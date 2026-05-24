@@ -1,13 +1,11 @@
-use std::sync::Arc;
-
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
-use crate::routes::v1::assets::common::{AssetsQuery, find_or_404, resolve_version};
-use crate::services::assets::versions::ranks::{self, Rank};
+use crate::error::APIResult;
+use crate::routes::v1::assets::common::{AssetsQuery, find_or_404, load_localized};
+use crate::services::assets::versions::ranks::{Rank, fetch_ranks};
 
 #[utoipa::path(
     get,
@@ -26,7 +24,7 @@ pub(super) async fn list_ranks(
     State(state): State<AppState>,
     Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    Ok(Json(load(&state, &q).await?).into_response())
+    Ok(Json(load_localized(&state, &q, "ranks", fetch_ranks).await?).into_response())
 }
 
 #[utoipa::path(
@@ -50,18 +48,10 @@ pub(super) async fn get_rank(
     Path(tier): Path<u32>,
     Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let ranks = load(&state, &q).await?;
+    let ranks = load_localized(&state, &q, "ranks", fetch_ranks).await?;
     find_or_404(
         &ranks,
         |r| r.tier == tier,
         format!("Unknown rank tier: {tier}"),
     )
-}
-
-async fn load(state: &AppState, q: &AssetsQuery) -> APIResult<Arc<Vec<Rank>>> {
-    let version = resolve_version(state, q.client_version).await?;
-    let lang = q.language.unwrap_or_default().as_str();
-    ranks::fetch_ranks(&state.r2_client, version, lang)
-        .await
-        .map_err(|e| APIError::internal(format!("building ranks: {e}")))
 }

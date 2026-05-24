@@ -1,13 +1,11 @@
-use std::sync::Arc;
-
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
-use crate::routes::v1::assets::common::{AssetsQuery, find_or_404, resolve_version};
-use crate::services::assets::versions::accolades::{self, Accolade};
+use crate::error::APIResult;
+use crate::routes::v1::assets::common::{AssetsQuery, find_or_404, load_localized};
+use crate::services::assets::versions::accolades::{Accolade, fetch_accolades};
 
 #[utoipa::path(
     get,
@@ -26,7 +24,7 @@ pub(super) async fn list_accolades(
     State(state): State<AppState>,
     Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    Ok(Json(load(&state, &q).await?).into_response())
+    Ok(Json(load_localized(&state, &q, "accolades", fetch_accolades).await?).into_response())
 }
 
 #[utoipa::path(
@@ -50,7 +48,7 @@ pub(super) async fn get_accolade(
     Path(accolade_id): Path<u32>,
     Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let accolades = load(&state, &q).await?;
+    let accolades = load_localized(&state, &q, "accolades", fetch_accolades).await?;
     find_or_404(
         &accolades,
         |a| a.id == accolade_id,
@@ -79,7 +77,7 @@ pub(super) async fn get_accolade_by_name(
     Path(name): Path<String>,
     Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let accolades = load(&state, &q).await?;
+    let accolades = load_localized(&state, &q, "accolades", fetch_accolades).await?;
     find_or_404(
         &accolades,
         |a| {
@@ -88,12 +86,4 @@ pub(super) async fn get_accolade_by_name(
         },
         format!("Unknown accolade name: {name}"),
     )
-}
-
-async fn load(state: &AppState, q: &AssetsQuery) -> APIResult<Arc<Vec<Accolade>>> {
-    let version = resolve_version(state, q.client_version).await?;
-    let lang = q.language.unwrap_or_default().as_str();
-    accolades::fetch_accolades(&state.r2_client, version, lang)
-        .await
-        .map_err(|e| APIError::internal(format!("building accolades: {e}")))
 }

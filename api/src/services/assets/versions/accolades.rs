@@ -70,16 +70,12 @@ pub(crate) fn build_accolades(
 }
 
 fn transform(class_name: String, r: RawAccolade, loc: &HashMap<String, String>) -> Accolade {
-    let localize = |t: &str| {
-        let key = t.trim_start_matches('#');
-        loc.get(key).cloned().unwrap_or_else(|| t.to_owned())
-    };
     Accolade {
         class_name,
         id: r.id,
         tracked_stat_name: r.tracked_stat_name,
-        flavor_name: localize(&r.flavor_name),
-        description: localize(&r.description),
+        flavor_name: localization::localize(loc, &r.flavor_name),
+        description: localization::localize(loc, &r.description),
         threshold_type: r.threshold_type.to_lowercase(),
         enabled_game_modes: r
             .enabled_game_modes

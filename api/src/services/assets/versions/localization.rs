@@ -11,6 +11,13 @@ use crate::services::assets::versions::common::{DEFAULT_CACHE_SIZE, DEFAULT_CACH
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::store;
 
+/// Look up a localization token, stripping the leading `#` if present. Returns
+/// the raw token unchanged if no entry exists.
+pub(crate) fn localize(loc: &HashMap<String, String>, token: &str) -> String {
+    let key = token.trim_start_matches('#');
+    loc.get(key).cloned().unwrap_or_else(|| token.to_owned())
+}
+
 /// Falls back to english when the requested language is missing.
 #[cached(
     ty = "LruTtlCache<(u32, String), Arc<HashMap<String, String>>>",

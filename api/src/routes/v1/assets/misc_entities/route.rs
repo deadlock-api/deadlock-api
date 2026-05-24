@@ -3,9 +3,9 @@ use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
-use crate::routes::v1::assets::common::{VersionQuery, find_or_404, resolve_version};
-use crate::services::assets::versions::misc_entities::{self, MiscEntity};
+use crate::error::APIResult;
+use crate::routes::v1::assets::common::{VersionQuery, find_by_id_or_classname, load_versioned};
+use crate::services::assets::versions::misc_entities::{MiscEntity, fetch_misc_entities};
 
 #[utoipa::path(
     get,
@@ -24,11 +24,10 @@ pub(super) async fn list_misc_entities(
     State(state): State<AppState>,
     Query(q): Query<VersionQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let version = resolve_version(&state, q.client_version).await?;
-    let entities = misc_entities::fetch_misc_entities(&state.r2_client, version)
-        .await
-        .map_err(|e| APIError::internal(format!("building misc entities: {e}")))?;
-    Ok(Json(entities).into_response())
+    Ok(
+        Json(load_versioned(&state, &q, "misc entities", fetch_misc_entities).await?)
+            .into_response(),
+    )
 }
 
 #[utoipa::path(
@@ -52,17 +51,12 @@ pub(super) async fn get_misc_entity(
     Path(id_or_classname): Path<String>,
     Query(q): Query<VersionQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let version = resolve_version(&state, q.client_version).await?;
-    let entities = misc_entities::fetch_misc_entities(&state.r2_client, version)
-        .await
-        .map_err(|e| APIError::internal(format!("building misc entities: {e}")))?;
-    let as_id: Option<u32> = id_or_classname.parse().ok();
-    find_or_404(
+    let entities = load_versioned(&state, &q, "misc entities", fetch_misc_entities).await?;
+    find_by_id_or_classname(
         &entities,
-        |e| {
-            as_id.is_some_and(|id| e.id == id)
-                || e.class_name.eq_ignore_ascii_case(&id_or_classname)
-        },
-        format!("Unknown misc entity: {id_or_classname}"),
+        &id_or_classname,
+        |e| e.id,
+        |e| &e.class_name,
+        "misc entity",
     )
 }

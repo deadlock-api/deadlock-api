@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
@@ -7,7 +5,7 @@ use reqwest::StatusCode;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::assets::common::{AssetsQuery, resolve_version};
+use crate::routes::v1::assets::common::{AssetsQuery, load_localized};
 use crate::services::assets::versions::items::fetch_items;
 use crate::services::assets::versions::items::types::{Item, ItemSlotType, ItemType};
 
@@ -28,7 +26,7 @@ pub(super) async fn list_items(
     State(state): State<AppState>,
     Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    Ok(Json(load(&state, &q).await?).into_response())
+    Ok(Json(load_localized(&state, &q, "items", fetch_items).await?).into_response())
 }
 
 #[utoipa::path(
@@ -50,7 +48,7 @@ pub(super) async fn get_item(
     Path(id_or_class_name): Path<String>,
     Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let items = load(&state, &q).await?;
+    let items = load_localized(&state, &q, "items", fetch_items).await?;
     let needle_id: Option<u32> = id_or_class_name.parse().ok();
     items
         .iter()
@@ -79,7 +77,7 @@ pub(super) async fn get_items_by_type(
     Path(item_type): Path<ItemType>,
     Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let items = load(&state, &q).await?;
+    let items = load_localized(&state, &q, "items", fetch_items).await?;
     let filtered: Vec<Item> = items
         .iter()
         .filter(|i| i.item_type() as u8 == item_type as u8)
@@ -116,7 +114,7 @@ pub(super) async fn get_items_by_hero_id(
         "citadel_ability_zip_line",
         "citadel_ability_zipline_boost",
     ];
-    let items = load(&state, &q).await?;
+    let items = load_localized(&state, &q, "items", fetch_items).await?;
     let filtered: Vec<Item> = items
         .iter()
         .filter(|i| {
@@ -145,19 +143,11 @@ pub(super) async fn get_items_by_slot_type(
     Path(slot_type): Path<ItemSlotType>,
     Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let items = load(&state, &q).await?;
+    let items = load_localized(&state, &q, "items", fetch_items).await?;
     let filtered: Vec<Item> = items
         .iter()
         .filter(|i| matches!(i, Item::Upgrade(u) if u.item_slot_type == slot_type))
         .cloned()
         .collect();
     Ok(Json(filtered).into_response())
-}
-
-async fn load(state: &AppState, q: &AssetsQuery) -> APIResult<Arc<Vec<Item>>> {
-    let version = resolve_version(state, q.client_version).await?;
-    let lang = q.language.unwrap_or_default().as_str();
-    fetch_items(&state.r2_client, version, lang)
-        .await
-        .map_err(|e| APIError::internal(format!("building items: {e}")))
 }

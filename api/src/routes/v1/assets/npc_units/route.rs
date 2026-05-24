@@ -3,9 +3,9 @@ use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
-use crate::routes::v1::assets::common::{VersionQuery, find_or_404, resolve_version};
-use crate::services::assets::versions::npc_units::{self, NpcUnit};
+use crate::error::APIResult;
+use crate::routes::v1::assets::common::{VersionQuery, find_by_id_or_classname, load_versioned};
+use crate::services::assets::versions::npc_units::{NpcUnit, fetch_npc_units};
 
 #[utoipa::path(
     get,
@@ -24,11 +24,7 @@ pub(super) async fn list_npc_units(
     State(state): State<AppState>,
     Query(q): Query<VersionQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let version = resolve_version(&state, q.client_version).await?;
-    let units = npc_units::fetch_npc_units(&state.r2_client, version)
-        .await
-        .map_err(|e| APIError::internal(format!("building npc units: {e}")))?;
-    Ok(Json(units).into_response())
+    Ok(Json(load_versioned(&state, &q, "npc units", fetch_npc_units).await?).into_response())
 }
 
 #[utoipa::path(
@@ -52,17 +48,12 @@ pub(super) async fn get_npc_unit(
     Path(id_or_classname): Path<String>,
     Query(q): Query<VersionQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let version = resolve_version(&state, q.client_version).await?;
-    let units = npc_units::fetch_npc_units(&state.r2_client, version)
-        .await
-        .map_err(|e| APIError::internal(format!("building npc units: {e}")))?;
-    let as_id: Option<u32> = id_or_classname.parse().ok();
-    find_or_404(
+    let units = load_versioned(&state, &q, "npc units", fetch_npc_units).await?;
+    find_by_id_or_classname(
         &units,
-        |u| {
-            as_id.is_some_and(|id| u.id == id)
-                || u.class_name.eq_ignore_ascii_case(&id_or_classname)
-        },
-        format!("Unknown NPC unit: {id_or_classname}"),
+        &id_or_classname,
+        |u| u.id,
+        |u| &u.class_name,
+        "NPC unit",
     )
 }

@@ -7,16 +7,16 @@ use serde::Deserialize;
 use utoipa::IntoParams;
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
-use crate::routes::v1::assets::common::{AssetsQuery, find_or_404, resolve_version};
-use crate::services::assets::versions::heroes::{self, Hero};
+use crate::error::APIResult;
+use crate::routes::v1::assets::common::{AssetsQuery, Language, find_or_404, load_localized};
+use crate::services::assets::versions::heroes::{Hero, fetch_heroes};
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub(crate) struct HeroesListQuery {
     /// Language code. Defaults to `english`.
     #[serde(default)]
     #[param(inline)]
-    language: Option<crate::routes::v1::assets::common::Language>,
+    language: Option<Language>,
     /// Client/game version (e.g. `6518`). Defaults to the latest known version.
     #[serde(default)]
     client_version: Option<u32>,
@@ -42,11 +42,7 @@ pub(super) async fn list_heroes(
     State(state): State<AppState>,
     Query(q): Query<HeroesListQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let base = AssetsQuery {
-        language: q.language,
-        client_version: q.client_version,
-    };
-    let heroes = load(&state, &base).await?;
+    let heroes = load(&state, q.language, q.client_version).await?;
     // Filter at request time so the underlying cache entry is shared between
     // `only_active=true` and `only_active=false` callers.
     if q.only_active.unwrap_or(false) {
@@ -82,7 +78,7 @@ pub(super) async fn get_hero(
     Path(hero_id): Path<u32>,
     Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let heroes = load(&state, &q).await?;
+    let heroes = load(&state, q.language, q.client_version).await?;
     find_or_404(
         &heroes,
         |h| h.id == hero_id,
@@ -111,7 +107,7 @@ pub(super) async fn get_hero_by_name(
     Path(name): Path<String>,
     Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let heroes = load(&state, &q).await?;
+    let heroes = load(&state, q.language, q.client_version).await?;
     let needle = name.to_lowercase();
     let prefixed = format!("hero_{needle}");
     let matches = |s: &str| {
@@ -126,12 +122,20 @@ pub(super) async fn get_hero_by_name(
 }
 
 /// Returns the cached `Arc<Vec<Hero>>` directly so concurrent requests for
-/// the same `(version, language)` share a single underlying allocation. The
-/// caller filters by `only_active` / `hero_id` at request time.
-async fn load(state: &AppState, q: &AssetsQuery) -> APIResult<Arc<Vec<Hero>>> {
-    let version = resolve_version(state, q.client_version).await?;
-    let lang = q.language.unwrap_or_default().as_str();
-    heroes::fetch_heroes(&state.r2_client, version, lang)
-        .await
-        .map_err(|e| APIError::internal(format!("building heroes: {e}")))
+/// the same `(version, language)` share a single underlying allocation.
+async fn load(
+    state: &AppState,
+    language: Option<Language>,
+    client_version: Option<u32>,
+) -> APIResult<Arc<Vec<Hero>>> {
+    load_localized(
+        state,
+        &AssetsQuery {
+            language,
+            client_version,
+        },
+        "heroes",
+        fetch_heroes,
+    )
+    .await
 }

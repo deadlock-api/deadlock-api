@@ -3,9 +3,9 @@ use axum::extract::{Query, State};
 use axum::response::IntoResponse;
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
-use crate::routes::v1::assets::common::{VersionQuery, resolve_version};
-use crate::services::assets::versions::colors;
+use crate::error::APIResult;
+use crate::routes::v1::assets::common::{VersionQuery, load_versioned};
+use crate::services::assets::versions::colors::fetch_colors;
 use crate::services::assets::versions::common::Color;
 
 #[utoipa::path(
@@ -25,9 +25,5 @@ pub(super) async fn list_colors(
     State(state): State<AppState>,
     Query(q): Query<VersionQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let version = resolve_version(&state, q.client_version).await?;
-    let colors = colors::fetch_colors(&state.r2_client, version)
-        .await
-        .map_err(|e| APIError::internal(format!("building colors: {e}")))?;
-    Ok(Json(colors).into_response())
+    Ok(Json(load_versioned(&state, &q, "colors", fetch_colors).await?).into_response())
 }

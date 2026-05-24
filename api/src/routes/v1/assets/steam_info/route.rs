@@ -3,9 +3,9 @@ use axum::extract::{Query, State};
 use axum::response::IntoResponse;
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
-use crate::routes::v1::assets::common::{VersionQuery, resolve_version};
-use crate::services::assets::versions::steam_info::{self, SteamInfo};
+use crate::error::APIResult;
+use crate::routes::v1::assets::common::{VersionQuery, load_versioned};
+use crate::services::assets::versions::steam_info::{SteamInfo, fetch_steam_info};
 
 #[utoipa::path(
     get,
@@ -25,9 +25,5 @@ pub(super) async fn get_steam_info(
     State(state): State<AppState>,
     Query(q): Query<VersionQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let version = resolve_version(&state, q.client_version).await?;
-    let info = steam_info::fetch_steam_info(&state.r2_client, version)
-        .await
-        .map_err(|e| APIError::internal(format!("building steam info: {e}")))?;
-    Ok(Json(info).into_response())
+    Ok(Json(load_versioned(&state, &q, "steam info", fetch_steam_info).await?).into_response())
 }

@@ -631,16 +631,10 @@ fn transform(
         .as_deref()
         .unwrap_or(&[])
         .iter()
-        .map(|t| {
-            let key = t.trim_start_matches('#');
-            loc.get(key).cloned().unwrap_or_else(|| t.clone())
-        })
+        .map(|t| localization::localize(loc, t))
         .collect();
 
-    let gun_tag = r.gun_tag.as_ref().map(|g| {
-        let key = g.trim_start_matches('#');
-        loc.get(key).cloned().unwrap_or_else(|| g.clone())
-    });
+    let gun_tag = r.gun_tag.as_ref().map(|g| localization::localize(loc, g));
 
     let hideout_rich_presence = r.hideout_rich_presence.as_ref().map(|h| {
         let key = h.trim_start_matches('#');
