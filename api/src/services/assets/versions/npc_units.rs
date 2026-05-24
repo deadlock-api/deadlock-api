@@ -241,7 +241,7 @@ struct RawIntrinsicModifiers {
 #[derive(Debug, Deserialize, Clone, Copy)]
 struct RawObjectiveRegen {
     #[serde(default, rename = "m_flOutOfCombatHealthRegen")]
-    out_of_combat_health_regen: Option<i64>,
+    out_of_combat_health_regen: Option<f64>,
     #[serde(default, rename = "m_flOutOfCombatRegenDelay")]
     out_of_combat_regen_delay: Option<f64>,
 }
@@ -610,7 +610,7 @@ pub(crate) struct IntrinsicModifiers {
 #[derive(Debug, Serialize, Clone, ToSchema)]
 pub(crate) struct ObjectiveRegen {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub out_of_combat_health_regen: Option<i64>,
+    pub out_of_combat_health_regen: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub out_of_combat_regen_delay: Option<f64>,
 }

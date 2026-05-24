@@ -13,4 +13,5 @@ pub(crate) mod heroes;
 pub(crate) mod localization;
 pub(crate) mod misc_entities;
 pub(crate) mod npc_units;
+pub(crate) mod ranks;
 pub(crate) mod store;
