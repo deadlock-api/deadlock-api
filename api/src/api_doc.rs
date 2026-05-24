@@ -62,7 +62,10 @@ impl Modify for SecurityAddon {
 struct TagGroupsAddon;
 
 const TAG_GROUPS: &[(&str, &[&str])] = &[
-    ("Assets", &["Accolades", "Heroes"]),
+    (
+        "Assets",
+        &["Accolades", "Heroes", "Misc Entities", "NPC Units"],
+    ),
     (
         "Game Data",
         &[

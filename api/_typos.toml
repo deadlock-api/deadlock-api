@@ -1,3 +1,11 @@
+[default.extend-identifiers]
+# Upstream source field name (sic).
+m_sModifer = "m_sModifer"
+
+[default.extend-words]
+# Upstream source field name (sic).
+Modifer = "Modifer"
+
 [files]
 extend-exclude = [
     "src/utils/kv3_fixtures/",

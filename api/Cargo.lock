@@ -1305,6 +1305,7 @@ dependencies = [
  "memchr",
  "metrics",
  "mimalloc",
+ "murmur2",
  "ndarray",
  "object_store",
  "ort",
@@ -2917,6 +2918,12 @@ name = "multimap"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d87ecb2933e8aeadb3e3a02b828fed80a7528047e68b4f424523a0981a3a084"
+
+[[package]]
+name = "murmur2"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb585ade2549a017db2e35978b77c319214fa4b37cede841e27954dd6e8f3ca8"
 
 [[package]]
 name = "murmur3"

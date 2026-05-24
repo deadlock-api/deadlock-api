@@ -1,0 +1,1836 @@
+---
+source: src/services/assets/versions/misc_entities.rs
+assertion_line: 445
+expression: entities
+---
+[
+  {
+    "class_name": "citadel_item_powerup_spawner",
+    "id": 4172910958,
+    "initial_spawn_time": 300.0,
+    "spawn_interval": 300.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "gun_powerup_pickup",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "survival_powerup_pickup",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "casting_powerup_pickup",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "movement_powerup_pickup",
+        "pickup_weight": 1.0
+      }
+    ]
+  },
+  {
+    "class_name": "citadel_refresh_spawner",
+    "id": 2376414226,
+    "initial_spawn_time": 5.0,
+    "respawn_time": 1.0
+  },
+  {
+    "class_name": "citadel_change_team_spawner",
+    "id": 3174592083,
+    "initial_spawn_time": -1.0,
+    "respawn_time": 1.0
+  },
+  {
+    "class_name": "citadel_breakable_prop_drop_powerups",
+    "id": 3457071437,
+    "initial_spawn_time": 120.0,
+    "respawn_time": 180.0,
+    "match_time_mins_for_level2_pickups": 10,
+    "match_time_mins_for_level3_pickups": 30,
+    "loot_list_deck_size": 5,
+    "health": 1,
+    "break_on_dodge_touch": true,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "primary_drop_chance": 50.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "spirit_permanent_pickup",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "firerate_permanent_pickup",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "ammo_permanent_pickup",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "hp_permanent_pickup",
+        "pickup_weight": 2.0
+      },
+      {
+        "pickup_name": "cd_permanent_pickup",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "wp_permanent_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "m_vecPickups_lv2": [
+      {
+        "pickup_name": "spirit_permanent_pickup_lv2",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "firerate_permanent_pickup_lv2",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "ammo_permanent_pickup_lv2",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "hp_permanent_pickup_lv2",
+        "pickup_weight": 2.0
+      },
+      {
+        "pickup_name": "cd_permanent_pickup_lv2",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "wp_permanent_pickup_lv2",
+        "pickup_weight": 1.0
+      }
+    ],
+    "m_vecPickups_lv3": [
+      {
+        "pickup_name": "spirit_permanent_pickup_lv3",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "firerate_permanent_pickup_lv3",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "ammo_permanent_pickup_lv3",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "hp_permanent_pickup_lv3",
+        "pickup_weight": 2.0
+      },
+      {
+        "pickup_name": "cd_permanent_pickup_lv3",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "wp_permanent_pickup_lv3",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakablePowerupPickup"
+  },
+  {
+    "class_name": "citadel_breakable_prop_drop_gold",
+    "id": 3017498471,
+    "initial_spawn_time": 120.0,
+    "respawn_time": 180.0,
+    "health": 1,
+    "break_on_dodge_touch": true,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_breakable_item_container",
+    "id": 3719077267,
+    "initial_spawn_time": 120.0,
+    "respawn_time": 180.0,
+    "match_time_mins_for_level2_pickups": 10,
+    "match_time_mins_for_level3_pickups": 30,
+    "loot_list_deck_size": 5,
+    "health": 1,
+    "break_on_dodge_touch": true,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "primary_drop_chance": 50.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "spirit_permanent_pickup",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "firerate_permanent_pickup",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "ammo_permanent_pickup",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "hp_permanent_pickup",
+        "pickup_weight": 2.0
+      },
+      {
+        "pickup_name": "cd_permanent_pickup",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "wp_permanent_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "m_vecPickups_lv2": [
+      {
+        "pickup_name": "spirit_permanent_pickup_lv2",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "firerate_permanent_pickup_lv2",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "ammo_permanent_pickup_lv2",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "hp_permanent_pickup_lv2",
+        "pickup_weight": 2.0
+      },
+      {
+        "pickup_name": "cd_permanent_pickup_lv2",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "wp_permanent_pickup_lv2",
+        "pickup_weight": 1.0
+      }
+    ],
+    "m_vecPickups_lv3": [
+      {
+        "pickup_name": "spirit_permanent_pickup_lv3",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "firerate_permanent_pickup_lv3",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "ammo_permanent_pickup_lv3",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "hp_permanent_pickup_lv3",
+        "pickup_weight": 2.0
+      },
+      {
+        "pickup_name": "cd_permanent_pickup_lv3",
+        "pickup_weight": 1.0
+      },
+      {
+        "pickup_name": "wp_permanent_pickup_lv3",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakablePowerupPickup"
+  },
+  {
+    "class_name": "citadel_breakable_prop_vase",
+    "id": 3040869273,
+    "initial_spawn_time": 120.0,
+    "respawn_time": 180.0,
+    "health": 1,
+    "break_on_dodge_touch": true,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_breakable_prop_box_multi",
+    "id": 2286845008,
+    "initial_spawn_time": 120.0,
+    "respawn_time": 180.0,
+    "health": 1,
+    "break_on_dodge_touch": true,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_breakable_prop_wooden_crate",
+    "id": 3986897915,
+    "initial_spawn_time": 120.0,
+    "respawn_time": 180.0,
+    "health": 1,
+    "break_on_dodge_touch": true,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_breakable_lion_statue",
+    "id": 2168482585,
+    "initial_spawn_time": 120.0,
+    "respawn_time": 180.0,
+    "health": 1,
+    "break_on_dodge_touch": true,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_breakable_sake_barrel",
+    "id": 1153939632,
+    "initial_spawn_time": 120.0,
+    "respawn_time": 180.0,
+    "health": 1,
+    "break_on_dodge_touch": true,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_breakable_wooden_crate_02",
+    "id": 1075096886,
+    "initial_spawn_time": 120.0,
+    "respawn_time": 180.0,
+    "health": 1,
+    "break_on_dodge_touch": true,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_breakable_wooden_crate_03",
+    "id": 985941184,
+    "initial_spawn_time": 120.0,
+    "respawn_time": 180.0,
+    "health": 1,
+    "break_on_dodge_touch": true,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_breakable_jar_01",
+    "id": 4027046556,
+    "initial_spawn_time": 120.0,
+    "respawn_time": 180.0,
+    "health": 1,
+    "break_on_dodge_touch": true,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_breakable_prop_car",
+    "id": 1402417399,
+    "initial_spawn_time": 0.0,
+    "respawn_time": 180.0,
+    "health": 100000000,
+    "break_on_dodge_touch": false,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "vehicle_car_01",
+    "id": 844909675,
+    "initial_spawn_time": 0.0,
+    "respawn_time": 180.0,
+    "health": 100000000,
+    "break_on_dodge_touch": false,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "vehicle_car_04",
+    "id": 3283028508,
+    "initial_spawn_time": 0.0,
+    "respawn_time": 180.0,
+    "health": 100000000,
+    "break_on_dodge_touch": false,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "vehicle_car_05",
+    "id": 479455394,
+    "initial_spawn_time": 0.0,
+    "respawn_time": 180.0,
+    "health": 100000000,
+    "break_on_dodge_touch": false,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "vehicle_large_truck_01",
+    "id": 1702726906,
+    "initial_spawn_time": 0.0,
+    "respawn_time": 180.0,
+    "health": 100000000,
+    "break_on_dodge_touch": false,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "vehicle_large_truck_02",
+    "id": 818456624,
+    "initial_spawn_time": 0.0,
+    "respawn_time": 180.0,
+    "health": 100000000,
+    "break_on_dodge_touch": false,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "vehicle_mini_truck_03",
+    "id": 2902681599,
+    "initial_spawn_time": 0.0,
+    "respawn_time": 180.0,
+    "health": 100000000,
+    "break_on_dodge_touch": false,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "vehicle_bike_flying",
+    "id": 2812656400,
+    "initial_spawn_time": 0.0,
+    "respawn_time": 180.0,
+    "health": 100000000,
+    "break_on_dodge_touch": false,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "vehicle_ground_ship_03",
+    "id": 3087609631,
+    "initial_spawn_time": 0.0,
+    "respawn_time": 180.0,
+    "health": 100000000,
+    "break_on_dodge_touch": false,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_breakable_prop_pumpkin01",
+    "id": 1070887086,
+    "initial_spawn_time": 120.0,
+    "respawn_time": 180.0,
+    "health": 1,
+    "break_on_dodge_touch": true,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_breakable_prop_pumpkin02",
+    "id": 1413828045,
+    "initial_spawn_time": 120.0,
+    "respawn_time": 180.0,
+    "health": 1,
+    "break_on_dodge_touch": true,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_breakable_prop_pumpkin03",
+    "id": 2572218233,
+    "initial_spawn_time": 120.0,
+    "respawn_time": 180.0,
+    "health": 1,
+    "break_on_dodge_touch": true,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_breakable_prop_pumpkin04",
+    "id": 841549549,
+    "initial_spawn_time": 120.0,
+    "respawn_time": 180.0,
+    "health": 1,
+    "break_on_dodge_touch": true,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_breakable_prop_xmaspresent01",
+    "id": 1467120186,
+    "initial_spawn_time": 120.0,
+    "respawn_time": 180.0,
+    "health": 1,
+    "break_on_dodge_touch": true,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_breakable_prop_xmaspresent02",
+    "id": 1580763103,
+    "initial_spawn_time": 120.0,
+    "respawn_time": 180.0,
+    "health": 1,
+    "break_on_dodge_touch": true,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_breakable_prop_xmaspresent03",
+    "id": 4154240310,
+    "initial_spawn_time": 120.0,
+    "respawn_time": 180.0,
+    "health": 1,
+    "break_on_dodge_touch": true,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": true,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": true,
+    "is_mantleable": true,
+    "primary_drop_chance": 60.0,
+    "primary_pickups": [
+      {
+        "pickup_name": "small_gold_pickup",
+        "pickup_weight": 1.0
+      }
+    ],
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "small_gold_pickup",
+    "id": 3036894972,
+    "color": {
+      "red": 0,
+      "green": 255,
+      "blue": 204,
+      "alpha": 255
+    },
+    "gold_amount": 23.0,
+    "gold_per_minute_amount": 2.0,
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 300.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "gun_powerup_pickup",
+    "id": 201785745,
+    "color": {
+      "red": 218,
+      "green": 148,
+      "blue": 65,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_citadel_powerup_gun",
+        "subclass_name": "gun_powerup_pickup",
+        "duration": 160.0,
+        "time_min": 5.0,
+        "time_max": 40.0,
+        "always_show_in_ui": [
+          "MODIFIER_VALUE_FIRE_RATE",
+          "MODIFIER_VALUE_AMMO_CLIP_SIZE_PERCENT"
+        ],
+        "modifier_values": [
+          {
+            "value_type": "MODIFIER_VALUE_FIRE_RATE",
+            "value_min": 12.0,
+            "value_max": 35.0
+          },
+          {
+            "value_type": "MODIFIER_VALUE_AMMO_CLIP_SIZE_PERCENT",
+            "value_min": 35.0,
+            "value_max": 70.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 300.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": true,
+    "collision_radius": 40.0
+  },
+  {
+    "class_name": "survival_powerup_pickup",
+    "id": 828222066,
+    "color": {
+      "red": 122,
+      "green": 184,
+      "blue": 29,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_citadel_powerup_survival",
+        "subclass_name": "survival_powerup_pickup",
+        "duration": 160.0,
+        "time_min": 5.0,
+        "time_max": 40.0,
+        "always_show_in_ui": [
+          "MODIFIER_VALUE_HEALTH_MAX",
+          "MODIFIER_VALUE_HEALTH_REGEN_PER_SECOND"
+        ],
+        "modifier_values": [
+          {
+            "value_type": "MODIFIER_VALUE_HEALTH_MAX",
+            "value_min": 200.0,
+            "value_max": 750.0
+          },
+          {
+            "value_type": "MODIFIER_VALUE_HEALTH_REGEN_PER_SECOND",
+            "value_min": 4.0,
+            "value_max": 40.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 300.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": true,
+    "collision_radius": 40.0
+  },
+  {
+    "class_name": "casting_powerup_pickup",
+    "id": 15572055,
+    "color": {
+      "red": 203,
+      "green": 143,
+      "blue": 252,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_citadel_powerup_casting",
+        "subclass_name": "casting_powerup_pickup",
+        "duration": 160.0,
+        "time_min": 5.0,
+        "time_max": 40.0,
+        "always_show_in_ui": [
+          "MODIFIER_VALUE_TECH_POWER",
+          "MODIFIER_VALUE_COOLDOWN_REDUCTION_PERCENTAGE"
+        ],
+        "modifier_values": [
+          {
+            "value_type": "MODIFIER_VALUE_TECH_POWER",
+            "value_min": 15.0,
+            "value_max": 65.0
+          },
+          {
+            "value_type": "MODIFIER_VALUE_COOLDOWN_REDUCTION_PERCENTAGE",
+            "value_min": 12.0,
+            "value_max": 20.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 300.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": true,
+    "collision_radius": 40.0
+  },
+  {
+    "class_name": "movement_powerup_pickup",
+    "id": 754654000,
+    "color": {
+      "red": 50,
+      "green": 50,
+      "blue": 255,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_citadel_powerup_movement",
+        "subclass_name": "movement_powerup_pickup",
+        "duration": 160.0,
+        "time_min": 5.0,
+        "time_max": 40.0,
+        "always_show_in_ui": [
+          "MODIFIER_VALUE_SPRINT_SPEED_BONUS",
+          "MODIFIER_VALUE_SPRINT_SPEED_BONUS",
+          "MODIFIER_VALUE_ZIP_LINE_SPEED_PERCENTAGE"
+        ],
+        "modifier_values": [
+          {
+            "value_type": "MODIFIER_VALUE_STAMINA",
+            "value_min": 2.0,
+            "value_max": 4.0
+          },
+          {
+            "value_type": "MODIFIER_VALUE_SPRINT_SPEED_BONUS",
+            "value_min": 59.0551,
+            "value_max": 157.48
+          },
+          {
+            "value_type": "MODIFIER_VALUE_ZIP_LINE_SPEED_PERCENTAGE",
+            "value_min": 40.0,
+            "value_max": 80.0
+          },
+          {
+            "value_type": "MODIFIER_VALUE_STAMINA_REGEN_PER_SECOND_PERCENTAGE",
+            "value_min": 20.0,
+            "value_max": 50.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 300.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": true,
+    "collision_radius": 40.0
+  },
+  {
+    "class_name": "refresh_powerup_pickup",
+    "id": 951580887,
+    "color": {
+      "red": 203,
+      "green": 143,
+      "blue": 252,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "citadel_hero_refresh",
+        "subclass_name": "citadel_hero_refresh"
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 300.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": true,
+    "collision_radius": 40.0
+  },
+  {
+    "class_name": "change_team_powerup_pickup",
+    "id": 31027522,
+    "color": {
+      "red": 195,
+      "green": 82,
+      "blue": 26,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "citadel_change_team",
+        "subclass_name": "citadel_change_team"
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 300.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": true,
+    "collision_radius": 40.0
+  },
+  {
+    "class_name": "spirit_permanent_pickup",
+    "id": 2365238906,
+    "color": {
+      "red": 88,
+      "green": 20,
+      "blue": 180,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_TECH_POWER",
+            "value": 2.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "spirit_permanent_pickup_lv2",
+    "id": 3447178839,
+    "color": {
+      "red": 88,
+      "green": 20,
+      "blue": 180,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_TECH_POWER",
+            "value": 3.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "spirit_permanent_pickup_lv3",
+    "id": 2496153953,
+    "color": {
+      "red": 88,
+      "green": 20,
+      "blue": 180,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_TECH_POWER",
+            "value": 4.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "firerate_permanent_pickup",
+    "id": 639567848,
+    "color": {
+      "red": 200,
+      "green": 0,
+      "blue": 0,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_FIRE_RATE",
+            "value": 1.5
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "firerate_permanent_pickup_lv2",
+    "id": 1470635657,
+    "color": {
+      "red": 200,
+      "green": 0,
+      "blue": 0,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_FIRE_RATE",
+            "value": 2.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "firerate_permanent_pickup_lv3",
+    "id": 2070007436,
+    "color": {
+      "red": 200,
+      "green": 0,
+      "blue": 0,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_FIRE_RATE",
+            "value": 2.5
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "ammo_permanent_pickup",
+    "id": 3039784139,
+    "color": {
+      "red": 255,
+      "green": 165,
+      "blue": 0,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_AMMO_CLIP_SIZE_PERCENT",
+            "value": 3.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "ammo_permanent_pickup_lv2",
+    "id": 1937950387,
+    "color": {
+      "red": 255,
+      "green": 165,
+      "blue": 0,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_AMMO_CLIP_SIZE_PERCENT",
+            "value": 5.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "ammo_permanent_pickup_lv3",
+    "id": 755268683,
+    "color": {
+      "red": 255,
+      "green": 165,
+      "blue": 0,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_AMMO_CLIP_SIZE_PERCENT",
+            "value": 7.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "hp_permanent_pickup",
+    "id": 1683824683,
+    "color": {
+      "red": 50,
+      "green": 205,
+      "blue": 50,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_HEALTH_MAX",
+            "value": 15.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "hp_permanent_pickup_lv2",
+    "id": 4180897498,
+    "color": {
+      "red": 50,
+      "green": 205,
+      "blue": 50,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_HEALTH_MAX",
+            "value": 25.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "hp_permanent_pickup_lv3",
+    "id": 1182568511,
+    "color": {
+      "red": 50,
+      "green": 205,
+      "blue": 50,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_HEALTH_MAX",
+            "value": 35.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "cd_permanent_pickup",
+    "id": 2848399878,
+    "color": {
+      "red": 0,
+      "green": 0,
+      "blue": 200,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_COOLDOWN_REDUCTION_PERCENTAGE",
+            "value": 0.5
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "cd_permanent_pickup_lv2",
+    "id": 2833086415,
+    "color": {
+      "red": 0,
+      "green": 0,
+      "blue": 200,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_COOLDOWN_REDUCTION_PERCENTAGE",
+            "value": 0.75
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "cd_permanent_pickup_lv3",
+    "id": 540531328,
+    "color": {
+      "red": 0,
+      "green": 0,
+      "blue": 200,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_COOLDOWN_REDUCTION_PERCENTAGE",
+            "value": 1.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "wp_permanent_pickup",
+    "id": 3282445765,
+    "color": {
+      "red": 200,
+      "green": 85,
+      "blue": 0,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_BASEATTACK_DAMAGE_PERCENT",
+            "value": 3.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "wp_permanent_pickup_lv2",
+    "id": 2778554071,
+    "color": {
+      "red": 200,
+      "green": 85,
+      "blue": 0,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_BASEATTACK_DAMAGE_PERCENT",
+            "value": 4.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "wp_permanent_pickup_lv3",
+    "id": 2026620961,
+    "color": {
+      "red": 200,
+      "green": 85,
+      "blue": 0,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_BASEATTACK_DAMAGE_PERCENT",
+            "value": 6.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
+  },
+  {
+    "class_name": "dropped_soul_orb",
+    "id": 607220400,
+    "color": {
+      "red": 0,
+      "green": 0,
+      "blue": 0,
+      "alpha": 0
+    },
+    "pickup_radius": {
+      "base": 709.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 18.0,
+      "per_minute_after_start": 4.0
+    }
+  },
+  {
+    "class_name": "medic_trooper_aoe_health_pickup_amber",
+    "id": 1653866732,
+    "color": {
+      "red": 0,
+      "green": 0,
+      "blue": 0,
+      "alpha": 0
+    },
+    "pickup_radius": {
+      "base": 709.0,
+      "per_minute_after_start": 59.0125
+    },
+    "expiration_duration": {
+      "base": 18.0,
+      "per_minute_after_start": 2.0
+    }
+  },
+  {
+    "class_name": "medic_trooper_aoe_health_pickup_sapphire",
+    "id": 207112043,
+    "color": {
+      "red": 0,
+      "green": 0,
+      "blue": 0,
+      "alpha": 0
+    },
+    "pickup_radius": {
+      "base": 709.0,
+      "per_minute_after_start": 59.0125
+    },
+    "expiration_duration": {
+      "base": 18.0,
+      "per_minute_after_start": 2.0
+    }
+  },
+  {
+    "class_name": "dropped_necro_pickup",
+    "id": 3657004675,
+    "color": {
+      "red": 0,
+      "green": 0,
+      "blue": 0,
+      "alpha": 0
+    },
+    "pickup_radius": {
+      "base": 708.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 10.0,
+      "per_minute_after_start": 0.0
+    }
+  },
+  {
+    "class_name": "xp_orb",
+    "id": 2222749624,
+    "orb_spawn_delay_min": 0.3,
+    "orb_spawn_delay_max": 0.3,
+    "lifetime": 3.0,
+    "collision_radius": 12.0
+  },
+  {
+    "class_name": "xp_orb_trooper",
+    "id": 494398941,
+    "orb_spawn_delay_min": 0.4,
+    "orb_spawn_delay_max": 0.7,
+    "lifetime": 0.7,
+    "collision_radius": 12.0
+  },
+  {
+    "class_name": "xp_orb_idol_dropoff",
+    "id": 3283937835,
+    "orb_spawn_delay_min": 0.3,
+    "orb_spawn_delay_max": 0.3,
+    "lifetime": 3.0,
+    "collision_radius": 12.0
+  },
+  {
+    "class_name": "xp_orb_player_kill",
+    "id": 3027388212,
+    "orb_spawn_delay_min": 0.3,
+    "orb_spawn_delay_max": 0.3,
+    "lifetime": 3.0,
+    "collision_radius": 12.0
+  },
+  {
+    "class_name": "xp_orb_objective",
+    "id": 2172658167,
+    "orb_spawn_delay_min": 0.3,
+    "orb_spawn_delay_max": 0.3,
+    "lifetime": 3.0,
+    "collision_radius": 12.0
+  },
+  {
+    "class_name": "xp_orb_vault",
+    "id": 828604450,
+    "orb_spawn_delay_min": 0.3,
+    "orb_spawn_delay_max": 0.3,
+    "lifetime": 0.3,
+    "collision_radius": 12.0
+  },
+  {
+    "class_name": "xp_orb_spawner",
+    "id": 7345281,
+    "orb_spawn_delay_min": 0.4,
+    "orb_spawn_delay_max": 0.7,
+    "lifetime": 0.7,
+    "collision_radius": 12.0
+  },
+  {
+    "class_name": "xp_orb_neutral",
+    "id": 882063455,
+    "orb_spawn_delay_min": 0.4,
+    "orb_spawn_delay_max": 0.7,
+    "lifetime": 1.7,
+    "collision_radius": 12.0
+  },
+  {
+    "class_name": "citadel_herotest_orbspawner",
+    "id": 3108287559
+  },
+  {
+    "class_name": "xp_orb_siege_trooper",
+    "id": 2331280903,
+    "orb_spawn_delay_min": 0.3,
+    "orb_spawn_delay_max": 0.3,
+    "lifetime": 3.0,
+    "collision_radius": 12.0
+  },
+  {
+    "class_name": "info_neutral_trooper_camp",
+    "id": 3333418522
+  },
+  {
+    "class_name": "neutral_camp_vaults",
+    "id": 176907887,
+    "initial_spawn_delay_in_seconds": 480,
+    "spawn_interval_in_seconds": 300,
+    "initial_spawn_delay_seconds": 480
+  },
+  {
+    "class_name": "neutral_camp_vaults_herotest",
+    "id": 740793546,
+    "initial_spawn_delay_in_seconds": 0,
+    "spawn_interval_in_seconds": 30,
+    "initial_spawn_delay_seconds": 0
+  },
+  {
+    "class_name": "neutral_camp_weak",
+    "id": 3966169273,
+    "initial_spawn_delay_in_seconds": 120,
+    "spawn_interval_in_seconds": 85,
+    "initial_spawn_delay_seconds": 120
+  },
+  {
+    "class_name": "neutral_camp_weak_herotest",
+    "id": 1530874816,
+    "initial_spawn_delay_in_seconds": 0,
+    "spawn_interval_in_seconds": 30,
+    "initial_spawn_delay_seconds": 0
+  },
+  {
+    "class_name": "neutral_camp_medium",
+    "id": 806615399,
+    "initial_spawn_delay_in_seconds": 360,
+    "spawn_interval_in_seconds": 290,
+    "initial_spawn_delay_seconds": 360
+  },
+  {
+    "class_name": "neutral_camp_medium_herotest",
+    "id": 1721127882,
+    "initial_spawn_delay_in_seconds": 0,
+    "spawn_interval_in_seconds": 30,
+    "initial_spawn_delay_seconds": 0
+  },
+  {
+    "class_name": "neutral_camp_strong",
+    "id": 811125052,
+    "initial_spawn_delay_in_seconds": 480,
+    "spawn_interval_in_seconds": 335,
+    "initial_spawn_delay_seconds": 480
+  },
+  {
+    "class_name": "neutral_camp_strong_herotest",
+    "id": 2463964429,
+    "initial_spawn_delay_in_seconds": 0,
+    "spawn_interval_in_seconds": 30,
+    "initial_spawn_delay_seconds": 0
+  },
+  {
+    "class_name": "neutral_camp_midboss",
+    "id": 911084663,
+    "initial_spawn_delay_in_seconds": 600,
+    "spawn_interval_in_seconds": 420,
+    "initial_spawn_delay_seconds": 600
+  },
+  {
+    "class_name": "neutral_camp_bug",
+    "id": 992563467,
+    "initial_spawn_delay_in_seconds": 120,
+    "spawn_interval_in_seconds": 120,
+    "initial_spawn_delay_seconds": 120
+  },
+  {
+    "class_name": "neutral_camp_bug_herotest",
+    "id": 375979665,
+    "initial_spawn_delay_in_seconds": 0,
+    "spawn_interval_in_seconds": 10,
+    "initial_spawn_delay_seconds": 0
+  },
+  {
+    "class_name": "capture_point_escort",
+    "id": 69830815
+  }
+]

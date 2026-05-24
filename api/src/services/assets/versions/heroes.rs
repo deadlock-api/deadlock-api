@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use strum::EnumString;
 use utoipa::ToSchema;
 
+use crate::services::assets::versions::common::HeroItemType;
 use crate::services::assets::versions::css;
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::localization;
@@ -527,52 +528,6 @@ pub(crate) enum HeroType {
     Marksman,
     #[strum(serialize = "ECitadelHeroType_Mystic")]
     Mystic,
-}
-
-#[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq, Hash, ToSchema, EnumString)]
-#[serde(rename_all = "snake_case")]
-pub(crate) enum HeroItemType {
-    #[strum(serialize = "ESlot_Weapon_Primary")]
-    WeaponPrimary,
-    #[strum(serialize = "ESlot_Weapon_Secondary")]
-    WeaponSecondary,
-    #[strum(serialize = "ESlot_Weapon_Melee")]
-    WeaponMelee,
-    #[strum(serialize = "ESlot_Ability_Mantle")]
-    AbilityMantle,
-    #[strum(serialize = "ESlot_Ability_Jump")]
-    AbilityJump,
-    #[strum(serialize = "ESlot_Ability_Slide")]
-    AbilitySlide,
-    #[strum(serialize = "ESlot_Ability_ZipLine")]
-    AbilityZipLine,
-    #[strum(serialize = "ESlot_Ability_ZipLineBoost")]
-    AbilityZipLineBoost,
-    #[strum(serialize = "ESlot_Ability_ClimbRope")]
-    AbilityClimbRope,
-    #[serde(rename = "ability_innate1")]
-    #[strum(serialize = "ESlot_Ability_Innate_1")]
-    AbilityInnate1,
-    #[serde(rename = "ability_innate2")]
-    #[strum(serialize = "ESlot_Ability_Innate_2")]
-    AbilityInnate2,
-    #[serde(rename = "ability_innate3")]
-    #[strum(serialize = "ESlot_Ability_Innate_3")]
-    AbilityInnate3,
-    #[serde(rename = "signature1")]
-    #[strum(serialize = "ESlot_Signature_1")]
-    Signature1,
-    #[serde(rename = "signature2")]
-    #[strum(serialize = "ESlot_Signature_2")]
-    Signature2,
-    #[serde(rename = "signature3")]
-    #[strum(serialize = "ESlot_Signature_3")]
-    Signature3,
-    #[serde(rename = "signature4")]
-    #[strum(serialize = "ESlot_Signature_4")]
-    Signature4,
-    #[strum(serialize = "ESlot_Cosmetic_1")]
-    EslotCosmetic1,
 }
 
 #[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq, Hash, ToSchema, EnumString)]

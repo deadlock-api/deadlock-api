@@ -1,0 +1,2159 @@
+---
+source: src/services/assets/versions/npc_units.rs
+assertion_line: 1168
+expression: units
+---
+[
+  {
+    "class_name": "weapon_base",
+    "id": 768565940,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_gravity_scale": 0.8,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 3.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 0.3,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 3000.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 2000.0,
+      "horizontal_punch": 0.0,
+      "range": 3500.0,
+      "bullet_speed": 18000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 0.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": 10,
+      "reload_duration": 1.5,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 3.3333333333333335,
+      "shots_per_second_with_reload": 2.1052631578947367,
+      "bullets_per_second": 3.3333333333333335,
+      "bullets_per_second_with_reload": 2.1052631578947367
+    }
+  },
+  {
+    "class_name": "trooper_base",
+    "id": 2180443324,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 36.0,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 3.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 1.03,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 1000.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 600.0,
+      "horizontal_punch": 0.0,
+      "range": 1000.0,
+      "bullet_speed": 12000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 2.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "reload_duration": 1.8,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 0.970873786407767,
+      "shots_per_second_with_reload": -0.9803921568627451,
+      "bullets_per_second": 0.970873786407767,
+      "bullets_per_second_with_reload": -0.9803921568627451,
+      "damage_per_second": 34.95145631067961,
+      "damage_per_second_with_reload": -35.29411764705882,
+      "damage_per_shot": 36.0
+    },
+    "max_health": 300,
+    "sight_range_players": 700.0,
+    "sight_range_npcs": 1600.0,
+    "near_death_duration": 1.0,
+    "walk_speed": 248.0,
+    "run_speed": 512.0,
+    "acceleration": 200.0,
+    "melee_attempt_range": 100.0,
+    "melee_hit_range": 100.0,
+    "health_bar_color_friend": {
+      "red": 255,
+      "green": 239,
+      "blue": 215,
+      "alpha": 255
+    },
+    "health_bar_color_enemy": {
+      "red": 230,
+      "green": 25,
+      "blue": 25,
+      "alpha": 255
+    },
+    "health_bar_color_team1": {
+      "red": 231,
+      "green": 182,
+      "blue": 89,
+      "alpha": 255
+    },
+    "health_bar_color_team2": {
+      "red": 91,
+      "green": 121,
+      "blue": 230,
+      "alpha": 255
+    },
+    "health_bar_color_team_neutral": {
+      "red": 0,
+      "green": 125,
+      "blue": 125,
+      "alpha": 255
+    }
+  },
+  {
+    "class_name": "trooper_zipline_container",
+    "id": 3237674373,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 36.0,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 3.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 1.03,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 1000.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 600.0,
+      "horizontal_punch": 0.0,
+      "range": 1000.0,
+      "bullet_speed": 12000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 2.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "reload_duration": 1.8,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 0.970873786407767,
+      "shots_per_second_with_reload": -0.9803921568627451,
+      "bullets_per_second": 0.970873786407767,
+      "bullets_per_second_with_reload": -0.9803921568627451,
+      "damage_per_second": 34.95145631067961,
+      "damage_per_second_with_reload": -35.29411764705882,
+      "damage_per_shot": 36.0
+    },
+    "max_health": 1,
+    "bound_abilities": {
+      "ability_zip_line": "citadel_ability_trooper_zip_line"
+    },
+    "sight_range_players": 700.0,
+    "sight_range_npcs": 1600.0,
+    "near_death_duration": 0.0,
+    "walk_speed": 248.0,
+    "run_speed": 512.0,
+    "acceleration": 200.0,
+    "spawn_breakables_on_death": false,
+    "melee_attempt_range": 100.0,
+    "melee_hit_range": 100.0,
+    "health_bar_color_friend": {
+      "red": 255,
+      "green": 239,
+      "blue": 215,
+      "alpha": 255
+    },
+    "health_bar_color_enemy": {
+      "red": 230,
+      "green": 25,
+      "blue": 25,
+      "alpha": 255
+    },
+    "health_bar_color_team1": {
+      "red": 231,
+      "green": 182,
+      "blue": 89,
+      "alpha": 255
+    },
+    "health_bar_color_team2": {
+      "red": 91,
+      "green": 121,
+      "blue": 230,
+      "alpha": 255
+    },
+    "health_bar_color_team_neutral": {
+      "red": 0,
+      "green": 125,
+      "blue": 125,
+      "alpha": 255
+    }
+  },
+  {
+    "class_name": "trooper_normal",
+    "id": 1773848083,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 36.0,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 3.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 1.03,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 1000.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 600.0,
+      "horizontal_punch": 0.0,
+      "range": 1000.0,
+      "bullet_speed": 12000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 2.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "reload_duration": 1.8,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 0.970873786407767,
+      "shots_per_second_with_reload": -0.9803921568627451,
+      "bullets_per_second": 0.970873786407767,
+      "bullets_per_second_with_reload": -0.9803921568627451,
+      "damage_per_second": 34.95145631067961,
+      "damage_per_second_with_reload": -35.29411764705882,
+      "damage_per_shot": 36.0
+    },
+    "max_health": 300,
+    "sight_range_players": 700.0,
+    "sight_range_npcs": 1600.0,
+    "near_death_duration": 1.0,
+    "walk_speed": 248.0,
+    "run_speed": 512.0,
+    "acceleration": 200.0,
+    "melee_damage": 50.0,
+    "spawn_breakables_on_death": true,
+    "melee_attempt_range": 100.0,
+    "melee_hit_range": 100.0,
+    "melee_duration": 1.5,
+    "health_bar_color_friend": {
+      "red": 255,
+      "green": 239,
+      "blue": 215,
+      "alpha": 255
+    },
+    "health_bar_color_enemy": {
+      "red": 230,
+      "green": 25,
+      "blue": 25,
+      "alpha": 255
+    },
+    "health_bar_color_team1": {
+      "red": 231,
+      "green": 182,
+      "blue": 89,
+      "alpha": 255
+    },
+    "health_bar_color_team2": {
+      "red": 91,
+      "green": 121,
+      "blue": 230,
+      "alpha": 255
+    },
+    "health_bar_color_team_neutral": {
+      "red": 0,
+      "green": 125,
+      "blue": 125,
+      "alpha": 255
+    }
+  },
+  {
+    "class_name": "trooper_medic",
+    "id": 1003135509,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 36.0,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 3.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 1.03,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 1400.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 600.0,
+      "horizontal_punch": 0.0,
+      "range": 1400.0,
+      "bullet_speed": 12000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 2.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "reload_duration": 1.8,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 0.970873786407767,
+      "shots_per_second_with_reload": -0.9803921568627451,
+      "bullets_per_second": 0.970873786407767,
+      "bullets_per_second_with_reload": -0.9803921568627451,
+      "damage_per_second": 34.95145631067961,
+      "damage_per_second_with_reload": -35.29411764705882,
+      "damage_per_shot": 36.0
+    },
+    "max_health": 350,
+    "bound_abilities": {
+      "signature2": "ability_medic_trooper_heal"
+    },
+    "sight_range_players": 900.0,
+    "sight_range_npcs": 1600.0,
+    "near_death_duration": 1.0,
+    "walk_speed": 248.0,
+    "run_speed": 512.0,
+    "acceleration": 200.0,
+    "melee_damage": 25.0,
+    "spawn_breakables_on_death": true,
+    "melee_attempt_range": 100.0,
+    "melee_hit_range": 100.0,
+    "melee_duration": 1.0,
+    "health_bar_color_friend": {
+      "red": 255,
+      "green": 239,
+      "blue": 215,
+      "alpha": 255
+    },
+    "health_bar_color_enemy": {
+      "red": 230,
+      "green": 25,
+      "blue": 25,
+      "alpha": 255
+    },
+    "health_bar_color_team1": {
+      "red": 231,
+      "green": 182,
+      "blue": 89,
+      "alpha": 255
+    },
+    "health_bar_color_team2": {
+      "red": 91,
+      "green": 121,
+      "blue": 230,
+      "alpha": 255
+    },
+    "health_bar_color_team_neutral": {
+      "red": 0,
+      "green": 125,
+      "blue": 125,
+      "alpha": 255
+    }
+  },
+  {
+    "class_name": "trooper_melee",
+    "id": 2943225653,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 61.8,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 3.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 1.03,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 1400.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 600.0,
+      "horizontal_punch": 0.0,
+      "range": 1400.0,
+      "bullet_speed": 12000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 2.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "reload_duration": 1.8,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 0.970873786407767,
+      "shots_per_second_with_reload": -0.9803921568627451,
+      "bullets_per_second": 0.970873786407767,
+      "bullets_per_second_with_reload": -0.9803921568627451,
+      "damage_per_second": 60.0,
+      "damage_per_second_with_reload": -60.588235294117645,
+      "damage_per_shot": 61.8
+    },
+    "max_health": 400,
+    "sight_range_players": 700.0,
+    "sight_range_npcs": 1600.0,
+    "near_death_duration": 1.0,
+    "walk_speed": 320.0,
+    "run_speed": 512.0,
+    "acceleration": 200.0,
+    "melee_damage": 80.0,
+    "spawn_breakables_on_death": true,
+    "melee_attempt_range": 120.0,
+    "melee_hit_range": 120.0,
+    "melee_duration": 1.333,
+    "health_bar_color_friend": {
+      "red": 255,
+      "green": 239,
+      "blue": 215,
+      "alpha": 255
+    },
+    "health_bar_color_enemy": {
+      "red": 230,
+      "green": 25,
+      "blue": 25,
+      "alpha": 255
+    },
+    "health_bar_color_team1": {
+      "red": 231,
+      "green": 182,
+      "blue": 89,
+      "alpha": 255
+    },
+    "health_bar_color_team2": {
+      "red": 91,
+      "green": 121,
+      "blue": 230,
+      "alpha": 255
+    },
+    "health_bar_color_team_neutral": {
+      "red": 0,
+      "green": 125,
+      "blue": 125,
+      "alpha": 255
+    }
+  },
+  {
+    "class_name": "npc_boss_tier1",
+    "id": 2977181093,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 16.0,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 12.0,
+      "bullet_radius_vs_world": 1.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 0.2,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 2000.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 2000.0,
+      "horizontal_punch": 0.0,
+      "range": 2000.0,
+      "bullet_speed": 18000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 0.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "reload_duration": 1.0,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 5.0,
+      "shots_per_second_with_reload": -0.9523809523809523,
+      "bullets_per_second": 5.0,
+      "bullets_per_second_with_reload": -0.9523809523809523,
+      "damage_per_second": 80.0,
+      "damage_per_second_with_reload": -15.238095238095237,
+      "damage_per_shot": 16.0
+    },
+    "max_health": 5500,
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 0.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST",
+              "value": 10.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 1338.58,
+    "sight_range_npcs": 700.0,
+    "player_damage_resist_pct": -25.0,
+    "trooper_damage_resist_pct": 42.5,
+    "run_speed": 300.0,
+    "melee_attempt_range": 196.85,
+    "melee_hit_range": 275.591,
+    "player_dps": 116.0,
+    "trooper_dps": 35.0
+  },
+  {
+    "class_name": "npc_barrack_boss",
+    "id": 2458524739,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 8.0,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 12.0,
+      "bullet_radius_vs_world": 1.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 0.2,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 2000.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 2000.0,
+      "horizontal_punch": 0.0,
+      "range": 2000.0,
+      "bullet_speed": 18000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 0.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "reload_duration": 1.0,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 5.0,
+      "shots_per_second_with_reload": -0.9523809523809523,
+      "bullets_per_second": 5.0,
+      "bullets_per_second_with_reload": -0.9523809523809523,
+      "damage_per_second": 40.0,
+      "damage_per_second_with_reload": -7.619047619047619,
+      "damage_per_shot": 8.0
+    },
+    "max_health": 4000,
+    "enemy_trooper_protection_range": 1575.0,
+    "backdoor_bullet_resist_modifier": {
+      "subclass": {
+        "bullet_resist": 40,
+        "bullet_resist_reduction_per_hero": 20
+      }
+    },
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 0.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST",
+              "value": 10.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 1250.0,
+    "sight_range_npcs": 1500.0,
+    "player_damage_resist_pct": -25.0,
+    "trooper_damage_resist_pct": 42.5,
+    "run_speed": 300.0,
+    "melee_attempt_range": 250.0,
+    "melee_hit_range": 275.0,
+    "melee_duration": 0.6,
+    "player_dps": 116.0,
+    "trooper_dps": 35.0
+  },
+  {
+    "class_name": "npc_barrack_boss_amber",
+    "id": 3342945378,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 8.0,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 12.0,
+      "bullet_radius_vs_world": 1.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 0.2,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 2000.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 2000.0,
+      "horizontal_punch": 0.0,
+      "range": 2000.0,
+      "bullet_speed": 18000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 0.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "reload_duration": 1.0,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 5.0,
+      "shots_per_second_with_reload": -0.9523809523809523,
+      "bullets_per_second": 5.0,
+      "bullets_per_second_with_reload": -0.9523809523809523,
+      "damage_per_second": 40.0,
+      "damage_per_second_with_reload": -7.619047619047619,
+      "damage_per_shot": 8.0
+    },
+    "max_health": 4000,
+    "enemy_trooper_protection_range": 1575.0,
+    "backdoor_bullet_resist_modifier": {
+      "subclass": {
+        "bullet_resist": 40,
+        "bullet_resist_reduction_per_hero": 20
+      }
+    },
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 0.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST",
+              "value": 10.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 1250.0,
+    "sight_range_npcs": 1500.0,
+    "player_damage_resist_pct": -25.0,
+    "trooper_damage_resist_pct": 42.5,
+    "run_speed": 300.0,
+    "melee_attempt_range": 250.0,
+    "melee_hit_range": 275.0,
+    "melee_duration": 0.6,
+    "player_dps": 116.0,
+    "trooper_dps": 35.0
+  },
+  {
+    "class_name": "npc_barrack_boss_sapphire",
+    "id": 1113860772,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 8.0,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 12.0,
+      "bullet_radius_vs_world": 1.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 0.2,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 2000.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 2000.0,
+      "horizontal_punch": 0.0,
+      "range": 2000.0,
+      "bullet_speed": 18000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 0.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "reload_duration": 1.0,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 5.0,
+      "shots_per_second_with_reload": -0.9523809523809523,
+      "bullets_per_second": 5.0,
+      "bullets_per_second_with_reload": -0.9523809523809523,
+      "damage_per_second": 40.0,
+      "damage_per_second_with_reload": -7.619047619047619,
+      "damage_per_shot": 8.0
+    },
+    "max_health": 4000,
+    "enemy_trooper_protection_range": 1575.0,
+    "backdoor_bullet_resist_modifier": {
+      "subclass": {
+        "bullet_resist": 40,
+        "bullet_resist_reduction_per_hero": 20
+      }
+    },
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 0.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST",
+              "value": 10.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 1250.0,
+    "sight_range_npcs": 1500.0,
+    "player_damage_resist_pct": -25.0,
+    "trooper_damage_resist_pct": 42.5,
+    "run_speed": 300.0,
+    "melee_attempt_range": 250.0,
+    "melee_hit_range": 275.0,
+    "melee_duration": 0.6,
+    "player_dps": 116.0,
+    "trooper_dps": 35.0
+  },
+  {
+    "class_name": "destroyable_building",
+    "id": 746131114,
+    "max_health_final": 8775,
+    "max_health_generator": 5000,
+    "enemy_trooper_protection_range": 1575.0,
+    "backdoor_bullet_resist_modifier": {
+      "subclass": {
+        "bullet_resist": 60,
+        "bullet_resist_reduction_per_hero": 20
+      }
+    },
+    "ranged_armor_modifier": {
+      "subclass": {
+        "range_min": 1300.0,
+        "range_max": 1300.0,
+        "invuln_range": 450.0
+      }
+    },
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 0.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST",
+              "value": 10.0
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "class_name": "alt_npc_boss_tier1",
+    "id": 2713571573,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 16.0,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 12.0,
+      "bullet_radius_vs_world": 1.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 0.2,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 2000.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 2000.0,
+      "horizontal_punch": 0.0,
+      "range": 2000.0,
+      "bullet_speed": 18000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 0.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "reload_duration": 1.0,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 5.0,
+      "shots_per_second_with_reload": -0.9523809523809523,
+      "bullets_per_second": 5.0,
+      "bullets_per_second_with_reload": -0.9523809523809523,
+      "damage_per_second": 80.0,
+      "damage_per_second_with_reload": -15.238095238095237,
+      "damage_per_shot": 16.0
+    },
+    "max_health": 5500,
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 0.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST",
+              "value": 10.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 1338.58,
+    "sight_range_npcs": 700.0,
+    "player_damage_resist_pct": -25.0,
+    "trooper_damage_resist_pct": 42.5,
+    "run_speed": 300.0,
+    "melee_attempt_range": 196.85,
+    "melee_hit_range": 275.591,
+    "player_dps": 116.0,
+    "trooper_dps": 35.0
+  },
+  {
+    "class_name": "nano_rollermine",
+    "id": 2313689504,
+    "sight_range_players": 1024.0,
+    "sight_range_npcs": 1024.0
+  },
+  {
+    "class_name": "citadel_cat_animating",
+    "id": 3402320969
+  },
+  {
+    "class_name": "npc_super_neutral",
+    "id": 1166266048,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 20.0,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 3.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 0.2,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 1500.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 1500.0,
+      "horizontal_punch": 0.0,
+      "range": 1500.0,
+      "bullet_speed": 13000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 1.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "reload_duration": 0.0,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 5.0,
+      "shots_per_second_with_reload": -20.000000000000004,
+      "bullets_per_second": 5.0,
+      "bullets_per_second_with_reload": -20.000000000000004,
+      "damage_per_second": 100.0,
+      "damage_per_second_with_reload": -400.00000000000006,
+      "damage_per_shot": 20.0
+    },
+    "bound_abilities": {
+      "signature1": "super_neutral_shield",
+      "signature2": "super_neutral_charge"
+    },
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_HEALTH_REGEN_PER_SECOND",
+              "value": 15.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 0.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST",
+              "value": 15.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_STATUS_RESISTANCE",
+              "value": 35.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 1500.0,
+    "sight_range_npcs": 1500.0
+  },
+  {
+    "class_name": "neutral_base",
+    "id": 718596933,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_gravity_scale": 0.8,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 3.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 0.3,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 3000.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 2000.0,
+      "horizontal_punch": 0.0,
+      "range": 3500.0,
+      "bullet_speed": 18000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 0.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": 10,
+      "reload_duration": 1.5,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 3.3333333333333335,
+      "shots_per_second_with_reload": 2.1052631578947367,
+      "bullets_per_second": 3.3333333333333335,
+      "bullets_per_second_with_reload": 2.1052631578947367
+    },
+    "sight_range_players": 2000.0,
+    "gold_reward": 89.0,
+    "gold_reward_bonus_percent_per_minute": 1.08
+  },
+  {
+    "class_name": "neutral_trooper_weak",
+    "id": 1250952856,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 2.415,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 3.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 0.5,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 1500.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 1500.0,
+      "horizontal_punch": 0.0,
+      "range": 1500.0,
+      "bullet_speed": 6000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 5.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "reload_duration": 0.25,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 2.0,
+      "shots_per_second_with_reload": 0.0,
+      "bullets_per_second": 2.0,
+      "damage_per_second": 4.83,
+      "damage_per_shot": 2.415
+    },
+    "max_health": 129,
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_DAMAGE_REDUCTION_PERCENT",
+              "value": 50.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 45.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 2000.0,
+    "gold_reward": 41.0,
+    "gold_reward_bonus_percent_per_minute": 1.08
+  },
+  {
+    "class_name": "neutral_trooper_normal",
+    "id": 941701082,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 6.125,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 3.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 0.5,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 1500.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 1500.0,
+      "horizontal_punch": 0.0,
+      "range": 1500.0,
+      "bullet_speed": 6000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 5.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "reload_duration": 0.25,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 2.0,
+      "shots_per_second_with_reload": 0.0,
+      "bullets_per_second": 2.0,
+      "damage_per_second": 12.25,
+      "damage_per_shot": 6.125
+    },
+    "max_health": 322,
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_DAMAGE_REDUCTION_PERCENT",
+              "value": 50.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 45.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 2000.0,
+    "gold_reward": 68.0,
+    "gold_reward_bonus_percent_per_minute": 1.08
+  },
+  {
+    "class_name": "neutral_trooper_strong",
+    "id": 3392417854,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 9.1,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 3.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 0.5,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 1500.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 1500.0,
+      "horizontal_punch": 0.0,
+      "range": 1500.0,
+      "bullet_speed": 6000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 5.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "reload_duration": 0.25,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 2.0,
+      "shots_per_second_with_reload": 0.0,
+      "bullets_per_second": 2.0,
+      "damage_per_second": 18.2,
+      "damage_per_shot": 9.1
+    },
+    "max_health": 1133,
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_DAMAGE_REDUCTION_PERCENT",
+              "value": 60.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 55.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_MELEE_DAMAGE_INCREASE_PERCENT",
+              "value": 20.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 2000.0,
+    "gold_reward": 181.0,
+    "gold_reward_bonus_percent_per_minute": 1.08
+  },
+  {
+    "class_name": "npc_neutral_weakpoint",
+    "id": 1384726732
+  },
+  {
+    "class_name": "npc_neutral_weakpoint_med",
+    "id": 1964349235
+  },
+  {
+    "class_name": "npc_neutral_weakpoint_strong",
+    "id": 2164975349
+  },
+  {
+    "class_name": "npc_neutral_flying_weakpoint_base",
+    "id": 1824607641
+  },
+  {
+    "class_name": "npc_neutral_flying_weakpoint",
+    "id": 4167471243
+  },
+  {
+    "class_name": "npc_neutral_flying_weakpoint_weak",
+    "id": 3322995697
+  },
+  {
+    "class_name": "npc_neutral_flying_weakpoint_med",
+    "id": 3923359380
+  },
+  {
+    "class_name": "npc_neutral_flying_weakpoint_strong",
+    "id": 1767170318
+  },
+  {
+    "class_name": "neutral_sinners_sacrifice",
+    "id": 855199377,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_gravity_scale": 0.8,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 3.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 0.3,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 3000.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 2000.0,
+      "horizontal_punch": 0.0,
+      "range": 0.0,
+      "bullet_speed": 18000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 0.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": 10,
+      "reload_duration": 1.5,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 3.3333333333333335,
+      "shots_per_second_with_reload": 2.1052631578947367,
+      "bullets_per_second": 3.3333333333333335,
+      "bullets_per_second_with_reload": 2.1052631578947367
+    },
+    "max_health": 500,
+    "intrinsic_modifiers": [
+      {
+        "subclass": {}
+      }
+    ],
+    "sight_range_players": 2000.0,
+    "gold_reward": 155.0,
+    "gold_reward_bonus_percent_per_minute": 1.08,
+    "spawn_breakables_on_death": true
+  },
+  {
+    "class_name": "npc_neutral_sinners_sacrifice_hideout",
+    "id": 2357089212,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_gravity_scale": 0.8,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 3.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 0.3,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 3000.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 2000.0,
+      "horizontal_punch": 0.0,
+      "range": 0.0,
+      "bullet_speed": 18000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 0.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": 10,
+      "reload_duration": 1.5,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 3.3333333333333335,
+      "shots_per_second_with_reload": 2.1052631578947367,
+      "bullets_per_second": 3.3333333333333335,
+      "bullets_per_second_with_reload": 2.1052631578947367
+    },
+    "max_health": 500,
+    "intrinsic_modifiers": [
+      {
+        "subclass": {}
+      }
+    ],
+    "sight_range_players": 2000.0,
+    "gold_reward": 155.0,
+    "gold_reward_bonus_percent_per_minute": 1.08,
+    "spawn_breakables_on_death": true
+  },
+  {
+    "class_name": "npc_neutral_bug",
+    "id": 1838034729,
+    "max_health": 1,
+    "intrinsic_modifiers": [
+      {
+        "subclass": {}
+      }
+    ]
+  },
+  {
+    "class_name": "npc_boss_tier2",
+    "id": 3493103073,
+    "max_health": 6000,
+    "bound_abilities": {
+      "signature1": "citadel_ability_tier2boss_rocket_barrage",
+      "signature2": "citadel_ability_tier2boss_laser_beam",
+      "signature3": "citadel_ability_tier2boss_stomp",
+      "signature4": "citadel_ability_tier2boss_aoe_wave"
+    },
+    "empowered_modifier_level1": {
+      "subclass": {
+        "max_health": 9000,
+        "transition_duration": 1.0,
+        "model_scale": 1.0
+      }
+    },
+    "empowered_modifier_level2": {
+      "subclass": {
+        "max_health": 12000,
+        "transition_duration": 1.0,
+        "model_scale": 1.15
+      }
+    },
+    "ranged_armor_modifier": {
+      "subclass": {
+        "range_min": 1200.0,
+        "range_max": 2000.0
+      }
+    },
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 0.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST",
+              "value": 25.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 944.0,
+    "sight_range_npcs": 1102.36,
+    "stomp_damage": 350.0,
+    "stomp_damage_max_health_percent": 15.0,
+    "stun_duration": 2.0,
+    "stomp_impact_radius": 570.8661,
+    "melee_damage": 300.0,
+    "melee_attempt_range": 600.0,
+    "melee_duration": 0.9,
+    "health_bar_color_friend": {
+      "red": 255,
+      "green": 239,
+      "blue": 215,
+      "alpha": 255
+    },
+    "health_bar_color_enemy": {
+      "red": 230,
+      "green": 25,
+      "blue": 25,
+      "alpha": 255
+    },
+    "health_bar_color_team1": {
+      "red": 231,
+      "green": 182,
+      "blue": 89,
+      "alpha": 255
+    },
+    "health_bar_color_team2": {
+      "red": 91,
+      "green": 121,
+      "blue": 230,
+      "alpha": 255
+    },
+    "health_bar_color_team_neutral": {
+      "red": 0,
+      "green": 125,
+      "blue": 125,
+      "alpha": 255
+    }
+  },
+  {
+    "class_name": "alt_npc_boss_tier2",
+    "id": 736669903,
+    "max_health": 6000,
+    "bound_abilities": {
+      "signature1": "citadel_ability_tier2boss_rocket_barrage",
+      "signature2": "citadel_ability_tier2boss_laser_beam",
+      "signature3": "citadel_ability_tier2boss_stomp",
+      "signature4": "citadel_ability_tier2boss_aoe_wave"
+    },
+    "empowered_modifier_level1": {
+      "subclass": {
+        "max_health": 9000,
+        "transition_duration": 1.0,
+        "model_scale": 1.0
+      }
+    },
+    "empowered_modifier_level2": {
+      "subclass": {
+        "max_health": 12000,
+        "transition_duration": 1.0,
+        "model_scale": 1.15
+      }
+    },
+    "ranged_armor_modifier": {
+      "subclass": {
+        "range_min": 1200.0,
+        "range_max": 2000.0
+      }
+    },
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 0.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST",
+              "value": 25.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 944.0,
+    "sight_range_npcs": 1102.36,
+    "stomp_damage": 350.0,
+    "stomp_damage_max_health_percent": 15.0,
+    "stun_duration": 2.0,
+    "stomp_impact_radius": 570.8661,
+    "melee_damage": 300.0,
+    "melee_attempt_range": 600.0,
+    "melee_duration": 0.9,
+    "health_bar_color_friend": {
+      "red": 255,
+      "green": 239,
+      "blue": 215,
+      "alpha": 255
+    },
+    "health_bar_color_enemy": {
+      "red": 230,
+      "green": 25,
+      "blue": 25,
+      "alpha": 255
+    },
+    "health_bar_color_team1": {
+      "red": 231,
+      "green": 182,
+      "blue": 89,
+      "alpha": 255
+    },
+    "health_bar_color_team2": {
+      "red": 91,
+      "green": 121,
+      "blue": 230,
+      "alpha": 255
+    },
+    "health_bar_color_team_neutral": {
+      "red": 0,
+      "green": 125,
+      "blue": 125,
+      "alpha": 255
+    }
+  },
+  {
+    "class_name": "npc_boss_tier2_weak",
+    "id": 4174712489,
+    "max_health": 6000,
+    "bound_abilities": {
+      "signature1": "citadel_ability_tier2boss_rocket_barrage",
+      "signature2": "citadel_ability_tier2boss_laser_beam",
+      "signature3": "citadel_ability_tier2boss_stomp",
+      "signature4": "citadel_ability_tier2boss_aoe_wave"
+    },
+    "empowered_modifier_level1": {
+      "subclass": {
+        "max_health": 9000,
+        "transition_duration": 1.0,
+        "model_scale": 1.0
+      }
+    },
+    "empowered_modifier_level2": {
+      "subclass": {
+        "max_health": 12000,
+        "transition_duration": 1.0,
+        "model_scale": 1.15
+      }
+    },
+    "ranged_armor_modifier": {
+      "subclass": {
+        "range_min": 1200.0,
+        "range_max": 2000.0
+      }
+    },
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 0.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST",
+              "value": 25.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 944.0,
+    "sight_range_npcs": 1102.36,
+    "stomp_damage": 350.0,
+    "stomp_damage_max_health_percent": 15.0,
+    "stun_duration": 2.0,
+    "stomp_impact_radius": 570.8661,
+    "melee_damage": 300.0,
+    "melee_attempt_range": 600.0,
+    "melee_duration": 0.9,
+    "health_bar_color_friend": {
+      "red": 255,
+      "green": 239,
+      "blue": 215,
+      "alpha": 255
+    },
+    "health_bar_color_enemy": {
+      "red": 230,
+      "green": 25,
+      "blue": 25,
+      "alpha": 255
+    },
+    "health_bar_color_team1": {
+      "red": 231,
+      "green": 182,
+      "blue": 89,
+      "alpha": 255
+    },
+    "health_bar_color_team2": {
+      "red": 91,
+      "green": 121,
+      "blue": 230,
+      "alpha": 255
+    },
+    "health_bar_color_team_neutral": {
+      "red": 0,
+      "green": 125,
+      "blue": 125,
+      "alpha": 255
+    }
+  },
+  {
+    "class_name": "alt_npc_boss_tier2_weak",
+    "id": 3601160001,
+    "max_health": 6000,
+    "bound_abilities": {
+      "signature1": "citadel_ability_tier2boss_rocket_barrage",
+      "signature2": "citadel_ability_tier2boss_laser_beam",
+      "signature3": "citadel_ability_tier2boss_stomp",
+      "signature4": "citadel_ability_tier2boss_aoe_wave"
+    },
+    "empowered_modifier_level1": {
+      "subclass": {
+        "max_health": 9000,
+        "transition_duration": 1.0,
+        "model_scale": 1.0
+      }
+    },
+    "empowered_modifier_level2": {
+      "subclass": {
+        "max_health": 12000,
+        "transition_duration": 1.0,
+        "model_scale": 1.15
+      }
+    },
+    "ranged_armor_modifier": {
+      "subclass": {
+        "range_min": 1200.0,
+        "range_max": 2000.0
+      }
+    },
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 0.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST",
+              "value": 25.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 944.0,
+    "sight_range_npcs": 1102.36,
+    "stomp_damage": 350.0,
+    "stomp_damage_max_health_percent": 15.0,
+    "stun_duration": 2.0,
+    "stomp_impact_radius": 570.8661,
+    "melee_damage": 300.0,
+    "melee_attempt_range": 600.0,
+    "melee_duration": 0.9,
+    "health_bar_color_friend": {
+      "red": 255,
+      "green": 239,
+      "blue": 215,
+      "alpha": 255
+    },
+    "health_bar_color_enemy": {
+      "red": 230,
+      "green": 25,
+      "blue": 25,
+      "alpha": 255
+    },
+    "health_bar_color_team1": {
+      "red": 231,
+      "green": 182,
+      "blue": 89,
+      "alpha": 255
+    },
+    "health_bar_color_team2": {
+      "red": 91,
+      "green": 121,
+      "blue": 230,
+      "alpha": 255
+    },
+    "health_bar_color_team_neutral": {
+      "red": 0,
+      "green": 125,
+      "blue": 125,
+      "alpha": 255
+    }
+  },
+  {
+    "class_name": "npc_shielded_sentry",
+    "id": 4039205640,
+    "near_death_duration": 0.8
+  },
+  {
+    "class_name": "npc_yakuza_gangster",
+    "id": 2850028344,
+    "melee_attempt_range": 0.0
+  },
+  {
+    "class_name": "citadel_bounce_pad",
+    "id": 203831622
+  },
+  {
+    "class_name": "citadel_viscous_ball",
+    "id": 1885199434
+  },
+  {
+    "class_name": "npc_base_defense_sentry",
+    "id": 3436570796
+  },
+  {
+    "class_name": "npc_field_sentry",
+    "id": 861957705
+  },
+  {
+    "class_name": "npc_player_bot_brain",
+    "id": 3288425227,
+    "sight_range_players": 1600.0,
+    "sight_range_npcs": 1600.0
+  },
+  {
+    "class_name": "bullet_time_warp",
+    "id": 1106346047
+  },
+  {
+    "class_name": "bullet_redirect_volume",
+    "id": 2883227263
+  },
+  {
+    "class_name": "projectile_touch_volume",
+    "id": 2380824004
+  },
+  {
+    "class_name": "citadel_item_punchable_gold",
+    "id": 3045641808
+  },
+  {
+    "class_name": "citadel_item_pickup_rejuv",
+    "id": 289368075
+  },
+  {
+    "class_name": "citadel_item_pickup_rejuv_herotest",
+    "id": 3820209822
+  },
+  {
+    "class_name": "citadel_spider_animating",
+    "id": 531062045
+  },
+  {
+    "class_name": "shield_escort",
+    "id": 2845108504,
+    "weapon_info": {
+      "bullet_damage": 75.0,
+      "cycle_time": 0.1,
+      "shots_per_second": 10.0
+    },
+    "max_health": 5000,
+    "bound_abilities": {
+      "signature1": "vanguard_aoe_buff",
+      "signature2": "ability_npc_shield"
+    },
+    "sight_range_players": 3000.0,
+    "sight_range_npcs": 3000.0,
+    "walk_speed": 248.0,
+    "run_speed": 512.0
+  },
+  {
+    "class_name": "citadel_hideout_shootable_target_spawner",
+    "id": 3352425018
+  },
+  {
+    "class_name": "npc_neutral_flying_pigeon",
+    "id": 3808026914
+  },
+  {
+    "class_name": "npc_neutral_hideout_cat",
+    "id": 2586053867,
+    "walk_speed": 150.0,
+    "run_speed": 320.0
+  },
+  {
+    "class_name": "npc_neutral_hideout_rabbit",
+    "id": 3438906538,
+    "walk_speed": 100.0,
+    "run_speed": 390.0
+  },
+  {
+    "class_name": "citadel_hideout_clock",
+    "id": 2036685539
+  },
+  {
+    "class_name": "citadel_hideout_ball",
+    "id": 202471042
+  },
+  {
+    "class_name": "npc_necro_skele",
+    "id": 1789419264,
+    "intrinsic_modifiers": [
+      {
+        "subclass": {}
+      }
+    ],
+    "sight_range_players": 1200.0,
+    "sight_range_npcs": 1200.0,
+    "walk_speed": 230.0,
+    "run_speed": 230.0,
+    "acceleration": 0.0,
+    "melee_attempt_range": 100.0,
+    "melee_hit_range": 110.0
+  },
+  {
+    "class_name": "npc_familiar_helper",
+    "id": 653905635,
+    "melee_attempt_range": 0.0
+  },
+  {
+    "class_name": "trooper_necro",
+    "id": 3560296272,
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 61.8,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 2.0,
+      "bullet_radius": 3.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "burst_shot_cooldown": 0.0,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 1.03,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 1400.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 600.0,
+      "horizontal_punch": 0.0,
+      "range": 1400.0,
+      "bullet_speed": 12000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 2.0,
+      "vertical_punch": 0.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "reload_duration": 1.8,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "shots_per_second": 0.970873786407767,
+      "shots_per_second_with_reload": -0.9803921568627451,
+      "bullets_per_second": 0.970873786407767,
+      "bullets_per_second_with_reload": -0.9803921568627451,
+      "damage_per_second": 60.0,
+      "damage_per_second_with_reload": -60.588235294117645,
+      "damage_per_shot": 61.8
+    },
+    "max_health": 400,
+    "sight_range_players": 700.0,
+    "sight_range_npcs": 1600.0,
+    "near_death_duration": 1.0,
+    "walk_speed": 320.0,
+    "run_speed": 512.0,
+    "acceleration": 200.0,
+    "melee_damage": 80.0,
+    "melee_attempt_range": 120.0,
+    "melee_hit_range": 120.0,
+    "melee_duration": 1.333,
+    "health_bar_color_friend": {
+      "red": 255,
+      "green": 239,
+      "blue": 215,
+      "alpha": 255
+    },
+    "health_bar_color_enemy": {
+      "red": 230,
+      "green": 25,
+      "blue": 25,
+      "alpha": 255
+    },
+    "health_bar_color_team1": {
+      "red": 231,
+      "green": 182,
+      "blue": 89,
+      "alpha": 255
+    },
+    "health_bar_color_team2": {
+      "red": 91,
+      "green": 121,
+      "blue": 230,
+      "alpha": 255
+    },
+    "health_bar_color_team_neutral": {
+      "red": 0,
+      "green": 125,
+      "blue": 125,
+      "alpha": 255
+    }
+  },
+  {
+    "class_name": "citadel_fissure_wall",
+    "id": 1956095138
+  }
+]

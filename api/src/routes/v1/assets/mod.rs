@@ -8,11 +8,15 @@ use crate::middleware::cache::CacheControlMiddleware;
 mod accolades;
 mod common;
 mod heroes;
+mod misc_entities;
+mod npc_units;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .nest("/accolades", accolades::router())
         .nest("/heroes", heroes::router())
+        .nest("/misc-entities", misc_entities::router())
+        .nest("/npc-units", npc_units::router())
         .layer(
             CacheControlMiddleware::new(Duration::from_hours(1))
                 .with_stale_while_revalidate(Duration::from_hours(24))

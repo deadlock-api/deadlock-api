@@ -6,8 +6,11 @@
 //! the public `/v2/...` JSON shapes.
 
 pub(crate) mod accolades;
+pub(crate) mod common;
 pub(crate) mod css;
 pub(crate) mod error;
 pub(crate) mod heroes;
 pub(crate) mod localization;
+pub(crate) mod misc_entities;
+pub(crate) mod npc_units;
 pub(crate) mod store;

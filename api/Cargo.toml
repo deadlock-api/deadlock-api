@@ -65,6 +65,7 @@ tantivy = { version = "0.26.1", features = ["zstd-compression"] }
 arc-swap = "1.9.1"
 cssparser = "0.37"
 indexmap = { version = "2", features = ["serde"] }
+murmur2 = "0.1.0"
 
 [dev-dependencies]
 clickhouse-sql-parser = { git = "https://github.com/raimannma/clickhouse-antlr4", version = "0.1.0" }
