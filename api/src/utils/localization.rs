@@ -1,4 +1,4 @@
-//! Valve KeyValues (KV1) localization file parser.
+//! Valve `KeyValues` (KV1) localization file parser.
 //!
 //! Parses Valve's text-format localization files (e.g. `accolades_english.txt`,
 //! `citadel_main_english.txt`) into a typed [`Localization`] struct with
@@ -149,19 +149,17 @@ impl<'a> Parser<'a> {
             let start = self.idx;
             // Fast path: scan for `"` or `\\`.
             let bytes = self.bytes;
-            loop {
-                match memchr::memchr2(b'"', b'\\', &bytes[self.idx..]) {
-                    None => return Err(self.err("unterminated string")),
-                    Some(off) => {
-                        let pos = self.idx + off;
-                        if bytes[pos] == b'"' {
-                            let s = &self.src[start..pos];
-                            self.idx = pos + 1;
-                            return Ok(Cow::Borrowed(s));
-                        }
-                        // Escape found — switch to the slow path that allocates.
-                        return self.read_quoted_with_escapes(start, pos);
+            match memchr::memchr2(b'"', b'\\', &bytes[self.idx..]) {
+                None => return Err(self.err("unterminated string")),
+                Some(off) => {
+                    let pos = self.idx + off;
+                    if bytes[pos] == b'"' {
+                        let s = &self.src[start..pos];
+                        self.idx = pos + 1;
+                        return Ok(Cow::Borrowed(s));
                     }
+                    // Escape found — switch to the slow path that allocates.
+                    return self.read_quoted_with_escapes(start, pos);
                 }
             }
         }
@@ -275,22 +273,19 @@ impl<'a> Parser<'a> {
             let key = self.read_string()?;
             self.skip_ws_and_comments();
 
-            match self.peek() {
-                Some(b'{') => {
-                    self.idx += 1;
-                    if key.eq_ignore_ascii_case("Tokens") {
-                        self.parse_block_into(out)?;
-                    } else {
-                        self.skip_block()?;
-                    }
+            if let Some(b'{') = self.peek() {
+                self.idx += 1;
+                if key.eq_ignore_ascii_case("Tokens") {
+                    self.parse_block_into(out)?;
+                } else {
+                    self.skip_block()?;
                 }
-                _ => {
-                    let value = self.read_string()?;
-                    if key.eq_ignore_ascii_case("Language") && out.language.is_none() {
-                        out.language = Some(value);
-                    } else {
-                        out.tokens.push((key, value));
-                    }
+            } else {
+                let value = self.read_string()?;
+                if key.eq_ignore_ascii_case("Language") && out.language.is_none() {
+                    out.language = Some(value);
+                } else {
+                    out.tokens.push((key, value));
                 }
             }
         }

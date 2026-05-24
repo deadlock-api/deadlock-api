@@ -1,4 +1,4 @@
-//! KV3 (Valve KeyValues3) text format parser.
+//! KV3 (Valve `KeyValues3`) text format parser.
 //!
 //! Parses KV3 text into a borrowed [`Kv3Value`] and exposes [`from_str`] for
 //! deserializing directly into any `serde::Deserialize` type. A
@@ -38,7 +38,7 @@ pub enum Kv3Error {
 }
 
 impl de::Error for Kv3Error {
-    fn custom<T: std::fmt::Display>(msg: T) -> Self {
+    fn custom<T: core::fmt::Display>(msg: T) -> Self {
         Self::Custom(msg.to_string())
     }
 }
@@ -162,7 +162,7 @@ impl<'de> Deserializer<'de> for &'de Kv3Value<'de> {
 }
 
 struct SeqVisitor<'de> {
-    iter: std::slice::Iter<'de, Kv3Value<'de>>,
+    iter: core::slice::Iter<'de, Kv3Value<'de>>,
 }
 impl<'de> SeqAccess<'de> for SeqVisitor<'de> {
     type Error = Kv3Error;
@@ -178,7 +178,7 @@ impl<'de> SeqAccess<'de> for SeqVisitor<'de> {
 }
 
 struct MapVisitor<'de> {
-    iter: std::slice::Iter<'de, (Cow<'de, str>, Kv3Value<'de>)>,
+    iter: core::slice::Iter<'de, (Cow<'de, str>, Kv3Value<'de>)>,
     value: Option<&'de Kv3Value<'de>>,
 }
 impl<'de> MapAccess<'de> for MapVisitor<'de> {
@@ -284,7 +284,7 @@ impl<'a> Parser<'a> {
     fn err(&self, msg: impl Into<String>) -> Kv3Error {
         let prefix = &self.src[..self.idx.min(self.src.len())];
         let line = prefix.bytes().filter(|b| *b == b'\n').count() + 1;
-        let col = prefix.rsplit('\n').next().map(str::len).unwrap_or(0) + 1;
+        let col = prefix.rsplit('\n').next().map_or(0, str::len) + 1;
         Kv3Error::Parse {
             msg: msg.into(),
             line,
@@ -355,7 +355,7 @@ impl<'a> Parser<'a> {
             b'[' => self.parse_array(),
             b'"' => self.parse_string().map(Kv3Value::Str),
             b'-' | b'0'..=b'9' => self.parse_number(),
-            _ => self.parse_keyword_or_resource(),
+            _ => Ok(self.parse_keyword_or_resource()),
         }
     }
 
@@ -531,7 +531,7 @@ impl<'a> Parser<'a> {
         Err(self.err(format!("invalid number: {text}")))
     }
 
-    fn parse_keyword_or_resource(&mut self) -> Result<Kv3Value<'a>, Kv3Error> {
+    fn parse_keyword_or_resource(&mut self) -> Kv3Value<'a> {
         let bytes = self.bytes();
         let start = self.idx;
         let mut in_quotes = false;
@@ -539,9 +539,9 @@ impl<'a> Parser<'a> {
             let b = bytes[self.idx];
             if b == b'"' {
                 in_quotes = !in_quotes;
-            } else if b.is_ascii_whitespace() {
-                break;
-            } else if !in_quotes && matches!(b, b'{' | b'}' | b'[' | b']') {
+            } else if b.is_ascii_whitespace()
+                || (!in_quotes && matches!(b, b'{' | b'}' | b'[' | b']'))
+            {
                 break;
             }
             self.idx += 1;
@@ -549,12 +549,12 @@ impl<'a> Parser<'a> {
         // Loop breaks on whitespace before advancing, so the slice never has
         // leading/trailing whitespace — no trim needed.
         let kw = &self.src[start..self.idx];
-        Ok(match kw {
+        match kw {
             "true" => Kv3Value::Bool(true),
             "false" => Kv3Value::Bool(false),
             "null" => Kv3Value::Null,
             other => Kv3Value::Str(Cow::Borrowed(other)),
-        })
+        }
     }
 
     fn parse_key(&mut self) -> Result<(Cow<'a, str>, Option<&'a str>), Kv3Error> {
@@ -603,7 +603,8 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::time::{Duration, Instant};
+    use core::time::Duration;
+    use std::time::Instant;
 
     use super::*;
 
@@ -705,6 +706,7 @@ mod tests {
                 f();
             }
             let avg: Duration = t0.elapsed() / n;
+            #[allow(clippy::cast_precision_loss)]
             let mb = (len as f64) / avg.as_secs_f64() / 1024.0 / 1024.0;
             println!("{label:>32}: {len} bytes, avg {avg:?}, {mb:.1} MB/s");
         }

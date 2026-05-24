@@ -4,8 +4,8 @@
 //! zstd-compressed. The store fetches, decompresses, and caches them in
 //! memory. Listing the version directory yields the set of known patches.
 
+use core::time::Duration;
 use std::sync::Arc;
-use std::time::Duration;
 
 use arc_swap::ArcSwap;
 use async_compression::tokio::bufread::ZstdDecoder;
@@ -53,7 +53,7 @@ impl VersionStore {
         let this = self.clone();
         tokio::spawn(async move {
             loop {
-                tokio::time::sleep(Duration::from_secs(15 * 60)).await;
+                tokio::time::sleep(Duration::from_mins(15)).await;
                 if let Err(e) = this.refresh_now(&r2).await {
                     tracing::warn!("Failed to refresh versions: {e}");
                 }

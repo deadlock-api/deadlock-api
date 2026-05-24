@@ -12,6 +12,7 @@ use std::collections::HashMap;
 /// Convenience wrapper around the heroes pipeline that returns the same
 /// `Vec<Value>` the public endpoint serves, so snapshot tests don't need
 /// access to the private `HeroV2` types.
+#[allow(clippy::implicit_hasher)]
 pub fn build_heroes_json(
     heroes_vdata: &str,
     localization: &HashMap<String, String>,
