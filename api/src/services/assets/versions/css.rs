@@ -141,7 +141,7 @@ fn find_background_image(p: &mut Parser<'_, '_>) -> Option<String> {
 }
 
 fn write_token(buf: &mut String, t: &Token<'_>) {
-    use std::fmt::Write;
+    use core::fmt::Write;
     match t {
         Token::Ident(s) => buf.push_str(s),
         Token::AtKeyword(s) => {
@@ -183,8 +183,8 @@ mod tests {
         assert_eq!(map.get("hero_inferno"), Some(&"#C93C26".to_owned()));
         assert_eq!(map.get("hero_kelvin"), Some(&"#74ABBC".to_owned()));
         // `foo` doesn't end in `Color` — ignored.
-        assert!(map.get("hero_foo").is_none());
-        assert!(map.get("hero_basetext").is_none());
+        assert!(!map.contains_key("hero_foo"));
+        assert!(!map.contains_key("hero_basetext"));
     }
 
     #[test]

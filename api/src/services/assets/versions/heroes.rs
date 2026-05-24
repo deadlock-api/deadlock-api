@@ -13,10 +13,10 @@
 //! `deadlock-assets-api/scripts/standalone_heroes_v2.py`; this is a port of
 //! its output, kept as close to byte-for-byte equivalent as practical.
 
+use core::time::Duration;
 use std::collections::HashMap;
 use std::collections::HashMap as StdMap;
 use std::sync::Arc;
-use std::time::Duration;
 
 use cached::LruTtlCache;
 use cached::macros::cached;
@@ -53,6 +53,7 @@ pub(crate) enum HeroesError {
 /// the python pipeline does the same via pydantic coercion.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
+#[allow(clippy::struct_field_names)]
 struct RawStartingStats {
     #[serde(rename = "EMaxMoveSpeed")]
     e_max_move_speed: f64,
@@ -125,6 +126,7 @@ struct RawShopWeaponStatsDisplay {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(clippy::struct_field_names)]
 struct RawShopStatDisplay {
     #[serde(rename = "m_eSpiritStatsDisplay")]
     e_spirit_stats_display: RawShopSpiritStatsDisplay,
@@ -135,6 +137,7 @@ struct RawShopStatDisplay {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(clippy::struct_field_names)]
 struct RawHeroStatsDisplay {
     #[serde(rename = "m_vecHealthHeaderStats", default)]
     health_header_stats: Vec<String>,
@@ -219,6 +222,7 @@ pub(crate) struct DraftBucketing {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(clippy::struct_excessive_bools)]
 struct RawHero {
     #[serde(rename = "m_HeroID")]
     id: u32,
@@ -319,6 +323,7 @@ struct RawHero {
 
 /// Per-key serialization order matches the python `HeroV2` field order.
 #[derive(Debug, Serialize, Clone, ToSchema)]
+#[allow(clippy::struct_excessive_bools)]
 pub(crate) struct HeroV2 {
     pub id: u32,
     pub class_name: String,
@@ -448,6 +453,7 @@ pub(crate) struct HeroColors {
 }
 
 #[derive(Debug, Serialize, Clone, ToSchema)]
+#[allow(clippy::struct_field_names)]
 pub(crate) struct ShopStatDisplay {
     pub spirit_stats_display: ShopSpiritStatsDisplay,
     pub vitality_stats_display: ShopVitalityStatsDisplay,
@@ -476,6 +482,7 @@ pub(crate) struct ShopWeaponStatsDisplay {
 }
 
 #[derive(Debug, Serialize, Clone, ToSchema)]
+#[allow(clippy::struct_field_names)]
 pub(crate) struct StatsDisplay {
     pub health_header_stats: Vec<String>,
     pub health_stats: Vec<String>,
@@ -694,7 +701,7 @@ fn transform_root(
             continue;
         }
         out.push(transform(
-            class_name.clone(),
+            class_name,
             raw,
             localization,
             style_colors,
@@ -704,8 +711,9 @@ fn transform_root(
     out
 }
 
+#[allow(clippy::too_many_lines)]
 fn transform(
-    class_name: String,
+    class_name: &str,
     r: RawHero,
     loc: &HashMap<String, String>,
     style_colors: &HashMap<String, String>,
@@ -713,10 +721,10 @@ fn transform(
 ) -> HeroV2 {
     let name = loc
         .get(&format!("{class_name}:n"))
-        .or_else(|| loc.get(&class_name))
+        .or_else(|| loc.get(class_name))
         .or_else(|| loc.get(&format!("Steam_RP_{class_name}")))
         .cloned()
-        .unwrap_or_else(|| class_name.clone())
+        .unwrap_or_else(|| class_name.to_owned())
         .trim()
         .replace("#|f|#", "")
         .replace("#|m|#", "");
@@ -756,7 +764,7 @@ fn transform(
             .unwrap_or_else(|| h.clone())
     });
 
-    let bg_raw = backgrounds.get(&class_name).cloned();
+    let bg_raw = backgrounds.get(class_name).cloned();
     let images = build_images(&r, bg_raw.as_deref());
 
     let physics = HeroPhysics {
@@ -769,7 +777,7 @@ fn transform(
         step_sound_time_sprinting: r.step_sound_time_sprinting,
     };
 
-    let style_hex = style_colors.get(&class_name).cloned();
+    let style_hex = style_colors.get(class_name).cloned();
     let style_rgb = style_hex.as_deref().and_then(hex_to_rgb);
     let colors = HeroColors {
         ui: r.color_ui,
@@ -829,7 +837,7 @@ fn transform(
 
     HeroV2 {
         id: r.id,
-        class_name: class_name.clone(),
+        class_name: class_name.to_owned(),
         name,
         description,
         item_draft_weights: r.item_draft_weights,
@@ -848,7 +856,7 @@ fn transform(
         skin: r.skin,
         images,
         items,
-        starting_stats: build_starting_stats(r.starting_stats),
+        starting_stats: build_starting_stats(&r.starting_stats),
         item_slot_info,
         physics,
         colors,
@@ -904,14 +912,15 @@ fn build_shop_stat_display(r: RawShopStatDisplay) -> ShopStatDisplay {
     }
 }
 
-fn build_starting_stats(s: RawStartingStats) -> StartingStats {
+#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+fn build_starting_stats(s: &RawStartingStats) -> StartingStats {
     macro_rules! mk {
         ($v:expr, $name:literal) => {
             StartingStat {
-                value: serde_json::Number::from_f64($v as f64)
+                value: serde_json::Number::from_f64($v)
                     .and_then(|n| {
                         // Use integer form when the value rounds cleanly.
-                        let f = n.as_f64().unwrap_or($v as f64);
+                        let f = n.as_f64().unwrap_or($v);
                         if f.fract() == 0.0 && f.abs() < (i64::MAX as f64) {
                             Some(serde_json::Number::from(f as i64))
                         } else {
@@ -936,22 +945,22 @@ fn build_starting_stats(s: RawStartingStats) -> StartingStats {
         crouch_speed: mk!(s.e_crouch_speed, "ECrouchSpeed", float),
         move_acceleration: mk!(s.e_move_acceleration, "EMoveAcceleration", float),
         light_melee_damage: mk!(s.e_light_melee_damage, "ELightMeleeDamage", float),
-        heavy_melee_damage: mk!(s.e_heavy_melee_damage as f64, "EHeavyMeleeDamage"),
-        max_health: mk!(s.e_max_health as f64, "EMaxHealth"),
-        weapon_power: mk!(s.e_weapon_power as f64, "EWeaponPower"),
-        reload_speed: mk!(s.e_reload_speed as f64, "EReloadSpeed"),
-        weapon_power_scale: mk!(s.e_weapon_power_scale as f64, "EWeaponPowerScale"),
-        proc_build_up_rate_scale: mk!(s.e_proc_build_up_rate_scale as f64, "EProcBuildUpRateScale"),
-        stamina: mk!(s.e_stamina as f64, "EStamina"),
+        heavy_melee_damage: mk!(s.e_heavy_melee_damage, "EHeavyMeleeDamage"),
+        max_health: mk!(s.e_max_health, "EMaxHealth"),
+        weapon_power: mk!(s.e_weapon_power, "EWeaponPower"),
+        reload_speed: mk!(s.e_reload_speed, "EReloadSpeed"),
+        weapon_power_scale: mk!(s.e_weapon_power_scale, "EWeaponPowerScale"),
+        proc_build_up_rate_scale: mk!(s.e_proc_build_up_rate_scale, "EProcBuildUpRateScale"),
+        stamina: mk!(s.e_stamina, "EStamina"),
         base_health_regen: mk!(s.e_base_health_regen, "EBaseHealthRegen", float),
         stamina_regen_per_second: mk!(
             s.e_stamina_regen_per_second,
             "EStaminaRegenPerSecond",
             float
         ),
-        ability_resource_max: mk!(s.e_ability_resource_max as f64, "EAbilityResourceMax"),
+        ability_resource_max: mk!(s.e_ability_resource_max, "EAbilityResourceMax"),
         ability_resource_regen_per_second: mk!(
-            s.e_ability_resource_regen_per_second as f64,
+            s.e_ability_resource_regen_per_second,
             "EAbilityResourceRegenPerSecond"
         ),
         crit_damage_received_scale: mk!(
@@ -959,11 +968,11 @@ fn build_starting_stats(s: RawStartingStats) -> StartingStats {
             "ECritDamageReceivedScale",
             float
         ),
-        tech_duration: mk!(s.e_tech_duration as f64, "ETechDuration"),
+        tech_duration: mk!(s.e_tech_duration, "ETechDuration"),
         tech_armor_damage_reduction: s
             .e_tech_armor_damage_reduction
             .map(|v| mk!(v, "ETechArmorDamageReduction", float)),
-        tech_range: mk!(s.e_tech_range as f64, "ETechRange"),
+        tech_range: mk!(s.e_tech_range, "ETechRange"),
         bullet_armor_damage_reduction: s
             .e_bullet_armor_damage_reduction
             .map(|v| mk!(v, "EBulletArmorDamageReduction", float)),
@@ -1075,7 +1084,10 @@ fn parse_img_path(v: &str) -> Option<String> {
         &v[i..]
     } else if let Some((_, t)) = v.rsplit_once("{images}/") {
         t
-    } else if !v.ends_with(".svg") {
+    } else if !std::path::Path::new(v)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("svg"))
+    {
         // Plain relative path — no markers, not an svg.
         let cleaned = normalize_image_suffix(v)
             .replace(".vsvg", ".svg")
@@ -1086,7 +1098,10 @@ fn parse_img_path(v: &str) -> Option<String> {
     };
 
     let s = normalize_image_suffix(tail).replace(".vsvg", ".svg");
-    if s.ends_with(".svg") {
+    if std::path::Path::new(&s)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("svg"))
+    {
         let leaf = s.rsplit('/').next().unwrap_or(&s);
         Some(format!("{SVGS_BASE_URL}/{leaf}"))
     } else {
@@ -1117,7 +1132,7 @@ const BUILT_CACHE_SIZE: usize = 64;
 /// Both layers use a long TTL. Files in R2 are immutable per version — we
 /// never need to invalidate within a version's lifetime — so the TTL only
 /// exists to evict cold entries from idle processes.
-const CACHE_TTL: Duration = Duration::from_secs(24 * 60 * 60);
+const CACHE_TTL: Duration = Duration::from_hours(24);
 
 /// Parsed per-version source artifacts, shared across all language builds.
 #[derive(Clone)]
