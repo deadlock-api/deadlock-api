@@ -64,7 +64,14 @@ struct TagGroupsAddon;
 const TAG_GROUPS: &[(&str, &[&str])] = &[
     (
         "Assets",
-        &["Accolades", "Heroes", "Misc Entities", "NPC Units"],
+        &[
+            "Accolades",
+            "Build Tags",
+            "Heroes",
+            "Misc Entities",
+            "NPC Units",
+            "Ranks",
+        ],
     ),
     (
         "Game Data",

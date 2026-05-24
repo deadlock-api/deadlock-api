@@ -1,6 +1,5 @@
 ---
 source: src/services/assets/versions/npc_units.rs
-assertion_line: 1168
 expression: units
 ---
 [
@@ -1896,6 +1895,174 @@ expression: units
     "melee_damage": 300.0,
     "melee_attempt_range": 600.0,
     "melee_duration": 0.9,
+    "health_bar_color_friend": {
+      "red": 255,
+      "green": 239,
+      "blue": 215,
+      "alpha": 255
+    },
+    "health_bar_color_enemy": {
+      "red": 230,
+      "green": 25,
+      "blue": 25,
+      "alpha": 255
+    },
+    "health_bar_color_team1": {
+      "red": 231,
+      "green": 182,
+      "blue": 89,
+      "alpha": 255
+    },
+    "health_bar_color_team2": {
+      "red": 91,
+      "green": 121,
+      "blue": 230,
+      "alpha": 255
+    },
+    "health_bar_color_team_neutral": {
+      "red": 0,
+      "green": 125,
+      "blue": 125,
+      "alpha": 255
+    }
+  },
+  {
+    "class_name": "npc_boss_tier3",
+    "id": 4137263170,
+    "max_health": 12000,
+    "phase2_health": 12000,
+    "bound_abilities": {
+      "signature1": "citadel_ability_tier3boss_laser_beam",
+      "signature2": "citadel_ability_tier3boss_aoe_wave",
+      "signature3": "citadel_ability_tier3boss_drop_bombs",
+      "signature4": "citadel_ability_tier3boss_rocket_barrage",
+      "weapon_primary": "citadel_weapon_bosstier3_set"
+    },
+    "enemy_trooper_protection_range": 1575.0,
+    "objective_regen": {
+      "subclass": {
+        "out_of_combat_health_regen": 120.0,
+        "out_of_combat_regen_delay": 20.0
+      }
+    },
+    "objective_health_growth_phase1": {
+      "subclass": {
+        "growth_per_minute": 250,
+        "tick_rate": 60.0,
+        "growth_start_time_in_minutes": 20
+      }
+    },
+    "objective_health_growth_phase2": {
+      "subclass": {
+        "growth_per_minute": 450,
+        "tick_rate": 60.0,
+        "growth_start_time_in_minutes": 1
+      }
+    },
+    "ranged_armor_modifier": {
+      "subclass": {
+        "range_min": 1000.0,
+        "range_max": 2000.0
+      }
+    },
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 3000.0,
+    "sight_range_npcs": 3000.0,
+    "health_bar_color_friend": {
+      "red": 255,
+      "green": 239,
+      "blue": 215,
+      "alpha": 255
+    },
+    "health_bar_color_enemy": {
+      "red": 230,
+      "green": 25,
+      "blue": 25,
+      "alpha": 255
+    },
+    "health_bar_color_team1": {
+      "red": 231,
+      "green": 182,
+      "blue": 89,
+      "alpha": 255
+    },
+    "health_bar_color_team2": {
+      "red": 91,
+      "green": 121,
+      "blue": 230,
+      "alpha": 255
+    },
+    "health_bar_color_team_neutral": {
+      "red": 0,
+      "green": 125,
+      "blue": 125,
+      "alpha": 255
+    }
+  },
+  {
+    "class_name": "alt_npc_boss_tier3",
+    "id": 2372954235,
+    "max_health": 12000,
+    "phase2_health": 12000,
+    "bound_abilities": {
+      "signature1": "citadel_ability_tier3boss_laser_beam",
+      "signature2": "citadel_ability_tier3boss_aoe_wave",
+      "signature3": "citadel_ability_tier3boss_drop_bombs",
+      "signature4": "citadel_ability_tier3boss_rocket_barrage",
+      "weapon_primary": "citadel_weapon_bosstier3_set"
+    },
+    "enemy_trooper_protection_range": 1575.0,
+    "objective_regen": {
+      "subclass": {
+        "out_of_combat_health_regen": 120.0,
+        "out_of_combat_regen_delay": 20.0
+      }
+    },
+    "objective_health_growth_phase1": {
+      "subclass": {
+        "growth_per_minute": 250,
+        "tick_rate": 60.0,
+        "growth_start_time_in_minutes": 20
+      }
+    },
+    "objective_health_growth_phase2": {
+      "subclass": {
+        "growth_per_minute": 450,
+        "tick_rate": 60.0,
+        "growth_start_time_in_minutes": 1
+      }
+    },
+    "ranged_armor_modifier": {
+      "subclass": {
+        "range_min": 1000.0,
+        "range_max": 2000.0
+      }
+    },
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 3000.0,
+    "sight_range_npcs": 3000.0,
     "health_bar_color_friend": {
       "red": 255,
       "green": 239,

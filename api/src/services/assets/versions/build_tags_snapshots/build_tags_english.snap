@@ -1,0 +1,90 @@
+---
+source: src/services/assets/versions/build_tags.rs
+expression: tags
+---
+[
+  {
+    "class_name": "citadel_build_tag_complexity_1",
+    "label": "For New Players",
+    "id": 1052421347,
+    "icon": "https://assets-bucket.deadlock-api.com/assets-api-res/icons/citadel_build_tag_complexity_1.svg"
+  },
+  {
+    "class_name": "citadel_build_tag_complexity_2",
+    "label": "For Intermediate Players",
+    "id": 1150155374,
+    "icon": "https://assets-bucket.deadlock-api.com/assets-api-res/icons/citadel_build_tag_complexity_2.svg"
+  },
+  {
+    "class_name": "citadel_build_tag_complexity_3",
+    "label": "For Advanced Players",
+    "id": 3797987367,
+    "icon": "https://assets-bucket.deadlock-api.com/assets-api-res/icons/citadel_build_tag_complexity_3.svg"
+  },
+  {
+    "class_name": "citadel_build_tag_crowd_control",
+    "label": "Crowd Control",
+    "id": 4216803923,
+    "icon": "https://assets-bucket.deadlock-api.com/assets-api-res/icons/citadel_build_tag_crowd_control.svg"
+  },
+  {
+    "class_name": "citadel_build_tag_damage",
+    "label": "Damage",
+    "id": 2592289373,
+    "icon": "https://assets-bucket.deadlock-api.com/assets-api-res/icons/citadel_build_tag_damage.svg"
+  },
+  {
+    "class_name": "citadel_build_tag_debuff",
+    "label": "Debuff",
+    "id": 255841590,
+    "icon": "https://assets-bucket.deadlock-api.com/assets-api-res/icons/citadel_build_tag_debuff.svg"
+  },
+  {
+    "class_name": "citadel_build_tag_headshots",
+    "label": "Headshots",
+    "id": 2579669585,
+    "icon": "https://assets-bucket.deadlock-api.com/assets-api-res/icons/citadel_build_tag_headshots.svg"
+  },
+  {
+    "class_name": "citadel_build_tag_healing",
+    "label": "Healing",
+    "id": 38758251,
+    "icon": "https://assets-bucket.deadlock-api.com/assets-api-res/icons/citadel_build_tag_healing.svg"
+  },
+  {
+    "class_name": "citadel_build_tag_melee",
+    "label": "Melee",
+    "id": 3401565923,
+    "icon": "https://assets-bucket.deadlock-api.com/assets-api-res/icons/citadel_build_tag_melee.svg"
+  },
+  {
+    "class_name": "citadel_build_tag_mobility",
+    "label": "Mobility",
+    "id": 3238474489,
+    "icon": "https://assets-bucket.deadlock-api.com/assets-api-res/icons/citadel_build_tag_mobility.svg"
+  },
+  {
+    "class_name": "citadel_build_tag_spirit",
+    "label": "Spirit",
+    "id": 36498494,
+    "icon": "https://assets-bucket.deadlock-api.com/assets-api-res/icons/citadel_build_tag_spirit.svg"
+  },
+  {
+    "class_name": "citadel_build_tag_utility",
+    "label": "Utility",
+    "id": 953263904,
+    "icon": "https://assets-bucket.deadlock-api.com/assets-api-res/icons/citadel_build_tag_utility.svg"
+  },
+  {
+    "class_name": "citadel_build_tag_vitality",
+    "label": "Vitality",
+    "id": 4213205702,
+    "icon": "https://assets-bucket.deadlock-api.com/assets-api-res/icons/citadel_build_tag_vitality.svg"
+  },
+  {
+    "class_name": "citadel_build_tag_weapon",
+    "label": "Weapon",
+    "id": 47026193,
+    "icon": "https://assets-bucket.deadlock-api.com/assets-api-res/icons/citadel_build_tag_weapon.svg"
+  }
+]

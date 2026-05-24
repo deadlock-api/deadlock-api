@@ -6,6 +6,7 @@
 //! the public `/v2/...` JSON shapes.
 
 pub(crate) mod accolades;
+pub(crate) mod build_tags;
 pub(crate) mod common;
 pub(crate) mod css;
 pub(crate) mod error;

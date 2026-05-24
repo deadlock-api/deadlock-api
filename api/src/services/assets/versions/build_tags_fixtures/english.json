@@ -1,0 +1,19 @@
+{
+  "citadel_build_tag_complexity_1": "For New Players",
+  "citadel_build_tag_complexity_2": "For Intermediate Players",
+  "citadel_build_tag_complexity_3": "For Advanced Players",
+  "citadel_build_tag_crowd_control": "Crowd Control",
+  "citadel_build_tag_damage": "Damage",
+  "citadel_build_tag_debuff": "Debuff",
+  "citadel_build_tag_headshots": "Headshots",
+  "citadel_build_tag_healing": "Healing",
+  "citadel_build_tag_label": "{s:tag_name}",
+  "citadel_build_tag_melee": "Melee",
+  "citadel_build_tag_mobility": "Mobility",
+  "citadel_build_tag_spirit": "Spirit",
+  "citadel_build_tag_utility": "Utility",
+  "citadel_build_tag_vitality": "Vitality",
+  "citadel_build_tag_weapon": "Weapon",
+  "AOERadius_label": "Impact Radius",
+  "AbandonMatchPrompt_Cancel": "Stay in match"
+}

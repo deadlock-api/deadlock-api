@@ -3,9 +3,22 @@
 use reqwest::StatusCode;
 use serde::Deserialize;
 use strum::IntoStaticStr;
+use utoipa::IntoParams;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+
+/// Shared query params for `/v1/assets/*` endpoints.
+#[derive(Debug, Deserialize, IntoParams)]
+pub(crate) struct AssetsQuery {
+    /// Language code. Defaults to `english`.
+    #[serde(default)]
+    #[param(inline)]
+    pub(crate) language: Option<Language>,
+    /// Client/game version (e.g. `6518`). Defaults to the latest known version.
+    #[serde(default)]
+    pub(crate) client_version: Option<u32>,
+}
 
 /// Set of languages the upstream `localization/<lang>.json` files are keyed by.
 #[derive(Debug, Clone, Copy, Deserialize, IntoStaticStr, utoipa::ToSchema)]
