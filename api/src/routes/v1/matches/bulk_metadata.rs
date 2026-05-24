@@ -105,6 +105,11 @@ pub(super) struct BulkMatchMetadataQuery {
     /// Include player stats in the response.
     #[serde(default)]
     include_player_stats: bool,
+    /// Include only the final per-player stats (last sample of every `stats.*`
+    /// time-series) as a single `final_stats` object. Far cheaper than
+    /// `include_player_stats`, which returns the whole array per field.
+    #[serde(default)]
+    include_player_final_stats: bool,
     /// Include player death details in the response.
     #[serde(default)]
     include_player_death_details: bool,
@@ -321,6 +326,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         || query.include_player_kda
         || query.include_player_items
         || query.include_player_stats
+        || query.include_player_final_stats
         || query.include_player_death_details
         || has_extra_player_columns;
     if has_player_fields {
@@ -353,6 +359,9 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         }
         if query.include_player_stats {
             player_select_fields.push("stats");
+        }
+        if query.include_player_final_stats {
+            player_select_fields.push("final_stats");
         }
         if query.include_player_death_details {
             player_select_fields.push("death_details");
