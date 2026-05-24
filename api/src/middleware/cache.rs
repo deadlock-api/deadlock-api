@@ -199,4 +199,22 @@ mod tests {
             "public, max-age=60, stale-while-revalidate=60"
         );
     }
+
+    #[tokio::test]
+    async fn test_stale_if_error() {
+        let layer = CacheControlMiddleware::new(Duration::from_mins(1))
+            .with_stale_if_error(Duration::from_mins(1));
+        let app = Router::new().route("/", get(test_handler)).layer(layer);
+
+        let response = app
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response.headers().get(CACHE_CONTROL).unwrap(),
+            "public, max-age=60, stale-if-error=60"
+        );
+    }
 }
