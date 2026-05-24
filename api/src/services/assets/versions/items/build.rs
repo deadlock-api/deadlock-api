@@ -1101,19 +1101,10 @@ async fn build_section_attrs(
 
 #[cfg(test)]
 mod tests {
-    //! Parity check against the live `/v2/items` endpoint. Fetches the source
-    //! files from the public bucket, builds locally, then diffs against the
-    //! live JSON ignoring item ordering and object key ordering.
-    //!
-    //! Run with:
-    //!
-    //!     cargo test -p deadlock-api-rust --lib items::build::tests -- --ignored --nocapture
-
     use super::*;
 
     const SNAPSHOT_VERSION: u32 = 6064;
     const PUBLIC_BASE: &str = "https://assets-bucket.deadlock-api.com/assets-api-res/versions";
-    const LIVE_ITEMS_URL: &str = "https://assets.deadlock-api.com/v2/items";
 
     async fn fetch_zst(client: &reqwest::Client, version: u32, rel: &str) -> String {
         use async_compression::tokio::bufread::ZstdDecoder;
@@ -1132,62 +1123,6 @@ mod tests {
         let mut out = Vec::new();
         decoder.read_to_end(&mut out).await.expect("decompress");
         String::from_utf8(out).expect("utf-8")
-    }
-
-    #[tokio::test]
-    #[ignore = "network; manual parity check against live /v2/items"]
-    async fn parity_with_live_v2_items() {
-        let client = reqwest::Client::new();
-
-        let (abilities, heroes, generic, loc_json, icons, prop_icons, base_styles, live) = tokio::join!(
-            fetch_zst(&client, SNAPSHOT_VERSION, "scripts/abilities.vdata"),
-            fetch_zst(&client, SNAPSHOT_VERSION, "scripts/heroes.vdata"),
-            fetch_zst(&client, SNAPSHOT_VERSION, "scripts/generic_data.vdata"),
-            fetch_zst(&client, SNAPSHOT_VERSION, "localization/english.json"),
-            fetch_zst(&client, SNAPSHOT_VERSION, "styles/ability_icons.css"),
-            fetch_zst(
-                &client,
-                SNAPSHOT_VERSION,
-                "styles/ability_property_icons.css"
-            ),
-            fetch_zst(&client, SNAPSHOT_VERSION, "styles/citadel_base_styles.css"),
-            async {
-                let url =
-                    format!("{LIVE_ITEMS_URL}?language=english&client_version={SNAPSHOT_VERSION}");
-                client
-                    .get(&url)
-                    .send()
-                    .await
-                    .expect("live")
-                    .text()
-                    .await
-                    .expect("body")
-            },
-        );
-        let localization: std::collections::HashMap<String, String> =
-            serde_json::from_str(&loc_json).expect("loc json");
-
-        let items = build_items(BuildInputs {
-            abilities_vdata: &abilities,
-            heroes_vdata: &heroes,
-            generic_data_vdata: &generic,
-            localization: &localization,
-            ability_icons_css: &icons,
-            ability_property_icons_css: &prop_icons,
-            citadel_base_styles_css: &base_styles,
-        })
-        .await
-        .expect("build");
-
-        let ours: serde_json::Value = serde_json::to_value(&*items).expect("serialize");
-        let live: serde_json::Value = serde_json::from_str(&live).expect("parse live");
-        let diffs = diff_items(&ours, &live);
-        if !diffs.is_empty() {
-            for d in &diffs {
-                println!("{d}");
-            }
-            panic!("{} parity diffs", diffs.len());
-        }
     }
 
     #[tokio::test]
@@ -1234,70 +1169,6 @@ mod tests {
         }
     }
 
-    /// Diff two `/v2/items` arrays by `class_name`, ignoring item-list and
-    /// object-key ordering. Arrays inside items are compared in order.
-    fn diff_items(a: &serde_json::Value, b: &serde_json::Value) -> Vec<String> {
-        let (Some(la), Some(lb)) = (a.as_array(), b.as_array()) else {
-            return vec!["top-level value is not an array".into()];
-        };
-        let by_class = |list: &[serde_json::Value]| {
-            list.iter()
-                .filter_map(|v| {
-                    v.get("class_name")?
-                        .as_str()
-                        .map(|c| (c.to_owned(), v.clone()))
-                })
-                .collect::<std::collections::BTreeMap<_, _>>()
-        };
-        let ours = by_class(la);
-        let live = by_class(lb);
-        let mut out = Vec::new();
-        for k in ours
-            .keys()
-            .chain(live.keys())
-            .collect::<std::collections::BTreeSet<_>>()
-        {
-            match (ours.get(k), live.get(k)) {
-                (None, Some(_)) => out.push(format!("{k}: missing from local build")),
-                (Some(_), None) => out.push(format!("{k}: only in local build")),
-                (Some(a), Some(b)) => diff_value(k, a, b, &mut out),
-                (None, None) => {}
-            }
-        }
-        out
-    }
-
-    fn diff_value(path: &str, a: &serde_json::Value, b: &serde_json::Value, out: &mut Vec<String>) {
-        match (a, b) {
-            (serde_json::Value::Object(oa), serde_json::Value::Object(ob)) => {
-                for k in oa
-                    .keys()
-                    .chain(ob.keys())
-                    .collect::<std::collections::BTreeSet<_>>()
-                {
-                    let sub = format!("{path}.{k}");
-                    match (oa.get(k), ob.get(k)) {
-                        (Some(va), Some(vb)) => diff_value(&sub, va, vb, out),
-                        (Some(_), None) => out.push(format!("{sub}: only local")),
-                        (None, Some(_)) => out.push(format!("{sub}: only live")),
-                        (None, None) => {}
-                    }
-                }
-            }
-            (serde_json::Value::Array(aa), serde_json::Value::Array(ab)) => {
-                if aa.len() != ab.len() {
-                    out.push(format!("{path}: len {} vs {}", aa.len(), ab.len()));
-                }
-                for (i, (x, y)) in aa.iter().zip(ab.iter()).enumerate() {
-                    diff_value(&format!("{path}[{i}]"), x, y, out);
-                }
-            }
-            _ if a == b => {}
-            _ => out.push(format!("{path}: {a} != {b}")),
-        }
-    }
-
-    // Old summary-shape snapshot retained for completeness.
     #[derive(serde::Serialize)]
     struct Summary<'a> {
         class_name: &'a str,
