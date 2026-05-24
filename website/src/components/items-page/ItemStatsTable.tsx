@@ -40,6 +40,8 @@ interface SortState {
   direction: SortDirection;
 }
 
+const DEFAULT_SORT_STATE: SortState = { field: "winRate", direction: "desc" };
+
 export interface ItemStatsTableDisplayProps {
   data: DisplayItemStats[] | undefined;
   isLoading: boolean;
@@ -417,7 +419,7 @@ export function ItemStatsTableDisplay({
   excludedItemIds,
   onItemInclude,
   onItemExclude,
-  initialSort = { field: "winRate" as SortField, direction: "desc" as SortDirection },
+  initialSort = DEFAULT_SORT_STATE,
   prevStatsMap,
   customDropdownContent,
 }: ItemStatsTableDisplayProps) {

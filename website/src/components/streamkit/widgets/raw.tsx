@@ -6,13 +6,15 @@ import { API_ORIGIN } from "~/lib/constants";
 import { queryKeys } from "~/queries/query-keys";
 import type { RawWidgetProps, Region } from "~/types/streamkit/widget";
 
+const EMPTY_EXTRA_ARGS: Record<string, string> = {};
+
 export const RawWidget: FC<RawWidgetProps> = ({
   region,
   accountId,
   variable = "wins_losses_today",
   prefix = "",
   suffix = "",
-  extraArgs = {},
+  extraArgs = EMPTY_EXTRA_ARGS,
   fontColor = "#ffffff",
   refreshInterval = UPDATE_INTERVAL_MS,
 }) => {

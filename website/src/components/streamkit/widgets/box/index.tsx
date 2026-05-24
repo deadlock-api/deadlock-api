@@ -11,6 +11,8 @@ import { BoxBranding } from "./BoxBranding";
 import { BoxHeader } from "./BoxHeader";
 import { BoxStats } from "./BoxStats";
 
+const EMPTY_EXTRA_ARGS: Record<string, string> = {};
+
 export const createStatDisplays = (
   stats: Record<string, string> | null,
   variables: string[],
@@ -42,7 +44,7 @@ export const BoxWidget = ({
   accountId,
   variables = DEFAULT_VARIABLES,
   labels = DEFAULT_LABELS,
-  extraArgs = {},
+  extraArgs = EMPTY_EXTRA_ARGS,
   theme = "dark",
   showHeader = true,
   refreshInterval = UPDATE_INTERVAL_MS,

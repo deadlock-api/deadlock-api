@@ -59,6 +59,7 @@ async function crawl() {
     if (seenPages.has(path)) continue;
     seenPages.add(path);
 
+    // oxlint-disable-next-line no-await-in-loop -- queue grows dynamically as we crawl
     const html = await fetchText(SITE + path);
     if (!html) continue;
     for (const a of extractAssets(html)) assets.add(a);
@@ -80,6 +81,7 @@ async function crawl() {
   const initialJs = [...assets].filter((a) => a.endsWith(".js"));
   for (let i = 0; i < initialJs.length; i += CONCURRENCY) {
     const batch = initialJs.slice(i, i + CONCURRENCY);
+    // oxlint-disable-next-line no-await-in-loop -- intentional backpressure between batches
     const texts = await Promise.all(batch.map((name) => fetchText(`${SITE}/assets/${name}`)));
     for (const t of texts) {
       if (!t) continue;
@@ -115,6 +117,7 @@ async function main() {
   let failed = 0;
   for (let i = 0; i < missing.length; i += CONCURRENCY) {
     const batch = missing.slice(i, i + CONCURRENCY);
+    // oxlint-disable-next-line no-await-in-loop -- intentional backpressure between batches
     const results = await Promise.all(
       batch.map(async (name) => {
         const bytes = await fetchBytes(`${SITE}/assets/${name}`);

@@ -9,10 +9,15 @@ interface QueryRendererProps<T> {
   children: (data: T) => React.ReactNode;
 }
 
+const DEFAULT_LOADING_FALLBACK = <LoadingLogo />;
+const defaultErrorFallback = (error: Error) => (
+  <div className="py-8 text-center text-sm text-destructive">Error: {error.message}</div>
+);
+
 export function QueryRenderer<T>({
   query,
-  loadingFallback = <LoadingLogo />,
-  errorFallback = (error) => <div className="py-8 text-center text-sm text-destructive">Error: {error.message}</div>,
+  loadingFallback = DEFAULT_LOADING_FALLBACK,
+  errorFallback = defaultErrorFallback,
   children,
 }: QueryRendererProps<T>) {
   if (query.isPending) return loadingFallback;

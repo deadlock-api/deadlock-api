@@ -1,10 +1,11 @@
 import { Button } from "~/components/ui/button";
 
 const TIERS = [1, 2, 3, 4];
+const EMPTY_TIERS: number[] = [];
 
 export function ItemTierSelector({
   onItemTiersSelected,
-  selectedItemTiers = [],
+  selectedItemTiers = EMPTY_TIERS,
 }: {
   onItemTiersSelected: (selectedItemTier: number[]) => void;
   selectedItemTiers?: number[] | null;
