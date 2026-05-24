@@ -37,7 +37,7 @@ const WRITER_HEAP_MB: usize = 200;
 const MAX_PROFILES_PER_REBUILD: usize = 10_000_000;
 /// Minimum candidate pool size handed to the JW reranker — large enough that
 /// weight=0 (pure-similarity ranking) finds low-activity profiles, and that
-/// space-variant matches ("Average Jonas" vs "AverageJonas") survive the
+/// space-variant matches ("Average Jonas" vs "`AverageJonas`") survive the
 /// matches_played-ordered first pass.
 const MIN_OVERSAMPLE: usize = 5_000;
 const RERANK_OVERSAMPLE_MULT: usize = 50;
@@ -303,6 +303,7 @@ impl SteamSearchIndex {
 
     /// Search the index. Returns up to `limit` profiles ranked by
     /// `jaro_winkler(personaname_lc, query) + matches_played_weight * log1p(matches)`.
+    #[allow(clippy::too_many_lines)]
     pub(crate) fn search(
         &self,
         query: &str,

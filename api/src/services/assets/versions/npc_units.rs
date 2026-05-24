@@ -190,7 +190,7 @@ struct RawWeaponInfo {
     vertical_recoil: Option<RawVerticalRecoil>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone, Copy)]
 struct RawEmpoweredModifierLevel {
     #[serde(default, rename = "m_nMaxHealth")]
     max_health: Option<i64>,
@@ -200,7 +200,7 @@ struct RawEmpoweredModifierLevel {
     model_scale: Option<f64>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone, Copy)]
 struct RawBulletResistModifier {
     #[serde(default, rename = "m_BulletResist")]
     bullet_resist: Option<i64>,
@@ -208,13 +208,13 @@ struct RawBulletResistModifier {
     bullet_resist_reduction_per_hero: Option<i64>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone, Copy)]
 struct RawTrooperDamageReduction {
     #[serde(default, rename = "m_flDamageReductionForTroopers")]
     damage_reduction_for_troopers: Option<f64>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone, Copy)]
 struct RawRangedArmorModifier {
     #[serde(default, rename = "m_flRangeMin")]
     range_min: Option<f64>,
@@ -238,7 +238,7 @@ struct RawIntrinsicModifiers {
     script_values: Option<Vec<RawScriptValues>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone, Copy)]
 struct RawObjectiveRegen {
     #[serde(default, rename = "m_flOutOfCombatHealthRegen")]
     out_of_combat_health_regen: Option<i64>,
@@ -246,7 +246,7 @@ struct RawObjectiveRegen {
     out_of_combat_regen_delay: Option<f64>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone, Copy)]
 struct RawObjectiveHealthGrowthPhase {
     #[serde(default, rename = "m_iGrowthPerMinute")]
     growth_per_minute: Option<i64>,
@@ -783,6 +783,7 @@ pub(crate) fn build_npc_units(vdata: &str) -> Result<Vec<NpcUnit>, AssetsError> 
     Ok(out)
 }
 
+#[allow(clippy::too_many_lines)]
 fn transform(class_name: String, r: RawNpcUnit) -> NpcUnit {
     let id = entity_id(&class_name);
 
@@ -932,6 +933,7 @@ fn obj_health_phase_out(r: RawObjectiveHealthGrowthPhase) -> ObjectiveHealthGrow
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn weapon_info_out(r: RawWeaponInfo) -> WeaponInfo {
     let reload_duration = r.reload_duration_a.or(r.reload_duration_b);
     let cycle_time = r.cycle_time;

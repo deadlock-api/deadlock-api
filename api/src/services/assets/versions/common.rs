@@ -97,20 +97,20 @@ pub(crate) struct Color {
 }
 
 impl<'de> Deserialize<'de> for Color {
-    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        let v: Vec<u8> = Vec::deserialize(d)?;
-        match v.as_slice() {
-            [r, g, b] => Ok(Self {
-                red: *r,
-                green: *g,
-                blue: *b,
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let components: Vec<u8> = Vec::deserialize(deserializer)?;
+        match components.as_slice() {
+            [red, green, blue] => Ok(Self {
+                red: *red,
+                green: *green,
+                blue: *blue,
                 alpha: 255,
             }),
-            [r, g, b, a] => Ok(Self {
-                red: *r,
-                green: *g,
-                blue: *b,
-                alpha: *a,
+            [red, green, blue, alpha] => Ok(Self {
+                red: *red,
+                green: *green,
+                blue: *blue,
+                alpha: *alpha,
             }),
             _ => Err(serde::de::Error::custom(
                 "color must be a 3- or 4-element list of bytes",
