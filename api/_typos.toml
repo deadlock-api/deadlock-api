@@ -1,13 +1,18 @@
 [default.extend-identifiers]
-# Upstream source field name (sic).
+# Upstream source field names (sic).
 m_sModifer = "m_sModifer"
+m_strVAlue = "m_strVAlue"
+m_StrPropertyNAme = "m_StrPropertyNAme"
 
 [default.extend-words]
-# Upstream source field name (sic).
+# Upstream source field names (sic).
 Modifer = "Modifer"
+VAlue = "VAlue"
+NAme = "NAme"
 
 [files]
 extend-exclude = [
+    "src/services/assets/versions/items/items_snapshots/",
     "src/utils/kv3_fixtures/",
     "src/utils/kv3_snapshots/",
     "src/utils/localization_fixtures/",

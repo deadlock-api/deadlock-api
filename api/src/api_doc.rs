@@ -71,6 +71,7 @@ const TAG_GROUPS: &[(&str, &[&str])] = &[
             "Colors",
             "Generic Data",
             "Heroes",
+            "Items",
             "Loot Tables",
             "Misc Entities",
             "NPC Units",

@@ -11,6 +11,7 @@ mod client_versions;
 mod colors;
 mod common;
 mod heroes;
+mod items;
 mod loot_tables;
 mod misc_entities;
 mod npc_units;
@@ -24,6 +25,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .nest("/client-versions", client_versions::router())
         .nest("/colors", colors::router())
         .nest("/heroes", heroes::router())
+        .nest("/items", items::router())
         .nest("/loot-tables", loot_tables::router())
         .nest("/misc-entities", misc_entities::router())
         .nest("/npc-units", npc_units::router())

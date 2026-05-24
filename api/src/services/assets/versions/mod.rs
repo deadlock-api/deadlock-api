@@ -13,6 +13,7 @@ pub(crate) mod css;
 pub(crate) mod error;
 pub(crate) mod generic_data;
 pub(crate) mod heroes;
+pub(crate) mod items;
 pub(crate) mod localization;
 pub(crate) mod loot_tables;
 pub(crate) mod misc_entities;
