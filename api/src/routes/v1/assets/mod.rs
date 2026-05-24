@@ -5,6 +5,7 @@ use utoipa_axum::router::OpenApiRouter;
 use crate::context::AppState;
 use crate::middleware::cache::CacheControlMiddleware;
 
+mod common;
 mod heroes;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {
