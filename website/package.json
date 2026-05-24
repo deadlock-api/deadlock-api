@@ -79,11 +79,5 @@
   "engines": {
     "node": ">=24.0.0"
   },
-  "packageManager": "pnpm@10.18.0",
-  "pnpm": {
-    "minimumReleaseAge": 1440,
-    "minimumReleaseAgeExclude": [
-      "wrangler"
-    ]
-  }
+  "packageManager": "pnpm@10.18.0"
 }
