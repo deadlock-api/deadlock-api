@@ -59,16 +59,14 @@ fn capture_hero_color_define(p: &mut Parser<'_, '_>) -> Option<(String, String)>
         _ => return None,
     };
     // Source uses bare `<name>Color` (e.g. `kelvinColor`); the hero map keys
-    // are `hero_<name>`. Match the python pipeline 1:1.
+    // are `hero_<name>`.
     let class = format!("hero_{}", prefix.to_ascii_lowercase());
     Some((class, hex))
 }
 
 /// Parse `hero_background_default.css` and produce a map from `hero_<name>`
 /// class selectors to the inner URL string of each rule's `background-image`.
-///
-/// Mirrors the python pipeline: only the first occurrence of any `.hero_*`
-/// class wins.
+/// Only the first occurrence of any `.hero_*` class wins.
 pub(crate) fn parse_hero_backgrounds(css: &str) -> HashMap<String, String> {
     let mut input = ParserInput::new(css);
     let mut p = Parser::new(&mut input);
@@ -179,7 +177,7 @@ mod tests {
                    @define kelvinColor: #74ABBC;\n\
                    @define foo: #112233;";
         let map = parse_hero_style_colors(css);
-        // `<name>Color` → `hero_<name>` (matches python pipeline).
+        // `<name>Color` → `hero_<name>`.
         assert_eq!(map.get("hero_inferno"), Some(&"#C93C26".to_owned()));
         assert_eq!(map.get("hero_kelvin"), Some(&"#74ABBC".to_owned()));
         // `foo` doesn't end in `Color` — ignored.

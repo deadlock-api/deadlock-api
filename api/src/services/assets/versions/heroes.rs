@@ -1,18 +1,3 @@
-//! Build the `/v2/heroes` response from the versioned source files.
-//!
-//! Pipeline (per request):
-//!
-//! ```text
-//! scripts/heroes.vdata.zst        ──► kv3::from_str   ─┐
-//! localization/<lang>.json.zst    ──► serde_json      ─┤
-//! styles/citadel_base_styles.css  ──► css::parse_*    ─┼─► Vec<HeroV2>
-//! styles/hero_background_…css     ──► css::parse_*    ─┘
-//! ```
-//!
-//! The legacy python implementation lives at
-//! `deadlock-assets-api/scripts/standalone_heroes_v2.py`; this is a port of
-//! its output, kept as close to byte-for-byte equivalent as practical.
-
 use core::time::Duration;
 use std::collections::HashMap;
 use std::collections::HashMap as StdMap;
@@ -23,6 +8,7 @@ use cached::macros::cached;
 use indexmap::IndexMap;
 use object_store::aws::AmazonS3;
 use serde::{Deserialize, Serialize};
+use strum::EnumString;
 use utoipa::ToSchema;
 
 use crate::services::assets::versions::css;
@@ -42,15 +28,6 @@ pub(crate) enum HeroesError {
     Store(#[from] store::VersionStoreError),
 }
 
-// ============================================================== Raw KV3 model
-//
-// Only the fields needed for the public output are bound. The KV3 parser
-// preserves nested-object ordering, so `IndexMap` keeps insertion order for
-// the map-shaped fields.
-
-/// All starting-stat slots are stored as `f64` so the same struct accepts
-/// the kv3 source whether values were authored as `830` or `830.0` —
-/// the python pipeline does the same via pydantic coercion.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 #[allow(clippy::struct_field_names)]
@@ -321,10 +298,9 @@ struct RawHero {
 
 // ================================================================ Public model
 
-/// Per-key serialization order matches the python `HeroV2` field order.
 #[derive(Debug, Serialize, Clone, ToSchema)]
-#[allow(clippy::struct_excessive_bools)]
-pub(crate) struct HeroV2 {
+#[allow(clippy::struct_excessive_bools, clippy::struct_field_names)]
+pub(crate) struct Hero {
     pub id: u32,
     pub class_name: String,
     pub name: String,
@@ -337,8 +313,7 @@ pub(crate) struct HeroV2 {
     pub in_development: bool,
     pub needs_testing: bool,
     pub assigned_players_only: bool,
-    /// Always emitted (empty if the hero declares no `m_vecHeroTags`) to match
-    /// the python pipeline which coerces missing tag lists to `[]`.
+    /// Always emitted (empty if the hero declares no `m_vecHeroTags`).
     pub tags: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gun_tag: Option<String>,
@@ -548,8 +523,9 @@ pub(crate) struct LevelInfo {
 
 // ============================================================== Enum normalization
 
-#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq, ToSchema, EnumString)]
 #[serde(rename_all = "snake_case")]
+#[strum(ascii_case_insensitive, prefix = "ECitadelHeroType_")]
 pub(crate) enum HeroType {
     Assassin,
     Brawler,
@@ -557,96 +533,62 @@ pub(crate) enum HeroType {
     Mystic,
 }
 
-impl HeroType {
-    fn from_kv3(s: &str) -> Option<Self> {
-        let s = s
-            .strip_prefix("ECitadelHeroType_")
-            .unwrap_or(s)
-            .to_ascii_lowercase();
-        Some(match s.as_str() {
-            "assassin" => Self::Assassin,
-            "brawler" => Self::Brawler,
-            "marksman" => Self::Marksman,
-            "mystic" => Self::Mystic,
-            _ => return None,
-        })
-    }
-}
-
-#[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq, Hash, ToSchema)]
+#[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq, Hash, ToSchema, EnumString)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum HeroItemType {
+    #[strum(serialize = "ESlot_Weapon_Primary")]
     WeaponPrimary,
+    #[strum(serialize = "ESlot_Weapon_Secondary")]
     WeaponSecondary,
+    #[strum(serialize = "ESlot_Weapon_Melee")]
     WeaponMelee,
+    #[strum(serialize = "ESlot_Ability_Mantle")]
     AbilityMantle,
+    #[strum(serialize = "ESlot_Ability_Jump")]
     AbilityJump,
+    #[strum(serialize = "ESlot_Ability_Slide")]
     AbilitySlide,
+    #[strum(serialize = "ESlot_Ability_ZipLine")]
     AbilityZipLine,
+    #[strum(serialize = "ESlot_Ability_ZipLineBoost")]
     AbilityZipLineBoost,
+    #[strum(serialize = "ESlot_Ability_ClimbRope")]
     AbilityClimbRope,
     #[serde(rename = "ability_innate1")]
+    #[strum(serialize = "ESlot_Ability_Innate_1")]
     AbilityInnate1,
     #[serde(rename = "ability_innate2")]
+    #[strum(serialize = "ESlot_Ability_Innate_2")]
     AbilityInnate2,
     #[serde(rename = "ability_innate3")]
+    #[strum(serialize = "ESlot_Ability_Innate_3")]
     AbilityInnate3,
     #[serde(rename = "signature1")]
+    #[strum(serialize = "ESlot_Signature_1")]
     Signature1,
     #[serde(rename = "signature2")]
+    #[strum(serialize = "ESlot_Signature_2")]
     Signature2,
     #[serde(rename = "signature3")]
+    #[strum(serialize = "ESlot_Signature_3")]
     Signature3,
     #[serde(rename = "signature4")]
+    #[strum(serialize = "ESlot_Signature_4")]
     Signature4,
+    #[strum(serialize = "ESlot_Cosmetic_1")]
     EslotCosmetic1,
 }
 
-impl HeroItemType {
-    fn from_kv3(s: &str) -> Option<Self> {
-        Some(match s {
-            "ESlot_Weapon_Primary" => Self::WeaponPrimary,
-            "ESlot_Weapon_Secondary" => Self::WeaponSecondary,
-            "ESlot_Weapon_Melee" => Self::WeaponMelee,
-            "ESlot_Ability_Mantle" => Self::AbilityMantle,
-            "ESlot_Ability_Jump" => Self::AbilityJump,
-            "ESlot_Ability_Slide" => Self::AbilitySlide,
-            "ESlot_Ability_ZipLine" => Self::AbilityZipLine,
-            "ESlot_Ability_ZipLineBoost" => Self::AbilityZipLineBoost,
-            "ESlot_Ability_ClimbRope" => Self::AbilityClimbRope,
-            "ESlot_Ability_Innate_1" => Self::AbilityInnate1,
-            "ESlot_Ability_Innate_2" => Self::AbilityInnate2,
-            "ESlot_Ability_Innate_3" => Self::AbilityInnate3,
-            "ESlot_Signature_1" => Self::Signature1,
-            "ESlot_Signature_2" => Self::Signature2,
-            "ESlot_Signature_3" => Self::Signature3,
-            "ESlot_Signature_4" => Self::Signature4,
-            "ESlot_Cosmetic_1" => Self::EslotCosmetic1,
-            _ => return None,
-        })
-    }
-}
-
-#[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq, Hash, ToSchema)]
+#[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq, Hash, ToSchema, EnumString)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum ItemSlotType {
+    #[strum(serialize = "EItemSlotType_WeaponMod")]
     Weapon,
+    #[strum(serialize = "EItemSlotType_Tech")]
     Spirit,
+    #[strum(serialize = "EItemSlotType_Armor")]
     Vitality,
 }
-
-impl ItemSlotType {
-    fn from_kv3(s: &str) -> Option<Self> {
-        Some(match s {
-            "EItemSlotType_WeaponMod" => Self::Weapon,
-            "EItemSlotType_Tech" => Self::Spirit,
-            "EItemSlotType_Armor" => Self::Vitality,
-            _ => return None,
-        })
-    }
-}
-
-// ====================================================================== Pipeline
 
 /// Build the public list of heroes from raw source bytes.
 ///
@@ -659,7 +601,7 @@ pub(crate) fn build_heroes(
     style_css: &str,
     bg_css: &str,
     only_active: bool,
-) -> Result<Vec<HeroV2>, HeroesError> {
+) -> Result<Vec<Hero>, HeroesError> {
     let root: IndexMap<String, serde_json::Value> = kv3::from_str(heroes_vdata)?;
     let style_colors = css::parse_hero_style_colors(style_css);
     let backgrounds = css::parse_hero_backgrounds(bg_css);
@@ -672,15 +614,13 @@ pub(crate) fn build_heroes(
     ))
 }
 
-/// Shared filter+deserialize+transform loop used by both [`build_heroes`]
-/// (tests, raw inputs) and the cached production pipeline.
 fn transform_root(
     root: &IndexMap<String, serde_json::Value>,
     localization: &HashMap<String, String>,
     style_colors: &HashMap<String, String>,
     backgrounds: &HashMap<String, String>,
     only_active: bool,
-) -> Vec<HeroV2> {
+) -> Vec<Hero> {
     let mut out = Vec::with_capacity(root.len());
     for (class_name, value) in root {
         if !class_name.starts_with("hero_")
@@ -718,7 +658,7 @@ fn transform(
     loc: &HashMap<String, String>,
     style_colors: &HashMap<String, String>,
     backgrounds: &HashMap<String, String>,
-) -> HeroV2 {
+) -> Hero {
     let name = loc
         .get(&format!("{class_name}:n"))
         .or_else(|| loc.get(class_name))
@@ -788,14 +728,14 @@ fn transform(
     let items: IndexMap<HeroItemType, String> = r
         .items
         .into_iter()
-        .filter_map(|(k, v)| HeroItemType::from_kv3(&k).map(|k| (k, v)))
+        .filter_map(|(k, v)| k.parse().ok().map(|k| (k, v)))
         .collect();
 
     let item_slot_info: IndexMap<ItemSlotType, ItemSlotInfo> = r
         .item_slot_info
         .into_iter()
         .filter_map(|(k, v)| {
-            ItemSlotType::from_kv3(&k).map(|k| {
+            k.parse().ok().map(|k| {
                 (
                     k,
                     ItemSlotInfo {
@@ -809,13 +749,13 @@ fn transform(
     let cost_bonuses: IndexMap<ItemSlotType, Vec<MapModCostBonus>> = r
         .cost_bonuses
         .into_iter()
-        .filter_map(|(k, v)| ItemSlotType::from_kv3(&k).map(|k| (k, v)))
+        .filter_map(|(k, v)| k.parse().ok().map(|k| (k, v)))
         .collect();
 
     let purchase_bonuses: IndexMap<ItemSlotType, Vec<PurchaseBonus>> = r
         .purchase_bonuses
         .into_iter()
-        .filter_map(|(k, v)| ItemSlotType::from_kv3(&k).map(|k| (k, v)))
+        .filter_map(|(k, v)| k.parse().ok().map(|k| (k, v)))
         .collect();
 
     let level_info: IndexMap<String, LevelInfo> = r
@@ -835,7 +775,7 @@ fn transform(
         })
         .collect();
 
-    HeroV2 {
+    Hero {
         id: r.id,
         class_name: class_name.to_owned(),
         name,
@@ -849,7 +789,7 @@ fn transform(
         tags,
         gun_tag,
         hideout_rich_presence,
-        hero_type: r.hero_type.as_deref().and_then(HeroType::from_kv3),
+        hero_type: r.hero_type.as_deref().and_then(|s| s.parse().ok()),
         prerelease_only: r.prerelease_only,
         limited_testing: r.limited_testing,
         complexity: r.complexity,
@@ -980,10 +920,6 @@ fn build_starting_stats(s: &RawStartingStats) -> StartingStats {
 }
 
 fn build_images(r: &RawHero, background_raw: Option<&str>) -> HeroImages {
-    // NB: `weapon_image` lives on `shop_stat_display.weapon_stats_display` —
-    // it is intentionally NOT copied here. The python `HeroImagesV2.from_raw_hero`
-    // only iterates top-level RawHero fields, so `images.weapon_image` is always
-    // null in its output (the weapon URL surfaces solely under `shop_stat_display`).
     let icon_hero_card = extract_image_url(r.icon_hero_card.as_deref());
     let icon_image_small = extract_image_url(r.icon_image_small.as_deref());
     let minimap_image = extract_image_url(r.minimap_image.as_deref());
@@ -991,8 +927,8 @@ fn build_images(r: &RawHero, background_raw: Option<&str>) -> HeroImages {
     let hero_card_gloat = extract_image_url(r.hero_card_gloat.as_deref());
     let top_bar_vertical_image = extract_image_url(r.top_bar_vertical_image.as_deref());
 
-    // Backgrounds come from CSS — the python wraps them as `panorama:"file://{images}/<path>"`
-    // before running parse_img_path. We replicate that synthesized form here.
+    // Backgrounds come from CSS — wrap them as `panorama:"file://{images}/<path>"`
+    // before running `parse_img_path` so the shared parser can handle them.
     let background_image = background_raw.and_then(|raw| {
         let trimmed = raw
             .strip_prefix('"')
@@ -1039,7 +975,6 @@ fn hex_to_rgb(h: &str) -> Option<[u8; 3]> {
     Some([r, g, b])
 }
 
-/// Port of the python `extract_image_url` helper.
 fn extract_image_url(v: Option<&str>) -> Option<String> {
     let v = v?;
     if v.is_empty() {
@@ -1068,7 +1003,7 @@ fn normalize_image_suffix(s: &str) -> String {
         .replace(".psd", ".png")
 }
 
-/// Port of the python `parse_img_path` helper. Returns `None` for empty input.
+/// Returns `None` for empty input.
 fn parse_img_path(v: &str) -> Option<String> {
     if v.is_empty() {
         return None;
@@ -1109,46 +1044,18 @@ fn parse_img_path(v: &str) -> Option<String> {
     }
 }
 
-// =================================================================== Caching
-//
-// Three cache layers, each backed by `cached::TimedSizedCache` (LRU + TTL) and
-// guarded with `sync_writes = "by_key"` so a thundering-herd of concurrent
-// first-misses for the same key collapses into a single fetch+parse.
-//
-// ```text
-//                       per (version)               per (version, language)
-//                       ────────────────            ───────────────────────
-//   R2 raw bytes ──► parsed_version_sources ──► hero_bundle ──► Arc<Vec<HeroV2>>
-//   (store.rs)       (KV3 + CSS, ~1s once)      (transform per language)
-// ```
-//
-// Bucket sizes are deliberately small — the live API serves only a handful of
-// `(version, language)` pairs in practice (latest + a few neighbours), so
-// 8 versions × 16 build entries keeps steady-state memory well under 50 MB
-// while still surviving a deploy with multiple in-flight versions.
-
 const SOURCES_CACHE_SIZE: usize = 8;
 const BUILT_CACHE_SIZE: usize = 64;
-/// Both layers use a long TTL. Files in R2 are immutable per version — we
-/// never need to invalidate within a version's lifetime — so the TTL only
-/// exists to evict cold entries from idle processes.
+// Files in R2 are immutable per version, so the TTL only evicts cold entries.
 const CACHE_TTL: Duration = Duration::from_hours(24);
 
-/// Parsed per-version source artifacts, shared across all language builds.
 #[derive(Clone)]
 struct ParsedSources {
-    /// `m_HeroID → raw KV3 hero blob`, keyed by `class_name`. Stored as
-    /// `serde_json::Value` because the per-hero `RawHero` deserialization
-    /// runs again in `build_from_sources` (small cost; keeps `RawHero` private).
     raw_root: Arc<IndexMap<String, serde_json::Value>>,
     style_colors: Arc<HashMap<String, String>>,
     backgrounds: Arc<HashMap<String, String>>,
 }
 
-/// Layer 1: per-version sources.
-///
-/// Caches the parsed KV3 root + both CSS lookup tables. Subsequent builds for
-/// any language reuse this without re-running the heavy parsers.
 #[cached(
     ty = "LruTtlCache<u32, ParsedSources>",
     create = "{ LruTtlCache::builder().size(SOURCES_CACHE_SIZE).ttl(CACHE_TTL).build() }",
@@ -1157,11 +1064,8 @@ struct ParsedSources {
     sync_writes = "by_key"
 )]
 async fn parsed_version_sources(r2: &AmazonS3, version: u32) -> Result<ParsedSources, HeroesError> {
-    // The hero metadata is required; the two CSS files are optional decoration
-    // (older patches predate `hero_background_default.css`, and a corrupted
-    // styles file shouldn't take the whole endpoint down). A NotFound on
-    // either CSS just leaves the corresponding lookup map empty so the per-hero
-    // `background_image*` and `colors.style*` fields serialize as null.
+    // CSS files are optional: a NotFound leaves the lookup empty so the
+    // per-hero `background_image*` / `colors.style*` fields serialize as null.
     let (vdata, style_css, bg_css) = tokio::try_join!(
         store::fetch_text(r2, version, "scripts/heroes.vdata"),
         fetch_optional_text(r2, version, "styles/citadel_base_styles.css"),
@@ -1185,8 +1089,6 @@ async fn parsed_version_sources(r2: &AmazonS3, version: u32) -> Result<ParsedSou
     })
 }
 
-/// Fetch an optional asset: returns `Ok(None)` if the object is missing in R2,
-/// `Err` for any other failure (network, decompression, encoding).
 async fn fetch_optional_text(
     r2: &AmazonS3,
     version: u32,
@@ -1202,14 +1104,6 @@ async fn fetch_optional_text(
     }
 }
 
-/// Layer 2: per `(version, language)` localization map.
-///
-/// Each `localization/<lang>.json` in R2 is already an english-base map with
-/// the target language overlaid on top, so we just fetch the one file. If the
-/// requested language isn't present for this version (e.g. a newly-added
-/// translation hasn't been mirrored yet), fall back to english and log it —
-/// the legacy python service does the same so /v2/heroes never 500s on a
-/// language gap.
 #[cached(
     ty = "LruTtlCache<(u32, String), Arc<HashMap<String, String>>>",
     create = "{ LruTtlCache::builder().size(BUILT_CACHE_SIZE).ttl(CACHE_TTL).build() }",
@@ -1237,12 +1131,8 @@ async fn cached_localization(
     }
 }
 
-/// Layer 3: per `(version, language)` fully built hero list.
-///
-/// The list is always built with `only_active = false`; the route layer
-/// filters at request time (O(n) over ~60 heroes, negligible).
 #[cached(
-    ty = "LruTtlCache<(u32, String), Arc<Vec<HeroV2>>>",
+    ty = "LruTtlCache<(u32, String), Arc<Vec<Hero>>>",
     create = "{ LruTtlCache::builder().size(BUILT_CACHE_SIZE).ttl(CACHE_TTL).build() }",
     convert = r#"{ (version, language.to_owned()) }"#,
     result = true,
@@ -1252,7 +1142,7 @@ pub(crate) async fn fetch_heroes(
     r2: &AmazonS3,
     version: u32,
     language: &str,
-) -> Result<Arc<Vec<HeroV2>>, HeroesError> {
+) -> Result<Arc<Vec<Hero>>, HeroesError> {
     let (sources, localization) = tokio::try_join!(
         parsed_version_sources(r2, version),
         cached_localization(r2, version, language),
@@ -1261,9 +1151,7 @@ pub(crate) async fn fetch_heroes(
     Ok(Arc::new(heroes))
 }
 
-/// Build the hero list from already-parsed sources. Always emits the full
-/// (unfiltered) list; the route layer filters by `only_active` per request.
-fn build_from_sources(s: &ParsedSources, localization: &HashMap<String, String>) -> Vec<HeroV2> {
+fn build_from_sources(s: &ParsedSources, localization: &HashMap<String, String>) -> Vec<Hero> {
     transform_root(
         &s.raw_root,
         localization,

@@ -8,7 +8,7 @@ use utoipa::IntoParams;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::assets::common::{Language, resolve_version};
-use crate::services::assets::versions::heroes::{self, HeroV2};
+use crate::services::assets::versions::heroes::{self, Hero};
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub(crate) struct HeroesQuery {
@@ -29,7 +29,7 @@ pub(crate) struct HeroesQuery {
     path = "/",
     params(HeroesQuery),
     responses(
-        (status = OK, body = [HeroV2]),
+        (status = OK, body = [Hero]),
         (status = NOT_FOUND, description = "Requested client_version is not available"),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to load source assets"),
     ),
@@ -45,7 +45,7 @@ pub(super) async fn list_heroes(
     // Filter at request time so the underlying cache entry is shared between
     // `only_active=true` and `only_active=false` callers.
     if q.only_active.unwrap_or(false) {
-        let filtered: Vec<HeroV2> = heroes
+        let filtered: Vec<Hero> = heroes
             .iter()
             .filter(|h| h.player_selectable && !h.disabled && !h.in_development)
             .cloned()
@@ -73,7 +73,7 @@ pub(crate) struct HeroQuery {
         HeroQuery,
     ),
     responses(
-        (status = OK, body = HeroV2),
+        (status = OK, body = Hero),
         (status = NOT_FOUND, description = "Unknown hero id or client_version"),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to load source assets"),
     ),
@@ -105,7 +105,7 @@ pub(super) async fn get_hero(
         HeroQuery,
     ),
     responses(
-        (status = OK, body = HeroV2),
+        (status = OK, body = Hero),
         (status = NOT_FOUND, description = "Unknown hero name or client_version"),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to load source assets"),
     ),
@@ -135,14 +135,14 @@ pub(super) async fn get_hero_by_name(
         })
 }
 
-/// Returns the cached `Arc<Vec<HeroV2>>` directly so concurrent requests for
+/// Returns the cached `Arc<Vec<Hero>>` directly so concurrent requests for
 /// the same `(version, language)` share a single underlying allocation. The
 /// caller filters by `only_active` / `hero_id` at request time.
 async fn load_heroes(
     state: &AppState,
     client_version: Option<u32>,
     language: Option<Language>,
-) -> APIResult<std::sync::Arc<Vec<HeroV2>>> {
+) -> APIResult<std::sync::Arc<Vec<Hero>>> {
     let version = resolve_version(state, client_version).await?;
     let lang = language.unwrap_or(Language::English).as_str();
     heroes::fetch_heroes(&state.r2_client, version, lang)
