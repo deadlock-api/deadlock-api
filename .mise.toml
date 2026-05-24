@@ -1,5 +1,5 @@
 [tools]
-pnpm = "latest"
+pnpm = "10.18.0"
 rust = "1.95"
 lefthook = "latest"
 "cargo:typos-cli" = "latest"
