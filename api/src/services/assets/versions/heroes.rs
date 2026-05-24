@@ -517,11 +517,15 @@ pub(crate) struct LevelInfo {
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq, ToSchema, EnumString)]
 #[serde(rename_all = "snake_case")]
-#[strum(ascii_case_insensitive, prefix = "ECitadelHeroType_")]
+#[strum(ascii_case_insensitive)]
 pub(crate) enum HeroType {
+    #[strum(serialize = "ECitadelHeroType_Assassin")]
     Assassin,
+    #[strum(serialize = "ECitadelHeroType_Brawler")]
     Brawler,
+    #[strum(serialize = "ECitadelHeroType_Marksman")]
     Marksman,
+    #[strum(serialize = "ECitadelHeroType_Mystic")]
     Mystic,
 }
 
@@ -1108,11 +1112,10 @@ pub(crate) async fn fetch_heroes(
     version: u32,
     language: &str,
 ) -> Result<Arc<Vec<Hero>>, AssetsError> {
-    let (sources, loc) = tokio::try_join!(parsed_version_sources(r2, version), async {
-        localization::fetch_localization(r2, version, language)
-            .await
-            .map_err(AssetsError::from)
-    },)?;
+    let (sources, loc) = tokio::try_join!(
+        parsed_version_sources(r2, version),
+        localization::fetch_localization(r2, version, language),
+    )?;
     let heroes = build_from_sources(&sources, &loc);
     Ok(Arc::new(heroes))
 }
