@@ -9,13 +9,13 @@ use object_store::aws::AmazonS3;
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use crate::services::assets::versions::common::{DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL};
+use crate::services::assets::versions::common::{
+    DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL, IMAGE_BASE_URL,
+};
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::localization;
 
-const IMAGE_BASE_URL: &str = "https://assets-bucket.deadlock-api.com/assets-api-res/images";
 const NUM_TIERS: u32 = 12;
-const NUM_SUBRANKS: u32 = 6;
 
 const RANK_COLORS: [&str; NUM_TIERS as usize] = [
     "#333333", "#6A3E1E", "#882355", "#5C6DAB", "#719C47", "#DDA326", "#EE4F57", "#B47FEB",
@@ -86,46 +86,51 @@ pub(crate) struct RankImages {
 
 impl RankImages {
     fn from_tier(tier: u32) -> Self {
-        let f = format!("{IMAGE_BASE_URL}/ranks/rank{tier}");
-        let png = |p: String| format!("{f}/{p}.png");
-        let webp = |p: String| format!("{f}/{p}.webp");
-        let mut img = Self {
-            large: Some(png("badge_lg".into())),
-            large_webp: Some(webp("badge_lg".into())),
-            ..Self::default()
-        };
+        let prefix = format!("{IMAGE_BASE_URL}/ranks/rank{tier}");
+        let url = |name: &str, ext: &str| Some(format!("{prefix}/{name}.{ext}"));
+
+        // Tier 0 has no subranks — only a plain large + small badge.
         if tier == 0 {
-            img.small = Some(png("badge_sm".into()));
-            img.small_webp = Some(webp("badge_sm".into()));
-            return img;
+            return Self {
+                large: url("badge_lg", "png"),
+                large_webp: url("badge_lg", "webp"),
+                small: url("badge_sm", "png"),
+                small_webp: url("badge_sm", "webp"),
+                ..Self::default()
+            };
         }
-        let lg_slots: [(&mut Option<String>, &mut Option<String>); NUM_SUBRANKS as usize] = [
-            (&mut img.large_subrank1, &mut img.large_subrank1_webp),
-            (&mut img.large_subrank2, &mut img.large_subrank2_webp),
-            (&mut img.large_subrank3, &mut img.large_subrank3_webp),
-            (&mut img.large_subrank4, &mut img.large_subrank4_webp),
-            (&mut img.large_subrank5, &mut img.large_subrank5_webp),
-            (&mut img.large_subrank6, &mut img.large_subrank6_webp),
-        ];
-        for (i, (p, w)) in lg_slots.into_iter().enumerate() {
-            let n = i + 1;
-            *p = Some(png(format!("badge_lg_subrank{n}")));
-            *w = Some(webp(format!("badge_lg_subrank{n}")));
+
+        let sub = |size: &str, ext: &str, n: u32| url(&format!("badge_{size}_subrank{n}"), ext);
+        Self {
+            large: url("badge_lg", "png"),
+            large_webp: url("badge_lg", "webp"),
+            large_subrank1: sub("lg", "png", 1),
+            large_subrank1_webp: sub("lg", "webp", 1),
+            large_subrank2: sub("lg", "png", 2),
+            large_subrank2_webp: sub("lg", "webp", 2),
+            large_subrank3: sub("lg", "png", 3),
+            large_subrank3_webp: sub("lg", "webp", 3),
+            large_subrank4: sub("lg", "png", 4),
+            large_subrank4_webp: sub("lg", "webp", 4),
+            large_subrank5: sub("lg", "png", 5),
+            large_subrank5_webp: sub("lg", "webp", 5),
+            large_subrank6: sub("lg", "png", 6),
+            large_subrank6_webp: sub("lg", "webp", 6),
+            small_subrank1: sub("sm", "png", 1),
+            small_subrank1_webp: sub("sm", "webp", 1),
+            small_subrank2: sub("sm", "png", 2),
+            small_subrank2_webp: sub("sm", "webp", 2),
+            small_subrank3: sub("sm", "png", 3),
+            small_subrank3_webp: sub("sm", "webp", 3),
+            small_subrank4: sub("sm", "png", 4),
+            small_subrank4_webp: sub("sm", "webp", 4),
+            small_subrank5: sub("sm", "png", 5),
+            small_subrank5_webp: sub("sm", "webp", 5),
+            small_subrank6: sub("sm", "png", 6),
+            small_subrank6_webp: sub("sm", "webp", 6),
+            small: None,
+            small_webp: None,
         }
-        let sm_slots: [(&mut Option<String>, &mut Option<String>); NUM_SUBRANKS as usize] = [
-            (&mut img.small_subrank1, &mut img.small_subrank1_webp),
-            (&mut img.small_subrank2, &mut img.small_subrank2_webp),
-            (&mut img.small_subrank3, &mut img.small_subrank3_webp),
-            (&mut img.small_subrank4, &mut img.small_subrank4_webp),
-            (&mut img.small_subrank5, &mut img.small_subrank5_webp),
-            (&mut img.small_subrank6, &mut img.small_subrank6_webp),
-        ];
-        for (i, (p, w)) in sm_slots.into_iter().enumerate() {
-            let n = i + 1;
-            *p = Some(png(format!("badge_sm_subrank{n}")));
-            *w = Some(webp(format!("badge_sm_subrank{n}")));
-        }
-        img
     }
 }
 

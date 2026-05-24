@@ -7,10 +7,11 @@ use object_store::aws::AmazonS3;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::services::assets::versions::common::{DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL};
+use crate::services::assets::versions::common::{
+    DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL, build_map_from_kv3,
+};
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::store;
-use crate::utils::kv3;
 
 #[derive(Debug, Deserialize)]
 struct RawLootTable {
@@ -37,27 +38,18 @@ pub(crate) struct LootTable {
 pub(crate) type LootTables = IndexMap<String, LootTable>;
 
 pub(crate) fn build_loot_tables(vdata: &str) -> Result<LootTables, AssetsError> {
-    let root: IndexMap<String, serde_json::Value> = kv3::from_str(vdata)?;
-    let mut out = LootTables::with_capacity(root.len());
-    for (name, value) in root {
-        if name == "all_items" || name.starts_with("generic_") || !value.is_object() {
-            continue;
-        }
-        let raw: RawLootTable = match serde_json::from_value(value) {
-            Ok(r) => r,
-            Err(e) => {
-                tracing::warn!("Skipping loot table {name}: {e}");
-                continue;
-            }
-        };
-        let entries = raw
-            .entries
-            .into_iter()
-            .map(|e| LootEntry { item: e.item })
-            .collect();
-        out.insert(name, LootTable { entries });
-    }
-    Ok(out)
+    build_map_from_kv3(
+        vdata,
+        "loot table",
+        |name, value| name != "all_items" && !name.starts_with("generic_") && value.is_object(),
+        |_, raw: RawLootTable| LootTable {
+            entries: raw
+                .entries
+                .into_iter()
+                .map(|e| LootEntry { item: e.item })
+                .collect(),
+        },
+    )
 }
 
 #[cached(

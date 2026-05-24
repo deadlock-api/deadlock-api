@@ -4,17 +4,17 @@ use std::sync::Arc;
 
 use cached::LruTtlCache;
 use cached::macros::cached;
-use indexmap::IndexMap;
 use object_store::aws::AmazonS3;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 use utoipa::ToSchema;
 
-use crate::services::assets::versions::common::{Color, Subclass, WrapSubclass, entity_id};
-use crate::services::assets::versions::common::{DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL};
+use crate::services::assets::versions::common::{
+    Color, DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL, Subclass, WrapSubclass, build_from_kv3,
+    entity_id, enum_str_serde,
+};
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::store;
-use crate::utils::kv3;
 
 // ----- Raw KV3 shape -----
 
@@ -85,18 +85,7 @@ pub(crate) enum RollType {
     Other(String),
 }
 
-impl Serialize for RollType {
-    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        s.collect_str(self)
-    }
-}
-
-impl<'de> Deserialize<'de> for RollType {
-    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        let s = String::deserialize(d)?;
-        s.parse().map_err(serde::de::Error::custom)
-    }
-}
+enum_str_serde!(RollType);
 
 #[derive(Debug, Deserialize)]
 #[allow(clippy::struct_excessive_bools)]
@@ -302,22 +291,14 @@ pub(crate) struct MiscEntity {
 // ----- Build -----
 
 pub(crate) fn build_misc_entities(vdata: &str) -> Result<Vec<MiscEntity>, AssetsError> {
-    let root: IndexMap<String, serde_json::Value> = kv3::from_str(vdata)?;
-    let mut out = Vec::with_capacity(root.len());
-    for (class_name, value) in root {
-        if !value.is_object() || class_name.contains("base") || class_name.contains("dummy") {
-            continue;
-        }
-        let raw: RawMiscEntity = match serde_json::from_value(value) {
-            Ok(r) => r,
-            Err(e) => {
-                tracing::warn!("Skipping misc entity {class_name}: {e}");
-                continue;
-            }
-        };
-        out.push(transform(class_name, raw));
-    }
-    Ok(out)
+    build_from_kv3(
+        vdata,
+        "misc entity",
+        |class_name, value| {
+            value.is_object() && !class_name.contains("base") && !class_name.contains("dummy")
+        },
+        transform,
+    )
 }
 
 fn transform(class_name: String, r: RawMiscEntity) -> MiscEntity {

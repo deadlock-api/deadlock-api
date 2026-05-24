@@ -9,11 +9,12 @@ use object_store::aws::AmazonS3;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::services::assets::versions::common::{DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL};
+use crate::services::assets::versions::common::{
+    DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL, build_from_kv3,
+};
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::localization;
 use crate::services::assets::versions::store;
-use crate::utils::kv3;
 
 // ----- Raw KV3 shape -----
 
@@ -51,22 +52,12 @@ pub(crate) fn build_accolades(
     vdata: &str,
     loc: &HashMap<String, String>,
 ) -> Result<Vec<Accolade>, AssetsError> {
-    let root: indexmap::IndexMap<String, serde_json::Value> = kv3::from_str(vdata)?;
-    let mut out = Vec::with_capacity(root.len());
-    for (class_name, value) in root {
-        if class_name == "generic_data_type" || class_name.starts_with('_') {
-            continue;
-        }
-        let raw: RawAccolade = match serde_json::from_value(value) {
-            Ok(r) => r,
-            Err(e) => {
-                tracing::warn!("Skipping accolade {class_name}: {e}");
-                continue;
-            }
-        };
-        out.push(transform(class_name, raw, loc));
-    }
-    Ok(out)
+    build_from_kv3(
+        vdata,
+        "accolade",
+        |class_name, _| class_name != "generic_data_type" && !class_name.starts_with('_'),
+        |class_name, raw| transform(class_name, raw, loc),
+    )
 }
 
 fn transform(class_name: String, r: RawAccolade, loc: &HashMap<String, String>) -> Accolade {
@@ -106,14 +97,11 @@ pub(crate) async fn fetch_accolades(
 ) -> Result<Arc<Vec<Accolade>>, AssetsError> {
     let (vdata, loc) = tokio::try_join!(
         async {
-            store::fetch_text(r2, version, "scripts/accolades.vdata")
-                .await
-                .map_err(AssetsError::from)
+            Ok::<_, AssetsError>(store::fetch_text(r2, version, "scripts/accolades.vdata").await?)
         },
         localization::fetch_localization(r2, version, language),
     )?;
-    let accolades = build_accolades(&vdata, &loc)?;
-    Ok(Arc::new(accolades))
+    Ok(Arc::new(build_accolades(&vdata, &loc)?))
 }
 
 #[cfg(test)]

@@ -10,12 +10,11 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::services::assets::versions::common::{
-    Color, HeroItemType, Subclass, WrapSubclass, entity_id,
+    Color, DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL, HeroItemType, Subclass, WrapSubclass,
+    build_from_kv3, entity_id,
 };
-use crate::services::assets::versions::common::{DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL};
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::store;
-use crate::utils::kv3;
 
 // ===================================================== Raw KV3 shape
 
@@ -764,23 +763,8 @@ pub(crate) struct NpcUnit {
 // ===================================================== Build
 
 pub(crate) fn build_npc_units(vdata: &str) -> Result<Vec<NpcUnit>, AssetsError> {
-    let root: IndexMap<String, serde_json::Value> = kv3::from_str(vdata)?;
-    let mut out = Vec::with_capacity(root.len());
-    for (class_name, value) in root {
-        if !value.is_object() {
-            // `generic_data_type` and other scalar top-level keys.
-            continue;
-        }
-        let raw: RawNpcUnit = match serde_json::from_value(value) {
-            Ok(r) => r,
-            Err(e) => {
-                tracing::warn!("Skipping npc unit {class_name}: {e}");
-                continue;
-            }
-        };
-        out.push(transform(class_name, raw));
-    }
-    Ok(out)
+    // `generic_data_type` and other scalar top-level keys are filtered out.
+    build_from_kv3(vdata, "npc unit", |_, value| value.is_object(), transform)
 }
 
 #[allow(clippy::too_many_lines)]

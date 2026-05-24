@@ -9,12 +9,12 @@ use object_store::aws::AmazonS3;
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use crate::services::assets::versions::common::entity_id;
-use crate::services::assets::versions::common::{DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL};
+use crate::services::assets::versions::common::{
+    DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL, SVGS_BASE_URL, entity_id,
+};
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::localization;
 
-const SVGS_BASE_URL: &str = "https://assets-bucket.deadlock-api.com/assets-api-res/icons";
 const KEY_PREFIX: &str = "citadel_build_tag_";
 const KEY_EXCLUDE: &str = "citadel_build_tag_label";
 

@@ -2,14 +2,100 @@
 
 use core::time::Duration;
 
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 use utoipa::ToSchema;
+
+use crate::services::assets::versions::error::AssetsError;
+use crate::utils::kv3;
 
 /// Default LRU capacity for per-version `fetch_*` caches.
 pub(crate) const DEFAULT_CACHE_SIZE: usize = 64;
 /// Default TTL for per-version `fetch_*` caches.
 pub(crate) const DEFAULT_CACHE_TTL: Duration = Duration::from_hours(24);
+
+/// Base URL for static images served from the assets bucket.
+pub(crate) const IMAGE_BASE_URL: &str =
+    "https://assets-bucket.deadlock-api.com/assets-api-res/images";
+/// Base URL for static SVG icons served from the assets bucket.
+pub(crate) const SVGS_BASE_URL: &str =
+    "https://assets-bucket.deadlock-api.com/assets-api-res/icons";
+
+/// Parse a KV3 source file, then iterate its top-level entries: each entry
+/// that passes `keep` is deserialized into `Raw` and passed to `transform`.
+/// Entries that fail to deserialize are skipped with a `warn!` carrying
+/// `label` for context, so a single malformed entry can't break the endpoint.
+pub(crate) fn build_from_kv3<Raw, Out>(
+    vdata: &str,
+    label: &'static str,
+    keep: impl Fn(&str, &serde_json::Value) -> bool,
+    mut transform: impl FnMut(String, Raw) -> Out,
+) -> Result<Vec<Out>, AssetsError>
+where
+    Raw: serde::de::DeserializeOwned,
+{
+    let root: IndexMap<String, serde_json::Value> = kv3::from_str(vdata)?;
+    let mut out = Vec::with_capacity(root.len());
+    for (class_name, value) in root {
+        if !keep(&class_name, &value) {
+            continue;
+        }
+        match serde_json::from_value::<Raw>(value) {
+            Ok(raw) => out.push(transform(class_name, raw)),
+            Err(e) => tracing::warn!("Skipping {label} {class_name}: {e}"),
+        }
+    }
+    Ok(out)
+}
+
+/// Like [`build_from_kv3`], but collects into an [`IndexMap`] keyed by
+/// `class_name`.
+pub(crate) fn build_map_from_kv3<Raw, Out>(
+    vdata: &str,
+    label: &'static str,
+    keep: impl Fn(&str, &serde_json::Value) -> bool,
+    mut transform: impl FnMut(&str, Raw) -> Out,
+) -> Result<IndexMap<String, Out>, AssetsError>
+where
+    Raw: serde::de::DeserializeOwned,
+{
+    let root: IndexMap<String, serde_json::Value> = kv3::from_str(vdata)?;
+    let mut out = IndexMap::with_capacity(root.len());
+    for (class_name, value) in root {
+        if !keep(&class_name, &value) {
+            continue;
+        }
+        match serde_json::from_value::<Raw>(value) {
+            Ok(raw) => {
+                let v = transform(&class_name, raw);
+                out.insert(class_name, v);
+            }
+            Err(e) => tracing::warn!("Skipping {label} {class_name}: {e}"),
+        }
+    }
+    Ok(out)
+}
+
+/// Derives `Serialize`/`Deserialize` for an enum that already implements
+/// [`core::fmt::Display`] and [`core::str::FromStr`] (e.g. via `strum`).
+/// Serializes via `Display`, deserializes via `FromStr`.
+macro_rules! enum_str_serde {
+    ($($t:ty),+ $(,)?) => {$(
+        impl serde::Serialize for $t {
+            fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+                s.collect_str(self)
+            }
+        }
+        impl<'de> serde::Deserialize<'de> for $t {
+            fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+                let s = <std::borrow::Cow<'de, str>>::deserialize(d)?;
+                s.parse().map_err(serde::de::Error::custom)
+            }
+        }
+    )+};
+}
+pub(crate) use enum_str_serde;
 
 /// Stable murmurhash2 seed used for entity-id derivation from `class_name`.
 const ENTITY_ID_SEED: u32 = 0x3141_5926;
@@ -80,18 +166,7 @@ pub(crate) enum HeroItemType {
     EslotCosmetic1,
 }
 
-impl Serialize for HeroItemType {
-    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        s.collect_str(self)
-    }
-}
-
-impl<'de> Deserialize<'de> for HeroItemType {
-    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        let s = <&str>::deserialize(d)?;
-        s.parse().map_err(serde::de::Error::custom)
-    }
-}
+enum_str_serde!(HeroItemType);
 
 /// RGBA color emitted by KV3 as a 3- or 4-element integer array. Alpha
 /// defaults to 255 when omitted.
