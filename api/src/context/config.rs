@@ -51,11 +51,15 @@ pub(super) struct R2Config {
     pub(super) secret_access_key: String,
     #[serde(default = "default_r2_region")]
     pub(super) region: String,
+    #[serde(default)]
+    pub(super) endpoint: Option<String>,
 }
 
 impl R2Config {
     pub(super) fn endpoint(&self) -> String {
-        format!("https://{}.r2.cloudflarestorage.com", self.account_id)
+        self.endpoint
+            .clone()
+            .unwrap_or_else(|| format!("https://{}.r2.cloudflarestorage.com", self.account_id))
     }
 }
 
