@@ -1,0 +1,20 @@
+overrides:
+  typescript: ^6.0.3
+
+onlyBuiltDependencies:
+  - "@tailwindcss/oxide"
+  - assets_deadlock_api_client
+  - core-js
+  - deadlock_api_client
+  - esbuild
+  - protobufjs
+  - sharp
+  - unrs-resolver
+  - workerd
+
+allowBuilds:
+  deadlock_api_client: true
+  assets_deadlock_api_client: true
+  esbuild: true
+  sharp: true
+  workerd: true
