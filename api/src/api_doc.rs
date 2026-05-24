@@ -1,3 +1,5 @@
+use serde_json::json;
+use utoipa::openapi::extensions::Extensions;
 use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 
@@ -30,7 +32,7 @@ _deadlock-api.com is not endorsed by Valve and does not reflect the views or opi
             url = "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE"
         )
     ),
-    modifiers(&SecurityAddon),
+    modifiers(&SecurityAddon, &TagGroupsAddon),
     external_docs(
         description = "Source Code",
         url = "https://github.com/deadlock-api/deadlock-api"
@@ -54,5 +56,120 @@ impl Modify for SecurityAddon {
                 ),
             ]);
         }
+    }
+}
+
+struct TagGroupsAddon;
+
+const TAG_GROUPS: &[(&str, &[&str])] = &[
+    ("Assets", &["Heroes"]),
+    (
+        "Game Data",
+        &[
+            "Analytics",
+            "Builds",
+            "Custom Matches",
+            "Info",
+            "Leaderboard",
+            "Matches",
+            "MMR",
+            "Patches",
+            "Players",
+            "Steam",
+        ],
+    ),
+    (
+        "Developer",
+        &["Commands", "GraphQL", "Internal", "Servers", "SQL"],
+    ),
+];
+
+impl Modify for TagGroupsAddon {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        let tag_groups = json!(
+            TAG_GROUPS
+                .iter()
+                .map(|(name, tags)| json!({ "name": name, "tags": tags }))
+                .collect::<Vec<_>>()
+        );
+        openapi
+            .extensions
+            .get_or_insert_with(Extensions::default)
+            .insert("x-tagGroups".to_string(), tag_groups);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+    use std::path::Path;
+
+    use super::TAG_GROUPS;
+
+    /// Walks `src/` and extracts every tag name used in a `#[utoipa::path(...)]`
+    /// attribute via `tags = ["X", "Y"]`. Returns the unique set.
+    fn collect_source_tags() -> HashSet<String> {
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let src = Path::new(manifest_dir).join("src");
+
+        let tags_re = regex::Regex::new(r"tags\s*=\s*\[([^\]]*)\]").unwrap();
+        let str_re = regex::Regex::new(r#""([^"]+)""#).unwrap();
+
+        let mut tags = HashSet::new();
+        let mut stack = vec![src];
+        while let Some(dir) = stack.pop() {
+            for entry in std::fs::read_dir(&dir).unwrap().flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    stack.push(path);
+                } else if path.extension().is_some_and(|e| e == "rs")
+                    && path.file_name().is_some_and(|f| f != "api_doc.rs")
+                {
+                    let content = std::fs::read_to_string(&path).unwrap();
+                    for m in tags_re.captures_iter(&content) {
+                        for s in str_re.captures_iter(&m[1]) {
+                            tags.insert(s[1].to_string());
+                        }
+                    }
+                }
+            }
+        }
+        tags
+    }
+
+    fn collect_grouped_tags() -> HashSet<String> {
+        TAG_GROUPS
+            .iter()
+            .flat_map(|(_, ts)| ts.iter().map(|t| (*t).to_string()))
+            .collect()
+    }
+
+    #[test]
+    fn every_tag_is_in_a_group() {
+        let source: HashSet<String> = collect_source_tags();
+        let grouped = collect_grouped_tags();
+        let missing: Vec<&String> = source.difference(&grouped).collect();
+        assert!(
+            missing.is_empty(),
+            "Tags used in #[utoipa::path] are not present in TAG_GROUPS (Scalar x-tagGroups). \
+             Add them to src/api_doc.rs::TAG_GROUPS:\n  {missing:?}",
+        );
+    }
+
+    #[test]
+    fn no_tag_appears_in_multiple_groups() {
+        let mut seen: HashSet<&str> = HashSet::new();
+        let mut dupes: Vec<&str> = Vec::new();
+        for (_, tags) in TAG_GROUPS {
+            for t in *tags {
+                if !seen.insert(t) {
+                    dupes.push(t);
+                }
+            }
+        }
+        assert!(
+            dupes.is_empty(),
+            "TAG_GROUPS contains tags assigned to multiple groups: {dupes:?}",
+        );
     }
 }
