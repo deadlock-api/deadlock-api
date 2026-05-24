@@ -97,6 +97,44 @@ pub(super) async fn get_hero(
         })
 }
 
+#[utoipa::path(
+    get,
+    path = "/by-name/{name}",
+    params(
+        ("name" = String, Path, description = "Hero class name (e.g. `hero_atlas`) or short name (e.g. `atlas`)"),
+        HeroQuery,
+    ),
+    responses(
+        (status = OK, body = HeroV2),
+        (status = NOT_FOUND, description = "Unknown hero name or client_version"),
+        (status = INTERNAL_SERVER_ERROR, description = "Failed to load source assets"),
+    ),
+    tags = ["Heroes"],
+    summary = "Get Hero By Name",
+    description = "Returns a single hero by `class_name` or display `name`. Matches the bare value as well as the `hero_`-prefixed form."
+)]
+pub(super) async fn get_hero_by_name(
+    State(state): State<AppState>,
+    Path(name): Path<String>,
+    Query(q): Query<HeroQuery>,
+) -> APIResult<impl IntoResponse> {
+    let heroes = load_heroes(&state, q.client_version, q.language).await?;
+    let needle = name.to_lowercase();
+    let prefixed = format!("hero_{needle}");
+    heroes
+        .iter()
+        .find(|h| {
+            let cn = h.class_name.to_lowercase();
+            let n = h.name.to_lowercase();
+            cn == needle || cn == prefixed || n == needle || n == prefixed
+        })
+        .cloned()
+        .map(Json)
+        .ok_or_else(|| {
+            APIError::status_msg(StatusCode::NOT_FOUND, format!("Unknown hero name: {name}"))
+        })
+}
+
 /// Returns the cached `Arc<Vec<HeroV2>>` directly so concurrent requests for
 /// the same `(version, language)` share a single underlying allocation. The
 /// caller filters by `only_active` / `hero_id` at request time.

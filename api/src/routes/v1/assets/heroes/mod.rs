@@ -23,5 +23,6 @@ struct ApiDoc;
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(route::list_heroes))
+        .routes(routes!(route::get_hero_by_name))
         .routes(routes!(route::get_hero))
 }
