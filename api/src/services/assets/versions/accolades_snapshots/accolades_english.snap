@@ -1,0 +1,279 @@
+---
+source: src/services/assets/versions/accolades.rs
+assertion_line: 180
+expression: out
+---
+[
+  {
+    "class_name": "kills",
+    "id": 1,
+    "tracked_stat_name": "kills",
+    "flavor_name": "Killer Instinct",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> {stat_value, plural, one{kill} other{kills}}",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "assists",
+    "id": 2,
+    "tracked_stat_name": "assists",
+    "flavor_name": "Accomplished Accomplice",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> {stat_value, plural, one{assist} other{assists}}",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "healing",
+    "id": 3,
+    "tracked_stat_name": "healing",
+    "flavor_name": "The Doctor is In",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> healing",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "player_damage",
+    "id": 4,
+    "tracked_stat_name": "player_damage",
+    "flavor_name": "Bring the Pain",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> damage to enemy heroes",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "net_worth",
+    "id": 5,
+    "tracked_stat_name": "net_worth",
+    "flavor_name": "I'm Rich",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> {stat_value, plural, one{soul} other{souls}} earned",
+    "threshold_type": "automatic",
+    "enabled_game_modes": [
+      "normal"
+    ]
+  },
+  {
+    "class_name": "trooper_last_hits",
+    "id": 6,
+    "tracked_stat_name": "trooper_last_hits",
+    "flavor_name": "Super Troopers",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> {stat_value, plural, one{last hit on a trooper} other{last hits on troopers}}",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "neutral_last_hits",
+    "id": 7,
+    "tracked_stat_name": "neutral_last_hits",
+    "flavor_name": "Filthy Neutral Scum",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> {stat_value, plural, one{last hit on a neutral} other{last hits on neutrals}}",
+    "threshold_type": "automatic",
+    "enabled_game_modes": [
+      "normal"
+    ]
+  },
+  {
+    "class_name": "last_hits",
+    "id": 8,
+    "tracked_stat_name": "last_hits",
+    "flavor_name": "Heavy Hitter",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> {stat_value, plural, one{last hit} other{last hits}}",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "secures",
+    "id": 9,
+    "tracked_stat_name": "secures",
+    "flavor_name": "Social Security",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> {stat_value, plural, one{secured soul orb} other{secured soul orbs}}",
+    "threshold_type": "automatic",
+    "enabled_game_modes": [
+      "normal"
+    ]
+  },
+  {
+    "class_name": "denies",
+    "id": 10,
+    "tracked_stat_name": "denies",
+    "flavor_name": "None for You",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> {stat_value, plural, one{deny} other{denies}}",
+    "threshold_type": "automatic",
+    "enabled_game_modes": [
+      "normal"
+    ]
+  },
+  {
+    "class_name": "breakables_destroyed",
+    "id": 11,
+    "tracked_stat_name": "breakables_destroyed",
+    "flavor_name": "Championship Box-er",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> {stat_value, plural, one{broken crate or golden idol} other{broken crates or golden idols}}",
+    "threshold_type": "automatic",
+    "enabled_game_modes": [
+      "normal"
+    ]
+  },
+  {
+    "class_name": "pickups_collected_powerup",
+    "id": 12,
+    "tracked_stat_name": "pickups_collected_powerup",
+    "flavor_name": "Power Overwhelming",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> {stat_value, plural, one{golden idol bonus} other{golden idol bonuses}}",
+    "threshold_type": "automatic",
+    "enabled_game_modes": [
+      "normal"
+    ]
+  },
+  {
+    "class_name": "returned_idol",
+    "id": 13,
+    "tracked_stat_name": "returned_idol",
+    "flavor_name": "High Urner",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> {stat_value, plural, one{urn delivery} other{urn deliveries}}",
+    "threshold_type": "automatic",
+    "enabled_game_modes": [
+      "normal"
+    ]
+  },
+  {
+    "class_name": "sinners_sacrifice_jackpot",
+    "id": 14,
+    "tracked_stat_name": "sinners_sacrifice_jackpot",
+    "flavor_name": "Ka-Ching",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> Sinner's Sacrifice jackpot",
+    "threshold_type": "automatic",
+    "enabled_game_modes": [
+      "normal"
+    ]
+  },
+  {
+    "class_name": "first_blood",
+    "id": 15,
+    "tracked_stat_name": "first_blood",
+    "flavor_name": "First of Many",
+    "description": "First Blood",
+    "threshold_type": "manual"
+  },
+  {
+    "class_name": "killstreak_kills",
+    "id": 16,
+    "tracked_stat_name": "killstreak_kills",
+    "flavor_name": "We're Going Streaking",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> {stat_value, plural, one{kill} other{kills}} on a killstreak",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "closeup_kills",
+    "id": 17,
+    "tracked_stat_name": "closeup_kills",
+    "flavor_name": "Up Close and Personal",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> {stat_value, plural, one{nearby kill} other{nearby kills}}",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "long_distance_kills",
+    "id": 18,
+    "tracked_stat_name": "long_distance_kills",
+    "flavor_name": "From Downtown",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> {stat_value, plural, one{kill} other{kills}} from far away",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "gun_kills",
+    "id": 19,
+    "tracked_stat_name": "gun_kills",
+    "flavor_name": "Gunslinger",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> gun {stat_value, plural, one{kill} other{kills}}",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "melee_kills",
+    "id": 20,
+    "tracked_stat_name": "melee_kills",
+    "flavor_name": "Punch-Out",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> melee {stat_value, plural, one{kill} other{kills}}",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "ability_kills",
+    "id": 21,
+    "tracked_stat_name": "ability_kills",
+    "flavor_name": "The Deadly Spirit",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> ability {stat_value, plural, one{kill} other{kills}}",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "bullet_damage",
+    "id": 22,
+    "tracked_stat_name": "bullet_damage",
+    "flavor_name": "Shooty McShootypants",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> bullet damage",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "melee_damage",
+    "id": 23,
+    "tracked_stat_name": "melee_damage",
+    "flavor_name": "Talk to the Hand",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> melee damage",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "ability_damage",
+    "id": 24,
+    "tracked_stat_name": "ability_damage",
+    "flavor_name": "The Zapper",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> ability damage",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "weapon_damage",
+    "id": 25,
+    "tracked_stat_name": "weapon_damage",
+    "flavor_name": "Master at Arms",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> weapon damage",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "damage_absorbed",
+    "id": 26,
+    "tracked_stat_name": "damage_absorbed",
+    "flavor_name": "Well Protected",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> {stat_value, plural, one{damage absorbed with a barrier} other{damage absorbed with barriers}}",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "damage_mitigated",
+    "id": 27,
+    "tracked_stat_name": "damage_mitigated",
+    "flavor_name": "Resilient",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> damage mitigated",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "headshots",
+    "id": 28,
+    "tracked_stat_name": "headshots",
+    "flavor_name": "Pow, Right in the Kisser",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> {stat_value, plural, one{headshot} other{headshots}}",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "headshot_damage",
+    "id": 29,
+    "tracked_stat_name": "headshot_damage",
+    "flavor_name": "Head First",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> headshot damage",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "closeup_damage",
+    "id": 30,
+    "tracked_stat_name": "closeup_damage",
+    "flavor_name": "In Your Face",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> close range damage",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "long_distance_damage",
+    "id": 31,
+    "tracked_stat_name": "long_distance_damage",
+    "flavor_name": "Keeping Your Distance",
+    "description": "<span class=\"StatValue\">{g:citadel_thousands:stat_value}</span> far away damage",
+    "threshold_type": "automatic"
+  }
+]

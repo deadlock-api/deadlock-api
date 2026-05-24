@@ -7,8 +7,7 @@ use strum::IntoStaticStr;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 
-/// Set of languages the upstream `localization/<lang>.json` files are
-/// keyed by. Matches the python `Language` enum.
+/// Set of languages the upstream `localization/<lang>.json` files are keyed by.
 #[derive(Debug, Clone, Copy, Deserialize, IntoStaticStr, utoipa::ToSchema)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]

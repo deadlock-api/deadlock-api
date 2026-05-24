@@ -5,6 +5,9 @@
 //! in the R2 bucket. This module fetches, parses, and transforms them into
 //! the public `/v2/...` JSON shapes.
 
+pub(crate) mod accolades;
 pub(crate) mod css;
+pub(crate) mod error;
 pub(crate) mod heroes;
+pub(crate) mod localization;
 pub(crate) mod store;

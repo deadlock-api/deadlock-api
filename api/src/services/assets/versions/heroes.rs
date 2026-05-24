@@ -12,21 +12,13 @@ use strum::EnumString;
 use utoipa::ToSchema;
 
 use crate::services::assets::versions::css;
+use crate::services::assets::versions::error::AssetsError;
+use crate::services::assets::versions::localization;
 use crate::services::assets::versions::store;
 use crate::utils::kv3;
 
 const IMAGE_BASE_URL: &str = "https://assets-bucket.deadlock-api.com/assets-api-res/images";
 const SVGS_BASE_URL: &str = "https://assets-bucket.deadlock-api.com/assets-api-res/icons";
-
-#[derive(Debug, thiserror::Error)]
-pub(crate) enum HeroesError {
-    #[error("KV3 parse error: {0}")]
-    Kv3(#[from] kv3::Kv3Error),
-    #[error("Localization parse error: {0}")]
-    Localization(#[from] serde_json::Error),
-    #[error("Asset fetch error: {0}")]
-    Store(#[from] store::VersionStoreError),
-}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -601,7 +593,7 @@ pub(crate) fn build_heroes(
     style_css: &str,
     bg_css: &str,
     only_active: bool,
-) -> Result<Vec<Hero>, HeroesError> {
+) -> Result<Vec<Hero>, AssetsError> {
     let root: IndexMap<String, serde_json::Value> = kv3::from_str(heroes_vdata)?;
     let style_colors = css::parse_hero_style_colors(style_css);
     let backgrounds = css::parse_hero_backgrounds(bg_css);
@@ -1063,7 +1055,7 @@ struct ParsedSources {
     result = true,
     sync_writes = "by_key"
 )]
-async fn parsed_version_sources(r2: &AmazonS3, version: u32) -> Result<ParsedSources, HeroesError> {
+async fn parsed_version_sources(r2: &AmazonS3, version: u32) -> Result<ParsedSources, AssetsError> {
     // CSS files are optional: a NotFound leaves the lookup empty so the
     // per-hero `background_image*` / `colors.style*` fields serialize as null.
     let (vdata, style_css, bg_css) = tokio::try_join!(
@@ -1105,33 +1097,6 @@ async fn fetch_optional_text(
 }
 
 #[cached(
-    ty = "LruTtlCache<(u32, String), Arc<HashMap<String, String>>>",
-    create = "{ LruTtlCache::builder().size(BUILT_CACHE_SIZE).ttl(CACHE_TTL).build() }",
-    convert = r#"{ (version, language.to_owned()) }"#,
-    result = true,
-    sync_writes = "by_key"
-)]
-async fn cached_localization(
-    r2: &AmazonS3,
-    version: u32,
-    language: &str,
-) -> Result<Arc<HashMap<String, String>>, HeroesError> {
-    match store::fetch_text(r2, version, &format!("localization/{language}.json")).await {
-        Ok(json) => Ok(Arc::new(serde_json::from_str(&json)?)),
-        Err(store::VersionStoreError::ObjectStore(object_store::Error::NotFound { .. }))
-            if language != "english" =>
-        {
-            tracing::warn!(
-                "localization/{language}.json missing for v{version}; falling back to english"
-            );
-            let json = store::fetch_text(r2, version, "localization/english.json").await?;
-            Ok(Arc::new(serde_json::from_str(&json)?))
-        }
-        Err(e) => Err(e.into()),
-    }
-}
-
-#[cached(
     ty = "LruTtlCache<(u32, String), Arc<Vec<Hero>>>",
     create = "{ LruTtlCache::builder().size(BUILT_CACHE_SIZE).ttl(CACHE_TTL).build() }",
     convert = r#"{ (version, language.to_owned()) }"#,
@@ -1142,12 +1107,13 @@ pub(crate) async fn fetch_heroes(
     r2: &AmazonS3,
     version: u32,
     language: &str,
-) -> Result<Arc<Vec<Hero>>, HeroesError> {
-    let (sources, localization) = tokio::try_join!(
-        parsed_version_sources(r2, version),
-        cached_localization(r2, version, language),
-    )?;
-    let heroes = build_from_sources(&sources, &localization);
+) -> Result<Arc<Vec<Hero>>, AssetsError> {
+    let (sources, loc) = tokio::try_join!(parsed_version_sources(r2, version), async {
+        localization::fetch_localization(r2, version, language)
+            .await
+            .map_err(AssetsError::from)
+    },)?;
+    let heroes = build_from_sources(&sources, &loc);
     Ok(Arc::new(heroes))
 }
 

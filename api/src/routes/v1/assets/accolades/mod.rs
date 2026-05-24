@@ -1,4 +1,4 @@
-//! `/v1/assets/heroes` route layer.
+//! `/v1/assets/accolades` route layer.
 
 pub(super) mod route;
 
@@ -10,14 +10,14 @@ use crate::context::AppState;
 
 #[derive(OpenApi)]
 #[openapi(tags((
-    name = "Heroes",
-    description = "Hero metadata derived from per-version game data files."
+    name = "Accolades",
+    description = "Accolade definitions derived from per-version game data files."
 )))]
 struct ApiDoc;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
-        .routes(routes!(route::list_heroes))
-        .routes(routes!(route::get_hero_by_name))
-        .routes(routes!(route::get_hero))
+        .routes(routes!(route::list_accolades))
+        .routes(routes!(route::get_accolade_by_name))
+        .routes(routes!(route::get_accolade))
 }

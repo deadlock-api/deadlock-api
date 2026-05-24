@@ -1,0 +1,279 @@
+---
+source: src/services/assets/versions/accolades.rs
+assertion_line: 191
+expression: out
+---
+[
+  {
+    "class_name": "kills",
+    "id": 1,
+    "tracked_stat_name": "kills",
+    "flavor_name": "#Citadel_VData_accolades_kills_FlavorName",
+    "description": "#Citadel_VData_accolades_kills_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "assists",
+    "id": 2,
+    "tracked_stat_name": "assists",
+    "flavor_name": "#Citadel_VData_accolades_assists_FlavorName",
+    "description": "#Citadel_VData_accolades_assists_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "healing",
+    "id": 3,
+    "tracked_stat_name": "healing",
+    "flavor_name": "#Citadel_VData_accolades_healing_FlavorName",
+    "description": "#Citadel_VData_accolades_healing_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "player_damage",
+    "id": 4,
+    "tracked_stat_name": "player_damage",
+    "flavor_name": "#Citadel_VData_accolades_player_damage_FlavorName",
+    "description": "#Citadel_VData_accolades_player_damage_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "net_worth",
+    "id": 5,
+    "tracked_stat_name": "net_worth",
+    "flavor_name": "#Citadel_VData_accolades_net_worth_FlavorName",
+    "description": "#Citadel_VData_accolades_net_worth_Description:f",
+    "threshold_type": "automatic",
+    "enabled_game_modes": [
+      "normal"
+    ]
+  },
+  {
+    "class_name": "trooper_last_hits",
+    "id": 6,
+    "tracked_stat_name": "trooper_last_hits",
+    "flavor_name": "#Citadel_VData_accolades_trooper_last_hits_FlavorName",
+    "description": "#Citadel_VData_accolades_trooper_last_hits_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "neutral_last_hits",
+    "id": 7,
+    "tracked_stat_name": "neutral_last_hits",
+    "flavor_name": "#Citadel_VData_accolades_neutral_last_hits_FlavorName",
+    "description": "#Citadel_VData_accolades_neutral_last_hits_Description:f",
+    "threshold_type": "automatic",
+    "enabled_game_modes": [
+      "normal"
+    ]
+  },
+  {
+    "class_name": "last_hits",
+    "id": 8,
+    "tracked_stat_name": "last_hits",
+    "flavor_name": "#Citadel_VData_accolades_last_hits_FlavorName",
+    "description": "#Citadel_VData_accolades_last_hits_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "secures",
+    "id": 9,
+    "tracked_stat_name": "secures",
+    "flavor_name": "#Citadel_VData_accolades_secures_FlavorName",
+    "description": "#Citadel_VData_accolades_secures_Description:f",
+    "threshold_type": "automatic",
+    "enabled_game_modes": [
+      "normal"
+    ]
+  },
+  {
+    "class_name": "denies",
+    "id": 10,
+    "tracked_stat_name": "denies",
+    "flavor_name": "#Citadel_VData_accolades_denies_FlavorName",
+    "description": "#Citadel_VData_accolades_denies_Description:f",
+    "threshold_type": "automatic",
+    "enabled_game_modes": [
+      "normal"
+    ]
+  },
+  {
+    "class_name": "breakables_destroyed",
+    "id": 11,
+    "tracked_stat_name": "breakables_destroyed",
+    "flavor_name": "#Citadel_VData_accolades_breakables_destroyed_FlavorName",
+    "description": "#Citadel_VData_accolades_breakables_destroyed_Description:f",
+    "threshold_type": "automatic",
+    "enabled_game_modes": [
+      "normal"
+    ]
+  },
+  {
+    "class_name": "pickups_collected_powerup",
+    "id": 12,
+    "tracked_stat_name": "pickups_collected_powerup",
+    "flavor_name": "#Citadel_VData_accolades_pickups_collected_powerup_FlavorName",
+    "description": "#Citadel_VData_accolades_pickups_collected_powerup_Description:f",
+    "threshold_type": "automatic",
+    "enabled_game_modes": [
+      "normal"
+    ]
+  },
+  {
+    "class_name": "returned_idol",
+    "id": 13,
+    "tracked_stat_name": "returned_idol",
+    "flavor_name": "#Citadel_VData_accolades_returned_idol_FlavorName",
+    "description": "#Citadel_VData_accolades_returned_idol_Description:f",
+    "threshold_type": "automatic",
+    "enabled_game_modes": [
+      "normal"
+    ]
+  },
+  {
+    "class_name": "sinners_sacrifice_jackpot",
+    "id": 14,
+    "tracked_stat_name": "sinners_sacrifice_jackpot",
+    "flavor_name": "#Citadel_VData_accolades_sinners_sacrifice_jackpot_FlavorName",
+    "description": "#Citadel_VData_accolades_sinners_sacrifice_jackpot_Description:f",
+    "threshold_type": "automatic",
+    "enabled_game_modes": [
+      "normal"
+    ]
+  },
+  {
+    "class_name": "first_blood",
+    "id": 15,
+    "tracked_stat_name": "first_blood",
+    "flavor_name": "#Citadel_VData_accolades_first_blood_FlavorName",
+    "description": "#Citadel_VData_accolades_first_blood_Description:f",
+    "threshold_type": "manual"
+  },
+  {
+    "class_name": "killstreak_kills",
+    "id": 16,
+    "tracked_stat_name": "killstreak_kills",
+    "flavor_name": "#Citadel_VData_accolades_killstreak_kills_FlavorName",
+    "description": "#Citadel_VData_accolades_killstreak_kills_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "closeup_kills",
+    "id": 17,
+    "tracked_stat_name": "closeup_kills",
+    "flavor_name": "#Citadel_VData_accolades_closeup_kills_FlavorName",
+    "description": "#Citadel_VData_accolades_closeup_kills_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "long_distance_kills",
+    "id": 18,
+    "tracked_stat_name": "long_distance_kills",
+    "flavor_name": "#Citadel_VData_accolades_long_distance_kills_FlavorName",
+    "description": "#Citadel_VData_accolades_long_distance_kills_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "gun_kills",
+    "id": 19,
+    "tracked_stat_name": "gun_kills",
+    "flavor_name": "#Citadel_VData_accolades_gun_kills_FlavorName",
+    "description": "#Citadel_VData_accolades_gun_kills_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "melee_kills",
+    "id": 20,
+    "tracked_stat_name": "melee_kills",
+    "flavor_name": "#Citadel_VData_accolades_melee_kills_FlavorName",
+    "description": "#Citadel_VData_accolades_melee_kills_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "ability_kills",
+    "id": 21,
+    "tracked_stat_name": "ability_kills",
+    "flavor_name": "#Citadel_VData_accolades_ability_kills_FlavorName",
+    "description": "#Citadel_VData_accolades_ability_kills_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "bullet_damage",
+    "id": 22,
+    "tracked_stat_name": "bullet_damage",
+    "flavor_name": "#Citadel_VData_accolades_bullet_damage_FlavorName",
+    "description": "#Citadel_VData_accolades_bullet_damage_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "melee_damage",
+    "id": 23,
+    "tracked_stat_name": "melee_damage",
+    "flavor_name": "#Citadel_VData_accolades_melee_damage_FlavorName",
+    "description": "#Citadel_VData_accolades_melee_damage_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "ability_damage",
+    "id": 24,
+    "tracked_stat_name": "ability_damage",
+    "flavor_name": "#Citadel_VData_accolades_ability_damage_FlavorName",
+    "description": "#Citadel_VData_accolades_ability_damage_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "weapon_damage",
+    "id": 25,
+    "tracked_stat_name": "weapon_damage",
+    "flavor_name": "#Citadel_VData_accolades_weapon_damage_FlavorName",
+    "description": "#Citadel_VData_accolades_weapon_damage_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "damage_absorbed",
+    "id": 26,
+    "tracked_stat_name": "damage_absorbed",
+    "flavor_name": "#Citadel_VData_accolades_damage_absorbed_FlavorName",
+    "description": "#Citadel_VData_accolades_damage_absorbed_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "damage_mitigated",
+    "id": 27,
+    "tracked_stat_name": "damage_mitigated",
+    "flavor_name": "#Citadel_VData_accolades_damage_mitigated_FlavorName",
+    "description": "#Citadel_VData_accolades_damage_mitigated_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "headshots",
+    "id": 28,
+    "tracked_stat_name": "headshots",
+    "flavor_name": "#Citadel_VData_accolades_headshots_FlavorName",
+    "description": "#Citadel_VData_accolades_headshots_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "headshot_damage",
+    "id": 29,
+    "tracked_stat_name": "headshot_damage",
+    "flavor_name": "#Citadel_VData_accolades_headshot_damage_FlavorName",
+    "description": "#Citadel_VData_accolades_headshot_damage_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "closeup_damage",
+    "id": 30,
+    "tracked_stat_name": "closeup_damage",
+    "flavor_name": "#Citadel_VData_accolades_closeup_damage_FlavorName",
+    "description": "#Citadel_VData_accolades_closeup_damage_Description:f",
+    "threshold_type": "automatic"
+  },
+  {
+    "class_name": "long_distance_damage",
+    "id": 31,
+    "tracked_stat_name": "long_distance_damage",
+    "flavor_name": "#Citadel_VData_accolades_long_distance_damage_FlavorName",
+    "description": "#Citadel_VData_accolades_long_distance_damage_Description:f",
+    "threshold_type": "automatic"
+  }
+]
