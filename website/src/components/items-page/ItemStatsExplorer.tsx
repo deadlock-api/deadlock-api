@@ -1,18 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { AbilityV2, HeroV2 } from "assets_deadlock_api_client";
 import type { ItemStats } from "deadlock_api_client";
 import type { AnalyticsApiItemStatsRequest, MatchesApiBulkMetadataRequest } from "deadlock_api_client";
-import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
+import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
-import { ItemImage } from "~/components/ItemImage";
-import { ItemName } from "~/components/ItemName";
 import { ItemBuyTimingChart } from "~/components/items-page/ItemBuyTimingChart";
-import { getDisplayItemStats, ItemStatsTableDisplay } from "~/components/items-page/ItemStatsTable";
+import { getDisplayItemStats, ItemStatsTable } from "~/components/items-page/ItemStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import MatchHistoryCard, { type FullBuildItem } from "~/components/MatchHistoryCard";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { day, type Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -23,8 +20,6 @@ import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } f
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { queryKeys } from "~/queries/query-keys";
 import { ranksQueryOptions } from "~/queries/ranks-query";
-
-import { Button } from "../ui/button";
 
 interface BulkMatchMetadata {
   match_id: number;
@@ -132,11 +127,13 @@ function timeAgo(dateStr: string): string {
   return day(`${dateStr}Z`).fromNow();
 }
 
-export function ItemCombsExplore({
+export function ItemStatsExplorer({
   minRankId,
   maxRankId,
   minDate,
   maxDate,
+  prevMinDate,
+  prevMaxDate,
   sortBy,
   hero,
   minMatches,
@@ -149,6 +146,8 @@ export function ItemCombsExplore({
   maxRankId?: number;
   minDate?: Dayjs;
   maxDate?: Dayjs;
+  prevMinDate?: Dayjs;
+  prevMaxDate?: Dayjs;
   hero?: number | null;
   sortBy?: keyof ItemStats | "winrate";
   minMatches?: number | null;
@@ -157,20 +156,15 @@ export function ItemCombsExplore({
   maxBoughtAtS?: number;
   gameMode?: GameMode;
 }) {
-  const [includeItems, setIncludeItems] = useQueryState(
-    "include_items",
-    parseAsSetOf(parseAsInteger).withDefault(new Set()),
-  );
-  const [excludeItems, setExcludeItems] = useQueryState(
-    "exclude_items",
-    parseAsSetOf(parseAsInteger).withDefault(new Set()),
-  );
-  const [slot, setSlot] = useQueryState(
-    "item_slot",
-    parseAsStringLiteral(["weapon", "vitality", "spirit"] as const).withDefault("weapon"),
-  );
+  const [includeItems] = useQueryState("include_items", parseAsSetOf(parseAsInteger).withDefault(new Set()));
+  const [excludeItems] = useQueryState("exclude_items", parseAsSetOf(parseAsInteger).withDefault(new Set()));
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
+  const { minUnixTimestamp: prevMinTimestamp, maxUnixTimestamp: prevMaxTimestamp } = useNormalizedTimeRange(
+    prevMinDate,
+    prevMaxDate,
+  );
+  const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
   const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery(itemUpgradesQueryOptions);
 
@@ -188,8 +182,8 @@ export function ItemCombsExplore({
       maxAverageBadge: maxRankId,
       minUnixTimestamp: minUnixTimestamp ?? 0,
       maxUnixTimestamp,
-      includeItemIds: includeItems ? Array.from(includeItems) : undefined,
-      excludeItemIds: excludeItems ? Array.from(excludeItems) : undefined,
+      includeItemIds: includeItems.size > 0 ? Array.from(includeItems) : undefined,
+      excludeItemIds: excludeItems.size > 0 ? Array.from(excludeItems) : undefined,
       minBoughtAtS,
       maxBoughtAtS,
       gameMode,
@@ -209,7 +203,64 @@ export function ItemCombsExplore({
     ],
   );
 
-  const { data = [], isLoading: isLoadingItemStats } = useQuery(itemStatsQueryOptions(queryStatOptions));
+  const {
+    data = [],
+    isLoading: isLoadingItemStats,
+    isPlaceholderData: isRefetchingItemStats,
+  } = useQuery({
+    ...itemStatsQueryOptions(queryStatOptions),
+    placeholderData: keepPreviousData,
+  });
+
+  const prevQueryStatOptions: AnalyticsApiItemStatsRequest = useMemo(
+    () => ({
+      minMatches,
+      heroId: hero,
+      minAverageBadge: minRankId,
+      maxAverageBadge: maxRankId,
+      minUnixTimestamp: prevMinTimestamp ?? 0,
+      maxUnixTimestamp: prevMaxTimestamp,
+      includeItemIds: includeItems.size > 0 ? Array.from(includeItems) : undefined,
+      excludeItemIds: excludeItems.size > 0 ? Array.from(excludeItems) : undefined,
+      minBoughtAtS,
+      maxBoughtAtS,
+      gameMode,
+    }),
+    [
+      minMatches,
+      hero,
+      minRankId,
+      maxRankId,
+      prevMinTimestamp,
+      prevMaxTimestamp,
+      includeItems,
+      excludeItems,
+      minBoughtAtS,
+      maxBoughtAtS,
+      gameMode,
+    ],
+  );
+
+  const { data: prevData } = useQuery({
+    ...itemStatsQueryOptions(prevQueryStatOptions),
+    enabled: hasPreviousInterval,
+    placeholderData: keepPreviousData,
+  });
+
+  const prevStatsMap = useMemo(() => {
+    if (!prevData) return undefined;
+    const prevSumMatches = prevData.reduce((acc, row) => acc + row.matches, 0);
+    const prevMaxMatches = Math.max(...prevData.map((item) => item.matches));
+    const map = new Map<number, { winrate: number; pickrate: number; normalizedPickrate: number }>();
+    for (const row of prevData) {
+      map.set(row.item_id, {
+        winrate: row.wins / row.matches,
+        pickrate: row.matches / prevSumMatches,
+        normalizedPickrate: row.matches / prevMaxMatches,
+      });
+    }
+    return map;
+  }, [prevData]);
 
   // Build lookup: class_name → item_id, and item_id → set of component class_names
   const upgradeChainLookup = useMemo(() => {
@@ -362,154 +413,53 @@ export function ItemCombsExplore({
   }
 
   return (
-    <div>
-      <div className="mt-2 grid min-h-24 grid-cols-2 rounded bg-muted p-4 text-center">
-        <div className="border-r">
-          <h2 className="p-2 text-center text-xl">Included Items</h2>
-          <div className="flex flex-wrap items-center justify-center gap-2 p-2">
-            {Array.from(includeItems)?.map((item) => (
-              <Button
-                key={item}
-                variant="outline"
-                onClick={() => setIncludeItems(new Set([...includeItems].filter((i) => i !== item)))}
-              >
-                <div className="flex w-full items-center justify-start gap-2">
-                  <ItemImage itemId={item} className="size-6" />
-                  <ItemName itemId={item} className="text-sm text-pretty" />
-                </div>
-              </Button>
-            ))}
+    <div className="space-y-4">
+      <div className={cn("gap-4", topBuildsEnabled ? "flex flex-col lg:flex-row" : "")}>
+        <div className="min-w-0 flex-1 overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]">
+          <div className="flex items-center gap-2 border-b border-white/[0.06] bg-white/[0.015] px-4 py-2.5">
+            <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Item Stats</h3>
           </div>
-        </div>
-        <div className="border-l">
-          <h2 className="p-2 text-center text-xl">Excluded Items</h2>
-          <div className="flex flex-wrap items-center justify-center gap-2 p-2">
-            {Array.from(excludeItems)?.map((item) => (
-              <Button
-                key={item}
-                variant="outline"
-                onClick={() => setExcludeItems(new Set([...excludeItems].filter((i) => i !== item)))}
-              >
-                <div className="flex w-full items-center justify-start gap-2">
-                  <ItemImage itemId={item} className="size-6" />
-                  <ItemName itemId={item} className="text-sm text-pretty" />
-                </div>
-              </Button>
-            ))}
+          <div className="p-4">
+            <ItemStatsTable
+              data={displayData}
+              isLoading={isLoadingItemStats || isLoadingItemAssets}
+              isRefetching={isRefetchingItemStats}
+              columns={["winRate", "matches", "itemsTier", "confidence"]}
+              hideHeader={false}
+              hideIndex={true}
+              hideItemTierFilter={false}
+              minWinRate={minWinRate}
+              maxWinRate={maxWinRate}
+              minUsage={minUsage}
+              maxUsage={maxUsage}
+              prevStatsMap={prevStatsMap}
+              customDropdownContent={({ itemId, rowTotal }) => (
+                <ItemBuyTimingChart itemIds={[itemId]} baseQueryOptions={queryStatOptions} rowTotalMatches={rowTotal} />
+              )}
+            />
           </div>
-        </div>
-      </div>
-
-      <div className="mt-4 rounded bg-muted px-4 py-2">
-        <h2 className="p-2 text-center text-xl">Select Items</h2>
-        <Tabs value={slot} onValueChange={(i) => setSlot(i as "weapon" | "vitality" | "spirit")} className="w-full">
-          <TabsList className="flex h-auto w-full flex-wrap items-center justify-start">
-            <TabsTrigger className="flex-1" value="weapon">
-              Weapon
-            </TabsTrigger>
-            <TabsTrigger className="flex-1" value="vitality">
-              Vitality
-            </TabsTrigger>
-            <TabsTrigger className="flex-1" value="spirit">
-              Spirit
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value={slot}>
-            {[1, 2, 3, 4].map((tier) => (
-              <div key={tier}>
-                <h3 className="mt-2 p-2 text-center text-lg">Tier {tier}</h3>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                  {assetsItems
-                    ?.filter(
-                      (i) =>
-                        !i.disabled &&
-                        i.shopable &&
-                        i.shop_image_webp &&
-                        i.item_slot_type === slot &&
-                        i.item_tier === tier,
-                    )
-                    .map((item) => (
-                      <div key={item.id} className="flex w-full items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <ItemImage itemId={item.id} className="size-8 min-h-8 min-w-8" />
-                          <ItemName itemId={item.id} className="text-sm text-pretty" />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="secondary"
-                            className="h-6 bg-green-700 px-1 text-lg hover:bg-green-500"
-                            onClick={() => {
-                              setIncludeItems(new Set([...includeItems, item.id]));
-                              if (excludeItems.has(item.id)) {
-                                setExcludeItems(new Set([...excludeItems].filter((i) => i !== item.id)));
-                              }
-                            }}
-                          >
-                            <span className="icon-[mdi--plus]" />
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            className="h-6 bg-red-700 px-1 hover:bg-red-500"
-                            onClick={() => {
-                              setExcludeItems(new Set([...excludeItems, item.id]));
-                              if (includeItems.has(item.id)) {
-                                setIncludeItems(new Set([...includeItems].filter((i) => i !== item.id)));
-                              }
-                            }}
-                          >
-                            <span className="icon-[mdi--minus] text-lg" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            ))}
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      <div className={cn("mt-4 gap-4", topBuildsEnabled ? "flex" : "")}>
-        {/* Display the filtered data using ItemStatsTableDisplay */}
-        <div className="min-w-0 flex-1 rounded bg-muted p-4">
-          <h2 className="p-2 text-center text-xl">Items Stats</h2>
-          <ItemStatsTableDisplay
-            data={displayData}
-            isLoading={isLoadingItemStats || isLoadingItemAssets}
-            columns={["winRate", "matches", "itemsTier", "confidence"]}
-            hideHeader={false}
-            hideIndex={true}
-            hideItemTierFilter={false}
-            minWinRate={minWinRate}
-            maxWinRate={maxWinRate}
-            minUsage={minUsage}
-            maxUsage={maxUsage}
-            includedItemIds={Array.from(includeItems)}
-            excludedItemIds={Array.from(excludeItems)}
-            onItemInclude={(i) => setIncludeItems(new Set([...includeItems, i]))}
-            onItemExclude={(i) => setExcludeItems(new Set([...excludeItems, i]))}
-            customDropdownContent={({ itemId, rowTotal }) => (
-              <ItemBuyTimingChart itemIds={[itemId]} baseQueryOptions={queryStatOptions} rowTotalMatches={rowTotal} />
-            )}
-          />
         </div>
 
         {topBuildsEnabled && (
-          <div className="w-1/3 shrink-0 overflow-x-auto">
-            <h2 className="mb-2 text-center text-lg">Top Builds</h2>
-            {isLoadingTopBuilds ? (
-              <div className="flex items-center justify-center py-8">
-                <LoadingLogo />
-              </div>
-            ) : topBuildsCards.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                {topBuildsCards.map((card) => (
-                  <MatchHistoryCard key={card.matchId} {...card} ranks={ranksData} expandable={false} />
-                ))}
-              </div>
-            ) : (
-              <p className="py-4 text-center text-muted-foreground">No matching builds found.</p>
-            )}
+          <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02] lg:w-96 lg:shrink-0">
+            <div className="flex items-center gap-2 border-b border-white/[0.06] bg-white/[0.015] px-4 py-2.5">
+              <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Top Builds</h3>
+            </div>
+            <div className="overflow-x-auto p-4">
+              {isLoadingTopBuilds ? (
+                <div className="flex items-center justify-center py-8">
+                  <LoadingLogo />
+                </div>
+              ) : topBuildsCards.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {topBuildsCards.map((card) => (
+                    <MatchHistoryCard key={card.matchId} {...card} ranks={ranksData} expandable={false} />
+                  ))}
+                </div>
+              ) : (
+                <p className="py-4 text-center text-sm text-muted-foreground">No matching builds found.</p>
+              )}
+            </div>
           </div>
         )}
       </div>

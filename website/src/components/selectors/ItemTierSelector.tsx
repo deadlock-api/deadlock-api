@@ -19,18 +19,17 @@ export function ItemTierSelector({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      Tiers:
-      <div className="item-center flex gap-2">
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5">
+        <span className="icon-[mdi--layers-triple] size-4 text-muted-foreground" />
+        <p className="text-sm font-medium text-foreground">Tiers</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-1">
         {TIERS.map((tier) => (
           <Button
             key={tier}
-            type="button"
-            className={`rounded px-4 py-2 ${
-              selectedItemTiers?.includes(tier)
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground"
-            }`}
+            variant={selectedItemTiers?.includes(tier) ? "default" : "secondary"}
+            size="icon-xs"
             onClick={() => handleToggle(tier)}
           >
             {tier}

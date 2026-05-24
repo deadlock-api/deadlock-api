@@ -4,7 +4,6 @@ import { lazy, Suspense, useState } from "react";
 
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
-import { ItemStatsTable } from "~/components/items-page/ItemStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
@@ -21,8 +20,8 @@ import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 const ItemPurchaseAnalysis = lazy(() =>
   import("~/components/items-page/ItemPurchaseAnalysis").then((m) => ({ default: m.ItemPurchaseAnalysis })),
 );
-const ItemCombsExplore = lazy(() =>
-  import("~/components/items-page/ItemCombsExplore").then((m) => ({ default: m.ItemCombsExplore })),
+const ItemStatsExplorer = lazy(() =>
+  import("~/components/items-page/ItemStatsExplorer").then((m) => ({ default: m.ItemStatsExplorer })),
 );
 
 export const Route = createFileRoute("/items")({
@@ -83,7 +82,7 @@ function ItemsPage() {
 
   const [tab, setTab] = useQueryState(
     "tab",
-    parseAsStringLiteral(["stats", "item-purchase-analysis", "item-combs"] as const).withDefault("stats"),
+    parseAsStringLiteral(["item-stats", "item-purchase-analysis"] as const).withDefault("item-stats"),
   );
 
   return (
@@ -136,38 +135,22 @@ function ItemsPage() {
           value={tab ?? undefined}
           onValueChange={(value) => setTab(value as typeof tab)}
           options={[
-            { value: "stats", label: "Overall Stats" },
+            { value: "item-stats", label: "Item Stats" },
             { value: "item-purchase-analysis", label: "Purchase Analysis" },
-            { value: "item-combs", label: "Combos" },
           ]}
         />
-        <TabsContent value="stats">
-          <h2 className="sr-only">Overall Item Stats</h2>
-          <ItemStatsTable
-            columns={["itemsTier", "winRate", "matches", "confidence"]}
-            initialSort={{ field: "winRate", direction: "desc" }}
-            minRankId={effectiveMinRankId}
-            maxRankId={effectiveMaxRankId}
-            minDate={startDate || undefined}
-            maxDate={endDate || undefined}
-            prevMinDate={prevDates.prevStartDate}
-            prevMaxDate={prevDates.prevEndDate}
-            hero={hero}
-            minMatches={minMatches}
-            minBoughtAtS={minBoughtAtS ?? undefined}
-            maxBoughtAtS={maxBoughtAtS ?? undefined}
-            gameMode={gameMode}
-          />
-        </TabsContent>
-        <TabsContent value="item-purchase-analysis">
-          <h2 className="sr-only">Item Purchase Analysis</h2>
+        <TabsContent value="item-stats">
+          <h2 className="sr-only">Item Stats</h2>
           <ChunkErrorBoundary>
             <Suspense fallback={<LoadingLogo />}>
-              <ItemPurchaseAnalysis
+              <ItemStatsExplorer
+                sortBy="winrate"
                 minRankId={effectiveMinRankId}
                 maxRankId={effectiveMaxRankId}
                 minDate={startDate || undefined}
                 maxDate={endDate || undefined}
+                prevMinDate={prevDates.prevStartDate}
+                prevMaxDate={prevDates.prevEndDate}
                 hero={hero}
                 minMatches={minMatches}
                 minBoughtAtS={minBoughtAtS ?? undefined}
@@ -177,12 +160,11 @@ function ItemsPage() {
             </Suspense>
           </ChunkErrorBoundary>
         </TabsContent>
-        <TabsContent value="item-combs">
-          <h2 className="sr-only">Item Combos</h2>
+        <TabsContent value="item-purchase-analysis">
+          <h2 className="sr-only">Item Purchase Analysis</h2>
           <ChunkErrorBoundary>
             <Suspense fallback={<LoadingLogo />}>
-              <ItemCombsExplore
-                sortBy="winrate"
+              <ItemPurchaseAnalysis
                 minRankId={effectiveMinRankId}
                 maxRankId={effectiveMaxRankId}
                 minDate={startDate || undefined}

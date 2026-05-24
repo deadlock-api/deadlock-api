@@ -220,7 +220,7 @@ export default function MatchHistoryCard({
           </div>
 
           {/* Items */}
-          <div className="flex shrink-0 flex-col gap-1.5">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             <FullBuildPhase label="Early" items={earlyItems} />
             <FullBuildPhase label="Mid" items={midItems} />
             <FullBuildPhase label="Late" items={lateItems} />
