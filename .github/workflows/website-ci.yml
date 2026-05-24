@@ -43,6 +43,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Rebuild git deps (ensure prepare scripts ran)
+        run: pnpm rebuild assets_deadlock_api_client deadlock_api_client
+
       - name: Check formatting
         run: pnpm fmt && git diff --exit-code
 
