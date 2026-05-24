@@ -7,6 +7,7 @@ use crate::middleware::cache::CacheControlMiddleware;
 
 mod accolades;
 mod build_tags;
+mod client_versions;
 mod colors;
 mod common;
 mod heroes;
@@ -20,6 +21,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .nest("/accolades", accolades::router())
         .nest("/build-tags", build_tags::router())
+        .nest("/client-versions", client_versions::router())
         .nest("/colors", colors::router())
         .nest("/heroes", heroes::router())
         .nest("/loot-tables", loot_tables::router())
