@@ -2,7 +2,6 @@
 
 #![allow(clippy::struct_field_names, clippy::needless_pass_by_value)]
 
-use core::time::Duration;
 use std::sync::Arc;
 
 use cached::LruTtlCache;
@@ -14,6 +13,7 @@ use strum::{Display, EnumString, FromRepr};
 use utoipa::ToSchema;
 
 use crate::services::assets::versions::common::Color;
+use crate::services::assets::versions::common::{DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL};
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::store;
 use crate::utils::kv3;
@@ -808,12 +808,9 @@ fn street_brawl_out(r: RawStreetBrawl) -> StreetBrawl {
     }
 }
 
-const CACHE_SIZE: usize = 64;
-const CACHE_TTL: Duration = Duration::from_hours(24);
-
 #[cached(
     ty = "LruTtlCache<u32, Arc<GenericData>>",
-    create = "{ LruTtlCache::builder().size(CACHE_SIZE).ttl(CACHE_TTL).build() }",
+    create = "{ LruTtlCache::builder().size(DEFAULT_CACHE_SIZE).ttl(DEFAULT_CACHE_TTL).build() }",
     convert = "{ version }",
     result = true,
     sync_writes = "by_key"

@@ -1,4 +1,3 @@
-use core::time::Duration;
 use std::sync::Arc;
 
 use cached::LruTtlCache;
@@ -8,6 +7,7 @@ use object_store::aws::AmazonS3;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+use crate::services::assets::versions::common::{DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL};
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::store;
 use crate::utils::kv3;
@@ -60,12 +60,9 @@ pub(crate) fn build_loot_tables(vdata: &str) -> Result<LootTables, AssetsError> 
     Ok(out)
 }
 
-const CACHE_SIZE: usize = 64;
-const CACHE_TTL: Duration = Duration::from_hours(24);
-
 #[cached(
     ty = "LruTtlCache<u32, Arc<LootTables>>",
-    create = "{ LruTtlCache::builder().size(CACHE_SIZE).ttl(CACHE_TTL).build() }",
+    create = "{ LruTtlCache::builder().size(DEFAULT_CACHE_SIZE).ttl(DEFAULT_CACHE_TTL).build() }",
     convert = r#"{ version }"#,
     result = true,
     sync_writes = "by_key"

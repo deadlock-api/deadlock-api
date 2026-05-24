@@ -1,6 +1,5 @@
 //! `/v1/assets/build-tags` data layer.
 
-use core::time::Duration;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -11,6 +10,7 @@ use serde::Serialize;
 use utoipa::ToSchema;
 
 use crate::services::assets::versions::common::entity_id;
+use crate::services::assets::versions::common::{DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL};
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::localization;
 
@@ -43,12 +43,9 @@ pub(crate) fn build_build_tags(loc: &HashMap<String, String>) -> Vec<BuildTag> {
     out
 }
 
-const CACHE_SIZE: usize = 64;
-const CACHE_TTL: Duration = Duration::from_hours(24);
-
 #[cached(
     ty = "LruTtlCache<(u32, String), Arc<Vec<BuildTag>>>",
-    create = "{ LruTtlCache::builder().size(CACHE_SIZE).ttl(CACHE_TTL).build() }",
+    create = "{ LruTtlCache::builder().size(DEFAULT_CACHE_SIZE).ttl(DEFAULT_CACHE_TTL).build() }",
     convert = r#"{ (version, language.to_owned()) }"#,
     result = true,
     sync_writes = "by_key"

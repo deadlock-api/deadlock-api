@@ -1,27 +1,16 @@
-use std::sync::Arc;
-
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
-use serde::Deserialize;
-use utoipa::IntoParams;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::assets::common::resolve_version;
-use crate::services::assets::versions::loot_tables::{self, LootTable, LootTables};
-
-#[derive(Debug, Deserialize, IntoParams)]
-pub(crate) struct LootTablesQuery {
-    /// Client/game version (e.g. `6518`). Defaults to the latest known version.
-    #[serde(default)]
-    client_version: Option<u32>,
-}
+use crate::routes::v1::assets::common::{VersionQuery, resolve_version};
+use crate::services::assets::versions::loot_tables::{self, LootTable};
 
 #[utoipa::path(
     get,
     path = "/",
-    params(LootTablesQuery),
+    params(VersionQuery),
     responses(
         (status = OK, body = std::collections::HashMap<String, LootTable>),
         (status = NOT_FOUND, description = "Requested client_version is not available"),
@@ -33,18 +22,11 @@ pub(crate) struct LootTablesQuery {
 )]
 pub(super) async fn list_loot_tables(
     State(state): State<AppState>,
-    Query(q): Query<LootTablesQuery>,
+    Query(q): Query<VersionQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let tables = load_loot_tables(&state, q.client_version).await?;
-    Ok(Json(tables).into_response())
-}
-
-async fn load_loot_tables(
-    state: &AppState,
-    client_version: Option<u32>,
-) -> APIResult<Arc<LootTables>> {
-    let version = resolve_version(state, client_version).await?;
-    loot_tables::fetch_loot_tables(&state.r2_client, version)
+    let version = resolve_version(&state, q.client_version).await?;
+    let tables = loot_tables::fetch_loot_tables(&state.r2_client, version)
         .await
-        .map_err(|e| APIError::internal(format!("building loot tables: {e}")))
+        .map_err(|e| APIError::internal(format!("building loot tables: {e}")))?;
+    Ok(Json(tables).into_response())
 }

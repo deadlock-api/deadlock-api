@@ -9,7 +9,7 @@
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use strum::{Display, EnumString, IntoStaticStr};
+use strum::{Display, EnumString};
 use utoipa::ToSchema;
 
 use crate::services::assets::versions::items::raw::{
@@ -18,121 +18,78 @@ use crate::services::assets::versions::items::raw::{
     RawItemWeaponInfoInner, RawWeaponInfoHorizontalRecoil, RawWeaponInfoVerticalRecoil,
 };
 
-#[derive(Debug, Clone, Copy, Serialize, IntoStaticStr, EnumString, ToSchema)]
+#[derive(Debug, Clone, Copy, Serialize, EnumString, ToSchema)]
+#[serde(rename_all = "snake_case")]
 pub(crate) enum AbilityType {
-    #[strum(serialize = "EAbilityType_Innate", to_string = "innate")]
-    #[serde(rename = "innate")]
+    #[strum(serialize = "EAbilityType_Innate")]
     Innate,
-    #[strum(serialize = "EAbilityType_Item", to_string = "item")]
-    #[serde(rename = "item")]
+    #[strum(serialize = "EAbilityType_Item")]
     Item,
-    #[strum(serialize = "EAbilityType_Signature", to_string = "signature")]
-    #[serde(rename = "signature")]
+    #[strum(serialize = "EAbilityType_Signature")]
     Signature,
-    #[strum(serialize = "EAbilityType_Ultimate", to_string = "ultimate")]
-    #[serde(rename = "ultimate")]
+    #[strum(serialize = "EAbilityType_Ultimate")]
     Ultimate,
-    #[strum(serialize = "EAbilityType_Weapon", to_string = "weapon")]
-    #[serde(rename = "weapon")]
+    #[strum(serialize = "EAbilityType_Weapon")]
     Weapon,
-    #[strum(serialize = "EAbilityType_Melee", to_string = "melee")]
-    #[serde(rename = "melee")]
+    #[strum(serialize = "EAbilityType_Melee")]
     Melee,
-    #[strum(serialize = "EAbilityType_Cosmetic", to_string = "cosmetic")]
-    #[serde(rename = "cosmetic")]
+    #[strum(serialize = "EAbilityType_Cosmetic")]
     Cosmetic,
 }
 
-#[derive(
-    Debug, Clone, Copy, Serialize, Deserialize, IntoStaticStr, EnumString, ToSchema, PartialEq, Eq,
-)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, EnumString, ToSchema, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub(crate) enum ItemSlotType {
-    #[strum(serialize = "EItemSlotType_WeaponMod", to_string = "weapon")]
-    #[serde(rename = "weapon")]
+    #[strum(serialize = "EItemSlotType_WeaponMod")]
     Weapon,
-    #[strum(serialize = "EItemSlotType_Tech", to_string = "spirit")]
+    #[strum(serialize = "EItemSlotType_Tech")]
     #[serde(rename = "spirit")]
     Spirit,
-    #[strum(serialize = "EItemSlotType_Armor", to_string = "vitality")]
+    #[strum(serialize = "EItemSlotType_Armor")]
     #[serde(rename = "vitality")]
     Vitality,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, IntoStaticStr, EnumString, ToSchema)]
+#[derive(Debug, Clone, Copy, Serialize, EnumString, ToSchema)]
+#[serde(rename_all = "snake_case")]
 pub(crate) enum AbilityActivation {
-    #[strum(
-        serialize = "CITADEL_ABILITY_ACTIVATION_HOLD_TOGGLE",
-        to_string = "hold_toggle"
-    )]
-    #[serde(rename = "hold_toggle")]
+    #[strum(serialize = "CITADEL_ABILITY_ACTIVATION_HOLD_TOGGLE")]
     HoldToggle,
-    #[strum(
-        serialize = "CITADEL_ABILITY_ACTIVATION_INSTANT_CAST",
-        to_string = "instant_cast"
-    )]
-    #[serde(rename = "instant_cast")]
+    #[strum(serialize = "CITADEL_ABILITY_ACTIVATION_INSTANT_CAST")]
     InstantCast,
-    #[strum(
-        serialize = "CITADEL_ABILITY_ACTIVATION_ON_BUTTON_IS_DOWN",
-        to_string = "on_button_is_down"
-    )]
-    #[serde(rename = "on_button_is_down")]
+    #[strum(serialize = "CITADEL_ABILITY_ACTIVATION_ON_BUTTON_IS_DOWN")]
     OnButtonIsDown,
-    #[strum(
-        serialize = "CITADEL_ABILITY_ACTIVATION_PASSIVE",
-        to_string = "passive"
-    )]
-    #[serde(rename = "passive")]
+    #[strum(serialize = "CITADEL_ABILITY_ACTIVATION_PASSIVE")]
     Passive,
-    #[strum(serialize = "CITADEL_ABILITY_ACTIVATION_PRESS", to_string = "press")]
-    #[serde(rename = "press")]
+    #[strum(serialize = "CITADEL_ABILITY_ACTIVATION_PRESS")]
     Press,
-    #[strum(
-        serialize = "CITADEL_ABILITY_ACTIVATION_PRESS_TOGGLE",
-        to_string = "press_toggle"
-    )]
-    #[serde(rename = "press_toggle")]
+    #[strum(serialize = "CITADEL_ABILITY_ACTIVATION_PRESS_TOGGLE")]
     PressToggle,
-    #[strum(
-        serialize = "CITADEL_ABILITY_ACTIVATION_INSTANT_CAST_TOGGLE",
-        to_string = "instant_cast_toggle"
-    )]
-    #[serde(rename = "instant_cast_toggle")]
+    #[strum(serialize = "CITADEL_ABILITY_ACTIVATION_INSTANT_CAST_TOGGLE")]
     InstantCastToggle,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, IntoStaticStr, EnumString, ToSchema)]
+#[derive(Debug, Clone, Copy, Serialize, EnumString, ToSchema)]
 pub(crate) enum AbilityImbue {
-    #[strum(
-        serialize = "CITADEL_TARGET_ABILITY_BEHAVIOR_IMBUE_ACTIVE",
-        to_string = "imbue_active"
-    )]
+    #[strum(serialize = "CITADEL_TARGET_ABILITY_BEHAVIOR_IMBUE_ACTIVE")]
     #[serde(rename = "imbue_active")]
     Active,
-    #[strum(
-        serialize = "CITADEL_TARGET_ABILITY_BEHAVIOR_IMBUE_ACTIVE_NON_ULT",
-        to_string = "imbue_active_non_ult"
-    )]
+    #[strum(serialize = "CITADEL_TARGET_ABILITY_BEHAVIOR_IMBUE_ACTIVE_NON_ULT")]
     #[serde(rename = "imbue_active_non_ult")]
     ActiveNonUlt,
-    #[strum(
-        serialize = "CITADEL_TARGET_ABILITY_BEHAVIOR_IMBUE_MODIFIER_VALUE",
-        to_string = "imbue_modifier_value"
-    )]
+    #[strum(serialize = "CITADEL_TARGET_ABILITY_BEHAVIOR_IMBUE_MODIFIER_VALUE")]
     #[serde(rename = "imbue_modifier_value")]
     ModifierValue,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, IntoStaticStr, EnumString, ToSchema)]
+#[derive(Debug, Clone, Copy, Serialize, EnumString, ToSchema)]
+#[serde(rename_all = "snake_case")]
 pub(crate) enum AbilitySectionType {
-    #[strum(serialize = "EArea_Innate", to_string = "innate")]
-    #[serde(rename = "innate")]
+    #[strum(serialize = "EArea_Innate")]
     Innate,
-    #[strum(serialize = "EArea_Active", to_string = "active")]
-    #[serde(rename = "active")]
+    #[strum(serialize = "EArea_Active")]
     Active,
-    #[strum(serialize = "EArea_Passive", to_string = "passive")]
-    #[serde(rename = "passive")]
+    #[strum(serialize = "EArea_Passive")]
     Passive,
 }
 
@@ -145,7 +102,7 @@ pub(crate) enum StatsUsageFlag {
 }
 
 /// Discriminator for the `type` field on every item variant.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Display, IntoStaticStr, ToSchema)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Display, ToSchema)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub(crate) enum ItemType {

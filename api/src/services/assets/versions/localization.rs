@@ -1,6 +1,5 @@
 //! Shared cached loader for the per-version localization JSON.
 
-use core::time::Duration;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -8,16 +7,14 @@ use cached::LruTtlCache;
 use cached::macros::cached;
 use object_store::aws::AmazonS3;
 
+use crate::services::assets::versions::common::{DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL};
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::store;
-
-const CACHE_SIZE: usize = 64;
-const CACHE_TTL: Duration = Duration::from_hours(24);
 
 /// Falls back to english when the requested language is missing.
 #[cached(
     ty = "LruTtlCache<(u32, String), Arc<HashMap<String, String>>>",
-    create = "{ LruTtlCache::builder().size(CACHE_SIZE).ttl(CACHE_TTL).build() }",
+    create = "{ LruTtlCache::builder().size(DEFAULT_CACHE_SIZE).ttl(DEFAULT_CACHE_TTL).build() }",
     convert = r#"{ (version, language.to_owned()) }"#,
     result = true,
     sync_writes = "by_key"

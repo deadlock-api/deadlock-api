@@ -1,5 +1,6 @@
 //! Shared query types and helpers for `/v1/assets/*` endpoints.
 
+use axum::Json;
 use reqwest::StatusCode;
 use serde::Deserialize;
 use strum::IntoStaticStr;
@@ -8,8 +9,9 @@ use utoipa::IntoParams;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 
-/// Shared query params for `/v1/assets/*` endpoints.
-#[derive(Debug, Deserialize, IntoParams)]
+/// Query params for `/v1/assets/*` endpoints that accept both a language and a
+/// client version. Endpoints that don't accept a language use [`VersionQuery`].
+#[derive(Debug, Default, Deserialize, IntoParams)]
 pub(crate) struct AssetsQuery {
     /// Language code. Defaults to `english`.
     #[serde(default)]
@@ -20,8 +22,16 @@ pub(crate) struct AssetsQuery {
     pub(crate) client_version: Option<u32>,
 }
 
+/// Query params for `/v1/assets/*` endpoints that take only a client version.
+#[derive(Debug, Default, Deserialize, IntoParams)]
+pub(crate) struct VersionQuery {
+    /// Client/game version (e.g. `6518`). Defaults to the latest known version.
+    #[serde(default)]
+    pub(crate) client_version: Option<u32>,
+}
+
 /// Set of languages the upstream `localization/<lang>.json` files are keyed by.
-#[derive(Debug, Clone, Copy, Deserialize, IntoStaticStr, utoipa::ToSchema)]
+#[derive(Debug, Default, Clone, Copy, Deserialize, IntoStaticStr, utoipa::ToSchema)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 #[allow(clippy::enum_variant_names)]
@@ -31,6 +41,7 @@ pub(crate) enum Language {
     Czech,
     Danish,
     Dutch,
+    #[default]
     English,
     Finnish,
     French,
@@ -97,4 +108,19 @@ pub(crate) async fn resolve_version(
             .latest()
             .ok_or_else(|| APIError::internal("no versions available")),
     }
+}
+
+/// Find the first element matching `pred`, clone it into a `Json` response, or
+/// return a 404 carrying `not_found_msg`.
+pub(crate) fn find_or_404<T: Clone>(
+    items: &[T],
+    mut pred: impl FnMut(&T) -> bool,
+    not_found_msg: impl Into<String>,
+) -> APIResult<Json<T>> {
+    items
+        .iter()
+        .find(|i| pred(i))
+        .cloned()
+        .map(Json)
+        .ok_or_else(|| APIError::status_msg(StatusCode::NOT_FOUND, not_found_msg))
 }

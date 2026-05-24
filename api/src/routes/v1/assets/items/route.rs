@@ -1,31 +1,20 @@
+use std::sync::Arc;
+
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
 use reqwest::StatusCode;
-use serde::Deserialize;
-use utoipa::IntoParams;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::assets::common::{Language, resolve_version};
+use crate::routes::v1::assets::common::{AssetsQuery, resolve_version};
 use crate::services::assets::versions::items::fetch_items;
 use crate::services::assets::versions::items::types::{Item, ItemSlotType, ItemType};
-
-#[derive(Debug, Deserialize, IntoParams)]
-pub(crate) struct ItemsQuery {
-    /// Language code. Defaults to `english`.
-    #[serde(default)]
-    #[param(inline)]
-    language: Option<Language>,
-    /// Client/game version (e.g. `6518`). Defaults to the latest known version.
-    #[serde(default)]
-    client_version: Option<u32>,
-}
 
 #[utoipa::path(
     get,
     path = "/",
-    params(ItemsQuery),
+    params(AssetsQuery),
     responses(
         (status = OK, body = [Item]),
         (status = NOT_FOUND, description = "Requested client_version is not available"),
@@ -37,10 +26,9 @@ pub(crate) struct ItemsQuery {
 )]
 pub(super) async fn list_items(
     State(state): State<AppState>,
-    Query(q): Query<ItemsQuery>,
+    Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let items = load(&state, q.client_version, q.language).await?;
-    Ok(Json(items).into_response())
+    Ok(Json(load(&state, &q).await?).into_response())
 }
 
 #[utoipa::path(
@@ -48,7 +36,7 @@ pub(super) async fn list_items(
     path = "/{id_or_class_name}",
     params(
         ("id_or_class_name" = String, Path, description = "Numeric `id` or string `class_name`."),
-        ItemsQuery,
+        AssetsQuery,
     ),
     responses(
         (status = OK, body = Item),
@@ -60,9 +48,9 @@ pub(super) async fn list_items(
 pub(super) async fn get_item(
     State(state): State<AppState>,
     Path(id_or_class_name): Path<String>,
-    Query(q): Query<ItemsQuery>,
+    Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let items = load(&state, q.client_version, q.language).await?;
+    let items = load(&state, &q).await?;
     let needle_id: Option<u32> = id_or_class_name.parse().ok();
     items
         .iter()
@@ -80,7 +68,7 @@ pub(super) async fn get_item(
     path = "/by-type/{type}",
     params(
         ("type" = ItemType, Path, description = "Item type: `ability`, `weapon`, or `upgrade`."),
-        ItemsQuery,
+        AssetsQuery,
     ),
     responses((status = OK, body = [Item])),
     tags = ["Items"],
@@ -89,9 +77,9 @@ pub(super) async fn get_item(
 pub(super) async fn get_items_by_type(
     State(state): State<AppState>,
     Path(item_type): Path<ItemType>,
-    Query(q): Query<ItemsQuery>,
+    Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let items = load(&state, q.client_version, q.language).await?;
+    let items = load(&state, &q).await?;
     let filtered: Vec<Item> = items
         .iter()
         .filter(|i| i.item_type() as u8 == item_type as u8)
@@ -105,7 +93,7 @@ pub(super) async fn get_items_by_type(
     path = "/by-hero-id/{id}",
     params(
         ("id" = u32, Path, description = "Hero id (`m_HeroID`)."),
-        ItemsQuery,
+        AssetsQuery,
     ),
     responses((status = OK, body = [Item])),
     tags = ["Items"],
@@ -115,7 +103,7 @@ pub(super) async fn get_items_by_type(
 pub(super) async fn get_items_by_hero_id(
     State(state): State<AppState>,
     Path(hero_id): Path<u32>,
-    Query(q): Query<ItemsQuery>,
+    Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
     const FILTERED: &[&str] = &[
         "citadel_ability_climb_rope",
@@ -128,7 +116,7 @@ pub(super) async fn get_items_by_hero_id(
         "citadel_ability_zip_line",
         "citadel_ability_zipline_boost",
     ];
-    let items = load(&state, q.client_version, q.language).await?;
+    let items = load(&state, &q).await?;
     let filtered: Vec<Item> = items
         .iter()
         .filter(|i| {
@@ -146,7 +134,7 @@ pub(super) async fn get_items_by_hero_id(
     path = "/by-slot-type/{slot_type}",
     params(
         ("slot_type" = ItemSlotType, Path, description = "Slot type: `weapon`, `spirit`, or `vitality`."),
-        ItemsQuery,
+        AssetsQuery,
     ),
     responses((status = OK, body = [Item])),
     tags = ["Items"],
@@ -155,9 +143,9 @@ pub(super) async fn get_items_by_hero_id(
 pub(super) async fn get_items_by_slot_type(
     State(state): State<AppState>,
     Path(slot_type): Path<ItemSlotType>,
-    Query(q): Query<ItemsQuery>,
+    Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let items = load(&state, q.client_version, q.language).await?;
+    let items = load(&state, &q).await?;
     let filtered: Vec<Item> = items
         .iter()
         .filter(|i| matches!(i, Item::Upgrade(u) if u.item_slot_type == slot_type))
@@ -166,13 +154,9 @@ pub(super) async fn get_items_by_slot_type(
     Ok(Json(filtered).into_response())
 }
 
-async fn load(
-    state: &AppState,
-    client_version: Option<u32>,
-    language: Option<Language>,
-) -> APIResult<std::sync::Arc<Vec<Item>>> {
-    let version = resolve_version(state, client_version).await?;
-    let lang = language.unwrap_or(Language::English).as_str();
+async fn load(state: &AppState, q: &AssetsQuery) -> APIResult<Arc<Vec<Item>>> {
+    let version = resolve_version(state, q.client_version).await?;
+    let lang = q.language.unwrap_or_default().as_str();
     fetch_items(&state.r2_client, version, lang)
         .await
         .map_err(|e| APIError::internal(format!("building items: {e}")))

@@ -1,26 +1,16 @@
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
-use reqwest::StatusCode;
-use serde::Deserialize;
-use utoipa::IntoParams;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::assets::common::resolve_version;
+use crate::routes::v1::assets::common::{VersionQuery, find_or_404, resolve_version};
 use crate::services::assets::versions::npc_units::{self, NpcUnit};
-
-#[derive(Debug, Deserialize, IntoParams)]
-pub(crate) struct NpcUnitsQuery {
-    /// Client/game version (e.g. `6518`). Defaults to the latest known version.
-    #[serde(default)]
-    client_version: Option<u32>,
-}
 
 #[utoipa::path(
     get,
     path = "/",
-    params(NpcUnitsQuery),
+    params(VersionQuery),
     responses(
         (status = OK, body = [NpcUnit]),
         (status = NOT_FOUND, description = "Requested client_version is not available"),
@@ -32,9 +22,12 @@ pub(crate) struct NpcUnitsQuery {
 )]
 pub(super) async fn list_npc_units(
     State(state): State<AppState>,
-    Query(q): Query<NpcUnitsQuery>,
+    Query(q): Query<VersionQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let units = load_npc_units(&state, q.client_version).await?;
+    let version = resolve_version(&state, q.client_version).await?;
+    let units = npc_units::fetch_npc_units(&state.r2_client, version)
+        .await
+        .map_err(|e| APIError::internal(format!("building npc units: {e}")))?;
     Ok(Json(units).into_response())
 }
 
@@ -43,7 +36,7 @@ pub(super) async fn list_npc_units(
     path = "/{id_or_classname}",
     params(
         ("id_or_classname" = String, Path, description = "NPC unit id (`murmurhash2(class_name)`) or `class_name`"),
-        NpcUnitsQuery,
+        VersionQuery,
     ),
     responses(
         (status = OK, body = NpcUnit),
@@ -57,32 +50,19 @@ pub(super) async fn list_npc_units(
 pub(super) async fn get_npc_unit(
     State(state): State<AppState>,
     Path(id_or_classname): Path<String>,
-    Query(q): Query<NpcUnitsQuery>,
+    Query(q): Query<VersionQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let units = load_npc_units(&state, q.client_version).await?;
-    let as_id = id_or_classname.parse::<u32>().ok();
-    units
-        .iter()
-        .find(|u| {
+    let version = resolve_version(&state, q.client_version).await?;
+    let units = npc_units::fetch_npc_units(&state.r2_client, version)
+        .await
+        .map_err(|e| APIError::internal(format!("building npc units: {e}")))?;
+    let as_id: Option<u32> = id_or_classname.parse().ok();
+    find_or_404(
+        &units,
+        |u| {
             as_id.is_some_and(|id| u.id == id)
                 || u.class_name.eq_ignore_ascii_case(&id_or_classname)
-        })
-        .cloned()
-        .map(Json)
-        .ok_or_else(|| {
-            APIError::status_msg(
-                StatusCode::NOT_FOUND,
-                format!("Unknown NPC unit: {id_or_classname}"),
-            )
-        })
-}
-
-async fn load_npc_units(
-    state: &AppState,
-    client_version: Option<u32>,
-) -> APIResult<std::sync::Arc<Vec<NpcUnit>>> {
-    let version = resolve_version(state, client_version).await?;
-    npc_units::fetch_npc_units(&state.r2_client, version)
-        .await
-        .map_err(|e| APIError::internal(format!("building npc units: {e}")))
+        },
+        format!("Unknown NPC unit: {id_or_classname}"),
+    )
 }

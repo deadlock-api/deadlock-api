@@ -1,29 +1,17 @@
-use std::collections::BTreeMap;
-use std::sync::Arc;
-
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
-use serde::Deserialize;
-use utoipa::IntoParams;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::assets::common::resolve_version;
+use crate::routes::v1::assets::common::{VersionQuery, resolve_version};
 use crate::services::assets::versions::colors;
 use crate::services::assets::versions::common::Color;
-
-#[derive(Debug, Deserialize, IntoParams)]
-pub(crate) struct ColorsQuery {
-    /// Client/game version (e.g. `6518`). Defaults to the latest known version.
-    #[serde(default)]
-    client_version: Option<u32>,
-}
 
 #[utoipa::path(
     get,
     path = "/",
-    params(ColorsQuery),
+    params(VersionQuery),
     responses(
         (status = OK, body = std::collections::HashMap<String, Color>),
         (status = NOT_FOUND, description = "Requested client_version is not available"),
@@ -35,18 +23,11 @@ pub(crate) struct ColorsQuery {
 )]
 pub(super) async fn list_colors(
     State(state): State<AppState>,
-    Query(q): Query<ColorsQuery>,
+    Query(q): Query<VersionQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let colors = load_colors(&state, q.client_version).await?;
-    Ok(Json(colors).into_response())
-}
-
-async fn load_colors(
-    state: &AppState,
-    client_version: Option<u32>,
-) -> APIResult<Arc<BTreeMap<String, Color>>> {
-    let version = resolve_version(state, client_version).await?;
-    colors::fetch_colors(&state.r2_client, version)
+    let version = resolve_version(&state, q.client_version).await?;
+    let colors = colors::fetch_colors(&state.r2_client, version)
         .await
-        .map_err(|e| APIError::internal(format!("building colors: {e}")))
+        .map_err(|e| APIError::internal(format!("building colors: {e}")))?;
+    Ok(Json(colors).into_response())
 }

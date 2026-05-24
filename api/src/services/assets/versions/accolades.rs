@@ -1,6 +1,5 @@
 //! `/v1/assets/accolades` data layer — fetch + parse + transform.
 
-use core::time::Duration;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -10,6 +9,7 @@ use object_store::aws::AmazonS3;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+use crate::services::assets::versions::common::{DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL};
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::localization;
 use crate::services::assets::versions::store;
@@ -96,12 +96,9 @@ fn map_game_mode(raw: &str) -> String {
 
 // ----- Cached fetch -----
 
-const CACHE_SIZE: usize = 64;
-const CACHE_TTL: Duration = Duration::from_hours(24);
-
 #[cached(
     ty = "LruTtlCache<(u32, String), Arc<Vec<Accolade>>>",
-    create = "{ LruTtlCache::builder().size(CACHE_SIZE).ttl(CACHE_TTL).build() }",
+    create = "{ LruTtlCache::builder().size(DEFAULT_CACHE_SIZE).ttl(DEFAULT_CACHE_TTL).build() }",
     convert = r#"{ (version, language.to_owned()) }"#,
     result = true,
     sync_writes = "by_key"

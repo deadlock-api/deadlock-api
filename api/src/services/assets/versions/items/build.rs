@@ -229,7 +229,7 @@ fn transform_property(
         .map(|f| {
             f.as_list()
                 .into_iter()
-                .filter_map(|s| parse_usage_flag(&s))
+                .filter_map(|s| s.trim().parse::<StatsUsageFlag>().ok())
                 .collect::<Vec<_>>()
         })
         .filter(|v| !v.is_empty());
@@ -306,16 +306,6 @@ fn coerce_recoil_range(v: Value) -> Value {
     match v {
         Value::Array(arr) => Value::Array(arr.into_iter().map(coerce_recoil_range).collect()),
         other => coerce_numeric_to_float(other),
-    }
-}
-
-fn parse_usage_flag(s: &str) -> Option<StatsUsageFlag> {
-    match s.trim() {
-        "ConditionallyApplied" => Some(StatsUsageFlag::ConditionallyApplied),
-        "ConditionallyEnemyApplied" => Some(StatsUsageFlag::ConditionallyEnemyApplied),
-        "IntrinsicallyProvidedInAbility" => Some(StatsUsageFlag::IntrinsicallyProvidedInAbility),
-        "IntrinsicallyProvidedInModifier" => Some(StatsUsageFlag::IntrinsicallyProvidedInModifier),
-        _ => None,
     }
 }
 

@@ -1,25 +1,16 @@
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
-use serde::Deserialize;
-use utoipa::IntoParams;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::assets::common::resolve_version;
+use crate::routes::v1::assets::common::{VersionQuery, resolve_version};
 use crate::services::assets::versions::generic_data::{self, GenericData};
-
-#[derive(Debug, Deserialize, IntoParams)]
-pub(crate) struct GenericDataQuery {
-    /// Client/game version (e.g. `6518`). Defaults to the latest known version.
-    #[serde(default)]
-    client_version: Option<u32>,
-}
 
 #[utoipa::path(
     get,
     path = "/",
-    params(GenericDataQuery),
+    params(VersionQuery),
     responses(
         (status = OK, body = GenericData),
         (status = NOT_FOUND, description = "Requested client_version is not available"),
@@ -33,7 +24,7 @@ pub(crate) struct GenericDataQuery {
 )]
 pub(super) async fn get_generic_data(
     State(state): State<AppState>,
-    Query(q): Query<GenericDataQuery>,
+    Query(q): Query<VersionQuery>,
 ) -> APIResult<impl IntoResponse> {
     let version = resolve_version(&state, q.client_version).await?;
     let data = generic_data::fetch_generic_data(&state.r2_client, version)

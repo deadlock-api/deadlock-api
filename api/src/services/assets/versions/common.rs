@@ -1,8 +1,15 @@
 //! Types shared between `/v1/assets/*` versioned-asset endpoints.
 
+use core::time::Duration;
+
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 use utoipa::ToSchema;
+
+/// Default LRU capacity for per-version `fetch_*` caches.
+pub(crate) const DEFAULT_CACHE_SIZE: usize = 64;
+/// Default TTL for per-version `fetch_*` caches.
+pub(crate) const DEFAULT_CACHE_TTL: Duration = Duration::from_hours(24);
 
 /// Stable murmurhash2 seed used for entity-id derivation from `class_name`.
 const ENTITY_ID_SEED: u32 = 0x3141_5926;

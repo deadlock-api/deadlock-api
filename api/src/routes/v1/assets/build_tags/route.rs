@@ -1,11 +1,12 @@
+use std::sync::Arc;
+
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
-use reqwest::StatusCode;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::assets::common::{AssetsQuery, Language, resolve_version};
+use crate::routes::v1::assets::common::{AssetsQuery, find_or_404, resolve_version};
 use crate::services::assets::versions::build_tags::{self, BuildTag};
 
 #[utoipa::path(
@@ -25,8 +26,7 @@ pub(super) async fn list_build_tags(
     State(state): State<AppState>,
     Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let tags = load_build_tags(&state, q.client_version, q.language).await?;
-    Ok(Json(tags).into_response())
+    Ok(Json(load(&state, &q).await?).into_response())
 }
 
 #[utoipa::path(
@@ -50,17 +50,12 @@ pub(super) async fn get_build_tag(
     Path(build_tag_id): Path<u32>,
     Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let tags = load_build_tags(&state, q.client_version, q.language).await?;
-    tags.iter()
-        .find(|t| t.id == build_tag_id)
-        .cloned()
-        .map(Json)
-        .ok_or_else(|| {
-            APIError::status_msg(
-                StatusCode::NOT_FOUND,
-                format!("Unknown build tag id: {build_tag_id}"),
-            )
-        })
+    let tags = load(&state, &q).await?;
+    find_or_404(
+        &tags,
+        |t| t.id == build_tag_id,
+        format!("Unknown build tag id: {build_tag_id}"),
+    )
 }
 
 #[utoipa::path(
@@ -84,26 +79,17 @@ pub(super) async fn get_build_tag_by_name(
     Path(name): Path<String>,
     Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let tags = load_build_tags(&state, q.client_version, q.language).await?;
-    tags.iter()
-        .find(|t| t.class_name.eq_ignore_ascii_case(&name))
-        .cloned()
-        .map(Json)
-        .ok_or_else(|| {
-            APIError::status_msg(
-                StatusCode::NOT_FOUND,
-                format!("Unknown build tag name: {name}"),
-            )
-        })
+    let tags = load(&state, &q).await?;
+    find_or_404(
+        &tags,
+        |t| t.class_name.eq_ignore_ascii_case(&name),
+        format!("Unknown build tag name: {name}"),
+    )
 }
 
-async fn load_build_tags(
-    state: &AppState,
-    client_version: Option<u32>,
-    language: Option<Language>,
-) -> APIResult<std::sync::Arc<Vec<BuildTag>>> {
-    let version = resolve_version(state, client_version).await?;
-    let lang = language.unwrap_or(Language::English).as_str();
+async fn load(state: &AppState, q: &AssetsQuery) -> APIResult<Arc<Vec<BuildTag>>> {
+    let version = resolve_version(state, q.client_version).await?;
+    let lang = q.language.unwrap_or_default().as_str();
     build_tags::fetch_build_tags(&state.r2_client, version, lang)
         .await
         .map_err(|e| APIError::internal(format!("building build tags: {e}")))
