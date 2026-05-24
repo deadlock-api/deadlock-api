@@ -36,18 +36,20 @@ const FULL_REBUILD_INTERVAL_SECS: u64 = 6 * 60 * 60;
 const WRITER_HEAP_MB: usize = 200;
 const MAX_PROFILES_PER_REBUILD: usize = 10_000_000;
 /// Minimum candidate pool size handed to the JW reranker — large enough that
-/// weight=0 (pure-similarity ranking) finds low-activity profiles.
-const MIN_OVERSAMPLE: usize = 1000;
-const RERANK_OVERSAMPLE_MULT: usize = 10;
+/// weight=0 (pure-similarity ranking) finds low-activity profiles, and that
+/// space-variant matches ("Average Jonas" vs "AverageJonas") survive the
+/// matches_played-ordered first pass.
+const MIN_OVERSAMPLE: usize = 5_000;
+const RERANK_OVERSAMPLE_MULT: usize = 50;
 const WATERMARK_FILENAME: &str = "watermark";
 /// Offset applied to `account_id` to produce a Steam ID64.
 const STEAM_ID64_OFFSET: u64 = 76_561_197_960_265_728;
 /// Subdirectory prefix for the on-disk index. Bump whenever the Tantivy
 /// schema changes — old `v*_` dirs that don't match are GC'd at next
 /// successful rebuild.
-const VERSION_PREFIX: &str = "v2_";
+const VERSION_PREFIX: &str = "v3_";
 /// Older prefixes still recognized by cleanup so they get removed on upgrade.
-const LEGACY_PREFIXES: &[&str] = &["v_"];
+const LEGACY_PREFIXES: &[&str] = &["v_", "v2_"];
 
 #[derive(Clone)]
 pub(crate) struct SteamSearchIndex {
@@ -67,6 +69,7 @@ struct SearchFields {
     account_id: Field,
     personaname_search: Field,
     personaname_exact: Field,
+    personaname_nospace: Field,
     matches_played: Field,
     personaname: Field,
     profileurl: Field,
@@ -314,6 +317,7 @@ impl SteamSearchIndex {
         let searcher = reader.searcher();
         let f = self.inner.fields;
         let q_lc = query.to_lowercase();
+        let q_nospace = strip_whitespace(&q_lc);
 
         // If the user typed an account_id (u32) or steam_id64, pin that
         // profile at the front of the results.
@@ -330,6 +334,33 @@ impl SteamSearchIndex {
                 tantivy::schema::IndexRecordOption::Basic,
             )),
         ));
+        // Bridge whitespace asymmetry: "Average Jonas" must match
+        // "AverageJonas" and vice versa. Match the whitespace-stripped query
+        // against the indexed whitespace-stripped form (exact + fuzzy).
+        if !q_nospace.is_empty() && q_nospace != q_lc {
+            clauses.push((
+                Occur::Should,
+                Box::new(TermQuery::new(
+                    Term::from_field_text(f.personaname_nospace, &q_nospace),
+                    tantivy::schema::IndexRecordOption::Basic,
+                )),
+            ));
+        }
+        if !q_nospace.is_empty() {
+            let distance: u8 = match q_nospace.chars().count() {
+                0..=2 => 0,
+                3..=5 => 1,
+                _ => 2,
+            };
+            clauses.push((
+                Occur::Should,
+                Box::new(FuzzyTermQuery::new(
+                    Term::from_field_text(f.personaname_nospace, &q_nospace),
+                    distance,
+                    true,
+                )),
+            ));
+        }
         for token in q_lc.split_whitespace() {
             if token.is_empty() {
                 continue;
@@ -389,8 +420,21 @@ impl SteamSearchIndex {
                 .map(str::to_lowercase)
                 .unwrap_or_default();
             let mp = matches_played.unwrap_or(0);
-            let score = jaro_winkler(&personaname_lc, &q_lc)
-                + matches_played_weight * (1.0 + mp as f64).ln();
+            // Score against both the raw lowercase form and the
+            // whitespace-stripped form, so "Average Jonas" can still rank
+            // highly against "AverageJonas" and vice versa.
+            let sim_raw = jaro_winkler(&personaname_lc, &q_lc);
+            let sim_nospace = if q_nospace.is_empty() {
+                0.0
+            } else {
+                let name_nospace = strip_whitespace(&personaname_lc);
+                if name_nospace.is_empty() {
+                    0.0
+                } else {
+                    jaro_winkler(&name_nospace, &q_nospace)
+                }
+            };
+            let score = sim_raw.max(sim_nospace) + matches_played_weight * (1.0 + mp as f64).ln();
             scored.push((score, doc, mp));
         }
         scored.sort_unstable_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(core::cmp::Ordering::Equal));
@@ -535,6 +579,7 @@ fn build_schema() -> Schema {
     sb.add_u64_field("account_id", STORED | FAST | INDEXED);
     sb.add_text_field("personaname_search", TEXT);
     sb.add_text_field("personaname_exact", STRING);
+    sb.add_text_field("personaname_nospace", STRING);
     sb.add_u64_field("matches_played", STORED | FAST | INDEXED);
     let stored_text = TextOptions::default().set_stored();
     sb.add_text_field("personaname", stored_text.clone());
@@ -556,6 +601,7 @@ fn lookup_fields(schema: &Schema) -> SearchFields {
         account_id: f("account_id"),
         personaname_search: f("personaname_search"),
         personaname_exact: f("personaname_exact"),
+        personaname_nospace: f("personaname_nospace"),
         matches_played: f("matches_played"),
         personaname: f("personaname"),
         profileurl: f("profileurl"),
@@ -597,6 +643,10 @@ fn decode_friends(bytes: &[u8]) -> Vec<(u32, u32)> {
         out.push((aid, ts));
     }
     out
+}
+
+fn strip_whitespace(s: &str) -> String {
+    s.chars().filter(|c| !c.is_whitespace()).collect()
 }
 
 /// Jaro-Winkler similarity in [0, 1] — matches CH `jaroWinklerSimilarity`.
@@ -743,6 +793,10 @@ fn write_rows(
         doc.add_u64(f.account_id, u64::from(row.account_id));
         doc.add_text(f.personaname_search, &row.personaname_lc);
         doc.add_text(f.personaname_exact, &row.personaname_lc);
+        let personaname_nospace = strip_whitespace(&row.personaname_lc);
+        if !personaname_nospace.is_empty() {
+            doc.add_text(f.personaname_nospace, &personaname_nospace);
+        }
         doc.add_text(f.personaname, &row.personaname);
         doc.add_text(f.profileurl, &row.profileurl);
         doc.add_text(f.avatar, &row.avatar);
