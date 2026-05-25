@@ -16,7 +16,7 @@ set -euo pipefail
 #      asset update — the index must never drift from what's in the bucket.
 #
 # Requires: wget/curl, unzip, zstd, uv, rclone, convert (ImageMagick),
-#           optipng, ffmpeg, python3, and Steam credentials in the environment.
+#           ffmpeg, python3, and Steam credentials in the environment.
 #
 # Environment:
 #   STEAM_USERNAME / STEAM_PASSWORD  Steam login for the depot download.
@@ -81,7 +81,7 @@ check_cmd() {
     fi
 }
 
-for cmd in unzip zstd uv rclone convert optipng ffmpeg python3 rsync; do
+for cmd in unzip zstd uv rclone convert ffmpeg python3 rsync; do
     check_cmd "$cmd"
 done
 
@@ -301,9 +301,6 @@ find images -type f -name "*.png" -print0 | xargs -0 -P 24 -I {} sh -c '
 find images -type f -name "*_psd.*" -exec bash -c 'mv "$1" "${1/_psd./.}"' _ {} \;
 find images -type f -name "*_psd_128.*" -exec bash -c 'mv "$1" "${1/_psd_128./.}"' _ {} \;
 find images -type f -name "*_png.*" -exec bash -c 'mv "$1" "${1/_png./.}"' _ {} \;
-
-# Optimize images (one optipng process per file, parallelized)
-find images -type f -name "*.png" -print0 | xargs -0 -r -P "$JOBS" -n 1 optipng -o2 || true
 
 # Videos: transcode webm -> h264 mp4, skipping when the source sha256 is unchanged.
 mkdir -p videos

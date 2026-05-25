@@ -70,7 +70,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            wget unzip zstd rsync ffmpeg optipng imagemagick python3
+            wget unzip zstd rsync ffmpeg imagemagick python3
           curl -fsSL https://rclone.org/install.sh | sudo bash
 
       - name: Install uv
