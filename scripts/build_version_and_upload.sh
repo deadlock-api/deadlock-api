@@ -256,8 +256,10 @@ mkdir -p fonts
 [ -d "$citadel_folder/panorama/fonts" ] && \
     find "$citadel_folder"/panorama/fonts -type f -name '*.otf' -print0 | xargs -0 -r -n 1 cp -t fonts/
 
-# Sounds
+# Sounds. Source2Viewer dumps a KV3 .vsnd resource for sounds it can't decode to
+# audio; those aren't playable and aren't indexed, so drop them before copying.
 mkdir -p sounds
+find "$citadel_folder"/sounds -type f -name '*.vsnd' -delete
 safe_cp -r "$citadel_folder"/sounds/* sounds/
 
 # Images
