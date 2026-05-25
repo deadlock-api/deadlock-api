@@ -38,8 +38,8 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .nest("/ranks", ranks::router())
         .nest("/steam-info", steam_info::router())
         .layer(
-            CacheControlMiddleware::new(Duration::from_hours(1))
-                .with_stale_while_revalidate(Duration::from_hours(24))
+            CacheControlMiddleware::new(Duration::from_mins(15))
+                .with_stale_while_revalidate(Duration::from_mins(15))
                 .with_stale_if_error(Duration::from_hours(24)),
         )
 }

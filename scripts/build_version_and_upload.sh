@@ -90,10 +90,7 @@ if command -v nproc >/dev/null 2>&1; then JOBS=$(nproc); else JOBS=$(sysctl -n h
 if command -v sha256sum >/dev/null 2>&1; then HASH_CMD="sha256sum"; else HASH_CMD="shasum -a 256"; fi
 export HASH_CMD
 
-# The game's panorama/materials layout shifts between builds (folders get
-# renamed or removed). A daily job must not abort just because one source path
-# vanished, so media copies warn instead of failing. Running cp inside the `if`
-# keeps `set -e` from killing the run; we still log what was skipped.
+# Copy that warns instead of aborting when a source path is missing.
 safe_cp() {
     if ! cp "$@" 2>/dev/null; then
         echo "Warning: skipped missing asset source: cp $*"
@@ -149,11 +146,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     done
 fi
 
-# 2. Download Deadlock Game files.
-# We only ever extract the pak01 VPK set (+ steam.inf), so restrict the download
-# to those files from a single platform's depots: no other-platform binaries,
-# no localized-audio depots, and no giant maps/*.vpk. Text localization lives
-# inside pak01 (resource/localization), so a single language depot is fine.
+# 2. Download Deadlock Game files (only the pak01 VPK set + steam.inf).
 if [ -z "${STEAM_USERNAME:-}" ] || [ -z "${STEAM_PASSWORD:-}" ]; then
     echo "Error: STEAM_USERNAME and STEAM_PASSWORD must be set to download game files."
     exit 1
@@ -312,11 +305,9 @@ find images -type f -name "*_png.*" -exec bash -c 'mv "$1" "${1/_png./.}"' _ {} 
 # Optimize images (one optipng process per file, parallelized)
 find images -type f -name "*.png" -print0 | xargs -0 -r -P "$JOBS" -n 1 optipng -o2 || true
 
-# Videos: transcode webm -> h264 mp4. Skip re-encoding when the source webm is
-# unchanged — its sha256 is recorded in a sidecar kept OUTSIDE the upload tree
-# (so it never lands on R2). Pays off whenever WORK_DIR is reused across runs.
+# Videos: transcode webm -> h264 mp4, skipping when the source sha256 is unchanged.
 mkdir -p videos
-cp -r "$citadel_folder"/panorama/videos/hero_abilities videos/
+safe_cp -r "$citadel_folder"/panorama/videos/hero_abilities videos/
 HASH_DIR="$WORK_DIR/.video-hashes"
 mkdir -p "$HASH_DIR"
 export HASH_DIR

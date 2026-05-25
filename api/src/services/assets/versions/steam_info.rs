@@ -6,6 +6,7 @@
 //! preserved verbatim, including field order, so this endpoint can swap in
 //! transparently.
 
+use core::time::Duration;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -111,6 +112,7 @@ pub(crate) async fn fetch_steam_info(
 /// Bucket key for the pre-built array of every version's steam info, produced
 /// by `scripts/update_r2_index.sh`.
 const ALL_STEAM_INFO_KEY: &str = "assets-api-res/steam-info/all.json.zst";
+const ALL_STEAM_INFO_TTL: Duration = Duration::from_mins(15);
 
 /// Fetch the pre-built `[SteamInfo]` array spanning every known version.
 ///
@@ -119,7 +121,7 @@ const ALL_STEAM_INFO_KEY: &str = "assets-api-res/steam-info/all.json.zst";
 /// field order as [`SteamInfo`] — without re-fetching N files per request.
 #[cached(
     ty = "TtlCache<u8, Bytes>",
-    create = "{ TtlCache::with_ttl(DEFAULT_CACHE_TTL) }",
+    create = "{ TtlCache::with_ttl(ALL_STEAM_INFO_TTL) }",
     convert = "{ 0_u8 }",
     result = true,
     sync_writes = "by_key"
