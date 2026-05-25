@@ -66,6 +66,7 @@ const TAG_GROUPS: &[(&str, &[&str])] = &[
         "Assets",
         &[
             "Accolades",
+            "Assets",
             "Build Tags",
             "Client Versions",
             "Colors",
