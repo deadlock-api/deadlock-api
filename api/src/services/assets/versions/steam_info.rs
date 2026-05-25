@@ -9,8 +9,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use cached::LruTtlCache;
+use bytes::Bytes;
 use cached::macros::cached;
+use cached::{LruTtlCache, TtlCache};
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use object_store::aws::AmazonS3;
 use serde::Serialize;
@@ -105,6 +106,26 @@ pub(crate) async fn fetch_steam_info(
 ) -> Result<Arc<SteamInfo>, AssetsError> {
     let text = store::fetch_text(r2, version, "steam.inf").await?;
     Ok(Arc::new(build_steam_info(&text)?))
+}
+
+/// Bucket key for the pre-built array of every version's steam info, produced
+/// by `scripts/update_r2_index.sh`.
+const ALL_STEAM_INFO_KEY: &str = "assets-api-res/steam-info/all.json.zst";
+
+/// Fetch the pre-built `[SteamInfo]` array spanning every known version.
+///
+/// The script collects and parses each version's `steam.inf` offline, so this
+/// is served as the raw JSON bytes it produced — already in the same shape and
+/// field order as [`SteamInfo`] — without re-fetching N files per request.
+#[cached(
+    ty = "TtlCache<(), Bytes>",
+    create = "{ TtlCache::with_ttl(DEFAULT_CACHE_TTL) }",
+    convert = "{ () }",
+    result = true,
+    sync_writes = "by_key"
+)]
+pub(crate) async fn fetch_all_steam_info(r2: &AmazonS3) -> Result<Bytes, AssetsError> {
+    Ok(store::fetch_zst(r2, ALL_STEAM_INFO_KEY).await?)
 }
 
 #[cfg(test)]

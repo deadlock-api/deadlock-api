@@ -16,5 +16,7 @@ use crate::context::AppState;
 struct ApiDoc;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {
-    OpenApiRouter::with_openapi(ApiDoc::openapi()).routes(routes!(route::get_steam_info))
+    OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .routes(routes!(route::get_steam_info))
+        .routes(routes!(route::get_all_steam_info))
 }
