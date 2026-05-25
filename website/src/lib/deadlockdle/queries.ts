@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import type { UpgradeV2 } from "assets_deadlock_api_client";
 
 import { api } from "~/lib/api";
-import { assetsApi } from "~/lib/assets-api";
 
 export function useHeroes() {
   return useQuery({
@@ -45,7 +44,7 @@ export function useSounds() {
   return useQuery({
     queryKey: ["assets-sounds"],
     queryFn: async () => {
-      const res = await assetsApi.default_api.getSoundsV1SoundsGet();
+      const res = await api.assets_api.sounds();
       return res.data as Record<string, unknown>;
     },
     staleTime: Number.POSITIVE_INFINITY,

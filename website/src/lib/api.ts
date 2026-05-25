@@ -1,6 +1,7 @@
 import type { AxiosInstance } from "axios";
 import {
   AnalyticsApi,
+  AssetsApi,
   HeroesApi,
   ItemsApi,
   LeaderboardApi,
@@ -34,6 +35,7 @@ export class Api {
   public items_api: ItemsApi;
   public ranks_api: RanksApi;
   public npc_units_api: NPCUnitsApi;
+  public assets_api: AssetsApi;
   public client: AxiosInstance;
 
   constructor(config: ApiConfig = DEFAULT_API_CONFIG) {
@@ -49,6 +51,7 @@ export class Api {
     this.items_api = new ItemsApi(undefined, API_ORIGIN, axios_client);
     this.ranks_api = new RanksApi(undefined, API_ORIGIN, axios_client);
     this.npc_units_api = new NPCUnitsApi(undefined, API_ORIGIN, axios_client);
+    this.assets_api = new AssetsApi(undefined, API_ORIGIN, axios_client);
   }
 }
 
