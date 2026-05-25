@@ -11,4 +11,6 @@ pub(crate) enum AssetsError {
     Store(#[from] store::VersionStoreError),
     #[error("steam.inf parse error: {0}")]
     SteamInfo(String),
+    #[error("map parse error: {0}")]
+    Map(String),
 }

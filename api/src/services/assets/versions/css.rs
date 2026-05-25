@@ -162,6 +162,81 @@ fn find_background_image(p: &mut Parser<'_, '_>) -> Option<String> {
     found
 }
 
+/// For every style rule that declares both `margin-left` and `margin-top` as
+/// percentages, maps its whitespace-normalized selector text to
+/// `(left_fraction, top_fraction)`. Percentages are returned as fractions, e.g.
+/// `35%` -> `0.35`. Grouped selectors keep their full comma-joined text, so they
+/// never collide with single-selector lookups. First occurrence of a selector
+/// wins.
+pub(crate) fn parse_margin_percentages(css: &str) -> HashMap<String, (f64, f64)> {
+    let mut input = ParserInput::new(css);
+    let mut p = Parser::new(&mut input);
+    let mut out = HashMap::new();
+
+    while !p.is_exhausted() {
+        let mut selector = String::new();
+        let block_found = loop {
+            match p.next_including_whitespace_and_comments().cloned() {
+                Ok(Token::CurlyBracketBlock) => break true,
+                Ok(t) => write_token(&mut selector, &t),
+                Err(_) => break false,
+            }
+        };
+        if !block_found {
+            break;
+        }
+        let margins = p
+            .parse_nested_block::<_, (Option<f64>, Option<f64>), ()>(|inner| {
+                Ok(find_margins(inner))
+            })
+            .unwrap_or((None, None));
+        if let (Some(left), Some(top)) = margins {
+            out.entry(normalize_selector(&selector))
+                .or_insert((left, top));
+        }
+    }
+    out
+}
+
+/// Scan a declaration block for `margin-left` / `margin-top` percentage values.
+fn find_margins(p: &mut Parser<'_, '_>) -> (Option<f64>, Option<f64>) {
+    let mut left = None;
+    let mut top = None;
+    while !p.is_exhausted() {
+        let _ = p.parse_until_after::<_, _, ()>(Delimiter::Semicolon, |inner| {
+            if let Ok(Token::Ident(name)) = inner.next().cloned() {
+                let slot = match name.as_ref() {
+                    "margin-left" => Some(&mut left),
+                    "margin-top" => Some(&mut top),
+                    _ => None,
+                };
+                if let Some(slot) = slot
+                    && inner.expect_colon().is_ok()
+                    && let Ok(Token::Percentage {
+                        unit_value,
+                        int_value,
+                        ..
+                    }) = inner.next().cloned()
+                {
+                    // Prefer the integer source value for an exact f64; fall
+                    // back to the f32 fraction only for fractional percentages.
+                    *slot = Some(
+                        int_value.map_or_else(|| f64::from(unit_value), |i| f64::from(i) / 100.0),
+                    );
+                }
+            }
+            Ok::<(), ParseErr<'_>>(())
+        });
+    }
+    (left, top)
+}
+
+/// Collapse internal whitespace runs to single spaces and trim, yielding the
+/// canonical single-space selector form (e.g. `.ThreeLane #Team1Tier2_1`).
+fn normalize_selector(selector: &str) -> String {
+    selector.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
 fn write_token(buf: &mut String, t: &Token<'_>) {
     use core::fmt::Write;
     match t {

@@ -14,6 +14,7 @@ mod generic_data;
 mod heroes;
 mod items;
 mod loot_tables;
+mod map;
 mod misc_entities;
 mod npc_units;
 mod r2_index;
@@ -30,6 +31,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .nest("/heroes", heroes::router())
         .nest("/items", items::router())
         .nest("/loot-tables", loot_tables::router())
+        .nest("/map", map::router())
         .nest("/misc-entities", misc_entities::router())
         .nest("/npc-units", npc_units::router())
         .merge(r2_index::router())

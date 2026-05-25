@@ -118,9 +118,9 @@ const ALL_STEAM_INFO_KEY: &str = "assets-api-res/steam-info/all.json.zst";
 /// is served as the raw JSON bytes it produced — already in the same shape and
 /// field order as [`SteamInfo`] — without re-fetching N files per request.
 #[cached(
-    ty = "TtlCache<(), Bytes>",
+    ty = "TtlCache<u8, Bytes>",
     create = "{ TtlCache::with_ttl(DEFAULT_CACHE_TTL) }",
-    convert = "{ () }",
+    convert = "{ 0_u8 }",
     result = true,
     sync_writes = "by_key"
 )]
