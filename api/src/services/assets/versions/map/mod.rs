@@ -117,7 +117,7 @@ pub(crate) struct ZiplanePath {
 
 /// The `/v1/assets/map` response.
 #[derive(Debug, Clone, Serialize, ToSchema)]
-pub(crate) struct Map {
+pub(crate) struct MapData {
     radius: u32,
     images: MapImages,
     #[schema(value_type = HashMap<String, ObjectivePosition>)]
@@ -193,8 +193,8 @@ pub(crate) fn build_objective_positions(
 }
 
 /// Build the full map response from the version's `objectives_map.css`.
-pub(crate) fn build_map(css: &str) -> Result<Map, AssetsError> {
-    Ok(Map {
+pub(crate) fn build_map(css: &str) -> Result<MapData, AssetsError> {
+    Ok(MapData {
         radius: MAP_RADIUS,
         images: images(),
         objective_positions: build_objective_positions(css)?,
@@ -203,13 +203,13 @@ pub(crate) fn build_map(css: &str) -> Result<Map, AssetsError> {
 }
 
 #[cached(
-    ty = "LruTtlCache<u32, Arc<Map>>",
+    ty = "LruTtlCache<u32, Arc<MapData>>",
     create = "{ LruTtlCache::builder().size(DEFAULT_CACHE_SIZE).ttl(DEFAULT_CACHE_TTL).build() }",
     convert = r#"{ version }"#,
     result = true,
     sync_writes = "by_key"
 )]
-pub(crate) async fn fetch_map(r2: &AmazonS3, version: u32) -> Result<Arc<Map>, AssetsError> {
+pub(crate) async fn fetch_map(r2: &AmazonS3, version: u32) -> Result<Arc<MapData>, AssetsError> {
     let css_src = store::fetch_text(r2, version, CSS_PATH).await?;
     Ok(Arc::new(build_map(&css_src)?))
 }

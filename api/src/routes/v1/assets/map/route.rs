@@ -5,14 +5,14 @@ use axum::response::IntoResponse;
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::assets::common::{VersionQuery, load_versioned};
-use crate::services::assets::versions::map::{Map, fetch_map};
+use crate::services::assets::versions::map::{MapData, fetch_map};
 
 #[utoipa::path(
     get,
     path = "/",
     params(VersionQuery),
     responses(
-        (status = OK, body = Map),
+        (status = OK, body = MapData),
         (status = NOT_FOUND, description = "Requested client_version is not available"),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to load source assets"),
     ),
