@@ -1,5 +1,16 @@
 import type { AxiosInstance } from "axios";
-import { AnalyticsApi, LeaderboardApi, MatchesApi, PlayersApi, ServersApi, SteamApi } from "deadlock_api_client";
+import {
+  AnalyticsApi,
+  HeroesApi,
+  ItemsApi,
+  LeaderboardApi,
+  MatchesApi,
+  NPCUnitsApi,
+  PlayersApi,
+  RanksApi,
+  ServersApi,
+  SteamApi,
+} from "deadlock_api_client";
 
 import { API_ORIGIN } from "~/lib/constants";
 import { createApiClient } from "~/lib/create-api-client";
@@ -19,6 +30,10 @@ export class Api {
   public players_api: PlayersApi;
   public servers_api: ServersApi;
   public steam_api: SteamApi;
+  public heroes_api: HeroesApi;
+  public items_api: ItemsApi;
+  public ranks_api: RanksApi;
+  public npc_units_api: NPCUnitsApi;
   public client: AxiosInstance;
 
   constructor(config: ApiConfig = DEFAULT_API_CONFIG) {
@@ -30,6 +45,10 @@ export class Api {
     this.players_api = new PlayersApi(undefined, API_ORIGIN, axios_client);
     this.servers_api = new ServersApi(undefined, API_ORIGIN, axios_client);
     this.steam_api = new SteamApi(undefined, API_ORIGIN, axios_client);
+    this.heroes_api = new HeroesApi(undefined, API_ORIGIN, axios_client);
+    this.items_api = new ItemsApi(undefined, API_ORIGIN, axios_client);
+    this.ranks_api = new RanksApi(undefined, API_ORIGIN, axios_client);
+    this.npc_units_api = new NPCUnitsApi(undefined, API_ORIGIN, axios_client);
   }
 }
 

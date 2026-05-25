@@ -1,15 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import type { UpgradeV2 } from "assets_deadlock_api_client";
-import axios from "axios";
 
+import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
-import { ASSETS_ORIGIN } from "~/lib/constants";
 
 export function useHeroes() {
   return useQuery({
     queryKey: ["assets-heroes"],
     queryFn: async () => {
-      const res = await assetsApi.heroes_api.getHeroesV2HeroesGet({ onlyActive: true });
+      const res = await api.heroes_api.listHeroes({ onlyActive: true });
       return res.data;
     },
     staleTime: Number.POSITIVE_INFINITY,
@@ -20,7 +19,7 @@ export function useItems() {
   return useQuery({
     queryKey: ["assets-items-upgrades"],
     queryFn: async () => {
-      const res = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({
+      const res = await api.items_api.getItemsByType({
         type: "upgrade",
       });
       return res.data as UpgradeV2[];
@@ -33,7 +32,7 @@ export function useAbilities() {
   return useQuery({
     queryKey: ["assets-items-abilities"],
     queryFn: async () => {
-      const res = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({
+      const res = await api.items_api.getItemsByType({
         type: "ability",
       });
       return res.data;
@@ -57,24 +56,7 @@ export function useNpcUnits() {
   return useQuery({
     queryKey: ["assets-npc-units"],
     queryFn: async () => {
-      const res = await axios.get(`${ASSETS_ORIGIN}/v2/npc-units`);
-      return res.data as Array<{
-        class_name: string;
-        max_health?: number | null;
-        gold_reward?: number | null;
-        id: number;
-        [key: string]: unknown;
-      }>;
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-}
-
-export function useGenericData() {
-  return useQuery({
-    queryKey: ["assets-generic-data"],
-    queryFn: async () => {
-      const res = await axios.get(`${ASSETS_ORIGIN}/v2/generic-data`);
+      const res = await api.npc_units_api.listNpcUnits();
       return res.data;
     },
     staleTime: Number.POSITIVE_INFINITY,

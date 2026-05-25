@@ -8,7 +8,7 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { buildAbilityTrie, getSortedChildren, mergeStreetBrawlRows } from "~/lib/ability-order-utils";
-import { assetsApi } from "~/lib/assets-api";
+import { api } from "~/lib/api";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
 import { abilitiesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
@@ -66,8 +66,8 @@ export default function AbilityOrderTree({
   const { data: heroData } = useQuery({
     queryKey: queryKeys.assets.hero(heroId),
     queryFn: async () => {
-      const response = await assetsApi.heroes_api.getHeroV2HeroesIdGet({
-        id: heroId,
+      const response = await api.heroes_api.getHero({
+        heroId,
       });
       return response.data;
     },
