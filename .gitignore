@@ -4,3 +4,4 @@
 .vscode
 *.local.*
 lefthook-local.yml
+.asset-index/

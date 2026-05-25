@@ -146,9 +146,13 @@ async fn fetch_decompressed_cached(
     version: u32,
     rel_path: String,
 ) -> Result<Bytes, VersionStoreError> {
-    let key = format!("{VERSIONS_PREFIX}/{version}/{rel_path}.zst");
-    debug!("Fetching versioned asset: {key}");
-    let res = r2.get(&ObjectPath::from(key)).await?;
+    fetch_zst(r2, &format!("{VERSIONS_PREFIX}/{version}/{rel_path}.zst")).await
+}
+
+/// Fetch a zstd-compressed object by its full bucket key and decompress it.
+pub(crate) async fn fetch_zst(r2: &AmazonS3, key: &str) -> Result<Bytes, VersionStoreError> {
+    debug!("Fetching asset: {key}");
+    let res = r2.get(&ObjectPath::from(key.to_owned())).await?;
     let compressed = res.bytes().await?;
     let mut decoder = ZstdDecoder::new(std::io::Cursor::new(compressed.as_ref()));
     let mut out = Vec::with_capacity(compressed.len() * 4);

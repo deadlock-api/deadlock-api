@@ -12,3 +12,9 @@ run = [
   "cd website && pnpm install",
   "lefthook install",
 ]
+
+[tasks.update-assets]
+description = "Update generated assets"
+run = [
+  "bash scripts/update_r2_index.sh"
+]

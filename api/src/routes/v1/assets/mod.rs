@@ -16,6 +16,7 @@ mod items;
 mod loot_tables;
 mod misc_entities;
 mod npc_units;
+mod r2_index;
 mod ranks;
 mod steam_info;
 
@@ -31,6 +32,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .nest("/loot-tables", loot_tables::router())
         .nest("/misc-entities", misc_entities::router())
         .nest("/npc-units", npc_units::router())
+        .merge(r2_index::router())
         .nest("/ranks", ranks::router())
         .nest("/steam-info", steam_info::router())
         .layer(
