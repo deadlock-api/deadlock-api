@@ -53,7 +53,7 @@ pub(crate) enum RankPredictorError {
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub(crate) struct RankPrediction {
-    /// See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// See more: <https://api.deadlock-api.com/v1/assets/ranks>
     pub(crate) badge: i32,
     /// Calibrated model output (float index into badge space)
     pub(crate) raw_score: f32,

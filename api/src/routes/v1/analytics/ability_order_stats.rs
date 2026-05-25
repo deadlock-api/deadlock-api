@@ -28,7 +28,7 @@ fn default_min_matches() -> Option<u32> {
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(super) struct AbilityOrderStatsQuery {
-    /// See more: <https://assets.deadlock-api.com/v2/heroes>
+    /// See more: <https://api.deadlock-api.com/v1/assets/heroes>
     hero_id: u32,
     /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
     #[serde(
@@ -59,10 +59,10 @@ pub(super) struct AbilityOrderStatsQuery {
     min_networth: Option<u64>,
     /// Filter players based on their final net worth.
     max_networth: Option<u64>,
-    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
-    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
@@ -85,14 +85,14 @@ pub(super) struct AbilityOrderStatsQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     account_ids: Option<Vec<u32>>,
-    /// Comma separated list of item ids to include (only players who have purchased these items). See more: <https://assets.deadlock-api.com/v2/items>
+    /// Comma separated list of item ids to include (only players who have purchased these items). See more: <https://api.deadlock-api.com/v1/assets/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
         test,
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     include_item_ids: Option<Vec<u32>>,
-    /// Comma separated list of item ids to exclude (only players who have not purchased these items). See more: <https://assets.deadlock-api.com/v2/items>
+    /// Comma separated list of item ids to exclude (only players who have not purchased these items). See more: <https://api.deadlock-api.com/v1/assets/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
         test,
@@ -103,7 +103,7 @@ pub(super) struct AbilityOrderStatsQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct AnalyticsAbilityOrderStats {
-    /// See more: <https://assets.deadlock-api.com/v2/heroes>
+    /// See more: <https://api.deadlock-api.com/v1/assets/heroes>
     pub abilities: Vec<u32>,
     pub wins: u64,
     pub losses: u64,

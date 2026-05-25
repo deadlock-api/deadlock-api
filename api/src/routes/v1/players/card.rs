@@ -40,7 +40,7 @@ impl From<c_msg_citadel_profile_card::slot::Stat> for PlayerCardSlotStat {
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub(crate) struct PlayerCardSlotHero {
-    /// See more: <https://assets.deadlock-api.com/v2/heroes>
+    /// See more: <https://api.deadlock-api.com/v1/assets/heroes>
     pub(crate) id: Option<u32>,
     pub(crate) kills: Option<u32>,
     pub(crate) wins: Option<u32>,
@@ -76,11 +76,11 @@ impl From<c_msg_citadel_profile_card::Slot> for PlayerCardSlot {
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub(crate) struct PlayerCard {
     pub(crate) account_id: u32,
-    /// See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// See more: <https://api.deadlock-api.com/v1/assets/ranks>
     pub(crate) ranked_badge_level: Option<u32>,
-    /// See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// See more: <https://api.deadlock-api.com/v1/assets/ranks>
     pub(crate) ranked_rank: Option<u32>,
-    /// See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// See more: <https://api.deadlock-api.com/v1/assets/ranks>
     pub(crate) ranked_subrank: Option<u32>,
     pub(crate) slots: Vec<PlayerCardSlot>,
 }

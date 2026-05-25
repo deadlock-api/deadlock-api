@@ -27,7 +27,7 @@ fn default_min_matches() -> Option<u64> {
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub(super) struct HeroBuildStatsPath {
-    /// The hero ID to fetch build stats for. See more: <https://assets.deadlock-api.com/v2/heroes>
+    /// The hero ID to fetch build stats for. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     hero_id: u32,
 }
 
@@ -46,10 +46,10 @@ pub(super) struct HeroBuildStatsQuery {
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     max_duration_s: Option<u64>,
-    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
-    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
@@ -78,7 +78,7 @@ pub(super) struct HeroBuildStatsQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct HeroBuildStats {
-    /// The ID of the hero. See more: <https://assets.deadlock-api.com/v2/heroes>
+    /// The ID of the hero. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     pub hero_id: u32,
     /// The ID of the hero build. The `hero_build_id` is the first build the player had selected when the game started.
     pub hero_build_id: u64,

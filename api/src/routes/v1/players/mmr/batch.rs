@@ -28,7 +28,7 @@ pub(crate) struct MMRBatchQuery {
 
 #[derive(Deserialize, IntoParams, Default, Clone, Eq, PartialEq, Hash)]
 pub(super) struct HeroMMRPath {
-    /// The hero ID to fetch the MMR history for. See more: <https://assets.deadlock-api.com/v2/heroes>
+    /// The hero ID to fetch the MMR history for. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     pub(super) hero_id: u8,
 }
 

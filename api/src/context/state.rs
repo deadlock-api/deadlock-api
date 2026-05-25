@@ -269,10 +269,6 @@ impl AppState {
             config.steam.api_key.clone(),
         );
 
-        // Create an Assets client
-        debug!("Creating Assets client");
-        let assets_client = AssetsClient::new(config.assets_base_url.clone(), http_client.clone());
-
         // Create a Rate Limit client
         debug!("Creating Rate Limit client");
         let rate_limit_client = RateLimitClient::new(
@@ -329,6 +325,11 @@ impl AppState {
             warn!("Initial version listing failed (will retry in background): {e}");
         }
         version_store.spawn_refresh_loop(r2_client.clone());
+
+        // Create an Assets client (loads hero/rank metadata in-process from the
+        // versioned R2 assets — no external HTTP call).
+        debug!("Creating Assets client");
+        let assets_client = AssetsClient::new(r2_client.clone(), version_store.clone());
 
         Ok(Self {
             config,

@@ -44,7 +44,7 @@ export function useSounds() {
   return useQuery({
     queryKey: ["assets-sounds"],
     queryFn: async () => {
-      const res = await api.assets_api.sounds();
+      const res = await api.assets_bucket_api.sounds();
       return res.data as Record<string, unknown>;
     },
     staleTime: Number.POSITIVE_INFINITY,

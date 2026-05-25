@@ -160,10 +160,6 @@ async fn setup() -> &'static TestEnv {
                 ("POSTGRES_USERNAME", "root".to_owned()),
                 ("POSTGRES_PASSWORD", "postgres".to_owned()),
                 ("POSTGRES_DBNAME", "root".to_owned()),
-                (
-                    "ASSETS_BASE_URL",
-                    "https://assets.deadlock-api.com".to_owned(),
-                ),
                 ("PATREON_CLIENT_ID", "your_patreon_client_id".to_owned()),
                 (
                     "PATREON_CLIENT_SECRET",

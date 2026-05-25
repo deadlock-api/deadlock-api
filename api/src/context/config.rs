@@ -132,10 +132,6 @@ pub(super) struct PostgresConfig {
     pub(super) pool_size: u32,
 }
 
-fn default_assets_base_url() -> String {
-    "https://assets.deadlock-api.com".to_owned()
-}
-
 #[derive(Deserialize, Debug, Clone)]
 pub(crate) struct Config {
     #[serde(default)]
@@ -155,9 +151,6 @@ pub(crate) struct Config {
 
     #[serde(default)]
     pub(crate) game_server_secret: String,
-
-    #[serde(default = "default_assets_base_url")]
-    pub(super) assets_base_url: String,
 }
 
 impl Config {

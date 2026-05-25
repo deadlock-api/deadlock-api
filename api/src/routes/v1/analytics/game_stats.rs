@@ -25,7 +25,7 @@ pub enum BucketQuery {
     /// No Bucketing
     #[default]
     NoBucket,
-    /// Bucket Game Stats By Max Average Badge Level (tier = first digits, subtier = last digit) of both teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Bucket Game Stats By Max Average Badge Level (tier = first digits, subtier = last digit) of both teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     AvgBadge,
     /// Bucket Game Stats By Start Time (Hour)
     StartTimeHour,
@@ -78,11 +78,11 @@ pub(crate) struct GameStatsQuery {
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     max_duration_s: Option<u64>,
-    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     /// Only works for `game_modes` with badge data (e.g. `normal`, not `street_brawl`).
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
-    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     /// Only works for `game_modes` with badge data (e.g. `normal`, not `street_brawl`).
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,

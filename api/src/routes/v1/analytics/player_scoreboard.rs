@@ -43,7 +43,7 @@ pub(crate) struct PlayerScoreboardQuery {
     )]
     #[param(inline, default = "normal")]
     game_mode: Option<GameMode>,
-    /// Filter matches based on the hero ID. See more: <https://assets.deadlock-api.com/v2/heroes>
+    /// Filter matches based on the hero ID. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     hero_id: Option<u32>,
     /// The minimum number of matches played for a player to be included in the scoreboard.
     #[serde(default = "default_min_matches_u32")]
@@ -67,10 +67,10 @@ pub(crate) struct PlayerScoreboardQuery {
     min_networth: Option<u64>,
     /// Filter players based on their final net worth.
     max_networth: Option<u64>,
-    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
-    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
     /// Filter matches based on their ID.

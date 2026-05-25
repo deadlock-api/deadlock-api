@@ -29,7 +29,7 @@ fn default_comb_size() -> Option<u8> {
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(super) struct ItemPermutationStatsQuery {
-    /// Comma separated list of item ids. See more: <https://assets.deadlock-api.com/v2/items>
+    /// Comma separated list of item ids. See more: <https://api.deadlock-api.com/v1/assets/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
         test,
@@ -46,7 +46,7 @@ pub(super) struct ItemPermutationStatsQuery {
     )]
     #[param(inline, default = "normal")]
     game_mode: Option<GameMode>,
-    /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
+    /// Filter matches based on the hero IDs. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
@@ -54,7 +54,7 @@ pub(super) struct ItemPermutationStatsQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     hero_ids: Option<Vec<u32>>,
-    /// Filter matches based on the hero ID. See more: <https://assets.deadlock-api.com/v2/heroes>
+    /// Filter matches based on the hero ID. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     #[deprecated(note = "Use hero_ids instead")]
     hero_id: Option<u32>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
@@ -73,10 +73,10 @@ pub(super) struct ItemPermutationStatsQuery {
     min_networth: Option<u64>,
     /// Filter players based on their final net worth.
     max_networth: Option<u64>,
-    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
-    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
@@ -99,7 +99,7 @@ pub(super) struct ItemPermutationStatsQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 struct ItemPermutationStats {
-    /// See more: <https://assets.deadlock-api.com/v2/items>
+    /// See more: <https://api.deadlock-api.com/v1/assets/items>
     item_ids: Vec<u32>,
     wins: u64,
     losses: u64,

@@ -8,7 +8,6 @@ import {
   GraduationCap,
   HardDrive,
   Home,
-  ImageIcon,
   ListOrdered,
   Map,
   Medal,
@@ -30,7 +29,7 @@ import { PrefetchAnchor } from "~/components/PrefetchAnchor";
 import { SmartLink } from "~/components/SmartLink";
 import { Button } from "~/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "~/components/ui/sheet";
-import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
+import { API_ORIGIN } from "~/lib/constants";
 import { cn } from "~/lib/utils";
 
 interface NavLink {
@@ -247,7 +246,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </p>
         <div className="grid grid-cols-2 gap-1">
           {[
-            { href: ASSETS_ORIGIN, label: "Assets API", icon: ImageIcon, external: true },
             { href: API_ORIGIN, label: "Game Data", icon: BarChart3, external: true },
             { href: "/data-dumps", label: "DB Dumps", icon: HardDrive, external: false },
             {

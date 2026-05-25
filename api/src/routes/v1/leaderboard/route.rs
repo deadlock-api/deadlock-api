@@ -45,7 +45,7 @@ pub(super) struct LeaderboardHeroQuery {
     #[serde(default)]
     #[param(inline)]
     region: LeaderboardRegion,
-    /// The hero ID to fetch the leaderboard for. See more: <https://assets.deadlock-api.com/v2/heroes>
+    /// The hero ID to fetch the leaderboard for. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     hero_id: u32,
 }
 

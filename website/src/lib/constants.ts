@@ -3,10 +3,6 @@ import { type Dayjs, day } from "~/dayjs";
 export const IS_DEV = import.meta.env.DEV;
 
 export const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || "https://api.deadlock-api.com").replace(/\/+$/, "");
-export const ASSETS_ORIGIN = (import.meta.env.VITE_ASSETS_BASE_URL || "https://assets.deadlock-api.com").replace(
-  /\/+$/,
-  "",
-);
 export interface PatchInfo {
   id: string;
   name: string;

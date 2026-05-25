@@ -124,7 +124,7 @@ pub(crate) struct ItemStatsQuery {
     )]
     #[param(inline, default = "normal")]
     game_mode: Option<GameMode>,
-    /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
+    /// Filter matches based on the hero IDs. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
@@ -132,10 +132,10 @@ pub(crate) struct ItemStatsQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     hero_ids: Option<Vec<u32>>,
-    /// Filter matches based on the hero ID. See more: <https://assets.deadlock-api.com/v2/heroes>
+    /// Filter matches based on the hero ID. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     #[deprecated(note = "Use hero_ids instead")]
     hero_id: Option<u32>,
-    /// Filter to matches where one or more of these heroes were on the opposing team. Comma separated. When set, returns "what items beat hero(es) X?" stats. See more: <https://assets.deadlock-api.com/v2/heroes>
+    /// Filter to matches where one or more of these heroes were on the opposing team. Comma separated. When set, returns "what items beat hero(es) X?" stats. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
@@ -167,24 +167,24 @@ pub(crate) struct ItemStatsQuery {
     min_networth: Option<u64>,
     /// Filter players based on their final net worth.
     max_networth: Option<u64>,
-    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
-    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
     min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,
-    /// Comma separated list of item ids to include. See more: <https://assets.deadlock-api.com/v2/items>
+    /// Comma separated list of item ids to include. See more: <https://api.deadlock-api.com/v1/assets/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
         test,
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     include_item_ids: Option<Vec<u32>>,
-    /// Comma separated list of item ids to exclude. See more: <https://assets.deadlock-api.com/v2/items>
+    /// Comma separated list of item ids to exclude. See more: <https://api.deadlock-api.com/v1/assets/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
         test,
@@ -219,7 +219,7 @@ pub(crate) struct ItemStatsQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct ItemStats {
-    /// See more: <https://assets.deadlock-api.com/v2/items>
+    /// See more: <https://api.deadlock-api.com/v1/assets/items>
     pub item_id: u32,
     pub bucket: u32,
     pub wins: u64,

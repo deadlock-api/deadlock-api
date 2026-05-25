@@ -10,8 +10,7 @@
 - [AI Chat](https://deadlock-api.com/chat): Natural-language assistant for querying Deadlock game data
 
 ## APIs
-- [Game Data API](https://api.deadlock-api.com): Real-time and historical match data, hero and item analytics, leaderboard endpoints (OpenAPI spec: https://api.deadlock-api.com/openapi.json)
-- [Assets API](https://assets.deadlock-api.com): Hero images, item icons, ability icons, and other static game assets (OpenAPI spec: https://assets.deadlock-api.com/openapi.json)
+- [Game Data API](https://api.deadlock-api.com): Real-time and historical match data, hero and item analytics, leaderboard endpoints, game assets (OpenAPI spec: https://api.deadlock-api.com/openapi.json)
 - [Live Events API](https://github.com/deadlock-api/deadlock-api/tree/master/live-events): Server-Sent Events stream for real-time match data
 
 ## Data

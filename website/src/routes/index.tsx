@@ -8,7 +8,6 @@ import {
   ExternalLink,
   HardDrive,
   Heart,
-  ImageIcon,
   ListOrdered,
   Map,
   Medal,
@@ -28,7 +27,7 @@ import {
 import { ElectricBorder } from "~/components/ElectricBorder";
 import { SmartLink } from "~/components/SmartLink";
 import { Button } from "~/components/ui/button";
-import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
+import { API_ORIGIN } from "~/lib/constants";
 import { seo } from "~/lib/seo";
 import { cn } from "~/lib/utils";
 
@@ -89,14 +88,6 @@ const services = [
     icon: BarChart3,
     external: true,
     cta: "Visit Game Data API",
-  },
-  {
-    title: "Assets API",
-    description: "Provides static game assets such as heroes/item data, images, icons, sounds.",
-    href: ASSETS_ORIGIN,
-    icon: ImageIcon,
-    external: true,
-    cta: "Visit Assets API",
   },
   {
     title: "UI Components",

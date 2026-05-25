@@ -98,7 +98,7 @@ pub(super) struct BuildsSearchQuery {
     build_id: Option<u32>,
     /// Filter builds by version.
     version: Option<u32>,
-    /// Filter builds by hero ID. See more: <https://assets.deadlock-api.com/v2/heroes>
+    /// Filter builds by hero ID. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     hero_id: Option<u32>,
     /// Filter builds by tag.
     tag: Option<u32>,

@@ -45,7 +45,7 @@ Follow these phases in order. You MUST complete each phase before moving to the 
 
 Spawn one or more **research agents** to gather data and context. The researcher should:
 
-1. **Query the Deadlock API** to pull relevant statistics. Use `bun scripts/get-openapi-info.ts` to discover endpoints, then use `curl` or `xh` to fetch actual data from `https://api.deadlock-api.com` and `https://assets.deadlock-api.com`.
+1. **Query the Deadlock API** to pull relevant statistics. Use `bun scripts/get-openapi-info.ts` to discover endpoints, then use `curl` or `xh` to fetch actual data from `https://api.deadlock-api.com`.
 
    Common useful endpoints:
    - `GET /v1/analytics/hero-stats` -- hero win rates, pick rates, KDA, etc.
@@ -89,7 +89,7 @@ Your goal is to gather concrete data and context. Here's what to do:
 
 1. Use `bun scripts/get-openapi-info.ts` to find relevant API endpoints
 2. Use `bun scripts/get-openapi-info.ts <endpoint>` to get parameter details
-3. Fetch actual data using curl/xh from https://api.deadlock-api.com and https://assets.deadlock-api.com
+3. Fetch actual data using curl/xh from https://api.deadlock-api.com
 4. Search the web for relevant Deadlock game context
 5. Read existing blog posts in content/blog/ for tone reference
 
@@ -284,8 +284,7 @@ const jsxPosts: JsxBlogPost[] = [
 
 **JSX API restrictions:**
 
-- Only the assets API (`assets.deadlock-api.com`) is allowed at runtime in JSX posts
-- NO calls to `deadlock_api_client` or `api.deadlock-api.com`
+- Only the assets (`https://api.deadlock-api.com/v1/assets`) are allowed at runtime in JSX posts
 - Any analytics data must be baked in as static constants (gathered during research)
 - The component must be a default export
 - Keep bundle size reasonable; lazy-load heavy dependencies

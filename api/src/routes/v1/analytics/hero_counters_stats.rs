@@ -55,10 +55,10 @@ pub(super) struct HeroCounterStatsQuery {
     min_enemy_networth: Option<u64>,
     /// Filter enemy players based on their net worth.
     max_enemy_networth: Option<u64>,
-    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
-    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
@@ -93,9 +93,9 @@ pub(super) struct HeroCounterStatsQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct HeroCounterStats {
-    /// The ID of the hero. See more: <https://assets.deadlock-api.com/v2/heroes>
+    /// The ID of the hero. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     pub hero_id: u32,
-    /// The ID of the opposing hero. See more: <https://assets.deadlock-api.com/v2/heroes>
+    /// The ID of the opposing hero. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     pub enemy_hero_id: u32,
     /// The number of times `hero_id` won the match when facing `enemy_hero_id`.
     pub wins: u64,

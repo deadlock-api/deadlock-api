@@ -8,7 +8,7 @@ pub struct Hero {
 
 pub async fn fetch_hero_ids(http_client: &reqwest::Client) -> reqwest::Result<Vec<u32>> {
     let heroes: Vec<Hero> = http_client
-        .get("https://assets.deadlock-api.com/v2/heroes?only_active=true")
+        .get("https://api.deadlock-api.com/v1/assets/heroes?only_active=true")
         .send()
         .await?
         .json()

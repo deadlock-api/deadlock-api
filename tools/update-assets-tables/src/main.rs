@@ -99,7 +99,7 @@ async fn update_heroes(
     info!("Updating heroes");
     let heroes: Vec<Hero> = fetch_with_retries(
         http_client,
-        "https://assets.deadlock-api.com/v2/heroes?only_active=true",
+        "https://api.deadlock-api.com/v1/assets/heroes?only_active=true",
     )
     .await?;
     let fetched = heroes.len();
@@ -156,7 +156,7 @@ async fn update_items(
 ) -> anyhow::Result<()> {
     info!("Updating items");
     let raw_items: Vec<Item> =
-        fetch_with_retries(http_client, "https://assets.deadlock-api.com/v2/items").await?;
+        fetch_with_retries(http_client, "https://api.deadlock-api.com/v1/assets/items").await?;
     let fetched = raw_items.len();
     info!("Fetched {fetched} items from upstream");
 

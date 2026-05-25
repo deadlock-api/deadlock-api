@@ -23,7 +23,7 @@ pub enum BucketQuery {
     /// No Bucketing
     #[default]
     NoBucket,
-    /// Bucket Hero Ban Stats By Max Average Badge Level (tier = first digits, subtier = last digit) of both teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Bucket Hero Ban Stats By Max Average Badge Level (tier = first digits, subtier = last digit) of both teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     AvgBadge,
     /// Bucket Hero Ban Stats By Start Time (Hour)
     StartTimeHour,
@@ -54,10 +54,10 @@ pub(super) struct HeroBanStatsQuery {
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     max_duration_s: Option<u64>,
-    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
-    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
@@ -68,7 +68,7 @@ pub(super) struct HeroBanStatsQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct HeroBanStats {
-    /// The ID of the banned hero. See more: <https://assets.deadlock-api.com/v2/heroes>
+    /// The ID of the banned hero. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     pub hero_id: u32,
     /// The bucket value (depends on the bucket query parameter).
     pub bucket: u32,

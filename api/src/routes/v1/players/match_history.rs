@@ -69,7 +69,7 @@ pub(crate) type MatchHistoryInsertBatcher = ClickhouseInsertBatcher<MatchHistory
 pub(crate) struct PlayerMatchHistoryEntry {
     account_id: u32,
     pub(crate) match_id: u64,
-    /// See more: <https://assets.deadlock-api.com/v2/heroes>
+    /// See more: <https://api.deadlock-api.com/v1/assets/heroes>
     pub(crate) hero_id: u32,
     hero_level: u32,
     pub(crate) start_time: u32,
