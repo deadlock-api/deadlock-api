@@ -82,6 +82,15 @@ jobs:
           workspaces: "api -> target"
       - name: Tests
         run: cargo test --locked
+        env:
+          # Read credentials for the R2 bucket holding versioned game assets.
+          # Used by the integration tests to validate hero/rank IDs against
+          # real data. R2_ENDPOINT is intentionally left unset so it defaults
+          # to the Cloudflare S3 API endpoint, which supports object listing.
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
 
   ###############################
   ##     Stage 3: Deploy       ##

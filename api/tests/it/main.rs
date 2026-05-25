@@ -139,12 +139,6 @@ async fn setup() -> &'static TestEnv {
                     "S3_CACHE_ENDPOINT",
                     format!("http://127.0.0.1:{minio_port}"),
                 ),
-                ("R2_ACCOUNT_ID", "test".to_owned()),
-                ("R2_BUCKET", "test".to_owned()),
-                ("R2_ACCESS_KEY_ID", "minioadmin".to_owned()),
-                ("R2_SECRET_ACCESS_KEY", "minioadmin".to_owned()),
-                ("R2_REGION", String::new()),
-                ("R2_ENDPOINT", format!("http://127.0.0.1:{minio_port}")),
                 ("CLICKHOUSE_HOST", "127.0.0.1".to_owned()),
                 ("CLICKHOUSE_HTTP_PORT", ch_http_port.to_string()),
                 ("CLICKHOUSE_USERNAME", "default".to_owned()),
@@ -183,6 +177,28 @@ async fn setup() -> &'static TestEnv {
             ];
             for (key, value) in &env_vars {
                 unsafe { std::env::set_var(key, value) };
+            }
+
+            // R2 holds the versioned game assets used to validate hero/rank IDs.
+            // CI provides real read credentials via the environment; when they
+            // are present we leave the whole R2 config to the environment so the
+            // endpoint defaults to the Cloudflare S3 API (which supports the
+            // listing the version store relies on -- the public CDN domain
+            // serves object reads but 404s on listing). Only when no real creds
+            // are set do we fall back to the local MinIO stand-in.
+            let r2_configured = std::env::var_os("R2_ACCESS_KEY_ID").is_some_and(|v| !v.is_empty());
+            if !r2_configured {
+                let r2_defaults = [
+                    ("R2_ACCOUNT_ID", "test".to_owned()),
+                    ("R2_BUCKET", "test".to_owned()),
+                    ("R2_ACCESS_KEY_ID", "minioadmin".to_owned()),
+                    ("R2_SECRET_ACCESS_KEY", "minioadmin".to_owned()),
+                    ("R2_REGION", String::new()),
+                    ("R2_ENDPOINT", format!("http://127.0.0.1:{minio_port}")),
+                ];
+                for (key, value) in &r2_defaults {
+                    unsafe { std::env::set_var(key, value) };
+                }
             }
 
             // Start the API in-process on a random port.
