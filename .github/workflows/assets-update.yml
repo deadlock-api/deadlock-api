@@ -1,0 +1,89 @@
+name: Assets Update
+
+# Rebuilds all game assets from Steam and uploads them to R2 once a day.
+# See scripts/build_version_and_upload.sh for the full pipeline.
+
+on:
+  schedule:
+    # 05:00 UTC daily.
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Run the full build even if the client version is unchanged'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  # Never let two asset builds clobber each other's R2 uploads.
+  group: assets-update
+  cancel-in-progress: false
+
+jobs:
+  # Cheap gate: only do the heavy build when Steam's active client version
+  # differs from the latest version we've already published to R2. The latest
+  # built version is read from the PUBLIC steam-info index, so this needs no
+  # secrets and exits in seconds when there's nothing new.
+  check:
+    name: Check for new client version
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.compare.outputs.changed }}
+    steps:
+      - name: Compare Steam active version against published version
+        id: compare
+        run: |
+          sudo apt-get update && sudo apt-get install -y zstd
+          active=$(curl -fsSL "https://api.steampowered.com/IGCVersion_1422450/GetClientVersion/v1/" \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["active_version"])')
+          latest=$(curl -fsSL "https://assets-bucket.deadlock-api.com/assets-api-res/steam-info/all.json.zst" \
+            | zstd -dq \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0]["client_version"] if d else 0)' \
+            || echo 0)
+          echo "Steam active_version=$active, latest published=$latest"
+          if [ "$active" != "$latest" ]; then
+            echo "New client version detected -> running full build."
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No new client version -> skipping full build."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  update-assets:
+    name: Build & upload assets
+    needs: check
+    # Run on a new client version, or when manually forced.
+    if: needs.check.outputs.changed == 'true' || inputs.force
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 180
+    steps:
+      - uses: useblacksmith/checkout@v1
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            wget unzip zstd rsync ffmpeg optipng imagemagick python3
+          curl -fsSL https://rclone.org/install.sh | sudo bash
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8
+
+      - name: Build and upload assets to R2
+        run: bash scripts/build_version_and_upload.sh
+        env:
+          # Steam login for the depot download (see reminder when adding secrets).
+          STEAM_USERNAME: ${{ secrets.STEAM_USERNAME }}
+          STEAM_PASSWORD: ${{ secrets.STEAM_PASSWORD }}
+          # R2 bucket the assets live in.
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          # Configure the rclone "R2" remote entirely from env, no config file.
+          RCLONE_CONFIG_R2_TYPE: s3
+          RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+          RCLONE_CONFIG_R2_REGION: auto
+          RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}

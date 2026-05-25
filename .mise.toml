@@ -1,6 +1,7 @@
 [tools]
 pnpm = "10.18.0"
 rust = "1.95"
+uv = "latest"
 lefthook = "latest"
 "cargo:typos-cli" = "latest"
 "cargo:cargo-machete" = "latest"
@@ -14,7 +15,7 @@ run = [
 ]
 
 [tasks.update-assets]
-description = "Update generated assets"
+description = "Rebuild all game assets from Steam and upload them to R2 (incl. index rebuild)"
 run = [
-  "bash scripts/update_r2_index.sh"
+  "bash scripts/build_version_and_upload.sh"
 ]

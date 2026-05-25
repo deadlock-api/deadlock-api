@@ -5,3 +5,4 @@
 *.local.*
 lefthook-local.yml
 .asset-index/
+.assets-build/
