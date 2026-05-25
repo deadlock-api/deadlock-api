@@ -20,7 +20,7 @@ async fn respond(state: &AppState, folder: IndexFolder) -> APIResult<impl IntoRe
         (status = OK, body = serde_json::Value),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to load source assets"),
     ),
-    tags = ["Assets"],
+    tags = ["Assets Bucket"],
     summary = "Images Index",
     description = "Nested file-tree of all hosted images, mapping each name to its public CDN URL."
 )]
@@ -35,7 +35,7 @@ pub(super) async fn images(State(state): State<AppState>) -> APIResult<impl Into
         (status = OK, body = serde_json::Value),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to load source assets"),
     ),
-    tags = ["Assets"],
+    tags = ["Assets Bucket"],
     summary = "Icons Index",
     description = "Nested file-tree of all hosted icons, mapping each name to its public CDN URL."
 )]
@@ -50,7 +50,7 @@ pub(super) async fn icons(State(state): State<AppState>) -> APIResult<impl IntoR
         (status = OK, body = serde_json::Value),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to load source assets"),
     ),
-    tags = ["Assets"],
+    tags = ["Assets Bucket"],
     summary = "Sounds Index",
     description = "Nested file-tree of all hosted sounds, mapping each name to its public CDN URL."
 )]
@@ -65,7 +65,7 @@ pub(super) async fn sounds(State(state): State<AppState>) -> APIResult<impl Into
         (status = OK, body = serde_json::Value),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to load source assets"),
     ),
-    tags = ["Assets"],
+    tags = ["Assets Bucket"],
     summary = "Fonts Index",
     description = "Nested file-tree of all hosted fonts, mapping each name to its public CDN URL."
 )]
