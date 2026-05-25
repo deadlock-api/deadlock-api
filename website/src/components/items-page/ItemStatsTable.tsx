@@ -577,9 +577,7 @@ export function ItemStatsTable({
             </Button>
           </div>
         </div>
-        {!hideItemTierFilter && (
-          <ItemTierSelector onItemTiersSelected={setItemTiers} selectedItemTiers={itemTiers} />
-        )}
+        {!hideItemTierFilter && <ItemTierSelector onItemTiersSelected={setItemTiers} selectedItemTiers={itemTiers} />}
         {/* NOTE: "Highlight overperforming items" toggle hidden for now — not very useful in its
             current form. May bring back later; if reviving, restore the Switch+Label toggle here
             plus the related `dim_low_confidence` useQueryState (see git history) and wire it
@@ -597,78 +595,77 @@ export function ItemStatsTable({
             </div>
           )}
           <div className={cn("transition-opacity", isRefetching && "pointer-events-none opacity-50")}>
-        <Table>
-          {!hideHeader && (
-            <TableHeader className="bg-muted">
-              <TableRow>
-                {customDropdownContent && <TableHead className="w-4 text-center" />}
-                {!hideIndex && <TableHead className="text-center">#</TableHead>}
-                <TableHead>Item</TableHead>
-                {columns.includes("itemsTier") && <TableHead>Tier</TableHead>}
-                {columns.includes("winRate") && (
-                  <TableHead
-                    className="cursor-pointer text-center transition-colors hover:bg-accent"
-                    onClick={() => toggleSort("winRate")}
-                    aria-sort={
-                      sort.field === "winRate" ? (sort.direction === "asc" ? "ascending" : "descending") : undefined
-                    }
-                  >
-                    <div className="flex items-center">
-                      <span>Win Rate</span>
-                      {getSortArrow("winRate")}
-                    </div>
-                  </TableHead>
-                )}
-                {columns.includes("matches") && (
-                  <TableHead
-                    className="cursor-pointer text-center transition-colors hover:bg-accent"
-                    onClick={() => toggleSort("matches")}
-                    aria-sort={
-                      sort.field === "matches" ? (sort.direction === "asc" ? "ascending" : "descending") : undefined
-                    }
-                  >
-                    <div className="flex items-center">
-                      <span>Pick Rate</span>
-                      {getSortArrow("matches")}
-                    </div>
-                  </TableHead>
-                )}
-                {columns.includes("confidence") && <TableHead className="text-center">Confidence</TableHead>}
-                <TableHead className="text-center" aria-label="Include or exclude item from filters">
-                  <span className="icon-[mdi--filter-variant] inline-block size-4 align-middle text-muted-foreground" />
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-          )}
-          <TableBody>
-            {processedData
-              .filter((row) => itemTiers.includes(row.itemTier))
-              .map((row, index) => (
-                <ItemStatsTableRow
-                  key={row.item_id}
-                  row={row}
-                  index={index}
-                  columns={columns}
-                  hideIndex={hideIndex}
-                  dimLowConfidence={false}
-                  minWinRate={minWinRate}
-                  maxWinRate={maxWinRate}
-                  minUsage={minUsage}
-                  maxUsage={maxUsage}
-                  isIncluded={includeItems.has(row.item_id)}
-                  isExcluded={excludeItems.has(row.item_id)}
-                  prevStatsMap={prevStatsMap}
-                  onItemInclude={addInclude}
-                  onItemExclude={addExclude}
-                  customDropdownContent={customDropdownContent}
-                />
-              ))}
-          </TableBody>
-        </Table>
+            <Table>
+              {!hideHeader && (
+                <TableHeader className="bg-muted">
+                  <TableRow>
+                    {customDropdownContent && <TableHead className="w-4 text-center" />}
+                    {!hideIndex && <TableHead className="text-center">#</TableHead>}
+                    <TableHead>Item</TableHead>
+                    {columns.includes("itemsTier") && <TableHead>Tier</TableHead>}
+                    {columns.includes("winRate") && (
+                      <TableHead
+                        className="cursor-pointer text-center transition-colors hover:bg-accent"
+                        onClick={() => toggleSort("winRate")}
+                        aria-sort={
+                          sort.field === "winRate" ? (sort.direction === "asc" ? "ascending" : "descending") : undefined
+                        }
+                      >
+                        <div className="flex items-center">
+                          <span>Win Rate</span>
+                          {getSortArrow("winRate")}
+                        </div>
+                      </TableHead>
+                    )}
+                    {columns.includes("matches") && (
+                      <TableHead
+                        className="cursor-pointer text-center transition-colors hover:bg-accent"
+                        onClick={() => toggleSort("matches")}
+                        aria-sort={
+                          sort.field === "matches" ? (sort.direction === "asc" ? "ascending" : "descending") : undefined
+                        }
+                      >
+                        <div className="flex items-center">
+                          <span>Pick Rate</span>
+                          {getSortArrow("matches")}
+                        </div>
+                      </TableHead>
+                    )}
+                    {columns.includes("confidence") && <TableHead className="text-center">Confidence</TableHead>}
+                    <TableHead className="text-center" aria-label="Include or exclude item from filters">
+                      <span className="icon-[mdi--filter-variant] inline-block size-4 align-middle text-muted-foreground" />
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+              )}
+              <TableBody>
+                {processedData
+                  .filter((row) => itemTiers.includes(row.itemTier))
+                  .map((row, index) => (
+                    <ItemStatsTableRow
+                      key={row.item_id}
+                      row={row}
+                      index={index}
+                      columns={columns}
+                      hideIndex={hideIndex}
+                      dimLowConfidence={false}
+                      minWinRate={minWinRate}
+                      maxWinRate={maxWinRate}
+                      minUsage={minUsage}
+                      maxUsage={maxUsage}
+                      isIncluded={includeItems.has(row.item_id)}
+                      isExcluded={excludeItems.has(row.item_id)}
+                      prevStatsMap={prevStatsMap}
+                      onItemInclude={addInclude}
+                      onItemExclude={addExclude}
+                      customDropdownContent={customDropdownContent}
+                    />
+                  ))}
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}
     </div>
   );
 }
-

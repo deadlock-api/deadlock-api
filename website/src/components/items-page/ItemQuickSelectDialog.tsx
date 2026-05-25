@@ -4,14 +4,7 @@ import { memo, useCallback, useMemo, useState } from "react";
 
 import { ItemImage } from "~/components/ItemImage";
 import { Button } from "~/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "~/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { cn } from "~/lib/utils";
@@ -206,11 +199,7 @@ function ItemQuickSelectDialogBody({
     >
       <DialogHeader className="space-y-3 border-b border-white/[0.06] p-4">
         <DialogTitle>Quick Select Items</DialogTitle>
-        <Input
-          placeholder="Search items by name..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <Input placeholder="Search items by name..." value={search} onChange={(e) => setSearch(e.target.value)} />
       </DialogHeader>
 
       <Tabs
