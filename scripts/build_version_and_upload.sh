@@ -85,6 +85,21 @@ for cmd in unzip zstd uv rclone convert optipng ffmpeg python3 rsync; do
     check_cmd "$cmd"
 done
 
+# Parallelism + portable hashing helpers (used by media processing).
+if command -v nproc >/dev/null 2>&1; then JOBS=$(nproc); else JOBS=$(sysctl -n hw.ncpu 2>/dev/null || echo 4); fi
+if command -v sha256sum >/dev/null 2>&1; then HASH_CMD="sha256sum"; else HASH_CMD="shasum -a 256"; fi
+export HASH_CMD
+
+# The game's panorama/materials layout shifts between builds (folders get
+# renamed or removed). A daily job must not abort just because one source path
+# vanished, so media copies warn instead of failing. Running cp inside the `if`
+# keeps `set -e` from killing the run; we still log what was skipped.
+safe_cp() {
+    if ! cp "$@" 2>/dev/null; then
+        echo "Warning: skipped missing asset source: cp $*"
+    fi
+}
+
 # 0. Load Environment Variables (Steam credentials, rclone remote config etc.)
 if [ -f "$REPO_ROOT/.env" ]; then
     echo "Loading environment variables from .env..."
@@ -134,13 +149,22 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     done
 fi
 
-# 2. Download Deadlock Game files
+# 2. Download Deadlock Game files.
+# We only ever extract the pak01 VPK set (+ steam.inf), so restrict the download
+# to those files from a single platform's depots: no other-platform binaries,
+# no localized-audio depots, and no giant maps/*.vpk. Text localization lives
+# inside pak01 (resource/localization), so a single language depot is fine.
 if [ -z "${STEAM_USERNAME:-}" ] || [ -z "${STEAM_PASSWORD:-}" ]; then
     echo "Error: STEAM_USERNAME and STEAM_PASSWORD must be set to download game files."
     exit 1
 fi
-echo "Downloading Deadlock game files..."
-./DepotDownloader -app 1422450 -username "$STEAM_USERNAME" -password "$STEAM_PASSWORD" -all-platforms -all-languages -validate -remember-password || exit 1
+cat > filelist.txt <<'EOF'
+regex:citadel/pak01_.*\.vpk$
+regex:citadel/steam\.inf$
+EOF
+echo "Downloading Deadlock game files (windows depot, pak01 only)..."
+./DepotDownloader -app 1422450 -os windows -filelist filelist.txt -validate -remember-password \
+    -username "$STEAM_USERNAME" -password "$STEAM_PASSWORD" || exit 1
 
 mkdir -p depots/game
 rsync -av depots/*/*/game/* depots/game/
@@ -216,11 +240,14 @@ echo "Leftover uncompressed files in $VERSION_DIR: $leftover"
 
 # Icons (svgs)
 mkdir -p svgs
-find depots/game/ -type f -name '*.svg' -print0 | xargs -0 -n 1 cp -t svgs/
-find depots/game/ -type f -name 'keystat_*.png' -print0 | xargs -0 -n 1 cp -t svgs/
-find depots/game/citadel/panorama/images/hud/text_images -type f -name '*.png' -print0 | xargs -0 -n 1 cp -t svgs/
-find depots/game/citadel/panorama/images/minimap/ -type f -name '*.png' -print0 | xargs -0 -n 1 cp -t svgs/
-find depots/game/citadel/materials/minimap/ -type f -name '*.png' -print0 | xargs -0 -n 1 cp -t svgs/
+find depots/game/ -type f -name '*.svg' -print0 | xargs -0 -r -n 1 cp -t svgs/
+find depots/game/ -type f -name 'keystat_*.png' -print0 | xargs -0 -r -n 1 cp -t svgs/
+for d in \
+    depots/game/citadel/panorama/images/hud/text_images \
+    depots/game/citadel/panorama/images/minimap \
+    depots/game/citadel/materials/minimap; do
+    [ -d "$d" ] && find "$d" -type f -name '*.png' -print0 | xargs -0 -r -n 1 cp -t svgs/
+done
 find svgs -type f -name "*_png.*" -exec bash -c 'mv "$1" "${1/_png./.}"' _ {} \;
 
 # Add SVGs with currentColor fill
@@ -233,37 +260,38 @@ done
 
 # Fonts
 mkdir -p fonts
-find "$citadel_folder"/panorama/fonts -type f -name '*.otf' -print0 | xargs -0 -n 1 cp -t fonts/
+[ -d "$citadel_folder/panorama/fonts" ] && \
+    find "$citadel_folder"/panorama/fonts -type f -name '*.otf' -print0 | xargs -0 -r -n 1 cp -t fonts/
 
 # Sounds
 mkdir -p sounds
-cp -r "$citadel_folder"/sounds/* sounds/
+safe_cp -r "$citadel_folder"/sounds/* sounds/
 
 # Images
 mkdir -p images
 mkdir -p images/hud
 mkdir -p images/hud/core
-cp -r "$citadel_folder"/panorama/images/heroes images/
-cp -r "$citadel_folder"/panorama/images/hud/*.png images/hud/
-cp -r "$citadel_folder"/panorama/images/hud/*/*.png images/hud/core/
-cp "$citadel_folder"/panorama/images/hud/hero_portraits/* images/heroes/
-cp "$citadel_folder"/panorama/images/*.* images/
-cp -r "$citadel_folder"/panorama/images/hud/hero_portraits images/hud/
-cp -r "$citadel_folder"/panorama/images/items/ images/
-cp -r "$citadel_folder"/panorama/images/shop/ images/
-cp -r "$citadel_folder"/panorama/images/main_menu/ images/
+safe_cp -r "$citadel_folder"/panorama/images/heroes images/
+safe_cp -r "$citadel_folder"/panorama/images/hud/*.png images/hud/
+safe_cp -r "$citadel_folder"/panorama/images/hud/*/*.png images/hud/core/
+safe_cp "$citadel_folder"/panorama/images/hud/hero_portraits/* images/heroes/
+safe_cp "$citadel_folder"/panorama/images/*.* images/
+safe_cp -r "$citadel_folder"/panorama/images/hud/hero_portraits images/hud/
+safe_cp -r "$citadel_folder"/panorama/images/items/ images/
+safe_cp -r "$citadel_folder"/panorama/images/shop/ images/
+safe_cp -r "$citadel_folder"/panorama/images/main_menu/ images/
 mkdir -p images/materials
-cp "$citadel_folder"/materials/citadel_loading*.png images/materials/
+safe_cp "$citadel_folder"/materials/citadel_loading*.png images/materials/
 
 mkdir -p images/abilities
-cp -r "$citadel_folder"/panorama/images/hud/abilities images/
-cp -r "$citadel_folder"/panorama/images/upgrades images/
+safe_cp -r "$citadel_folder"/panorama/images/hud/abilities images/
+safe_cp -r "$citadel_folder"/panorama/images/upgrades images/
 
 mkdir -p images/maps
-cp -r "$citadel_folder"/panorama/images/minimap/base/* images/maps/
+safe_cp -r "$citadel_folder"/panorama/images/minimap/base/* images/maps/
 
 mkdir -p images/ranks
-cp -r "$citadel_folder"/panorama/images/ranked/badges/* images/ranks/
+safe_cp -r "$citadel_folder"/panorama/images/ranked/badges/* images/ranks/
 
 # Generate webp images
 find images -type f -name "*.png" -print0 | xargs -0 -P 24 -I {} sh -c '
@@ -281,25 +309,31 @@ find images -type f -name "*_psd.*" -exec bash -c 'mv "$1" "${1/_psd./.}"' _ {} 
 find images -type f -name "*_psd_128.*" -exec bash -c 'mv "$1" "${1/_psd_128./.}"' _ {} \;
 find images -type f -name "*_png.*" -exec bash -c 'mv "$1" "${1/_png./.}"' _ {} \;
 
-# Optimize images
-shopt -s globstar nullglob
-optipng -o2 images/**/*.png || true
-shopt -u globstar nullglob
+# Optimize images (one optipng process per file, parallelized)
+find images -type f -name "*.png" -print0 | xargs -0 -r -P "$JOBS" -n 1 optipng -o2 || true
 
-# Videos
+# Videos: transcode webm -> h264 mp4. Skip re-encoding when the source webm is
+# unchanged — its sha256 is recorded in a sidecar kept OUTSIDE the upload tree
+# (so it never lands on R2). Pays off whenever WORK_DIR is reused across runs.
 mkdir -p videos
 cp -r "$citadel_folder"/panorama/videos/hero_abilities videos/
+HASH_DIR="$WORK_DIR/.video-hashes"
+mkdir -p "$HASH_DIR"
+export HASH_DIR
 find videos -type f -name "*.webm" -print0 | \
     xargs -P 2 -0 -I {} sh -c '
-        video_file="{}"
-        video_mp4_file=$(echo "$video_file" | sed "s/\.webm$/_h264.mp4/")
-        if [ -f "$video_mp4_file" ]; then
-            echo "Skipping conversion, already exists: $video_mp4_file"
+        video_file="$1"
+        mp4_file="${video_file%.webm}_h264.mp4"
+        hash_file="$HASH_DIR/$(echo "$video_file" | tr "/" "_").sha256"
+        cur=$($HASH_CMD "$video_file" | cut -d" " -f1)
+        if [ -f "$mp4_file" ] && [ "$(cat "$hash_file" 2>/dev/null)" = "$cur" ]; then
+            echo "Skipping unchanged video: $video_file"
         else
-            echo "Converting $video_file to $video_mp4_file"
-            ffmpeg -i "$video_file" -c:v libx264 -crf 23 -y "$video_mp4_file"
+            echo "Converting $video_file -> $mp4_file"
+            ffmpeg -nostdin -loglevel error -i "$video_file" -c:v libx264 -crf 23 -y "$mp4_file" \
+                && printf "%s\n" "$cur" > "$hash_file"
         fi
-    '
+    ' _ {}
 
 # 6. Upload media assets to R2
 echo "Uploading media assets to R2..."
