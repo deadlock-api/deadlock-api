@@ -39,10 +39,14 @@ jobs:
           sudo apt-get update && sudo apt-get install -y zstd
           active=$(curl -fsSL "https://api.steampowered.com/IGCVersion_1422450/GetClientVersion/v1/" \
             | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["active_version"])')
-          latest=$(curl -fsSL "https://assets-bucket.deadlock-api.com/assets-api-res/steam-info/all.json.zst" \
-            | zstd -dq \
-            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0]["client_version"] if d else 0)' \
-            || echo 0)
+          # Latest published build = newest entry of the all-steam-infos index
+          # (sorted newest-first). Missing/empty (first ever run) -> 0.
+          raw=$(curl -fsS "https://assets-bucket.deadlock-api.com/assets-api-res/steam-info/all.json.zst" 2>/dev/null | zstd -dq 2>/dev/null || true)
+          if [ -n "$raw" ]; then
+            latest=$(printf '%s' "$raw" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0]["client_version"] if d else 0)' 2>/dev/null || echo 0)
+          else
+            latest=0
+          fi
           echo "Steam active_version=$active, latest published=$latest"
           if [ "$active" != "$latest" ]; then
             echo "New client version detected -> running full build."
@@ -70,7 +74,7 @@ jobs:
           curl -fsSL https://rclone.org/install.sh | sudo bash
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v8
+        uses: astral-sh/setup-uv@v8.1.0
 
       - name: Build and upload assets to R2
         run: bash scripts/build_version_and_upload.sh
