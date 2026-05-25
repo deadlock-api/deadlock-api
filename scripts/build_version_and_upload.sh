@@ -325,16 +325,16 @@ find videos -type f -name "*.webm" -print0 | \
 
 # 6. Upload media assets to R2
 echo "Uploading media assets to R2..."
-rclone copy -P -c images/ "$REMOTE/images/"
-rclone copy -P -c svgs/ "$REMOTE/svgs/"
-rclone copy -P -c svgs/ "$REMOTE/icons/"
-rclone copy -P -c sounds/ "$REMOTE/sounds/"
-rclone copy -P -c videos/ "$REMOTE/videos/"
-rclone copy -P -c fonts/ "$REMOTE/fonts/"
+rclone copy -P -c --transfers 8 --checkers 8 images/ "$REMOTE/images/"
+rclone copy -P -c --transfers 8 --checkers 8 svgs/ "$REMOTE/svgs/"
+rclone copy -P -c --transfers 8 --checkers 8 svgs/ "$REMOTE/icons/"
+rclone copy -P -c --transfers 8 --checkers 8 sounds/ "$REMOTE/sounds/"
+rclone copy -P -c --transfers 8 --checkers 8 videos/ "$REMOTE/videos/"
+rclone copy -P -c --transfers 8 --checkers 8 fonts/ "$REMOTE/fonts/"
 
 # 7. Upload the versioned source files (vdata/css/steam.inf/localization) to R2
 echo "Uploading versions/$BUILD to R2..."
-rclone copy -P -c "$VERSION_DIR/" "$REMOTE/versions/$BUILD/"
+rclone copy -P -c --transfers 8 --checkers 8 "$VERSION_DIR/" "$REMOTE/versions/$BUILD/"
 
 # 8. Rebuild the R2 indexes so the newly uploaded assets are discoverable.
 echo "Rebuilding R2 indexes..."
