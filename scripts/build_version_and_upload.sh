@@ -146,14 +146,13 @@ mkdir -p depots/game
 rsync -av depots/*/*/game/* depots/game/
 find depots/ -type d -empty -delete
 
-# 3. Extract VPKs
+# 3. Extract VPKs (stdout is a per-file flood; silence it, keep stderr for errors)
 citadel_folder="depots/game/citadel"
 
-./Source2Viewer-CLI -i "$citadel_folder"/pak01_dir.vpk -d --threads 8 -o "$citadel_folder" -f scripts
-./Source2Viewer-CLI -i "$citadel_folder"/pak01_dir.vpk -d --threads 8 -o "$citadel_folder" -f resource
-./Source2Viewer-CLI -i "$citadel_folder"/pak01_dir.vpk -d --threads 8 -o "$citadel_folder" -f panorama
-./Source2Viewer-CLI -i "$citadel_folder"/pak01_dir.vpk -d --threads 8 -o "$citadel_folder" -f materials/minimap
-./Source2Viewer-CLI -i "$citadel_folder"/pak01_dir.vpk -d --threads 8 -o "$citadel_folder" -f sounds
+for filter in scripts resource panorama materials/minimap sounds; do
+    echo "Extracting $filter from pak01_dir.vpk..."
+    ./Source2Viewer-CLI -i "$citadel_folder"/pak01_dir.vpk -d --threads 8 -o "$citadel_folder" -f "$filter" > /dev/null
+done
 
 # 4. Build the versions/<build>/ folder structure
 if [ ! -f "$citadel_folder/steam.inf" ]; then
