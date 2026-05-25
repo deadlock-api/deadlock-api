@@ -21,7 +21,6 @@ const EXPERIENCE_BUCKETS = [
   { label: "Beginner", sublabel: "1-25 matches", min: 1, max: 25 },
   { label: "Intermediate", sublabel: "25-100 matches", min: 25, max: 100 },
   { label: "Experienced", sublabel: "100-500 matches", min: 100, max: 500 },
-  { label: "Veteran", sublabel: "500+ matches", min: 500, max: 10000 },
 ] as const;
 
 const MIN_MATCHES_PER_BUCKET = 10;
