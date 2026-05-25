@@ -1,7 +1,7 @@
 //! Internal helpers used by integration tests under `tests/`.
 //!
 //! The module is `pub` so the test binary (a separate crate) can call into
-//! the heroes pipeline without us having to leak the full `HeroV2` type tree.
+//! the heroes pipeline without us having to leak the full `Hero` type tree.
 //! `#[doc(hidden)]` on the module declaration keeps it out of rustdoc and
 //! signals that nothing here is part of the public API.
 
@@ -11,7 +11,7 @@ use std::collections::HashMap;
 ///
 /// Convenience wrapper around the heroes pipeline that returns the same
 /// `Vec<Value>` the public endpoint serves, so snapshot tests don't need
-/// access to the private `HeroV2` types.
+/// access to the private `Hero` types.
 #[allow(clippy::implicit_hasher)]
 pub fn build_heroes_json(
     heroes_vdata: &str,

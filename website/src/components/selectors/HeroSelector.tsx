@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { HeroV2 } from "assets_deadlock_api_client";
+import type { Hero } from "deadlock_api_client";
 import { SearchIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -32,12 +32,12 @@ export function HeroSelector({
   const { sortedHeroes } = useHeroes();
   const [search, setSearch] = useState("");
 
-  const currentHero = selectedHero ? sortedHeroes.find((h: HeroV2) => h.id === selectedHero) : undefined;
+  const currentHero = selectedHero ? sortedHeroes.find((h: Hero) => h.id === selectedHero) : undefined;
 
   const filteredHeroes = useMemo(() => {
     if (!search) return sortedHeroes;
     const lower = search.toLowerCase();
-    return sortedHeroes.filter((h: HeroV2) => h.name.toLowerCase().includes(lower));
+    return sortedHeroes.filter((h: Hero) => h.name.toLowerCase().includes(lower));
   }, [sortedHeroes, search]);
 
   const isActive = selectedHero != null;
@@ -79,7 +79,7 @@ export function HeroSelector({
             <span className="text-muted-foreground">Any Hero</span>
           </button>
         )}
-        {filteredHeroes.map((hero: HeroV2) => (
+        {filteredHeroes.map((hero: Hero) => (
           <button
             key={hero.id}
             type="button"

@@ -1,4 +1,4 @@
-import type { UpgradeV2 } from "assets_deadlock_api_client";
+import type { Upgrade } from "deadlock_api_client";
 import type { ItemStats } from "deadlock_api_client";
 import { parseAsArrayOf, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { type ReactNode, useMemo, useState } from "react";
@@ -148,7 +148,7 @@ function wilsonScoreInterval(wins: number, matches: number, z = 1.96): [number, 
   return [(center - margin) / denominator, (center + margin) / denominator];
 }
 
-export function getDisplayItemStats(data: ItemStats[] | undefined, assetsItems: UpgradeV2[]): DisplayItemStats[] {
+export function getDisplayItemStats(data: ItemStats[] | undefined, assetsItems: Upgrade[]): DisplayItemStats[] {
   if (!data || data.length === 0) return [];
   const baselineRow = data.reduce((max, d) => (d.matches > max.matches ? d : max), data[0]);
   const [baselineLower, baselineUpper] = wilsonScoreInterval(baselineRow.wins, baselineRow.matches);

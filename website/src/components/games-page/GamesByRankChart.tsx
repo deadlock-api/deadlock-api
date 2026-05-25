@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { RankV2 } from "assets_deadlock_api_client";
+import type { Rank } from "deadlock_api_client";
 import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Customized, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -34,7 +34,7 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
   const { data: ranksData } = useQuery(ranksQueryOptions);
 
   const tierData = useMemo(() => {
-    const map = new Map<number, RankV2>();
+    const map = new Map<number, Rank>();
     ranksData?.forEach((r) => map.set(r.tier, r));
     return map;
   }, [ranksData]);

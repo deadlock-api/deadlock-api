@@ -1,7 +1,6 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import type { MapV1 } from "assets_deadlock_api_client";
-import type { KillDeathStats } from "deadlock_api_client";
+import type { KillDeathStats, MapData } from "deadlock_api_client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
@@ -13,7 +12,7 @@ type ViewMode = "kills" | "deaths" | "kd";
 
 interface Heatmap3DProps {
   data: KillDeathStats[];
-  mapData: MapV1;
+  mapData: MapData;
   viewMode: ViewMode;
   sensitivity: number;
   onSensitivityChange: (value: number) => void;

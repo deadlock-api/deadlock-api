@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { UpgradeV2 } from "assets_deadlock_api_client";
+import type { Upgrade } from "deadlock_api_client";
 
 import { api } from "~/lib/api";
 
@@ -21,7 +21,7 @@ export function useItems() {
       const res = await api.items_api.getItemsByType({
         type: "upgrade",
       });
-      return res.data as UpgradeV2[];
+      return res.data as Upgrade[];
     },
     staleTime: Number.POSITIVE_INFINITY,
   });

@@ -1,4 +1,4 @@
-import type { RankV2 } from "assets_deadlock_api_client";
+import type { Rank } from "deadlock_api_client";
 
 const SUBTIERS = [1, 2, 3, 4, 5, 6] as const;
 
@@ -12,7 +12,7 @@ export interface SubtierInfo {
   color?: string;
 }
 
-export function extractBadgeMap(ranks: RankV2[]): Map<number, SubtierInfo> {
+export function extractBadgeMap(ranks: Rank[]): Map<number, SubtierInfo> {
   const badgeMap = new Map<number, SubtierInfo>();
   ranks.forEach((rank) => {
     const tier = rank.tier;

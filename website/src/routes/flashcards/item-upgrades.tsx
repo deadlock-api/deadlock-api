@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import type { UpgradeV2 } from "assets_deadlock_api_client";
+import type { Upgrade } from "deadlock_api_client";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, Check, RotateCcw, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -19,8 +19,8 @@ const WRONG_FEEDBACK_MS = 1800;
 
 interface UpgradePathEntry {
   id: number;
-  target: UpgradeV2;
-  components: UpgradeV2[];
+  target: Upgrade;
+  components: Upgrade[];
   answerKey: string;
   answerLabel: string;
 }
@@ -28,7 +28,7 @@ interface UpgradePathEntry {
 interface UpgradePathOption {
   key: string;
   label: string;
-  components: UpgradeV2[];
+  components: Upgrade[];
 }
 
 interface UpgradePathCard {
@@ -46,23 +46,23 @@ export const Route = createFileRoute("/flashcards/item-upgrades")({
     }),
 });
 
-function itemImageSrc(item: UpgradeV2): string {
+function itemImageSrc(item: Upgrade): string {
   return item.shop_image_webp ?? item.shop_image ?? item.image_webp ?? item.image ?? "";
 }
 
-function isUsableShopItem(item: UpgradeV2): boolean {
+function isUsableShopItem(item: Upgrade): boolean {
   return item.shopable && !item.disabled && itemImageSrc(item).length > 0;
 }
 
-function buildAnswerKey(components: UpgradeV2[]): string {
+function buildAnswerKey(components: Upgrade[]): string {
   return components.map((item) => item.id).join("+");
 }
 
-function buildAnswerLabel(components: UpgradeV2[]): string {
+function buildAnswerLabel(components: Upgrade[]): string {
   return components.map((item) => item.name).join(" + ");
 }
 
-function buildUpgradePathPool(items: UpgradeV2[]): UpgradePathEntry[] {
+function buildUpgradePathPool(items: Upgrade[]): UpgradePathEntry[] {
   const itemByClassName = new Map(items.map((item) => [item.class_name, item]));
 
   return filterShopableItems(items)
@@ -72,7 +72,7 @@ function buildUpgradePathPool(items: UpgradeV2[]): UpgradePathEntry[] {
 
       const components = componentClassNames
         .map((className) => itemByClassName.get(className))
-        .filter((item): item is UpgradeV2 => item != null);
+        .filter((item): item is Upgrade => item != null);
 
       if (components.length !== componentClassNames.length || !components.every(isUsableShopItem)) {
         return [];

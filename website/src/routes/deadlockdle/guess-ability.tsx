@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import type { AbilityV2, HeroV2 } from "assets_deadlock_api_client";
+import type { Ability, Hero } from "deadlock_api_client";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
@@ -44,12 +44,12 @@ function formatAbilityType(abilityType: string): string {
 }
 
 interface GuessableAbility {
-  ability: AbilityV2;
-  hero: HeroV2;
+  ability: Ability;
+  hero: Hero;
 }
 
-function buildGuessableAbilities(abilities: AbilityV2[], playableHeroes: HeroV2[]): GuessableAbility[] {
-  const heroMap = new Map<number, HeroV2>();
+function buildGuessableAbilities(abilities: Ability[], playableHeroes: Hero[]): GuessableAbility[] {
+  const heroMap = new Map<number, Hero>();
   for (const hero of playableHeroes) {
     heroMap.set(hero.id, hero);
   }
@@ -80,7 +80,7 @@ function GuessAbility() {
   const playableHeroes = useMemo(() => (heroes ? filterPlayableHeroes(heroes) : []), [heroes]);
 
   const guessableAbilities = useMemo(
-    () => (abilities ? buildGuessableAbilities(abilities as AbilityV2[], playableHeroes) : []),
+    () => (abilities ? buildGuessableAbilities(abilities as Ability[], playableHeroes) : []),
     [abilities, playableHeroes],
   );
 

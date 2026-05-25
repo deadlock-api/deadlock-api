@@ -1,4 +1,4 @@
-import type { MapV1 } from "assets_deadlock_api_client";
+import type { MapData } from "deadlock_api_client";
 import type { KillDeathStats } from "deadlock_api_client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -17,7 +17,7 @@ interface TooltipState {
 
 interface HeatmapCanvasProps {
   data: KillDeathStats[];
-  mapData: MapV1;
+  mapData: MapData;
   viewMode: ViewMode;
   sensitivity: number;
   onSensitivityChange: (value: number) => void;

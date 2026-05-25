@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import type { AbilityV2 } from "assets_deadlock_api_client";
+import type { Ability } from "deadlock_api_client";
 import { motion } from "framer-motion";
 import { Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -52,7 +52,7 @@ function flattenUrls(obj: unknown, prefix = ""): [string, string][] {
   return results;
 }
 
-function resolveAbilityName(path: string, heroAbilities: AbilityV2[]): string | null {
+function resolveAbilityName(path: string, heroAbilities: Ability[]): string | null {
   const slugMatch = path.match(/a\d+_([^/]+)/);
   if (!slugMatch) return null;
   const slug = slugMatch[1].toLowerCase();
@@ -68,7 +68,7 @@ function resolveAbilityName(path: string, heroAbilities: AbilityV2[]): string | 
 function extractPlayableSounds(
   soundsData: Record<string, unknown>,
   codenameMap: Map<string, { id: number; name: string }>,
-  abilitiesByHero: Map<number, AbilityV2[]>,
+  abilitiesByHero: Map<number, Ability[]>,
 ): PlayableSound[] {
   const sounds: PlayableSound[] = [];
   const seen = new Set<string>();
@@ -137,8 +137,8 @@ function buildCodenameMap(
   return map;
 }
 
-function buildAbilitiesByHero(abilities: AbilityV2[]): Map<number, AbilityV2[]> {
-  const map = new Map<number, AbilityV2[]>();
+function buildAbilitiesByHero(abilities: Ability[]): Map<number, Ability[]> {
+  const map = new Map<number, Ability[]>();
   for (const ability of abilities) {
     if (!ability.hero || !ability.ability_type || !VALID_ABILITY_TYPES.has(ability.ability_type)) continue;
     const list = map.get(ability.hero) ?? [];
@@ -270,7 +270,7 @@ function GuessSound() {
   );
 
   const abilitiesByHero = useMemo(
-    () => (rawAbilities ? buildAbilitiesByHero(rawAbilities as AbilityV2[]) : new Map<number, AbilityV2[]>()),
+    () => (rawAbilities ? buildAbilitiesByHero(rawAbilities as Ability[]) : new Map<number, Ability[]>()),
     [rawAbilities],
   );
 
@@ -323,7 +323,7 @@ function GuessSound() {
       names.push({ id: names.length, name: sound.abilityName });
     }
     if (rawAbilities) {
-      for (const ability of rawAbilities as AbilityV2[]) {
+      for (const ability of rawAbilities as Ability[]) {
         if (!ability.ability_type || !VALID_ABILITY_TYPES.has(ability.ability_type)) continue;
         if (!ability.name || !ability.hero) continue;
         const heroInfo = playableHeroes.find((h) => h.id === ability.hero);

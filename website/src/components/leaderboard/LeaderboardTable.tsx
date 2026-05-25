@@ -1,4 +1,4 @@
-import type { RankV2 } from "assets_deadlock_api_client";
+import type { Rank } from "deadlock_api_client";
 import type { Leaderboard } from "deadlock_api_client";
 import Fuse from "fuse.js";
 import { forwardRef, useImperativeHandle, useMemo, useState } from "react";
@@ -16,14 +16,14 @@ export interface LeaderboardTableHandle {
 }
 
 export interface LeaderboardTableProps {
-  ranks: RankV2[];
+  ranks: Rank[];
   leaderboard: Leaderboard;
   onHeroClick: (heroId: number) => void;
 }
 
 interface LeaderboardTableRowProps {
   entry: Leaderboard["entries"][number];
-  ranks: RankV2[];
+  ranks: Rank[];
   badgeMap: Map<number, SubtierInfo>;
   shouldShowBadgeColumn: boolean;
   shouldShowTopHeroesColumn: boolean;

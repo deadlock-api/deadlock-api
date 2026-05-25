@@ -1,4 +1,4 @@
-import type { RankV2 } from "assets_deadlock_api_client";
+import type { Rank } from "deadlock_api_client";
 import type { BadgeDistribution } from "deadlock_api_client";
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Customized, Label, Tooltip, XAxis, YAxis } from "recharts";
@@ -9,7 +9,7 @@ import { range } from "~/lib/utils";
 
 export interface BadgeDistributionChartProps {
   badgeDistributionData: BadgeDistribution[];
-  ranksData: RankV2[];
+  ranksData: Rank[];
 }
 
 interface ChartEntry {
@@ -21,7 +21,7 @@ interface ChartEntry {
 
 export default function BadgeDistributionChart({ badgeDistributionData, ranksData }: BadgeDistributionChartProps) {
   const tierData = useMemo(() => {
-    const map = new Map<number, RankV2>();
+    const map = new Map<number, Rank>();
     ranksData.forEach((r) => {
       map.set(r.tier, r);
     });
@@ -110,7 +110,7 @@ export default function BadgeDistributionChart({ badgeDistributionData, ranksDat
 
             const centerX = (x1 + x6 + bandwidth) / 2;
             const rank = tierData.get(tier);
-            // General rank image (no division) from RankV2.images.large_webp
+            // General rank image (no division) from Rank.images.large_webp
             const imageUrl = rank?.images?.large_webp ?? rank?.images?.large;
             if (!imageUrl) return null;
 

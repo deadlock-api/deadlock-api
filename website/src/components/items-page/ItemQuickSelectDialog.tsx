@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { UpgradeV2 } from "assets_deadlock_api_client";
+import type { Upgrade } from "deadlock_api_client";
 import { memo, useCallback, useMemo, useState } from "react";
 
 import { ItemImage } from "~/components/ItemImage";
@@ -120,9 +120,9 @@ function ItemQuickSelectDialogBody({
     const filtered = lowerSearch
       ? shopableItems.filter((i) => i.name.toLowerCase().includes(lowerSearch))
       : shopableItems;
-    const grouped = new Map<SlotKey, Map<number, UpgradeV2[]>>();
+    const grouped = new Map<SlotKey, Map<number, Upgrade[]>>();
     for (const slotKey of SLOTS.map((s) => s.key)) {
-      grouped.set(slotKey, new Map(TIERS.map((t) => [t, [] as UpgradeV2[]])));
+      grouped.set(slotKey, new Map(TIERS.map((t) => [t, [] as Upgrade[]])));
     }
     for (const item of filtered) {
       const slotMap = grouped.get(item.item_slot_type as SlotKey);

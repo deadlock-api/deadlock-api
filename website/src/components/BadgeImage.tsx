@@ -1,4 +1,4 @@
-import type { RankV2 } from "assets_deadlock_api_client";
+import type { Rank } from "deadlock_api_client";
 import { CircleQuestionMark } from "lucide-react";
 import type React from "react";
 import { memo, useMemo, useState } from "react";
@@ -9,7 +9,7 @@ import { cn } from "~/lib/utils";
 
 export interface BadgeImageProps {
   badge: number;
-  ranks: RankV2[];
+  ranks: Rank[];
   imageType?: "small" | "large";
 }
 

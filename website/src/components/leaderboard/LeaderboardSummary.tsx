@@ -1,4 +1,4 @@
-import type { RankV2 } from "assets_deadlock_api_client";
+import type { Rank } from "deadlock_api_client";
 import type { Leaderboard } from "deadlock_api_client";
 import { useMemo } from "react";
 
@@ -6,7 +6,7 @@ import { BadgeImage } from "~/components/BadgeImage";
 import { extractBadgeMap } from "~/lib/leaderboard";
 
 export interface LeaderboardSummaryProps {
-  ranks: RankV2[];
+  ranks: Rank[];
   leaderboard: Leaderboard;
   onBadgeClick?: (rank: number) => void;
 }

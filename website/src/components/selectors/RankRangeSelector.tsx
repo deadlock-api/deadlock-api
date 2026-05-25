@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { RankV2 } from "assets_deadlock_api_client";
+import type { Rank } from "deadlock_api_client";
 import { ShieldIcon } from "lucide-react";
 import { useMemo } from "react";
 
@@ -18,7 +18,7 @@ function getRankId(tier: number, subrank: number): number {
 
 interface RankOption {
   rankId: number;
-  rank: RankV2;
+  rank: Rank;
   subrank: number;
   label: string;
 }
@@ -33,10 +33,7 @@ interface RankRangeSelectorProps {
 export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: RankRangeSelectorProps) {
   const { data: ranksData, isLoading } = useQuery(ranksQueryOptions);
 
-  const sortedRanks = useMemo(
-    () => [...(ranksData ?? [])].sort((a: RankV2, b: RankV2) => a.tier - b.tier),
-    [ranksData],
-  );
+  const sortedRanks = useMemo(() => [...(ranksData ?? [])].sort((a: Rank, b: Rank) => a.tier - b.tier), [ranksData]);
 
   const options: RankOption[] = useMemo(() => {
     const opts: RankOption[] = [];

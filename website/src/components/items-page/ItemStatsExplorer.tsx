@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import type { AbilityV2, HeroV2 } from "assets_deadlock_api_client";
+import type { Ability, Hero } from "deadlock_api_client";
 import type { ItemStats } from "deadlock_api_client";
 import type { AnalyticsApiItemStatsRequest, MatchesApiBulkMetadataRequest } from "deadlock_api_client";
 import { parseAsInteger, useQueryState } from "nuqs";
@@ -49,7 +49,7 @@ interface BulkMatchMetadata {
 
 const HERO_ABILITY_SLOTS = ["signature1", "signature2", "signature3", "signature4"] as const;
 
-function getHeroAbilityMetadata(heroData?: HeroV2, abilityItems?: AbilityV2[]) {
+function getHeroAbilityMetadata(heroData?: Hero, abilityItems?: Ability[]) {
   if (!heroData || !abilityItems) return null;
 
   const abilityEntries = HERO_ABILITY_SLOTS.map((slot, index) => {

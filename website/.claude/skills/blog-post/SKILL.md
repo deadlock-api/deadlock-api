@@ -278,7 +278,7 @@ const jsxPosts: JsxBlogPost[] = [
    - Tailwind classes (the site uses Tailwind v4)
    - shadcn/ui components from `~/components/ui/`
    - Framer Motion for animations
-   - `assets_deadlock_api_client` for hero/item data (NO game data API calls)
+   - `deadlock_api_client` for hero/item data (NO game data API calls)
    - React hooks (useState, useEffect, etc.)
    - Recharts for interactive charts (already a dependency)
 

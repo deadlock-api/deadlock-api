@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { RankV2 } from "assets_deadlock_api_client";
+import type { Rank } from "deadlock_api_client";
 import { ChevronDown } from "lucide-react";
 
 import { BadgeImage } from "~/components/BadgeImage";
@@ -45,7 +45,7 @@ export interface MatchHistoryCardProps {
   itemIds: number[];
   buildData?: BuildData;
   averageBadge?: number;
-  ranks?: RankV2[];
+  ranks?: Rank[];
   placement?: string;
   placementLabel?: string;
   teams?: [MatchHistoryCardPlayer[], MatchHistoryCardPlayer[]];

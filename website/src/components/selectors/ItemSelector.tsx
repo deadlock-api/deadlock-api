@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { UpgradeV2 } from "assets_deadlock_api_client";
+import type { Upgrade } from "deadlock_api_client";
 
 import { ItemImage } from "~/components/ItemImage";
 import { ItemName } from "~/components/ItemName";
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~
 import { Skeleton } from "~/components/ui/skeleton";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 
-function sortItems(a: UpgradeV2, b: UpgradeV2) {
+function sortItems(a: Upgrade, b: Upgrade) {
   if (a.item_tier !== b.item_tier) {
     return a.item_tier - b.item_tier;
   }
@@ -46,7 +46,7 @@ export function ItemSelector({
 
   const selectValue = selectedItem === null || selectedItem === undefined ? "" : String(selectedItem);
 
-  const currentItem = selectedItem ? sortedItems.find((opt: UpgradeV2) => opt.id === selectedItem) : undefined;
+  const currentItem = selectedItem ? sortedItems.find((opt: Upgrade) => opt.id === selectedItem) : undefined;
 
   return (
     <div className="flex max-w-[200px] flex-col gap-1.5">
@@ -73,7 +73,7 @@ export function ItemSelector({
                 <span className="truncate">None</span>
               </SelectItem>
             )}
-            {sortedItems.map((item: UpgradeV2) => (
+            {sortedItems.map((item: Upgrade) => (
               <SelectItem key={item.id} value={String(item.id)}>
                 <div className="flex flex-nowrap items-center gap-2">
                   <ItemImage itemId={item.id} className="size-5 shrink-0 object-contain" />
@@ -108,7 +108,7 @@ export function ItemSelectorMultiple({
       items={sortedItems}
       selectedIds={selectedItems}
       onSelectedIdsChange={onItemsSelected}
-      getId={(item: UpgradeV2) => item.id}
+      getId={(item: Upgrade) => item.id}
       emptyLabel={label ?? "Select Items..."}
       renderChip={(itemId) => (
         <>
@@ -116,7 +116,7 @@ export function ItemSelectorMultiple({
           <ItemName itemId={itemId} className="truncate text-xs" />
         </>
       )}
-      renderRow={(item: UpgradeV2) => (
+      renderRow={(item: Upgrade) => (
         <>
           <ItemImage itemId={item.id} className="size-5 shrink-0 object-contain" />
           <ItemName itemId={item.id} className="truncate text-sm" />

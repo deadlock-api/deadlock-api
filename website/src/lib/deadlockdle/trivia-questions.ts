@@ -1,4 +1,4 @@
-import type { AbilityV2, HeroV2, UpgradeV2 } from "assets_deadlock_api_client";
+import type { Ability, Hero, Upgrade } from "deadlock_api_client";
 
 import { filterPlayableHeroes, filterShopableItems } from "~/queries/asset-queries";
 
@@ -19,7 +19,7 @@ type NpcUnit = {
 };
 
 type AbilityWithHero = {
-  ability: AbilityV2;
+  ability: Ability;
   heroName: string;
 };
 
@@ -42,8 +42,8 @@ const HERO_STAT_KEYS = [
 ] as const;
 
 type QuestionGenerator = (
-  heroes: HeroV2[],
-  items: UpgradeV2[],
+  heroes: Hero[],
+  items: Upgrade[],
   npcUnits: NpcUnit[],
   abilities: AbilityWithHero[],
   rng: () => number,
@@ -64,7 +64,7 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function getHeroStat(hero: HeroV2, key: string): number | null {
+function getHeroStat(hero: Hero, key: string): number | null {
   const stats = hero.starting_stats as unknown as Record<string, { value: unknown } | null | undefined>;
   const stat = stats[key];
   if (!stat || stat.value == null) return null;
@@ -554,8 +554,8 @@ const MAX_TYPE_REPEATS = 2;
 const QUESTION_COUNT = 10;
 
 /** Build ability-hero pairs from raw abilities and playable heroes */
-export function buildAbilitiesWithHeroes(rawAbilities: AbilityV2[], playableHeroes: HeroV2[]): AbilityWithHero[] {
-  const heroMap = new Map<number, HeroV2>();
+export function buildAbilitiesWithHeroes(rawAbilities: Ability[], playableHeroes: Hero[]): AbilityWithHero[] {
+  const heroMap = new Map<number, Hero>();
   for (const hero of playableHeroes) {
     heroMap.set(hero.id, hero);
   }
@@ -572,8 +572,8 @@ export function buildAbilitiesWithHeroes(rawAbilities: AbilityV2[], playableHero
 }
 
 export function generateDailyQuestions(
-  rawHeroes: HeroV2[],
-  rawItems: UpgradeV2[],
+  rawHeroes: Hero[],
+  rawItems: Upgrade[],
   npcUnits: NpcUnit[],
   abilitiesWithHeroes: AbilityWithHero[],
   rng: () => number,

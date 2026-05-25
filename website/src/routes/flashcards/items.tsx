@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import type { UpgradeV2 } from "assets_deadlock_api_client";
+import type { Upgrade } from "deadlock_api_client";
 import { useMemo } from "react";
 
 import { FlashcardGame } from "~/components/flashcards/FlashcardGame";
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/flashcards/items")({
     }),
 });
 
-function itemIconSrc(item: UpgradeV2): string {
+function itemIconSrc(item: Upgrade): string {
   return item.shop_image_webp ?? "";
 }
 
