@@ -329,6 +329,46 @@ find videos -type f -name "*.webm" -print0 | \
         fi
     ' _ {}
 
+# 5b. Validate the build before uploading ANYTHING to R2. A partial or broken
+# build (e.g. missing localization, empty media) must never reach the bucket and
+# poison the version, so fail hard here instead.
+echo "Validating build $BUILD before upload..."
+errors=0
+fail() { echo "  ✗ $1"; errors=$((errors + 1)); }
+
+[ -s "$VERSION_DIR/steam.inf.zst" ] || fail "missing steam.inf.zst"
+
+for f in "${KEEP_VDATA[@]}"; do
+    [ -s "$VERSION_DIR/scripts/$f.zst" ] || fail "missing scripts/$f.zst"
+done
+for f in "${KEEP_CSS[@]}"; do
+    [ -s "$VERSION_DIR/styles/$f.zst" ] || fail "missing styles/$f.zst"
+done
+
+# Localization is the part that silently broke before: require english plus a
+# handful of other languages, and confirm english parses to a non-trivial map.
+loc_count=$(find "$VERSION_DIR/localization" -name '*.json.zst' 2>/dev/null | wc -l)
+[ "$loc_count" -ge 5 ] || fail "only $loc_count localization language file(s) (expected >= 5)"
+if [ -s "$VERSION_DIR/localization/english.json.zst" ]; then
+    keys=$(zstd -dqc "$VERSION_DIR/localization/english.json.zst" \
+        | python3 -c 'import json,sys; d=json.load(sys.stdin); print(len(d) if isinstance(d, dict) else 0)' 2>/dev/null || echo 0)
+    [ "$keys" -ge 100 ] || fail "english.json has only $keys key(s) (expected >= 100)"
+else
+    fail "missing localization/english.json.zst"
+fi
+
+# Media sanity: extraction must have produced the core asset types.
+[ -n "$(find images -type f -name '*.webp' -print -quit 2>/dev/null)" ] || fail "no images/*.webp produced"
+[ -n "$(find sounds -type f -name '*.mp3'  -print -quit 2>/dev/null)" ] || fail "no sounds/*.mp3 produced"
+[ -n "$(find svgs   -type f -name '*.svg'  -print -quit 2>/dev/null)" ] || fail "no svgs/*.svg produced"
+[ -n "$(find fonts  -type f -name '*.otf'  -print -quit 2>/dev/null)" ] || fail "no fonts/*.otf produced"
+
+if [ "$errors" -gt 0 ]; then
+    echo "Build validation failed with $errors error(s); aborting before any upload."
+    exit 1
+fi
+echo "Build validation passed."
+
 # 6. Upload media assets to R2
 echo "Uploading media assets to R2..."
 rclone copy -P -c --transfers 8 --checkers 8 images/ "$REMOTE/images/"
