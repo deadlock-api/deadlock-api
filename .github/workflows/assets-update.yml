@@ -63,6 +63,18 @@ jobs:
     if: needs.check.outputs.changed == 'true' || inputs.force
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 180
+    # contents:write so the release-notes step can publish a GitHub release.
+    permissions:
+      contents: write
+    env:
+      # R2 bucket + rclone "R2" remote, shared by the build and release steps.
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      RCLONE_CONFIG_R2_TYPE: s3
+      RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+      RCLONE_CONFIG_R2_REGION: auto
+      RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
     steps:
       - uses: useblacksmith/checkout@v1
 
@@ -82,12 +94,11 @@ jobs:
           # Steam login for the depot download (see reminder when adding secrets).
           STEAM_USERNAME: ${{ secrets.STEAM_USERNAME }}
           STEAM_PASSWORD: ${{ secrets.STEAM_PASSWORD }}
-          # R2 bucket the assets live in.
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
-          # Configure the rclone "R2" remote entirely from env, no config file.
-          RCLONE_CONFIG_R2_TYPE: s3
-          RCLONE_CONFIG_R2_PROVIDER: Cloudflare
-          RCLONE_CONFIG_R2_REGION: auto
-          RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
-          RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+
+      # Secondary to the upload: diff the new build against the previous one and
+      # publish a GitHub release. Never fail the run if note generation hiccups.
+      - name: Publish release notes
+        continue-on-error: true
+        run: bash scripts/generate_release_notes.sh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
