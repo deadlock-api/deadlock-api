@@ -235,23 +235,33 @@ echo "Leftover uncompressed files in $VERSION_DIR: $leftover"
 
 # 5. Extract + process media assets
 
-# Icons (svgs)
-mkdir -p svgs
-find depots/game/ -type f -name '*.svg' -print0 | xargs -0 -r -n 1 cp -t svgs/
-find depots/game/ -type f -name 'keystat_*.png' -print0 | xargs -0 -r -n 1 cp -t svgs/
+mkdir -p icons
+copy_icon() {
+    local src="$1" rel
+    case "$src" in
+        */panorama/images/*) rel="${src#*/panorama/images/}" ;;
+        *)                   rel="$(basename "$src")" ;;
+    esac
+    mkdir -p "icons/$(dirname "$rel")"
+    cp "$src" "icons/$rel"
+}
+icon_list=$(mktemp)
+find depots/game/ -type f -name '*.svg' -print0 >> "$icon_list"
+find depots/game/ -type f -name 'keystat_*.png' -print0 >> "$icon_list"
 for d in \
     depots/game/citadel/panorama/images/hud/text_images \
     depots/game/citadel/panorama/images/minimap \
     depots/game/citadel/materials/minimap; do
-    [ -d "$d" ] && find "$d" -type f -name '*.png' -print0 | xargs -0 -r -n 1 cp -t svgs/
+    [ -d "$d" ] && find "$d" -type f -name '*.png' -print0 >> "$icon_list"
 done
-find svgs -type f -name "*_png.*" -exec bash -c 'mv "$1" "${1/_png./.}"' _ {} \;
+while IFS= read -r -d '' src; do
+    copy_icon "$src"
+done < "$icon_list"
+rm -f "$icon_list"
+find icons -type f -name "*_png.*" -exec bash -c 'mv "$1" "${1/_png./.}"' _ {} \;
 
-# Add SVGs with currentColor fill
-for f in svgs/*.svg; do
-    if [[ "$f" == *"_unfilled.svg" ]]; then
-        continue
-    fi
+# Add SVGs with currentColor fill (skip the generated _unfilled variants).
+find icons -type f -name '*.svg' ! -name '*_unfilled.svg' -print0 | while IFS= read -r -d '' f; do
     sed 's/fill="[^"]*"/fill="currentColor"/g' "$f" > "${f%.svg}_unfilled.svg"
 done
 
@@ -360,7 +370,7 @@ fi
 # Media sanity: extraction must have produced the core asset types.
 [ -n "$(find images -type f -name '*.webp' -print -quit 2>/dev/null)" ] || fail "no images/*.webp produced"
 [ -n "$(find sounds -type f -name '*.mp3'  -print -quit 2>/dev/null)" ] || fail "no sounds/*.mp3 produced"
-[ -n "$(find svgs   -type f -name '*.svg'  -print -quit 2>/dev/null)" ] || fail "no svgs/*.svg produced"
+[ -n "$(find icons  -type f -name '*.svg'  -print -quit 2>/dev/null)" ] || fail "no icons/*.svg produced"
 [ -n "$(find fonts  -type f -name '*.otf'  -print -quit 2>/dev/null)" ] || fail "no fonts/*.otf produced"
 
 if [ "$errors" -gt 0 ]; then
@@ -372,8 +382,7 @@ echo "Build validation passed."
 # 6. Upload media assets to R2
 echo "Uploading media assets to R2..."
 rclone copy -P -c --transfers 8 --checkers 8 images/ "$REMOTE/images/"
-rclone copy -P -c --transfers 8 --checkers 8 svgs/ "$REMOTE/svgs/"
-rclone copy -P -c --transfers 8 --checkers 8 svgs/ "$REMOTE/icons/"
+rclone copy -P -c --transfers 8 --checkers 8 icons/ "$REMOTE/icons/"
 rclone copy -P -c --transfers 8 --checkers 8 sounds/ "$REMOTE/sounds/"
 rclone copy -P -c --transfers 8 --checkers 8 videos/ "$REMOTE/videos/"
 rclone copy -P -c --transfers 8 --checkers 8 fonts/ "$REMOTE/fonts/"
@@ -382,9 +391,10 @@ rclone copy -P -c --transfers 8 --checkers 8 fonts/ "$REMOTE/fonts/"
 echo "Uploading versions/$BUILD to R2..."
 rclone copy -P -c --transfers 8 --checkers 8 "$VERSION_DIR/" "$REMOTE/versions/$BUILD/"
 
-# 8. Update the R2 indexes. Indexes are additive (files are never deleted), so
-# download the current index and merge in just this build's files instead of
-# re-listing the whole bucket / re-reading every version each run.
+# 8. Update the R2 indexes. Most indexes are additive (files are never deleted),
+# so download the current index and merge in just this build's files instead of
+# re-listing the whole bucket / re-reading every version each run. Icons are the
+# exception (see the loop below).
 echo "Updating R2 indexes..."
 
 # Merge a file list (stdin, paths relative to the folder) into an existing
@@ -422,11 +432,14 @@ json.dump(tree, sys.stdout, separators=(",", ":"), ensure_ascii=False)
 PY
 )
 
-# folder:local-dir pairs (icons/ on R2 mirror the svgs/ output).
-for pair in sounds:sounds images:images icons:svgs fonts:fonts; do
+for pair in sounds:sounds images:images icons:icons fonts:fonts; do
     folder="${pair%%:*}"; localdir="${pair##*:}"
     echo ">> index: $folder"
-    rclone cat "$REMOTE/$folder/index.json.zst" 2>/dev/null | zstd -dq > current_index.json 2>/dev/null || true
+    if [ "$folder" = "icons" ]; then
+        : > current_index.json
+    else
+        rclone cat "$REMOTE/$folder/index.json.zst" 2>/dev/null | zstd -dq > current_index.json 2>/dev/null || true
+    fi
     ( cd "$localdir" && find . -type f ) | sed 's#^\./##' \
         | python3 -c "$MERGE_INDEX" "$folder" "$PUBLIC/$folder/" current_index.json > index.json
     zstd -q -19 -f index.json -o index.json.zst
