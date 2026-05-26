@@ -348,6 +348,10 @@ find videos -type f -name "*.webm" -print0 | \
 echo "Validating build $BUILD before upload..."
 errors=0
 fail() { echo "  ✗ $1"; errors=$((errors + 1)); }
+# Non-fatal: media assets Valve can silently relocate/remove (fonts, portraits,
+# loose media) shouldn't block the whole build. Warn and keep going -- uploads
+# and indexes are additive, so whatever already exists in the bucket survives.
+warn() { echo "  ! $1"; }
 
 [ -s "$VERSION_DIR/steam.inf.zst" ] || fail "missing steam.inf.zst"
 
@@ -370,11 +374,13 @@ else
     fail "missing localization/english.json.zst"
 fi
 
-# Media sanity: extraction must have produced the core asset types.
-[ -n "$(find images -type f -name '*.webp' -print -quit 2>/dev/null)" ] || fail "no images/*.webp produced"
-[ -n "$(find sounds -type f -name '*.mp3'  -print -quit 2>/dev/null)" ] || fail "no sounds/*.mp3 produced"
-[ -n "$(find icons  -type f -name '*.svg'  -print -quit 2>/dev/null)" ] || fail "no icons/*.svg produced"
-[ -n "$(find fonts  -type f -name '*.otf'  -print -quit 2>/dev/null)" ] || fail "no fonts/*.otf produced"
+# Media sanity: warn (don't abort) if a core asset type came out empty. Valve
+# moves these between pak01 and loose depot files and occasionally drops them
+# entirely; a missing type shouldn't block the build or the other uploads.
+[ -n "$(find images -type f -name '*.webp' -print -quit 2>/dev/null)" ] || warn "no images/*.webp produced"
+[ -n "$(find sounds -type f -name '*.mp3'  -print -quit 2>/dev/null)" ] || warn "no sounds/*.mp3 produced"
+[ -n "$(find icons  -type f -name '*.svg'  -print -quit 2>/dev/null)" ] || warn "no icons/*.svg produced"
+[ -n "$(find fonts  -type f -name '*.otf'  -print -quit 2>/dev/null)" ] || warn "no fonts/*.otf produced"
 
 if [ "$errors" -gt 0 ]; then
     echo "Build validation failed with $errors error(s); aborting before any upload."
