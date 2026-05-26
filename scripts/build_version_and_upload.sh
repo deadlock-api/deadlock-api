@@ -382,14 +382,23 @@ rclone copy -P -c --transfers 8 --checkers 8 fonts/ "$REMOTE/fonts/"
 echo "Uploading versions/$BUILD to R2..."
 rclone copy -P -c --transfers 8 --checkers 8 "$VERSION_DIR/" "$REMOTE/versions/$BUILD/"
 
-# 8. Rebuild the R2 indexes so the newly uploaded assets are discoverable.
-echo "Rebuilding R2 indexes..."
+# 8. Update the R2 indexes. Indexes are additive (files are never deleted), so
+# download the current index and merge in just this build's files instead of
+# re-listing the whole bucket / re-reading every version each run.
+echo "Updating R2 indexes..."
 
-# Reads a file list on stdin, prints a nested file-tree JSON (args: folder, url-prefix).
-# sounds: key without extension, prefer .mp3 over .wav. others: key with extension, skip .bak.
-BUILD_INDEX=$(cat <<'PY'
+# Merge a file list (stdin, paths relative to the folder) into an existing
+# index tree (argv: folder, url-prefix, existing-index-json-path).
+# sounds: key without extension, prefer .mp3 over .wav. others: key with ext, skip .bak.
+MERGE_INDEX=$(cat <<'PY'
 import json, os, sys
-folder, prefix = sys.argv[1], sys.argv[2]
+folder, prefix, existing = sys.argv[1], sys.argv[2], sys.argv[3]
+tree = {}
+if os.path.exists(existing) and os.path.getsize(existing) > 0:
+    try:
+        tree = json.load(open(existing))
+    except Exception:
+        tree = {}
 paths = [l.strip() for l in sys.stdin if l.strip()]
 if folder == "sounds":
     mp3 = {os.path.splitext(p)[0] for p in paths if p.lower().endswith(".mp3")}
@@ -399,36 +408,41 @@ if folder == "sounds":
 else:
     paths = [p for p in paths if not p.lower().endswith(".bak")]
     key = lambda fn: fn
-tree = {}
 for p in paths:
     *dirs, fn = p.split("/")
     node = tree
     for d in dirs:
-        node = node.setdefault(d, {})
+        nxt = node.get(d)
+        if not isinstance(nxt, dict):
+            nxt = {}
+            node[d] = nxt
+        node = nxt
     node[key(fn)] = prefix + p
 json.dump(tree, sys.stdout, separators=(",", ":"), ensure_ascii=False)
 PY
 )
 
-for folder in sounds images icons fonts; do
-  echo ">> index: $folder"
-  rclone lsf -R --files-only "$REMOTE/$folder/" \
-    | python3 -c "$BUILD_INDEX" "$folder" "$PUBLIC/$folder/" > index.json
-  zstd -q -19 -f index.json -o index.json.zst
-  rclone copyto index.json.zst "$REMOTE/$folder/index.json.zst"
+# folder:local-dir pairs (icons/ on R2 mirror the svgs/ output).
+for pair in sounds:sounds images:images icons:svgs fonts:fonts; do
+    folder="${pair%%:*}"; localdir="${pair##*:}"
+    echo ">> index: $folder"
+    rclone cat "$REMOTE/$folder/index.json.zst" 2>/dev/null | zstd -dq > current_index.json 2>/dev/null || true
+    ( cd "$localdir" && find . -type f ) | sed 's#^\./##' \
+        | python3 -c "$MERGE_INDEX" "$folder" "$PUBLIC/$folder/" current_index.json > index.json
+    zstd -q -19 -f index.json -o index.json.zst
+    rclone copyto index.json.zst "$REMOTE/$folder/index.json.zst"
+    rm -f current_index.json index.json index.json.zst
 done
 
-rm -f index.json index.json.zst
-
+# Parse the given steam.inf files, merge them into the existing array (argv1,
+# may be empty/missing) keyed by client_version, and emit newest-first.
 STEAM_INFO=$(cat <<'PY'
 import json, os, sys
-from glob import glob
 MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
-out = []
-for path in glob(os.path.join(sys.argv[1], "*.inf")):
+def parse(path):
     raw = dict(map(str.strip, l.split("=", 1)) for l in open(path) if "=" in l)
     mon, day, year = raw["VersionDate"].split()
-    out.append({
+    return {
         "client_version": int(raw["ClientVersion"]),
         "server_version": int(raw["ServerVersion"]),
         "product_name": raw["ProductName"],
@@ -439,22 +453,41 @@ for path in glob(os.path.join(sys.argv[1], "*.inf")):
         "version_date": raw["VersionDate"],
         "version_time": raw["VersionTime"],
         "version_datetime": f"{year}-{MONTHS.index(mon) + 1:02d}-{day}T{raw['VersionTime']}",
-    })
-out.sort(key=lambda i: i["client_version"], reverse=True)
+    }
+existing = sys.argv[1]
+by_ver = {}
+if existing and os.path.exists(existing) and os.path.getsize(existing) > 0:
+    try:
+        by_ver = {e["client_version"]: e for e in json.load(open(existing))}
+    except Exception:
+        by_ver = {}
+for p in sys.argv[2:]:
+    try:
+        e = parse(p); by_ver[e["client_version"]] = e
+    except Exception as ex:
+        print(f"skip {os.path.basename(p)}: {ex}", file=sys.stderr)
+out = sorted(by_ver.values(), key=lambda i: i["client_version"], reverse=True)
 json.dump(out, sys.stdout, separators=(",", ":"))
 PY
 )
 
 echo ">> index: steam-info"
-tmp=$(mktemp -d)
-rclone lsf --dirs-only "$REMOTE/versions/" | while read -r d; do
-  v="${d%/}"
-  rclone cat "$REMOTE/versions/$v/steam.inf.zst" 2>/dev/null | zstd -dq > "$tmp/$v.inf" || rm -f "$tmp/$v.inf"
-done
-python3 -c "$STEAM_INFO" "$tmp" > steam_info_all.json
+if rclone cat "$REMOTE/steam-info/all.json.zst" 2>/dev/null | zstd -dq > all_current.json 2>/dev/null && [ -s all_current.json ]; then
+    zstd -dqc "$VERSION_DIR/steam.inf.zst" > new_steam.inf
+    python3 -c "$STEAM_INFO" all_current.json new_steam.inf > steam_info_all.json
+    rm -f new_steam.inf
+else
+    echo "   no existing steam-info index; rebuilding from all versions on R2"
+    sitmp=$(mktemp -d)
+    rclone lsf --dirs-only "$REMOTE/versions/" | while read -r d; do
+        v="${d%/}"
+        rclone cat "$REMOTE/versions/$v/steam.inf.zst" 2>/dev/null | zstd -dq > "$sitmp/$v.inf" || rm -f "$sitmp/$v.inf"
+    done
+    python3 -c "$STEAM_INFO" "" "$sitmp"/*.inf > steam_info_all.json
+    rm -rf "$sitmp"
+fi
 zstd -q -19 -f steam_info_all.json -o steam_info_all.json.zst
 rclone copyto steam_info_all.json.zst "$REMOTE/steam-info/all.json.zst"
+rm -f all_current.json steam_info_all.json steam_info_all.json.zst
 
-rm -rf "$tmp" steam_info_all.json steam_info_all.json.zst
-
-echo "Done. Built versions/$BUILD, uploaded all assets, and rebuilt R2 indexes."
+echo "Done. Built versions/$BUILD, uploaded all assets, and updated R2 indexes."
