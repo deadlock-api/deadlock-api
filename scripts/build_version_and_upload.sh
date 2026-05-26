@@ -61,18 +61,6 @@ KEEP_VDATA=(
     misc.vdata
 )
 
-# Localization categories to pull into the versions folder.
-LOCALIZATION_DIRS=(
-    citadel_gc
-    citadel_heroes
-    citadel_mods
-    citadel_main
-    citadel_vdata/accolades
-    citadel_attributes
-    citadel_gc_hero_names
-    citadel_gc_mod_names
-)
-
 # Helper to check commands
 check_cmd() {
     if ! command -v "$1" &> /dev/null; then
@@ -209,16 +197,36 @@ for f in "${KEEP_CSS[@]}"; do
     fi
 done
 
-# Localization (raw per-language KeyValues .txt files)
-for d in "${LOCALIZATION_DIRS[@]}"; do
-    if [ -d "$citadel_folder/resource/localization/$d" ]; then
-        cp -r "$citadel_folder/resource/localization/$d/"* "$VERSION_DIR/localization/" 2>/dev/null || true
-    fi
-done
+# Localization (raw per-language KeyValues .txt files).
+#
+# Pull EVERY *.txt under resource/localization/ instead of a hand-maintained
+# allowlist of category folders. Valve reshuffles the localization layout
+# between builds (adds categories, renames/moves folders), and a stale
+# allowlist silently drops categories — or, when a whole layout shifts, every
+# category — leaving the merged <lang>.json without the tokens the API needs
+# (or, in the worst case, no english.json at all, which 500s every localized
+# asset for that build). Files are flattened into one folder, folding the
+# relative path into the name so files with the same basename in different
+# category folders don't clobber each other.
+loc_src="$citadel_folder/resource/localization"
+if [ -d "$loc_src" ]; then
+    while IFS= read -r -d '' f; do
+        rel="${f#"$loc_src"/}"
+        cp "$f" "$VERSION_DIR/localization/${rel//\//_}"
+    done < <(find "$loc_src" -type f -name '*.txt' -print0)
+fi
 
 # Merge per-language localization .txt into <lang>.json.zst (drops the .txt)
 echo "Merging localization for build $BUILD..."
 uv run --with zstandard python "$SCRIPT_DIR/merge_localization.py" "$VERSION_DIR/localization"
+
+# An english base is mandatory: every other language merges on top of it, and
+# the API has no fallback when it's absent. Bail rather than upload a version
+# whose localized assets (items/heroes/...) would 500 on every request.
+if [ ! -f "$VERSION_DIR/localization/english.json.zst" ]; then
+    echo "Error: no english localization produced for build $BUILD (searched $loc_src)." >&2
+    exit 1
+fi
 
 # zstd-compress the remaining scripts/styles/steam.inf files (level 19)
 echo "Compressing vdata/css/steam.inf..."
