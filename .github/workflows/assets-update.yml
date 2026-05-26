@@ -13,6 +13,10 @@ on:
         description: 'Run the full build even if the client version is unchanged'
         type: boolean
         default: false
+      rebuild_icons_index:
+        description: 'Rebuild the icons index from scratch (drop legacy flat entries)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -59,8 +63,9 @@ jobs:
   update-assets:
     name: Build & upload assets
     needs: check
-    # Run on a new client version, or when manually forced.
-    if: needs.check.outputs.changed == 'true' || inputs.force
+    # Run on a new client version, when manually forced, or when an icons-index
+    # rebuild was requested.
+    if: needs.check.outputs.changed == 'true' || inputs.force || inputs.rebuild_icons_index
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 180
     # contents:write so the release-notes step can publish a GitHub release.
@@ -94,6 +99,8 @@ jobs:
           # Steam login for the depot download (see reminder when adding secrets).
           STEAM_USERNAME: ${{ secrets.STEAM_USERNAME }}
           STEAM_PASSWORD: ${{ secrets.STEAM_PASSWORD }}
+          # When set, rebuild the icons index from scratch instead of incrementally.
+          REBUILD_ICONS_INDEX: ${{ inputs.rebuild_icons_index && '1' || '' }}
 
       # Secondary to the upload: diff the new build against the previous one and
       # publish a GitHub release. Never fail the run if note generation hiccups.

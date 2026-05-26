@@ -154,12 +154,15 @@ fi
 # pak01 holds the vdata/css/media we extract; steam.inf is the build manifest;
 # the localization .txt files are LOOSE in the depot (not inside pak01), so they
 # must be listed explicitly or the versions/ folder ships without localization.
+# The panorama/fonts/*.otf files are ALSO loose now -- Valve moved them out of
+# pak01 -- so they must be listed too or the fonts/ output ships empty.
 cat > filelist.txt <<'EOF'
 regex:citadel/pak01_.*\.vpk$
 regex:citadel/steam\.inf$
 regex:citadel/resource/localization/.*\.txt$
+regex:citadel/panorama/fonts/.*\.otf$
 EOF
-echo "Downloading Deadlock game files (windows depot, pak01 only)..."
+echo "Downloading Deadlock game files (windows depot, pak01 + loose fonts)..."
 ./DepotDownloader -app 1422450 -os windows -filelist filelist.txt -validate -remember-password \
     -username "$STEAM_USERNAME" -password "$STEAM_PASSWORD" || exit 1
 
@@ -432,13 +435,19 @@ PY
 )
 
 # folder:local-dir pairs. Every index is incremental: seed from the current
-# bucket index and merge in this build's files. The icons index was first built
-# fresh on the new nested layout (replacing the old flat entries); from then on
-# it accumulates like the others.
+# bucket index and merge in this build's files. Set REBUILD_ICONS_INDEX=1 (via
+# the rebuild_icons_index workflow input) to rebuild the icons index from
+# scratch -- needed once to replace the old flat layout with the nested one, and
+# any time the flat/nested split needs re-baselining.
 for pair in sounds:sounds images:images icons:icons fonts:fonts; do
     folder="${pair%%:*}"; localdir="${pair##*:}"
     echo ">> index: $folder"
-    rclone cat "$REMOTE/$folder/index.json.zst" 2>/dev/null | zstd -dq > current_index.json 2>/dev/null || true
+    if [ "$folder" = "icons" ] && [ -n "${REBUILD_ICONS_INDEX:-}" ]; then
+        echo "   (REBUILD_ICONS_INDEX set: rebuilding icons index from scratch)"
+        : > current_index.json
+    else
+        rclone cat "$REMOTE/$folder/index.json.zst" 2>/dev/null | zstd -dq > current_index.json 2>/dev/null || true
+    fi
     ( cd "$localdir" && find . -type f ) | sed 's#^\./##' \
         | python3 -c "$MERGE_INDEX" "$folder" "$PUBLIC/$folder/" current_index.json > index.json
     zstd -q -19 -f index.json -o index.json.zst
