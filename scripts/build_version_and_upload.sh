@@ -391,10 +391,9 @@ rclone copy -P -c --transfers 8 --checkers 8 fonts/ "$REMOTE/fonts/"
 echo "Uploading versions/$BUILD to R2..."
 rclone copy -P -c --transfers 8 --checkers 8 "$VERSION_DIR/" "$REMOTE/versions/$BUILD/"
 
-# 8. Update the R2 indexes. Most indexes are additive (files are never deleted),
-# so download the current index and merge in just this build's files instead of
-# re-listing the whole bucket / re-reading every version each run. Icons are the
-# exception (see the loop below).
+# 8. Update the R2 indexes. Indexes are additive (files are never deleted), so
+# download the current index and merge in just this build's files instead of
+# re-listing the whole bucket / re-reading every version each run.
 echo "Updating R2 indexes..."
 
 # Merge a file list (stdin, paths relative to the folder) into an existing
@@ -432,14 +431,14 @@ json.dump(tree, sys.stdout, separators=(",", ":"), ensure_ascii=False)
 PY
 )
 
+# folder:local-dir pairs. Every index is incremental: seed from the current
+# bucket index and merge in this build's files. The icons index was first built
+# fresh on the new nested layout (replacing the old flat entries); from then on
+# it accumulates like the others.
 for pair in sounds:sounds images:images icons:icons fonts:fonts; do
     folder="${pair%%:*}"; localdir="${pair##*:}"
     echo ">> index: $folder"
-    if [ "$folder" = "icons" ]; then
-        : > current_index.json
-    else
-        rclone cat "$REMOTE/$folder/index.json.zst" 2>/dev/null | zstd -dq > current_index.json 2>/dev/null || true
-    fi
+    rclone cat "$REMOTE/$folder/index.json.zst" 2>/dev/null | zstd -dq > current_index.json 2>/dev/null || true
     ( cd "$localdir" && find . -type f ) | sed 's#^\./##' \
         | python3 -c "$MERGE_INDEX" "$folder" "$PUBLIC/$folder/" current_index.json > index.json
     zstd -q -19 -f index.json -o index.json.zst
