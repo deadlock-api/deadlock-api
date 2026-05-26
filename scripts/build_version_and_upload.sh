@@ -151,9 +151,13 @@ if [ -z "${STEAM_USERNAME:-}" ] || [ -z "${STEAM_PASSWORD:-}" ]; then
     echo "Error: STEAM_USERNAME and STEAM_PASSWORD must be set to download game files."
     exit 1
 fi
+# pak01 holds the vdata/css/media we extract; steam.inf is the build manifest;
+# the localization .txt files are LOOSE in the depot (not inside pak01), so they
+# must be listed explicitly or the versions/ folder ships without localization.
 cat > filelist.txt <<'EOF'
 regex:citadel/pak01_.*\.vpk$
 regex:citadel/steam\.inf$
+regex:citadel/resource/localization/.*\.txt$
 EOF
 echo "Downloading Deadlock game files (windows depot, pak01 only)..."
 ./DepotDownloader -app 1422450 -os windows -filelist filelist.txt -validate -remember-password \
