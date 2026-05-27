@@ -53,6 +53,19 @@ export function extractSteamId(claimedId: string): string | null {
   return match ? match[1] : null;
 }
 
+// SteamID64 -> account_id (SteamID3 32-bit), the id the Deadlock match
+// endpoints use. account_id = steamID64 - 76561197960265728.
+const STEAM_ID64_BASE = 76561197960265728n;
+
+export function steamId64ToAccountId(steamId64: string): number | null {
+  try {
+    const id = BigInt(steamId64) - STEAM_ID64_BASE;
+    return id > 0n ? Number(id) : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Validate Steam OpenID response parameters
  * @param params - URLSearchParams from the callback
