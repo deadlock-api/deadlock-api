@@ -31,6 +31,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as StreamkitIndexRouteImport } from './routes/streamkit/index'
 import { Route as FlashcardsIndexRouteImport } from './routes/flashcards/index'
 import { Route as DeadlockdleIndexRouteImport } from './routes/deadlockdle/index'
+import { Route as ChatIndexRouteImport } from './routes/chat.index'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as FlashcardsItemsRouteImport } from './routes/flashcards/items'
 import { Route as FlashcardsItemUpgradesRouteImport } from './routes/flashcards/item-upgrades'
@@ -41,6 +42,7 @@ import { Route as DeadlockdleGuessSoundRouteImport } from './routes/deadlockdle/
 import { Route as DeadlockdleGuessItemRouteImport } from './routes/deadlockdle/guess-item'
 import { Route as DeadlockdleGuessHeroRouteImport } from './routes/deadlockdle/guess-hero'
 import { Route as DeadlockdleGuessAbilityRouteImport } from './routes/deadlockdle/guess-ability'
+import { Route as ChatSessionIdRouteImport } from './routes/chat.$sessionId'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
 import { Route as AuthPatreonCallbackRouteImport } from './routes/auth/patreon/callback'
 import { Route as StreamkitWidgetsRegionAccountIdWidgetTypeRouteImport } from './routes/streamkit/widgets/$region/$accountId/$widgetType'
@@ -155,6 +157,11 @@ const DeadlockdleIndexRoute = DeadlockdleIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DeadlockdleRoute,
 } as any)
+const ChatIndexRoute = ChatIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ChatRoute,
+} as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
   id: '/blog/',
   path: '/blog/',
@@ -205,6 +212,11 @@ const DeadlockdleGuessAbilityRoute = DeadlockdleGuessAbilityRouteImport.update({
   path: '/guess-ability',
   getParentRoute: () => DeadlockdleRoute,
 } as any)
+const ChatSessionIdRoute = ChatSessionIdRouteImport.update({
+  id: '/$sessionId',
+  path: '/$sessionId',
+  getParentRoute: () => ChatRoute,
+} as any)
 const BlogSlugRoute = BlogSlugRouteImport.update({
   id: '/blog/$slug',
   path: '/blog/$slug',
@@ -226,7 +238,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/abilities': typeof AbilitiesRoute
   '/badge-distribution': typeof BadgeDistributionRoute
-  '/chat': typeof ChatRoute
+  '/chat': typeof ChatRouteWithChildren
   '/data-dumps': typeof DataDumpsRoute
   '/data-privacy': typeof DataPrivacyRoute
   '/deadlockdle': typeof DeadlockdleRouteWithChildren
@@ -243,6 +255,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/chat/$sessionId': typeof ChatSessionIdRoute
   '/deadlockdle/guess-ability': typeof DeadlockdleGuessAbilityRoute
   '/deadlockdle/guess-hero': typeof DeadlockdleGuessHeroRoute
   '/deadlockdle/guess-item': typeof DeadlockdleGuessItemRoute
@@ -253,6 +266,7 @@ export interface FileRoutesByFullPath {
   '/flashcards/item-upgrades': typeof FlashcardsItemUpgradesRoute
   '/flashcards/items': typeof FlashcardsItemsRoute
   '/blog/': typeof BlogIndexRoute
+  '/chat/': typeof ChatIndexRoute
   '/deadlockdle/': typeof DeadlockdleIndexRoute
   '/flashcards/': typeof FlashcardsIndexRoute
   '/streamkit/': typeof StreamkitIndexRoute
@@ -263,7 +277,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/abilities': typeof AbilitiesRoute
   '/badge-distribution': typeof BadgeDistributionRoute
-  '/chat': typeof ChatRoute
   '/data-dumps': typeof DataDumpsRoute
   '/data-privacy': typeof DataPrivacyRoute
   '/deadlockstats-privacy': typeof DeadlockstatsPrivacyRoute
@@ -279,6 +292,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/chat/$sessionId': typeof ChatSessionIdRoute
   '/deadlockdle/guess-ability': typeof DeadlockdleGuessAbilityRoute
   '/deadlockdle/guess-hero': typeof DeadlockdleGuessHeroRoute
   '/deadlockdle/guess-item': typeof DeadlockdleGuessItemRoute
@@ -289,6 +303,7 @@ export interface FileRoutesByTo {
   '/flashcards/item-upgrades': typeof FlashcardsItemUpgradesRoute
   '/flashcards/items': typeof FlashcardsItemsRoute
   '/blog': typeof BlogIndexRoute
+  '/chat': typeof ChatIndexRoute
   '/deadlockdle': typeof DeadlockdleIndexRoute
   '/flashcards': typeof FlashcardsIndexRoute
   '/streamkit': typeof StreamkitIndexRoute
@@ -300,7 +315,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/abilities': typeof AbilitiesRoute
   '/badge-distribution': typeof BadgeDistributionRoute
-  '/chat': typeof ChatRoute
+  '/chat': typeof ChatRouteWithChildren
   '/data-dumps': typeof DataDumpsRoute
   '/data-privacy': typeof DataPrivacyRoute
   '/deadlockdle': typeof DeadlockdleRouteWithChildren
@@ -317,6 +332,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/chat/$sessionId': typeof ChatSessionIdRoute
   '/deadlockdle/guess-ability': typeof DeadlockdleGuessAbilityRoute
   '/deadlockdle/guess-hero': typeof DeadlockdleGuessHeroRoute
   '/deadlockdle/guess-item': typeof DeadlockdleGuessItemRoute
@@ -327,6 +343,7 @@ export interface FileRoutesById {
   '/flashcards/item-upgrades': typeof FlashcardsItemUpgradesRoute
   '/flashcards/items': typeof FlashcardsItemsRoute
   '/blog/': typeof BlogIndexRoute
+  '/chat/': typeof ChatIndexRoute
   '/deadlockdle/': typeof DeadlockdleIndexRoute
   '/flashcards/': typeof FlashcardsIndexRoute
   '/streamkit/': typeof StreamkitIndexRoute
@@ -356,6 +373,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/sitemap_index.xml'
     | '/blog/$slug'
+    | '/chat/$sessionId'
     | '/deadlockdle/guess-ability'
     | '/deadlockdle/guess-hero'
     | '/deadlockdle/guess-item'
@@ -366,6 +384,7 @@ export interface FileRouteTypes {
     | '/flashcards/item-upgrades'
     | '/flashcards/items'
     | '/blog/'
+    | '/chat/'
     | '/deadlockdle/'
     | '/flashcards/'
     | '/streamkit/'
@@ -376,7 +395,6 @@ export interface FileRouteTypes {
     | '/'
     | '/abilities'
     | '/badge-distribution'
-    | '/chat'
     | '/data-dumps'
     | '/data-privacy'
     | '/deadlockstats-privacy'
@@ -392,6 +410,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/sitemap_index.xml'
     | '/blog/$slug'
+    | '/chat/$sessionId'
     | '/deadlockdle/guess-ability'
     | '/deadlockdle/guess-hero'
     | '/deadlockdle/guess-item'
@@ -402,6 +421,7 @@ export interface FileRouteTypes {
     | '/flashcards/item-upgrades'
     | '/flashcards/items'
     | '/blog'
+    | '/chat'
     | '/deadlockdle'
     | '/flashcards'
     | '/streamkit'
@@ -429,6 +449,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/sitemap_index.xml'
     | '/blog/$slug'
+    | '/chat/$sessionId'
     | '/deadlockdle/guess-ability'
     | '/deadlockdle/guess-hero'
     | '/deadlockdle/guess-item'
@@ -439,6 +460,7 @@ export interface FileRouteTypes {
     | '/flashcards/item-upgrades'
     | '/flashcards/items'
     | '/blog/'
+    | '/chat/'
     | '/deadlockdle/'
     | '/flashcards/'
     | '/streamkit/'
@@ -450,7 +472,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AbilitiesRoute: typeof AbilitiesRoute
   BadgeDistributionRoute: typeof BadgeDistributionRoute
-  ChatRoute: typeof ChatRoute
+  ChatRoute: typeof ChatRouteWithChildren
   DataDumpsRoute: typeof DataDumpsRoute
   DataPrivacyRoute: typeof DataPrivacyRoute
   DeadlockdleRoute: typeof DeadlockdleRouteWithChildren
@@ -633,6 +655,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeadlockdleIndexRouteImport
       parentRoute: typeof DeadlockdleRoute
     }
+    '/chat/': {
+      id: '/chat/'
+      path: '/'
+      fullPath: '/chat/'
+      preLoaderRoute: typeof ChatIndexRouteImport
+      parentRoute: typeof ChatRoute
+    }
     '/blog/': {
       id: '/blog/'
       path: '/blog'
@@ -703,6 +732,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeadlockdleGuessAbilityRouteImport
       parentRoute: typeof DeadlockdleRoute
     }
+    '/chat/$sessionId': {
+      id: '/chat/$sessionId'
+      path: '/$sessionId'
+      fullPath: '/chat/$sessionId'
+      preLoaderRoute: typeof ChatSessionIdRouteImport
+      parentRoute: typeof ChatRoute
+    }
     '/blog/$slug': {
       id: '/blog/$slug'
       path: '/blog/$slug'
@@ -726,6 +762,18 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface ChatRouteChildren {
+  ChatSessionIdRoute: typeof ChatSessionIdRoute
+  ChatIndexRoute: typeof ChatIndexRoute
+}
+
+const ChatRouteChildren: ChatRouteChildren = {
+  ChatSessionIdRoute: ChatSessionIdRoute,
+  ChatIndexRoute: ChatIndexRoute,
+}
+
+const ChatRouteWithChildren = ChatRoute._addFileChildren(ChatRouteChildren)
 
 interface DeadlockdleRouteChildren {
   DeadlockdleGuessAbilityRoute: typeof DeadlockdleGuessAbilityRoute
@@ -755,7 +803,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AbilitiesRoute: AbilitiesRoute,
   BadgeDistributionRoute: BadgeDistributionRoute,
-  ChatRoute: ChatRoute,
+  ChatRoute: ChatRouteWithChildren,
   DataDumpsRoute: DataDumpsRoute,
   DataPrivacyRoute: DataPrivacyRoute,
   DeadlockdleRoute: DeadlockdleRouteWithChildren,
