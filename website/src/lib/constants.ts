@@ -15,14 +15,21 @@ export interface PatchInfo {
 
 export const PATCHES: readonly PatchInfo[] = [
   {
+    id: "2026-05-25",
+    name: "New Urn Patch #2 (2026-05-25)",
+    startDate: day.utc("2026-05-26T00:53:00Z").local(),
+  },
+  {
     id: "2026-05-22",
-    name: "Gameplay Update (2026-05-22)",
+    name: "New Urn Patch #1 (2026-05-22)",
     startDate: day.utc("2026-05-22T21:50:00Z").local(),
+    endDate: day.utc("2026-05-26T00:53:00Z").local(),
   },
   {
     id: "2026-04-30",
     name: "Gameplay Update (2026-04-30)",
     startDate: day.utc("2026-05-01T23:49:47Z").local(),
+    endDate: day.utc("2026-05-22T21:50:00Z").local(),
   },
   {
     id: "2026-04-10",
