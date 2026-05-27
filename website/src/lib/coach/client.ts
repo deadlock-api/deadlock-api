@@ -5,7 +5,7 @@ import type { Report } from "./report";
 export const COACH_API_ORIGIN = (
   import.meta.env.VITE_COACH_API_URL ||
   import.meta.env.VITE_AI_ASSISTANT_API_URL ||
-  "http://localhost:8000"
+  "https://ai.deadlock-api.com"
 ).replace(/\/+$/, "");
 
 export interface ToolActivity {
