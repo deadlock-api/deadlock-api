@@ -32,7 +32,7 @@ By default the bot leaves automatically after 15 minutes, but this endpoint allo
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | API-Key ONLY |
+| IP | 10req/h |
 | Key | 100req/30min |
 | Global | 1000req/h |
 "
@@ -48,6 +48,7 @@ pub(super) async fn leave(
             &rate_limit_key,
             "leave",
             &[
+                Quota::ip_limit(10, Duration::from_hours(1)),
                 Quota::key_limit(100, Duration::from_mins(30)),
                 Quota::global_limit(1000, Duration::from_hours(1)),
             ],

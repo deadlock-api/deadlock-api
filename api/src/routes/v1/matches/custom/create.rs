@@ -222,7 +222,7 @@ The bot will leave the match 15 minutes after creation, regardless of match stat
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | API-Key ONLY |
+| IP | 10req/h |
 | Key | 100req/30min |
 | Global | 1000req/h |
 "
@@ -239,6 +239,7 @@ pub(super) async fn create_custom(
             &rate_limit_key,
             "create_custom",
             &[
+                Quota::ip_limit(10, Duration::from_hours(1)),
                 Quota::key_limit(100, Duration::from_mins(30)),
                 Quota::global_limit(1000, Duration::from_hours(1)),
             ],

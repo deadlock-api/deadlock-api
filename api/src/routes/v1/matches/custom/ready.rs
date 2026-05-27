@@ -37,7 +37,7 @@ This endpoint allows you to ready up for a custom match.
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | API-Key ONLY |
+| IP | 10req/h |
 | Key | 100req/30min |
 | Global | 1000req/h |
 "
@@ -53,6 +53,7 @@ pub(super) async fn ready_up(
             &rate_limit_key,
             "ready_up",
             &[
+                Quota::ip_limit(10, Duration::from_hours(1)),
                 Quota::key_limit(100, Duration::from_mins(30)),
                 Quota::global_limit(1000, Duration::from_hours(1)),
             ],
@@ -92,7 +93,7 @@ This endpoint allows you to unready for a custom match.
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | API-Key ONLY |
+| IP | 10req/h |
 | Key | 100req/30min |
 | Global | 1000req/h |
 "
@@ -108,6 +109,7 @@ pub(super) async fn unready(
             &rate_limit_key,
             "unready",
             &[
+                Quota::ip_limit(10, Duration::from_hours(1)),
                 Quota::key_limit(100, Duration::from_mins(30)),
                 Quota::global_limit(1000, Duration::from_hours(1)),
             ],
