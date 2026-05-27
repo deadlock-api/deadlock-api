@@ -1,5 +1,7 @@
 import { Outlet, createFileRoute } from "@tanstack/react-router";
 
+import { ComingSoonTeaser } from "~/components/coach/ComingSoonTeaser";
+import { useAiAgentAccess } from "~/lib/coach/use-ai-agent-access";
 import { seo } from "~/lib/seo";
 
 export const Route = createFileRoute("/chat")({
@@ -14,5 +16,14 @@ export const Route = createFileRoute("/chat")({
 });
 
 function ChatLayout() {
+  const { data: hasAccess, isLoading } = useAiAgentAccess();
+
+  // Until access resolves, render the teaser shell so non-patrons (the common
+  // case) never see a flash of the coach workspace. Patrons with `ai_agent_access`
+  // get the real workspace via the nested route.
+  if (isLoading || !hasAccess) {
+    return <ComingSoonTeaser />;
+  }
+
   return <Outlet />;
 }

@@ -89,6 +89,23 @@ export async function listSessions(): Promise<SessionSummary[]> {
   return (await res.json()) as SessionSummary[];
 }
 
+// Whether the current patron is allowed to use the AI coach (the `ai_agent_access`
+// flag, owned by deadlock-api). Returns false for anyone not signed in or without
+// the flag — the UI then falls back to the "coming soon" teaser. Never throws.
+export async function fetchAiAgentAccess(): Promise<boolean> {
+  try {
+    const res = await fetch(`${COACH_API_ORIGIN}/access`, {
+      headers: authHeaders(),
+      credentials: "include",
+    });
+    if (!res.ok) return false;
+    const data = (await res.json()) as { has_access?: boolean };
+    return data.has_access === true;
+  } catch {
+    return false;
+  }
+}
+
 export class SessionNotFoundError extends Error {}
 
 // Fetch a session's message tree. Throws SessionNotFoundError on 404 so the UI
