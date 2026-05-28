@@ -7,14 +7,14 @@ repository = "https://github.com/deadlock-api/deadlock-api"
 license = "MIT"
 
 [dependencies]
-reqwest = { version = "0.13.3", features = ["json", "http2", "zstd", "gzip", "form"] }
+reqwest = { version = "0.13.4", features = ["json", "http2", "zstd", "gzip", "form"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "signal"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 redis = { version = "1.2.1", default-features = false, features = ["tokio-comp"] }
 clickhouse = { version = "0.15.0", features = ["chrono", "uuid"] }
 sqlx = { version = "0.9.0", features = ["chrono", "derive", "postgres", "runtime-tokio", "uuid"] }
 uuid = { version = "1.23.1", features = ["serde", "v4"] }
-cached = { version = "1.0", features = ["async", "serde"] }
+cached = { version = "1.1", features = ["async", "serde"] }
 axum = "0.8.9"
 utoipa-axum = "0.2.0"
 utoipa = { version = "5.5.0", features = ["axum_extras", "chrono", "uuid"] }
