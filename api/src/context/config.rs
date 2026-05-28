@@ -17,8 +17,12 @@ pub(crate) struct PatreonConfig {
     pub(crate) frontend_redirect_url: String,
     pub(crate) campaign_id: String,
     pub(crate) webhook_secret: String,
-    #[serde(default)]
+    #[serde(default = "default_cookie_domains")]
     pub(crate) cookie_domains: Vec<String>,
+}
+
+fn default_cookie_domains() -> Vec<String> {
+    vec![".deadlock-api.com".to_owned()]
 }
 
 fn default_redis_url() -> String {
