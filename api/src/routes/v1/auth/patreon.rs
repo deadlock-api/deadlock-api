@@ -95,9 +95,17 @@ fn extract_state_from_cookie(headers: &HeaderMap) -> Option<String> {
 ///
 /// Logs out the patron by clearing the session cookie.
 /// Returns 200 OK after clearing the cookie.
-pub(crate) async fn logout() -> impl IntoResponse {
+pub(crate) async fn logout(State(state): State<AppState>) -> impl IntoResponse {
     // Clear the patron_session cookie by setting Max-Age=0
-    let clear_session_cookie = "patron_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0";
+    let clear_session_cookie = match &state.config.patreon.cookie_domain {
+        Some(domain) => format!(
+            "patron_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Domain={domain}; Max-Age=0"
+        ),
+        None => "patron_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0".to_owned(),
+    };
+
+    let clear_session_cookie_header = HeaderValue::from_str(&clear_session_cookie)
+        .expect("cookie domains are valid header values");
 
     let mut response = Response::builder()
         .status(StatusCode::OK)
@@ -106,7 +114,7 @@ pub(crate) async fn logout() -> impl IntoResponse {
 
     response
         .headers_mut()
-        .insert(SET_COOKIE, HeaderValue::from_static(clear_session_cookie));
+        .insert(SET_COOKIE, clear_session_cookie_header);
 
     response
 }
@@ -268,9 +276,14 @@ pub(crate) async fn callback(
 
     // Step 6: Set session cookie and redirect to frontend
     // Session cookie valid for 7 days (matches JWT expiration)
-    let session_cookie = format!(
-        "patron_session={session_token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800"
-    );
+    let session_cookie = match &app_state.config.patreon.cookie_domain {
+        Some(domain) => format!(
+            "patron_session={session_token}; HttpOnly; Secure; SameSite=Lax; Path=/; Domain={domain}; Max-Age=604800"
+        ),
+        None => format!(
+            "patron_session={session_token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800"
+        ),
+    };
 
     // Encode session cookie as header value - this can fail if the JWT contains invalid header chars
     let session_cookie_header = match HeaderValue::from_str(&session_cookie) {
