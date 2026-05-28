@@ -286,23 +286,22 @@ pub(crate) async fn callback(
         "patron_session={session_token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800"
     );
     let session_cookie_headers: Vec<HeaderValue> =
-        match app_state.config.patreon.cookie_domains.is_empty() {
-            true => vec![HeaderValue::from_str(&base_cookie).expect("valid cookie")],
-            false => {
-                let mut headers = Vec::with_capacity(app_state.config.patreon.cookie_domains.len());
-                for domain in &app_state.config.patreon.cookie_domains {
-                    let cookie = format!("{base_cookie}; Domain={domain}");
-                    let header = match HeaderValue::from_str(&cookie) {
-                        Ok(v) => v,
-                        Err(e) => {
-                            tracing::error!("Failed to encode session cookie as header value: {e}");
-                            return APIError::internal("Failed to create session").into_response();
-                        }
-                    };
-                    headers.push(header);
-                }
-                headers
+        if app_state.config.patreon.cookie_domains.is_empty() {
+            vec![HeaderValue::from_str(&base_cookie).expect("valid cookie")]
+        } else {
+            let mut headers = Vec::with_capacity(app_state.config.patreon.cookie_domains.len());
+            for domain in &app_state.config.patreon.cookie_domains {
+                let cookie = format!("{base_cookie}; Domain={domain}");
+                let header = match HeaderValue::from_str(&cookie) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        tracing::error!("Failed to encode session cookie as header value: {e}");
+                        return APIError::internal("Failed to create session").into_response();
+                    }
+                };
+                headers.push(header);
             }
+            headers
         };
 
     let mut response = Response::builder()
