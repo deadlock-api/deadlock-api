@@ -200,24 +200,16 @@ async fn fetch_builds(
         search_text: search.cloned(),
         ..Default::default()
     };
-    loop {
-        let result = common::call_steam_proxy(
-            http_client,
-            EgcCitadelClientMessages::KEMsgClientToGcFindHeroBuilds,
-            &msg,
-            None,
-            None,
-            Duration::from_mins(20),
-            None,
-            Duration::from_secs(5),
-            None,
-        )
-        .await;
-
-        if let Ok(r) = result {
-            return Ok(r);
-        }
-        warn!("Got proxy rate limit, waiting 10s before retrying");
-        sleep(Duration::from_secs(10)).await;
-    }
+    common::call_steam_proxy(
+        http_client,
+        EgcCitadelClientMessages::KEMsgClientToGcFindHeroBuilds,
+        &msg,
+        None,
+        None,
+        Duration::from_mins(20),
+        None,
+        Duration::from_secs(5),
+        None,
+    )
+    .await
 }
