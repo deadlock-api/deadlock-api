@@ -97,24 +97,30 @@ fn extract_state_from_cookie(headers: &HeaderMap) -> Option<String> {
 /// Returns 200 OK after clearing the cookie.
 pub(crate) async fn logout(State(state): State<AppState>) -> impl IntoResponse {
     // Clear the patron_session cookie by setting Max-Age=0
-    let clear_session_cookie = match &state.config.patreon.cookie_domain {
-        Some(domain) => format!(
-            "patron_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Domain={domain}; Max-Age=0"
-        ),
-        None => "patron_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0".to_owned(),
+    let base_clear = "patron_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0";
+    let clear_cookie_headers: Vec<HeaderValue> = if state.config.patreon.cookie_domains.is_empty() {
+        vec![HeaderValue::from_static(base_clear)]
+    } else {
+        state
+            .config
+            .patreon
+            .cookie_domains
+            .iter()
+            .map(|domain| {
+                HeaderValue::from_str(&format!("{base_clear}; Domain={domain}"))
+                    .expect("valid cookie domain")
+            })
+            .collect()
     };
-
-    let clear_session_cookie_header = HeaderValue::from_str(&clear_session_cookie)
-        .expect("cookie domains are valid header values");
 
     let mut response = Response::builder()
         .status(StatusCode::OK)
         .body(axum::body::Body::empty())
         .expect("Failed to build response");
 
-    response
-        .headers_mut()
-        .insert(SET_COOKIE, clear_session_cookie_header);
+    for header in clear_cookie_headers {
+        response.headers_mut().append(SET_COOKIE, header);
+    }
 
     response
 }
@@ -276,23 +282,28 @@ pub(crate) async fn callback(
 
     // Step 6: Set session cookie and redirect to frontend
     // Session cookie valid for 7 days (matches JWT expiration)
-    let session_cookie = match &app_state.config.patreon.cookie_domain {
-        Some(domain) => format!(
-            "patron_session={session_token}; HttpOnly; Secure; SameSite=Lax; Path=/; Domain={domain}; Max-Age=604800"
-        ),
-        None => format!(
-            "patron_session={session_token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800"
-        ),
-    };
-
-    // Encode session cookie as header value - this can fail if the JWT contains invalid header chars
-    let session_cookie_header = match HeaderValue::from_str(&session_cookie) {
-        Ok(v) => v,
-        Err(e) => {
-            tracing::error!("Failed to encode session cookie as header value: {e}");
-            return APIError::internal("Failed to create session").into_response();
-        }
-    };
+    let base_cookie = format!(
+        "patron_session={session_token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800"
+    );
+    let session_cookie_headers: Vec<HeaderValue> =
+        match app_state.config.patreon.cookie_domains.is_empty() {
+            true => vec![HeaderValue::from_str(&base_cookie).expect("valid cookie")],
+            false => {
+                let mut headers = Vec::with_capacity(app_state.config.patreon.cookie_domains.len());
+                for domain in &app_state.config.patreon.cookie_domains {
+                    let cookie = format!("{base_cookie}; Domain={domain}");
+                    let header = match HeaderValue::from_str(&cookie) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            tracing::error!("Failed to encode session cookie as header value: {e}");
+                            return APIError::internal("Failed to create session").into_response();
+                        }
+                    };
+                    headers.push(header);
+                }
+                headers
+            }
+        };
 
     let mut response = Response::builder()
         .status(StatusCode::FOUND)
@@ -300,9 +311,9 @@ pub(crate) async fn callback(
         .body(axum::body::Body::empty())
         .expect("Failed to build redirect response");
 
-    response
-        .headers_mut()
-        .insert(SET_COOKIE, session_cookie_header);
+    for header in session_cookie_headers {
+        response.headers_mut().append(SET_COOKIE, header);
+    }
     response.headers_mut().append(
         SET_COOKIE,
         HeaderValue::from_static(

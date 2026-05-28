@@ -18,7 +18,7 @@ pub(crate) struct PatreonConfig {
     pub(crate) campaign_id: String,
     pub(crate) webhook_secret: String,
     #[serde(default)]
-    pub(crate) cookie_domain: Option<String>,
+    pub(crate) cookie_domains: Vec<String>,
 }
 
 fn default_redis_url() -> String {
