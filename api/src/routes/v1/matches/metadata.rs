@@ -188,7 +188,7 @@ async fn fetch_match_metadata_raw(
     }
 
     // If not in S3, fetch from Steam
-    let salts = fetch_match_salts(state, rate_limit_key, match_id, is_custom).await?;
+    let salts = fetch_match_salts(state, rate_limit_key, match_id, is_custom, false).await?;
     let metadata = state
         .steam_client
         .fetch_metadata_file(match_id, salts)

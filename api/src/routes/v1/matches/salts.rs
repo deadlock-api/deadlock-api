@@ -4,12 +4,13 @@ use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use axum_extra::extract::Query;
 use cached::TtlCache;
 use cached::macros::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchMetaData, CMsgClientToGcGetMatchMetaDataResponse,
     EgcCitadelClientMessages, c_msg_client_to_gc_get_match_meta_data_response,
@@ -166,11 +167,19 @@ pub(super) async fn fetch_match_salts(
     rate_limit_key: &RateLimitKey,
     match_id: u64,
     is_custom: bool,
+    disable_steam: bool,
 ) -> APIResult<CMsgClientToGcGetMatchMetaDataResponse> {
     // Try fetch from Clickhouse via batcher
     if let Ok(salts) = state.batchers.match_salts_read.load(match_id).await {
         debug!("Match salts found in Clickhouse");
         return Ok(salts.into());
+    }
+
+    if disable_steam {
+        return Err(APIError::status_msg(
+            StatusCode::NOT_FOUND,
+            "Match salts not found in Clickhouse and Steam fallback is disabled",
+        ));
     }
 
     let has_metadata = state
@@ -256,10 +265,17 @@ pub(super) async fn fetch_match_salts(
     ))
 }
 
+#[derive(Deserialize, IntoParams)]
+pub(super) struct SaltsQuery {
+    /// If `true`, skip the Steam fallback when the salts are not available in Clickhouse
+    /// and return an error instead.
+    disable_steam: Option<bool>,
+}
+
 #[utoipa::path(
     get,
     path = "/{match_id}/salts",
-    params(MatchIdQuery),
+    params(MatchIdQuery, SaltsQuery),
     responses(
         (status = OK, body = MatchSaltsResponse),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
@@ -283,11 +299,18 @@ This endpoints returns salts that can be used to fetch metadata and demofile for
 )]
 pub(super) async fn salts(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
+    Query(SaltsQuery { disable_steam }): Query<SaltsQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    fetch_match_salts(&state, &rate_limit_key, match_id, false)
-        .await
-        .map(|salts| (match_id, salts).into())
-        .map(|s: MatchSaltsResponse| Json(s))
+    fetch_match_salts(
+        &state,
+        &rate_limit_key,
+        match_id,
+        false,
+        disable_steam.unwrap_or_default(),
+    )
+    .await
+    .map(|salts| (match_id, salts).into())
+    .map(|s: MatchSaltsResponse| Json(s))
 }
