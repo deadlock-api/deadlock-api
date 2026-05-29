@@ -20,6 +20,7 @@ use chrono::{DateTime, Utc};
 use clickhouse::Row;
 use serde::Deserialize;
 use tantivy::collector::TopDocs;
+use tantivy::columnar::StrColumn;
 use tantivy::directory::MmapDirectory;
 use tantivy::query::{BooleanQuery, FuzzyTermQuery, Occur, Query, RangeQuery, TermQuery};
 use tantivy::schema::{
@@ -27,7 +28,9 @@ use tantivy::schema::{
 };
 use tantivy::store::{Compressor, ZstdCompressor};
 use tantivy::tokenizer::{LowerCaser, SimpleTokenizer, TextAnalyzer};
-use tantivy::{Index, IndexReader, IndexSettings, Order, ReloadPolicy, TantivyDocument, Term};
+use tantivy::{
+    DocAddress, Index, IndexReader, IndexSettings, Order, ReloadPolicy, TantivyDocument, Term,
+};
 use tokio::time::interval;
 use tracing::{error, info, warn};
 
@@ -47,9 +50,9 @@ const STEAM_ID64_OFFSET: u64 = 76_561_197_960_265_728;
 /// Subdirectory prefix for the on-disk index. Bump whenever the Tantivy
 /// schema changes — old `v*_` dirs that don't match are GC'd at next
 /// successful rebuild.
-const VERSION_PREFIX: &str = "v3_";
+const VERSION_PREFIX: &str = "v4_";
 /// Older prefixes still recognized by cleanup so they get removed on upgrade.
-const LEGACY_PREFIXES: &[&str] = &["v_", "v2_"];
+const LEGACY_PREFIXES: &[&str] = &["v_", "v2_", "v3_"];
 
 #[derive(Clone)]
 pub(crate) struct SteamSearchIndex {
@@ -412,23 +415,32 @@ impl SteamSearchIndex {
             .search(&final_query, &collector)
             .map_err(tantivy_se)?;
 
-        let mut scored: Vec<(f64, TantivyDocument, u64)> = Vec::with_capacity(top.len());
+        let name_cols: Vec<Option<StrColumn>> = searcher
+            .segment_readers()
+            .iter()
+            .map(|sr| sr.fast_fields().str("personaname_exact").ok().flatten())
+            .collect();
+
+        let mut scored: Vec<(f64, DocAddress, u64)> = Vec::with_capacity(top.len());
+        let mut name = String::new();
         for (matches_played, doc_address) in top {
-            let doc: TantivyDocument = searcher.doc(doc_address).map_err(tantivy_se)?;
-            let personaname_lc = doc
-                .get_first(f.personaname)
-                .and_then(|v| v.as_str())
-                .map(str::to_lowercase)
-                .unwrap_or_default();
+            name.clear();
+            if let Some(col) = name_cols
+                .get(doc_address.segment_ord as usize)
+                .and_then(Option::as_ref)
+                && let Some(ord) = col.term_ords(doc_address.doc_id).next()
+            {
+                let _ = col.ord_to_str(ord, &mut name);
+            }
             let mp = matches_played.unwrap_or(0);
             // Score against both the raw lowercase form and the
             // whitespace-stripped form, so "Average Jonas" can still rank
             // highly against "AverageJonas" and vice versa.
-            let sim_raw = jaro_winkler(&personaname_lc, &q_lc);
+            let sim_raw = jaro_winkler(&name, &q_lc);
             let sim_nospace = if q_nospace.is_empty() {
                 0.0
             } else {
-                let name_nospace = strip_whitespace(&personaname_lc);
+                let name_nospace = strip_whitespace(&name);
                 if name_nospace.is_empty() {
                     0.0
                 } else {
@@ -436,7 +448,7 @@ impl SteamSearchIndex {
                 }
             };
             let score = sim_raw.max(sim_nospace) + matches_played_weight * (1.0 + mp as f64).ln();
-            scored.push((score, doc, mp));
+            scored.push((score, doc_address, mp));
         }
         scored.sort_unstable_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(core::cmp::Ordering::Equal));
         scored.truncate(limit);
@@ -444,15 +456,19 @@ impl SteamSearchIndex {
         // Pin the ID-match profile (if any) at the front, removing it from
         // its current position if also in the scored list.
         let mut hits: Vec<IndexedProfile> = Vec::with_capacity(scored.len() + 1);
-        if let Some(id) = pinned_id
-            && let Some(profile) = self.lookup_by_account_id(&searcher, id).ok().flatten()
-        {
-            scored.retain(|(_, doc, _)| {
-                doc.get_first(f.account_id).and_then(|v| v.as_u64()) != Some(u64::from(id))
-            });
+        let pinned =
+            pinned_id.and_then(|id| self.lookup_by_account_id(&searcher, id).ok().flatten());
+        let pinned_account = pinned.as_ref().map(|p| u64::from(p.account_id));
+        if let Some(profile) = pinned {
             hits.push(profile);
         }
-        for (_, doc, mp) in scored {
+        for (_, doc_address, mp) in scored {
+            let doc: TantivyDocument = searcher.doc(doc_address).map_err(tantivy_se)?;
+            if pinned_account.is_some()
+                && doc.get_first(f.account_id).and_then(|v| v.as_u64()) == pinned_account
+            {
+                continue;
+            }
             hits.push(profile_from_doc(&doc, f, mp));
         }
         hits.truncate(limit);
@@ -579,7 +595,7 @@ fn build_schema() -> Schema {
     let mut sb = Schema::builder();
     sb.add_u64_field("account_id", STORED | FAST | INDEXED);
     sb.add_text_field("personaname_search", TEXT);
-    sb.add_text_field("personaname_exact", STRING);
+    sb.add_text_field("personaname_exact", STRING.set_fast(None));
     sb.add_text_field("personaname_nospace", STRING);
     sb.add_u64_field("matches_played", STORED | FAST | INDEXED);
     let stored_text = TextOptions::default().set_stored();

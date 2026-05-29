@@ -408,7 +408,7 @@ async fn fetch_matches_played_last_30d(
     }
 }
 
-fn search_steam(
+async fn search_steam(
     state: &AppState,
     search_query: &str,
     limit: u32,
@@ -439,15 +439,30 @@ fn search_steam(
         }
     };
 
-    if hits.is_empty() {
+    let tantivy_ms = t0.elapsed().as_millis();
+    let mut profiles: Vec<SteamProfile> = hits.into_iter().map(SteamProfile::from).collect();
+
+    if let Some(account_id) = search_query
+        .trim()
+        .parse::<u64>()
+        .ok()
+        .and_then(|id| steamid64_to_steamid3(id).ok())
+        && profiles.first().map(|p| p.account_id) != Some(account_id)
+    {
+        profiles.retain(|p| p.account_id != account_id);
+        if let Ok(row) = state.batchers.steam_profile.load(account_id).await {
+            profiles.insert(0, SteamProfile::from(row));
+        }
+    }
+
+    if profiles.is_empty() {
         return Err(APIError::status_msg(
             StatusCode::NOT_FOUND,
             "No Steam profiles found.",
         ));
     }
 
-    let tantivy_ms = t0.elapsed().as_millis();
-    let profiles: Vec<SteamProfile> = hits.into_iter().map(SteamProfile::from).collect();
+    profiles.truncate(limit as usize);
     debug!(
         target: "steam_search",
         tantivy_ms,
@@ -504,5 +519,6 @@ pub(super) async fn steam_search(
         min_last_team_avg_badge,
         matches_played_weight,
     )
+    .await
     .map(Json)
 }
