@@ -118,7 +118,11 @@ impl IntoResponse for APIError {
             }
             Self::StatusMsg { status, message } => {
                 match status {
-                    StatusCode::BAD_REQUEST | StatusCode::NOT_FOUND | StatusCode::FORBIDDEN => {
+                    StatusCode::BAD_REQUEST
+                    | StatusCode::NOT_FOUND
+                    | StatusCode::FORBIDDEN
+                    | StatusCode::TOO_MANY_REQUESTS
+                    | StatusCode::SERVICE_UNAVAILABLE => {
                         warn!("API error with status {status}: {message}");
                     }
                     _ => {
@@ -172,25 +176,30 @@ impl IntoResponse for APIError {
                 )
             }
             Self::SteamProxy(e) => {
-                error!("Steam Proxy Error Error: {e}");
-                match e {
-                    SteamProxyError::Request(_) => Self::status_msg(
+                let (status, message) = match &e {
+                    SteamProxyError::Request(_) => (
                         StatusCode::SERVICE_UNAVAILABLE,
                         "Failed to fetch data from Steam. Retry your request later.",
-                    )
-                    .into_response(),
-                    SteamProxyError::Base64(_) => Self::internal(
+                    ),
+                    SteamProxyError::Base64(_) => (
+                        StatusCode::INTERNAL_SERVER_ERROR,
                         "Failed to decode base64 data from Steam. Retrying won't help.",
-                    )
-                    .into_response(),
-                    SteamProxyError::Protobuf(_) => Self::internal(
+                    ),
+                    SteamProxyError::Protobuf(_) => (
+                        StatusCode::INTERNAL_SERVER_ERROR,
                         "Failed to parse protobuf message from Steam. Retrying won't help.",
-                    )
-                    .into_response(),
-                    SteamProxyError::NoBaseUrl => {
-                        Self::internal("No Steam proxy URL configured.").into_response()
-                    }
+                    ),
+                    SteamProxyError::NoBaseUrl => (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "No Steam proxy URL configured.",
+                    ),
+                };
+                if status.is_server_error() && status != StatusCode::SERVICE_UNAVAILABLE {
+                    error!("Steam proxy error: {e}");
+                } else {
+                    warn!("Steam proxy error: {e}");
                 }
+                build_error_response(status, message)
             }
             Self::Protobuf(_) => {
                 Self::internal("Failed to parse protobuf message from Steam. Retrying won't help.")

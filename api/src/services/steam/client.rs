@@ -10,7 +10,7 @@ use prost::Message;
 use rand::prelude::IndexedRandom;
 use reqwest::Response;
 use serde_json::json;
-use tracing::{debug, error};
+use tracing::debug;
 use valveprotos::deadlock::CMsgClientToGcGetMatchMetaDataResponse;
 
 use crate::context::AppState;
@@ -83,7 +83,6 @@ impl SteamClient {
                 Ok(r)
             }
             Err(e) => {
-                error!("Failed to call Steam proxy: {e}");
                 counter!("steam.proxy.call", "msg_type" => query.msg_type.as_str_name(), "error" => "true").increment(1);
                 Err(e)
             }
