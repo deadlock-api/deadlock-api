@@ -102,9 +102,9 @@ Example Parsers:
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | 10req/30mins |
-| Key | 60req/min |
-| Global | 100req/10s |
+| IP | 5req/h |
+| Key | 10req/min |
+| Global | 10req/10s |
     "
 )]
 pub(super) async fn url(
@@ -118,9 +118,9 @@ pub(super) async fn url(
             &rate_limit_key,
             "spectate",
             &[
-                Quota::ip_limit(10, Duration::from_mins(30)),
-                Quota::key_limit(60, Duration::from_mins(1)),
-                Quota::global_limit(100, Duration::from_secs(10)),
+                Quota::ip_limit(5, Duration::from_hours(1)),
+                Quota::key_limit(10, Duration::from_mins(1)),
+                Quota::global_limit(10, Duration::from_secs(10)),
             ],
         )
         .await?;
