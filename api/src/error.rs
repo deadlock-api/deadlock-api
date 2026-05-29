@@ -4,7 +4,7 @@ use axum::response::IntoResponse;
 use reqwest::StatusCode;
 use serde_json::json;
 use thiserror::Error;
-use tracing::{error, warn};
+use tracing::{debug, error, info, warn};
 
 use crate::context::AppStateError;
 use crate::services::rate_limiter;
@@ -103,13 +103,12 @@ impl IntoResponse for APIError {
     fn into_response(self) -> Response<Body> {
         match self {
             Self::Status { status } => {
-                match status {
-                    StatusCode::BAD_REQUEST | StatusCode::NOT_FOUND | StatusCode::FORBIDDEN => {
-                        warn!("API error with status {status}");
-                    }
-                    _ => {
-                        error!("Unexpected status code in StatusMsgJson: {status}");
-                    }
+                match status.as_u16() {
+                    200..=299 => info!(?status, "Successful response"),
+                    300..=399 => debug!(?status, "Redirection"),
+                    400..=499 => warn!(?status, "Client error"),
+                    500..=599 => error!(?status, "Server error"),
+                    _ => error!(?status, "Unexpected status code"),
                 }
                 Response::builder()
                     .status(status)
@@ -117,33 +116,27 @@ impl IntoResponse for APIError {
                     .unwrap_or_else(|_| "Internal server error".to_owned().into_response())
             }
             Self::StatusMsg { status, message } => {
-                match status {
-                    StatusCode::BAD_REQUEST
-                    | StatusCode::NOT_FOUND
-                    | StatusCode::FORBIDDEN
-                    | StatusCode::TOO_MANY_REQUESTS
-                    | StatusCode::SERVICE_UNAVAILABLE => {
-                        warn!("API error with status {status}: {message}");
-                    }
-                    _ => {
-                        error!("API error with status {status}: {message}");
-                    }
+                match status.as_u16() {
+                    200..=299 => info!(?status, ?message, "Successful response"),
+                    300..=399 => debug!(?status, ?message, "Redirection"),
+                    400..=499 => warn!(?status, ?message, "Client error"),
+                    500..=599 => error!(?status, ?message, "Server error"),
+                    _ => error!(?status, ?message, "Unexpected status code"),
                 }
                 build_error_response(status, message)
             }
             Self::StatusMsgJson { status, message } => {
-                match status {
-                    StatusCode::BAD_REQUEST | StatusCode::NOT_FOUND | StatusCode::FORBIDDEN => {
-                        warn!("API error with status {status}: {message}");
-                    }
-                    _ => {
-                        error!("Unexpected status code in StatusMsgJson: {status}");
-                    }
+                match status.as_u16() {
+                    200..=299 => info!(?status, ?message, "Successful response"),
+                    300..=399 => debug!(?status, ?message, "Redirection"),
+                    400..=499 => warn!(?status, ?message, "Client error"),
+                    500..=599 => error!(?status, ?message, "Server error"),
+                    _ => error!(?status, ?message, "Unexpected status code"),
                 }
                 build_error_response(status, message)
             }
             Self::RateLimitExceeded { status } => {
-                warn!("Rate limit exceeded: {status:?}");
+                warn!(?status, "Rate limit exceeded");
                 let mut res = Response::builder();
                 for (key, value) in status.response_headers() {
                     if let Some(key) = key {
@@ -195,7 +188,7 @@ impl IntoResponse for APIError {
                     ),
                 };
                 if status.is_server_error() && status != StatusCode::SERVICE_UNAVAILABLE {
-                    error!("Steam proxy error: {e}");
+                    error!(message, "Internal Error");
                 } else {
                     warn!("Steam proxy error: {e}");
                 }
