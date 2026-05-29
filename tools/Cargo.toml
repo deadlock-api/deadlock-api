@@ -19,7 +19,7 @@ object_store = { version = "0.13.2", features = ["aws"] }
 opentelemetry = { version = "0.32", features = ["logs", "trace"] }
 opentelemetry_sdk = { version = "0.32", features = ["logs", "trace"] }
 opentelemetry-otlp = { version = "0.32", features = ["grpc-tonic", "logs", "trace"] }
-opentelemetry-appender-tracing = "0.32"
+opentelemetry-appender-tracing = { version = "0.32", features = ["experimental_metadata_attributes"] }
 prost = "0.14.3"
 rand = "0.10.1"
 reqwest = "0.13.3"
