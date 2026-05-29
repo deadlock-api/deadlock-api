@@ -33,6 +33,7 @@ static FETCH_INTERVAL: std::sync::LazyLock<Duration> =
     std::sync::LazyLock::new(|| Duration::from_secs(common::env_or("FETCH_INTERVAL_SECONDS", 120)));
 
 const OUTDATED_INTERVAL: &str = "INTERVAL 1 WEEK";
+const RECENT_ACTIVITY_INTERVAL: &str = "INTERVAL 30 DAY";
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -223,7 +224,7 @@ WHERE
     OR (last_profile_update = toDateTime(0) AND last_active > now() - {OUTDATED_INTERVAL})
 ORDER BY
     (last_observed_name_change > last_profile_update) DESC,
-    last_observed_name_change DESC,
+    (last_active > now() - {RECENT_ACTIVITY_INTERVAL}) DESC,
     last_profile_update ASC,
     last_active DESC,
     account_id ASC
