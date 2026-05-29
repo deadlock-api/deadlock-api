@@ -461,24 +461,13 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
             "avg({expr}) AS avg_{name}, std({expr}) AS std_{name}, {quantiles}({expr}) AS quantiles_{name}"
         )
     }).join(",\n");
-    let match_limit_clause = query
-        .max_matches
-        .map(|n| format!("ORDER BY match_id DESC LIMIT {n}"))
-        .unwrap_or_default();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    format!(
-        "
-    WITH t_matches AS (
-            SELECT match_id, greatest(1, any(duration_s)) / 60 as duration_m
-            FROM match_player
-            WHERE match_mode IN ('Ranked', 'Unranked')
-                AND {game_mode_filter}
-                {info_filters}
-            GROUP BY match_id
-            {match_limit_clause}
-        ),
-        t_data AS (
-            SELECT
+    // `duration_s` is denormalized onto every player row and is constant within
+    // a match, so the per-match duration can be read directly off each row.
+    // This avoids the previous self-aggregation + JOIN, which forced a full,
+    // unfilterable scan of every player row in the window just to attach the
+    // match duration.
+    let data_columns = "
                 kills, deaths, assists, net_worth, denies, last_hits,
                 max_hero_bullets_hit_crit, max_hero_bullets_hit,
                 max_shots_hit, max_shots_missed,
@@ -487,13 +476,46 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
                 max_self_healing, max_player_healing,
                 max_teammate_healing, max_teammate_barriering,
                 max_heal_prevented,
-                duration_m
-            FROM match_player
-                INNER JOIN t_matches USING (match_id)
-            WHERE 1=1 {player_filters}
+                greatest(1, duration_s) / 60 AS duration_m";
+    // When `max_matches` is set we must restrict to the most recent N matches
+    // first. That selection is hero-agnostic (it mirrors the old `t_matches`
+    // CTE), and is cheap because `ORDER BY match_id DESC LIMIT n` rides the
+    // table's `match_id` sort key. The player-level filters are then applied
+    // to the rows of those matches.
+    let t_data = if let Some(n) = query.max_matches {
+        format!(
+            "(
+                SELECT {data_columns}
+                FROM match_player
+                WHERE match_id IN (
+                    SELECT match_id
+                    FROM match_player
+                    WHERE match_mode IN ('Ranked', 'Unranked')
+                        AND {game_mode_filter}
+                        {info_filters}
+                    GROUP BY match_id
+                    ORDER BY match_id DESC
+                    LIMIT {n}
+                )
+                {player_filters}
+            )"
         )
+    } else {
+        format!(
+            "(
+                SELECT {data_columns}
+                FROM match_player
+                WHERE match_mode IN ('Ranked', 'Unranked')
+                    AND {game_mode_filter}
+                    {info_filters}
+                    {player_filters}
+            )"
+        )
+    };
+    format!(
+        "
     SELECT {selects}
-    FROM t_data
+    FROM {t_data}
     SETTINGS log_comment = 'player_stats_metrics'
     "
     )
