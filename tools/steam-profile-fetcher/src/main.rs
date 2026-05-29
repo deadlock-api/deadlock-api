@@ -36,7 +36,7 @@ const OUTDATED_INTERVAL: &str = "INTERVAL 1 WEEK";
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    common::init_tracing();
+    let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
 
     info!("Starting Steam Profile Fetcher");

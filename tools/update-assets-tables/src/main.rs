@@ -27,7 +27,7 @@ const CACHE_BUST_AFTER_ATTEMPTS: u32 = 2;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    common::init_tracing();
+    let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
 
     let mut interval = tokio::time::interval(Duration::from_secs(UPDATE_INTERVAL_S));

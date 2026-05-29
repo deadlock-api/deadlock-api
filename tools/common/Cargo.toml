@@ -11,12 +11,17 @@ fred = { workspace = true }
 metrics = { workspace = true }
 metrics-exporter-prometheus = "0.18"
 object_store = { workspace = true }
+opentelemetry = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+opentelemetry-otlp = { workspace = true }
+opentelemetry-appender-tracing = { workspace = true }
 prost = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true, features = ["macros", "postgres", "runtime-tokio", "time"] }
 tracing = { workspace = true }
+tracing-opentelemetry = { workspace = true }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 tryhard = { workspace = true }
 valveprotos = { workspace = true, features = ["gc-client", "serde"] }

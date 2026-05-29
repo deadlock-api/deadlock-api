@@ -25,7 +25,7 @@ mod hltv;
 
 #[tokio::main]
 async fn main() {
-    common::init_tracing();
+    let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     tracing::info!("Starting processing!");
     run_cli().await;
 }
