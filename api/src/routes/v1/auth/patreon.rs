@@ -96,8 +96,10 @@ fn extract_state_from_cookie(headers: &HeaderMap) -> Option<String> {
 /// Logs out the patron by clearing the session cookie.
 /// Returns 200 OK after clearing the cookie.
 pub(crate) async fn logout(State(state): State<AppState>) -> impl IntoResponse {
-    // Clear the patron_session cookie by setting Max-Age=0
-    let base_clear = "patron_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0";
+    // Clear the patron_session cookie by setting Max-Age=0.
+    // SameSite=None (with Secure) so the attributes match the cookie set in `callback`,
+    // which must ride along on cross-site XHR/SSE to sibling APIs like ai.deadlock-api.com.
+    let base_clear = "patron_session=; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=0";
     let clear_cookie_headers: Vec<HeaderValue> = if state.config.patreon.cookie_domains.is_empty() {
         vec![HeaderValue::from_static(base_clear)]
     } else {
@@ -281,9 +283,13 @@ pub(crate) async fn callback(
     };
 
     // Step 6: Set session cookie and redirect to frontend
-    // Session cookie valid for 7 days (matches JWT expiration)
+    // Session cookie valid for 7 days (matches JWT expiration).
+    // SameSite=None (with Secure) is required so the browser includes the cookie on
+    // cross-site XHR/fetch/SSE requests to sibling APIs (e.g. ai.deadlock-api.com).
+    // SameSite=Lax would be dropped on those subresource requests. The Domain attribute
+    // (.deadlock-api.com, from PATREON_COOKIE_DOMAINS) is what scopes it to all subdomains.
     let base_cookie = format!(
-        "patron_session={session_token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800"
+        "patron_session={session_token}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=604800"
     );
     let session_cookie_headers: Vec<HeaderValue> =
         if app_state.config.patreon.cookie_domains.is_empty() {
