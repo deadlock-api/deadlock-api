@@ -39,9 +39,9 @@ use tower_http::compression::{CompressionLayer, DefaultPredicate, Predicate};
 use tower_http::cors::CorsLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::normalize_path::{NormalizePath, NormalizePathLayer};
-use tower_http::trace::{DefaultMakeSpan, TraceLayer};
+use tower_http::trace::TraceLayer;
 use tower_layer::Layer;
-use tracing::{Level, debug};
+use tracing::debug;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
@@ -55,6 +55,7 @@ use crate::middleware::feature_flags::feature_flags;
 use crate::middleware::track_requests::track_requests;
 use crate::services::patreon::verification_job::PatreonVerificationJob;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::utils::observability;
 
 const DEFAULT_CACHE_TIME: u64 = 2 * 60; // Cloudflare Free Tier Minimal Cache Time
 
@@ -148,7 +149,12 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024)) // 10MB limit
         .layer(ConcurrencyLimitLayer::new(1000))
         .layer(from_fn(no_store_on_error))
-        .layer(TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::new().level(Level::INFO)))
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(observability::make_request_span)
+                .on_response(observability::on_response)
+                .on_failure(observability::on_failure),
+        )
         .split_for_parts();
 
     let server_url = if cfg!(debug_assertions) {
