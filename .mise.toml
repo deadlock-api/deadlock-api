@@ -1,6 +1,6 @@
 [tools]
 pnpm = "10.18.0"
-rust = "1.95"
+rust = "1.96"
 uv = "latest"
 lefthook = "latest"
 "cargo:typos-cli" = "latest"
