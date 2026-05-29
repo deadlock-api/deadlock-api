@@ -10,7 +10,7 @@ use axum::extract::Request;
 use deadlock_api_rust::{StartupError, router};
 use mimalloc::MiMalloc;
 use opentelemetry::trace::TracerProvider as _;
-use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
+use opentelemetry_appender_tracing::layer::{OpenTelemetryTracingBridge, TracingSpanAttributes};
 use opentelemetry_otlp::{LogExporter, SpanExporter, WithExportConfig};
 use opentelemetry_sdk::Resource;
 use opentelemetry_sdk::logs::SdkLoggerProvider;
@@ -93,8 +93,16 @@ fn init_tracing() -> Option<OtelGuard> {
             opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
             let trace_layer =
                 tracing_opentelemetry::layer().with_tracer(tracer_provider.tracer(SERVICE_NAME));
-            let log_layer =
-                OpenTelemetryTracingBridge::new(&logger_provider).with_filter(filter_fn(|meta| {
+            let log_layer = OpenTelemetryTracingBridge::builder(&logger_provider)
+                .with_tracing_span_attributes(TracingSpanAttributes::allowlist([
+                    "http.route",
+                    "http.request.method",
+                    "http.response.status_code",
+                    "url.full",
+                    "http.request.id",
+                ]))
+                .build()
+                .with_filter(filter_fn(|meta| {
                     !meta.target().starts_with("opentelemetry")
                 }));
             let guard = OtelGuard {
