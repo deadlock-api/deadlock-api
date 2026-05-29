@@ -61,15 +61,28 @@ async fn fetch_and_update_profiles(
     pg_client: &sqlx::Pool<sqlx::Postgres>,
 ) -> Result<()> {
     let protected_users = get_protected_users_cached(pg_client).await?;
-    let account_ids = get_account_ids_to_update(ch_client)
-        .await?
+    let limited_account_ids = get_account_ids_to_update(ch_client, Some(100)).await?;
+    let limited_count = limited_account_ids.len();
+    let mut account_ids = filter_protected_users(limited_account_ids, &protected_users)
         .into_iter()
-        .filter(|id| !protected_users.contains(id))
+        .take(100)
         .collect_vec();
+
+    if account_ids.is_empty() && limited_count == 100 {
+        info!("First update batch only contained protected users, fetching full update list");
+        account_ids = filter_protected_users(
+            get_account_ids_to_update(ch_client, None).await?,
+            &protected_users,
+        )
+        .into_iter()
+        .take(100)
+        .collect_vec();
+    }
+
     gauge!("steam_profile_fetcher.account_ids_to_update").set(account_ids.len() as f64);
 
-    if account_ids.len() < 100 {
-        info!("No full batch, waiting for next interval");
+    if account_ids.is_empty() {
+        info!("No account IDs to update");
         return Ok(());
     }
     info!("Found {} account IDs to update", account_ids.len());
@@ -197,18 +210,35 @@ fn attach_friends(
 
 async fn get_account_ids_to_update(
     ch_client: &clickhouse::Client,
+    limit: Option<usize>,
 ) -> clickhouse::error::Result<Vec<u32>> {
+    let limit_clause = limit.map_or_else(String::new, |limit| format!("LIMIT {limit}"));
     let query = format!(
         r"
 SELECT account_id
 FROM accounts_to_update FINAL
 WHERE
-    (last_profile_update > toDateTime(0) AND last_profile_update < now() - {OUTDATED_INTERVAL})
+    last_observed_name_change > last_profile_update
+    OR (last_profile_update > toDateTime(0) AND last_profile_update < now() - {OUTDATED_INTERVAL})
     OR (last_profile_update = toDateTime(0) AND last_active > now() - {OUTDATED_INTERVAL})
+ORDER BY
+    (last_observed_name_change > last_profile_update) DESC,
+    last_observed_name_change DESC,
+    last_profile_update ASC,
+    last_active DESC,
+    account_id ASC
+{limit_clause}
 SETTINGS log_comment = 'steam_profile_fetcher_get_account_ids_to_update'
     "
     );
     ch_client.query(&query).fetch_all().await
+}
+
+fn filter_protected_users(account_ids: Vec<u32>, protected_users: &[u32]) -> Vec<u32> {
+    account_ids
+        .into_iter()
+        .filter(|id| !protected_users.contains(id))
+        .collect_vec()
 }
 
 #[instrument(skip_all)]

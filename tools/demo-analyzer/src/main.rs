@@ -14,7 +14,7 @@
 #![allow(clippy::struct_field_names)]
 
 use core::time::Duration;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::io::BufReader;
 use std::sync::{Arc, Mutex};
 
@@ -30,7 +30,9 @@ mod models;
 mod streaming_demo;
 mod visitor;
 
-use models::{MatchUpdate, MatchWithReplay};
+use models::{
+    DemoPlayer, MatchUpdate, MatchWithReplay, ObservedSteamName, ObservedSteamNameChange,
+};
 use streaming_demo::StreamingDemoFile;
 use visitor::{DemoAnalyzerVisitor, SharedState, VisitorError};
 
@@ -147,7 +149,7 @@ async fn fetch_pending_matches(
 ) -> anyhow::Result<Vec<MatchWithReplay>> {
     let matches = ch_client
         .query(
-            "SELECT ms.match_id, ms.cluster_id, ms.replay_salt \
+            "SELECT ms.match_id, mp.start_time, ms.cluster_id, ms.replay_salt \
              FROM ( \
                  SELECT match_id, cluster_id, replay_salt \
                  FROM match_salts FINAL \
@@ -155,8 +157,9 @@ async fn fetch_pending_matches(
                    AND replay_salt IS NOT NULL AND replay_salt > 0 \
                    AND cluster_id IS NOT NULL AND cluster_id > 0 \
              ) ms \
-             WHERE ms.match_id IN ( \
-                 SELECT match_id FROM match_player \
+             INNER JOIN ( \
+                 SELECT match_id, any(start_time) AS start_time \
+                 FROM match_player \
                  WHERE match_id IN ( \
                      SELECT match_id FROM match_salts FINAL \
                      WHERE created_at > now() - INTERVAL 30 DAY \
@@ -164,8 +167,9 @@ async fn fetch_pending_matches(
                        AND cluster_id IS NOT NULL AND cluster_id > 0 \
                  ) \
                  AND game_mode = 'Normal' \
-             ) \
-             AND ms.match_id NOT IN ( \
+                 GROUP BY match_id \
+             ) mp ON mp.match_id = ms.match_id \
+             WHERE ms.match_id NOT IN ( \
                  SELECT match_id FROM match_player WHERE demo_processed = 1 \
              ) \
              ORDER BY ms.match_id DESC \
@@ -264,7 +268,7 @@ async fn process_demo(
     }
 
     let state = state.lock().map_err(|e| anyhow::anyhow!("{e}"))?;
-    let update = correlate(match_id, &state);
+    let update = correlate(match_info, &state);
 
     info!(
         "Match {match_id}: extracted {} players, {} bans",
@@ -274,7 +278,7 @@ async fn process_demo(
     Ok(update)
 }
 
-fn correlate(match_id: u64, state: &SharedState) -> MatchUpdate {
+fn correlate(match_info: &MatchWithReplay, state: &SharedState) -> MatchUpdate {
     let mut players = Vec::new();
     for pawn in state.pawns.values() {
         let Some(ctrl_idx) = pawn.controller_index else {
@@ -296,10 +300,15 @@ fn correlate(match_id: u64, state: &SharedState) -> MatchUpdate {
             id
         };
 
-        players.push((account_id, hero_build_id));
+        players.push(DemoPlayer {
+            account_id,
+            hero_build_id,
+            observed_name: ctrl.steam_name.as_deref().and_then(normalize_observed_name),
+        });
     }
     MatchUpdate {
-        match_id,
+        match_id: match_info.match_id,
+        start_time: match_info.start_time,
         banned_hero_ids: state.banned_hero_ids.clone(),
         players,
     }
@@ -318,8 +327,8 @@ async fn apply_updates(ch_client: &clickhouse::Client, updates: &[MatchUpdate]) 
 
 async fn apply_update(ch_client: &clickhouse::Client, update: &MatchUpdate) -> anyhow::Result<()> {
     let bans = format_array(update.banned_hero_ids.iter().copied());
-    let accounts = format_array(update.players.iter().map(|(a, _)| *a));
-    let builds = format_array(update.players.iter().map(|(_, b)| *b));
+    let accounts = format_array(update.players.iter().map(|p| p.account_id));
+    let builds = format_array(update.players.iter().map(|p| p.hero_build_id));
     let match_id = update.match_id;
 
     // transform(account_id, [accounts], [builds], 0) maps each player's
@@ -340,7 +349,88 @@ async fn apply_update(ch_client: &clickhouse::Client, update: &MatchUpdate) -> a
         }
     })
     .await?;
+
+    if let Err(e) = insert_observed_name_changes(ch_client, update).await {
+        warn!(
+            "Failed to insert Steam name change observations for match {}: {e}",
+            update.match_id
+        );
+        counter!("demo_analyzer.observed_name_change_insert.failure").increment(1);
+    }
+
     Ok(())
+}
+
+async fn insert_observed_name_changes(
+    ch_client: &clickhouse::Client,
+    update: &MatchUpdate,
+) -> anyhow::Result<()> {
+    let observed_names: HashMap<u32, &str> = update
+        .players
+        .iter()
+        .filter_map(|p| {
+            p.observed_name
+                .as_deref()
+                .map(|observed_name| (p.account_id, observed_name))
+        })
+        .collect();
+    if observed_names.is_empty() {
+        return Ok(());
+    }
+
+    let account_ids = observed_names.keys().copied().collect::<Vec<_>>();
+    let previous_names = ch_client
+        .query(
+            "SELECT account_id, observed_name \
+             FROM steam_profile_observed_names \
+             WHERE account_id IN ? \
+             ORDER BY account_id, observed_at DESC \
+             LIMIT 1 BY account_id \
+             SETTINGS log_comment = 'demo_analyzer_get_observed_steam_names'",
+        )
+        .bind(&account_ids)
+        .fetch_all::<ObservedSteamName>()
+        .await?;
+    let previous_names = previous_names
+        .into_iter()
+        .map(|row| (row.account_id, row.observed_name))
+        .collect::<HashMap<_, _>>();
+
+    let name_changes = observed_names
+        .into_iter()
+        .filter(|(account_id, observed_name)| {
+            previous_names
+                .get(account_id)
+                .is_none_or(|previous_name| previous_name != observed_name)
+        })
+        .map(|(account_id, observed_name)| ObservedSteamNameChange {
+            account_id,
+            observed_name: observed_name.to_owned(),
+            match_id: update.match_id,
+            observed_at: update.start_time,
+        })
+        .collect::<Vec<_>>();
+
+    if name_changes.is_empty() {
+        return Ok(());
+    }
+
+    let mut inserter = ch_client
+        .insert::<ObservedSteamNameChange>("steam_profile_observed_names")
+        .await?;
+    for name_change in &name_changes {
+        inserter.write(name_change).await?;
+    }
+    inserter.end().await?;
+
+    counter!("demo_analyzer.observed_name_change_insert.success")
+        .increment(name_changes.len() as u64);
+    Ok(())
+}
+
+fn normalize_observed_name(name: &str) -> Option<String> {
+    let name = name.trim_end_matches('\0');
+    (!name.is_empty()).then(|| name.to_owned())
 }
 
 fn format_array<T: core::fmt::Display>(values: impl IntoIterator<Item = T>) -> String {

@@ -8,7 +8,7 @@ use prost::Message;
 use tracing::debug;
 use valveprotos::deadlock::{CCitadelUserMsgBannedHeroes, CitadelUserMessageIds};
 
-use crate::hashes::{CONTROLLER_HASH, HERO_BUILD_ID_HASH, STEAM_ID_HASH};
+use crate::hashes::{CONTROLLER_HASH, HERO_BUILD_ID_HASH, STEAM_ID_HASH, STEAM_NAME_HASH};
 
 const PLAYER_CONTROLLER_HASH: u64 = fxhash::hash_bytes(b"CCitadelPlayerController");
 const PLAYER_PAWN_HASH: u64 = fxhash::hash_bytes(b"CCitadelPlayerPawn");
@@ -16,11 +16,12 @@ const PLAYER_PAWN_HASH: u64 = fxhash::hash_bytes(b"CCitadelPlayerPawn");
 #[derive(Debug, Clone, Default)]
 pub(crate) struct ControllerData {
     pub steam_id: Option<u64>,
+    pub steam_name: Option<String>,
 }
 
 impl ControllerData {
     fn is_complete(&self) -> bool {
-        self.steam_id.is_some()
+        self.steam_id.is_some() && self.steam_name.is_some()
     }
 }
 
@@ -111,8 +112,12 @@ impl Visitor for DemoAnalyzerVisitor {
             if let Some(v) = entity.get_value::<u64>(&STEAM_ID_HASH) {
                 entry.steam_id = Some(v);
             }
+            if let Some(v) = entity.get_value::<String>(&STEAM_NAME_HASH) {
+                entry.steam_name = Some(v);
+            }
             if !was_complete && entry.is_complete() {
                 let steam_id = entry.steam_id;
+                let steam_name = entry.steam_name.clone();
                 let count = state
                     .controllers
                     .values()
@@ -122,7 +127,7 @@ impl Visitor for DemoAnalyzerVisitor {
                 let tick = ctx.tick();
                 debug!(
                     entity_index = idx,
-                    steam_id, tick, "PlayerController complete ({count}/{expected})",
+                    steam_id, steam_name, tick, "PlayerController complete ({count}/{expected})",
                 );
                 if state.all_data_complete(expected) {
                     debug!(
