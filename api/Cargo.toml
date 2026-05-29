@@ -10,6 +10,11 @@ license = "MIT"
 reqwest = { version = "0.13.3", features = ["json", "http2", "zstd", "gzip", "form"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "signal"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+opentelemetry = { version = "0.32", features = ["logs", "trace"] }
+opentelemetry_sdk = { version = "0.32", features = ["logs", "trace"] }
+opentelemetry-otlp = { version = "0.32", features = ["grpc-tonic", "logs", "trace"] }
+opentelemetry-appender-tracing = "0.32"
+tracing-opentelemetry = "0.33"
 redis = { version = "1.2.1", default-features = false, features = ["tokio-comp"] }
 clickhouse = { version = "0.15.0", features = ["chrono", "uuid"] }
 sqlx = { version = "0.9.0", features = ["chrono", "derive", "postgres", "runtime-tokio", "uuid"] }

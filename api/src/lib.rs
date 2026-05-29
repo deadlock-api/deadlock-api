@@ -39,8 +39,9 @@ use tower_http::compression::{CompressionLayer, DefaultPredicate, Predicate};
 use tower_http::cors::CorsLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::normalize_path::{NormalizePath, NormalizePathLayer};
+use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tower_layer::Layer;
-use tracing::debug;
+use tracing::{Level, debug};
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
@@ -147,6 +148,7 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024)) // 10MB limit
         .layer(ConcurrencyLimitLayer::new(1000))
         .layer(from_fn(no_store_on_error))
+        .layer(TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::new().level(Level::INFO)))
         .split_for_parts();
 
     let server_url = if cfg!(debug_assertions) {
