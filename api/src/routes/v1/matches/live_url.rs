@@ -112,21 +112,6 @@ pub(super) async fn url(
     rate_limit_key: RateLimitKey,
     State(mut state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "spectate",
-            &[
-                Quota::ip_limit(2, Duration::from_hours(1)),
-                Quota::key_limit(5, Duration::from_mins(1)),
-                Quota::key_limit(100, Duration::from_hours(1)),
-                Quota::global_limit(5, Duration::from_secs(10)),
-                Quota::global_limit(500, Duration::from_hours(1)),
-            ],
-        )
-        .await?;
-
     // Check if the match could be live, by checking the match id from a match 4 hours ago
     let match_id_4_hours_ago = state
         .ch_client
@@ -156,6 +141,21 @@ pub(super) async fn url(
             lobby_id: cached.get("lobby_id").and_then(serde_json::Value::as_u64),
         }));
     }
+
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "spectate",
+            &[
+                Quota::ip_limit(2, Duration::from_hours(1)),
+                Quota::key_limit(5, Duration::from_mins(1)),
+                Quota::key_limit(100, Duration::from_hours(1)),
+                Quota::global_limit(5, Duration::from_secs(10)),
+                Quota::global_limit(500, Duration::from_hours(1)),
+            ],
+        )
+        .await?;
 
     let spectate_response = tryhard::retry_fn(|| spectate_match(&state.steam_client, match_id))
         .retries(3)
