@@ -2,6 +2,7 @@ use core::time::Duration;
 
 use axum::Json;
 use axum::extract::{Path, State};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use cached::TtlCache;
 use cached::macros::cached;
@@ -24,6 +25,13 @@ use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
 use crate::utils::types::MatchIdQuery;
 
+/// Redis hash storing the currently available live broadcast URLs.
+const SPECTATED_MATCHES_KEY: &str = "spectated_matches";
+/// How long an ingested/spectated broadcast URL stays listed, in seconds.
+const LIVE_URL_TTL_SECS: i64 = 900;
+/// Maximum number of broadcast URLs accepted in a single ingest request.
+const MAX_BROADCAST_URLS_PER_REQUEST: usize = 1000;
+
 #[derive(Serialize, ToSchema)]
 struct MatchSpectateResponse {
     broadcast_url: String,
@@ -38,6 +46,21 @@ struct LiveUrl {
     lobby_id: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     updated_at: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    started_at: Option<i64>,
+}
+
+/// A single broadcast URL submitted to the ingest endpoint.
+#[derive(Deserialize, ToSchema)]
+pub(super) struct IngestLiveUrl {
+    /// The match ID the broadcast URL belongs to.
+    match_id: u64,
+    /// The live broadcast URL to be used in a demofile broadcast parser.
+    broadcast_url: String,
+    /// The lobby ID of the match, if known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    lobby_id: Option<u64>,
+    /// The unix timestamp (seconds) the match started, if known.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     started_at: Option<i64>,
 }
@@ -129,7 +152,7 @@ pub(super) async fn url(
     // Check Redis for a cached broadcast URL
     let cached: Option<String> = state
         .redis_client
-        .hget("spectated_matches", match_id.to_string())
+        .hget(SPECTATED_MATCHES_KEY, match_id.to_string())
         .await?;
 
     if let Some(cached) = cached
@@ -183,7 +206,7 @@ pub(super) async fn url(
             state
                 .redis_client
                 .hset(
-                    "spectated_matches",
+                    SPECTATED_MATCHES_KEY,
                     match_id.to_string(),
                     serde_json::to_string(payload)?,
                 )
@@ -191,8 +214,8 @@ pub(super) async fn url(
             state
                 .redis_client
                 .hexpire(
-                    "spectated_matches",
-                    900,
+                    SPECTATED_MATCHES_KEY,
+                    LIVE_URL_TTL_SECS,
                     ExpireOption::NONE,
                     match_id.to_string(),
                 )
@@ -239,10 +262,118 @@ These can be used in any demofile broadcast parser:
     "
 )]
 pub(super) async fn urls(State(mut state): State<AppState>) -> APIResult<impl IntoResponse> {
-    let values: Vec<String> = state.redis_client.hvals("spectated_matches").await?;
+    let values: Vec<String> = state.redis_client.hvals(SPECTATED_MATCHES_KEY).await?;
     let urls: Vec<LiveUrl> = values
         .iter()
         .filter_map(|v| serde_json::from_str(v).ok())
         .collect();
     Ok(Json(urls))
+}
+
+#[utoipa::path(
+    post,
+    path = "/live/urls",
+    request_body = Vec<IngestLiveUrl>,
+    responses(
+        (status = OK),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
+        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
+        (status = INTERNAL_SERVER_ERROR, description = "Ingesting live URLs failed")
+    ),
+    tags = ["Matches"],
+    summary = "Ingest Live Broadcast URLs",
+    description = "
+Submit one or more live broadcast URLs so they show up in the `GET /live/urls` listing.
+
+Each submitted URL is stored for 15 minutes; re-submit periodically to keep a match listed
+while it is still live. Existing entries for the same `match_id` are overwritten.
+
+These URLs can be used in any demofile broadcast parser:
+- [Demofile-Net](https://github.com/saul/demofile-net)
+- [Haste](https://github.com/blukai/haste/)
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "
+)]
+pub(super) async fn ingest_urls(
+    rate_limit_key: RateLimitKey,
+    State(mut state): State<AppState>,
+    Json(broadcast_urls): Json<Vec<IngestLiveUrl>>,
+) -> APIResult<impl IntoResponse> {
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "ingest_broadcast_urls",
+            &[Quota::ip_limit(100, Duration::from_secs(1))],
+        )
+        .await?;
+
+    if broadcast_urls.is_empty() {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "No broadcast URLs provided",
+        ));
+    }
+
+    if broadcast_urls.len() > MAX_BROADCAST_URLS_PER_REQUEST {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            format!(
+                "Too many broadcast URLs provided (max {MAX_BROADCAST_URLS_PER_REQUEST}, got {})",
+                broadcast_urls.len()
+            ),
+        ));
+    }
+
+    // Validate everything up front so we never persist a partial batch.
+    if let Some(invalid) = broadcast_urls
+        .iter()
+        .find(|b| b.broadcast_url.trim().is_empty())
+    {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            format!("Empty broadcast_url for match {}", invalid.match_id),
+        ));
+    }
+
+    let now = chrono::Utc::now().timestamp();
+    for broadcast in &broadcast_urls {
+        let payload = serde_json::json!({
+            "match_type": "IngestedMatch",
+            "match_id": broadcast.match_id,
+            "broadcast_url": broadcast.broadcast_url,
+            "lobby_id": broadcast.lobby_id,
+            "updated_at": now,
+            "started_at": broadcast.started_at,
+        });
+        let field = broadcast.match_id.to_string();
+        state
+            .redis_client
+            .hset(
+                SPECTATED_MATCHES_KEY,
+                &field,
+                serde_json::to_string(&payload)?,
+            )
+            .await?;
+        state
+            .redis_client
+            .hexpire(
+                SPECTATED_MATCHES_KEY,
+                LIVE_URL_TTL_SECS,
+                ExpireOption::NONE,
+                &field,
+            )
+            .await?;
+    }
+
+    Ok(Json(serde_json::json!({
+        "status": "success",
+        "urls_ingested": broadcast_urls.len(),
+    })))
 }
