@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "deadlock-api",
+  "workers_dev": true,
   "main": "./dist/server/server.js",
   "compatibility_date": "2026-05-14",
   "compatibility_flags": ["nodejs_compat"],
