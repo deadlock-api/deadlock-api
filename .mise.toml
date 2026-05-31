@@ -1,6 +1,7 @@
 [tools]
 pnpm = "10.18.0"
 rust = "1.96"
+java = "temurin-21"
 uv = "latest"
 lefthook = "latest"
 "cargo:typos-cli" = "latest"
