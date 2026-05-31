@@ -25,11 +25,8 @@ use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
 use crate::utils::types::MatchIdQuery;
 
-/// Redis hash storing the currently available live broadcast URLs.
 const SPECTATED_MATCHES_KEY: &str = "spectated_matches";
-/// How long an ingested/spectated broadcast URL stays listed, in seconds.
 const LIVE_URL_TTL_SECS: i64 = 900;
-/// Maximum number of broadcast URLs accepted in a single ingest request.
 const MAX_BROADCAST_URLS_PER_REQUEST: usize = 1000;
 
 #[derive(Serialize, ToSchema)]
@@ -50,17 +47,12 @@ struct LiveUrl {
     started_at: Option<i64>,
 }
 
-/// A single broadcast URL submitted to the ingest endpoint.
 #[derive(Deserialize, ToSchema)]
 pub(super) struct IngestLiveUrl {
-    /// The match ID the broadcast URL belongs to.
     match_id: u64,
-    /// The live broadcast URL to be used in a demofile broadcast parser.
     broadcast_url: String,
-    /// The lobby ID of the match, if known.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     lobby_id: Option<u64>,
-    /// The unix timestamp (seconds) the match started, if known.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     started_at: Option<i64>,
 }
