@@ -199,6 +199,14 @@ const analyticsLinks = [
   },
 ];
 
+const mainSponsor = {
+  href: "https://www.deadchaps.com/",
+  title: "Dead Chaps",
+  logo: "/logo/deadchaps.png",
+  width: 600,
+  height: 140,
+};
+
 const sponsors = [
   {
     href: "https://statlocker.gg/",
@@ -217,13 +225,31 @@ function IndexRoute() {
       <section className="relative pt-4 pb-2">
         <div className="pointer-events-none absolute top-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/8 blur-[100px]" />
 
-        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+        <div className="relative flex flex-col gap-8">
           <div className="min-w-0 flex-1">
-            <h1 className="mb-5 bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-5xl font-bold tracking-tight text-transparent lg:text-6xl">
-              Deadlock API
-            </h1>
+            <div className="mb-5 flex flex-col items-center gap-2">
+              <h1 className="bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-6xl font-bold tracking-tight text-transparent lg:text-7xl">
+                Deadlock API
+              </h1>
+              <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">sponsored by</span>
+              <a
+                href={mainSponsor.href}
+                title={mainSponsor.title}
+                target="_blank"
+                rel="noreferrer"
+                className="group rounded-xl border border-primary/30 bg-primary/5 px-4 py-2 shadow-md shadow-primary/5 transition-all hover:border-primary/60 hover:bg-primary/10"
+              >
+                <img
+                  src={mainSponsor.logo}
+                  alt={`${mainSponsor.title} Logo`}
+                  width={mainSponsor.width}
+                  height={mainSponsor.height}
+                  className="max-h-10 w-auto object-contain transition-transform group-hover:scale-105 lg:max-h-12"
+                />
+              </a>
+            </div>
 
-            <div className="mb-6 flex flex-wrap gap-3">
+            <div className="mb-6 flex flex-wrap justify-center gap-3">
               {valueProps.map((prop) => (
                 <SmartLink
                   key={prop.label}
@@ -238,45 +264,11 @@ function IndexRoute() {
               ))}
             </div>
 
-            <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
+            <p className="mx-auto max-w-2xl text-center text-base leading-relaxed text-pretty text-muted-foreground">
               A comprehensive set of endpoints to access Deadlock game data, match history, player statistics, hero
               analytics, and more. Whether you're a developer integrating game data or a player analyzing performance,
               the Deadlock API has you covered.
             </p>
-          </div>
-
-          <div className="flex flex-col items-start gap-3 lg:shrink-0 lg:items-end">
-            <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Our Sponsors</span>
-            <div className="flex flex-wrap items-center gap-6 lg:justify-end">
-              {sponsors.map((sponsor) => (
-                <a
-                  key={sponsor.href}
-                  href={sponsor.href}
-                  title={sponsor.title}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="opacity-70 transition-opacity hover:opacity-100"
-                >
-                  <img
-                    src={sponsor.logo}
-                    alt={`${sponsor.title} Logo`}
-                    width={sponsor.width}
-                    height={sponsor.height}
-                    loading="lazy"
-                    className="max-h-10 max-w-[120px]"
-                  />
-                </a>
-              ))}
-            </div>
-            <a
-              href="https://www.patreon.com/c/manuelhexe"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs font-medium text-primary underline underline-offset-4"
-              title="Support on Patreon"
-            >
-              Become a sponsor
-            </a>
           </div>
         </div>
       </section>
@@ -427,6 +419,62 @@ function IndexRoute() {
               </SmartLink>
             );
           })}
+        </div>
+      </section>
+
+      {/* Sponsors */}
+      <section>
+        <div className="mb-6 text-center">
+          <h2 className="text-2xl font-semibold tracking-tight">Our Sponsors</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Supporting the Deadlock API and the community</p>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-8">
+          <a
+            href={mainSponsor.href}
+            title={mainSponsor.title}
+            target="_blank"
+            rel="noreferrer"
+            className="opacity-70 transition-opacity hover:opacity-100"
+          >
+            <img
+              src={mainSponsor.logo}
+              alt={`${mainSponsor.title} Logo`}
+              width={mainSponsor.width}
+              height={mainSponsor.height}
+              loading="lazy"
+              className="max-h-10 max-w-[140px] object-contain"
+            />
+          </a>
+          {sponsors.map((sponsor) => (
+            <a
+              key={sponsor.href}
+              href={sponsor.href}
+              title={sponsor.title}
+              target="_blank"
+              rel="noreferrer"
+              className="opacity-70 transition-opacity hover:opacity-100"
+            >
+              <img
+                src={sponsor.logo}
+                alt={`${sponsor.title} Logo`}
+                width={sponsor.width}
+                height={sponsor.height}
+                loading="lazy"
+                className="max-h-10 max-w-[140px] object-contain"
+              />
+            </a>
+          ))}
+        </div>
+        <div className="mt-6 text-center">
+          <a
+            href="https://www.patreon.com/c/manuelhexe"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-medium text-primary underline underline-offset-4"
+            title="Support on Patreon"
+          >
+            Become a sponsor
+          </a>
         </div>
       </section>
 
