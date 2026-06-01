@@ -275,7 +275,7 @@ WHERE true {grouped_filters}
 GROUP BY hero_ids
 {having_clause}
 ORDER BY wins / greatest(1, matches) DESC
-SETTINGS log_comment = 'hero_comb_stats'
+SETTINGS log_comment = 'hero_comb_stats', apply_patch_parts = 0
     "
     )
 }

@@ -257,7 +257,7 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
     )
     GROUP BY position_x, position_y, killer_team
     HAVING TRUE {min_deaths_per_raster} {min_kills_per_raster} {max_deaths_per_raster} {max_kills_per_raster}
-    SETTINGS log_comment = 'kill_death_stats'
+    SETTINGS log_comment = 'kill_death_stats', apply_patch_parts = 0
     "
     )
 }

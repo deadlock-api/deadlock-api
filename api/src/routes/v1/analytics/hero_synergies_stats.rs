@@ -260,7 +260,7 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
         ) AS pair
     GROUP BY hero_id1, hero_id2
     {having_clause}
-    SETTINGS log_comment = 'hero_synergies_stats'
+    SETTINGS log_comment = 'hero_synergies_stats', apply_patch_parts = 0
     "
     )
 }

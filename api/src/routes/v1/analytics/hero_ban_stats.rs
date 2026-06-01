@@ -108,7 +108,7 @@ fn build_query(query: &HeroBanStatsQuery) -> String {
       AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 {info_filters}
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
-    SETTINGS log_comment = 'hero_ban_stats'
+    SETTINGS log_comment = 'hero_ban_stats', apply_patch_parts = 0
     "
     )
 }

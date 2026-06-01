@@ -104,7 +104,7 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
     WHERE badge_level > 0
     GROUP BY badge_level
     ORDER BY badge_level
-    SETTINGS log_comment = 'badge_distribution'
+    SETTINGS log_comment = 'badge_distribution', apply_patch_parts = 0
     "
     )
 }

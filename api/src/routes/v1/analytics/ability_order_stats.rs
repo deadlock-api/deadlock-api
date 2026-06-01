@@ -168,7 +168,7 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
     GROUP BY abilities
     HAVING matches >= {}
     ORDER BY matches DESC
-    SETTINGS log_comment = 'ability_order_stats'
+    SETTINGS log_comment = 'ability_order_stats', apply_patch_parts = 0
     ",
         query.min_matches.unwrap_or_default()
     )

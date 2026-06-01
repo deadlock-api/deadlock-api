@@ -214,7 +214,7 @@ fn build_query(query: &GameStatsQuery) -> String {
         {info_filters}
     GROUP BY bucket
     ORDER BY bucket
-    SETTINGS log_comment = 'game_stats'
+    SETTINGS log_comment = 'game_stats', apply_patch_parts = 0
     "
     )
 }
