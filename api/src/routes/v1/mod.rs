@@ -1,6 +1,7 @@
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::context::AppState;
+use crate::middleware::cors;
 
 pub mod analytics;
 mod assets;
@@ -19,6 +20,11 @@ pub(crate) mod servers;
 pub mod sql;
 
 pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
+    let credentialed = OpenApiRouter::new()
+        .nest("/auth", auth::router())
+        .nest("/patron", patron::router())
+        .layer(cors::credentialed());
+
     OpenApiRouter::new()
         .nest("/matches", matches::router())
         .nest("/players", players::router())
@@ -29,9 +35,9 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
         .nest("/commands", commands::router())
         .nest("/info", info::router())
         .nest("/sql", sql::router())
-        .nest("/auth", auth::router())
-        .nest("/patron", patron::router())
         .nest("/servers", servers::router())
         .nest("/assets", assets::router())
         .merge(graphql::router())
+        .layer(cors::public())
+        .merge(credentialed)
 }

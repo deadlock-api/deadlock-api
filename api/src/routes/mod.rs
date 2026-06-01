@@ -2,6 +2,7 @@ use axum::routing::{get, post};
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::context::AppState;
+use crate::middleware::cors;
 use crate::routes::v1::analytics::{
     badge_distribution, hero_comb_stats, hero_stats, item_stats, player_scoreboard,
 };
@@ -48,6 +49,7 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
             "/v1/players/scoreboard",
             get(player_scoreboard::player_scoreboard),
         )
-        .nest("/v1", v1::router(state))
         .nest("/v2", v2::router())
+        .layer(cors::public())
+        .nest("/v1", v1::router(state))
 }
