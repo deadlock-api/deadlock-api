@@ -496,9 +496,11 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     // Add player filter subquery if any player filters exist
     if !player_filters.is_empty() {
         if advanced_player_filters {
+            let mut match_player_filters = info_filters.clone();
+            match_player_filters.extend(player_filters);
             info_filters.push(format!(
                 "match_id IN (SELECT match_id FROM match_player WHERE {})",
-                player_filters.join(" AND ")
+                match_player_filters.join(" AND ")
             ));
         } else {
             info_filters.push(format!(
@@ -697,5 +699,29 @@ mod proptests {
                 assert_valid_sql(&sql);
             }
         }
+    }
+
+    #[test]
+    fn advanced_player_filter_subquery_includes_match_filters() {
+        let sql = build_query(BulkMatchMetadataQuery {
+            include_info: true,
+            include_player_info: true,
+            include_player_items: true,
+            game_mode: Some(GameMode::Normal),
+            min_unix_timestamp: Some(1_780_256_805),
+            max_unix_timestamp: Some(1_780_270_000),
+            min_average_badge: Some(101),
+            hero_ids: Some(vec![7]),
+            item_filter_hero_id: Some(7),
+            include_item_ids: Some(vec![1_282_141_666]),
+            order_by: SortKey::AverageBadge,
+            limit: 10,
+            ..BulkMatchMetadataQuery::default()
+        })
+        .expect("query should build");
+
+        assert!(sql.contains(
+            "match_id IN (SELECT match_id FROM match_player WHERE match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 AND start_time >= 1780256805 AND start_time <= 1780270000 AND average_badge_team0 >= 101 AND average_badge_team1 >= 101 AND hero_id IN (7) AND hero_id = 7 AND hasAll(items.item_id, [1282141666]))"
+        ));
     }
 }
