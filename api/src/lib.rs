@@ -50,6 +50,7 @@ use crate::context::AppState;
 use crate::middleware::api_key::write_api_key_to_header;
 use crate::middleware::cache::CacheControlMiddleware;
 use crate::middleware::cache_bust::reject_cache_busts;
+use crate::middleware::cors;
 use crate::middleware::feature_flags::feature_flags;
 use crate::middleware::track_requests::track_requests;
 use crate::services::patreon::verification_job::PatreonVerificationJob;
@@ -109,14 +110,12 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
     let (mut prometheus_layer, metric_handle) = PrometheusMetricLayer::pair();
     prometheus_layer.enable_response_body_size();
 
-    let (router, mut api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+    let infra = OpenApiRouter::new()
         // Redirect root to /docs
         .route("/", get(|| async { Redirect::to("/docs") }))
         // Serve favicon
         .route("/favicon.ico", get(favicon))
-        // Add application routes
-        .merge(routes::router(&state))
-        // Add prometheus metrics route
+        // Prometheus metrics route
         .route("/metrics", get(|rk: RateLimitKey, State(AppState{config, ..}): State<AppState>| async move {
             let internal_key = config.internal_api_key.strip_prefix("HEXE-").unwrap_or(&config.internal_api_key);
             if rk.api_key.is_none_or(|k| k.to_string() != internal_key) {
@@ -131,9 +130,15 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
             }
             Ok((headers, metric_handle.render()))
         }))
-        .layer(prometheus_layer)
-        // Add robots.txt
+        // robots.txt
         .route("/robots.txt", get(async || ROBOTS_TXT))
+        .layer(cors::public());
+
+    let (router, mut api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .merge(infra)
+        // Add application routes
+        .merge(routes::router(&state))
+        .layer(prometheus_layer)
         // Add Middlewares
         .layer(from_fn_with_state(state.clone(), feature_flags))
         .layer(from_fn(write_api_key_to_header))
@@ -162,9 +167,10 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
     };
     api.servers = Some(vec![utoipa::openapi::Server::new(server_url)]);
 
-    let router = router
-        .with_state(state)
+    let docs = Router::new()
         .merge(Scalar::with_url("/docs", api.clone()))
-        .route("/openapi.json", get(|| async { Json(api) }));
+        .route("/openapi.json", get(|| async { Json(api) }))
+        .layer(cors::public());
+    let router = router.with_state(state).merge(docs);
     Ok(NormalizePathLayer::trim_trailing_slash().layer(router))
 }
