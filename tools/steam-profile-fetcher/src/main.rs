@@ -32,7 +32,15 @@ mod steam_api;
 static FETCH_INTERVAL: std::sync::LazyLock<Duration> =
     std::sync::LazyLock::new(|| Duration::from_secs(common::env_or("FETCH_INTERVAL_SECONDS", 120)));
 
-const OUTDATED_INTERVAL: &str = "INTERVAL 1 WEEK";
+// Re-fetch cadence, tiered by how recently the account played. Best effort:
+// every account is eligible once its profile is older than its tier's interval,
+// and the ORDER BY keeps the more active accounts ahead in the queue. At the
+// current Steam API throughput the inactive tier is aspirational (see the
+// capacity note in get_account_ids_to_update), but ordering guarantees active
+// accounts are never starved.
+const REFETCH_INTERVAL_ACTIVE: &str = "INTERVAL 3 DAY"; // played within 7 days
+const REFETCH_INTERVAL_SEMI_ACTIVE: &str = "INTERVAL 1 WEEK"; // played within 30 days
+const REFETCH_INTERVAL_INACTIVE: &str = "INTERVAL 2 WEEK"; // everyone else
 const RECENT_ACTIVITY_INTERVAL: &str = "INTERVAL 30 DAY";
 
 #[tokio::main]
@@ -220,8 +228,11 @@ SELECT account_id
 FROM accounts_to_update FINAL
 WHERE
     last_observed_name_change > last_profile_update
-    OR (last_profile_update > toDateTime(0) AND last_profile_update < now() - {OUTDATED_INTERVAL})
-    OR (last_profile_update = toDateTime(0) AND last_active > now() - {OUTDATED_INTERVAL})
+    OR last_profile_update < now() - multiIf(
+        last_active > now() - INTERVAL 7 DAY, {REFETCH_INTERVAL_ACTIVE},
+        last_active > now() - {RECENT_ACTIVITY_INTERVAL}, {REFETCH_INTERVAL_SEMI_ACTIVE},
+        {REFETCH_INTERVAL_INACTIVE}
+    )
 ORDER BY
     (last_observed_name_change > last_profile_update) DESC,
     (last_active > now() - {RECENT_ACTIVITY_INTERVAL}) DESC,
