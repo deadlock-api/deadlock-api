@@ -258,6 +258,13 @@ fn build_query(query: &ItemStatsQuery) -> String {
         hero_ids.push(hero_id);
     }
     #[allow(deprecated)]
+    let has_account_filter = query.account_id.is_some()
+        || query
+            .account_ids
+            .as_ref()
+            .is_some_and(|account_ids| !account_ids.is_empty());
+    let has_buyer_hero_filter = !hero_ids.is_empty();
+    #[allow(deprecated)]
     let mut player_filters = PlayerFilters {
         hero_ids: if hero_ids.is_empty() {
             None
@@ -362,6 +369,28 @@ fn build_query(query: &ItemStatsQuery) -> String {
      * (emitted by PlayerFilters for include/exclude_item_ids) still see the
      * full per-row arrays.
      */
+    let mut settings = vec!["log_comment = 'item_stats'", "apply_patch_parts = 0"];
+    /*
+     * 2026-06-01: Account-filtered item-stats queries regressed after adding
+     * the hero/mode/badge item-stats projection. ClickHouse's projection cost
+     * model compares the projection against the base table before deferred
+     * skip-index reads make the account_id bloom indexes effective, so it picks
+     * the item projection even though the base table is ~10x less I/O for
+     * account-only shapes.
+     *
+     * We tried lighter `_part_offset` projection-index variants and lower
+     * `min_table_rows_to_use_projection_index` thresholds. Those can make the
+     * projection-index path eligible during base-table reads, but they do not
+     * stop the full item projection from winning the replacement decision.
+     * There is also no clean ClickHouse setting to ignore only that projection
+     * by name, and preferring a specific account projection would couple this
+     * endpoint to fragile projection names/schema details. For account filters
+     * without a buyer hero filter, use the base table and its account indexes.
+     */
+    if has_account_filter && !has_buyer_hero_filter {
+        settings.push("optimize_use_projections = 0");
+    }
+    let settings_clause = settings.join(", ");
     let match_filters =
         format!("match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}");
     format!(
@@ -389,7 +418,7 @@ WHERE {match_filters}{enemy_where}
 GROUP BY item_id, bucket
 {having_clause}
 ORDER BY item_id, bucket
-SETTINGS log_comment = 'item_stats', apply_patch_parts = 0
+SETTINGS {settings_clause}
         "
     )
 }
