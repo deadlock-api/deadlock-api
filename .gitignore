@@ -7,3 +7,4 @@ lefthook-local.yml
 .asset-index/
 .assets-build/
 scripts/.gh_token
+.cache
