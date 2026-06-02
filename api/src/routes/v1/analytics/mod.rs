@@ -74,8 +74,8 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
             )
             .layer(from_fn_with_state(rate_limit_state, rate_limit))
             .layer(
-                CacheControlMiddleware::new(Duration::from_hours(1))
-                    .with_stale_while_revalidate(Duration::from_hours(12)),
+                CacheControlMiddleware::new(Duration::from_mins(10))
+                    .with_stale_while_revalidate(Duration::from_mins(20)),
             ),
     )
 }
