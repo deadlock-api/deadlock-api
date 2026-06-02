@@ -16,5 +16,6 @@ export function leaderboardQueryOptions(region: LeaderboardRegionEnum, heroId?: 
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
+    refetchOnMount: "always",
   });
 }

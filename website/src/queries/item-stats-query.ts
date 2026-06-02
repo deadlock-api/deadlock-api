@@ -13,6 +13,7 @@ export function itemStatsQueryOptions(itemStatsQuery: AnalyticsApiItemStatsReque
       const response = await api.analytics_api.itemStats(itemStatsQuery);
       return response.data;
     },
-    staleTime: CACHE_DURATIONS.ONE_DAY,
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
+    refetchOnMount: "always",
   });
 }

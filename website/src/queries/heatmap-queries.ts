@@ -22,6 +22,7 @@ export function killDeathStatsQueryOptions(params: AnalyticsApiKillDeathStatsReq
       const response = await api.analytics_api.killDeathStats(params);
       return response.data;
     },
-    staleTime: CACHE_DURATIONS.ONE_DAY,
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
+    refetchOnMount: "always",
   });
 }
