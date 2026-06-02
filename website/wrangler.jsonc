@@ -10,7 +10,22 @@
     "binding": "ASSETS",
     "not_found_handling": "404-page",
     "html_handling": "drop-trailing-slash",
-    "run_worker_first": ["/streamkit/widgets/*"]
+    // The analytics routes below are no longer prerendered (their data would
+    // freeze at build time). They must hit the Worker for fresh SSR instead of
+    // the static-asset 404 fallback that navigation requests otherwise get.
+    // Keep in sync with src/lib/dynamic-data-routes.ts.
+    "run_worker_first": [
+      "/streamkit/widgets/*",
+      "/games",
+      "/heroes",
+      "/items",
+      "/abilities",
+      "/leaderboard",
+      "/badge-distribution",
+      "/heatmap",
+      "/player-scoreboard",
+      "/servers"
+    ]
   },
   "routes": [
     { "pattern": "deadlock-api.com", "custom_domain": true },
