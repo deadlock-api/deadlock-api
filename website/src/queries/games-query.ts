@@ -13,6 +13,6 @@ export function gameStatsQueryOptions(gameStatsQuery: AnalyticsApiGameStatsReque
       const response = await api.analytics_api.gameStats(gameStatsQuery);
       return response.data;
     },
-    staleTime: CACHE_DURATIONS.ONE_DAY,
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
   });
 }
