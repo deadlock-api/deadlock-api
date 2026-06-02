@@ -4,8 +4,6 @@ import viteReact from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import babel from "vite-plugin-babel";
 
-import { DYNAMIC_DATA_ROUTES } from "./src/lib/dynamic-data-routes";
-
 const ReactCompilerConfig = {};
 const isDev = process.env.NODE_ENV !== "production";
 
@@ -21,7 +19,7 @@ export default defineConfig({
       prerender: {
         enabled: true,
         crawlLinks: true,
-        filter: ({ path }) => path !== "/auth" && path !== "/auth/patreon" && !DYNAMIC_DATA_ROUTES.has(path),
+        filter: ({ path }) => path !== "/auth" && path !== "/auth/patreon",
       },
       pages: [{ path: "/" }, { path: "/blog" }, { path: "/sitemap.xml" }, { path: "/sitemap_index.xml" }],
     }),
