@@ -109,8 +109,9 @@ fn build_query(query: &HeroStatsQuery) -> String {
         .as_ref()
         .map(|heroes| heroes.iter().map(ToString::to_string).join(","));
 
-    // account_id/hero_id/net_worth are columns in the `hero_stats_by_account` projection,
-    // so ClickHouse can serve this read from the projection.
+    // Every column referenced here (incl. max_damage_mitigated and start_time) is in the
+    // `hero_stats_by_account` projection, and apply_patch_parts=0 (set below) keeps patch
+    // parts from disabling it, so ClickHouse serves this read from the projection.
     let mut mp_filters = vec![
         format!("account_id IN ({account_ids})"),
         MatchMode::sql_filter(None),
@@ -226,7 +227,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
     {outer_where}
     GROUP BY account_id, hero_id
     ORDER BY account_id, hero_id
-    SETTINGS log_comment = 'player_hero_stats'
+    SETTINGS log_comment = 'player_hero_stats', apply_patch_parts = 0
     "
     )
 }
