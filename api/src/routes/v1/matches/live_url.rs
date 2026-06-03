@@ -127,14 +127,13 @@ pub(super) async fn url(
     rate_limit_key: RateLimitKey,
     State(mut state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    // Check if the match could be live, by checking the match id from a match 4 hours ago
-    let match_id_4_hours_ago = state
+    let oldest_possibly_live_match_id = state
         .ch_client
-        .query("SELECT max(match_id) FROM match_player WHERE created_at < now() - INTERVAL 4 HOUR AND match_id > (SELECT max(match_id) - 2000000 FROM match_player) SETTINGS log_comment = 'live_url', apply_patch_parts = 0")
+        .query("SELECT min(match_id) FROM match_player WHERE start_time >= now() - INTERVAL 4 HOUR SETTINGS log_comment = 'live_url', apply_patch_parts = 0, optimize_use_projections = 0")
         .fetch_one::<u64>()
         .await?;
 
-    if match_id < match_id_4_hours_ago {
+    if match_id < oldest_possibly_live_match_id {
         return Err(APIError::status_msg(
             reqwest::StatusCode::BAD_REQUEST,
             format!("Match {match_id} cannot be live"),
