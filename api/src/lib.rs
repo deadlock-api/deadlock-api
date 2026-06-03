@@ -59,6 +59,9 @@ use crate::utils::observability;
 
 const DEFAULT_CACHE_TIME: u64 = 2 * 60; // Cloudflare Free Tier Minimal Cache Time
 
+pub static SHUTTING_DOWN: core::sync::atomic::AtomicBool =
+    core::sync::atomic::AtomicBool::new(false);
+
 const ROBOTS_TXT: &str = r"
 User-agent: *
 Disallow: /

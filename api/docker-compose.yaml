@@ -5,8 +5,9 @@ services:
     env_file: .env
     ports:
       - "3000:3000"
+    stop_grace_period: 60s
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:3000/v1/info/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      interval: 3s
+      timeout: 2s
+      retries: 2

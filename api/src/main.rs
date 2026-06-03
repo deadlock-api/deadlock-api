@@ -29,6 +29,7 @@ static GLOBAL: MiMalloc = MiMalloc;
 
 const PORT: u16 = 3000;
 const SERVICE_NAME: &str = "deadlock-api";
+const DRAIN_DELAY: core::time::Duration = core::time::Duration::from_secs(8);
 
 struct OtelGuard {
     tracer_provider: SdkTracerProvider,
@@ -151,6 +152,11 @@ async fn shutdown_signal() {
         () = interrupt => {},
         () = terminate => {},
     }
+
+    info!("Shutdown signal received, draining for {DRAIN_DELAY:?} before stopping");
+    deadlock_api_rust::SHUTTING_DOWN.store(true, core::sync::atomic::Ordering::Relaxed);
+    #[cfg(not(debug_assertions))]
+    tokio::time::sleep(DRAIN_DELAY).await;
 }
 
 #[tokio::main]
