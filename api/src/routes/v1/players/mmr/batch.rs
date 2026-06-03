@@ -100,7 +100,7 @@ fn build_mmr_query_inner(
         GROUP BY account_id
     )
     WHERE length(mmr_window) > 0
-    SETTINGS log_comment = '{log_comment}'
+    SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0
     "
     )
 }

@@ -98,7 +98,7 @@ fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String
         toUInt32(floor(rank / 10)) AS division,
         toUInt32(rank % 10) AS division_tier
     FROM mmr_data
-    SETTINGS log_comment = '{log_comment}'
+    SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0
     "
     )
 }

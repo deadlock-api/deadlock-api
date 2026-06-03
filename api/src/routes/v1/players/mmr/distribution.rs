@@ -147,7 +147,7 @@ fn build_mmr_distribution_query(hero_id: Option<u8>, query: &MMRDistributionQuer
     )
     {rank_filter}
     ORDER BY rank
-    SETTINGS log_comment = '{log_comment}'
+    SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0
     "
     )
 }

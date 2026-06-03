@@ -85,7 +85,7 @@ async fn get_recently_fetched_match_ids(
     WHERE match_player.created_at > now() - 600 AND match_player.match_mode IN ('Ranked', 'Unranked') AND (match_player.match_id > 70426318 OR now() >= '2026-03-31 00:00:00')
     GROUP BY match_id
     ORDER BY max(match_player.created_at) DESC
-    SETTINGS log_comment = 'recently_fetched'
+    SETTINGS log_comment = 'recently_fetched', apply_patch_parts = 0
     ";
     let rows: Vec<ClickhouseMatchInfoRow> = ch_client.query(query).fetch_all().await?;
     Ok(rows.into_iter().map(Into::into).collect())

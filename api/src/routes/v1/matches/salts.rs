@@ -109,7 +109,7 @@ impl BatchQuery for MatchInfoExistsQuery {
     fn build_query(keys: &[u64]) -> String {
         format!(
             "SELECT DISTINCT match_id FROM match_player WHERE match_id IN ({}) \
-             SETTINGS log_comment = 'salts_match_info_exists'",
+             SETTINGS log_comment = 'salts_match_info_exists', apply_patch_parts = 0",
             in_clause(keys)
         )
     }

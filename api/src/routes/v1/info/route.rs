@@ -41,7 +41,7 @@ WITH fetched_matches AS (
     WHERE created_at > now() - INTERVAL 1 DAY
 )
 SELECT uniq(match_id) FROM fetched_matches
-SETTINGS log_comment = 'info_fetched_matches_24h'
+SETTINGS log_comment = 'info_fetched_matches_24h', apply_patch_parts = 0
 ";
 
 #[derive(Deserialize, Row)]
