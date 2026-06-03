@@ -153,7 +153,7 @@ impl AppState {
             .with_setting("output_format_json_quote_64bit_integers", "0")
             .with_setting("output_format_json_named_tuples_as_objects", "1")
             .with_setting("enable_json_type", "1")
-            // .with_setting("allow_statistics_optimize", "1") // This is extremely slow right now
+            .with_setting("allow_statistics_optimize", "0")
             .with_setting("allow_experimental_statistics", "1")
             .with_setting("query_plan_optimize_join_order_limit", "10")
             .with_setting("optimize_if_transform_strings_to_enum", "1")
@@ -186,7 +186,7 @@ impl AppState {
             .with_setting("output_format_json_quote_64bit_integers", "0")
             .with_setting("output_format_json_named_tuples_as_objects", "1")
             .with_setting("enable_json_type", "1")
-            // .with_setting("allow_statistics_optimize", "1") // This is extremely slow right now
+            .with_setting("allow_statistics_optimize", "0")
             .with_setting("allow_experimental_statistics", "1")
             .with_setting("query_plan_optimize_join_order_limit", "10")
             .with_setting("optimize_if_transform_strings_to_enum", "1")
@@ -232,7 +232,8 @@ impl AppState {
             ))
             .with_user(&config.clickhouse.restricted_username)
             .with_password(&config.clickhouse.restricted_password)
-            .with_database(&config.clickhouse.dbname);
+            .with_database(&config.clickhouse.dbname)
+            .with_setting("allow_statistics_optimize", "0");
         if let Err(e) = ch_client_restricted
             .query("SELECT 1")
             .fetch_one::<u8>()
