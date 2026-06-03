@@ -11,7 +11,7 @@ use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::Display;
-use tracing::debug;
+use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
@@ -75,7 +75,12 @@ pub enum BucketQuery {
     NetWorthBy10000,
 }
 
-const NET_WORTH_AT_BUY_EXPR: &str = "coalesce(arrayElementOrNull(stats.net_worth, arrayFirstIndex(ts -> ts >= buy_time, stats.time_stamp_s) - 1), net_worth)";
+// Per-purchase net worth at buy time. Precomputed at write time into the
+// MATERIALIZED column `items.net_worth_at_buy` and exposed via the ARRAY JOIN
+// alias `net_worth_at_buy` (see build_query). This avoids reading the large
+// `stats.net_worth`/`stats.time_stamp_s` time-series arrays and the per-purchase
+// `arrayFirstIndex` search, which was ~44% of a net-worth-bucket query's cost.
+const NET_WORTH_AT_BUY_EXPR: &str = "net_worth_at_buy";
 
 impl BucketQuery {
     fn get_select_clause(self) -> String {
@@ -106,6 +111,42 @@ impl BucketQuery {
             Self::NetWorthBy10000 => {
                 format!("toUInt32(floor(({NET_WORTH_AT_BUY_EXPR}) / 10000) * 10000)")
             }
+        }
+    }
+
+    /// Whether this bucket's select clause references `net_worth_at_buy`, so the
+    /// base query knows to ARRAY JOIN the precomputed `items.net_worth_at_buy`.
+    fn needs_net_worth_at_buy(self) -> bool {
+        matches!(
+            self,
+            Self::NetWorthBy1000
+                | Self::NetWorthBy2000
+                | Self::NetWorthBy3000
+                | Self::NetWorthBy5000
+                | Self::NetWorthBy10000
+        )
+    }
+
+    /// Bucket expression against the pre-aggregated `item_stats_agg` view, or
+    /// `None` for buckets the view cannot serve. Net-worth and game-time buckets
+    /// need per-purchase data, and `StartTimeHour` needs sub-day resolution the
+    /// day-grained view does not keep; those run against the base table.
+    fn mv_bucket_expr(self) -> Option<&'static str> {
+        match self {
+            Self::NoBucket => Some("toUInt32(0)"),
+            Self::Hero => Some("hero_id"),
+            Self::Team => Some("toUInt32(if(team = 'Team0', 0, 1))"),
+            Self::StartTimeDay => Some("toStartOfDay(toDateTime(day))"),
+            Self::StartTimeWeek => Some("toDateTime(toStartOfWeek(day))"),
+            Self::StartTimeMonth => Some("toDateTime(toStartOfMonth(day))"),
+            Self::StartTimeHour
+            | Self::GameTimeMin
+            | Self::GameTimeNormalizedPercentage
+            | Self::NetWorthBy1000
+            | Self::NetWorthBy2000
+            | Self::NetWorthBy3000
+            | Self::NetWorthBy5000
+            | Self::NetWorthBy10000 => None,
         }
     }
 }
@@ -234,6 +275,138 @@ pub struct ItemStats {
     pub avg_buy_time_relative: f64,
     /// Average sell time as percentage of match duration (for items that were sold)
     pub avg_sell_time_relative: f64,
+}
+
+/// Horizon of the `item_stats_agg` materialized view, in days. Keep in sync with
+/// the `INTERVAL ... DAY` in `clickhouse/item_stats_agg.sql`.
+const MV_HORIZON_DAYS: i64 = 65;
+/// Safety margin below the horizon: only route windows whose start sits
+/// comfortably inside the materialized range, so a just-refreshed edge (the view
+/// drops the oldest day as time advances) never under-serves a request.
+const MV_ROUTING_MARGIN_DAYS: i64 = 5;
+
+/// Builds a query against the pre-aggregated `item_stats_agg` view when the
+/// request falls within the "global meta" subset it materializes, else `None`
+/// (the caller then uses the base-table query). See `clickhouse/item_stats_agg.sql`
+/// for the grain and the list of what is and isn't covered.
+fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
+    let bucket_expr = query.bucket.mv_bucket_expr()?;
+
+    // Fold the deprecated single hero_id into hero_ids.
+    let mut hero_ids = query.hero_ids.clone().unwrap_or_default();
+    #[allow(deprecated)]
+    if let Some(hero_id) = query.hero_id {
+        hero_ids.push(hero_id);
+    }
+
+    // The view only covers the shared, non-personalized subset. Anything needing
+    // per-purchase data, item-set membership, per-account/enemy context, or a
+    // dimension not in the grain (sub-day time, match_id, duration, final net
+    // worth, buy time) must use the base table.
+    #[allow(deprecated)]
+    let personalized = query.account_id.is_some()
+        || query.account_ids.as_ref().is_some_and(|v| !v.is_empty())
+        || query.enemy_hero_ids.as_ref().is_some_and(|v| !v.is_empty())
+        || query
+            .include_item_ids
+            .as_ref()
+            .is_some_and(|v| !v.is_empty())
+        || query
+            .exclude_item_ids
+            .as_ref()
+            .is_some_and(|v| !v.is_empty());
+    let unsupported_filter = query.min_networth.is_some()
+        || query.max_networth.is_some()
+        || query.min_duration_s.is_some()
+        || query.max_duration_s.is_some()
+        || query.min_bought_at_s.is_some()
+        || query.max_bought_at_s.is_some()
+        || query.min_match_id.is_some()
+        || query.max_match_id.is_some();
+    if personalized || unsupported_filter {
+        return None;
+    }
+
+    // The view only holds the last MV_HORIZON_DAYS days; older windows use base.
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_secs()
+        .cast_signed();
+    let oldest_servable = now - (MV_HORIZON_DAYS - MV_ROUTING_MARGIN_DAYS) * 86_400;
+    if query
+        .min_unix_timestamp
+        .is_none_or(|min_ts| min_ts < oldest_servable)
+    {
+        return None;
+    }
+
+    /* ---------- filters (all on item_stats_agg columns) ---------- */
+    let mut filters = vec![GameMode::sql_filter(query.game_mode)];
+    if let Some(v) = query.min_unix_timestamp {
+        filters.push(format!("day >= toDate({v})"));
+    }
+    if let Some(v) = query.max_unix_timestamp {
+        filters.push(format!("day <= toDate({v})"));
+    }
+    // Badge: least/greatest mirror the base table's both-teams semantics, with the
+    // same >11 / <116 guards as MatchInfoFilters. NULL badges are stored as
+    // 0 / 65535, so any active filter excludes them just like the base table.
+    if let Some(v) = query.min_average_badge
+        && v > 11
+    {
+        filters.push(format!("least_badge >= {v}"));
+    }
+    if let Some(v) = query.max_average_badge
+        && v < 116
+    {
+        filters.push(format!("greatest_badge <= {v}"));
+    }
+    if !hero_ids.is_empty() {
+        filters.push(format!(
+            "hero_id IN ({})",
+            hero_ids.iter().map(ToString::to_string).join(", ")
+        ));
+    }
+    let where_clause = filters.join(" AND ");
+
+    /* ---------- HAVING (identical to base) ---------- */
+    let mut having_filters = vec![];
+    if let Some(min_matches) = query.min_matches {
+        having_filters.push(format!("matches >= {min_matches}"));
+    }
+    if let Some(max_matches) = query.max_matches {
+        having_filters.push(format!("matches <= {max_matches}"));
+    }
+    let having_clause = if having_filters.is_empty() {
+        String::new()
+    } else {
+        format!("HAVING {}", having_filters.join(" AND "))
+    };
+
+    // The per-row averages equal the base query's avg()/avgIf(): the denominators
+    // (matches, n_sold) are the same counts.
+    Some(format!(
+        "
+SELECT
+    item_id,
+    {bucket_expr}    AS bucket,
+    sum(n_wins)                  AS wins,
+    sum(n_matches) - sum(n_wins) AS losses,
+    sum(n_matches)               AS matches,
+    uniqMerge(players_state)     AS players,
+    sum(sum_buy_time) / sum(n_matches)                       AS avg_buy_time_s,
+    if(sum(n_sold) = 0, 0, sum(sum_sold_time) / sum(n_sold)) AS avg_sell_time_s,
+    sum(sum_buy_rel) / sum(n_matches)                        AS avg_buy_time_relative,
+    if(sum(n_sold) = 0, 0, sum(sum_sold_rel) / sum(n_sold))  AS avg_sell_time_relative
+FROM item_stats_agg
+WHERE {where_clause}
+GROUP BY item_id, bucket
+{having_clause}
+ORDER BY item_id, bucket
+SETTINGS log_comment = 'item_stats_mv'
+        "
+    ))
 }
 
 #[allow(clippy::too_many_lines)]
@@ -393,6 +566,13 @@ fn build_query(query: &ItemStatsQuery) -> String {
     let settings_clause = settings.join(", ");
     let match_filters =
         format!("match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}");
+    // Only ARRAY JOIN the precomputed net-worth column when a net-worth bucket
+    // needs it, so other buckets don't pay to read it.
+    let nw_array_join = if query.bucket.needs_net_worth_at_buy() {
+        ",\n    `items.net_worth_at_buy` AS net_worth_at_buy"
+    } else {
+        ""
+    };
     format!(
         "
 WITH t_upgrades AS (SELECT id FROM items WHERE type = 'upgrade'){enemy_cte}
@@ -411,7 +591,7 @@ FROM match_player{enemy_join}
 ARRAY JOIN
     items.item_id      AS item_id,
     items.game_time_s  AS buy_time,
-    items.sold_time_s  AS sold_time
+    items.sold_time_s  AS sold_time{nw_array_join}
 WHERE {match_filters}{enemy_where}
     AND item_id IN t_upgrades AND buy_time > 0
     {player_filters}
@@ -443,9 +623,19 @@ async fn get_item_stats(
     mut query: ItemStatsQuery,
 ) -> APIResult<Vec<ItemStats>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
-    let query = build_query(&query);
-    debug!(?query);
-    Ok(run_query(ch_client, &query).await?)
+    // Prefer the pre-aggregated item_stats_agg view for the global-meta subset of
+    // parameters; fall back to the base table for everything else, and on any MV
+    // error so a missing or rebuilding view never breaks the endpoint.
+    if let Some(mv_query) = build_mv_query(&query) {
+        debug!(?mv_query);
+        match run_query(ch_client, &mv_query).await {
+            Ok(rows) => return Ok(rows),
+            Err(e) => warn!("item_stats MV query failed, falling back to base table: {e}"),
+        }
+    }
+    let base_query = build_query(&query);
+    debug!(?base_query);
+    Ok(run_query(ch_client, &base_query).await?)
 }
 
 #[utoipa::path(
@@ -507,6 +697,14 @@ mod proptests {
         #[allow(deprecated)]
         fn item_stats_build_query_is_valid_sql(query: ItemStatsQuery) {
             assert_valid_sql(&build_query(&query));
+        }
+
+        #[test]
+        #[allow(deprecated)]
+        fn item_stats_build_mv_query_is_valid_sql(query: ItemStatsQuery) {
+            if let Some(sql) = build_mv_query(&query) {
+                assert_valid_sql(&sql);
+            }
         }
     }
 }
