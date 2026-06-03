@@ -324,7 +324,7 @@ pub(super) async fn hero_synergies_stats(
 ) -> APIResult<impl IntoResponse> {
     #[allow(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
-    get_hero_synergy_stats(&state.ch_client_ro, query)
+    get_hero_synergy_stats(&state.ch_client_cached, query)
         .await
         .map(Json)
 }

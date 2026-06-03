@@ -176,7 +176,7 @@ pub(super) async fn hero_ban_stats(
     Query(query): Query<HeroBanStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_hero_ban_stats(&state.ch_client_ro, query)
+    get_hero_ban_stats(&state.ch_client_cached, query)
         .await
         .map(Json)
 }

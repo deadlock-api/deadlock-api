@@ -229,7 +229,7 @@ pub(super) async fn hero_build_stats(
     #[allow(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     let valid_build_ids = fetch_valid_build_ids(&state.pg_client, hero_id).await?;
-    get_hero_build_stats(&state.ch_client_ro, hero_id, &valid_build_ids, query)
+    get_hero_build_stats(&state.ch_client_cached, hero_id, &valid_build_ids, query)
         .await
         .map(Json)
 }

@@ -587,7 +587,7 @@ pub(crate) async fn player_stats_metrics(
         });
     }
     filter_protected_accounts(&state, &mut query.account_ids, None).await?;
-    get_player_stats_metrics(&state.ch_client_ro, query)
+    get_player_stats_metrics(&state.ch_client_cached, query)
         .await
         .map(|rows| {
             Metric::VARIANTS

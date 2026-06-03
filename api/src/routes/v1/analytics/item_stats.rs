@@ -488,7 +488,9 @@ pub(crate) async fn item_stats(
     }
     #[allow(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
-    get_item_stats(&state.ch_client_ro, query).await.map(Json)
+    get_item_stats(&state.ch_client_cached, query)
+        .await
+        .map(Json)
 }
 
 #[cfg(test)]

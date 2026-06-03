@@ -243,7 +243,7 @@ pub(super) async fn ability_order_stats(
             format!("Invalid hero_id: {}", query.hero_id),
         ));
     }
-    get_ability_order_stats(&state.ch_client_ro, query)
+    get_ability_order_stats(&state.ch_client_cached, query)
         .await
         .map(Json)
 }

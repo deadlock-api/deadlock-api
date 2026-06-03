@@ -273,7 +273,7 @@ pub(super) async fn item_permutation_stats(
             "No item ids provided",
         ));
     }
-    get_item_permutation_stats(&state.ch_client_ro, query)
+    get_item_permutation_stats(&state.ch_client_cached, query)
         .await
         .map(Json)
 }

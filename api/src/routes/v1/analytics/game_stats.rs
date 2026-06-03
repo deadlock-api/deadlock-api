@@ -281,7 +281,9 @@ pub(crate) async fn game_stats(
         });
     }
 
-    get_game_stats(&state.ch_client_ro, query).await.map(Json)
+    get_game_stats(&state.ch_client_cached, query)
+        .await
+        .map(Json)
 }
 
 #[cfg(test)]

@@ -307,7 +307,7 @@ pub(crate) async fn kill_death_stats(
             message: "Cannot filter by average badge for street brawl game mode".to_string(),
         });
     }
-    get_kill_death_stats(&state.ch_client_ro, query)
+    get_kill_death_stats(&state.ch_client_cached, query)
         .await
         .map(Json)
 }
