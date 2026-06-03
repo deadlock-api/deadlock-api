@@ -30,7 +30,7 @@ use tracing::{debug, error, info, instrument, warn};
 mod models;
 
 const CONCURRENCY: usize = 10;
-const POLL_INTERVAL: Duration = Duration::from_secs(10);
+const POLL_INTERVAL: Duration = Duration::from_secs(30);
 const ITERATION_BACKOFF: Duration = Duration::from_secs(5);
 const RETRY_INTERVAL: Duration = Duration::from_mins(3);
 const MAX_RETRIES: u8 = 30;
@@ -64,10 +64,15 @@ async fn main() -> anyhow::Result<()> {
     let state = State::new();
 
     loop {
+        let started = tokio::time::Instant::now();
         if let Err(e) = run_iteration(&ch_client, &store, &cache_store, &state).await {
             counter!("matchdata_downloader.iteration.failure").increment(1);
             error!("Iteration failed: {e:#}");
             sleep(ITERATION_BACKOFF).await;
+            continue;
+        }
+        if let Some(remaining) = POLL_INTERVAL.checked_sub(started.elapsed()) {
+            sleep(remaining).await;
         }
     }
 }
@@ -89,11 +94,7 @@ async fn run_iteration(
     gauge!("matchdata_downloader.matches_to_download").set(to_fetch.len() as f64);
 
     if to_fetch.is_empty() {
-        info!(
-            "No matches to download, sleeping for {}s",
-            POLL_INTERVAL.as_secs()
-        );
-        sleep(POLL_INTERVAL).await;
+        info!("No matches to download");
         return Ok(());
     }
 
