@@ -250,7 +250,7 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
     )
     GROUP BY hero_id, enemy_hero_id
     {having_clause}
-    SETTINGS log_comment = 'hero_counters_stats', apply_patch_parts = 0
+    SETTINGS log_comment = 'hero_counters_stats', apply_patch_parts = 0, do_not_merge_across_partitions_select_final = 1
     "
     )
 }

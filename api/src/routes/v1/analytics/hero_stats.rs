@@ -251,7 +251,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         {}
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
-    SETTINGS log_comment = 'hero_stats', apply_patch_parts = 0
+    SETTINGS log_comment = 'hero_stats', apply_patch_parts = 0, do_not_merge_across_partitions_select_final = 1
     ",
         if has_player_hero_cte {
             format!(
