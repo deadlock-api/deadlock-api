@@ -255,15 +255,24 @@ impl SteamSearchIndex {
         // `>=` (not `>`) so writes landing in the same second as the previous
         // snapshot's high-water mark aren't lost. The delete_term below dedups
         // any rows we re-fetch as a result.
+        // No FINAL: with FINAL, ClickHouse must read every row's wide `friends.*`
+        // arrays to run the replacing merge before the `last_updated` filter
+        // applies (~4 GiB / 1.2s per run). Without FINAL it joins via the
+        // account_id primary key and column-prunes the filtered scan (~7 MiB /
+        // 25ms — ~600x less, measured equivalent result). `LIMIT 1 BY account_id`
+        // (latest wins) dedups the rare case of an account with multiple
+        // unmerged versions both newer than the watermark, so we never emit two
+        // tantivy docs for one account.
         let query = format!(
             "{SELECT_PROFILES_COMMON}
-            FROM steam_profiles sp FINAL
+            FROM steam_profiles sp
             INNER JOIN player_match_counts30d mp ON sp.account_id = mp.account_id
             WHERE sp.personaname IS NOT NULL AND not empty(sp.personaname)
               AND sp.last_updated >= toDateTime(?)
+            ORDER BY sp.last_updated DESC
+            LIMIT 1 BY sp.account_id
             SETTINGS
                 log_comment = 'steam_search_index_build_incremental',
-                do_not_merge_across_partitions_select_final = 1,
                 max_execution_time = 60"
         );
         let rows = ch_client
