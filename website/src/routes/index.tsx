@@ -200,7 +200,7 @@ const analyticsLinks = [
 ];
 
 const mainSponsor = {
-  href: "https://www.deadchaps.com/",
+  href: "https://www.deadchaps.com/?ref=deadlock-api.com",
   title: "Dead Chaps",
   logo: "/logo/deadchaps.png",
   width: 600,
@@ -209,13 +209,19 @@ const mainSponsor = {
 
 const sponsors = [
   {
-    href: "https://statlocker.gg/",
+    href: "https://statlocker.gg/?ref=deadlock-api.com",
     title: "Statlocker.GG",
     logo: "/logo/statlocker.png",
     width: 414,
     height: 114,
   },
-  { href: "https://blast.tv/", title: "Blast.TV", logo: "/logo/blast.svg", width: 996, height: 188 },
+  {
+    href: "https://blast.tv/?ref=deadlock-api.com",
+    title: "Blast.TV",
+    logo: "/logo/blast.svg",
+    width: 996,
+    height: 188,
+  },
 ];
 
 function IndexRoute() {
