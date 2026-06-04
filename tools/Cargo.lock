@@ -11,7 +11,7 @@ dependencies = [
  "common",
  "delay_map",
  "metrics",
- "reqwest 0.13.3",
+ "reqwest 0.13.4",
  "serde",
  "serde_repr",
  "tokio",
@@ -300,7 +300,7 @@ dependencies = [
  "itertools",
  "metrics",
  "rand 0.10.1",
- "reqwest 0.13.3",
+ "reqwest 0.13.4",
  "serde_json",
  "sqlx",
  "time",
@@ -357,9 +357,9 @@ dependencies = [
 
 [[package]]
 name = "cached"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fddee1beae7a67a67cfe13f0833b44716f219359ac6c433099e1ae0faaee933"
+checksum = "4863037a22757575c62f4f52c71bc833c7989c696c35eda5c83a4f36599b2bbd"
 dependencies = [
  "ahash",
  "cached_proc_macro",
@@ -373,9 +373,9 @@ dependencies = [
 
 [[package]]
 name = "cached_proc_macro"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21fe1bb11488edf0c44742ed08922597716279435267308ad086b82680320a16"
+checksum = "8b7a89b3ceb2f9166826b0d21b670a8720dbaeb3397428d1c7603e0ffacdfd37"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -579,7 +579,7 @@ dependencies = [
  "opentelemetry-otlp",
  "opentelemetry_sdk",
  "prost",
- "reqwest 0.13.3",
+ "reqwest 0.13.4",
  "serde",
  "serde_json",
  "sqlx",
@@ -826,7 +826,7 @@ dependencies = [
  "metrics",
  "os_pipe",
  "prost",
- "reqwest 0.13.3",
+ "reqwest 0.13.4",
  "serde",
  "snap",
  "thiserror",
@@ -1114,7 +1114,7 @@ dependencies = [
  "clickhouse",
  "common",
  "metrics",
- "reqwest 0.13.3",
+ "reqwest 0.13.4",
  "serde",
  "sqlx",
  "tokio",
@@ -1363,7 +1363,7 @@ dependencies = [
  "http",
  "log",
  "prost",
- "reqwest 0.13.3",
+ "reqwest 0.13.4",
  "serde",
  "serde_json",
  "thiserror",
@@ -1430,7 +1430,7 @@ dependencies = [
  "common",
  "futures",
  "metrics",
- "reqwest 0.13.3",
+ "reqwest 0.13.4",
  "serde",
  "sqlx",
  "tokio",
@@ -1467,7 +1467,7 @@ dependencies = [
  "metrics",
  "object_store",
  "prost",
- "reqwest 0.13.3",
+ "reqwest 0.13.4",
  "serde",
  "serde_json",
  "thiserror",
@@ -1832,9 +1832,9 @@ checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
 
 [[package]]
 name = "jiff"
-version = "0.2.24"
+version = "0.2.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f00b5dbd620d61dfdcb6007c9c1f6054ebd75319f163d886a9055cec1155073d"
+checksum = "4603d3033e49e2b0e31229fcab20a5d40089c607d975cd9c80551dc69eed9102"
 dependencies = [
  "jiff-static",
  "jiff-tzdb-platform",
@@ -1842,14 +1842,14 @@ dependencies = [
  "portable-atomic",
  "portable-atomic-util",
  "serde_core",
- "windows-sys 0.61.2",
+ "windows-link",
 ]
 
 [[package]]
 name = "jiff-static"
-version = "0.2.24"
+version = "0.2.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e000de030ff8022ea1da3f466fbb0f3a809f5e51ed31f6dd931c35181ad8e6d7"
+checksum = "782d32378dddf207193ac91cefb848ad41abb58195c95168e1291227a0832b47"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2051,7 +2051,7 @@ dependencies = [
  "futures",
  "metrics",
  "object_store",
- "reqwest 0.13.3",
+ "reqwest 0.13.4",
  "serde",
  "time",
  "tokio",
@@ -2326,7 +2326,7 @@ dependencies = [
  "bytes",
  "http",
  "opentelemetry",
- "reqwest 0.13.3",
+ "reqwest 0.13.4",
 ]
 
 [[package]]
@@ -2341,7 +2341,7 @@ dependencies = [
  "opentelemetry-proto",
  "opentelemetry_sdk",
  "prost",
- "reqwest 0.13.3",
+ "reqwest 0.13.4",
  "thiserror",
  "tokio",
  "tonic",
@@ -2928,9 +2928,9 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.13.3"
+version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62e0021ea2c22aed41653bc7e1419abb2c97e038ff2c33d0e1309e49a97deec0"
+checksum = "219c5811de6525e5416c7d5d53bb656d3afdbc6c5af816e0802bcfa42dbdc1c3"
 dependencies = [
  "base64",
  "bytes",
@@ -3109,7 +3109,7 @@ dependencies = [
  "common",
  "futures",
  "metrics",
- "reqwest 0.13.3",
+ "reqwest 0.13.4",
  "serde",
  "tokio",
  "tracing",
@@ -3577,7 +3577,7 @@ dependencies = [
  "itertools",
  "metrics",
  "rand 0.10.1",
- "reqwest 0.13.3",
+ "reqwest 0.13.4",
  "serde",
  "serde_repr",
  "sqlx",
@@ -4105,7 +4105,7 @@ dependencies = [
  "clickhouse",
  "common",
  "metrics",
- "reqwest 0.13.3",
+ "reqwest 0.13.4",
  "serde",
  "serde_repr",
  "tokio",
