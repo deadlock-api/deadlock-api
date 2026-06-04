@@ -250,6 +250,12 @@ impl SteamSearchIndex {
         if watermark == 0 {
             return self.rebuild_full(ch_client).await;
         }
+        if !current_dir.exists() {
+            warn!(
+                "steam search index: current dir {current_dir:?} vanished (concurrent GC?); falling back to full rebuild"
+            );
+            return self.rebuild_full(ch_client).await;
+        }
         let started = std::time::Instant::now();
 
         // `>=` (not `>`) so writes landing in the same second as the previous
