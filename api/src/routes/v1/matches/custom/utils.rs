@@ -119,10 +119,10 @@ pub(super) async fn leave_party(
 
     info!("Left Party: {username} {party_id} {response:?}");
     let result = response.result;
-    if result
-        .is_none_or(|r| r != c_msg_client_to_gc_party_leave_response::EResponse::KESuccess as i32)
-    {
-        error!("Failed to leave party: {username} {party_id} {result:?}");
+    if result.is_none_or(|r| {
+        r != c_msg_client_to_gc_party_leave_response::EResponse::KESuccess as i32
+            && r != c_msg_client_to_gc_party_leave_response::EResponse::KENotInParty as i32
+    }) {
         return Err(APIError::internal(format!(
             "Failed to leave party: {result:?}"
         )));
