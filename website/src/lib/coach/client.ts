@@ -40,6 +40,7 @@ export interface SessionSummary {
   title: string | null;
   root_message_id: string | null;
   forked_from_message_id: string | null;
+  is_public: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -89,6 +90,28 @@ export async function listSessions(): Promise<SessionSummary[]> {
   return (await res.json()) as SessionSummary[];
 }
 
+// Share a session to make it public.
+export async function shareSession(sessionId: string): Promise<SessionSummary> {
+  const res = await fetch(`${COACH_API_ORIGIN}/sessions/${sessionId}/share`, {
+    method: "POST",
+    headers: authHeaders(),
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(`shareSession failed: ${res.status}`);
+  return (await res.json()) as SessionSummary;
+}
+
+// Make a session private again.
+export async function makeSessionPrivate(sessionId: string): Promise<SessionSummary> {
+  const res = await fetch(`${COACH_API_ORIGIN}/sessions/${sessionId}/private`, {
+    method: "POST",
+    headers: authHeaders(),
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(`makeSessionPrivate failed: ${res.status}`);
+  return (await res.json()) as SessionSummary;
+}
+
 // Whether the current patron is allowed to use the AI coach (the `ai_agent_access`
 // flag, owned by deadlock-api). Returns false for anyone not signed in or without
 // the flag — the UI then falls back to the "coming soon" teaser. Never throws.
@@ -107,6 +130,17 @@ export async function fetchAiAgentAccess(): Promise<boolean> {
 }
 
 export class SessionNotFoundError extends Error {}
+
+// Fetch a single session's metadata.
+export async function getSession(sessionId: string): Promise<SessionSummary> {
+  const res = await fetch(`${COACH_API_ORIGIN}/sessions/${sessionId}`, {
+    headers: authHeaders(),
+    credentials: "include",
+  });
+  if (res.status === 404) throw new SessionNotFoundError("Chat not found");
+  if (!res.ok) throw new Error(`getSession failed: ${res.status}`);
+  return (await res.json()) as SessionSummary;
+}
 
 // Fetch a session's message tree. Throws SessionNotFoundError on 404 so the UI
 // can show a clean empty state instead of crashing.

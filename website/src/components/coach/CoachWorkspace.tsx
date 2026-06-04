@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Bot, Check, CornerDownLeft, Link2, Plus, Sparkles } from "lucide-react";
+import { Bot, Check, CornerDownLeft, Link2, Plus, Sparkles, Lock, Globe } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { NumberSelectorBare } from "~/components/NumberSelector";
@@ -7,10 +7,13 @@ import { HeroSelector } from "~/components/selectors/HeroSelector";
 import { useHeroById } from "~/hooks/useAssetById";
 import {
   type CoachStreamHandle,
+  getSession,
   getSessionTree,
   isReportPart,
   isTextPart,
   listSessions,
+  shareSession,
+  makeSessionPrivate,
   type MessageTreeNode,
   streamCoachMessage,
   type ToolActivity,
@@ -19,6 +22,7 @@ import {
 import { CoachIcon } from "~/lib/coach/icons";
 import type { Report } from "~/lib/coach/report";
 import { SAMPLE_REPORTS } from "~/lib/coach/sample-reports";
+import { useAiAgentAccess } from "~/lib/coach/use-ai-agent-access";
 import { useSteamAccount } from "~/lib/coach/use-steam-account";
 import { cn } from "~/lib/utils";
 
@@ -100,9 +104,11 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
   // Demo mode seeds a worked example without touching the network.
   const [turns, setTurns] = useState<Turn[]>(() => demoTurns(demo));
   const { account, connect, disconnect } = useSteamAccount();
+  const { data: hasAccess } = useAiAgentAccess();
   const navigate = useNavigate();
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(routeSessionId ?? null);
+  const [isPublic, setIsPublic] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [loadState, setLoadState] = useState<LoadState>(routeSessionId ? "loading" : "idle");
   const handleRef = useRef<CoachStreamHandle | null>(null);
@@ -114,10 +120,13 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
   useEffect(() => {
     if (!routeSessionId || demo) return;
     let cancelled = false;
-    getSessionTree(routeSessionId)
-      .then((roots) => {
+    Promise.all([getSessionTree(routeSessionId), getSession(routeSessionId).catch(() => null)])
+      .then(([roots, session]) => {
         if (!cancelled) {
           setTurns(treeToTurns(roots));
+          if (session) {
+            setIsPublic(session.is_public);
+          }
           setLoadState("idle");
         }
         return undefined;
@@ -166,6 +175,7 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
           const newId = created?.id ?? after[0]?.id ?? null;
           if (newId) {
             setSessionId(newId);
+            setIsPublic(created?.is_public ?? false);
             // History replace keeps the streamed turn mounted and rendered.
             window.history.replaceState(window.history.state, "", `/chat/${newId}`);
           }
@@ -204,6 +214,7 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
     handleRef.current?.close();
     setTurns([]);
     setSessionId(null);
+    setIsPublic(false);
     setStreaming(false);
     setLoadState("idle");
     navigate({ to: "/chat", search: {}, replace: true });
@@ -231,7 +242,9 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {sessionId && !demo && !showNotFound && !showLoading ? <CopyLinkButton sessionId={sessionId} /> : null}
+          {sessionId && !demo && !showNotFound && !showLoading ? (
+            <ShareToggle sessionId={sessionId} isPublic={isPublic} setIsPublic={setIsPublic} hasAccess={hasAccess} />
+          ) : null}
           {account ? <SteamConnect account={account} onConnect={connect} onDisconnect={disconnect} /> : null}
           {(!empty || (sessionId && !showNotFound)) && !showLoading ? (
             <button
@@ -250,6 +263,17 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
           <LoadingState />
         ) : showNotFound ? (
           <NotFoundState onReset={reset} />
+        ) : !hasAccess && !demo ? (
+          empty ? (
+            <NotFoundState onReset={reset} />
+          ) : (
+            <div className="space-y-8 pb-6">
+              {turns.map((turn) => (
+                <TurnView key={turn.id} turn={turn} />
+              ))}
+              <div ref={bottomRef} />
+            </div>
+          )
         ) : !account && !demo ? (
           <SteamGate onConnect={connect} />
         ) : empty ? (
@@ -264,16 +288,38 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
         )}
       </div>
 
-      {(account || demo) && !showNotFound && !showLoading ? (
+      {hasAccess && (account || demo) && !showNotFound && !showLoading ? (
         <Composer value={input} onChange={setInput} onSubmit={() => submit(input)} disabled={streaming} />
       ) : null}
     </div>
   );
 }
 
-function CopyLinkButton({ sessionId }: { sessionId: string }) {
+function ShareToggle({
+  sessionId,
+  isPublic,
+  setIsPublic,
+  hasAccess,
+}: {
+  sessionId: string;
+  isPublic: boolean;
+  setIsPublic: (b: boolean) => void;
+  hasAccess: boolean | undefined;
+}) {
   const [copied, setCopied] = useState(false);
+
   const copy = () => {
+    if (hasAccess && !isPublic) {
+      void shareSession(sessionId)
+        .then(() => {
+          setIsPublic(true);
+          return undefined;
+        })
+        .catch((err) => {
+          console.error("Failed to share session:", err);
+        });
+    }
+
     const url = typeof window !== "undefined" ? `${window.location.origin}/chat/${sessionId}` : `/chat/${sessionId}`;
     void navigator.clipboard?.writeText(url).then(() => {
       setCopied(true);
@@ -281,16 +327,68 @@ function CopyLinkButton({ sessionId }: { sessionId: string }) {
       return undefined;
     });
   };
+
+  const revoke = () => {
+    if (!hasAccess) return;
+    void makeSessionPrivate(sessionId)
+      .then(() => {
+        setIsPublic(false);
+        return undefined;
+      })
+      .catch((err) => {
+        console.error("Failed to make private:", err);
+      });
+  };
+
+  if (!hasAccess) {
+    return (
+      <button
+        type="button"
+        onClick={copy}
+        aria-label="Copy link to this chat"
+        className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] px-2.5 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"
+      >
+        {copied ? <Check className="size-3.5 text-emerald-400" /> : <Link2 className="size-3.5" />}
+        {copied ? "Copied" : "Copy link"}
+      </button>
+    );
+  }
+
   return (
-    <button
-      type="button"
-      onClick={copy}
-      aria-label="Copy link to this chat"
-      className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] px-2.5 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"
-    >
-      {copied ? <Check className="size-3.5 text-emerald-400" /> : <Link2 className="size-3.5" />}
-      {copied ? "Copied" : "Copy link"}
-    </button>
+    <div className="flex items-center gap-1.5">
+      <button
+        type="button"
+        onClick={copy}
+        aria-label="Copy link to this chat"
+        className={cn(
+          "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition",
+          isPublic
+            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+            : "border-white/[0.08] bg-white/[0.02] text-muted-foreground hover:text-foreground",
+        )}
+      >
+        {copied ? (
+          <Check className="size-3.5" />
+        ) : isPublic ? (
+          <Globe className="size-3.5" />
+        ) : (
+          <Link2 className="size-3.5" />
+        )}
+        {copied ? "Copied" : isPublic ? "Public link" : "Copy public link"}
+      </button>
+
+      {isPublic && (
+        <button
+          type="button"
+          onClick={revoke}
+          aria-label="Make this chat private"
+          className="flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-xs text-red-400 transition hover:bg-red-500/20"
+        >
+          <Lock className="size-3.5" />
+          Make private
+        </button>
+      )}
+    </div>
   );
 }
 

@@ -1,6 +1,8 @@
-import { Outlet, createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Outlet, createFileRoute, useParams } from "@tanstack/react-router";
 
 import { ComingSoonTeaser } from "~/components/coach/ComingSoonTeaser";
+import { getSessionTree } from "~/lib/coach/client";
 import { useAiAgentAccess } from "~/lib/coach/use-ai-agent-access";
 import { seo } from "~/lib/seo";
 
@@ -16,12 +18,26 @@ export const Route = createFileRoute("/chat")({
 });
 
 function ChatLayout() {
-  const { data: hasAccess, isLoading } = useAiAgentAccess();
+  const { data: hasAccess, isLoading: accessLoading } = useAiAgentAccess();
+  const { sessionId } = useParams({ strict: false }) as { sessionId?: string };
 
-  // Until access resolves, render the teaser shell so non-patrons (the common
-  // case) never see a flash of the coach workspace. Patrons with `ai_agent_access`
-  // get the real workspace via the nested route.
-  if (isLoading || !hasAccess) {
+  const { data: sessionTree, isLoading: sessionLoading } = useQuery({
+    queryKey: ["coach-session-tree", sessionId],
+    queryFn: () => getSessionTree(sessionId!),
+    enabled: !!sessionId && typeof document !== "undefined",
+    retry: false,
+    staleTime: 60_000,
+  });
+
+  if (sessionId && sessionLoading) {
+    return <ComingSoonTeaser />;
+  }
+
+  if (sessionId && sessionTree) {
+    return <Outlet />;
+  }
+
+  if (accessLoading || !hasAccess) {
     return <ComingSoonTeaser />;
   }
 
