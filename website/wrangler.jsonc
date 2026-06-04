@@ -4,6 +4,7 @@
   "workers_dev": true,
   "main": "./dist/server/server.js",
   "compatibility_date": "2026-05-14",
+  "keep_names": false,
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./dist/client",
