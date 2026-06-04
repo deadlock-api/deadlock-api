@@ -10,7 +10,7 @@
     "binding": "ASSETS",
     "not_found_handling": "404-page",
     "html_handling": "drop-trailing-slash",
-    "run_worker_first": ["/streamkit/widgets/*"]
+    "run_worker_first": ["/streamkit/widgets/*", "/chat/*"]
   },
   "routes": [
     { "pattern": "deadlock-api.com", "custom_domain": true },
