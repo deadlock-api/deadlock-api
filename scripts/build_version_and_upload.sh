@@ -163,12 +163,21 @@ regex:citadel/resource/localization/.*\.txt$
 regex:citadel/panorama/fonts/.*\.otf$
 EOF
 echo "Downloading Deadlock game files (windows depot, pak01 + loose fonts)..."
-./DepotDownloader -app 1422450 -os windows -filelist filelist.txt -validate -remember-password \
-    -username "$STEAM_USERNAME" -password "$STEAM_PASSWORD" || exit 1
+DEPOT_DIR="$WORK_DIR/depot"
+mkdir -p "$DEPOT_DIR"
+timeout 2400 ./DepotDownloader -app 1422450 -os windows -filelist filelist.txt -validate \
+    -remember-password -username "$STEAM_USERNAME" -password "$STEAM_PASSWORD" \
+    -dir "$DEPOT_DIR" </dev/null \
+    || { echo "Error: depot download failed or timed out."; exit 1; }
 
+citadel_src=$(find "$DEPOT_DIR" -type d -path '*/game/citadel' | head -n 1)
+if [ -z "$citadel_src" ]; then
+    echo "Error: game/citadel not found under $DEPOT_DIR after download."
+    exit 1
+fi
+rm -rf depots/game
 mkdir -p depots/game
-rsync -av depots/*/*/game/* depots/game/
-find depots/ -type d -empty -delete
+rsync -a "$citadel_src" depots/game/
 
 # 3. Extract VPKs (stdout is a per-file flood; silence it, keep stderr for errors)
 citadel_folder="depots/game/citadel"
@@ -337,7 +346,7 @@ find videos -type f -name "*.webm" -print0 | \
             echo "Skipping unchanged video: $video_file"
         else
             echo "Converting $video_file -> $mp4_file"
-            ffmpeg -nostdin -loglevel error -i "$video_file" -c:v libx264 -crf 23 -y "$mp4_file" \
+            timeout 300 ffmpeg -nostdin -loglevel error -i "$video_file" -c:v libx264 -crf 23 -y "$mp4_file" \
                 && printf "%s\n" "$cur" > "$hash_file"
         fi
     ' _ {}

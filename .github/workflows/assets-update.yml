@@ -36,6 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       changed: ${{ steps.compare.outputs.changed }}
+      version: ${{ steps.compare.outputs.version }}
     steps:
       - name: Compare Steam active version against published version
         id: compare
@@ -52,6 +53,7 @@ jobs:
             latest=0
           fi
           echo "Steam active_version=$active, latest published=$latest"
+          echo "version=$active" >> "$GITHUB_OUTPUT"
           if [ "$active" != "$latest" ]; then
             echo "New client version detected -> running full build."
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -92,6 +94,18 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.2.0
+
+      - name: Cache Steam depot + tooling
+        uses: useblacksmith/cache@v5
+        with:
+          path: |
+            .assets-build/DepotDownloader
+            .assets-build/Source2Viewer-CLI
+            .assets-build/depot
+            .assets-build/.video-hashes
+          key: assets-depot-${{ needs.check.outputs.version }}
+          restore-keys: |
+            assets-depot-
 
       - name: Build and upload assets to R2
         run: bash scripts/build_version_and_upload.sh
