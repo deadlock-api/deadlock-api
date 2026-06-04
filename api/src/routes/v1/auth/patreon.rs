@@ -100,20 +100,19 @@ pub(crate) async fn logout(State(state): State<AppState>) -> impl IntoResponse {
     // SameSite=None (with Secure) so the attributes match the cookie set in `callback`,
     // which must ride along on cross-site XHR/SSE to sibling APIs like ai.deadlock-api.com.
     let base_clear = "patron_session=; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=0";
-    let clear_cookie_headers: Vec<HeaderValue> = if state.config.patreon.cookie_domains.is_empty() {
-        vec![HeaderValue::from_static(base_clear)]
-    } else {
-        state
-            .config
-            .patreon
-            .cookie_domains
-            .iter()
-            .map(|domain| {
-                HeaderValue::from_str(&format!("{base_clear}; Domain={domain}"))
-                    .expect("valid cookie domain")
-            })
-            .collect()
-    };
+    // Always emit a host-only clear (no Domain attribute) in addition to the
+    // domain-scoped ones. Older builds set `patron_session` host-only (scoped to
+    // api.deadlock-api.com), and a `Domain=.deadlock-api.com` clear does NOT remove
+    // a host-only cookie. Without this, anyone still carrying a stale host-only
+    // cookie can never log it out, and it shadows the real `.deadlock-api.com`
+    // cookie on api.* requests.
+    let mut clear_cookie_headers: Vec<HeaderValue> = vec![HeaderValue::from_static(base_clear)];
+    for domain in &state.config.patreon.cookie_domains {
+        match HeaderValue::from_str(&format!("{base_clear}; Domain={domain}")) {
+            Ok(header) => clear_cookie_headers.push(header),
+            Err(e) => tracing::error!("Skipping invalid cookie domain in logout clear: {e}"),
+        }
+    }
 
     let mut response = Response::builder()
         .status(StatusCode::OK)
