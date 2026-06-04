@@ -91,7 +91,7 @@ jobs:
           curl -fsSL https://rclone.org/install.sh | sudo bash
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v8.2.0
 
       - name: Build and upload assets to R2
         run: bash scripts/build_version_and_upload.sh
