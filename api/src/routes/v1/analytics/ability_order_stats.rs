@@ -149,10 +149,8 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     format!(
         "
-    WITH
-        (SELECT groupArray(id) FROM items WHERE type = 'ability') AS ability_ids_array
     SELECT
-        arrayFilter(x -> has(ability_ids_array, x), items.item_id) as abilities,
+        arrayFilter(x -> x IN (SELECT id FROM items WHERE type = 'ability'), items.item_id) as abilities,
         countIf(won) AS wins,
         countIf(not won) AS losses,
         wins + losses AS matches,
