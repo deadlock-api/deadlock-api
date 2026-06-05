@@ -84,7 +84,7 @@ pub(crate) fn make_request_span<B>(request: &Request<B>) -> Span {
 
     tracing::span!(
         Level::INFO,
-        "http_request",
+        "request",
         otel.name = %otel_name,
         otel.kind = "server",
         http.request.method = %method,
@@ -148,8 +148,32 @@ pub(crate) fn on_failure(
     }
 }
 
-const CONSOLE_SPAN_FIELDS: &[&str] = &["deadlock.api_key", "client.address", "http.route"];
+/// Maps a rich OTel-semantic span field name to the short label the console used
+/// before the OTLP migration. Returns `None` for any field that should not be
+/// printed to the console.
+///
+/// The request span ([`make_request_span`]) carries the full set of OpenTelemetry
+/// HTTP semantic-convention fields so the OTLP trace/log exporters stay complete.
+/// The console, however, only wants the original `request` span fields —
+/// `method`, `path`, `query`, `api_key`, `ip` — no more, no less.
+fn console_label(name: &str) -> Option<&'static str> {
+    Some(match name {
+        "http.request.method" => "method",
+        "url.path" => "path",
+        "url.query" => "query",
+        "deadlock.api_key" => "api_key",
+        "client.address" => "ip",
+        _ => return None,
+    })
+}
 
+/// `FormatFields` implementation for the console fmt layer.
+///
+/// Events (log records, identified by carrying a `message` field) are formatted
+/// with the default formatter so nothing is lost from log lines. Span field sets
+/// — i.e. the `request` span wrapping every log line — are reduced to the legacy
+/// console field set via [`console_label`], keeping console output identical to
+/// the pre-OTLP behaviour while the spans still export their full attribute set.
 #[derive(Default)]
 pub struct ConsoleFields {
     default: DefaultFields,
@@ -167,7 +191,7 @@ impl<'writer> FormatFields<'writer> for ConsoleFields {
             return self.default.format_fields(writer, fields);
         }
 
-        let mut visitor = AllowlistVisitor {
+        let mut visitor = LegacyFieldVisitor {
             writer: &mut writer,
             first: true,
             result: Ok(()),
@@ -177,6 +201,8 @@ impl<'writer> FormatFields<'writer> for ConsoleFields {
     }
 }
 
+/// Detects whether a field set belongs to a log event (which always records a
+/// `message` field) rather than a span.
 struct IsEventProbe(bool);
 
 impl Visit for IsEventProbe {
@@ -187,19 +213,23 @@ impl Visit for IsEventProbe {
     }
 }
 
-struct AllowlistVisitor<'a, 'writer> {
+/// Renders only the legacy console fields, relabelled via [`console_label`].
+struct LegacyFieldVisitor<'a, 'writer> {
     writer: &'a mut Writer<'writer>,
     first: bool,
     result: fmt::Result,
 }
 
-impl Visit for AllowlistVisitor<'_, '_> {
+impl Visit for LegacyFieldVisitor<'_, '_> {
     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
-        if self.result.is_err() || !CONSOLE_SPAN_FIELDS.contains(&field.name()) {
+        let Some(label) = console_label(field.name()) else {
+            return;
+        };
+        if self.result.is_err() {
             return;
         }
         let sep = if self.first { "" } else { " " };
-        self.result = write!(self.writer, "{sep}{}={value:?}", field.name());
+        self.result = write!(self.writer, "{sep}{label}={value:?}");
         if self.result.is_ok() {
             self.first = false;
         }
