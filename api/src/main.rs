@@ -77,10 +77,17 @@ fn init_tracing() -> Option<OtelGuard> {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
         "debug,hyper_util=warn,tower_http=info,reqwest=warn,rustls=warn,sqlx=warn,h2=warn",
     ));
+    // Keep the `http_request` span on the console fmt layer so its fields
+    // (client IP, route, request id, …) keep wrapping every log line emitted
+    // while a request is in flight — e.g. rate-limit warnings. Only drop the
+    // per-request *events* the observability layer emits (the "response" line
+    // and failure events) so they don't add a line per request. The span and
+    // those events share the same module target, so distinguish them by kind.
     let fmt_layer = tracing_subscriber::fmt::layer().with_filter(filter_fn(|meta| {
-        !meta
-            .target()
-            .starts_with("deadlock_api_rust::utils::observability")
+        !(meta.is_event()
+            && meta
+                .target()
+                .starts_with("deadlock_api_rust::utils::observability"))
     }));
 
     let providers = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
