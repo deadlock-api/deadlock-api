@@ -101,6 +101,7 @@ jobs:
           path: |
             .assets-build/DepotDownloader
             .assets-build/Source2Viewer-CLI
+            .assets-build/*.so
             .assets-build/depot
             .assets-build/.video-hashes
           key: assets-depot-${{ needs.check.outputs.version }}

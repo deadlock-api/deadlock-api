@@ -122,7 +122,11 @@ if [ ! -f DepotDownloader ]; then
     chmod +x DepotDownloader
 fi
 
-if [ ! -f Source2Viewer-CLI ]; then
+# Re-extract if EITHER the CLI binary OR its sibling native libs are missing.
+# The zip ships Source2Viewer-CLI alongside libSkiaSharp.so (and friends); a
+# partial cache restore that brings back only the managed binary leaves the
+# natives absent, and the CLI then aborts with "Unable to load libSkiaSharp".
+if [ ! -f Source2Viewer-CLI ] || [ ! -f libSkiaSharp.so ]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
         curl -L -o Decompiler.zip "https://github.com/ValveResourceFormat/ValveResourceFormat/releases/download/19.1/cli-macos-arm64.zip"
     elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
