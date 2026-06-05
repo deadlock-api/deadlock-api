@@ -3,7 +3,6 @@ use core::time::Duration;
 use axum::http::HeaderMap;
 use chrono::{DateTime, Utc};
 use strum::EnumIs;
-use tracing::warn;
 
 use crate::error::{APIError, APIResult};
 
@@ -87,7 +86,6 @@ impl Status {
 
     pub(super) fn raise_if_exceeded(&self) -> APIResult<()> {
         if self.is_exceeded() {
-            warn!("Rate limit exceeded: {self:?}");
             return Err(APIError::RateLimitExceeded {
                 status: self.clone(),
             });
