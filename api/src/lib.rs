@@ -41,6 +41,7 @@ use tower_http::normalize_path::{NormalizePath, NormalizePathLayer};
 use tower_http::trace::TraceLayer;
 use tower_layer::Layer;
 use tracing::debug;
+pub use utils::observability::ConsoleFields;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};

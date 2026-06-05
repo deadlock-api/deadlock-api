@@ -1,10 +1,14 @@
+use core::fmt;
 use core::time::Duration;
 
 use axum::extract::MatchedPath;
 use axum::http::{HeaderMap, Request, Response};
 use tower_http::classify::ServerErrorsFailureClass;
-use tracing::field::Empty;
+use tracing::field::{Empty, Field, Visit};
 use tracing::{Level, Span};
+use tracing_subscriber::field::RecordFields;
+use tracing_subscriber::fmt::FormatFields;
+use tracing_subscriber::fmt::format::{DefaultFields, Writer};
 use uuid::Uuid;
 
 use crate::utils::parse;
@@ -140,6 +144,64 @@ pub(crate) fn on_failure(
         // hung up mid-response, so log at WARN to keep ERROR for real faults.
         ServerErrorsFailureClass::Error(error) => {
             tracing::warn!(error, latency_ms, "response failed: stream/service error");
+        }
+    }
+}
+
+const CONSOLE_SPAN_FIELDS: &[&str] = &["deadlock.api_key", "client.address", "http.route"];
+
+#[derive(Default)]
+pub struct ConsoleFields {
+    default: DefaultFields,
+}
+
+impl<'writer> FormatFields<'writer> for ConsoleFields {
+    fn format_fields<R: RecordFields>(
+        &self,
+        mut writer: Writer<'writer>,
+        fields: R,
+    ) -> fmt::Result {
+        let mut probe = IsEventProbe(false);
+        fields.record(&mut probe);
+        if probe.0 {
+            return self.default.format_fields(writer, fields);
+        }
+
+        let mut visitor = AllowlistVisitor {
+            writer: &mut writer,
+            first: true,
+            result: Ok(()),
+        };
+        fields.record(&mut visitor);
+        visitor.result
+    }
+}
+
+struct IsEventProbe(bool);
+
+impl Visit for IsEventProbe {
+    fn record_debug(&mut self, field: &Field, _value: &dyn fmt::Debug) {
+        if field.name() == "message" {
+            self.0 = true;
+        }
+    }
+}
+
+struct AllowlistVisitor<'a, 'writer> {
+    writer: &'a mut Writer<'writer>,
+    first: bool,
+    result: fmt::Result,
+}
+
+impl Visit for AllowlistVisitor<'_, '_> {
+    fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
+        if self.result.is_err() || !CONSOLE_SPAN_FIELDS.contains(&field.name()) {
+            return;
+        }
+        let sep = if self.first { "" } else { " " };
+        self.result = write!(self.writer, "{sep}{}={value:?}", field.name());
+        if self.result.is_ok() {
+            self.first = false;
         }
     }
 }

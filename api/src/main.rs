@@ -7,7 +7,7 @@ use std::net::{Ipv4Addr, SocketAddr};
 
 use axum::ServiceExt;
 use axum::extract::Request;
-use deadlock_api_rust::{StartupError, router};
+use deadlock_api_rust::{ConsoleFields, StartupError, router};
 use mimalloc::MiMalloc;
 use opentelemetry::trace::TracerProvider as _;
 use opentelemetry_appender_tracing::layer::{OpenTelemetryTracingBridge, TracingSpanAttributes};
@@ -77,11 +77,14 @@ fn init_tracing() -> Option<OtelGuard> {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
         "debug,hyper_util=warn,tower_http=info,reqwest=warn,rustls=warn,sqlx=warn,h2=warn",
     ));
-    let fmt_layer = tracing_subscriber::fmt::layer().with_filter(filter_fn(|meta| {
-        !meta
-            .target()
-            .starts_with("deadlock_api_rust::utils::observability")
-    }));
+    let fmt_layer = tracing_subscriber::fmt::layer()
+        .fmt_fields(ConsoleFields::default())
+        .with_filter(filter_fn(|meta| {
+            !(meta.is_event()
+                && meta
+                    .target()
+                    .starts_with("deadlock_api_rust::utils::observability"))
+        }));
 
     let providers = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
         .ok()
