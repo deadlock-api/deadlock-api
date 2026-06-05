@@ -170,11 +170,18 @@ timeout 2400 ./DepotDownloader -app 1422450 -os windows -filelist filelist.txt -
     -dir "$DEPOT_DIR" </dev/null \
     || { echo "Error: depot download failed or timed out."; exit 1; }
 
-citadel_src=$(find "$DEPOT_DIR" -type d -path '*/game/citadel' | head -n 1)
-if [ -z "$citadel_src" ]; then
-    echo "Error: game/citadel not found under $DEPOT_DIR after download."
+# Locate the citadel dir by the pak01_dir.vpk we actually need, NOT by directory
+# name. The restored depot cache can carry stray EMPTY game/citadel dirs (staging
+# for the zero-byte shared depots, e.g. 228989/1422451/1422452), and a
+# `find -type d -path '*/game/citadel' | head -n1` picks whichever readdir
+# returns first -- on the CI runner that was an empty one, so the rsync copied
+# nothing and extraction failed with "pak01_dir.vpk is not a file or a folder".
+pak01_dir=$(find "$DEPOT_DIR" -type f -name 'pak01_dir.vpk' | head -n 1)
+if [ -z "$pak01_dir" ]; then
+    echo "Error: pak01_dir.vpk not found under $DEPOT_DIR after download."
     exit 1
 fi
+citadel_src=$(dirname "$pak01_dir")
 rm -rf depots/game
 mkdir -p depots/game
 rsync -a "$citadel_src" depots/game/
