@@ -69,6 +69,40 @@ pub(super) struct BuildArgs<'a> {
     pub(super) offset: u32,
 }
 
+/// Columns the demo-analyzer writes via lightweight `UPDATE` (i.e. patch parts).
+/// A query that neither selects nor filters on any of these can set
+/// `apply_patch_parts = 0`, which lets ClickHouse serve it from the
+/// `match_player` projections instead of falling back to a base-table scan.
+const PATCHED_COLUMNS: [&str; 3] = ["banned_hero_ids", "hero_build_id", "demo_processed"];
+
+/// True when the projection or filters reference any demo-analyzer patched
+/// column, meaning patch parts must be applied for correct results.
+fn references_patched_column(args: &BuildArgs<'_>) -> bool {
+    let in_projection = args
+        .projection
+        .match_columns
+        .iter()
+        .chain(args.projection.player_columns.iter())
+        .any(|c| PATCHED_COLUMNS.contains(&c.ch_expr));
+    // Defense in depth: no patched column is filterable today, but scan the raw
+    // filter fragments so this stays correct if one is ever added.
+    let in_filters = args
+        .filters
+        .iter()
+        .any(|f| PATCHED_COLUMNS.iter().any(|p| f.contains(p)));
+    in_projection || in_filters
+}
+
+/// Builds the trailing `SETTINGS` clause, appending `apply_patch_parts = 0`
+/// whenever the query touches none of the [`PATCHED_COLUMNS`].
+fn settings_clause(args: &BuildArgs<'_>) -> String {
+    let mut clause = format!("SETTINGS log_comment = '{}'", super::RATE_LIMIT_KEY);
+    if !references_patched_column(args) {
+        clause.push_str(", apply_patch_parts = 0");
+    }
+    clause
+}
+
 /// Match-grouped query: returns one row per `match_id` with players aggregated
 /// into a `players` JSON array.
 ///
@@ -122,11 +156,7 @@ pub(super) fn build_matches_query(args: &BuildArgs<'_>) -> Result<String, core::
         "ORDER BY {outer_order} {dir} LIMIT {limit} ",
         limit = args.limit,
     )?;
-    write!(
-        &mut sql,
-        "SETTINGS log_comment = '{}'",
-        super::RATE_LIMIT_KEY
-    )?;
+    sql.push_str(&settings_clause(args));
     Ok(sql)
 }
 
@@ -165,11 +195,7 @@ pub(super) fn build_match_players_query(args: &BuildArgs<'_>) -> Result<String, 
         limit = args.limit,
         offset = args.offset,
     )?;
-    write!(
-        &mut sql,
-        "SETTINGS log_comment = '{}'",
-        super::RATE_LIMIT_KEY
-    )?;
+    sql.push_str(&settings_clause(args));
     Ok(sql)
 }
 
@@ -306,6 +332,68 @@ mod tests {
         .unwrap();
         assert!(!sql.contains("demo_player"));
         assert!(sql.contains("any(banned_hero_ids)"));
+        // banned_hero_ids is a demo-analyzer patched column -> patches must apply.
+        assert!(!sql.contains("apply_patch_parts"));
+    }
+
+    #[test]
+    fn omits_patch_parts_when_no_patched_column() {
+        // match_id-only projection touches no patched column -> safe to skip patches.
+        let sql = build_matches_query(&BuildArgs {
+            projection: &match_id_only(),
+            filters: &["match_mode = 'Ranked'".into()],
+            order_by: OrderKey::MatchId,
+            order_dir: OrderDir::Desc,
+            limit: 10,
+            offset: 0,
+        })
+        .unwrap();
+        assert!(sql.contains("apply_patch_parts = 0"));
+    }
+
+    #[test]
+    fn keeps_patch_parts_when_hero_build_id_selected() {
+        let projection = Projection {
+            player_columns: PLAYER_COLUMNS
+                .iter()
+                .filter(|c| matches!(c.gql, "match_id" | "account_id" | "hero_build_id"))
+                .copied()
+                .collect(),
+            ..Default::default()
+        };
+        let sql = build_match_players_query(&BuildArgs {
+            projection: &projection,
+            filters: &[],
+            order_by: OrderKey::AccountId,
+            order_dir: OrderDir::Asc,
+            limit: 5,
+            offset: 0,
+        })
+        .unwrap();
+        assert!(sql.contains("hero_build_id"));
+        assert!(!sql.contains("apply_patch_parts"));
+    }
+
+    #[test]
+    fn player_row_without_patched_column_skips_patches() {
+        let projection = Projection {
+            player_columns: PLAYER_COLUMNS
+                .iter()
+                .filter(|c| matches!(c.gql, "match_id" | "account_id" | "kills"))
+                .copied()
+                .collect(),
+            ..Default::default()
+        };
+        let sql = build_match_players_query(&BuildArgs {
+            projection: &projection,
+            filters: &["account_id = 123".into()],
+            order_by: OrderKey::AccountId,
+            order_dir: OrderDir::Asc,
+            limit: 5,
+            offset: 0,
+        })
+        .unwrap();
+        assert!(sql.contains("apply_patch_parts = 0"));
     }
 }
 
