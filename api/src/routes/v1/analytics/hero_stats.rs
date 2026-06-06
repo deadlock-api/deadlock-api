@@ -219,16 +219,77 @@ fn build_query(query: &HeroStatsQuery) -> String {
         .min_hero_matches_total
         .or(query.max_hero_matches_total)
         .is_some_and(|v| v > 1);
+    let mut ctes: Vec<String> = vec![];
+    if has_player_hero_cte {
+        ctes.push(format!(
+            "t_players AS (
+            SELECT account_id, hero_id
+            FROM match_player
+            WHERE TRUE
+                {player_filters}
+                {match_filters}
+            GROUP BY account_id, hero_id
+            HAVING {player_hero_filters}
+        )"
+        ));
+    }
+    if has_player_hero_total_cte {
+        ctes.push(format!(
+            "t_players2 AS (
+            SELECT account_id, hero_id
+            FROM player_match_history
+            GROUP BY account_id, hero_id
+            HAVING {player_hero_total_filters}
+        )"
+        ));
+    }
+    let hero_matches_join = if has_player_hero_cte {
+        "AND (account_id, hero_id) IN t_players"
+    } else {
+        ""
+    };
+    let hero_total_join = if has_player_hero_total_cte {
+        "AND (account_id, hero_id) IN t_players2"
+    } else {
+        ""
+    };
+    // Deduplicate match_player with `LIMIT 1 BY match_id, account_id` instead of FINAL.
+    // match_player is a ReplacingMergeTree with no version column, and duplicate rows are always
+    // full duplicates, so this is equivalent to FINAL while letting the `hero_stats_by_account` /
+    // `hero_stats_by_hero` projections be used (FINAL disables projection usage entirely).
+    ctes.push(format!(
+        "mp AS (
+        SELECT
+            hero_id, account_id, match_id, won, kills, deaths, assists, net_worth, last_hits, denies,
+            max_player_damage, max_player_damage_taken, max_boss_damage, max_creep_damage,
+            max_neutral_damage, max_max_health, max_shots_hit, max_shots_missed,
+            start_time, average_badge_team0, average_badge_team1
+        FROM match_player
+        WHERE TRUE
+            {player_filters}
+            {match_filters}
+            {hero_matches_join}
+            {hero_total_join}
+        LIMIT 1 BY match_id, account_id
+    )"
+    ));
+    let with_clause = ctes.join(",\n    ");
+    let matches_per_bucket = if query.bucket == BucketQuery::NoBucket {
+        "matches".to_owned()
+    } else {
+        format!("sum(count(distinct match_id)) OVER (PARTITION BY {bucket})")
+    };
+
     format!(
         "
-    {}{}
+    WITH {with_clause}
     SELECT
         hero_id,
         {bucket} AS bucket,
         countIf(won) AS wins,
         countIf(not won) AS losses,
         wins + losses AS matches,
-        {} AS matches_per_bucket,
+        {matches_per_bucket} AS matches_per_bucket,
         uniq(account_id) AS players,
         sum(kills) AS total_kills,
         sum(deaths) AS total_deaths,
@@ -244,58 +305,11 @@ fn build_query(query: &HeroStatsQuery) -> String {
         sum(max_max_health) AS total_max_health,
         sum(max_shots_hit) AS total_shots_hit,
         sum(max_shots_missed) AS total_shots_missed
-    FROM match_player FINAL
-    WHERE TRUE {player_filters}
-        {match_filters}
-        {}
-        {}
+    FROM mp
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
-    SETTINGS log_comment = 'hero_stats', apply_patch_parts = 0, do_not_merge_across_partitions_select_final = 1
-    ",
-        if has_player_hero_cte {
-            format!(
-                "WITH t_players AS (
-            SELECT account_id, hero_id
-            FROM match_player
-            WHERE TRUE
-                {player_filters}
-                {match_filters}
-            GROUP BY account_id, hero_id
-            HAVING {player_hero_filters}
-        )"
-            )
-        } else {
-            String::new()
-        },
-        if has_player_hero_total_cte {
-            let prefix = if has_player_hero_cte { "," } else { "WITH" };
-            format!(
-                "{prefix} t_players2 AS (
-            SELECT account_id, hero_id
-            FROM player_match_history
-            GROUP BY account_id, hero_id
-            HAVING {player_hero_total_filters}
-        )"
-            )
-        } else {
-            String::new()
-        },
-        if query.bucket == BucketQuery::NoBucket {
-            "matches".to_owned()
-        } else {
-            format!("sum(count(distinct match_id)) OVER (PARTITION BY {bucket})")
-        },
-        if has_player_hero_cte {
-            "AND (account_id, hero_id) IN t_players"
-        } else {
-            ""
-        },
-        if has_player_hero_total_cte {
-            "AND (account_id, hero_id) IN t_players2"
-        } else {
-            ""
-        }
+    SETTINGS log_comment = 'hero_stats', apply_patch_parts = 0
+    "
     )
 }
 
