@@ -247,7 +247,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <div className="grid grid-cols-2 gap-1">
           {[
             { href: API_ORIGIN, label: "Game Data", icon: BarChart3, external: true },
-            { href: "/data-dumps", label: "DB Dumps", icon: HardDrive, external: false },
             {
               href: "https://github.com/deadlock-api/deadlock-api/tree/master/live-events",
               label: "Live Events",
