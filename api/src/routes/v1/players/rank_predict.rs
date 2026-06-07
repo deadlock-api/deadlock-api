@@ -9,7 +9,6 @@ use axum::response::IntoResponse;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use tracing::debug;
 use utoipa::ToSchema;
 
 use crate::context::AppState;
@@ -195,7 +194,6 @@ async fn fetch_matches(
         GROUP BY match_id, team
         SETTINGS log_comment = 'rank_predict_enemy_stats', apply_patch_parts = 0"
     );
-    debug!("Enemy stats query: {enemy_query}");
 
     // Creep stats (max_creep_kills / max_possible_creeps) are the queried player's own
     // per-match values, so they are folded into the batched matches query above instead
