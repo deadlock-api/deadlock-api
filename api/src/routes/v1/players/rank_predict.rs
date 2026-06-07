@@ -57,6 +57,8 @@ pub(crate) struct MatchRow {
     average_badge_team0: Option<u32>,
     average_badge_team1: Option<u32>,
     enemy_team: u8,
+    max_creep_kills: u32,
+    max_possible_creeps: u32,
 }
 
 pub(crate) struct RankPredictMatchesQuery;
@@ -83,7 +85,9 @@ impl BatchQueryMulti for RankPredictMatchesQuery {
                 duration_s AS match_duration_s,
                 average_badge_team0,
                 average_badge_team1,
-                if(team = 'Team0', 1, 0) AS enemy_team
+                if(team = 'Team0', 1, 0) AS enemy_team,
+                max_creep_kills,
+                max_possible_creeps
             FROM (
                 SELECT
                     account_id,
@@ -100,7 +104,9 @@ impl BatchQueryMulti for RankPredictMatchesQuery {
                     max_shots_missed,
                     duration_s,
                     average_badge_team0,
-                    average_badge_team1
+                    average_badge_team1,
+                    max_creep_kills,
+                    max_possible_creeps
                 FROM match_player
                 WHERE account_id IN ({})
                   AND match_mode IN ('Ranked', 'Unranked')
@@ -131,13 +137,6 @@ struct EnemyStatsRow {
     team: i8,
     nw_avg: f64,
     dmg_avg: f64,
-}
-
-#[derive(Debug, Clone, Row, Deserialize)]
-struct PlayerCreepRow {
-    match_id: u64,
-    max_creep_kills: u32,
-    max_possible_creeps: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -198,36 +197,19 @@ async fn fetch_matches(
     );
     debug!("Enemy stats query: {enemy_query}");
 
-    let match_ids: String = match_rows.iter().map(|r| r.match_id.to_string()).join(", ");
-    let creep_query = format!(
-        "SELECT match_id, max_creep_kills, max_possible_creeps
-         FROM match_player
-         WHERE match_id IN ({match_ids}) AND account_id = {account_id}
-         SETTINGS log_comment = 'rank_predict_creep_stats', apply_patch_parts = 0"
-    );
-    debug!("Player creep stats query: {creep_query}");
-
-    let (enemy_stats, creep_rows): (Vec<EnemyStatsRow>, Vec<PlayerCreepRow>) = tokio::try_join!(
-        async {
-            ch.query(&enemy_query)
-                .fetch_all()
-                .await
-                .map_err(|e| APIError::internal(format!("ClickHouse query failed: {e}")))
-        },
-        async {
-            ch.query(&creep_query)
-                .fetch_all()
-                .await
-                .map_err(|e| APIError::internal(format!("ClickHouse query failed: {e}")))
-        },
-    )?;
+    // Creep stats (max_creep_kills / max_possible_creeps) are the queried player's own
+    // per-match values, so they are folded into the batched matches query above instead
+    // of being fetched per-request here.
+    let enemy_stats: Vec<EnemyStatsRow> = ch
+        .query(&enemy_query)
+        .fetch_all()
+        .await
+        .map_err(|e| APIError::internal(format!("ClickHouse query failed: {e}")))?;
 
     let enemy_map: HashMap<(u64, i8), &EnemyStatsRow> = enemy_stats
         .iter()
         .map(|e| ((e.match_id, e.team), e))
         .collect();
-    let creep_map: HashMap<u64, &PlayerCreepRow> =
-        creep_rows.iter().map(|c| (c.match_id, c)).collect();
 
     Ok(match_rows
         .into_iter()
@@ -248,9 +230,8 @@ async fn fetch_matches(
             } else {
                 Some(f64::from(r.max_shots_hit) / f64::from(shots_total))
             };
-            let cs_efficiency = creep_map
-                .get(&r.match_id)
-                .map(|c| f64::from(c.max_creep_kills) / f64::from(c.max_possible_creeps.max(1)));
+            let cs_efficiency =
+                Some(f64::from(r.max_creep_kills) / f64::from(r.max_possible_creeps.max(1)));
             Match {
                 hero_id: r.hero_id,
                 player_kills: r.player_kills,

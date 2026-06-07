@@ -1,5 +1,6 @@
 use axum::Json;
 use axum::extract::{Path, State};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
@@ -10,6 +11,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::GameMode;
+use crate::routes::v1::players::steam::route::SteamProfileBatcher;
 use crate::services::clickhouse_batcher::in_clause;
 use crate::utils::types::AccountIdQuery;
 
@@ -129,29 +131,29 @@ fn build_query(account_id: u32, query: &MateStatsQuery, friend_ids: Option<&[u32
 }
 
 async fn fetch_friend_account_ids(
-    ch_client: &clickhouse::Client,
+    steam_profile_batcher: &SteamProfileBatcher,
     account_id: u32,
 ) -> APIResult<Vec<u32>> {
-    let query = format!(
-        "
-        SELECT friends.account_id
-        FROM steam_profiles FINAL
-        WHERE account_id = {account_id}
-        SETTINGS log_comment = 'mate_stats_friends'
-        "
-    );
-    debug!(?query);
-    let rows: Vec<Vec<u32>> = ch_client.query(&query).fetch_all().await?;
-    Ok(rows.into_iter().next().unwrap_or_default())
+    // Reuse the shared steam_profile batcher, which already projects `friends.account_id`,
+    // instead of issuing a dedicated per-request query.
+    match steam_profile_batcher.load(account_id).await {
+        Ok(profile) => Ok(profile.friends_account_id),
+        // A missing steam profile simply means there is no friends list to filter on.
+        Err(APIError::StatusMsg { status, .. }) if status == StatusCode::NOT_FOUND => {
+            Ok(Vec::new())
+        }
+        Err(e) => Err(e),
+    }
 }
 
 async fn get_mate_stats(
     ch_client: &clickhouse::Client,
+    steam_profile_batcher: &SteamProfileBatcher,
     account_id: u32,
     query: MateStatsQuery,
 ) -> APIResult<Vec<MateStats>> {
     let friend_ids = if query.same_party {
-        let ids = fetch_friend_account_ids(ch_client, account_id).await?;
+        let ids = fetch_friend_account_ids(steam_profile_batcher, account_id).await?;
         if ids.is_empty() {
             return Ok(Vec::new());
         }
@@ -198,9 +200,14 @@ pub(super) async fn mate_stats(
     {
         return Err(APIError::protected_user());
     }
-    get_mate_stats(&state.ch_client_ro, account_id, query)
-        .await
-        .map(Json)
+    get_mate_stats(
+        &state.ch_client_ro,
+        &state.batchers.steam_profile,
+        account_id,
+        query,
+    )
+    .await
+    .map(Json)
 }
 
 #[cfg(test)]
