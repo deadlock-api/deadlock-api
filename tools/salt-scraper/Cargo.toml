@@ -13,5 +13,4 @@ reqwest = { workspace = true }
 serde = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
-tryhard = { workspace = true }
 valveprotos = { workspace = true, features = ["gc-client"] }
