@@ -724,7 +724,7 @@ console.table(table.toArray().slice(0, 5));`;
 const DUCKLAKE_EXAMPLE = `# pip install duckdb
 import duckdb
 
-DUCKLAKE_URL = "ducklake:${BUCKET_BASE}/${BUCKET_NAME}/${ROOT_PREFIX}db_snapshot.ducklake"
+DUCKLAKE_URL = "ducklake:${BUCKET_BASE}/fast/db_snapshot.ducklake"
 
 with duckdb.connect() as con:
     con.execute("""
