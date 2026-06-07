@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Outlet, createFileRoute, useParams } from "@tanstack/react-router";
+import { Agentation } from "agentation";
+import { type ReactNode, useSyncExternalStore } from "react";
 
 import { ComingSoonTeaser } from "~/components/coach/ComingSoonTeaser";
 import { getSessionTree } from "~/lib/coach/client";
@@ -29,17 +31,32 @@ function ChatLayout() {
     staleTime: 60_000,
   });
 
+  let content: ReactNode;
   if (sessionId && sessionLoading) {
-    return <ComingSoonTeaser />;
+    content = <ComingSoonTeaser />;
+  } else if (sessionId && sessionTree) {
+    content = <Outlet />;
+  } else if (accessLoading || !hasAccess) {
+    content = <ComingSoonTeaser />;
+  } else {
+    content = <Outlet />;
   }
 
-  if (sessionId && sessionTree) {
-    return <Outlet />;
-  }
+  return (
+    <>
+      {content}
+      <AgentationToolbar />
+    </>
+  );
+}
 
-  if (accessLoading || !hasAccess) {
-    return <ComingSoonTeaser />;
-  }
+const subscribeNoop = () => () => {};
 
-  return <Outlet />;
+function AgentationToolbar() {
+  const isClient = useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false,
+  );
+  return isClient ? <Agentation /> : null;
 }
