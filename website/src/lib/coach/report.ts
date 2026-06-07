@@ -38,15 +38,6 @@ export interface KeyValueRow {
   emphasis?: boolean;
 }
 
-export interface ComparisonRow {
-  label: string;
-  you: number;
-  baseline: number;
-  unit?: string | null;
-  better?: "higher" | "lower";
-  percentile?: number | null;
-}
-
 export interface ChartSeries {
   key: string;
   label: string;
@@ -225,14 +216,6 @@ export interface KeyValueBlock {
   rows: KeyValueRow[];
 }
 
-export interface ComparisonBlock {
-  type: "comparison";
-  title?: string | null;
-  you_label?: string;
-  baseline_label?: string;
-  rows: ComparisonRow[];
-}
-
 export interface HeroCardBlock {
   type: "hero_card";
   hero_id?: number | null;
@@ -277,7 +260,6 @@ export interface BarChartBlock {
   x_key?: string;
   x_label?: string | null;
   y_label?: string | null;
-  stacked?: boolean;
   horizontal?: boolean;
   series: ChartSeries[];
   data: ChartRow[];
@@ -404,7 +386,6 @@ export type Block =
   | CalloutBlock
   | StatCardsBlock
   | KeyValueBlock
-  | ComparisonBlock
   | HeroCardBlock
   | LineChartBlock
   | AreaChartBlock

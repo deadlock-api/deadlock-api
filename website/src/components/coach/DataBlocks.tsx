@@ -5,7 +5,6 @@ import { ItemName } from "~/components/ItemName";
 import { CoachIcon } from "~/lib/coach/icons";
 import type {
   AbilityOrderBlock,
-  ComparisonBlock,
   HeroCardBlock,
   ItemBuildBlock,
   KeyValueBlock,
@@ -14,7 +13,7 @@ import type {
   StatCardsBlock,
   TimelineBlock,
 } from "~/lib/coach/report";
-import { hexAlpha, teamLabel, toneColor, toneSurface } from "~/lib/coach/tones";
+import { hexAlpha, teamLabel, toneColor } from "~/lib/coach/tones";
 import { cn } from "~/lib/utils";
 
 import { BlockHeading, CoachCard, formatClock, Sparkline } from "./shared";
@@ -97,61 +96,6 @@ export function KeyValue({ block }: { block: KeyValueBlock }) {
           </div>
         ))}
       </dl>
-    </CoachCard>
-  );
-}
-
-export function Comparison({ block }: { block: ComparisonBlock }) {
-  return (
-    <CoachCard>
-      <BlockHeading title={block.title} />
-      <div className="mb-3 flex items-center gap-4 text-xs">
-        <span className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-sm bg-primary" />
-          <span className="text-muted-foreground">{block.you_label ?? "You"}</span>
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-sm bg-white/25" />
-          <span className="text-muted-foreground">{block.baseline_label ?? "Peer avg"}</span>
-        </span>
-      </div>
-      <div className="space-y-3.5">
-        {block.rows.map((row, i) => {
-          const max = Math.max(row.you, row.baseline) || 1;
-          const better = (row.better ?? "higher") === "higher" ? row.you >= row.baseline : row.you <= row.baseline;
-          return (
-            <div key={i}>
-              <div className="mb-1 flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">{row.label}</span>
-                <span className="flex items-center gap-2 tabular-nums">
-                  <span className="font-semibold text-foreground">
-                    {row.you}
-                    {row.unit}
-                  </span>
-                  {row.percentile != null ? (
-                    <span
-                      className="rounded px-1.5 py-0.5 text-[10px] font-medium"
-                      style={toneSurface(better ? "success" : "warning", 0.9)}
-                    >
-                      P{row.percentile}
-                    </span>
-                  ) : null}
-                </span>
-              </div>
-              <div className="relative h-2 overflow-hidden rounded-full bg-white/[0.05]">
-                <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-white/20"
-                  style={{ width: `${(row.baseline / max) * 100}%` }}
-                />
-                <div
-                  className="absolute inset-y-0 left-0 rounded-full"
-                  style={{ width: `${(row.you / max) * 100}%`, backgroundColor: better ? "#34d399" : "#fa4454" }}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
     </CoachCard>
   );
 }

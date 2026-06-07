@@ -120,15 +120,17 @@ export const SAMPLE_MATCH_REPORT: Report = {
       columns: 2,
       children: [
         {
-          type: "comparison",
-          title: "You vs Archon Haze average",
-          you_label: "You",
-          baseline_label: "Rank avg",
-          rows: [
-            { label: "Souls/min", you: 212, baseline: 198, percentile: 72 },
-            { label: "Deaths", you: 9, baseline: 6, better: "lower", percentile: 28 },
-            { label: "Last hits @10", you: 71, baseline: 64, percentile: 78 },
-            { label: "Camps/min", you: 1.1, baseline: 1.6, percentile: 34 },
+          type: "bar_chart",
+          title: "When you win vs. when you lose",
+          x_key: "stat",
+          series: [
+            { key: "win", label: "Wins", color: "#34d399" },
+            { key: "loss", label: "Losses", color: "#fa4454" },
+          ],
+          data: [
+            { stat: "Kills", win: 10.2, loss: 5.1 },
+            { stat: "Deaths", win: 4.8, loss: 8.9 },
+            { stat: "Assists", win: 12.4, loss: 7.6 },
           ],
         },
         {

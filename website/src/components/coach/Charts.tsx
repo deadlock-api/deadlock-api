@@ -210,7 +210,6 @@ export function BarChart({ block }: { block: BarChartBlock }) {
             name={s.label}
             fill={seriesColor(s, i)}
             radius={horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]}
-            stackId={block.stacked ? "stack" : undefined}
             maxBarSize={48}
           />
         ))}
