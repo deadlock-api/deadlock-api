@@ -8,6 +8,7 @@ import { HeroSelector } from "~/components/selectors/HeroSelector";
 import { useHeroById } from "~/hooks/useAssetById";
 import {
   type CoachStreamHandle,
+  forkSession,
   getSession,
   getSessionTree,
   isReportPart,
@@ -168,6 +169,49 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
     setTurns((prev) => prev.map((t) => (t.id === id ? fn(t) : t)));
   }, []);
 
+  // A loaded session owned by someone else (an admin browsing another patron's
+  // chat, or anyone opening a shared public link) isn't ours to post into.
+  // Replying still works for a signed-in viewer: the first message forks it into
+  // a private copy first (see `submit`).
+  const readOnly = Boolean(ownerId && access?.patronId && ownerId !== access.patronId);
+
+  // Open the SSE turn for an already-created composer turn `id`, threading onto
+  // `parentMessageId` within `sid`. `onComplete` runs after the stream ends
+  // (used to adopt a freshly-created session's id into the URL).
+  const startStream = useCallback(
+    (id: string, content: string, sid: string | null, parentMessageId: string | null, onComplete?: () => void) => {
+      handleRef.current = streamCoachMessage(
+        { content, sessionId: sid, parentMessageId, steamAccountId: account?.accountId ?? null },
+        {
+          onUserMessage: (mid) => {
+            leafIdRef.current = mid;
+          },
+          onAssistantMessage: (mid) => {
+            leafIdRef.current = mid;
+          },
+          onTool: (tool) =>
+            patch(id, (t) => ({
+              ...t,
+              tools: [...t.tools.filter((x) => x.id !== tool.id), tool],
+            })),
+          onDelta: (delta) => patch(id, (t) => ({ ...t, deltaText: t.deltaText + delta })),
+          onReport: (report) => patch(id, (t) => ({ ...t, report, status: "done" })),
+          onTitle: () => {},
+          onDone: () => {
+            patch(id, (t) => ({ ...t, status: t.report || t.deltaText ? "done" : "error" }));
+            setStreaming(false);
+            onComplete?.();
+          },
+          onError: (err) => {
+            patch(id, (t) => ({ ...t, status: "error", error: err }));
+            setStreaming(false);
+          },
+        },
+      );
+    },
+    [account, patch],
+  );
+
   const submit = useCallback(
     (text: string) => {
       const content = text.trim();
@@ -176,6 +220,31 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
       setTurns((prev) => [...prev, { id, userText: content, status: "thinking", tools: [], deltaText: "" }]);
       setInput("");
       setStreaming(true);
+
+      // Replying to someone else's shared chat seamlessly forks it into a
+      // private copy in our own history, then continues there. The loaded turns
+      // already on screen stay rendered; the fork inherits them as context and
+      // the new turn threads onto the leaf we branched from.
+      if (readOnly && sessionId && leafIdRef.current) {
+        const anchorId = leafIdRef.current;
+        void forkSession(sessionId, anchorId)
+          .then((forked) => {
+            setSessionId(forked.id);
+            setOwnerId(forked.patron_id);
+            setIsPublic(forked.is_public);
+            // Replace the URL in place so the live stream isn't torn down by a
+            // route remount; the copy is now this viewer's editable chat.
+            window.history.replaceState(window.history.state, "", `/chat/${forked.id}`);
+            void queryClient.invalidateQueries({ queryKey: ["coach-sessions"] });
+            startStream(id, content, forked.id, anchorId);
+            return undefined;
+          })
+          .catch((err) => {
+            patch(id, (t) => ({ ...t, status: "error", error: String(err) }));
+            setStreaming(false);
+          });
+        return;
+      }
 
       // The SSE stream doesn't carry the session id; for a brand-new chat we
       // diff the session list after the turn finishes to learn the new id, then
@@ -206,41 +275,9 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
         }
       };
 
-      handleRef.current = streamCoachMessage(
-        {
-          content,
-          sessionId,
-          parentMessageId: leafIdRef.current,
-          steamAccountId: account?.accountId ?? null,
-        },
-        {
-          onUserMessage: (mid) => {
-            leafIdRef.current = mid;
-          },
-          onAssistantMessage: (mid) => {
-            leafIdRef.current = mid;
-          },
-          onTool: (tool) =>
-            patch(id, (t) => ({
-              ...t,
-              tools: [...t.tools.filter((x) => x.id !== tool.id), tool],
-            })),
-          onDelta: (delta) => patch(id, (t) => ({ ...t, deltaText: t.deltaText + delta })),
-          onReport: (report) => patch(id, (t) => ({ ...t, report, status: "done" })),
-          onTitle: () => {},
-          onDone: () => {
-            patch(id, (t) => ({ ...t, status: t.report || t.deltaText ? "done" : "error" }));
-            setStreaming(false);
-            void adoptNewSession();
-          },
-          onError: (err) => {
-            patch(id, (t) => ({ ...t, status: "error", error: err }));
-            setStreaming(false);
-          },
-        },
-      );
+      startStream(id, content, sessionId, leafIdRef.current, () => void adoptNewSession());
     },
-    [sessionId, streaming, patch, account, queryClient],
+    [sessionId, streaming, patch, queryClient, readOnly, startStream],
   );
 
   const reset = () => {
@@ -258,13 +295,13 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
   const empty = turns.length === 0;
   const showNotFound = loadState === "not-found";
   const showLoading = loadState === "loading";
-  // A loaded session owned by someone else (an admin browsing another patron's
-  // chat, or anyone opening a shared public link) is view-only — posting into it
-  // would be rejected by the backend's ownership guard.
-  const readOnly = Boolean(ownerId && access?.patronId && ownerId !== access.patronId);
-  // Suggested-question chips can only send when this viewer owns an active
-  // composer; a shared/read-only report shows them but inert.
-  const canAsk = Boolean(hasAccess && (account || demo) && !showNotFound && !showLoading && !readOnly);
+  // A signed-in viewer with a connected account can reply to a shared chat that
+  // isn't theirs: the reply forks it into their own history first. The composer
+  // and suggested-question chips behave normally — the fork is invisible.
+  const forkable = readOnly && Boolean(sessionId && hasAccess && account);
+  // Suggested-question chips and the composer can send whenever this viewer can
+  // post — either they own an active composer, or the chat is forkable.
+  const canAsk = Boolean(hasAccess && (account || demo) && !showNotFound && !showLoading && (!readOnly || forkable));
 
   return (
     <AskProvider value={{ ask: canAsk ? submit : null, busy: streaming }}>
@@ -288,7 +325,7 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
             {hasAccess && !demo ? (
               <ConversationHistory currentSessionId={sessionId ?? routeSessionId} isAdmin={isAdmin} />
             ) : null}
-            {readOnly ? (
+            {readOnly && !forkable ? (
               <span className="flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-400">
                 <Lock className="size-3.5" /> View only
               </span>
@@ -339,7 +376,7 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
           )}
         </div>
 
-        {hasAccess && (account || demo) && !showNotFound && !showLoading && !readOnly ? (
+        {hasAccess && (account || demo) && !showNotFound && !showLoading && (!readOnly || forkable) ? (
           <Composer value={input} onChange={setInput} onSubmit={() => submit(input)} disabled={streaming} />
         ) : null}
       </div>

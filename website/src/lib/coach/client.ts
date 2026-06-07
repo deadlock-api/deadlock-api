@@ -103,6 +103,21 @@ export async function shareSession(sessionId: string): Promise<SessionSummary> {
   return (await res.json()) as SessionSummary;
 }
 
+// Fork a session into the current patron's history, branching at `messageId`.
+// Works on any chat the viewer can see (their own or a public shared one); no
+// messages are copied — the fork records the branch point and inherits the
+// prior turns as read-only context.
+export async function forkSession(sessionId: string, messageId: string): Promise<SessionSummary> {
+  const res = await fetch(`${COACH_API_ORIGIN}/sessions/${sessionId}/fork`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ message_id: messageId }),
+  });
+  if (!res.ok) throw new Error(`forkSession failed: ${res.status}`);
+  return (await res.json()) as SessionSummary;
+}
+
 // Make a session private again.
 export async function makeSessionPrivate(sessionId: string): Promise<SessionSummary> {
   const res = await fetch(`${COACH_API_ORIGIN}/sessions/${sessionId}/private`, {
