@@ -26,6 +26,7 @@ import { useAiAgentAccess } from "~/lib/coach/use-ai-agent-access";
 import { useSteamAccount } from "~/lib/coach/use-steam-account";
 import { cn } from "~/lib/utils";
 
+import { AskProvider } from "./ask-context";
 import { ReportRenderer } from "./ReportRenderer";
 
 interface Turn {
@@ -223,49 +224,65 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
   const empty = turns.length === 0;
   const showNotFound = loadState === "not-found";
   const showLoading = loadState === "loading";
+  // Suggested-question chips can only send when this viewer owns an active
+  // composer; a shared/read-only report shows them but inert.
+  const canAsk = Boolean(hasAccess && (account || demo) && !showNotFound && !showLoading);
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-5xl flex-col px-4">
-      <div className="flex items-center justify-between gap-3 py-4">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-9 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary">
-            <Bot className="size-5" />
+    <AskProvider value={{ ask: canAsk ? submit : null, busy: streaming }}>
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-5xl flex-col px-4">
+        <div className="flex items-center justify-between gap-3 py-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-9 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary">
+              <Bot className="size-5" />
+            </div>
+            <div>
+              <h1 className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+                Deadlock Coach
+                <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                  <Sparkles className="size-2.5" /> AI
+                </span>
+              </h1>
+              <p className="text-xs text-muted-foreground">Builds a custom report for every question.</p>
+            </div>
           </div>
-          <div>
-            <h1 className="flex items-center gap-2 text-sm font-semibold tracking-tight">
-              Deadlock Coach
-              <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-                <Sparkles className="size-2.5" /> AI
-              </span>
-            </h1>
-            <p className="text-xs text-muted-foreground">Builds a custom report for every question.</p>
+          <div className="flex items-center gap-2">
+            {sessionId && !demo && !showNotFound && !showLoading ? (
+              <ShareToggle sessionId={sessionId} isPublic={isPublic} setIsPublic={setIsPublic} hasAccess={hasAccess} />
+            ) : null}
+            {account ? <SteamConnect account={account} onConnect={connect} onDisconnect={disconnect} /> : null}
+            {(!empty || (sessionId && !showNotFound)) && !showLoading ? (
+              <button
+                type="button"
+                onClick={reset}
+                className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] px-2.5 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"
+              >
+                <Plus className="size-3.5" /> New
+              </button>
+            ) : null}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {sessionId && !demo && !showNotFound && !showLoading ? (
-            <ShareToggle sessionId={sessionId} isPublic={isPublic} setIsPublic={setIsPublic} hasAccess={hasAccess} />
-          ) : null}
-          {account ? <SteamConnect account={account} onConnect={connect} onDisconnect={disconnect} /> : null}
-          {(!empty || (sessionId && !showNotFound)) && !showLoading ? (
-            <button
-              type="button"
-              onClick={reset}
-              className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] px-2.5 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"
-            >
-              <Plus className="size-3.5" /> New
-            </button>
-          ) : null}
-        </div>
-      </div>
 
-      <div className="flex-1">
-        {showLoading ? (
-          <LoadingState />
-        ) : showNotFound ? (
-          <NotFoundState onReset={reset} />
-        ) : !hasAccess && !demo ? (
-          empty ? (
+        <div className="flex-1">
+          {showLoading ? (
+            <LoadingState />
+          ) : showNotFound ? (
             <NotFoundState onReset={reset} />
+          ) : !hasAccess && !demo ? (
+            empty ? (
+              <NotFoundState onReset={reset} />
+            ) : (
+              <div className="space-y-8 pb-6">
+                {turns.map((turn) => (
+                  <TurnView key={turn.id} turn={turn} />
+                ))}
+                <div ref={bottomRef} />
+              </div>
+            )
+          ) : !account && !demo ? (
+            <SteamGate onConnect={connect} />
+          ) : empty ? (
+            <EmptyState onPick={(s) => setInput(s)} onSubmit={submit} disabled={streaming} />
           ) : (
             <div className="space-y-8 pb-6">
               {turns.map((turn) => (
@@ -273,25 +290,14 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
               ))}
               <div ref={bottomRef} />
             </div>
-          )
-        ) : !account && !demo ? (
-          <SteamGate onConnect={connect} />
-        ) : empty ? (
-          <EmptyState onPick={(s) => setInput(s)} onSubmit={submit} disabled={streaming} />
-        ) : (
-          <div className="space-y-8 pb-6">
-            {turns.map((turn) => (
-              <TurnView key={turn.id} turn={turn} />
-            ))}
-            <div ref={bottomRef} />
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      {hasAccess && (account || demo) && !showNotFound && !showLoading ? (
-        <Composer value={input} onChange={setInput} onSubmit={() => submit(input)} disabled={streaming} />
-      ) : null}
-    </div>
+        {hasAccess && (account || demo) && !showNotFound && !showLoading ? (
+          <Composer value={input} onChange={setInput} onSubmit={() => submit(input)} disabled={streaming} />
+        ) : null}
+      </div>
+    </AskProvider>
   );
 }
 
@@ -523,8 +529,8 @@ function EmptyState({
       </div>
       <h2 className="text-2xl font-bold tracking-tight">What should we break down?</h2>
       <p className="mt-2 max-w-md text-sm text-muted-foreground">
-        Pick a starter or ask your own. The coach pulls live data and assembles a report with charts, a tactical map,
-        and a match replay.
+        Pick a starter or ask your own. The coach pulls live data and gives you a short read of the match, then you
+        drill into the specifics by asking follow-up questions.
       </p>
 
       <div className="mt-7 w-full max-w-2xl space-y-2.5 text-left">

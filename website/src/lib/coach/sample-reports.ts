@@ -401,6 +401,16 @@ export const SAMPLE_MATCH_REPORT: Report = {
         },
       ],
     },
+    {
+      type: "suggested_questions",
+      title: "Ask me to go deeper",
+      questions: [
+        { text: "Why did we lose two walkers after I pushed mid?", icon: "shield" },
+        { text: "Was contesting the mid-boss at 18:00 the mistake?", icon: "skull" },
+        { text: "What should I have built once their Abrams got online?", icon: "trophy" },
+        { text: "Where did the game actually flip?", icon: "trending-down" },
+      ],
+    },
   ],
 };
 

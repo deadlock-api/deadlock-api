@@ -6,6 +6,7 @@ import { AreaChart, BarChart, LineChart, NetWorthChart, RadarChart, WinProbabili
 import { AbilityOrder, Comparison, HeroCard, ItemBuild, KeyValue, Scoreboard, StatCards, Timeline } from "./DataBlocks";
 import { MatchReplay } from "./MatchReplay";
 import { Minimap } from "./Minimap";
+import { SuggestedQuestions } from "./SuggestedQuestions";
 import { Callout, Header, MarkdownProse } from "./TextBlocks";
 
 export function RenderBlock({ block }: { block: Block }) {
@@ -91,6 +92,8 @@ export function RenderBlock({ block }: { block: Block }) {
       return <Minimap block={block} />;
     case "match_replay":
       return <MatchReplay block={block} />;
+    case "suggested_questions":
+      return <SuggestedQuestions block={block} />;
     default:
       return null;
   }

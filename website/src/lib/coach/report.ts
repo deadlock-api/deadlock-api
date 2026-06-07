@@ -374,6 +374,19 @@ export interface DividerBlock {
   label?: string | null;
 }
 
+export interface SuggestedQuestion {
+  /** A drill question phrased in the player's own voice. */
+  text: string;
+  /** lucide-react icon name. */
+  icon?: string | null;
+}
+
+export interface SuggestedQuestionsBlock {
+  type: "suggested_questions";
+  title?: string | null;
+  questions: SuggestedQuestion[];
+}
+
 export type Block =
   | HeaderBlock
   | SectionBlock
@@ -396,9 +409,12 @@ export type Block =
   | AbilityOrderBlock
   | MinimapBlock
   | MatchReplayBlock
+  | SuggestedQuestionsBlock
   | DividerBlock;
 
 export interface Report {
   summary: string;
+  /** Internal recap for follow-up turns; never rendered. */
+  analyst_notes?: string;
   blocks: Block[];
 }
