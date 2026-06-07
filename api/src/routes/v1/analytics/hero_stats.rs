@@ -55,19 +55,19 @@ impl BucketQuery {
         }
     }
 
-    /// Bucket expression against the pre-aggregated `hero_stats_agg` view. The view
-    /// is grained on `hour` (a start-of-hour `DateTime`), so every bucket the
-    /// endpoint exposes is derivable from it — including `StartTimeHour`. `AvgBadge`
-    /// buckets by the per-match `greatest_badge` (stored as 65535 when null, which we
-    /// map back to 0 to mirror the base query's `coalesce(..., 0)`).
-    fn mv_bucket_expr(self) -> &'static str {
+    /// Bucket expression against the pre-aggregated `hero_stats_agg` view, or `None`
+    /// for buckets it cannot serve. The view is grained on `day` (a `Date`), so
+    /// `StartTimeHour` needs sub-day resolution it does not keep and runs against the
+    /// base table. `AvgBadge` buckets by the per-match `greatest_badge` (stored as
+    /// 65535 when null, which we map back to 0 to mirror `coalesce(..., 0)`).
+    fn mv_bucket_expr(self) -> Option<&'static str> {
         match self {
-            Self::NoBucket => "toUInt32(0)",
-            Self::AvgBadge => "toUInt32(if(greatest_badge = 65535, 0, greatest_badge))",
-            Self::StartTimeHour => "toStartOfHour(hour)",
-            Self::StartTimeDay => "toStartOfDay(hour)",
-            Self::StartTimeWeek => "toDateTime(toStartOfWeek(hour))",
-            Self::StartTimeMonth => "toDateTime(toStartOfMonth(hour))",
+            Self::NoBucket => Some("toUInt32(0)"),
+            Self::AvgBadge => Some("toUInt32(if(greatest_badge = 65535, 0, greatest_badge))"),
+            Self::StartTimeDay => Some("toStartOfDay(toDateTime(day))"),
+            Self::StartTimeWeek => Some("toDateTime(toStartOfWeek(day))"),
+            Self::StartTimeMonth => Some("toDateTime(toStartOfMonth(day))"),
+            Self::StartTimeHour => None,
         }
     }
 }
@@ -185,11 +185,12 @@ const MV_ROUTING_MARGIN_DAYS: i64 = 5;
 /// Builds a query against the pre-aggregated `hero_stats_agg` view when the request
 /// falls within the "global meta" subset it materializes, else `None` (the caller
 /// then uses the base-table query). The view is grained on
-/// `(game_mode, hour, hero_id, least_badge, greatest_badge)`, so it serves
-/// `game_mode` + time-range + badge-range filters and every bucket, but anything
-/// per-player or per-row (account, item set, net worth, duration, match id, hero
-/// match counts) must use the base table.
+/// `(game_mode, day, hero_id, least_badge, greatest_badge)`, so it serves
+/// `game_mode` + time-range + badge-range filters and the non-hourly buckets, but
+/// anything per-player or per-row (account, item set, net worth, duration, match id,
+/// hero match counts) or needing sub-day resolution must use the base table.
 fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
+    let bucket_expr = query.bucket.mv_bucket_expr()?;
     // Per-player / per-row filters the grain cannot express → base table.
     #[allow(deprecated)]
     let personalized = query.account_id.is_some()
@@ -230,15 +231,12 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
         return None;
     }
 
-    let bucket_expr = query.bucket.mv_bucket_expr();
     let mut filters = vec![GameMode::sql_filter(query.game_mode)];
-    // Timestamps are hour-rounded by `round_timestamps`, and the grain is hourly, so
-    // `hour >= min AND hour < max` is exact (no boundary slop).
     if let Some(v) = query.min_unix_timestamp {
-        filters.push(format!("hour >= toDateTime({v})"));
+        filters.push(format!("day >= toDate({v})"));
     }
     if let Some(v) = query.max_unix_timestamp {
-        filters.push(format!("hour < toDateTime({v})"));
+        filters.push(format!("day <= toDate({v})"));
     }
     // Badge: least/greatest mirror the base table's both-teams semantics, with the
     // same >11 / <116 guards as MatchInfoFilters. Null badges are stored as
