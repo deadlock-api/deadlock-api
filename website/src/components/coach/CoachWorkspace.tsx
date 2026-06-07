@@ -69,13 +69,20 @@ function demoTurns(demo?: string): Turn[] {
 
 // Walk the primary branch of a message tree (root, then first child each step)
 // in created_at order and pair each user message with its assistant reply.
-function treeToTurns(roots: MessageTreeNode[]): Turn[] {
+// Also returns the leaf message id so follow-ups can be parented onto it.
+// Roots arrive in created_at order; a healthy session has one root, but older
+// chats predating parent threading stored each turn as its own root, so we
+// concatenate every root's branch to render them as one conversation.
+function treeToTurns(roots: MessageTreeNode[]): { turns: Turn[]; leafId: string | null } {
   const line: MessageTreeNode[] = [];
-  let node: MessageTreeNode | undefined = roots[0];
-  while (node) {
-    line.push(node);
-    node = node.children[0];
+  for (const root of roots) {
+    let node: MessageTreeNode | undefined = root;
+    while (node) {
+      line.push(node);
+      node = node.children[0];
+    }
   }
+  const leafId = line.length ? line[line.length - 1].id : null;
 
   const turns: Turn[] = [];
   let current: Turn | null = null;
@@ -98,7 +105,7 @@ function treeToTurns(roots: MessageTreeNode[]): Turn[] {
     }
   }
   if (current) turns.push(current);
-  return turns;
+  return { turns, leafId };
 }
 
 type LoadState = "idle" | "loading" | "not-found";
@@ -120,6 +127,9 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
   const [loadState, setLoadState] = useState<LoadState>(routeSessionId ? "loading" : "idle");
   const handleRef = useRef<CoachStreamHandle | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  // Leaf of the conversation's primary branch; the parent for the next message
+  // so the server threads turns into one chain (and feeds Claude prior context).
+  const leafIdRef = useRef<string | null>(null);
 
   // Load a past chat when arriving with a session id in the URL. State is
   // initialized from props (the route remounts per id), so the effect only runs
@@ -130,7 +140,9 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
     Promise.all([getSessionTree(routeSessionId), getSession(routeSessionId).catch(() => null)])
       .then(([roots, session]) => {
         if (!cancelled) {
-          setTurns(treeToTurns(roots));
+          const { turns: loaded, leafId } = treeToTurns(roots);
+          setTurns(loaded);
+          leafIdRef.current = leafId;
           if (session) {
             setIsPublic(session.is_public);
             setOwnerId(session.patron_id);
@@ -195,8 +207,19 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
       };
 
       handleRef.current = streamCoachMessage(
-        { content, sessionId, steamAccountId: account?.accountId ?? null },
         {
+          content,
+          sessionId,
+          parentMessageId: leafIdRef.current,
+          steamAccountId: account?.accountId ?? null,
+        },
+        {
+          onUserMessage: (mid) => {
+            leafIdRef.current = mid;
+          },
+          onAssistantMessage: (mid) => {
+            leafIdRef.current = mid;
+          },
           onTool: (tool) =>
             patch(id, (t) => ({
               ...t,
@@ -223,6 +246,7 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
   const reset = () => {
     handleRef.current?.close();
     setTurns([]);
+    leafIdRef.current = null;
     setSessionId(null);
     setOwnerId(null);
     setIsPublic(false);

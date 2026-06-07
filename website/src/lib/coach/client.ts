@@ -16,6 +16,7 @@ export interface ToolActivity {
 
 export interface CoachStreamHandlers {
   onUserMessage?: (id: string) => void;
+  onAssistantMessage?: (id: string) => void;
   onDelta?: (text: string) => void;
   onTool?: (tool: ToolActivity) => void;
   onReport?: (report: Report, messageId: string) => void;
@@ -248,6 +249,9 @@ export function streamCoachMessage(req: CoachStreamRequest, handlers: CoachStrea
   source.addEventListener("report", (e: MessageEvent) => {
     const d = parse<{ id: string; report: Report }>(e.data, { id: "", report: { summary: "", blocks: [] } });
     handlers.onReport?.(d.report, d.id);
+  });
+  source.addEventListener("message_completed", (e: MessageEvent) => {
+    handlers.onAssistantMessage?.(parse<{ id: string }>(e.data, { id: "" }).id);
   });
   source.addEventListener("title", (e: MessageEvent) => {
     handlers.onTitle?.(parse<{ title: string }>(e.data, { title: "" }).title);
