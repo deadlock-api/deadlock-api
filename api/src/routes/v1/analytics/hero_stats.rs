@@ -264,7 +264,7 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
         hero_id,
         {bucket_expr} AS bucket,
         sum(n_wins) AS wins,
-        sum(n_matches) - sum(n_wins) AS losses,
+        toUInt64(sum(n_matches) - sum(n_wins)) AS losses,
         sum(n_matches) AS matches,
         {matches_per_bucket} AS matches_per_bucket,
         sum(sum_kills) AS total_kills,
