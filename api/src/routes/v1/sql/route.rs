@@ -2,16 +2,16 @@ use core::time::Duration;
 use std::sync::LazyLock;
 
 use axum::Json;
+use axum::body::Body;
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
+use axum::http::{StatusCode, header};
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use cached::TtlCache;
 use cached::macros::cached;
-use clickhouse::query::BytesCursor;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use tokio::io::{AsyncBufReadExt, Lines};
+use tokio::io::AsyncBufReadExt;
 use tracing::{debug, warn};
 use utoipa::IntoParams;
 
@@ -19,6 +19,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::utils::json_stream::{ResponseFormat, stream_rows};
 
 static SYSTEM_TABLE_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)\bsystem\s*\.\s*\w+").unwrap());
@@ -81,6 +82,10 @@ fn validate_query(query: &str) -> Result<(), &'static str> {
 pub(super) struct SQLQuery {
     /// The SQL query to execute. It must follow the Clickhouse SQL syntax.
     query: String,
+    /// The response format. Valid values: `json` (a JSON array), `ndjson` (newline-delimited JSON objects).
+    #[serde(default)]
+    #[param(inline, default = "json")]
+    format: ResponseFormat,
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
@@ -100,8 +105,6 @@ pub struct TableSchemaRow {
 enum SQLQueryError {
     #[error("Failed to execute query: {0}")]
     Query(#[from] clickhouse::error::Error),
-    #[error("Failed to parse query result: {0}")]
-    Parse(#[from] serde_json::Error),
     #[error("Failed to read query result: {0}")]
     Read(#[from] tokio::io::Error),
 }
@@ -153,6 +156,7 @@ pub(super) async fn sql(
         )
         .await?;
 
+    let format = query.format;
     let query = query.query;
     let query = query.trim().replace(';', "");
     let query = normalize_query(&query);
@@ -161,9 +165,9 @@ pub(super) async fn sql(
 
     debug!("CUSTOM QUERY: {query}");
 
-    run_sql(&state.ch_client_restricted, &query)
+    run_sql(&state.ch_client_restricted, &query, format)
         .await
-        .map(Json)
+        .map(|body| ([(header::CONTENT_TYPE, format.content_type())], body))
         .map_err(|sql_error| {
             warn!("Failed to execute query: {sql_error}");
             APIError::status_msg(
@@ -176,17 +180,17 @@ pub(super) async fn sql(
 async fn run_sql(
     ch_client: &clickhouse::Client,
     query: &str,
-) -> Result<Vec<serde_json::Value>, SQLQueryError> {
-    let mut lines: Lines<BytesCursor> = ch_client
+    format: ResponseFormat,
+) -> Result<Body, SQLQueryError> {
+    let lines = ch_client
         .query(query)
         .fetch_bytes("JSONEachRow")
         .map(AsyncBufReadExt::lines)?;
-    let mut parsed_result: Vec<serde_json::Value> = vec![];
-    while let Some(line) = lines.next_line().await? {
-        let value: serde_json::Value = serde_json::de::from_str(&line)?;
-        parsed_result.push(value);
-    }
-    Ok(parsed_result)
+    Ok(match stream_rows(lines, format).await? {
+        Some(body) => body,
+        None if format == ResponseFormat::Ndjson => Body::empty(),
+        None => Body::from("[]"),
+    })
 }
 
 #[utoipa::path(

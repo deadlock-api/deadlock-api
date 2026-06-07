@@ -4,9 +4,8 @@
 use core::fmt::Write;
 use core::time::Duration;
 
-use axum::Json;
 use axum::extract::State;
-use axum::http::StatusCode;
+use axum::http::{StatusCode, header};
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::query::BytesCursor;
@@ -22,6 +21,7 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::utils::json_stream::{ResponseFormat, stream_rows};
 use crate::utils::parse::{comma_separated_deserialize_option, default_true};
 use crate::utils::types::SortDirectionAsc;
 
@@ -239,6 +239,11 @@ pub(super) struct BulkMatchMetadataQuery {
     #[serde(default = "default_limit")]
     #[param(minimum = 1, maximum = 10000, default = 1000)]
     limit: u32,
+    /// The response format. Valid values: `json` (a JSON array), `ndjson` (newline-delimited JSON objects).
+    #[serde(default)]
+    #[param(inline, default = "json")]
+    #[cfg_attr(test, proptest(value = "ResponseFormat::Json"))]
+    format: ResponseFormat,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -588,15 +593,6 @@ fn fetch_lines(
         .map(tokio::io::AsyncBufReadExt::lines)
 }
 
-async fn parse_lines(mut lines: Lines<BytesCursor>) -> APIResult<Vec<serde_json::Value>> {
-    let mut parsed_result: Vec<serde_json::Value> = vec![];
-    while let Some(line) = lines.next_line().await? {
-        let value: serde_json::Value = serde_json::de::from_str(&line)?;
-        parsed_result.push(value);
-    }
-    Ok(parsed_result)
-}
-
 #[utoipa::path(
     get,
     path = "/metadata",
@@ -669,16 +665,16 @@ pub(super) async fn bulk_metadata(
         ));
     }
     debug!(?query);
+    let format = query.format;
     let query = build_query(query)?;
     let lines = fetch_lines(&state.ch_client_ro, &query)?;
-    let parsed_result = parse_lines(lines).await?;
-    if parsed_result.is_empty() {
+    let Some(body) = stream_rows(lines, format).await? else {
         return Err(APIError::status_msg(
             StatusCode::NOT_FOUND,
             "No matches found".to_owned(),
         ));
-    }
-    Ok(Json(parsed_result))
+    };
+    Ok(([(header::CONTENT_TYPE, format.content_type())], body))
 }
 
 #[cfg(test)]
