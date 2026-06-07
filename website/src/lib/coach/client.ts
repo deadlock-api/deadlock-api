@@ -37,6 +37,7 @@ export interface CoachStreamHandle {
 
 export interface SessionSummary {
   id: string;
+  patron_id: string;
   title: string | null;
   root_message_id: string | null;
   forked_from_message_id: string | null;
@@ -112,20 +113,34 @@ export async function makeSessionPrivate(sessionId: string): Promise<SessionSumm
   return (await res.json()) as SessionSummary;
 }
 
-// Whether the current patron is allowed to use the AI coach (the `ai_agent_access`
-// flag, owned by deadlock-api). Returns false for anyone not signed in or without
-// the flag — the UI then falls back to the "coming soon" teaser. Never throws.
-export async function fetchAiAgentAccess(): Promise<boolean> {
+export interface CoachAccess {
+  // Whether the current patron may use the AI coach (the `ai_agent_access` flag,
+  // owned by deadlock-api). False for anyone not signed in or without the flag.
+  hasAccess: boolean;
+  // Admins may list and open every patron's conversations, not just their own.
+  isAdmin: boolean;
+  // The viewer's own patron id (null when not signed in). Used to tell whether a
+  // loaded session is theirs, so an admin viewing someone else's chat is read-only.
+  patronId: string | null;
+}
+
+// Resolve the current patron's coach access. Never throws — a network or auth
+// failure yields no access, so the UI falls back to the "coming soon" teaser.
+export async function fetchCoachAccess(): Promise<CoachAccess> {
   try {
     const res = await fetch(`${COACH_API_ORIGIN}/access`, {
       headers: authHeaders(),
       credentials: "include",
     });
-    if (!res.ok) return false;
-    const data = (await res.json()) as { has_access?: boolean };
-    return data.has_access === true;
+    if (!res.ok) return { hasAccess: false, isAdmin: false, patronId: null };
+    const data = (await res.json()) as { has_access?: boolean; is_admin?: boolean; patron_id?: string | null };
+    return {
+      hasAccess: data.has_access === true,
+      isAdmin: data.is_admin === true,
+      patronId: data.patron_id ?? null,
+    };
   } catch {
-    return false;
+    return { hasAccess: false, isAdmin: false, patronId: null };
   }
 }
 

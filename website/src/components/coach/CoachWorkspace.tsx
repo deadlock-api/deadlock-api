@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Bot, Check, CornerDownLeft, Link2, Plus, Sparkles, Lock, Globe } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -22,11 +23,12 @@ import {
 import { CoachIcon } from "~/lib/coach/icons";
 import type { Report } from "~/lib/coach/report";
 import { SAMPLE_REPORTS } from "~/lib/coach/sample-reports";
-import { useAiAgentAccess } from "~/lib/coach/use-ai-agent-access";
+import { useCoachAccess } from "~/lib/coach/use-ai-agent-access";
 import { useSteamAccount } from "~/lib/coach/use-steam-account";
 import { cn } from "~/lib/utils";
 
 import { AskProvider } from "./ask-context";
+import { ConversationHistory } from "./ConversationHistory";
 import { ReportRenderer } from "./ReportRenderer";
 
 interface Turn {
@@ -105,10 +107,14 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
   // Demo mode seeds a worked example without touching the network.
   const [turns, setTurns] = useState<Turn[]>(() => demoTurns(demo));
   const { account, connect, disconnect } = useSteamAccount();
-  const { data: hasAccess } = useAiAgentAccess();
+  const { data: access } = useCoachAccess();
+  const hasAccess = access?.hasAccess;
+  const isAdmin = access?.isAdmin ?? false;
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(routeSessionId ?? null);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [loadState, setLoadState] = useState<LoadState>(routeSessionId ? "loading" : "idle");
@@ -127,6 +133,7 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
           setTurns(treeToTurns(roots));
           if (session) {
             setIsPublic(session.is_public);
+            setOwnerId(session.patron_id);
           }
           setLoadState("idle");
         }
@@ -180,6 +187,8 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
             // History replace keeps the streamed turn mounted and rendered.
             window.history.replaceState(window.history.state, "", `/chat/${newId}`);
           }
+          // Surface the new chat (and its generated title) in the history drawer.
+          void queryClient.invalidateQueries({ queryKey: ["coach-sessions"] });
         } catch {
           // Sharing is best-effort; the chat still works without a URL update.
         }
@@ -208,13 +217,14 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
         },
       );
     },
-    [sessionId, streaming, patch, account],
+    [sessionId, streaming, patch, account, queryClient],
   );
 
   const reset = () => {
     handleRef.current?.close();
     setTurns([]);
     setSessionId(null);
+    setOwnerId(null);
     setIsPublic(false);
     setStreaming(false);
     setLoadState("idle");
@@ -224,9 +234,13 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
   const empty = turns.length === 0;
   const showNotFound = loadState === "not-found";
   const showLoading = loadState === "loading";
+  // A loaded session owned by someone else (an admin browsing another patron's
+  // chat, or anyone opening a shared public link) is view-only — posting into it
+  // would be rejected by the backend's ownership guard.
+  const readOnly = Boolean(ownerId && access?.patronId && ownerId !== access.patronId);
   // Suggested-question chips can only send when this viewer owns an active
   // composer; a shared/read-only report shows them but inert.
-  const canAsk = Boolean(hasAccess && (account || demo) && !showNotFound && !showLoading);
+  const canAsk = Boolean(hasAccess && (account || demo) && !showNotFound && !showLoading && !readOnly);
 
   return (
     <AskProvider value={{ ask: canAsk ? submit : null, busy: streaming }}>
@@ -247,7 +261,15 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {sessionId && !demo && !showNotFound && !showLoading ? (
+            {hasAccess && !demo ? (
+              <ConversationHistory currentSessionId={sessionId ?? routeSessionId} isAdmin={isAdmin} />
+            ) : null}
+            {readOnly ? (
+              <span className="flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-400">
+                <Lock className="size-3.5" /> View only
+              </span>
+            ) : null}
+            {sessionId && !demo && !showNotFound && !showLoading && !readOnly ? (
               <ShareToggle sessionId={sessionId} isPublic={isPublic} setIsPublic={setIsPublic} hasAccess={hasAccess} />
             ) : null}
             {account ? <SteamConnect account={account} onConnect={connect} onDisconnect={disconnect} /> : null}
@@ -293,7 +315,7 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
           )}
         </div>
 
-        {hasAccess && (account || demo) && !showNotFound && !showLoading ? (
+        {hasAccess && (account || demo) && !showNotFound && !showLoading && !readOnly ? (
           <Composer value={input} onChange={setInput} onSubmit={() => submit(input)} disabled={streaming} />
         ) : null}
       </div>
