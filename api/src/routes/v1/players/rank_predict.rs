@@ -9,6 +9,7 @@ use axum::response::IntoResponse;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use tracing::debug;
 use utoipa::ToSchema;
 
 use crate::context::AppState;
