@@ -150,7 +150,7 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
     format!(
         "
     SELECT
-        arrayFilter(x -> x IN (SELECT id FROM items WHERE type = 'ability'), items.item_id) as abilities,
+        abilities,
         countIf(won) AS wins,
         countIf(not won) AS losses,
         wins + losses AS matches,
