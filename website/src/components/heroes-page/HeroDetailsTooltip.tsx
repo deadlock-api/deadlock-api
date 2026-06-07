@@ -21,7 +21,6 @@ interface HeroDetailsRow {
   total_shots_hit: number;
   total_shots_missed: number;
   total_max_health: number;
-  players: number;
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -84,7 +83,6 @@ export function HeroDetailsTooltip({
               label={pickrateLabel ?? "Pick Rate"}
               value={`${(mult * (row.matches / sumMatches) * 100).toFixed(2)}%`}
             />
-            <Stat label="Unique Players" value={row.players.toLocaleString()} />
           </div>
           <div className="flex flex-col gap-1 border-t border-border pt-2">
             <span className="text-xs font-semibold">KDA (avg per match)</span>

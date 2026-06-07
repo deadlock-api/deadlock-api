@@ -503,7 +503,6 @@ function BucketTooltip({
           <div className="mb-1 font-medium text-foreground">{bucketLabel}</div>
           <TooltipRow label="Matches" value={entry.matches.toLocaleString()} />
           <TooltipRow label="Win rate" value={`${winrate}%`} highlight={heroStat === "winrate"} />
-          <TooltipRow label="Players" value={entry.players.toLocaleString()} />
           <div className="my-1 border-t border-border" />
           <TooltipRow label="Kills/match" value={kills} highlight={heroStat === "kills_per_match"} />
           <TooltipRow label="Deaths/match" value={deaths} highlight={heroStat === "deaths_per_match"} />

@@ -5,7 +5,6 @@ export const HERO_STATS = [
   "wins",
   "losses",
   "matches",
-  "players",
   "kills_per_match",
   "deaths_per_match",
   "assists_per_match",
@@ -26,8 +25,6 @@ export function hero_stats_transform(heroStats: AnalyticsHeroStats, heroStat: (t
       return heroStats.losses;
     case "matches":
       return heroStats.matches;
-    case "players":
-      return heroStats.players;
     case "kills_per_match":
       return heroStats.total_kills / heroStats.matches;
     case "deaths_per_match":

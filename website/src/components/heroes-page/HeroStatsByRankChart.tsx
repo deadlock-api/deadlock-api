@@ -54,7 +54,7 @@ interface DataPoint {
 function formatStatValue(stat: ByRankStat, value: number): string {
   if (stat === "winrate" || stat === "pickrate" || stat === "ban_rate") return `${value.toFixed(2)}%`;
   if (stat === "net_worth_per_match") return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
-  if (stat === "wins" || stat === "losses" || stat === "matches" || stat === "players")
+  if (stat === "wins" || stat === "losses" || stat === "matches")
     return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
   return value.toFixed(1);
 }
@@ -69,8 +69,7 @@ function formatStatLabel(stat: ByRankStat): string {
 function tickFormatter(stat: ByRankStat): (v: number) => string {
   if (stat === "winrate" || stat === "pickrate" || stat === "ban_rate") return (v) => `${Number(v).toFixed(0)}%`;
   if (stat === "net_worth_per_match") return (v) => Number(v).toLocaleString();
-  if (stat === "wins" || stat === "losses" || stat === "matches" || stat === "players")
-    return (v) => Number(v).toLocaleString();
+  if (stat === "wins" || stat === "losses" || stat === "matches") return (v) => Number(v).toLocaleString();
   return (v) => Number(v).toFixed(1);
 }
 
@@ -188,7 +187,6 @@ function addToAggregatedTier(agg: AggregatedTier, entry: AnalyticsHeroStats): vo
   agg.losses += entry.losses;
   agg.matches += entry.matches;
   agg.matchesPerBucket += entry.matches_per_bucket;
-  agg.players += entry.players;
   agg.total_kills += entry.total_kills;
   agg.total_deaths += entry.total_deaths;
   agg.total_assists += entry.total_assists;
