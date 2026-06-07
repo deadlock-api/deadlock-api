@@ -54,6 +54,22 @@ impl BucketQuery {
             Self::StartTimeMonth => "toDateTime(toStartOfMonth(start_time))",
         }
     }
+
+    /// Bucket expression against the pre-aggregated `hero_stats_agg` view. The view
+    /// is grained on `hour` (a start-of-hour `DateTime`), so every bucket the
+    /// endpoint exposes is derivable from it — including `StartTimeHour`. `AvgBadge`
+    /// buckets by the per-match `greatest_badge` (stored as 65535 when null, which we
+    /// map back to 0 to mirror the base query's `coalesce(..., 0)`).
+    fn mv_bucket_expr(self) -> &'static str {
+        match self {
+            Self::NoBucket => "toUInt32(0)",
+            Self::AvgBadge => "toUInt32(if(greatest_badge = 65535, 0, greatest_badge))",
+            Self::StartTimeHour => "toStartOfHour(hour)",
+            Self::StartTimeDay => "toStartOfDay(hour)",
+            Self::StartTimeWeek => "toDateTime(toStartOfWeek(hour))",
+            Self::StartTimeMonth => "toDateTime(toStartOfMonth(hour))",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
@@ -156,6 +172,126 @@ pub struct AnalyticsHeroStats {
     total_max_health: u64,
     total_shots_hit: u64,
     total_shots_missed: u64,
+}
+
+/// Horizon of the `hero_stats_agg` materialized view, in days. Keep in sync with
+/// the `INTERVAL ... DAY` in the view's refresh `SELECT`.
+const MV_HORIZON_DAYS: i64 = 65;
+/// Safety margin below the horizon: only route windows whose start sits
+/// comfortably inside the materialized range, so a just-refreshed edge (the view
+/// drops the oldest day as time advances) never under-serves a request.
+const MV_ROUTING_MARGIN_DAYS: i64 = 5;
+
+/// Builds a query against the pre-aggregated `hero_stats_agg` view when the request
+/// falls within the "global meta" subset it materializes, else `None` (the caller
+/// then uses the base-table query). The view is grained on
+/// `(game_mode, hour, hero_id, least_badge, greatest_badge)`, so it serves
+/// `game_mode` + time-range + badge-range filters and every bucket, but anything
+/// per-player or per-row (account, item set, net worth, duration, match id, hero
+/// match counts) must use the base table.
+fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
+    // Per-player / per-row filters the grain cannot express → base table.
+    #[allow(deprecated)]
+    let personalized = query.account_id.is_some()
+        || query.account_ids.as_ref().is_some_and(|v| !v.is_empty())
+        || query
+            .include_item_ids
+            .as_ref()
+            .is_some_and(|v| !v.is_empty())
+        || query
+            .exclude_item_ids
+            .as_ref()
+            .is_some_and(|v| !v.is_empty());
+    let unsupported_filter = query.min_networth.is_some()
+        || query.max_networth.is_some()
+        || query.min_duration_s.is_some()
+        || query.max_duration_s.is_some()
+        || query.min_match_id.is_some()
+        || query.max_match_id.is_some()
+        || query.min_hero_matches.is_some()
+        || query.max_hero_matches.is_some()
+        || query.min_hero_matches_total.is_some()
+        || query.max_hero_matches_total.is_some();
+    if personalized || unsupported_filter {
+        return None;
+    }
+
+    // The view only holds the last MV_HORIZON_DAYS days; older windows use base.
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_secs()
+        .cast_signed();
+    let oldest_servable = now - (MV_HORIZON_DAYS - MV_ROUTING_MARGIN_DAYS) * 86_400;
+    if query
+        .min_unix_timestamp
+        .is_none_or(|min_ts| min_ts < oldest_servable)
+    {
+        return None;
+    }
+
+    let bucket_expr = query.bucket.mv_bucket_expr();
+    let mut filters = vec![GameMode::sql_filter(query.game_mode)];
+    // Timestamps are hour-rounded by `round_timestamps`, and the grain is hourly, so
+    // `hour >= min AND hour < max` is exact (no boundary slop).
+    if let Some(v) = query.min_unix_timestamp {
+        filters.push(format!("hour >= toDateTime({v})"));
+    }
+    if let Some(v) = query.max_unix_timestamp {
+        filters.push(format!("hour < toDateTime({v})"));
+    }
+    // Badge: least/greatest mirror the base table's both-teams semantics, with the
+    // same >11 / <116 guards as MatchInfoFilters. Null badges are stored as
+    // 0 / 65535, so any active filter excludes them just like the base table.
+    if let Some(v) = query.min_average_badge
+        && v > 11
+    {
+        filters.push(format!("least_badge >= {v}"));
+    }
+    if let Some(v) = query.max_average_badge
+        && v < 116
+    {
+        filters.push(format!("greatest_badge <= {v}"));
+    }
+    let where_clause = filters.join(" AND ");
+
+    let matches_per_bucket = if query.bucket == BucketQuery::NoBucket {
+        "matches".to_owned()
+    } else {
+        "sum(sum(n_matches)) OVER (PARTITION BY bucket)".to_owned()
+    };
+
+    Some(format!(
+        "
+    SELECT
+        hero_id,
+        {bucket_expr} AS bucket,
+        sum(n_wins) AS wins,
+        sum(n_matches) - sum(n_wins) AS losses,
+        sum(n_matches) AS matches,
+        {matches_per_bucket} AS matches_per_bucket,
+        uniqMerge(players_state) AS players,
+        sum(sum_kills) AS total_kills,
+        sum(sum_deaths) AS total_deaths,
+        sum(sum_assists) AS total_assists,
+        sum(sum_net_worth) AS total_net_worth,
+        sum(sum_last_hits) AS total_last_hits,
+        sum(sum_denies) AS total_denies,
+        sum(sum_player_damage) AS total_player_damage,
+        sum(sum_player_damage_taken) AS total_player_damage_taken,
+        sum(sum_boss_damage) AS total_boss_damage,
+        sum(sum_creep_damage) AS total_creep_damage,
+        sum(sum_neutral_damage) AS total_neutral_damage,
+        sum(sum_max_health) AS total_max_health,
+        sum(sum_shots_hit) AS total_shots_hit,
+        sum(sum_shots_missed) AS total_shots_missed
+    FROM hero_stats_agg
+    WHERE {where_clause}
+    GROUP BY hero_id, bucket
+    ORDER BY hero_id, bucket
+    SETTINGS log_comment = 'hero_stats_mv'
+    "
+    ))
 }
 
 #[allow(clippy::too_many_lines)]
@@ -333,7 +469,7 @@ async fn get_hero_stats(
     mut query: HeroStatsQuery,
 ) -> APIResult<Vec<AnalyticsHeroStats>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
-    let query_str = build_query(&query);
+    let query_str = build_mv_query(&query).unwrap_or_else(|| build_query(&query));
     debug!(?query_str);
     Ok(run_query(ch_client, &query_str).await?)
 }
@@ -394,6 +530,33 @@ mod proptests {
         #[test]
         fn hero_stats_build_query_is_valid_sql(query: HeroStatsQuery) {
             assert_valid_sql(&build_query(&query));
+        }
+
+        #[test]
+        fn hero_stats_build_mv_query_is_valid_sql(mut query: HeroStatsQuery) {
+            // Force routing into the MV path: clear the filters that disqualify it
+            // and pick a min timestamp comfortably inside the horizon.
+            #[allow(deprecated)]
+            {
+                query.account_id = None;
+            }
+            query.account_ids = None;
+            query.include_item_ids = None;
+            query.exclude_item_ids = None;
+            query.min_networth = None;
+            query.max_networth = None;
+            query.min_duration_s = None;
+            query.max_duration_s = None;
+            query.min_match_id = None;
+            query.max_match_id = None;
+            query.min_hero_matches = None;
+            query.max_hero_matches = None;
+            query.min_hero_matches_total = None;
+            query.max_hero_matches_total = None;
+            query.min_unix_timestamp = Some(i64::MAX / 2);
+            if let Some(mv) = build_mv_query(&query) {
+                assert_valid_sql(&mv);
+            }
         }
     }
 }
