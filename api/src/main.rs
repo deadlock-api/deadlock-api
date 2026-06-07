@@ -77,14 +77,7 @@ fn init_tracing() -> Option<OtelGuard> {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
         "debug,hyper_util=warn,tower_http=info,reqwest=warn,rustls=warn,sqlx=warn,h2=warn",
     ));
-    let fmt_layer = tracing_subscriber::fmt::layer()
-        .fmt_fields(ConsoleFields::default())
-        .with_filter(filter_fn(|meta| {
-            !(meta.is_event()
-                && meta
-                    .target()
-                    .starts_with("deadlock_api_rust::utils::observability"))
-        }));
+    let fmt_layer = tracing_subscriber::fmt::layer().fmt_fields(ConsoleFields::default());
 
     let providers = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
         .ok()
