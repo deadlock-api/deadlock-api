@@ -139,6 +139,13 @@ export interface HeatPoint {
   weight?: number;
 }
 
+export interface MapView {
+  /** Center of the initial view, in normalized map coords. */
+  at: Point;
+  /** Magnification on open: 1 = whole map, ~2.5 = zoomed onto a teamfight. */
+  zoom?: number;
+}
+
 export interface ReplaySample {
   t: number;
   at: Point;
@@ -346,6 +353,8 @@ export interface MinimapBlock {
   zones?: MapZone[];
   heat?: HeatPoint[];
   legend?: MetaChip[];
+  /** Optional initial camera — frames the moment (e.g. a teamfight) on open. */
+  view?: MapView | null;
   /** Scene-board fields: a freeze-frame of one decisive moment. */
   critical?: boolean;
   scene_clock?: string | null;

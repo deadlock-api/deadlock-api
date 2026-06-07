@@ -208,9 +208,9 @@ export function MatchReplay({ block }: { block: MatchReplayBlock }) {
           mapData={mapData}
           showObjectives
           markers={markers}
+          mapOverlay={trails}
           extra={
             <>
-              {trails}
               <div className="pointer-events-none absolute top-2 left-2 rounded-md bg-black/60 px-2 py-1 font-mono text-xs text-white backdrop-blur">
                 {formatClock(t)} / {formatClock(duration)}
               </div>

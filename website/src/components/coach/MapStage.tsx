@@ -5,10 +5,12 @@ import { useId } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
 import { CoachIcon } from "~/lib/coach/icons";
-import type { HeatPoint, MapMarker, MapPath, MapZone, Point } from "~/lib/coach/report";
+import type { HeatPoint, MapMarker, MapPath, MapView, MapZone, Point } from "~/lib/coach/report";
 import { teamLabel, toneColor } from "~/lib/coach/tones";
 import { cn } from "~/lib/utils";
 import { mapQueryOptions } from "~/queries/heatmap-queries";
+
+import { usePanZoom } from "./usePanZoom";
 
 export function useMapData() {
   return useQuery(mapQueryOptions);
@@ -182,6 +184,9 @@ export function MapStage({
   markers = NO_MARKERS,
   smartLabels = false,
   sequenceKind,
+  view,
+  interactive = true,
+  mapOverlay,
   extra,
   className,
 }: {
@@ -196,9 +201,17 @@ export function MapStage({
   // When set, markers of this kind get chronological number badges and a
   // connecting "sequence" arrow trail (e.g. the order of deaths).
   sequenceKind?: MapMarker["kind"];
+  // Initial camera (center + zoom). The user can still pan/zoom from here.
+  view?: MapView | null;
+  // Allow drag/wheel/pinch pan-zoom and show the zoom controls.
+  interactive?: boolean;
+  // Map-space overlay rendered INSIDE the transform (pans/zooms with the map),
+  // e.g. the replay's movement trails. `extra` stays pinned to the viewport.
+  mapOverlay?: ReactNode;
   extra?: ReactNode;
   className?: string;
 }) {
+  const { containerRef, transform, isZoomed, dragging, zoomIn, zoomOut, reset, bind } = usePanZoom(view, interactive);
   const uid = useId().replace(/:/g, "");
   const maxWeight = Math.max(1, ...heat.map((h) => h.weight ?? 1));
   const objectives = Object.entries(mapData.objective_positions ?? {});
@@ -213,266 +226,329 @@ export function MapStage({
 
   return (
     <div
+      ref={containerRef}
       className={cn(
-        "relative aspect-square w-full overflow-hidden rounded-xl border border-white/[0.08] bg-black/40",
+        "relative aspect-square w-full touch-none overflow-hidden rounded-xl border border-white/[0.08] bg-black/40",
+        interactive && (dragging ? "cursor-grabbing" : isZoomed ? "cursor-grab" : "cursor-default"),
         className,
       )}
+      {...(interactive ? bind : {})}
     >
-      {mapData.images.minimap ? (
-        <img
-          src={mapData.images.minimap}
-          alt="Deadlock map"
-          className="absolute inset-0 size-full object-cover opacity-90"
-          draggable={false}
-        />
-      ) : (
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundColor: "#0b1118",
-            backgroundImage:
-              "radial-gradient(circle at 30% 30%, rgba(240,169,43,0.12), transparent 40%), radial-gradient(circle at 70% 70%, rgba(59,157,255,0.12), transparent 40%), linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)",
-            backgroundSize: "100% 100%, 100% 100%, 8% 8%, 8% 8%",
-          }}
-        />
-      )}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/30" />
+      <div className="absolute inset-0 origin-top-left" style={{ transform, willChange: "transform" }}>
+        {mapData.images.minimap ? (
+          <img
+            src={mapData.images.minimap}
+            alt="Deadlock map"
+            className="absolute inset-0 size-full object-cover opacity-90"
+            draggable={false}
+          />
+        ) : (
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundColor: "#0b1118",
+              backgroundImage:
+                "radial-gradient(circle at 30% 30%, rgba(240,169,43,0.12), transparent 40%), radial-gradient(circle at 70% 70%, rgba(59,157,255,0.12), transparent 40%), linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)",
+              backgroundSize: "100% 100%, 100% 100%, 8% 8%, 8% 8%",
+            }}
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/30" />
 
-      <svg viewBox="0 0 100 100" className="absolute inset-0 size-full" preserveAspectRatio="none">
-        <defs>
-          <radialGradient id={`heat-${uid}`}>
-            <stop offset="0%" stopColor="#fa4454" stopOpacity={0.85} />
-            <stop offset="55%" stopColor="#f59e0b" stopOpacity={0.4} />
-            <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
-          </radialGradient>
-          {paths.map((p, i) => (
+        <svg viewBox="0 0 100 100" className="absolute inset-0 size-full" preserveAspectRatio="none">
+          <defs>
+            <radialGradient id={`heat-${uid}`}>
+              <stop offset="0%" stopColor="#fa4454" stopOpacity={0.85} />
+              <stop offset="55%" stopColor="#f59e0b" stopOpacity={0.4} />
+              <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
+            </radialGradient>
+            {paths.map((p, i) => (
+              <marker
+                key={`arrow-${p.label ?? ""}-${p.points[0]?.x}-${p.points[0]?.y}`}
+                id={`arrow-${uid}-${i}`}
+                viewBox="0 0 12 12"
+                refX="8"
+                refY="6"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+                markerUnits="userSpaceOnUse"
+              >
+                <path
+                  d="M1,1 L11,6 L1,11 L3.5,6 z"
+                  fill={toneColor(p.tone ?? "accent")}
+                  stroke="#0b1118"
+                  strokeWidth={0.6}
+                />
+              </marker>
+            ))}
+            <filter id={`pathglow-${uid}`} x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="1.2" result="b" />
+              <feMerge>
+                <feMergeNode in="b" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
             <marker
-              key={`arrow-${p.label ?? ""}-${p.points[0]?.x}-${p.points[0]?.y}`}
-              id={`arrow-${uid}-${i}`}
+              id={`seqarrow-${uid}`}
               viewBox="0 0 12 12"
-              refX="8"
+              refX="7"
               refY="6"
-              markerWidth="7"
-              markerHeight="7"
+              markerWidth="6"
+              markerHeight="6"
               orient="auto-start-reverse"
               markerUnits="userSpaceOnUse"
             >
-              <path
-                d="M1,1 L11,6 L1,11 L3.5,6 z"
-                fill={toneColor(p.tone ?? "accent")}
-                stroke="#0b1118"
-                strokeWidth={0.6}
-              />
+              <path d="M1,1 L11,6 L1,11 L3.5,6 z" fill="#ffffff" fillOpacity={0.85} />
             </marker>
-          ))}
-          <filter id={`pathglow-${uid}`} x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="1.2" result="b" />
-            <feMerge>
-              <feMergeNode in="b" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <marker
-            id={`seqarrow-${uid}`}
-            viewBox="0 0 12 12"
-            refX="7"
-            refY="6"
-            markerWidth="6"
-            markerHeight="6"
-            orient="auto-start-reverse"
-            markerUnits="userSpaceOnUse"
-          >
-            <path d="M1,1 L11,6 L1,11 L3.5,6 z" fill="#ffffff" fillOpacity={0.85} />
-          </marker>
-        </defs>
+          </defs>
 
-        {/* heat */}
-        {heat.map((h) => (
-          <circle
-            key={`h-${h.at.x}-${h.at.y}`}
-            cx={h.at.x * 100}
-            cy={h.at.y * 100}
-            r={4 + 7 * ((h.weight ?? 1) / maxWeight)}
-            fill={`url(#heat-${uid})`}
+          {/* heat */}
+          {heat.map((h) => (
+            <circle
+              key={`h-${h.at.x}-${h.at.y}`}
+              cx={h.at.x * 100}
+              cy={h.at.y * 100}
+              r={4 + 7 * ((h.weight ?? 1) / maxWeight)}
+              fill={`url(#heat-${uid})`}
+            />
+          ))}
+
+          {/* zones */}
+          {zones.map((z) => (
+            <ZoneShape key={`z-${z.label ?? z.shape ?? ""}-${z.at?.x ?? ""}-${z.at?.y ?? ""}`} zone={z} />
+          ))}
+
+          {/* ziplines */}
+          {showZiplines &&
+            (mapData.zipline_paths ?? []).map((zp) => (
+              <Zipline
+                key={`zl-${zp.color}-${zp.P0_points[0]?.[0] ?? ""}-${zp.P0_points[0]?.[1] ?? ""}`}
+                points={zp.P0_points}
+                color={zp.color}
+              />
+            ))}
+
+          {/* paths (rotations / routes): dark casing + glowing colored line +
+            mid-route chevrons so the direction of travel reads at a glance */}
+          {paths.map((p, i) => {
+            const pts = p.points.map((pt) => `${pt.x * 100},${pt.y * 100}`).join(" ");
+            const color = toneColor(p.tone ?? "accent");
+            const w = p.width ?? 3.5;
+            return (
+              <g key={`p-${p.label ?? ""}-${p.points[0]?.x}-${p.points[0]?.y}`}>
+                <polyline
+                  points={pts}
+                  fill="none"
+                  stroke="#0b1118"
+                  strokeWidth={w + 2.5}
+                  strokeOpacity={0.7}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+                <polyline
+                  points={pts}
+                  fill="none"
+                  stroke={color}
+                  strokeWidth={w}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray={p.dashed ? "6 5" : undefined}
+                  vectorEffect="non-scaling-stroke"
+                  filter={`url(#pathglow-${uid})`}
+                  markerEnd={p.arrow !== false ? `url(#arrow-${uid}-${i})` : undefined}
+                />
+                {p.arrow !== false ? <PathChevrons points={p.points} color={color} /> : null}
+              </g>
+            );
+          })}
+
+          {/* sequence connector: order-of-events arrows between numbered markers */}
+          {sequencePoints.length > 1
+            ? sequencePoints.slice(0, -1).map((a, i) => {
+                const b = sequencePoints[i + 1];
+                // Shorten each segment so it stops short of the badges at both ends.
+                const dx = b.x - a.x;
+                const dy = b.y - a.y;
+                const len = Math.hypot(dx, dy) || 1;
+                const trim = 0.026;
+                const ax = a.x + (dx / len) * trim;
+                const ay = a.y + (dy / len) * trim;
+                const bx = b.x - (dx / len) * trim;
+                const by = b.y - (dy / len) * trim;
+                return (
+                  <line
+                    key={`seq-${a.x}-${a.y}-${b.x}-${b.y}`}
+                    x1={ax * 100}
+                    y1={ay * 100}
+                    x2={bx * 100}
+                    y2={by * 100}
+                    stroke="#ffffff"
+                    strokeOpacity={0.55}
+                    strokeWidth={1.6}
+                    strokeDasharray="3 2.5"
+                    strokeLinecap="round"
+                    vectorEffect="non-scaling-stroke"
+                    markerEnd={`url(#seqarrow-${uid})`}
+                  />
+                );
+              })
+            : null}
+        </svg>
+
+        {/* objectives, mapped from the game's CSS margin space onto the lanes */}
+        {showObjectives &&
+          objectives.map(([key, op]) => {
+            const meta = objectiveMeta(key);
+            const at = objectivePoint(key, op);
+            return (
+              <span
+                key={key}
+                className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border shadow"
+                style={{
+                  left: pct(at.x),
+                  top: pct(at.y),
+                  width: meta.size,
+                  height: meta.size,
+                  borderColor: "rgba(255,255,255,0.7)",
+                  backgroundColor: meta.color,
+                }}
+                title={meta.label}
+              />
+            );
+          })}
+
+        {/* zone labels: pinned to the top edge of the region so they don't sit
+          on the markers inside it */}
+        {zones
+          .filter((z) => z.label && z.at)
+          .map((z) => {
+            const at = z.at as Point;
+            const r = z.radius ?? 0.1;
+            return (
+              <MapLabel
+                key={`zlbl-${z.label ?? ""}-${at.x}-${at.y}`}
+                at={{ x: at.x, y: Math.max(0.05, at.y - r - 0.01) }}
+                tone={z.tone ?? "warning"}
+                text={z.label ?? ""}
+                icon={(z.tone ?? "warning") === "success" ? "shield" : "warning"}
+              />
+            );
+          })}
+
+        {/* path labels: pinned to the route's end (the destination of the arrow) */}
+        {paths
+          .filter((p) => p.label)
+          .map((p) => {
+            const end = p.points[p.points.length - 1];
+            return (
+              <MapLabel
+                key={`plbl-${p.label ?? ""}-${end.x}-${end.y}`}
+                at={end}
+                tone={p.tone ?? "accent"}
+                text={p.label ?? ""}
+                icon="route"
+              />
+            );
+          })}
+
+        {/* leader lines from de-overlapped labels back to their precise points */}
+        {placedLabels.length > 0 ? (
+          <svg
+            viewBox="0 0 100 100"
+            className="pointer-events-none absolute inset-0 size-full"
+            preserveAspectRatio="none"
+          >
+            {placedLabels
+              .filter((pl) => pl.moved)
+              .map((pl) => (
+                <line
+                  key={`ll${pl.index}`}
+                  x1={pl.anchor.x * 100}
+                  y1={pl.anchor.y * 100}
+                  x2={pl.pos.x * 100}
+                  y2={pl.pos.y * 100}
+                  stroke={toneColor(markers[pl.index].tone ?? "accent")}
+                  strokeWidth={1}
+                  strokeOpacity={0.5}
+                  vectorEffect="non-scaling-stroke"
+                />
+              ))}
+          </svg>
+        ) : null}
+
+        {/* markers */}
+        {markers.map((m, i) => (
+          <Marker
+            key={`m-${m.kind ?? "dot"}-${m.at.x}-${m.at.y}-${m.label ?? ""}`}
+            marker={m}
+            label={placedByIndex.get(i)}
+            smartLabels={smartLabels}
+            seqNumber={numbers?.get(i)}
           />
         ))}
 
-        {/* zones */}
-        {zones.map((z) => (
-          <ZoneShape key={`z-${z.label ?? z.shape ?? ""}-${z.at?.x ?? ""}-${z.at?.y ?? ""}`} zone={z} />
-        ))}
-
-        {/* ziplines */}
-        {showZiplines &&
-          (mapData.zipline_paths ?? []).map((zp) => (
-            <Zipline
-              key={`zl-${zp.color}-${zp.P0_points[0]?.[0] ?? ""}-${zp.P0_points[0]?.[1] ?? ""}`}
-              points={zp.P0_points}
-              color={zp.color}
-            />
-          ))}
-
-        {/* paths (rotations / routes): dark casing + glowing colored line +
-            mid-route chevrons so the direction of travel reads at a glance */}
-        {paths.map((p, i) => {
-          const pts = p.points.map((pt) => `${pt.x * 100},${pt.y * 100}`).join(" ");
-          const color = toneColor(p.tone ?? "accent");
-          const w = p.width ?? 3.5;
-          return (
-            <g key={`p-${p.label ?? ""}-${p.points[0]?.x}-${p.points[0]?.y}`}>
-              <polyline
-                points={pts}
-                fill="none"
-                stroke="#0b1118"
-                strokeWidth={w + 2.5}
-                strokeOpacity={0.7}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                vectorEffect="non-scaling-stroke"
-              />
-              <polyline
-                points={pts}
-                fill="none"
-                stroke={color}
-                strokeWidth={w}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeDasharray={p.dashed ? "6 5" : undefined}
-                vectorEffect="non-scaling-stroke"
-                filter={`url(#pathglow-${uid})`}
-                markerEnd={p.arrow !== false ? `url(#arrow-${uid}-${i})` : undefined}
-              />
-              {p.arrow !== false ? <PathChevrons points={p.points} color={color} /> : null}
-            </g>
-          );
-        })}
-
-        {/* sequence connector: order-of-events arrows between numbered markers */}
-        {sequencePoints.length > 1
-          ? sequencePoints.slice(0, -1).map((a, i) => {
-              const b = sequencePoints[i + 1];
-              // Shorten each segment so it stops short of the badges at both ends.
-              const dx = b.x - a.x;
-              const dy = b.y - a.y;
-              const len = Math.hypot(dx, dy) || 1;
-              const trim = 0.026;
-              const ax = a.x + (dx / len) * trim;
-              const ay = a.y + (dy / len) * trim;
-              const bx = b.x - (dx / len) * trim;
-              const by = b.y - (dy / len) * trim;
-              return (
-                <line
-                  key={`seq-${a.x}-${a.y}-${b.x}-${b.y}`}
-                  x1={ax * 100}
-                  y1={ay * 100}
-                  x2={bx * 100}
-                  y2={by * 100}
-                  stroke="#ffffff"
-                  strokeOpacity={0.55}
-                  strokeWidth={1.6}
-                  strokeDasharray="3 2.5"
-                  strokeLinecap="round"
-                  vectorEffect="non-scaling-stroke"
-                  markerEnd={`url(#seqarrow-${uid})`}
-                />
-              );
-            })
-          : null}
-      </svg>
-
-      {/* objectives, mapped from the game's CSS margin space onto the lanes */}
-      {showObjectives &&
-        objectives.map(([key, op]) => {
-          const meta = objectiveMeta(key);
-          const at = objectivePoint(key, op);
-          return (
-            <span
-              key={key}
-              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border shadow"
-              style={{
-                left: pct(at.x),
-                top: pct(at.y),
-                width: meta.size,
-                height: meta.size,
-                borderColor: "rgba(255,255,255,0.7)",
-                backgroundColor: meta.color,
-              }}
-              title={meta.label}
-            />
-          );
-        })}
-
-      {/* zone labels: pinned to the top edge of the region so they don't sit
-          on the markers inside it */}
-      {zones
-        .filter((z) => z.label && z.at)
-        .map((z) => {
-          const at = z.at as Point;
-          const r = z.radius ?? 0.1;
-          return (
-            <MapLabel
-              key={`zlbl-${z.label ?? ""}-${at.x}-${at.y}`}
-              at={{ x: at.x, y: Math.max(0.05, at.y - r - 0.01) }}
-              tone={z.tone ?? "warning"}
-              text={z.label ?? ""}
-              icon={(z.tone ?? "warning") === "success" ? "shield" : "warning"}
-            />
-          );
-        })}
-
-      {/* path labels: pinned to the route's end (the destination of the arrow) */}
-      {paths
-        .filter((p) => p.label)
-        .map((p) => {
-          const end = p.points[p.points.length - 1];
-          return (
-            <MapLabel
-              key={`plbl-${p.label ?? ""}-${end.x}-${end.y}`}
-              at={end}
-              tone={p.tone ?? "accent"}
-              text={p.label ?? ""}
-              icon="route"
-            />
-          );
-        })}
-
-      {/* leader lines from de-overlapped labels back to their precise points */}
-      {placedLabels.length > 0 ? (
-        <svg
-          viewBox="0 0 100 100"
-          className="pointer-events-none absolute inset-0 size-full"
-          preserveAspectRatio="none"
-        >
-          {placedLabels
-            .filter((pl) => pl.moved)
-            .map((pl) => (
-              <line
-                key={`ll${pl.index}`}
-                x1={pl.anchor.x * 100}
-                y1={pl.anchor.y * 100}
-                x2={pl.pos.x * 100}
-                y2={pl.pos.y * 100}
-                stroke={toneColor(markers[pl.index].tone ?? "accent")}
-                strokeWidth={1}
-                strokeOpacity={0.5}
-                vectorEffect="non-scaling-stroke"
-              />
-            ))}
-        </svg>
-      ) : null}
-
-      {/* markers */}
-      {markers.map((m, i) => (
-        <Marker
-          key={`m-${m.kind ?? "dot"}-${m.at.x}-${m.at.y}-${m.label ?? ""}`}
-          marker={m}
-          label={placedByIndex.get(i)}
-          smartLabels={smartLabels}
-          seqNumber={numbers?.get(i)}
-        />
-      ))}
+        {mapOverlay}
+      </div>
 
       {extra}
+
+      {interactive ? <ZoomControls isZoomed={isZoomed} zoomIn={zoomIn} zoomOut={zoomOut} reset={reset} /> : null}
+    </div>
+  );
+}
+
+function ZoomControls({
+  isZoomed,
+  zoomIn,
+  zoomOut,
+  reset,
+}: {
+  isZoomed: boolean;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  reset: () => void;
+}) {
+  // Stop pointer-down on the buttons from starting a map drag.
+  const stop = (e: React.PointerEvent) => e.stopPropagation();
+  const btn =
+    "flex size-7 items-center justify-center rounded-md border border-white/15 bg-black/70 text-white/90 backdrop-blur transition hover:bg-black/90";
+  return (
+    <div className="absolute right-2 bottom-2 z-20 flex flex-col gap-1">
+      {isZoomed ? (
+        <button
+          type="button"
+          onClick={reset}
+          onPointerDown={stop}
+          className={cn(btn, "mb-0.5")}
+          aria-label="Reset view"
+          title="Reset view"
+        >
+          <CoachIcon name="crosshair" className="size-3.5" />
+        </button>
+      ) : null}
+      <button
+        type="button"
+        onClick={zoomIn}
+        onPointerDown={stop}
+        className={cn(btn, "text-lg leading-none")}
+        aria-label="Zoom in"
+        title="Zoom in"
+      >
+        +
+      </button>
+      <button
+        type="button"
+        onClick={zoomOut}
+        onPointerDown={stop}
+        className={cn(btn, "text-lg leading-none disabled:opacity-40")}
+        aria-label="Zoom out"
+        title="Zoom out"
+        disabled={!isZoomed}
+      >
+        −
+      </button>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import type { MapData } from "deadlock_api_client";
 import { Area, AreaChart, ReferenceLine, ResponsiveContainer, YAxis } from "recharts";
 
 import { CoachIcon } from "~/lib/coach/icons";
-import type { MinimapBlock, WinProbPoint } from "~/lib/coach/report";
+import type { MapMarker, MapView, MinimapBlock, WinProbPoint } from "~/lib/coach/report";
 import { toneColor } from "~/lib/coach/tones";
 
 import { MapStage, useMapData } from "./MapStage";
@@ -22,6 +22,26 @@ export const FALLBACK_MAP: MapData = {
 function cropWindow(points: WinProbPoint[], center: number, half = 360): WinProbPoint[] {
   const within = points.filter((p) => Math.abs(p.t - center) <= half);
   return within.length >= 2 ? within : points;
+}
+
+// When the agent didn't specify a camera, frame the action ourselves: fit the
+// bounding box of the markers (the heroes in the scene) with some breathing room,
+// so a tight teamfight opens zoomed in instead of lost on the full map.
+function autoView(markers: MapMarker[]): MapView | undefined {
+  const pts = markers.map((m) => m.at);
+  if (pts.length < 2) return undefined;
+  const xs = pts.map((p) => p.x);
+  const ys = pts.map((p) => p.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const pad = 0.1;
+  const extent = Math.max(maxX - minX, maxY - minY) + 2 * pad;
+  // Only zoom when the cluster is genuinely tight; a spread-out scene stays full.
+  if (extent >= 0.85) return undefined;
+  const zoom = Math.min(3, Math.max(1, 1 / extent));
+  return { at: { x: (minX + maxX) / 2, y: (minY + maxY) / 2 }, zoom };
 }
 
 function nearestIndex(points: { t: number }[], t: number): number {
@@ -53,6 +73,8 @@ export function Minimap({ block }: { block: MinimapBlock }) {
   const sceneT = block.scene_t ?? null;
   const cropped = wp.length > 1 && sceneT != null ? cropWindow(wp, sceneT) : wp;
 
+  const view = block.view ?? autoView(markers);
+
   return (
     <CoachCard>
       <BlockHeading title={block.title} subtitle={block.critical ? null : block.subtitle} icon="crosshair" />
@@ -66,6 +88,7 @@ export function Minimap({ block }: { block: MinimapBlock }) {
           heat={block.heat ?? []}
           markers={markers}
           smartLabels
+          view={view}
           extra={
             block.scene_clock ? (
               <div className="pointer-events-none absolute top-2 left-2 rounded-md bg-black/70 px-2 py-1 font-mono text-xs font-semibold text-white backdrop-blur">
