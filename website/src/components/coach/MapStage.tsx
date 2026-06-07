@@ -228,7 +228,7 @@ export function MapStage({
     <div
       ref={containerRef}
       className={cn(
-        "relative aspect-square w-full touch-none overflow-hidden rounded-xl border border-white/[0.08] bg-black/40",
+        "relative aspect-square w-full touch-none overflow-hidden rounded-xl border border-white/[0.08] bg-black/40 select-none",
         interactive && (dragging ? "cursor-grabbing" : isZoomed ? "cursor-grab" : "cursor-default"),
         className,
       )}
