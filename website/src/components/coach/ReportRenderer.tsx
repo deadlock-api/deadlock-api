@@ -3,7 +3,17 @@ import type { Block, Report } from "~/lib/coach/report";
 import { cn } from "~/lib/utils";
 
 import { AreaChart, BarChart, LineChart, NetWorthChart, RadarChart, WinProbabilityChart } from "./Charts";
-import { AbilityOrder, HeroCard, ItemBuild, KeyValue, Scoreboard, StatCards, Timeline } from "./DataBlocks";
+import {
+  AbilityOrder,
+  AbilityOrderComparison,
+  HeroCard,
+  ItemBuild,
+  ItemComparison,
+  KeyValue,
+  Scoreboard,
+  StatCards,
+  Timeline,
+} from "./DataBlocks";
 import { MatchReplay } from "./MatchReplay";
 import { Minimap } from "./Minimap";
 import { SuggestedQuestions } from "./SuggestedQuestions";
@@ -86,6 +96,10 @@ export function RenderBlock({ block }: { block: Block }) {
       return <ItemBuild block={block} />;
     case "ability_order":
       return <AbilityOrder block={block} />;
+    case "item_comparison":
+      return <ItemComparison block={block} />;
+    case "ability_order_comparison":
+      return <AbilityOrderComparison block={block} />;
     case "minimap":
       return <Minimap block={block} />;
     case "match_replay":

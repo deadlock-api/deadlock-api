@@ -5,15 +5,19 @@ import { ItemName } from "~/components/ItemName";
 import { CoachIcon } from "~/lib/coach/icons";
 import type {
   AbilityOrderBlock,
+  AbilityOrderComparisonBlock,
+  AbilityOrderRow,
+  BuildColumn,
   HeroCardBlock,
   ItemBuildBlock,
+  ItemComparisonBlock,
   KeyValueBlock,
   ScoreboardBlock,
   StatCard,
   StatCardsBlock,
   TimelineBlock,
 } from "~/lib/coach/report";
-import { hexAlpha, teamLabel, toneColor } from "~/lib/coach/tones";
+import { hexAlpha, teamLabel, toneColor, toneSurface } from "~/lib/coach/tones";
 import { cn } from "~/lib/utils";
 
 import { BlockHeading, CoachCard, formatClock, Sparkline } from "./shared";
@@ -277,6 +281,170 @@ export function ItemBuild({ block }: { block: ItemBuildBlock }) {
         })}
       </div>
     </CoachCard>
+  );
+}
+
+function winPct(wr?: number | null): string | null {
+  return wr == null ? null : `${Math.round(wr * 100)}%`;
+}
+
+const ITEM_STATUS = {
+  good: { tone: "success", label: "on track" },
+  late: { tone: "warning", label: "late" },
+  off_meta: { tone: "warning", label: "off meta" },
+  missing: { tone: "critical", label: "missing" },
+} as const;
+
+export function ItemComparison({ block }: { block: ItemComparisonBlock }) {
+  return (
+    <CoachCard>
+      <BlockHeading title={block.title} />
+      {block.subtitle ? <p className="mb-3 text-xs text-muted-foreground">{block.subtitle}</p> : null}
+      <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))" }}>
+        {block.columns.map((col, i) => (
+          <BuildColumnView key={i} column={col} />
+        ))}
+      </div>
+    </CoachCard>
+  );
+}
+
+function BuildColumnView({ column }: { column: BuildColumn }) {
+  return (
+    <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-2">
+      <div className="mb-2 flex items-center gap-1.5">
+        {column.hero_id != null ? <HeroImage heroId={column.hero_id} className="size-5 rounded-full" /> : null}
+        <span className="text-xs font-semibold" style={{ color: toneColor(column.tone ?? "neutral") }}>
+          {column.label}
+        </span>
+      </div>
+      <div className="space-y-1">
+        {column.items.map((item, j) => {
+          const status = item.status ? ITEM_STATUS[item.status] : null;
+          const pct = winPct(item.win_rate);
+          return (
+            <div key={j} className="flex items-center gap-1.5 rounded-md px-1 py-1">
+              <ItemImage itemId={item.item_id} className="size-6 rounded" />
+              <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                <ItemName itemId={item.item_id} />
+              </span>
+              {pct ? <span className="text-[11px] text-muted-foreground tabular-nums">{pct}</span> : null}
+              {item.buy_time_s != null ? (
+                <span className="text-[11px] text-muted-foreground tabular-nums">{formatClock(item.buy_time_s)}</span>
+              ) : null}
+              {status ? (
+                <span className="rounded px-1.5 py-0.5 text-[10px] font-medium" style={toneSurface(status.tone, 0.8)}>
+                  {status.label}
+                </span>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const ABILITY_PALETTE = ["#f0a92b", "#3b9dff", "#a78bfa", "#34d399", "#fa4454"] as const;
+
+function abilityColorMap(rows: AbilityOrderRow[], legend?: string[]): Map<string, string> {
+  const m = new Map<string, string>();
+  const assign = (name: string) => {
+    if (!m.has(name)) m.set(name, ABILITY_PALETTE[m.size % ABILITY_PALETTE.length]);
+  };
+  (legend ?? []).forEach(assign);
+  rows.forEach((r) => r.order.forEach(assign));
+  return m;
+}
+
+function abbrev(name: string): string {
+  const words = name.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+export function AbilityOrderComparison({ block }: { block: AbilityOrderComparisonBlock }) {
+  const maxLen = Math.max(1, ...block.rows.map((r) => r.order.length));
+  const steps = Array.from({ length: maxLen }, (_, i) => i + 1);
+  const colors = abilityColorMap(block.rows, block.abilities);
+  return (
+    <CoachCard className="overflow-x-auto">
+      <BlockHeading title={block.title} />
+      {block.abilities && block.abilities.length > 0 ? (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {block.abilities.map((name) => (
+            <span key={name} className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              <span className="size-2.5 rounded-full" style={{ backgroundColor: colors.get(name) }} />
+              {name}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <table className="w-full border-separate border-spacing-1 text-xs">
+        <thead>
+          <tr>
+            <th aria-label="Line" />
+            {steps.map((s) => (
+              <th key={s} className="w-7 text-center font-medium text-muted-foreground">
+                {s}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {block.rows.map((row, i) => (
+            <AbilityRowView key={i} row={row} steps={steps} colors={colors} />
+          ))}
+        </tbody>
+      </table>
+    </CoachCard>
+  );
+}
+
+function AbilityRowView({
+  row,
+  steps,
+  colors,
+}: {
+  row: AbilityOrderRow;
+  steps: number[];
+  colors: Map<string, string>;
+}) {
+  const pct = winPct(row.win_rate);
+  return (
+    <tr>
+      <td className="pr-2 whitespace-nowrap">
+        <span className="font-medium text-foreground" style={row.tone ? { color: toneColor(row.tone) } : undefined}>
+          {row.label}
+        </span>
+        {pct ? <span className="ml-1.5 text-[11px] text-muted-foreground tabular-nums">{pct}</span> : null}
+      </td>
+      {steps.map((s) => {
+        const name = row.order[s - 1];
+        if (!name)
+          return (
+            <td key={s} className="size-7 rounded bg-white/[0.04] text-center text-transparent">
+              ·
+            </td>
+          );
+        const color = colors.get(name) ?? "#8b949e";
+        const diverges = row.diverges_at != null && s === row.diverges_at;
+        return (
+          <td key={s} className="p-0">
+            <div
+              title={name}
+              className={cn(
+                "flex size-7 items-center justify-center rounded text-[10px] font-semibold",
+                diverges && "ring-2 ring-[#fa4454]",
+              )}
+              style={{ backgroundColor: hexAlpha(color, 0.22), color }}
+            >
+              {abbrev(name)}
+            </div>
+          </td>
+        );
+      })}
+    </tr>
   );
 }
 

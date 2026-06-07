@@ -324,6 +324,49 @@ export interface AbilityOrderBlock {
   max_level?: number;
 }
 
+export interface ComparisonItem {
+  item_id: number;
+  /** Meta win rate 0..1 (omitted for the player's own build). */
+  win_rate?: number | null;
+  /** Actual or average purchase time, seconds into the match. */
+  buy_time_s?: number | null;
+  status?: "good" | "late" | "off_meta" | "missing" | null;
+}
+
+export interface BuildColumn {
+  /** e.g. "Your build", "Peer meta", "High-skill", "Enemy laner". */
+  label: string;
+  hero_id?: number | null;
+  tone?: Tone;
+  items: ComparisonItem[];
+}
+
+export interface ItemComparisonBlock {
+  type: "item_comparison";
+  title?: string | null;
+  subtitle?: string | null;
+  columns: BuildColumn[];
+}
+
+export interface AbilityOrderRow {
+  /** e.g. "Yours", "Peer meta", "High-skill". */
+  label: string;
+  /** Ability names in upgrade order. */
+  order: string[];
+  win_rate?: number | null;
+  tone?: Tone;
+  /** 1-based upgrade index where this order first leaves the winning line. */
+  diverges_at?: number | null;
+}
+
+export interface AbilityOrderComparisonBlock {
+  type: "ability_order_comparison";
+  title?: string | null;
+  /** Optional legend of the hero's ability names. */
+  abilities?: string[];
+  rows: AbilityOrderRow[];
+}
+
 export interface MinimapBlock {
   type: "minimap";
   title?: string | null;
@@ -397,6 +440,8 @@ export type Block =
   | ScoreboardBlock
   | ItemBuildBlock
   | AbilityOrderBlock
+  | ItemComparisonBlock
+  | AbilityOrderComparisonBlock
   | MinimapBlock
   | MatchReplayBlock
   | SuggestedQuestionsBlock

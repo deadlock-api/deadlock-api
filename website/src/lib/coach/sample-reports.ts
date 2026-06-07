@@ -404,6 +404,61 @@ export const SAMPLE_MATCH_REPORT: Report = {
       ],
     },
     {
+      type: "item_comparison",
+      title: "What to buy instead",
+      subtitle: "Your build vs what wins at your rank and at the top.",
+      columns: [
+        {
+          label: "Your build",
+          items: [
+            { item_id: 1248737459, buy_time_s: 240, status: "good" },
+            { item_id: 3261353684, buy_time_s: 1320, status: "late" },
+            { item_id: 2566692615, status: "off_meta" },
+          ],
+        },
+        {
+          label: "Peer meta",
+          tone: "info",
+          items: [
+            { item_id: 1248737459, win_rate: 0.54, buy_time_s: 210 },
+            { item_id: 3970837787, win_rate: 0.57, buy_time_s: 900 },
+          ],
+        },
+        {
+          label: "High-skill",
+          tone: "success",
+          items: [
+            { item_id: 3970837787, win_rate: 0.61, buy_time_s: 780 },
+            { item_id: 3884003354, win_rate: 0.59, buy_time_s: 1500 },
+          ],
+        },
+      ],
+    },
+    {
+      type: "ability_order_comparison",
+      title: "Ability order vs the winning line",
+      abilities: ["Afterburn", "Flame Dash", "Napalm", "Concussive Combustion"],
+      rows: [
+        {
+          label: "Yours",
+          order: ["Afterburn", "Flame Dash", "Afterburn", "Napalm", "Flame Dash"],
+          diverges_at: 3,
+        },
+        {
+          label: "Peer meta",
+          win_rate: 0.55,
+          tone: "info",
+          order: ["Afterburn", "Flame Dash", "Napalm", "Afterburn", "Napalm"],
+        },
+        {
+          label: "High-skill",
+          win_rate: 0.59,
+          tone: "success",
+          order: ["Afterburn", "Napalm", "Flame Dash", "Napalm", "Afterburn"],
+        },
+      ],
+    },
+    {
       type: "suggested_questions",
       title: "Ask me to go deeper",
       questions: [
