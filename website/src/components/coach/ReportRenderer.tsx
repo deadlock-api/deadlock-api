@@ -53,6 +53,7 @@ export function RenderBlock({ block }: { block: Block }) {
       return (
         <div className={cn("grid gap-3", colClass)}>
           {(block.children ?? []).map((child, i) => (
+            // oxlint-disable-next-line react/no-array-index-key -- blocks have no stable id
             <RenderBlock key={i} block={child} />
           ))}
         </div>
@@ -115,6 +116,7 @@ export function BlockList({ blocks }: { blocks: Block[] }) {
   return (
     <div className="space-y-3">
       {blocks.map((block, i) => (
+        // oxlint-disable-next-line react/no-array-index-key -- blocks have no stable id
         <RenderBlock key={i} block={block} />
       ))}
     </div>

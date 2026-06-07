@@ -31,8 +31,8 @@ export function StatCards({ block }: { block: StatCardsBlock }) {
         className="grid gap-3"
         style={{ gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, ${cols > 3 ? 150 : 200}px), 1fr))` }}
       >
-        {block.cards.map((card, i) => (
-          <StatCardView key={i} card={card} />
+        {block.cards.map((card) => (
+          <StatCardView key={card.label} card={card} />
         ))}
       </div>
     </div>
@@ -88,8 +88,8 @@ export function KeyValue({ block }: { block: KeyValueBlock }) {
     <CoachCard>
       <BlockHeading title={block.title} />
       <dl className="divide-y divide-white/[0.05]">
-        {block.rows.map((row, i) => (
-          <div key={i} className="flex items-center justify-between gap-4 py-2 first:pt-0 last:pb-0">
+        {block.rows.map((row) => (
+          <div key={row.label} className="flex items-center justify-between gap-4 py-2 first:pt-0 last:pb-0">
             <dt className="text-sm text-muted-foreground">{row.label}</dt>
             <dd
               className={cn("text-sm tabular-nums", row.emphasis ? "font-semibold" : "font-medium")}
@@ -126,8 +126,8 @@ export function HeroCard({ block }: { block: HeroCardBlock }) {
       </div>
       {block.stats && block.stats.length > 0 ? (
         <div className="grid grid-cols-3 divide-x divide-white/[0.05] border-t border-white/[0.05]">
-          {block.stats.slice(0, 3).map((s, i) => (
-            <div key={i} className="px-3 py-2.5 text-center">
+          {block.stats.slice(0, 3).map((s) => (
+            <div key={s.label} className="px-3 py-2.5 text-center">
               <p className="text-base font-bold text-foreground tabular-nums">{s.value}</p>
               <p className="text-[11px] text-muted-foreground">{s.label}</p>
             </div>
@@ -213,8 +213,9 @@ export function Timeline({ block }: { block: TimelineBlock }) {
         {events.map((ev, i) => {
           const color = toneColor(ev.tone ?? "neutral");
           const last = i === events.length - 1;
+
           return (
-            <li key={i} className="flex items-stretch gap-3">
+            <li key={`${ev.t}-${ev.label}`} className="flex items-stretch gap-3">
               <div className="flex flex-col items-center">
                 <span
                   className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 bg-card"
@@ -246,19 +247,19 @@ export function ItemBuild({ block }: { block: ItemBuildBlock }) {
     <CoachCard>
       <BlockHeading title={block.title} />
       <div className="space-y-3">
-        {block.phases.map((phase, i) => {
+        {block.phases.map((phase) => {
           const ids = phase.item_ids ?? [];
           return (
-            <div key={i}>
+            <div key={phase.label}>
               <div className="mb-1.5 flex items-center justify-between">
                 <span className="text-xs font-semibold text-foreground">{phase.label}</span>
                 {phase.note ? <span className="text-[11px] text-muted-foreground">{phase.note}</span> : null}
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {ids.length > 0
-                  ? ids.map((id, j) => (
+                  ? ids.map((id) => (
                       <div
-                        key={j}
+                        key={id}
                         className="flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] py-1 pr-2 pl-1"
                       >
                         <ItemImage itemId={id} className="size-7 rounded" />
@@ -267,9 +268,9 @@ export function ItemBuild({ block }: { block: ItemBuildBlock }) {
                         </span>
                       </div>
                     ))
-                  : (phase.item_names ?? []).map((name, j) => (
+                  : (phase.item_names ?? []).map((name) => (
                       <span
-                        key={j}
+                        key={name}
                         className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2 py-1 text-xs text-muted-foreground"
                       >
                         {name}
@@ -301,8 +302,8 @@ export function ItemComparison({ block }: { block: ItemComparisonBlock }) {
       <BlockHeading title={block.title} />
       {block.subtitle ? <p className="mb-3 text-xs text-muted-foreground">{block.subtitle}</p> : null}
       <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))" }}>
-        {block.columns.map((col, i) => (
-          <BuildColumnView key={i} column={col} />
+        {block.columns.map((col) => (
+          <BuildColumnView key={col.label} column={col} />
         ))}
       </div>
     </CoachCard>
@@ -319,11 +320,11 @@ function BuildColumnView({ column }: { column: BuildColumn }) {
         </span>
       </div>
       <div className="space-y-1">
-        {column.items.map((item, j) => {
+        {column.items.map((item) => {
           const status = item.status ? ITEM_STATUS[item.status] : null;
           const pct = winPct(item.win_rate);
           return (
-            <div key={j} className="flex items-center gap-1.5 rounded-md px-1 py-1">
+            <div key={item.item_id} className="flex items-center gap-1.5 rounded-md px-1 py-1">
               <ItemImage itemId={item.item_id} className="size-6 rounded" />
               <span className="min-w-0 flex-1 truncate text-xs text-foreground">
                 <ItemName itemId={item.item_id} />
@@ -392,8 +393,8 @@ export function AbilityOrderComparison({ block }: { block: AbilityOrderCompariso
           </tr>
         </thead>
         <tbody>
-          {block.rows.map((row, i) => (
-            <AbilityRowView key={i} row={row} steps={steps} colors={colors} />
+          {block.rows.map((row) => (
+            <AbilityRowView key={row.label} row={row} steps={steps} colors={colors} />
           ))}
         </tbody>
       </table>
@@ -466,10 +467,10 @@ export function AbilityOrder({ block }: { block: AbilityOrderBlock }) {
           </tr>
         </thead>
         <tbody>
-          {block.abilities.map((ab, i) => {
+          {block.abilities.map((ab) => {
             const set = new Set(ab.order);
             return (
-              <tr key={i}>
+              <tr key={ab.ability}>
                 <td className="pr-2 font-medium whitespace-nowrap text-foreground">{ab.ability}</td>
                 {levels.map((l) => (
                   <td

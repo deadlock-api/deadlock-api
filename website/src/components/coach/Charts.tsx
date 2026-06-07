@@ -55,8 +55,8 @@ function ChartTip({
       <p className="mb-1 font-medium text-foreground">
         {isTime && typeof label === "number" ? formatClock(label) : label}
       </p>
-      {payload.map((p, i) => (
-        <div key={i} className="flex items-center gap-2">
+      {payload.map((p) => (
+        <div key={p.name} className="flex items-center gap-2">
           <span className="size-2 rounded-sm" style={{ backgroundColor: p.color }} />
           <span className="text-muted-foreground">{p.name}</span>
           <span className="ml-auto font-medium text-foreground tabular-nums">{p.value}</span>
@@ -103,9 +103,9 @@ export function LineChart({ block }: { block: LineChartBlock }) {
         <YAxis tick={AXIS} tickLine={false} axisLine={false} width={40} />
         <Tooltip content={<ChartTip isTime={block.x_is_time} />} />
         {block.series.length > 1 ? <Legend wrapperStyle={{ fontSize: 11 }} /> : null}
-        {(block.annotations ?? []).map((a, i) => (
+        {(block.annotations ?? []).map((a) => (
           <ReferenceLine
-            key={i}
+            key={String(a.x)}
             x={a.x}
             stroke={toneColor(a.tone ?? "accent")}
             strokeDasharray="4 3"
@@ -153,8 +153,8 @@ export function AreaChart({ block }: { block: AreaChartBlock }) {
         <YAxis tick={AXIS} tickLine={false} axisLine={false} width={40} />
         <Tooltip content={<ChartTip isTime={block.x_is_time} />} />
         {block.series.length > 1 ? <Legend wrapperStyle={{ fontSize: 11 }} /> : null}
-        {(block.annotations ?? []).map((a, i) => (
-          <ReferenceLine key={i} x={a.x} stroke={toneColor(a.tone ?? "accent")} strokeDasharray="4 3" />
+        {(block.annotations ?? []).map((a) => (
+          <ReferenceLine key={String(a.x)} x={a.x} stroke={toneColor(a.tone ?? "accent")} strokeDasharray="4 3" />
         ))}
         {block.series.map((s, i) => (
           <Area
@@ -281,9 +281,9 @@ export function NetWorthChart({ block }: { block: NetWorthChartBlock }) {
         />
         <Tooltip content={<ChartTip isTime />} />
         {hasEnemy ? <Legend wrapperStyle={{ fontSize: 11 }} /> : null}
-        {(block.annotations ?? []).map((a, i) => (
+        {(block.annotations ?? []).map((a) => (
           <ReferenceLine
-            key={i}
+            key={String(a.x)}
             x={a.x}
             stroke={toneColor(a.tone ?? "accent")}
             strokeDasharray="4 3"
@@ -348,9 +348,9 @@ export function WinProbabilityChart({ block }: { block: WinProbabilityChartBlock
         />
         <Tooltip content={<ChartTip isTime />} />
         <ReferenceLine y={0.5} stroke="var(--border)" strokeDasharray="4 4" />
-        {(block.swings ?? []).map((a, i) => (
+        {(block.swings ?? []).map((a) => (
           <ReferenceLine
-            key={i}
+            key={String(a.x)}
             x={a.x}
             stroke={toneColor(a.tone ?? "accent")}
             strokeDasharray="4 3"

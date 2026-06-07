@@ -15,9 +15,9 @@ export function SuggestedQuestions({ block }: { block: SuggestedQuestionsBlock }
         <p className="text-sm font-semibold text-foreground">{block.title ?? "Ask me to go deeper"}</p>
       </div>
       <div className="flex flex-col gap-2">
-        {questions.map((q, i) => (
+        {questions.map((q) => (
           <button
-            key={i}
+            key={q.text}
             type="button"
             disabled={!ask || busy}
             onClick={() => ask?.(q.text)}

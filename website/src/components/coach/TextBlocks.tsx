@@ -35,9 +35,9 @@ export function Header({ block }: { block: HeaderBlock }) {
           {block.subtitle ? <p className="mt-1 text-sm text-muted-foreground">{block.subtitle}</p> : null}
           {block.chips && block.chips.length > 0 ? (
             <div className="mt-4 flex flex-wrap gap-2">
-              {block.chips.map((chip, i) => (
+              {block.chips.map((chip) => (
                 <div
-                  key={i}
+                  key={chip.label}
                   className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs"
                   style={toneSurface(chip.tone ?? "neutral", 0.8)}
                 >
