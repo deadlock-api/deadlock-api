@@ -9,7 +9,7 @@ mod accolades;
 mod build_tags;
 mod client_versions;
 mod colors;
-mod common;
+pub(crate) mod common;
 mod generic_data;
 mod heroes;
 mod items;

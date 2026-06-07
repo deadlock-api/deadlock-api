@@ -7,6 +7,7 @@
     clippy::struct_field_names
 )]
 
+use async_graphql::{ComplexObject, Enum, Json, SimpleObject, Union};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
@@ -18,7 +19,7 @@ use crate::services::assets::versions::items::raw::{
     RawItemWeaponInfoInner, RawWeaponInfoHorizontalRecoil, RawWeaponInfoVerticalRecoil,
 };
 
-#[derive(Debug, Clone, Copy, Serialize, EnumString, ToSchema)]
+#[derive(Debug, Clone, Copy, Serialize, EnumString, ToSchema, PartialEq, Eq, Enum)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum AbilityType {
     #[strum(serialize = "EAbilityType_Innate")]
@@ -37,7 +38,7 @@ pub(crate) enum AbilityType {
     Cosmetic,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, EnumString, ToSchema, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, EnumString, ToSchema, PartialEq, Eq, Enum)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum ItemSlotType {
     #[strum(serialize = "EItemSlotType_WeaponMod")]
@@ -50,7 +51,7 @@ pub(crate) enum ItemSlotType {
     Vitality,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, EnumString, ToSchema)]
+#[derive(Debug, Clone, Copy, Serialize, EnumString, ToSchema, PartialEq, Eq, Enum)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum AbilityActivation {
     #[strum(serialize = "CITADEL_ABILITY_ACTIVATION_HOLD_TOGGLE")]
@@ -69,7 +70,7 @@ pub(crate) enum AbilityActivation {
     InstantCastToggle,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, EnumString, ToSchema)]
+#[derive(Debug, Clone, Copy, Serialize, EnumString, ToSchema, PartialEq, Eq, Enum)]
 pub(crate) enum AbilityImbue {
     #[strum(serialize = "CITADEL_TARGET_ABILITY_BEHAVIOR_IMBUE_ACTIVE")]
     #[serde(rename = "imbue_active")]
@@ -102,7 +103,7 @@ pub(crate) enum StatsUsageFlag {
 }
 
 /// Discriminator for the `type` field on every item variant.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Display, ToSchema)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Display, ToSchema, PartialEq, Eq, Enum)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub(crate) enum ItemType {
@@ -165,7 +166,8 @@ pub(crate) struct UpgradeProperty {
     pub(crate) tooltip_is_important: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema, Default)]
+#[derive(Debug, Clone, Serialize, ToSchema, Default, SimpleObject)]
+#[graphql(rename_fields = "snake_case")]
 pub(crate) struct AbilityDescription {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) desc: Option<String>,
@@ -183,7 +185,8 @@ pub(crate) struct AbilityDescription {
     pub(crate) passive: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema, Default)]
+#[derive(Debug, Clone, Serialize, ToSchema, Default, SimpleObject)]
+#[graphql(rename_fields = "snake_case")]
 pub(crate) struct UpgradeDescription {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) desc: Option<String>,
@@ -195,7 +198,8 @@ pub(crate) struct UpgradeDescription {
     pub(crate) passive: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, ToSchema, SimpleObject)]
+#[graphql(rename_fields = "snake_case")]
 pub(crate) struct AbilityVideos {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) webm: Option<String>,
@@ -426,7 +430,8 @@ pub(crate) struct WeaponInfo {
     pub(crate) damage_per_magazine: Option<f64>,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, ToSchema, SimpleObject)]
+#[graphql(complex, rename_fields = "snake_case")]
 pub(crate) struct Ability {
     pub(crate) id: u32,
     pub(crate) class_name: String,
@@ -445,8 +450,10 @@ pub(crate) struct Ability {
     pub(crate) update_time: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<std::collections::HashMap<String, ItemProperty>>)]
+    #[graphql(skip)]
     pub(crate) properties: Option<IndexMap<String, ItemProperty>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[graphql(skip)]
     pub(crate) weapon_info: Option<RawItemWeaponInfoInner>,
     pub(crate) r#type: ItemType,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -455,8 +462,10 @@ pub(crate) struct Ability {
     pub(crate) behaviours: Option<Vec<String>>,
     pub(crate) description: AbilityDescription,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[graphql(skip)]
     pub(crate) tooltip_details: Option<AbilityTooltipDetails>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[graphql(skip)]
     pub(crate) upgrades: Option<Vec<RawAbilityUpgrade>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) ability_type: Option<AbilityType>,
@@ -468,10 +477,33 @@ pub(crate) struct Ability {
     pub(crate) videos: Option<AbilityVideos>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<std::collections::HashMap<String, DependantAbilities>>)]
+    #[graphql(skip)]
     pub(crate) dependent_abilities: Option<IndexMap<String, Option<DependantAbilities>>>,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[ComplexObject(rename_fields = "snake_case")]
+impl Ability {
+    async fn properties(&self) -> Json<Option<IndexMap<String, ItemProperty>>> {
+        Json(self.properties.clone())
+    }
+    async fn weapon_info(&self) -> Json<Option<RawItemWeaponInfoInner>> {
+        Json(self.weapon_info.clone())
+    }
+    async fn tooltip_details(&self) -> Json<Option<AbilityTooltipDetails>> {
+        Json(self.tooltip_details.clone())
+    }
+    async fn upgrades(&self) -> Json<Option<Vec<RawAbilityUpgrade>>> {
+        Json(self.upgrades.clone())
+    }
+    async fn dependent_abilities(
+        &self,
+    ) -> Json<Option<IndexMap<String, Option<DependantAbilities>>>> {
+        Json(self.dependent_abilities.clone())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema, SimpleObject)]
+#[graphql(complex, rename_fields = "snake_case")]
 pub(crate) struct Weapon {
     pub(crate) id: u32,
     pub(crate) class_name: String,
@@ -490,8 +522,10 @@ pub(crate) struct Weapon {
     pub(crate) update_time: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<std::collections::HashMap<String, ItemProperty>>)]
+    #[graphql(skip)]
     pub(crate) properties: Option<IndexMap<String, ItemProperty>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[graphql(skip)]
     pub(crate) weapon_info: Option<WeaponInfo>,
     pub(crate) r#type: ItemType,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -499,10 +533,25 @@ pub(crate) struct Weapon {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) use_custom_crosshair_settings: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[graphql(skip)]
     pub(crate) custom_crosshair_settings: Option<RawCustomCrosshairSettings>,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[ComplexObject(rename_fields = "snake_case")]
+impl Weapon {
+    async fn properties(&self) -> Json<Option<IndexMap<String, ItemProperty>>> {
+        Json(self.properties.clone())
+    }
+    async fn weapon_info(&self) -> Json<Option<WeaponInfo>> {
+        Json(self.weapon_info.clone())
+    }
+    async fn custom_crosshair_settings(&self) -> Json<Option<RawCustomCrosshairSettings>> {
+        Json(self.custom_crosshair_settings.clone())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema, SimpleObject)]
+#[graphql(complex, rename_fields = "snake_case")]
 pub(crate) struct Upgrade {
     pub(crate) id: u32,
     pub(crate) class_name: String,
@@ -520,6 +569,7 @@ pub(crate) struct Upgrade {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) update_time: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[graphql(skip)]
     pub(crate) weapon_info: Option<RawItemWeaponInfoInner>,
     pub(crate) r#type: ItemType,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -534,6 +584,7 @@ pub(crate) struct Upgrade {
     pub(crate) item_tier: u8,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<std::collections::HashMap<String, UpgradeProperty>>)]
+    #[graphql(skip)]
     pub(crate) properties: Option<IndexMap<String, UpgradeProperty>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) disabled: Option<bool>,
@@ -545,8 +596,10 @@ pub(crate) struct Upgrade {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) component_items: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[graphql(skip)]
     pub(crate) tooltip_sections: Option<Vec<UpgradeTooltipSection>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[graphql(skip)]
     pub(crate) upgrades: Option<Vec<RawAbilityUpgrade>>,
     pub(crate) is_active_item: bool,
     pub(crate) shopable: bool,
@@ -554,7 +607,24 @@ pub(crate) struct Upgrade {
     pub(crate) cost: Option<u32>,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[ComplexObject(rename_fields = "snake_case")]
+impl Upgrade {
+    async fn weapon_info(&self) -> Json<Option<RawItemWeaponInfoInner>> {
+        Json(self.weapon_info.clone())
+    }
+    async fn properties(&self) -> Json<Option<IndexMap<String, UpgradeProperty>>> {
+        Json(self.properties.clone())
+    }
+    async fn tooltip_sections(&self) -> Json<Option<Vec<UpgradeTooltipSection>>> {
+        Json(self.tooltip_sections.clone())
+    }
+    async fn upgrades(&self) -> Json<Option<Vec<RawAbilityUpgrade>>> {
+        Json(self.upgrades.clone())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema, Union)]
+#[graphql(name = "AssetItem")]
 #[serde(untagged)]
 pub(crate) enum Item {
     Ability(Ability),

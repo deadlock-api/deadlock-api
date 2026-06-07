@@ -77,7 +77,7 @@ pub(super) struct Match {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, SimpleObject)]
-#[graphql(rename_fields = "snake_case")]
+#[graphql(complex, rename_fields = "snake_case")]
 pub(super) struct MatchPlayer {
     // Identity
     pub(super) match_id: Option<u64>,
@@ -153,7 +153,7 @@ pub(super) struct MatchPlayer {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, SimpleObject)]
-#[graphql(rename_fields = "snake_case")]
+#[graphql(complex, rename_fields = "snake_case")]
 pub(super) struct Item {
     pub(super) game_time_s: Option<u32>,
     pub(super) item_id: Option<u32>,

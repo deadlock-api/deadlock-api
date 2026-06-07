@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use async_graphql::{ComplexObject, SimpleObject};
 use cached::LruTtlCache;
 use cached::macros::cached;
 use object_store::aws::AmazonS3;
@@ -24,7 +25,8 @@ const RANK_COLORS: [&str; NUM_TIERS as usize] = [
 
 /// Image URLs for a single rank tier. Field declaration order is load-bearing:
 /// it sets the JSON key order, which is stable across versions of this API.
-#[derive(Debug, Serialize, Clone, Default, ToSchema)]
+#[derive(Debug, Serialize, Clone, Default, ToSchema, SimpleObject)]
+#[graphql(rename_fields = "snake_case")]
 pub(crate) struct RankImages {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub large: Option<String>,
@@ -134,12 +136,21 @@ impl RankImages {
     }
 }
 
-#[derive(Debug, Serialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
+#[graphql(complex, rename_fields = "snake_case")]
 pub(crate) struct Rank {
     pub tier: u32,
     pub name: String,
     pub images: RankImages,
+    #[graphql(skip)]
     pub color: &'static str,
+}
+
+#[ComplexObject(rename_fields = "snake_case")]
+impl Rank {
+    async fn color(&self) -> &'static str {
+        self.color
+    }
 }
 
 pub(crate) fn build_ranks(loc: &HashMap<String, String>) -> Vec<Rank> {

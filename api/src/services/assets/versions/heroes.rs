@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::collections::HashMap as StdMap;
 use std::sync::Arc;
 
+use async_graphql::{ComplexObject, Enum, Json, SimpleObject};
 use cached::LruTtlCache;
 use cached::macros::cached;
 use indexmap::IndexMap;
@@ -123,7 +124,8 @@ struct RawHeroStatsDisplay {
     weapon_stats: Vec<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, ToSchema)]
+#[derive(Debug, Deserialize, Serialize, Clone, ToSchema, SimpleObject)]
+#[graphql(rename_fields = "snake_case")]
 pub(crate) struct HeroStatsUIDisplay {
     #[serde(alias = "m_eStatCategory")]
     pub category: String,
@@ -291,7 +293,8 @@ struct RawHero {
 
 // ================================================================ Public model
 
-#[derive(Debug, Serialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
+#[graphql(complex, rename_fields = "snake_case")]
 #[allow(clippy::struct_excessive_bools, clippy::struct_field_names)]
 pub(crate) struct Hero {
     pub id: u32,
@@ -300,6 +303,7 @@ pub(crate) struct Hero {
     pub description: HeroDescription,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<StdMap<String, f64>>)]
+    #[graphql(skip)]
     pub item_draft_weights: Option<IndexMap<String, f64>>,
     pub player_selectable: bool,
     pub disabled: bool,
@@ -321,32 +325,80 @@ pub(crate) struct Hero {
     pub skin: i64,
     pub images: HeroImages,
     #[schema(value_type = StdMap<HeroItemType, String>)]
+    #[graphql(skip)]
     pub items: IndexMap<HeroItemType, String>,
+    #[graphql(skip)]
     pub starting_stats: StartingStats,
     #[schema(value_type = StdMap<ItemSlotType, ItemSlotInfo>)]
+    #[graphql(skip)]
     pub item_slot_info: IndexMap<ItemSlotType, ItemSlotInfo>,
     pub physics: HeroPhysics,
+    #[graphql(skip)]
     pub colors: HeroColors,
     pub shop_stat_display: ShopStatDisplay,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<StdMap<ItemSlotType, Vec<MapModCostBonus>>>)]
+    #[graphql(skip)]
     pub cost_bonuses: Option<IndexMap<ItemSlotType, Vec<MapModCostBonus>>>,
     pub stats_display: StatsDisplay,
     pub hero_stats_ui: HeroStatsUI,
     #[schema(value_type = StdMap<String, LevelInfo>)]
+    #[graphql(skip)]
     pub level_info: IndexMap<String, LevelInfo>,
     #[schema(value_type = StdMap<String, ScalingStat>)]
+    #[graphql(skip)]
     pub scaling_stats: IndexMap<String, ScalingStat>,
     #[schema(value_type = StdMap<ItemSlotType, Vec<PurchaseBonus>>)]
+    #[graphql(skip)]
     pub purchase_bonuses: IndexMap<ItemSlotType, Vec<PurchaseBonus>>,
     #[schema(value_type = StdMap<String, f64>)]
+    #[graphql(skip)]
     pub standard_level_up_upgrades: IndexMap<String, f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<StdMap<String, Option<DraftBucketing>>>)]
+    #[graphql(skip)]
     pub item_draft_bucketing: Option<IndexMap<String, Option<DraftBucketing>>>,
 }
 
-#[derive(Debug, Serialize, Clone, ToSchema)]
+#[ComplexObject(rename_fields = "snake_case")]
+impl Hero {
+    async fn item_draft_weights(&self) -> Json<Option<IndexMap<String, f64>>> {
+        Json(self.item_draft_weights.clone())
+    }
+    async fn items(&self) -> Json<IndexMap<HeroItemType, String>> {
+        Json(self.items.clone())
+    }
+    async fn starting_stats(&self) -> Json<StartingStats> {
+        Json(self.starting_stats.clone())
+    }
+    async fn item_slot_info(&self) -> Json<IndexMap<ItemSlotType, ItemSlotInfo>> {
+        Json(self.item_slot_info.clone())
+    }
+    async fn colors(&self) -> Json<HeroColors> {
+        Json(self.colors.clone())
+    }
+    async fn cost_bonuses(&self) -> Json<Option<IndexMap<ItemSlotType, Vec<MapModCostBonus>>>> {
+        Json(self.cost_bonuses.clone())
+    }
+    async fn level_info(&self) -> Json<IndexMap<String, LevelInfo>> {
+        Json(self.level_info.clone())
+    }
+    async fn scaling_stats(&self) -> Json<IndexMap<String, ScalingStat>> {
+        Json(self.scaling_stats.clone())
+    }
+    async fn purchase_bonuses(&self) -> Json<IndexMap<ItemSlotType, Vec<PurchaseBonus>>> {
+        Json(self.purchase_bonuses.clone())
+    }
+    async fn standard_level_up_upgrades(&self) -> Json<IndexMap<String, f64>> {
+        Json(self.standard_level_up_upgrades.clone())
+    }
+    async fn item_draft_bucketing(&self) -> Json<Option<IndexMap<String, Option<DraftBucketing>>>> {
+        Json(self.item_draft_bucketing.clone())
+    }
+}
+
+#[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
+#[graphql(rename_fields = "snake_case")]
 pub(crate) struct HeroDescription {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub lore: Option<String>,
@@ -356,7 +408,8 @@ pub(crate) struct HeroDescription {
     pub playstyle: Option<String>,
 }
 
-#[derive(Debug, Serialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
+#[graphql(rename_fields = "snake_case")]
 pub(crate) struct HeroImages {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub icon_hero_card: Option<String>,
@@ -394,7 +447,8 @@ pub(crate) struct HeroImages {
     pub name_image: Option<String>,
 }
 
-#[derive(Debug, Serialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
+#[graphql(rename_fields = "snake_case")]
 pub(crate) struct HeroPhysics {
     pub stealth_speed_meters_per_second: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -420,7 +474,8 @@ pub(crate) struct HeroColors {
     pub style_hex: Option<String>,
 }
 
-#[derive(Debug, Serialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
+#[graphql(rename_fields = "snake_case")]
 #[allow(clippy::struct_field_names)]
 pub(crate) struct ShopStatDisplay {
     pub spirit_stats_display: ShopSpiritStatsDisplay,
@@ -428,16 +483,19 @@ pub(crate) struct ShopStatDisplay {
     pub weapon_stats_display: ShopWeaponStatsDisplay,
 }
 
-#[derive(Debug, Serialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
+#[graphql(rename_fields = "snake_case")]
 pub(crate) struct ShopSpiritStatsDisplay {
     pub display_stats: Vec<String>,
 }
-#[derive(Debug, Serialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
+#[graphql(rename_fields = "snake_case")]
 pub(crate) struct ShopVitalityStatsDisplay {
     pub display_stats: Vec<String>,
     pub other_display_stats: Vec<String>,
 }
-#[derive(Debug, Serialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
+#[graphql(rename_fields = "snake_case")]
 pub(crate) struct ShopWeaponStatsDisplay {
     pub display_stats: Vec<String>,
     pub other_display_stats: Vec<String>,
@@ -449,7 +507,8 @@ pub(crate) struct ShopWeaponStatsDisplay {
     pub weapon_image_webp: Option<String>,
 }
 
-#[derive(Debug, Serialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
+#[graphql(rename_fields = "snake_case")]
 #[allow(clippy::struct_field_names)]
 pub(crate) struct StatsDisplay {
     pub health_header_stats: Vec<String>,
@@ -460,7 +519,8 @@ pub(crate) struct StatsDisplay {
     pub weapon_stats: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
+#[graphql(rename_fields = "snake_case")]
 pub(crate) struct HeroStatsUI {
     pub weapon_stat_display: String,
     pub display_stats: Vec<HeroStatsUIDisplay>,
@@ -516,7 +576,7 @@ pub(crate) struct LevelInfo {
 
 // ============================================================== Enum normalization
 
-#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq, ToSchema, EnumString)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq, ToSchema, EnumString, Enum)]
 #[serde(rename_all = "snake_case")]
 #[strum(ascii_case_insensitive)]
 pub(crate) enum HeroType {

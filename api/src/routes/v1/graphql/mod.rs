@@ -1,3 +1,4 @@
+mod assets;
 mod cost;
 mod filters;
 mod metrics_ext;

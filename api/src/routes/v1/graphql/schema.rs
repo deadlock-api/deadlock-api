@@ -2,6 +2,8 @@
 
 #![allow(clippy::doc_markdown)]
 
+use std::sync::Arc;
+
 use async_graphql::{
     Context, EmptyMutation, EmptySubscription, Enum, Object, Result as GqlResult, Schema,
 };
@@ -9,6 +11,8 @@ use tokio::io::AsyncBufReadExt as _;
 use tracing::{Instrument as _, debug, info_span};
 
 use crate::context::AppState;
+use crate::routes::v1::assets::common::Language;
+use crate::routes::v1::graphql::assets::{load_heroes, load_items, load_ranks};
 use crate::routes::v1::graphql::cost::{COMPLEXITY_LIMIT, DEPTH_LIMIT, MAX_LIMIT};
 use crate::routes::v1::graphql::filters::MatchPlayerWhere;
 use crate::routes::v1::graphql::metrics_ext::MetricsExtension;
@@ -17,8 +21,11 @@ use crate::routes::v1::graphql::sql::{
     BuildArgs, OrderDir, OrderKey, build_match_players_query, build_matches_query,
 };
 use crate::routes::v1::graphql::types::{Match, MatchPlayer};
+use crate::services::assets::versions::heroes::Hero;
+use crate::services::assets::versions::items::Item as AssetItem;
+use crate::services::assets::versions::ranks::Rank;
 
-fn app_state<'a>(ctx: &'a Context<'_>) -> GqlResult<&'a AppState> {
+pub(super) fn app_state<'a>(ctx: &'a Context<'_>) -> GqlResult<&'a AppState> {
     ctx.data::<AppState>()
         .map_err(|e| async_graphql::Error::new(format!("Internal: missing AppState: {e:?}")))
 }
@@ -150,6 +157,43 @@ impl QueryRoot {
             .record(rows.len() as f64);
         Ok(rows)
     }
+
+    /// All heroes for the given client version (defaults to latest), localized
+    /// to `language` (defaults to English). Sourced from the versioned assets,
+    /// not ClickHouse.
+    #[graphql(complexity = "100 + 10 * child_complexity")]
+    async fn heroes(
+        &self,
+        ctx: &Context<'_>,
+        client_version: Option<u32>,
+        language: Option<Language>,
+    ) -> GqlResult<Arc<Vec<Hero>>> {
+        load_heroes(app_state(ctx)?, client_version, language).await
+    }
+
+    /// All items (abilities, weapons, upgrades) for the given client version
+    /// (defaults to latest), localized to `language` (defaults to English).
+    #[graphql(complexity = "100 + 10 * child_complexity")]
+    async fn items(
+        &self,
+        ctx: &Context<'_>,
+        client_version: Option<u32>,
+        language: Option<Language>,
+    ) -> GqlResult<Arc<Vec<AssetItem>>> {
+        load_items(app_state(ctx)?, client_version, language).await
+    }
+
+    /// All rank tiers for the given client version (defaults to latest),
+    /// localized to `language` (defaults to English).
+    #[graphql(complexity = "50 + 10 * child_complexity")]
+    async fn ranks(
+        &self,
+        ctx: &Context<'_>,
+        client_version: Option<u32>,
+        language: Option<Language>,
+    ) -> GqlResult<Arc<Vec<Rank>>> {
+        load_ranks(app_state(ctx)?, client_version, language).await
+    }
 }
 
 async fn run_query<T>(ch_client: &clickhouse::Client, sql: &str) -> GqlResult<Vec<T>>
@@ -172,4 +216,21 @@ where
         out.push(value);
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn schema_builds_with_assets() {
+        // Panics on duplicate type names / invalid output types.
+        let sdl = build_schema().sdl();
+        assert!(sdl.contains("type Hero"));
+        assert!(sdl.contains("union AssetItem"));
+        assert!(sdl.contains("type Rank"));
+        assert!(sdl.contains("heroes("));
+        assert!(sdl.contains("hero:")); // MatchPlayer.hero enrichment
+        assert!(sdl.contains("asset:")); // Item.asset enrichment
+    }
 }

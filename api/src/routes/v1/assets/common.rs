@@ -39,7 +39,18 @@ pub(crate) struct VersionQuery {
 }
 
 /// Set of languages the upstream `localization/<lang>.json` files are keyed by.
-#[derive(Debug, Default, Clone, Copy, Deserialize, IntoStaticStr, utoipa::ToSchema)]
+#[derive(
+    Debug,
+    Default,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Deserialize,
+    IntoStaticStr,
+    utoipa::ToSchema,
+    async_graphql::Enum,
+)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 #[allow(clippy::enum_variant_names)]
