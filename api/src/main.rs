@@ -101,6 +101,9 @@ fn init_tracing() -> Option<OtelGuard> {
                     "http.response.status_code",
                     "url.full",
                     "http.request.id",
+                    "user_agent.original",
+                    "client.address",
+                    "deadlock.api_key",
                 ]))
                 .build()
                 .with_filter(filter_fn(|meta| {
