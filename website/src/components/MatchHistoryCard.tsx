@@ -20,6 +20,10 @@ export interface FullBuildItem {
   itemId: number;
   gameTimeS: number;
   sold: boolean;
+  /** When truly sold (not upgraded), the game time the item was sold. */
+  soldTimeS?: number;
+  /** Cumulative souls spent on items at the moment of this purchase (refund-adjusted). */
+  soulsSpent?: number;
   imbuedAbilityNumber?: number;
 }
 
@@ -52,6 +56,8 @@ export interface MatchHistoryCardProps {
   expandable?: boolean;
   expanded?: boolean;
   onToggleExpand?: () => void;
+  /** When provided, the player's name becomes a button that invokes this with the resolved persona name. */
+  onPlayerClick?: (name?: string) => void;
   /** Pre-fetched Steam profile. When provided the card skips its own profile query. */
   steamProfile?: { personaname: string } | null;
 }
@@ -149,6 +155,7 @@ export default function MatchHistoryCard({
   expandable = true,
   expanded,
   onToggleExpand,
+  onPlayerClick,
   steamProfile: steamProfileProp,
 }: MatchHistoryCardProps) {
   const isWin = result === "win";
@@ -199,11 +206,21 @@ export default function MatchHistoryCard({
             <div className="text-xs text-muted-foreground/60">{timeAgo}</div>
             <div className="text-xs text-muted-foreground/60">{matchId}</div>
             <div className="my-1.5 h-px w-full bg-border/50" />
-            {steamProfile?.personaname && (
-              <div className="mb-1 max-w-28 truncate text-xs font-medium text-foreground">
-                {steamProfile.personaname}
-              </div>
-            )}
+            {steamProfile?.personaname &&
+              (onPlayerClick ? (
+                <button
+                  type="button"
+                  onClick={() => onPlayerClick(steamProfile.personaname)}
+                  className="mb-1 max-w-28 cursor-pointer truncate text-left text-xs font-medium text-foreground hover:text-primary hover:underline"
+                  title={`View ${steamProfile.personaname}'s recent builds on this hero`}
+                >
+                  {steamProfile.personaname}
+                </button>
+              ) : (
+                <div className="mb-1 max-w-28 truncate text-xs font-medium text-foreground">
+                  {steamProfile.personaname}
+                </div>
+              ))}
             <div className="flex items-start gap-2">
               <HeroImage heroId={heroId} className="mt-0.5 size-8 shrink-0 rounded-md border border-border/50" />
               <div className="flex flex-col">

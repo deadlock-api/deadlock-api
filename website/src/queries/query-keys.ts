@@ -41,6 +41,8 @@ export const queryKeys = {
     gameStats: (params: AnalyticsApiGameStatsRequest) => ["api-game-stats", params] as const,
     playerScoreboard: (params: AnalyticsApiPlayerScoreboardRequest) => ["api-player-scoreboard", params] as const,
     topBuilds: (params: MatchesApiBulkMetadataRequest) => ["api-top-builds", params] as const,
+    playerHeroBuilds: (accountId: number, heroId: number, minUnixTimestamp?: number, maxUnixTimestamp?: number) =>
+      ["api-player-hero-builds", accountId, heroId, minUnixTimestamp ?? null, maxUnixTimestamp ?? null] as const,
   },
   servers: {
     list: () => ["api-servers-list"] as const,
@@ -50,6 +52,7 @@ export const queryKeys = {
     profiles: (batch: number[]) => ["steam-profiles", batch] as const,
     profile: (accountId: number | undefined) => ["steam-profile", accountId] as const,
     name: (region: string, accountId: string) => ["steam-name", region, accountId] as const,
+    search: (query: string) => ["steam-search", query] as const,
   },
   streamkit: {
     availableVariables: () => ["streamkit-available-variables"] as const,
