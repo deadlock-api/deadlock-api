@@ -181,13 +181,20 @@ const MV_HORIZON_DAYS: i64 = 65;
 /// drops the oldest day as time advances) never under-serves a request.
 const MV_ROUTING_MARGIN_DAYS: i64 = 5;
 
-/// Builds a query against the pre-aggregated `hero_stats_agg` view when the request
-/// falls within the "global meta" subset it materializes, else `None` (the caller
-/// then uses the base-table query). The view is grained on
-/// `(game_mode, day, hero_id, least_badge, greatest_badge)`, so it serves
+/// Builds a query against a pre-aggregated hero-stats rollup when the request falls
+/// within the "global meta" subset they materialize, else `None` (the caller then
+/// uses the base-table query). Both rollups are grained on
+/// `(game_mode, day, hero_id, least_badge, greatest_badge)`, so they serve
 /// `game_mode` + time-range + badge-range filters and the non-hourly buckets, but
 /// anything per-player or per-row (account, item set, net worth, duration, match id,
 /// hero match counts) or needing sub-day resolution must use the base table.
+///
+/// Two rollups back this: the hourly-refreshed last-65-days `hero_stats_agg` and the
+/// 6-hourly full-history `hero_stats_agg_all`. Recent windows use the hot one (freshest
+/// data); older / all-time windows — notably the date-picker-reset
+/// `min_unix_timestamp=0` state, which used to full-scan `match_player` and time out —
+/// use the full-history one. A request reads exactly one table, so totals never
+/// double-count.
 fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
     let bucket_expr = query.bucket.mv_bucket_expr()?;
     // Per-player / per-row filters the grain cannot express → base table.
@@ -216,19 +223,23 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
         return None;
     }
 
-    // The view only holds the last MV_HORIZON_DAYS days; older windows use base.
+    // Pick the rollup: the hourly 65-day `hero_stats_agg` for windows that start
+    // comfortably inside its horizon (freshest data), else the 6-hourly full-history
+    // `hero_stats_agg_all` (covers all-time / old windows the hot view can't).
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .ok()?
         .as_secs()
         .cast_signed();
     let oldest_servable = now - (MV_HORIZON_DAYS - MV_ROUTING_MARGIN_DAYS) * 86_400;
-    if query
+    let (mv_table, mv_log_comment) = if query
         .min_unix_timestamp
-        .is_none_or(|min_ts| min_ts < oldest_servable)
+        .is_some_and(|min_ts| min_ts >= oldest_servable)
     {
-        return None;
-    }
+        ("hero_stats_agg", "hero_stats_mv")
+    } else {
+        ("hero_stats_agg_all", "hero_stats_mv_all")
+    };
 
     let mut filters = vec![GameMode::sql_filter(query.game_mode)];
     if let Some(v) = query.min_unix_timestamp {
@@ -281,11 +292,11 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
         sum(sum_max_health) AS total_max_health,
         sum(sum_shots_hit) AS total_shots_hit,
         sum(sum_shots_missed) AS total_shots_missed
-    FROM hero_stats_agg
+    FROM {mv_table}
     WHERE {where_clause}
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
-    SETTINGS log_comment = 'hero_stats_mv'
+    SETTINGS log_comment = '{mv_log_comment}'
     "
     ))
 }
