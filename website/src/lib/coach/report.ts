@@ -408,6 +408,11 @@ export interface MatchReplayBlock {
   title?: string | null;
   subtitle?: string | null;
   duration_s: number;
+  /** Server-fill contract: when set, the agent service decodes `tracks` from
+   * the real match_paths at publish time (the model leaves `tracks` empty). */
+  match_id?: number | null;
+  account_id?: number | null;
+  include_slots?: number[];
   tracks?: ReplayTrack[];
   win_prob?: WinProbPoint[];
   annotations?: ReplayAnnotation[];
