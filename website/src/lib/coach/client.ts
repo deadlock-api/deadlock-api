@@ -103,6 +103,21 @@ export async function shareSession(sessionId: string): Promise<SessionSummary> {
   return (await res.json()) as SessionSummary;
 }
 
+// Record thumbs up/down feedback on an assistant message (1 = up, 0 = down).
+export async function submitMessageFeedback(
+  messageId: string,
+  value: 0 | 1,
+  comment: string | null = null,
+): Promise<void> {
+  const res = await fetch(`${COACH_API_ORIGIN}/messages/${messageId}/feedback`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ value, comment }),
+  });
+  if (!res.ok) throw new Error(`submitMessageFeedback failed: ${res.status}`);
+}
+
 // Fork a session into the current patron's history, branching at `messageId`.
 // Works on any chat the viewer can see (their own or a public shared one); no
 // messages are copied — the fork records the branch point and inherits the

@@ -1,7 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Bot, Check, CornerDownLeft, Link2, Plus, Sparkles, Lock, Globe } from "lucide-react";
+import { Bot, Check, CornerDownLeft, Link2, Plus, Sparkles, Lock, Globe, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { NumberSelectorBare } from "~/components/NumberSelector";
 import { HeroSelector } from "~/components/selectors/HeroSelector";
@@ -18,6 +19,7 @@ import {
   makeSessionPrivate,
   type MessageTreeNode,
   streamCoachMessage,
+  submitMessageFeedback,
   type ToolActivity,
   toolLabel,
 } from "~/lib/coach/client";
@@ -34,6 +36,7 @@ import { ReportRenderer } from "./ReportRenderer";
 
 interface Turn {
   id: string;
+  assistantMessageId?: string;
   userText: string;
   status: "thinking" | "done" | "error";
   tools: ToolActivity[];
@@ -99,6 +102,7 @@ function treeToTurns(roots: MessageTreeNode[]): { turns: Turn[]; leafId: string 
         deltaText: "",
       };
     } else if (msg.role === "assistant" && current) {
+      current.assistantMessageId = msg.id;
       for (const part of msg.content) {
         if (isReportPart(part)) current.report = part.report;
         else if (isTextPart(part)) current.deltaText += part.text;
@@ -188,6 +192,7 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
           },
           onAssistantMessage: (mid) => {
             leafIdRef.current = mid;
+            patch(id, (t) => ({ ...t, assistantMessageId: mid }));
           },
           onTool: (tool) =>
             patch(id, (t) => ({
@@ -829,6 +834,7 @@ function TurnView({ turn }: { turn: Turn }) {
       {turn.report ? (
         <div className="rounded-2xl border border-white/[0.06] bg-card/40 p-4 sm:p-5">
           <ReportRenderer report={turn.report} />
+          {turn.assistantMessageId ? <FeedbackBar messageId={turn.assistantMessageId} /> : null}
         </div>
       ) : null}
 
@@ -838,6 +844,61 @@ function TurnView({ turn }: { turn: Turn }) {
           <p className="mt-1 text-muted-foreground">{turn.error ?? "Something went wrong. Try again."}</p>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function FeedbackBar({ messageId }: { messageId: string }) {
+  const [sent, setSent] = useState<0 | 1 | null>(null);
+  const [pending, setPending] = useState(false);
+
+  const send = async (value: 0 | 1) => {
+    if (pending || sent === value) return;
+    setPending(true);
+    try {
+      await submitMessageFeedback(messageId, value);
+      setSent(value);
+      toast.success("Thanks for the feedback!");
+    } catch {
+      toast.error("Couldn't send feedback. Try again.");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 flex items-center gap-2 border-t border-white/[0.06] pt-3">
+      <span className="text-xs text-muted-foreground">Was this helpful?</span>
+      <button
+        type="button"
+        onClick={() => send(1)}
+        disabled={pending}
+        aria-label="Helpful"
+        aria-pressed={sent === 1}
+        className={cn(
+          "flex items-center rounded-lg border p-1.5 transition disabled:opacity-50",
+          sent === 1
+            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+            : "border-white/[0.08] bg-white/[0.02] text-muted-foreground hover:text-foreground",
+        )}
+      >
+        <ThumbsUp className="size-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => send(0)}
+        disabled={pending}
+        aria-label="Not helpful"
+        aria-pressed={sent === 0}
+        className={cn(
+          "flex items-center rounded-lg border p-1.5 transition disabled:opacity-50",
+          sent === 0
+            ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+            : "border-white/[0.08] bg-white/[0.02] text-muted-foreground hover:text-foreground",
+        )}
+      >
+        <ThumbsDown className="size-3.5" />
+      </button>
     </div>
   );
 }
