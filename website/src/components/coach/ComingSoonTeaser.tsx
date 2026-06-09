@@ -1,9 +1,24 @@
-import { Activity, BarChart3, Bot, Brain, LineChart, MessageSquare, Sparkles, TrendingUp, Zap } from "lucide-react";
+import {
+  Activity,
+  BarChart3,
+  Bot,
+  Brain,
+  LineChart,
+  LogIn,
+  MessageSquare,
+  Sparkles,
+  TrendingUp,
+  Zap,
+} from "lucide-react";
 
 import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
+import { usePatronAuth } from "~/hooks/usePatronAuth";
 
 export function ComingSoonTeaser() {
+  const { isAuthenticated, isLoading, login } = usePatronAuth();
+
   return (
     <div className="relative flex min-h-[85vh] w-full flex-col items-center justify-center overflow-hidden px-4 py-12">
       <div className="pointer-events-none absolute inset-0 -z-10">
@@ -37,6 +52,22 @@ export function ComingSoonTeaser() {
               API.
             </p>
           </div>
+
+          {!isLoading && !isAuthenticated && (
+            <div className="flex flex-col items-center gap-2">
+              <Button
+                onClick={login}
+                size="lg"
+                className="bg-gradient-to-r from-[#fa4454] to-[#ff6b7a] font-semibold text-white hover:from-[#e83d4c] hover:to-[#f05a68]"
+              >
+                <LogIn className="mr-2 size-4" />
+                Login with Patreon
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                The AI Coach is available to patrons pledging $3/month or more.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

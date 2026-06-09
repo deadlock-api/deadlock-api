@@ -307,6 +307,19 @@ function IndexRoute() {
                     </div>
                   ))}
                 </div>
+                <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <Bot className="size-4 text-primary" />
+                    AI Coach
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Pledge $3/month or more to unlock the{" "}
+                    <Link to="/chat" preload="intent" className="font-medium text-primary underline underline-offset-4">
+                      AI Coach
+                    </Link>
+                    . Every $1/month of your pledge includes one chat message per month.
+                  </p>
+                </div>
               </div>
               <Link to="/patron" preload="intent" className="shrink-0">
                 <Button className="h-11 w-full bg-gradient-to-r from-[#fa4454] to-[#ff6b7a] px-8 font-semibold text-white hover:from-[#e83d4c] hover:to-[#f05a68] lg:w-auto">
