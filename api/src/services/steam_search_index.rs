@@ -35,7 +35,7 @@ use tokio::time::interval;
 use tracing::{error, info, warn};
 
 const INCREMENTAL_INTERVAL_SECS: u64 = 2 * 60;
-const FULL_REBUILD_INTERVAL_SECS: u64 = 6 * 60 * 60;
+const FULL_REBUILD_INTERVAL_SECS: u64 = 60 * 60;
 const WRITER_HEAP_MB: usize = 200;
 const MAX_PROFILES_PER_REBUILD: usize = 10_000_000;
 /// Minimum candidate pool size handed to the JW reranker — large enough that
@@ -45,6 +45,15 @@ const MAX_PROFILES_PER_REBUILD: usize = 10_000_000;
 const MIN_OVERSAMPLE: usize = 5_000;
 const RERANK_OVERSAMPLE_MULT: usize = 50;
 const WATERMARK_FILENAME: &str = "watermark";
+/// Per-instance subdirectory prefix. Each replica writes its index under
+/// `<root>/inst_<id>/` so replicas sharing one volume never delete each other's
+/// dirs (the historical cause of a full-rebuild storm).
+const INSTANCE_DIR_PREFIX: &str = "inst_";
+/// Sibling instance dirs whose newest index commit is older than this are
+/// assumed abandoned (their replica was redeployed/removed) and GC'd to reclaim
+/// disk. A live replica commits an incremental every `INCREMENTAL_INTERVAL_SECS`,
+/// keeping its dir well within this window.
+const STALE_INSTANCE_GRACE_SECS: u64 = 60 * 60;
 /// Offset applied to `account_id` to produce a Steam ID64.
 const STEAM_ID64_OFFSET: u64 = 76_561_197_960_265_728;
 /// Subdirectory prefix for the on-disk index. Bump whenever the Tantivy
@@ -60,6 +69,9 @@ pub(crate) struct SteamSearchIndex {
 }
 
 struct Inner {
+    /// Shared volume root (may be shared by sibling replicas).
+    root_path: PathBuf,
+    /// This replica's private subdir under `root_path`; all index dirs live here.
     base_path: PathBuf,
     fields: SearchFields,
     reader: ArcSwapOption<IndexReader>,
@@ -124,11 +136,13 @@ pub(crate) struct IndexedProfile {
 }
 
 impl SteamSearchIndex {
-    pub(crate) fn new(base_path: PathBuf) -> Self {
+    pub(crate) fn new(root_path: PathBuf) -> Self {
         let schema = build_schema();
         let fields = lookup_fields(&schema);
+        let base_path = root_path.join(format!("{INSTANCE_DIR_PREFIX}{}", instance_id()));
         Self {
             inner: Arc::new(Inner {
+                root_path,
                 base_path,
                 fields,
                 reader: ArcSwapOption::empty(),
@@ -526,13 +540,15 @@ impl SteamSearchIndex {
     pub(crate) fn spawn_refresh_loop(&self, ch_client: clickhouse::Client) {
         let loaded = self.try_load_persisted();
         info!(
-            "steam search index: incremental every {INCREMENTAL_INTERVAL_SECS}s, full every {FULL_REBUILD_INTERVAL_SECS}s, loaded_persisted={loaded}",
+            "steam search index: dir={:?}, incremental every {INCREMENTAL_INTERVAL_SECS}s, full every {FULL_REBUILD_INTERVAL_SECS}s, loaded_persisted={loaded}",
+            self.inner.base_path,
         );
         let this = self.clone();
         tokio::spawn(async move {
             if !loaded && let Err(e) = this.rebuild_full(&ch_client).await {
                 warn!("steam search index initial full build failed: {e}");
             }
+            gc_stale_instance_dirs(&this.inner.root_path, &this.inner.base_path);
             let mut inc = interval(Duration::from_secs(INCREMENTAL_INTERVAL_SECS));
             let mut full = interval(Duration::from_secs(FULL_REBUILD_INTERVAL_SECS));
             inc.tick().await;
@@ -548,6 +564,7 @@ impl SteamSearchIndex {
                         if let Err(e) = this.rebuild_full(&ch_client).await {
                             error!("steam search index periodic full rebuild failed: {e}");
                         }
+                        gc_stale_instance_dirs(&this.inner.root_path, &this.inner.base_path);
                     }
                 }
             }
@@ -856,6 +873,70 @@ fn unix_now() -> u64 {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or_default()
+}
+
+/// Stable-per-replica identifier for namespacing the on-disk index. In Docker
+/// `HOSTNAME` is the container id (unique per replica, stable for the
+/// container's life); falls back to the PID when unset.
+fn instance_id() -> String {
+    let raw = std::env::var("HOSTNAME")
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| std::process::id().to_string());
+    let sanitized: String = raw
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+        .take(64)
+        .collect();
+    if sanitized.is_empty() {
+        std::process::id().to_string()
+    } else {
+        sanitized
+    }
+}
+
+/// Remove sibling `inst_*` dirs not touched within `STALE_INSTANCE_GRACE_SECS`,
+/// reclaiming disk from replicas that were redeployed or removed. Never touches
+/// `own_dir`. "Touched" = newest mtime among an instance dir's `v*_` children
+/// (incremental commits bump those, not the parent dir's own mtime).
+fn gc_stale_instance_dirs(root_path: &Path, own_dir: &Path) {
+    let Ok(entries) = std::fs::read_dir(root_path) else {
+        return;
+    };
+    let now = SystemTime::now();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path == own_dir {
+            continue;
+        }
+        let is_instance_dir = entry
+            .file_name()
+            .to_str()
+            .is_some_and(|n| n.starts_with(INSTANCE_DIR_PREFIX));
+        if !is_instance_dir || !entry.file_type().is_ok_and(|t| t.is_dir()) {
+            continue;
+        }
+        if newest_child_age(&path, now).is_some_and(|age| age.as_secs() < STALE_INSTANCE_GRACE_SECS)
+        {
+            continue;
+        }
+        if let Err(e) = std::fs::remove_dir_all(&path) {
+            warn!("steam search index: failed to GC stale instance dir {path:?}: {e}");
+        } else {
+            info!("steam search index: GC'd stale instance dir {path:?}");
+        }
+    }
+}
+
+/// Age of the most recently modified immediate child of `dir`, or `None` if it
+/// has no readable children (treated as removable).
+fn newest_child_age(dir: &Path, now: SystemTime) -> Option<Duration> {
+    let entries = std::fs::read_dir(dir).ok()?;
+    let newest = entries
+        .flatten()
+        .filter_map(|e| e.metadata().ok()?.modified().ok())
+        .max()?;
+    now.duration_since(newest).ok()
 }
 
 fn read_watermark(dir: &Path) -> Option<u32> {
