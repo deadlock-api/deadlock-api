@@ -175,6 +175,35 @@ export async function fetchCoachAccess(): Promise<CoachAccess> {
   }
 }
 
+export interface CoachQuota {
+  used: number;
+  limit: number;
+  remaining: number;
+  // The shared daily capacity is exhausted (independent of this patron's allowance).
+  throttled: boolean;
+}
+
+// The patron's monthly message allowance. Never throws — on failure the UI
+// simply hides the counter.
+export async function fetchCoachQuota(): Promise<CoachQuota | null> {
+  try {
+    const res = await fetch(`${COACH_API_ORIGIN}/quota`, {
+      headers: authHeaders(),
+      credentials: "include",
+    });
+    if (!res.ok) return null;
+    const d = (await res.json()) as Partial<CoachQuota>;
+    return {
+      used: d.used ?? 0,
+      limit: d.limit ?? 0,
+      remaining: d.remaining ?? 0,
+      throttled: d.throttled === true,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export class SessionNotFoundError extends Error {}
 
 // Fetch a single session's metadata.
@@ -203,12 +232,17 @@ export async function getSessionTree(sessionId: string): Promise<MessageTreeNode
 // Friendly names for the tool chips shown while the agent works.
 const TOOL_LABELS: Record<string, string> = {
   get_match_metadata: "Reading the box score",
+  get_match_map: "Mapping the match",
   score_match: "Scoring the match",
   analyze_match: "Running the full analysis",
   analyze_player: "Reviewing recent matches",
+  recall_findings: "Recalling the earlier analysis",
+  get_items: "Looking up items",
   wiki_search: "Searching the wiki",
   wiki_fetch: "Reading the wiki",
   deadlock_api_endpoints: "Checking the data API",
+  fetch_url: "Pulling live data",
+  coach_docs: "Consulting the playbook",
   publish_report: "Building your report",
 };
 
@@ -295,7 +329,8 @@ export function streamCoachMessage(req: CoachStreamRequest, handlers: CoachStrea
     // server-sent `event: error` carrying JSON {message, status}.
     const server = e?.data ? parse<{ message?: string; status?: number }>(e.data, {}) : {};
     if (server.message) {
-      handlers.onError?.(describeError(server.status, server.message));
+      // The agent's own error events already carry player-friendly text.
+      handlers.onError?.(server.message);
     } else {
       handlers.onError?.(describeError(e?.responseCode, e?.data));
     }

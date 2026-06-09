@@ -16,6 +16,7 @@ import {
 } from "./DataBlocks";
 import { MatchReplay } from "./MatchReplay";
 import { Minimap } from "./Minimap";
+import { ReplaySeekProvider } from "./shared";
 import { SuggestedQuestions } from "./SuggestedQuestions";
 import { Callout, Header, MarkdownProse } from "./TextBlocks";
 
@@ -54,7 +55,7 @@ export function RenderBlock({ block }: { block: Block }) {
         <div className={cn("grid gap-3", colClass)}>
           {(block.children ?? []).map((child, i) => (
             // oxlint-disable-next-line react/no-array-index-key -- blocks have no stable id
-            <RenderBlock key={i} block={child} />
+            <RenderBlock key={`${child.type}-${i}`} block={child} />
           ))}
         </div>
       );
@@ -117,7 +118,7 @@ export function BlockList({ blocks }: { blocks: Block[] }) {
     <div className="space-y-3">
       {blocks.map((block, i) => (
         // oxlint-disable-next-line react/no-array-index-key -- blocks have no stable id
-        <RenderBlock key={i} block={block} />
+        <RenderBlock key={`${block.type}-${i}`} block={block} />
       ))}
     </div>
   );
@@ -125,8 +126,10 @@ export function BlockList({ blocks }: { blocks: Block[] }) {
 
 export function ReportRenderer({ report }: { report: Report }) {
   return (
-    <div className="space-y-4">
-      <BlockList blocks={report.blocks} />
-    </div>
+    <ReplaySeekProvider>
+      <div className="space-y-4">
+        <BlockList blocks={report.blocks} />
+      </div>
+    </ReplaySeekProvider>
   );
 }

@@ -1,6 +1,18 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Bot, Check, CornerDownLeft, Link2, Plus, Sparkles, Lock, Globe, ThumbsDown, ThumbsUp } from "lucide-react";
+import {
+  Bot,
+  Check,
+  CornerDownLeft,
+  Link2,
+  Plus,
+  RotateCcw,
+  Sparkles,
+  Lock,
+  Globe,
+  ThumbsDown,
+  ThumbsUp,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -8,7 +20,9 @@ import { NumberSelectorBare } from "~/components/NumberSelector";
 import { HeroSelector } from "~/components/selectors/HeroSelector";
 import { useHeroById } from "~/hooks/useAssetById";
 import {
+  type CoachQuota,
   type CoachStreamHandle,
+  fetchCoachQuota,
   forkSession,
   getSession,
   getSessionTree,
@@ -30,7 +44,7 @@ import { useCoachAccess } from "~/lib/coach/use-ai-agent-access";
 import { useSteamAccount } from "~/lib/coach/use-steam-account";
 import { cn } from "~/lib/utils";
 
-import { AskProvider } from "./ask-context";
+import { AskProvider, useAsk } from "./ask-context";
 import { ConversationHistory } from "./ConversationHistory";
 import { ReportRenderer } from "./ReportRenderer";
 
@@ -43,6 +57,8 @@ interface Turn {
   deltaText: string;
   report?: Report;
   error?: string;
+  // ISO timestamp of the assistant reply, shown as "data as of" on the report.
+  at?: string;
 }
 
 // Selectable time windows for the "matches this period" starter.
@@ -103,6 +119,7 @@ function treeToTurns(roots: MessageTreeNode[]): { turns: Turn[]; leafId: string 
       };
     } else if (msg.role === "assistant" && current) {
       current.assistantMessageId = msg.id;
+      current.at = msg.created_at;
       for (const part of msg.content) {
         if (isReportPart(part)) current.report = part.report;
         else if (isTextPart(part)) current.deltaText += part.text;
@@ -130,6 +147,12 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
   const [isPublic, setIsPublic] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [loadState, setLoadState] = useState<LoadState>(routeSessionId ? "loading" : "idle");
+  const { data: quota } = useQuery({
+    queryKey: ["coach-quota"],
+    queryFn: fetchCoachQuota,
+    enabled: Boolean(hasAccess && !demo && typeof document !== "undefined"),
+    staleTime: 30_000,
+  });
   const handleRef = useRef<CoachStreamHandle | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   // Leaf of the conversation's primary branch; the parent for the next message
@@ -200,11 +223,12 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
               tools: [...t.tools.filter((x) => x.id !== tool.id), tool],
             })),
           onDelta: (delta) => patch(id, (t) => ({ ...t, deltaText: t.deltaText + delta })),
-          onReport: (report) => patch(id, (t) => ({ ...t, report, status: "done" })),
+          onReport: (report) => patch(id, (t) => ({ ...t, report, status: "done", at: new Date().toISOString() })),
           onTitle: () => {},
           onDone: () => {
             patch(id, (t) => ({ ...t, status: t.report || t.deltaText ? "done" : "error" }));
             setStreaming(false);
+            void queryClient.invalidateQueries({ queryKey: ["coach-quota"] });
             onComplete?.();
           },
           onError: (err) => {
@@ -214,7 +238,7 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
         },
       );
     },
-    [account, patch],
+    [account, patch, queryClient],
   );
 
   const submit = useCallback(
@@ -382,7 +406,13 @@ export function CoachWorkspace({ demo, sessionId: routeSessionId }: { demo?: str
         </div>
 
         {hasAccess && (account || demo) && !showNotFound && !showLoading && (!readOnly || forkable) ? (
-          <Composer value={input} onChange={setInput} onSubmit={() => submit(input)} disabled={streaming} />
+          <Composer
+            value={input}
+            onChange={setInput}
+            onSubmit={() => submit(input)}
+            disabled={streaming}
+            quota={quota ?? null}
+          />
         ) : null}
       </div>
     </AskProvider>
@@ -821,6 +851,7 @@ function FixedPrompt({
 }
 
 function TurnView({ turn }: { turn: Turn }) {
+  const { ask, busy } = useAsk();
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -834,14 +865,34 @@ function TurnView({ turn }: { turn: Turn }) {
       {turn.report ? (
         <div className="rounded-2xl border border-white/[0.06] bg-card/40 p-4 sm:p-5">
           <ReportRenderer report={turn.report} />
-          {turn.assistantMessageId ? <FeedbackBar messageId={turn.assistantMessageId} /> : null}
+          <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-3">
+            {turn.assistantMessageId ? <FeedbackBar messageId={turn.assistantMessageId} /> : <span />}
+            {turn.at ? (
+              <span className="shrink-0 text-[11px] text-muted-foreground" title="When this report was generated">
+                Data as of {new Date(turn.at).toLocaleString()}
+              </span>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
       {turn.status === "error" ? (
-        <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-foreground">
+        <div
+          role="alert"
+          className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-foreground"
+        >
           <p className="font-medium">The coach hit a snag.</p>
           <p className="mt-1 text-muted-foreground">{turn.error ?? "Something went wrong. Try again."}</p>
+          {ask ? (
+            <button
+              type="button"
+              onClick={() => ask(turn.userText)}
+              disabled={busy || !turn.userText.trim()}
+              className="mt-3 flex items-center gap-1.5 rounded-lg border border-white/[0.12] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-white/[0.08] disabled:opacity-50"
+            >
+              <RotateCcw className="size-3.5" /> Try again
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -867,7 +918,7 @@ function FeedbackBar({ messageId }: { messageId: string }) {
   };
 
   return (
-    <div className="mt-3 flex items-center gap-2 border-t border-white/[0.06] pt-3">
+    <div className="flex items-center gap-2">
       <span className="text-xs text-muted-foreground">Was this helpful?</span>
       <button
         type="button"
@@ -905,7 +956,7 @@ function FeedbackBar({ messageId }: { messageId: string }) {
 
 function ThinkingPanel({ turn }: { turn: Turn }) {
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-card/40 p-4">
+    <div aria-live="polite" className="rounded-2xl border border-white/[0.06] bg-card/40 p-4">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Bot className="size-4 text-primary" />
         <span className="flex gap-1">
@@ -941,11 +992,13 @@ function Composer({
   onChange,
   onSubmit,
   disabled,
+  quota,
 }: {
   value: string;
   onChange: (v: string) => void;
   onSubmit: () => void;
   disabled: boolean;
+  quota?: CoachQuota | null;
 }) {
   return (
     <div className="sticky bottom-0 z-10 -mx-4 border-t border-white/[0.06] bg-background/80 px-4 py-3 backdrop-blur-xl">
@@ -976,6 +1029,13 @@ function Composer({
       </div>
       <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
         Coach can be wrong. Grounded in live Deadlock API data, but verify high-stakes calls.
+        {quota && quota.limit > 0 ? (
+          <span className={cn("ml-1.5", quota.remaining === 0 && "text-amber-400")}>
+            {quota.remaining === 0
+              ? "No messages left this month — pledge more on Patreon for extra."
+              : `${quota.remaining} of ${quota.limit} messages left this month.`}
+          </span>
+        ) : null}
       </p>
     </div>
   );

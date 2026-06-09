@@ -20,7 +20,7 @@ import type {
 import { hexAlpha, teamLabel, toneColor, toneSurface } from "~/lib/coach/tones";
 import { cn } from "~/lib/utils";
 
-import { BlockHeading, CoachCard, formatClock, Sparkline } from "./shared";
+import { BlockHeading, CoachCard, EvidenceChip, formatClock, Sparkline } from "./shared";
 
 export function StatCards({ block }: { block: StatCardsBlock }) {
   const cols = Math.min(block.columns ?? block.cards.length, 6);
@@ -79,6 +79,7 @@ function StatCardView({ card }: { card: StatCard }) {
         {card.sparkline && card.sparkline.length > 1 ? <Sparkline values={card.sparkline} tone={tone} /> : null}
       </div>
       {card.delta && card.hint ? <span className="text-[11px] text-muted-foreground">{card.hint}</span> : null}
+      {card.evidence ? <EvidenceChip evidence={card.evidence} /> : null}
     </CoachCard>
   );
 }

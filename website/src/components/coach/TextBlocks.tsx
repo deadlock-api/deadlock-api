@@ -7,6 +7,8 @@ import type { CalloutBlock, HeaderBlock, MarkdownBlock } from "~/lib/coach/repor
 import { toneColor, toneSurface } from "~/lib/coach/tones";
 import { cn } from "~/lib/utils";
 
+import { EvidenceChip } from "./shared";
+
 export function Header({ block }: { block: HeaderBlock }) {
   const accent = toneColor(block.verdict_tone ?? "accent");
   return (
@@ -76,6 +78,7 @@ export function Callout({ block }: { block: CalloutBlock }) {
           <div className={cn("text-sm text-muted-foreground", block.title && "mt-0.5")}>
             <Markdown remarkPlugins={[remarkGfm]}>{block.body}</Markdown>
           </div>
+          {block.evidence ? <EvidenceChip evidence={block.evidence} /> : null}
         </div>
       </div>
     </div>

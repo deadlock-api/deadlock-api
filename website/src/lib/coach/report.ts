@@ -18,6 +18,15 @@ export interface MetaChip {
   tone?: Tone;
 }
 
+export interface Evidence {
+  /** Player-facing origin of the number, e.g. "your match data". */
+  source: string;
+  t_start?: number | null;
+  t_end?: number | null;
+  /** Seconds into the match to seek the report's replay to on click. */
+  seek_t?: number | null;
+}
+
 export interface StatCard {
   label: string;
   value: string;
@@ -29,6 +38,7 @@ export interface StatCard {
   icon?: string | null;
   tone?: Tone;
   hint?: string | null;
+  evidence?: Evidence | null;
 }
 
 export interface KeyValueRow {
@@ -201,6 +211,7 @@ export interface CalloutBlock {
   title?: string | null;
   body: string;
   icon?: string | null;
+  evidence?: Evidence | null;
 }
 
 export interface StatCardsBlock {
@@ -401,6 +412,11 @@ export interface MatchReplayBlock {
   win_prob?: WinProbPoint[];
   annotations?: ReplayAnnotation[];
   objective_events?: TimelineEvent[];
+  /** Clip mode: scrubber spans [t_start, t_end] instead of the whole match. */
+  t_start?: number | null;
+  t_end?: number | null;
+  /** The moment being shown; the clip opens paused here. */
+  anchor_t?: number | null;
 }
 
 export interface DividerBlock {
