@@ -11,12 +11,46 @@ import { queryKeys } from "~/queries/query-keys";
 import type { Color } from "~/types/general";
 import type { Region, Theme } from "~/types/streamkit/widget";
 
+type WidgetSearch = {
+  vars?: string;
+  labels?: string;
+  theme?: string;
+  variable?: string;
+  prefix?: string;
+  suffix?: string;
+  fontColor?: string;
+  showHeader?: boolean;
+  showBranding?: boolean;
+  showMatchHistory?: boolean;
+  matchHistoryShowsToday?: boolean;
+  numMatches?: number;
+  opacity?: number;
+};
+
+const BOOL_KEYS = new Set(["showHeader", "showBranding", "showMatchHistory", "matchHistoryShowsToday"]);
+const NUM_KEYS = new Set(["numMatches", "opacity"]);
+
+// The router's default search parser coerces "false"->false and "10"->10, so values reach the route
+// already typed. Normalize each flag explicitly here and let the component apply defaults, instead of
+// comparing against string literals (which never matched the coerced booleans).
+function validateWidgetSearch(search: Record<string, unknown>): WidgetSearch {
+  const out: Record<string, string | number | boolean> = {};
+  for (const [key, value] of Object.entries(search)) {
+    if (value === undefined || value === null) continue;
+    if (BOOL_KEYS.has(key)) {
+      out[key] = value !== false && value !== "false";
+    } else if (NUM_KEYS.has(key)) {
+      const parsed = typeof value === "number" ? value : Number.parseInt(String(value), 10);
+      if (!Number.isNaN(parsed)) out[key] = parsed;
+    } else {
+      out[key] = String(value);
+    }
+  }
+  return out as WidgetSearch;
+}
+
 export const Route = createFileRoute("/streamkit/widgets/$region/$accountId/$widgetType")({
-  validateSearch: (search: Record<string, unknown>): Record<string, string> =>
-    Object.fromEntries(Object.entries(search).filter(([, value]) => typeof value === "string")) as Record<
-      string,
-      string
-    >,
+  validateSearch: validateWidgetSearch,
   head: () => ({
     meta: [
       { title: "Deadlock Stats Widget" },
@@ -29,7 +63,7 @@ export const Route = createFileRoute("/streamkit/widgets/$region/$accountId/$wid
 
 function Widget() {
   const { region, accountId, widgetType } = Route.useParams();
-  const search = Route.useSearch() as Record<string, string | undefined>;
+  const search = Route.useSearch();
   const initialVersionRef = useRef<number | null>(null);
 
   const { data: fetchedVersion, error: versionError } = useQuery<number>({
@@ -74,14 +108,12 @@ function Widget() {
       const variables = search.vars?.split(",");
       const labels = search.labels?.split(",") ?? variables?.map(snakeToPretty);
       const theme = (search.theme ?? "dark") as Theme;
-      const showHeader = search.showHeader !== "false";
-      const showBranding = search.showBranding !== "false";
-      const showMatchHistory = search.showMatchHistory !== "false";
-      const matchHistoryShowsToday = search.matchHistoryShowsToday !== "false";
-      const parsedNumMatches = Number.parseInt(search.numMatches ?? "10", 10);
-      const numMatches = Math.max(1, Math.min(20, Number.isNaN(parsedNumMatches) ? 10 : parsedNumMatches));
-      const parsedOpacity = Number.parseInt(search.opacity ?? "100", 10);
-      const opacity = Math.max(0, Math.min(100, Number.isNaN(parsedOpacity) ? 100 : parsedOpacity));
+      const showHeader = search.showHeader ?? true;
+      const showBranding = search.showBranding ?? true;
+      const showMatchHistory = search.showMatchHistory ?? true;
+      const matchHistoryShowsToday = search.matchHistoryShowsToday ?? true;
+      const numMatches = Math.max(1, Math.min(20, search.numMatches ?? 10));
+      const opacity = Math.max(0, Math.min(100, search.opacity ?? 100));
       const reserved = new Set([
         "vars",
         "labels",
