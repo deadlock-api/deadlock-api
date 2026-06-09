@@ -20,7 +20,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(feed::feed))
         .layer(
-            CacheControlMiddleware::new(Duration::from_hours(1))
-                .with_stale_while_revalidate(Duration::from_hours(1)),
+            CacheControlMiddleware::new(Duration::from_mins(15))
+                .with_stale_while_revalidate(Duration::from_mins(15)),
         )
 }
