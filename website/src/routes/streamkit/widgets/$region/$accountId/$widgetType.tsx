@@ -12,6 +12,11 @@ import type { Color } from "~/types/general";
 import type { Region, Theme } from "~/types/streamkit/widget";
 
 export const Route = createFileRoute("/streamkit/widgets/$region/$accountId/$widgetType")({
+  validateSearch: (search: Record<string, unknown>): Record<string, string> =>
+    Object.fromEntries(Object.entries(search).filter(([, value]) => typeof value === "string")) as Record<
+      string,
+      string
+    >,
   head: () => ({
     meta: [
       { title: "Deadlock Stats Widget" },
