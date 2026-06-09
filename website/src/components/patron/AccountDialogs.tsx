@@ -205,9 +205,14 @@ export function AddBotDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add bot as Steam friend</DialogTitle>
-          <DialogDescription>
-            To retrieve your rank, our bot needs to be on your Steam friends list. Click one of the invite links below,
-            accept the friend request in Steam, then check the connection.
+          <DialogDescription asChild>
+            <div className="space-y-2">
+              <p>
+                Our bot needs to be on your Steam friends list to access your match history. This is how your matches
+                get ingested with priority — without it, only public data is available.
+              </p>
+              <p>Click one of the invite links below, accept the friend request in Steam, then check the connection.</p>
+            </div>
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 pt-2">

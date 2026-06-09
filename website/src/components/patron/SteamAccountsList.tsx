@@ -67,14 +67,21 @@ function BotFriendCell({ cardQuery }: { cardQuery: CardQuery }) {
     if (Object.hasOwn(errObj, "invites") && Array.isArray(errObj.invites)) {
       return (
         <>
-          <button
-            type="button"
-            onClick={() => setDialogOpen(true)}
-            className="flex items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20"
-          >
-            <AlertTriangle className="h-3.5 w-3.5" />
-            Add bot friend
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => setDialogOpen(true)}
+                className="flex items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20"
+              >
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Add bot friend
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-56 text-center">
+              The bot needs to be your Steam friend to access your match history for priority ingestion
+            </TooltipContent>
+          </Tooltip>
           <AddBotDialog
             open={dialogOpen}
             onOpenChange={setDialogOpen}
