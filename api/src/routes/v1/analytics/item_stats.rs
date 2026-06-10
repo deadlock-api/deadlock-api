@@ -280,6 +280,11 @@ pub struct ItemStats {
 /// Horizon of the `item_stats_agg` materialized view, in days. Keep in sync with
 /// the `INTERVAL ... DAY` in `clickhouse/item_stats_agg.sql`.
 const MV_HORIZON_DAYS: i64 = 65;
+/// Horizon of the `item_cohort_stats_*_agg` views, in days. Shorter than
+/// `MV_HORIZON_DAYS` because the cohort cross-join makes their refresh far
+/// heavier; sized to cover the default 30-day window plus routing margin. Keep
+/// in sync with `tools/migrations/clickhouse/31_create_item_cohort_stats_agg.sql`.
+const COHORT_MV_HORIZON_DAYS: i64 = 35;
 /// Safety margin below the horizon: only route windows whose start sits
 /// comfortably inside the materialized range, so a just-refreshed edge (the view
 /// drops the oldest day as time advances) never under-serves a request.
@@ -405,6 +410,151 @@ GROUP BY item_id, bucket
 {having_clause}
 ORDER BY item_id, bucket
 SETTINGS log_comment = 'item_stats_mv'
+        "
+    ))
+}
+
+/// Bucket support against the cohort rollups: returns the rollup table and the
+/// bucket expression, or `None` for buckets they cannot serve. The time-grained
+/// view stores per-minute buckets, so any coarser grouping (no bucket, start-time
+/// day/week/month) merges its states exactly; the net-worth view stores step-1000
+/// buckets, so the wider steps (all multiples of 1000) re-bucket exactly.
+fn cohort_mv_bucket(bucket: BucketQuery) -> Option<(&'static str, String)> {
+    const TIME_AGG: &str = "item_cohort_stats_time_agg";
+    const NW_AGG: &str = "item_cohort_stats_net_worth_agg";
+    match bucket {
+        BucketQuery::NoBucket => Some((TIME_AGG, "toUInt32(0)".to_owned())),
+        BucketQuery::StartTimeDay => Some((TIME_AGG, "toStartOfDay(toDateTime(day))".to_owned())),
+        BucketQuery::StartTimeWeek => Some((TIME_AGG, "toDateTime(toStartOfWeek(day))".to_owned())),
+        BucketQuery::StartTimeMonth => {
+            Some((TIME_AGG, "toDateTime(toStartOfMonth(day))".to_owned()))
+        }
+        BucketQuery::GameTimeMin => Some((TIME_AGG, "bucket_minute".to_owned())),
+        BucketQuery::NetWorthBy1000 => Some((NW_AGG, "bucket_net_worth".to_owned())),
+        BucketQuery::NetWorthBy2000 => Some((
+            NW_AGG,
+            "toUInt32(floor(bucket_net_worth / 2000) * 2000)".to_owned(),
+        )),
+        BucketQuery::NetWorthBy3000 => Some((
+            NW_AGG,
+            "toUInt32(floor(bucket_net_worth / 3000) * 3000)".to_owned(),
+        )),
+        BucketQuery::NetWorthBy5000 => Some((
+            NW_AGG,
+            "toUInt32(floor(bucket_net_worth / 5000) * 5000)".to_owned(),
+        )),
+        BucketQuery::NetWorthBy10000 => Some((
+            NW_AGG,
+            "toUInt32(floor(bucket_net_worth / 10000) * 10000)".to_owned(),
+        )),
+        // Hero/team need dimensions the cohort grain dropped; the normalized
+        // game-time bucket needs per-match duration; sub-day windows need
+        // sub-day resolution.
+        BucketQuery::Hero
+        | BucketQuery::Team
+        | BucketQuery::StartTimeHour
+        | BucketQuery::GameTimeNormalizedPercentage => None,
+    }
+}
+
+/// Builds a query against the `item_cohort_stats_*_agg` rollups for the
+/// single-cohort-item shape (`include_item_ids` with exactly one id and no
+/// granular filters), else `None`. This is the shape that otherwise full-scans
+/// the base table: the hasAll cohort filter cannot prune any granule.
+fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
+    let cohort_item_id = match query.include_item_ids.as_deref() {
+        Some([id]) => *id,
+        _ => return None,
+    };
+    let (table, bucket_expr) = cohort_mv_bucket(query.bucket)?;
+
+    // The rollup grain is (game_mode, day, cohort_item, item, bucket); anything
+    // outside it falls back. Badge bounds use the same >11 / <116 no-op guards
+    // as MatchInfoFilters. Hero-filtered cohort queries are deliberately
+    // excluded: they are served fast by the base-table projection.
+    #[allow(deprecated)]
+    let unsupported = query.hero_id.is_some()
+        || query.hero_ids.as_ref().is_some_and(|v| !v.is_empty())
+        || query.account_id.is_some()
+        || query.account_ids.as_ref().is_some_and(|v| !v.is_empty())
+        || query.enemy_hero_ids.as_ref().is_some_and(|v| !v.is_empty())
+        || query
+            .exclude_item_ids
+            .as_ref()
+            .is_some_and(|v| !v.is_empty())
+        || query.min_networth.is_some()
+        || query.max_networth.is_some()
+        || query.min_duration_s.is_some()
+        || query.max_duration_s.is_some()
+        || query.min_bought_at_s.is_some()
+        || query.max_bought_at_s.is_some()
+        || query.min_match_id.is_some()
+        || query.max_match_id.is_some()
+        || query.min_average_badge.is_some_and(|v| v > 11)
+        || query.max_average_badge.is_some_and(|v| v < 116);
+    if unsupported {
+        return None;
+    }
+
+    // The views only hold the last COHORT_MV_HORIZON_DAYS days; older windows
+    // use the base table.
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_secs()
+        .cast_signed();
+    let oldest_servable = now - (COHORT_MV_HORIZON_DAYS - MV_ROUTING_MARGIN_DAYS) * 86_400;
+    if query
+        .min_unix_timestamp
+        .is_none_or(|min_ts| min_ts < oldest_servable)
+    {
+        return None;
+    }
+
+    let mut filters = vec![
+        GameMode::sql_filter(query.game_mode),
+        format!("cohort_item_id = {cohort_item_id}"),
+    ];
+    if let Some(v) = query.min_unix_timestamp {
+        filters.push(format!("day >= toDate({v})"));
+    }
+    if let Some(v) = query.max_unix_timestamp {
+        filters.push(format!("day <= toDate({v})"));
+    }
+    let where_clause = filters.join(" AND ");
+
+    let mut having_filters = vec![];
+    if let Some(min_matches) = query.min_matches {
+        having_filters.push(format!("matches >= {min_matches}"));
+    }
+    if let Some(max_matches) = query.max_matches {
+        having_filters.push(format!("matches <= {max_matches}"));
+    }
+    let having_clause = if having_filters.is_empty() {
+        String::new()
+    } else {
+        format!("HAVING {}", having_filters.join(" AND "))
+    };
+
+    Some(format!(
+        "
+SELECT
+    item_id,
+    {bucket_expr}    AS bucket,
+    sum(n_wins)                  AS wins,
+    sum(n_matches) - sum(n_wins) AS losses,
+    sum(n_matches)               AS matches,
+    uniqMerge(players_state)     AS players,
+    sum(sum_buy_time) / sum(n_matches)                       AS avg_buy_time_s,
+    if(sum(n_sold) = 0, 0, sum(sum_sold_time) / sum(n_sold)) AS avg_sell_time_s,
+    sum(sum_buy_rel) / sum(n_matches)                        AS avg_buy_time_relative,
+    if(sum(n_sold) = 0, 0, sum(sum_sold_rel) / sum(n_sold))  AS avg_sell_time_relative
+FROM {table}
+WHERE {where_clause}
+GROUP BY item_id, bucket
+{having_clause}
+ORDER BY item_id, bucket
+SETTINGS log_comment = 'item_stats_cohort_mv'
         "
     ))
 }
@@ -655,6 +805,13 @@ async fn get_item_stats(
         match run_query(ch_client, &mv_query).await {
             Ok(rows) => return Ok(rows),
             Err(e) => warn!("item_stats MV query failed, falling back to base table: {e}"),
+        }
+    }
+    if let Some(cohort_mv_query) = build_cohort_mv_query(&query) {
+        debug!(?cohort_mv_query);
+        match run_query(ch_client, &cohort_mv_query).await {
+            Ok(rows) => return Ok(rows),
+            Err(e) => warn!("item_stats cohort MV query failed, falling back to base table: {e}"),
         }
     }
     let base_query = build_query(&query);
