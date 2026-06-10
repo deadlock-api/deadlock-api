@@ -127,6 +127,9 @@ SETTINGS max_bytes_before_external_group_by = 20000000000, max_threads = 16, max
 -- base table.
 GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.item_cohort_stats_time_agg TO api_readonly_user;
 GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.item_cohort_stats_net_worth_agg TO api_readonly_user;
+-- item_stats_agg predates this migration but was never granted, so restricted
+-- clients always fell back to the base table for it too.
+GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.item_stats_agg TO api_readonly_user;
 
 -- The first refresh starts automatically after creation. Monitor with:
 --   SELECT view, status, last_refresh_time, exception FROM system.view_refreshes
