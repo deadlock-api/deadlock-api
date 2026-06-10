@@ -122,6 +122,12 @@ WHERE match_mode IN ('Ranked', 'Unranked')
 GROUP BY game_mode, day, cohort_item_id, item_id, bucket_net_worth
 SETTINGS max_bytes_before_external_group_by = 20000000000, max_threads = 16, max_execution_time = 1800, log_comment = 'item_cohort_stats_net_worth_agg_refresh';
 
+-- The API's restricted user needs explicit per-table grants (it has no
+-- database-wide SELECT); without these its requests silently fall back to the
+-- base table.
+GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.item_cohort_stats_time_agg TO api_readonly_user;
+GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.item_cohort_stats_net_worth_agg TO api_readonly_user;
+
 -- The first refresh starts automatically after creation. Monitor with:
 --   SELECT view, status, last_refresh_time, exception FROM system.view_refreshes
 --   WHERE view LIKE 'item_cohort%';
