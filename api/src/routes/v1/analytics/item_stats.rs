@@ -501,8 +501,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
             ""
         };
         let cte = format!(
-            ",
-    t_enemy_teams AS (
+            "t_enemy_teams AS (
         SELECT
             match_id,
             team AS enemy_team{lanes_col}
@@ -560,16 +559,50 @@ fn build_query(query: &ItemStatsQuery) -> String {
     let settings_clause = settings.join(", ");
     let match_filters =
         format!("match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}");
+    /*
+     * The no-hero path reads the materialized `upgrades.*` columns (migration 30):
+     * upgrade-only elements with buy_time > 0, baked in at insert time, so the
+     * `item_id IN t_upgrades AND buy_time > 0` filter and ~47% of the array bytes
+     * disappear. The hero-filtered path must keep `items.*` + the query-time
+     * filter: it is served by the item_stats_by_hero_mode_badge projection, which
+     * does not contain the upgrades.* columns, so referencing them would silently
+     * disable the projection.
+     */
+    let (items_array_join, upgrade_filter, nw_col) = if has_buyer_hero_filter {
+        (
+            "items.item_id      AS item_id,\n    items.game_time_s  AS buy_time,\n    items.sold_time_s  AS sold_time",
+            "\n    AND item_id IN t_upgrades AND buy_time > 0",
+            ",\n    `items.net_worth_at_buy` AS net_worth_at_buy",
+        )
+    } else {
+        (
+            "`upgrades.item_id`      AS item_id,\n    `upgrades.game_time_s`  AS buy_time,\n    `upgrades.sold_time_s`  AS sold_time",
+            "",
+            ",\n    `upgrades.net_worth_at_buy` AS net_worth_at_buy",
+        )
+    };
     // Only ARRAY JOIN the precomputed net-worth column when a net-worth bucket
     // needs it, so other buckets don't pay to read it.
     let nw_array_join = if query.bucket.needs_net_worth_at_buy() {
-        ",\n    `items.net_worth_at_buy` AS net_worth_at_buy"
+        nw_col
     } else {
         ""
     };
+    let mut ctes = vec![];
+    if has_buyer_hero_filter {
+        ctes.push("t_upgrades AS (SELECT id FROM items WHERE type = 'upgrade')".to_owned());
+    }
+    if !enemy_cte.is_empty() {
+        ctes.push(enemy_cte);
+    }
+    let with_clause = if ctes.is_empty() {
+        String::new()
+    } else {
+        format!("WITH {}", ctes.join(",\n    "))
+    };
     format!(
         "
-WITH t_upgrades AS (SELECT id FROM items WHERE type = 'upgrade'){enemy_cte}
+{with_clause}
 SELECT
     item_id,
     {bucket_expr}    AS bucket,
@@ -583,11 +616,8 @@ SELECT
     coalesce(avgIf((sold_time / duration_s) * 100, sold_time > 0), 0) AS avg_sell_time_relative
 FROM match_player{enemy_join}
 ARRAY JOIN
-    items.item_id      AS item_id,
-    items.game_time_s  AS buy_time,
-    items.sold_time_s  AS sold_time{nw_array_join}
-WHERE {match_filters}{enemy_where}
-    AND item_id IN t_upgrades AND buy_time > 0
+    {items_array_join}{nw_array_join}
+WHERE {match_filters}{enemy_where}{upgrade_filter}
     {player_filters}
 GROUP BY item_id, bucket
 {having_clause}
