@@ -124,10 +124,22 @@ export const Route = createFileRoute("/heroes")({
   },
   head: () =>
     seo({
-      title: "Deadlock Hero Stats: Win Rates, Pick Rates & Matchups",
+      title: "Deadlock Hero Win Rates & Pick Rates — Live Match Data",
       description:
         "Deadlock hero win rates, pick rates, matchups, and synergies for every hero. Filter by rank and patch. Updated daily from live match data.",
       path: "/heroes",
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        name: "Deadlock Hero Win Rates & Pick Rates",
+        description:
+          "Win rates, pick rates, ban rates, and matchup data for every Deadlock hero, calculated from tracked ranked matches and updated daily. Filterable by rank, patch, and game mode.",
+        url: "https://deadlock-api.com/heroes",
+        keywords: ["Deadlock", "hero win rates", "pick rates", "ban rates", "matchups", "hero meta"],
+        creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
+        isAccessibleForFree: true,
+        license: "https://github.com/deadlock-api/",
+      },
     }),
 });
 
@@ -141,7 +153,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Hero Stats</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Deadlock Hero Win Rates</h1>
         <p className="mt-1 text-sm text-muted-foreground">Detailed analytics and matchup data for Deadlock heroes</p>
         <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Explore win rates, pick rates, and matchup data for every Deadlock hero. Filter by rank, patch, and game mode
