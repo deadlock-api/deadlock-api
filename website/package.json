@@ -32,7 +32,6 @@
     "@tanstack/react-router-ssr-query": "^1.167.1",
     "@tanstack/react-start": "^1.168.24",
     "@uiw/react-codemirror": "^4.25.10",
-    "agentation": "^3.0.2",
     "axios": "^1.17.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -68,6 +67,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.184.1",
     "@vitejs/plugin-react": "^6.0.2",
+    "agentation": "^3.0.2",
     "babel-plugin-react-compiler": "^1.0.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "oxfmt": "^0.53.0",
@@ -81,5 +81,5 @@
   "engines": {
     "node": ">=24.0.0"
   },
-  "packageManager": "pnpm@10.18.0"
+  "packageManager": "pnpm@11.6.0"
 }

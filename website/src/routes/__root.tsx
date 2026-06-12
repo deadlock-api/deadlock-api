@@ -4,6 +4,7 @@ import newRockerWoff2 from "@fontsource/new-rocker/files/new-rocker-latin-400-no
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext, useRouterState } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { Agentation } from "agentation";
 import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
 import * as React from "react";
 import { Component, type ErrorInfo, type ReactNode } from "react";
@@ -206,6 +207,7 @@ function RootDocument({ children, bare = false }: { children: React.ReactNode; b
         <div className="pointer-events-none fixed inset-0 z-0 bg-gradient-to-br from-black/35 to-transparent" />
         <div className="relative z-10">{children}</div>
         <TanStackRouterDevtools position="bottom-right" />
+        {import.meta.env.DEV && <Agentation />}
         <Scripts />
       </body>
     </html>
