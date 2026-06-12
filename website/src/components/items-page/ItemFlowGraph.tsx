@@ -335,6 +335,20 @@ export function ItemFlowGraph({
       list.push(node);
       byColumn.set(node.column, list);
     }
+
+    // Ensure all columns from 0 to max(columns) are represented, so locked items in early stages
+    // don't disappear when locking items in later stages. The API may omit earlier stages when
+    // you have locks, but we still need to display them.
+    const allColumnIndices = new Set([...byColumn.keys(), ...lockedColumns]);
+    if (allColumnIndices.size > 0) {
+      const maxCol = Math.max(...allColumnIndices);
+      for (let i = 0; i <= maxCol; i++) {
+        if (!byColumn.has(i)) {
+          byColumn.set(i, []);
+        }
+      }
+    }
+
     const columns = [...byColumn.keys()].sort((a, b) => a - b);
     if (columns.length === 0) return null;
 
@@ -374,16 +388,40 @@ export function ItemFlowGraph({
     };
     columns.forEach((column, colIndex) => {
       const excl = excludedTiers.get(column);
-      const sorted = (byColumn.get(column) ?? [])
+      const columnData = byColumn.get(column) ?? [];
+
+      // Identify locked items in this column.
+      const lockedItemsInColumn = [...lockedSet]
+        .filter((k) => Number(k.split(":")[0]) === column)
+        .map((k) => Number(k.split(":")[1]));
+      const lockedItemSet = new Set(lockedItemsInColumn);
+
+      const sorted = columnData
         .slice()
         .filter((n) => {
-          if (lockedSet.has(`${column}:${n.item_id}`)) return true;
+          if (lockedItemSet.has(n.item_id)) return true;
           return ciOk(n) && !(excl?.has(tierOf(n)) ?? false);
         })
         .sort(cmp);
+
       // Locked items always pinned to the top (in sorted order); top-N of the rest below them.
-      const lockedNodes = sorted.filter((n) => lockedSet.has(`${column}:${n.item_id}`));
-      const rest = sorted.filter((n) => !lockedSet.has(`${column}:${n.item_id}`)).slice(0, perColumn);
+      const lockedNodes = sorted.filter((n) => lockedItemSet.has(n.item_id));
+
+      // Ensure locked items are shown even if API didn't return them (e.g., when adding new locks).
+      // Find any locked item IDs that aren't already in lockedNodes.
+      const foundLockedIds = new Set(lockedNodes.map((n) => n.item_id));
+      for (const itemId of lockedItemsInColumn) {
+        if (!foundLockedIds.has(itemId)) {
+          // Try to find this item in the full data; if not found, it won't be displayed
+          // but this preserves the locked state for when the API returns updated data.
+          const found = data.nodes.find((n) => n.column === column && n.item_id === itemId);
+          if (found) {
+            lockedNodes.push(found);
+          }
+        }
+      }
+
+      const rest = sorted.filter((n) => !lockedItemSet.has(n.item_id)).slice(0, perColumn);
       const list = [...lockedNodes, ...rest];
       maxRows = Math.max(maxRows, list.length);
       const x = colIndex * colSpacing;
