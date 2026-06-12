@@ -15,7 +15,7 @@ COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/app/target,sharing=locked \
-    cargo build --release --bin ${EXE_NAME} \
+    cargo build --release --locked --bin ${EXE_NAME} \
     && cp /app/target/release/${EXE_NAME} /usr/local/bin/${EXE_NAME}
 
 # We do not need the Rust toolchain to run the binary!
