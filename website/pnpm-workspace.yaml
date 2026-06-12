@@ -4,7 +4,6 @@ overrides:
 onlyBuiltDependencies:
   - "@tailwindcss/oxide"
   - core-js
-  - deadlock_api_client
   - esbuild
   - protobufjs
   - sharp
@@ -12,11 +11,9 @@ onlyBuiltDependencies:
   - workerd
 
 allowBuilds:
-  deadlock_api_client: true
   esbuild: true
   sharp: true
   workerd: true
-  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/19424d801c9be52a389cb7b1b48bd2e7982dc56c#path:/typescript: true
 
 minimumReleaseAgeExclude:
   - lucide-react@1.18.0

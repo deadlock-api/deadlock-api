@@ -2895,7 +2895,7 @@ packages:
     resolution: {integrity: sha512-98IT+HOahAisibz/yjKbzuOBwYcjJ7BCLPzARyHiyEBmRz4fatF+KPJszEHXsGYjUG234aH/cOjW1wwTbKUZlA==}
 
   deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/19424d801c9be52a389cb7b1b48bd2e7982dc56c#path:/typescript:
-    resolution: {gitHosted: true, integrity: sha512-CLkhUg1UW5IjfSoW/2KEoWL2bvHVWw4AdFw+pZaeqGJi6cHvkW5g3JsNIgOIcGRAGp6gLZgS9WWtP10SpW50aQ==, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/19424d801c9be52a389cb7b1b48bd2e7982dc56c}
+    resolution: {gitHosted: true, path: /typescript, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/19424d801c9be52a389cb7b1b48bd2e7982dc56c}
     version: 0.1.0
 
   debug@4.4.3:
