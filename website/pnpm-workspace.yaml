@@ -16,7 +16,7 @@ allowBuilds:
   esbuild: true
   sharp: true
   workerd: true
-  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/2b3326c8942d31975af48ca47381d96a3deb9001#path:/typescript: true
+  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/19424d801c9be52a389cb7b1b48bd2e7982dc56c#path:/typescript: true
 
 minimumReleaseAgeExclude:
   - lucide-react@1.18.0
