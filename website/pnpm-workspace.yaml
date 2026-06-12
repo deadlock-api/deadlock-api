@@ -16,3 +16,4 @@ allowBuilds:
   esbuild: true
   sharp: true
   workerd: true
+  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/005deda4a23005a68af1fe2e305480d597a8349c#path:/typescript: true

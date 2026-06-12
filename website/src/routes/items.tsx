@@ -23,6 +23,9 @@ const ItemPurchaseAnalysis = lazy(() =>
 const ItemStatsExplorer = lazy(() =>
   import("~/components/items-page/ItemStatsExplorer").then((m) => ({ default: m.ItemStatsExplorer })),
 );
+const ItemFlowGraph = lazy(() =>
+  import("~/components/items-page/ItemFlowGraph").then((m) => ({ default: m.ItemFlowGraph })),
+);
 
 export const Route = createFileRoute("/items")({
   component: ItemsPage,
@@ -82,7 +85,7 @@ function ItemsPage() {
 
   const [tab, setTab] = useQueryState(
     "tab",
-    parseAsStringLiteral(["item-stats", "item-purchase-analysis"] as const).withDefault("item-stats"),
+    parseAsStringLiteral(["item-stats", "item-purchase-analysis", "build-flow"] as const).withDefault("item-stats"),
   );
 
   return (
@@ -137,6 +140,7 @@ function ItemsPage() {
           options={[
             { value: "item-stats", label: "Item Stats" },
             { value: "item-purchase-analysis", label: "Purchase Analysis" },
+            { value: "build-flow", label: "Build Flow" },
           ]}
         />
         <TabsContent value="item-stats">
@@ -173,6 +177,22 @@ function ItemsPage() {
                 minMatches={minMatches}
                 minBoughtAtS={minBoughtAtS ?? undefined}
                 maxBoughtAtS={maxBoughtAtS ?? undefined}
+                gameMode={gameMode}
+              />
+            </Suspense>
+          </ChunkErrorBoundary>
+        </TabsContent>
+        <TabsContent value="build-flow">
+          <h2 className="sr-only">Item Build Flow</h2>
+          <ChunkErrorBoundary>
+            <Suspense fallback={<LoadingLogo />}>
+              <ItemFlowGraph
+                heroId={hero}
+                minRankId={effectiveMinRankId}
+                maxRankId={effectiveMaxRankId}
+                minDate={startDate || undefined}
+                maxDate={endDate || undefined}
+                minMatches={minMatches}
                 gameMode={gameMode}
               />
             </Suspense>

@@ -14,6 +14,7 @@ import { Button } from "~/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { cn } from "~/lib/utils";
+import { wilsonScoreInterval } from "~/lib/wilson";
 
 // Parsers for sort field and direction using nuqs string literal parser
 const parseAsSortField = parseAsStringLiteral(["winRate", "matches"] as const);
@@ -129,23 +130,6 @@ interface ItemStatsTableRowProps {
     rowLosses: number;
     rowTotal: number;
   }) => ReactNode;
-}
-
-function wilsonScoreInterval(wins: number, matches: number, z = 1.96): [number, number] {
-  if (matches === 0) return [0, 0];
-
-  // Pre-calculate frequently used values
-  const phat = wins / matches;
-  const zSquared = z * z;
-  const zSquaredOverMatches = zSquared / matches;
-  const denominator = 1 + zSquaredOverMatches;
-
-  // Combine operations where possible
-  const center = phat + zSquaredOverMatches * 0.5;
-  const margin = z * Math.sqrt((phat * (1 - phat) + zSquaredOverMatches * 0.25) / matches);
-
-  // Return directly without intermediate variables
-  return [(center - margin) / denominator, (center + margin) / denominator];
 }
 
 export function getDisplayItemStats(data: ItemStats[] | undefined, assetsItems: Upgrade[]): DisplayItemStats[] {

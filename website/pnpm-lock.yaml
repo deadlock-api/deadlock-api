@@ -82,7 +82,7 @@ importers:
         version: 1.11.21
       deadlock_api_client:
         specifier: github:deadlock-api/openapi-clients#path:/typescript
-        version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/2a2adb69843ec718c676fae580580f7f85f92821#path:/typescript
+        version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/005deda4a23005a68af1fe2e305480d597a8349c#path:/typescript
       framer-motion:
         specifier: ^12.40.0
         version: 12.40.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -120,8 +120,8 @@ importers:
         specifier: ^10.1.0
         version: 10.1.0(@types/react@19.2.17)(react@19.2.7)
       recharts:
-        specifier: 3.8.1
-        version: 3.8.1(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react-is@19.2.6)(react@19.2.7)(redux@5.0.1)
+        specifier: 3.8.0
+        version: 3.8.0(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react-is@19.2.6)(react@19.2.7)(redux@5.0.1)
       rehype-highlight:
         specifier: ^7.0.2
         version: 7.0.2
@@ -2891,8 +2891,8 @@ packages:
   dayjs@1.11.21:
     resolution: {integrity: sha512-98IT+HOahAisibz/yjKbzuOBwYcjJ7BCLPzARyHiyEBmRz4fatF+KPJszEHXsGYjUG234aH/cOjW1wwTbKUZlA==}
 
-  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/2a2adb69843ec718c676fae580580f7f85f92821#path:/typescript:
-    resolution: {gitHosted: true, path: /typescript, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/2a2adb69843ec718c676fae580580f7f85f92821}
+  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/005deda4a23005a68af1fe2e305480d597a8349c#path:/typescript:
+    resolution: {gitHosted: true, integrity: sha512-tfB52hx1EO5eY2AjHyEIycPl52BjU1pBP9sQ7I5rugUjxlG0esmZo6c0NBgeDmX7hZjdW63h8dB222p9OF1tAw==, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/005deda4a23005a68af1fe2e305480d597a8349c}
     version: 0.1.0
 
   debug@4.4.3:
@@ -3903,8 +3903,8 @@ packages:
     resolution: {integrity: sha512-9u/XQ1pvrQtYyMpZe7DXKv2p5CNvyVwzUB6uhLAnQwHMSgKMBR62lc7AHljaeteeHXn11XTAaLLUVZYVZyuRBQ==}
     engines: {node: '>= 20.19.0'}
 
-  recharts@3.8.1:
-    resolution: {integrity: sha512-mwzmO1s9sFL0TduUpwndxCUNoXsBw3u3E/0+A+cLcrSfQitSG62L32N69GhqUrrT5qKcAE3pCGVINC6pqkBBQg==}
+  recharts@3.8.0:
+    resolution: {integrity: sha512-Z/m38DX3L73ExO4Tpc9/iZWHmHnlzWG4njQbxsF5aSjwqmHNDDIm0rdEBArkwsBvR8U6EirlEHiQNYWCVh9sGQ==}
     engines: {node: '>=18'}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -6925,7 +6925,7 @@ snapshots:
 
   dayjs@1.11.21: {}
 
-  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/2a2adb69843ec718c676fae580580f7f85f92821#path:/typescript:
+  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/005deda4a23005a68af1fe2e305480d597a8349c#path:/typescript:
     dependencies:
       axios: 1.17.0
     transitivePeerDependencies:
@@ -8178,7 +8178,7 @@ snapshots:
 
   readdirp@5.0.0: {}
 
-  recharts@3.8.1(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react-is@19.2.6)(react@19.2.7)(redux@5.0.1):
+  recharts@3.8.0(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react-is@19.2.6)(react@19.2.7)(redux@5.0.1):
     dependencies:
       '@reduxjs/toolkit': 2.12.0(react-redux@9.3.0(@types/react@19.2.17)(react@19.2.7)(redux@5.0.1))(react@19.2.7)
       clsx: 2.1.1
