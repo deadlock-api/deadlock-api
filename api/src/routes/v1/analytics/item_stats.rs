@@ -279,11 +279,13 @@ pub struct ItemStats {
 /// Horizon of the `item_stats_agg` materialized view, in days. Keep in sync with
 /// the `INTERVAL ... DAY` in `clickhouse/item_stats_agg.sql`.
 const MV_HORIZON_DAYS: i64 = 65;
-/// Horizon of the `item_cohort_stats_*_agg` views, in days. Shorter than
-/// `MV_HORIZON_DAYS` because the cohort cross-join makes their refresh far
-/// heavier; sized to cover the default 30-day window plus routing margin. Keep
-/// in sync with `tools/migrations/clickhouse/31_create_item_cohort_stats_agg.sql`.
-const COHORT_MV_HORIZON_DAYS: i64 = 35;
+/// Horizon of the `item_cohort_stats_*_agg` tables, in days. Matches
+/// `MV_HORIZON_DAYS` so cohort queries over the current-patch window (a fixed
+/// start date, often >30 days back) route to the rollup instead of the base
+/// table. Keep in sync with `HORIZON_DAYS` in `services/cohort_agg_refresh.rs`
+/// and the backfill range in
+/// `tools/migrations/clickhouse/32_cohort_agg_incremental.sql`.
+const COHORT_MV_HORIZON_DAYS: i64 = 65;
 /// Safety margin below the horizon: only route windows whose start sits
 /// comfortably inside the materialized range, so a just-refreshed edge (the view
 /// drops the oldest day as time advances) never under-serves a request.
