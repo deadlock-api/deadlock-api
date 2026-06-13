@@ -1,4 +1,3 @@
-use cached::TtlCache;
 use cached::macros::cached;
 use serde::{Deserialize, Serialize};
 use tracing::info;
@@ -57,13 +56,7 @@ fn has_objective(mask: u32, objective: ECitadelTeamObjective) -> bool {
     mask & (1 << (objective as u32)) != 0
 }
 
-#[cached(
-    ty = "TtlCache<u8, Vec<ActiveMatch>>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60)) }",
-    result = true,
-    convert = "{ 0 }",
-    sync_writes = "default"
-)]
+#[cached(ttl = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 pub(crate) async fn fetch_active_matches_cached() -> anyhow::Result<Vec<ActiveMatch>> {
     let client = reqwest::Client::new();
     let res = client

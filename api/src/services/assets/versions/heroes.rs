@@ -1,10 +1,8 @@
-use core::time::Duration;
 use std::collections::HashMap;
 use std::collections::HashMap as StdMap;
 use std::sync::Arc;
 
 use async_graphql::{ComplexObject, Enum, Json, SimpleObject};
-use cached::LruTtlCache;
 use cached::macros::cached;
 use indexmap::IndexMap;
 use object_store::aws::AmazonS3;
@@ -1049,11 +1047,6 @@ fn parse_img_path(v: &str) -> Option<String> {
     }
 }
 
-const SOURCES_CACHE_SIZE: usize = 8;
-const BUILT_CACHE_SIZE: usize = 64;
-// Files in R2 are immutable per version, so the TTL only evicts cold entries.
-const CACHE_TTL: Duration = Duration::from_hours(24);
-
 #[derive(Clone)]
 struct ParsedSources {
     raw_root: Arc<IndexMap<String, serde_json::Value>>,
@@ -1062,10 +1055,10 @@ struct ParsedSources {
 }
 
 #[cached(
-    ty = "LruTtlCache<u32, ParsedSources>",
-    create = "{ LruTtlCache::builder().size(SOURCES_CACHE_SIZE).ttl(CACHE_TTL).build() }",
+    max_size = 8,
+    ttl = 86400,
     convert = "{ version }",
-    result = true,
+    key = "u32",
     sync_writes = "by_key"
 )]
 async fn parsed_version_sources(r2: &AmazonS3, version: u32) -> Result<ParsedSources, AssetsError> {
@@ -1110,10 +1103,10 @@ async fn fetch_optional_text(
 }
 
 #[cached(
-    ty = "LruTtlCache<(u32, String), Arc<Vec<Hero>>>",
-    create = "{ LruTtlCache::builder().size(BUILT_CACHE_SIZE).ttl(CACHE_TTL).build() }",
+    max_size = 64,
+    ttl = 86400,
     convert = r#"{ (version, language.to_owned()) }"#,
-    result = true,
+    key = "(u32, String)",
     sync_writes = "by_key"
 )]
 pub(crate) async fn fetch_heroes(

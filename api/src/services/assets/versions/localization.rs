@@ -3,11 +3,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use cached::LruTtlCache;
 use cached::macros::cached;
 use object_store::aws::AmazonS3;
 
-use crate::services::assets::versions::common::{DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL};
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::store;
 
@@ -20,10 +18,10 @@ pub(crate) fn localize(loc: &HashMap<String, String>, token: &str) -> String {
 
 /// Falls back to english when the requested language is missing.
 #[cached(
-    ty = "LruTtlCache<(u32, String), Arc<HashMap<String, String>>>",
-    create = "{ LruTtlCache::builder().size(DEFAULT_CACHE_SIZE).ttl(DEFAULT_CACHE_TTL).build() }",
+    max_size = 64,
+    ttl = 86400,
     convert = r#"{ (version, language.to_owned()) }"#,
-    result = true,
+    key = "(u32, String)",
     sync_writes = "by_key"
 )]
 pub(crate) async fn fetch_localization(

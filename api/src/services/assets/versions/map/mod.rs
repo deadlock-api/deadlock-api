@@ -9,7 +9,6 @@ mod geometry;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use cached::LruTtlCache;
 use cached::macros::cached;
 use indexmap::IndexMap;
 use object_store::aws::AmazonS3;
@@ -17,9 +16,7 @@ use serde::Serialize;
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 use utoipa::ToSchema;
 
-use crate::services::assets::versions::common::{
-    Color, DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL, IMAGE_BASE_URL,
-};
+use crate::services::assets::versions::common::{Color, IMAGE_BASE_URL};
 use crate::services::assets::versions::css;
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::store;
@@ -203,10 +200,10 @@ pub(crate) fn build_map(css: &str) -> Result<MapData, AssetsError> {
 }
 
 #[cached(
-    ty = "LruTtlCache<u32, Arc<MapData>>",
-    create = "{ LruTtlCache::builder().size(DEFAULT_CACHE_SIZE).ttl(DEFAULT_CACHE_TTL).build() }",
+    max_size = 64,
+    ttl = 86400,
     convert = r#"{ version }"#,
-    result = true,
+    key = "u32",
     sync_writes = "by_key"
 )]
 pub(crate) async fn fetch_map(r2: &AmazonS3, version: u32) -> Result<Arc<MapData>, AssetsError> {

@@ -3,7 +3,6 @@ use std::collections::HashSet;
 
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
-use cached::TtlCache;
 use cached::macros::cached;
 use metrics::counter;
 use prost::Message;
@@ -239,14 +238,8 @@ impl SteamClient {
     }
 }
 
-#[cached(
-    ty = "TtlCache<u8, Vec<Patch>>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(30 * 60)) }",
-    result = true,
-    convert = "{ 0 }",
-    sync_writes = "default"
-)]
-async fn fetch_patch_notes(http_client: &reqwest::Client) -> APIResult<Vec<Patch>> {
+#[cached(ttl = 1800, convert = "{ 0 }", key = "u8", sync_writes = "default")]
+async fn fetch_patch_notes(http_client: &reqwest::Client) -> Result<Vec<Patch>, APIError> {
     let response = http_client.get(RSS_ENDPOINT).send().await.map_err(|e| {
         APIError::status_msg(
             reqwest::StatusCode::INTERNAL_SERVER_ERROR,
@@ -284,14 +277,10 @@ async fn fetch_rss_text(http_client: &reqwest::Client, url: &str) -> APIResult<S
     })
 }
 
-#[cached(
-    ty = "TtlCache<u8, Vec<FeedItem>>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(30 * 60)) }",
-    result = true,
-    convert = "{ 0 }",
-    sync_writes = "default"
-)]
-async fn fetch_combined_patch_feed(http_client: &reqwest::Client) -> APIResult<Vec<FeedItem>> {
+#[cached(ttl = 1800, convert = "{ 0 }", key = "u8", sync_writes = "default")]
+async fn fetch_combined_patch_feed(
+    http_client: &reqwest::Client,
+) -> Result<Vec<FeedItem>, APIError> {
     let (forum_rss, steam_rss) = tokio::try_join!(
         fetch_rss_text(http_client, RSS_ENDPOINT),
         fetch_rss_text(http_client, STEAM_NEWS_ENDPOINT),
@@ -323,17 +312,11 @@ async fn fetch_combined_patch_feed(http_client: &reqwest::Client) -> APIResult<V
     Ok(items)
 }
 
-#[cached(
-    ty = "TtlCache<u8, Vec<SteamServer>>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(30)) }",
-    result = true,
-    convert = "{ 0 }",
-    sync_writes = "default"
-)]
+#[cached(ttl = 30, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 async fn fetch_steam_server_list(
     http_client: &reqwest::Client,
     steam_api_key: &str,
-) -> APIResult<Vec<SteamServer>> {
+) -> Result<Vec<SteamServer>, APIError> {
     let response: GetSteamServerListResponse = http_client
         .get(format!(
             "https://api.steampowered.com/IGameServersService/GetServerList/v1/?key={steam_api_key}&filter=\\appid\\1422450"
@@ -349,13 +332,7 @@ async fn fetch_steam_server_list(
     Ok(response.response.servers)
 }
 
-#[cached(
-    ty = "TtlCache<u8, HashSet<u32>>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(24 * 60 * 60)) }",
-    result = true,
-    convert = "{ 0 }",
-    sync_writes = "default"
-)]
+#[cached(ttl = 86400, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 pub(crate) async fn get_protected_users_cached(
     ph_client: &sqlx::Pool<sqlx::Postgres>,
 ) -> sqlx::Result<HashSet<u32>> {
@@ -380,14 +357,8 @@ struct SteamClientVersionResult {
     min_allowed_version: Option<u32>,
 }
 
-#[cached(
-    ty = "TtlCache<u8, u32>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(5 * 60)) }",
-    result = true,
-    convert = "{ 0 }",
-    sync_writes = "default"
-)]
-async fn get_current_client_version(http_client: &reqwest::Client) -> APIResult<u32> {
+#[cached(ttl = 300, convert = "{ 0 }", key = "u8", sync_writes = "default")]
+async fn get_current_client_version(http_client: &reqwest::Client) -> Result<u32, APIError> {
     // Try the official Steam API first
     if let Ok(version) = get_client_version_from_steam_api(http_client).await {
         return Ok(version);
@@ -449,9 +420,7 @@ async fn get_client_version_from_github(http_client: &reqwest::Client) -> APIRes
 }
 
 #[cached(
-    ty = "TtlCache<u32, String>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(24 * 60 * 60)) }",
-    result = true,
+    ttl = 86400,
     convert = "{ steam_id }",
     sync_writes = "by_key",
     key = "u32"

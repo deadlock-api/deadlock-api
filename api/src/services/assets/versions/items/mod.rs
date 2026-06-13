@@ -16,10 +16,8 @@
     clippy::if_not_else
 )]
 
-use core::time::Duration;
 use std::sync::Arc;
 
-use cached::LruTtlCache;
 use cached::macros::cached;
 use object_store::aws::AmazonS3;
 
@@ -39,14 +37,11 @@ pub(crate) mod types;
 
 pub(crate) use types::Item;
 
-const CACHE_SIZE: usize = 32;
-const CACHE_TTL: Duration = Duration::from_hours(24);
-
 #[cached(
-    ty = "LruTtlCache<(u32, String), Arc<Vec<Item>>>",
-    create = "{ LruTtlCache::builder().size(CACHE_SIZE).ttl(CACHE_TTL).build() }",
+    max_size = 32,
+    ttl = 86400,
     convert = r#"{ (version, language.to_owned()) }"#,
-    result = true,
+    key = "(u32, String)",
     sync_writes = "by_key"
 )]
 pub(crate) async fn fetch_items(

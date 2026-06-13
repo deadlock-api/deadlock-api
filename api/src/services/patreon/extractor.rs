@@ -1,6 +1,5 @@
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
-use cached::TtlCache;
 use cached::macros::cached;
 use reqwest::StatusCode;
 use sqlx::{Pool, Postgres};
@@ -91,11 +90,11 @@ fn extract_token_from_auth_header(headers: &axum::http::HeaderMap) -> Option<Str
 /// Returns `None` if the API key is not found, is disabled, or has no patron linked.
 /// Results are cached for 10 minutes.
 #[cached(
-    ty = "TtlCache<Uuid, Option<Uuid>>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(10 * 60)) }",
+    ttl = 600,
     convert = "{ api_key }",
     sync_writes = "by_key",
-    key = "Uuid"
+    key = "Uuid",
+    cache_none = true
 )]
 pub(crate) async fn get_patron_id_for_api_key(
     pg_client: &Pool<Postgres>,

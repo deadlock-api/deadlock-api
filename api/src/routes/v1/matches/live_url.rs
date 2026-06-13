@@ -4,7 +4,6 @@ use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use cached::TtlCache;
 use cached::macros::cached;
 use redis::{AsyncTypedCommands, ExpireOption};
 use serde::{Deserialize, Serialize};
@@ -58,9 +57,7 @@ pub(super) struct IngestLiveUrl {
 }
 
 #[cached(
-    ty = "TtlCache<u64, CMsgClientToGcSpectateLobbyResponse>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60)) }",
-    result = true,
+    ttl = 60,
     convert = "{ match_id }",
     sync_writes = "by_key",
     key = "u64"
@@ -68,7 +65,7 @@ pub(super) struct IngestLiveUrl {
 pub(super) async fn spectate_match(
     steam_client: &SteamClient,
     match_id: u64,
-) -> APIResult<CMsgClientToGcSpectateLobbyResponse> {
+) -> Result<CMsgClientToGcSpectateLobbyResponse, APIError> {
     let client_version = steam_client.get_current_client_version().await?;
     let msg = CMsgClientToGcSpectateLobby {
         match_id: Some(match_id),

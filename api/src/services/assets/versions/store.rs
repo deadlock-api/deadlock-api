@@ -10,7 +10,6 @@ use std::sync::Arc;
 use arc_swap::ArcSwap;
 use async_compression::tokio::bufread::ZstdDecoder;
 use bytes::Bytes;
-use cached::TtlCache;
 use cached::macros::cached;
 use object_store::aws::AmazonS3;
 use object_store::{ObjectStore, ObjectStoreExt, path::Path as ObjectPath};
@@ -135,10 +134,9 @@ pub(crate) async fn fetch_decompressed(
 }
 
 #[cached(
-    ty = "TtlCache<(u32, String), Bytes>",
-    create = "{ TtlCache::with_ttl(Duration::from_secs(60 * 60)) }",
+    ttl = 3600,
     convert = r#"{ (version, rel_path.clone()) }"#,
-    result = true,
+    key = "(u32, String)",
     sync_writes = "by_key"
 )]
 async fn fetch_decompressed_cached(

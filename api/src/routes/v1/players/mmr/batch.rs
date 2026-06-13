@@ -3,7 +3,6 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::TtlCache;
 use cached::macros::cached;
 use serde::Deserialize;
 use tracing::debug;
@@ -106,9 +105,7 @@ fn build_mmr_query_inner(
 }
 
 #[cached(
-    ty = "TtlCache<String, Vec<MMRHistory>>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60)) }",
-    result = true,
+    ttl = 60,
     convert = r#"{ format!("{account_ids:?}-{max_match_id:?}") }"#,
     sync_writes = "by_key",
     key = "String"

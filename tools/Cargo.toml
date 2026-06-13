@@ -6,7 +6,7 @@ resolver = "2"
 anyhow = "1.0.102"
 async-compression = "0.4.42"
 base64 = "0.22.1"
-cached = "1.1"
+cached = "2.0"
 clap = { version = "4.6.1", features = ["derive", "env"] }
 clickhouse = "0.15.1"
 common = { version = "0.1.0", path = "common" }
@@ -20,7 +20,7 @@ opentelemetry = { version = "0.32", features = ["logs", "trace"] }
 opentelemetry_sdk = { version = "0.32", features = ["logs", "trace"] }
 opentelemetry-otlp = { version = "0.32", features = ["grpc-tonic", "logs", "trace"] }
 opentelemetry-appender-tracing = { version = "0.32", features = ["experimental_metadata_attributes"] }
-prost = "0.14.3"
+prost = "0.14.4"
 rand = "0.10.1"
 reqwest = "0.13.4"
 serde = { version = "1.0.228", features = ["derive"] }
@@ -33,5 +33,5 @@ tokio-util = "0.7.18"
 tracing = "0.1.44"
 tracing-opentelemetry = "0.33"
 tryhard = "0.5.2"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "63a9001f9bd1bb9095cc5c503ec3db80085f6bae" }
-haste = { git = "https://github.com/deadlock-api/haste.git", rev = "b1d693dafc3f6290b4b1c0984cf98503a6643507" }
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "d4ce19ea77083bdc4db690bbd906659f80f34be4" }
+haste = { git = "https://github.com/deadlock-api/haste.git", rev = "4a91bbfd36a90bb4eb9b215a80fccd59250d5051" }

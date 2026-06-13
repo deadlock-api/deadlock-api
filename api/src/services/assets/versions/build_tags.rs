@@ -3,15 +3,12 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use cached::LruTtlCache;
 use cached::macros::cached;
 use object_store::aws::AmazonS3;
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use crate::services::assets::versions::common::{
-    DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL, SVGS_BASE_URL, entity_id,
-};
+use crate::services::assets::versions::common::{SVGS_BASE_URL, entity_id};
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::localization;
 
@@ -44,10 +41,10 @@ pub(crate) fn build_build_tags(loc: &HashMap<String, String>) -> Vec<BuildTag> {
 }
 
 #[cached(
-    ty = "LruTtlCache<(u32, String), Arc<Vec<BuildTag>>>",
-    create = "{ LruTtlCache::builder().size(DEFAULT_CACHE_SIZE).ttl(DEFAULT_CACHE_TTL).build() }",
+    max_size = 64,
+    ttl = 86400,
     convert = r#"{ (version, language.to_owned()) }"#,
-    result = true,
+    key = "(u32, String)",
     sync_writes = "by_key"
 )]
 pub(crate) async fn fetch_build_tags(

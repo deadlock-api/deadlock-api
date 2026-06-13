@@ -1,7 +1,6 @@
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
-use cached::TtlCache;
 use cached::macros::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
@@ -62,13 +61,7 @@ impl From<ClickhouseMatchInfoRow> for ClickhouseMatchInfo {
     }
 }
 
-#[cached(
-    ty = "TtlCache<u8, Vec<ClickhouseMatchInfo>>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60)) }",
-    result = true,
-    convert = "{ 0 }",
-    sync_writes = "default"
-)]
+#[cached(ttl = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 async fn get_recently_fetched_match_ids(
     ch_client: &clickhouse::Client,
 ) -> clickhouse::error::Result<Vec<ClickhouseMatchInfo>> {

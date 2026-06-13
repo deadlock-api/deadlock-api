@@ -7,7 +7,6 @@ use axum::extract::{Path, State};
 use axum::http::{StatusCode, header};
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::TtlCache;
 use cached::macros::cached;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -239,13 +238,7 @@ pub(super) async fn list_tables(
     Ok(Json(fetch_list_tables(&state.ch_client_restricted).await?))
 }
 
-#[cached(
-    ty = "TtlCache<u8, Vec<String>>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60 * 60)) }",
-    result = true,
-    convert = "{ 0 }",
-    sync_writes = "default"
-)]
+#[cached(ttl = 3600, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 async fn fetch_list_tables(
     ch_client: &clickhouse::Client,
 ) -> clickhouse::error::Result<Vec<String>> {
@@ -322,9 +315,7 @@ pub(super) async fn table_schema(
 }
 
 #[cached(
-    ty = "TtlCache<String, Vec<TableSchemaRow>>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60 * 60)) }",
-    result = true,
+    ttl = 3600,
     convert = r#"{ format!("{table}") }"#,
     sync_writes = "by_key",
     key = "String"

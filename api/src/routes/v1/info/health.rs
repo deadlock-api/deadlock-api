@@ -1,7 +1,6 @@
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
-use cached::TtlCache;
 use cached::macros::cached;
 use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
@@ -35,18 +34,12 @@ pub struct Status {
     pub services: StatusServices,
 }
 
-#[cached(
-    ty = "TtlCache<u8, Status>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60)) }",
-    result = true,
-    convert = "{ 0 }",
-    sync_writes = "default"
-)]
+#[cached(ttl = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 async fn check_health(
     ch_client: clickhouse::Client,
     pg_client: Pool<Postgres>,
     redis_client: &mut redis::aio::MultiplexedConnection,
-) -> APIResult<Status> {
+) -> Result<Status, APIError> {
     let mut status = Status::default();
 
     // Check Clickhouse connection

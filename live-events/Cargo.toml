@@ -17,11 +17,11 @@ tower-layer = "0.3.3"
 tower-http = { version = "0.6.11", features = ["cors", "normalize-path", "trace", "limit"] }
 tracing = "0.1.44"
 futures = "0.3.32"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "63a9001f9bd1bb9095cc5c503ec3db80085f6bae", features = ["serde", "user-msgs", "game-msgs"] }
-prost = "0.14.3"
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "d4ce19ea77083bdc4db690bbd906659f80f34be4", features = ["serde", "user-msgs", "game-msgs"] }
+prost = "0.14.4"
 tryhard = "0.5.2"
 strum = { version = "0.28.0", features = ["derive"] }
-haste = { git = "https://github.com/deadlock-api/haste.git", rev = "b1d693dafc3f6290b4b1c0984cf98503a6643507" }
+haste = { git = "https://github.com/deadlock-api/haste.git", rev = "4a91bbfd36a90bb4eb9b215a80fccd59250d5051" }
 async-stream = "0.3.6"
 thiserror = "2.0.18"
 serde-env = "0.3.0"

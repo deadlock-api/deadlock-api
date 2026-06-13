@@ -8,7 +8,6 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
-use cached::TtlCache;
 use cached::macros::cached;
 use clickhouse::Row;
 use futures::join;
@@ -28,7 +27,7 @@ use crate::routes::v1::leaderboard::types::{
 };
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{
-    SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult,
+    SteamProxyError, SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse,
 };
 
 #[derive(Debug, Deserialize, IntoParams)]
@@ -50,9 +49,7 @@ pub(super) struct LeaderboardHeroQuery {
 }
 
 #[cached(
-    ty = "TtlCache<(LeaderboardRegion, Option<u32>), SteamProxyRawResponse>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(10 * 60)) }",
-    result = true,
+    ttl = 600,
     convert = "{ (region, hero_id) }",
     sync_writes = "by_key",
     key = "(LeaderboardRegion, Option<u32>)"
@@ -61,7 +58,7 @@ pub(crate) async fn fetch_leaderboard_raw(
     steam_client: &SteamClient,
     region: LeaderboardRegion,
     hero_id: Option<u32>,
-) -> SteamProxyResult<SteamProxyRawResponse> {
+) -> Result<SteamProxyRawResponse, SteamProxyError> {
     let msg = CMsgClientToGcGetLeaderboard {
         leaderboard_region: Some(region as i32),
         hero_id,
@@ -80,13 +77,7 @@ pub(crate) async fn fetch_leaderboard_raw(
         .await
 }
 
-#[cached(
-    ty = "TtlCache<u8, HashMap<String, Vec<u32>>>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(24 * 60 * 60)) }",
-    result = true,
-    convert = "{ 0 }",
-    sync_writes = "default"
-)]
+#[cached(ttl = 86400, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 async fn fetch_all_steam_names(
     ch_client: &clickhouse::Client,
 ) -> clickhouse::error::Result<HashMap<String, Vec<u32>>> {

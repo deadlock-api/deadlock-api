@@ -6,19 +6,16 @@
 //! preserved verbatim, including field order, so this endpoint can swap in
 //! transparently.
 
-use core::time::Duration;
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use bytes::Bytes;
 use cached::macros::cached;
-use cached::{LruTtlCache, TtlCache};
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use object_store::aws::AmazonS3;
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use crate::services::assets::versions::common::{DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL};
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::store;
 
@@ -95,10 +92,10 @@ pub(crate) fn build_steam_info(text: &str) -> Result<SteamInfo, AssetsError> {
 }
 
 #[cached(
-    ty = "LruTtlCache<u32, Arc<SteamInfo>>",
-    create = "{ LruTtlCache::builder().size(DEFAULT_CACHE_SIZE).ttl(DEFAULT_CACHE_TTL).build() }",
+    max_size = 64,
+    ttl = 86400,
     convert = "{ version }",
-    result = true,
+    key = "u32",
     sync_writes = "by_key"
 )]
 pub(crate) async fn fetch_steam_info(
@@ -112,20 +109,13 @@ pub(crate) async fn fetch_steam_info(
 /// Bucket key for the pre-built array of every version's steam info, produced
 /// by `scripts/update_r2_index.sh`.
 const ALL_STEAM_INFO_KEY: &str = "assets-api-res/steam-info/all.json.zst";
-const ALL_STEAM_INFO_TTL: Duration = Duration::from_mins(15);
 
 /// Fetch the pre-built `[SteamInfo]` array spanning every known version.
 ///
 /// The script collects and parses each version's `steam.inf` offline, so this
 /// is served as the raw JSON bytes it produced — already in the same shape and
 /// field order as [`SteamInfo`] — without re-fetching N files per request.
-#[cached(
-    ty = "TtlCache<u8, Bytes>",
-    create = "{ TtlCache::with_ttl(ALL_STEAM_INFO_TTL) }",
-    convert = "{ 0_u8 }",
-    result = true,
-    sync_writes = "by_key"
-)]
+#[cached(ttl = 900, convert = "{ 0_u8 }", key = "u8", sync_writes = "by_key")]
 pub(crate) async fn fetch_all_steam_info(r2: &AmazonS3) -> Result<Bytes, AssetsError> {
     Ok(store::fetch_zst(r2, ALL_STEAM_INFO_KEY).await?)
 }
