@@ -1,7 +1,5 @@
 //! Types shared between `/v1/assets/*` versioned-asset endpoints.
 
-use core::time::Duration;
-
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
@@ -9,11 +7,6 @@ use utoipa::ToSchema;
 
 use crate::services::assets::versions::error::AssetsError;
 use crate::utils::kv3;
-
-/// Default LRU capacity for per-version `fetch_*` caches.
-pub(crate) const DEFAULT_CACHE_SIZE: usize = 64;
-/// Default TTL for per-version `fetch_*` caches.
-pub(crate) const DEFAULT_CACHE_TTL: Duration = Duration::from_hours(24);
 
 /// Base URL for static images served from the assets bucket.
 pub(crate) const IMAGE_BASE_URL: &str =

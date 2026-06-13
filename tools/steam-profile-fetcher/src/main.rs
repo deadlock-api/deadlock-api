@@ -17,7 +17,6 @@ use std::collections::{HashMap, HashSet};
 
 use anyhow::Result;
 use cached::macros::cached;
-use cached::TtlCache;
 use futures::stream::StreamExt;
 use itertools::Itertools;
 use metrics::{counter, gauge};
@@ -279,13 +278,7 @@ async fn delete_profiles(
         .await
 }
 
-#[cached(
-    ty = "TtlCache<u8, Vec<u32>>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(24 * 60 * 60)) }",
-    result = true,
-    convert = "{ 0 }",
-    sync_writes = "default"
-)]
+#[cached(ttl = 86400, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 async fn get_protected_users_cached(
     ph_client: &sqlx::Pool<sqlx::Postgres>,
 ) -> sqlx::Result<Vec<u32>> {

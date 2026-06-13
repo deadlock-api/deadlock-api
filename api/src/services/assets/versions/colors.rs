@@ -3,12 +3,10 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use cached::LruTtlCache;
 use cached::macros::cached;
 use object_store::aws::AmazonS3;
 
 use crate::services::assets::versions::common::Color;
-use crate::services::assets::versions::common::{DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL};
 use crate::services::assets::versions::css;
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::store;
@@ -20,10 +18,10 @@ pub(crate) fn build_colors(css_src: &str) -> BTreeMap<String, Color> {
 }
 
 #[cached(
-    ty = "LruTtlCache<u32, Arc<BTreeMap<String, Color>>>",
-    create = "{ LruTtlCache::builder().size(DEFAULT_CACHE_SIZE).ttl(DEFAULT_CACHE_TTL).build() }",
+    max_size = 64,
+    ttl = 86400,
     convert = r#"{ version }"#,
-    result = true,
+    key = "u32",
     sync_writes = "by_key"
 )]
 pub(crate) async fn fetch_colors(

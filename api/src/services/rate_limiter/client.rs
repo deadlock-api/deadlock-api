@@ -1,7 +1,6 @@
 use core::time::Duration;
 
 use axum::http::StatusCode;
-use cached::TtlCache;
 use cached::macros::cached;
 use chrono::{DateTime, Utc};
 use redis::RedisResult;
@@ -187,12 +186,10 @@ impl RateLimitClient {
 
 // Helper functions outside the impl block since cached macros cannot be used directly on methods
 #[cached(
-    ty = "TtlCache<Uuid, bool>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60 * 60)) }",
+    ttl = 3600,
     convert = "{ api_key }",
     sync_writes = "by_key",
-    key = "Uuid",
-    result = true
+    key = "Uuid"
 )]
 async fn is_api_key_valid(pg_client: &Pool<Postgres>, api_key: Uuid) -> Result<bool, sqlx::Error> {
     let row = sqlx::query!(
@@ -205,12 +202,10 @@ async fn is_api_key_valid(pg_client: &Pool<Postgres>, api_key: Uuid) -> Result<b
 }
 
 #[cached(
-    ty = "TtlCache<String, Vec<Quota>>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(10 * 60)) }",
+    ttl = 600,
     convert = r#"{ format!("{api_key}-{path}") }"#,
     sync_writes = "by_key",
-    key = "String",
-    result = true
+    key = "String"
 )]
 async fn get_custom_quotas(
     pg_client: &Pool<Postgres>,

@@ -5,7 +5,6 @@ use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum_extra::extract::Query;
-use cached::TtlCache;
 use cached::macros::cached;
 use clickhouse::Row;
 use itertools::{Itertools, chain};
@@ -206,9 +205,7 @@ async fn fetch_match_history_raw(
 }
 
 #[cached(
-    ty = "TtlCache<(u32, bool), PlayerMatchHistory>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(8 * 60)) }",
-    result = true,
+    ttl = 480,
     convert = "{ (account_id, force_refetch) }",
     sync_writes = "by_key",
     key = "(u32, bool)"
@@ -218,7 +215,7 @@ pub(crate) async fn fetch_steam_match_history(
     account_id: u32,
     force_refetch: bool,
     bot_username: Option<String>,
-) -> APIResult<PlayerMatchHistory> {
+) -> Result<PlayerMatchHistory, APIError> {
     debug!("Fetching match history from Steam for account_id {account_id}");
     let mut continue_cursor = None;
     let mut all_matches = vec![];

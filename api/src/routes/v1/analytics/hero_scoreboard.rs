@@ -3,7 +3,6 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::TtlCache;
 use cached::macros::cached;
 use clickhouse::Row;
 use itertools::Itertools;
@@ -151,9 +150,7 @@ SETTINGS log_comment = 'hero_scoreboard', apply_patch_parts = 0
 }
 
 #[cached(
-    ty = "TtlCache<String, Vec<HeroEntry>>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60*60)) }",
-    result = true,
+    ttl = 3600,
     convert = "{ query_str.to_string() }",
     sync_writes = "by_key",
     key = "String"

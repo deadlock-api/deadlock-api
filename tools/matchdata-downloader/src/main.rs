@@ -15,7 +15,6 @@ use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
 use anyhow::Context;
-use cached::LruCache;
 use cached::macros::cached;
 use clickhouse::Client;
 use futures::StreamExt;
@@ -388,9 +387,9 @@ async fn delete_object<S: ObjectStore + ?Sized>(store: &S, key: &Path) -> object
 }
 
 #[cached(
-    ty = "LruCache<String, bool>",
-    create = "{ LruCache::with_size(10_000) }",
-    convert = r#"{ format!("{file_path}") }"#
+    max_size = 10_000,
+    convert = r#"{ format!("{file_path}") }"#,
+    key = "String"
 )]
 #[instrument(skip(store))]
 async fn key_exists<S: ObjectStore + ?Sized>(store: &S, file_path: &Path) -> bool {

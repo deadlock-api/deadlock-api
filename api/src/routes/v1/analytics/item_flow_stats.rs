@@ -3,7 +3,6 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::TtlCache;
 use cached::macros::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
@@ -526,9 +525,7 @@ fn build_edges_query(query: &ItemFlowStatsQuery) -> String {
 }
 
 #[cached(
-    ty = "TtlCache<String, Vec<ItemFlowNode>>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60*60)) }",
-    result = true,
+    ttl = 3600,
     convert = "{ query_str.to_string() }",
     sync_writes = "by_key",
     key = "String"
@@ -541,9 +538,7 @@ async fn run_nodes_query(
 }
 
 #[cached(
-    ty = "TtlCache<String, Vec<ItemFlowEdge>>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60*60)) }",
-    result = true,
+    ttl = 3600,
     convert = "{ query_str.to_string() }",
     sync_writes = "by_key",
     key = "String"
@@ -580,9 +575,7 @@ struct ItemFlowTotalsRow {
 }
 
 #[cached(
-    ty = "TtlCache<String, ItemFlowTotalsRow>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60*60)) }",
-    result = true,
+    ttl = 3600,
     convert = "{ query_str.to_string() }",
     sync_writes = "by_key",
     key = "String"

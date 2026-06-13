@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 
-use cached::LruTtlCache;
 use cached::macros::cached;
 use indexmap::IndexMap;
 use object_store::aws::AmazonS3;
@@ -10,8 +9,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::services::assets::versions::common::{
-    Color, DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL, HeroItemType, Subclass, WrapSubclass,
-    build_from_kv3, entity_id,
+    Color, HeroItemType, Subclass, WrapSubclass, build_from_kv3, entity_id,
 };
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::store;
@@ -1091,10 +1089,10 @@ fn normalize_spread_penalty(p: SpreadPenalty) -> Option<SpreadPenalty> {
 // ===================================================== Cached fetch
 
 #[cached(
-    ty = "LruTtlCache<u32, Arc<Vec<NpcUnit>>>",
-    create = "{ LruTtlCache::builder().size(DEFAULT_CACHE_SIZE).ttl(DEFAULT_CACHE_TTL).build() }",
+    max_size = 64,
+    ttl = 86400,
     convert = "{ version }",
-    result = true,
+    key = "u32",
     sync_writes = "by_key"
 )]
 pub(crate) async fn fetch_npc_units(

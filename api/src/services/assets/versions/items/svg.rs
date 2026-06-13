@@ -3,16 +3,12 @@
 //! `https://assets-bucket.deadlock-api.com/assets-api-res/icons/<name>` and
 //! cached in-process. Negative responses are cached too so we don't refetch.
 
-use core::time::Duration;
 use std::sync::{Arc, OnceLock};
 
-use cached::LruTtlCache;
 use cached::macros::cached;
 use regex::Regex;
 
 const ICONS_BASE_URL: &str = "https://assets-bucket.deadlock-api.com/assets-api-res/icons";
-const CACHE_SIZE: usize = 256;
-const CACHE_TTL: Duration = Duration::from_hours(24);
 
 fn http() -> &'static reqwest::Client {
     static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
@@ -20,9 +16,10 @@ fn http() -> &'static reqwest::Client {
 }
 
 #[cached(
-    ty = "LruTtlCache<String, Arc<Option<String>>>",
-    create = "{ LruTtlCache::builder().size(CACHE_SIZE).ttl(CACHE_TTL).build() }",
+    max_size = 256,
+    ttl = 86400,
     convert = r#"{ name.to_owned() }"#,
+    key = "String",
     sync_writes = "by_key"
 )]
 pub(super) async fn fetch_svg(name: &str) -> Arc<Option<String>> {

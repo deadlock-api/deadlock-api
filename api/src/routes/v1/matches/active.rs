@@ -6,7 +6,6 @@ use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
-use cached::TtlCache;
 use cached::macros::cached;
 use itertools::Itertools;
 use prost::Message;
@@ -35,14 +34,8 @@ pub(super) struct ActiveMatchesQuery {
     account_ids: Option<Vec<u32>>,
 }
 
-#[cached(
-    ty = "TtlCache<u8, Vec<u8>>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60)) }",
-    result = true,
-    convert = "{ 0 }",
-    sync_writes = "default"
-)]
-async fn fetch_active_matches_raw(state: &AppState) -> APIResult<Vec<u8>> {
+#[cached(ttl = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
+async fn fetch_active_matches_raw(state: &AppState) -> Result<Vec<u8>, APIError> {
     let steam_response = state
         .steam_client
         .call_steam_proxy_raw(SteamProxyQuery {

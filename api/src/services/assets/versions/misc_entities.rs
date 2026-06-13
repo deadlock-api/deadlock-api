@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 
-use cached::LruTtlCache;
 use cached::macros::cached;
 use object_store::aws::AmazonS3;
 use serde::{Deserialize, Serialize};
@@ -10,8 +9,7 @@ use strum::{Display, EnumString};
 use utoipa::ToSchema;
 
 use crate::services::assets::versions::common::{
-    Color, DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL, Subclass, WrapSubclass, build_from_kv3,
-    entity_id, enum_str_serde,
+    Color, Subclass, WrapSubclass, build_from_kv3, entity_id, enum_str_serde,
 };
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::store;
@@ -390,10 +388,10 @@ fn curve_or_float_out(r: RawCurveOrFloat) -> CurveOrFloat {
 // ----- Cached fetch -----
 
 #[cached(
-    ty = "LruTtlCache<u32, Arc<Vec<MiscEntity>>>",
-    create = "{ LruTtlCache::builder().size(DEFAULT_CACHE_SIZE).ttl(DEFAULT_CACHE_TTL).build() }",
+    max_size = 64,
+    ttl = 86400,
     convert = "{ version }",
-    result = true,
+    key = "u32",
     sync_writes = "by_key"
 )]
 pub(crate) async fn fetch_misc_entities(

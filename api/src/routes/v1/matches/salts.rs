@@ -5,7 +5,6 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::TtlCache;
 use cached::macros::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
@@ -155,9 +154,7 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for MatchSaltsResponse 
 }
 
 #[cached(
-    ty = "TtlCache<u64, CMsgClientToGcGetMatchMetaDataResponse>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60)) }",
-    result = true,
+    ttl = 60,
     convert = "{ match_id }",
     sync_writes = "by_key",
     key = "u64"
@@ -168,7 +165,7 @@ pub(super) async fn fetch_match_salts(
     match_id: u64,
     is_custom: bool,
     disable_steam: bool,
-) -> APIResult<CMsgClientToGcGetMatchMetaDataResponse> {
+) -> Result<CMsgClientToGcGetMatchMetaDataResponse, APIError> {
     // Try fetch from Clickhouse via batcher
     if let Ok(salts) = state.batchers.match_salts_read.load(match_id).await {
         debug!("Match salts found in Clickhouse");

@@ -1,7 +1,4 @@
-use core::time::Duration;
-
 use bytes::Bytes;
-use cached::TtlCache;
 use cached::macros::cached;
 use object_store::aws::AmazonS3;
 use strum::IntoStaticStr;
@@ -20,10 +17,9 @@ pub(crate) enum IndexFolder {
 
 /// Fetch the cached JSON file-tree index for `folder`.
 #[cached(
-    ty = "TtlCache<&'static str, Bytes>",
-    create = "{ TtlCache::with_ttl(Duration::from_secs(60 * 60)) }",
+    ttl = 3600,
     convert = r#"{ <&str>::from(folder) }"#,
-    result = true,
+    key = "&'static str",
     sync_writes = "by_key"
 )]
 pub(crate) async fn fetch_index(

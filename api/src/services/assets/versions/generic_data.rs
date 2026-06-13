@@ -4,7 +4,6 @@
 
 use std::sync::Arc;
 
-use cached::LruTtlCache;
 use cached::macros::cached;
 use indexmap::IndexMap;
 use object_store::aws::AmazonS3;
@@ -13,7 +12,6 @@ use strum::{Display, EnumString, FromRepr};
 use utoipa::ToSchema;
 
 use crate::services::assets::versions::common::Color;
-use crate::services::assets::versions::common::{DEFAULT_CACHE_SIZE, DEFAULT_CACHE_TTL};
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::store;
 use crate::utils::kv3;
@@ -809,10 +807,10 @@ fn street_brawl_out(r: RawStreetBrawl) -> StreetBrawl {
 }
 
 #[cached(
-    ty = "LruTtlCache<u32, Arc<GenericData>>",
-    create = "{ LruTtlCache::builder().size(DEFAULT_CACHE_SIZE).ttl(DEFAULT_CACHE_TTL).build() }",
+    max_size = 64,
+    ttl = 86400,
     convert = "{ version }",
-    result = true,
+    key = "u32",
     sync_writes = "by_key"
 )]
 pub(crate) async fn fetch_generic_data(

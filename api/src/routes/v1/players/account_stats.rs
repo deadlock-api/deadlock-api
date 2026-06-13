@@ -3,7 +3,6 @@ use core::time::Duration;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
-use cached::TtlCache;
 use cached::macros::cached;
 use serde::Serialize;
 use utoipa::ToSchema;
@@ -17,7 +16,7 @@ use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{
-    SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult,
+    SteamProxyError, SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse,
 };
 use crate::utils::types::AccountIdQuery;
 
@@ -60,9 +59,7 @@ impl From<CMsgAccountStats> for PlayerAccountStats {
 }
 
 #[cached(
-    ty = "TtlCache<u32, SteamProxyRawResponse>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60)) }",
-    result = true,
+    ttl = 60,
     convert = "{ account_id }",
     sync_writes = "by_key",
     key = "u32"
@@ -71,7 +68,7 @@ pub(crate) async fn fetch_player_account_stats_raw(
     steam_client: &SteamClient,
     account_id: u32,
     bot_username: String,
-) -> SteamProxyResult<SteamProxyRawResponse> {
+) -> Result<SteamProxyRawResponse, SteamProxyError> {
     let msg = CMsgClientToGcGetAccountStats {
         account_id: Some(account_id),
         dev_access_hint: None,
@@ -92,9 +89,7 @@ pub(crate) async fn fetch_player_account_stats_raw(
 }
 
 #[cached(
-    ty = "TtlCache<u32, PlayerAccountStats>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(5*60)) }",
-    result = true,
+    ttl = 300,
     convert = "{ account_id }",
     sync_writes = "by_key",
     key = "u32"
@@ -103,7 +98,7 @@ pub(crate) async fn get_player_account_stats(
     steam_client: &SteamClient,
     account_id: u32,
     bot_username: String,
-) -> APIResult<PlayerAccountStats> {
+) -> Result<PlayerAccountStats, APIError> {
     let raw_data = tryhard::retry_fn(|| {
         fetch_player_account_stats_raw(steam_client, account_id, bot_username.clone())
     })

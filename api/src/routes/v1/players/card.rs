@@ -3,7 +3,6 @@ use core::time::Duration;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
-use cached::TtlCache;
 use cached::macros::cached;
 use clickhouse::Row;
 use serde::Serialize;
@@ -19,7 +18,7 @@ use crate::error::APIResult;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{
-    SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult,
+    SteamProxyError, SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse,
 };
 use crate::utils::types::AccountIdQuery;
 
@@ -145,9 +144,7 @@ impl From<&PlayerCard> for PlayerCardClickhouse {
 }
 
 #[cached(
-    ty = "TtlCache<u32, SteamProxyRawResponse>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_mins(5)) }",
-    result = true,
+    ttl = 300,
     convert = "{ account_id }",
     sync_writes = "by_key",
     key = "u32"
@@ -156,7 +153,7 @@ pub(crate) async fn fetch_player_card_raw(
     steam_client: &SteamClient,
     account_id: u32,
     bot_username: String,
-) -> SteamProxyResult<SteamProxyRawResponse> {
+) -> Result<SteamProxyRawResponse, SteamProxyError> {
     let msg = CMsgClientToGcGetProfileCard {
         account_id: Some(account_id),
         dev_access_hint: None,
