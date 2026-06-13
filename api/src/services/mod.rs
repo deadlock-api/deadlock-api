@@ -1,6 +1,7 @@
 pub(super) mod assets;
 pub(crate) mod clickhouse_batcher;
 pub(crate) mod clickhouse_insert_batcher;
+pub(crate) mod cohort_agg_refresh;
 pub(crate) mod game_server;
 pub(crate) mod patreon;
 pub(crate) mod rank_predictor;

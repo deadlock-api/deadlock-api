@@ -329,6 +329,11 @@ impl AppState {
         let steam_search_index = SteamSearchIndex::new(steam_search_index_path);
         steam_search_index.spawn_refresh_loop(ch_client_ro.clone());
 
+        if !cfg!(debug_assertions) && std::env::var_os("COHORT_AGG_REFRESH_DISABLED").is_none() {
+            debug!("Starting cohort agg refresh");
+            crate::services::cohort_agg_refresh::spawn_cohort_agg_refresh(ch_client.clone());
+        }
+
         // Build the versioned-assets store (R2-backed). Best-effort initial
         // load so /v2/heroes works on the first request post-boot; the
         // background loop keeps it fresh.
