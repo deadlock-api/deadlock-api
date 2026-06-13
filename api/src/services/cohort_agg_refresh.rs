@@ -192,6 +192,7 @@ fn secs_until_next_utc_hour(hour: u32) -> u64 {
 }
 
 pub(crate) fn spawn_cohort_agg_refresh(ch_client: clickhouse::Client) {
+    let ch_client = ch_client.with_setting("max_execution_time", "600");
     tokio::spawn(async move {
         let specs = cohort_specs();
         info!(
