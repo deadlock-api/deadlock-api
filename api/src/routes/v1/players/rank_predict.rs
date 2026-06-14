@@ -6,6 +6,7 @@ use axum::body::Bytes;
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::IntoResponse;
+use cached::macros::cached;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -165,12 +166,18 @@ pub(crate) struct RankPredictResponse {
     pub(crate) matches_used: usize,
 }
 
+#[cached(
+    ttl = 600,
+    convert = "{ account_id }",
+    sync_writes = "by_key",
+    key = "u32"
+)]
 #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
 async fn fetch_matches(
     batcher: &RankPredictMatchesBatcher,
     ch: &clickhouse::Client,
     account_id: u32,
-) -> APIResult<Vec<Match>> {
+) -> Result<Vec<Match>, APIError> {
     let match_rows = batcher.load(account_id).await?;
 
     if match_rows.len() < N_MATCHES {

@@ -197,11 +197,22 @@ pub(crate) fn spawn_cohort_agg_refresh(ch_client: clickhouse::Client) {
         let specs = cohort_specs();
         info!(
             "cohort agg refresh started: per-day incremental every {INCREMENTAL_INTERVAL_SECS}s \
-             (last {RECENT_DAYS}d), full rebuild on boot + daily at {FULL_REBUILD_HOUR_UTC}:00 UTC"
+             (last {RECENT_DAYS}d), incremental catch-up on boot (full only if empty) + daily \
+             full at {FULL_REBUILD_HOUR_UTC}:00 UTC"
         );
         for spec in &specs {
-            if let Err(e) = run_full(&ch_client, spec).await {
-                error!("cohort agg startup rebuild for {} failed: {e}", spec.table);
+            // On boot only refresh the recently-changed days that went stale during downtime.
+            // A full 65-day rebuild is reserved for a cold start (empty table) and the daily run.
+            let is_empty = distinct_days(&ch_client, spec.table)
+                .await
+                .is_ok_and(|days| days.is_empty());
+            let startup = if is_empty {
+                run_full(&ch_client, spec).await
+            } else {
+                run_incremental(&ch_client, spec).await
+            };
+            if let Err(e) = startup {
+                error!("cohort agg startup refresh for {} failed: {e}", spec.table);
             }
         }
         let mut inc = interval(Duration::from_secs(INCREMENTAL_INTERVAL_SECS));
