@@ -30,7 +30,7 @@ object_store = { version = "0.13.2", features = ["aws"], default-features = fals
 tower = { version = "0.5.3", features = ["limit", "tokio"] }
 tower-layer = "0.3.3"
 tower-service = "0.3.3"
-tower-http = { version = "0.6.11", features = ["compression-full", "cors", "decompression-full", "normalize-path", "trace", "limit"] }
+tower-http = { version = "0.7.0", features = ["compression-full", "cors", "decompression-full", "normalize-path", "trace", "limit"] }
 tracing = "0.1.44"
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
 axum-prometheus = "0.10.0"
