@@ -10,11 +10,13 @@ use strum::Display;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-use super::common_filters::{MatchInfoFilters, round_timestamps};
+use super::common_filters::{
+    MatchInfoFilters, PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
+};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::GameMode;
-use crate::utils::parse::default_last_month_timestamp;
+use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -89,6 +91,42 @@ pub(crate) struct GameStatsQuery {
     min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,
+    /// Filter players based on their final net worth.
+    min_networth: Option<u64>,
+    /// Filter players based on their final net worth.
+    max_networth: Option<u64>,
+    /// Comma separated list of hero ids to include. See more: <https://api.deadlock-api.com/v1/assets/heroes>
+    #[param(inline)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
+    hero_ids: Option<Vec<u32>>,
+    /// Comma separated list of item ids to include (only players who have purchased these items). See more: <https://api.deadlock-api.com/v1/assets/items>
+    #[param(inline)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
+    include_item_ids: Option<Vec<u32>>,
+    /// Comma separated list of item ids to exclude (only players who have not purchased these items). See more: <https://api.deadlock-api.com/v1/assets/items>
+    #[param(inline)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
+    exclude_item_ids: Option<Vec<u32>>,
+    /// Comma separated list of account ids to include
+    #[param(inline, min_items = 1, max_items = 1_000)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
+    account_ids: Option<Vec<u32>>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -155,6 +193,18 @@ fn build_query(query: &GameStatsQuery) -> String {
         max_duration_s: query.max_duration_s,
     }
     .build();
+    let player_filters = join_filters(
+        &PlayerFilters {
+            account_ids: query.account_ids.as_deref(),
+            hero_ids: query.hero_ids.as_deref(),
+            min_networth: query.min_networth,
+            max_networth: query.max_networth,
+            include_item_ids: query.include_item_ids.as_deref(),
+            exclude_item_ids: query.exclude_item_ids.as_deref(),
+            ..Default::default()
+        }
+        .build(),
+    );
     let bucket = query.bucket.get_select_clause();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     format!(
@@ -211,6 +261,7 @@ fn build_query(query: &GameStatsQuery) -> String {
     WHERE match_mode IN ('Ranked', 'Unranked')
         AND {game_mode_filter}
         {info_filters}
+        {player_filters}
     GROUP BY bucket
     ORDER BY bucket
     SETTINGS log_comment = 'game_stats', apply_patch_parts = 0
@@ -266,7 +317,7 @@ Retrieves aggregate game-level statistics.
     "
 )]
 pub(crate) async fn game_stats(
-    Query(query): Query<GameStatsQuery>,
+    Query(mut query): Query<GameStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     if query.game_mode.is_some_and(|g| g == GameMode::StreetBrawl)
@@ -277,6 +328,7 @@ pub(crate) async fn game_stats(
             message: "Cannot filter by average badge for street brawl game mode".to_string(),
         });
     }
+    filter_protected_accounts(&state, &mut query.account_ids, None).await?;
 
     get_game_stats(&state.ch_client_cached, query)
         .await
