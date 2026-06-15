@@ -462,19 +462,11 @@ PY
 )
 
 # folder:local-dir pairs. Every index is incremental: seed from the current
-# bucket index and merge in this build's files. Set REBUILD_ICONS_INDEX=1 (via
-# the rebuild_icons_index workflow input) to rebuild the icons index from
-# scratch -- needed once to replace the old flat layout with the nested one, and
-# any time the flat/nested split needs re-baselining.
+# bucket index and merge in this build's files.
 for pair in sounds:sounds images:images icons:icons fonts:fonts; do
     folder="${pair%%:*}"; localdir="${pair##*:}"
     echo ">> index: $folder"
-    if [ "$folder" = "icons" ] && [ -n "${REBUILD_ICONS_INDEX:-}" ]; then
-        echo "   (REBUILD_ICONS_INDEX set: rebuilding icons index from scratch)"
-        : > current_index.json
-    else
-        rclone cat "$REMOTE/$folder/index.json.zst" 2>/dev/null | zstd -dq > current_index.json 2>/dev/null || true
-    fi
+    rclone cat "$REMOTE/$folder/index.json.zst" 2>/dev/null | zstd -dq > current_index.json 2>/dev/null || true
     ( cd "$localdir" && find . -type f ) | sed 's#^\./##' \
         | python3 -c "$MERGE_INDEX" "$folder" "$PUBLIC/$folder/" current_index.json > index.json
     zstd -q -19 -f index.json -o index.json.zst
