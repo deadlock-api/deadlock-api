@@ -158,7 +158,7 @@ fi
 # pak01 holds the vdata/css/media we extract; steam.inf is the build manifest;
 # the localization .txt files are LOOSE in the depot (not inside pak01), so they
 # must be listed explicitly or the versions/ folder ships without localization.
-# The panorama/fonts/*.otf files are ALSO loose now -- Valve moved them out of
+# The panorama/fonts/*.(otf,ttf) files are ALSO loose now -- Valve moved them out of
 # pak01 -- so they must be listed too or the fonts/ output ships empty.
 cat > filelist.txt <<'EOF'
 regex:citadel/pak01_.*\.vpk$
@@ -292,7 +292,7 @@ done
 # Fonts
 mkdir -p fonts
 [ -d "$citadel_folder/panorama/fonts" ] && \
-    find "$citadel_folder"/panorama/fonts -type f -name '*.otf' -print0 | xargs -0 -r -n 1 cp -t fonts/
+    find "$citadel_folder"/panorama/fonts -type f \( -name '*.otf' -o -name '*.ttf' \) -print0 | xargs -0 -r -n 1 cp -t fonts/
 
 # Sounds. Source2Viewer dumps a KV3 .vsnd resource for sounds it can't decode to
 # audio; those aren't playable and aren't indexed, so drop them before copying.
@@ -401,7 +401,7 @@ fi
 [ -n "$(find images -type f -name '*.webp' -print -quit 2>/dev/null)" ] || warn "no images/*.webp produced"
 [ -n "$(find sounds -type f -name '*.mp3'  -print -quit 2>/dev/null)" ] || warn "no sounds/*.mp3 produced"
 [ -n "$(find icons  -type f -name '*.svg'  -print -quit 2>/dev/null)" ] || warn "no icons/*.svg produced"
-[ -n "$(find fonts  -type f -name '*.otf'  -print -quit 2>/dev/null)" ] || warn "no fonts/*.otf produced"
+[ -n "$(find fonts  -type f \( -name '*.otf' -o -name '*.ttf' \) -print -quit 2>/dev/null)" ] || warn "no fonts/*.otf or *.ttf produced"
 
 if [ "$errors" -gt 0 ]; then
     echo "Build validation failed with $errors error(s); aborting before any upload."
