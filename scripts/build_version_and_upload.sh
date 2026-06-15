@@ -165,6 +165,7 @@ regex:citadel/pak01_.*\.vpk$
 regex:citadel/steam\.inf$
 regex:citadel/resource/localization/.*\.txt$
 regex:citadel/panorama/fonts/.*\.otf$
+regex:citadel/panorama/fonts/.*\.ttf$
 EOF
 echo "Downloading Deadlock game files (windows depot, pak01 + loose fonts)..."
 DEPOT_DIR="$WORK_DIR/depot"
