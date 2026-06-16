@@ -1,17 +1,21 @@
 use core::time::Duration;
+use std::collections::HashMap;
 
 use clickhouse::Row;
 use serde::Deserialize;
-use tokio::time::{Instant, interval, interval_at};
+use tokio::time::interval;
 use tracing::{error, info};
 
-const INCREMENTAL_INTERVAL_SECS: u64 = 30 * 60;
-const FULL_REBUILD_INTERVAL_SECS: u64 = 24 * 60 * 60;
-const FULL_REBUILD_HOUR_UTC: u32 = 9;
-const RECENT_DAYS: u32 = 3;
+const REFRESH_INTERVAL_SECS: u64 = 30 * 60;
 const HORIZON_DAYS: u32 = 65;
 const GROUP_BY_SPILL_BYTES: u64 = 8_000_000_000;
 const PER_DAY_MAX_MEMORY_BYTES: u64 = 15_032_385_536;
+
+/// Persistent watermark of the source data each agg day partition was last built
+/// from. A day is rebuilt only when `match_player` has a newer `max(created_at)`
+/// than what we recorded, which lets us always do targeted incremental work and
+/// never a blind 65-day full rebuild.
+const STATE_TABLE: &str = "default.cohort_agg_refresh_state";
 
 struct CohortSpec {
     table: &'static str,
@@ -72,14 +76,27 @@ GROUP BY game_mode, day, cohort_item_id, item_id, {bucket_col}",
     )
 }
 
-fn day_window_clause(days_ago: u32) -> String {
-    let lower = format!("toStartOfDay(now()) - INTERVAL {days_ago} DAY");
-    format!("start_time >= {lower} AND start_time < {lower} + INTERVAL 1 DAY")
+/// Restricts a rebuild to a single calendar day. The literal must match the
+/// `toDate(start_time)` grouping (server timezone) so partition ids line up.
+fn day_window_clause(day: &str) -> String {
+    format!(
+        "start_time >= toDateTime('{day}') AND start_time < toDateTime('{day}') + INTERVAL 1 DAY"
+    )
 }
+
+/// Source filter mirroring `select_body`'s WHERE; used by the staleness probe so
+/// the watermark only advances for rows that actually feed the aggregate.
+const SOURCE_FILTER: &str = "match_mode IN ('Ranked', 'Unranked') AND duration_s > 0";
 
 #[derive(Row, Deserialize)]
 struct DayRow {
     day: String,
+}
+
+#[derive(Row, Deserialize)]
+struct WatermarkRow {
+    day: String,
+    max_created: u32,
 }
 
 async fn distinct_days(
@@ -95,17 +112,87 @@ async fn distinct_days(
     Ok(rows.into_iter().map(|r| r.day).collect())
 }
 
+async fn ensure_state_table(
+    ch_client: &clickhouse::Client,
+) -> Result<(), clickhouse::error::Error> {
+    ch_client
+        .query(&format!(
+            "CREATE TABLE IF NOT EXISTS {STATE_TABLE} (
+    table_name String,
+    day Date,
+    source_max_created_at DateTime,
+    refreshed_at DateTime DEFAULT now()
+) ENGINE = ReplacingMergeTree(refreshed_at)
+ORDER BY (table_name, day)"
+        ))
+        .execute()
+        .await
+}
+
+/// Per-day `max(created_at)` in the source over the horizon. Cheap: reads only
+/// `start_time`/`created_at`, no array joins (~0.2s vs ~30s for a day rebuild).
+async fn source_watermarks(
+    ch_client: &clickhouse::Client,
+) -> Result<Vec<WatermarkRow>, clickhouse::error::Error> {
+    ch_client
+        .query(&format!(
+            "SELECT toString(toDate(start_time)) AS day, toUnixTimestamp(max(created_at)) AS max_created
+FROM default.match_player
+WHERE {SOURCE_FILTER}
+    AND start_time >= toStartOfDay(now()) - INTERVAL {HORIZON_DAYS} DAY
+GROUP BY day"
+        ))
+        .fetch_all::<WatermarkRow>()
+        .await
+}
+
+async fn stored_watermarks(
+    ch_client: &clickhouse::Client,
+    table: &str,
+) -> Result<HashMap<String, u32>, clickhouse::error::Error> {
+    let rows = ch_client
+        .query(&format!(
+            "SELECT toString(day) AS day, toUnixTimestamp(source_max_created_at) AS max_created
+FROM {STATE_TABLE} FINAL
+WHERE table_name = '{table}'"
+        ))
+        .fetch_all::<WatermarkRow>()
+        .await?;
+    Ok(rows.into_iter().map(|r| (r.day, r.max_created)).collect())
+}
+
+async fn record_watermarks(
+    ch_client: &clickhouse::Client,
+    table: &str,
+    days: &[(String, u32)],
+) -> Result<(), clickhouse::error::Error> {
+    if days.is_empty() {
+        return Ok(());
+    }
+    let values = days
+        .iter()
+        .map(|(day, ts)| format!("('{table}', '{day}', toDateTime({ts}), now())"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    ch_client
+        .query(&format!(
+            "INSERT INTO {STATE_TABLE} (table_name, day, source_max_created_at, refreshed_at) VALUES {values}"
+        ))
+        .execute()
+        .await
+}
+
 async fn rebuild_day(
     ch_client: &clickhouse::Client,
     spec: &CohortSpec,
-    days_ago: u32,
+    day: &str,
     log_comment: &str,
-) -> Result<Vec<String>, clickhouse::error::Error> {
+) -> Result<(), clickhouse::error::Error> {
     ch_client
         .query(&format!("TRUNCATE TABLE {}", spec.staging))
         .execute()
         .await?;
-    let body = select_body(spec, &day_window_clause(days_ago));
+    let body = select_body(spec, &day_window_clause(day));
     let insert = format!(
         "INSERT INTO {staging} {body} SETTINGS max_bytes_before_external_group_by = \
          {GROUP_BY_SPILL_BYTES}, max_threads = 8, max_memory_usage = {PER_DAY_MAX_MEMORY_BYTES}, \
@@ -113,54 +200,52 @@ async fn rebuild_day(
         staging = spec.staging,
     );
     ch_client.query(&insert).execute().await?;
-    let days = distinct_days(ch_client, spec.staging).await?;
-    for day in &days {
+    for staged_day in distinct_days(ch_client, spec.staging).await? {
         ch_client
             .query(&format!(
-                "ALTER TABLE {table} REPLACE PARTITION '{day}' FROM {staging}",
+                "ALTER TABLE {table} REPLACE PARTITION '{staged_day}' FROM {staging}",
                 table = spec.table,
                 staging = spec.staging,
             ))
             .execute()
             .await?;
     }
-    Ok(days)
-}
-
-async fn run_incremental(
-    ch_client: &clickhouse::Client,
-    spec: &CohortSpec,
-) -> Result<(), clickhouse::error::Error> {
-    let log_comment = format!("{}_incremental", spec.table);
-    let mut replaced = 0usize;
-    for days_ago in 0..RECENT_DAYS {
-        replaced += rebuild_day(ch_client, spec, days_ago, &log_comment)
-            .await?
-            .len();
-    }
-    info!(
-        "cohort agg incremental refresh for {} replaced {replaced} day partition(s)",
-        spec.table
-    );
     Ok(())
 }
 
-async fn run_full(
+/// Rebuilds only the day partitions whose source watermark advanced since the
+/// last run, then prunes agg days that fell out of the horizon. On a cold start
+/// (no recorded state) every source day is "stale", so this also serves as the
+/// initial full build — without ever scanning the full horizon when warm.
+async fn refresh(
     ch_client: &clickhouse::Client,
     spec: &CohortSpec,
 ) -> Result<(), clickhouse::error::Error> {
-    let log_comment = format!("{}_full", spec.table);
-    let mut rebuilt: Vec<String> = Vec::new();
-    for days_ago in (0..HORIZON_DAYS).rev() {
-        rebuilt.extend(rebuild_day(ch_client, spec, days_ago, &log_comment).await?);
+    let log_comment = format!("{}_refresh", spec.table);
+    let source = source_watermarks(ch_client).await?;
+    let stored = stored_watermarks(ch_client, spec.table).await?;
+
+    let stale: Vec<(String, u32)> = source
+        .iter()
+        .filter(|row| {
+            stored
+                .get(&row.day)
+                .is_none_or(|prev| row.max_created > *prev)
+        })
+        .map(|row| (row.day.clone(), row.max_created))
+        .collect();
+    for (day, _) in &stale {
+        rebuild_day(ch_client, spec, day, &log_comment).await?;
     }
-    let dropped = if let Some(oldest_fresh) = rebuilt.iter().min() {
-        let stale: Vec<String> = distinct_days(ch_client, spec.table)
+    record_watermarks(ch_client, spec.table, &stale).await?;
+
+    let dropped = if let Some(oldest_fresh) = source.iter().map(|r| &r.day).min() {
+        let stale_partitions: Vec<String> = distinct_days(ch_client, spec.table)
             .await?
             .into_iter()
             .filter(|d| d.as_str() < oldest_fresh.as_str())
             .collect();
-        for day in &stale {
+        for day in &stale_partitions {
             ch_client
                 .query(&format!(
                     "ALTER TABLE {table} DROP PARTITION '{day}'",
@@ -169,26 +254,16 @@ async fn run_full(
                 .execute()
                 .await?;
         }
-        stale.len()
+        stale_partitions.len()
     } else {
         0
     };
     info!(
-        "cohort agg full rebuild for {} rebuilt {} day(s), dropped {dropped} stale",
+        "cohort agg refresh for {} rebuilt {} day(s), dropped {dropped} stale",
         spec.table,
-        rebuilt.len()
+        stale.len()
     );
     Ok(())
-}
-
-fn secs_until_next_utc_hour(hour: u32) -> u64 {
-    use chrono::Timelike;
-
-    let day = 86_400u64;
-    let secs_today = u64::from(chrono::Utc::now().num_seconds_from_midnight()) % day;
-    let target = u64::from(hour) * 3600;
-    let delta = (target + day - secs_today) % day;
-    if delta == 0 { day } else { delta }
 }
 
 pub(crate) fn spawn_cohort_agg_refresh(ch_client: clickhouse::Client) {
@@ -196,45 +271,18 @@ pub(crate) fn spawn_cohort_agg_refresh(ch_client: clickhouse::Client) {
     tokio::spawn(async move {
         let specs = cohort_specs();
         info!(
-            "cohort agg refresh started: per-day incremental every {INCREMENTAL_INTERVAL_SECS}s \
-             (last {RECENT_DAYS}d), incremental catch-up on boot (full only if empty) + daily \
-             full at {FULL_REBUILD_HOUR_UTC}:00 UTC"
+            "cohort agg refresh started: watermark-driven, every {REFRESH_INTERVAL_SECS}s rebuild \
+             only days changed since last run (horizon {HORIZON_DAYS}d)"
         );
-        for spec in &specs {
-            // On boot only refresh the recently-changed days that went stale during downtime.
-            // A full 65-day rebuild is reserved for a cold start (empty table) and the daily run.
-            let is_empty = distinct_days(&ch_client, spec.table)
-                .await
-                .is_ok_and(|days| days.is_empty());
-            let startup = if is_empty {
-                run_full(&ch_client, spec).await
-            } else {
-                run_incremental(&ch_client, spec).await
-            };
-            if let Err(e) = startup {
-                error!("cohort agg startup refresh for {} failed: {e}", spec.table);
-            }
+        if let Err(e) = ensure_state_table(&ch_client).await {
+            error!("cohort agg state table init failed: {e}");
         }
-        let mut inc = interval(Duration::from_secs(INCREMENTAL_INTERVAL_SECS));
-        let first_full =
-            Instant::now() + Duration::from_secs(secs_until_next_utc_hour(FULL_REBUILD_HOUR_UTC));
-        let mut full = interval_at(first_full, Duration::from_secs(FULL_REBUILD_INTERVAL_SECS));
-        inc.tick().await;
+        let mut tick = interval(Duration::from_secs(REFRESH_INTERVAL_SECS));
         loop {
-            tokio::select! {
-                _ = inc.tick() => {
-                    for spec in &specs {
-                        if let Err(e) = run_incremental(&ch_client, spec).await {
-                            error!("cohort agg incremental refresh for {} failed: {e}", spec.table);
-                        }
-                    }
-                }
-                _ = full.tick() => {
-                    for spec in &specs {
-                        if let Err(e) = run_full(&ch_client, spec).await {
-                            error!("cohort agg full rebuild for {} failed: {e}", spec.table);
-                        }
-                    }
+            tick.tick().await;
+            for spec in &specs {
+                if let Err(e) = refresh(&ch_client, spec).await {
+                    error!("cohort agg refresh for {} failed: {e}", spec.table);
                 }
             }
         }
