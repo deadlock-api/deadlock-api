@@ -6,11 +6,14 @@ import { HeroImage } from "~/components/HeroImage";
 import { AverageBuildCard } from "~/components/items-page/AverageBuildCard";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import MatchHistoryCard from "~/components/MatchHistoryCard";
+import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { CACHE_DURATIONS } from "~/constants/cache";
+import { day, type Dayjs } from "~/dayjs";
+import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { computeAverageBuild } from "~/lib/average-build";
 import {
@@ -20,6 +23,7 @@ import {
   buildUpgradeChainLookup,
   getHeroAbilityMetadata,
 } from "~/lib/build-transform";
+import { PATCHES } from "~/lib/constants";
 import { useDebouncedState } from "~/lib/utils";
 import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
@@ -50,21 +54,35 @@ export function PlayerHeroBuildsDialog({
   const { data: abilityItems } = useQuery(abilitiesQueryOptions);
   const { data: assetsItems } = useQuery(itemUpgradesQueryOptions);
 
-  // Lets the user pivot the dialog to a different player (same hero) without leaving it.
-  // Reset back to the originating player whenever the dialog is (re)opened or the source account changes.
+  // Lets the user pivot the dialog to a different player (same hero) without leaving it,
+  // and widen/narrow the time window past the range it inherited from the item-stats page.
+  // Reset both back to their originating values whenever the dialog is (re)opened or the source account changes.
+  const inheritedRange = useMemo<{ startDate?: Dayjs; endDate?: Dayjs }>(
+    () => ({
+      startDate: minUnixTimestamp != null ? day.unix(minUnixTimestamp) : undefined,
+      endDate: maxUnixTimestamp != null ? day.unix(maxUnixTimestamp) : undefined,
+    }),
+    [minUnixTimestamp, maxUnixTimestamp],
+  );
   const [overridePlayer, setOverridePlayer] = useState<{ accountId: number; name?: string } | null>(null);
+  const [dateRange, setDateRange] = useState<{ startDate?: Dayjs; endDate?: Dayjs }>(inheritedRange);
   const [sessionKey, setSessionKey] = useState(`${open}:${accountId}`);
   const currentKey = `${open}:${accountId}`;
   if (currentKey !== sessionKey) {
     setSessionKey(currentKey);
     setOverridePlayer(null);
+    setDateRange(inheritedRange);
   }
 
   const effectiveAccountId = overridePlayer?.accountId ?? accountId;
   const effectiveName = overridePlayer?.name ?? playerName;
+  const { minUnixTimestamp: queryMinTimestamp, maxUnixTimestamp: queryMaxTimestamp } = useNormalizedTimeRange(
+    dateRange.startDate,
+    dateRange.endDate,
+  );
 
   const { data: matches, isLoading } = useQuery({
-    queryKey: queryKeys.analytics.playerHeroBuilds(effectiveAccountId ?? 0, heroId, minUnixTimestamp, maxUnixTimestamp),
+    queryKey: queryKeys.analytics.playerHeroBuilds(effectiveAccountId ?? 0, heroId, queryMinTimestamp, queryMaxTimestamp),
     queryFn: async () => {
       const request: MatchesApiBulkMetadataRequest = {
         includeInfo: true,
@@ -73,8 +91,8 @@ export function PlayerHeroBuildsDialog({
         includePlayerInfo: true,
         accountIds: effectiveAccountId != null ? [effectiveAccountId] : undefined,
         heroIds: String(heroId),
-        minUnixTimestamp,
-        maxUnixTimestamp,
+        minUnixTimestamp: queryMinTimestamp ?? undefined,
+        maxUnixTimestamp: queryMaxTimestamp ?? undefined,
         // Exclude Street Brawl (and other non-standard modes) — their builds aren't comparable.
         gameMode: "normal",
         orderBy: "match_id",
@@ -118,6 +136,12 @@ export function PlayerHeroBuildsDialog({
             <span className="text-sm font-normal text-muted-foreground">— recent builds</span>
             <PlayerSearch
               onSelect={(profile) => setOverridePlayer({ accountId: profile.account_id, name: profile.personaname })}
+            />
+            <PatchOrDatePicker
+              patchDates={PATCHES}
+              value={dateRange}
+              onValueChange={({ startDate, endDate }) => setDateRange({ startDate, endDate })}
+              defaultTab="custom"
             />
           </DialogTitle>
           <DialogDescription>

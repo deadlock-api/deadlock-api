@@ -8,3 +8,6 @@ lefthook-local.yml
 .assets-build/
 scripts/.gh_token
 .cache
+__pycache__
+**/playground/**/data/
+website/scripts/playground/fixtures/
