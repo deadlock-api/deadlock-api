@@ -56,8 +56,20 @@ function steamRegionLabel(code: number) {
   return STEAM_REGION_LABELS[code] ?? `R${code}`;
 }
 
+const DEADLOCK_APP_ID = 1422450;
+
+// steam://connect can't carry launch flags. Deadlock requires the client to be
+// started with -allow_no_lobby_connect to direct-connect outside matchmaking;
+// without it Steam cancels the auth ticket (k_EAuthSessionResponseAuthTicketCanceled)
+// ~1s after connecting. The run/<appid>//<args>/ form injects the flag at launch.
+// Caveat: args are only honored on a cold start — if Deadlock is already running
+// Steam just focuses it and ignores them.
+function steamConnectUrl(addr: string) {
+  return `steam://run/${DEADLOCK_APP_ID}//-allow_no_lobby_connect +connect ${addr}/`;
+}
+
 function connectUrl(server: GameServerInfo) {
-  return `steam://connect/${server.ip}:${server.port}`;
+  return steamConnectUrl(`${server.ip}:${server.port}`);
 }
 
 function formatAddress(ip: string, port: number) {
@@ -374,7 +386,7 @@ function SteamServerRow({ server }: { server: SteamServer }) {
       <TableCell className="text-right">
         {isDefaultMap ? (
           <Button asChild size="sm" className="h-8 gap-1">
-            <a href={`steam://connect/${server.addr}`} title={`Connect to ${server.name || server.addr}`}>
+            <a href={steamConnectUrl(server.addr)} title={`Connect to ${server.name || server.addr}`}>
               Connect
               <Plug className="size-3.5" />
             </a>
