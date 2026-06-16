@@ -779,7 +779,7 @@ SETTINGS {settings_clause}
 }
 
 #[cached(
-    ttl = 3600,
+    ttl = 21600,
     convert = "{ query_str.to_string() }",
     sync_writes = "by_key",
     key = "String"
@@ -832,7 +832,7 @@ async fn get_item_stats(
     description = "
 Retrieves item statistics based on historical match data.
 
-Results are cached for **1 hour** based on the unique combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
+Results are cached for **6 hours** based on the unique combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
 
 ### Rate Limits:
 > The rate limits below are **shared across all analytics endpoints**.
