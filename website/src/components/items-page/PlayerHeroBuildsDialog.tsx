@@ -82,7 +82,12 @@ export function PlayerHeroBuildsDialog({
   );
 
   const { data: matches, isLoading } = useQuery({
-    queryKey: queryKeys.analytics.playerHeroBuilds(effectiveAccountId ?? 0, heroId, queryMinTimestamp, queryMaxTimestamp),
+    queryKey: queryKeys.analytics.playerHeroBuilds(
+      effectiveAccountId ?? 0,
+      heroId,
+      queryMinTimestamp,
+      queryMaxTimestamp,
+    ),
     queryFn: async () => {
       const request: MatchesApiBulkMetadataRequest = {
         includeInfo: true,
