@@ -21,8 +21,14 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::{
-    comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
+    comma_separated_chains_deserialize_option, comma_separated_deserialize_option,
+    default_last_month_timestamp, parse_steam_id_option,
 };
+
+/// Maximum number of independent `item_order` chains accepted per request.
+const MAX_ITEM_ORDER_CHAINS: usize = 10;
+/// Maximum number of item ids in a single `item_order` chain.
+const MAX_ITEM_ORDER_LEN: usize = 10;
 
 fn default_min_matches() -> Option<u32> {
     default_min_matches_u32()
@@ -255,6 +261,22 @@ pub(crate) struct ItemStatsQuery {
     min_bought_at_s: Option<u32>,
     /// Filter items bought before this game time (seconds).
     max_bought_at_s: Option<u32>,
+    /// Filter by purchase order. Each value is a comma-separated, ordered list of item
+    /// ids (e.g. `1396247347,3977876567`). This is a *constraint*, not an inclusion
+    /// filter: for each adjacent pair in the list, a match is excluded only when the
+    /// player bought **both** items but bought the later one first. Builds missing
+    /// either item are unaffected. Repeat the parameter for multiple independent
+    /// orderings. See more: <https://api.deadlock-api.com/v1/assets/items>
+    #[param(value_type = Option<Vec<String>>)]
+    #[serde(
+        default,
+        deserialize_with = "comma_separated_chains_deserialize_option"
+    )]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_chains()")
+    )]
+    item_order: Option<Vec<Vec<u32>>>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -327,6 +349,7 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
         || query.max_duration_s.is_some()
         || query.min_bought_at_s.is_some()
         || query.max_bought_at_s.is_some()
+        || query.item_order.as_ref().is_some_and(|v| !v.is_empty())
         || query.min_match_id.is_some()
         || query.max_match_id.is_some();
     if personalized || unsupported_filter {
@@ -489,6 +512,7 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
         || query.max_duration_s.is_some()
         || query.min_bought_at_s.is_some()
         || query.max_bought_at_s.is_some()
+        || query.item_order.as_ref().is_some_and(|v| !v.is_empty())
         || query.min_match_id.is_some()
         || query.max_match_id.is_some()
         || query.min_average_badge.is_some_and(|v| v > 11)
@@ -560,6 +584,67 @@ SETTINGS log_comment = 'item_stats_cohort_mv'
     ))
 }
 
+/// Builds the conditional build-order predicate for a single ordered `chain`, or
+/// `None` for a no-op chain (fewer than 2 ids).
+///
+/// For each adjacent pair `(a, b)` the match is excluded **only** when the player
+/// bought both `a` and `b` and bought `b` before `a`; builds missing either item are
+/// left untouched (this is a constraint, not a presence filter). Ties are lenient:
+/// equal first-purchase times (`<=`) are not treated as a violation. `indexOf` returns
+/// the first occurrence, so the comparison is on each item's *first* purchase time; the
+/// `NOT has(...)` guards make the absent-item case (where `indexOf` is 0) pass.
+fn item_order_predicate(chain: &[u32]) -> Option<String> {
+    if chain.len() < 2 {
+        return None;
+    }
+    let first_buy =
+        |id: u32| format!("arrayElement(items.game_time_s, indexOf(items.item_id, {id}))");
+    let clause = chain
+        .windows(2)
+        .map(|w| {
+            let (a, b) = (w[0], w[1]);
+            format!(
+                "(NOT has(items.item_id, {a}) OR NOT has(items.item_id, {b}) OR {} <= {})",
+                first_buy(a),
+                first_buy(b),
+            )
+        })
+        .join(" AND ");
+    // Each adjacent-pair clause is already parenthesized; AND-joining them yields a
+    // valid predicate element (join_filters AND-joins it with the other filters).
+    Some(clause)
+}
+
+/// Validates `item_order` chains, rejecting degenerate or oversized input with a `400`.
+/// Each chain must list at least two item ids that are not all identical, and both the
+/// chain count and per-chain length are bounded to keep the generated SQL small.
+fn validate_item_order(chains: Option<&[Vec<u32>]>) -> APIResult<()> {
+    let Some(chains) = chains else {
+        return Ok(());
+    };
+    let bad_request = |message: &str| APIError::StatusMsg {
+        status: StatusCode::BAD_REQUEST,
+        message: message.to_string(),
+    };
+    if chains.len() > MAX_ITEM_ORDER_CHAINS {
+        return Err(bad_request("Too many item_order constraints"));
+    }
+    for chain in chains {
+        if chain.len() < 2 {
+            return Err(bad_request("Each item_order must list at least 2 item ids"));
+        }
+        if chain.len() > MAX_ITEM_ORDER_LEN {
+            return Err(bad_request("An item_order chain has too many item ids"));
+        }
+        if chain.iter().all(|&id| id == chain[0]) {
+            return Err(bad_request(
+                "An item_order chain must use distinct item ids",
+            ));
+        }
+    }
+    Ok(())
+}
+
 #[allow(clippy::too_many_lines)]
 fn build_query(query: &ItemStatsQuery) -> String {
     /* ---------- match_info filters ---------- */
@@ -603,6 +688,9 @@ fn build_query(query: &ItemStatsQuery) -> String {
     }
     if let Some(max_bought_at_s) = query.max_bought_at_s {
         player_filters.push(format!("buy_time <= {max_bought_at_s}"));
+    }
+    if let Some(chains) = &query.item_order {
+        player_filters.extend(chains.iter().filter_map(|c| item_order_predicate(c)));
     }
     let player_filters = join_filters(&player_filters);
 
@@ -856,6 +944,7 @@ pub(crate) async fn item_stats(
             message: "Cannot filter by average badge for street brawl game mode".to_string(),
         });
     }
+    validate_item_order(query.item_order.as_deref())?;
     #[allow(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     get_item_stats(&state.ch_client_cached, query)
@@ -886,5 +975,69 @@ mod proptests {
                 assert_valid_sql(&sql);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
+
+    #[test]
+    fn item_order_predicate_is_noop_for_short_chains() {
+        assert!(item_order_predicate(&[]).is_none());
+        assert!(item_order_predicate(&[5]).is_none());
+    }
+
+    #[test]
+    fn item_order_predicate_pair_is_conditional() {
+        // A build missing either item must pass, so the clause is OR-guarded on
+        // presence — never a bare `has(a) AND has(b) AND ...` presence requirement.
+        let pred = item_order_predicate(&[1, 2]).unwrap();
+        assert_eq!(
+            pred,
+            "(NOT has(items.item_id, 1) OR NOT has(items.item_id, 2) OR \
+             arrayElement(items.game_time_s, indexOf(items.item_id, 1)) <= \
+             arrayElement(items.game_time_s, indexOf(items.item_id, 2)))"
+        );
+        assert!(!pred.contains(" AND "));
+    }
+
+    #[test]
+    fn item_order_predicate_chain_ands_adjacent_pairs() {
+        let pred = item_order_predicate(&[1, 2, 3]).unwrap();
+        // Two adjacent pairs (1,2) and (2,3), AND-joined into one clause.
+        assert_eq!(pred.matches(" AND ").count(), 1);
+        for id in [1, 2, 3] {
+            assert!(pred.contains(&format!("indexOf(items.item_id, {id})")));
+        }
+    }
+
+    #[test]
+    fn item_order_predicate_emits_valid_sql() {
+        let pred = item_order_predicate(&[1, 2, 3]).unwrap();
+        assert_valid_sql(&format!("SELECT * FROM match_player WHERE {pred}"));
+    }
+
+    #[test]
+    fn validate_item_order_accepts_valid() {
+        assert!(validate_item_order(None).is_ok());
+        assert!(validate_item_order(Some(&[vec![1, 2]])).is_ok());
+        assert!(validate_item_order(Some(&[vec![1, 2, 3], vec![4, 5]])).is_ok());
+    }
+
+    #[test]
+    fn validate_item_order_rejects_degenerate() {
+        assert!(validate_item_order(Some(&[vec![1]])).is_err()); // too short
+        assert!(validate_item_order(Some(&[vec![]])).is_err()); // empty
+        assert!(validate_item_order(Some(&[vec![7, 7]])).is_err()); // all identical
+    }
+
+    #[test]
+    fn validate_item_order_rejects_oversized() {
+        let too_long: Vec<u32> = (0..=u32::try_from(MAX_ITEM_ORDER_LEN).unwrap() + 1).collect();
+        assert!(validate_item_order(Some(&[too_long])).is_err());
+        let too_many: Vec<Vec<u32>> = (0..=MAX_ITEM_ORDER_CHAINS).map(|_| vec![1, 2]).collect();
+        assert!(validate_item_order(Some(&too_many)).is_err());
     }
 }

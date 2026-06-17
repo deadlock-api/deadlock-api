@@ -872,6 +872,51 @@ async fn test_item_stats(
     }
 }
 
+/// Execution smoke test for the `item_order` filter: the ordering predicate must be
+/// accepted and executed by ClickHouse (not just grammar-valid — the proptests already
+/// cover that), and the two opposite orderings must each return no more matches per
+/// item than the unconstrained query, confirming the constraint only removes builds.
+///
+/// Notes on the fixture: it never populates `match_mode`/`start_time`, so item-stats
+/// queries return zero rows here (the other item-stats cases are vacuous for the same
+/// reason); the invariants below are therefore written to hold for empty results too.
+/// Only the hero path is exercised — the no-hero path needs the `upgrades.*`
+/// materialized columns (migration 30), which this fixture does not define.
+#[tokio::test]
+async fn test_item_stats_item_order_executes() {
+    // Two upgrade item ids that exist in the assets fixture.
+    const A: u32 = 1548066885; // Extended Magazine
+    const B: u32 = 1009965641; // Monster Rounds
+
+    async fn matches_by_item(order: Option<Vec<u32>>) -> std::collections::HashMap<u32, u64> {
+        let mut q = vec![];
+        push_query!(q, "bucket" => "no_bucket");
+        push_query!(q, "hero_ids" =>[] Some(vec![1, 2, 11, 13, 15]));
+        push_query!(q, "min_matches" => 1);
+        push_query!(q, "item_order" =>[] order);
+        let response = request_endpoint("/v1/analytics/item-stats", query_refs(&q)).await;
+        let stats: Vec<ItemStats> = response.json().await.expect("Failed to parse response");
+        stats.into_iter().map(|s| (s.item_id, s.matches)).collect()
+    }
+
+    // Reaching here at all proves the predicate executes (request_endpoint asserts 200).
+    let unconstrained = matches_by_item(None).await;
+    let ab = matches_by_item(Some(vec![A, B])).await;
+    let ba = matches_by_item(Some(vec![B, A])).await;
+
+    // The constraint only ever removes builds: each constrained count is bounded by the
+    // unconstrained count for the same item. (Vacuously true when results are empty.)
+    for (constrained, label) in [(&ab, "A,B"), (&ba, "B,A")] {
+        for (item, &m) in constrained {
+            let unc = unconstrained.get(item).copied().unwrap_or(0);
+            assert!(
+                m <= unc,
+                "item {item}: item_order={label} matches {m} should be <= unconstrained {unc}",
+            );
+        }
+    }
+}
+
 #[rstest]
 #[case(
     1,

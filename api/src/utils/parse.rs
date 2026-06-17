@@ -175,6 +175,57 @@ where
     })
 }
 
+/// Deserializes a repeatable, comma-separated list query parameter into a list of
+/// "chains" (`Vec<Vec<u32>>`). Each occurrence of the parameter is one comma-separated
+/// ordered list, e.g. `item_order=1,2,3` -> `[[1, 2, 3]]` and
+/// `item_order=1,2&item_order=3,4` -> `[[1, 2], [3, 4]]`. Tolerates surrounding
+/// brackets and whitespace like [`comma_separated_deserialize_option`]. Empty input
+/// (and empty chains) collapse away; the result is `None` when nothing remains.
+pub(crate) fn comma_separated_chains_deserialize_option<'de, D>(
+    deserializer: D,
+) -> Result<Option<Vec<Vec<u32>>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum ChainsRaw {
+        /// A single occurrence, e.g. `"1,2,3"`.
+        One(String),
+        /// Multiple occurrences (repeated key) or a string array, e.g. `["1,2", "3,4"]`.
+        Many(Vec<String>),
+    }
+
+    let Some(raw) = Option::<ChainsRaw>::deserialize(deserializer)? else {
+        return Ok(None);
+    };
+    let chain_strs = match raw {
+        ChainsRaw::One(s) => vec![s],
+        ChainsRaw::Many(v) => v,
+    };
+
+    let mut chains = Vec::new();
+    for chain_str in chain_strs {
+        let chain_str = chain_str.replace(['[', ']'], "");
+        let mut chain = Vec::new();
+        for part in chain_str.split(',') {
+            let part = part.trim();
+            if part.is_empty() {
+                continue;
+            }
+            let id = part
+                .parse()
+                .map_err(|_| serde::de::Error::custom("Failed to parse item_order list"))?;
+            chain.push(id);
+        }
+        if !chain.is_empty() {
+            chains.push(chain);
+        }
+    }
+
+    Ok((!chains.is_empty()).then_some(chains))
+}
+
 /// March 1, 2026 00:00:00 UTC — absolute minimum for demo_player-based endpoints.
 pub(crate) const MIN_DEMO_PLAYER_TIMESTAMP: i64 = 1_772_323_200;
 
@@ -339,6 +390,42 @@ mod tests {
     #[case("{\"ids\": \"1,\"2\", 3\"}")] // Mixed numbers and strings, do we want to support this?
     fn test_comma_separated_deserialize_invalid(#[case] json: &str) {
         let result = serde_json::from_str::<CommaSeparatedTestStruct>(json);
+        assert!(result.is_err());
+    }
+
+    #[derive(Deserialize, Debug)]
+    struct ChainsOptionTestStruct {
+        #[serde(
+            default,
+            deserialize_with = "comma_separated_chains_deserialize_option"
+        )]
+        order: Option<Vec<Vec<u32>>>,
+    }
+
+    #[rstest]
+    #[case("{\"order\": \"1,2,3\"}", Some(vec![vec![1, 2, 3]]))] // single chain
+    #[case("{\"order\": [\"1,2\", \"3,4\"]}", Some(vec![vec![1, 2], vec![3, 4]]))] // repeated keys
+    #[case("{\"order\": \"1, 2, 3\"}", Some(vec![vec![1, 2, 3]]))] // spaces
+    #[case("{\"order\": \"[1,2]\"}", Some(vec![vec![1, 2]]))] // brackets
+    #[case("{\"order\": [\"1,2\", \"\"]}", Some(vec![vec![1, 2]]))] // empty chain dropped
+    #[case("{\"order\": \"\"}", None)] // empty string
+    #[case("{\"order\": null}", None)] // null
+    #[case("{\"order\": []}", None)] // empty array
+    #[case("{}", None)] // missing
+    fn test_comma_separated_chains_deserialize_option(
+        #[case] json: &str,
+        #[case] expected: Option<Vec<Vec<u32>>>,
+    ) {
+        let result: ChainsOptionTestStruct = serde_json::from_str(json).unwrap();
+        assert_eq!(result.order, expected);
+    }
+
+    #[rstest]
+    #[case("{\"order\": \"1,x\"}")]
+    #[case("{\"order\": [\"1,2\", \"a\"]}")]
+    #[case("{\"order\": \"1,2,notanumber\"}")]
+    fn test_comma_separated_chains_deserialize_option_invalid(#[case] json: &str) {
+        let result = serde_json::from_str::<ChainsOptionTestStruct>(json);
         assert!(result.is_err());
     }
 

@@ -16,6 +16,16 @@ pub(crate) fn arb_small_u32_list() -> impl Strategy<Value = Option<Vec<u32>>> {
     prop::option::of(prop::collection::vec(any::<u32>(), 0..=4))
 }
 
+/// Bounded strategy for the `item_order` field (`Option<Vec<Vec<u32>>>`): at most a
+/// couple of short chains, so the generated ordering predicates stay small for the
+/// SQL-validity proptests.
+pub(crate) fn arb_small_chains() -> impl Strategy<Value = Option<Vec<Vec<u32>>>> {
+    prop::option::of(prop::collection::vec(
+        prop::collection::vec(any::<u32>(), 0..=3),
+        0..=2,
+    ))
+}
+
 pub(crate) fn assert_valid_sql(sql: &str) {
     if let Err(errors) = validate(sql) {
         let msg = errors
