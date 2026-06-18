@@ -317,7 +317,7 @@ function IndexRoute() {
                     <Link to="/chat" preload="intent" className="font-medium text-primary underline underline-offset-4">
                       AI Coach
                     </Link>
-                    . Every $1/month of your pledge includes one chat message per month.
+                    . Every $0.75/month of your pledge includes one chat message per month.
                   </p>
                 </div>
               </div>
