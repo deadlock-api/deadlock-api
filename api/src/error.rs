@@ -207,7 +207,25 @@ impl IntoResponse for APIError {
             Self::Clickhouse(_) | Self::PostgreSQL(_) | Self::Redis(_) => {
                 Self::internal("Database error.").into_response()
             }
-            Self::Json(_) | Self::Io(_) | Self::Snappy(_) | Self::Fmt(_) => {
+            Self::Io(e) => {
+                let ch_err = clickhouse::error::Error::from(e);
+                let is_timeout = matches!(ch_err, clickhouse::error::Error::TimedOut)
+                    || matches!(&ch_err, clickhouse::error::Error::BadResponse(msg) if msg.contains("TIMEOUT_EXCEEDED"));
+                if is_timeout {
+                    warn!("Database query timed out: {ch_err}");
+                    build_error_response(
+                        StatusCode::GATEWAY_TIMEOUT,
+                        "Query timed out. Try narrowing your filters or reducing the limit.",
+                    )
+                } else {
+                    error!("IO Error: {ch_err}");
+                    build_error_response(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "Internal server error.",
+                    )
+                }
+            }
+            Self::Json(_) | Self::Snappy(_) | Self::Fmt(_) => {
                 Self::internal("Serialization error.").into_response()
             }
         }
