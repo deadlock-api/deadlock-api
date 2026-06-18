@@ -1004,7 +1004,7 @@ mod tests {
     }
 
     #[test]
-    fn item_order_predicate_chain_ands_adjacent_pairs() {
+    fn item_order_predicate_chain_and_adjacent_pairs() {
         let pred = item_order_predicate(&[1, 2, 3]).unwrap();
         // Two adjacent pairs (1,2) and (2,3), AND-joined into one clause.
         assert_eq!(pred.matches(" AND ").count(), 1);

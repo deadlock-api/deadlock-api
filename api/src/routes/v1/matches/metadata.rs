@@ -4,7 +4,6 @@ use async_compression::tokio::bufread::BzDecoder;
 use axum::Json;
 use axum::body::Body;
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use bytes::Bytes;
@@ -180,15 +179,9 @@ async fn fetch_match_metadata_raw(
         }
     }
 
-    if disable_steam {
-        return Err(APIError::status_msg(
-            StatusCode::NOT_FOUND,
-            "Match metadata not found in S3 and Steam fallback is disabled",
-        ));
-    }
-
     // If not in S3, fetch from Steam
-    let salts = fetch_match_salts(state, rate_limit_key, match_id, is_custom, false).await?;
+    let salts =
+        fetch_match_salts(state, rate_limit_key, match_id, is_custom, disable_steam).await?;
     let metadata = state
         .steam_client
         .fetch_metadata_file(match_id, salts)
