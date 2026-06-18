@@ -247,7 +247,7 @@ pub(super) struct BulkMatchMetadataQuery {
 }
 
 /// Prepends `match_player.` to a filter whose leading token is a bare column
-/// name, preventing ClickHouse alias substitution when the same name appears
+/// name, preventing `ClickHouse` alias substitution when the same name appears
 /// as an aggregate alias in the outer SELECT (e.g. `any(match_mode) AS match_mode`
 /// would otherwise shadow `match_mode` in a sibling WHERE clause).
 ///
