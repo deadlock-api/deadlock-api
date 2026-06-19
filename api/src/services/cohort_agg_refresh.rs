@@ -11,10 +11,17 @@ const HORIZON_DAYS: u32 = 65;
 const GROUP_BY_SPILL_BYTES: u64 = 8_000_000_000;
 const PER_DAY_MAX_MEMORY_BYTES: u64 = 15_032_385_536;
 
-/// Persistent watermark of the source data each agg day partition was last built
-/// from. A day is rebuilt only when `match_player` has a newer `max(created_at)`
-/// than what we recorded, which lets us always do targeted incremental work and
-/// never a blind 65-day full rebuild.
+/// A day is rebuilt only once at least this many *new* source matches have landed
+/// in it since the last build. Late backfill trickles a handful of old matches into
+/// nearly every historical day every cycle; without this gate each such day gets a
+/// full ~30-60s rebuild to absorb a few rows. Changes accumulate until they cross
+/// this bar.
+const MIN_NEW_MATCHES: u64 = 10;
+
+/// Persistent record of the source state each agg day partition was last built
+/// from: `max(created_at)` and the match count at build time. A day is rebuilt only
+/// once its source match count has grown by more than `MIN_NEW_MATCHES`, so we do
+/// targeted incremental work and never a blind 65-day full rebuild.
 const STATE_TABLE: &str = "default.cohort_agg_refresh_state";
 
 struct CohortSpec {
@@ -97,6 +104,7 @@ struct DayRow {
 struct WatermarkRow {
     day: String,
     max_created: u32,
+    n_matches: u64,
 }
 
 async fn distinct_days(
@@ -121,22 +129,30 @@ async fn ensure_state_table(
     table_name String,
     day Date,
     source_max_created_at DateTime,
+    source_match_count UInt64 DEFAULT 0,
     refreshed_at DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(refreshed_at)
 ORDER BY (table_name, day)"
         ))
         .execute()
+        .await?;
+    ch_client
+        .query(&format!(
+            "ALTER TABLE {STATE_TABLE} ADD COLUMN IF NOT EXISTS source_match_count UInt64 DEFAULT 0"
+        ))
+        .execute()
         .await
 }
 
-/// Per-day `max(created_at)` in the source over the horizon. Cheap: reads only
-/// `start_time`/`created_at`, no array joins (~0.2s vs ~30s for a day rebuild).
+/// Per-day `max(created_at)` and match count in the source over the horizon. Cheap:
+/// reads only `start_time`/`created_at`/`match_id`, no array joins (~0.2s vs ~30s
+/// for a day rebuild).
 async fn source_watermarks(
     ch_client: &clickhouse::Client,
 ) -> Result<Vec<WatermarkRow>, clickhouse::error::Error> {
     ch_client
         .query(&format!(
-            "SELECT toString(toDate(start_time)) AS day, toUnixTimestamp(max(created_at)) AS max_created
+            "SELECT toString(toDate(start_time)) AS day, toUnixTimestamp(max(created_at)) AS max_created, uniqExact(match_id) AS n_matches
 FROM default.match_player
 WHERE {SOURCE_FILTER}
     AND start_time >= toStartOfDay(now()) - INTERVAL {HORIZON_DAYS} DAY
@@ -146,37 +162,37 @@ GROUP BY day"
         .await
 }
 
-async fn stored_watermarks(
+async fn stored_match_counts(
     ch_client: &clickhouse::Client,
     table: &str,
-) -> Result<HashMap<String, u32>, clickhouse::error::Error> {
+) -> Result<HashMap<String, u64>, clickhouse::error::Error> {
     let rows = ch_client
         .query(&format!(
-            "SELECT toString(day) AS day, toUnixTimestamp(source_max_created_at) AS max_created
+            "SELECT toString(day) AS day, toUnixTimestamp(source_max_created_at) AS max_created, source_match_count AS n_matches
 FROM {STATE_TABLE} FINAL
 WHERE table_name = '{table}'"
         ))
         .fetch_all::<WatermarkRow>()
         .await?;
-    Ok(rows.into_iter().map(|r| (r.day, r.max_created)).collect())
+    Ok(rows.into_iter().map(|r| (r.day, r.n_matches)).collect())
 }
 
 async fn record_watermarks(
     ch_client: &clickhouse::Client,
     table: &str,
-    days: &[(String, u32)],
+    days: &[(String, u32, u64)],
 ) -> Result<(), clickhouse::error::Error> {
     if days.is_empty() {
         return Ok(());
     }
     let values = days
         .iter()
-        .map(|(day, ts)| format!("('{table}', '{day}', toDateTime({ts}), now())"))
+        .map(|(day, ts, n)| format!("('{table}', '{day}', toDateTime({ts}), {n}, now())"))
         .collect::<Vec<_>>()
         .join(", ");
     ch_client
         .query(&format!(
-            "INSERT INTO {STATE_TABLE} (table_name, day, source_max_created_at, refreshed_at) VALUES {values}"
+            "INSERT INTO {STATE_TABLE} (table_name, day, source_max_created_at, source_match_count, refreshed_at) VALUES {values}"
         ))
         .execute()
         .await
@@ -223,18 +239,17 @@ async fn refresh(
 ) -> Result<(), clickhouse::error::Error> {
     let log_comment = format!("{}_refresh", spec.table);
     let source = source_watermarks(ch_client).await?;
-    let stored = stored_watermarks(ch_client, spec.table).await?;
+    let stored = stored_match_counts(ch_client, spec.table).await?;
 
-    let stale: Vec<(String, u32)> = source
+    let stale: Vec<(String, u32, u64)> = source
         .iter()
         .filter(|row| {
-            stored
-                .get(&row.day)
-                .is_none_or(|prev| row.max_created > *prev)
+            let prev = stored.get(&row.day).copied().unwrap_or(0);
+            row.n_matches > prev + MIN_NEW_MATCHES
         })
-        .map(|row| (row.day.clone(), row.max_created))
+        .map(|row| (row.day.clone(), row.max_created, row.n_matches))
         .collect();
-    for (day, _) in &stale {
+    for (day, _, _) in &stale {
         rebuild_day(ch_client, spec, day, &log_comment).await?;
     }
     record_watermarks(ch_client, spec.table, &stale).await?;
