@@ -38,7 +38,7 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: rustup component add rustfmt
       - name: Rustfmt Check
         run: cargo fmt --all -- --check
@@ -50,7 +50,7 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: taiki-e/cache-cargo-install-action@v3
         with:
           tool: cargo-machete
@@ -64,7 +64,7 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: taiki-e/cache-cargo-install-action@v3
         with:
           tool: typos-cli
@@ -78,7 +78,7 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev ${{ inputs.lint-extra-apt-packages }}
       - name: Install Rust toolchain

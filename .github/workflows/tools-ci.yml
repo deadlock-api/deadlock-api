@@ -35,7 +35,7 @@ jobs:
       run:
         working-directory: tools
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Update Rust toolchain
         run: |
           rustup override set stable
@@ -53,7 +53,7 @@ jobs:
       run:
         working-directory: tools
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Update Rust toolchain to stable
         run: |
           rustup override set stable
@@ -70,7 +70,7 @@ jobs:
       run:
         working-directory: tools
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install Protocol Buffers compiler
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
       - name: Cache Rust dependencies
@@ -90,7 +90,7 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup Docker Builder
         uses: useblacksmith/setup-docker-builder@v1
       - name: Login to GitHub Container Registry
@@ -127,7 +127,7 @@ jobs:
           - demo-analyzer
           - friends-rank-fetcher
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Filter changed paths
         id: changes
         uses: dorny/paths-filter@v4
