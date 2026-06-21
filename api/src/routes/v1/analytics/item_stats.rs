@@ -584,6 +584,70 @@ SETTINGS log_comment = 'item_stats_cohort_mv'
     ))
 }
 
+/// Tracing companion to [`build_cohort_mv_query`]: for a single-cohort-item request
+/// that still reached the base table, names the first condition that kept it off the
+/// `item_cohort_stats_*_agg` rollups. `"eligible"` means the rollup was not declined
+/// (so a routed query must have errored and fallen back). Keep the checks in sync with
+/// `build_cohort_mv_query`'s `None` branches; diagnostic only, no effect on results.
+#[allow(deprecated)]
+fn cohort_mv_skip_reason(query: &ItemStatsQuery) -> &'static str {
+    fn nonempty<T>(v: Option<&[T]>) -> bool {
+        v.is_some_and(|v| !v.is_empty())
+    }
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs().cast_signed());
+    let oldest_servable = now - (COHORT_MV_HORIZON_DAYS - MV_ROUTING_MARGIN_DAYS) * 86_400;
+
+    let reasons = [
+        (
+            !matches!(query.include_item_ids.as_deref(), Some([_])),
+            "not_single_item",
+        ),
+        (cohort_mv_bucket(query.bucket).is_none(), "bucket"),
+        (
+            query.hero_id.is_some() || nonempty(query.hero_ids.as_deref()),
+            "hero",
+        ),
+        (
+            query.account_id.is_some() || nonempty(query.account_ids.as_deref()),
+            "account",
+        ),
+        (nonempty(query.enemy_hero_ids.as_deref()), "enemy"),
+        (nonempty(query.exclude_item_ids.as_deref()), "exclude_items"),
+        (
+            query.min_networth.is_some() || query.max_networth.is_some(),
+            "networth",
+        ),
+        (
+            query.min_duration_s.is_some() || query.max_duration_s.is_some(),
+            "duration",
+        ),
+        (
+            query.min_bought_at_s.is_some() || query.max_bought_at_s.is_some(),
+            "bought_at",
+        ),
+        (nonempty(query.item_order.as_deref()), "item_order"),
+        (
+            query.min_match_id.is_some() || query.max_match_id.is_some(),
+            "match_id",
+        ),
+        (query.min_average_badge.is_some_and(|v| v > 11), "badge"),
+        (query.max_average_badge.is_some_and(|v| v < 116), "badge"),
+        (query.min_unix_timestamp.is_none(), "no_min_timestamp"),
+        (
+            query
+                .min_unix_timestamp
+                .is_some_and(|ts| ts < oldest_servable),
+            "horizon",
+        ),
+    ];
+    reasons
+        .into_iter()
+        .find_map(|(hit, reason)| hit.then_some(reason))
+        .unwrap_or("eligible")
+}
+
 /// Builds the conditional build-order predicate for a single ordered `chain`, or
 /// `None` for a no-op chain (fewer than 2 ids).
 ///
@@ -900,6 +964,14 @@ async fn get_item_stats(
             Ok(rows) => return Ok(rows),
             Err(e) => warn!("item_stats cohort MV query failed, falling back to base table: {e}"),
         }
+    } else if matches!(query.include_item_ids.as_deref(), Some([_])) {
+        // Single-item cohort shape that the rollup declined: this is the base-table
+        // full-scan path responsible for the item_stats timeouts. Record why it missed.
+        warn!(
+            reason = cohort_mv_skip_reason(&query),
+            bucket = ?query.bucket,
+            "single-item item_stats cohort query not routed to rollup, using base table"
+        );
     }
     let base_query = build_query(&query);
     debug!(?base_query);
