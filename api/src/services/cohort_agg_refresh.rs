@@ -11,12 +11,22 @@ const HORIZON_DAYS: u32 = 65;
 const GROUP_BY_SPILL_BYTES: u64 = 8_000_000_000;
 const PER_DAY_MAX_MEMORY_BYTES: u64 = 15_032_385_536;
 
-/// A day is rebuilt only once at least this many *new* source matches have landed
-/// in it since the last build. Late backfill trickles a handful of old matches into
-/// nearly every historical day every cycle; without this gate each such day gets a
-/// full ~30-60s rebuild to absorb a few rows. Changes accumulate until they cross
-/// this bar.
+/// Floor on the per-day rebuild threshold, so sparse horizon-edge days still build.
 const MIN_NEW_MATCHES: u64 = 10;
+
+/// A day is rebuilt only once new source matches exceed `1/REBUILD_THRESHOLD_DIVISOR`
+/// of the day's total (≈0.5%), floored at [`MIN_NEW_MATCHES`]. Late backfill trickles
+/// matches into nearly every historical day every cycle; a flat floor made a 40-day-old,
+/// ~57k-match day rebuild ~9x/day to absorb <0.1% churn — full ~30s/6+GiB partition
+/// rebuilds that dominated background DB load. Scaling with day size keeps fresh days
+/// (huge inflow) rebuilding every cycle while old days rebuild only when late arrivals
+/// actually cross ~0.5%, bounding worst-case staleness to that fraction.
+const REBUILD_THRESHOLD_DIVISOR: u64 = 200;
+
+/// New-match count a day must gain since its last build before it is rebuilt.
+fn rebuild_threshold(day_matches: u64) -> u64 {
+    (day_matches / REBUILD_THRESHOLD_DIVISOR).max(MIN_NEW_MATCHES)
+}
 
 /// Persistent record of the source state each agg day partition was last built
 /// from: `max(created_at)` and the match count at build time. A day is rebuilt only
@@ -245,7 +255,7 @@ async fn refresh(
         .iter()
         .filter(|row| {
             let prev = stored.get(&row.day).copied().unwrap_or(0);
-            row.n_matches > prev + MIN_NEW_MATCHES
+            row.n_matches > prev + rebuild_threshold(row.n_matches)
         })
         .map(|row| (row.day.clone(), row.max_created, row.n_matches))
         .collect();
