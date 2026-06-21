@@ -48,6 +48,13 @@ static GAP_PERCENTILE: LazyLock<f64> = LazyLock::new(|| {
     p.clamp(0.0, 1.0)
 });
 
+// When set to a truthy value, the bot skips finding and spectating gap matches,
+// only spectating active matches.
+static DISABLE_GAP_SPECTATING: LazyLock<bool> = LazyLock::new(|| {
+    env::var("DISABLE_GAP_SPECTATING")
+        .is_ok_and(|s| matches!(s.trim().to_lowercase().as_str(), "1" | "true" | "yes"))
+});
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct PoolLimitInfo {
     ready_bots: u32,
@@ -219,8 +226,8 @@ impl SpectatorBot {
 
         // we prioritise from start to max first, then start to min
         // cause the very old matches might be already over and result in KENotInGame Errors
-        let potential_ids = (start..max_id).chain(min_id..start);
-        potential_ids
+        (start..max_id)
+            .chain(min_id..start)
             .filter(|x| !recently_spectated.contains_key(x))
             .filter(|x| !failed_spectating.contains_key(x))
             .filter(|x| !active_set.contains(x))
@@ -454,6 +461,11 @@ impl SpectatorBot {
                 {
                     error!("Failed to spectate match {}: {e:?}", m.match_id);
                 }
+            } else if *DISABLE_GAP_SPECTATING {
+                info!(
+                    "No eligible active matches; gap spectating disabled (spectated: {n_spectated})"
+                );
+                sleep(Duration::from_secs(10)).await;
             } else {
                 let fifteen_min_ago = jiff::Timestamp::now()
                     .checked_sub(15.minutes())?
