@@ -3,9 +3,9 @@
 //! [`schema`] inspects a demo's queryable tables (entities + events) and their columns;
 //! [`query`] runs a SQL query over a demo and streams the result rows back.
 //!
-//! Only [`schema`] is wired to an endpoint so far; the [`query`] path (and the Arrow
-//! batch builders behind it) is kept ready for a future query endpoint, hence the
-//! module-wide `dead_code`/`unused_imports` allowances.
+//! [`schema`] is exposed via the demo schema API; [`query`] is used by the demo-query worker to
+//! execute user-submitted SQL extractions. (The module may still carry allowances for generated/
+//! verbose code.)
 
 mod catalog;
 mod dynamic_builder;
