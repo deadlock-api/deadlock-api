@@ -33,5 +33,5 @@ tokio-util = "0.7.18"
 tracing = "0.1.44"
 tracing-opentelemetry = "0.33"
 tryhard = "0.5.2"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "d4ce19ea77083bdc4db690bbd906659f80f34be4" }
-haste = { git = "https://github.com/deadlock-api/haste.git", rev = "4a91bbfd36a90bb4eb9b215a80fccd59250d5051" }
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "5fd2477e8f0868fb2d75c8a99bed6e336da4f3dd" }
+haste = { git = "https://github.com/deadlock-api/haste.git", rev = "0518c57967b5751bda383ae7249153568d8a00cd", features = ["async"] }

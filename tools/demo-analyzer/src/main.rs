@@ -15,25 +15,24 @@
 
 use core::time::Duration;
 use std::collections::{HashMap, HashSet};
-use std::io::BufReader;
 use std::sync::{Arc, Mutex};
 
 use async_compression::tokio::bufread::BzDecoder;
 use clap::Parser;
 use futures::{StreamExt, TryStreamExt};
+use haste::async_demofile::AsyncDemoFile;
+use haste::parser::AsyncStreamingParser;
 use metrics::{counter, gauge};
 use tokio_util::io::StreamReader;
 use tracing::{debug, error, info, warn};
 
 mod hashes;
 mod models;
-mod streaming_demo;
 mod visitor;
 
 use models::{
     DemoPlayer, MatchUpdate, MatchWithReplay, ObservedSteamName, ObservedSteamNameChange,
 };
-use streaming_demo::StreamingDemoFile;
 use visitor::{DemoAnalyzerVisitor, SharedState, VisitorError};
 
 #[derive(Parser)]
@@ -200,71 +199,24 @@ async fn process_demo(
     debug!(match_id, %url, "Downloading demo");
     let response = http_client.get(&url).send().await?.error_for_status()?;
 
-    // Stream HTTP → bz2 decompress → pipe to sync reader → parser.
-    // Neither compressed nor decompressed data is fully buffered.
+    // Stream HTTP → bz2 decompress → async parser. Nothing is fully buffered.
     let byte_stream = response.bytes_stream().map_err(std::io::Error::other);
     let stream_reader = StreamReader::new(byte_stream);
     let decoder = BzDecoder::new(tokio::io::BufReader::new(stream_reader));
 
-    // Bridge async decompressor → sync reader via an OS pipe.
-    // The parser thread is fully outside the tokio runtime so there's no
-    // "block_on inside runtime" conflict.
-    let (pipe_reader, pipe_writer) = os_pipe::pipe()?;
-
-    // Spawn a task that copies decompressed bytes into the pipe.
-    let copy_handle = tokio::spawn(async move {
-        let mut decoder = decoder;
-        let std_file = std::fs::File::from(std::os::fd::OwnedFd::from(pipe_writer));
-        let mut async_writer = tokio::fs::File::from_std(std_file);
-        tokio::io::copy(&mut decoder, &mut async_writer).await
-    });
-
-    // Parse on a real OS thread (not spawn_blocking) to avoid tokio runtime nesting.
     let state = Arc::new(Mutex::new(SharedState::default()));
-    let state_clone = Arc::clone(&state);
-    debug!(match_id, "Starting parser thread");
-    let parse_handle = std::thread::spawn(move || -> anyhow::Result<()> {
-        let reader = BufReader::new(pipe_reader);
-        let demo_file = StreamingDemoFile::start_reading(reader)?;
-        let visitor = DemoAnalyzerVisitor::new(state_clone, 12);
-        let mut parser = haste::parser::Parser::from_stream_with_visitor(demo_file, visitor)?;
+    debug!(match_id, "Starting parser");
+    let demo_file = AsyncDemoFile::start_reading(decoder).await?;
+    let visitor = DemoAnalyzerVisitor::new(Arc::clone(&state), 12);
+    let mut parser = AsyncStreamingParser::from_stream_with_visitor(demo_file, visitor)?;
 
-        // The visitor's async methods are actually sync (just HashMap ops),
-        // so a minimal single-threaded runtime is fine here.
-        let result = tokio::runtime::Builder::new_current_thread()
-            .build()?
-            .block_on(parser.run_to_end());
-
-        // AllPlayersCollected is the expected early-exit signal, not an error.
-        match result {
-            Ok(()) => Ok(()),
-            Err(e)
-                if e.downcast_ref::<VisitorError>()
-                    .is_some_and(|ve| matches!(ve, VisitorError::AllDataCollected)) =>
-            {
-                Ok(())
-            }
-            Err(e) => Err(e),
-        }
-    });
-
-    // Wait for the parser thread first, then cancel/join the copy task.
-    // When the parser exits early, dropping the pipe_reader causes the copy
-    // task's write to get a broken pipe error, which is expected.
-    let parse_result = parse_handle
-        .join()
-        .map_err(|_| anyhow::anyhow!("parser thread panicked"))?;
-    parse_result?;
-
-    // The copy task may have ended with a broken pipe if the parser exited early.
-    // That's fine — we only care about the parse result.
-    match copy_handle.await? {
-        Ok(_) => {}
-        #[allow(clippy::std_instead_of_core)]
-        Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => {
-            debug!(match_id, "Copy task ended (parser stopped early)");
-        }
-        Err(e) => return Err(e.into()),
+    // AllDataCollected is the expected early-exit signal, not an error.
+    match parser.run_to_end().await {
+        Ok(()) => {}
+        Err(e)
+            if e.downcast_ref::<VisitorError>()
+                .is_some_and(|ve| matches!(ve, VisitorError::AllDataCollected)) => {}
+        Err(e) => return Err(e),
     }
 
     let state = state.lock().map_err(|e| anyhow::anyhow!("{e}"))?;

@@ -6,9 +6,11 @@ use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, HeaderValue, header};
 use axum::response::sse::{Event, KeepAlive};
 use axum::response::{IntoResponse, Sse};
+use bytes::Bytes;
 use futures::{Stream, TryStreamExt};
 use haste::broadcast::BroadcastHttp;
-use haste::parser::Parser;
+use haste::packet_channel_broadcast_stream::PacketChannelBroadcastStream;
+use haste::parser::AsyncStreamingParser;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use strum::VariantArray;
@@ -63,40 +65,48 @@ async fn demo_event_stream(
     broadcast_url: impl Into<String>,
     query: DemoEventsQuery,
 ) -> Result<impl Stream<Item = Result<Event, DemoParseError>>, DemoParseError> {
-    let demo_stream = BroadcastHttp::start_streaming(http_client, broadcast_url).await?;
+    let mut broadcast = BroadcastHttp::start_streaming(http_client, broadcast_url).await?;
     let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel();
     let visitor = SendingVisitor::new(
         sender.clone(),
         query.subscribed_chat_messages.unwrap_or_default(),
         query.subscribed_entities,
     );
-    let mut parser = Parser::from_stream_with_visitor(demo_stream, visitor)?;
+
+    // Async streaming mode has no seeking, so pump broadcast fragments into the parser via a
+    // bounded channel. The bound provides backpressure; dropping the parser closes the channel
+    // and stops the pump.
+    let (packet_tx, packet_rx) = tokio::sync::mpsc::channel::<Bytes>(32);
     tokio::spawn(async move {
         loop {
-            if sender.is_closed() {
-                warn!("Channel closed, ending demo stream");
-                break;
-            }
-            let demo_stream = parser.demo_stream_mut();
-            debug!("Waiting for next packet in demo stream");
-            match demo_stream.next_packet().await {
-                Some(Ok(_)) => {
-                    if let Err(e) = parser.run_to_end().await {
-                        error!("Error while parsing demo stream: {e}");
+            debug!("Waiting for next packet in broadcast stream");
+            match broadcast.next_packet().await {
+                Some(Ok(packet)) => {
+                    if packet_tx.send(packet).await.is_err() {
+                        debug!("Packet receiver dropped, stopping broadcast pump");
                         break;
                     }
                 }
                 Some(Err(err)) => {
-                    error!("Error while parsing demo stream: {err}");
+                    error!("Error while fetching broadcast packet: {err}");
+                    break;
                 }
                 None => {
-                    debug!("Demo stream ended");
-                    if let Err(e) = sender.send(Event::default().event("end").data("end")) {
-                        warn!("Failed to send end event: {e}");
-                    }
+                    debug!("Broadcast stream ended");
                     break;
                 }
             }
+        }
+    });
+
+    let demo_stream = PacketChannelBroadcastStream::new(packet_rx);
+    let mut parser = AsyncStreamingParser::from_stream_with_visitor(demo_stream, visitor)?;
+    tokio::spawn(async move {
+        if let Err(e) = parser.run_to_end().await {
+            error!("Error while parsing demo stream: {e}");
+        }
+        if let Err(e) = sender.send(Event::default().event("end").data("end")) {
+            warn!("Failed to send end event: {e}");
         }
     });
     Ok(try_stream! {
