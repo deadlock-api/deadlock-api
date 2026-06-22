@@ -15,7 +15,7 @@ opentelemetry_sdk = { version = "0.32", features = ["logs", "trace"] }
 opentelemetry-otlp = { version = "0.32", features = ["grpc-tonic", "logs", "trace"] }
 opentelemetry-appender-tracing = { version = "0.32", features = ["experimental_metadata_attributes", "experimental_span_attributes"] }
 tracing-opentelemetry = "0.33"
-redis = { version = "1.2.2", default-features = false, features = ["tokio-comp"] }
+redis = { version = "1.2.4", default-features = false, features = ["tokio-comp"] }
 clickhouse = { version = "0.15.1", features = ["chrono", "uuid"] }
 sqlx = { version = "0.9.0", features = ["chrono", "derive", "postgres", "runtime-tokio", "uuid"] }
 uuid = { version = "1.23.3", features = ["serde", "v4"] }
@@ -30,11 +30,11 @@ object_store = { version = "0.13.2", features = ["aws"], default-features = fals
 tower = { version = "0.5.3", features = ["limit", "tokio"] }
 tower-layer = "0.3.3"
 tower-service = "0.3.3"
-tower-http = { version = "0.6.11", features = ["compression-full", "cors", "decompression-full", "normalize-path", "trace", "limit"] }
+tower-http = { version = "0.7.0", features = ["compression-full", "cors", "decompression-full", "normalize-path", "trace", "limit"] }
 tracing = "0.1.44"
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
 axum-prometheus = "0.10.0"
-itertools = "0.14.0"
+itertools = "0.15.0"
 futures = "0.3.32"
 snap = "1.1.1"
 valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "5fd2477e8f0868fb2d75c8a99bed6e336da4f3dd", features = ["gc-client", "serde"] }
@@ -48,7 +48,7 @@ async-graphql = { version = "7", features = ["chrono", "uuid"] }
 async-graphql-axum = "7"
 # Pinned: 0.24.4/0.24.5 break counter aggregation (counters stop incrementing past 1).
 metrics = "=0.24.3"
-bytes = { version = "1.11.1", features = ["serde"] }
+bytes = { version = "1.12.0", features = ["serde"] }
 thiserror = "2.0.18"
 rand = "0.10.1"
 quick-xml = { version = "0.40.1", features = ["serde", "serialize"] }

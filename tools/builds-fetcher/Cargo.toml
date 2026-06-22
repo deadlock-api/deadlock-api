@@ -12,7 +12,7 @@ rand = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }
 serde_json = { workspace = true }
 sqlx = { workspace = true, features = ["macros", "postgres", "runtime-tokio", "time"] }
-time = "0.3.47"
+time = "0.3.51"
 tokio = { workspace = true }
 tracing = { workspace = true }
 valveprotos = { workspace = true, features = ["gc-client", "serde"] }

@@ -15,7 +15,7 @@ dashmap = "6.2.1"
 fred = { workspace = true }
 haste = { workspace = true }
 itertools = { workspace = true }
-jiff = { version = "0.2.28", features = ["serde"] }
+jiff = { version = "0.2.29", features = ["serde"] }
 lru = "0.18.0"
 metrics = { workspace = true }
 object_store = { workspace = true }
