@@ -65,10 +65,25 @@ fn create_builder_for_type(data_type: &DataType, capacity: usize) -> Box<dyn Arr
         DataType::Utf8 => Box::new(StringBuilder::with_capacity(capacity, capacity * 32)),
         DataType::Binary => Box::new(BinaryBuilder::with_capacity(capacity, capacity * 32)),
         DataType::List(inner) => match inner.data_type() {
+            DataType::Int32 => Box::new(ListBuilder::new(Int32Builder::new())),
             DataType::Int64 => Box::new(ListBuilder::new(Int64Builder::new())),
             DataType::UInt32 => Box::new(ListBuilder::new(UInt32Builder::new())),
+            DataType::UInt64 => Box::new(ListBuilder::new(UInt64Builder::new())),
             DataType::Float32 => Box::new(ListBuilder::new(Float32Builder::new())),
+            DataType::Float64 => Box::new(ListBuilder::new(Float64Builder::new())),
+            DataType::Boolean => Box::new(ListBuilder::new(BooleanBuilder::new())),
             DataType::Utf8 => Box::new(ListBuilder::new(StringBuilder::new())),
+            DataType::Binary => Box::new(ListBuilder::new(BinaryBuilder::new())),
+            DataType::Struct(fields) => {
+                let child_builders: Vec<Box<dyn ArrayBuilder>> = fields
+                    .iter()
+                    .map(|f| create_builder_for_type(f.data_type(), capacity))
+                    .collect();
+                Box::new(ListBuilder::new(StructBuilder::new(
+                    fields.clone(),
+                    child_builders,
+                )))
+            }
             _ => Box::new(ListBuilder::new(Int32Builder::new())),
         },
         DataType::Struct(fields) => {
@@ -107,5 +122,36 @@ mod tests {
         assert!(batch.schema().field_with_name("tick").is_ok());
         assert!(batch.schema().field_with_name("objective_team").is_ok());
         assert!(batch.schema().field_with_name("entity_damaged").is_ok());
+    }
+
+    #[test]
+    fn test_event_batch_builder_list_of_struct() {
+        use valveprotos::deadlock::CCitadelUserMsgRecentDamageSummary;
+        use valveprotos::deadlock::c_citadel_user_msg_recent_damage_summary::{
+            DamageRecord, ModifierRecord,
+        };
+
+        let mut builder = EventBatchBuilder::new(EventType::RecentDamageSummary);
+
+        let msg = CCitadelUserMsgRecentDamageSummary {
+            player_slot: Some(3),
+            damage_records: vec![DamageRecord {
+                damage: Some(50),
+                ..Default::default()
+            }],
+            modifier_records: vec![ModifierRecord {
+                ability_id: Some(7),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let event = DecodedEvent::RecentDamageSummary(msg);
+
+        builder.append(1000, &event);
+
+        let batch = builder.finish().expect("finish should succeed");
+        assert_eq!(batch.num_rows(), 1);
+        assert!(batch.schema().field_with_name("damage_records").is_ok());
+        assert!(batch.schema().field_with_name("modifier_records").is_ok());
     }
 }
