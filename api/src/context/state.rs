@@ -374,7 +374,7 @@ impl AppState {
         let demo_query_queue = crate::routes::v1::matches::demo::DemoQueryQueue::spawn(
             redis_client.clone(),
             demo_extracts_client,
-            config.demo_extracts_public_url.clone(),
+            &config.demo_extracts_public_url,
         );
 
         Ok(Self {
