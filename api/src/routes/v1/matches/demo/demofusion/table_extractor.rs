@@ -73,7 +73,9 @@ fn extract_from_set_expr(expr: &SetExpr, tables: &mut Vec<String>) {
             extract_from_query(query, tables);
         }
         SetExpr::Table(table) => {
-            tables.push(table.table_name.clone().unwrap_or_default());
+            if let Some(name) = &table.table_name {
+                tables.push(name.clone());
+            }
         }
         _ => {}
     }
@@ -175,7 +177,7 @@ mod tests {
              SELECT * FROM ranked",
         )
         .unwrap();
-        // CTE creates a virtual table "ranked", but we extract the source table
+        // The CTE name (`ranked`) is referenced in the outer query, so it is also extracted.
         assert_eq!(tables, vec!["CCitadelPlayerPawn", "ranked"]);
     }
 
