@@ -1,11 +1,11 @@
-use std::sync::Arc;
-
 use datafusion::arrow::array::{
-    ArrayBuilder, ArrayRef, BinaryBuilder, BooleanBuilder, Float32Builder, Float64Builder,
-    Int32Builder, Int64Builder, ListBuilder, RecordBatch, StringBuilder, StructBuilder,
+    ArrayBuilder, ArrayRef, BinaryBuilder, BooleanBuilder, Float16Builder, Float32Builder,
+    Float64Builder, Int8Builder, Int16Builder, Int32Builder, Int64Builder, ListBuilder,
+    NullBuilder, RecordBatch, StringBuilder, StructBuilder, UInt8Builder, UInt16Builder,
     UInt32Builder, UInt64Builder,
 };
 use datafusion::arrow::datatypes::{DataType, Schema, SchemaRef};
+use std::sync::Arc;
 
 use super::events::{DecodedEvent, EventType, append_event_to_builders, event_schema};
 
@@ -65,15 +65,42 @@ fn create_builder_for_type(data_type: &DataType, capacity: usize) -> Box<dyn Arr
         DataType::Utf8 => Box::new(StringBuilder::with_capacity(capacity, capacity * 32)),
         DataType::Binary => Box::new(BinaryBuilder::with_capacity(capacity, capacity * 32)),
         DataType::List(inner) => match inner.data_type() {
-            DataType::Int32 => Box::new(ListBuilder::new(Int32Builder::new())),
-            DataType::Int64 => Box::new(ListBuilder::new(Int64Builder::new())),
+            DataType::Int8 => Box::new(ListBuilder::new(Int8Builder::new())),
+            DataType::Int16 => Box::new(ListBuilder::new(Int16Builder::new())),
+            DataType::Int32
+            | DataType::Date32
+            | DataType::Time32(_)
+            | DataType::List(_)
+            | DataType::ListView(_)
+            | DataType::FixedSizeList(_, _) => Box::new(ListBuilder::new(Int32Builder::new())),
+            DataType::Int64
+            | DataType::Date64
+            | DataType::Timestamp(_, _)
+            | DataType::Time64(_)
+            | DataType::Duration(_)
+            | DataType::Interval(_)
+            | DataType::LargeList(_)
+            | DataType::LargeListView(_) => Box::new(ListBuilder::new(Int64Builder::new())),
+            DataType::UInt8 => Box::new(ListBuilder::new(UInt8Builder::new())),
+            DataType::UInt16 => Box::new(ListBuilder::new(UInt16Builder::new())),
             DataType::UInt32 => Box::new(ListBuilder::new(UInt32Builder::new())),
             DataType::UInt64 => Box::new(ListBuilder::new(UInt64Builder::new())),
-            DataType::Float32 => Box::new(ListBuilder::new(Float32Builder::new())),
-            DataType::Float64 => Box::new(ListBuilder::new(Float64Builder::new())),
+            DataType::Float16 => Box::new(ListBuilder::new(Float16Builder::new())),
+            DataType::Float32 | DataType::Decimal32(_, _) => {
+                Box::new(ListBuilder::new(Float32Builder::new()))
+            }
+            DataType::Float64
+            | DataType::Decimal64(_, _)
+            | DataType::Decimal128(_, _)
+            | DataType::Decimal256(_, _) => Box::new(ListBuilder::new(Float64Builder::new())),
             DataType::Boolean => Box::new(ListBuilder::new(BooleanBuilder::new())),
-            DataType::Utf8 => Box::new(ListBuilder::new(StringBuilder::new())),
-            DataType::Binary => Box::new(ListBuilder::new(BinaryBuilder::new())),
+            DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => {
+                Box::new(ListBuilder::new(StringBuilder::new()))
+            }
+            DataType::Binary
+            | DataType::FixedSizeBinary(_)
+            | DataType::LargeBinary
+            | DataType::BinaryView => Box::new(ListBuilder::new(BinaryBuilder::new())),
             DataType::Struct(fields) => {
                 let child_builders: Vec<Box<dyn ArrayBuilder>> = fields
                     .iter()
@@ -84,7 +111,11 @@ fn create_builder_for_type(data_type: &DataType, capacity: usize) -> Box<dyn Arr
                     child_builders,
                 )))
             }
-            _ => Box::new(ListBuilder::new(Int32Builder::new())),
+            DataType::Null
+            | DataType::Union(_, _)
+            | DataType::Dictionary(_, _)
+            | DataType::Map(_, _)
+            | DataType::RunEndEncoded(_, _) => Box::new(ListBuilder::new(NullBuilder::new())),
         },
         DataType::Struct(fields) => {
             let child_builders: Vec<Box<dyn ArrayBuilder>> = fields
