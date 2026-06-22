@@ -25,7 +25,7 @@ const MAX_QUEUE_DEPTH: usize = 32;
 /// memory, so keep this tiny. Bump only after measuring headroom.
 pub(super) const MAX_CONCURRENT: usize = 1;
 /// Rough per-job duration used purely for the status endpoint's wait estimate.
-pub(super) const AVG_JOB_SECONDS: u64 = 30;
+pub(super) const AVG_JOB_SECONDS: u64 = 20;
 
 pub(crate) struct QueryJob {
     pub(crate) job_id: String,
