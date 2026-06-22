@@ -49,7 +49,7 @@ impl DemoQueryQueue {
     pub(crate) fn spawn(redis: MultiplexedConnection, r2: AmazonS3, public_url: String) -> Self {
         let (tx, mut rx) = mpsc::channel::<QueryJob>(MAX_QUEUE_DEPTH);
         let completed = Arc::new(AtomicU64::new(0));
-        let public_url = Arc::<str>::from(public_url);
+        let public_url = Arc::<str>::from(public_url.trim_end_matches('/').to_owned());
 
         let completed_worker = completed.clone();
         tokio::spawn(async move {
