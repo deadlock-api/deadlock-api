@@ -3,7 +3,7 @@ import { Outlet, createFileRoute, useParams } from "@tanstack/react-router";
 import { Agentation } from "agentation";
 import { type ReactNode, useSyncExternalStore } from "react";
 
-import { ComingSoonTeaser } from "~/components/coach/ComingSoonTeaser";
+import { AiCoachGate } from "~/components/coach/AiCoachGate";
 import { getSessionTree } from "~/lib/coach/client";
 import { useAiAgentAccess } from "~/lib/coach/use-ai-agent-access";
 import { seo } from "~/lib/seo";
@@ -33,11 +33,11 @@ function ChatLayout() {
 
   let content: ReactNode;
   if (sessionId && sessionLoading) {
-    content = <ComingSoonTeaser />;
+    content = <AiCoachGate />;
   } else if (sessionId && sessionTree) {
     content = <Outlet />;
   } else if (accessLoading || !hasAccess) {
-    content = <ComingSoonTeaser />;
+    content = <AiCoachGate />;
   } else {
     content = <Outlet />;
   }

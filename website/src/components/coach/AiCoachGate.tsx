@@ -1,5 +1,6 @@
 import {
   Activity,
+  ArrowRight,
   BarChart3,
   Bot,
   Brain,
@@ -16,7 +17,7 @@ import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { usePatronAuth } from "~/hooks/usePatronAuth";
 
-export function ComingSoonTeaser() {
+export function AiCoachGate() {
   const { isAuthenticated, isLoading, login } = usePatronAuth();
 
   return (
@@ -30,7 +31,7 @@ export function ComingSoonTeaser() {
         <div className="space-y-6 text-center">
           <Badge variant="outline" className="gap-1.5 border-primary/30 bg-primary/5 px-3 py-1 text-primary">
             <Sparkles className="size-3.5" />
-            Coming Soon
+            Patrons Only
           </Badge>
 
           <div className="flex items-center justify-center">
@@ -53,50 +54,60 @@ export function ComingSoonTeaser() {
             </p>
           </div>
 
-          {!isLoading && !isAuthenticated && (
-            <div className="flex flex-col items-center gap-2">
-              <Button
-                onClick={login}
-                size="lg"
-                className="bg-gradient-to-r from-[#fa4454] to-[#ff6b7a] font-semibold text-white hover:from-[#e83d4c] hover:to-[#f05a68]"
-              >
-                <LogIn className="mr-2 size-4" />
-                Login with Patreon
-              </Button>
+          {!isLoading && (
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+                {!isAuthenticated && (
+                  <Button
+                    onClick={login}
+                    size="lg"
+                    className="bg-primary px-8 font-semibold text-primary-foreground hover:bg-primary/90"
+                  >
+                    <LogIn className="mr-2 size-4" />
+                    Sign in with Patreon
+                  </Button>
+                )}
+                <Button size="lg" variant={isAuthenticated ? "default" : "outline"} asChild>
+                  <a href="https://www.patreon.com/c/manuelhexe" target="_blank" rel="noopener noreferrer">
+                    Become a Patron
+                    <ArrowRight className="ml-2 size-4" />
+                  </a>
+                </Button>
+              </div>
               <p className="text-xs text-muted-foreground">
-                The AI Coach is available to patrons pledging $3/month or more.
+                The AI Agent is available to patrons pledging $3/month or more.
               </p>
             </div>
           )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <TeaserCard
+          <FeatureCard
             icon={<MessageSquare className="size-5" />}
             title="Conversational Analysis"
             description="Ask anything about heroes, items, builds, or matchups and get answers grounded in live data."
           />
-          <TeaserCard
+          <FeatureCard
             icon={<BarChart3 className="size-5" />}
             title="Interactive Charts"
             description="Win-rate curves, item timing distributions, and net worth graphs generated on demand."
           />
-          <TeaserCard
+          <FeatureCard
             icon={<Activity className="size-5" />}
             title="Deep Match Analytics"
             description="Lane-by-lane breakdowns, objective control, and team-fight participation pulled per match."
           />
-          <TeaserCard
+          <FeatureCard
             icon={<TrendingUp className="size-5" />}
             title="Meta Trends"
             description="Track how the meta shifts across patches with hero pick rates, item builds, and win deltas."
           />
-          <TeaserCard
+          <FeatureCard
             icon={<Brain className="size-5" />}
             title="Build Recommendations"
             description="Personalized item paths tuned to your hero, role, and the enemy team composition."
           />
-          <TeaserCard
+          <FeatureCard
             icon={<Zap className="size-5" />}
             title="Live Insight"
             description="Powered directly by the public Deadlock API. Every answer is backed by real match data."
@@ -110,12 +121,11 @@ export function ComingSoonTeaser() {
                 <LineChart className="size-5" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-semibold">A preview of what's coming</h3>
+                <h3 className="font-semibold">What you can ask</h3>
                 <p className="text-sm text-muted-foreground">
-                  Imagine asking{" "}
-                  <span className="text-foreground">"How did I play in this match, what were my mistakes?"</span> and
-                  getting a lane-by-lane breakdown, item timing comparisons against the average, and the moments that
-                  decided the game. That's the goal.
+                  Ask <span className="text-foreground">"How did I play in this match, what were my mistakes?"</span>{" "}
+                  and get a lane-by-lane breakdown, item timing comparisons against the average, and the moments that
+                  decided the game.
                 </p>
               </div>
             </div>
@@ -123,14 +133,14 @@ export function ComingSoonTeaser() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
-          Want early access or have feedback on what the agent should answer first? Reach out on Discord.
+          Have feedback on what the agent should answer next? Reach out on Discord.
         </p>
       </div>
     </div>
   );
 }
 
-function TeaserCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
+function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
   return (
     <Card className="group relative overflow-hidden border-border/60 bg-card/50 p-5 backdrop-blur transition hover:border-primary/40 hover:bg-card">
       <div className="space-y-3">
