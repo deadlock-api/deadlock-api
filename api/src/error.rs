@@ -60,6 +60,8 @@ pub(super) enum APIError {
     Fmt(#[from] core::fmt::Error),
     #[error("Snappy Error: {0}")]
     Snappy(#[from] snap::Error),
+    #[error("Object Store Error: {0}")]
+    ObjectStore(#[from] object_store::Error),
 }
 
 impl APIError {
@@ -207,6 +209,7 @@ impl IntoResponse for APIError {
             Self::Clickhouse(_) | Self::PostgreSQL(_) | Self::Redis(_) => {
                 Self::internal("Database error.").into_response()
             }
+            Self::ObjectStore(_) => Self::internal("Object storage error.").into_response(),
             Self::Io(e) => {
                 let ch_err = clickhouse::error::Error::from(e);
                 let is_timeout = matches!(ch_err, clickhouse::error::Error::TimedOut)

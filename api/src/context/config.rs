@@ -69,6 +69,14 @@ impl R2Config {
     }
 }
 
+fn default_demo_extracts_bucket() -> String {
+    "demo-extracts".to_owned()
+}
+
+fn default_demo_extracts_public_url() -> String {
+    "https://demo-extracts.deadlock-api.com".to_owned()
+}
+
 fn default_clickhouse_host() -> String {
     "localhost".to_owned()
 }
@@ -148,6 +156,12 @@ pub(crate) struct Config {
     pub(super) s3: S3Config,
     pub(super) s3_cache: S3Config,
     pub(super) r2: R2Config,
+    /// Public R2 bucket for demo query extracts. Reuses the `R2_*` account credentials.
+    #[serde(default = "default_demo_extracts_bucket")]
+    pub(super) demo_extracts_bucket: String,
+    /// Public base URL the `demo_extracts_bucket` is served from (no trailing slash).
+    #[serde(default = "default_demo_extracts_public_url")]
+    pub(crate) demo_extracts_public_url: String,
     pub(crate) clickhouse: ClickhouseConfig,
     pub(super) postgres: PostgresConfig,
     pub(crate) patreon: PatreonConfig,

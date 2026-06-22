@@ -7,7 +7,7 @@ repository = "https://github.com/deadlock-api/deadlock-api"
 license = "MIT"
 
 [dependencies]
-reqwest = { version = "0.13.4", features = ["json", "http2", "zstd", "gzip", "form"] }
+reqwest = { version = "0.13.4", features = ["json", "http2", "zstd", "gzip", "form", "stream"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "signal"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 opentelemetry = { version = "0.32", features = ["logs", "trace"] }
@@ -37,11 +37,13 @@ axum-prometheus = "0.10.0"
 itertools = "0.15.0"
 futures = "0.3.32"
 snap = "1.1.1"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "5fd2477e8f0868fb2d75c8a99bed6e336da4f3dd", features = ["gc-client", "serde"] }
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "5fd2477e8f0868fb2d75c8a99bed6e336da4f3dd", features = ["gc-client", "serde", "user-msgs", "reflect"] }
 prost = "0.14.4"
 base64 = "0.22.1"
 tryhard = "0.5.2"
 async-compression = { version = "0.4.42", features = ["bzip2", "zstd", "tokio"] }
+bzip2 = "0.6"
+arrow = { version = "58", features = ["json"] }
 strum = { version = "0.28.0", features = ["derive"] }
 axum-extra = { version = "0.12.6", features = ["query"] }
 async-graphql = { version = "7", features = ["chrono", "uuid"] }
@@ -71,6 +73,25 @@ arc-swap = "1.9.1"
 cssparser = "0.37"
 indexmap = { version = "2", features = ["serde"] }
 murmur2 = "0.1.0"
+datafusion = { version = "54", default-features = false, features = [
+    "sql",
+    "parquet",
+    "recursive_protection",
+    "string_expressions",
+    "datetime_expressions",
+    "regex_expressions",
+    "unicode_expressions",
+    "nested_expressions",
+    "crypto_expressions",
+    "encoding_expressions",
+] }
+haste_core = { git = "https://github.com/deadlock-api/haste.git", rev = "7b3382710d3c25ec48ae1c0cc8a6789976f7c18e" }
+rayon = "1"
+tokio-util = { version = "0.7.18", features = ["io"] }
+
+[build-dependencies]
+prost-reflect = "0.16"
+heck = "0.5"
 
 [dev-dependencies]
 clickhouse-sql-parser = { git = "https://github.com/raimannma/clickhouse-antlr4", version = "0.1.0" }
