@@ -67,6 +67,7 @@ pub(crate) struct AppState {
     pub(crate) rank_predictor: Option<Arc<RankPredictor>>,
     pub(crate) steam_search_index: SteamSearchIndex,
     pub(crate) version_store: VersionStore,
+    pub(crate) demo_query_queue: crate::routes::v1::matches::demo::DemoQueryQueue,
 }
 
 impl AppState {
@@ -118,6 +119,25 @@ impl AppState {
         let r2_client = AmazonS3Builder::new()
             .with_region(&config.r2.region)
             .with_bucket_name(&config.r2.bucket)
+            .with_access_key_id(&config.r2.access_key_id)
+            .with_secret_access_key(&config.r2.secret_access_key)
+            .with_endpoint(config.r2.endpoint())
+            .with_retry(RetryConfig {
+                backoff: BackoffConfig {
+                    init_backoff: Duration::from_millis(200),
+                    max_backoff: Duration::from_secs(3),
+                    base: 2.,
+                },
+                max_retries: 3,
+                retry_timeout: Duration::from_secs(5),
+            })
+            .build()?;
+
+        // Create the demo-extracts R2 client (public bucket; reuses the R2 account creds).
+        debug!("Creating demo-extracts R2 client");
+        let demo_extracts_client = AmazonS3Builder::new()
+            .with_region(&config.r2.region)
+            .with_bucket_name(&config.demo_extracts_bucket)
             .with_access_key_id(&config.r2.access_key_id)
             .with_secret_access_key(&config.r2.secret_access_key)
             .with_endpoint(config.r2.endpoint())
@@ -349,6 +369,14 @@ impl AppState {
         debug!("Creating Assets client");
         let assets_client = AssetsClient::new(r2_client.clone(), version_store.clone());
 
+        // Spawn the in-process demo query worker queue.
+        debug!("Starting demo query queue");
+        let demo_query_queue = crate::routes::v1::matches::demo::DemoQueryQueue::spawn(
+            redis_client.clone(),
+            demo_extracts_client,
+            config.demo_extracts_public_url.clone(),
+        );
+
         Ok(Self {
             config,
             s3_client,
@@ -369,6 +397,7 @@ impl AppState {
             rank_predictor,
             steam_search_index,
             version_store,
+            demo_query_queue,
         })
     }
 }

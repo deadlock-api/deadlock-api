@@ -1,6 +1,7 @@
 mod active;
 mod bulk_metadata;
 mod custom;
+pub(crate) mod demo;
 mod ingest_salts;
 mod live_url;
 pub(crate) mod metadata;
@@ -41,4 +42,5 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
                 .layer(CacheControlMiddleware::new(Duration::from_hours(168))),
         )
         .nest("/custom", custom::router())
+        .nest("/demo", demo::router())
 }
