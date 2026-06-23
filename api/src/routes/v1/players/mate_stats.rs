@@ -62,33 +62,34 @@ pub struct MateStats {
 }
 
 fn build_query(account_id: u32, query: &MateStatsQuery, friend_ids: Option<&[u32]>) -> String {
-    let mut history_filters = vec![];
-    history_filters.push(format!("account_id = {account_id}"));
-    history_filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
-    history_filters.push(GameMode::sql_filter(query.game_mode));
+    // The roster table only contains Ranked/Unranked matches, so no match_mode filter is needed.
+    let mut filters = vec![
+        format!("account_id = {account_id}"),
+        GameMode::sql_filter(query.game_mode),
+    ];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        history_filters.push(format!("start_time >= {min_unix_timestamp}"));
+        filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
     if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        history_filters.push(format!("start_time <= {max_unix_timestamp}"));
+        filters.push(format!("start_time <= {max_unix_timestamp}"));
     }
     if let Some(min_match_id) = query.min_match_id {
-        history_filters.push(format!("match_id >= {min_match_id}"));
+        filters.push(format!("match_id >= {min_match_id}"));
     }
     if let Some(max_match_id) = query.max_match_id {
-        history_filters.push(format!("match_id <= {max_match_id}"));
+        filters.push(format!("match_id <= {max_match_id}"));
     }
     if let Some(min_duration_s) = query.min_duration_s {
-        history_filters.push(format!("duration_s >= {min_duration_s}"));
+        filters.push(format!("match_duration_s >= {min_duration_s}"));
     }
     if let Some(max_duration_s) = query.max_duration_s {
-        history_filters.push(format!("duration_s <= {max_duration_s}"));
+        filters.push(format!("match_duration_s <= {max_duration_s}"));
     }
-    let history_filters = if history_filters.is_empty() {
-        String::new()
-    } else {
-        history_filters.join(" AND ")
-    };
+    // The same-party filter restricts mates to the account's Steam friends.
+    if let Some(ids) = friend_ids {
+        filters.push(format!("mate_id IN ({})", in_clause(ids)));
+    }
+    let where_clause = filters.join(" AND ");
 
     let mut having_filters = vec![];
     if let Some(min_matches_played) = query.min_matches_played {
@@ -103,26 +104,19 @@ fn build_query(account_id: u32, query: &MateStatsQuery, friend_ids: Option<&[u32
         format!("HAVING {}", having_filters.join(" AND "))
     };
 
-    let friend_filter = match friend_ids {
-        Some(ids) => format!(" AND account_id IN ({})", in_clause(ids)),
-        None => String::new(),
-    };
-
+    // `won` is the queried account's own result; a mate is on the same team, so it is also the
+    // mate's result -> countIf(won) is the number of matches won together.
     format!(
         "
-        WITH t_histories AS (SELECT match_id, player_team FROM player_match_history WHERE {history_filters})
         SELECT
-            account_id as mate_id,
+            mate_id,
             countIf(won) as wins,
-            uniq(match_id) as matches_played,
-            groupUniqArray(match_id) as matches
-        FROM (
-            SELECT account_id, match_id, won
-            FROM player_match_by_match
-            WHERE (match_id, player_team) IN t_histories AND account_id != {account_id}{friend_filter}
-            LIMIT 1 BY match_id, account_id
-        )
-        GROUP BY account_id
+            count() as matches_played,
+            groupArray(match_id) as matches
+        FROM player_match_roster FINAL
+        ARRAY JOIN mate_ids AS mate_id
+        WHERE {where_clause}
+        GROUP BY mate_id
         {having_clause}
         ORDER BY matches_played DESC
         SETTINGS log_comment = 'mate_stats'

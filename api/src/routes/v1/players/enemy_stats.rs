@@ -54,34 +54,30 @@ pub struct EnemyStats {
 }
 
 fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
-    let mut history_filters = vec![];
-    history_filters.push(format!("account_id = {account_id}"));
-    history_filters.push("player_team IN ('Team0', 'Team1')".to_owned());
-    history_filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
-    history_filters.push(GameMode::sql_filter(query.game_mode));
+    // The roster table only contains Ranked/Unranked matches, so no match_mode filter is needed.
+    let mut filters = vec![
+        format!("account_id = {account_id}"),
+        GameMode::sql_filter(query.game_mode),
+    ];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        history_filters.push(format!("start_time >= {min_unix_timestamp}"));
+        filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
     if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        history_filters.push(format!("start_time <= {max_unix_timestamp}"));
+        filters.push(format!("start_time <= {max_unix_timestamp}"));
     }
     if let Some(min_match_id) = query.min_match_id {
-        history_filters.push(format!("match_id >= {min_match_id}"));
+        filters.push(format!("match_id >= {min_match_id}"));
     }
     if let Some(max_match_id) = query.max_match_id {
-        history_filters.push(format!("match_id <= {max_match_id}"));
+        filters.push(format!("match_id <= {max_match_id}"));
     }
     if let Some(min_duration_s) = query.min_duration_s {
-        history_filters.push(format!("duration_s >= {min_duration_s}"));
+        filters.push(format!("match_duration_s >= {min_duration_s}"));
     }
     if let Some(max_duration_s) = query.max_duration_s {
-        history_filters.push(format!("duration_s <= {max_duration_s}"));
+        filters.push(format!("match_duration_s <= {max_duration_s}"));
     }
-    let history_filters = if history_filters.is_empty() {
-        String::new()
-    } else {
-        history_filters.join(" AND ")
-    };
+    let where_clause = filters.join(" AND ");
     let mut having_filters = vec![];
     if let Some(min_matches_played) = query.min_matches_played {
         having_filters.push(format!("matches_played >= {min_matches_played}"));
@@ -94,26 +90,19 @@ fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
     } else {
         format!("HAVING {}", having_filters.join(" AND "))
     };
+    // `won` is the queried account's own result. An enemy is on the opposite team, so the
+    // account winning is exactly the enemy losing -> countIf(won) = "matches won against the enemy".
     format!(
         "
-    WITH
-        t_matches AS (
-            SELECT match_id, if(player_team = 'Team1', 'Team0', 'Team1') as enemy_team
-            FROM player_match_history
-            WHERE {history_filters}
-        )
     SELECT
-        account_id as enemy_id,
-        countIf(not won) as wins,
-        uniq(match_id) as matches_played,
+        enemy_id,
+        countIf(won) as wins,
+        count() as matches_played,
         groupArray(match_id) as matches
-    FROM (
-        SELECT account_id, match_id, won
-        FROM player_match_by_match
-        WHERE (match_id, player_team) IN t_matches
-        LIMIT 1 BY match_id, account_id
-    )
-    GROUP BY account_id
+    FROM player_match_roster FINAL
+    ARRAY JOIN enemy_ids AS enemy_id
+    WHERE {where_clause}
+    GROUP BY enemy_id
     {having_clause}
     ORDER BY matches_played DESC
     SETTINGS log_comment = 'enemy_stats'
