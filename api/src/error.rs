@@ -203,8 +203,12 @@ impl IntoResponse for APIError {
             Self::Base64Decode(_) => {
                 Self::internal("Failed to decode base64 data. Retrying won't help.").into_response()
             }
-            Self::Request(_) => {
-                Self::internal("A needed request failed. Retry your request later.").into_response()
+            Self::Request(e) => {
+                warn!("Request error: {e}");
+                build_error_response(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "A needed request failed. Retry your request later.",
+                )
             }
             Self::Clickhouse(_) | Self::PostgreSQL(_) | Self::Redis(_) => {
                 Self::internal("Database error.").into_response()

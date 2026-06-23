@@ -1,12 +1,15 @@
 use core::time::Duration;
+use std::sync::LazyLock;
 
 use async_compression::tokio::bufread::BzDecoder;
 use axum::Json;
 use axum::body::Body;
 use axum::extract::{Path, State};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use bytes::Bytes;
+use cached::{Cached, TtlCache};
 use clickhouse::Row;
 use futures::future::join;
 use futures::stream::BoxStream;
@@ -17,7 +20,7 @@ use object_store::{GetResult, ObjectStoreExt};
 use prost::Message;
 use serde::Deserialize;
 use tokio::io::AsyncReadExt;
-use tokio::sync::OnceCell;
+use tokio::sync::{Mutex, OnceCell};
 use tracing::{debug, error};
 use utoipa::IntoParams;
 use valveprotos::deadlock::{
@@ -77,6 +80,19 @@ struct MatchMetadataResponse {
 
 static MIN_MATCH_ID_IN_CACHE: OnceCell<u64> = OnceCell::const_new();
 
+/// Negative cache of match IDs whose metadata fetch from Valve's replay CDN recently failed.
+/// Lets retry storms short-circuit instead of repeatedly re-hitting S3 and the (often
+/// unavailable) CDN for the same match.
+static METADATA_FETCH_FAILURES: LazyLock<Mutex<TtlCache<u64, ()>>> = LazyLock::new(|| {
+    Mutex::new(
+        TtlCache::<u64, ()>::builder()
+            .ttl(Duration::from_mins(1))
+            .capacity(100_000)
+            .build()
+            .expect("ttl is set"),
+    )
+});
+
 async fn min_cache_match_id(ch_client: &clickhouse::Client) -> &u64 {
     MIN_MATCH_ID_IN_CACHE
         .get_or_init(|| async { ch_client
@@ -108,6 +124,18 @@ async fn fetch_match_metadata_raw(
     is_custom: bool,
     disable_steam: bool,
 ) -> APIResult<Vec<u8>> {
+    if METADATA_FETCH_FAILURES
+        .lock()
+        .await
+        .cache_get(&match_id)
+        .is_some()
+    {
+        return Err(APIError::status_msg(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Match metadata recently failed to fetch from upstream. Retry later.",
+        ));
+    }
+
     // Try to fetch from the cache first
     if match_id >= *min_cache_match_id(&state.ch_client).await
         && let Some(s3_cache) = s3_cache
@@ -182,10 +210,17 @@ async fn fetch_match_metadata_raw(
     // If not in S3, fetch from Steam
     let salts =
         fetch_match_salts(state, rate_limit_key, match_id, is_custom, disable_steam).await?;
-    let metadata = state
+    let metadata = match state
         .steam_client
         .fetch_metadata_file(match_id, salts)
-        .await?;
+        .await
+    {
+        Ok(metadata) => metadata,
+        Err(e) => {
+            METADATA_FETCH_FAILURES.lock().await.cache_set(match_id, ());
+            return Err(e.into());
+        }
+    };
 
     // Signal the downloader to retry this match since we know it's fetchable now
     set_force_retry(state, match_id).await;
