@@ -1,12 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client";
+import type { AnalyticsApiGameStatsRequest, GameStatsBucketEnum } from "deadlock_api_client";
 import { ArrowDown, ArrowUp } from "lucide-react";
+import { lazy, Suspense, useState } from "react";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/hover-card";
 import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
 import { CATEGORY_ICONS, formatStatValue, getFilteredCategories } from "./stat-definitions";
+
+const StatTrendChart = lazy(() => import("./StatTrendChart"));
 
 interface GamesOverviewProps {
   params: AnalyticsApiGameStatsRequest;
@@ -16,6 +20,7 @@ interface GamesOverviewProps {
 }
 
 export default function GamesOverview({ params, prevParams, onStatClick, isStreetBrawl = false }: GamesOverviewProps) {
+  const [trendBucket, setTrendBucket] = useState<GameStatsBucketEnum>("start_time_day");
   const { data: currentData, isPending } = useQuery(gameStatsQueryOptions({ ...params, bucket: "no_bucket" }));
   const { data: prevData } = useQuery({
     ...gameStatsQueryOptions({ ...(prevParams as AnalyticsApiGameStatsRequest), bucket: "no_bucket" }),
@@ -98,45 +103,65 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
 
                 return (
                   <div key={stat.key}>
-                    <button
-                      type="button"
-                      className={cn(
-                        "flex w-full items-center justify-between px-4 py-2.5 transition-colors",
-                        "border-b border-white/[0.04]",
-                        !isWide && isLast && !teamWinRow && "border-b-0",
-                        isWide && statIdx >= category.stats.length - 2 && "sm:border-b-0",
-                        isWide && isLast && "border-b-0",
-                        onStatClick && "cursor-pointer hover:bg-white/[0.04]",
-                      )}
-                      onClick={() => onStatClick?.(stat.key)}
-                    >
-                      <span className="text-sm text-muted-foreground">{stat.label}</span>
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-sm font-semibold tabular-nums">
-                          {formatStatValue(value, stat.format)}
-                        </span>
-                        {delta != null && (
-                          <span
-                            className={cn(
-                              "inline-flex min-w-[52px] items-center justify-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs tabular-nums",
-                              delta > 0
-                                ? "bg-green-400/10 text-green-400"
-                                : delta < 0
-                                  ? "bg-red-400/10 text-red-400"
-                                  : "bg-white/[0.04] text-muted-foreground",
+                    <HoverCard openDelay={150} closeDelay={100}>
+                      <HoverCardTrigger asChild>
+                        <button
+                          type="button"
+                          className={cn(
+                            "flex w-full items-center justify-between px-4 py-2.5 transition-colors",
+                            "border-b border-white/[0.04]",
+                            !isWide && isLast && !teamWinRow && "border-b-0",
+                            isWide && statIdx >= category.stats.length - 2 && "sm:border-b-0",
+                            isWide && isLast && "border-b-0",
+                            onStatClick && "cursor-pointer hover:bg-white/[0.04]",
+                          )}
+                          onClick={() => onStatClick?.(stat.key)}
+                        >
+                          <span className="text-sm text-muted-foreground">{stat.label}</span>
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-sm font-semibold tabular-nums">
+                              {formatStatValue(value, stat.format)}
+                            </span>
+                            {delta != null && (
+                              <span
+                                className={cn(
+                                  "inline-flex min-w-[52px] items-center justify-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs tabular-nums",
+                                  delta > 0
+                                    ? "bg-green-400/10 text-green-400"
+                                    : delta < 0
+                                      ? "bg-red-400/10 text-red-400"
+                                      : "bg-white/[0.04] text-muted-foreground",
+                                )}
+                              >
+                                {delta > 0 ? (
+                                  <ArrowUp className="size-3" />
+                                ) : delta < 0 ? (
+                                  <ArrowDown className="size-3" />
+                                ) : null}
+                                {delta > 0 ? "+" : ""}
+                                {(delta * 100).toFixed(1)}%
+                              </span>
                             )}
-                          >
-                            {delta > 0 ? (
-                              <ArrowUp className="size-3" />
-                            ) : delta < 0 ? (
-                              <ArrowDown className="size-3" />
-                            ) : null}
-                            {delta > 0 ? "+" : ""}
-                            {(delta * 100).toFixed(1)}%
-                          </span>
-                        )}
-                      </div>
-                    </button>
+                          </div>
+                        </button>
+                      </HoverCardTrigger>
+                      <HoverCardContent className="w-[28rem] max-w-[90vw]" align="end">
+                        <Suspense
+                          fallback={
+                            <div className="flex h-[250px] items-center justify-center">
+                              <LoadingLogo />
+                            </div>
+                          }
+                        >
+                          <StatTrendChart
+                            params={params}
+                            stat={stat}
+                            bucket={trendBucket}
+                            onBucketChange={setTrendBucket}
+                          />
+                        </Suspense>
+                      </HoverCardContent>
+                    </HoverCard>
                     {teamWinRow}
                   </div>
                 );
