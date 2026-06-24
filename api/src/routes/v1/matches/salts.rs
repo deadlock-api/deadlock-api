@@ -25,8 +25,6 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
 use crate::utils::types::MatchIdQuery;
 
-const FIRST_MATCH_DECEMBER_2024: u64 = 29507576;
-
 pub(crate) struct MatchSaltsReadQuery;
 
 impl BatchQuery for MatchSaltsReadQuery {
@@ -193,13 +191,6 @@ pub(super) async fn fetch_match_salts(
             format!(
                 "Match salts for match {match_id} won't be fetched, as it has metadata already"
             ),
-        ));
-    }
-
-    if match_id < FIRST_MATCH_DECEMBER_2024 {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            format!("Match salts for match {match_id} cannot be fetched"),
         ));
     }
 
