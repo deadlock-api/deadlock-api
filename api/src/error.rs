@@ -150,12 +150,14 @@ impl IntoResponse for APIError {
                         serde_json::to_string(&json!({
                             "status": StatusCode::TOO_MANY_REQUESTS.as_u16(),
                             "error": {
+                                "type": status.limit_type(),
                                 "quota": {
                                     "limit": status.quota.limit,
                                     "period": status.quota.period.as_secs(),
                                 },
                                 "requests": status.requests,
                                 "remaining": status.remaining(),
+                                "next_request_in": status.next_request_in().as_secs(),
                             }
                         }))
                         .unwrap_or_else(|_| "Internal server error".to_owned())

@@ -2,11 +2,11 @@ use core::time::Duration;
 
 use axum::http::HeaderMap;
 use chrono::{DateTime, Utc};
-use strum::EnumIs;
+use strum::{EnumIs, IntoStaticStr};
 
 use crate::error::{APIError, APIResult};
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, EnumIs)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, EnumIs, IntoStaticStr)]
 pub(super) enum QuotaType {
     IP,
     Key,
@@ -58,11 +58,15 @@ impl Status {
         self.quota.limit.saturating_sub(self.requests)
     }
 
+    pub(crate) fn limit_type(&self) -> &'static str {
+        self.quota.r#type.into()
+    }
+
     fn is_exceeded(&self) -> bool {
         self.remaining() == 0
     }
 
-    fn next_request_in(&self) -> Duration {
+    pub(crate) fn next_request_in(&self) -> Duration {
         // If the quota is not exceeded, then there is no need to wait
         if !self.is_exceeded() {
             return Duration::from_millis(0);
