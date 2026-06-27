@@ -56,7 +56,7 @@ export default defineConfig({
       prerender: {
         enabled: true,
         crawlLinks: true,
-        filter: ({ path }) => path !== "/auth" && path !== "/auth/patreon",
+        filter: ({ path }) => path !== "/auth" && path !== "/auth/patreon" && path !== "/servers",
       },
       pages: [{ path: "/" }, { path: "/blog" }, { path: "/sitemap.xml" }, { path: "/sitemap_index.xml" }],
     }),

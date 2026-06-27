@@ -17,6 +17,7 @@ import { seo } from "~/lib/seo";
 import { serversQueryOptions, steamServersQueryOptions } from "~/queries/servers-query";
 
 export const Route = createFileRoute("/servers")({
+  ssr: false,
   component: ServersPage,
   head: () =>
     seo({
