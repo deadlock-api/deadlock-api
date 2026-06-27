@@ -23,7 +23,7 @@ use crate::error::APIResult;
 const MAX_QUEUE_DEPTH: usize = 32;
 /// Concurrent jobs. Each one uses all cores via rayon and holds the full demo in
 /// memory, so keep this tiny. Bump only after measuring headroom.
-pub(super) const MAX_CONCURRENT: usize = 1;
+pub(super) const MAX_CONCURRENT: usize = 4;
 /// Rough per-job duration used purely for the status endpoint's wait estimate.
 pub(super) const AVG_JOB_SECONDS: u64 = 20;
 

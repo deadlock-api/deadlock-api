@@ -60,9 +60,9 @@ Identical `(match_id, query, format)` submissions are deduplicated and reuse a c
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | 5req/h |
-| Key | 50req/h |
-| Global | 100req/h |
+| IP | 20req/h |
+| Key | 200req/h |
+| Global | 400req/h |
 "
 )]
 pub(super) async fn submit(
@@ -83,9 +83,9 @@ pub(super) async fn submit(
             &rate_limit_key,
             "demo_query",
             &[
-                Quota::ip_limit(5, Duration::from_hours(1)),
-                Quota::key_limit(50, Duration::from_hours(1)),
-                Quota::global_limit(100, Duration::from_hours(1)),
+                Quota::ip_limit(20, Duration::from_hours(1)),
+                Quota::key_limit(200, Duration::from_hours(1)),
+                Quota::global_limit(400, Duration::from_hours(1)),
             ],
         )
         .await?;
