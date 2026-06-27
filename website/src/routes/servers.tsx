@@ -12,12 +12,10 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
-import { api } from "~/lib/api";
 import { seo } from "~/lib/seo";
 import { serversQueryOptions, steamServersQueryOptions } from "~/queries/servers-query";
 
 export const Route = createFileRoute("/servers")({
-  ssr: false,
   component: ServersPage,
   head: () =>
     seo({
@@ -26,14 +24,6 @@ export const Route = createFileRoute("/servers")({
         "Browse currently active Deadlock game servers. Filter by region and game mode, then connect directly with one click.",
       path: "/servers",
     }),
-  loader: async () => {
-    try {
-      const response = await api.servers_api.list();
-      return { servers: response.data.servers };
-    } catch {
-      return { servers: [] };
-    }
-  },
 });
 
 const DEFAULT_PORT = 27015;
@@ -99,11 +89,7 @@ function formatSince(timestamp: string | number | Date, now: number) {
 }
 
 function ServersPage() {
-  const { servers: initialServers } = Route.useLoaderData();
-  const { data, isPending, isError, error, dataUpdatedAt } = useQuery({
-    ...serversQueryOptions,
-    initialData: initialServers,
-  });
+  const { data, isPending, isError, error, dataUpdatedAt } = useQuery(serversQueryOptions);
   const showEmptyState = !isPending && !isError;
 
   const [now, setNow] = useState(() => Date.now());
