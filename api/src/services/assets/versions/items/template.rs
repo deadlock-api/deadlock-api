@@ -262,8 +262,11 @@ async fn resolve_inline_attribute(ctx: &TemplateCtx<'_>, css_class: &str) -> Str
         .base_styles_css
         .find_base_styles(&format!(".InlineAttributeIcon.{css_class}"));
 
-    // The game CSS maps DamageAmp to `images/damage.psd`, which doesn't exist
-    // in the assets bucket. Point it at the crit-damage property icon instead.
+    // The game CSS maps DamageAmp to a bare `images/damage_psd.vtex`. That path
+    // hits the `parse_img_path` quirk that skips the `.psd`->`.png` rewrite, so
+    // it resolves to `images/damage.psd` (never uploaded) instead of the real
+    // `images/damage.png`. Use the themeable crit-damage property SVG instead,
+    // matching how the other inline-attribute icons render with a wash color.
     let (bg, svg_name_override): (Option<String>, Option<&str>) = match css_class {
         "DamageAmp" => {
             let name = "icons/properties/damage_crit_color.svg";
