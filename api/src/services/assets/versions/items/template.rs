@@ -11,7 +11,7 @@ use regex::Regex;
 
 use crate::services::assets::versions::items::css_lookup::CssIndex;
 use crate::services::assets::versions::items::paths::{
-    parse_img_path, pascal_case_to_snake_case, prettify_pascal_case,
+    SVGS_BASE_URL, parse_img_path, pascal_case_to_snake_case, prettify_pascal_case,
 };
 use indexmap::IndexMap;
 
@@ -261,11 +261,21 @@ async fn resolve_inline_attribute(ctx: &TemplateCtx<'_>, css_class: &str) -> Str
     let (bg_raw, wash) = ctx
         .base_styles_css
         .find_base_styles(&format!(".InlineAttributeIcon.{css_class}"));
-    let bg = parse_img_path(bg_raw.as_deref());
+
+    // The game CSS maps DamageAmp to `images/damage.psd`, which doesn't exist
+    // in the assets bucket. Point it at the crit-damage property icon instead.
+    let (bg, svg_name_override): (Option<String>, Option<&str>) = match css_class {
+        "DamageAmp" => {
+            let name = "icons/properties/damage_crit_color.svg";
+            (Some(format!("{SVGS_BASE_URL}/{name}")), Some(name))
+        }
+        _ => (parse_img_path(bg_raw.as_deref()), None),
+    };
 
     let img_tag = match bg.as_deref() {
         Some(bg_url) if bg_url.ends_with(".svg") => {
-            let svg_name = bg_url.rsplit('/').next().unwrap_or(bg_url);
+            let svg_name =
+                svg_name_override.unwrap_or_else(|| bg_url.rsplit('/').next().unwrap_or(bg_url));
             if let Some(svg) = fetch_svg(svg_name).await.as_ref().clone() {
                 add_fill_to_svg(&svg, wash.as_deref())
             } else if wash.is_some() {
