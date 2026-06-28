@@ -1458,6 +1458,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -1469,6 +1477,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -3023,6 +3039,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 1.0
@@ -3034,6 +3058,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -4593,6 +4625,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -4604,6 +4644,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -6158,6 +6206,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.49
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 1.0
@@ -6169,6 +6225,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.7
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -7723,6 +7787,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.49
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 1.5
@@ -7734,6 +7806,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.7
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -9293,6 +9373,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -9304,6 +9392,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -10858,6 +10954,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -10869,6 +10973,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -12423,6 +12535,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.43
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 1.0
@@ -12434,6 +12554,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.62
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -13989,6 +14117,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.49
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 1.75
@@ -14000,6 +14136,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.7
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -15555,6 +15699,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.49
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 1.0
@@ -15566,6 +15718,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.7
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -17125,6 +17285,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.43
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -17136,6 +17304,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.62
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -18690,6 +18866,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.43
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -18701,6 +18885,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.62
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -20255,6 +20447,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.49
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.5
@@ -20266,6 +20466,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.7
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -21820,6 +22028,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.43
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -21831,6 +22047,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.62
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -23395,6 +23619,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.43
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 1.5
@@ -23406,6 +23638,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.62
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -24961,6 +25201,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.49
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 1.0
@@ -24972,6 +25220,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.7
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -26527,6 +26783,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.49
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -26538,6 +26802,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.7
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -28092,6 +28364,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.43
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -28103,6 +28383,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.62
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -29636,6 +29924,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -29647,6 +29943,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -31206,6 +31510,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -31217,6 +31529,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -32777,6 +33097,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 1.0
@@ -32788,6 +33116,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -34342,6 +34678,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -34353,6 +34697,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -35912,6 +36264,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -35923,6 +36283,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -37450,6 +37818,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -37461,6 +37837,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -38984,6 +39368,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -38995,6 +39387,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -40518,6 +40918,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -40529,6 +40937,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -42066,6 +42482,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -42077,6 +42501,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -43600,6 +44032,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -43611,6 +44051,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -45161,6 +45609,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 1.0
@@ -45172,6 +45628,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -46703,6 +47167,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -46714,6 +47186,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -48264,6 +48744,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 1.5
@@ -48275,6 +48763,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -49813,6 +50309,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -49824,6 +50328,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -51347,6 +51859,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -51358,6 +51878,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -52874,6 +53402,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -52885,6 +53421,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -54401,6 +54945,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -54412,6 +54964,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -55967,6 +56527,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -55978,6 +56546,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -57512,6 +58088,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -57523,6 +58107,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -59079,6 +59671,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -59090,6 +59690,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -60628,6 +61236,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -60639,6 +61255,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -62175,6 +62799,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -62186,6 +62818,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -63734,6 +64374,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.43
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -63745,6 +64393,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.62
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -65297,6 +65953,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 3.5
@@ -65308,6 +65972,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -66869,6 +67541,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.49
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -66880,6 +67560,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.7
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -68437,6 +69125,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.49
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 1.5
@@ -68448,6 +69144,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.7
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -70009,6 +70713,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.49
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -70020,6 +70732,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.7
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -71554,6 +72274,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -71565,6 +72293,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -73113,6 +73849,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.43
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 1.0
@@ -73124,6 +73868,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.62
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -74659,6 +75411,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -74670,6 +75430,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -76204,6 +76972,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -76215,6 +76991,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -77762,6 +78546,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.5
@@ -77773,6 +78565,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -79303,6 +80103,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -79314,6 +80122,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -80845,6 +81661,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -80856,6 +81680,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -82396,6 +83228,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -82407,6 +83247,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -83959,6 +84807,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 1.0
@@ -83970,6 +84826,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -85522,6 +86386,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 1.0
@@ -85533,6 +86405,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -87068,6 +87948,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -87079,6 +87967,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -88625,6 +89521,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.49
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -88636,6 +89540,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -90188,6 +91100,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.5
@@ -90199,6 +91119,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -91752,6 +92680,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.43
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 1.0
@@ -91763,6 +92699,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.62
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -93283,6 +94227,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.47
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -93294,6 +94246,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.68
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
@@ -94832,6 +95792,14 @@ expression: heroes
         "display_stat_name": "EAbilityResourceRegenPerSecond",
         "value": 0
       },
+      "air_dash_distance_in_meters": {
+        "display_stat_name": "EAirDashDistanceInMeters",
+        "value": 8.0
+      },
+      "air_dash_duration": {
+        "display_stat_name": "EAirDashDuration",
+        "value": 0.43
+      },
       "base_health_regen": {
         "display_stat_name": "EBaseHealthRegen",
         "value": 2.0
@@ -94843,6 +95811,14 @@ expression: heroes
       "crouch_speed": {
         "display_stat_name": "ECrouchSpeed",
         "value": 4.75
+      },
+      "ground_dash_distance_in_meters": {
+        "display_stat_name": "EGroundDashDistanceInMeters",
+        "value": 10.0
+      },
+      "ground_dash_duration": {
+        "display_stat_name": "EGroundDashDuration",
+        "value": 0.62
       },
       "heavy_melee_damage": {
         "display_stat_name": "EHeavyMeleeDamage",
