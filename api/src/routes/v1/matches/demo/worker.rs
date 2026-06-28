@@ -13,7 +13,7 @@ use object_store::aws::AmazonS3;
 use object_store::path::Path;
 use redis::aio::MultiplexedConnection;
 use tokio::sync::{Semaphore, mpsc};
-use tracing::error;
+use tracing::{error, info};
 
 use super::job::{JobRecord, JobStatus, store as store_job};
 use super::{OutputFormat, download, format};
@@ -25,7 +25,7 @@ const MAX_QUEUE_DEPTH: usize = 32;
 /// memory, so keep this tiny. Bump only after measuring headroom.
 pub(super) const MAX_CONCURRENT: usize = 4;
 /// Rough per-job duration used purely for the status endpoint's wait estimate.
-pub(super) const AVG_JOB_SECONDS: u64 = 20;
+pub(super) const AVG_JOB_SECONDS: u64 = 55;
 
 pub(crate) struct QueryJob {
     pub(crate) job_id: String,
@@ -110,13 +110,23 @@ impl QuerySlot {
 }
 
 async fn run_job(mut redis: MultiplexedConnection, r2: &AmazonS3, public_url: &str, job: QueryJob) {
+    info!(
+        job_id = %job.job_id,
+        match_id = job.match_id,
+        format = job.format.extension(),
+        query = %job.sql,
+        "Running demo query job"
+    );
+
+    let running_since = chrono::Utc::now().timestamp();
     let mut record = JobRecord {
         status: JobStatus::Running,
         match_id: job.match_id,
         format: job.format,
         queue_ticket: job.queue_ticket,
         enqueued_at: job.enqueued_at,
-        running_since: Some(chrono::Utc::now().timestamp()),
+        running_since: Some(running_since),
+        completed_at: None,
         result_url: None,
         error: None,
     };
@@ -135,6 +145,16 @@ async fn run_job(mut redis: MultiplexedConnection, r2: &AmazonS3, public_url: &s
             record.error = Some(e.to_string());
         }
     }
+
+    let completed_at = chrono::Utc::now().timestamp();
+    record.completed_at = Some(completed_at);
+    info!(
+        job_id = %job.job_id,
+        match_id = job.match_id,
+        status = ?record.status,
+        duration_secs = completed_at.saturating_sub(running_since),
+        "Finished demo query job"
+    );
 
     if let Err(e) = store_job(&mut redis, &job.job_id, &record).await {
         error!("Failed to store demo query job {} result: {e}", job.job_id);

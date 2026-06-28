@@ -31,6 +31,8 @@ pub(crate) struct JobRecord {
     pub(crate) enqueued_at: i64,
     /// Unix seconds the worker started processing, once it has.
     pub(crate) running_since: Option<i64>,
+    /// Unix seconds the job finished (done or failed), once it has.
+    pub(crate) completed_at: Option<i64>,
     pub(crate) result_url: Option<String>,
     pub(crate) error: Option<String>,
 }

@@ -51,7 +51,7 @@ pub(super) struct DemoQueryJobResponse {
     summary = "Demo Query",
     description = "
 Submit a SQL query against a match's demo file. The work (download + decompress + parse +
-query) takes ~12s, so this is asynchronous: the endpoint returns a `job_id` you poll via
+query) takes ~55s, so this is asynchronous: the endpoint returns a `job_id` you poll via
 `/demo/query/{job_id}`. Once done, the status response carries a public URL to the result
 artifact (Parquet or NDJSON).
 
@@ -137,6 +137,7 @@ pub(super) async fn submit(
         queue_ticket: slot.ticket,
         enqueued_at,
         running_since: None,
+        completed_at: None,
         result_url: None,
         error: None,
     };
