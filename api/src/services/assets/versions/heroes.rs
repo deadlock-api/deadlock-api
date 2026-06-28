@@ -66,14 +66,14 @@ struct RawStartingStats {
     e_tech_range: f64,
     #[serde(default, rename = "EBulletArmorDamageReduction")]
     e_bullet_armor_damage_reduction: Option<f64>,
-    #[serde(rename = "EGroundDashDistanceInMeters")]
-    e_ground_dash_distance_in_meters: f64,
-    #[serde(rename = "EGroundDashDuration")]
-    e_ground_dash_duration: f64,
-    #[serde(rename = "EAirDashDistanceInMeters")]
-    e_air_dash_distance_in_meters: f64,
-    #[serde(rename = "EAirDashDuration")]
-    e_air_dash_duration: f64,
+    #[serde(default, rename = "EGroundDashDistanceInMeters")]
+    e_ground_dash_distance_in_meters: Option<f64>,
+    #[serde(default, rename = "EGroundDashDuration")]
+    e_ground_dash_duration: Option<f64>,
+    #[serde(default, rename = "EAirDashDistanceInMeters")]
+    e_air_dash_distance_in_meters: Option<f64>,
+    #[serde(default, rename = "EAirDashDuration")]
+    e_air_dash_duration: Option<f64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -564,10 +564,14 @@ pub(crate) struct StartingStats {
     pub tech_range: StartingStat,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bullet_armor_damage_reduction: Option<StartingStat>,
-    pub ground_dash_distance_in_meters: StartingStat,
-    pub ground_dash_duration: StartingStat,
-    pub air_dash_distance_in_meters: StartingStat,
-    pub air_dash_duration: StartingStat,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ground_dash_distance_in_meters: Option<StartingStat>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ground_dash_duration: Option<StartingStat>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub air_dash_distance_in_meters: Option<StartingStat>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub air_dash_duration: Option<StartingStat>,
 }
 
 #[derive(Debug, Serialize, Clone, ToSchema)]
@@ -931,18 +935,18 @@ fn build_starting_stats(s: &RawStartingStats) -> StartingStats {
         bullet_armor_damage_reduction: s
             .e_bullet_armor_damage_reduction
             .map(|v| mk!(v, "EBulletArmorDamageReduction", float)),
-        ground_dash_distance_in_meters: mk!(
-            s.e_ground_dash_distance_in_meters,
-            "EGroundDashDistanceInMeters",
-            float
-        ),
-        ground_dash_duration: mk!(s.e_ground_dash_duration, "EGroundDashDuration", float),
-        air_dash_distance_in_meters: mk!(
-            s.e_air_dash_distance_in_meters,
-            "EAirDashDistanceInMeters",
-            float
-        ),
-        air_dash_duration: mk!(s.e_air_dash_duration, "EAirDashDuration", float),
+        ground_dash_distance_in_meters: s
+            .e_ground_dash_distance_in_meters
+            .map(|v| mk!(v, "EGroundDashDistanceInMeters", float)),
+        ground_dash_duration: s
+            .e_ground_dash_duration
+            .map(|v| mk!(v, "EGroundDashDuration", float)),
+        air_dash_distance_in_meters: s
+            .e_air_dash_distance_in_meters
+            .map(|v| mk!(v, "EAirDashDistanceInMeters", float)),
+        air_dash_duration: s
+            .e_air_dash_duration
+            .map(|v| mk!(v, "EAirDashDuration", float)),
     }
 }
 
