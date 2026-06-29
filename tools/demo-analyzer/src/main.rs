@@ -157,7 +157,7 @@ async fn fetch_pending_matches(
                    AND cluster_id IS NOT NULL AND cluster_id > 0 \
              ) ms \
              INNER JOIN ( \
-                 SELECT match_id, any(start_time) AS start_time \
+                 SELECT match_id, any(start_time) AS start_time, max(demo_processed) AS demo_processed \
                  FROM match_player \
                  WHERE match_id IN ( \
                      SELECT match_id FROM match_salts FINAL \
@@ -168,9 +168,7 @@ async fn fetch_pending_matches(
                  AND game_mode = 'Normal' \
                  GROUP BY match_id \
              ) mp ON mp.match_id = ms.match_id \
-             WHERE ms.match_id NOT IN ( \
-                 SELECT match_id FROM match_player WHERE demo_processed = 1 \
-             ) \
+             WHERE mp.demo_processed = 0 \
              ORDER BY ms.match_id DESC \
              LIMIT 1000 \
              SETTINGS log_comment = 'demo_analyzer_fetch_pending_matches'",
