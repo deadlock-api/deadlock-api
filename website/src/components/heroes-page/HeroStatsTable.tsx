@@ -84,7 +84,7 @@ export function HeroStatsTable({
 }) {
   const [activeSortKey, setActiveSortKey] = useState<SortKey>("winrate");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [pickRateMode, setPickRateMode] = useState<"pickRate" | "presence">("presence");
+  const [pickRateMode, setPickRateMode] = useState<"pickRate" | "banRate" | "presence">("presence");
 
   const handleSort = (key: SortKey) => {
     if (key === activeSortKey) {
@@ -332,7 +332,19 @@ export function HeroStatsTable({
     return { presenceMap: map, minPresence: minP, maxPresence: maxP };
   }, [heroData, sumMatches, pickrateMultiplier, banStatsMap]);
 
+  const { minBanRate, maxBanRate } = useMemo(() => {
+    if (banStatsMap.size === 0) return { minBanRate: 0, maxBanRate: 0 };
+    let minB = Infinity;
+    let maxB = -Infinity;
+    for (const rate of banStatsMap.values()) {
+      if (rate < minB) minB = rate;
+      if (rate > maxB) maxB = rate;
+    }
+    return { minBanRate: minB, maxBanRate: maxB };
+  }, [banStatsMap]);
+
   const showPresence = pickRateMode === "presence" && banStatsMap.size > 0;
+  const showBanRate = pickRateMode === "banRate" && banStatsMap.size > 0;
   const sortedData = useMemo(() => {
     if (!heroData) return heroData;
     const dir = sortDir === "desc" ? 1 : -1;
@@ -357,6 +369,8 @@ export function HeroStatsTable({
         case "pickRate":
           if (showPresence) {
             diff = (presenceMap.get(b.hero_id) ?? 0) - (presenceMap.get(a.hero_id) ?? 0);
+          } else if (showBanRate) {
+            diff = (banStatsMap.get(b.hero_id) ?? 0) - (banStatsMap.get(a.hero_id) ?? 0);
           } else {
             diff = b.matches - a.matches;
           }
@@ -367,7 +381,18 @@ export function HeroStatsTable({
       }
       return diff * dir;
     });
-  }, [heroData, activeSortKey, sortDir, heroNameMap, zScoreMap, residualMap, banStatsMap, presenceMap, showPresence]);
+  }, [
+    heroData,
+    activeSortKey,
+    sortDir,
+    heroNameMap,
+    zScoreMap,
+    residualMap,
+    banStatsMap,
+    presenceMap,
+    showPresence,
+    showBanRate,
+  ]);
   const limitedData = useMemo(() => (limit ? sortedData?.slice(0, limit) : sortedData), [sortedData, limit]);
 
   const groupedData = useMemo(() => {
@@ -528,6 +553,18 @@ export function HeroStatsTable({
                     type="button"
                     className={cn(
                       "cursor-pointer rounded-sm px-2 py-0.5 transition-colors",
+                      showBanRate
+                        ? "bg-muted font-semibold text-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                    onClick={() => setPickRateMode("banRate")}
+                  >
+                    Ban Rate
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      "cursor-pointer rounded-sm px-2 py-0.5 transition-colors",
                       showPresence
                         ? "bg-muted font-semibold text-foreground"
                         : "text-muted-foreground hover:text-foreground",
@@ -544,7 +581,7 @@ export function HeroStatsTable({
                 type="button"
                 className="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
                 onClick={() => handleSort("pickRate")}
-                aria-label={`Sort by ${showPresence ? "presence" : "pick rate"}`}
+                aria-label={`Sort by ${showPresence ? "presence" : showBanRate ? "ban rate" : "pick rate"}`}
               >
                 {activeSortKey === "pickRate" ? (
                   sortDir === "desc" ? (
@@ -723,6 +760,35 @@ export function HeroStatsTable({
                         <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">Previous</span>
                           <span className="font-medium">{(prev.presence * 100).toFixed(2)}%</span>
+                        </div>
+                      )}
+                    </div>
+                  }
+                />
+              );
+            })()
+          ) : showBanRate ? (
+            (() => {
+              const banRate = banStatsMap.get(row.hero_id) ?? 0;
+              const prev = prevStatsMap?.get(row.hero_id);
+              return (
+                <ProgressBarWithLabel
+                  min={minBanRate}
+                  max={maxBanRate}
+                  value={banRate}
+                  color={"#f97316"}
+                  label={`${(banRate * 100).toFixed(1)}% `}
+                  delta={prev !== undefined ? banRate - prev.banrate : undefined}
+                  tooltip={
+                    <div className="flex flex-col gap-1 text-xs">
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Ban rate</span>
+                        <span className="font-medium">{(banRate * 100).toFixed(2)}%</span>
+                      </div>
+                      {prev !== undefined && (
+                        <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
+                          <span className="text-muted-foreground">Previous</span>
+                          <span className="font-medium">{(prev.banrate * 100).toFixed(2)}%</span>
                         </div>
                       )}
                     </div>
@@ -938,7 +1004,20 @@ export function HeroStatsTable({
                     </div>
                   )}
                   {columns.includes("pickRate") &&
-                    (showPresence ? (
+                    (showBanRate ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-muted-foreground">Ban Rate:</span>
+                        <span className="font-semibold">{(group.banRate * 100).toFixed(1)}%</span>
+                        {banRateDelta !== undefined && banRateDelta !== 0 && (
+                          <span
+                            className={cn("text-xs font-medium", banRateDelta > 0 ? "text-red-500" : "text-green-500")}
+                          >
+                            {banRateDelta > 0 ? "+" : ""}
+                            {(banRateDelta * 100).toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
+                    ) : showPresence ? (
                       (() => {
                         const presence = group.pickrate + group.banRate;
                         const prevPresence =
