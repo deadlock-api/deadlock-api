@@ -182,7 +182,13 @@ impl AppState {
             .with_setting("max_threads", "16")
             .with_setting("max_execution_time", "20")
             .with_setting("enable_named_columns_in_function_tuple", "1")
-            .with_setting("do_not_merge_across_partitions_select_final", "1");
+            .with_setting("do_not_merge_across_partitions_select_final", "1")
+            // Cap per-query memory below the server profile default (40 GiB) so a single
+            // heavy analytics query cannot, when several overlap, push total RSS into the
+            // ~85 GiB server ceiling and trigger overcommit kills of unrelated queries.
+            // 25 GiB clears the largest legitimate refresh (~19 GiB) with headroom; spilling
+            // is already enabled server-side (max_bytes_before_external_group_by/sort = 20 GiB).
+            .with_setting("max_memory_usage", "26843545600");
         if let Err(e) = ch_client
             .query("SELECT 1 SETTINGS log_comment = 'startup_health_check'")
             .fetch_one::<u8>()
@@ -216,6 +222,7 @@ impl AppState {
             .with_setting("max_execution_time", "20")
             .with_setting("enable_named_columns_in_function_tuple", "1")
             .with_setting("do_not_merge_across_partitions_select_final", "1")
+            .with_setting("max_memory_usage", "26843545600")
             .with_setting("readonly", "2")
             .with_setting("allow_ddl", "0")
             .with_setting("allow_introspection_functions", "0");
@@ -253,7 +260,8 @@ impl AppState {
             .with_user(&config.clickhouse.restricted_username)
             .with_password(&config.clickhouse.restricted_password)
             .with_database(&config.clickhouse.dbname)
-            .with_setting("allow_statistics_optimize", "0");
+            .with_setting("allow_statistics_optimize", "0")
+            .with_setting("max_memory_usage", "26843545600");
         if let Err(e) = ch_client_restricted
             .query("SELECT 1")
             .fetch_one::<u8>()
