@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Outlet, createFileRoute, useParams } from "@tanstack/react-router";
-import { Agentation } from "agentation";
-import { type ReactNode, useSyncExternalStore } from "react";
+import type { ReactNode } from "react";
 
 import { AiCoachGate } from "~/components/coach/AiCoachGate";
 import { getSessionTree } from "~/lib/coach/client";
@@ -42,21 +41,5 @@ function ChatLayout() {
     content = <Outlet />;
   }
 
-  return (
-    <>
-      {content}
-      <AgentationToolbar />
-    </>
-  );
-}
-
-const subscribeNoop = () => () => {};
-
-function AgentationToolbar() {
-  const isClient = useSyncExternalStore(
-    subscribeNoop,
-    () => true,
-    () => false,
-  );
-  return isClient ? <Agentation /> : null;
+  return content;
 }

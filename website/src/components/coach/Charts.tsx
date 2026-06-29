@@ -181,7 +181,7 @@ export function BarChart({ block }: { block: BarChartBlock }) {
       <RBarChart
         data={block.data}
         layout={horizontal ? "vertical" : "horizontal"}
-        margin={{ top: 8, right: 12, bottom: 4, left: horizontal ? 8 : -8 }}
+        margin={{ top: 8, right: 12, bottom: horizontal ? 4 : 24, left: horizontal ? 8 : -8 }}
       >
         <CartesianGrid
           strokeDasharray="3 3"
@@ -197,7 +197,16 @@ export function BarChart({ block }: { block: BarChartBlock }) {
           </>
         ) : (
           <>
-            <XAxis dataKey={xKey} tick={AXIS} tickLine={false} axisLine={false} />
+            <XAxis
+              dataKey={xKey}
+              tick={AXIS}
+              tickLine={false}
+              axisLine={false}
+              interval={0}
+              angle={-30}
+              textAnchor="end"
+              height={56}
+            />
             <YAxis tick={AXIS} tickLine={false} axisLine={false} width={40} />
           </>
         )}
