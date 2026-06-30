@@ -100,6 +100,43 @@ pub struct PlayerEntry {
     pub matches: u64,
 }
 
+/// Picks the `FROM`/dedup strategy: returns the from-clause, whether the outer query keeps the
+/// `WHERE`, and the per-account match-count expression.
+fn from_clause_parts(
+    query: &PlayerScoreboardQuery,
+    where_clause: &str,
+) -> (String, bool, &'static str) {
+    // FINAL streams the ReplacingMergeTree merge during read and beats the
+    // hand-rolled (account_id, match_id) GROUP BY dedup 3-7x, but blocks the
+    // planner from picking hero_stats_by_hero or the account_id bloom-filter
+    // index — so when hero_id or account_ids is set, the inline dedup wins.
+    let use_final = query.hero_id.is_none() && query.account_ids.is_none();
+
+    if query.sort_by.dedup_free() {
+        (" FROM match_player ".to_owned(), true, "uniq(match_id)")
+    } else if use_final {
+        (" FROM match_player FINAL ".to_owned(), true, "count()")
+    } else {
+        let inner_projection = query
+            .sort_by
+            .inner_column()
+            .map_or(String::new(), |col| format!(", any({col}) as {col}"));
+        (
+            format!(
+                "
+FROM (
+    SELECT account_id, match_id{inner_projection}
+    FROM match_player
+    {where_clause}
+    GROUP BY account_id, match_id
+)"
+            ),
+            false,
+            "uniq(match_id)",
+        )
+    }
+}
+
 fn build_query(query: &PlayerScoreboardQuery) -> String {
     let mut inner_filters = vec!["account_id > 0".to_owned()];
     let needs_match_info_filter = query.min_unix_timestamp.is_some()
@@ -145,36 +182,11 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
     }
     let where_clause = format!(" WHERE {} ", inner_filters.join(" AND "));
 
-    // FINAL streams the ReplacingMergeTree merge during read and beats the
-    // hand-rolled (account_id, match_id) GROUP BY dedup 3-7x, but blocks the
-    // planner from picking hero_stats_by_hero or the account_id bloom-filter
-    // index — so when hero_id or account_ids is set, the inline dedup wins.
-    let use_final = query.hero_id.is_none() && query.account_ids.is_none();
-
-    let (from_clause, outer_where, matches_expr) = if use_final {
-        (
-            String::from(" FROM match_player FINAL "),
-            where_clause.as_str(),
-            "count()",
-        )
+    let (from_clause, needs_outer_where, matches_expr) = from_clause_parts(query, &where_clause);
+    let outer_where = if needs_outer_where {
+        where_clause.as_str()
     } else {
-        let inner_projection = query
-            .sort_by
-            .inner_column()
-            .map_or(String::new(), |col| format!(", any({col}) as {col}"));
-        (
-            format!(
-                "
-FROM (
-    SELECT account_id, match_id{inner_projection}
-    FROM match_player
-    {where_clause}
-    GROUP BY account_id, match_id
-)"
-            ),
-            "",
-            "uniq(match_id)",
-        )
+        ""
     };
 
     let mut having_filters = vec![];
