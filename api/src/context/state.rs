@@ -261,7 +261,8 @@ impl AppState {
             .with_password(&config.clickhouse.restricted_password)
             .with_database(&config.clickhouse.dbname)
             .with_setting("allow_statistics_optimize", "0")
-            .with_setting("max_memory_usage", "26843545600");
+            .with_setting("max_memory_usage", "26843545600")
+            .with_setting("use_query_cache", "0");
         if let Err(e) = ch_client_restricted
             .query("SELECT 1")
             .fetch_one::<u8>()
