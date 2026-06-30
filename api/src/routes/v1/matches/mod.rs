@@ -7,6 +7,7 @@ mod live_url;
 pub(crate) mod metadata;
 mod recently_fetched;
 pub(crate) mod salts;
+mod to_fetch;
 pub(crate) mod types;
 
 use core::time::Duration;
@@ -35,6 +36,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(live_url::url))
         .routes(routes!(live_url::urls, live_url::ingest_urls))
         .routes(routes!(salts::salts))
+        .route("/to-fetch", axum::routing::get(to_fetch::matches_to_fetch))
         .merge(
             OpenApiRouter::new()
                 .routes(routes!(metadata::metadata))
