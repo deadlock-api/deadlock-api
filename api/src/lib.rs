@@ -172,7 +172,7 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
     api.servers = Some(vec![utoipa::openapi::Server::new(server_url)]);
 
     let docs = Router::new()
-        .merge(Scalar::with_url("/docs", api.clone()))
+        .merge(Scalar::with_url("/docs", api.clone()).custom_html(api_doc::SCALAR_HTML))
         .route("/openapi.json", get(|| async { Json(api) }))
         .layer(cors::public());
     let router = router.with_state(state).merge(docs);

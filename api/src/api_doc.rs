@@ -40,6 +40,26 @@ _deadlock-api.com is not endorsed by Valve and does not reflect the views or opi
 )]
 pub(super) struct ApiDoc;
 
+/// Scalar template with a `data-configuration` override. `hideModels` drops the
+/// schema "Models" section from the sidebar; `customCss` centers and enlarges the
+/// `x-tagGroups` headers (the non-interactive `cursor-auto` sidebar entries).
+/// `$spec` is substituted by `Scalar::to_html`.
+pub(super) const SCALAR_HTML: &str = r#"<!doctype html>
+<html>
+<head>
+    <title>Deadlock API</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+</head>
+<body>
+<script id="api-reference" type="application/json" data-configuration='{"hideModels":true,"customCss":".text-sidebar-c-2.cursor-auto>.group\\/button-label{text-align:center;font-size:1rem;font-weight:700}"}'>
+    $spec
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+</body>
+</html>
+"#;
+
 struct SecurityAddon;
 
 impl Modify for SecurityAddon {
@@ -62,44 +82,46 @@ impl Modify for SecurityAddon {
 struct TagGroupsAddon;
 
 const TAG_GROUPS: &[(&str, &[&str])] = &[
-    (
-        "Assets",
-        &[
-            "Accolades",
-            "Assets Bucket",
-            "Build Tags",
-            "Client Versions",
-            "Colors",
-            "Generic Data",
-            "Heroes",
-            "Items",
-            "Loot Tables",
-            "Map",
-            "Misc Entities",
-            "NPC Units",
-            "Ranks",
-            "Steam Info",
-        ],
-    ),
+    // Tags within each group are ordered by 30-day request volume (most-used
+    // first) so the heavily-hit endpoints sit at the top of the sidebar. Pure
+    // machine traffic (health pings, internal salt fetches) is discounted.
     (
         "Game Data",
         &[
             "Players",
             "Matches",
-            "Custom Matches",
-            "Demo",
-            "Leaderboard",
+            "Steam",
+            "MMR",
             "Analytics",
             "Builds",
-            "Info",
-            "MMR",
-            "Patches",
-            "Steam",
+            "Leaderboard",
+            "Custom Matches",
+            "Demo",
         ],
     ),
     (
+        "Assets",
+        &[
+            "Items",
+            "Heroes",
+            "Ranks",
+            "NPC Units",
+            "Build Tags",
+            "Client Versions",
+            "Map",
+            "Assets Bucket",
+            "Misc Entities",
+            "Generic Data",
+            "Loot Tables",
+            "Accolades",
+            "Steam Info",
+            "Colors",
+        ],
+    ),
+    ("Game Info", &["Info", "Patches"]),
+    (
         "Developer",
-        &["Commands", "GraphQL", "Internal", "Servers", "SQL"],
+        &["GraphQL", "SQL", "Servers", "Commands", "Internal"],
     ),
 ];
 
