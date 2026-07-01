@@ -98,8 +98,6 @@ clickhouse-sql-parser = { git = "https://github.com/raimannma/clickhouse-antlr4"
 proptest = "1"
 proptest-derive = "0.8"
 rstest = "0.26.1"
-testcontainers = "0.27"
-testcontainers-modules = { version = "0.15", features = ["postgres", "redis", "clickhouse", "minio"] }
 insta = { version = "1", features = ["json"] }
 
 # Optimize only the ANTLR-based SQL parser (and its runtime), which is the
