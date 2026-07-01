@@ -102,7 +102,11 @@ testcontainers = "0.27"
 testcontainers-modules = { version = "0.15", features = ["postgres", "redis", "clickhouse", "minio"] }
 insta = { version = "1", features = ["json"] }
 
-# Optimize external deps (the ANTLR-based `clickhouse-sql-parser` is the
-# proptest bottleneck). Workspace code stays unoptimized for fast rebuilds.
-[profile.test.package."*"]
+# Optimize only the ANTLR-based SQL parser (and its runtime), which is the
+# proptest bottleneck. Everything else stays unoptimized so the test profile
+# doesn't pay -O3 codegen across all dependencies -- that dominated CI compile
+# time. Workspace code stays unoptimized for fast rebuilds.
+[profile.test.package.clickhouse-sql-parser]
+opt-level = 3
+[profile.test.package.antlr4rust]
 opt-level = 3

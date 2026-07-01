@@ -53,8 +53,7 @@ jobs:
 
   test:
     name: Test
-    needs: [checks]
-    timeout-minutes: 20
+    timeout-minutes: 40
     runs-on: blacksmith-4vcpu-ubuntu-2404
     defaults:
       run:
@@ -78,7 +77,9 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "api-build-cache-${{ runner.os }}-${{ runner.arch }}"
+          # Dedicated key: the test profile's artifacts differ from the clippy
+          # job's, so they must not share a (immutable) cache key.
+          shared-key: "api-test-cache-${{ runner.os }}-${{ runner.arch }}"
           workspaces: "api -> target"
       - name: Tests
         run: cargo test --locked
@@ -99,7 +100,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    needs: [test]
+    needs: [checks, test]
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
     defaults:
       run:
