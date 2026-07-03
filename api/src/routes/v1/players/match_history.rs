@@ -52,6 +52,19 @@ impl BatchQueryMulti for MatchHistoryReadQuery {
 
 pub(crate) type MatchHistoryReadBatcher = ClickhouseBatcherMulti<MatchHistoryReadQuery>;
 
+#[cached(
+    ttl = 600,
+    convert = "{ account_id }",
+    sync_writes = "by_key",
+    key = "u32"
+)]
+async fn fetch_ch_match_history(
+    batcher: &MatchHistoryReadBatcher,
+    account_id: u32,
+) -> Result<PlayerMatchHistory, APIError> {
+    batcher.load(account_id).await
+}
+
 pub(crate) struct MatchHistoryInsert;
 
 impl BatchInsert for MatchHistoryInsert {
@@ -317,7 +330,8 @@ pub(super) async fn match_history(
         return Err(APIError::protected_user());
     }
 
-    let ch_match_history = state.batchers.match_history_read.load(account_id).await?;
+    let ch_match_history =
+        fetch_ch_match_history(&state.batchers.match_history_read, account_id).await?;
 
     // Look up bot friend username for this account
     let bot_username = fetch_bot_username(&state.pg_client, account_id).await;
