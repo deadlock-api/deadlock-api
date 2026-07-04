@@ -40,7 +40,7 @@ pub(crate) struct DemoPlayerRow {
     match_id: u64,
     account_id: u32,
     hero_build_id: u64,
-    banned_hero_ids: Vec<u32>,
+    banned_hero_ids: Vec<u8>,
 }
 
 pub(crate) struct DemoPlayerQuery;
@@ -75,7 +75,7 @@ struct MatchMetadataResponse {
     /// It does not reflect any build changes made during the match.
     hero_build_ids: std::collections::HashMap<u32, u64>,
     /// List of hero IDs that were banned in this match.
-    banned_hero_ids: Vec<u32>,
+    banned_hero_ids: Vec<u8>,
 }
 
 static MIN_MATCH_ID_IN_CACHE: OnceCell<u64> = OnceCell::const_new();

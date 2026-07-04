@@ -27,7 +27,7 @@ struct PlayerCardRow {
     account_id: u32,
     ranked_badge_level: Option<u32>,
     slots_slots_id: Vec<Option<u32>>,
-    slots_hero_id: Vec<Option<u32>>,
+    slots_hero_id: Vec<Option<u8>>,
     slots_hero_kills: Vec<Option<u32>>,
     slots_hero_wins: Vec<Option<u32>>,
     slots_stat_id: Vec<Option<i32>>,
@@ -43,7 +43,11 @@ impl From<CMsgCitadelProfileCard> for PlayerCardRow {
             slots_hero_id: card
                 .slots
                 .iter()
-                .filter_map(|s| s.hero.as_ref().map(|h| h.hero_id))
+                .filter_map(|s| {
+                    s.hero
+                        .as_ref()
+                        .map(|h| h.hero_id.map(|id| u8::try_from(id).unwrap_or_default()))
+                })
                 .collect(),
             slots_hero_kills: card
                 .slots

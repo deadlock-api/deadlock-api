@@ -186,7 +186,7 @@ impl ResolverContext {
         Ok(self
             .all_matches()?
             .iter()
-            .filter(move |m| m.hero_id == hero_id))
+            .filter(move |m| u32::from(m.hero_id) == hero_id))
     }
 }
 
@@ -476,7 +476,7 @@ impl Variable {
                 Ok(heroes_played
                     .into_iter()
                     .filter_map(|(hero_id, count)| {
-                        format!("{} ({count})", heroes.get(&hero_id)?).into()
+                        format!("{} ({count})", heroes.get(&u32::from(hero_id))?).into()
                     })
                     .join(", "))
             }
@@ -610,7 +610,7 @@ impl Variable {
                     .ok_or(VariableResolveError::NoData("most played hero"))?;
                 state
                     .assets_client
-                    .fetch_hero_name_from_id(most_played_hero)
+                    .fetch_hero_name_from_id(u32::from(most_played_hero))
                     .await
                     .ok()
                     .flatten()

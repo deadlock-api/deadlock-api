@@ -87,9 +87,9 @@ pub(super) struct HeroSynergyStatsQuery {
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct HeroSynergyStats {
     /// The ID of the first hero in the pair.
-    pub hero_id1: u32,
+    pub hero_id1: u8,
     /// The ID of the second hero in the pair.
-    pub hero_id2: u32,
+    pub hero_id2: u8,
     /// The number of times the team won when both `hero_id1` and `hero_id2` were on the same team.
     pub wins: u64,
     /// The total number of matches played where `hero_id1` and `hero_id2` were on the same team, meeting the filter criteria.

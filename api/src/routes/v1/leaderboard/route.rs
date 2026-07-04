@@ -141,7 +141,11 @@ async fn insert_leaderboard_to_ch(
             rank,
             #[allow(clippy::cast_possible_truncation)]
             leaderboard_position: (i as u32) + 1,
-            top_hero_ids: entry.top_hero_ids.clone(),
+            top_hero_ids: entry
+                .top_hero_ids
+                .iter()
+                .map(|&h| u8::try_from(h).unwrap_or_default())
+                .collect(),
             badge_level: entry.badge_level,
         };
         if let Err(e) = inserter.write(&row).await {
@@ -184,12 +188,16 @@ async fn insert_hero_leaderboard_to_ch(
         let row = HeroLeaderboardClickhouse {
             fetched_at: now,
             region: region as i8,
-            hero_id,
+            hero_id: u8::try_from(hero_id).unwrap_or_default(),
             account_name: entry.account_name.clone(),
             rank,
             #[allow(clippy::cast_possible_truncation)]
             leaderboard_position: (i as u32) + 1,
-            top_hero_ids: entry.top_hero_ids.clone(),
+            top_hero_ids: entry
+                .top_hero_ids
+                .iter()
+                .map(|&h| u8::try_from(h).unwrap_or_default())
+                .collect(),
             badge_level: entry.badge_level,
         };
         if let Err(e) = inserter.write(&row).await {

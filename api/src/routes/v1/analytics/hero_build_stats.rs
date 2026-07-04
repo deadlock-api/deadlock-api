@@ -78,7 +78,7 @@ pub(super) struct HeroBuildStatsQuery {
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct HeroBuildStats {
     /// The ID of the hero. See more: <https://api.deadlock-api.com/v1/assets/heroes>
-    pub hero_id: u32,
+    pub hero_id: u8,
     /// The ID of the hero build. The `hero_build_id` is the first build the player had selected when the game started.
     pub hero_build_id: u64,
     /// The number of wins with this build.

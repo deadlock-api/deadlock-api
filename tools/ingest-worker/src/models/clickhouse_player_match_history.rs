@@ -17,7 +17,7 @@ pub(crate) enum Source {
 pub(crate) struct PlayerMatchHistoryEntry {
     pub account_id: u32,
     pub match_id: u64,
-    pub hero_id: u32,
+    pub hero_id: u8,
     pub hero_level: u32,
     pub start_time: u32,
     pub game_mode: i8,
@@ -46,7 +46,7 @@ impl PlayerMatchHistoryEntry {
         Some(Self {
             account_id: player.account_id?,
             match_id: match_info.match_id?,
-            hero_id: player.hero_id?,
+            hero_id: player.hero_id? as u8,
             hero_level: player.level?,
             start_time: match_info.start_time?,
             game_mode: match_info.game_mode? as i8,

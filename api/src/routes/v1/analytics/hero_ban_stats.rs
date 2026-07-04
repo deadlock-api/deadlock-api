@@ -68,7 +68,7 @@ pub(super) struct HeroBanStatsQuery {
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct HeroBanStats {
     /// The ID of the banned hero. See more: <https://api.deadlock-api.com/v1/assets/heroes>
-    pub hero_id: u32,
+    pub hero_id: u8,
     /// The bucket value (depends on the bucket query parameter).
     pub bucket: u32,
     /// The number of matches in which this hero was banned.

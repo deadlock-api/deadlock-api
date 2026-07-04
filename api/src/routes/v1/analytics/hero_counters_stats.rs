@@ -93,9 +93,9 @@ pub(super) struct HeroCounterStatsQuery {
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct HeroCounterStats {
     /// The ID of the hero. See more: <https://api.deadlock-api.com/v1/assets/heroes>
-    pub hero_id: u32,
+    pub hero_id: u8,
     /// The ID of the opposing hero. See more: <https://api.deadlock-api.com/v1/assets/heroes>
-    pub enemy_hero_id: u32,
+    pub enemy_hero_id: u8,
     /// The number of times `hero_id` won the match when facing `enemy_hero_id`.
     pub wins: u64,
     /// The total number of matches played between `hero_id` and `enemy_hero_id` that meet the filter criteria.

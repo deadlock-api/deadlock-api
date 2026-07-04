@@ -6,7 +6,7 @@ use valveprotos::deadlock::c_msg_client_to_gc_get_match_history_response;
 pub(crate) struct PlayerMatchHistoryEntry {
     pub account_id: u32,
     pub match_id: u64,
-    pub hero_id: u32,
+    pub hero_id: u8,
     pub hero_level: u32,
     pub start_time: u32,
     pub game_mode: i8,
@@ -37,7 +37,7 @@ impl PlayerMatchHistoryEntry {
         Some(Self {
             account_id,
             match_id: entry.match_id?,
-            hero_id: entry.hero_id?,
+            hero_id: entry.hero_id? as u8,
             hero_level: entry.hero_level?,
             start_time: entry.start_time?,
             game_mode: entry.game_mode? as i8,

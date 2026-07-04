@@ -83,7 +83,7 @@ pub(super) struct HeroScoreboardQuery {
 pub struct HeroEntry {
     rank: u64,
     /// See more: <https://api.deadlock-api.com/v1/assets/heroes>
-    hero_id: u32,
+    hero_id: u8,
     pub value: f64,
     pub matches: u64,
 }

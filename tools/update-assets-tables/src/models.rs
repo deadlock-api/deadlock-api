@@ -86,7 +86,7 @@ impl From<Item> for ChItem {
 
 #[derive(Deserialize)]
 pub(crate) struct Hero {
-    pub id: u16,
+    pub id: u8,
     pub name: String,
     pub disabled: Option<bool>,
     pub in_development: Option<bool>,
@@ -94,7 +94,7 @@ pub(crate) struct Hero {
 
 #[derive(Serialize, Row)]
 pub(crate) struct ChHero {
-    pub id: u16,
+    pub id: u8,
     pub name: String,
 }
 

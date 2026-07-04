@@ -67,7 +67,7 @@ pub(crate) struct HeroStatsQuery {
 pub struct HeroStats {
     account_id: u32,
     /// See more: <https://api.deadlock-api.com/v1/assets/heroes>
-    pub hero_id: u32,
+    pub hero_id: u8,
     matches_played: u64,
     last_played: u32,
     time_played: u64,

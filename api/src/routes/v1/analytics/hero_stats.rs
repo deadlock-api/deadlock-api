@@ -150,7 +150,7 @@ pub(crate) struct HeroStatsQuery {
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct AnalyticsHeroStats {
     /// See more: <https://api.deadlock-api.com/v1/assets/heroes>
-    pub hero_id: u32,
+    pub hero_id: u8,
     bucket: u32,
     pub wins: u64,
     pub losses: u64,

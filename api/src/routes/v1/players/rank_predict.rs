@@ -44,7 +44,7 @@ static W_NORM: LazyLock<[f64; N_MATCHES]> = LazyLock::new(|| {
 pub(crate) struct MatchRow {
     account_id: u32,
     match_id: u64,
-    hero_id: u32,
+    hero_id: u8,
     player_team: i8,
     player_kills: u32,
     player_deaths: u32,
@@ -239,7 +239,7 @@ async fn fetch_matches(
             let cs_efficiency =
                 Some(f64::from(r.max_creep_kills) / f64::from(r.max_possible_creeps.max(1)));
             Match {
-                hero_id: r.hero_id,
+                hero_id: r.hero_id.into(),
                 player_kills: r.player_kills,
                 player_deaths: r.player_deaths,
                 player_assists: r.player_assists,

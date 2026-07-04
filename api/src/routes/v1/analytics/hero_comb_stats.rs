@@ -29,6 +29,18 @@ fn default_comb_size() -> Option<u8> {
     6.into()
 }
 
+/// Builds a `UInt128` bitmask (`OR` of `1 << hero_id`) for a hero id list, used to translate
+/// `hasAll`/`hasAny` array membership checks into cheap bitwise ops. `bitOr` (not sum) so duplicate
+/// ids can't carry into the wrong bit; empty list yields `0` (a no-op filter). Requires hero ids
+/// `<= 127`, which the current roster (max 81) satisfies with headroom.
+fn hero_id_mask(hero_ids: &[u32]) -> String {
+    hero_ids
+        .iter()
+        .map(|h| format!("bitShiftLeft(toUInt128(1), {h})"))
+        .reduce(|a, b| format!("bitOr({a}, {b})"))
+        .unwrap_or_else(|| "toUInt128(0)".to_owned())
+}
+
 #[derive(Debug, Clone, Deserialize, IntoParams, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(crate) struct HeroCombStatsQuery {
@@ -188,33 +200,23 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
         grouped_filters.push(format!("hasAny(account_ids, [{account_list}])"));
     }
     if let Some(include_hero_ids) = &query.include_hero_ids {
-        grouped_filters.push(format!(
-            "hasAll(hero_ids, [{}])",
-            include_hero_ids.iter().map(ToString::to_string).join(", ")
-        ));
+        let mask = hero_id_mask(include_hero_ids);
+        grouped_filters.push(format!("bitAnd(hero_mask, {mask}) = {mask}"));
     }
     if let Some(exclude_hero_ids) = &query.exclude_hero_ids {
         grouped_filters.push(format!(
-            "not hasAny(hero_ids, [{}])",
-            exclude_hero_ids.iter().map(ToString::to_string).join(", ")
+            "bitAnd(hero_mask, {}) = 0",
+            hero_id_mask(exclude_hero_ids)
         ));
     }
     if let Some(include_enemy_hero_ids) = &query.include_enemy_hero_ids {
-        grouped_filters.push(format!(
-            "hasAll(enemy_hero_ids, [{}])",
-            include_enemy_hero_ids
-                .iter()
-                .map(ToString::to_string)
-                .join(", ")
-        ));
+        let mask = hero_id_mask(include_enemy_hero_ids);
+        grouped_filters.push(format!("bitAnd(enemy_mask, {mask}) = {mask}"));
     }
     if let Some(exclude_enemy_hero_ids) = &query.exclude_enemy_hero_ids {
         grouped_filters.push(format!(
-            "not hasAny(enemy_hero_ids, [{}])",
-            exclude_enemy_hero_ids
-                .iter()
-                .map(ToString::to_string)
-                .join(", ")
+            "bitAnd(enemy_mask, {}) = 0",
+            hero_id_mask(exclude_enemy_hero_ids)
         ));
     }
     let grouped_filters = if grouped_filters.is_empty() {
@@ -251,27 +253,27 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
         "
 WITH hero_combinations AS (
     SELECT
-        arraySort(groupUniqArrayIf({team_size})(hero_id, team = 'Team0')) AS team0_hero_ids,
-        arraySort(groupUniqArrayIf({team_size})(hero_id, team = 'Team1')) AS team1_hero_ids,
+        groupBitOrIf(bitShiftLeft(toUInt128(1), hero_id), team = 'Team0') AS team0_mask,
+        groupBitOrIf(bitShiftLeft(toUInt128(1), hero_id), team = 'Team1') AS team1_mask,
         anyIf(won, team = 'Team0') AS team0_won,
         anyIf(won, team = 'Team1') AS team1_won{cte_account_select}
     FROM match_player
     WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}{account_prefilter} {player_filters}
     GROUP BY match_id
-    HAVING length(team0_hero_ids) = {team_size} AND length(team1_hero_ids) = {team_size}
+    HAVING bitCount(team0_mask) = {team_size} AND bitCount(team1_mask) = {team_size}
 )
 SELECT
-    hero_ids,
+    arrayMap(i -> toUInt32(i), arrayFilter(i -> bitAnd(hero_mask, bitShiftLeft(toUInt128(1), i)) != 0, range(0, 128))) AS hero_ids,
     countIf(won) AS wins,
     countIf(not won) AS losses,
     wins + losses AS matches
 FROM hero_combinations
 ARRAY JOIN
-    [team0_hero_ids, team1_hero_ids] AS hero_ids,
-    [team1_hero_ids, team0_hero_ids] AS enemy_hero_ids,
+    [team0_mask, team1_mask] AS hero_mask,
+    [team1_mask, team0_mask] AS enemy_mask,
     [team0_won, team1_won] AS won{array_join_account}
 WHERE true {grouped_filters}
-GROUP BY hero_ids
+GROUP BY hero_mask
 {having_clause}
 ORDER BY wins / greatest(1, matches) DESC
 SETTINGS log_comment = 'hero_comb_stats', apply_patch_parts = 0

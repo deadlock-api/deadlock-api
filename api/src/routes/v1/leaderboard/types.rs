@@ -67,7 +67,7 @@ pub(super) struct LeaderboardClickhouse {
     pub account_name: Option<String>,
     pub rank: u32,
     pub leaderboard_position: u32,
-    pub top_hero_ids: Vec<u32>,
+    pub top_hero_ids: Vec<u8>,
     pub badge_level: Option<u32>,
 }
 
@@ -75,11 +75,11 @@ pub(super) struct LeaderboardClickhouse {
 pub(super) struct HeroLeaderboardClickhouse {
     pub fetched_at: u32,
     pub region: i8,
-    pub hero_id: u32,
+    pub hero_id: u8,
     pub account_name: Option<String>,
     pub rank: u32,
     pub leaderboard_position: u32,
-    pub top_hero_ids: Vec<u32>,
+    pub top_hero_ids: Vec<u8>,
     pub badge_level: Option<u32>,
 }
 

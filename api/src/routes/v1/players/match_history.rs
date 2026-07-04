@@ -82,7 +82,7 @@ pub(crate) struct PlayerMatchHistoryEntry {
     account_id: u32,
     pub(crate) match_id: u64,
     /// See more: <https://api.deadlock-api.com/v1/assets/heroes>
-    pub(crate) hero_id: u32,
+    pub(crate) hero_id: u8,
     hero_level: u32,
     pub(crate) start_time: u32,
     game_mode: i8,
@@ -113,7 +113,7 @@ impl PlayerMatchHistoryEntry {
         Some(Self {
             account_id,
             match_id: entry.match_id?,
-            hero_id: entry.hero_id?,
+            hero_id: u8::try_from(entry.hero_id?).ok()?,
             hero_level: entry.hero_level?,
             start_time: entry.start_time?,
             game_mode: i8::try_from(entry.game_mode?).ok()?,
