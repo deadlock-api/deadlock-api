@@ -3,7 +3,7 @@ ARG EXE_NAME=deadlock-api-rust
 FROM rust:1.96-slim-trixie AS builder
 ARG EXE_NAME
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev ca-certificates gcc libssl-dev pkg-config cmake build-essential clang curl mold \
+    && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev ca-certificates gcc libssl-dev pkg-config cmake build-essential clang curl mold git \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 # Tune codegen for the deploy host (AMD EPYC 7502P, Zen 2). Includes the mold
