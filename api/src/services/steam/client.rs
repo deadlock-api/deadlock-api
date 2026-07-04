@@ -9,8 +9,9 @@ use prost::Message;
 use rand::prelude::IndexedRandom;
 use reqwest::Response;
 use serde_json::json;
-use tracing::debug;
+use tracing::{debug, warn};
 use valveprotos::deadlock::CMsgClientToGcGetMatchMetaDataResponse;
+use wreq_util::Emulation;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -29,6 +30,9 @@ const STEAM_NEWS_ENDPOINT: &str = "https://store.steampowered.com/feeds/news/app
 #[derive(Clone)]
 pub(crate) struct SteamClient {
     http_client: reqwest::Client,
+    /// Chrome-emulating client used only for the forum RSS feed, which sits behind a TLS
+    /// fingerprint bot challenge (stile) that rejects non-browser `ClientHello`s.
+    forum_client: wreq::Client,
     steam_proxy_urls: Vec<String>,
     steam_proxy_api_key: String,
     steam_api_key: String,
@@ -43,6 +47,7 @@ impl SteamClient {
     ) -> Self {
         Self {
             http_client,
+            forum_client: build_forum_client(),
             steam_proxy_urls,
             steam_proxy_api_key,
             steam_api_key,
@@ -207,11 +212,11 @@ impl SteamClient {
     }
 
     pub(crate) async fn fetch_patch_notes(&self) -> APIResult<Vec<Patch>> {
-        fetch_patch_notes(&self.http_client).await
+        fetch_patch_notes(&self.forum_client).await
     }
 
     pub(crate) async fn fetch_combined_patch_feed(&self) -> APIResult<Vec<FeedItem>> {
-        fetch_combined_patch_feed(&self.http_client).await
+        fetch_combined_patch_feed(&self.forum_client).await
     }
 
     pub(crate) async fn fetch_steam_server_list(&self) -> APIResult<Vec<SteamServer>> {
@@ -238,20 +243,22 @@ impl SteamClient {
     }
 }
 
+/// Build the Chrome-emulating client used for the forum RSS feed. The feed is behind the `stile`
+/// bot challenge, which redirects any request whose TLS fingerprint doesn't look like a browser to
+/// an HTML challenge page (breaking XML parsing). A Chrome `ClientHello` passes straight through.
+fn build_forum_client() -> wreq::Client {
+    wreq::Client::builder()
+        .emulation(Emulation::Chrome131)
+        .build()
+        .unwrap_or_else(|e| {
+            warn!("Failed to build forum emulation client, using default: {e}");
+            wreq::Client::new()
+        })
+}
+
 #[cached(ttl = 1800, convert = "{ 0 }", key = "u8", sync_writes = "default")]
-async fn fetch_patch_notes(http_client: &reqwest::Client) -> Result<Vec<Patch>, APIError> {
-    let response = http_client.get(RSS_ENDPOINT).send().await.map_err(|e| {
-        APIError::status_msg(
-            reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to fetch patch notes: {e}"),
-        )
-    })?;
-    let rss = response.text().await.map_err(|e| {
-        APIError::status_msg(
-            reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to read patch notes: {e}"),
-        )
-    })?;
+async fn fetch_patch_notes(http_client: &wreq::Client) -> Result<Vec<Patch>, APIError> {
+    let rss = fetch_rss_text(http_client, RSS_ENDPOINT).await?;
     quick_xml::de::from_str::<Rss>(&rss)
         .map(|rss| rss.channel.patch_notes)
         .map_err(|e| {
@@ -262,25 +269,35 @@ async fn fetch_patch_notes(http_client: &reqwest::Client) -> Result<Vec<Patch>, 
         })
 }
 
-async fn fetch_rss_text(http_client: &reqwest::Client, url: &str) -> APIResult<String> {
-    let response = http_client.get(url).send().await.map_err(|e| {
-        APIError::status_msg(
-            reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to fetch patch notes: {e}"),
-        )
-    })?;
-    response.text().await.map_err(|e| {
-        APIError::status_msg(
-            reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to read patch notes: {e}"),
-        )
-    })
+/// Number of attempts for a forum/steam RSS fetch. The forum sits behind a bot challenge that
+/// occasionally resets the connection mid-handshake, so a couple of retries smooth over transient
+/// `SendRequest` errors.
+const RSS_FETCH_ATTEMPTS: u32 = 3;
+
+async fn fetch_rss_text(http_client: &wreq::Client, url: &str) -> APIResult<String> {
+    let mut attempt = 1;
+    loop {
+        match async { http_client.get(url).send().await?.text().await }.await {
+            Ok(text) => return Ok(text),
+            Err(e) if attempt < RSS_FETCH_ATTEMPTS => {
+                warn!(
+                    "RSS fetch from {url} failed (attempt {attempt}/{RSS_FETCH_ATTEMPTS}): {e}; retrying"
+                );
+                tokio::time::sleep(Duration::from_millis(200 * u64::from(attempt))).await;
+                attempt += 1;
+            }
+            Err(e) => {
+                return Err(APIError::status_msg(
+                    reqwest::StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to fetch patch notes: {e}"),
+                ));
+            }
+        }
+    }
 }
 
 #[cached(ttl = 1800, convert = "{ 0 }", key = "u8", sync_writes = "default")]
-async fn fetch_combined_patch_feed(
-    http_client: &reqwest::Client,
-) -> Result<Vec<FeedItem>, APIError> {
+async fn fetch_combined_patch_feed(http_client: &wreq::Client) -> Result<Vec<FeedItem>, APIError> {
     let (forum_rss, steam_rss) = tokio::try_join!(
         fetch_rss_text(http_client, RSS_ENDPOINT),
         fetch_rss_text(http_client, STEAM_NEWS_ENDPOINT),
@@ -473,7 +490,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_patches() {
-        let patches = fetch_patch_notes(&reqwest::Client::new())
+        let patches = fetch_patch_notes(&build_forum_client())
             .await
             .expect("Failed to fetch patch notes");
         assert!(patches.len() > 7);
@@ -481,7 +498,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_combined_patch_feed() {
-        let items = fetch_combined_patch_feed(&reqwest::Client::new())
+        let items = fetch_combined_patch_feed(&build_forum_client())
             .await
             .expect("Failed to fetch combined patch feed");
         let forum_count = items

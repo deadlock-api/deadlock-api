@@ -8,7 +8,9 @@ license = "MIT"
 
 [dependencies]
 reqwest = { version = "0.13.4", features = ["json", "http2", "zstd", "gzip", "form", "stream"] }
-tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "signal"] }
+wreq = "5.3.0"
+wreq-util = "2.2.6"
+tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "signal", "time"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 opentelemetry = { version = "0.32", features = ["logs", "trace"] }
 opentelemetry_sdk = { version = "0.32", features = ["logs", "trace"] }
