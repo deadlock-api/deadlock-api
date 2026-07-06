@@ -17,6 +17,7 @@ const TAB_VALUES = [
   "matchups",
   "hero-combs",
   "hero-matchup-details",
+  "hero-scoreboard",
 ] as const;
 
 export const STATS_TABS: readonly HeroTab[] = [

@@ -5,6 +5,7 @@ import type {
   AnalyticsApiHeroBanStatsRequest,
   AnalyticsApiHeroCombStatsRequest,
   AnalyticsApiHeroCountersStatsRequest,
+  AnalyticsApiHeroScoreboardRequest,
   AnalyticsApiHeroStatsRequest,
   AnalyticsApiHeroSynergiesStatsRequest,
   AnalyticsApiItemStatsRequest,
@@ -41,6 +42,7 @@ export const queryKeys = {
     heroStatsByExperience: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-by-experience", params] as const,
     gameStats: (params: AnalyticsApiGameStatsRequest) => ["api-game-stats", params] as const,
     playerScoreboard: (params: AnalyticsApiPlayerScoreboardRequest) => ["api-player-scoreboard", params] as const,
+    heroScoreboard: (params: AnalyticsApiHeroScoreboardRequest) => ["api-hero-scoreboard", params] as const,
     topBuilds: (params: MatchesApiBulkMetadataRequest) => ["api-top-builds", params] as const,
     playerHeroBuilds: (accountId: number, heroId: number, minUnixTimestamp?: number, maxUnixTimestamp?: number) =>
       ["api-player-hero-builds", accountId, heroId, minUnixTimestamp ?? null, maxUnixTimestamp ?? null] as const,

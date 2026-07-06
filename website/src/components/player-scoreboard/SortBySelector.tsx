@@ -40,7 +40,7 @@ export function SortBySelector({ value, onChange }: SortBySelectorProps) {
   const displayValue = currentCategory?.label ?? key;
 
   return (
-    <FilterPill label="Sort" value={displayValue} active={false} className="w-52 p-2">
+    <FilterPill label="" value={displayValue} active={false} className="w-52 p-2">
       {hasVariants && (
         <div className="mb-2 flex overflow-hidden rounded-md border border-input">
           {VARIANT_LABELS.map((v) => (

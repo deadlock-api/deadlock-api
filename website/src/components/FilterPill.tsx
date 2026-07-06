@@ -27,10 +27,7 @@ export function FilterPill({ label, value, active, icon, children, className, al
           )}
         >
           {icon}
-          <span className="truncate">
-            {label}
-            {value != null && `: ${value}`}
-          </span>
+          <span className="truncate">{label ? (value != null ? `${label}: ${value}` : label) : value}</span>
           <ChevronDownIcon className="size-3.5 shrink-0 opacity-50" />
         </button>
       </PopoverTrigger>

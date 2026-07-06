@@ -1,5 +1,6 @@
 import type { PlayerEntry } from "deadlock_api_client";
 import Fuse from "fuse.js";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { PaginationControls } from "~/components/PaginationControls";
@@ -7,14 +8,29 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 
-import { formatStatValue, getSortByLabel } from "./sort-options";
+import { formatStatValue } from "./sort-options";
+import { SortBySelector } from "./SortBySelector";
 
 export interface ScoreboardTableProps {
   entries: PlayerEntry[];
   sortBy: string;
+  sortDirection: "desc" | "asc";
+  onSortByChange: (value: string) => void;
+  onSortDirectionChange: (dir: "desc" | "asc") => void;
 }
 
-export function ScoreboardTable({ entries, sortBy }: ScoreboardTableProps) {
+function DirectionIcon({ active, sortDirection }: { active: boolean; sortDirection: "desc" | "asc" }) {
+  if (!active) return <ArrowUpDown className="size-3.5 text-muted-foreground/50" />;
+  return sortDirection === "desc" ? <ArrowDown className="size-3.5" /> : <ArrowUp className="size-3.5" />;
+}
+
+export function ScoreboardTable({
+  entries,
+  sortBy,
+  sortDirection,
+  onSortByChange,
+  onSortDirectionChange,
+}: ScoreboardTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -86,8 +102,38 @@ export function ScoreboardTable({ entries, sortBy }: ScoreboardTableProps) {
           <TableRow>
             <TableHead className="w-[5ch] text-right">#</TableHead>
             <TableHead>Player</TableHead>
-            {sortBy !== "matches" && <TableHead className="text-right">Matches</TableHead>}
-            <TableHead className="text-right">{getSortByLabel(sortBy)}</TableHead>
+            {sortBy !== "matches" && (
+              <TableHead className="text-right">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (sortBy === "matches") {
+                      onSortDirectionChange(sortDirection === "desc" ? "asc" : "desc");
+                    } else {
+                      onSortByChange("matches");
+                      onSortDirectionChange("desc");
+                    }
+                  }}
+                  className="inline-flex cursor-pointer items-center justify-end gap-1 transition-colors hover:text-foreground"
+                >
+                  <span>Matches</span>
+                  <DirectionIcon active={false} sortDirection={sortDirection} />
+                </button>
+              </TableHead>
+            )}
+            <TableHead className="text-right">
+              <div className="flex items-center justify-end gap-1">
+                <SortBySelector value={sortBy} onChange={onSortByChange} />
+                <button
+                  type="button"
+                  onClick={() => onSortDirectionChange(sortDirection === "desc" ? "asc" : "desc")}
+                  className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+                  aria-label="Toggle sort direction"
+                >
+                  <DirectionIcon active sortDirection={sortDirection} />
+                </button>
+              </div>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -97,7 +143,7 @@ export function ScoreboardTable({ entries, sortBy }: ScoreboardTableProps) {
             return (
               // oxlint-disable-next-line react/no-array-index-key
               <TableRow key={`${accountId ?? i}-${entry.rank}`}>
-                <TableCell className="text-right">{entry.rank + 1}</TableCell>
+                <TableCell className="text-right">{entry.rank}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     {isLoadingProfiles && !profile ? (

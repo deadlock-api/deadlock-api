@@ -6,8 +6,7 @@ import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ScoreboardTable } from "~/components/player-scoreboard/ScoreboardTable";
-import { ALL_SORT_BY_VALUES, getSortByLabel } from "~/components/player-scoreboard/sort-options";
-import { SortBySelector } from "~/components/player-scoreboard/SortBySelector";
+import { ALL_SORT_BY_VALUES } from "~/components/player-scoreboard/sort-options";
 import { QueryRenderer } from "~/components/QueryRenderer";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -126,10 +125,6 @@ function PlayerScoreboardPage() {
         </div>
 
         <Filter.Root>
-          <Filter.SortBy label={getSortByLabel(sortBy)}>
-            <SortBySelector value={sortBy} onChange={setSortBy} />
-          </Filter.SortBy>
-          <Filter.SortDirection value={sortDirection} onChange={setSortDirection} />
           <Filter.GameMode value={gameMode} onChange={setGameMode} />
           <Filter.Hero value={heroId} onChange={setHeroId} allowNull label="Hero" />
           <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={1} />
@@ -160,7 +155,15 @@ function PlayerScoreboardPage() {
               </div>
             )}
           >
-            {(data) => <ScoreboardTable entries={data} sortBy={sortBy} />}
+            {(data) => (
+              <ScoreboardTable
+                entries={data}
+                sortBy={sortBy}
+                sortDirection={sortDirection}
+                onSortByChange={setSortBy}
+                onSortDirectionChange={setSortDirection}
+              />
+            )}
           </QueryRenderer>
         </div>
       </section>

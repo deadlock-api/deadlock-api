@@ -1,12 +1,17 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { parseAsBoolean, useQueryState } from "nuqs";
+import type { HeroScoreboardSortByEnum } from "deadlock_api_client";
+import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense, useId } from "react";
 
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { HeroFiltersSection } from "~/components/heroes-page/HeroFiltersSection";
+import { HeroScoreboardTable } from "~/components/heroes-page/HeroScoreboardTable";
 import { BY_RANK_STATS, HeroStatSelector, HeroTimeIntervalSelector } from "~/components/heroes-page/HeroStatSelectors";
 import { HeroStatsTable } from "~/components/heroes-page/HeroStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { ALL_SORT_BY_VALUES } from "~/components/player-scoreboard/sort-options";
+import { QueryRenderer } from "~/components/QueryRenderer";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { HeroSelector } from "~/components/selectors/HeroSelector";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -14,11 +19,13 @@ import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { type HeroTab, useHeroFilters } from "~/hooks/useHeroFilters";
+import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { DEFAULT_DATE_RANGE, DEFAULT_PREV_DATE_RANGE } from "~/lib/constants";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
+import { heroScoreboardQueryOptions } from "~/queries/hero-scoreboard-query";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { HERO_STATS, HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
 
@@ -150,6 +157,29 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
   const sameLaneFilterId1 = useId();
   const sameLaneFilterId2 = useId();
 
+  const [scoreboardSortBy, setScoreboardSortBy] = useQueryState(
+    "scoreboard_sort_by",
+    parseAsStringLiteral(ALL_SORT_BY_VALUES as [string, ...string[]]).withDefault("winrate"),
+  );
+  const [scoreboardSortDirection, setScoreboardSortDirection] = useQueryState(
+    "scoreboard_sort_dir",
+    parseAsStringLiteral(["desc", "asc"] as const).withDefault("desc"),
+  );
+  const { minUnixTimestamp: scoreboardMinUnixTimestamp, maxUnixTimestamp: scoreboardMaxUnixTimestamp } =
+    useNormalizedTimeRange(filters.startDate, filters.endDate);
+  const heroScoreboardQuery = useQuery(
+    heroScoreboardQueryOptions({
+      sortBy: scoreboardSortBy as HeroScoreboardSortByEnum,
+      sortDirection: scoreboardSortDirection as "desc" | "asc",
+      gameMode: filters.gameMode ?? undefined,
+      minMatches: filters.minMatches,
+      minAverageBadge: filters.effectiveMinRankId,
+      maxAverageBadge: filters.effectiveMaxRankId,
+      minUnixTimestamp: scoreboardMinUnixTimestamp ?? 0,
+      maxUnixTimestamp: scoreboardMaxUnixTimestamp,
+    }),
+  );
+
   return (
     <div className="space-y-6">
       <div className="text-center">
@@ -181,6 +211,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
             { value: "hero-combs", label: "Combos" },
             { value: "matchups", label: "Matchups" },
             { value: "hero-matchup-details", label: "Matchup Details" },
+            { value: "hero-scoreboard", label: "Scoreboard" },
           ]}
         />
 
@@ -464,6 +495,35 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
                 </div>
               </Suspense>
             </ChunkErrorBoundary>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="hero-scoreboard">
+          <div className="flex flex-col gap-4">
+            <h2 className="sr-only">Hero Scoreboard</h2>
+            <QueryRenderer
+              query={heroScoreboardQuery}
+              loadingFallback={
+                <div className="flex items-center justify-center py-24">
+                  <LoadingLogo />
+                </div>
+              }
+              errorFallback={(error) => (
+                <div className="py-8 text-center text-sm text-destructive">
+                  Failed to load scoreboard: {error.message}
+                </div>
+              )}
+            >
+              {(data) => (
+                <HeroScoreboardTable
+                  entries={data}
+                  sortBy={scoreboardSortBy}
+                  sortDirection={scoreboardSortDirection}
+                  onSortByChange={setScoreboardSortBy}
+                  onSortDirectionChange={setScoreboardSortDirection}
+                />
+              )}
+            </QueryRenderer>
           </div>
         </TabsContent>
       </Tabs>
