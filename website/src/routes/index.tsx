@@ -147,9 +147,9 @@ const analyticsLinks = [
     icon: Trophy,
   },
   {
-    title: "Player Scoreboard",
-    description: "Compare player performance across matches with detailed stat breakdowns.",
-    href: "/player-scoreboard",
+    title: "Player Analytics",
+    description: "Compare player performance across matches and view stat distributions.",
+    href: "/players",
     icon: Users,
   },
   {

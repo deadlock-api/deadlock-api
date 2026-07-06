@@ -57,13 +57,13 @@ const navGroups: NavGroup[] = [
       { to: "/heroes", label: "Heroes", icon: Swords },
       { to: "/items", label: "Items", icon: ShoppingBag },
       { to: "/abilities", label: "Abilities", icon: ListOrdered },
+      { to: "/players", label: "Player Analytics", icon: Users },
     ],
   },
   {
     label: "Community",
     links: [
       { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
-      { to: "/player-scoreboard", label: "Player Scoreboard", icon: Users },
       { to: "/badge-distribution", label: "Rank Distribution", icon: Medal },
       { to: "/heatmap", label: "Kill Heatmap", icon: Map },
       { to: "/servers", label: "Game Servers", icon: Server },

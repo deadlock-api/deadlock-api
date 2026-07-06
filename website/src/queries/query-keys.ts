@@ -11,6 +11,7 @@ import type {
   AnalyticsApiItemStatsRequest,
   AnalyticsApiKillDeathStatsRequest,
   AnalyticsApiPlayerScoreboardRequest,
+  AnalyticsApiPlayerStatsMetricsRequest,
   MatchesApiBulkMetadataRequest,
 } from "deadlock_api_client";
 
@@ -42,6 +43,8 @@ export const queryKeys = {
     heroStatsByExperience: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-by-experience", params] as const,
     gameStats: (params: AnalyticsApiGameStatsRequest) => ["api-game-stats", params] as const,
     playerScoreboard: (params: AnalyticsApiPlayerScoreboardRequest) => ["api-player-scoreboard", params] as const,
+    playerStatsMetrics: (params: AnalyticsApiPlayerStatsMetricsRequest) =>
+      ["api-player-stats-metrics", params] as const,
     heroScoreboard: (params: AnalyticsApiHeroScoreboardRequest) => ["api-hero-scoreboard", params] as const,
     topBuilds: (params: MatchesApiBulkMetadataRequest) => ["api-top-builds", params] as const,
     playerHeroBuilds: (accountId: number, heroId: number, minUnixTimestamp?: number, maxUnixTimestamp?: number) =>

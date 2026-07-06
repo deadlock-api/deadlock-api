@@ -9,7 +9,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "badge-distribution": "Rank Distribution",
   games: "Games",
   heatmap: "Kill Heatmap",
-  "player-scoreboard": "Player Scoreboard",
+  players: "Player Analytics",
   chat: "AI Chat",
   streamkit: "Stream Kit",
   "ingest-cache": "Data Ingest",

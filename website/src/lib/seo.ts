@@ -32,7 +32,7 @@ const OG_IMAGES: Record<string, string> = {
   "/badge-distribution": "/og/badge-distribution.png",
   "/games": "/og/games.png",
   "/heatmap": "/og/heatmap.png",
-  "/player-scoreboard": "/og/player-scoreboard.png",
+  "/players": "/og/player-scoreboard.png",
   "/streamkit": "/og/streamkit.png",
   "/chat": "/og/chat.png",
   "/data-privacy": "/og/default.png",

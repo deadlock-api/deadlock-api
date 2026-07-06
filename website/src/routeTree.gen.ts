@@ -12,7 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as Sitemap_indexDotxmlRouteImport } from './routes/sitemap_index[.]xml'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ServersRouteImport } from './routes/servers'
-import { Route as PlayerScoreboardRouteImport } from './routes/player-scoreboard'
+import { Route as PlayersRouteImport } from './routes/players'
 import { Route as PatronRouteImport } from './routes/patron'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as ItemsRouteImport } from './routes/items'
@@ -62,9 +62,9 @@ const ServersRoute = ServersRouteImport.update({
   path: '/servers',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlayerScoreboardRoute = PlayerScoreboardRouteImport.update({
-  id: '/player-scoreboard',
-  path: '/player-scoreboard',
+const PlayersRoute = PlayersRouteImport.update({
+  id: '/players',
+  path: '/players',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PatronRoute = PatronRouteImport.update({
@@ -250,7 +250,7 @@ export interface FileRoutesByFullPath {
   '/items': typeof ItemsRoute
   '/leaderboard': typeof LeaderboardRoute
   '/patron': typeof PatronRoute
-  '/player-scoreboard': typeof PlayerScoreboardRoute
+  '/players': typeof PlayersRoute
   '/servers': typeof ServersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
@@ -287,7 +287,7 @@ export interface FileRoutesByTo {
   '/items': typeof ItemsRoute
   '/leaderboard': typeof LeaderboardRoute
   '/patron': typeof PatronRoute
-  '/player-scoreboard': typeof PlayerScoreboardRoute
+  '/players': typeof PlayersRoute
   '/servers': typeof ServersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
@@ -327,7 +327,7 @@ export interface FileRoutesById {
   '/items': typeof ItemsRoute
   '/leaderboard': typeof LeaderboardRoute
   '/patron': typeof PatronRoute
-  '/player-scoreboard': typeof PlayerScoreboardRoute
+  '/players': typeof PlayersRoute
   '/servers': typeof ServersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
@@ -368,7 +368,7 @@ export interface FileRouteTypes {
     | '/items'
     | '/leaderboard'
     | '/patron'
-    | '/player-scoreboard'
+    | '/players'
     | '/servers'
     | '/sitemap.xml'
     | '/sitemap_index.xml'
@@ -405,7 +405,7 @@ export interface FileRouteTypes {
     | '/items'
     | '/leaderboard'
     | '/patron'
-    | '/player-scoreboard'
+    | '/players'
     | '/servers'
     | '/sitemap.xml'
     | '/sitemap_index.xml'
@@ -444,7 +444,7 @@ export interface FileRouteTypes {
     | '/items'
     | '/leaderboard'
     | '/patron'
-    | '/player-scoreboard'
+    | '/players'
     | '/servers'
     | '/sitemap.xml'
     | '/sitemap_index.xml'
@@ -484,7 +484,7 @@ export interface RootRouteChildren {
   ItemsRoute: typeof ItemsRoute
   LeaderboardRoute: typeof LeaderboardRoute
   PatronRoute: typeof PatronRoute
-  PlayerScoreboardRoute: typeof PlayerScoreboardRoute
+  PlayersRoute: typeof PlayersRoute
   ServersRoute: typeof ServersRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   Sitemap_indexDotxmlRoute: typeof Sitemap_indexDotxmlRoute
@@ -522,11 +522,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServersRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/player-scoreboard': {
-      id: '/player-scoreboard'
-      path: '/player-scoreboard'
-      fullPath: '/player-scoreboard'
-      preLoaderRoute: typeof PlayerScoreboardRouteImport
+    '/players': {
+      id: '/players'
+      path: '/players'
+      fullPath: '/players'
+      preLoaderRoute: typeof PlayersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/patron': {
@@ -815,7 +815,7 @@ const rootRouteChildren: RootRouteChildren = {
   ItemsRoute: ItemsRoute,
   LeaderboardRoute: LeaderboardRoute,
   PatronRoute: PatronRoute,
-  PlayerScoreboardRoute: PlayerScoreboardRoute,
+  PlayersRoute: PlayersRoute,
   ServersRoute: ServersRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   Sitemap_indexDotxmlRoute: Sitemap_indexDotxmlRoute,
