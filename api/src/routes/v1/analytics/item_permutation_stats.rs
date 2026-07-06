@@ -11,7 +11,8 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    MatchInfoFilters, PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
+    MatchInfoFilters, PlayerFilters, default_min_matches_u32, filter_protected_accounts,
+    join_filters, round_timestamps,
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -38,6 +39,14 @@ pub(super) struct ItemPermutationStatsQuery {
     /// The combination size to return.
     #[param(minimum = 2, maximum = 12, default = 2)]
     comb_size: Option<u8>,
+    /// The minimum number of matches for an item combination to be included in the response.
+    #[serde(default = "default_min_matches_u32")]
+    #[param(minimum = 1, default = 20)]
+    min_matches: Option<u32>,
+    /// The maximum number of matches for an item combination to be included in the response.
+    #[serde(default)]
+    #[param(minimum = 1)]
+    max_matches: Option<u32>,
     /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
     #[serde(
         default = "GameMode::default_option",
@@ -140,6 +149,18 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         .build(),
     );
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
+    let mut having_filters = vec![];
+    if let Some(min_matches) = query.min_matches {
+        having_filters.push(format!("matches >= {min_matches}"));
+    }
+    if let Some(max_matches) = query.max_matches {
+        having_filters.push(format!("matches <= {max_matches}"));
+    }
+    let having_clause = if having_filters.is_empty() {
+        String::new()
+    } else {
+        format!("HAVING {}", having_filters.join(" AND "))
+    };
     if let Some(item_ids) = &query.item_ids {
         if item_ids.len() < 2 {
             return String::new();
@@ -157,6 +178,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
             AND match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}
             {player_filters}
         GROUP BY item_ids
+        {having_clause}
         ORDER BY matches DESC
         SETTINGS log_comment = 'item_permutation_stats_intersect', apply_patch_parts = 0
         "
@@ -188,6 +210,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         FROM t_players {joins}
         WHERE {filters_distinct}
         GROUP BY {intersect_array}
+        {having_clause}
         ORDER BY matches DESC
         SETTINGS log_comment = 'item_permutation_stats_combinations', apply_patch_parts = 0
         "
