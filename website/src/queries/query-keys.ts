@@ -8,6 +8,7 @@ import type {
   AnalyticsApiHeroScoreboardRequest,
   AnalyticsApiHeroStatsRequest,
   AnalyticsApiHeroSynergiesStatsRequest,
+  AnalyticsApiItemPermutationStatsRequest,
   AnalyticsApiItemStatsRequest,
   AnalyticsApiKillDeathStatsRequest,
   AnalyticsApiPlayerScoreboardRequest,
@@ -32,6 +33,8 @@ export const queryKeys = {
     itemFlowStats: (params: unknown) => ["api-item-flow-stats", params] as const,
     killDeathStats: (filter: AnalyticsApiKillDeathStatsRequest) => ["api-kill-death-stats", filter] as const,
     itemStats: (filter: AnalyticsApiItemStatsRequest) => ["api-item-stats", filter] as const,
+    itemPermutationStats: (params: AnalyticsApiItemPermutationStatsRequest) =>
+      ["api-item-permutation-stats", params] as const,
     heroStats: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats", params] as const,
     heroBanStats: (params: AnalyticsApiHeroBanStatsRequest) => ["api-hero-ban-stats", params] as const,
     heroSynergyStats: (params: AnalyticsApiHeroSynergiesStatsRequest) => ["api-hero-synergy-stats", params] as const,

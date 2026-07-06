@@ -26,6 +26,9 @@ const ItemStatsExplorer = lazy(() =>
 const ItemFlowGraph = lazy(() =>
   import("~/components/items-page/ItemFlowGraph").then((m) => ({ default: m.ItemFlowGraph })),
 );
+const ItemCombStatsTable = lazy(() =>
+  import("~/components/items-page/ItemCombStatsTable").then((m) => ({ default: m.ItemCombStatsTable })),
+);
 
 export const Route = createFileRoute("/items")({
   component: ItemsPage,
@@ -85,7 +88,9 @@ function ItemsPage() {
 
   const [tab, setTab] = useQueryState(
     "tab",
-    parseAsStringLiteral(["item-stats", "item-purchase-analysis", "build-flow"] as const).withDefault("item-stats"),
+    parseAsStringLiteral(["item-stats", "item-purchase-analysis", "build-flow", "item-combos"] as const).withDefault(
+      "item-stats",
+    ),
   );
 
   return (
@@ -141,6 +146,7 @@ function ItemsPage() {
             { value: "item-stats", label: "Item Stats" },
             { value: "item-purchase-analysis", label: "Purchase Analysis" },
             { value: "build-flow", label: "Build Flow" },
+            { value: "item-combos", label: "Item Combos" },
           ]}
         />
         <TabsContent value="item-stats">
@@ -193,6 +199,25 @@ function ItemsPage() {
                 minDate={startDate || undefined}
                 maxDate={endDate || undefined}
                 minMatches={minMatches}
+                gameMode={gameMode}
+              />
+            </Suspense>
+          </ChunkErrorBoundary>
+        </TabsContent>
+        <TabsContent value="item-combos">
+          <h2 className="sr-only">Item Combos</h2>
+          <ChunkErrorBoundary>
+            <Suspense fallback={<LoadingLogo />}>
+              <ItemCombStatsTable
+                columns={["winRate", "pickRate", "totalMatches"]}
+                hero={hero}
+                minRankId={effectiveMinRankId}
+                maxRankId={effectiveMaxRankId}
+                minMatches={minMatches}
+                minDate={startDate || undefined}
+                maxDate={endDate || undefined}
+                prevMinDate={prevDates.prevStartDate}
+                prevMaxDate={prevDates.prevEndDate}
                 gameMode={gameMode}
               />
             </Suspense>
