@@ -7,8 +7,10 @@ use axum::response::IntoResponse;
 use cached::macros::cached;
 use redis::{AsyncTypedCommands, ExpireOption};
 use serde::{Deserialize, Serialize};
+use sqlx::{Pool, Postgres};
 use tracing::debug;
 use utoipa::ToSchema;
+use uuid::Uuid;
 use valveprotos::deadlock::{
     CMsgClientToGcSpectateLobby, CMsgClientToGcSpectateLobbyResponse,
     CMsgClientToGcSpectateUserResponse, EgcCitadelClientMessages,
@@ -57,6 +59,25 @@ pub(super) struct IngestLiveUrl {
 }
 
 #[cached(
+    ttl = 3600,
+    convert = "{ api_key }",
+    sync_writes = "by_key",
+    key = "Uuid"
+)]
+async fn uses_live_events_pool(
+    pg_client: &Pool<Postgres>,
+    api_key: Uuid,
+) -> Result<bool, sqlx::Error> {
+    let row = sqlx::query!(
+        "SELECT live_events_pool FROM api_keys WHERE key = $1 AND disabled IS false",
+        api_key
+    )
+    .fetch_optional(pg_client)
+    .await?;
+    Ok(row.is_some_and(|r| r.live_events_pool))
+}
+
+#[cached(
     ttl = 60,
     convert = "{ match_id }",
     sync_writes = "by_key",
@@ -65,7 +86,8 @@ pub(super) struct IngestLiveUrl {
 pub(super) async fn spectate_match(
     steam_client: &SteamClient,
     match_id: u64,
-) -> Result<CMsgClientToGcSpectateLobbyResponse, APIError> {
+    live_events_pool: bool,
+) -> Result<(String, Option<u64>), APIError> {
     let client_version = steam_client.get_current_client_version().await?;
     let msg = CMsgClientToGcSpectateLobby {
         match_id: Some(match_id),
@@ -74,13 +96,18 @@ pub(super) async fn spectate_match(
         ..Default::default()
     };
     debug!(?msg);
-    Ok(steam_client
+    let primary_group = if live_events_pool {
+        "SpectateLobbyLiveEventsApi"
+    } else {
+        "SpectateLobby"
+    };
+    let response: CMsgClientToGcSpectateLobbyResponse = steam_client
         .call_steam_proxy(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcSpectateLobby,
             msg,
             in_all_groups: None,
             in_any_groups: Some(vec![
-                "SpectateLobby".to_owned(),
+                primary_group.to_owned(),
                 "SpectateLobbyOnDemand".to_owned(),
             ]),
             cooldown_time: Duration::from_secs(24 * 60 * 60 / 50),
@@ -89,7 +116,30 @@ pub(super) async fn spectate_match(
             soft_cooldown_millis: None,
         })
         .await
-        .map(|s| s.msg)?)
+        .map(|s| s.msg)?;
+
+    let Some(response) = response.result else {
+        return Err(APIError::internal("Failed to spectate match"));
+    };
+
+    match response {
+        CMsgClientToGcSpectateUserResponse {
+            result: Some(r),
+            client_broadcast_url: Some(broadcast_url),
+            lobby_id,
+            ..
+        } if r == c_msg_client_to_gc_spectate_user_response::EResponse::KESuccess as i32 => {
+            Ok((broadcast_url, lobby_id))
+        }
+        failed => {
+            let result: Option<c_msg_client_to_gc_spectate_user_response::EResponse> =
+                failed.result.and_then(|r| r.try_into().ok());
+            Err(APIError::internal(format!(
+                "Failed to spectate match: {:?}",
+                result.map_or("Unknown", |r| r.as_str_name())
+            )))
+        }
+    }
 }
 
 #[utoipa::path(
@@ -168,61 +218,48 @@ pub(super) async fn url(
         )
         .await?;
 
-    let spectate_response = tryhard::retry_fn(|| spectate_match(&state.steam_client, match_id))
-        .retries(3)
-        .fixed_backoff(Duration::from_millis(10))
-        .await?;
-
-    let Some(spectate_response) = spectate_response.result else {
-        return Err(APIError::internal("Failed to spectate match"));
+    let live_events_pool = match rate_limit_key.api_key {
+        Some(api_key) => uses_live_events_pool(&state.pg_client, api_key)
+            .await
+            .unwrap_or(false),
+        None => false,
     };
 
-    match spectate_response {
-        CMsgClientToGcSpectateUserResponse {
-            result: Some(r),
-            client_broadcast_url: Some(broadcast_url),
-            lobby_id,
-            ..
-        } if r == c_msg_client_to_gc_spectate_user_response::EResponse::KESuccess as i32 => {
-            let payload = &serde_json::json!({
-                "match_type": "GapMatch",
-                "match_id": match_id,
-                "broadcast_url": broadcast_url,
-                "lobby_id": lobby_id,
-                "updated_at": chrono::Utc::now().timestamp(),
-            });
-            state
-                .redis_client
-                .hset(
-                    SPECTATED_MATCHES_KEY,
-                    match_id.to_string(),
-                    serde_json::to_string(payload)?,
-                )
-                .await?;
-            state
-                .redis_client
-                .hexpire(
-                    SPECTATED_MATCHES_KEY,
-                    LIVE_URL_TTL_SECS,
-                    ExpireOption::NONE,
-                    match_id.to_string(),
-                )
-                .await?;
+    let (broadcast_url, lobby_id) =
+        tryhard::retry_fn(|| spectate_match(&state.steam_client, match_id, live_events_pool))
+            .retries(3)
+            .fixed_backoff(Duration::from_millis(10))
+            .await?;
 
-            Ok(Json(MatchSpectateResponse {
-                broadcast_url,
-                lobby_id,
-            }))
-        }
-        failed => {
-            let result: Option<c_msg_client_to_gc_spectate_user_response::EResponse> =
-                failed.result.and_then(|r| r.try_into().ok());
-            Err(APIError::internal(format!(
-                "Failed to spectate match: {:?}",
-                result.map_or("Unknown", |r| r.as_str_name())
-            )))
-        }
-    }
+    let payload = &serde_json::json!({
+        "match_type": "GapMatch",
+        "match_id": match_id,
+        "broadcast_url": broadcast_url,
+        "lobby_id": lobby_id,
+        "updated_at": chrono::Utc::now().timestamp(),
+    });
+    state
+        .redis_client
+        .hset(
+            SPECTATED_MATCHES_KEY,
+            match_id.to_string(),
+            serde_json::to_string(payload)?,
+        )
+        .await?;
+    state
+        .redis_client
+        .hexpire(
+            SPECTATED_MATCHES_KEY,
+            LIVE_URL_TTL_SECS,
+            ExpireOption::NONE,
+            match_id.to_string(),
+        )
+        .await?;
+
+    Ok(Json(MatchSpectateResponse {
+        broadcast_url,
+        lobby_id,
+    }))
 }
 
 #[utoipa::path(

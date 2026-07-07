@@ -6,12 +6,24 @@
       {
         "ordinal": 0,
         "name": "rate_limit",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "api_key_limits",
+            "name": "rate_limit"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "rate_period",
-        "type_info": "Interval"
+        "type_info": "Interval",
+        "origin": {
+          "Table": {
+            "table": "api_key_limits",
+            "name": "rate_period"
+          }
+        }
       }
     ],
     "parameters": {
