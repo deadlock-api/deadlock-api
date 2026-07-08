@@ -27,7 +27,7 @@ use crate::services::steam::types::SteamProxyQuery;
 use crate::utils::types::MatchIdQuery;
 
 const SPECTATED_MATCHES_KEY: &str = "spectated_matches";
-const LIVE_URL_TTL_SECS: i64 = 900;
+const LIVE_URL_TTL_SECS: i64 = 60 * 60;
 const MAX_BROADCAST_URLS_PER_REQUEST: usize = 1000;
 
 #[derive(Serialize, ToSchema)]
