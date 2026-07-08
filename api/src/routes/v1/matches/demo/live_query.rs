@@ -68,8 +68,8 @@ Projection/filter queries emit rows continuously as they are decoded. A whole-ma
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | 10req/m |
-| Global | 60req/m |
+| IP | 20req/m |
+| Global | 100req/m |
 "
 )]
 pub(super) async fn live_query(
@@ -83,8 +83,8 @@ pub(super) async fn live_query(
             &rate_limit_key,
             "demo_live_query",
             &[
-                Quota::ip_limit(10, Duration::from_mins(1)),
-                Quota::global_limit(60, Duration::from_mins(1)),
+                Quota::ip_limit(20, Duration::from_mins(1)),
+                Quota::global_limit(100, Duration::from_mins(1)),
             ],
         )
         .await?;
