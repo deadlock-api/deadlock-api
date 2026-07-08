@@ -8,6 +8,7 @@
 use std::collections::{HashMap, HashSet};
 use std::io::{self, Read};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use bytes::Bytes;
 use datafusion::arrow::datatypes::SchemaRef;
@@ -39,6 +40,11 @@ use super::query::{
 };
 use super::table_extractor::extract_table_names;
 use super::visitor::{BroadcastDemoStream, discover_schemas_from_demo};
+
+/// Flush a table's builder once this many rows have accumulated: bounds batch size.
+const FLUSH_ROWS: usize = 1024;
+/// Flush partial batches at least this often, so sparse live queries don't wait for 1024 rows.
+const FLUSH_INTERVAL: Duration = Duration::from_millis(250);
 
 /// Run `query` over a live GOTV/spectator broadcast, streaming result rows as the match plays.
 ///
@@ -141,6 +147,7 @@ pub(crate) async fn query_live(base_url: &str, query: &str) -> Result<SendableRe
         entities,
         events,
         pending: 0,
+        last_flush: Instant::now(),
     };
     tokio::task::spawn_blocking(move || {
         let stream = LiveBroadcastStream::new(bytes_rx);
@@ -218,19 +225,20 @@ impl PartitionStream for ChannelPartition {
     }
 }
 
-/// Flush a table's builder once this many rows have accumulated: bounds batch size and staleness.
-const FLUSH_ROWS: usize = 1024;
-
 struct StreamingCollector {
     entities: HashMap<u64, Channel<EntityBatchBuilder>>,
     events: HashMap<u32, Channel<EventBatchBuilder>>,
     pending: usize,
+    last_flush: Instant,
 }
 
 impl StreamingCollector {
-    /// Send each table's accumulated batch. `force` flushes below the row threshold (the final tail).
+    /// Send each table's accumulated batch. `force` flushes below the row/time threshold.
     fn flush(&mut self, force: bool) -> Result<()> {
-        if !force && self.pending < FLUSH_ROWS {
+        if self.pending == 0 {
+            return Ok(());
+        }
+        if !force && self.pending < FLUSH_ROWS && self.last_flush.elapsed() < FLUSH_INTERVAL {
             return Ok(());
         }
         for ch in self.entities.values_mut() {
@@ -240,6 +248,7 @@ impl StreamingCollector {
             send_batch(ch.builder.finish()?, &ch.tx)?;
         }
         self.pending = 0;
+        self.last_flush = Instant::now();
         Ok(())
     }
 }
