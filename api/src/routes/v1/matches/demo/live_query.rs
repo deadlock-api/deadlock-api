@@ -104,11 +104,30 @@ pub(super) async fn live_query(
         }
     };
 
-    let stream = demofusion::query_live(&broadcast_url, &params.query)
-        .await
-        .map_err(|e| super::format::map_demofusion_err(&e))?;
+    // The response head is returned immediately; the (fallible, potentially slow) broadcast setup
+    // runs lazily inside the stream so a stale/unavailable relay surfaces as a terminal `error`
+    // event rather than a pre-response gateway error, and the keep-alive ping holds the connection
+    // open through the wait for the signon fragment.
+    Ok(Sse::new(live_sse(broadcast_url, params.query)).keep_alive(
+        KeepAlive::new()
+            .interval(Duration::from_secs(15))
+            .text("ping"),
+    ))
+}
 
-    Ok(Sse::new(sse_rows(stream)).keep_alive(KeepAlive::default()))
+/// Run the live-query setup lazily as the stream's first step so the SSE response head is sent
+/// before it completes. On success, stream result rows; on setup failure, emit a single `error`
+/// event followed by the terminal `end`.
+fn live_sse(broadcast_url: String, query: String) -> impl Stream<Item = Result<Event, Infallible>> {
+    futures::stream::once(async move { demofusion::query_live(&broadcast_url, &query).await })
+        .flat_map(|res| match res {
+            Ok(rows) => sse_rows(rows).left_stream(),
+            Err(e) => futures::stream::iter([
+                Ok(error_event(&format!("Live broadcast error: {e}"))),
+                Ok(end_event()),
+            ])
+            .right_stream(),
+        })
 }
 
 /// Adapt a result-batch stream into an SSE row stream: one `message` event per row, a terminal
@@ -122,9 +141,11 @@ fn sse_rows(stream: SendableRecordBatchStream) -> impl Stream<Item = Result<Even
             };
             futures::stream::iter(events.into_iter().map(Ok))
         })
-        .chain(futures::stream::once(async {
-            Ok(Event::default().event("end").data("{}"))
-        }))
+        .chain(futures::stream::once(async { Ok(end_event()) }))
+}
+
+fn end_event() -> Event {
+    Event::default().event("end").data("{}")
 }
 
 /// Serialize one batch to newline-delimited JSON and turn each row into its own `data:` event.

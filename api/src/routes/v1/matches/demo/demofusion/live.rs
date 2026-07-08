@@ -69,11 +69,19 @@ pub(crate) async fn query_live(base_url: &str, query: &str) -> Result<SendableRe
         None => return Err(Error::Broadcast("broadcast ended before signon".into())),
     };
 
-    let entity_schemas: Schemas =
-        discover_schemas_from_demo::<BroadcastDemoStream>(signon.clone(), &referenced)?
-            .into_iter()
-            .map(|s| (Arc::clone(&s.serializer_name), s))
-            .collect();
+    // Schema discovery is CPU-bound haste parsing; run it off the async runtime, and catch a panic
+    // on malformed/stale relay bytes as a Broadcast error rather than letting it reset the connection.
+    let signon_for_schema = signon.clone();
+    let referenced_for_schema = referenced.clone();
+    let discovered = tokio::task::spawn_blocking(move || {
+        discover_schemas_from_demo::<BroadcastDemoStream>(signon_for_schema, &referenced_for_schema)
+    })
+    .await
+    .map_err(|e| Error::Broadcast(format!("schema discovery task failed: {e}")))??;
+    let entity_schemas: Schemas = discovered
+        .into_iter()
+        .map(|s| (Arc::clone(&s.serializer_name), s))
+        .collect();
 
     let (referenced_entities, event_types) = resolve_referenced(&referenced, &entity_schemas);
     let projections =
