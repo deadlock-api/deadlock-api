@@ -28,6 +28,8 @@ use haste_core::valveprotos::common::{
     CDemoClassInfo, CDemoFullPacket, CDemoPacket, CDemoSendTables, EDemoCommands,
 };
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
+use tokio::time::{Duration, sleep};
+use tracing::warn;
 
 use super::entity_batch_builder::EntityBatchBuilder;
 use super::error::{Error, Result};
@@ -39,6 +41,13 @@ use super::query::{
 };
 use super::table_extractor::extract_table_names;
 use super::visitor::{BroadcastDemoStream, discover_schemas_from_demo};
+
+/// Number of consecutive broadcast fragment errors tolerated before ending the live stream.
+const MAX_CONSECUTIVE_BROADCAST_ERRORS: usize = 3;
+/// Short pause before retrying after a transient fragment fetch error.
+const BROADCAST_ERROR_BACKOFF: Duration = Duration::from_millis(250);
+/// Flush a table's builder once this many rows have accumulated: bounds batch size and staleness.
+const FLUSH_ROWS: usize = 1024;
 
 /// Run `query` over a live GOTV/spectator broadcast, streaming result rows as the match plays.
 ///
@@ -130,9 +139,28 @@ pub(crate) async fn query_live(base_url: &str, query: &str) -> Result<SendableRe
 
     // Producer: forward each remaining fragment; dropping the sender on exit signals EOF to the parser.
     tokio::spawn(async move {
-        while let Some(Ok(bytes)) = http.next_packet().await {
-            if bytes_tx.send(bytes).is_err() {
-                break;
+        let mut consecutive_errors = 0usize;
+        loop {
+            match http.next_packet().await {
+                Some(Ok(bytes)) => {
+                    consecutive_errors = 0;
+                    if bytes_tx.send(bytes).is_err() {
+                        break;
+                    }
+                }
+                Some(Err(e)) => {
+                    consecutive_errors += 1;
+                    warn!(
+                        error = %e,
+                        consecutive_errors,
+                        "live broadcast fragment fetch failed"
+                    );
+                    if consecutive_errors >= MAX_CONSECUTIVE_BROADCAST_ERRORS {
+                        break;
+                    }
+                    sleep(BROADCAST_ERROR_BACKOFF).await;
+                }
+                None => break,
             }
         }
     });
@@ -217,9 +245,6 @@ impl PartitionStream for ChannelPartition {
         ))
     }
 }
-
-/// Flush a table's builder once this many rows have accumulated: bounds batch size and staleness.
-const FLUSH_ROWS: usize = 1024;
 
 struct StreamingCollector {
     entities: HashMap<u64, Channel<EntityBatchBuilder>>,
