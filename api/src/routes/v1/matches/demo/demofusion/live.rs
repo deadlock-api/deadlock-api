@@ -27,7 +27,7 @@ use haste_core::parser::{Context, Parser, Visitor};
 use haste_core::valveprotos::common::{
     CDemoClassInfo, CDemoFullPacket, CDemoPacket, CDemoSendTables, EDemoCommands,
 };
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
+use tokio::sync::mpsc::{Receiver, Sender, channel};
 
 use super::entity_batch_builder::EntityBatchBuilder;
 use super::error::{Error, Result};
@@ -39,6 +39,11 @@ use super::query::{
 };
 use super::table_extractor::extract_table_names;
 use super::visitor::{BroadcastDemoStream, discover_schemas_from_demo};
+
+/// Number of ready batches each live table may buffer before the blocking parser applies backpressure.
+const LIVE_TABLE_CHANNEL_DEPTH: usize = 16;
+/// Flush a table's builder once this many rows have accumulated: bounds batch size and staleness.
+const FLUSH_ROWS: usize = 1024;
 
 /// Run `query` over a live GOTV/spectator broadcast, streaming result rows as the match plays.
 ///
@@ -86,7 +91,7 @@ pub(crate) async fn query_live(base_url: &str, query: &str) -> Result<SendableRe
     let ctx = SessionContext::new();
     let mut entities: HashMap<u64, Channel<EntityBatchBuilder>> = HashMap::new();
     for (schema, projection) in &entity_specs {
-        let (tx, rx) = unbounded_channel();
+        let (tx, rx) = channel(LIVE_TABLE_CHANNEL_DEPTH);
         register_streaming_table(
             &ctx,
             &schema.serializer_name,
@@ -117,7 +122,7 @@ pub(crate) async fn query_live(base_url: &str, query: &str) -> Result<SendableRe
         let Some(arrow_schema) = event_schema(table_name) else {
             continue;
         };
-        let (tx, rx) = unbounded_channel();
+        let (tx, rx) = channel(LIVE_TABLE_CHANNEL_DEPTH);
         register_streaming_table(&ctx, table_name, arrow_schema, rx)?;
         events.insert(
             event_type.message_id(),
@@ -158,7 +163,7 @@ fn register_streaming_table(
     ctx: &SessionContext,
     name: &str,
     schema: SchemaRef,
-    rx: UnboundedReceiver<RecordBatch>,
+    rx: Receiver<RecordBatch>,
 ) -> Result<()> {
     let partition = Arc::new(ChannelPartition {
         schema: Arc::clone(&schema),
@@ -173,12 +178,13 @@ fn register_streaming_table(
 
 struct Channel<B> {
     builder: B,
-    tx: UnboundedSender<RecordBatch>,
+    tx: Sender<RecordBatch>,
 }
 
-fn send_batch(batch: RecordBatch, tx: &UnboundedSender<RecordBatch>) -> Result<()> {
-    if batch.num_rows() > 0 && tx.send(batch).is_err() {
-        return Err(Error::Broadcast("live result stream closed".into()));
+fn send_batch(batch: RecordBatch, tx: &Sender<RecordBatch>) -> Result<()> {
+    if batch.num_rows() > 0 {
+        tx.blocking_send(batch)
+            .map_err(|_| Error::Broadcast("live result stream closed".into()))?;
     }
     Ok(())
 }
@@ -186,7 +192,7 @@ fn send_batch(batch: RecordBatch, tx: &UnboundedSender<RecordBatch>) -> Result<(
 /// A `DataFusion` partition yielding the `RecordBatch`es sent on its channel until it closes.
 struct ChannelPartition {
     schema: SchemaRef,
-    rx: Mutex<Option<UnboundedReceiver<RecordBatch>>>,
+    rx: Mutex<Option<Receiver<RecordBatch>>>,
 }
 
 impl core::fmt::Debug for ChannelPartition {
@@ -217,9 +223,6 @@ impl PartitionStream for ChannelPartition {
         ))
     }
 }
-
-/// Flush a table's builder once this many rows have accumulated: bounds batch size and staleness.
-const FLUSH_ROWS: usize = 1024;
 
 struct StreamingCollector {
     entities: HashMap<u64, Channel<EntityBatchBuilder>>,
