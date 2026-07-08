@@ -69,4 +69,5 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(submit::submit))
         .routes(routes!(status::status))
         .routes(routes!(live_query::live_query))
+        .routes(routes!(live_query::live_query_post))
 }
