@@ -9,7 +9,7 @@ use datafusion::arrow::datatypes::SchemaRef;
 
 use super::error::Result;
 use super::events::{EventType, event_schema};
-use super::visitor::discover_all_schemas_from_demo;
+use super::visitor::{SyncDemoStream, discover_all_schemas_from_demo};
 
 /// Which kind of table a [`TableSchema`] describes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,7 +53,7 @@ pub(crate) struct TableSchema {
 pub(crate) fn schema(demo: Bytes) -> Result<Vec<TableSchema>> {
     let mut tables = Vec::new();
 
-    for entity in discover_all_schemas_from_demo(demo)? {
+    for entity in discover_all_schemas_from_demo::<SyncDemoStream>(demo)? {
         tables.push(TableSchema {
             name: entity.serializer_name.to_string(),
             kind: TableKind::Entity,

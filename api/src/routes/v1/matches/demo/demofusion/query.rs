@@ -33,8 +33,8 @@ use super::events::{EventType, event_schema};
 use super::schema::EntitySchema;
 use super::table_extractor::extract_table_names;
 use super::visitor::{
-    CollectedBatches, CollectingVisitor, discover_schemas_from_demo, scan_full_packet_ticks,
-    sync_parser,
+    BuildStream, CollectedBatches, CollectingVisitor, SyncDemoStream, discover_schemas_from_demo,
+    scan_full_packet_ticks, sync_parser,
 };
 
 /// Run `query` against a single parse of `demo` and return a stream of its
@@ -53,64 +53,34 @@ use super::visitor::{
 /// demo cannot be parsed, or `DataFusion` fails to plan or execute the query
 /// (see [`Error`](super::Error)).
 pub(crate) async fn query(demo: Bytes, query: &str) -> Result<SendableRecordBatchStream> {
-    // Discover the tables the query references.
+    query_stream::<SyncDemoStream>(demo, query).await
+}
+
+/// The shared batch pipeline, generic over the demo stream format `D` (a `.dem` file or a buffered
+/// broadcast). The bytes are parsed once; only the columns the query references are decoded, and
+/// only the entity types it references have Arrow schemas built (a demo defines hundreds).
+async fn query_stream<D: BuildStream>(
+    demo: Bytes,
+    query: &str,
+) -> Result<SendableRecordBatchStream> {
     let referenced: HashSet<String> = extract_table_names(query)?.into_iter().collect();
 
-    // Parse the demo's schemas from its raw bytes, building Arrow schemas only for the entity
-    // types the query actually references (the demo defines hundreds of serializers).
-    let entity_schemas: Schemas = discover_schemas_from_demo(demo.clone(), &referenced)?
+    let entity_schemas: Schemas = discover_schemas_from_demo::<D>(demo.clone(), &referenced)?
         .into_iter()
         .map(|s| (Arc::clone(&s.serializer_name), s))
         .collect();
 
-    let referenced_entities: Vec<EntitySchema> = referenced
-        .iter()
-        .filter_map(|name| entity_schemas.get(name.as_str()).cloned())
-        .collect();
-
-    let event_types: Vec<EventType> = EventType::all()
-        .iter()
-        .copied()
-        .filter(|event_type| referenced.contains(event_type.table_name()))
-        .collect();
-
-    // Ask the query optimizer which columns each entity table really needs,
-    // so we only materialize those (decisive for wide tables).
+    let (referenced_entities, event_types) = resolve_referenced(&referenced, &entity_schemas);
     let projections =
         discover_entity_projections(query, &referenced_entities, &event_types).await?;
+    let entity_specs = build_entity_specs(&referenced_entities, &projections);
 
-    // Build the per-entity collection specs (full schema + chosen projection).
-    let mut entity_specs: Vec<(EntitySchema, Option<Arc<[usize]>>)> =
-        Vec::with_capacity(referenced_entities.len());
-    for schema in &referenced_entities {
-        match projections.get(schema.serializer_name.as_ref()) {
-            Some(EntityProjection::All) => entity_specs.push((schema.clone(), None)),
-            Some(EntityProjection::Columns(cols)) => {
-                entity_specs.push((schema.clone(), Some(cols.iter().copied().collect())));
-            }
-            // Referenced in SQL text but optimized away (no scan) — skip parsing,
-            // but still register an empty table below so the query resolves.
-            None => {}
-        }
-    }
+    let collected = parse_and_collect::<D>(&demo, &entity_specs, &event_types)?;
 
-    // Parse the demo once, collecting only the projected columns.
-    let collected = parse_and_collect(&demo, &entity_specs, &event_types)?;
-
-    // Register each referenced entity as a single in-memory batch. Entities the
-    // optimizer dropped (no projection) get the full schema with no data, so the
-    // SQL still resolves against an empty table.
     let ctx = SessionContext::new();
 
     for schema in &referenced_entities {
-        let arrow_schema: SchemaRef = match projections.get(schema.serializer_name.as_ref()) {
-            Some(EntityProjection::Columns(cols)) => Arc::new(
-                schema
-                    .arrow_schema
-                    .project(&cols.iter().copied().collect::<Vec<_>>())?,
-            ),
-            Some(EntityProjection::All) | None => schema.arrow_schema.clone(),
-        };
+        let arrow_schema = projected_entity_schema(schema, &projections)?;
         let table = multi_batch_table(
             arrow_schema,
             collected.entities.get(&schema.serializer_name),
@@ -130,11 +100,67 @@ pub(crate) async fn query(demo: Bytes, query: &str) -> Result<SendableRecordBatc
     Ok(ctx.sql(query).await?.execute_stream().await?)
 }
 
-type Schemas = HashMap<Arc<str>, EntitySchema>;
+pub(crate) type Schemas = HashMap<Arc<str>, EntitySchema>;
+
+/// The entity tables a query references, paired with the projection each needs — the shared front
+/// half of every query pipeline once schemas have been discovered.
+pub(crate) fn resolve_referenced(
+    referenced: &HashSet<String>,
+    entity_schemas: &Schemas,
+) -> (Vec<EntitySchema>, Vec<EventType>) {
+    let referenced_entities: Vec<EntitySchema> = referenced
+        .iter()
+        .filter_map(|name| entity_schemas.get(name.as_str()).cloned())
+        .collect();
+
+    let event_types: Vec<EventType> = EventType::all()
+        .iter()
+        .copied()
+        .filter(|event_type| referenced.contains(event_type.table_name()))
+        .collect();
+
+    (referenced_entities, event_types)
+}
+
+/// Build the per-entity collection specs (full schema + chosen projection). Entities referenced in
+/// SQL text but optimized away by the planner (no projection entry) are skipped — no columns are
+/// parsed for them, though the caller still registers an empty table so the SQL resolves.
+pub(crate) fn build_entity_specs(
+    referenced_entities: &[EntitySchema],
+    projections: &HashMap<Arc<str>, EntityProjection>,
+) -> Vec<(EntitySchema, Option<Arc<[usize]>>)> {
+    let mut entity_specs = Vec::with_capacity(referenced_entities.len());
+    for schema in referenced_entities {
+        match projections.get(schema.serializer_name.as_ref()) {
+            Some(EntityProjection::All) => entity_specs.push((schema.clone(), None)),
+            Some(EntityProjection::Columns(cols)) => {
+                entity_specs.push((schema.clone(), Some(cols.iter().copied().collect())));
+            }
+            None => {}
+        }
+    }
+    entity_specs
+}
+
+/// The Arrow schema an entity table is registered with: the projected columns when the planner
+/// pushed a projection, otherwise the full schema (so an optimized-away table still resolves).
+pub(crate) fn projected_entity_schema(
+    schema: &EntitySchema,
+    projections: &HashMap<Arc<str>, EntityProjection>,
+) -> Result<SchemaRef> {
+    Ok(match projections.get(schema.serializer_name.as_ref()) {
+        Some(EntityProjection::Columns(cols)) => Arc::new(
+            schema
+                .arrow_schema
+                .project(&cols.iter().copied().collect::<Vec<_>>())?,
+        ),
+        Some(EntityProjection::All) | None => schema.arrow_schema.clone(),
+    })
+}
 
 /// Plan the query against full-schema (empty) tables and read back the
 /// column projection the optimizer pushed into each entity `TableScan`.
-async fn discover_entity_projections(
+pub(crate) async fn discover_entity_projections(
     query: &str,
     entities: &[EntitySchema],
     event_types: &[EventType],
@@ -188,7 +214,7 @@ struct CollectedTables {
 /// snapshot, so a segment can be parsed independently — and the segments are parsed in parallel on
 /// rayon's pool, which load-balances them across idle workers. Each segment's output batches are
 /// concatenated in tick (segment) order, which reproduces a single end-to-end parse exactly.
-fn parse_and_collect(
+fn parse_and_collect<D: BuildStream>(
     demo_bytes: &Bytes,
     entity_specs: &[(EntitySchema, Option<Arc<[usize]>>)],
     event_types: &[EventType],
@@ -200,7 +226,7 @@ fn parse_and_collect(
         });
     }
 
-    let num_full_packets = scan_full_packet_ticks(demo_bytes.clone())?.len();
+    let num_full_packets = scan_full_packet_ticks::<D>(demo_bytes.clone())?.len();
 
     // One segment per full packet, parsed in parallel — rayon load-balances them across idle
     // workers and `into_par_iter` over the range keeps results in tick order. Segment `i` spans
@@ -212,7 +238,7 @@ fn parse_and_collect(
         .into_par_iter()
         .map(|ordinal| -> Result<CollectedBatches> {
             let visitor = CollectingVisitor::new(entity_specs, event_types);
-            let mut parser = sync_parser(demo_bytes.clone(), visitor)?;
+            let mut parser = sync_parser::<D, _>(demo_bytes.clone(), visitor)?;
             // Mirrors the single-threaded path: parse errors (e.g. a truncated tail) are
             // tolerated and whatever was collected so far is kept.
             let _ = parser.run_full_packet(ordinal);
@@ -240,7 +266,7 @@ fn parse_and_collect(
 }
 
 /// The set of columns a query needs from one entity table.
-enum EntityProjection {
+pub(crate) enum EntityProjection {
     /// At least one scan needs every column.
     All,
     /// The union of column indices needed across all scans.

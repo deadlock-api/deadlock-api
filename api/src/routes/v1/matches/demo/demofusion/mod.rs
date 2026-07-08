@@ -13,6 +13,7 @@ mod entity_batch_builder;
 mod error;
 mod event_batch_builder;
 mod events;
+mod live;
 mod query;
 mod schema;
 mod table_extractor;
@@ -20,4 +21,5 @@ mod visitor;
 
 pub(crate) use catalog::{TableKind, TableSchema, schema};
 pub(crate) use error::Error;
+pub(crate) use live::query_live;
 pub(crate) use query::query;

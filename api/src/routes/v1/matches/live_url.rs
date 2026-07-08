@@ -174,6 +174,26 @@ pub(super) async fn url(
     rate_limit_key: RateLimitKey,
     State(mut state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    let (broadcast_url, lobby_id) =
+        resolve_broadcast_url(&mut state, &rate_limit_key, match_id).await?;
+    Ok(Json(MatchSpectateResponse {
+        broadcast_url,
+        lobby_id,
+    }))
+}
+
+/// Resolve a match's live broadcast URL, reusing a cached one when present and otherwise spectating
+/// the lobby (rate-limited, since spectating is expensive) and caching the result for 15 minutes.
+///
+/// # Errors
+///
+/// Returns `BAD_REQUEST` if the match is too old to be live, `TOO_MANY_REQUESTS` if the spectate
+/// rate limit is hit, or an internal error if spectating fails.
+pub(super) async fn resolve_broadcast_url(
+    state: &mut AppState,
+    rate_limit_key: &RateLimitKey,
+    match_id: u64,
+) -> APIResult<(String, Option<u64>)> {
     let oldest_possibly_live_match_id = state
         .ch_client
         .query("SELECT min(match_id) FROM match_player WHERE start_time >= now() - INTERVAL 4 HOUR SETTINGS log_comment = 'live_url', apply_patch_parts = 0, optimize_use_projections = 0")
@@ -197,16 +217,16 @@ pub(super) async fn url(
         && let Ok(cached) = serde_json::from_str::<serde_json::Value>(&cached)
         && let Some(broadcast_url) = cached.get("broadcast_url").and_then(|v| v.as_str())
     {
-        return Ok(Json(MatchSpectateResponse {
-            broadcast_url: broadcast_url.to_string(),
-            lobby_id: cached.get("lobby_id").and_then(serde_json::Value::as_u64),
-        }));
+        return Ok((
+            broadcast_url.to_string(),
+            cached.get("lobby_id").and_then(serde_json::Value::as_u64),
+        ));
     }
 
     state
         .rate_limit_client
         .apply_limits(
-            &rate_limit_key,
+            rate_limit_key,
             "spectate",
             &[
                 Quota::ip_limit(2, Duration::from_hours(1)),
@@ -256,10 +276,7 @@ pub(super) async fn url(
         )
         .await?;
 
-    Ok(Json(MatchSpectateResponse {
-        broadcast_url,
-        lobby_id,
-    }))
+    Ok((broadcast_url, lobby_id))
 }
 
 #[utoipa::path(

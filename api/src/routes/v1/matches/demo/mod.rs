@@ -2,6 +2,7 @@ mod demofusion;
 mod download;
 mod format;
 mod job;
+mod live_query;
 mod schema;
 mod status;
 mod submit;
@@ -67,4 +68,5 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         )
         .routes(routes!(submit::submit))
         .routes(routes!(status::status))
+        .routes(routes!(live_query::live_query))
 }

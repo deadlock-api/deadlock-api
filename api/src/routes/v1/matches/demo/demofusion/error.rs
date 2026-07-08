@@ -20,6 +20,10 @@ pub(crate) enum Error {
     /// "need more bytes" signal for streaming/partial-download callers.
     #[error("incomplete demo: more bytes are needed before the schema is available")]
     IncompleteDemo,
+
+    /// A live broadcast could not be fetched from its relay (see [`super::query_live`]).
+    #[error("live broadcast error: {0}")]
+    Broadcast(String),
 }
 
 pub(crate) type Result<T> = core::result::Result<T, Error>;

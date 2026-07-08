@@ -88,6 +88,7 @@ datafusion = { version = "54", default-features = false, features = [
     "encoding_expressions",
 ] }
 haste_core = { git = "https://github.com/deadlock-api/haste.git", rev = "7b3382710d3c25ec48ae1c0cc8a6789976f7c18e" }
+haste_broadcast = { git = "https://github.com/deadlock-api/haste.git", rev = "7b3382710d3c25ec48ae1c0cc8a6789976f7c18e" }
 rayon = "1"
 tokio-util = { version = "0.7.18", features = ["io"] }
 

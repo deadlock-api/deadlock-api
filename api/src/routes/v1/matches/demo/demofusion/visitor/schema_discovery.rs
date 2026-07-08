@@ -1,7 +1,8 @@
+use core::marker::PhantomData;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
-use haste_core::demostream::CmdHeader;
+use haste_core::demostream::{CmdHeader, DemoStream};
 use haste_core::flattenedserializers::{FlattenedSerializer, FlattenedSerializerField};
 use haste_core::parser::{Context, Visitor};
 use haste_core::valveprotos::common::EDemoCommands;
@@ -13,15 +14,21 @@ use super::super::schema::{
     ArrayColumn, ArrayInfo, ArrayLen, ElemExtract, EntitySchema, FieldInfo, SymbolTable,
     build_schema, compute_field_key,
 };
+use super::BuildStream;
 
-struct SchemaDiscoveryVisitor {
+/// Extracts serializer symbols from a demo's send-tables. Generic over the stream format `D` so the
+/// raw send-tables body is unwrapped the format's own way (demo files wrap it in a protobuf
+/// `CDemoSendTables`; broadcasts prefix it with four raw bytes) via [`DemoStream::decode_cmd_send_tables`].
+struct SchemaDiscoveryVisitor<D> {
     symbols: Arc<Mutex<Option<Vec<String>>>>,
+    _marker: PhantomData<fn() -> D>,
 }
 
-impl SchemaDiscoveryVisitor {
+impl<D> SchemaDiscoveryVisitor<D> {
     fn new() -> Self {
         Self {
             symbols: Arc::new(Mutex::new(None)),
+            _marker: PhantomData,
         }
     }
 
@@ -30,13 +37,7 @@ impl SchemaDiscoveryVisitor {
     }
 }
 
-impl Default for SchemaDiscoveryVisitor {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Visitor for SchemaDiscoveryVisitor {
+impl<D: DemoStream> Visitor for SchemaDiscoveryVisitor<D> {
     type Error = Error;
 
     fn on_cmd(
@@ -47,7 +48,7 @@ impl Visitor for SchemaDiscoveryVisitor {
     ) -> core::result::Result<(), Self::Error> {
         match cmd_header.cmd {
             EDemoCommands::DemSendTables => {
-                if let Ok(symbols) = extract_symbols_from_send_tables(data)
+                if let Ok(symbols) = extract_symbols_from_send_tables::<D>(data)
                     && let Ok(mut guard) = self.symbols.lock()
                 {
                     *guard = Some(symbols);
@@ -65,10 +66,10 @@ impl Visitor for SchemaDiscoveryVisitor {
     }
 }
 
-fn extract_symbols_from_send_tables(data: &[u8]) -> Result<Vec<String>> {
+fn extract_symbols_from_send_tables<D: DemoStream>(data: &[u8]) -> Result<Vec<String>> {
     use haste_core::valveprotos::common::CsvcMsgFlattenedSerializer;
 
-    let send_tables = haste_core::valveprotos::common::CDemoSendTables::decode(data)
+    let send_tables = D::decode_cmd_send_tables(data)
         .map_err(|e| Error::Schema(format!("Failed to decode send tables: {e}")))?;
 
     let raw_data = send_tables.data.unwrap_or_default();
@@ -360,31 +361,32 @@ fn collect_struct_leaves(
     }
 }
 
-/// Discover entity schemas from a demo file.
-///
-/// Parses the demo file header to extract entity serializer definitions and builds
-/// Arrow schemas for each entity type.
-pub(crate) fn discover_schemas_from_demo(
+/// Discover entity schemas from a demo, parsing its send-tables to extract serializer definitions
+/// and building Arrow schemas for each referenced entity type. Generic over the stream format `D`.
+pub(crate) fn discover_schemas_from_demo<D: BuildStream>(
     data: bytes::Bytes,
     wanted: &HashSet<String>,
 ) -> Result<Vec<EntitySchema>> {
-    discover_schemas(data, Some(wanted))
+    discover_schemas::<D>(data, Some(wanted))
 }
 
 /// Like [`discover_schemas_from_demo`], but builds Arrow schemas for *every* entity
 /// serializer in the demo rather than only a wanted subset.
-pub(crate) fn discover_all_schemas_from_demo(data: bytes::Bytes) -> Result<Vec<EntitySchema>> {
-    discover_schemas(data, None)
+pub(crate) fn discover_all_schemas_from_demo<D: BuildStream>(
+    data: bytes::Bytes,
+) -> Result<Vec<EntitySchema>> {
+    discover_schemas::<D>(data, None)
 }
 
-fn discover_schemas(
+fn discover_schemas<D: BuildStream>(
     data: bytes::Bytes,
     wanted: Option<&HashSet<String>>,
 ) -> Result<Vec<EntitySchema>> {
-    let visitor = SchemaDiscoveryVisitor::new();
+    let visitor = SchemaDiscoveryVisitor::<D>::new();
     let symbols_handle = visitor.symbols_handle();
 
-    let mut parser = super::sync_parser(data, visitor).map_err(|e| Error::Schema(e.to_string()))?;
+    let mut parser =
+        super::sync_parser::<D, _>(data, visitor).map_err(|e| Error::Schema(e.to_string()))?;
 
     // Run until schema discovery completes (at DEM_SyncTick)
     let _ = parser.run_to_end();

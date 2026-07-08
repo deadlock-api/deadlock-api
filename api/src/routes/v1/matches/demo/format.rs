@@ -93,11 +93,16 @@ fn to_ndjson(batches: &[RecordBatch]) -> APIResult<Bytes> {
     Ok(Bytes::from(buf))
 }
 
-fn map_demofusion_err(e: &demofusion::Error) -> APIError {
+pub(super) fn map_demofusion_err(e: &demofusion::Error) -> APIError {
     match e {
         demofusion::Error::DataFusion(_) | demofusion::Error::Schema(_) => {
             APIError::status_msg(StatusCode::BAD_REQUEST, format!("Invalid query: {e}"))
         }
+        // Only the live-broadcast path produces this; a relay fetch failure is an upstream 502.
+        demofusion::Error::Broadcast(_) => APIError::status_msg(
+            StatusCode::BAD_GATEWAY,
+            format!("Live broadcast error: {e}"),
+        ),
         _ => APIError::internal(format!("Failed to query demo: {e}")),
     }
 }
