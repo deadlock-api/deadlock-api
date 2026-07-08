@@ -158,6 +158,9 @@ async fn shutdown_signal() {
 
     info!("Shutdown signal received, draining for {DRAIN_DELAY:?} before stopping");
     deadlock_api_rust::SHUTTING_DOWN.store(true, core::sync::atomic::Ordering::Relaxed);
+    // Close long-lived streams (live SSE) right away so they don't hold connections open through
+    // the drain and block graceful shutdown until the container is force-killed.
+    deadlock_api_rust::SHUTDOWN_TOKEN.cancel();
     #[cfg(not(debug_assertions))]
     tokio::time::sleep(DRAIN_DELAY).await;
 }

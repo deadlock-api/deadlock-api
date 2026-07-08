@@ -63,6 +63,11 @@ const DEFAULT_CACHE_TIME: u64 = 2 * 60; // Cloudflare Free Tier Minimal Cache Ti
 pub static SHUTTING_DOWN: core::sync::atomic::AtomicBool =
     core::sync::atomic::AtomicBool::new(false);
 
+/// Cancelled the moment a shutdown signal arrives, so long-lived streams (live SSE) can end
+/// immediately instead of keeping the connection open until the container is force-killed.
+pub static SHUTDOWN_TOKEN: std::sync::LazyLock<tokio_util::sync::CancellationToken> =
+    std::sync::LazyLock::new(tokio_util::sync::CancellationToken::new);
+
 const ROBOTS_TXT: &str = r"
 User-agent: *
 Disallow: /

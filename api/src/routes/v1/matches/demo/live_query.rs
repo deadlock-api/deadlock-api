@@ -108,7 +108,9 @@ pub(super) async fn live_query(
     // runs lazily inside the stream so a stale/unavailable relay surfaces as a terminal `error`
     // event rather than a pre-response gateway error, and the keep-alive ping holds the connection
     // open through the wait for the signon fragment.
-    Ok(Sse::new(live_sse(broadcast_url, params.query)).keep_alive(
+    let stream = live_sse(broadcast_url, params.query)
+        .take_until(crate::SHUTDOWN_TOKEN.clone().cancelled_owned());
+    Ok(Sse::new(stream).keep_alive(
         KeepAlive::new()
             .interval(Duration::from_secs(15))
             .text("ping"),
