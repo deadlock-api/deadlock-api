@@ -18,6 +18,7 @@ use valveprotos::deadlock::{
 };
 use valveprotos::gcsdk::EgcPlatform;
 
+use super::active::active_lobby_id;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::Quota;
@@ -79,18 +80,20 @@ async fn uses_live_events_pool(
 
 #[cached(
     ttl = 60,
-    convert = "{ match_id }",
+    convert = "{ (match_id, lobby_id) }",
     sync_writes = "by_key",
-    key = "u64"
+    key = "(u64, Option<u64>)"
 )]
 pub(super) async fn spectate_match(
     steam_client: &SteamClient,
     match_id: u64,
+    lobby_id: Option<u64>,
     live_events_pool: bool,
 ) -> Result<(String, Option<u64>), APIError> {
     let client_version = steam_client.get_current_client_version().await?;
     let msg = CMsgClientToGcSpectateLobby {
-        match_id: Some(match_id),
+        lobby_id,
+        match_id: lobby_id.is_none().then_some(match_id),
         client_version: Some(client_version),
         client_platform: Some(EgcPlatform::KEGcPlatformPc as i32),
         ..Default::default()
@@ -207,7 +210,12 @@ pub(super) async fn resolve_broadcast_url(
         ));
     }
 
-    // Check Redis for a cached broadcast URL
+    let active_lobby_id = active_lobby_id(state, match_id).await.ok().flatten();
+
+    // Check Redis for a cached broadcast URL. Older entries may have been resolved by match_id,
+    // which can allocate a URL without reliably starting the on-demand relay. If the active match
+    // list has a lobby id and the cached entry was not resolved through it, refresh once through
+    // lobby_id instead of letting a stale not-started URL bypass the start path.
     let cached: Option<String> = state
         .redis_client
         .hget(SPECTATED_MATCHES_KEY, match_id.to_string())
@@ -217,10 +225,16 @@ pub(super) async fn resolve_broadcast_url(
         && let Ok(cached) = serde_json::from_str::<serde_json::Value>(&cached)
         && let Some(broadcast_url) = cached.get("broadcast_url").and_then(|v| v.as_str())
     {
-        return Ok((
-            broadcast_url.to_string(),
-            cached.get("lobby_id").and_then(serde_json::Value::as_u64),
-        ));
+        let cached_lobby_id = cached.get("lobby_id").and_then(serde_json::Value::as_u64);
+        let should_refresh_with_lobby_id = active_lobby_id.is_some()
+            && cached.get("match_type").and_then(serde_json::Value::as_str) == Some("GapMatch")
+            && !cached
+                .get("spectated_via_lobby_id")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(false);
+        if !should_refresh_with_lobby_id {
+            return Ok((broadcast_url.to_string(), cached_lobby_id));
+        }
     }
 
     state
@@ -245,17 +259,24 @@ pub(super) async fn resolve_broadcast_url(
         None => false,
     };
 
-    let (broadcast_url, lobby_id) =
-        tryhard::retry_fn(|| spectate_match(&state.steam_client, match_id, live_events_pool))
-            .retries(3)
-            .fixed_backoff(Duration::from_millis(10))
-            .await?;
+    let (broadcast_url, lobby_id) = tryhard::retry_fn(|| {
+        spectate_match(
+            &state.steam_client,
+            match_id,
+            active_lobby_id,
+            live_events_pool,
+        )
+    })
+    .retries(3)
+    .fixed_backoff(Duration::from_millis(10))
+    .await?;
 
     let payload = &serde_json::json!({
         "match_type": "GapMatch",
         "match_id": match_id,
         "broadcast_url": broadcast_url,
         "lobby_id": lobby_id,
+        "spectated_via_lobby_id": active_lobby_id.is_some(),
         "updated_at": chrono::Utc::now().timestamp(),
     });
     state

@@ -67,6 +67,14 @@ fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>> {
         .collect())
 }
 
+pub(super) async fn active_lobby_id(state: &AppState, match_id: u64) -> APIResult<Option<u64>> {
+    let raw_data = fetch_active_matches_raw(state).await?;
+    Ok(parse_active_matches_raw(&raw_data)?
+        .into_iter()
+        .find(|m| m.match_id == Some(match_id))
+        .and_then(|m| m.lobby_id))
+}
+
 #[utoipa::path(
     get,
     path = "/active/raw",

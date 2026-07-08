@@ -17,6 +17,8 @@ use datafusion::execution::SendableRecordBatchStream;
 use futures::{Stream, StreamExt};
 use reqwest::StatusCode;
 use serde::Deserialize;
+use serde_json::Value;
+use tokio::time::Instant;
 use utoipa::IntoParams;
 
 use super::demofusion;
@@ -25,6 +27,11 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::live_url::resolve_broadcast_url;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+
+const BROADCAST_READY_TIMEOUT_SECS: u64 = 30;
+const BROADCAST_READY_POLL_SECS: u64 = 2;
+const BROADCAST_SYNC_REQUEST_TIMEOUT_SECS: u64 = 5;
+const BROADCAST_NOT_STARTED_MESSAGE: &str = "Broadcast has not started yet";
 
 #[derive(Deserialize, IntoParams)]
 pub(super) struct LiveQueryParams {
@@ -50,7 +57,9 @@ terminal `end` event marks the end of the broadcast, and an `error` event carrie
 failure."),
         (status = BAD_REQUEST, description = "Neither match_id nor broadcast_url given, or the query is invalid."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
+        (status = 425, description = "The Steam CDN broadcast URL exists, but /sync is not ready yet"),
         (status = BAD_GATEWAY, description = "The live broadcast could not be fetched"),
+        (status = SERVICE_UNAVAILABLE, description = "The live broadcast relay is temporarily unavailable"),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to start the live query")
     ),
     tags = ["Demo"],
@@ -104,11 +113,132 @@ pub(super) async fn live_query(
         }
     };
 
+    wait_for_broadcast_ready(&broadcast_url).await?;
+
     let stream = demofusion::query_live(&broadcast_url, &params.query)
         .await
         .map_err(|e| super::format::map_demofusion_err(&e))?;
 
     Ok(Sse::new(sse_rows(stream)).keep_alive(KeepAlive::default()))
+}
+
+async fn wait_for_broadcast_ready(broadcast_url: &str) -> APIResult<()> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(BROADCAST_SYNC_REQUEST_TIMEOUT_SECS))
+        .build()?;
+    let deadline = Instant::now() + Duration::from_secs(BROADCAST_READY_TIMEOUT_SECS);
+
+    loop {
+        match probe_broadcast_sync(&client, broadcast_url).await {
+            BroadcastSyncProbe::Ready => return Ok(()),
+            BroadcastSyncProbe::NotStarted => {
+                if Instant::now() >= deadline {
+                    return Err(APIError::status_msg(
+                        too_early_status(),
+                        "Live broadcast URL is allocated, but the Steam CDN relay has not started yet. Retry shortly.",
+                    ));
+                }
+            }
+            BroadcastSyncProbe::TemporarilyUnavailable => {
+                if Instant::now() >= deadline {
+                    return Err(APIError::status_msg(
+                        StatusCode::SERVICE_UNAVAILABLE,
+                        "Live broadcast relay is temporarily unavailable. Retry shortly.",
+                    ));
+                }
+            }
+            BroadcastSyncProbe::FailedStatus(status) => {
+                return Err(APIError::status_msg(
+                    StatusCode::BAD_GATEWAY,
+                    format!("Live broadcast relay returned HTTP {status}."),
+                ));
+            }
+            BroadcastSyncProbe::MalformedSync => {
+                return Err(APIError::status_msg(
+                    StatusCode::BAD_GATEWAY,
+                    "Live broadcast relay returned an invalid /sync response.",
+                ));
+            }
+        }
+
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        let sleep_for = remaining.min(Duration::from_secs(BROADCAST_READY_POLL_SECS));
+        if sleep_for.is_zero() {
+            continue;
+        }
+        tokio::time::sleep(sleep_for).await;
+    }
+}
+
+#[derive(Debug)]
+enum BroadcastSyncProbe {
+    Ready,
+    NotStarted,
+    TemporarilyUnavailable,
+    FailedStatus(StatusCode),
+    MalformedSync,
+}
+
+async fn probe_broadcast_sync(client: &reqwest::Client, broadcast_url: &str) -> BroadcastSyncProbe {
+    let url = format!("{}/sync", broadcast_url.trim_end_matches('/'));
+    let response = match client.get(url).send().await {
+        Ok(response) => response,
+        Err(_) => return BroadcastSyncProbe::TemporarilyUnavailable,
+    };
+    let status = response.status();
+    let body = match response.text().await {
+        Ok(body) => body,
+        Err(_) => return BroadcastSyncProbe::TemporarilyUnavailable,
+    };
+
+    if status.is_success() {
+        return match serde_json::from_str::<Value>(&body) {
+            Ok(value)
+                if value.get("fragment").and_then(Value::as_i64).is_some()
+                    && value
+                        .get("signup_fragment")
+                        .and_then(Value::as_i64)
+                        .is_some() =>
+            {
+                BroadcastSyncProbe::Ready
+            }
+            _ => BroadcastSyncProbe::MalformedSync,
+        };
+    }
+
+    if status == StatusCode::NOT_FOUND
+        && sync_error_message(&body).is_some_and(is_not_started_message)
+    {
+        return BroadcastSyncProbe::NotStarted;
+    }
+    if status == StatusCode::NOT_FOUND && is_not_started_message(&body) {
+        return BroadcastSyncProbe::NotStarted;
+    }
+    if status == StatusCode::TOO_MANY_REQUESTS || status.is_server_error() {
+        return BroadcastSyncProbe::TemporarilyUnavailable;
+    }
+
+    BroadcastSyncProbe::FailedStatus(status)
+}
+
+fn too_early_status() -> StatusCode {
+    StatusCode::from_u16(425).unwrap_or(StatusCode::SERVICE_UNAVAILABLE)
+}
+
+fn is_not_started_message(message: impl AsRef<str>) -> bool {
+    message
+        .as_ref()
+        .to_ascii_lowercase()
+        .contains(&BROADCAST_NOT_STARTED_MESSAGE.to_ascii_lowercase())
+}
+
+fn sync_error_message(body: &str) -> Option<String> {
+    serde_json::from_str::<Value>(body).ok().and_then(|value| {
+        value
+            .get("message")
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+    })
 }
 
 /// Adapt a result-batch stream into an SSE row stream: one `message` event per row, a terminal
