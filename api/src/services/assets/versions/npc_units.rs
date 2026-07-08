@@ -1118,7 +1118,7 @@ mod tests {
     fn snapshot_npc_units() {
         let units = build_npc_units(&fixture()).expect("builds");
         insta::with_settings!(
-            { snapshot_path => "npc_units_snapshots", prepend_module_to_snapshot => false },
+            { snapshot_path => "npc_units_snapshots", prepend_module_to_snapshot => false, sort_maps => true },
             { insta::assert_json_snapshot!("npc_units", units); }
         );
     }

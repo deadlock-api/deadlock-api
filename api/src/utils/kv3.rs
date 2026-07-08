@@ -618,7 +618,7 @@ mod tests {
 
     fn snap(name: &str, file: &str) {
         let value = parse_to_json(&fixture(file)).expect("parses");
-        insta::with_settings!({ snapshot_path => "kv3_snapshots", prepend_module_to_snapshot => false }, {
+        insta::with_settings!({ snapshot_path => "kv3_snapshots", prepend_module_to_snapshot => false, sort_maps => true }, {
             insta::assert_json_snapshot!(name, value);
         });
     }
