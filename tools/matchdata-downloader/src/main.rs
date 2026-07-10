@@ -34,15 +34,16 @@ const ITERATION_BACKOFF: Duration = Duration::from_secs(5);
 const RETRY_INTERVAL: Duration = Duration::from_mins(3);
 const MAX_RETRIES: u8 = 30;
 
-/// When set to a truthy value, drop the 2-day recency filter so even very old
-/// matches missing player data are (re)downloaded, not just recent ones.
+/// When set to a truthy value, the first iteration drops the 2-day recency
+/// filter so even very old matches missing player data are (re)downloaded.
+/// Subsequent iterations revert to the normal 2-day window.
 static FETCH_ALL_MATCHES: LazyLock<bool> = LazyLock::new(|| {
     std::env::var("MATCHDATA_DOWNLOADER_FETCH_ALL_MATCHES")
         .is_ok_and(|s| matches!(s.trim().to_lowercase().as_str(), "1" | "true" | "yes"))
 });
 
-fn pending_salts_query() -> String {
-    let recency = if *FETCH_ALL_MATCHES {
+fn pending_salts_query(fetch_all: bool) -> String {
+    let recency = if fetch_all {
         "1"
     } else {
         "created_at > now() - INTERVAL 2 DAY"
@@ -78,14 +79,17 @@ async fn main() -> anyhow::Result<()> {
     let cache_store: Arc<dyn ObjectStore> = Arc::new(common::get_cache_store()?);
     let state = State::new();
 
+    let mut first_iteration = true;
     loop {
         let started = tokio::time::Instant::now();
-        if let Err(e) = run_iteration(&ch_client, &store, &cache_store, &state).await {
+        let fetch_all = first_iteration && *FETCH_ALL_MATCHES;
+        if let Err(e) = run_iteration(&ch_client, &store, &cache_store, &state, fetch_all).await {
             counter!("matchdata_downloader.iteration.failure").increment(1);
             error!("Iteration failed: {e:#}");
             sleep(ITERATION_BACKOFF).await;
             continue;
         }
+        first_iteration = false;
         if let Some(remaining) = POLL_INTERVAL.checked_sub(started.elapsed()) {
             sleep(remaining).await;
         }
@@ -97,9 +101,10 @@ async fn run_iteration(
     store: &Arc<dyn ObjectStore>,
     cache_store: &Arc<dyn ObjectStore>,
     state: &State,
+    fetch_all: bool,
 ) -> anyhow::Result<()> {
     info!("Fetching match ids to download");
-    let pending = fetch_pending_salts(ch_client)
+    let pending = fetch_pending_salts(ch_client, fetch_all)
         .await
         .context("fetching pending match salts")?;
 
@@ -118,9 +123,12 @@ async fn run_iteration(
     Ok(())
 }
 
-async fn fetch_pending_salts(ch_client: &Client) -> anyhow::Result<Vec<MatchSalts>> {
+async fn fetch_pending_salts(
+    ch_client: &Client,
+    fetch_all: bool,
+) -> anyhow::Result<Vec<MatchSalts>> {
     let rows = ch_client
-        .query(&pending_salts_query())
+        .query(&pending_salts_query(fetch_all))
         .fetch_all::<MatchSalts>()
         .await?;
     Ok(rows
