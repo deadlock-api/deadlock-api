@@ -12,7 +12,7 @@
 
 use core::time::Duration;
 use std::collections::HashSet;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 
 use anyhow::Context;
 use cached::macros::cached;
@@ -34,23 +34,39 @@ const ITERATION_BACKOFF: Duration = Duration::from_secs(5);
 const RETRY_INTERVAL: Duration = Duration::from_mins(3);
 const MAX_RETRIES: u8 = 30;
 
-const PENDING_SALTS_QUERY: &str = "
+/// When set to a truthy value, drop the 2-day recency filter so even very old
+/// matches missing player data are (re)downloaded, not just recent ones.
+static FETCH_ALL_MATCHES: LazyLock<bool> = LazyLock::new(|| {
+    std::env::var("MATCHDATA_DOWNLOADER_FETCH_ALL_MATCHES")
+        .is_ok_and(|s| matches!(s.trim().to_lowercase().as_str(), "1" | "true" | "yes"))
+});
+
+fn pending_salts_query() -> String {
+    let recency = if *FETCH_ALL_MATCHES {
+        "1"
+    } else {
+        "created_at > now() - INTERVAL 2 DAY"
+    };
+    format!(
+        "
 SELECT
     match_id,
     argMax(cluster_id,    created_at) AS cluster_id,
     argMax(metadata_salt, created_at) AS metadata_salt,
     argMax(force_retry_at, created_at) AS force_retry_at
 FROM match_salts
-WHERE created_at > now() - INTERVAL 2 DAY
+WHERE {recency}
   AND match_id NOT IN (
       SELECT DISTINCT match_id FROM match_player
       WHERE match_id IN (
-          SELECT match_id FROM match_salts WHERE created_at > now() - INTERVAL 2 DAY
+          SELECT match_id FROM match_salts WHERE {recency}
       )
   )
 GROUP BY match_id
 SETTINGS log_comment = 'matchdata_downloader_fetch_pending_salts'
-";
+"
+    )
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -104,7 +120,7 @@ async fn run_iteration(
 
 async fn fetch_pending_salts(ch_client: &Client) -> anyhow::Result<Vec<MatchSalts>> {
     let rows = ch_client
-        .query(PENDING_SALTS_QUERY)
+        .query(&pending_salts_query())
         .fetch_all::<MatchSalts>()
         .await?;
     Ok(rows
