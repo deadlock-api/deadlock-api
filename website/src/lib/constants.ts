@@ -15,9 +15,21 @@ export interface PatchInfo {
 
 export const PATCHES: readonly PatchInfo[] = [
   {
+    id: "2026-07-09",
+    name: "Minor Update (2026-07-09)",
+    startDate: day.utc("2026-07-09T19:27:38Z").local(),
+  },
+  {
+    id: "2026-07-01",
+    name: "Minor Update (2026-07-01)",
+    startDate: day.utc("2026-07-01T22:54:59Z").local(),
+    endDate: day.utc("2026-07-09T19:27:38Z").local(),
+  },
+  {
     id: "2026-06-30",
     name: "Minor Update (2026-06-30)",
     startDate: day.utc("2026-06-30T17:37:32Z").local(),
+    endDate: day.utc("2026-07-01T22:54:59Z").local(),
   },
   {
     id: "2026-06-11",
