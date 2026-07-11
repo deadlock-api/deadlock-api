@@ -85,6 +85,26 @@ struct ParsedMatch {
 
 type InflightSet = Arc<Mutex<HashSet<Path>>>;
 
+/// Shared handles used by every live-loop inserter task.
+struct InserterCtx<S> {
+    client: clickhouse::Client,
+    store: Arc<S>,
+    inflight: InflightSet,
+    total_ingested: Arc<AtomicUsize>,
+}
+
+// Manual impl avoids a spurious `S: Clone` bound from `derive(Clone)`.
+impl<S> Clone for InserterCtx<S> {
+    fn clone(&self) -> Self {
+        Self {
+            client: self.client.clone(),
+            store: Arc::clone(&self.store),
+            inflight: Arc::clone(&self.inflight),
+            total_ingested: Arc::clone(&self.total_ingested),
+        }
+    }
+}
+
 fn lock_inflight(inflight: &InflightSet) -> std::sync::MutexGuard<'_, HashSet<Path>> {
     inflight
         .lock()
@@ -144,14 +164,19 @@ where
     let (tx, rx) = mpsc::channel::<(Path, ParsedMatch)>(batch_size.max(1).saturating_mul(2));
     let rx = Arc::new(tokio::sync::Mutex::new(rx));
     let inflight: InflightSet = Arc::new(Mutex::new(HashSet::new()));
+    let total_ingested = Arc::new(AtomicUsize::new(0));
+    let ctx = InserterCtx {
+        client: ch_client.clone(),
+        store: Arc::clone(&store),
+        inflight: Arc::clone(&inflight),
+        total_ingested: Arc::clone(&total_ingested),
+    };
 
     for i in 0..num_inserters {
-        let client = ch_client.clone();
+        let ctx = ctx.clone();
         let rx = Arc::clone(&rx);
-        let store = Arc::clone(&store);
-        let inflight = Arc::clone(&inflight);
         tokio::spawn(async move {
-            live_batch_inserter(client, store, rx, inflight, batch_size, flush_interval, i).await;
+            live_batch_inserter(ctx, rx, batch_size, flush_interval, i).await;
         });
     }
 
@@ -173,6 +198,11 @@ where
         };
 
         gauge!("ingest_worker.objs_to_ingest").set(objs_to_ingest.len() as f64);
+        info!(
+            "Queue: {} objects to ingest, {} matches ingested so far",
+            objs_to_ingest.len(),
+            total_ingested.load(Ordering::Relaxed)
+        );
 
         if objs_to_ingest.is_empty() {
             info!("No files to fetch");
@@ -240,10 +270,8 @@ where
 /// the corresponding S3 keys are moved to `processed/`. On persistent failure,
 /// the batch is dropped (objects stay in `ingest/` and will be re-listed next tick).
 async fn live_batch_inserter<S>(
-    client: clickhouse::Client,
-    store: Arc<S>,
+    ctx: InserterCtx<S>,
     rx: Arc<tokio::sync::Mutex<mpsc::Receiver<(Path, ParsedMatch)>>>,
-    inflight: InflightSet,
     batch_size: usize,
     flush_interval: Duration,
     inserter_id: usize,
@@ -264,12 +292,12 @@ async fn live_batch_inserter<S>(
         tokio::select! {
             biased;
             _ = flush_timer.tick(), if !batch.is_empty() => {
-                flush_live_batch(&client, &*store, &inflight, &mut batch, inserter_id).await;
+                flush_live_batch(&ctx, &mut batch, inserter_id).await;
             }
             opt = recv_fut => {
                 let Some(item) = opt else {
                     if !batch.is_empty() {
-                        flush_live_batch(&client, &*store, &inflight, &mut batch, inserter_id).await;
+                        flush_live_batch(&ctx, &mut batch, inserter_id).await;
                     }
                     return;
                 };
@@ -284,7 +312,7 @@ async fn live_batch_inserter<S>(
                     }
                 }
                 if batch.len() >= batch_size {
-                    flush_live_batch(&client, &*store, &inflight, &mut batch, inserter_id).await;
+                    flush_live_batch(&ctx, &mut batch, inserter_id).await;
                 }
             }
         }
@@ -295,15 +323,19 @@ async fn live_batch_inserter<S>(
 /// the underlying S3 keys to `processed/`. On persistent failure, drop the
 /// batch — objects remain in `ingest/` and will be re-listed next tick.
 async fn flush_live_batch<S: ObjectStore>(
-    client: &clickhouse::Client,
-    store: &S,
-    inflight: &InflightSet,
+    ctx: &InserterCtx<S>,
     batch: &mut Vec<(Path, ParsedMatch)>,
     inserter_id: usize,
 ) {
     if batch.is_empty() {
         return;
     }
+    let InserterCtx {
+        client,
+        store,
+        inflight,
+        total_ingested,
+    } = ctx;
     let n = batch.len();
     let parsed: Vec<&ParsedMatch> = batch.iter().map(|(_, p)| p).collect();
     let result =
@@ -314,7 +346,10 @@ async fn flush_live_batch<S: ObjectStore>(
         Ok(()) => {
             counter!("ingest_worker.batch_flush.success").increment(1);
             counter!("ingest_worker.batch_flush.matches").increment(n as u64);
-            info!("[inserter {inserter_id}] Flushed batch of {n} matches");
+            let ingested = total_ingested.fetch_add(n, Ordering::Relaxed) + n;
+            info!(
+                "[inserter {inserter_id}] Flushed batch of {n} matches ({ingested} ingested total)"
+            );
             let keys: Vec<Path> = batch.drain(..).map(|(k, _)| k).collect();
             futures::stream::iter(keys)
                 .map(|key| {
@@ -326,7 +361,7 @@ async fn flush_live_batch<S: ObjectStore>(
                             return;
                         };
                         let new_path = Path::from(format!("{PROCESSED_PREFIX}/{filename}"));
-                        if let Err(e) = move_object(store, &key, &new_path).await {
+                        if let Err(e) = move_object(store.as_ref(), &key, &new_path).await {
                             error!("Failed to move {key} to processed/: {e}");
                         } else {
                             gauge!("ingest_worker.objs_to_ingest").decrement(1);
