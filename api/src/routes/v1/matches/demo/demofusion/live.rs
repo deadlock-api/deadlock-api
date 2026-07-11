@@ -145,17 +145,13 @@ pub(crate) async fn query_live(base_url: &str, query: &str) -> Result<SendableRe
         }
     });
 
-    let visitor = StreamingCollector {
-        entities,
-        events,
-        pending: 0,
-    };
+    let visitor = StreamingCollector { entities, events };
     tokio::task::spawn_blocking(move || {
         let stream = LiveBroadcastStream::new(bytes_rx);
         if let Ok(mut parser) = Parser::from_stream_with_visitor(stream, visitor) {
             // A parse error (truncated tail) or a closed result stream just ends the live query.
             let _ = parser.run_to_end();
-            let _ = parser.into_visitor().flush(true);
+            let _ = parser.into_visitor().flush();
         }
     });
 
@@ -226,28 +222,21 @@ impl PartitionStream for ChannelPartition {
     }
 }
 
-/// Flush a table's builder once this many rows have accumulated: bounds batch size and staleness.
-const FLUSH_ROWS: usize = 1024;
-
 struct StreamingCollector {
     entities: HashMap<u64, Channel<EntityBatchBuilder>>,
     events: HashMap<u32, Channel<EventBatchBuilder>>,
-    pending: usize,
 }
 
 impl StreamingCollector {
-    /// Send each table's accumulated batch. `force` flushes below the row threshold (the final tail).
-    fn flush(&mut self, force: bool) -> Result<()> {
-        if !force && self.pending < FLUSH_ROWS {
-            return Ok(());
-        }
+    /// Send each table's accumulated batch immediately. Empty builders are skipped by `send_batch`,
+    /// so rows flow out as soon as they are decoded (flushed every tick) with no buffering delay.
+    fn flush(&mut self) -> Result<()> {
         for ch in self.entities.values_mut() {
             send_batch(ch.builder.finish()?, &ch.tx)?;
         }
         for ch in self.events.values_mut() {
             send_batch(ch.builder.finish()?, &ch.tx)?;
         }
-        self.pending = 0;
         Ok(())
     }
 }
@@ -266,7 +255,6 @@ impl Visitor for StreamingCollector {
         {
             ch.builder
                 .append_entity(ctx.tick(), entity.index(), delta, entity);
-            self.pending += 1;
         }
         Ok(())
     }
@@ -276,13 +264,12 @@ impl Visitor for StreamingCollector {
             && let Some(event) = decode_event(packet_type, data)
         {
             ch.builder.append(ctx.tick(), &event);
-            self.pending += 1;
         }
         Ok(())
     }
 
     fn on_tick_end(&mut self, _ctx: &Context) -> Result<()> {
-        self.flush(false)
+        self.flush()
     }
 }
 
