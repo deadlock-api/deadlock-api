@@ -362,7 +362,13 @@ async fn fetch_parse_and_send<S: ObjectStore>(
     key: &Path,
     tx: &mpsc::Sender<(Path, ParsedMatch)>,
 ) -> anyhow::Result<bool> {
-    let obj = get_object(store, key).await?;
+    let obj = match get_object(store, key).await {
+        Ok(obj) => obj,
+        // Another worker already processed and moved this object between our
+        // listing and this fetch. Benign race — skip without erroring.
+        Err(object_store::Error::NotFound { .. }) => return Ok(false),
+        Err(e) => return Err(e.into()),
+    };
 
     let data = obj.bytes().await?;
     let data = if key
@@ -743,6 +749,11 @@ async fn get_object(store: &impl ObjectStore, key: &Path) -> object_store::Resul
             counter!("ingest_worker.fetch_object.success").increment(1);
             debug!("Fetched object");
             Ok(data)
+        }
+        Err(e @ object_store::Error::NotFound { .. }) => {
+            counter!("ingest_worker.fetch_object.not_found").increment(1);
+            debug!("Object {key} already moved by another worker, skipping");
+            Err(e)
         }
         Err(e) => {
             counter!("ingest_worker.fetch_object.failure").increment(1);
