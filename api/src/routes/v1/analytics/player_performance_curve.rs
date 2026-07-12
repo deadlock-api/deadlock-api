@@ -1,3 +1,5 @@
+use core::fmt::Write as _;
+
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -21,6 +23,22 @@ use crate::utils::parse::{comma_separated_deserialize_option, default_last_month
 fn default_resolution() -> Option<u8> {
     10.into()
 }
+
+/// Per-tick soul source columns from `match_player.stats`, averaged per time bucket.
+/// Order must match the `gold_*_avg` field order in [`PlayerPerformanceCurvePoint`].
+const GOLD_SOURCES: [&str; 11] = [
+    "gold_player",
+    "gold_player_orbs",
+    "gold_lane_creep",
+    "gold_lane_creep_orbs",
+    "gold_neutral_creep",
+    "gold_neutral_creep_orbs",
+    "gold_boss",
+    "gold_boss_orb",
+    "gold_treasure",
+    "gold_denied",
+    "gold_death_loss",
+];
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -118,6 +136,28 @@ pub struct PlayerPerformanceCurvePoint {
     pub assists_avg: f64,
     /// Standard deviation of assists at this time point
     pub assists_std: f64,
+    /// Average souls earned from hero kills at this time point
+    pub gold_player_avg: f64,
+    /// Average souls earned from secured hero-kill orbs at this time point
+    pub gold_player_orbs_avg: f64,
+    /// Average souls earned from lane creeps at this time point
+    pub gold_lane_creep_avg: f64,
+    /// Average souls earned from secured lane-creep orbs at this time point
+    pub gold_lane_creep_orbs_avg: f64,
+    /// Average souls earned from neutral (jungle) creeps at this time point
+    pub gold_neutral_creep_avg: f64,
+    /// Average souls earned from secured neutral-creep orbs at this time point
+    pub gold_neutral_creep_orbs_avg: f64,
+    /// Average souls earned from objectives at this time point
+    pub gold_boss_avg: f64,
+    /// Average souls earned from secured objective orbs at this time point
+    pub gold_boss_orb_avg: f64,
+    /// Average souls earned from the urn at this time point
+    pub gold_treasure_avg: f64,
+    /// Average souls denied to enemies at this time point
+    pub gold_denied_avg: f64,
+    /// Average souls lost on death at this time point
+    pub gold_death_loss_avg: f64,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -161,11 +201,22 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
         )
     };
 
+    let mut players_gold = String::new();
+    let mut data_gold = String::new();
+    let mut array_join_gold = String::new();
+    let mut select_gold = String::new();
+    for s in GOLD_SOURCES {
+        let _ = write!(players_gold, ", stats.{s} as {s}_arr");
+        let _ = write!(data_gold, ", {s}_arr as {s}");
+        let _ = write!(array_join_gold, ", {s}_arr");
+        let _ = write!(select_gold, ",\n        avg({s}) AS {s}_avg");
+    }
+
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     format!(
         "
     WITH t_players AS (
-            SELECT stats.time_stamp_s as timestamp_s, stats.net_worth as net_worths, stats.kills as kills_arr, stats.deaths as deaths_arr, stats.assists as assists_arr, duration_s
+            SELECT stats.time_stamp_s as timestamp_s, stats.net_worth as net_worths, stats.kills as kills_arr, stats.deaths as deaths_arr, stats.assists as assists_arr{players_gold}, duration_s
             FROM match_player
             WHERE match_mode IN ('Ranked', 'Unranked')
                 AND {game_mode_filter}
@@ -173,9 +224,9 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
                 {player_filters}
         ),
         t_data AS (
-            SELECT timestamp_s, net_worths as net_worth, kills_arr as kills, deaths_arr as deaths, assists_arr as assists, duration_s
+            SELECT timestamp_s, net_worths as net_worth, kills_arr as kills, deaths_arr as deaths, assists_arr as assists{data_gold}, duration_s
             FROM t_players
-            ARRAY JOIN timestamp_s, net_worths, kills_arr, deaths_arr, assists_arr
+            ARRAY JOIN timestamp_s, net_worths, kills_arr, deaths_arr, assists_arr{array_join_gold}
         )
     SELECT
         {game_time_selection} AS game_time,
@@ -186,7 +237,7 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
         avg(deaths) AS deaths_avg,
         std(deaths) AS deaths_std,
         avg(assists) AS assists_avg,
-        std(assists) AS assists_std
+        std(assists) AS assists_std{select_gold}
     FROM t_data
     {additional_filter}
     GROUP BY game_time
