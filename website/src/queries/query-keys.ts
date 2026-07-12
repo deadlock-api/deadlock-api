@@ -11,6 +11,7 @@ import type {
   AnalyticsApiItemPermutationStatsRequest,
   AnalyticsApiItemStatsRequest,
   AnalyticsApiKillDeathStatsRequest,
+  AnalyticsApiPlayerPerformanceCurveRequest,
   AnalyticsApiPlayerScoreboardRequest,
   AnalyticsApiPlayerStatsMetricsRequest,
   MatchesApiBulkMetadataRequest,
@@ -45,6 +46,8 @@ export const queryKeys = {
     heroStatsByDuration: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-by-duration", params] as const,
     heroStatsByExperience: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-by-experience", params] as const,
     gameStats: (params: AnalyticsApiGameStatsRequest) => ["api-game-stats", params] as const,
+    playerPerformanceCurve: (params: AnalyticsApiPlayerPerformanceCurveRequest) =>
+      ["api-player-performance-curve", params] as const,
     playerScoreboard: (params: AnalyticsApiPlayerScoreboardRequest) => ["api-player-scoreboard", params] as const,
     playerStatsMetrics: (params: AnalyticsApiPlayerStatsMetricsRequest) =>
       ["api-player-stats-metrics", params] as const,

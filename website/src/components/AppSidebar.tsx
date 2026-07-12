@@ -57,7 +57,7 @@ const navGroups: NavGroup[] = [
       { to: "/heroes", label: "Heroes", icon: Swords },
       { to: "/items", label: "Items", icon: ShoppingBag },
       { to: "/abilities", label: "Abilities", icon: ListOrdered },
-      { to: "/players", label: "Player Analytics", icon: Users },
+      { to: "/players", label: "Players", icon: Users },
     ],
   },
   {

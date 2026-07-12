@@ -23,6 +23,7 @@ import { gameStatsQueryOptions } from "~/queries/games-query";
 
 const GamesOverTimeChart = lazy(() => import("~/components/games-page/GamesOverTimeChart"));
 const GamesByRankChart = lazy(() => import("~/components/games-page/GamesByRankChart"));
+const EconomyTab = lazy(() => import("~/components/games-page/EconomyTab"));
 
 export const Route = createFileRoute("/games")({
   component: Games,
@@ -59,7 +60,7 @@ export const Route = createFileRoute("/games")({
 function Games() {
   const [tab, setTab] = useQueryState(
     "tab",
-    parseAsStringLiteral(["overview", "over-time", "by-rank"] as const).withDefault("overview"),
+    parseAsStringLiteral(["overview", "over-time", "by-rank", "economy"] as const).withDefault("overview"),
   );
   const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
@@ -160,6 +161,7 @@ function Games() {
             { value: "overview", label: "Overview" },
             { value: "over-time", label: "Over Time" },
             { value: "by-rank", label: "By Rank" },
+            { value: "economy", label: "Economy" },
           ]}
         />
 
@@ -198,6 +200,14 @@ function Games() {
           <ChunkErrorBoundary>
             <Suspense fallback={<LoadingLogo />}>
               <GamesByRankChart params={baseParams} stat={stat} onStatChange={setStat} isStreetBrawl={isStreetBrawl} />
+            </Suspense>
+          </ChunkErrorBoundary>
+        </TabsContent>
+
+        <TabsContent value="economy">
+          <ChunkErrorBoundary>
+            <Suspense fallback={<LoadingLogo />}>
+              <EconomyTab params={baseParams} isStreetBrawl={isStreetBrawl} />
             </Suspense>
           </ChunkErrorBoundary>
         </TabsContent>
