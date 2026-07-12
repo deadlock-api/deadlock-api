@@ -73,7 +73,7 @@ enum RawCurveOrFloat {
 
 /// Known values for `m_eRollType`. Unknown values pass through as
 /// [`RollType::Other`] so a newly-introduced roll type doesn't 500.
-#[derive(Debug, Clone, PartialEq, Eq, EnumString, Display, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, EnumString, Display)]
 pub(crate) enum RollType {
     #[strum(serialize = "ECitadelRandomRoll_BreakablePowerupPickup")]
     BreakablePowerupPickup,
@@ -84,6 +84,31 @@ pub(crate) enum RollType {
 }
 
 enum_str_serde!(RollType);
+
+// Serializes as a plain string via `Display` (the `Other` catch-all makes any
+// string valid), so the schema is an open string, not a `oneOf`. A derived
+// `oneOf` schema here mismatches the wire format and makes the C# openapi
+// generator emit uncompilable code (deadlock-api/openapi-clients#7).
+impl utoipa::PartialSchema for RollType {
+    fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+        utoipa::openapi::schema::ObjectBuilder::new()
+            .schema_type(utoipa::openapi::schema::Type::String)
+            .description(Some(
+                "Known values for `m_eRollType`. Unknown values pass through \
+                 unchanged so a newly-introduced roll type doesn't 500. Known \
+                 values: `ECitadelRandomRoll_BreakablePowerupPickup`, \
+                 `ECitadelRandomRoll_BreakableGoldPickup`.",
+            ))
+            .examples(["ECitadelRandomRoll_BreakablePowerupPickup"])
+            .into()
+    }
+}
+
+impl utoipa::ToSchema for RollType {
+    fn name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("RollType")
+    }
+}
 
 #[derive(Debug, Deserialize)]
 #[allow(clippy::struct_excessive_bools)]
@@ -440,5 +465,16 @@ mod tests {
         );
         let other: RollType = "SomeNewRoll".parse().unwrap();
         assert_eq!(other.to_string(), "SomeNewRoll");
+    }
+
+    #[test]
+    fn roll_type_schema_is_plain_string() {
+        use utoipa::PartialSchema;
+        let schema = serde_json::to_value(RollType::schema()).expect("serializes");
+        assert_eq!(schema["type"], "string");
+        assert!(
+            schema.get("oneOf").is_none(),
+            "must not be a oneOf: {schema}"
+        );
     }
 }
