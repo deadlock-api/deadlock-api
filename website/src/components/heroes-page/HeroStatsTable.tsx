@@ -650,7 +650,7 @@ export function HeroStatsTable({
       <TableCell>
         <div className="flex items-center gap-2">
           <HeroImage heroId={row.hero_id} />
-          <HeroName heroId={row.hero_id} />
+          <HeroName heroId={row.hero_id} linkToDetail />
         </div>
       </TableCell>
       {columns.includes("winRate") && (

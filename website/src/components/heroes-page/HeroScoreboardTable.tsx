@@ -79,7 +79,7 @@ export function HeroScoreboardTable({
             <TableCell>
               <div className="flex items-center gap-2">
                 <HeroImage heroId={entry.hero_id} className="size-6" />
-                <HeroName heroId={entry.hero_id} className="max-w-[200px]" />
+                <HeroName heroId={entry.hero_id} className="max-w-[200px]" linkToDetail />
               </div>
             </TableCell>
             {sortBy !== "matches" && <TableCell className="text-right">{entry.matches.toLocaleString()}</TableCell>}
