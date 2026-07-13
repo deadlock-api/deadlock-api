@@ -34,16 +34,31 @@ import { cn } from "~/lib/utils";
 export const Route = createFileRoute("/")({
   head: () =>
     seo({
-      title: "Deadlock Stats & Analytics: Hero Win Rates, Tracker & Leaderboards",
+      title: "Deadlock Stats Tracker: Win Rates, Ranks & Leaderboards",
       description:
         "Deadlock stats tracker with hero win rates, pick rates, item analytics, rank distribution, and leaderboards. Free community tool with live data from Valve's servers.",
       path: "/",
-      jsonLd: {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        name: "Deadlock API",
-        url: "https://deadlock-api.com",
-      },
+      jsonLd: [
+        {
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Deadlock API",
+          alternateName: "deadlock-api.com",
+          url: "https://deadlock-api.com",
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "Deadlock API",
+          url: "https://deadlock-api.com",
+          logo: "https://deadlock-api.com/favicon.png",
+          sameAs: [
+            "https://github.com/deadlock-api",
+            "https://discord.gg/pqWQfTPQJu",
+            "https://www.patreon.com/c/manuelhexe",
+          ],
+        },
+      ],
     }),
   component: IndexRoute,
 });
@@ -248,8 +263,8 @@ function IndexRoute() {
                 <img
                   src={mainSponsor.logo}
                   alt={`${mainSponsor.title} Logo`}
-                  width={mainSponsor.width}
-                  height={mainSponsor.height}
+                  width={600}
+                  height={127}
                   className="max-h-10 w-auto object-contain transition-transform group-hover:scale-105 lg:max-h-12"
                 />
               </a>
@@ -271,9 +286,9 @@ function IndexRoute() {
             </div>
 
             <p className="mx-auto max-w-2xl text-center text-base leading-relaxed text-pretty text-muted-foreground">
-              A comprehensive set of endpoints to access Deadlock game data, match history, player statistics, hero
-              analytics, and more. Whether you're a developer integrating game data or a player analyzing performance,
-              the Deadlock API has you covered.
+              Track Deadlock stats — hero win rates, pick rates, item analytics, rank distribution, and leaderboards,
+              updated live from Valve's servers. A comprehensive set of endpoints also gives developers access to
+              Deadlock game data, match history, player statistics, hero analytics, and more.
             </p>
           </div>
         </div>
@@ -335,7 +350,7 @@ function IndexRoute() {
       {/* Analytics Links */}
       <section>
         <div className="mb-8 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight">Explore the Data</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">Deadlock Stats, Hero Win Rates & Leaderboards</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Dive into analytics, leaderboards, and visualizations powered by millions of tracked matches
           </p>

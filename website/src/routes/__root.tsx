@@ -1,6 +1,5 @@
 /// <reference types="vite/client" />
 import interWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
-import newRockerWoff2 from "@fontsource/new-rocker/files/new-rocker-latin-400-normal.woff2?url";
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext, useRouterState } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
@@ -61,13 +60,6 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       {
         rel: "preload",
         href: interWoff2,
-        as: "font",
-        type: "font/woff2",
-        crossOrigin: "anonymous",
-      },
-      {
-        rel: "preload",
-        href: newRockerWoff2,
         as: "font",
         type: "font/woff2",
         crossOrigin: "anonymous",

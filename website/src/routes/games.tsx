@@ -25,6 +25,8 @@ const GamesOverTimeChart = lazy(() => import("~/components/games-page/GamesOverT
 const GamesByRankChart = lazy(() => import("~/components/games-page/GamesByRankChart"));
 const EconomyTab = lazy(() => import("~/components/games-page/EconomyTab"));
 
+const MATCH_LENGTH_ANSWER = "A typical Deadlock match lasts around 30-40 minutes, varying by game mode and skill.";
+
 export const Route = createFileRoute("/games")({
   component: Games,
   loader: async ({ context: { queryClient } }) => {
@@ -52,8 +54,34 @@ export const Route = createFileRoute("/games")({
   head: () =>
     seo({
       title: "Deadlock Game Stats: Match Trends, Avg Kills & Souls by Rank",
-      description: "Aggregate game statistics and match analytics for Deadlock by Valve.",
+      description:
+        "Deadlock match stats by rank and game mode — average match length, kills, souls, and objective timings. See how long a typical Deadlock game lasts.",
       path: "/games",
+      jsonLd: [
+        {
+          "@context": "https://schema.org",
+          "@type": "Dataset",
+          name: "Deadlock Match Stats",
+          description:
+            "Average match statistics for Deadlock, including average kills, souls, and game length, calculated from tracked matches. Filterable by rank, patch, and game mode.",
+          url: "https://deadlock-api.com/games",
+          keywords: ["Deadlock", "match stats", "average kills", "souls", "game length"],
+          creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
+          isAccessibleForFree: true,
+          license: "https://github.com/deadlock-api/",
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: "How long is a Deadlock match?",
+              acceptedAnswer: { "@type": "Answer", text: MATCH_LENGTH_ANSWER },
+            },
+          ],
+        },
+      ],
     }),
 });
 
@@ -116,13 +144,18 @@ function Games() {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Game Stats</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Deadlock Game Stats</h1>
         <p className="mt-1 text-sm text-muted-foreground">Aggregate match statistics and trends</p>
         <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Track Deadlock match trends including average kills, deaths, game duration, and more. View stats over time,
           compare across ranks, and spot meta shifts as patches roll out.
         </p>
       </div>
+
+      <section className="mx-auto max-w-2xl text-center">
+        <h2 className="text-lg font-semibold tracking-tight">How long is a Deadlock match?</h2>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{MATCH_LENGTH_ANSWER}</p>
+      </section>
 
       <Filter.Root>
         <Filter.GameModeWithRank
