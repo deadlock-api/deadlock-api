@@ -37,33 +37,49 @@ export const Route = createFileRoute("/blog/$slug")({
       ogImage: `${SITE_URL}${getBlogOGImage(loaderData.slug)}`,
       ogType: "article",
       publishedTime: loaderData.date,
-      jsonLd: {
-        "@context": "https://schema.org",
-        "@type": "BlogPosting",
-        headline: loaderData.title,
-        description: loaderData.description,
-        image: `${SITE_URL}${getBlogOGImage(loaderData.slug)}`,
-        datePublished: loaderData.date,
-        dateModified: loaderData.date,
-        author: {
-          "@type": "Person",
-          name: loaderData.author,
-        },
-        publisher: {
-          "@type": "Organization",
-          name: "Deadlock API",
-          url: SITE_URL,
-          logo: {
-            "@type": "ImageObject",
-            url: `${SITE_URL}/favicon.png`,
+      jsonLd: [
+        {
+          "@context": "https://schema.org",
+          "@type": "BlogPosting",
+          headline: loaderData.title,
+          description: loaderData.description,
+          image: `${SITE_URL}${getBlogOGImage(loaderData.slug)}`,
+          datePublished: loaderData.date,
+          dateModified: loaderData.date,
+          author: {
+            "@type": "Person",
+            name: loaderData.author,
           },
+          publisher: {
+            "@type": "Organization",
+            name: "Deadlock API",
+            url: SITE_URL,
+            logo: {
+              "@type": "ImageObject",
+              url: `${SITE_URL}/favicon.png`,
+            },
+          },
+          mainEntityOfPage: {
+            "@type": "WebPage",
+            "@id": `${SITE_URL}/blog/${loaderData.slug}`,
+          },
+          keywords: loaderData.tags.join(", "),
         },
-        mainEntityOfPage: {
-          "@type": "WebPage",
-          "@id": `${SITE_URL}/blog/${loaderData.slug}`,
+        {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+            { "@type": "ListItem", position: 2, name: "Blog", item: `${SITE_URL}/blog` },
+            {
+              "@type": "ListItem",
+              position: 3,
+              name: loaderData.title,
+              item: `${SITE_URL}/blog/${loaderData.slug}`,
+            },
+          ],
         },
-        keywords: loaderData.tags.join(", "),
-      },
+      ],
     });
   },
   notFoundComponent: PostNotFound,

@@ -22,6 +22,19 @@ const STATIC_ENTRIES: SitemapEntry[] = [
   { path: "/data-privacy", lastmod: "2026-03-22", changefreq: "monthly", priority: 0.5 },
   { path: "/ingest-cache", lastmod: "2026-03-10", changefreq: "monthly", priority: 0.6 },
   { path: "/blog", lastmod: "2026-04-18", changefreq: "weekly", priority: 0.7 },
+  { path: "/deadlockdle", changefreq: "daily", priority: 0.8 },
+  { path: "/deadlockdle/guess-hero", changefreq: "weekly", priority: 0.6 },
+  { path: "/deadlockdle/guess-item", changefreq: "weekly", priority: 0.6 },
+  { path: "/deadlockdle/guess-sound", changefreq: "weekly", priority: 0.6 },
+  { path: "/deadlockdle/guess-ability", changefreq: "weekly", priority: 0.6 },
+  { path: "/deadlockdle/item-stats", changefreq: "weekly", priority: 0.6 },
+  { path: "/deadlockdle/trivia", changefreq: "weekly", priority: 0.6 },
+  { path: "/servers", changefreq: "daily", priority: 0.8 },
+  { path: "/flashcards", changefreq: "weekly", priority: 0.6 },
+  { path: "/flashcards/heroes", changefreq: "weekly", priority: 0.6 },
+  { path: "/flashcards/items", changefreq: "weekly", priority: 0.6 },
+  { path: "/flashcards/item-upgrades", changefreq: "weekly", priority: 0.6 },
+  { path: "/data-dumps", changefreq: "weekly", priority: 0.6 },
 ];
 
 // Load blog markdown files from content/blog/ at build time via Vite glob.

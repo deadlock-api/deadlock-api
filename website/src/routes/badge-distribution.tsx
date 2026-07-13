@@ -30,13 +30,26 @@ export const Route = createFileRoute("/badge-distribution")({
       ),
     );
   },
-  head: () =>
-    seo({
-      title: "Deadlock Rank Distribution: Badge Stats & Rank Percentiles",
+  head: () => {
+    const year = new Date().getFullYear();
+    return seo({
+      title: `Deadlock Rank Distribution ${year}: Badge Stats & Percentiles`,
       description:
         "See the Deadlock rank distribution across all badges and subtiers. Find out what percentage of players are at each rank on the competitive ladder.",
       path: "/badge-distribution",
-    }),
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        name: `Deadlock Rank Distribution ${year}`,
+        description:
+          "Distribution of Deadlock players across every rank badge and subtier, showing the share of players at each tier of the competitive ladder along with rank percentiles.",
+        url: "https://deadlock-api.com/badge-distribution",
+        keywords: ["Deadlock", "rank distribution", "badge distribution", "rank percentiles", "MMR"],
+        creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
+        isAccessibleForFree: true,
+      },
+    });
+  },
 });
 
 function BadgeDistributionPage() {
@@ -74,8 +87,13 @@ function BadgeDistributionPage() {
   return (
     <div className="flex h-[calc(100dvh-2rem)] flex-col gap-4">
       <div className="shrink-0 text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Match Rank Distribution</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Deadlock Rank Distribution</h1>
         <p className="mt-1 text-sm text-muted-foreground">Average match rank distribution across all badges</p>
+        <p className="mx-auto mt-2 max-w-3xl text-sm text-muted-foreground">
+          Deadlock ranks climb from Obscurus, Initiate, Seeker, Alchemist, Arcanist, Ritualist, Emissary, Archon,
+          Oracle, Phantom, Ascendant to Eternus, with every rank except Obscurus and Eternus split into 6 subrank
+          badges.
+        </p>
       </div>
       <Filter.Root>
         <Filter.MatchDuration

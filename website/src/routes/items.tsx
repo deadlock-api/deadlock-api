@@ -65,6 +65,17 @@ export const Route = createFileRoute("/items")({
       description:
         "Deadlock item win rates with statistical confidence intervals, optimal purchase timing, and item combo analytics. Filter by hero, rank, and patch.",
       path: "/items",
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        name: "Deadlock Item Stats: Build Win Rates, Buy Timings & Combos",
+        description:
+          "Item win rates, optimal purchase timing, and build statistics for Deadlock, calculated from tracked ranked matches. Filterable by hero, rank, and patch.",
+        url: "https://deadlock-api.com/items",
+        keywords: ["Deadlock", "item win rates", "build stats", "item combos"],
+        creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
+        isAccessibleForFree: true,
+      },
     }),
 });
 
@@ -96,7 +107,7 @@ function ItemsPage() {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Item Stats</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Deadlock Item Stats</h1>
         <p className="mt-1 text-sm text-muted-foreground">Win rates, purchase timing, and item combination analytics</p>
         <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Analyze item win rates with statistical confidence intervals, optimal purchase timing, and the best item

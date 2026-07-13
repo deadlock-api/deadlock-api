@@ -1,3 +1,4 @@
+import newRockerWoff2 from "@fontsource/new-rocker/files/new-rocker-latin-400-normal.woff2?url";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { ArrowRight, GitBranch, ShoppingBag, Swords } from "lucide-react";
@@ -7,13 +8,27 @@ import { seo } from "~/lib/seo";
 
 export const Route = createFileRoute("/flashcards/")({
   component: FlashcardsHub,
-  head: () =>
-    seo({
+  head: () => {
+    const s = seo({
       title: "Flashcards - Learn Deadlock Heroes and Items | Deadlock API",
       description:
         "Practice identifying Deadlock heroes, items, and item upgrade paths with multiple-choice flashcards.",
       path: "/flashcards",
-    }),
+    });
+    return {
+      ...s,
+      links: [
+        ...s.links,
+        {
+          rel: "preload",
+          href: newRockerWoff2,
+          as: "font",
+          type: "font/woff2",
+          crossOrigin: "anonymous",
+        },
+      ],
+    };
+  },
 });
 
 const GAMES: {

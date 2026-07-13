@@ -19,7 +19,7 @@ export const Route = createFileRoute("/servers")({
   component: ServersPage,
   head: () =>
     seo({
-      title: "Game Servers | Deadlock API",
+      title: "Deadlock Servers: Live Game Servers by Region",
       description:
         "Browse currently active Deadlock game servers. Filter by region and game mode, then connect directly with one click.",
       path: "/servers",
@@ -180,7 +180,7 @@ function ServersPage() {
     <div className="space-y-6">
       <section className="space-y-4">
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Game Servers</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Deadlock Game Servers</h1>
           <p className="mt-1 text-sm text-muted-foreground">Live registered Deadlock game servers</p>
           <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Browse currently active Deadlock game servers from the community server network. Filter by region and game

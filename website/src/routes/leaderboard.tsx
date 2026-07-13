@@ -26,6 +26,17 @@ export const Route = createFileRoute("/leaderboard")({
       description:
         "Browse the Deadlock ranked leaderboard across all regions. Filter by hero, rank badge, and search for any player.",
       path: "/leaderboard",
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        name: "Deadlock Leaderboard: Top Ranked Players by Region",
+        description:
+          "Ranked player standings for Deadlock across all regions, sortable by matchmaking rating and filterable by hero.",
+        url: "https://deadlock-api.com/leaderboard",
+        keywords: ["Deadlock", "leaderboard", "leaderboards", "top players", "ranked ladder"],
+        creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
+        isAccessibleForFree: true,
+      },
     }),
 });
 
@@ -61,7 +72,7 @@ function LeaderboardPage() {
     <div className="space-y-8">
       <section className="space-y-4">
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Deadlock Leaderboard</h1>
           <p className="mt-1 text-sm text-muted-foreground">Ranked player standings across all regions</p>
           <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Browse the top-ranked Deadlock players by region. Filter by hero to see who dominates with specific

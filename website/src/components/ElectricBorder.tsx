@@ -263,10 +263,45 @@ export function ElectricBorder({
     });
     resizeObserver.observe(container);
 
-    animationRef.current = requestAnimationFrame(drawElectricBorder);
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (prefersReducedMotion) {
+      // Draw one static frame so the border still renders, then cancel the
+      // follow-up frame drawElectricBorder schedules internally.
+      drawElectricBorder(0);
+      cancelAnimationFrame(animationRef.current);
+      return () => {
+        resizeObserver.disconnect();
+      };
+    }
+
+    let running = false;
+    const startLoop = () => {
+      if (running) return;
+      running = true;
+      // Reset so the first deltaTime after a resume doesn't spike timeRef.
+      lastFrameTimeRef.current = performance.now();
+      animationRef.current = requestAnimationFrame(drawElectricBorder);
+    };
+    const stopLoop = () => {
+      running = false;
+      cancelAnimationFrame(animationRef.current);
+    };
+
+    const intersectionObserver = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) startLoop();
+        else stopLoop();
+      }
+    });
+    intersectionObserver.observe(container);
 
     return () => {
-      cancelAnimationFrame(animationRef.current);
+      stopLoop();
+      intersectionObserver.disconnect();
       resizeObserver.disconnect();
     };
   }, [color, speed, chaos, borderRadius, octavedNoise, getRoundedRectPoint]);

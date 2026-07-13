@@ -10,6 +10,19 @@ function isHtmlResponse(res: Response): boolean {
 
 export default {
   async fetch(...args) {
+    const request = args[0] as Request;
+    const url = new URL(request.url);
+    let changed = false;
+    if (url.hostname === "www.deadlock-api.com") {
+      url.hostname = "deadlock-api.com";
+      changed = true;
+    }
+    if (url.pathname !== "/" && url.pathname.endsWith("/")) {
+      url.pathname = url.pathname.replace(/\/+$/, "");
+      changed = true;
+    }
+    if (changed) return Response.redirect(url.toString(), 301);
+
     const res = await handler(...args);
     if (isHtmlResponse(res) && !res.headers.has("cache-control")) {
       const headers = new Headers(res.headers);

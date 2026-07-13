@@ -1,3 +1,4 @@
+import newRockerWoff2 from "@fontsource/new-rocker/files/new-rocker-latin-400-normal.woff2?url";
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Copy, Crosshair, Ear, HelpCircle, Puzzle, ShoppingBag, Swords } from "lucide-react";
@@ -11,12 +12,26 @@ import { seo } from "~/lib/seo";
 
 export const Route = createFileRoute("/deadlockdle/")({
   component: DeadlockdleHub,
-  head: () =>
-    seo({
+  head: () => {
+    const s = seo({
       title: "Deadlockdle - Daily Deadlock Minigames | Deadlock API",
       description: "Test your Deadlock knowledge with daily puzzles. Guess heroes, items, sounds, abilities, and more.",
       path: "/deadlockdle",
-    }),
+    });
+    return {
+      ...s,
+      links: [
+        ...s.links,
+        {
+          rel: "preload",
+          href: newRockerWoff2,
+          as: "font",
+          type: "font/woff2",
+          crossOrigin: "anonymous",
+        },
+      ],
+    };
+  },
 });
 
 const GAMES: {
