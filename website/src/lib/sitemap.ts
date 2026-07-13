@@ -1,3 +1,7 @@
+import { api } from "~/lib/api";
+import { filterPlayableHeroes } from "~/queries/asset-queries";
+
+import { heroSlug } from "./hero-slug";
 import { SITE_URL } from "./seo";
 
 export interface SitemapEntry {
@@ -100,14 +104,29 @@ function renderUrl(entry: SitemapEntry): string {
   return `  <url>${parts.join("")}</url>`;
 }
 
-export function buildSitemapXml(): string {
+async function loadHeroEntries(): Promise<SitemapEntry[]> {
+  try {
+    const response = await api.heroes_api.listHeroes({ onlyActive: true });
+    return filterPlayableHeroes(response.data).map((hero) => ({
+      path: `/heroes/${heroSlug(hero.name)}`,
+      changefreq: "daily",
+      priority: 0.6,
+    }));
+  } catch (error) {
+    console.error("Failed to fetch heroes for sitemap", error);
+    return [];
+  }
+}
+
+export async function buildSitemapXml(): Promise<string> {
   const blogEntries: SitemapEntry[] = loadBlogEntries().map((post) => ({
     path: `/blog/${post.slug}`,
     lastmod: post.date,
     changefreq: "monthly",
     priority: 0.7,
   }));
-  const all = [...STATIC_ENTRIES, ...blogEntries];
+  const heroEntries = await loadHeroEntries();
+  const all = [...STATIC_ENTRIES, ...blogEntries, ...heroEntries];
   const body = all.map(renderUrl).join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
 }
