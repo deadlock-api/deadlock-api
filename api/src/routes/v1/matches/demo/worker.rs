@@ -8,9 +8,10 @@
 use core::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use object_store::ObjectStoreExt;
+use bytes::Bytes;
 use object_store::aws::AmazonS3;
 use object_store::path::Path;
+use object_store::{ObjectStoreExt, WriteMultipart};
 use redis::aio::MultiplexedConnection;
 use tokio::sync::{Semaphore, mpsc};
 use tracing::{error, info};
@@ -26,6 +27,12 @@ const MAX_QUEUE_DEPTH: usize = 32;
 pub(super) const MAX_CONCURRENT: usize = 4;
 /// Rough per-job duration used purely for the status endpoint's wait estimate.
 pub(super) const AVG_JOB_SECONDS: u64 = 55;
+/// Multipart part size. A whole-artifact `put` cannot finish inside the `object_store`
+/// 30s request timeout once an extract reaches a few hundred MB (NDJSON routinely does),
+/// so parts are sized to upload well inside that budget and to be retried individually.
+const UPLOAD_CHUNK_SIZE: usize = 16 * 1024 * 1024;
+/// Parts in flight per job. Jobs already run [`MAX_CONCURRENT`]-wide, so keep this low.
+const UPLOAD_CONCURRENCY: usize = 4;
 
 pub(crate) struct QueryJob {
     pub(crate) job_id: String,
@@ -166,9 +173,30 @@ async fn process(r2: &AmazonS3, public_url: &str, job: &QueryJob) -> APIResult<S
     let demo = format::decompress(compressed).await?;
     let artifact = format::run_and_serialize(demo, &job.sql, job.format).await?;
 
-    let object_key = format!("{}.{}", job.job_id, job.format.extension());
-    r2.put(&Path::from(object_key.clone()), artifact.into())
-        .await?;
+    let object_key = format!("{}.{}", job.job_id, job.format.object_extension());
+    upload(r2, &object_key, artifact).await?;
 
     Ok(format!("{public_url}/{object_key}"))
+}
+
+/// Upload the artifact as a multipart, applying backpressure so at most
+/// [`UPLOAD_CONCURRENCY`] parts are in flight. On failure the multipart is aborted so R2
+/// does not retain orphaned parts.
+async fn upload(r2: &AmazonS3, object_key: &str, artifact: Bytes) -> APIResult<()> {
+    let upload = r2.put_multipart(&Path::from(object_key)).await?;
+    let mut writer = WriteMultipart::new_with_chunk_size(upload, UPLOAD_CHUNK_SIZE);
+
+    let mut offset = 0;
+    while offset < artifact.len() {
+        if let Err(e) = writer.wait_for_capacity(UPLOAD_CONCURRENCY).await {
+            let _ = writer.abort().await;
+            return Err(e.into());
+        }
+        let end = artifact.len().min(offset + UPLOAD_CHUNK_SIZE);
+        writer.put(artifact.slice(offset..end));
+        offset = end;
+    }
+
+    writer.finish().await?;
+    Ok(())
 }

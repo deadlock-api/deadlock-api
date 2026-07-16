@@ -38,6 +38,15 @@ impl OutputFormat {
             Self::Ndjson => "ndjson",
         }
     }
+
+    /// Suffix of the uploaded object. NDJSON is zstd-compressed on upload; Parquet
+    /// already compresses internally and is stored as-is.
+    pub(crate) fn object_extension(self) -> &'static str {
+        match self {
+            Self::Parquet => "parquet",
+            Self::Ndjson => "ndjson.zst",
+        }
+    }
 }
 
 /// Stable id for a `(match_id, query, format)` triple. Doubles as the R2 object key,

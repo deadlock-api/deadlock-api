@@ -20,7 +20,8 @@ pub(super) struct DemoQueryStatusResponse {
     /// Rough seconds until the result is ready, while `queued` or `running`.
     #[serde(skip_serializing_if = "Option::is_none")]
     estimated_wait_seconds: Option<u64>,
-    /// Public URL of the result artifact, once `done`.
+    /// Public URL of the result artifact, once `done`. NDJSON results are zstd-compressed
+    /// (`.ndjson.zst`); Parquet results are served as-is.
     #[serde(skip_serializing_if = "Option::is_none")]
     result_url: Option<String>,
     /// Failure reason, once `failed`.
@@ -41,7 +42,8 @@ pub(super) struct DemoQueryStatusResponse {
     description = "
 Returns the status of a demo query job. While `queued`/`running` it includes a rough
 `estimated_wait_seconds`; when `done` it includes `result_url` (a public link to the
-Parquet/NDJSON artifact); when `failed` it includes `error`.
+Parquet artifact, or the zstd-compressed `.ndjson.zst` artifact); when `failed` it
+includes `error`.
 "
 )]
 pub(super) async fn status(

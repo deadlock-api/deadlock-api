@@ -148,7 +148,10 @@ impl AppState {
                     base: 2.,
                 },
                 max_retries: 3,
-                retry_timeout: Duration::from_secs(5),
+                // Counts from the start of the initial attempt, so it must exceed the 30s
+                // request timeout: a shorter deadline is already expired when a slow
+                // multipart part times out, and no retry is ever attempted.
+                retry_timeout: Duration::from_mins(3),
             })
             .build()?;
 

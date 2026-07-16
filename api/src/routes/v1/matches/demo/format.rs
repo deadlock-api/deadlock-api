@@ -27,7 +27,8 @@ pub(super) async fn decompress(compressed: Bytes) -> APIResult<Bytes> {
     .map_err(APIError::from)
 }
 
-/// Run the query over the demo, collect every result batch, and serialize to `format`.
+/// Run the query over the demo, collect every result batch, and serialize to `format`,
+/// returning the upload-ready artifact (NDJSON is zstd-compressed; see [`compress_zstd`]).
 pub(super) async fn run_and_serialize(
     demo: Bytes,
     sql: &str,
@@ -44,7 +45,7 @@ pub(super) async fn run_and_serialize(
 
     let bytes = tokio::task::spawn_blocking(move || match format {
         OutputFormat::Parquet => to_parquet(&schema, &batches),
-        OutputFormat::Ndjson => to_ndjson(&batches),
+        OutputFormat::Ndjson => to_ndjson(&batches).and_then(|raw| compress_zstd(&raw)),
     })
     .await
     .map_err(|e| APIError::internal(format!("Serialize task panicked: {e}")))??;
@@ -91,6 +92,16 @@ fn to_ndjson(batches: &[RecordBatch]) -> APIResult<Bytes> {
         .finish()
         .map_err(|e| APIError::internal(format!("NDJSON finish failed: {e}")))?;
     Ok(Bytes::from(buf))
+}
+
+/// Level 3 (zstd's default) — NDJSON is highly redundant, so it already sheds most of
+/// the bulk, and the higher levels cost far more CPU than the upload saves.
+const ZSTD_LEVEL: i32 = 3;
+
+fn compress_zstd(raw: &[u8]) -> APIResult<Bytes> {
+    zstd::stream::encode_all(raw, ZSTD_LEVEL)
+        .map(Bytes::from)
+        .map_err(|e| APIError::internal(format!("NDJSON compression failed: {e}")))
 }
 
 pub(super) fn map_demofusion_err(e: &demofusion::Error) -> APIError {
