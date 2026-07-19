@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { AlertCircle, AlertTriangle, CheckCircle, Clock, RefreshCw, XCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle, Clock, ExternalLink, RefreshCw, XCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -201,7 +201,17 @@ function AccountRow({
   return (
     <TableRow>
       <TableCell className="font-mono">{account.steam_id3}</TableCell>
-      <TableCell className="font-mono text-muted-foreground">{steamId3ToSteamId64(account.steam_id3)}</TableCell>
+      <TableCell className="font-mono text-muted-foreground">
+        <a
+          href={`https://steamcommunity.com/profiles/${steamId3ToSteamId64(account.steam_id3)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 hover:text-foreground hover:underline"
+        >
+          {steamId3ToSteamId64(account.steam_id3)}
+          <ExternalLink className="h-3 w-3 shrink-0" />
+        </a>
+      </TableCell>
       <TableCell>
         <Tooltip>
           <TooltipTrigger asChild>
