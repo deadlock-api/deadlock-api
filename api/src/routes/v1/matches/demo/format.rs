@@ -10,16 +10,23 @@ use reqwest::StatusCode;
 use super::OutputFormat;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::demo::demofusion;
+use crate::utils::compression::ZSTD_MAGIC;
 
-/// Decompress a fully-buffered single-stream `.bz2` into raw demo bytes.
+/// Decompress a fully-buffered single-stream demo into raw demo bytes.
 ///
-/// A single bzip2 stream is inherently sequential to decode, so this is the only
+/// A single stream is inherently sequential to decode, so this is the only
 /// concurrency available here; it runs on a blocking thread to keep the runtime free.
+///
+/// The container is sniffed from the magic bytes: Valve kept the `.dem.bz2` name but
+/// switched newer matches' actual compression to zstd.
 pub(super) async fn decompress(compressed: Bytes) -> APIResult<Bytes> {
     tokio::task::spawn_blocking(move || {
-        let mut decoder = bzip2::read::BzDecoder::new(&compressed[..]);
         let mut out = Vec::with_capacity(compressed.len() * 5);
-        decoder.read_to_end(&mut out)?;
+        if compressed.starts_with(&ZSTD_MAGIC) {
+            zstd::stream::read::Decoder::new(&compressed[..])?.read_to_end(&mut out)?;
+        } else {
+            bzip2::read::BzDecoder::new(&compressed[..]).read_to_end(&mut out)?;
+        }
         Ok::<_, std::io::Error>(Bytes::from(out))
     })
     .await

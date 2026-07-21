@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = { workspace = true }
-async-compression = { workspace = true, features = ["tokio", "bzip2"] }
+async-compression = { workspace = true, features = ["tokio", "bzip2", "zstd"] }
 clap = { workspace = true, features = ["env"] }
 clickhouse = { workspace = true, features = ["time"] }
 common = { workspace = true }

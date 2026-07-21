@@ -1,3 +1,4 @@
+pub(crate) mod compression;
 pub(crate) mod json_stream;
 pub mod kv3;
 pub mod localization;

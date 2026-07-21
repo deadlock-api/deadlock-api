@@ -19,6 +19,7 @@ use crate::routes::v1::matches::demo::demofusion;
 use crate::routes::v1::matches::demo::demofusion::{TableKind, TableSchema};
 use crate::routes::v1::matches::salts::fetch_match_salts;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::utils::compression::ZSTD_MAGIC;
 
 /// Shared HTTP client for streaming demo prefixes off Valve's replay servers.
 static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(reqwest::Client::new);
@@ -169,8 +170,19 @@ async fn fetch_demo_schema(url: &str) -> Result<Vec<TableSchema>, APIError> {
             )
         })?;
 
-    let reader = StreamReader::new(response.bytes_stream().map_err(std::io::Error::other));
-    let mut decoder = async_compression::tokio::bufread::BzDecoder::new(reader);
+    let mut reader = StreamReader::new(response.bytes_stream().map_err(std::io::Error::other));
+
+    // Sniff the container, then splice the consumed magic back in front of the stream so
+    // the decoder still sees a complete frame.
+    let mut magic = [0u8; ZSTD_MAGIC.len()];
+    reader.read_exact(&mut magic).await?;
+    let body = std::io::Cursor::new(magic).chain(reader);
+
+    let mut decoder: Box<dyn AsyncRead + Unpin + Send> = if magic == ZSTD_MAGIC {
+        Box::new(async_compression::tokio::bufread::ZstdDecoder::new(body))
+    } else {
+        Box::new(async_compression::tokio::bufread::BzDecoder::new(body))
+    };
 
     let mut demo_prefix: Vec<u8> = Vec::new();
     let mut step = vec![0u8; STEP];

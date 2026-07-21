@@ -17,18 +17,21 @@ use core::time::Duration;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
-use async_compression::tokio::bufread::BzDecoder;
+use async_compression::tokio::bufread::{BzDecoder, ZstdDecoder};
 use clap::Parser;
 use futures::{StreamExt, TryStreamExt};
 use haste::async_demofile::AsyncDemoFile;
 use haste::parser::AsyncStreamingParser;
 use metrics::{counter, gauge};
+use tokio::io::AsyncReadExt;
 use tokio_util::io::StreamReader;
 use tracing::{debug, error, info, warn};
 
 mod hashes;
 mod models;
 mod visitor;
+
+const ZSTD_MAGIC: [u8; 4] = [0x28, 0xb5, 0x2f, 0xfd];
 
 use models::{
     DemoPlayer, MatchUpdate, MatchWithReplay, ObservedSteamName, ObservedSteamNameChange,
@@ -197,10 +200,22 @@ async fn process_demo(
     debug!(match_id, %url, "Downloading demo");
     let response = http_client.get(&url).send().await?.error_for_status()?;
 
-    // Stream HTTP → bz2 decompress → async parser. Nothing is fully buffered.
+    // Stream HTTP → decompress → async parser. Nothing is fully buffered.
     let byte_stream = response.bytes_stream().map_err(std::io::Error::other);
-    let stream_reader = StreamReader::new(byte_stream);
-    let decoder = BzDecoder::new(tokio::io::BufReader::new(stream_reader));
+    let mut stream_reader = tokio::io::BufReader::new(StreamReader::new(byte_stream));
+
+    // Valve kept the `.dem.bz2` name but switched newer matches to zstd, so the container
+    // is sniffed from the magic bytes. The consumed magic is spliced back in front of the
+    // stream so the decoder still sees a complete frame.
+    let mut magic = [0u8; 4];
+    stream_reader.read_exact(&mut magic).await?;
+    let body = tokio::io::BufReader::new((&magic[..]).chain(stream_reader));
+
+    let decoder: Box<dyn tokio::io::AsyncRead + Unpin + Send> = if magic == ZSTD_MAGIC {
+        Box::new(ZstdDecoder::new(body))
+    } else {
+        Box::new(BzDecoder::new(body))
+    };
 
     let state = Arc::new(Mutex::new(SharedState::default()));
     debug!(match_id, "Starting parser");

@@ -33,6 +33,7 @@ use crate::routes::v1::matches::salts::fetch_match_salts;
 use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti, in_clause};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::utils::compression::is_zstd;
 use crate::utils::types::MatchIdQuery;
 
 #[derive(Debug, Clone, Row, Deserialize)]
@@ -243,10 +244,8 @@ async fn set_force_retry(state: &AppState, match_id: u64) {
 /// Valve kept the `.meta.bz2` name but switched the actual compression to zstd for newer
 /// matches, so the file extension is not a reliable signal.
 async fn decompress_metadata(raw_data: &[u8]) -> APIResult<Vec<u8>> {
-    const ZSTD_MAGIC: [u8; 4] = [0x28, 0xb5, 0x2f, 0xfd];
-
     let mut buf = Vec::with_capacity(raw_data.len());
-    if raw_data.starts_with(&ZSTD_MAGIC) {
+    if is_zstd(raw_data) {
         ZstdDecoder::new(raw_data).read_to_end(&mut buf).await?;
     } else {
         BzDecoder::new(raw_data).read_to_end(&mut buf).await?;
