@@ -7,6 +7,7 @@ edition = "2024"
 anyhow = { workspace = true }
 bzip2 = "0.6"
 bytes = "1"
+zstd = "0.13"
 clap = { workspace = true }
 clickhouse = { workspace = true, features = ["test-util", "time"] }
 common = { workspace = true }

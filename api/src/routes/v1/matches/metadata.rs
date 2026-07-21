@@ -1,7 +1,7 @@
 use core::time::Duration;
 use std::sync::LazyLock;
 
-use async_compression::tokio::bufread::BzDecoder;
+use async_compression::tokio::bufread::{BzDecoder, ZstdDecoder};
 use axum::Json;
 use axum::body::Body;
 use axum::extract::{Path, State};
@@ -238,10 +238,24 @@ async fn set_force_retry(state: &AppState, match_id: u64) {
     }
 }
 
+/// Decompress a `.meta.bz2` payload, sniffing the container from its magic bytes.
+///
+/// Valve kept the `.meta.bz2` name but switched the actual compression to zstd for newer
+/// matches, so the file extension is not a reliable signal.
+async fn decompress_metadata(raw_data: &[u8]) -> APIResult<Vec<u8>> {
+    const ZSTD_MAGIC: [u8; 4] = [0x28, 0xb5, 0x2f, 0xfd];
+
+    let mut buf = Vec::with_capacity(raw_data.len());
+    if raw_data.starts_with(&ZSTD_MAGIC) {
+        ZstdDecoder::new(raw_data).read_to_end(&mut buf).await?;
+    } else {
+        BzDecoder::new(raw_data).read_to_end(&mut buf).await?;
+    }
+    Ok(buf)
+}
+
 async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDataContents> {
-    let mut decompressor = BzDecoder::new(raw_data);
-    let mut buf = Vec::with_capacity(decompressor.get_ref().len());
-    decompressor.read_to_end(&mut buf).await?;
+    let buf = decompress_metadata(raw_data).await?;
     let match_data = CMsgMatchMetaData::decode(buf.as_slice())?
         .match_details
         .ok_or_else(|| APIError::internal("Failed to parse match metadata: No data"))?;

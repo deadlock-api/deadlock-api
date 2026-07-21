@@ -406,14 +406,7 @@ async fn fetch_parse_and_send<S: ObjectStore>(
     };
 
     let data = obj.bytes().await?;
-    let data = if key
-        .extension()
-        .is_some_and(|f| f.eq_ignore_ascii_case("bz2"))
-    {
-        bzip_decompress(data).await?
-    } else {
-        data.to_vec()
-    };
+    let data = decompress(data).await?;
 
     let filename = key
         .filename()
@@ -697,17 +690,10 @@ async fn fetch_and_parse_match(
     store: &impl ObjectStore,
     match_id: &str,
 ) -> anyhow::Result<ParsedMatch> {
-    let (path, obj) = find_match_object(store, match_id).await?;
+    let (_, obj) = find_match_object(store, match_id).await?;
 
     let data = obj.bytes().await?;
-    let data = if path
-        .extension()
-        .is_some_and(|f| f.eq_ignore_ascii_case("bz2"))
-    {
-        bzip_decompress(data).await?
-    } else {
-        data.to_vec()
-    };
+    let data = decompress(data).await?;
 
     let match_info = parse_match_data(&data)?;
 
@@ -798,12 +784,25 @@ async fn get_object(store: &impl ObjectStore, key: &Path) -> object_store::Resul
     }
 }
 
-/// Decompress bzip2 data on a blocking thread to avoid starving the async runtime.
-async fn bzip_decompress(data: Bytes) -> std::io::Result<Vec<u8>> {
+/// Decompress an object on a blocking thread to avoid starving the async runtime.
+///
+/// The container is sniffed from the magic bytes rather than taken from the key's extension:
+/// Valve kept the `.meta.bz2` name but switched the actual compression to zstd for newer
+/// matches. Data matching neither magic is passed through as already-plain protobuf.
+async fn decompress(data: Bytes) -> std::io::Result<Vec<u8>> {
+    const ZSTD_MAGIC: [u8; 4] = [0x28, 0xb5, 0x2f, 0xfd];
+    const BZIP2_MAGIC: [u8; 3] = *b"BZh";
+
     tokio::task::spawn_blocking(move || {
         use std::io::Read;
         let mut decompressed = vec![];
-        bzip2::read::BzDecoder::new(data.as_ref()).read_to_end(&mut decompressed)?;
+        if data.starts_with(&ZSTD_MAGIC) {
+            zstd::stream::read::Decoder::new(data.as_ref())?.read_to_end(&mut decompressed)?;
+        } else if data.starts_with(&BZIP2_MAGIC) {
+            bzip2::read::BzDecoder::new(data.as_ref()).read_to_end(&mut decompressed)?;
+        } else {
+            decompressed = data.to_vec();
+        }
         counter!("ingest_worker.decompress_object.success").increment(1);
         debug!("Decompressed object");
         Ok(decompressed)
