@@ -7,3 +7,6 @@ dist
 *.tsbuildinfo
 .env
 .env.local
+
+# Blog plotting scripts are scratch tooling, never shipped
+public/blog/scripts/
