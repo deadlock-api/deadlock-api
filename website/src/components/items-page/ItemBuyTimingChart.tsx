@@ -10,7 +10,9 @@ import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "~/components/ui/tooltip";
+import { chooseAdaptiveBucketIncrement, PURCHASE_BUCKET_INCREMENTS } from "~/lib/purchase-guide";
 import { randomColorHex } from "~/lib/utils";
+import { wilsonScoreInterval } from "~/lib/wilson";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
@@ -23,8 +25,6 @@ type BucketType = Exclude<AnalyticsApiItemStatsRequest["bucket"], undefined>;
 type ChartData = never[] | Record<string, ChartPoint[]>;
 
 const MIN_AVG_THRESHOLD = 0.1; // 5 %
-const BUCKET_INCREMENTS = [1000, 2000, 3000, 5000, 7000, 10000] as const;
-
 interface ChartPoint {
   bucket: number;
   displayBucket: number;
@@ -35,16 +35,6 @@ interface ChartPoint {
   wilsonLowerBound: number | null;
   matches: number;
   ema: number | null;
-}
-
-function wilsonLowerBound(wins: number, total: number) {
-  if (total === 0) return 0;
-  const p = wins / total;
-  const n = total;
-  const z = 1.96;
-  const numerator = p + (z * z) / (2 * n) - z * Math.sqrt((p * (1 - p) + (z * z) / (4 * n)) / n);
-  const denominator = 1 + (z * z) / n;
-  return Math.max(0, numerator / denominator);
 }
 
 function movingAverage(arr: Array<number | null | undefined>, window: number) {
@@ -81,18 +71,6 @@ function calculateSMA(data: Array<{ winrate: number | null }>, windowSize: numbe
     data.map((d) => d.winrate),
     windowSize,
   );
-}
-
-function computeAverageMatchCount(itemData: { bucket: number | null; matches: number }[], increment: number): number {
-  const groups = new Map<number, { matches: number }>();
-  for (const p of itemData) {
-    const key = Math.floor((p.bucket as number) / increment) * increment;
-    const g = groups.get(key) || { matches: 0 };
-    g.matches += p.matches;
-    groups.set(key, g);
-  }
-  const totalMatches = Array.from(groups.values()).reduce((sum, g) => sum + g.matches, 0);
-  return totalMatches / groups.size;
 }
 
 const BUCKET_CONFIG = {
@@ -138,25 +116,13 @@ function buildChartData({
     if (itemData.length === 0) return [];
 
     const bucketIncrements =
-      bucketType === "net_worth_by_1000" ? BUCKET_INCREMENTS : BUCKET_INCREMENTS.map((inc) => inc / 1000);
+      bucketType === "net_worth_by_1000"
+        ? PURCHASE_BUCKET_INCREMENTS
+        : PURCHASE_BUCKET_INCREMENTS.map((inc) => inc / 1000);
 
-    let increment = rowTotalMatches ? bucketIncrements[bucketIncrements.length - 1] : bucketIncrements[0];
-    if (rowTotalMatches) {
-      for (const inc of bucketIncrements) {
-        const avgMatches = computeAverageMatchCount(itemData, inc);
-        const avgPercent = rowTotalMatches ? avgMatches / rowTotalMatches : 0;
-        if (avgPercent >= minAvgThreshold) {
-          increment = inc;
-          console.log(
-            `increment: ${inc}, because ${avgPercent} >= ${minAvgThreshold} (value is ${avgMatches} / ${rowTotalMatches})`,
-          );
-          break;
-        }
-        console.log(
-          `NOT increment: ${inc}, because ${avgPercent} < ${minAvgThreshold} (value is ${avgMatches} / ${rowTotalMatches})`,
-        );
-      }
-    }
+    const increment = rowTotalMatches
+      ? chooseAdaptiveBucketIncrement(itemData, rowTotalMatches, bucketIncrements, minAvgThreshold)
+      : bucketIncrements[0];
 
     const groups = new Map<number, { matches: number; wins: number }>();
     for (const point of itemData) {
@@ -194,7 +160,8 @@ function buildChartData({
       }
 
       const trueWR = (group.wins / group.matches) * 100;
-      const wilson = wilsonLowerBound(group.wins, group.matches) * 100;
+      const [wilsonLowerBound] = wilsonScoreInterval(group.wins, group.matches);
+      const wilson = wilsonLowerBound * 100;
       points.push({
         bucket: key,
         displayBucket,
