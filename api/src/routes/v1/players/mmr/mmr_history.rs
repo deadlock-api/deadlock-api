@@ -14,8 +14,7 @@ use crate::utils::parse::parse_steam_id;
 use crate::utils::types::AccountIdQuery;
 
 pub const WINDOW_SIZE: usize = 40;
-/// `0.8f32.ln()`, the per-hour smoothing factor. Precomputed because `f32::ln` is not a `const fn`.
-pub const LOG_SMOOTHING_FACTOR: f32 = -0.22314353;
+pub const SMOOTHING_FACTOR: f32 = 0.8;
 
 #[derive(Deserialize, IntoParams, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub(super) struct HeroMMRHistoryPath {
@@ -64,7 +63,7 @@ fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String
         "
     WITH
         {WINDOW_SIZE} as window_size,
-        {LOG_SMOOTHING_FACTOR} as log_k,
+        log({SMOOTHING_FACTOR}) as log_k,
         t_matches AS (
             SELECT
                 account_id,

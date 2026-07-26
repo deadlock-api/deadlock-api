@@ -11,7 +11,7 @@ use utoipa::IntoParams;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::players::mmr::apply_mmr_rate_limits;
-use crate::routes::v1::players::mmr::mmr_history::{LOG_SMOOTHING_FACTOR, MMRHistory, WINDOW_SIZE};
+use crate::routes::v1::players::mmr::mmr_history::{MMRHistory, SMOOTHING_FACTOR, WINDOW_SIZE};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::comma_separated_deserialize;
 
@@ -60,7 +60,7 @@ fn build_mmr_query_inner(
         "
     WITH
         {WINDOW_SIZE} AS window_size,
-        {LOG_SMOOTHING_FACTOR} AS log_k
+        log({SMOOTHING_FACTOR}) AS log_k
     SELECT
         account_id,
         latest_match_id AS match_id,
