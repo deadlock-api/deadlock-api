@@ -11,7 +11,7 @@ use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::players::mmr::apply_mmr_rate_limits;
 use crate::routes::v1::players::mmr::batch::HeroMMRPath;
-use crate::routes::v1::players::mmr::mmr_history::{SMOOTHING_FACTOR, WINDOW_SIZE};
+use crate::routes::v1::players::mmr::mmr_history::{LOG_SMOOTHING_FACTOR, WINDOW_SIZE};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::default_last_month_timestamp;
 
@@ -109,7 +109,7 @@ fn build_mmr_distribution_query(hero_id: Option<u8>, query: &MMRDistributionQuer
         "
     WITH
         {WINDOW_SIZE} AS window_size,
-        log({SMOOTHING_FACTOR}) AS log_k
+        {LOG_SMOOTHING_FACTOR} AS log_k
     SELECT toUInt8(if(player_score <= 0, 0, 10 * intDiv(player_score - 1, 6) + 11 + modulo(player_score - 1, 6))) AS rank,
            players
     FROM (
