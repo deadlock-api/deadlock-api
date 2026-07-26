@@ -60,14 +60,14 @@ fn build_mmr_query_inner(
         "
     WITH
         {WINDOW_SIZE} AS window_size,
-        {SMOOTHING_FACTOR} AS k
+        log({SMOOTHING_FACTOR}) AS log_k
     SELECT
         account_id,
         latest_match_id AS match_id,
         latest_start_time AS start_time,
         clamp(
-            dotProduct(mmr_window, arrayMap(t -> pow(k, date_diff('hour', t, latest_start_time)), time_window)) /
-            arraySum(arrayMap(t -> pow(k, date_diff('hour', t, latest_start_time)), time_window)),
+            dotProduct(mmr_window, arrayMap(t -> exp(log_k * date_diff('hour', t, latest_start_time)), time_window)) /
+            arraySum(arrayMap(t -> exp(log_k * date_diff('hour', t, latest_start_time)), time_window)),
             0, 66
         ) AS player_score,
         toUInt32(if(toUInt32(round(player_score)) = 0, 0, 10 * intDiv(toUInt32(round(player_score)) - 1, 6) + 11 + modulo(toUInt32(round(player_score)) - 1, 6))) AS rank,

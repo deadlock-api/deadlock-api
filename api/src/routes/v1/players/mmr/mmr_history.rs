@@ -63,7 +63,7 @@ fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String
         "
     WITH
         {WINDOW_SIZE} as window_size,
-        {SMOOTHING_FACTOR} as k,
+        log({SMOOTHING_FACTOR}) as log_k,
         t_matches AS (
             SELECT
                 account_id,
@@ -85,7 +85,7 @@ fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String
                 start_time,
                 groupArray(mmr) OVER (PARTITION BY account_id ORDER BY match_id ROWS BETWEEN window_size - 1 PRECEDING AND CURRENT ROW) AS mmr_window,
                 groupArray(start_time) OVER (PARTITION BY account_id ORDER BY match_id ROWS BETWEEN window_size - 1 PRECEDING AND CURRENT ROW) AS time_window,
-                arrayMap(i -> pow(k, date_diff('hour', time_window[i], start_time)), range(1, length(time_window) + 1)) AS weights
+                arrayMap(i -> exp(log_k * date_diff('hour', time_window[i], start_time)), range(1, length(time_window) + 1)) AS weights
             FROM t_matches
             ORDER BY match_id
         )
