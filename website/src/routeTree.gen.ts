@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as Sitemap_indexDotxmlRouteImport } from './routes/sitemap_index[.]xml'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ServersRouteImport } from './routes/servers'
+import { Route as PurchaseGuideRouteImport } from './routes/purchase-guide'
 import { Route as PlayersRouteImport } from './routes/players'
 import { Route as PatronRouteImport } from './routes/patron'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
@@ -62,6 +63,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const ServersRoute = ServersRouteImport.update({
   id: '/servers',
   path: '/servers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PurchaseGuideRoute = PurchaseGuideRouteImport.update({
+  id: '/purchase-guide',
+  path: '/purchase-guide',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PlayersRoute = PlayersRouteImport.update({
@@ -263,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/leaderboard': typeof LeaderboardRoute
   '/patron': typeof PatronRoute
   '/players': typeof PlayersRoute
+  '/purchase-guide': typeof PurchaseGuideRoute
   '/servers': typeof ServersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
@@ -301,6 +308,7 @@ export interface FileRoutesByTo {
   '/leaderboard': typeof LeaderboardRoute
   '/patron': typeof PatronRoute
   '/players': typeof PlayersRoute
+  '/purchase-guide': typeof PurchaseGuideRoute
   '/servers': typeof ServersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
@@ -343,6 +351,7 @@ export interface FileRoutesById {
   '/leaderboard': typeof LeaderboardRoute
   '/patron': typeof PatronRoute
   '/players': typeof PlayersRoute
+  '/purchase-guide': typeof PurchaseGuideRoute
   '/servers': typeof ServersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
@@ -386,6 +395,7 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/patron'
     | '/players'
+    | '/purchase-guide'
     | '/servers'
     | '/sitemap.xml'
     | '/sitemap_index.xml'
@@ -424,6 +434,7 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/patron'
     | '/players'
+    | '/purchase-guide'
     | '/servers'
     | '/sitemap.xml'
     | '/sitemap_index.xml'
@@ -465,6 +476,7 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/patron'
     | '/players'
+    | '/purchase-guide'
     | '/servers'
     | '/sitemap.xml'
     | '/sitemap_index.xml'
@@ -507,6 +519,7 @@ export interface RootRouteChildren {
   LeaderboardRoute: typeof LeaderboardRoute
   PatronRoute: typeof PatronRoute
   PlayersRoute: typeof PlayersRoute
+  PurchaseGuideRoute: typeof PurchaseGuideRoute
   ServersRoute: typeof ServersRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   Sitemap_indexDotxmlRoute: typeof Sitemap_indexDotxmlRoute
@@ -542,6 +555,13 @@ declare module '@tanstack/react-router' {
       path: '/servers'
       fullPath: '/servers'
       preLoaderRoute: typeof ServersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/purchase-guide': {
+      id: '/purchase-guide'
+      path: '/purchase-guide'
+      fullPath: '/purchase-guide'
+      preLoaderRoute: typeof PurchaseGuideRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/players': {
@@ -865,6 +885,7 @@ const rootRouteChildren: RootRouteChildren = {
   LeaderboardRoute: LeaderboardRoute,
   PatronRoute: PatronRoute,
   PlayersRoute: PlayersRoute,
+  PurchaseGuideRoute: PurchaseGuideRoute,
   ServersRoute: ServersRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   Sitemap_indexDotxmlRoute: Sitemap_indexDotxmlRoute,
