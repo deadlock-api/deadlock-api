@@ -17,6 +17,7 @@ use datafusion::execution::SendableRecordBatchStream;
 use futures::{Stream, StreamExt};
 use reqwest::StatusCode;
 use serde::Deserialize;
+use tokio::sync::mpsc::{UnboundedReceiver, unbounded_channel};
 use utoipa::IntoParams;
 
 use super::demofusion;
@@ -47,7 +48,8 @@ pub(super) struct LiveQueryParams {
         (status = OK, content_type = "text/event-stream", description = "\
 SSE stream of result rows. Each `message` event's `data` is one result row as a JSON object; a \
 terminal `end` event marks the end of the broadcast, and an `error` event carries any mid-stream \
-failure."),
+failure. While the broadcast relay is still spinning up (common right after spectating a fresh \
+match), `status` events report retry progress instead of the stream going quiet."),
         (status = BAD_REQUEST, description = "Neither match_id nor broadcast_url given, or the query is invalid."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = BAD_GATEWAY, description = "The live broadcast could not be fetched"),
@@ -119,17 +121,38 @@ pub(super) async fn live_query(
 
 /// Run the live-query setup lazily as the stream's first step so the SSE response head is sent
 /// before it completes. On success, stream result rows; on setup failure, emit a single `error`
-/// event followed by the terminal `end`.
+/// event followed by the terminal `end`. Concurrently, any progress messages `query_live` reports
+/// while retrying the initial connection are forwarded as `status` events.
 fn live_sse(broadcast_url: String, query: String) -> impl Stream<Item = Result<Event, Infallible>> {
-    futures::stream::once(async move { demofusion::query_live(&broadcast_url, &query).await })
-        .flat_map(|res| match res {
-            Ok(rows) => sse_rows(rows).left_stream(),
-            Err(e) => futures::stream::iter([
-                Ok(error_event(&format!("Live broadcast error: {e}"))),
-                Ok(end_event()),
-            ])
-            .right_stream(),
-        })
+    let (status_tx, status_rx) = unbounded_channel::<String>();
+    let status_stream = receiver_stream(status_rx).map(|msg| Ok(status_event(&msg)));
+
+    let result_stream = futures::stream::once(async move {
+        demofusion::query_live(&broadcast_url, &query, status_tx).await
+    })
+    .flat_map(|res| match res {
+        Ok(rows) => sse_rows(rows).left_stream(),
+        Err(e) => {
+            // Reuse the same status classification as the non-live `/demo/query` path (e.g. a
+            // relay fetch failure is a 502) instead of leaking whatever raw status Valve's relay
+            // happened to answer with as if it meant something about this request.
+            let api_err = super::format::map_demofusion_err(&e);
+            let message = api_err.to_string();
+            let status = api_err.into_response().status();
+            futures::stream::iter([Ok(error_event(status, &message)), Ok(end_event())])
+                .right_stream()
+        }
+    });
+
+    futures::stream::select(status_stream, result_stream)
+}
+
+/// Adapt an `UnboundedReceiver` into a `Stream`, ending once the sender is dropped and the queue
+/// drains.
+fn receiver_stream<T>(rx: UnboundedReceiver<T>) -> impl Stream<Item = T> {
+    futures::stream::unfold(rx, |mut rx| async move {
+        rx.recv().await.map(|item| (item, rx))
+    })
 }
 
 /// Adapt a result-batch stream into an SSE row stream: one `message` event per row, a terminal
@@ -139,7 +162,10 @@ fn sse_rows(stream: SendableRecordBatchStream) -> impl Stream<Item = Result<Even
         .flat_map(|item| {
             let events = match item {
                 Ok(batch) => batch_to_row_events(&batch),
-                Err(e) => vec![error_event(&e.to_string())],
+                Err(e) => vec![error_event(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    &e.to_string(),
+                )],
             };
             futures::stream::iter(events.into_iter().map(Ok))
         })
@@ -150,14 +176,21 @@ fn end_event() -> Event {
     Event::default().event("end").data("{}")
 }
 
+fn status_event(msg: &str) -> Event {
+    Event::default()
+        .event("status")
+        .data(serde_json::json!({ "message": msg }).to_string())
+}
+
 /// Serialize one batch to newline-delimited JSON and turn each row into its own `data:` event.
 fn batch_to_row_events(batch: &RecordBatch) -> Vec<Event> {
     let mut buf = Vec::new();
     let mut writer = LineDelimitedWriter::new(&mut buf);
     if let Err(e) = writer.write(batch).and_then(|()| writer.finish()) {
-        return vec![error_event(&format!(
-            "Row serialization failed (a projected column type may be unsupported): {e}"
-        ))];
+        return vec![error_event(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &format!("Row serialization failed (a projected column type may be unsupported): {e}"),
+        )];
     }
     String::from_utf8_lossy(&buf)
         .lines()
@@ -166,8 +199,8 @@ fn batch_to_row_events(batch: &RecordBatch) -> Vec<Event> {
         .collect()
 }
 
-fn error_event(msg: &str) -> Event {
+fn error_event(status: StatusCode, msg: &str) -> Event {
     Event::default()
         .event("error")
-        .data(serde_json::json!({ "error": msg }).to_string())
+        .data(serde_json::json!({ "status": status.as_u16(), "error": msg }).to_string())
 }

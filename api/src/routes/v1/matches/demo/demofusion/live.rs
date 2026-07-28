@@ -5,6 +5,7 @@
 //! rows are pushed into `DataFusion` [`StreamingTable`]s, so projection/filter queries emit rows
 //! continuously. A whole-match `GROUP BY` / `ORDER BY` still only completes once the broadcast ends.
 
+use core::time::Duration;
 use std::collections::{HashMap, HashSet};
 use std::io::{self, Read};
 use std::sync::{Arc, Mutex};
@@ -18,7 +19,7 @@ use datafusion::execution::{SendableRecordBatchStream, TaskContext};
 use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
 use datafusion::physical_plan::streaming::PartitionStream;
 use datafusion::prelude::SessionContext;
-use haste_broadcast::BroadcastHttp;
+use haste_broadcast::{BroadcastHttp, BroadcastHttpClientError};
 use haste_core::demostream::{
     CmdHeader, DecodeCmdError, DemoStream, ReadCmdError, ReadCmdHeaderError,
 };
@@ -40,6 +41,11 @@ use super::query::{
 use super::table_extractor::extract_table_names;
 use super::visitor::{BroadcastDemoStream, discover_schemas_from_demo};
 
+/// A freshly-spectated match's relay can 404/405 for a while before it actually starts serving the
+/// broadcast, so the initial connect retries for at least this long before giving up.
+const CONNECT_RETRY_BUDGET: Duration = Duration::from_mins(1);
+const CONNECT_RETRY_INTERVAL: Duration = Duration::from_secs(2);
+
 /// Run `query` over a live GOTV/spectator broadcast, streaming result rows as the match plays.
 ///
 /// `base_url` is the stream base (e.g. `http://dist1-ord1.steamcontent.com/tv/<id>_<token>`, from
@@ -49,25 +55,23 @@ use super::visitor::{BroadcastDemoStream, discover_schemas_from_demo};
 /// still can't emit until the broadcast ends. The stream ends when the broadcast stops (match ends
 /// or relay stops serving); dropping it tears the background fetch/parse down.
 ///
+/// `status_tx` receives human-readable progress messages while the initial connection is retried, so
+/// a caller streaming this over SSE can surface them to a waiting client instead of going quiet.
+///
 /// # Errors
 ///
 /// Returns an error if the broadcast cannot be started or its schema decoded, or for the same
 /// reasons as [`query`](super::query).
-pub(crate) async fn query_live(base_url: &str, query: &str) -> Result<SendableRecordBatchStream> {
+pub(crate) async fn query_live(
+    base_url: &str,
+    query: &str,
+    status_tx: UnboundedSender<String>,
+) -> Result<SendableRecordBatchStream> {
     let referenced: HashSet<String> = extract_table_names(query)?.into_iter().collect();
-
-    let client = reqwest::Client::new();
-    let mut http = BroadcastHttp::start_streaming(client, base_url.to_string())
-        .await
-        .map_err(|e| Error::Broadcast(e.to_string()))?;
 
     // The `/start` signon fragment carries the send-tables the schema is built from, and also seeds
     // the parser so serializers/class-info are in place before deltas.
-    let signon = match http.next_packet().await {
-        Some(Ok(bytes)) => bytes,
-        Some(Err(e)) => return Err(Error::Broadcast(e.to_string())),
-        None => return Err(Error::Broadcast("broadcast ended before signon".into())),
-    };
+    let (mut http, signon) = connect_with_retry(base_url, &status_tx).await?;
 
     // Schema discovery is CPU-bound haste parsing; run it off the async runtime, and catch a panic
     // on malformed/stale relay bytes as a Broadcast error rather than letting it reset the connection.
@@ -156,6 +160,48 @@ pub(crate) async fn query_live(base_url: &str, query: &str) -> Result<SendableRe
     });
 
     Ok(ctx.sql(query).await?.execute_stream().await?)
+}
+
+/// Connect to the broadcast relay and fetch the signon fragment, retrying on failure for
+/// [`CONNECT_RETRY_BUDGET`]. A newly-spectated match's relay routinely answers 404 (nothing synced
+/// yet) or 405 (relay still connecting to the game server) for several seconds before it starts
+/// serving fragments, so a single failed attempt does not mean the broadcast is unavailable.
+async fn connect_with_retry(
+    base_url: &str,
+    status_tx: &UnboundedSender<String>,
+) -> Result<(BroadcastHttp<'static, reqwest::Client>, Bytes)> {
+    let deadline = tokio::time::Instant::now() + CONNECT_RETRY_BUDGET;
+    let mut attempt = 0u32;
+    loop {
+        attempt += 1;
+        match try_connect(base_url).await {
+            Ok(connected) => return Ok(connected),
+            Err(e) if tokio::time::Instant::now() < deadline => {
+                let _ = status_tx.send(format!(
+                    "Broadcast relay not ready yet (attempt {attempt}: {e}), retrying..."
+                ));
+                tokio::time::sleep(CONNECT_RETRY_INTERVAL).await;
+            }
+            Err(e) => return Err(Error::Broadcast(e.to_string())),
+        }
+    }
+}
+
+async fn try_connect(
+    base_url: &str,
+) -> core::result::Result<
+    (BroadcastHttp<'static, reqwest::Client>, Bytes),
+    BroadcastHttpClientError<reqwest::Error>,
+> {
+    let client = reqwest::Client::new();
+    let mut http = BroadcastHttp::start_streaming(client, base_url.to_string()).await?;
+    match http.next_packet().await {
+        Some(Ok(bytes)) => Ok((http, bytes)),
+        Some(Err(e)) => Err(e),
+        None => Err(BroadcastHttpClientError::StatusCode(
+            reqwest::StatusCode::NOT_FOUND,
+        )),
+    }
 }
 
 fn register_streaming_table(
