@@ -68,6 +68,10 @@ impl BatchQueryMulti for RankPredictMatchesQuery {
     type Key = u32;
     type Value = MatchRow;
 
+    fn batch_window_ms() -> u64 {
+        1000
+    }
+
     fn build_query(keys: &[u32]) -> String {
         format!(
             "SELECT
