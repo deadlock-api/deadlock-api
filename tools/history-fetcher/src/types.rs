@@ -27,6 +27,11 @@ pub(crate) struct PlayerMatchHistoryEntry {
     pub brawl_score_team0: Option<u32>,
     pub brawl_score_team1: Option<u32>,
     pub brawl_avg_round_time_s: Option<u32>,
+    pub player_match_outcome: i8,
+    pub ranked_display_badge: Option<u32>,
+    pub ranked_delta: Option<i32>,
+    pub ranked_calibration_match: Option<u32>,
+    pub ranked_used_demotion_protection: Option<bool>,
 }
 
 impl PlayerMatchHistoryEntry {
@@ -58,6 +63,11 @@ impl PlayerMatchHistoryEntry {
             brawl_score_team0: None,
             brawl_score_team1: None,
             brawl_avg_round_time_s: None,
+            player_match_outcome: entry.player_match_outcome.unwrap_or_default() as i8,
+            ranked_display_badge: entry.ranked_display_badge,
+            ranked_delta: entry.ranked_delta,
+            ranked_calibration_match: entry.ranked_calibration_match,
+            ranked_used_demotion_protection: entry.ranked_used_demotion_protection,
         })
     }
 }

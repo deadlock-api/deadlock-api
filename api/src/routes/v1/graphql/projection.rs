@@ -37,6 +37,8 @@ pub(super) const MATCH_COLUMNS: &[Column] = &[
     mp("low_pri_pool", "low_pri_pool"),
     mp("new_player_pool", "new_player_pool"),
     mp("not_scored", "not_scored"),
+    mp("ranked_type", "ranked_type"),
+    mp("rank_interval", "rank_interval"),
     mp("rewards_eligible", "rewards_eligible"),
     mp("earned_holiday_award_2025", "earned_holiday_award_2025"),
     mp("objectives_mask_team_0", "objectives_mask_team0"),
@@ -106,6 +108,40 @@ pub(super) const PLAYER_COLUMNS: &[Column] = &[
     mp("player_tracked_stats", "player_tracked_stats"),
     mp("stats_type_stat", "stats_type_stat"),
     mp("hero_build_id", "hero_build_id"),
+    mp("hero_xp_rewards", "hero_xp_rewards"),
+    mp("player_match_outcome", "player_match_outcome"),
+    mp(
+        "player_rank_initial_display_rank",
+        "player_rank_initial_display_rank",
+    ),
+    mp(
+        "player_rank_initial_flat_progress",
+        "player_rank_initial_flat_progress",
+    ),
+    mp(
+        "player_rank_final_flat_progress",
+        "player_rank_final_flat_progress",
+    ),
+    mp(
+        "player_rank_desired_progress_change",
+        "player_rank_desired_progress_change",
+    ),
+    mp(
+        "player_rank_initial_calibration_games",
+        "player_rank_initial_calibration_games",
+    ),
+    mp(
+        "player_rank_initial_demotion_protection_games",
+        "player_rank_initial_demotion_protection_games",
+    ),
+    mp(
+        "player_rank_consumed_demotion_protection",
+        "player_rank_consumed_demotion_protection",
+    ),
+    mp(
+        "player_rank_initial_win_streak",
+        "player_rank_initial_win_streak",
+    ),
 ];
 
 /// Sub-fields of the `items` Nested column. All `UInt32`.

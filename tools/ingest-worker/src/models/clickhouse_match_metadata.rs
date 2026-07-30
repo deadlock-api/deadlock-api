@@ -1,12 +1,16 @@
 use clickhouse::Row;
 use serde::Serialize;
+use valveprotos::deadlock::CMsgHeroXpGrant;
 use valveprotos::deadlock::c_msg_match_meta_data_contents::{
     BookReward, Deaths, Items, MatchInfo, MidBoss, Objective as ProtoObjective, PlayerAccolade,
     PlayerStats, Players, PowerUpBuff, StreetBrawlRound,
 };
 use valveprotos::deadlock::c_msg_match_player_paths_data::Path;
 
-use crate::models::enums::{BotDifficulty, GameMode, MatchMode, MatchOutcome, Objective, Team};
+use crate::models::enums::{
+    BotDifficulty, GameMode, HeroXpGrantReason, MatchMode, MatchOutcome, Objective,
+    PlayerMatchOutcome, RankedType, Team,
+};
 
 #[derive(Row, Debug, Clone, Serialize)]
 pub(crate) struct ClickhouseMatchPlayer {
@@ -27,6 +31,8 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub new_player_pool: Option<bool>,
     pub not_scored: Option<bool>,
     pub game_mode_version: Option<u32>,
+    pub ranked_type: RankedType,
+    pub rank_interval: Option<u32>,
     #[serde(rename = "objectives.destroyed_time_s")]
     pub objectives_destroyed_time_s: Vec<u32>,
     #[serde(rename = "objectives.creep_damage")]
@@ -224,6 +230,21 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub accolades_accolade_stat_value: Vec<i32>,
     #[serde(rename = "accolades.accolade_threshold_achieved")]
     pub accolades_accolade_threshold_achieved: Vec<i32>,
+    #[serde(rename = "hero_xp_rewards.hero_id")]
+    pub hero_xp_rewards_hero_id: Vec<u32>,
+    #[serde(rename = "hero_xp_rewards.xp_grant")]
+    pub hero_xp_rewards_xp_grant: Vec<u32>,
+    #[serde(rename = "hero_xp_rewards.reason")]
+    pub hero_xp_rewards_reason: Vec<HeroXpGrantReason>,
+    pub player_match_outcome: PlayerMatchOutcome,
+    pub player_rank_initial_display_rank: Option<u32>,
+    pub player_rank_initial_flat_progress: Option<u32>,
+    pub player_rank_final_flat_progress: Option<u32>,
+    pub player_rank_desired_progress_change: Option<i32>,
+    pub player_rank_initial_calibration_games: Option<u32>,
+    pub player_rank_initial_demotion_protection_games: Option<u32>,
+    pub player_rank_consumed_demotion_protection: Option<bool>,
+    pub player_rank_initial_win_streak: Option<u32>,
     pub x_min: Option<f32>,
     pub y_min: Option<f32>,
     pub x_max: Option<f32>,
@@ -263,6 +284,8 @@ impl From<(&MatchInfo, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer 
             new_player_pool: match_info.new_player_pool,
             not_scored: match_info.not_scored,
             game_mode_version: match_info.game_mode_version,
+            ranked_type: RankedType::from(match_info.ranked_type()),
+            rank_interval: match_info.rank_interval,
             objectives_destroyed_time_s: match_info
                 .objectives
                 .iter()
@@ -625,6 +648,50 @@ impl From<(&MatchInfo, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer 
                 .iter()
                 .map(PlayerAccolade::accolade_threshold_achieved)
                 .collect(),
+            hero_xp_rewards_hero_id: value
+                .hero_xp_rewards
+                .iter()
+                .filter_map(|r| r.xp_grant.as_ref())
+                .map(CMsgHeroXpGrant::hero_id)
+                .collect(),
+            hero_xp_rewards_xp_grant: value
+                .hero_xp_rewards
+                .iter()
+                .filter_map(|r| r.xp_grant.as_ref())
+                .map(CMsgHeroXpGrant::xp_grant)
+                .collect(),
+            hero_xp_rewards_reason: value
+                .hero_xp_rewards
+                .iter()
+                .filter_map(|r| r.xp_grant.as_ref())
+                .map(CMsgHeroXpGrant::reason)
+                .map(HeroXpGrantReason::from)
+                .collect(),
+            player_match_outcome: PlayerMatchOutcome::from(value.player_match_outcome()),
+            player_rank_initial_display_rank: value
+                .player_rank_data
+                .and_then(|r| r.initial_display_rank),
+            player_rank_initial_flat_progress: value
+                .player_rank_data
+                .and_then(|r| r.initial_flat_progress),
+            player_rank_final_flat_progress: value
+                .player_rank_data
+                .and_then(|r| r.final_flat_progress),
+            player_rank_desired_progress_change: value
+                .player_rank_data
+                .and_then(|r| r.desired_progress_change),
+            player_rank_initial_calibration_games: value
+                .player_rank_data
+                .and_then(|r| r.initial_calibration_games),
+            player_rank_initial_demotion_protection_games: value
+                .player_rank_data
+                .and_then(|r| r.initial_demotion_protection_games),
+            player_rank_consumed_demotion_protection: value
+                .player_rank_data
+                .and_then(|r| r.consumed_demotion_protection),
+            player_rank_initial_win_streak: value
+                .player_rank_data
+                .and_then(|r| r.initial_win_streak),
             x_min: match_path.as_ref().and_then(|p| p.x_min),
             y_min: match_path.as_ref().and_then(|p| p.y_min),
             x_max: match_path.as_ref().and_then(|p| p.x_max),

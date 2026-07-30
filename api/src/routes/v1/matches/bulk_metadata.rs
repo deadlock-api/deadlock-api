@@ -334,6 +334,8 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
             "any(match_tracked_stats) as match_tracked_stats".to_owned(),
             "any(team0_tracked_stats) as team0_tracked_stats".to_owned(),
             "any(team1_tracked_stats) as team1_tracked_stats".to_owned(),
+            "any(ranked_type) as ranked_type".to_owned(),
+            "any(rank_interval) as rank_interval".to_owned(),
         ]);
     }
     if query.include_mid_boss {
@@ -384,6 +386,16 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
                 "mvp_rank",
                 "player_tracked_stats",
                 "accolades",
+                "hero_xp_rewards",
+                "player_match_outcome",
+                "player_rank_initial_display_rank",
+                "player_rank_initial_flat_progress",
+                "player_rank_final_flat_progress",
+                "player_rank_desired_progress_change",
+                "player_rank_initial_calibration_games",
+                "player_rank_initial_demotion_protection_games",
+                "player_rank_consumed_demotion_protection",
+                "player_rank_initial_win_streak",
             ]);
         }
         if query.include_player_items {

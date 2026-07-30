@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use valveprotos::deadlock::c_msg_match_meta_data_contents::{MatchInfo, Players};
 
-use crate::models::enums::Team;
+use crate::models::enums::{PlayerMatchOutcome, Team};
 
 #[derive(Serialize_repr, Deserialize_repr, Copy, Clone, PartialEq, Debug, Default)]
 #[repr(i8)]
@@ -38,6 +38,11 @@ pub(crate) struct PlayerMatchHistoryEntry {
     pub brawl_score_team0: Option<u32>,
     pub brawl_score_team1: Option<u32>,
     pub brawl_avg_round_time_s: Option<u32>,
+    pub player_match_outcome: PlayerMatchOutcome,
+    pub ranked_display_badge: Option<u32>,
+    pub ranked_delta: Option<i32>,
+    pub ranked_calibration_match: Option<u32>,
+    pub ranked_used_demotion_protection: Option<bool>,
     pub source: Source,
 }
 
@@ -88,6 +93,14 @@ impl PlayerMatchHistoryEntry {
                     .sum::<u32>()
                     / match_info.street_brawl_rounds.len() as u32
             }),
+            player_match_outcome: PlayerMatchOutcome::from(player.player_match_outcome()),
+            // Only carried by the GC match history message, not by match metadata.
+            ranked_display_badge: None,
+            ranked_delta: None,
+            ranked_calibration_match: None,
+            ranked_used_demotion_protection: player
+                .player_rank_data
+                .and_then(|r| r.consumed_demotion_protection),
             source: Source::MatchPlayer,
         })
     }

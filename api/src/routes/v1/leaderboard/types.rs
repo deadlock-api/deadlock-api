@@ -59,7 +59,6 @@ pub(super) struct LeaderboardClickhouse {
     pub rank: u32,
     pub leaderboard_position: u32,
     pub top_hero_ids: Vec<u8>,
-    pub badge_level: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Row)]
@@ -71,7 +70,6 @@ pub(super) struct HeroLeaderboardClickhouse {
     pub rank: u32,
     pub leaderboard_position: u32,
     pub top_hero_ids: Vec<u8>,
-    pub badge_level: Option<u32>,
 }
 
 impl TryFrom<CMsgClientToGcGetLeaderboardResponse> for Leaderboard {

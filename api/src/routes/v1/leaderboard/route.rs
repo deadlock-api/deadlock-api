@@ -146,7 +146,6 @@ async fn insert_leaderboard_to_ch(
                 .iter()
                 .map(|&h| u8::try_from(h).unwrap_or_default())
                 .collect(),
-            badge_level: entry.badge_level,
         };
         if let Err(e) = inserter.write(&row).await {
             warn!("Failed to write leaderboard entry to CH: {e}");
@@ -198,7 +197,6 @@ async fn insert_hero_leaderboard_to_ch(
                 .iter()
                 .map(|&h| u8::try_from(h).unwrap_or_default())
                 .collect(),
-            badge_level: entry.badge_level,
         };
         if let Err(e) = inserter.write(&row).await {
             warn!("Failed to write hero_leaderboard entry to CH: {e}");

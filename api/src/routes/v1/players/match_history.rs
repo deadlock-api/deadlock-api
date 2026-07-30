@@ -103,6 +103,16 @@ pub(crate) struct PlayerMatchHistoryEntry {
     brawl_score_team0: Option<u32>,
     brawl_score_team1: Option<u32>,
     brawl_avg_round_time_s: Option<u32>,
+    /// How the match was scored for the player: 0 = invalid, 1 = win, 2 = loss, 3 = penalized, 4 = penalized party, 5 = not scored.
+    player_match_outcome: i8,
+    /// The ranked badge shown for the player after the match (tier = first digits, subtier = last digit). See more: <https://api.deadlock-api.com/v1/assets/ranks>
+    ranked_display_badge: Option<u32>,
+    /// The ranked progress change the player got from this match.
+    ranked_delta: Option<i32>,
+    /// Non-zero if this match counted towards the player's ranked calibration.
+    ranked_calibration_match: Option<u32>,
+    /// Whether the player's demotion protection absorbed a loss in this match.
+    ranked_used_demotion_protection: Option<bool>,
 }
 
 impl PlayerMatchHistoryEntry {
@@ -134,6 +144,12 @@ impl PlayerMatchHistoryEntry {
             brawl_score_team0: entry.brawl_score_team0,
             brawl_score_team1: entry.brawl_score_team1,
             brawl_avg_round_time_s: entry.brawl_avg_round_time_s,
+            player_match_outcome: i8::try_from(entry.player_match_outcome.unwrap_or_default())
+                .ok()?,
+            ranked_display_badge: entry.ranked_display_badge,
+            ranked_delta: entry.ranked_delta,
+            ranked_calibration_match: entry.ranked_calibration_match,
+            ranked_used_demotion_protection: entry.ranked_used_demotion_protection,
         })
     }
 
@@ -178,6 +194,8 @@ async fn fetch_match_history_raw(
         continue_cursor,
         game_mode: None,
         match_mode: None,
+        ranked_type: None,
+        rank_interval: None,
     };
     let response: CMsgClientToGcGetMatchHistoryResponse = steam_client
         .call_steam_proxy(SteamProxyQuery {

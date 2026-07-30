@@ -246,8 +246,13 @@ pub(crate) enum MatchMode {
     Tutorial = 6,
     #[strum(serialize = "hero_labs", to_string = "HeroLabs")]
     HeroLabs = 7,
-    #[strum(serialize = "calibration", to_string = "Calibration")]
-    Calibration = 8,
+    #[serde(alias = "calibration")]
+    #[strum(
+        serialize = "calibration",
+        serialize = "new_player_placement",
+        to_string = "NewPlayerPlacement"
+    )]
+    NewPlayerPlacement = 8,
 }
 
 impl MatchMode {

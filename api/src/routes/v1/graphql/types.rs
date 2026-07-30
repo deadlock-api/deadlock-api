@@ -45,6 +45,8 @@ pub(super) struct Match {
     pub(super) low_pri_pool: Option<bool>,
     pub(super) new_player_pool: Option<bool>,
     pub(super) not_scored: Option<bool>,
+    pub(super) ranked_type: Option<String>,
+    pub(super) rank_interval: Option<u32>,
 
     // Misc match flags / stats
     pub(super) rewards_eligible: Option<bool>,
@@ -129,6 +131,17 @@ pub(super) struct MatchPlayer {
     pub(super) rewards_eligible: Option<bool>,
     pub(super) earned_holiday_award_2025: Option<bool>,
 
+    // Ranked
+    pub(super) player_match_outcome: Option<String>,
+    pub(super) player_rank_initial_display_rank: Option<u32>,
+    pub(super) player_rank_initial_flat_progress: Option<u32>,
+    pub(super) player_rank_final_flat_progress: Option<u32>,
+    pub(super) player_rank_desired_progress_change: Option<i32>,
+    pub(super) player_rank_initial_calibration_games: Option<u32>,
+    pub(super) player_rank_initial_demotion_protection_games: Option<u32>,
+    pub(super) player_rank_consumed_demotion_protection: Option<bool>,
+    pub(super) player_rank_initial_win_streak: Option<u32>,
+
     // Demo-derived
     pub(super) hero_build_id: Option<u32>,
 
@@ -150,6 +163,8 @@ pub(super) struct MatchPlayer {
     pub(super) player_tracked_stats: Option<JsonScalar>,
     #[graphql(complexity = 50)]
     pub(super) stats_type_stat: Option<JsonScalar>,
+    #[graphql(complexity = 50)]
+    pub(super) hero_xp_rewards: Option<JsonScalar>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, SimpleObject)]

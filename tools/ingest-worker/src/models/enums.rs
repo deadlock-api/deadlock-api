@@ -2,7 +2,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use valveprotos::deadlock::c_msg_match_meta_data_contents::EMatchOutcome;
 use valveprotos::deadlock::{
     ECitadelBotDifficulty, ECitadelGameMode, ECitadelLobbyTeam, ECitadelMatchMode,
-    ECitadelTeamObjective,
+    ECitadelRankedType, ECitadelTeamObjective, EHeroXpGrantReason, EPlayerMatchOutcome,
 };
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
@@ -93,7 +93,7 @@ pub(crate) enum MatchMode {
     ServerTest = 5,
     Tutorial = 6,
     HeroLabs = 7,
-    Calibration = 8,
+    NewPlayerPlacement = 8,
 }
 
 impl From<ECitadelMatchMode> for MatchMode {
@@ -107,7 +107,7 @@ impl From<ECitadelMatchMode> for MatchMode {
             ECitadelMatchMode::KECitadelMatchModeServerTest => Self::ServerTest,
             ECitadelMatchMode::KECitadelMatchModeTutorial => Self::Tutorial,
             ECitadelMatchMode::KECitadelMatchModeHeroLabs => Self::HeroLabs,
-            ECitadelMatchMode::KECitadelMatchModeCalibration => Self::Calibration,
+            ECitadelMatchMode::KECitadelMatchModeNewPlayerPlacement => Self::NewPlayerPlacement,
         }
     }
 }
@@ -123,6 +123,64 @@ impl From<u8> for MatchMode {
             6 => MatchMode::Tutorial,
             7 => MatchMode::HeroLabs,
             _ => MatchMode::Invalid,
+        }
+    }
+}
+
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
+#[repr(i8)]
+pub(crate) enum RankedType {
+    Invalid = 0,
+    Normal = 1,
+}
+
+impl From<ECitadelRankedType> for RankedType {
+    fn from(value: ECitadelRankedType) -> Self {
+        match value {
+            ECitadelRankedType::KECitadelRankedTypeInvalid => Self::Invalid,
+            ECitadelRankedType::KECitadelRankedTypeNormal => Self::Normal,
+        }
+    }
+}
+
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
+#[repr(i8)]
+pub(crate) enum PlayerMatchOutcome {
+    Invalid = 0,
+    Win = 1,
+    Loss = 2,
+    Penalized = 3,
+    PenalizedParty = 4,
+    NotScored = 5,
+}
+
+impl From<EPlayerMatchOutcome> for PlayerMatchOutcome {
+    fn from(value: EPlayerMatchOutcome) -> Self {
+        match value {
+            EPlayerMatchOutcome::KEPlayerMatchOutcomeInvalid => Self::Invalid,
+            EPlayerMatchOutcome::KEPlayerMatchOutcomeWin => Self::Win,
+            EPlayerMatchOutcome::KEPlayerMatchOutcomeLoss => Self::Loss,
+            EPlayerMatchOutcome::KEPlayerMatchOutcomePenalized => Self::Penalized,
+            EPlayerMatchOutcome::KEPlayerMatchOutcomePenalizedParty => Self::PenalizedParty,
+            EPlayerMatchOutcome::KEPlayerMatchOutcomeNotScored => Self::NotScored,
+        }
+    }
+}
+
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
+#[repr(i8)]
+pub(crate) enum HeroXpGrantReason {
+    Win = 0,
+    Loss = 1,
+    Award = 2,
+}
+
+impl From<EHeroXpGrantReason> for HeroXpGrantReason {
+    fn from(value: EHeroXpGrantReason) -> Self {
+        match value {
+            EHeroXpGrantReason::KEGrantWin => Self::Win,
+            EHeroXpGrantReason::KEGrantLoss => Self::Loss,
+            EHeroXpGrantReason::KEGrantAward => Self::Award,
         }
     }
 }
