@@ -540,24 +540,12 @@ impl RankPredictImageFormat {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, Deserialize, ToSchema)]
-#[serde(rename_all = "lowercase")]
-pub(crate) enum RankPredictImageSize {
-    #[default]
-    Large,
-    Small,
-}
-
 #[derive(Debug, Default, Deserialize, utoipa::IntoParams)]
 pub(crate) struct RankPredictImageQuery {
     /// Image format. Defaults to `png`. Supported: `png`, `webp`.
     #[serde(default)]
     #[param(inline)]
     format: RankPredictImageFormat,
-    /// Image size. Defaults to `large`. Supported: `large`, `small`.
-    #[serde(default)]
-    #[param(inline)]
-    size: RankPredictImageSize,
 }
 
 #[utoipa::path(
@@ -579,11 +567,11 @@ pub(crate) struct RankPredictImageQuery {
     ),
     tags = ["Players"],
     summary = "Rank Predict Image",
-    description = "Returns the predicted rank badge image directly (binary), not a URL. Use `?format=webp` for WebP and `?size=small` for the small badge (defaults to large)."
+    description = "Returns the predicted rank badge image directly (binary), not a URL. Use `?format=webp` for WebP."
 )]
 pub(super) async fn rank_predict_image(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
-    Query(RankPredictImageQuery { format, size }): Query<RankPredictImageQuery>,
+    Query(RankPredictImageQuery { format }): Query<RankPredictImageQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     if state
@@ -595,22 +583,16 @@ pub(super) async fn rank_predict_image(
     }
 
     let prediction = predict_rank_for_account(&state, account_id).await?;
-    serve_rank_image(&state, prediction.badge, format, size).await
+    serve_rank_image(&state, prediction.badge, format).await
 }
 
 async fn serve_rank_image(
     state: &AppState,
     badge: i32,
     format: RankPredictImageFormat,
-    size: RankPredictImageSize,
 ) -> APIResult<(HeaderMap, Bytes)> {
     let rank = badge / 10;
-    let subrank = badge % 10;
     let suffix = format.suffix();
-    let (primary, fallback) = match size {
-        RankPredictImageSize::Large => ("large", "small"),
-        RankPredictImageSize::Small => ("small", "large"),
-    };
 
     let image_url = state
         .assets_client
@@ -619,14 +601,7 @@ async fn serve_rank_image(
         .map_err(|e| APIError::internal(format!("Failed to fetch ranks: {e}")))?
         .iter()
         .find(|r| r.tier == u32::try_from(rank).unwrap_or_default())
-        .and_then(|r| {
-            r.images
-                .get(&format!("{primary}_subrank{subrank}{suffix}"))
-                .or(r
-                    .images
-                    .get(&format!("{fallback}_subrank{subrank}{suffix}")))
-                .cloned()
-        })
+        .and_then(|r| r.images.get(&format!("large{suffix}")).cloned())
         .ok_or_else(|| {
             APIError::status_msg(
                 StatusCode::NOT_FOUND,
@@ -687,10 +662,6 @@ pub(crate) struct RankPredictAvgImageQuery {
     #[serde(default)]
     #[param(inline)]
     format: RankPredictImageFormat,
-    /// Image size. Defaults to `large`. Supported: `large`, `small`.
-    #[serde(default)]
-    #[param(inline)]
-    size: RankPredictImageSize,
 }
 
 #[utoipa::path(
@@ -712,13 +683,12 @@ pub(crate) struct RankPredictAvgImageQuery {
     ),
     tags = ["Players"],
     summary = "Rank Predict Avg Image",
-    description = "Returns the average predicted rank badge image (binary) for a comma-separated list of account IDs. Use `?format=webp` for WebP and `?size=small` for the small badge (defaults to large)."
+    description = "Returns the average predicted rank badge image (binary) for a comma-separated list of account IDs. Use `?format=webp` for WebP."
 )]
 pub(super) async fn rank_predict_avg_image(
     Query(RankPredictAvgImageQuery {
         account_ids,
         format,
-        size,
     }): Query<RankPredictAvgImageQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
@@ -779,5 +749,5 @@ pub(super) async fn rank_predict_avg_image(
     };
     let avg_badge = idx_to_badge(avg_idx);
 
-    serve_rank_image(&state, avg_badge, format, size).await
+    serve_rank_image(&state, avg_badge, format).await
 }
