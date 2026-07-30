@@ -1,8 +1,7 @@
 #![allow(dead_code)]
 
-use aes_gcm::aead::generic_array::GenericArray;
-use aes_gcm::aead::{Aead, KeyInit, OsRng};
-use aes_gcm::{Aes256Gcm, Nonce};
+use aes_gcm::Aes256Gcm;
+use aes_gcm::aead::{Aead, Generate, Key, KeyInit, Nonce};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use thiserror::Error;
@@ -249,25 +248,17 @@ pub(crate) fn encrypt_token(plaintext: &str, key_hex: &str) -> Result<String, To
         )));
     }
 
-    let key = GenericArray::from_slice(&key_bytes);
-    let cipher = Aes256Gcm::new(key);
+    let key = Key::<Aes256Gcm>::try_from(key_bytes.as_slice()).expect("key length checked above");
+    let cipher = Aes256Gcm::new(&key);
 
-    // Generate random 12-byte nonce
-    let nonce_bytes: [u8; 12] = aes_gcm::aead::rand_core::RngCore::next_u64(&mut OsRng)
-        .to_le_bytes()
-        .into_iter()
-        .chain(aes_gcm::aead::rand_core::RngCore::next_u32(&mut OsRng).to_le_bytes())
-        .collect::<Vec<u8>>()
-        .try_into()
-        .expect("12 bytes");
-    let nonce = Nonce::from_slice(&nonce_bytes);
+    let nonce = Nonce::<Aes256Gcm>::generate();
 
     let ciphertext = cipher
-        .encrypt(nonce, plaintext.as_bytes())
+        .encrypt(&nonce, plaintext.as_bytes())
         .map_err(|_| TokenCryptoError::EncryptionFailed)?;
 
     // Combine nonce + ciphertext and base64 encode
-    let mut combined = nonce_bytes.to_vec();
+    let mut combined = nonce.to_vec();
     combined.extend(ciphertext);
 
     Ok(base64::Engine::encode(
@@ -296,13 +287,13 @@ pub(crate) fn decrypt_token(encrypted: &str, key_hex: &str) -> Result<String, To
     }
 
     let (nonce_bytes, ciphertext) = combined.split_at(12);
-    let nonce = Nonce::from_slice(nonce_bytes);
+    let nonce = Nonce::<Aes256Gcm>::try_from(nonce_bytes).expect("split at 12 bytes");
 
-    let key = GenericArray::from_slice(&key_bytes);
-    let cipher = Aes256Gcm::new(key);
+    let key = Key::<Aes256Gcm>::try_from(key_bytes.as_slice()).expect("key length checked above");
+    let cipher = Aes256Gcm::new(&key);
 
     let plaintext = cipher
-        .decrypt(nonce, ciphertext)
+        .decrypt(&nonce, ciphertext)
         .map_err(|_| TokenCryptoError::DecryptionFailed)?;
 
     String::from_utf8(plaintext).map_err(|_| TokenCryptoError::DecryptionFailed)
