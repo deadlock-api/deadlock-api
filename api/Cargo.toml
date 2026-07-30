@@ -104,10 +104,13 @@ proptest-derive = "0.8"
 rstest = "0.26.1"
 insta = { version = "1", features = ["json"] }
 
-# Optimize only the ANTLR-based SQL parser (and its runtime), which is the
-# proptest bottleneck. Everything else stays unoptimized so the test profile
-# doesn't pay -O3 codegen across all dependencies -- that dominated CI compile
-# time. Workspace code stays unoptimized for fast rebuilds.
+[profile.dev]
+debug = "line-tables-only"
+split-debuginfo = "unpacked"
+
+[profile.dev.package."*"]
+debug = false
+
 [profile.test.package.clickhouse-sql-parser]
 opt-level = 3
 [profile.test.package.antlr4rust]
