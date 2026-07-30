@@ -31,8 +31,8 @@ const STEAM_NEWS_ENDPOINT: &str = "https://store.steampowered.com/feeds/news/app
 #[derive(Clone)]
 pub(crate) struct SteamClient {
     http_client: reqwest::Client,
-    /// Chrome-emulating client used only for the forum RSS feed, which sits behind a TLS
-    /// fingerprint bot challenge (stile) that rejects non-browser `ClientHello`s.
+    /// Chrome-emulating client used only for the forum RSS feed, which sits behind the stile bot
+    /// wall. Keeps the clearance cookie handed out by [`fetch_through_stile`] across fetches.
     forum_client: wreq::Client,
     steam_proxy_urls: Vec<String>,
     steam_proxy_api_key: String,

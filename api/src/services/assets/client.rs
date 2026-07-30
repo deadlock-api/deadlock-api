@@ -133,7 +133,7 @@ fn matches_hero_name(hero: &Hero, needle: &str) -> bool {
 }
 
 /// Flatten the typed [`RankImages`] into the `{key: url}` map shape the callers
-/// look up by dynamic key (e.g. `large_subrank3_webp`). Only present fields are
+/// look up by dynamic key (e.g. `large_webp`). Only present fields are
 /// serialized, so absent images are simply missing from the map.
 fn images_to_map(images: &RankImages) -> APIResult<HashMap<String, String>> {
     let value = serde_json::to_value(images)
