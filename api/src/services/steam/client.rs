@@ -11,6 +11,7 @@ use reqwest::Response;
 use serde_json::json;
 use tracing::{debug, warn};
 use valveprotos::deadlock::CMsgClientToGcGetMatchMetaDataResponse;
+use wreq::{Url, redirect};
 use wreq_util::Emulation;
 
 use crate::context::AppState;
@@ -244,11 +245,14 @@ impl SteamClient {
 }
 
 /// Build the Chrome-emulating client used for the forum RSS feed. The feed is behind the `stile`
-/// bot challenge, which redirects any request whose TLS fingerprint doesn't look like a browser to
-/// an HTML challenge page (breaking XML parsing). A Chrome `ClientHello` passes straight through.
+/// bot challenge, which redirects any request it deems suspect to an HTML challenge page (breaking
+/// XML parsing). A Chrome `ClientHello` no longer clears the wall on its own, so the client also
+/// needs to follow redirects into the challenge and keep the cookies it hands out.
 fn build_forum_client() -> wreq::Client {
     wreq::Client::builder()
         .emulation(Emulation::Chrome131)
+        .cookie_store(true)
+        .redirect(redirect::Policy::limited(10))
         .build()
         .unwrap_or_else(|e| {
             warn!("Failed to build forum emulation client, using default: {e}");
@@ -277,7 +281,7 @@ const RSS_FETCH_ATTEMPTS: u32 = 3;
 async fn fetch_rss_text(http_client: &wreq::Client, url: &str) -> APIResult<String> {
     let mut attempt = 1;
     loop {
-        match async { http_client.get(url).send().await?.text().await }.await {
+        match fetch_through_stile(http_client, url).await {
             Ok(text) => return Ok(text),
             Err(e) if attempt < RSS_FETCH_ATTEMPTS => {
                 warn!(
@@ -286,14 +290,55 @@ async fn fetch_rss_text(http_client: &wreq::Client, url: &str) -> APIResult<Stri
                 tokio::time::sleep(Duration::from_millis(200 * u64::from(attempt))).await;
                 attempt += 1;
             }
-            Err(e) => {
-                return Err(APIError::status_msg(
-                    reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Failed to fetch patch notes: {e}"),
-                ));
-            }
+            Err(e) => return Err(e),
         }
     }
+}
+
+/// Hops to follow before giving up on the `stile` bot wall. Its no-JS ladder chains
+/// `<meta http-equiv="refresh">` pages (challenge -> verify -> the original URL) and ends by setting
+/// a clearance cookie, so walking that chain clears the wall without running its JavaScript rung.
+const STILE_MAX_HOPS: u32 = 6;
+
+async fn fetch_through_stile(http_client: &wreq::Client, url: &str) -> APIResult<String> {
+    fn fetch_error(e: impl core::fmt::Display) -> APIError {
+        APIError::status_msg(
+            reqwest::StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to fetch patch notes: {e}"),
+        )
+    }
+
+    let mut next = Url::parse(url).map_err(fetch_error)?;
+    for _ in 0..STILE_MAX_HOPS {
+        let response = http_client
+            .get(next.clone())
+            .send()
+            .await
+            .map_err(fetch_error)?;
+        let current = response.url().clone();
+        let body = response.text().await.map_err(fetch_error)?;
+        if body.trim_start().starts_with("<?xml") {
+            return Ok(body);
+        }
+        let Some(hop) = meta_refresh_target(&body).and_then(|t| current.join(&t).ok()) else {
+            return Ok(body);
+        };
+        debug!("Following stile challenge hop to {hop}");
+        next = hop;
+    }
+    Err(APIError::status_msg(
+        reqwest::StatusCode::INTERNAL_SERVER_ERROR,
+        format!(
+            "Failed to fetch patch notes: stile challenge unsolved after {STILE_MAX_HOPS} hops"
+        ),
+    ))
+}
+
+fn meta_refresh_target(body: &str) -> Option<String> {
+    let tag = body.split_once(r#"http-equiv="refresh""#)?.1;
+    let content = tag.split_once(r#"content=""#)?.1.split_once('"')?.0;
+    let target = content.split_once("url=")?.1.trim();
+    Some(target.replace("&amp;", "&"))
 }
 
 #[cached(ttl = 1800, convert = "{ 0 }", key = "u8", sync_writes = "default")]
@@ -487,6 +532,16 @@ async fn fetch_steam_account_name_cached(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_meta_refresh_target() {
+        let body = r#"<meta http-equiv="refresh" content="20;url=?rung=nojs&amp;band=suspect">"#;
+        assert_eq!(
+            meta_refresh_target(body).as_deref(),
+            Some("?rung=nojs&band=suspect")
+        );
+        assert_eq!(meta_refresh_target("<rss><item/></rss>"), None);
+    }
 
     #[tokio::test]
     async fn test_patches() {
