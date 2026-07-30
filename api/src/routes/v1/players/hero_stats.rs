@@ -6,12 +6,12 @@ use axum_extra::extract::Query;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::services::clickhouse_batcher::{BatchQueryGrouped, ClickhouseBatcherGrouped};
 use crate::utils::parse::{comma_separated_deserialize, comma_separated_deserialize_option};
 use crate::utils::types::AccountIdQuery;
 
@@ -232,9 +232,33 @@ fn build_query(query: &HeroStatsQuery) -> String {
     )
 }
 
+pub(crate) struct PlayerHeroStatsQuery;
+
+impl BatchQueryGrouped for PlayerHeroStatsQuery {
+    type Key = u32;
+    type Group = HeroStatsQuery;
+    type Value = HeroStats;
+
+    fn batch_window_ms() -> u64 {
+        1000
+    }
+
+    fn build_query(group: &HeroStatsQuery, keys: &[u32]) -> String {
+        let mut query = group.clone();
+        query.account_ids = keys.to_vec();
+        build_query(&query)
+    }
+
+    fn key_of(value: &HeroStats) -> u32 {
+        value.account_id
+    }
+}
+
+pub(crate) type PlayerHeroStatsBatcher = ClickhouseBatcherGrouped<PlayerHeroStatsQuery>;
+
 async fn get_hero_stats(
-    ch_client: &clickhouse::Client,
-    query: HeroStatsQuery,
+    batcher: &PlayerHeroStatsBatcher,
+    mut query: HeroStatsQuery,
 ) -> APIResult<Vec<HeroStats>> {
     if query.account_ids.is_empty() {
         return Err(APIError::status_msg(
@@ -248,9 +272,8 @@ async fn get_hero_stats(
             "Too many account IDs provided.",
         ));
     }
-    let query = build_query(&query);
-    debug!(?query);
-    Ok(ch_client.query(&query).fetch_all().await?)
+    let account_ids = core::mem::take(&mut query.account_ids);
+    batcher.load_many(&query, &account_ids).await
 }
 
 #[utoipa::path(
@@ -287,7 +310,9 @@ pub(super) async fn player_hero_stats(
             message: "Cannot filter by average badge for street brawl game mode".to_string(),
         });
     }
-    get_hero_stats(&state.ch_client_ro, query).await.map(Json)
+    get_hero_stats(&state.batchers.player_hero_stats, query)
+        .await
+        .map(Json)
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
@@ -344,7 +369,9 @@ pub(crate) async fn hero_stats_single(
         max_match_id: query.max_match_id,
         ..Default::default()
     };
-    get_hero_stats(&state.ch_client_ro, query).await.map(Json)
+    get_hero_stats(&state.batchers.player_hero_stats, query)
+        .await
+        .map(Json)
 }
 
 #[cfg(test)]

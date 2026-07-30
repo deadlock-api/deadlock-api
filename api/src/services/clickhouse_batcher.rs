@@ -56,13 +56,30 @@ pub(crate) trait BatchQueryMulti: Send + Sync + 'static {
     }
 }
 
+pub(crate) trait BatchQueryGrouped: Send + Sync + 'static {
+    type Key: Hash + Eq + Clone + Send + Sync + 'static;
+    type Group: Hash + Eq + Clone + Send + Sync + 'static;
+    type Value: RowOwned + RowRead + serde::de::DeserializeOwned + Clone + Send + Sync;
+
+    fn build_query(group: &Self::Group, keys: &[Self::Key]) -> String;
+    fn key_of(value: &Self::Value) -> Self::Key;
+
+    fn batch_window_ms() -> u64 {
+        50
+    }
+    fn max_batch_size() -> usize {
+        1000
+    }
+}
+
 // --- Internal engine: deduplicated batch loop / execute pipeline ---
 
 trait BatcherInner: Send + Sync + 'static {
     type Key: Hash + Eq + Clone + Send + Sync + 'static;
+    type Group: Hash + Eq + Clone + Send + Sync + 'static;
     type Value: RowOwned + RowRead + serde::de::DeserializeOwned + Clone + Send + Sync;
 
-    fn build_query(keys: &[Self::Key]) -> String;
+    fn build_query(group: &Self::Group, keys: &[Self::Key]) -> String;
     fn key_of(value: &Self::Value) -> Self::Key;
     fn batch_window_ms() -> u64;
     fn max_batch_size() -> usize;
@@ -75,9 +92,10 @@ struct SingleBridge<T>(PhantomData<T>);
 
 impl<T: BatchQuery> BatcherInner for SingleBridge<T> {
     type Key = T::Key;
+    type Group = ();
     type Value = T::Value;
 
-    fn build_query(keys: &[Self::Key]) -> String {
+    fn build_query((): &(), keys: &[Self::Key]) -> String {
         T::build_query(keys)
     }
     fn key_of(value: &Self::Value) -> Self::Key {
@@ -96,9 +114,10 @@ struct MultiBridge<T>(PhantomData<T>);
 
 impl<T: BatchQueryMulti> BatcherInner for MultiBridge<T> {
     type Key = T::Key;
+    type Group = ();
     type Value = T::Value;
 
-    fn build_query(keys: &[Self::Key]) -> String {
+    fn build_query((): &(), keys: &[Self::Key]) -> String {
         T::build_query(keys)
     }
     fn key_of(value: &Self::Value) -> Self::Key {
@@ -113,8 +132,31 @@ impl<T: BatchQueryMulti> BatcherInner for MultiBridge<T> {
     const METRIC_PREFIX: &'static str = "clickhouse_batcher_multi";
 }
 
+struct GroupedBridge<T>(PhantomData<T>);
+
+impl<T: BatchQueryGrouped> BatcherInner for GroupedBridge<T> {
+    type Key = T::Key;
+    type Group = T::Group;
+    type Value = T::Value;
+
+    fn build_query(group: &Self::Group, keys: &[Self::Key]) -> String {
+        T::build_query(group, keys)
+    }
+    fn key_of(value: &Self::Value) -> Self::Key {
+        T::key_of(value)
+    }
+    fn batch_window_ms() -> u64 {
+        T::batch_window_ms()
+    }
+    fn max_batch_size() -> usize {
+        T::max_batch_size()
+    }
+    const METRIC_PREFIX: &'static str = "clickhouse_batcher_grouped";
+}
+
 struct EngineRequest<I: BatcherInner> {
     key: I::Key,
+    group: I::Group,
     response_tx: oneshot::Sender<APIResult<Vec<I::Value>>>,
 }
 
@@ -137,10 +179,18 @@ impl<I: BatcherInner> BatchEngine<I> {
         Self { tx }
     }
 
-    async fn enqueue(&self, key: I::Key) -> APIResult<oneshot::Receiver<APIResult<Vec<I::Value>>>> {
+    async fn enqueue(
+        &self,
+        group: I::Group,
+        key: I::Key,
+    ) -> APIResult<oneshot::Receiver<APIResult<Vec<I::Value>>>> {
         let (response_tx, response_rx) = oneshot::channel();
         self.tx
-            .send(EngineRequest { key, response_tx })
+            .send(EngineRequest {
+                key,
+                group,
+                response_tx,
+            })
             .await
             .map_err(|_| APIError::internal("Batcher unavailable"))?;
         Ok(response_rx)
@@ -184,14 +234,21 @@ async fn batch_loop<I: BatcherInner>(
         prev_batch_size = pending.len();
         gauge!(format!("{}.window_ms", I::METRIC_PREFIX)).set(window.as_secs_f64() * 1000.0);
 
-        let ch = ch_client.clone();
-        tokio::spawn(async move { execute_batch::<I>(&ch, pending).await });
+        let mut by_group: HashMap<I::Group, Vec<EngineRequest<I>>> = HashMap::new();
+        for req in pending {
+            by_group.entry(req.group.clone()).or_default().push(req);
+        }
+        for (group, reqs) in by_group {
+            let ch = ch_client.clone();
+            tokio::spawn(async move { execute_batch::<I>(&ch, &group, reqs).await });
+        }
     }
 }
 
 #[allow(clippy::cast_precision_loss)]
 async fn execute_batch<I: BatcherInner>(
     ch_client: &clickhouse::Client,
+    group: &I::Group,
     pending: Vec<EngineRequest<I>>,
 ) {
     type SenderMap<I> = HashMap<
@@ -212,7 +269,7 @@ async fn execute_batch<I: BatcherInner>(
     counter!(format!("{prefix}.batches")).increment(1);
 
     let keys: Vec<I::Key> = senders.keys().cloned().collect();
-    let query = I::build_query(&keys);
+    let query = I::build_query(group, &keys);
 
     let start = tokio::time::Instant::now();
     let result = ch_client.query(&query).fetch_all::<I::Value>().await;
@@ -272,7 +329,7 @@ impl<T: BatchQuery> ClickhouseBatcher<T> {
     }
 
     pub(crate) async fn load(&self, key: T::Key) -> APIResult<T::Value> {
-        let rx = self.engine.enqueue(key).await?;
+        let rx = self.engine.enqueue((), key).await?;
         counter!("clickhouse_batcher.requests").increment(1);
         let rows = await_response(rx).await?;
         if let Some(row) = rows.into_iter().next() {
@@ -286,7 +343,7 @@ impl<T: BatchQuery> ClickhouseBatcher<T> {
     pub(crate) async fn load_many(&self, keys: &[T::Key]) -> APIResult<Vec<T::Value>> {
         let mut receivers = Vec::with_capacity(keys.len());
         for key in keys {
-            receivers.push(self.engine.enqueue(key.clone()).await?);
+            receivers.push(self.engine.enqueue((), key.clone()).await?);
         }
         counter!("clickhouse_batcher.requests").increment(keys.len() as u64);
 
@@ -328,8 +385,46 @@ impl<T: BatchQueryMulti> ClickhouseBatcherMulti<T> {
     }
 
     pub(crate) async fn load(&self, key: T::Key) -> APIResult<Vec<T::Value>> {
-        let rx = self.engine.enqueue(key).await?;
+        let rx = self.engine.enqueue((), key).await?;
         counter!("clickhouse_batcher_multi.requests").increment(1);
         await_response(rx).await
+    }
+}
+
+pub(crate) struct ClickhouseBatcherGrouped<T: BatchQueryGrouped> {
+    engine: BatchEngine<GroupedBridge<T>>,
+}
+
+impl<T: BatchQueryGrouped> Clone for ClickhouseBatcherGrouped<T> {
+    fn clone(&self) -> Self {
+        Self {
+            engine: self.engine.clone(),
+        }
+    }
+}
+
+impl<T: BatchQueryGrouped> ClickhouseBatcherGrouped<T> {
+    pub(crate) fn new(ch_client: clickhouse::Client) -> Self {
+        Self {
+            engine: BatchEngine::new(ch_client),
+        }
+    }
+
+    pub(crate) async fn load_many(
+        &self,
+        group: &T::Group,
+        keys: &[T::Key],
+    ) -> APIResult<Vec<T::Value>> {
+        let mut receivers = Vec::with_capacity(keys.len());
+        for key in keys {
+            receivers.push(self.engine.enqueue(group.clone(), key.clone()).await?);
+        }
+        counter!("clickhouse_batcher_grouped.requests").increment(keys.len() as u64);
+
+        let mut results = Vec::new();
+        for rx in receivers {
+            results.extend(await_response(rx).await?);
+        }
+        Ok(results)
     }
 }
