@@ -9,129 +9,49 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as Sitemap_indexDotxmlRouteImport } from './routes/sitemap_index[.]xml'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as ServersRouteImport } from './routes/servers'
-import { Route as PlayersRouteImport } from './routes/players'
-import { Route as PatronRouteImport } from './routes/patron'
-import { Route as LeaderboardRouteImport } from './routes/leaderboard'
-import { Route as ItemsRouteImport } from './routes/items'
-import { Route as IngestCacheRouteImport } from './routes/ingest-cache'
-import { Route as HeroesRouteImport } from './routes/heroes'
-import { Route as HeatmapRouteImport } from './routes/heatmap'
-import { Route as GamesRouteImport } from './routes/games'
-import { Route as DeadlockstatsPrivacyRouteImport } from './routes/deadlockstats-privacy'
-import { Route as DeadlockdleRouteImport } from './routes/deadlockdle'
-import { Route as DataPrivacyRouteImport } from './routes/data-privacy'
-import { Route as DataDumpsRouteImport } from './routes/data-dumps'
-import { Route as ChatRouteImport } from './routes/chat'
-import { Route as BadgeDistributionRouteImport } from './routes/badge-distribution'
-import { Route as AbilitiesRouteImport } from './routes/abilities'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as StreamkitIndexRouteImport } from './routes/streamkit/index'
-import { Route as HeroesIndexRouteImport } from './routes/heroes.index'
-import { Route as FlashcardsIndexRouteImport } from './routes/flashcards/index'
-import { Route as DeadlockdleIndexRouteImport } from './routes/deadlockdle/index'
-import { Route as ChatIndexRouteImport } from './routes/chat.index'
+import { Route as AbilitiesRouteImport } from './routes/abilities'
+import { Route as BadgeDistributionRouteImport } from './routes/badge-distribution'
+import { Route as ChatRouteImport } from './routes/chat'
+import { Route as DataDumpsRouteImport } from './routes/data-dumps'
+import { Route as DataPrivacyRouteImport } from './routes/data-privacy'
+import { Route as DeadlockdleRouteImport } from './routes/deadlockdle'
+import { Route as DeadlockstatsPrivacyRouteImport } from './routes/deadlockstats-privacy'
+import { Route as GamesRouteImport } from './routes/games'
+import { Route as HeatmapRouteImport } from './routes/heatmap'
+import { Route as HeroesRouteImport } from './routes/heroes'
+import { Route as IngestCacheRouteImport } from './routes/ingest-cache'
+import { Route as ItemsRouteImport } from './routes/items'
+import { Route as LeaderboardRouteImport } from './routes/leaderboard'
+import { Route as PatronRouteImport } from './routes/patron'
+import { Route as PlayersRouteImport } from './routes/players'
+import { Route as ServersRouteImport } from './routes/servers'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as Sitemap_indexDotxmlRouteImport } from './routes/sitemap_index[.]xml'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
-import { Route as HeroesHeroNameRouteImport } from './routes/heroes.$heroName'
-import { Route as FlashcardsItemsRouteImport } from './routes/flashcards/items'
-import { Route as FlashcardsItemUpgradesRouteImport } from './routes/flashcards/item-upgrades'
-import { Route as FlashcardsHeroesRouteImport } from './routes/flashcards/heroes'
-import { Route as DeadlockdleTriviaRouteImport } from './routes/deadlockdle/trivia'
-import { Route as DeadlockdleItemStatsRouteImport } from './routes/deadlockdle/item-stats'
-import { Route as DeadlockdleGuessSoundRouteImport } from './routes/deadlockdle/guess-sound'
-import { Route as DeadlockdleGuessItemRouteImport } from './routes/deadlockdle/guess-item'
-import { Route as DeadlockdleGuessHeroRouteImport } from './routes/deadlockdle/guess-hero'
-import { Route as DeadlockdleGuessAbilityRouteImport } from './routes/deadlockdle/guess-ability'
-import { Route as ChatSessionIdRouteImport } from './routes/chat.$sessionId'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
+import { Route as ChatIndexRouteImport } from './routes/chat.index'
+import { Route as ChatSessionIdRouteImport } from './routes/chat.$sessionId'
+import { Route as DeadlockdleIndexRouteImport } from './routes/deadlockdle/index'
+import { Route as DeadlockdleGuessAbilityRouteImport } from './routes/deadlockdle/guess-ability'
+import { Route as DeadlockdleGuessHeroRouteImport } from './routes/deadlockdle/guess-hero'
+import { Route as DeadlockdleGuessItemRouteImport } from './routes/deadlockdle/guess-item'
+import { Route as DeadlockdleGuessSoundRouteImport } from './routes/deadlockdle/guess-sound'
+import { Route as DeadlockdleItemStatsRouteImport } from './routes/deadlockdle/item-stats'
+import { Route as DeadlockdleTriviaRouteImport } from './routes/deadlockdle/trivia'
+import { Route as FlashcardsIndexRouteImport } from './routes/flashcards/index'
+import { Route as FlashcardsHeroesRouteImport } from './routes/flashcards/heroes'
+import { Route as FlashcardsItemUpgradesRouteImport } from './routes/flashcards/item-upgrades'
+import { Route as FlashcardsItemsRouteImport } from './routes/flashcards/items'
+import { Route as HeroesIndexRouteImport } from './routes/heroes.index'
+import { Route as HeroesHeroNameRouteImport } from './routes/heroes.$heroName'
+import { Route as StreamkitIndexRouteImport } from './routes/streamkit/index'
 import { Route as AuthPatreonCallbackRouteImport } from './routes/auth/patreon/callback'
 import { Route as StreamkitWidgetsRegionAccountIdWidgetTypeRouteImport } from './routes/streamkit/widgets/$region/$accountId/$widgetType'
 
-const Sitemap_indexDotxmlRoute = Sitemap_indexDotxmlRouteImport.update({
-  id: '/sitemap_index.xml',
-  path: '/sitemap_index.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ServersRoute = ServersRouteImport.update({
-  id: '/servers',
-  path: '/servers',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PlayersRoute = PlayersRouteImport.update({
-  id: '/players',
-  path: '/players',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PatronRoute = PatronRouteImport.update({
-  id: '/patron',
-  path: '/patron',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LeaderboardRoute = LeaderboardRouteImport.update({
-  id: '/leaderboard',
-  path: '/leaderboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ItemsRoute = ItemsRouteImport.update({
-  id: '/items',
-  path: '/items',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IngestCacheRoute = IngestCacheRouteImport.update({
-  id: '/ingest-cache',
-  path: '/ingest-cache',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HeroesRoute = HeroesRouteImport.update({
-  id: '/heroes',
-  path: '/heroes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HeatmapRoute = HeatmapRouteImport.update({
-  id: '/heatmap',
-  path: '/heatmap',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GamesRoute = GamesRouteImport.update({
-  id: '/games',
-  path: '/games',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DeadlockstatsPrivacyRoute = DeadlockstatsPrivacyRouteImport.update({
-  id: '/deadlockstats-privacy',
-  path: '/deadlockstats-privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DeadlockdleRoute = DeadlockdleRouteImport.update({
-  id: '/deadlockdle',
-  path: '/deadlockdle',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DataPrivacyRoute = DataPrivacyRouteImport.update({
-  id: '/data-privacy',
-  path: '/data-privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DataDumpsRoute = DataDumpsRouteImport.update({
-  id: '/data-dumps',
-  path: '/data-dumps',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChatRoute = ChatRouteImport.update({
-  id: '/chat',
-  path: '/chat',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BadgeDistributionRoute = BadgeDistributionRouteImport.update({
-  id: '/badge-distribution',
-  path: '/badge-distribution',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AbilitiesRoute = AbilitiesRouteImport.update({
@@ -139,84 +59,114 @@ const AbilitiesRoute = AbilitiesRouteImport.update({
   path: '/abilities',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const BadgeDistributionRoute = BadgeDistributionRouteImport.update({
+  id: '/badge-distribution',
+  path: '/badge-distribution',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StreamkitIndexRoute = StreamkitIndexRouteImport.update({
-  id: '/streamkit/',
-  path: '/streamkit/',
+const ChatRoute = ChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HeroesIndexRoute = HeroesIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => HeroesRoute,
-} as any)
-const FlashcardsIndexRoute = FlashcardsIndexRouteImport.update({
-  id: '/flashcards/',
-  path: '/flashcards/',
+const DataDumpsRoute = DataDumpsRouteImport.update({
+  id: '/data-dumps',
+  path: '/data-dumps',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DeadlockdleIndexRoute = DeadlockdleIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => DeadlockdleRoute,
+const DataPrivacyRoute = DataPrivacyRouteImport.update({
+  id: '/data-privacy',
+  path: '/data-privacy',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const ChatIndexRoute = ChatIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => ChatRoute,
+const DeadlockdleRoute = DeadlockdleRouteImport.update({
+  id: '/deadlockdle',
+  path: '/deadlockdle',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeadlockstatsPrivacyRoute = DeadlockstatsPrivacyRouteImport.update({
+  id: '/deadlockstats-privacy',
+  path: '/deadlockstats-privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GamesRoute = GamesRouteImport.update({
+  id: '/games',
+  path: '/games',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HeatmapRoute = HeatmapRouteImport.update({
+  id: '/heatmap',
+  path: '/heatmap',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HeroesRoute = HeroesRouteImport.update({
+  id: '/heroes',
+  path: '/heroes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IngestCacheRoute = IngestCacheRouteImport.update({
+  id: '/ingest-cache',
+  path: '/ingest-cache',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ItemsRoute = ItemsRouteImport.update({
+  id: '/items',
+  path: '/items',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LeaderboardRoute = LeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PatronRoute = PatronRouteImport.update({
+  id: '/patron',
+  path: '/patron',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayersRoute = PlayersRouteImport.update({
+  id: '/players',
+  path: '/players',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ServersRoute = ServersRouteImport.update({
+  id: '/servers',
+  path: '/servers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Sitemap_indexDotxmlRoute = Sitemap_indexDotxmlRouteImport.update({
+  id: '/sitemap_index.xml',
+  path: '/sitemap_index.xml',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
   id: '/blog/',
   path: '/blog/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HeroesHeroNameRoute = HeroesHeroNameRouteImport.update({
-  id: '/$heroName',
-  path: '/$heroName',
-  getParentRoute: () => HeroesRoute,
-} as any)
-const FlashcardsItemsRoute = FlashcardsItemsRouteImport.update({
-  id: '/flashcards/items',
-  path: '/flashcards/items',
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/blog/$slug',
+  path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FlashcardsItemUpgradesRoute = FlashcardsItemUpgradesRouteImport.update({
-  id: '/flashcards/item-upgrades',
-  path: '/flashcards/item-upgrades',
-  getParentRoute: () => rootRouteImport,
+const ChatIndexRoute = ChatIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ChatRoute,
 } as any)
-const FlashcardsHeroesRoute = FlashcardsHeroesRouteImport.update({
-  id: '/flashcards/heroes',
-  path: '/flashcards/heroes',
-  getParentRoute: () => rootRouteImport,
+const ChatSessionIdRoute = ChatSessionIdRouteImport.update({
+  id: '/$sessionId',
+  path: '/$sessionId',
+  getParentRoute: () => ChatRoute,
 } as any)
-const DeadlockdleTriviaRoute = DeadlockdleTriviaRouteImport.update({
-  id: '/trivia',
-  path: '/trivia',
-  getParentRoute: () => DeadlockdleRoute,
-} as any)
-const DeadlockdleItemStatsRoute = DeadlockdleItemStatsRouteImport.update({
-  id: '/item-stats',
-  path: '/item-stats',
-  getParentRoute: () => DeadlockdleRoute,
-} as any)
-const DeadlockdleGuessSoundRoute = DeadlockdleGuessSoundRouteImport.update({
-  id: '/guess-sound',
-  path: '/guess-sound',
-  getParentRoute: () => DeadlockdleRoute,
-} as any)
-const DeadlockdleGuessItemRoute = DeadlockdleGuessItemRouteImport.update({
-  id: '/guess-item',
-  path: '/guess-item',
-  getParentRoute: () => DeadlockdleRoute,
-} as any)
-const DeadlockdleGuessHeroRoute = DeadlockdleGuessHeroRouteImport.update({
-  id: '/guess-hero',
-  path: '/guess-hero',
+const DeadlockdleIndexRoute = DeadlockdleIndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => DeadlockdleRoute,
 } as any)
 const DeadlockdleGuessAbilityRoute = DeadlockdleGuessAbilityRouteImport.update({
@@ -224,14 +174,64 @@ const DeadlockdleGuessAbilityRoute = DeadlockdleGuessAbilityRouteImport.update({
   path: '/guess-ability',
   getParentRoute: () => DeadlockdleRoute,
 } as any)
-const ChatSessionIdRoute = ChatSessionIdRouteImport.update({
-  id: '/$sessionId',
-  path: '/$sessionId',
-  getParentRoute: () => ChatRoute,
+const DeadlockdleGuessHeroRoute = DeadlockdleGuessHeroRouteImport.update({
+  id: '/guess-hero',
+  path: '/guess-hero',
+  getParentRoute: () => DeadlockdleRoute,
 } as any)
-const BlogSlugRoute = BlogSlugRouteImport.update({
-  id: '/blog/$slug',
-  path: '/blog/$slug',
+const DeadlockdleGuessItemRoute = DeadlockdleGuessItemRouteImport.update({
+  id: '/guess-item',
+  path: '/guess-item',
+  getParentRoute: () => DeadlockdleRoute,
+} as any)
+const DeadlockdleGuessSoundRoute = DeadlockdleGuessSoundRouteImport.update({
+  id: '/guess-sound',
+  path: '/guess-sound',
+  getParentRoute: () => DeadlockdleRoute,
+} as any)
+const DeadlockdleItemStatsRoute = DeadlockdleItemStatsRouteImport.update({
+  id: '/item-stats',
+  path: '/item-stats',
+  getParentRoute: () => DeadlockdleRoute,
+} as any)
+const DeadlockdleTriviaRoute = DeadlockdleTriviaRouteImport.update({
+  id: '/trivia',
+  path: '/trivia',
+  getParentRoute: () => DeadlockdleRoute,
+} as any)
+const FlashcardsIndexRoute = FlashcardsIndexRouteImport.update({
+  id: '/flashcards/',
+  path: '/flashcards/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FlashcardsHeroesRoute = FlashcardsHeroesRouteImport.update({
+  id: '/flashcards/heroes',
+  path: '/flashcards/heroes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FlashcardsItemUpgradesRoute = FlashcardsItemUpgradesRouteImport.update({
+  id: '/flashcards/item-upgrades',
+  path: '/flashcards/item-upgrades',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FlashcardsItemsRoute = FlashcardsItemsRouteImport.update({
+  id: '/flashcards/items',
+  path: '/flashcards/items',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HeroesIndexRoute = HeroesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => HeroesRoute,
+} as any)
+const HeroesHeroNameRoute = HeroesHeroNameRouteImport.update({
+  id: '/$heroName',
+  path: '/$heroName',
+  getParentRoute: () => HeroesRoute,
+} as any)
+const StreamkitIndexRoute = StreamkitIndexRouteImport.update({
+  id: '/streamkit/',
+  path: '/streamkit/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthPatreonCallbackRoute = AuthPatreonCallbackRouteImport.update({
@@ -523,123 +523,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/sitemap_index.xml': {
-      id: '/sitemap_index.xml'
-      path: '/sitemap_index.xml'
-      fullPath: '/sitemap_index.xml'
-      preLoaderRoute: typeof Sitemap_indexDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/servers': {
-      id: '/servers'
-      path: '/servers'
-      fullPath: '/servers'
-      preLoaderRoute: typeof ServersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/players': {
-      id: '/players'
-      path: '/players'
-      fullPath: '/players'
-      preLoaderRoute: typeof PlayersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/patron': {
-      id: '/patron'
-      path: '/patron'
-      fullPath: '/patron'
-      preLoaderRoute: typeof PatronRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/leaderboard': {
-      id: '/leaderboard'
-      path: '/leaderboard'
-      fullPath: '/leaderboard'
-      preLoaderRoute: typeof LeaderboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/items': {
-      id: '/items'
-      path: '/items'
-      fullPath: '/items'
-      preLoaderRoute: typeof ItemsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ingest-cache': {
-      id: '/ingest-cache'
-      path: '/ingest-cache'
-      fullPath: '/ingest-cache'
-      preLoaderRoute: typeof IngestCacheRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/heroes': {
-      id: '/heroes'
-      path: '/heroes'
-      fullPath: '/heroes'
-      preLoaderRoute: typeof HeroesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/heatmap': {
-      id: '/heatmap'
-      path: '/heatmap'
-      fullPath: '/heatmap'
-      preLoaderRoute: typeof HeatmapRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/games': {
-      id: '/games'
-      path: '/games'
-      fullPath: '/games'
-      preLoaderRoute: typeof GamesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/deadlockstats-privacy': {
-      id: '/deadlockstats-privacy'
-      path: '/deadlockstats-privacy'
-      fullPath: '/deadlockstats-privacy'
-      preLoaderRoute: typeof DeadlockstatsPrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/deadlockdle': {
-      id: '/deadlockdle'
-      path: '/deadlockdle'
-      fullPath: '/deadlockdle'
-      preLoaderRoute: typeof DeadlockdleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/data-privacy': {
-      id: '/data-privacy'
-      path: '/data-privacy'
-      fullPath: '/data-privacy'
-      preLoaderRoute: typeof DataPrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/data-dumps': {
-      id: '/data-dumps'
-      path: '/data-dumps'
-      fullPath: '/data-dumps'
-      preLoaderRoute: typeof DataDumpsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/chat': {
-      id: '/chat'
-      path: '/chat'
-      fullPath: '/chat'
-      preLoaderRoute: typeof ChatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/badge-distribution': {
-      id: '/badge-distribution'
-      path: '/badge-distribution'
-      fullPath: '/badge-distribution'
-      preLoaderRoute: typeof BadgeDistributionRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/abilities': {
@@ -649,47 +537,124 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AbilitiesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/badge-distribution': {
+      id: '/badge-distribution'
+      path: '/badge-distribution'
+      fullPath: '/badge-distribution'
+      preLoaderRoute: typeof BadgeDistributionRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/streamkit/': {
-      id: '/streamkit/'
-      path: '/streamkit'
-      fullPath: '/streamkit/'
-      preLoaderRoute: typeof StreamkitIndexRouteImport
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/heroes/': {
-      id: '/heroes/'
-      path: '/'
-      fullPath: '/heroes/'
-      preLoaderRoute: typeof HeroesIndexRouteImport
-      parentRoute: typeof HeroesRoute
-    }
-    '/flashcards/': {
-      id: '/flashcards/'
-      path: '/flashcards'
-      fullPath: '/flashcards/'
-      preLoaderRoute: typeof FlashcardsIndexRouteImport
+    '/data-dumps': {
+      id: '/data-dumps'
+      path: '/data-dumps'
+      fullPath: '/data-dumps'
+      preLoaderRoute: typeof DataDumpsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/deadlockdle/': {
-      id: '/deadlockdle/'
-      path: '/'
-      fullPath: '/deadlockdle/'
-      preLoaderRoute: typeof DeadlockdleIndexRouteImport
-      parentRoute: typeof DeadlockdleRoute
+    '/data-privacy': {
+      id: '/data-privacy'
+      path: '/data-privacy'
+      fullPath: '/data-privacy'
+      preLoaderRoute: typeof DataPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/chat/': {
-      id: '/chat/'
-      path: '/'
-      fullPath: '/chat/'
-      preLoaderRoute: typeof ChatIndexRouteImport
-      parentRoute: typeof ChatRoute
+    '/deadlockdle': {
+      id: '/deadlockdle'
+      path: '/deadlockdle'
+      fullPath: '/deadlockdle'
+      preLoaderRoute: typeof DeadlockdleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/deadlockstats-privacy': {
+      id: '/deadlockstats-privacy'
+      path: '/deadlockstats-privacy'
+      fullPath: '/deadlockstats-privacy'
+      preLoaderRoute: typeof DeadlockstatsPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/games': {
+      id: '/games'
+      path: '/games'
+      fullPath: '/games'
+      preLoaderRoute: typeof GamesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/heatmap': {
+      id: '/heatmap'
+      path: '/heatmap'
+      fullPath: '/heatmap'
+      preLoaderRoute: typeof HeatmapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/heroes': {
+      id: '/heroes'
+      path: '/heroes'
+      fullPath: '/heroes'
+      preLoaderRoute: typeof HeroesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ingest-cache': {
+      id: '/ingest-cache'
+      path: '/ingest-cache'
+      fullPath: '/ingest-cache'
+      preLoaderRoute: typeof IngestCacheRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/items': {
+      id: '/items'
+      path: '/items'
+      fullPath: '/items'
+      preLoaderRoute: typeof ItemsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/leaderboard': {
+      id: '/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof LeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/patron': {
+      id: '/patron'
+      path: '/patron'
+      fullPath: '/patron'
+      preLoaderRoute: typeof PatronRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/players': {
+      id: '/players'
+      path: '/players'
+      fullPath: '/players'
+      preLoaderRoute: typeof PlayersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/servers': {
+      id: '/servers'
+      path: '/servers'
+      fullPath: '/servers'
+      preLoaderRoute: typeof ServersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap_index.xml': {
+      id: '/sitemap_index.xml'
+      path: '/sitemap_index.xml'
+      fullPath: '/sitemap_index.xml'
+      preLoaderRoute: typeof Sitemap_indexDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/blog/': {
       id: '/blog/'
@@ -698,67 +663,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/heroes/$heroName': {
-      id: '/heroes/$heroName'
-      path: '/$heroName'
-      fullPath: '/heroes/$heroName'
-      preLoaderRoute: typeof HeroesHeroNameRouteImport
-      parentRoute: typeof HeroesRoute
-    }
-    '/flashcards/items': {
-      id: '/flashcards/items'
-      path: '/flashcards/items'
-      fullPath: '/flashcards/items'
-      preLoaderRoute: typeof FlashcardsItemsRouteImport
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/blog/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/flashcards/item-upgrades': {
-      id: '/flashcards/item-upgrades'
-      path: '/flashcards/item-upgrades'
-      fullPath: '/flashcards/item-upgrades'
-      preLoaderRoute: typeof FlashcardsItemUpgradesRouteImport
-      parentRoute: typeof rootRouteImport
+    '/chat/': {
+      id: '/chat/'
+      path: '/'
+      fullPath: '/chat/'
+      preLoaderRoute: typeof ChatIndexRouteImport
+      parentRoute: typeof ChatRoute
     }
-    '/flashcards/heroes': {
-      id: '/flashcards/heroes'
-      path: '/flashcards/heroes'
-      fullPath: '/flashcards/heroes'
-      preLoaderRoute: typeof FlashcardsHeroesRouteImport
-      parentRoute: typeof rootRouteImport
+    '/chat/$sessionId': {
+      id: '/chat/$sessionId'
+      path: '/$sessionId'
+      fullPath: '/chat/$sessionId'
+      preLoaderRoute: typeof ChatSessionIdRouteImport
+      parentRoute: typeof ChatRoute
     }
-    '/deadlockdle/trivia': {
-      id: '/deadlockdle/trivia'
-      path: '/trivia'
-      fullPath: '/deadlockdle/trivia'
-      preLoaderRoute: typeof DeadlockdleTriviaRouteImport
-      parentRoute: typeof DeadlockdleRoute
-    }
-    '/deadlockdle/item-stats': {
-      id: '/deadlockdle/item-stats'
-      path: '/item-stats'
-      fullPath: '/deadlockdle/item-stats'
-      preLoaderRoute: typeof DeadlockdleItemStatsRouteImport
-      parentRoute: typeof DeadlockdleRoute
-    }
-    '/deadlockdle/guess-sound': {
-      id: '/deadlockdle/guess-sound'
-      path: '/guess-sound'
-      fullPath: '/deadlockdle/guess-sound'
-      preLoaderRoute: typeof DeadlockdleGuessSoundRouteImport
-      parentRoute: typeof DeadlockdleRoute
-    }
-    '/deadlockdle/guess-item': {
-      id: '/deadlockdle/guess-item'
-      path: '/guess-item'
-      fullPath: '/deadlockdle/guess-item'
-      preLoaderRoute: typeof DeadlockdleGuessItemRouteImport
-      parentRoute: typeof DeadlockdleRoute
-    }
-    '/deadlockdle/guess-hero': {
-      id: '/deadlockdle/guess-hero'
-      path: '/guess-hero'
-      fullPath: '/deadlockdle/guess-hero'
-      preLoaderRoute: typeof DeadlockdleGuessHeroRouteImport
+    '/deadlockdle/': {
+      id: '/deadlockdle/'
+      path: '/'
+      fullPath: '/deadlockdle/'
+      preLoaderRoute: typeof DeadlockdleIndexRouteImport
       parentRoute: typeof DeadlockdleRoute
     }
     '/deadlockdle/guess-ability': {
@@ -768,18 +698,88 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeadlockdleGuessAbilityRouteImport
       parentRoute: typeof DeadlockdleRoute
     }
-    '/chat/$sessionId': {
-      id: '/chat/$sessionId'
-      path: '/$sessionId'
-      fullPath: '/chat/$sessionId'
-      preLoaderRoute: typeof ChatSessionIdRouteImport
-      parentRoute: typeof ChatRoute
+    '/deadlockdle/guess-hero': {
+      id: '/deadlockdle/guess-hero'
+      path: '/guess-hero'
+      fullPath: '/deadlockdle/guess-hero'
+      preLoaderRoute: typeof DeadlockdleGuessHeroRouteImport
+      parentRoute: typeof DeadlockdleRoute
     }
-    '/blog/$slug': {
-      id: '/blog/$slug'
-      path: '/blog/$slug'
-      fullPath: '/blog/$slug'
-      preLoaderRoute: typeof BlogSlugRouteImport
+    '/deadlockdle/guess-item': {
+      id: '/deadlockdle/guess-item'
+      path: '/guess-item'
+      fullPath: '/deadlockdle/guess-item'
+      preLoaderRoute: typeof DeadlockdleGuessItemRouteImport
+      parentRoute: typeof DeadlockdleRoute
+    }
+    '/deadlockdle/guess-sound': {
+      id: '/deadlockdle/guess-sound'
+      path: '/guess-sound'
+      fullPath: '/deadlockdle/guess-sound'
+      preLoaderRoute: typeof DeadlockdleGuessSoundRouteImport
+      parentRoute: typeof DeadlockdleRoute
+    }
+    '/deadlockdle/item-stats': {
+      id: '/deadlockdle/item-stats'
+      path: '/item-stats'
+      fullPath: '/deadlockdle/item-stats'
+      preLoaderRoute: typeof DeadlockdleItemStatsRouteImport
+      parentRoute: typeof DeadlockdleRoute
+    }
+    '/deadlockdle/trivia': {
+      id: '/deadlockdle/trivia'
+      path: '/trivia'
+      fullPath: '/deadlockdle/trivia'
+      preLoaderRoute: typeof DeadlockdleTriviaRouteImport
+      parentRoute: typeof DeadlockdleRoute
+    }
+    '/flashcards/': {
+      id: '/flashcards/'
+      path: '/flashcards'
+      fullPath: '/flashcards/'
+      preLoaderRoute: typeof FlashcardsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/flashcards/heroes': {
+      id: '/flashcards/heroes'
+      path: '/flashcards/heroes'
+      fullPath: '/flashcards/heroes'
+      preLoaderRoute: typeof FlashcardsHeroesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/flashcards/item-upgrades': {
+      id: '/flashcards/item-upgrades'
+      path: '/flashcards/item-upgrades'
+      fullPath: '/flashcards/item-upgrades'
+      preLoaderRoute: typeof FlashcardsItemUpgradesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/flashcards/items': {
+      id: '/flashcards/items'
+      path: '/flashcards/items'
+      fullPath: '/flashcards/items'
+      preLoaderRoute: typeof FlashcardsItemsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/heroes/': {
+      id: '/heroes/'
+      path: '/'
+      fullPath: '/heroes/'
+      preLoaderRoute: typeof HeroesIndexRouteImport
+      parentRoute: typeof HeroesRoute
+    }
+    '/heroes/$heroName': {
+      id: '/heroes/$heroName'
+      path: '/$heroName'
+      fullPath: '/heroes/$heroName'
+      preLoaderRoute: typeof HeroesHeroNameRouteImport
+      parentRoute: typeof HeroesRoute
+    }
+    '/streamkit/': {
+      id: '/streamkit/'
+      path: '/streamkit'
+      fullPath: '/streamkit/'
+      preLoaderRoute: typeof StreamkitIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/patreon/callback': {
