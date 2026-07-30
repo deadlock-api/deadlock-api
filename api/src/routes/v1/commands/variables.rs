@@ -395,32 +395,24 @@ impl Variable {
                 Ok(format!("{} {subrank}", rank.name))
             }
             Self::RankImg => {
-                let (rank, subrank) = Self::fetch_card_ranks(state, steam_id).await?;
+                let (rank, _) = Self::fetch_card_ranks(state, steam_id).await?;
                 state
                     .assets_client
                     .fetch_ranks()
                     .await?
                     .iter()
                     .find(|r| r.tier == rank)
-                    .and_then(|r| {
-                        r.images
-                            .get(&format!("large_subrank{subrank}"))
-                            .or(r.images.get(&format!("small_subrank{subrank}")))
-                    })
+                    .and_then(|r| r.images.get("large").or(r.images.get("large_webp")))
                     .cloned()
                     .ok_or(VariableResolveError::NoData("leaderboard rank img"))
             }
             Self::LeaderboardRankImg => {
-                let (rank, subrank) = Self::fetch_card_ranks(state, steam_id).await?;
+                let (rank, _) = Self::fetch_card_ranks(state, steam_id).await?;
                 let ranks = state.assets_client.fetch_ranks().await?;
                 ranks
                     .iter()
                     .find(|r| r.tier == rank)
-                    .and_then(|r| {
-                        r.images
-                            .get(&format!("large_subrank{subrank}"))
-                            .or(r.images.get(&format!("small_subrank{subrank}")))
-                    })
+                    .and_then(|r| r.images.get("large").or(r.images.get("large_webp")))
                     .cloned()
                     .ok_or(VariableResolveError::NoData("leaderboard rank img"))
             }
@@ -782,18 +774,13 @@ impl Variable {
             Self::PredictedRankImg => {
                 let prediction = predict_rank_for_account(state, steam_id).await?;
                 let rank = prediction.badge / 10;
-                let subrank = prediction.badge % 10;
                 state
                     .assets_client
                     .fetch_ranks()
                     .await?
                     .iter()
                     .find(|r| r.tier == u32::try_from(rank).unwrap_or_default())
-                    .and_then(|r| {
-                        r.images
-                            .get(&format!("large_subrank{subrank}"))
-                            .or(r.images.get(&format!("small_subrank{subrank}")))
-                    })
+                    .and_then(|r| r.images.get("large").or(r.images.get("large_webp")))
                     .cloned()
                     .ok_or(VariableResolveError::NoData("predicted rank img"))
             }
@@ -817,11 +804,7 @@ impl Variable {
                 ranks
                     .iter()
                     .find(|r| r.tier == mmr.division)
-                    .and_then(|r| {
-                        r.images
-                            .get(&format!("large_subrank{}", mmr.division_tier))
-                            .or(r.images.get(&format!("small_subrank{}", mmr.division_tier)))
-                    })
+                    .and_then(|r| r.images.get("large").or(r.images.get("large_webp")))
                     .cloned()
                     .ok_or(VariableResolveError::NoData("rank img"))
             }

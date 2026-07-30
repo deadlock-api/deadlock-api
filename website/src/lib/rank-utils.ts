@@ -1,33 +1,8 @@
 import type { Rank } from "deadlock_api_client";
 
-export function getRankImageUrl(
-  rank: Rank | undefined,
-  subrank: number,
-  size: "small" | "large" = "small",
-  format: "png" | "webp" = "webp",
-): string | undefined | null {
+export function getRankImageUrl(rank: Rank | undefined, format: "png" | "webp" = "webp"): string | undefined | null {
   if (!rank) return null;
-  if (rank.tier === 0) {
-    // Obscurus only has base images
-    const key = `${size}_${format}`;
-    return rank.images[key as keyof Rank["images"]] ?? rank.images[size as keyof Rank["images"]];
-  }
-  // Try specific subrank image first (webp, then png)
-  let key = `${size}_subrank${subrank}_${format}`;
-  if (rank.images[key as keyof Rank["images"]]) {
-    return rank.images[key as keyof Rank["images"]];
-  }
-  key = `${size}_subrank${subrank}`;
-  if (rank.images[key as keyof Rank["images"]]) {
-    return rank.images[key as keyof Rank["images"]];
-  }
-  // Fallback to base tier image (webp, then png)
-  key = `${size}_${format}`;
-  if (rank.images[key as keyof Rank["images"]]) {
-    return rank.images[key as keyof Rank["images"]];
-  }
-  key = `${size}`;
-  return rank.images[key as keyof Rank["images"]];
+  return format === "webp" ? (rank.images.large_webp ?? rank.images.large) : rank.images.large;
 }
 
 export function getRankLabel(rank: Rank, subrank: number): string {

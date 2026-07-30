@@ -30,79 +30,142 @@ pub(crate) struct RankImages {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub large_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub chalk: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub chalk_webp: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub large_subrank1: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub large_subrank1_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub large_subrank2: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub large_subrank2_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub large_subrank3: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub large_subrank3_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub large_subrank4: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub large_subrank4_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub large_subrank5: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub large_subrank5_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub large_subrank6: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub large_subrank6_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub small: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub small_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub small_subrank1: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub small_subrank1_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub small_subrank2: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub small_subrank2_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub small_subrank3: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub small_subrank3_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub small_subrank4: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub small_subrank4_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub small_subrank5: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub small_subrank5_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub small_subrank6: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(deprecated)]
+    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub small_subrank6_webp: Option<String>,
 }
 
 impl RankImages {
     fn from_tier(tier: u32) -> Self {
-        let prefix = format!("{IMAGE_BASE_URL}/ranks/rank{tier}");
-        let url = |name: &str, ext: &str| Some(format!("{prefix}/{name}.{ext}"));
+        let url = |variant: &str, ext: &str| {
+            Some(format!(
+                "{IMAGE_BASE_URL}/ranks/rank{tier:02}_{variant}.{ext}"
+            ))
+        };
+        let legacy_prefix = format!("{IMAGE_BASE_URL}/ranks/rank{tier}");
+        let legacy = |name: &str, ext: &str| Some(format!("{legacy_prefix}/{name}.{ext}"));
 
-        // Tier 0 has no subranks — only a plain large + small badge.
+        // Tier 0 has neither a chalk variant nor subranks — only a plain badge.
         if tier == 0 {
             return Self {
-                large: url("badge_lg", "png"),
-                large_webp: url("badge_lg", "webp"),
-                small: url("badge_sm", "png"),
-                small_webp: url("badge_sm", "webp"),
+                large: url("lg", "png"),
+                large_webp: url("lg", "webp"),
+                small: legacy("badge_sm", "png"),
+                small_webp: legacy("badge_sm", "webp"),
                 ..Self::default()
             };
         }
 
-        let sub = |size: &str, ext: &str, n: u32| url(&format!("badge_{size}_subrank{n}"), ext);
+        let sub = |size: &str, ext: &str, n: u32| legacy(&format!("badge_{size}_subrank{n}"), ext);
         Self {
-            large: url("badge_lg", "png"),
-            large_webp: url("badge_lg", "webp"),
+            large: url("lg", "png"),
+            large_webp: url("lg", "webp"),
+            chalk: url("chalk", "png"),
+            chalk_webp: url("chalk", "webp"),
             large_subrank1: sub("lg", "png", 1),
             large_subrank1_webp: sub("lg", "webp", 1),
             large_subrank2: sub("lg", "png", 2),
@@ -217,18 +280,30 @@ mod tests {
     }
 
     #[test]
-    fn tier_zero_omits_subranks() {
+    fn tier_zero_omits_chalk() {
         let ranks = build_ranks(&loc_from_fixture("citadel_main_english.txt"));
         let r0 = &ranks[0];
-        assert!(r0.images.large.is_some() && r0.images.small.is_some());
-        assert!(r0.images.large_subrank1.is_none() && r0.images.small_subrank6.is_none());
+        assert!(r0.images.large.is_some() && r0.images.large_webp.is_some());
+        assert!(r0.images.chalk.is_none() && r0.images.chalk_webp.is_none());
     }
 
     #[test]
-    fn non_zero_tier_has_subranks_and_no_plain_small() {
+    fn non_zero_tier_is_zero_padded_and_has_chalk() {
         let ranks = build_ranks(&loc_from_fixture("citadel_main_english.txt"));
         let r3 = &ranks[3];
-        assert!(r3.images.large.is_some() && r3.images.small.is_none());
-        assert!(r3.images.large_subrank1.is_some() && r3.images.small_subrank6.is_some());
+        assert!(
+            r3.images
+                .large
+                .as_ref()
+                .unwrap()
+                .ends_with("/ranks/rank03_lg.png")
+        );
+        assert!(
+            r3.images
+                .chalk_webp
+                .as_ref()
+                .unwrap()
+                .ends_with("/ranks/rank03_chalk.webp")
+        );
     }
 }

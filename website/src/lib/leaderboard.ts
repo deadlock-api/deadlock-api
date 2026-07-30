@@ -7,8 +7,6 @@ export interface SubtierInfo {
   subtier: number;
   large?: string;
   large_webp?: string;
-  small?: string;
-  small_webp?: string;
   color?: string;
 }
 
@@ -19,17 +17,11 @@ export function extractBadgeMap(ranks: Rank[]): Map<number, SubtierInfo> {
     if (tier < 1) return;
     for (const subtier of SUBTIERS) {
       const badge = tier * 10 + subtier;
-      const small = rank.images[`small_subrank${subtier}`];
-      const small_webp = rank.images[`small_subrank${subtier}_webp`];
-      const large = rank.images[`large_subrank${subtier}`];
-      const large_webp = rank.images[`large_subrank${subtier}_webp`];
       badgeMap.set(badge, {
         name: rank.name,
         subtier,
-        large: large ?? undefined,
-        large_webp: large_webp ?? undefined,
-        small: small ?? undefined,
-        small_webp: small_webp ?? undefined,
+        large: rank.images.large ?? undefined,
+        large_webp: rank.images.large_webp ?? undefined,
         color: rank.color ?? undefined,
       });
     }

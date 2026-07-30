@@ -10,13 +10,11 @@ import { cn } from "~/lib/utils";
 export interface BadgeImageProps {
   badge: number;
   ranks: Rank[];
-  imageType?: "small" | "large";
 }
 
 export const BadgeImage = memo(function BadgeImage({
   badge,
   ranks,
-  imageType = "small",
   className,
   ...props
 }: BadgeImageProps & React.ComponentProps<"img">) {
@@ -36,8 +34,8 @@ export const BadgeImage = memo(function BadgeImage({
     );
   }
 
-  const png = badgeInfo[imageType];
-  const webp = badgeInfo[`${imageType}_webp`];
+  const png = badgeInfo.large;
+  const webp = badgeInfo.large_webp;
   const altText = `${badgeInfo.name} ${badgeInfo.subtier}`;
 
   return (

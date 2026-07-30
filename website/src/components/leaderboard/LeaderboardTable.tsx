@@ -1,41 +1,24 @@
-import type { Rank } from "deadlock_api_client";
 import type { Leaderboard } from "deadlock_api_client";
 import Fuse from "fuse.js";
-import { forwardRef, useImperativeHandle, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
-import { BadgeImage } from "~/components/BadgeImage";
 import { HeroImage } from "~/components/HeroImage";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { extractBadgeMap, type SubtierInfo } from "~/lib/leaderboard";
-import { hexToRgba } from "~/lib/utils";
 
 import { LeaderboardControls } from "./LeaderboardControls";
 
-export interface LeaderboardTableHandle {
-  jumpToRank: (rank: number) => void;
-}
-
 export interface LeaderboardTableProps {
-  ranks: Rank[];
   leaderboard: Leaderboard;
   onHeroClick: (heroId: number) => void;
 }
 
 interface LeaderboardTableRowProps {
   entry: Leaderboard["entries"][number];
-  ranks: Rank[];
-  badgeMap: Map<number, SubtierInfo>;
-  shouldShowBadgeColumn: boolean;
   shouldShowTopHeroesColumn: boolean;
   onHeroClick: (heroId: number) => void;
 }
 
-export const LeaderboardTable = forwardRef<LeaderboardTableHandle, LeaderboardTableProps>(function LeaderboardTable(
-  { ranks, leaderboard, onHeroClick },
-  ref,
-) {
-  const badgeMap = useMemo(() => extractBadgeMap(ranks), [ranks]);
-
+export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [searchQuery, setSearchQuery] = useState("");
@@ -43,20 +26,6 @@ export const LeaderboardTable = forwardRef<LeaderboardTableHandle, LeaderboardTa
   const sortedEntries = useMemo(
     () => leaderboard.entries.sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0)),
     [leaderboard.entries],
-  );
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      jumpToRank(rank: number) {
-        setSearchQuery("");
-        const index = sortedEntries.findIndex((e) => e.rank === rank);
-        if (index !== -1) {
-          setCurrentPage(Math.floor(index / itemsPerPage));
-        }
-      },
-    }),
-    [sortedEntries, itemsPerPage],
   );
 
   const fuse = useMemo(
@@ -72,8 +41,6 @@ export const LeaderboardTable = forwardRef<LeaderboardTableHandle, LeaderboardTa
     () => (searchQuery ? fuse.search(searchQuery).map((r) => r.item) : sortedEntries),
     [searchQuery, sortedEntries, fuse],
   );
-
-  const shouldShowBadgeColumn = useMemo(() => filteredEntries.some((e) => e.badge_level), [filteredEntries]);
 
   const shouldShowTopHeroesColumn = useMemo(
     () => filteredEntries.some((e) => e.top_hero_ids && e.top_hero_ids.length > 0),
@@ -109,7 +76,6 @@ export const LeaderboardTable = forwardRef<LeaderboardTableHandle, LeaderboardTa
         <TableHeader className="bg-muted">
           <TableRow>
             <TableHead className="w-[5ch] text-right">#</TableHead>
-            {shouldShowBadgeColumn && <TableHead className="text-center">Rank</TableHead>}
             <TableHead>Account Name</TableHead>
             {shouldShowTopHeroesColumn && <TableHead className="min-w-40 text-right">Top Heroes</TableHead>}
           </TableRow>
@@ -119,9 +85,6 @@ export const LeaderboardTable = forwardRef<LeaderboardTableHandle, LeaderboardTa
             <LeaderboardTableRow
               key={`${entry.account_name}-${entry.rank}`}
               entry={entry}
-              ranks={ranks}
-              badgeMap={badgeMap}
-              shouldShowBadgeColumn={shouldShowBadgeColumn}
               shouldShowTopHeroesColumn={shouldShowTopHeroesColumn}
               onHeroClick={onHeroClick}
             />
@@ -131,31 +94,12 @@ export const LeaderboardTable = forwardRef<LeaderboardTableHandle, LeaderboardTa
       {controls}
     </div>
   );
-});
+}
 
-function LeaderboardTableRow({
-  entry,
-  ranks,
-  badgeMap,
-  shouldShowBadgeColumn,
-  shouldShowTopHeroesColumn,
-  onHeroClick,
-}: LeaderboardTableRowProps) {
-  const backgroundColor = useMemo(() => {
-    const rowColor = entry.badge_level ? badgeMap.get(entry.badge_level)?.color : undefined;
-    return rowColor ? hexToRgba(rowColor, 0.1) : undefined;
-  }, [entry.badge_level, badgeMap]);
-
+function LeaderboardTableRow({ entry, shouldShowTopHeroesColumn, onHeroClick }: LeaderboardTableRowProps) {
   return (
-    <TableRow key={`${entry.account_name}-${entry.rank}`} style={backgroundColor ? { backgroundColor } : undefined}>
+    <TableRow key={`${entry.account_name}-${entry.rank}`}>
       <TableCell className="text-right">{entry.rank}</TableCell>
-      {shouldShowBadgeColumn && (
-        <TableCell className="flex justify-center">
-          {entry.badge_level && (
-            <BadgeImage badge={entry.badge_level} ranks={ranks} imageType="small" className="h-8 w-8" />
-          )}
-        </TableCell>
-      )}
       <TableCell className="max-w-[200px] truncate">{entry.account_name}</TableCell>
       {shouldShowTopHeroesColumn && (
         <TableCell>

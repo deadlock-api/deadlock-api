@@ -2,18 +2,16 @@ import { useQueries } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { LeaderboardRegionEnum } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 
 import { Filter } from "~/components/Filter";
-import { LeaderboardSummary } from "~/components/leaderboard/LeaderboardSummary";
-import { LeaderboardTable, type LeaderboardTableHandle } from "~/components/leaderboard/LeaderboardTable";
+import { LeaderboardTable } from "~/components/leaderboard/LeaderboardTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { getDefaultRegion } from "~/lib/region";
 import { seo } from "~/lib/seo";
 import { leaderboardQueryOptions } from "~/queries/leaderboard-queries";
-import { ranksQueryOptions } from "~/queries/ranks-query";
 
 export const Route = createFileRoute("/leaderboard")({
   component: LeaderboardPage,
@@ -49,13 +47,11 @@ function LeaderboardPage() {
   );
   const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger);
 
-  const [ranks, leaderboardQuery] = useQueries({
-    queries: [ranksQueryOptions, leaderboardQueryOptions(region, heroId)],
+  const [leaderboardQuery] = useQueries({
+    queries: [leaderboardQueryOptions(region, heroId)],
   });
 
-  const { isPending, isError, error } = combineQueryStates(ranks, leaderboardQuery);
-
-  const tableRef = useRef<LeaderboardTableHandle>(null);
+  const { isPending, isError, error } = combineQueryStates(leaderboardQuery);
 
   const handleHeroClick = useCallback(
     (id: number) => {
@@ -63,10 +59,6 @@ function LeaderboardPage() {
     },
     [setHeroId],
   );
-
-  const handleBadgeClick = useCallback((rank: number) => {
-    tableRef.current?.jumpToRank(rank);
-  }, []);
 
   return (
     <div className="space-y-8">
@@ -94,19 +86,7 @@ function LeaderboardPage() {
               Failed to load leaderboard: {error?.message}
             </div>
           ) : leaderboardQuery.data ? (
-            <>
-              <LeaderboardSummary
-                ranks={ranks.data ?? []}
-                leaderboard={leaderboardQuery.data}
-                onBadgeClick={handleBadgeClick}
-              />
-              <LeaderboardTable
-                ref={tableRef}
-                ranks={ranks.data ?? []}
-                leaderboard={leaderboardQuery.data}
-                onHeroClick={handleHeroClick}
-              />
-            </>
+            <LeaderboardTable leaderboard={leaderboardQuery.data} onHeroClick={handleHeroClick} />
           ) : null}
         </div>
       </section>

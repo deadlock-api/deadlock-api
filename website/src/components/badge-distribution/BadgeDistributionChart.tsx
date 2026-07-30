@@ -164,7 +164,7 @@ export default function BadgeDistributionChart({ badgeDistributionData, ranksDat
               const rankName = tierData.get(entry.tier)?.name ?? "";
               const subtier = entry.badge % 10;
               const info = badgeMap.get(entry.badge);
-              const imageUrl = info?.small_webp ?? info?.small;
+              const imageUrl = info?.large_webp ?? info?.large;
               return (
                 <div className="flex items-center gap-2 rounded-md bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
                   {imageUrl && <img src={imageUrl} alt={`${rankName} ${subtier}`} className="size-5" />}

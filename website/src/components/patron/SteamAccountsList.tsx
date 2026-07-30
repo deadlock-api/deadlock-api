@@ -119,7 +119,7 @@ function PlayerCardRankCell({ cardQuery }: { cardQuery: CardQuery }) {
   const rank = ranksQuery.data?.find((r) => r.tier === card.ranked_rank);
   // Obscurus (tier 0) has subrank 0 in the card — use 1 for image lookup fallback
   const subrank = (card.ranked_subrank ?? 0) === 0 ? 1 : (card.ranked_subrank as number);
-  const imageUrl = getRankImageUrl(rank, subrank, "small", "webp");
+  const imageUrl = getRankImageUrl(rank, "webp");
   const label = rank ? getRankLabel(rank, subrank) : `${card.ranked_rank}·${card.ranked_subrank}`;
 
   return (

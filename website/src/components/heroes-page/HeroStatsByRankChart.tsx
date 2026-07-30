@@ -73,15 +73,15 @@ function tickFormatter(stat: ByRankStat): (v: number) => string {
   return (v) => Number(v).toFixed(1);
 }
 
-function BadgePoint(props: ScatterProps & { badgeMap: Map<number, { small_webp?: string; small?: string }> }) {
+function BadgePoint(props: ScatterProps & { badgeMap: Map<number, { large_webp?: string; large?: string }> }) {
   const { cx, cy, payload, badgeMap } = props as {
     cx: number;
     cy: number;
     payload: DataPoint;
-    badgeMap: Map<number, { small_webp?: string; small?: string }>;
+    badgeMap: Map<number, { large_webp?: string; large?: string }>;
   };
   const badgeInfo = badgeMap.get(payload.badge);
-  const imgUrl = badgeInfo?.small_webp || badgeInfo?.small;
+  const imgUrl = badgeInfo?.large_webp || badgeInfo?.large;
   if (!imgUrl) return <circle cx={cx} cy={cy} r={6} fill="#888" />;
   return <image x={cx - 18} y={cy - 18} width={36} height={36} href={imgUrl} />;
 }
@@ -303,7 +303,7 @@ export function HeroStatsByRankChart({
           rankName: badgeInfo?.name ?? `Rank ${tier}`,
           subtier: 6,
           matches: agg.matches,
-          badgeImageUrl: badgeInfo?.small_webp || badgeInfo?.small,
+          badgeImageUrl: badgeInfo?.large_webp || badgeInfo?.large,
           heroName: hero?.name ?? `Hero ${heroId}`,
           heroColor: hero?.color ?? "#ffffff",
         });

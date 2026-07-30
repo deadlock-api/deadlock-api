@@ -97,7 +97,7 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: Ran
   const triggerIcon =
     committedMinOption && !isMinAtStart ? (
       <ImgWithSkeleton
-        src={getRankImageUrl(committedMinOption.rank, committedMinOption.subrank, "small", "webp") ?? ""}
+        src={getRankImageUrl(committedMinOption.rank, "webp") ?? ""}
         alt={committedMinOption.label}
         className="size-4 shrink-0 object-contain"
       />
@@ -118,7 +118,7 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: Ran
           <div className="flex items-center gap-2">
             {localMinOption && (
               <ImgWithSkeleton
-                src={getRankImageUrl(localMinOption.rank, localMinOption.subrank, "small", "webp") ?? ""}
+                src={getRankImageUrl(localMinOption.rank, "webp") ?? ""}
                 alt={localMinOption.label}
                 className="size-6 shrink-0 object-contain"
               />
@@ -129,7 +129,7 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: Ran
             <span className="text-sm font-medium">{localMaxOption?.label}</span>
             {localMaxOption && (
               <ImgWithSkeleton
-                src={getRankImageUrl(localMaxOption.rank, localMaxOption.subrank, "small", "webp") ?? ""}
+                src={getRankImageUrl(localMaxOption.rank, "webp") ?? ""}
                 alt={localMaxOption.label}
                 className="size-6 shrink-0 object-contain"
               />

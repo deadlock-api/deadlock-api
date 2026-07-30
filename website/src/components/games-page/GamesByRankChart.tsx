@@ -204,7 +204,7 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
                     const entry = payload[0].payload as ChartEntry;
                     if (entry.isSpacer) return null;
                     const info = badgeMap.get(entry.badge);
-                    const imageUrl = info?.small_webp ?? info?.small;
+                    const imageUrl = info?.large_webp ?? info?.large;
                     return (
                       <div className="flex items-center gap-2 rounded-md bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
                         {imageUrl && <img src={imageUrl} alt={entry.label} className="size-5" />}
