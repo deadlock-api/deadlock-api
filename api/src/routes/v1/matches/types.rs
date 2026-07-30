@@ -33,7 +33,7 @@ enum ActiveMatchMode {
     ServerTest = 5,
     Tutorial = 6,
     HeroLabs = 7,
-    Calibration = 8,
+    NewPlayerPlacement = 8,
 }
 impl From<i32> for ActiveMatchMode {
     fn from(value: i32) -> Self {
