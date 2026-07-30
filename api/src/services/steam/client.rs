@@ -250,7 +250,7 @@ impl SteamClient {
 /// needs to follow redirects into the challenge and keep the cookies it hands out.
 fn build_forum_client() -> wreq::Client {
     wreq::Client::builder()
-        .emulation(Emulation::Chrome131)
+        .emulation(Emulation::Chrome137)
         .cookie_store(true)
         .redirect(redirect::Policy::limited(10))
         .build()
