@@ -411,20 +411,7 @@ impl Variable {
                     .ok_or(VariableResolveError::NoData("leaderboard rank img"))
             }
             Self::LeaderboardRankImg => {
-                let (rank, subrank) = match Self::get_leaderboard_entry(
-                    rate_limit_key,
-                    state,
-                    steam_id,
-                    region,
-                    None,
-                )
-                .await?
-                .and_then(|l| l.badge_level)
-                .map(|b| (b / 10, b % 10))
-                {
-                    Some((rank, subrank)) => (rank, subrank),
-                    None => Self::fetch_card_ranks(state, steam_id).await?,
-                };
+                let (rank, subrank) = Self::fetch_card_ranks(state, steam_id).await?;
                 let ranks = state.assets_client.fetch_ranks().await?;
                 ranks
                     .iter()
@@ -438,20 +425,7 @@ impl Variable {
                     .ok_or(VariableResolveError::NoData("leaderboard rank img"))
             }
             Self::LeaderboardRank => {
-                let (rank, subrank) = match Self::get_leaderboard_entry(
-                    rate_limit_key,
-                    state,
-                    steam_id,
-                    region,
-                    None,
-                )
-                .await?
-                .and_then(|l| l.badge_level)
-                .map(|b| (b / 10, b % 10))
-                {
-                    Some((rank, subrank)) => (rank, subrank),
-                    None => Self::fetch_card_ranks(state, steam_id).await?,
-                };
+                let (rank, subrank) = Self::fetch_card_ranks(state, steam_id).await?;
                 let ranks = state.assets_client.fetch_ranks().await?;
                 let rank = ranks
                     .iter()

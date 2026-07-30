@@ -31,12 +31,6 @@ pub(crate) struct LeaderboardEntry {
     /// The top hero IDs of the player. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     #[serde(default)]
     top_hero_ids: Vec<u32>,
-    /// The badge level of the player (tier = first digits, subtier = last digit). See more: <https://api.deadlock-api.com/v1/assets/ranks>
-    pub(crate) badge_level: Option<u32>,
-    /// The ranked rank of the player. See more: <https://api.deadlock-api.com/v1/assets/ranks>
-    ranked_rank: Option<u32>,
-    /// The ranked subrank of the player. See more: <https://api.deadlock-api.com/v1/assets/ranks>
-    ranked_subrank: Option<u32>,
 }
 
 impl From<c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry> for LeaderboardEntry {
@@ -46,9 +40,6 @@ impl From<c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry> for Lea
             possible_account_ids: vec![],
             rank: value.rank,
             top_hero_ids: value.top_hero_ids,
-            badge_level: value.badge_level,
-            ranked_rank: value.badge_level.map(|b| b / 10),
-            ranked_subrank: value.badge_level.map(|b| b % 10),
         }
     }
 }
