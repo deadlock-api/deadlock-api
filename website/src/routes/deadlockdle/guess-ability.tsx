@@ -28,42 +28,37 @@ export const Route = createFileRoute("/deadlockdle/guess-ability")({
 
 const MAX_ATTEMPTS = 5;
 
-const VALID_ABILITY_TYPES = new Set(["signature", "ultimate", "innate"]);
-
-function formatAbilityType(abilityType: string): string {
-  switch (abilityType) {
-    case "signature":
-      return "Signature Ability";
-    case "ultimate":
-      return "Ultimate";
-    case "innate":
-      return "Innate";
-    default:
-      return abilityType.charAt(0).toUpperCase() + abilityType.slice(1);
-  }
-}
+/**
+ * Slots in a hero's `items` map holding their four real abilities, in kit order.
+ * Every other `ability_*` slot is a movement ability (jump, slide, zipline, dash, ...) shared
+ * across all heroes, and the assets expose those with empty or raw-localization-key names.
+ */
+const ABILITY_SLOTS = ["signature1", "signature2", "signature3", "signature4"] as const;
+const ULTIMATE_SLOT = "signature4";
 
 interface GuessableAbility {
   ability: Ability;
   hero: Hero;
+  typeLabel: string;
 }
 
 function buildGuessableAbilities(abilities: Ability[], playableHeroes: Hero[]): GuessableAbility[] {
-  const heroMap = new Map<number, Hero>();
-  for (const hero of playableHeroes) {
-    heroMap.set(hero.id, hero);
-  }
+  const byClassName = new Map(abilities.map((ability) => [ability.class_name, ability]));
 
   const results: GuessableAbility[] = [];
-  for (const ability of abilities) {
-    if (!ability.hero) continue;
-    if (!ability.image && !ability.image_webp) continue;
-    if (!ability.ability_type || !VALID_ABILITY_TYPES.has(ability.ability_type)) continue;
+  for (const hero of playableHeroes) {
+    for (const slot of ABILITY_SLOTS) {
+      const ability = byClassName.get(hero.items[slot]);
+      if (!ability) continue;
+      if (!ability.name?.trim()) continue;
+      if (!ability.image && !ability.image_webp) continue;
 
-    const hero = heroMap.get(ability.hero);
-    if (!hero) continue;
-
-    results.push({ ability, hero });
+      results.push({
+        ability,
+        hero,
+        typeLabel: slot === ULTIMATE_SLOT ? "Ultimate" : "Signature Ability",
+      });
+    }
   }
 
   return results;
@@ -94,9 +89,7 @@ function GuessAbility() {
   const hints = useMemo(() => {
     if (!dailyEntry) return [];
 
-    const { ability, hero } = dailyEntry;
-
-    const abilityTypeLabel = ability.ability_type ? formatAbilityType(ability.ability_type) : "Unknown";
+    const { ability, hero, typeLabel } = dailyEntry;
 
     const heroType = hero.hero_type ? hero.hero_type.charAt(0).toUpperCase() + hero.hero_type.slice(1) : "Unknown";
 
@@ -110,7 +103,7 @@ function GuessAbility() {
       : "No description available";
 
     return [
-      { label: "TYPE", value: abilityTypeLabel },
+      { label: "TYPE", value: typeLabel },
       { label: "HERO TYPE", value: `${heroType} hero` },
       { label: "HERO", value: heroName },
       { label: "DESC", value: descTruncated },
