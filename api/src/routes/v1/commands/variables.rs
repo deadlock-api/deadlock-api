@@ -89,8 +89,6 @@ pub(super) enum Variable {
     LatestPatchnotesLink,
     LatestPatchnotesTitle,
     LeaderboardPlace,
-    LeaderboardRank,
-    LeaderboardRankImg,
     MMRHistoryRank,
     MMRHistoryRankImg,
     LossesToday,
@@ -253,9 +251,7 @@ impl Variable {
             | Self::WinsLossesToday
             | Self::WinsToday => VariableCategory::Daily,
 
-            Self::LeaderboardPlace | Self::LeaderboardRank | Self::LeaderboardRankImg => {
-                VariableCategory::Leaderboard
-            }
+            Self::LeaderboardPlace => VariableCategory::Leaderboard,
 
             Self::HighestDenies
             | Self::HighestKillCount
@@ -318,7 +314,6 @@ impl Variable {
             Self::LatestPatchnotesLink => "Get the link to the latest patch notes",
             Self::LatestPatchnotesTitle => "Get the title of the latest patch notes",
             Self::LeaderboardPlace => "Get the leaderboard place",
-            Self::LeaderboardRank | Self::LeaderboardRankImg => "Get the leaderboard rank",
             Self::LossesToday => "Get the number of losses today",
             Self::MatchesToday => "Get the number of matches today",
             Self::MostPlayedHero => "Get the most played hero",
@@ -355,7 +350,7 @@ impl Variable {
             Self::HeroWins => Some("{hero_name} Wins"),
             Self::WinsLossesToday => Some("Daily W-L"),
             Self::LeaderboardPlace => Some("Place"),
-            Self::LeaderboardRank | Self::MMRHistoryRank => Some("Rank"),
+            Self::MMRHistoryRank => Some("Rank"),
             _ => None,
         }
     }
@@ -386,16 +381,16 @@ impl Variable {
     ) -> Result<String, VariableResolveError> {
         match self {
             Self::Rank => {
-                let (rank, subrank) = Self::fetch_card_ranks(state, steam_id).await?;
+                let (rank, subrank) = Self::fetch_player_ranks(state, steam_id).await?;
                 let ranks = state.assets_client.fetch_ranks().await?;
                 let rank = ranks
                     .iter()
                     .find(|r| r.tier == rank)
-                    .ok_or(VariableResolveError::NoData("leaderboard rank"))?;
+                    .ok_or(VariableResolveError::NoData("rank"))?;
                 Ok(format!("{} {subrank}", rank.name))
             }
             Self::RankImg => {
-                let (rank, _) = Self::fetch_card_ranks(state, steam_id).await?;
+                let (rank, _) = Self::fetch_player_ranks(state, steam_id).await?;
                 state
                     .assets_client
                     .fetch_ranks()
@@ -404,26 +399,7 @@ impl Variable {
                     .find(|r| r.tier == rank)
                     .and_then(|r| r.images.get("large").or(r.images.get("large_webp")))
                     .cloned()
-                    .ok_or(VariableResolveError::NoData("leaderboard rank img"))
-            }
-            Self::LeaderboardRankImg => {
-                let (rank, _) = Self::fetch_card_ranks(state, steam_id).await?;
-                let ranks = state.assets_client.fetch_ranks().await?;
-                ranks
-                    .iter()
-                    .find(|r| r.tier == rank)
-                    .and_then(|r| r.images.get("large").or(r.images.get("large_webp")))
-                    .cloned()
-                    .ok_or(VariableResolveError::NoData("leaderboard rank img"))
-            }
-            Self::LeaderboardRank => {
-                let (rank, subrank) = Self::fetch_card_ranks(state, steam_id).await?;
-                let ranks = state.assets_client.fetch_ranks().await?;
-                let rank = ranks
-                    .iter()
-                    .find(|r| r.tier == rank)
-                    .ok_or(VariableResolveError::NoData("leaderboard rank"))?;
-                Ok(format!("{} {subrank}", rank.name))
+                    .ok_or(VariableResolveError::NoData("rank img"))
             }
             Self::HeroesPlayedToday => {
                 let heroes_played =
@@ -809,6 +785,57 @@ impl Variable {
                     .ok_or(VariableResolveError::NoData("rank img"))
             }
         }
+    }
+
+    /// Player cards are only readable for accounts befriended by one of our bots, so fall back to
+    /// the `initial_display_rank` Valve reports for the player on their latest ranked match.
+    /// A card rank of `0` means the card carries no rank and is treated the same as a failure.
+    async fn fetch_player_ranks(
+        state: &AppState,
+        steam_id: u32,
+    ) -> Result<(u32, u32), VariableResolveError> {
+        if let Ok((rank, subrank)) = Self::fetch_card_ranks(state, steam_id).await
+            && rank > 0
+        {
+            return Ok((rank, subrank));
+        }
+        let badge = Self::fetch_last_ranked_match_badge(&state.ch_client_ro, steam_id)
+            .await?
+            .ok_or(VariableResolveError::NoData("rank"))?;
+        Ok((badge / 10, badge % 10))
+    }
+
+    /// `initial_display_rank` is `0` while the player is still in placement games and is only set
+    /// on ranked matches. Restricting the scan to the player's recent ranked matches keeps the
+    /// query off a full `account_id` scan, which the `(match_id, account_id)` sort key can't serve.
+    async fn fetch_last_ranked_match_badge(
+        ch_client: &clickhouse::Client,
+        steam_id: u32,
+    ) -> clickhouse::error::Result<Option<u32>> {
+        ch_client
+            .query(
+                "
+                SELECT assumeNotNull(player_rank_initial_display_rank)
+                FROM match_player
+                WHERE
+                    account_id = ?
+                    AND match_id IN (
+                        SELECT match_id
+                        FROM match_player
+                        WHERE account_id = ? AND match_mode = 'Ranked'
+                        ORDER BY match_id DESC
+                        LIMIT 20
+                    )
+                    AND player_rank_initial_display_rank > 0
+                ORDER BY match_id DESC
+                LIMIT 1
+                SETTINGS log_comment = 'variables', apply_patch_parts = 0
+                ",
+            )
+            .bind(steam_id)
+            .bind(steam_id)
+            .fetch_optional()
+            .await
     }
 
     async fn fetch_card_ranks(
