@@ -41,6 +41,7 @@ pub(super) struct Match {
     // Badge / matchmaking
     pub(super) average_badge_team_0: Option<u32>,
     pub(super) average_badge_team_1: Option<u32>,
+    pub(super) average_badge: Option<u32>,
     pub(super) is_high_skill_range_parties: Option<bool>,
     pub(super) low_pri_pool: Option<bool>,
     pub(super) new_player_pool: Option<bool>,
@@ -99,6 +100,7 @@ pub(super) struct MatchPlayer {
     pub(super) match_outcome: Option<String>,
     pub(super) average_badge_team_0: Option<u32>,
     pub(super) average_badge_team_1: Option<u32>,
+    pub(super) average_badge: Option<u32>,
 
     // Core combat stats
     pub(super) kills: Option<u32>,

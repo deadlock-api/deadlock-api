@@ -160,16 +160,12 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
     if let Some(v) = query.min_average_badge
         && v > 11
     {
-        where_filters.push(format!(
-            "average_badge_team0 >= {v} AND average_badge_team1 >= {v}"
-        ));
+        where_filters.push(format!("average_badge >= {v}"));
     }
     if let Some(v) = query.max_average_badge
         && v < 116
     {
-        where_filters.push(format!(
-            "average_badge_team0 <= {v} AND average_badge_team1 <= {v}"
-        ));
+        where_filters.push(format!("average_badge <= {v}"));
     }
     if let Some(v) = query.min_duration_s {
         where_filters.push(format!("duration_s >= {v}"));

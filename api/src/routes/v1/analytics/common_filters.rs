@@ -39,16 +39,12 @@ impl MatchInfoFilters {
         if let Some(v) = self.min_average_badge
             && v > 11
         {
-            filters.push(format!(
-                "{prefix}average_badge_team0 >= {v} AND {prefix}average_badge_team1 >= {v}"
-            ));
+            filters.push(format!("{prefix}average_badge >= {v}"));
         }
         if let Some(v) = self.max_average_badge
             && v < 116
         {
-            filters.push(format!(
-                "{prefix}average_badge_team0 <= {v} AND {prefix}average_badge_team1 <= {v}"
-            ));
+            filters.push(format!("{prefix}average_badge <= {v}"));
         }
         if let Some(v) = self.min_duration_s {
             filters.push(format!("{prefix}duration_s >= {v}"));

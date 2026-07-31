@@ -42,9 +42,7 @@ impl BucketQuery {
     fn get_select_clause(self) -> &'static str {
         match self {
             Self::NoBucket => "toUInt32(0)",
-            Self::AvgBadge => {
-                "toUInt32(assumeNotNull(coalesce(greatest(average_badge_team0, average_badge_team1), 0)))"
-            }
+            Self::AvgBadge => "toUInt32(assumeNotNull(coalesce(average_badge, 0)))",
             Self::StartTimeHour => "toStartOfHour(start_time)",
             Self::StartTimeDay => "toStartOfDay(start_time)",
             Self::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))",

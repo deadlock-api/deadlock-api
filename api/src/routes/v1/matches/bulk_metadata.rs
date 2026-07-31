@@ -262,6 +262,7 @@ fn qualify_match_player_filter(filter: &str) -> String {
         "match_id",
         "average_badge_team0",
         "average_badge_team1",
+        "average_badge",
         "is_high_skill_range_parties",
         "low_pri_pool",
         "new_player_pool",
@@ -321,6 +322,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
             "any(game_mode) as game_mode".to_owned(),
             "any(average_badge_team0) as average_badge_team0".to_owned(),
             "any(average_badge_team1) as average_badge_team1".to_owned(),
+            "any(average_badge) as average_badge".to_owned(),
             "any(not_scored) as not_scored".to_owned(),
         ]);
     }
@@ -476,14 +478,12 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     if let Some(min_badge_level) = query.min_average_badge
         && min_badge_level > 11
     {
-        info_filters.push(format!("average_badge_team0 >= {min_badge_level}"));
-        info_filters.push(format!("average_badge_team1 >= {min_badge_level}"));
+        info_filters.push(format!("average_badge >= {min_badge_level}"));
     }
     if let Some(max_badge_level) = query.max_average_badge
         && max_badge_level < 116
     {
-        info_filters.push(format!("average_badge_team0 <= {max_badge_level}"));
-        info_filters.push(format!("average_badge_team1 <= {max_badge_level}"));
+        info_filters.push(format!("average_badge <= {max_badge_level}"));
     }
     if let Some(is_high_skill_range_parties) = query.is_high_skill_range_parties {
         info_filters.push(format!(
@@ -560,10 +560,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     let inner_order_expr = match query.order_by {
         SortKey::MatchId => "match_id".to_owned(),
         SortKey::StartTime => "any(start_time)".to_owned(),
-        SortKey::AverageBadge => {
-            "(coalesce(any(average_badge_team0), 0) + coalesce(any(average_badge_team1), 0)) / 2"
-                .to_owned()
-        }
+        SortKey::AverageBadge => "coalesce(any(average_badge), 0)".to_owned(),
     };
     let order = format!(" ORDER BY {} {} ", inner_order_expr, query.order_direction);
     // Outer query has GROUP BY match_id, so non-group columns must be aggregated.
@@ -580,7 +577,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
             )
         }
         SortKey::AverageBadge => format!(
-            " ORDER BY (coalesce(any(match_player.average_badge_team0), 0) + coalesce(any(match_player.average_badge_team1), 0)) / 2 {} ",
+            " ORDER BY coalesce(any(match_player.average_badge), 0) {} ",
             query.order_direction
         ),
     };
@@ -783,7 +780,7 @@ mod proptests {
         .expect("query should build");
 
         assert!(sql.contains(
-            "match_id IN (SELECT match_id FROM match_player WHERE match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 AND start_time >= 1780256805 AND start_time <= 1780270000 AND average_badge_team0 >= 101 AND average_badge_team1 >= 101 AND hero_id IN (7) AND hero_id = 7 AND hasAll(items.item_id, [1282141666]))"
+            "match_id IN (SELECT match_id FROM match_player WHERE match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 AND start_time >= 1780256805 AND start_time <= 1780270000 AND average_badge >= 101 AND hero_id IN (7) AND hero_id = 7 AND hasAll(items.item_id, [1282141666]))"
         ));
     }
 }

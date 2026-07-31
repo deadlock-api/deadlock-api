@@ -93,9 +93,7 @@ fn build_query(query: &HeroBanStatsQuery) -> String {
         BucketQuery::StartTimeDay => "toStartOfDay(start_time)",
         BucketQuery::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))",
         BucketQuery::StartTimeMonth => "toDateTime(toStartOfMonth(start_time))",
-        BucketQuery::AvgBadge => {
-            "toUInt32(assumeNotNull(coalesce(greatest(average_badge_team0, average_badge_team1), 0)))"
-        }
+        BucketQuery::AvgBadge => "toUInt32(assumeNotNull(coalesce(average_badge, 0)))",
     };
     format!(
         "

@@ -152,18 +152,12 @@ fn build_query(query: &HeroStatsQuery) -> String {
     if let Some(min_badge_level) = query.min_average_badge
         && min_badge_level > 11
     {
-        outer_filters.push(format!(
-            "average_badge_team0 >= {min_badge_level} AND average_badge_team1 >= \
-             {min_badge_level}"
-        ));
+        outer_filters.push(format!("average_badge >= {min_badge_level}"));
     }
     if let Some(max_badge_level) = query.max_average_badge
         && max_badge_level < 116
     {
-        outer_filters.push(format!(
-            "average_badge_team0 <= {max_badge_level} AND average_badge_team1 <= \
-             {max_badge_level}"
-        ));
+        outer_filters.push(format!("average_badge <= {max_badge_level}"));
     }
     let outer_where = if outer_filters.is_empty() {
         String::new()
@@ -179,7 +173,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
                max_damage_mitigated, max_creep_kills, max_boss_damage, max_creep_damage,
                max_neutral_damage, max_shots_hit, max_shots_missed,
                max_hero_bullets_hit, max_hero_bullets_hit_crit,
-               duration_s, start_time, average_badge_team0, average_badge_team1
+               duration_s, start_time, average_badge
         FROM match_player
         WHERE {mp_where}
         LIMIT 1 BY match_id, account_id

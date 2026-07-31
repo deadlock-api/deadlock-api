@@ -44,9 +44,7 @@ impl BucketQuery {
     fn get_select_clause(self) -> &'static str {
         match self {
             Self::NoBucket => "toUInt32(0)",
-            Self::AvgBadge => {
-                "toUInt32(assumeNotNull(coalesce(greatest(average_badge_team0, average_badge_team1), 0)))"
-            }
+            Self::AvgBadge => "toUInt32(assumeNotNull(coalesce(average_badge, 0)))",
             Self::StartTimeHour => "toStartOfHour(start_time)",
             Self::StartTimeDay => "toStartOfDay(start_time)",
             Self::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))",
@@ -405,7 +403,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
             hero_id, account_id, match_id, won, kills, deaths, assists, net_worth, last_hits, denies,
             max_player_damage, max_player_damage_taken, max_boss_damage, max_creep_damage,
             max_neutral_damage, max_max_health, max_shots_hit, max_shots_missed,
-            start_time, average_badge_team0, average_badge_team1
+            start_time, average_badge
         FROM match_player
         WHERE TRUE
             {player_filters}

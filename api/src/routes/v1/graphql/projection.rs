@@ -19,6 +19,7 @@ const fn mp(gql: &'static str, ch_expr: &'static str) -> Column {
 pub(super) const SQL_START_TIME_UNIX: &str = "toUnixTimestamp(start_time)";
 pub(super) const SQL_AVG_BADGE_T0: &str = "average_badge_team0";
 pub(super) const SQL_AVG_BADGE_T1: &str = "average_badge_team1";
+pub(super) const SQL_AVG_BADGE: &str = "average_badge";
 
 /// Match-level columns. All live on `match_player` (denormalized).
 pub(super) const MATCH_COLUMNS: &[Column] = &[
@@ -33,6 +34,7 @@ pub(super) const MATCH_COLUMNS: &[Column] = &[
     mp("match_outcome", "match_outcome"),
     mp("average_badge_team_0", SQL_AVG_BADGE_T0),
     mp("average_badge_team_1", SQL_AVG_BADGE_T1),
+    mp("average_badge", SQL_AVG_BADGE),
     mp("is_high_skill_range_parties", "is_high_skill_range_parties"),
     mp("low_pri_pool", "low_pri_pool"),
     mp("new_player_pool", "new_player_pool"),
@@ -75,6 +77,7 @@ pub(super) const PLAYER_COLUMNS: &[Column] = &[
     mp("match_outcome", "match_outcome"),
     mp("average_badge_team_0", SQL_AVG_BADGE_T0),
     mp("average_badge_team_1", SQL_AVG_BADGE_T1),
+    mp("average_badge", SQL_AVG_BADGE),
     mp("kills", "kills"),
     mp("deaths", "deaths"),
     mp("assists", "assists"),

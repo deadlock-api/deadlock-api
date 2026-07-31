@@ -18,6 +18,7 @@ struct ClickhouseMatchInfoRow {
     game_mode: i8,
     average_badge_team0: Option<u32>,
     average_badge_team1: Option<u32>,
+    average_badge: Option<u32>,
     player_account_ids: Vec<u32>,
 }
 
@@ -39,6 +40,9 @@ struct ClickhouseMatchInfo {
     /// See more: <https://api.deadlock-api.com/v1/assets/ranks>
     #[serde(default)]
     average_badge_team1: Option<u32>,
+    /// See more: <https://api.deadlock-api.com/v1/assets/ranks>
+    #[serde(default)]
+    average_badge: Option<u32>,
     players: Vec<MatchPlayer>,
 }
 
@@ -52,6 +56,7 @@ impl From<ClickhouseMatchInfoRow> for ClickhouseMatchInfo {
             game_mode: row.game_mode,
             average_badge_team0: row.average_badge_team0,
             average_badge_team1: row.average_badge_team1,
+            average_badge: row.average_badge,
             players: row
                 .player_account_ids
                 .into_iter()
@@ -73,6 +78,7 @@ async fn get_recently_fetched_match_ids(
         any(game_mode) AS game_mode,
         any(average_badge_team0) AS average_badge_team0,
         any(average_badge_team1) AS average_badge_team1,
+        any(average_badge) AS average_badge,
         groupUniqArray(account_id) AS player_account_ids
     FROM match_player
     WHERE match_player.created_at > now() - 600 AND match_player.match_mode IN ('Ranked', 'Unranked') AND (match_player.match_id > 70426318 OR now() >= '2026-03-31 00:00:00')

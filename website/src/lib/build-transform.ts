@@ -13,6 +13,7 @@ export interface BulkMatchMetadata {
   game_mode: string;
   average_badge_team0: number | null;
   average_badge_team1: number | null;
+  average_badge?: number | null;
   players: {
     account_id: number;
     hero_id: number;
@@ -292,10 +293,13 @@ export function buildPlayerBuildCards(
     }));
 
     const isWin = player.team === match.winning_team;
-    const badge0 = match.average_badge_team0;
-    const badge1 = match.average_badge_team1;
+    // Valve stopped sending the per-team averages on 2026-07-30; those columns read 0 for
+    // newer matches, so the match-level average_badge is the only reliable source there.
+    const badge0 = match.average_badge_team0 || null;
+    const badge1 = match.average_badge_team1 || null;
     const averageBadge =
-      badge0 != null && badge1 != null ? Math.round((badge0 + badge1) / 2) : (badge0 ?? badge1 ?? undefined);
+      match.average_badge ??
+      (badge0 != null && badge1 != null ? Math.round((badge0 + badge1) / 2) : (badge0 ?? badge1 ?? undefined));
 
     return [
       {

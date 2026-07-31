@@ -69,7 +69,7 @@ fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String
                 account_id,
                 match_id,
                 start_time,
-                assumeNotNull(if(team = 'Team1', average_badge_team1, average_badge_team0)) AS current_match_badge,
+                assumeNotNull(average_badge) AS current_match_badge,
                 (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10) AS mmr
             FROM match_player
             WHERE account_id = {account_id}

@@ -45,7 +45,6 @@ pub(crate) struct MatchRow {
     account_id: u32,
     match_id: u64,
     hero_id: u8,
-    player_team: i8,
     player_kills: u32,
     player_deaths: u32,
     player_assists: u32,
@@ -55,8 +54,7 @@ pub(crate) struct MatchRow {
     max_shots_hit: u32,
     max_shots_missed: u32,
     match_duration_s: u32,
-    average_badge_team0: Option<u32>,
-    average_badge_team1: Option<u32>,
+    average_badge: Option<u32>,
     enemy_team: u8,
     max_creep_kills: u32,
     max_possible_creeps: u32,
@@ -78,7 +76,6 @@ impl BatchQueryMulti for RankPredictMatchesQuery {
                 account_id,
                 match_id,
                 hero_id,
-                team AS player_team,
                 kills AS player_kills,
                 deaths AS player_deaths,
                 assists AS player_assists,
@@ -88,8 +85,7 @@ impl BatchQueryMulti for RankPredictMatchesQuery {
                 max_shots_hit,
                 max_shots_missed,
                 duration_s AS match_duration_s,
-                average_badge_team0,
-                average_badge_team1,
+                average_badge,
                 if(team = 'Team0', 1, 0) AS enemy_team,
                 max_creep_kills,
                 max_possible_creeps
@@ -108,16 +104,14 @@ impl BatchQueryMulti for RankPredictMatchesQuery {
                     max_shots_hit,
                     max_shots_missed,
                     duration_s,
-                    average_badge_team0,
-                    average_badge_team1,
+                    average_badge,
                     max_creep_kills,
                     max_possible_creeps
                 FROM match_player
                 WHERE account_id IN ({})
                   AND match_mode IN ('Ranked', 'Unranked')
                   AND game_mode = 'Normal'
-                  AND average_badge_team0 > 0
-                  AND average_badge_team1 > 0
+                  AND average_badge > 0
                 ORDER BY account_id, match_id DESC
                 LIMIT 1 BY account_id, match_id
             )
@@ -224,13 +218,9 @@ async fn fetch_matches(
     Ok(match_rows
         .into_iter()
         .map(|r| {
-            let b0 = r.average_badge_team0.unwrap_or(0).cast_signed();
-            let b1 = r.average_badge_team1.unwrap_or(0).cast_signed();
-            let (own_raw, enemy_raw) = if r.player_team == 0 {
-                (b0, b1)
-            } else {
-                (b1, b0)
-            };
+            // Valve stopped sending per-team averages on 2026-07-30, so own and enemy
+            // now share the single match-level badge.
+            let badge = r.average_badge.unwrap_or(0).cast_signed();
             let (enemy_nw, enemy_dmg) = enemy_map
                 .get(&(r.match_id, r.enemy_team.cast_signed()))
                 .map_or((0.0, 0.0), |e| (e.nw_avg, e.dmg_avg));
@@ -251,8 +241,8 @@ async fn fetch_matches(
                 player_net_worth: f64::from(r.player_net_worth),
                 won: r.player_won,
                 duration_s: r.match_duration_s,
-                own_team_badge: f64::from(badge_to_idx(own_raw)),
-                enemy_team_badge: f64::from(badge_to_idx(enemy_raw)),
+                own_team_badge: f64::from(badge_to_idx(badge)),
+                enemy_team_badge: f64::from(badge_to_idx(badge)),
                 enemy_nw_avg: enemy_nw,
                 enemy_dmg_avg: enemy_dmg,
                 cs_efficiency,

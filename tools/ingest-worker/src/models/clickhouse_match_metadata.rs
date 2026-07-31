@@ -21,6 +21,7 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub game_mode: GameMode,
     pub average_badge_team0: Option<u32>,
     pub average_badge_team1: Option<u32>,
+    pub average_badge: Option<u32>,
     pub winning_team: Team,
     pub match_outcome: MatchOutcome,
     pub bot_difficulty: BotDifficulty,
@@ -256,6 +257,43 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub move_type: Vec<u8>,
 }
 
+/// Match-level average badge, in the `tier * 10 + subrank` encoding.
+///
+/// Valve stopped populating `average_badge_team{0,1}` on 2026-07-30, so matches recorded
+/// since then only carry per-player `player_rank_data`. Both shapes stay reachable because
+/// the worker also re-ingests older matches, hence the two-source fallback.
+///
+/// A player's `initial_display_rank` is `0` while they are still in placement games;
+/// those are excluded rather than averaged in as rank zero. `None` when neither source
+/// yields a rank, which is the normal case for non-ranked match modes.
+fn average_badge(match_info: &MatchInfo) -> Option<u32> {
+    let team_badges: Vec<u32> = [
+        match_info.average_badge_team0,
+        match_info.average_badge_team1,
+    ]
+    .into_iter()
+    .flatten()
+    .filter(|badge| *badge > 0)
+    .collect();
+    if let Some(avg) = mean(&team_badges) {
+        return Some(avg);
+    }
+
+    let player_ranks: Vec<u32> = match_info
+        .players
+        .iter()
+        .filter_map(|player| player.player_rank_data)
+        .filter_map(|rank| rank.initial_display_rank)
+        .filter(|rank| *rank > 0)
+        .collect();
+    mean(&player_ranks)
+}
+
+fn mean(values: &[u32]) -> Option<u32> {
+    let count = u32::try_from(values.len()).ok().filter(|c| *c > 0)?;
+    Some(values.iter().sum::<u32>() / count)
+}
+
 /// Zeroes the low 4 bits of each position sample, keeping the 0..=16383 fixed-point
 /// domain intact (so the `x_min`/`x_max` reconstruction is unchanged) while dropping
 /// sub-16-unit precision. Trades imperceptible accuracy for ~36% smaller `x_pos`/`y_pos`.
@@ -274,6 +312,7 @@ impl From<(&MatchInfo, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer 
             game_mode: GameMode::from(match_info.game_mode()),
             average_badge_team0: match_info.average_badge_team0,
             average_badge_team1: match_info.average_badge_team1,
+            average_badge: average_badge(match_info),
             winning_team: Team::from(match_info.winning_team()),
             match_outcome: MatchOutcome::from(match_info.match_outcome()),
             bot_difficulty: BotDifficulty::from(match_info.bot_difficulty()),
@@ -722,5 +761,65 @@ impl From<(&MatchInfo, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer 
                 .map(|p| p.move_type.iter().map(|&v| v as u8).collect())
                 .unwrap_or_default(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use valveprotos::deadlock::CMsgMatchPlayerRankData;
+
+    use super::*;
+
+    fn match_info(team0: Option<u32>, team1: Option<u32>, ranks: &[Option<u32>]) -> MatchInfo {
+        MatchInfo {
+            average_badge_team0: team0,
+            average_badge_team1: team1,
+            players: ranks
+                .iter()
+                .map(|rank| Players {
+                    player_rank_data: rank.map(|initial_display_rank| CMsgMatchPlayerRankData {
+                        initial_display_rank: Some(initial_display_rank),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .collect(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn prefers_team_averages_over_player_ranks() {
+        let info = match_info(Some(60), Some(80), &[Some(100), Some(100)]);
+        assert_eq!(average_badge(&info), Some(70));
+    }
+
+    #[test]
+    fn single_known_team_is_not_halved() {
+        assert_eq!(average_badge(&match_info(Some(55), None, &[])), Some(55));
+        assert_eq!(average_badge(&match_info(Some(55), Some(0), &[])), Some(55));
+    }
+
+    #[test]
+    fn falls_back_to_player_ranks() {
+        let absent = match_info(None, None, &[Some(80), Some(84)]);
+        assert_eq!(average_badge(&absent), Some(82));
+        let zeroed = match_info(Some(0), Some(0), &[Some(80), Some(84)]);
+        assert_eq!(average_badge(&zeroed), Some(82));
+    }
+
+    #[test]
+    fn players_still_in_placements_are_excluded() {
+        let info = match_info(None, None, &[Some(0), Some(0), None, Some(84)]);
+        assert_eq!(average_badge(&info), Some(84));
+    }
+
+    #[test]
+    fn none_when_neither_source_has_data() {
+        assert_eq!(average_badge(&match_info(None, None, &[])), None);
+        assert_eq!(
+            average_badge(&match_info(Some(0), Some(0), &[Some(0), None])),
+            None
+        );
     }
 }

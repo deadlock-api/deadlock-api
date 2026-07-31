@@ -115,8 +115,8 @@ pub(super) fn build_matches_query(args: &BuildArgs<'_>) -> Result<String, core::
     let (cte_order, outer_order): (&str, &str) = match args.order_by {
         OrderKey::StartTime => ("any(start_time)", "any(match_player.start_time)"),
         OrderKey::AverageBadge => (
-            "(coalesce(any(average_badge_team0), 0) + coalesce(any(average_badge_team1), 0)) / 2",
-            "(coalesce(any(match_player.average_badge_team0), 0) + coalesce(any(match_player.average_badge_team1), 0)) / 2",
+            "coalesce(any(average_badge), 0)",
+            "coalesce(any(match_player.average_badge), 0)",
         ),
         OrderKey::MatchId | OrderKey::AccountId => ("match_id", "match_player.match_id"),
     };
@@ -166,7 +166,7 @@ pub(super) fn build_match_players_query(args: &BuildArgs<'_>) -> Result<String, 
     let order_col = match args.order_by {
         OrderKey::MatchId => "match_player.match_id",
         OrderKey::StartTime => "match_player.start_time",
-        OrderKey::AverageBadge => "match_player.average_badge_team0",
+        OrderKey::AverageBadge => "match_player.average_badge",
         OrderKey::AccountId => "match_player.account_id",
     };
     let dir = args.order_dir.as_sql();
@@ -284,7 +284,7 @@ mod tests {
         let projection = Projection {
             match_columns: MATCH_COLUMNS
                 .iter()
-                .filter(|c| matches!(c.gql, "match_id" | "start_time" | "average_badge_team_0"))
+                .filter(|c| matches!(c.gql, "match_id" | "start_time" | "average_badge"))
                 .copied()
                 .collect(),
             player_columns: PLAYER_COLUMNS

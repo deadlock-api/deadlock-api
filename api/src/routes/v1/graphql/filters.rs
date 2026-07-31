@@ -11,7 +11,7 @@ use async_graphql::InputObject;
 use itertools::Itertools;
 
 use crate::routes::v1::graphql::projection::{
-    SQL_AVG_BADGE_T0, SQL_AVG_BADGE_T1, SQL_START_TIME_UNIX,
+    SQL_AVG_BADGE, SQL_AVG_BADGE_T0, SQL_AVG_BADGE_T1, SQL_START_TIME_UNIX,
 };
 
 fn escape_sql_string(s: &str) -> String {
@@ -155,6 +155,7 @@ pub(super) struct MatchPlayerWhere {
     pub(super) match_outcome: Option<StringFilter>,
     pub(super) average_badge_team_0: Option<U32Filter>,
     pub(super) average_badge_team_1: Option<U32Filter>,
+    pub(super) average_badge: Option<U32Filter>,
     pub(super) is_high_skill_range_parties: Option<BoolFilter>,
     pub(super) low_pri_pool: Option<BoolFilter>,
     pub(super) new_player_pool: Option<BoolFilter>,
@@ -190,6 +191,7 @@ impl MatchPlayerWhere {
         push!(match_outcome, "match_outcome");
         push!(average_badge_team_0, SQL_AVG_BADGE_T0);
         push!(average_badge_team_1, SQL_AVG_BADGE_T1);
+        push!(average_badge, SQL_AVG_BADGE);
         push!(is_high_skill_range_parties, "is_high_skill_range_parties");
         push!(low_pri_pool, "low_pri_pool");
         push!(new_player_pool, "new_player_pool");
