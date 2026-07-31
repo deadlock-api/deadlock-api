@@ -289,9 +289,14 @@ fn average_badge(match_info: &MatchInfo) -> Option<u32> {
     mean(&player_ranks)
 }
 
+/// Ties round to even, matching the `ClickHouse` `round()` in the `average_badge` column's
+/// DEFAULT expression, so rows written here agree with rows derived from the legacy
+/// `average_badge_team{0,1}` columns instead of drifting by one on exact .5 averages.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn mean(values: &[u32]) -> Option<u32> {
     let count = u32::try_from(values.len()).ok().filter(|c| *c > 0)?;
-    Some(values.iter().sum::<u32>() / count)
+    let mean = f64::from(values.iter().sum::<u32>()) / f64::from(count);
+    Some(mean.round_ties_even() as u32)
 }
 
 /// Zeroes the low 4 bits of each position sample, keeping the 0..=16383 fixed-point
@@ -812,6 +817,20 @@ mod tests {
     fn players_still_in_placements_are_excluded() {
         let info = match_info(None, None, &[Some(0), Some(0), None, Some(84)]);
         assert_eq!(average_badge(&info), Some(84));
+    }
+
+    #[test]
+    fn ties_round_to_even_like_clickhouse() {
+        // 21.5 -> 22, 15.5 -> 16, 2.5 -> 2
+        assert_eq!(
+            average_badge(&match_info(Some(21), Some(22), &[])),
+            Some(22)
+        );
+        assert_eq!(
+            average_badge(&match_info(Some(15), Some(16), &[])),
+            Some(16)
+        );
+        assert_eq!(average_badge(&match_info(Some(2), Some(3), &[])), Some(2));
     }
 
     #[test]
