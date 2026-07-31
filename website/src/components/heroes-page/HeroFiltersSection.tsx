@@ -55,7 +55,7 @@ export function HeroFiltersSection({
             value={minHeroMatchesTotal}
             onChange={setMinHeroMatchesTotal}
             label="Min Hero Matches (Total)"
-            step={100}
+            step={10}
           />
         </>
       ) : (
