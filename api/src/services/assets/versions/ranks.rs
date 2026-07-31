@@ -213,14 +213,32 @@ impl Rank {
     }
 }
 
-pub(crate) fn build_ranks(loc: &HashMap<String, String>) -> Vec<Rank> {
+/// Rank names moved from `Citadel_ranks_rank{tier}` to `Citadel_ranks_{tier}`,
+/// and the renaming shifted tiers (Ritualist 5 -> 6, Emissary 6 -> 7), so the
+/// old key is only a valid answer once the new key is absent for every
+/// language — i.e. on builds from before the rename. Non-english files
+/// translate only tiers 0 and 9-11 under the new key, hence the english step.
+fn rank_name(
+    loc: &HashMap<String, String>,
+    english: &HashMap<String, String>,
+    tier: u32,
+) -> String {
+    let new_key = format!("Citadel_ranks_{tier}");
+    loc.get(&new_key)
+        .or_else(|| english.get(&new_key))
+        .or_else(|| loc.get(&format!("Citadel_ranks_rank{tier}")))
+        .map(|s| s.trim().to_owned())
+        .unwrap_or_default()
+}
+
+pub(crate) fn build_ranks(
+    loc: &HashMap<String, String>,
+    english: &HashMap<String, String>,
+) -> Vec<Rank> {
     (0..NUM_TIERS)
         .map(|tier| Rank {
             tier,
-            name: loc
-                .get(&format!("Citadel_ranks_rank{tier}"))
-                .map(|s| s.trim().to_owned())
-                .unwrap_or_default(),
+            name: rank_name(loc, english, tier),
             images: RankImages::from_tier(tier),
             color: RANK_COLORS[tier as usize],
         })
@@ -240,7 +258,12 @@ pub(crate) async fn fetch_ranks(
     language: &str,
 ) -> Result<Arc<Vec<Rank>>, AssetsError> {
     let loc = localization::fetch_localization(r2, version, language).await?;
-    Ok(Arc::new(build_ranks(&loc)))
+    let english = if language == "english" {
+        loc.clone()
+    } else {
+        localization::fetch_localization(r2, version, "english").await?
+    };
+    Ok(Arc::new(build_ranks(&loc, &english)))
 }
 
 #[cfg(test)]
@@ -261,9 +284,14 @@ mod tests {
             .collect()
     }
 
+    fn english_loc() -> HashMap<String, String> {
+        loc_from_fixture("citadel_main_english.txt")
+    }
+
     #[test]
     fn snapshot_ranks_english() {
-        let ranks = build_ranks(&loc_from_fixture("citadel_main_english.txt"));
+        let english = english_loc();
+        let ranks = build_ranks(&english, &english);
         insta::with_settings!(
             { snapshot_path => "ranks_snapshots", prepend_module_to_snapshot => false },
             { insta::assert_json_snapshot!("ranks_english", ranks); }
@@ -272,7 +300,10 @@ mod tests {
 
     #[test]
     fn snapshot_ranks_russian() {
-        let ranks = build_ranks(&loc_from_fixture("citadel_main_russian.txt"));
+        let ranks = build_ranks(
+            &loc_from_fixture("citadel_main_russian.txt"),
+            &english_loc(),
+        );
         insta::with_settings!(
             { snapshot_path => "ranks_snapshots", prepend_module_to_snapshot => false },
             { insta::assert_json_snapshot!("ranks_russian", ranks); }
@@ -280,8 +311,27 @@ mod tests {
     }
 
     #[test]
+    fn untranslated_tier_falls_back_to_english_not_to_the_old_key() {
+        let ranks = build_ranks(
+            &loc_from_fixture("citadel_main_russian.txt"),
+            &english_loc(),
+        );
+        assert_eq!(ranks[3].name, "Acolyte");
+        assert_eq!(ranks[9].name, "Фантом");
+    }
+
+    #[test]
+    fn pre_rename_build_uses_the_old_key() {
+        let old: HashMap<String, String> = (0..NUM_TIERS)
+            .map(|tier| (format!("Citadel_ranks_rank{tier}"), format!("tier{tier}")))
+            .collect();
+        let ranks = build_ranks(&old, &old);
+        assert_eq!(ranks[3].name, "tier3");
+    }
+
+    #[test]
     fn tier_zero_omits_chalk() {
-        let ranks = build_ranks(&loc_from_fixture("citadel_main_english.txt"));
+        let ranks = build_ranks(&english_loc(), &english_loc());
         let r0 = &ranks[0];
         assert!(r0.images.large.is_some() && r0.images.large_webp.is_some());
         assert!(r0.images.chalk.is_none() && r0.images.chalk_webp.is_none());
@@ -289,7 +339,7 @@ mod tests {
 
     #[test]
     fn non_zero_tier_is_zero_padded_and_has_chalk() {
-        let ranks = build_ranks(&loc_from_fixture("citadel_main_english.txt"));
+        let ranks = build_ranks(&english_loc(), &english_loc());
         let r3 = &ranks[3];
         assert!(
             r3.images

@@ -3575,6 +3575,7 @@
 		"Citadel_ranked_numGamesPlayed"				"Сыграно матчей: {s:games_played}"
 		"Citadel_ranked_match_history"				"История матчей:"
 
+		// Old Rank Names
 		"Citadel_ranks_rank0"						"Обскурус"
 		"Citadel_ranks_rank1"						"Послушник"
 		"Citadel_ranks_rank2"						"Искатель"
@@ -3587,6 +3588,12 @@
 		"Citadel_ranks_rank9"						"Фантом"
 		"Citadel_ranks_rank10"						"Владыка"
 		"Citadel_ranks_rank11"						"Этернус"
+
+		// New Rank Names
+		"Citadel_ranks_0"							"Обскурус"
+		"Citadel_ranks_9"							"Фантом"
+		"Citadel_ranks_10"							"Владыка"
+		"Citadel_ranks_11"							"Этернус"
 
 		"Citadel_subranks_1"						"I"
 		"Citadel_subranks_2"						"II"

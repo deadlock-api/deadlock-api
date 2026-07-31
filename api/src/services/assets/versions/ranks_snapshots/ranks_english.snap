@@ -86,7 +86,7 @@ expression: ranks
   },
   {
     "tier": 3,
-    "name": "Alchemist",
+    "name": "Acolyte",
     "images": {
       "large": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank03_lg.png",
       "large_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank03_lg.webp",
@@ -121,7 +121,7 @@ expression: ranks
   },
   {
     "tier": 4,
-    "name": "Arcanist",
+    "name": "Sentinel",
     "images": {
       "large": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank04_lg.png",
       "large_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank04_lg.webp",
@@ -156,7 +156,7 @@ expression: ranks
   },
   {
     "tier": 5,
-    "name": "Ritualist",
+    "name": "Mystic",
     "images": {
       "large": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank05_lg.png",
       "large_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank05_lg.webp",
@@ -191,7 +191,7 @@ expression: ranks
   },
   {
     "tier": 6,
-    "name": "Emissary",
+    "name": "Ritualist",
     "images": {
       "large": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank06_lg.png",
       "large_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank06_lg.webp",
@@ -226,7 +226,7 @@ expression: ranks
   },
   {
     "tier": 7,
-    "name": "Archon",
+    "name": "Emissary",
     "images": {
       "large": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank07_lg.png",
       "large_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank07_lg.webp",

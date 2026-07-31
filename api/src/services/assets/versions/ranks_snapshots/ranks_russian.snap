@@ -16,7 +16,7 @@ expression: ranks
   },
   {
     "tier": 1,
-    "name": "Послушник",
+    "name": "Initiate",
     "images": {
       "large": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank01_lg.png",
       "large_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank01_lg.webp",
@@ -51,7 +51,7 @@ expression: ranks
   },
   {
     "tier": 2,
-    "name": "Искатель",
+    "name": "Seeker",
     "images": {
       "large": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank02_lg.png",
       "large_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank02_lg.webp",
@@ -86,7 +86,7 @@ expression: ranks
   },
   {
     "tier": 3,
-    "name": "Алхимик",
+    "name": "Acolyte",
     "images": {
       "large": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank03_lg.png",
       "large_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank03_lg.webp",
@@ -121,7 +121,7 @@ expression: ranks
   },
   {
     "tier": 4,
-    "name": "Чародей",
+    "name": "Sentinel",
     "images": {
       "large": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank04_lg.png",
       "large_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank04_lg.webp",
@@ -156,7 +156,7 @@ expression: ranks
   },
   {
     "tier": 5,
-    "name": "Ритуалист",
+    "name": "Mystic",
     "images": {
       "large": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank05_lg.png",
       "large_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank05_lg.webp",
@@ -191,7 +191,7 @@ expression: ranks
   },
   {
     "tier": 6,
-    "name": "Эмиссар",
+    "name": "Ritualist",
     "images": {
       "large": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank06_lg.png",
       "large_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank06_lg.webp",
@@ -226,7 +226,7 @@ expression: ranks
   },
   {
     "tier": 7,
-    "name": "Архонт",
+    "name": "Emissary",
     "images": {
       "large": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank07_lg.png",
       "large_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank07_lg.webp",
@@ -261,7 +261,7 @@ expression: ranks
   },
   {
     "tier": 8,
-    "name": "Оракул",
+    "name": "Oracle",
     "images": {
       "large": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank08_lg.png",
       "large_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank08_lg.webp",
