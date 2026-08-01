@@ -16,7 +16,7 @@ use super::common_filters::{
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::GameMode;
+use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
@@ -54,6 +54,16 @@ pub(super) struct ItemPermutationStatsQuery {
     )]
     #[param(inline, default = "normal")]
     game_mode: Option<GameMode>,
+    /// Filter matches based on the match mode. Valid values: `unranked`, `private_lobby`, `coop_bot`, `ranked`, `server_test`, `tutorial`, `hero_labs`. **Default:** `ranked,unranked`.
+    #[param(value_type = Option<String>)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(
+            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::routes::v1::matches::types::MatchMode>(), 0..=4))"
+        )
+    )]
+    match_mode: Option<Vec<MatchMode>>,
     /// Filter matches based on the hero IDs. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
@@ -149,6 +159,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         .build(),
     );
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
+    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     let mut having_filters = vec![];
     if let Some(min_matches) = query.min_matches {
         having_filters.push(format!("matches >= {min_matches}"));
@@ -175,7 +186,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
             wins + losses AS matches
         FROM match_player
         WHERE hasAll(items.item_id, {items_list})
-            AND match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}
+            AND {match_mode_filter} AND {game_mode_filter} {info_filters}
             {player_filters}
         GROUP BY item_ids
         {having_clause}
@@ -202,7 +213,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
             t_players AS (SELECT arrayFilter(x -> x IN t_upgrades, arrayDistinct(items.item_id))
              as p_items, won
                 FROM match_player
-                WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters} {player_filters})
+                WHERE {match_mode_filter} AND {game_mode_filter} {info_filters} {player_filters})
         SELECT [{intersect_array}] AS item_ids,
                countIf(won)      AS wins,
                countIf(not won)  AS losses,

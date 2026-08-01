@@ -65,6 +65,7 @@ fn select_body(spec: &CohortSpec, since_clause: &str) -> String {
     format!(
         "SELECT
     game_mode,
+    match_mode,
     toDate(start_time) AS day,
     cohort_item_id,
     item_id,
@@ -86,7 +87,7 @@ ARRAY JOIN arrayDistinct(items.item_id) AS cohort_item_id
 WHERE match_mode IN ('Ranked', 'Unranked')
     AND {since_clause}
     AND duration_s > 0
-GROUP BY game_mode, day, cohort_item_id, item_id, {bucket_col}",
+GROUP BY game_mode, match_mode, day, cohort_item_id, item_id, {bucket_col}",
         bucket_select = spec.bucket_select,
         extra_array_join = spec.extra_array_join,
         bucket_col = spec.bucket_col,

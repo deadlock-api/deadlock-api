@@ -9,10 +9,10 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::matches::types::GameMode;
-use crate::utils::parse::default_last_month_timestamp;
+use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
-#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(crate) struct BadgeDistributionQuery {
     /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
@@ -22,6 +22,16 @@ pub(crate) struct BadgeDistributionQuery {
     )]
     #[param(inline, default = "normal")]
     game_mode: Option<GameMode>,
+    /// Filter matches based on the match mode. Valid values: `unranked`, `private_lobby`, `coop_bot`, `ranked`, `server_test`, `tutorial`, `hero_labs`. **Default:** `ranked,unranked`.
+    #[param(value_type = Option<String>)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(
+            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::routes::v1::matches::types::MatchMode>(), 0..=4))"
+        )
+    )]
+    match_mode: Option<Vec<MatchMode>>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -88,6 +98,7 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
         format!(" AND {}", info_filters.join(" AND "))
     };
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
+    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     format!(
         "
     SELECT
@@ -96,7 +107,7 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
     FROM (
         SELECT any(average_badge) AS t_badge_level
         FROM match_player
-        WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {filters}
+        WHERE {match_mode_filter} AND {game_mode_filter} {filters}
         GROUP BY match_id
     )
     WHERE badge_level > 0

@@ -12,7 +12,10 @@ use utoipa::{IntoParams, ToSchema};
 use super::common_filters::{MatchInfoFilters, round_timestamps};
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::utils::parse::{MIN_DEMO_PLAYER_TIMESTAMP, default_last_month_timestamp};
+use crate::routes::v1::matches::types::MatchMode;
+use crate::utils::parse::{
+    MIN_DEMO_PLAYER_TIMESTAMP, comma_separated_deserialize_option, default_last_month_timestamp,
+};
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -37,6 +40,16 @@ pub enum BucketQuery {
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(super) struct HeroBanStatsQuery {
+    /// Filter matches based on the match mode. Valid values: `unranked`, `private_lobby`, `coop_bot`, `ranked`, `server_test`, `tutorial`, `hero_labs`. **Default:** `ranked,unranked`.
+    #[param(value_type = Option<String>)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(
+            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::routes::v1::matches::types::MatchMode>(), 0..=4))"
+        )
+    )]
+    match_mode: Option<Vec<MatchMode>>,
     /// Bucket allows you to group the stats by a specific field.
     #[serde(default)]
     #[param(inline)]
@@ -87,6 +100,7 @@ fn build_query(query: &HeroBanStatsQuery) -> String {
         max_duration_s: query.max_duration_s,
     }
     .build();
+    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     let bucket_expr = match query.bucket {
         BucketQuery::NoBucket => "toUInt32(0)",
         BucketQuery::StartTimeHour => "toStartOfHour(start_time)",
@@ -102,7 +116,7 @@ fn build_query(query: &HeroBanStatsQuery) -> String {
            uniq(match_id) AS bans
     FROM match_player
     WHERE notEmpty(banned_hero_ids)
-      AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 {info_filters}
+      AND {match_mode_filter} AND game_mode = 1 {info_filters}
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
     SETTINGS log_comment = 'hero_ban_stats'

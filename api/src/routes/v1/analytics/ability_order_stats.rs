@@ -14,7 +14,7 @@ use super::common_filters::{
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::GameMode;
+use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
@@ -36,6 +36,16 @@ pub(super) struct AbilityOrderStatsQuery {
     )]
     #[param(inline, default = "normal")]
     game_mode: Option<GameMode>,
+    /// Filter matches based on the match mode. Valid values: `unranked`, `private_lobby`, `coop_bot`, `ranked`, `server_test`, `tutorial`, `hero_labs`. **Default:** `ranked,unranked`.
+    #[param(value_type = Option<String>)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(
+            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::routes::v1::matches::types::MatchMode>(), 0..=4))"
+        )
+    )]
+    match_mode: Option<Vec<MatchMode>>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -146,6 +156,7 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
     }
     let player_filters = join_filters(&player_filters);
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
+    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     format!(
         "
     SELECT
@@ -158,7 +169,7 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
         sum(deaths) AS total_deaths,
         sum(assists) AS total_assists
     FROM match_player
-    WHERE match_mode IN ('Ranked', 'Unranked')
+    WHERE {match_mode_filter}
         AND {game_mode_filter}
         {info_filters}
         {player_filters}

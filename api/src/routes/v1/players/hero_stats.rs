@@ -29,6 +29,16 @@ pub(crate) struct HeroStatsQuery {
     )]
     #[param(inline, default = "normal")]
     game_mode: Option<GameMode>,
+    /// Filter matches based on the match mode. Valid values: `unranked`, `private_lobby`, `coop_bot`, `ranked`, `server_test`, `tutorial`, `hero_labs`. **Default:** `ranked,unranked`.
+    #[param(value_type = Option<String>)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(
+            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::routes::v1::matches::types::MatchMode>(), 0..=4))"
+        )
+    )]
+    match_mode: Option<Vec<MatchMode>>,
     /// Filter matches based on the hero IDs. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
@@ -114,7 +124,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
     // parts from disabling it, so ClickHouse serves this read from the projection.
     let mut mp_filters = vec![
         format!("account_id IN ({account_ids})"),
-        MatchMode::sql_filter(None),
+        MatchMode::sql_filter(query.match_mode.as_deref()),
         GameMode::sql_filter(query.game_mode),
         "net_worth > 0".to_string(),
         "duration_s > 0".to_string(),

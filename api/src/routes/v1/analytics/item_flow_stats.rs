@@ -14,7 +14,7 @@ use super::common_filters::{
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::GameMode;
+use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
 #[allow(clippy::unnecessary_wraps)]
@@ -52,6 +52,16 @@ pub(super) struct ItemFlowStatsQuery {
     )]
     #[param(inline, default = "normal")]
     game_mode: Option<GameMode>,
+    /// Filter matches based on the match mode. Valid values: `unranked`, `private_lobby`, `coop_bot`, `ranked`, `server_test`, `tutorial`, `hero_labs`. **Default:** `ranked,unranked`.
+    #[param(value_type = Option<String>)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(
+            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::routes::v1::matches::types::MatchMode>(), 0..=4))"
+        )
+    )]
+    match_mode: Option<Vec<MatchMode>>,
     /// Filter matches based on the hero IDs. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
@@ -300,8 +310,8 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
     let player_filters = join_filters(&player_filter_vec);
     let base_player_filters = join_filters(&base_filter_vec);
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let match_filters =
-        format!("match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}");
+    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
+    let match_filters = format!("{match_mode_filter} AND {game_mode_filter} {info_filters}");
 
     let column_expr = column_of("e.buy_time", "e.round_durations");
     let extra_select = if is_brawl {

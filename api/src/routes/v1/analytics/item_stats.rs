@@ -19,7 +19,7 @@ use super::common_filters::{
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::GameMode;
+use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::utils::parse::{
     comma_separated_chains_deserialize_option, comma_separated_deserialize_option,
     default_last_month_timestamp, parse_steam_id_option,
@@ -170,6 +170,16 @@ pub(crate) struct ItemStatsQuery {
     )]
     #[param(inline, default = "normal")]
     game_mode: Option<GameMode>,
+    /// Filter matches based on the match mode. Valid values: `unranked`, `private_lobby`, `coop_bot`, `ranked`, `server_test`, `tutorial`, `hero_labs`. **Default:** `ranked,unranked`.
+    #[param(value_type = Option<String>)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(
+            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::routes::v1::matches::types::MatchMode>(), 0..=4))"
+        )
+    )]
+    match_mode: Option<Vec<MatchMode>>,
     /// Filter matches based on the hero IDs. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
@@ -317,6 +327,7 @@ const MV_ROUTING_MARGIN_DAYS: i64 = 5;
 /// request falls within the "global meta" subset it materializes, else `None`
 /// (the caller then uses the base-table query). See `clickhouse/item_stats_agg.sql`
 /// for the grain and the list of what is and isn't covered.
+#[allow(clippy::too_many_lines)]
 fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
     let bucket_expr = query.bucket.mv_bucket_expr()?;
 
@@ -330,7 +341,7 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
     // The view only covers the shared, non-personalized subset. Anything needing
     // per-purchase data, item-set membership, per-account/enemy context, or a
     // dimension not in the grain (sub-day time, match_id, duration, final net
-    // worth, buy time) must use the base table.
+    // worth, buy time), or a match mode the view does not ingest, must use the base table.
     #[allow(deprecated)]
     let personalized = query.account_id.is_some()
         || query.account_ids.as_ref().is_some_and(|v| !v.is_empty())
@@ -351,7 +362,8 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
         || query.max_bought_at_s.is_some()
         || query.item_order.as_ref().is_some_and(|v| !v.is_empty())
         || query.min_match_id.is_some()
-        || query.max_match_id.is_some();
+        || query.max_match_id.is_some()
+        || !MatchMode::is_agg_servable(query.match_mode.as_deref());
     if personalized || unsupported_filter {
         return None;
     }
@@ -372,6 +384,7 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
 
     /* ---------- filters (all on item_stats_agg columns) ---------- */
     let mut filters = vec![GameMode::sql_filter(query.game_mode)];
+    filters.extend(MatchMode::agg_sql_filter(query.match_mode.as_deref()));
     if let Some(v) = query.min_unix_timestamp {
         filters.push(format!("day >= toDate({v})"));
     }
@@ -516,7 +529,8 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
         || query.min_match_id.is_some()
         || query.max_match_id.is_some()
         || query.min_average_badge.is_some_and(|v| v > 11)
-        || query.max_average_badge.is_some_and(|v| v < 116);
+        || query.max_average_badge.is_some_and(|v| v < 116)
+        || !MatchMode::is_agg_servable(query.match_mode.as_deref());
     if unsupported {
         return None;
     }
@@ -540,6 +554,7 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
         GameMode::sql_filter(query.game_mode),
         format!("cohort_item_id = {cohort_item_id}"),
     ];
+    filters.extend(MatchMode::agg_sql_filter(query.match_mode.as_deref()));
     if let Some(v) = query.min_unix_timestamp {
         filters.push(format!("day >= toDate({v})"));
     }
@@ -631,6 +646,10 @@ fn cohort_mv_skip_reason(query: &ItemStatsQuery) -> &'static str {
         (
             query.min_match_id.is_some() || query.max_match_id.is_some(),
             "match_id",
+        ),
+        (
+            !MatchMode::is_agg_servable(query.match_mode.as_deref()),
+            "match_mode",
         ),
         (query.min_average_badge.is_some_and(|v| v > 11), "badge"),
         (query.max_average_badge.is_some_and(|v| v < 116), "badge"),
@@ -776,6 +795,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
 
     /* ---------- enemy-team filter (optional) ---------- */
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
+    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     let enemy_hero_ids = query
         .enemy_hero_ids
         .as_deref()
@@ -809,7 +829,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
             match_id,
             team AS enemy_team{lanes_col}
         FROM match_player
-        WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}
+        WHERE {match_mode_filter} AND {game_mode_filter} {info_filters}
             AND team IN ('Team0', 'Team1')
             AND hero_id IN ({})
         GROUP BY match_id, team{enemy_having_clause}
@@ -860,8 +880,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
         settings.push("optimize_use_projections = 0");
     }
     let settings_clause = settings.join(", ");
-    let match_filters =
-        format!("match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}");
+    let match_filters = format!("{match_mode_filter} AND {game_mode_filter} {info_filters}");
     /*
      * The no-hero path reads the materialized `upgrades.*` columns (migration 30):
      * upgrade-only elements with buy_time > 0, baked in at insert time, so the

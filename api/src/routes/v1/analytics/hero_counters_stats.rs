@@ -14,7 +14,7 @@ use super::common_filters::{
 };
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::matches::types::GameMode;
+use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, default_true_option,
     parse_steam_id_option,
@@ -34,6 +34,16 @@ pub(super) struct HeroCounterStatsQuery {
     )]
     #[param(inline, default = "normal")]
     game_mode: Option<GameMode>,
+    /// Filter matches based on the match mode. Valid values: `unranked`, `private_lobby`, `coop_bot`, `ranked`, `server_test`, `tutorial`, `hero_labs`. **Default:** `ranked,unranked`.
+    #[param(value_type = Option<String>)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(
+            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::routes::v1::matches::types::MatchMode>(), 0..=4))"
+        )
+    )]
+    match_mode: Option<Vec<MatchMode>>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -148,8 +158,8 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
     }
     .build();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let match_filters =
-        format!("match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter}{info_filters}");
+    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
+    let match_filters = format!("{match_mode_filter} AND {game_mode_filter}{info_filters}");
     let mut p1_filters = vec![match_filters.clone()];
     let mut p2_filters = vec![match_filters];
     #[allow(deprecated)]

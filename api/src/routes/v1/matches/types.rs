@@ -260,13 +260,20 @@ impl MatchMode {
     /// If specific modes are provided, filters to those modes.
     /// If None, defaults to `Ranked` and `Unranked`.
     pub(crate) fn sql_filter(match_modes: Option<&[Self]>) -> String {
+        Self::sql_filter_with_prefix(match_modes, "")
+    }
+
+    /// Same as [`Self::sql_filter`] but qualifies the column reference with the given
+    /// prefix (e.g. `"mp."`). Use when the surrounding query joins another table that
+    /// also has a `match_mode` column.
+    pub(crate) fn sql_filter_with_prefix(match_modes: Option<&[Self]>, prefix: &str) -> String {
         match match_modes {
             Some(modes) if !modes.is_empty() => {
                 if modes.len() == 1 {
-                    format!("match_mode = '{}'", modes[0])
+                    format!("{prefix}match_mode = '{}'", modes[0])
                 } else {
                     format!(
-                        "match_mode IN ({})",
+                        "{prefix}match_mode IN ({})",
                         modes
                             .iter()
                             .map(|m| format!("'{m}'"))
@@ -275,8 +282,38 @@ impl MatchMode {
                     )
                 }
             }
-            _ => format!("match_mode IN ('{}', '{}')", Self::Ranked, Self::Unranked),
+            _ => format!(
+                "{prefix}match_mode IN ('{}', '{}')",
+                Self::Ranked,
+                Self::Unranked
+            ),
         }
+    }
+
+    /// Whether every requested mode is covered by the `Ranked` + `Unranked` set the
+    /// pre-aggregated rollups are built from. A query selecting anything outside that
+    /// set would silently read zero rows from a rollup, so it must use the base table.
+    pub(crate) fn is_agg_servable(match_modes: Option<&[Self]>) -> bool {
+        match match_modes {
+            Some(modes) if !modes.is_empty() => modes
+                .iter()
+                .all(|m| matches!(m, Self::Ranked | Self::Unranked)),
+            _ => true,
+        }
+    }
+
+    /// SQL predicate for the pre-aggregated rollups, or `None` when no predicate is
+    /// needed. The rollups only ingest `Ranked` + `Unranked`, so a request covering
+    /// both already matches every row and the predicate is omitted. Omitting it also
+    /// keeps rows written before `match_mode` joined the rollup grain (stored as
+    /// `Invalid`) counted, so totals stay correct while a rebuild is still in flight.
+    ///
+    /// Callers must first check [`Self::is_agg_servable`]; a non-servable set has no
+    /// valid rollup predicate.
+    pub(crate) fn agg_sql_filter(match_modes: Option<&[Self]>) -> Option<String> {
+        let modes = match_modes?;
+        let narrows = matches!(modes, [Self::Ranked | Self::Unranked]);
+        narrows.then(|| Self::sql_filter(Some(modes)))
     }
 }
 

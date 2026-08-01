@@ -15,6 +15,7 @@ use super::common_filters::{
 };
 use crate::context::AppState;
 use crate::error::APIResult;
+use crate::routes::v1::matches::types::MatchMode;
 use crate::utils::parse::{
     MIN_DEMO_PLAYER_TIMESTAMP, comma_separated_deserialize_option, default_last_month_timestamp,
     parse_steam_id_option,
@@ -33,6 +34,16 @@ pub(super) struct HeroBuildStatsPath {
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(super) struct HeroBuildStatsQuery {
+    /// Filter matches based on the match mode. Valid values: `unranked`, `private_lobby`, `coop_bot`, `ranked`, `server_test`, `tutorial`, `hero_labs`. **Default:** `ranked,unranked`.
+    #[param(value_type = Option<String>)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(
+            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::routes::v1::matches::types::MatchMode>(), 0..=4))"
+        )
+    )]
+    match_mode: Option<Vec<MatchMode>>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago. **Minimum:** March 1, 2026.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -103,6 +114,7 @@ fn build_query(hero_id: u32, valid_build_ids: &[i32], query: &HeroBuildStatsQuer
         max_duration_s: query.max_duration_s,
     }
     .build_with_prefix("mp.");
+    let match_mode_filter = MatchMode::sql_filter_with_prefix(query.match_mode.as_deref(), "mp.");
     let mut player_filters = vec![format!("mp.hero_id = {hero_id}")];
     #[allow(deprecated)]
     if let Some(account_id) = query.account_id {
@@ -135,7 +147,7 @@ fn build_query(hero_id: u32, valid_build_ids: &[i32], query: &HeroBuildStatsQuer
         wins + losses AS matches,
         uniq(mp.account_id) AS players
     FROM match_player mp
-    WHERE mp.match_mode IN ('Ranked', 'Unranked') AND mp.game_mode = 1
+    WHERE {match_mode_filter} AND mp.game_mode = 1
       AND mp.demo_processed = 1 AND mp.hero_build_id != 0
       {info_filters} {player_filters}
     GROUP BY hero_id, hero_build_id
