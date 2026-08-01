@@ -16,7 +16,6 @@ use crate::context::batchers::Batchers;
 use crate::context::config::Config;
 use crate::services::assets::client::AssetsClient;
 use crate::services::assets::versions::store::VersionStore;
-use crate::services::rank_predictor::RankPredictor;
 use crate::services::rate_limiter::RateLimitClient;
 use crate::services::request_logger::RequestLogger;
 use crate::services::steam::client::SteamClient;
@@ -64,7 +63,6 @@ pub(crate) struct AppState {
     pub(crate) rate_limit_client: RateLimitClient,
     pub(crate) request_logger: Arc<RequestLogger>,
     pub(crate) batchers: Batchers,
-    pub(crate) rank_predictor: Option<Arc<RankPredictor>>,
     pub(crate) steam_search_index: SteamSearchIndex,
     pub(crate) version_store: VersionStore,
     pub(crate) demo_query_queue: crate::routes::v1::matches::demo::DemoQueryQueue,
@@ -326,19 +324,6 @@ impl AppState {
         debug!("Creating Request Logger");
         let request_logger = Arc::new(RequestLogger::new(ch_client.clone()));
 
-        // Load rank predictor model (optional – API starts without it if file is missing)
-        debug!("Loading rank predictor model");
-        let rank_predictor = match RankPredictor::load().await {
-            Ok(p) => {
-                debug!("Rank predictor loaded successfully");
-                Some(Arc::new(p))
-            }
-            Err(e) => {
-                warn!("Rank predictor not loaded (rank-predict endpoint will return 503): {e}");
-                None
-            }
-        };
-
         // Create batchers
         debug!("Creating batchers");
         let batchers = Batchers::new(&ch_client, &ch_client_ro);
@@ -406,7 +391,6 @@ impl AppState {
             rate_limit_client,
             request_logger,
             batchers,
-            rank_predictor,
             steam_search_index,
             version_store,
             demo_query_queue,

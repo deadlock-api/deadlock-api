@@ -1,416 +1,85 @@
-use std::collections::HashMap;
-use std::sync::LazyLock;
-
 use axum::Json;
 use axum::body::Bytes;
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::IntoResponse;
 use cached::macros::cached;
-use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use tracing::debug;
 use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti, in_clause};
-use crate::services::rank_predictor::{
-    N_FEATURES, RankPrediction, RankPredictorError, badge_to_idx, idx_to_badge,
-};
 use crate::utils::types::AccountIdQuery;
 
-const N_MATCHES: usize = 30;
-const RECENCY_ALPHA: f64 = 0.85;
-
-static W_NORM: LazyLock<[f64; N_MATCHES]> = LazyLock::new(|| {
-    let mut weights = [0.0f64; N_MATCHES];
-    let mut sum = 0.0f64;
-    for (i, w) in weights.iter_mut().enumerate() {
-        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-        {
-            *w = RECENCY_ALPHA.powi(i as i32);
-        }
-        sum += *w;
-    }
-    for w in &mut weights {
-        *w /= sum;
-    }
-    weights
-});
-
-#[derive(Debug, Clone, Row, Deserialize)]
-pub(crate) struct MatchRow {
-    account_id: u32,
-    match_id: u64,
-    hero_id: u8,
-    player_kills: u32,
-    player_deaths: u32,
-    player_assists: u32,
-    player_denies: u32,
-    player_net_worth: u32,
-    player_won: bool,
-    max_shots_hit: u32,
-    max_shots_missed: u32,
-    match_duration_s: u32,
-    average_badge: Option<u32>,
-    enemy_team: u8,
-    max_creep_kills: u32,
-    max_possible_creeps: u32,
+/// Convert a raw badge value (11–116) to a 1-based contiguous index (1–66).
+///
+/// Formula: `(badge / 10 - 1) * 6 + badge % 10`
+/// e.g. badge 82 → (8-1)*6 + 2 = 44
+fn badge_to_idx(badge: i32) -> i32 {
+    (badge / 10 - 1) * 6 + badge % 10
 }
 
-pub(crate) struct RankPredictMatchesQuery;
-
-impl BatchQueryMulti for RankPredictMatchesQuery {
-    type Key = u32;
-    type Value = MatchRow;
-
-    fn batch_window_ms() -> u64 {
-        1000
-    }
-
-    fn build_query(keys: &[u32]) -> String {
-        format!(
-            "SELECT
-                account_id,
-                match_id,
-                hero_id,
-                kills AS player_kills,
-                deaths AS player_deaths,
-                assists AS player_assists,
-                denies AS player_denies,
-                net_worth AS player_net_worth,
-                won AS player_won,
-                max_shots_hit,
-                max_shots_missed,
-                duration_s AS match_duration_s,
-                average_badge,
-                if(team = 'Team0', 1, 0) AS enemy_team,
-                max_creep_kills,
-                max_possible_creeps
-            FROM (
-                SELECT
-                    account_id,
-                    match_id,
-                    hero_id,
-                    team,
-                    kills,
-                    deaths,
-                    assists,
-                    denies,
-                    net_worth,
-                    won,
-                    max_shots_hit,
-                    max_shots_missed,
-                    duration_s,
-                    average_badge,
-                    max_creep_kills,
-                    max_possible_creeps
-                FROM match_player
-                WHERE account_id IN ({})
-                  AND match_mode IN ('Ranked', 'Unranked')
-                  AND game_mode = 'Normal'
-                  AND average_badge > 0
-                ORDER BY account_id, match_id DESC
-                LIMIT 1 BY account_id, match_id
-            )
-            ORDER BY account_id, match_id DESC
-            LIMIT {} BY account_id
-            SETTINGS log_comment = 'rank_predict_matches', apply_patch_parts = 0",
-            in_clause(keys),
-            N_MATCHES,
-        )
-    }
-
-    fn key_of(value: &MatchRow) -> u32 {
-        value.account_id
-    }
-}
-
-pub(crate) type RankPredictMatchesBatcher = ClickhouseBatcherMulti<RankPredictMatchesQuery>;
-
-#[derive(Debug, Clone, Row, Deserialize)]
-struct EnemyStatsRow {
-    match_id: u64,
-    team: i8,
-    nw_avg: f64,
-    dmg_avg: f64,
-}
-
-#[derive(Debug, Clone)]
-struct Match {
-    hero_id: u32,
-    player_kills: u32,
-    player_deaths: u32,
-    player_assists: u32,
-    player_denies: u32,
-    player_net_worth: f64,
-    won: bool,
-    duration_s: u32,
-    own_team_badge: f64,
-    enemy_team_badge: f64,
-    enemy_nw_avg: f64,
-    enemy_dmg_avg: f64,
-    cs_efficiency: Option<f64>,
-    shot_accuracy: Option<f64>,
+/// Convert a badge index (1..=66) back to a badge ID.
+///
+/// Tiers 1–11, 6 sub-ranks each. Index 1 → badge 11, index 66 → badge 116.
+/// Out-of-range values are clamped.
+fn idx_to_badge(idx: i32) -> i32 {
+    let idx = idx.clamp(1, 66);
+    10 * ((idx - 1) / 6) + 11 + (idx - 1) % 6
 }
 
 #[derive(Debug, Serialize, ToSchema)]
 pub(crate) struct RankPredictResponse {
-    #[serde(flatten)]
-    pub(crate) prediction: RankPrediction,
-    /// Number of recent matches used for the prediction
-    pub(crate) matches_used: usize,
+    /// Rank badge, `tier * 10 + subrank`. `0` when no recent ranked match reports a rank.
+    /// See more: <https://api.deadlock-api.com/v1/assets/ranks>
+    pub(crate) badge: u32,
+    /// Rank tier, `0` when unknown.
+    pub(crate) rank: u32,
+    /// Sub-rank within the tier, `0` when unknown.
+    pub(crate) subrank: u32,
 }
 
+/// `initial_display_rank` is `0` while the player is still in placement games and is only set on
+/// ranked matches. Restricting the scan to the player's recent ranked matches keeps the query off a
+/// full `account_id` scan, which the `(match_id, account_id)` sort key can't serve.
+///
+/// Returns `None` when none of those matches carries a rank.
 #[cached(
     ttl = 600,
     convert = "{ account_id }",
     sync_writes = "by_key",
     key = "u32"
 )]
-#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
-async fn fetch_matches(
-    batcher: &RankPredictMatchesBatcher,
-    ch: &clickhouse::Client,
+pub(crate) async fn fetch_last_ranked_match_badge(
+    ch_client: &clickhouse::Client,
     account_id: u32,
-) -> Result<Vec<Match>, APIError> {
-    let match_rows = batcher.load(account_id).await?;
-
-    if match_rows.len() < N_MATCHES {
-        return Ok(Vec::new());
-    }
-
-    // Explicit (match_id, team) tuples let ClickHouse prune match_player by primary key
-    // instead of scanning the full table.
-    let tuples: String = match_rows
-        .iter()
-        .map(|r| format!("({}, {})", r.match_id, r.enemy_team))
-        .join(", ");
-
-    let enemy_query = format!(
-        "SELECT
-            match_id,
-            team,
-            avg(net_worth)         AS nw_avg,
-            avg(max_player_damage) AS dmg_avg
-        FROM match_player
-        WHERE (match_id, team) IN ({tuples})
-        GROUP BY match_id, team
-        SETTINGS log_comment = 'rank_predict_enemy_stats', apply_patch_parts = 0"
-    );
-
-    // Creep stats (max_creep_kills / max_possible_creeps) are the queried player's own
-    // per-match values, so they are folded into the batched matches query above instead
-    // of being fetched per-request here.
-    let enemy_stats: Vec<EnemyStatsRow> = ch
-        .query(&enemy_query)
-        .fetch_all()
+) -> Result<Option<u32>, APIError> {
+    ch_client
+        .query(
+            "
+            SELECT assumeNotNull(player_rank_initial_display_rank)
+            FROM match_player
+            WHERE
+                account_id = ?
+                AND match_id IN (
+                    SELECT match_id
+                    FROM match_player
+                    WHERE account_id = ? AND match_mode = 'Ranked'
+                    ORDER BY match_id DESC
+                    LIMIT 20
+                )
+                AND player_rank_initial_display_rank > 0
+            ORDER BY match_id DESC
+            LIMIT 1
+            SETTINGS log_comment = 'rank_predict', apply_patch_parts = 0
+            ",
+        )
+        .bind(account_id)
+        .bind(account_id)
+        .fetch_optional()
         .await
-        .map_err(|e| APIError::internal(format!("ClickHouse query failed: {e}")))?;
-
-    let enemy_map: HashMap<(u64, i8), &EnemyStatsRow> = enemy_stats
-        .iter()
-        .map(|e| ((e.match_id, e.team), e))
-        .collect();
-
-    Ok(match_rows
-        .into_iter()
-        .map(|r| {
-            // Valve stopped sending per-team averages on 2026-07-30, so own and enemy
-            // now share the single match-level badge.
-            let badge = r.average_badge.unwrap_or(0).cast_signed();
-            let (enemy_nw, enemy_dmg) = enemy_map
-                .get(&(r.match_id, r.enemy_team.cast_signed()))
-                .map_or((0.0, 0.0), |e| (e.nw_avg, e.dmg_avg));
-            let shots_total = r.max_shots_hit + r.max_shots_missed;
-            let shot_accuracy = if shots_total == 0 {
-                None
-            } else {
-                Some(f64::from(r.max_shots_hit) / f64::from(shots_total))
-            };
-            let cs_efficiency =
-                Some(f64::from(r.max_creep_kills) / f64::from(r.max_possible_creeps.max(1)));
-            Match {
-                hero_id: r.hero_id.into(),
-                player_kills: r.player_kills,
-                player_deaths: r.player_deaths,
-                player_assists: r.player_assists,
-                player_denies: r.player_denies,
-                player_net_worth: f64::from(r.player_net_worth),
-                won: r.player_won,
-                duration_s: r.match_duration_s,
-                own_team_badge: f64::from(badge_to_idx(badge)),
-                enemy_team_badge: f64::from(badge_to_idx(badge)),
-                enemy_nw_avg: enemy_nw,
-                enemy_dmg_avg: enemy_dmg,
-                cs_efficiency,
-                shot_accuracy,
-            }
-        })
-        .collect())
-}
-
-#[allow(clippy::cast_precision_loss)]
-fn kills_per_min(m: &Match) -> f64 {
-    let dur = (f64::from(m.duration_s) / 60.0).max(1.0);
-    f64::from(m.player_kills) / dur
-}
-
-#[allow(
-    clippy::cast_precision_loss,
-    clippy::cast_possible_truncation,
-    clippy::cast_possible_wrap,
-    clippy::too_many_lines
-)]
-fn aggregate_features(matches: &[Match]) -> Option<[f64; N_FEATURES]> {
-    if matches.len() < N_MATCHES {
-        return None;
-    }
-
-    let window = &matches[..N_MATCHES];
-    let w_norm: &[f64; N_MATCHES] = &W_NORM;
-
-    // Build hero averages and total kills/min from the window only (matching Python predict.py).
-    let mut hero_sums: HashMap<u32, (f64, u32)> = HashMap::new();
-    let mut total_kills_pm = 0.0f64;
-    for m in window {
-        let e = hero_sums.entry(m.hero_id).or_insert((0.0, 0));
-        e.0 += m.own_team_badge;
-        e.1 += 1;
-        total_kills_pm += kills_per_min(m);
-    }
-    let hist_kills_pm = total_kills_pm / N_MATCHES as f64;
-    let hero_avg: HashMap<u32, f64> = hero_sums
-        .iter()
-        .map(|(&hero, &(sum, cnt))| (hero, sum / f64::from(cnt)))
-        .collect();
-    let hist_hero_diversity = hero_avg.len() as f64;
-    let per_hero_max = hero_avg.values().copied().fold(f64::NEG_INFINITY, f64::max);
-
-    let (own_b, enemy_b, hero_hist_badges): (Vec<f64>, Vec<f64>, Vec<f64>) = window
-        .iter()
-        .map(|m| {
-            let hist = *hero_avg.get(&m.hero_id).unwrap_or(&m.own_team_badge);
-            (m.own_team_badge, m.enemy_team_badge, hist)
-        })
-        .multiunzip();
-
-    let kills_pm: Vec<f64> = window.iter().map(kills_per_min).collect();
-
-    let (enemy_nw_sum, enemy_dmg_sum) = window.iter().fold((0.0f64, 0.0f64), |(nw, dmg), m| {
-        (nw + m.enemy_nw_avg, dmg + m.enemy_dmg_avg)
-    });
-    let enemy_nw_avg_mean = enemy_nw_sum / N_MATCHES as f64;
-    let enemy_dmg_avg_mean = enemy_dmg_sum / N_MATCHES as f64;
-
-    let wmean = |vals: &[f64], ws: &[f64]| -> f64 { vals.iter().zip(ws).map(|(v, w)| v * w).sum() };
-    let wstd = |vals: &[f64], ws: &[f64]| -> f64 {
-        let mean = wmean(vals, ws);
-        vals.iter()
-            .zip(ws)
-            .map(|(v, w)| w * (v - mean).powi(2))
-            .sum::<f64>()
-            .sqrt()
-    };
-    let r10mean = |vals: &[f64]| vals[..10].iter().sum::<f64>() / 10.0;
-
-    // Weighted mean over a subset of indices with weights re-normalized over
-    // the surviving rows. Matches the Python pipeline's NaN-skipping behavior
-    // for shot_accuracy_wmean and nw_ratio_wmean.
-    let wmean_masked = |vals: &[(usize, f64)], ws: &[f64], default: f64| -> f64 {
-        let wsum: f64 = vals.iter().map(|&(i, _)| ws[i]).sum();
-        if wsum <= 0.0 {
-            return default;
-        }
-        vals.iter().map(|&(i, v)| v * (ws[i] / wsum)).sum()
-    };
-
-    let own_badge_mean = own_b.iter().sum::<f64>() / N_MATCHES as f64;
-    let enemy_badge_mean = enemy_b.iter().sum::<f64>() / N_MATCHES as f64;
-
-    let cs_efficiencies: Vec<f64> = window.iter().filter_map(|m| m.cs_efficiency).collect();
-    let cs_efficiency_mean = if cs_efficiencies.is_empty() {
-        0.0
-    } else {
-        cs_efficiencies.iter().sum::<f64>() / cs_efficiencies.len() as f64
-    };
-
-    let cs_x_hero_vals: Vec<f64> = window
-        .iter()
-        .zip(hero_hist_badges.iter())
-        .filter_map(|(m, &hero_badge)| m.cs_efficiency.map(|cs| cs * hero_badge.max(1.0)))
-        .collect();
-    let cs_x_hero_badge = if cs_x_hero_vals.is_empty() {
-        0.0
-    } else {
-        cs_x_hero_vals.iter().sum::<f64>() / cs_x_hero_vals.len() as f64
-    };
-
-    // New per-match per-game-context scalars.
-    let per_match: Vec<(f64, f64, f64, f64)> = window
-        .iter()
-        .map(|m| {
-            let dur_min = (f64::from(m.duration_s) / 60.0).max(1.0);
-            let kda =
-                f64::from(m.player_kills + m.player_assists) / f64::from(m.player_deaths.max(1));
-            let denies_pm = f64::from(m.player_denies) / dur_min;
-            let nw_pm = m.player_net_worth / dur_min;
-            let win = if m.won { 1.0 } else { 0.0 };
-            (kda, denies_pm, nw_pm, win)
-        })
-        .collect();
-    let kdas: Vec<f64> = per_match.iter().map(|t| t.0).collect();
-    let denies_pms: Vec<f64> = per_match.iter().map(|t| t.1).collect();
-    let nw_pms: Vec<f64> = per_match.iter().map(|t| t.2).collect();
-    let wins: Vec<f64> = per_match.iter().map(|t| t.3).collect();
-
-    let shot_acc_vals: Vec<(usize, f64)> = window
-        .iter()
-        .enumerate()
-        .filter_map(|(i, m)| m.shot_accuracy.map(|v| (i, v)))
-        .collect();
-    let shot_accuracy_wmean = wmean_masked(&shot_acc_vals, w_norm, 0.0);
-
-    let nw_ratio_vals: Vec<(usize, f64)> = window
-        .iter()
-        .enumerate()
-        .filter_map(|(i, m)| {
-            if m.enemy_nw_avg > 0.0 {
-                Some((i, m.player_net_worth / m.enemy_nw_avg))
-            } else {
-                None
-            }
-        })
-        .collect();
-    let nw_ratio_wmean = wmean_masked(&nw_ratio_vals, w_norm, 1.0);
-
-    Some([
-        wmean(&own_b, w_norm),
-        wmean(&enemy_b, w_norm),
-        own_badge_mean,
-        enemy_badge_mean,
-        r10mean(&own_b),
-        r10mean(&enemy_b),
-        wstd(&own_b, w_norm),
-        enemy_nw_avg_mean,
-        enemy_dmg_avg_mean,
-        wmean(&hero_hist_badges, w_norm),
-        per_hero_max,
-        hist_kills_pm,
-        hist_hero_diversity,
-        wmean(&kills_pm, w_norm),
-        r10mean(&kills_pm),
-        cs_efficiency_mean,
-        cs_x_hero_badge,
-        shot_accuracy_wmean,
-        wmean(&wins, w_norm),
-        wmean(&nw_pms, w_norm),
-        wmean(&kdas, w_norm),
-        wmean(&denies_pms, w_norm),
-        nw_ratio_wmean,
-    ])
+        .map_err(|e| APIError::internal(format!("ClickHouse query failed: {e}")))
 }
 
 #[utoipa::path(
@@ -421,40 +90,17 @@ fn aggregate_features(matches: &[Match]) -> Option<[f64; N_FEATURES]> {
         (status = OK, body = RankPredictResponse),
         (status = BAD_REQUEST, description = "Invalid account ID"),
         (status = FORBIDDEN, description = "User is protected or endpoint unavailable"),
-        (status = UNPROCESSABLE_ENTITY, description = "Not enough recent ranked matches (need 30)"),
-        (status = SERVICE_UNAVAILABLE, description = "Rank prediction model not loaded"),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
-        (status = INTERNAL_SERVER_ERROR, description = "Prediction failed"),
+        (status = INTERNAL_SERVER_ERROR, description = "Rank lookup failed"),
     ),
     tags = ["Players"],
-    summary = "Rank Predict",
+    summary = "Rank",
     description = "
-Predicts a player's current rank badge from their last 30 ranked/unranked matches.
-Requires at least 30 eligible matches (Ranked or Unranked, Normal game mode) with valid badge data.
+Returns the player's rank as Valve reported it on their latest ranked match.
 
-> **This is an ML prediction and may be inaccurate.** The model has no access to the player's
-> actual hidden MMR — it infers rank from match context signals only.
-
-### Model Accuracy (5-fold cross-validation)
-
-| Metric | Value |
-|--------|-------|
-| R²     | 0.949 |
-| MAE    | 1.08 sub-ranks |
-| RMSE   | 1.89 sub-ranks |
-| Within ±1 sub-rank | 77.6% |
-| Within ±3 sub-rank | 93.9% |
-| Within ±5 sub-rank | 97.7% |
-| Within ±6 sub-rank | 98.6% |
-| Within ±10 sub-rank | 99.6% |
-
-Accuracy by tier:
-
-| Tier range | n | MAE |
-|------------|---|-----|
-| Low (1-4)  | 404 | 3.68 sub-ranks |
-| Mid (5-7)  | 777 | 2.91 sub-ranks |
-| High (8-11)| 25,556 | 0.98 sub-ranks |
+Only ranked matches carry a rank, and it stays unset while the player is in placement games.
+When none of the player's recent ranked matches reports a rank, `badge`, `rank` and `subrank` are
+all `0`, which is the `Obscurus` (unranked) tier.
 
 ### Rate Limits:
 | Type | Limit |
@@ -476,45 +122,15 @@ pub(super) async fn rank_predict(
         return Err(APIError::protected_user());
     }
 
-    let prediction = predict_rank_for_account(&state, account_id).await?;
+    let badge = fetch_last_ranked_match_badge(&state.ch_client_ro, account_id)
+        .await?
+        .unwrap_or_default();
 
     Ok(Json(RankPredictResponse {
-        prediction,
-        matches_used: N_MATCHES,
+        badge,
+        rank: badge / 10,
+        subrank: badge % 10,
     }))
-}
-
-pub(crate) async fn predict_rank_for_account(
-    state: &AppState,
-    account_id: u32,
-) -> APIResult<RankPrediction> {
-    let predictor = state.rank_predictor.as_ref().ok_or_else(|| {
-        APIError::status_msg(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "Rank prediction model is not loaded.",
-        )
-    })?;
-
-    let matches = fetch_matches(
-        &state.batchers.rank_predict_matches,
-        &state.ch_client_ro,
-        account_id,
-    )
-    .await?;
-
-    let features = aggregate_features(&matches).ok_or_else(|| {
-        APIError::status_msg(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            format!(
-                "Not enough eligible matches for prediction (found {}, need {N_MATCHES}).",
-                matches.len()
-            ),
-        )
-    })?;
-
-    predictor
-        .predict(features)
-        .map_err(|e: RankPredictorError| APIError::internal(format!("Inference failed: {e}")))
 }
 
 #[derive(Debug, Default, Clone, Copy, Deserialize, ToSchema)]
@@ -547,21 +163,19 @@ pub(crate) struct RankPredictImageQuery {
     path = "/{account_id}/rank-predict/image",
     params(AccountIdQuery, RankPredictImageQuery),
     responses(
-        (status = OK, description = "Predicted rank badge image", content(
+        (status = OK, description = "Rank badge image", content(
             ([u8] = "image/png"),
             ([u8] = "image/webp"),
         )),
         (status = BAD_REQUEST, description = "Invalid account ID"),
         (status = FORBIDDEN, description = "User is protected or endpoint unavailable"),
-        (status = NOT_FOUND, description = "No image available for the predicted rank"),
-        (status = UNPROCESSABLE_ENTITY, description = "Not enough recent ranked matches (need 30)"),
-        (status = SERVICE_UNAVAILABLE, description = "Rank prediction model not loaded"),
+        (status = NOT_FOUND, description = "No image available for the rank"),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
-        (status = INTERNAL_SERVER_ERROR, description = "Prediction failed"),
+        (status = INTERNAL_SERVER_ERROR, description = "Rank lookup failed"),
     ),
     tags = ["Players"],
-    summary = "Rank Predict Image",
-    description = "Returns the predicted rank badge image directly (binary), not a URL. Use `?format=webp` for WebP."
+    summary = "Rank Image",
+    description = "Returns the rank badge image directly (binary), not a URL. Players whose recent ranked matches carry no rank get the `Obscurus` image. Use `?format=webp` for WebP."
 )]
 pub(super) async fn rank_predict_image(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
@@ -576,13 +190,15 @@ pub(super) async fn rank_predict_image(
         return Err(APIError::protected_user());
     }
 
-    let prediction = predict_rank_for_account(&state, account_id).await?;
-    serve_rank_image(&state, prediction.badge, format).await
+    let badge = fetch_last_ranked_match_badge(&state.ch_client_ro, account_id)
+        .await?
+        .unwrap_or_default();
+    serve_rank_image(&state, badge, format).await
 }
 
 async fn serve_rank_image(
     state: &AppState,
-    badge: i32,
+    badge: u32,
     format: RankPredictImageFormat,
 ) -> APIResult<(HeaderMap, Bytes)> {
     let rank = badge / 10;
@@ -594,13 +210,10 @@ async fn serve_rank_image(
         .await
         .map_err(|e| APIError::internal(format!("Failed to fetch ranks: {e}")))?
         .iter()
-        .find(|r| r.tier == u32::try_from(rank).unwrap_or_default())
+        .find(|r| r.tier == rank)
         .and_then(|r| r.images.get(&format!("large{suffix}")).cloned())
         .ok_or_else(|| {
-            APIError::status_msg(
-                StatusCode::NOT_FOUND,
-                "No image available for the predicted rank.",
-            )
+            APIError::status_msg(StatusCode::NOT_FOUND, "No image available for the rank.")
         })?;
 
     let response = reqwest::get(&image_url)
@@ -663,21 +276,19 @@ pub(crate) struct RankPredictAvgImageQuery {
     path = "/rank-predict/image",
     params(RankPredictAvgImageQuery),
     responses(
-        (status = OK, description = "Average predicted rank badge image", content(
+        (status = OK, description = "Average rank badge image", content(
             ([u8] = "image/png"),
             ([u8] = "image/webp"),
         )),
         (status = BAD_REQUEST, description = "Invalid or missing account IDs"),
         (status = FORBIDDEN, description = "One of the users is protected"),
-        (status = NOT_FOUND, description = "No image available for the predicted rank"),
-        (status = UNPROCESSABLE_ENTITY, description = "Not enough recent ranked matches for one or more accounts"),
-        (status = SERVICE_UNAVAILABLE, description = "Rank prediction model not loaded"),
+        (status = NOT_FOUND, description = "No image available for the rank"),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
-        (status = INTERNAL_SERVER_ERROR, description = "Prediction failed"),
+        (status = INTERNAL_SERVER_ERROR, description = "Rank lookup failed"),
     ),
     tags = ["Players"],
-    summary = "Rank Predict Avg Image",
-    description = "Returns the average predicted rank badge image (binary) for a comma-separated list of account IDs. Use `?format=webp` for WebP."
+    summary = "Rank Avg Image",
+    description = "Returns the average rank badge image (binary) for a comma-separated list of account IDs. Accounts without a rank are left out of the average; if none of them has one, the `Obscurus` image is returned. Use `?format=webp` for WebP."
 )]
 pub(super) async fn rank_predict_avg_image(
     Query(RankPredictAvgImageQuery {
@@ -711,37 +322,57 @@ pub(super) async fn rank_predict_avg_image(
         }
     }
 
-    // Predict for each account independently, skipping any that fail (e.g. not enough
-    // eligible matches) so the image still renders as long as at least one succeeds.
-    let predictions: Vec<RankPrediction> = futures::future::join_all(
+    let badges: Vec<u32> = futures::future::try_join_all(
         unique_ids
             .iter()
-            .map(|&account_id| predict_rank_for_account(&state, account_id)),
+            .map(|&account_id| fetch_last_ranked_match_badge(&state.ch_client_ro, account_id)),
     )
-    .await
+    .await?
     .into_iter()
-    .filter_map(|res| match res {
-        Ok(prediction) => Some(prediction),
-        Err(e) => {
-            debug!("Skipping account in rank-predict avg image: {e}");
-            None
-        }
-    })
+    .flatten()
     .collect();
 
-    if predictions.is_empty() {
-        return Err(APIError::status_msg(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            "No account had enough eligible matches for prediction.",
-        ));
-    }
-
+    // Badge values are not contiguous (16 is followed by 21), so the average is taken over the
+    // badge index rather than the badge itself.
     #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
-    let avg_idx = {
-        let sum: f32 = predictions.iter().map(|p| p.raw_score).sum();
-        (sum / predictions.len() as f32).round() as i32
+    let avg_badge = if badges.is_empty() {
+        0
+    } else {
+        let sum: i32 = badges.iter().map(|&b| badge_to_idx(b.cast_signed())).sum();
+        idx_to_badge((f64::from(sum) / badges.len() as f64).round() as i32).cast_unsigned()
     };
-    let avg_badge = idx_to_badge(avg_idx);
 
     serve_rank_image(&state, avg_badge, format).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_idx_to_badge_boundaries() {
+        assert_eq!(idx_to_badge(1), 11);
+        assert_eq!(idx_to_badge(6), 16);
+        assert_eq!(idx_to_badge(7), 21);
+        assert_eq!(idx_to_badge(66), 116);
+        assert_eq!(idx_to_badge(0), 11);
+        assert_eq!(idx_to_badge(67), 116);
+    }
+
+    #[test]
+    fn test_badge_to_idx() {
+        assert_eq!(badge_to_idx(11), 1);
+        assert_eq!(badge_to_idx(16), 6);
+        assert_eq!(badge_to_idx(21), 7);
+        assert_eq!(badge_to_idx(82), 44);
+        assert_eq!(badge_to_idx(116), 66);
+    }
+
+    #[test]
+    fn test_badge_idx_roundtrip() {
+        for idx in 1..=66 {
+            let badge = idx_to_badge(idx);
+            assert_eq!(badge_to_idx(badge), idx);
+        }
+    }
 }

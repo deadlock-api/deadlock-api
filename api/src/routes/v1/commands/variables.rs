@@ -21,7 +21,7 @@ use crate::routes::v1::players::match_history::{
 };
 use crate::routes::v1::players::mmr;
 use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
-use crate::routes::v1::players::rank_predict::predict_rank_for_account;
+use crate::routes::v1::players::rank_predict::fetch_last_ranked_match_badge;
 use crate::services::assets::client::AssetsClient;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
@@ -288,9 +288,8 @@ impl Variable {
 
     pub(super) fn get_description(self) -> &'static str {
         match self {
-            Self::Rank | Self::RankImg => "Get the rank",
-            Self::PredictedRank | Self::PredictedRankImg => {
-                "Get the predicted rank from the last 30 ranked/unranked matches"
+            Self::Rank | Self::RankImg | Self::PredictedRank | Self::PredictedRankImg => {
+                "Get the rank"
             }
             Self::HeroHoursPlayed => {
                 "Get the total hours played in all matches for a specific hero"
@@ -380,7 +379,7 @@ impl Variable {
         context: &ResolverContext,
     ) -> Result<String, VariableResolveError> {
         match self {
-            Self::Rank => {
+            Self::Rank | Self::PredictedRank => {
                 let (rank, subrank) = Self::fetch_player_ranks(state, steam_id).await?;
                 let ranks = state.assets_client.fetch_ranks().await?;
                 let rank = ranks
@@ -389,7 +388,7 @@ impl Variable {
                     .ok_or(VariableResolveError::NoData("rank"))?;
                 Ok(format!("{} {subrank}", rank.name))
             }
-            Self::RankImg => {
+            Self::RankImg | Self::PredictedRankImg => {
                 let (rank, _) = Self::fetch_player_ranks(state, steam_id).await?;
                 state
                     .assets_client
@@ -736,30 +735,6 @@ impl Variable {
                     .map(|r| r.to_string())
                     .map_err(Into::into)
             }
-            Self::PredictedRank => {
-                let prediction = predict_rank_for_account(state, steam_id).await?;
-                let rank = prediction.badge / 10;
-                let subrank = prediction.badge % 10;
-                let ranks = state.assets_client.fetch_ranks().await?;
-                let rank = ranks
-                    .iter()
-                    .find(|r| r.tier == u32::try_from(rank).unwrap_or_default())
-                    .ok_or(VariableResolveError::NoData("predicted rank"))?;
-                Ok(format!("{} {subrank}", rank.name))
-            }
-            Self::PredictedRankImg => {
-                let prediction = predict_rank_for_account(state, steam_id).await?;
-                let rank = prediction.badge / 10;
-                state
-                    .assets_client
-                    .fetch_ranks()
-                    .await?
-                    .iter()
-                    .find(|r| r.tier == u32::try_from(rank).unwrap_or_default())
-                    .and_then(|r| r.images.get("large").or(r.images.get("large_webp")))
-                    .cloned()
-                    .ok_or(VariableResolveError::NoData("predicted rank img"))
-            }
             Self::MMRHistoryRank => {
                 let mmr = get_last_mmr_history(&state.ch_client_ro, steam_id)
                     .await?
@@ -799,43 +774,10 @@ impl Variable {
         {
             return Ok((rank, subrank));
         }
-        let badge = Self::fetch_last_ranked_match_badge(&state.ch_client_ro, steam_id)
+        let badge = fetch_last_ranked_match_badge(&state.ch_client_ro, steam_id)
             .await?
             .ok_or(VariableResolveError::NoData("rank"))?;
         Ok((badge / 10, badge % 10))
-    }
-
-    /// `initial_display_rank` is `0` while the player is still in placement games and is only set
-    /// on ranked matches. Restricting the scan to the player's recent ranked matches keeps the
-    /// query off a full `account_id` scan, which the `(match_id, account_id)` sort key can't serve.
-    async fn fetch_last_ranked_match_badge(
-        ch_client: &clickhouse::Client,
-        steam_id: u32,
-    ) -> clickhouse::error::Result<Option<u32>> {
-        ch_client
-            .query(
-                "
-                SELECT assumeNotNull(player_rank_initial_display_rank)
-                FROM match_player
-                WHERE
-                    account_id = ?
-                    AND match_id IN (
-                        SELECT match_id
-                        FROM match_player
-                        WHERE account_id = ? AND match_mode = 'Ranked'
-                        ORDER BY match_id DESC
-                        LIMIT 20
-                    )
-                    AND player_rank_initial_display_rank > 0
-                ORDER BY match_id DESC
-                LIMIT 1
-                SETTINGS log_comment = 'variables', apply_patch_parts = 0
-                ",
-            )
-            .bind(steam_id)
-            .bind(steam_id)
-            .fetch_optional()
-            .await
     }
 
     async fn fetch_card_ranks(
