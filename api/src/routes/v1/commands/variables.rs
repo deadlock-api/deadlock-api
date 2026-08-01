@@ -21,7 +21,7 @@ use crate::routes::v1::players::match_history::{
 };
 use crate::routes::v1::players::mmr;
 use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
-use crate::routes::v1::players::rank_predict::fetch_last_ranked_match_badge;
+use crate::routes::v1::players::rank::fetch_last_ranked_match_badge;
 use crate::services::assets::client::AssetsClient;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;

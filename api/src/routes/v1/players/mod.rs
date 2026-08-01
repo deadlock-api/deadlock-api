@@ -5,7 +5,7 @@ pub mod hero_stats;
 pub(crate) mod match_history;
 pub mod mate_stats;
 pub mod mmr;
-pub(crate) mod rank_predict;
+pub(crate) mod rank;
 pub mod steam;
 
 use core::time::Duration;
@@ -179,6 +179,7 @@ pub(super) async fn resolve_bot_for_account(
     })
 }
 
+#[allow(deprecated)]
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(match_history::match_history))
@@ -187,13 +188,54 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(mate_stats::mate_stats))
         .routes(routes!(enemy_stats::enemy_stats))
         .routes(routes!(hero_stats::player_hero_stats))
-        .routes(routes!(rank_predict::rank_predict))
-        .routes(routes!(rank_predict::rank_predict_image))
-        .routes(routes!(rank_predict::rank_predict_avg_image))
+        .routes(routes!(rank::rank))
+        .routes(routes!(rank::rank_image))
+        .routes(routes!(rank::rank_avg_image))
+        .routes(routes!(rank::rank_predict))
+        .routes(routes!(rank::rank_predict_image))
+        .routes(routes!(rank::rank_predict_avg_image))
         .merge(mmr::router())
         .merge(steam::router())
         .layer(
             CacheControlMiddleware::new(Duration::from_mins(10))
                 .with_stale_while_revalidate(Duration::from_mins(10)),
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use utoipa::openapi::Deprecated;
+
+    use super::*;
+
+    /// utoipa marks an operation deprecated from the handler's Rust `#[deprecated]` attribute,
+    /// not from the `utoipa::path` macro, so the rank-predict aliases lose their deprecation
+    /// flag silently if that attribute is dropped.
+    #[test]
+    fn rank_predict_paths_are_deprecated_aliases() {
+        let api = router().get_openapi().clone();
+        for path in [
+            "/{account_id}/rank",
+            "/{account_id}/rank/image",
+            "/rank/image",
+        ] {
+            assert!(api.paths.paths.contains_key(path), "missing path {path}");
+        }
+        for path in [
+            "/{account_id}/rank-predict",
+            "/{account_id}/rank-predict/image",
+            "/rank-predict/image",
+        ] {
+            let op = api
+                .paths
+                .paths
+                .get(path)
+                .and_then(|item| item.get.as_ref())
+                .expect("missing GET operation");
+            assert!(
+                matches!(op.deprecated, Some(Deprecated::True)),
+                "{path} not deprecated"
+            );
+        }
+    }
 }
