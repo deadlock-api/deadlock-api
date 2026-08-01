@@ -30,7 +30,7 @@ fn idx_to_badge(idx: i32) -> i32 {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
-pub(crate) struct RankPredictResponse {
+pub(crate) struct RankResponse {
     /// Rank badge, `tier * 10 + subrank`. `0` when no recent ranked match reports a rank.
     /// See more: <https://api.deadlock-api.com/v1/assets/ranks>
     pub(crate) badge: u32,
@@ -72,7 +72,7 @@ pub(crate) async fn fetch_last_ranked_match_badge(
                 AND player_rank_initial_display_rank > 0
             ORDER BY match_id DESC
             LIMIT 1
-            SETTINGS log_comment = 'rank_predict', apply_patch_parts = 0
+            SETTINGS log_comment = 'player_rank', apply_patch_parts = 0
             ",
         )
         .bind(account_id)
@@ -84,13 +84,12 @@ pub(crate) async fn fetch_last_ranked_match_badge(
 
 #[utoipa::path(
     get,
-    path = "/{account_id}/rank-predict",
+    path = "/{account_id}/rank",
     params(AccountIdQuery),
     responses(
-        (status = OK, body = RankPredictResponse),
+        (status = OK, body = RankResponse),
         (status = BAD_REQUEST, description = "Invalid account ID"),
         (status = FORBIDDEN, description = "User is protected or endpoint unavailable"),
-        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Rank lookup failed"),
     ),
     tags = ["Players"],
@@ -101,19 +100,12 @@ Returns the player's rank as Valve reported it on their latest ranked match.
 Only ranked matches carry a rank, and it stays unset while the player is in placement games.
 When none of the player's recent ranked matches reports a rank, `badge`, `rank` and `subrank` are
 all `0`, which is the `Obscurus` (unranked) tier.
-
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
 "
 )]
-pub(super) async fn rank_predict(
+pub(super) async fn rank(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     State(state): State<AppState>,
-) -> APIResult<Json<RankPredictResponse>> {
+) -> APIResult<Json<RankResponse>> {
     if state
         .steam_client
         .is_user_protected(&state.pg_client, account_id)
@@ -126,7 +118,7 @@ pub(super) async fn rank_predict(
         .await?
         .unwrap_or_default();
 
-    Ok(Json(RankPredictResponse {
+    Ok(Json(RankResponse {
         badge,
         rank: badge / 10,
         subrank: badge % 10,
@@ -135,13 +127,13 @@ pub(super) async fn rank_predict(
 
 #[derive(Debug, Default, Clone, Copy, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
-pub(crate) enum RankPredictImageFormat {
+pub(crate) enum RankImageFormat {
     #[default]
     Png,
     Webp,
 }
 
-impl RankPredictImageFormat {
+impl RankImageFormat {
     fn suffix(self) -> &'static str {
         match self {
             Self::Png => "",
@@ -151,17 +143,17 @@ impl RankPredictImageFormat {
 }
 
 #[derive(Debug, Default, Deserialize, utoipa::IntoParams)]
-pub(crate) struct RankPredictImageQuery {
+pub(crate) struct RankImageQuery {
     /// Image format. Defaults to `png`. Supported: `png`, `webp`.
     #[serde(default)]
     #[param(inline)]
-    format: RankPredictImageFormat,
+    format: RankImageFormat,
 }
 
 #[utoipa::path(
     get,
-    path = "/{account_id}/rank-predict/image",
-    params(AccountIdQuery, RankPredictImageQuery),
+    path = "/{account_id}/rank/image",
+    params(AccountIdQuery, RankImageQuery),
     responses(
         (status = OK, description = "Rank badge image", content(
             ([u8] = "image/png"),
@@ -170,16 +162,15 @@ pub(crate) struct RankPredictImageQuery {
         (status = BAD_REQUEST, description = "Invalid account ID"),
         (status = FORBIDDEN, description = "User is protected or endpoint unavailable"),
         (status = NOT_FOUND, description = "No image available for the rank"),
-        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Rank lookup failed"),
     ),
     tags = ["Players"],
     summary = "Rank Image",
     description = "Returns the rank badge image directly (binary), not a URL. Players whose recent ranked matches carry no rank get the `Obscurus` image. Use `?format=webp` for WebP."
 )]
-pub(super) async fn rank_predict_image(
+pub(super) async fn rank_image(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
-    Query(RankPredictImageQuery { format }): Query<RankPredictImageQuery>,
+    Query(RankImageQuery { format }): Query<RankImageQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     if state
@@ -199,7 +190,7 @@ pub(super) async fn rank_predict_image(
 async fn serve_rank_image(
     state: &AppState,
     badge: u32,
-    format: RankPredictImageFormat,
+    format: RankImageFormat,
 ) -> APIResult<(HeaderMap, Bytes)> {
     let rank = badge / 10;
     let suffix = format.suffix();
@@ -261,20 +252,20 @@ where
 }
 
 #[derive(Debug, Deserialize, utoipa::IntoParams)]
-pub(crate) struct RankPredictAvgImageQuery {
+pub(crate) struct RankAvgImageQuery {
     /// Comma-separated list of account IDs (max 12).
     #[serde(deserialize_with = "deserialize_account_ids")]
     account_ids: Vec<u32>,
     /// Image format. Defaults to `png`. Supported: `png`, `webp`.
     #[serde(default)]
     #[param(inline)]
-    format: RankPredictImageFormat,
+    format: RankImageFormat,
 }
 
 #[utoipa::path(
     get,
-    path = "/rank-predict/image",
-    params(RankPredictAvgImageQuery),
+    path = "/rank/image",
+    params(RankAvgImageQuery),
     responses(
         (status = OK, description = "Average rank badge image", content(
             ([u8] = "image/png"),
@@ -283,18 +274,17 @@ pub(crate) struct RankPredictAvgImageQuery {
         (status = BAD_REQUEST, description = "Invalid or missing account IDs"),
         (status = FORBIDDEN, description = "One of the users is protected"),
         (status = NOT_FOUND, description = "No image available for the rank"),
-        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Rank lookup failed"),
     ),
     tags = ["Players"],
     summary = "Rank Avg Image",
     description = "Returns the average rank badge image (binary) for a comma-separated list of account IDs. Accounts without a rank are left out of the average; if none of them has one, the `Obscurus` image is returned. Use `?format=webp` for WebP."
 )]
-pub(super) async fn rank_predict_avg_image(
-    Query(RankPredictAvgImageQuery {
+pub(super) async fn rank_avg_image(
+    Query(RankAvgImageQuery {
         account_ids,
         format,
-    }): Query<RankPredictAvgImageQuery>,
+    }): Query<RankAvgImageQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     if account_ids.is_empty() {
@@ -343,6 +333,81 @@ pub(super) async fn rank_predict_avg_image(
     };
 
     serve_rank_image(&state, avg_badge, format).await
+}
+
+#[utoipa::path(
+    get,
+    path = "/{account_id}/rank-predict",
+    params(AccountIdQuery),
+    responses(
+        (status = OK, body = RankResponse),
+        (status = BAD_REQUEST, description = "Invalid account ID"),
+        (status = FORBIDDEN, description = "User is protected or endpoint unavailable"),
+        (status = INTERNAL_SERVER_ERROR, description = "Rank lookup failed"),
+    ),
+    tags = ["Players"],
+    summary = "Rank Predict (Deprecated)",
+    description = "Deprecated alias of `/v1/players/{account_id}/rank`. The rank is no longer predicted, it is read from the player's latest ranked match."
+)]
+#[deprecated(note = "renamed to `rank`")]
+pub(super) async fn rank_predict(
+    account_id: Path<AccountIdQuery>,
+    state: State<AppState>,
+) -> APIResult<Json<RankResponse>> {
+    rank(account_id, state).await
+}
+
+#[utoipa::path(
+    get,
+    path = "/{account_id}/rank-predict/image",
+    params(AccountIdQuery, RankImageQuery),
+    responses(
+        (status = OK, description = "Rank badge image", content(
+            ([u8] = "image/png"),
+            ([u8] = "image/webp"),
+        )),
+        (status = BAD_REQUEST, description = "Invalid account ID"),
+        (status = FORBIDDEN, description = "User is protected or endpoint unavailable"),
+        (status = NOT_FOUND, description = "No image available for the rank"),
+        (status = INTERNAL_SERVER_ERROR, description = "Rank lookup failed"),
+    ),
+    tags = ["Players"],
+    summary = "Rank Predict Image (Deprecated)",
+    description = "Deprecated alias of `/v1/players/{account_id}/rank/image`. The rank is no longer predicted, it is read from the player's latest ranked match."
+)]
+#[deprecated(note = "renamed to `rank_image`")]
+pub(super) async fn rank_predict_image(
+    account_id: Path<AccountIdQuery>,
+    format: Query<RankImageQuery>,
+    state: State<AppState>,
+) -> APIResult<impl IntoResponse> {
+    rank_image(account_id, format, state).await
+}
+
+#[utoipa::path(
+    get,
+    path = "/rank-predict/image",
+    params(RankAvgImageQuery),
+    responses(
+        (status = OK, description = "Average rank badge image", content(
+            ([u8] = "image/png"),
+            ([u8] = "image/webp"),
+        )),
+        (status = BAD_REQUEST, description = "Invalid or missing account IDs"),
+        (status = FORBIDDEN, description = "One of the users is protected"),
+        (status = NOT_FOUND, description = "No image available for the rank"),
+        (status = INTERNAL_SERVER_ERROR, description = "Rank lookup failed"),
+    ),
+    tags = ["Players"],
+    summary = "Rank Predict Avg Image (Deprecated)",
+    description = "Deprecated alias of `/v1/players/rank/image`. The rank is no longer predicted, it is read from each player's latest ranked match."
+)]
+#[deprecated(note = "renamed to `rank_avg_image`")]
+pub(super) async fn rank_predict_avg_image(
+    query: Query<RankAvgImageQuery>,
+    state: State<AppState>,
+) -> APIResult<impl IntoResponse> {
+    rank_avg_image(query, state).await
 }
 
 #[cfg(test)]
