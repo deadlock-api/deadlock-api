@@ -1,0 +1,26 @@
+---
+source: src/services/assets/versions/ranked_seasons.rs
+expression: out
+---
+[
+  {
+    "class_name": "season_1",
+    "name": "Beta Season 1",
+    "ranked_type": "normal",
+    "min_wins": 60,
+    "min_hero_wins": 15,
+    "min_hero_unlocks": 3,
+    "calibration_matches": 8,
+    "valid_party_sizes": [
+      1,
+      2
+    ],
+    "intervals": [
+      {
+        "interval": 1,
+        "start_timestamp": 1785430800,
+        "end_timestamp": 1791493200
+      }
+    ]
+  }
+]

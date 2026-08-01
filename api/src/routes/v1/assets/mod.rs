@@ -18,6 +18,7 @@ mod map;
 mod misc_entities;
 mod npc_units;
 mod r2_index;
+mod ranked_seasons;
 mod ranks;
 mod steam_info;
 
@@ -35,6 +36,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .nest("/misc-entities", misc_entities::router())
         .nest("/npc-units", npc_units::router())
         .merge(r2_index::router())
+        .nest("/ranked-seasons", ranked_seasons::router())
         .nest("/ranks", ranks::router())
         .nest("/steam-info", steam_info::router())
         .layer(

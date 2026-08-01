@@ -1,0 +1,8 @@
+"lang"
+{
+	"Language" "English"
+	"Tokens"
+	{
+		"Citadel_RankedSeasonName_BetaSeason1"		"Beta Season 1"
+	}
+}

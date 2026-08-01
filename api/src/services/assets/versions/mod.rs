@@ -19,6 +19,7 @@ pub(crate) mod loot_tables;
 pub(crate) mod map;
 pub(crate) mod misc_entities;
 pub(crate) mod npc_units;
+pub(crate) mod ranked_seasons;
 pub(crate) mod ranks;
 pub(crate) mod steam_info;
 pub(crate) mod store;

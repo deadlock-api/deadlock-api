@@ -116,6 +116,7 @@ const TAG_GROUPS: &[(&str, &[&str])] = &[
             "Accolades",
             "Steam Info",
             "Colors",
+            "Ranked Seasons",
         ],
     ),
     ("Game Info", &["Info", "Patches"]),

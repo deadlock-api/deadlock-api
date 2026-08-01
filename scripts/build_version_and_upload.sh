@@ -59,6 +59,7 @@ KEEP_VDATA=(
     accolades.vdata
     npc_units.vdata
     misc.vdata
+    ranked_seasons.vdata
 )
 
 # Localization categories to pull into the versions folder.
