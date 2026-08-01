@@ -8,24 +8,25 @@ import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
-import type { Dayjs } from "~/dayjs";
+import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { DEFAULT_DATE_RANGE } from "~/lib/constants";
-import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { prefetchSafe } from "~/lib/prefetch-safe";
+import { defaultDateRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
+import { loadSeasons } from "~/queries/asset-queries";
 import { badgeDistributionQueryOptions } from "~/queries/badge-distribution-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
 export const Route = createFileRoute("/badge-distribution")({
   component: BadgeDistributionPage,
   loader: async ({ context: { queryClient } }) => {
+    const [defaultStart, defaultEnd] = defaultDateRange(await loadSeasons(queryClient));
     await prefetchSafe(
       queryClient.ensureQueryData(
         badgeDistributionQueryOptions({
-          minUnixTimestamp: normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0,
-          maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
+          minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
+          maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
         }),
       ),
     );
@@ -53,10 +54,7 @@ export const Route = createFileRoute("/badge-distribution")({
 });
 
 function BadgeDistributionPage() {
-  const [[startDate, endDate], setDateRange] = useQueryState(
-    "date_range",
-    parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE),
-  );
+  const { startDate, endDate, handleDateChange } = useDateRangeState();
   const [minDurationS, setMinDurationS] = useQueryState("min_duration_s", parseAsInteger);
   const [maxDurationS, setMaxDurationS] = useQueryState("max_duration_s", parseAsInteger);
 
@@ -72,10 +70,6 @@ function BadgeDistributionPage() {
   const handleDurationChange = (min: number | undefined, max: number | undefined) => {
     setMinDurationS(min ?? null);
     setMaxDurationS(max ?? null);
-  };
-
-  const handleDateChange = (newStartDate?: Dayjs, newEndDate?: Dayjs) => {
-    setDateRange([newStartDate, newEndDate]);
   };
 
   const [ranks, badgeDistributionQuery] = useQueries({
@@ -101,7 +95,7 @@ function BadgeDistributionPage() {
           maxTime={maxDurationS ?? undefined}
           onTimeChange={handleDurationChange}
         />
-        <Filter.PatchOrDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
+        <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
       </Filter.Root>
       <div className="flex min-h-0 flex-1 items-center justify-center">
         {isPending ? (

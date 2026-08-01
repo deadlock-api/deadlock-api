@@ -6,10 +6,10 @@ import { HeroFilter } from "./HeroFilter";
 import { ItemsTriStateFilter } from "./ItemsTriStateFilter";
 import { MatchDurationFilter } from "./MatchDurationFilter";
 import { MinMatchesFilter } from "./MinMatchesFilter";
-import { PatchOrDateFilter } from "./PatchOrDateFilter";
 import { RankRangeFilter } from "./RankRangeFilter";
 import { RegionFilter } from "./RegionFilter";
 import { Root } from "./Root";
+import { SeasonPatchDateFilter } from "./SeasonPatchDateFilter";
 import { SortByFilter } from "./SortByFilter";
 import { SortDirectionFilter } from "./SortDirectionFilter";
 import { TeamFilter } from "./TeamFilter";
@@ -24,7 +24,7 @@ export const Filter = {
   RankRange: RankRangeFilter,
   MinMatches: MinMatchesFilter,
   ItemsTriState: ItemsTriStateFilter,
-  PatchOrDate: PatchOrDateFilter,
+  SeasonPatchDate: SeasonPatchDateFilter,
   MatchDuration: MatchDurationFilter,
   Team: TeamFilter,
   HeatmapViewMode: HeatmapViewModeFilter,

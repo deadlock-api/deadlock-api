@@ -1,4 +1,4 @@
-import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
+import { SeasonPatchDatePicker } from "~/components/SeasonPatchDatePicker";
 import type { Dayjs } from "~/dayjs";
 import { PATCHES } from "~/lib/constants";
 
@@ -26,11 +26,11 @@ function formatDateRange(startDate: Dayjs | null | undefined, endDate: Dayjs | n
   return null;
 }
 
-export const PatchOrDateFilter = createFilter<{
+export const SeasonPatchDateFilter = createFilter<{
   startDate?: Dayjs;
   endDate?: Dayjs;
   onDateChange: (startDate?: Dayjs, endDate?: Dayjs, prevStartDate?: Dayjs, prevEndDate?: Dayjs) => void;
-  defaultTab?: "patch" | "custom";
+  defaultTab?: "season" | "patch" | "custom";
 }>({
   useDescription(props) {
     return {
@@ -39,7 +39,7 @@ export const PatchOrDateFilter = createFilter<{
   },
   Render({ startDate, endDate, onDateChange, defaultTab }) {
     return (
-      <PatchOrDatePicker
+      <SeasonPatchDatePicker
         patchDates={PATCHES}
         value={{ startDate, endDate }}
         onValueChange={({ startDate: s, endDate: e, prevStartDate, prevEndDate }) =>

@@ -14,13 +14,14 @@ import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { CACHE_DURATIONS } from "~/constants/cache";
+import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
-import { DEFAULT_DATE_RANGE } from "~/lib/constants";
-import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { prefetchSafe } from "~/lib/prefetch-safe";
+import { defaultDateRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
+import { loadSeasons } from "~/queries/asset-queries";
 import { playerScoreboardQueryOptions } from "~/queries/player-scoreboard-query";
 import { queryKeys } from "~/queries/query-keys";
 
@@ -42,6 +43,7 @@ function chunkIds(ids: number[], size: number): number[][] {
 export const Route = createFileRoute("/players")({
   component: PlayersPage,
   loader: async ({ context: { queryClient } }) => {
+    const [defaultStart, defaultEnd] = defaultDateRange(await loadSeasons(queryClient));
     const scoreboard = await prefetchSafe(
       queryClient.ensureQueryData(
         playerScoreboardQueryOptions({
@@ -51,8 +53,8 @@ export const Route = createFileRoute("/players")({
           minMatches: 0,
           minAverageBadge: 0,
           maxAverageBadge: 116,
-          minUnixTimestamp: normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0,
-          maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
+          minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
+          maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
           start: 0,
           limit: MAX_ENTRIES,
         }),
@@ -108,9 +110,7 @@ function PlayersPage() {
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(0));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
-  const [dateRange, setDateRange] = useQueryState("date_range", parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE));
-  const startDate = dateRange[0] ?? DEFAULT_DATE_RANGE[0];
-  const endDate = dateRange[1] ?? DEFAULT_DATE_RANGE[1];
+  const { startDate, endDate, handleDateChange } = useDateRangeState();
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
 
   const isStreetBrawl = gameMode === "street_brawl";
@@ -157,7 +157,7 @@ function PlayersPage() {
             }}
           />
         )}
-        <Filter.PatchOrDate startDate={startDate} endDate={endDate} onDateChange={(s, e) => setDateRange([s, e])} />
+        <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
       </Filter.Root>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="tabs-nav w-full">

@@ -24,6 +24,7 @@ export const queryKeys = {
     abilities: () => ["assets-items-abilities"] as const,
     itemUpgrades: () => ["assets-items-upgrades"] as const,
     hero: (heroId: number) => ["assets-hero", heroId] as const,
+    rankedSeasons: () => ["assets-ranked-seasons"] as const,
   },
   leaderboard: {
     data: (region: string, heroId?: number | null) => ["api-leaderboard-data", region, heroId] as const,

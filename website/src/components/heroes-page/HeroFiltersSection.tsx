@@ -18,8 +18,7 @@ type HeroFiltersProps = Pick<
   | "setMaxRankId"
   | "startDate"
   | "endDate"
-  | "setDateRange"
-  | "setPrevDates"
+  | "handleDateChange"
 >;
 
 export function HeroFiltersSection({
@@ -38,8 +37,7 @@ export function HeroFiltersSection({
   setMaxRankId,
   startDate,
   endDate,
-  setDateRange,
-  setPrevDates,
+  handleDateChange,
 }: HeroFiltersProps) {
   return (
     <Filter.Root>
@@ -73,14 +71,7 @@ export function HeroFiltersSection({
           }}
         />
       )}
-      <Filter.PatchOrDate
-        startDate={startDate}
-        endDate={endDate}
-        onDateChange={(s, e, ps, pe) => {
-          setDateRange([s, e]);
-          setPrevDates({ prevStartDate: ps, prevEndDate: pe });
-        }}
-      />
+      <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
     </Filter.Root>
   );
 }

@@ -8,16 +8,18 @@ import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import type { TriState } from "~/components/selectors/TriStateSelector";
-import { DEFAULT_DATE_RANGE } from "~/lib/constants";
-import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { prefetchSafe } from "~/lib/prefetch-safe";
+import { defaultDateRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
+import { loadSeasons } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/abilities")({
   component: AbilitiesPage,
   loader: async ({ context: { queryClient } }) => {
+    const [defaultStart, defaultEnd] = defaultDateRange(await loadSeasons(queryClient));
     await prefetchSafe(
       queryClient.ensureQueryData(
         abilityOrderQueryOptions({
@@ -25,8 +27,8 @@ export const Route = createFileRoute("/abilities")({
           gameMode: "normal",
           minAverageBadge: 0,
           maxAverageBadge: 116,
-          minUnixTimestamp: normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0,
-          maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
+          minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
+          maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
           minMatches: 20,
         }),
       ),
@@ -46,10 +48,7 @@ function AbilitiesPage() {
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
-  const [[startDate, endDate], setDateRange] = useQueryState(
-    "date_range",
-    parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE),
-  );
+  const { startDate, endDate, handleDateChange } = useDateRangeState();
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(20));
   const [itemSelections, setItemSelections] = useState<Map<number, TriState>>(new Map());
 
@@ -94,7 +93,7 @@ function AbilitiesPage() {
         />
         <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={0} />
         <Filter.ItemsTriState selections={itemSelections} onSelectionsChange={setItemSelections} label="Items" />
-        <Filter.PatchOrDate startDate={startDate} endDate={endDate} onDateChange={(s, e) => setDateRange([s, e])} />
+        <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
       </Filter.Root>
 
       <ChunkErrorBoundary>

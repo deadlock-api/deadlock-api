@@ -9,6 +9,7 @@ import {
   MapApi,
   NPCUnitsApi,
   PlayersApi,
+  RankedSeasonsApi,
   RanksApi,
   ServersApi,
   SteamApi,
@@ -35,6 +36,7 @@ export class Api {
   public heroes_api: HeroesApi;
   public items_api: ItemsApi;
   public ranks_api: RanksApi;
+  public ranked_seasons_api: RankedSeasonsApi;
   public npc_units_api: NPCUnitsApi;
   public map_api: MapApi;
   public assets_bucket_api: AssetsBucketApi;
@@ -52,6 +54,7 @@ export class Api {
     this.heroes_api = new HeroesApi(undefined, API_ORIGIN, axios_client);
     this.items_api = new ItemsApi(undefined, API_ORIGIN, axios_client);
     this.ranks_api = new RanksApi(undefined, API_ORIGIN, axios_client);
+    this.ranked_seasons_api = new RankedSeasonsApi(undefined, API_ORIGIN, axios_client);
     this.npc_units_api = new NPCUnitsApi(undefined, API_ORIGIN, axios_client);
     this.map_api = new MapApi(undefined, API_ORIGIN, axios_client);
     this.assets_bucket_api = new AssetsBucketApi(undefined, API_ORIGIN, axios_client);

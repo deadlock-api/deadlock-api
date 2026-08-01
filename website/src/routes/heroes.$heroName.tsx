@@ -6,13 +6,15 @@ import { Breadcrumb } from "~/components/Breadcrumb";
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { HeroImage } from "~/components/HeroImage";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { useSeasons } from "~/hooks/useSeasons";
 import { computeBanRates } from "~/lib/ban-rate";
-import { DEFAULT_DATE_RANGE, DEFAULT_PREV_DATE_RANGE, getPickrateMultiplier } from "~/lib/constants";
+import { getPickrateMultiplier } from "~/lib/constants";
 import { findHeroBySlug } from "~/lib/hero-slug";
 import { prefetchSafe } from "~/lib/prefetch-safe";
+import { defaultDateRange, defaultPrevDateRange, type SeasonInfo } from "~/lib/seasons";
 import { SITE_URL, seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
-import { filterPlayableHeroes, heroesQueryOptions } from "~/queries/asset-queries";
+import { filterPlayableHeroes, heroesQueryOptions, loadSeasons } from "~/queries/asset-queries";
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 
@@ -26,36 +28,45 @@ const DEFAULT_MIN_RANK = 91;
 const DEFAULT_MAX_RANK = 116;
 const GAME_MODE = "normal" as const;
 
-function currentStatsParams() {
+function currentStatsParams(seasons: readonly SeasonInfo[]) {
   return {
     minHeroMatches: 0,
     minHeroMatchesTotal: 0,
     minAverageBadge: DEFAULT_MIN_RANK,
     maxAverageBadge: DEFAULT_MAX_RANK,
     gameMode: GAME_MODE,
-    minUnixTimestamp: normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0,
-    maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
+    ...currentTimestamps(seasons),
   };
 }
 
-function currentBanParams() {
+function currentBanParams(seasons: readonly SeasonInfo[]) {
   return {
     minAverageBadge: DEFAULT_MIN_RANK,
     maxAverageBadge: DEFAULT_MAX_RANK,
-    minUnixTimestamp: normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0,
-    maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
+    ...currentTimestamps(seasons),
+  };
+}
+
+function currentTimestamps(seasons: readonly SeasonInfo[]) {
+  const [defaultStart, defaultEnd] = defaultDateRange(seasons);
+  return {
+    minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
+    maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
   };
 }
 
 export const Route = createFileRoute("/heroes/$heroName")({
   component: HeroDetailPage,
   loader: async ({ context: { queryClient }, params }) => {
-    const heroes = await queryClient.ensureQueryData(heroesQueryOptions);
+    const [heroes, seasons] = await Promise.all([
+      queryClient.ensureQueryData(heroesQueryOptions),
+      loadSeasons(queryClient),
+    ]);
     const hero = findHeroBySlug(filterPlayableHeroes(heroes), params.heroName);
     if (!hero) throw notFound();
     await Promise.all([
-      prefetchSafe(queryClient.ensureQueryData(heroStatsQueryOptions(currentStatsParams()))),
-      prefetchSafe(queryClient.ensureQueryData(heroBanStatsQueryOptions(currentBanParams()))),
+      prefetchSafe(queryClient.ensureQueryData(heroStatsQueryOptions(currentStatsParams(seasons)))),
+      prefetchSafe(queryClient.ensureQueryData(heroBanStatsQueryOptions(currentBanParams(seasons)))),
     ]);
     const cardImage = hero.images.hero_card_critical_webp ?? hero.images.icon_hero_card_webp ?? null;
     return { heroId: hero.id, heroName: hero.name, slug: params.heroName, cardImage };
@@ -116,8 +127,11 @@ function StatCard({ label, value }: { label: string; value: string }) {
 
 function HeroDetailPage() {
   const { heroId, heroName } = Route.useLoaderData();
-  const statsQuery = useQuery(heroStatsQueryOptions(currentStatsParams()));
-  const banQuery = useQuery(heroBanStatsQueryOptions(currentBanParams()));
+  const { seasons } = useSeasons();
+  const [defaultStart, defaultEnd] = defaultDateRange(seasons);
+  const [prevStart, prevEnd] = defaultPrevDateRange(seasons);
+  const statsQuery = useQuery(heroStatsQueryOptions(currentStatsParams(seasons)));
+  const banQuery = useQuery(heroBanStatsQueryOptions(currentBanParams(seasons)));
 
   const summary = useMemo(() => {
     const rows = statsQuery.data;
@@ -184,10 +198,10 @@ function HeroDetailPage() {
                 stat={0}
                 minRankId={DEFAULT_MIN_RANK}
                 maxRankId={DEFAULT_MAX_RANK}
-                minDate={DEFAULT_DATE_RANGE[0]}
-                maxDate={DEFAULT_DATE_RANGE[1]}
-                prevMinDate={DEFAULT_PREV_DATE_RANGE[0]}
-                prevMaxDate={DEFAULT_PREV_DATE_RANGE[1]}
+                minDate={defaultStart}
+                maxDate={defaultEnd}
+                prevMinDate={prevStart}
+                prevMaxDate={prevEnd}
                 gameMode={GAME_MODE}
               />
               <HeroMatchupDetailsStatsTable
@@ -195,10 +209,10 @@ function HeroDetailPage() {
                 stat={1}
                 minRankId={DEFAULT_MIN_RANK}
                 maxRankId={DEFAULT_MAX_RANK}
-                minDate={DEFAULT_DATE_RANGE[0]}
-                maxDate={DEFAULT_DATE_RANGE[1]}
-                prevMinDate={DEFAULT_PREV_DATE_RANGE[0]}
-                prevMaxDate={DEFAULT_PREV_DATE_RANGE[1]}
+                minDate={defaultStart}
+                maxDate={defaultEnd}
+                prevMinDate={prevStart}
+                prevMaxDate={prevEnd}
                 gameMode={GAME_MODE}
               />
             </div>

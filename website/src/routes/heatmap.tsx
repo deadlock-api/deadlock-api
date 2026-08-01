@@ -10,13 +10,13 @@ import HeatmapCanvas from "~/components/heatmap/HeatmapCanvas";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
 import { type GameMode, parseAsGameMode } from "~/components/selectors/GameModeSelector";
-import type { Dayjs } from "~/dayjs";
+import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { DEFAULT_DATE_RANGE } from "~/lib/constants";
-import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { prefetchSafe } from "~/lib/prefetch-safe";
+import { defaultDateRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
+import { loadSeasons } from "~/queries/asset-queries";
 import { killDeathStatsQueryOptions, mapQueryOptions } from "~/queries/heatmap-queries";
 
 const Heatmap3D = lazy(() => import("~/components/heatmap/Heatmap3D"));
@@ -26,11 +26,12 @@ const VIEW_MODES = ["kills", "deaths", "kd"] as const;
 export const Route = createFileRoute("/heatmap")({
   component: HeatmapPage,
   loader: async ({ context: { queryClient } }) => {
+    const [defaultStart, defaultEnd] = defaultDateRange(await loadSeasons(queryClient));
     const defaultKdParams: AnalyticsApiKillDeathStatsRequest = {
       team: 0,
       gameMode: "normal",
-      minUnixTimestamp: normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0,
-      maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
+      minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
+      maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
     };
     await Promise.all([
       prefetchSafe(queryClient.ensureQueryData(mapQueryOptions)),
@@ -57,10 +58,7 @@ function HeatmapPage() {
   const [minGameTime, setMinGameTime] = useQueryState("min_game_time", parseAsInteger.withDefault(0));
   const [maxGameTime, setMaxGameTime] = useQueryState("max_game_time", parseAsInteger.withDefault(3600));
   const [sensitivity, setOutlierSensitivity] = useQueryState("outlier", parseAsInteger.withDefault(9900));
-  const [[startDate, endDate], setDateRange] = useQueryState(
-    "date_range",
-    parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE),
-  );
+  const { startDate, endDate, handleDateChange } = useDateRangeState();
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
 
@@ -81,10 +79,6 @@ function HeatmapPage() {
   });
 
   const { isPending, isError, error } = combineQueryStates(mapQuery, killDeathQuery);
-
-  const handleDateChange = (start?: Dayjs, end?: Dayjs) => {
-    setDateRange([start, end]);
-  };
 
   const handleRankChange = (min: number, max: number) => {
     setMinRankId(min);
@@ -110,7 +104,7 @@ function HeatmapPage() {
           maxRank={maxRankId}
           onRankChange={handleRankChange}
         />
-        <Filter.PatchOrDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
+        <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
         <Filter.TimeRange
           minTime={minGameTime || undefined}
           maxTime={maxGameTime < 3600 ? maxGameTime : undefined}

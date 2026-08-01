@@ -20,10 +20,11 @@ import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { type HeroTab, useHeroFilters } from "~/hooks/useHeroFilters";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { DEFAULT_DATE_RANGE, DEFAULT_PREV_DATE_RANGE } from "~/lib/constants";
 import { prefetchSafe } from "~/lib/prefetch-safe";
+import { defaultDateRange, defaultPrevDateRange, type SeasonInfo } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
+import { loadSeasons } from "~/queries/asset-queries";
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
 import { heroScoreboardQueryOptions } from "~/queries/hero-scoreboard-query";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
@@ -68,19 +69,21 @@ const HeroMatchupDetailsStatsTable = lazy(() =>
 const DEFAULT_MIN_RANK = 91;
 const DEFAULT_MAX_RANK = 116;
 
-function defaultHeroStatsRanges() {
+function defaultHeroStatsRanges(seasons: readonly SeasonInfo[]) {
+  const [defaultStart, defaultEnd] = defaultDateRange(seasons);
+  const [prevStart, prevEnd] = defaultPrevDateRange(seasons);
   return {
-    minUnixTimestamp: normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0,
-    maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
-    prevMinUnixTimestamp: normalizeUnixFloor(DEFAULT_PREV_DATE_RANGE[0]) ?? 0,
-    prevMaxUnixTimestamp: normalizeUnixCeil(DEFAULT_PREV_DATE_RANGE[1]),
+    minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
+    maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
+    prevMinUnixTimestamp: normalizeUnixFloor(prevStart) ?? 0,
+    prevMaxUnixTimestamp: normalizeUnixCeil(prevEnd),
   };
 }
 
 export const Route = createFileRoute("/heroes/")({
   component: HeroesPage,
   loader: async ({ context: { queryClient } }) => {
-    const r = defaultHeroStatsRanges();
+    const r = defaultHeroStatsRanges(await loadSeasons(queryClient));
     const common = {
       minHeroMatches: 0,
       minHeroMatchesTotal: 0,
@@ -233,8 +236,8 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
               minHeroMatchesTotal={filters.minHeroMatchesTotal}
               minDate={filters.startDate || undefined}
               maxDate={filters.endDate || undefined}
-              prevMinDate={filters.prevDates.prevStartDate}
-              prevMaxDate={filters.prevDates.prevEndDate}
+              prevMinDate={filters.prevStartDate}
+              prevMaxDate={filters.prevEndDate}
               gameMode={filters.gameMode}
             />
           </div>
@@ -398,8 +401,8 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
                     maxRankId={filters.effectiveMaxRankId}
                     minDate={filters.startDate || undefined}
                     maxDate={filters.endDate || undefined}
-                    prevMinDate={filters.prevDates.prevStartDate}
-                    prevMaxDate={filters.prevDates.prevEndDate}
+                    prevMinDate={filters.prevStartDate}
+                    prevMaxDate={filters.prevEndDate}
                     minMatches={filters.minMatches}
                     sameLaneFilter={filters.sameLaneFilter}
                     gameMode={filters.gameMode}
@@ -421,8 +424,8 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
                   maxRankId={filters.effectiveMaxRankId}
                   minDate={filters.startDate || undefined}
                   maxDate={filters.endDate || undefined}
-                  prevMinDate={filters.prevDates.prevStartDate}
-                  prevMaxDate={filters.prevDates.prevEndDate}
+                  prevMinDate={filters.prevStartDate}
+                  prevMaxDate={filters.prevEndDate}
                   minMatches={filters.minMatches}
                   gameMode={filters.gameMode}
                 />
@@ -465,8 +468,8 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
                     maxRankId={filters.effectiveMaxRankId}
                     minDate={filters.startDate || undefined}
                     maxDate={filters.endDate || undefined}
-                    prevMinDate={filters.prevDates.prevStartDate}
-                    prevMaxDate={filters.prevDates.prevEndDate}
+                    prevMinDate={filters.prevStartDate}
+                    prevMaxDate={filters.prevEndDate}
                     onHeroSelected={(selectedHeroId) => {
                       if (!selectedHeroId) return;
                       filters.setHeroId(selectedHeroId);
@@ -482,8 +485,8 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
                     maxRankId={filters.effectiveMaxRankId}
                     minDate={filters.startDate || undefined}
                     maxDate={filters.endDate || undefined}
-                    prevMinDate={filters.prevDates.prevStartDate}
-                    prevMaxDate={filters.prevDates.prevEndDate}
+                    prevMinDate={filters.prevStartDate}
+                    prevMaxDate={filters.prevEndDate}
                     onHeroSelected={(selectedHeroId) => {
                       if (!selectedHeroId) return;
                       filters.setHeroId(selectedHeroId);

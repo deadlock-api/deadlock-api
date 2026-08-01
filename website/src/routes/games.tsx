@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { AnalyticsApiGameStatsRequest, GameStatsBucketEnum } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense } from "react";
 
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
@@ -11,14 +11,14 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
-import type { Dayjs } from "~/dayjs";
+import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { DEFAULT_DATE_RANGE, DEFAULT_PREV_DATE_RANGE } from "~/lib/constants";
 import { isStreetBrawlMode } from "~/lib/game-mode";
-import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { prefetchSafe } from "~/lib/prefetch-safe";
+import { defaultDateRange, defaultPrevDateRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
+import { loadSeasons } from "~/queries/asset-queries";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
 const GamesOverTimeChart = lazy(() => import("~/components/games-page/GamesOverTimeChart"));
@@ -30,10 +30,13 @@ const MATCH_LENGTH_ANSWER = "A typical Deadlock match lasts around 30-40 minutes
 export const Route = createFileRoute("/games")({
   component: Games,
   loader: async ({ context: { queryClient } }) => {
+    const seasons = await loadSeasons(queryClient);
+    const [defaultStart, defaultEnd] = defaultDateRange(seasons);
+    const [prevStart, prevEnd] = defaultPrevDateRange(seasons);
     const baseParams: AnalyticsApiGameStatsRequest = {
       gameMode: "normal",
-      minUnixTimestamp: normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0,
-      maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
+      minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
+      maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
       minAverageBadge: 0,
       maxAverageBadge: 116,
     };
@@ -43,8 +46,8 @@ export const Route = createFileRoute("/games")({
         queryClient.ensureQueryData(
           gameStatsQueryOptions({
             ...baseParams,
-            minUnixTimestamp: normalizeUnixFloor(DEFAULT_PREV_DATE_RANGE[0]) ?? 0,
-            maxUnixTimestamp: normalizeUnixCeil(DEFAULT_PREV_DATE_RANGE[1]),
+            minUnixTimestamp: normalizeUnixFloor(prevStart) ?? 0,
+            maxUnixTimestamp: normalizeUnixCeil(prevEnd),
             bucket: "no_bucket",
           }),
         ),
@@ -93,14 +96,7 @@ function Games() {
   const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
-  const [[startDate, endDate], setDateRange] = useQueryState(
-    "date_range",
-    parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE),
-  );
-  const [prevDates, setPrevDates] = useState<{ prevStartDate?: Dayjs; prevEndDate?: Dayjs }>(() => ({
-    prevStartDate: DEFAULT_PREV_DATE_RANGE[0],
-    prevEndDate: DEFAULT_PREV_DATE_RANGE[1],
-  }));
+  const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange } = useDateRangeState();
   const [minDurationS, setMinDurationS] = useQueryState("min_duration_s", parseAsInteger);
   const [maxDurationS, setMaxDurationS] = useQueryState("max_duration_s", parseAsInteger);
   const [stat, setStat] = useQueryState(
@@ -118,8 +114,8 @@ function Games() {
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
   const { minUnixTimestamp: prevMinUnix, maxUnixTimestamp: prevMaxUnix } = useNormalizedTimeRange(
-    prevDates.prevStartDate,
-    prevDates.prevEndDate,
+    prevStartDate,
+    prevEndDate,
   );
 
   const baseParams: AnalyticsApiGameStatsRequest = {
@@ -133,7 +129,7 @@ function Games() {
   };
 
   const prevParams: AnalyticsApiGameStatsRequest | null =
-    prevDates.prevStartDate && prevDates.prevEndDate && prevMinUnix != null && prevMaxUnix != null
+    prevStartDate && prevEndDate && prevMinUnix != null && prevMaxUnix != null
       ? {
           ...baseParams,
           minUnixTimestamp: prevMinUnix,
@@ -168,14 +164,7 @@ function Games() {
             setMaxRankId(max);
           }}
         />
-        <Filter.PatchOrDate
-          startDate={startDate}
-          endDate={endDate}
-          onDateChange={(s, e, ps, pe) => {
-            setDateRange([s, e]);
-            setPrevDates({ prevStartDate: ps, prevEndDate: pe });
-          }}
-        />
+        <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
         <Filter.MatchDuration
           minTime={minDurationS ?? undefined}
           maxTime={maxDurationS ?? undefined}

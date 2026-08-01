@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense } from "react";
 
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
@@ -8,13 +8,13 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
-import type { Dayjs } from "~/dayjs";
-import { DEFAULT_DATE_RANGE, DEFAULT_PREV_DATE_RANGE } from "~/lib/constants";
+import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { getEffectiveRankRange } from "~/lib/game-mode";
-import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { prefetchSafe } from "~/lib/prefetch-safe";
+import { defaultDateRange, defaultPrevDateRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
+import { loadSeasons } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
 const ItemPurchaseAnalysis = lazy(() =>
@@ -33,8 +33,11 @@ const ItemCombStatsTable = lazy(() =>
 export const Route = createFileRoute("/items")({
   component: ItemsPage,
   loader: async ({ context: { queryClient } }) => {
-    const minUnixTimestamp = normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0;
-    const maxUnixTimestamp = normalizeUnixCeil(DEFAULT_DATE_RANGE[1]);
+    const seasons = await loadSeasons(queryClient);
+    const [defaultStart, defaultEnd] = defaultDateRange(seasons);
+    const [prevStart, prevEnd] = defaultPrevDateRange(seasons);
+    const minUnixTimestamp = normalizeUnixFloor(defaultStart) ?? 0;
+    const maxUnixTimestamp = normalizeUnixCeil(defaultEnd);
     const common = {
       minMatches: 10,
       heroId: null,
@@ -52,8 +55,8 @@ export const Route = createFileRoute("/items")({
         queryClient.ensureQueryData(
           itemStatsQueryOptions({
             ...common,
-            minUnixTimestamp: normalizeUnixFloor(DEFAULT_PREV_DATE_RANGE[0]) ?? 0,
-            maxUnixTimestamp: normalizeUnixCeil(DEFAULT_PREV_DATE_RANGE[1]),
+            minUnixTimestamp: normalizeUnixFloor(prevStart) ?? 0,
+            maxUnixTimestamp: normalizeUnixCeil(prevEnd),
           }),
         ),
       ),
@@ -87,14 +90,7 @@ function ItemsPage() {
   const [maxBoughtAtS, setMaxBoughtAtS] = useQueryState("max_bought_at", parseAsInteger);
   const [hero, setHero] = useQueryState("hero", parseAsInteger);
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(10));
-  const [[startDate, endDate], setDateRange] = useQueryState(
-    "date_range",
-    parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE),
-  );
-  const [prevDates, setPrevDates] = useState<{ prevStartDate?: Dayjs; prevEndDate?: Dayjs }>(() => ({
-    prevStartDate: DEFAULT_PREV_DATE_RANGE[0],
-    prevEndDate: DEFAULT_PREV_DATE_RANGE[1],
-  }));
+  const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange } = useDateRangeState();
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(gameMode, minRankId, maxRankId);
 
   const [tab, setTab] = useQueryState(
@@ -139,14 +135,7 @@ function ItemsPage() {
           title="Purchase Time Window"
           description="Filter items by when they were purchased in the match."
         />
-        <Filter.PatchOrDate
-          startDate={startDate}
-          endDate={endDate}
-          onDateChange={(s, e, ps, pe) => {
-            setDateRange([s, e]);
-            setPrevDates({ prevStartDate: ps, prevEndDate: pe });
-          }}
-        />
+        <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
       </Filter.Root>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="tabs-nav w-full">
@@ -170,8 +159,8 @@ function ItemsPage() {
                 maxRankId={effectiveMaxRankId}
                 minDate={startDate || undefined}
                 maxDate={endDate || undefined}
-                prevMinDate={prevDates.prevStartDate}
-                prevMaxDate={prevDates.prevEndDate}
+                prevMinDate={prevStartDate}
+                prevMaxDate={prevEndDate}
                 hero={hero}
                 minMatches={minMatches}
                 minBoughtAtS={minBoughtAtS ?? undefined}
@@ -227,8 +216,8 @@ function ItemsPage() {
                 minMatches={minMatches}
                 minDate={startDate || undefined}
                 maxDate={endDate || undefined}
-                prevMinDate={prevDates.prevStartDate}
-                prevMaxDate={prevDates.prevEndDate}
+                prevMinDate={prevStartDate}
+                prevMaxDate={prevEndDate}
                 gameMode={gameMode}
               />
             </Suspense>

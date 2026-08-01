@@ -6,7 +6,7 @@ import { HeroImage } from "~/components/HeroImage";
 import { AverageBuildCard } from "~/components/items-page/AverageBuildCard";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import MatchHistoryCard from "~/components/MatchHistoryCard";
-import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
+import { SeasonPatchDatePicker } from "~/components/SeasonPatchDatePicker";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
@@ -142,7 +142,7 @@ export function PlayerHeroBuildsDialog({
             <PlayerSearch
               onSelect={(profile) => setOverridePlayer({ accountId: profile.account_id, name: profile.personaname })}
             />
-            <PatchOrDatePicker
+            <SeasonPatchDatePicker
               patchDates={PATCHES}
               value={dateRange}
               onValueChange={({ startDate, endDate }) => setDateRange({ startDate, endDate })}

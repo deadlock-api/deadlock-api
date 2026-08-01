@@ -117,14 +117,6 @@ export const PATCHES: readonly PatchInfo[] = [
   },
 ];
 
-// Default = current patch, open-ended. `undefined` upper bound keeps the
-// query key stable between build-time SSR and client-side hydration.
-export const DEFAULT_DATE_RANGE: [Dayjs | undefined, Dayjs | undefined] = [PATCHES[0].startDate, PATCHES[0].endDate];
-
-// Previous-period default = the patch before the current one. Used by routes
-// that pre-fetch a comparison range during SSR.
-export const DEFAULT_PREV_DATE_RANGE: [Dayjs, Dayjs] = [PATCHES[1].startDate, PATCHES[0].startDate];
-
 export const MIN_GAME_DURATION_S = 0;
 export const MAX_GAME_DURATION_S = 60 * 60;
 
