@@ -39,6 +39,16 @@ fn badge_from_flat_progress(flat_progress: u32) -> u32 {
     (idx / 7 + 1) * 10 + (idx % 7 + 1).min(6)
 }
 
+/// Progress into the current subrank and the width of that subrank, both in progress points.
+///
+/// The sixth subtier spans two of the 1000-point steps, so it is 2000 wide.
+fn subrank_progress(flat_progress: u32) -> (u32, u32) {
+    let step = flat_progress / 1000 % 7;
+    let progress = flat_progress % 1000 + if step == 6 { 1000 } else { 0 };
+    let width = if step >= 5 { 2000 } else { 1000 };
+    (progress, width)
+}
+
 /// `ClickHouse` expression equivalent to [`badge_from_flat_progress`]. `flat_progress` must be a
 /// non-nullable numeric expression; it is inlined twice.
 pub(crate) fn badge_from_flat_progress_sql(flat_progress: &str) -> String {
@@ -97,11 +107,30 @@ impl LastRankedMatch {
             badge_from_flat_progress,
         )
     }
+
+    /// Progress into the badge from [`Self::badge`] and the width of that subrank, in progress
+    /// points. `None` while the player is in placement games or when the match reports no final
+    /// progress.
+    pub(crate) fn progress(&self) -> Option<(u32, u32)> {
+        if self.player_rank_initial_display_rank == 0 {
+            return None;
+        }
+        self.player_rank_final_flat_progress.map(subrank_progress)
+    }
 }
 
 /// `initial_display_rank` is `0` while the player is still in placement games and is only set on
-/// ranked matches. Restricting the scan to the player's recent ranked matches keeps the query off a
-/// full `account_id` scan, which the `(match_id, account_id)` sort key can't serve.
+/// ranked matches.
+///
+/// `match_player` is sorted by `(match_id, account_id)`, so filtering on `account_id` alone falls
+/// back to a bloom-filter index scan that opens every one of its parts. `player_match_history` is
+/// sorted by `(account_id, match_id)`, so it resolves the player's recent ranked `match_id`s with a
+/// primary-key lookup; feeding those back in prunes `match_player` by partition and granule.
+///
+/// The window is 50 rather than 1 because `player_match_history` ingests ahead of `match_player`:
+/// its newest ranked matches may not have landed in `match_player` yet (observed lead: up to 15
+/// matches). Taking the newest row that exists in both keeps the result identical to scanning
+/// `match_player` directly.
 ///
 /// Returns `None` when none of those matches carries a rank.
 #[cached(
@@ -132,11 +161,19 @@ pub(crate) async fn fetch_last_ranked_match(
             WHERE
                 account_id = ?
                 AND match_mode = 'Ranked'
+                AND match_id IN (
+                    SELECT match_id
+                    FROM player_match_history
+                    WHERE account_id = ? AND match_mode = 'Ranked'
+                    ORDER BY match_id DESC
+                    LIMIT 50
+                )
             ORDER BY match_id DESC
             LIMIT 1
             SETTINGS log_comment = 'player_rank'
             ",
         )
+        .bind(account_id)
         .bind(account_id)
         .fetch_optional()
         .await
@@ -519,6 +556,22 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_subrank_progress() {
+        for (progress, expected) in [
+            (0, (0, 1000)),
+            (250, (250, 1000)),
+            (4_600, (600, 1000)),
+            // Subtier 6 spans 5_000..7_000.
+            (5_000, (0, 2000)),
+            (6_400, (1_400, 2000)),
+            (7_000, (0, 1000)),
+            (53_225, (225, 1000)),
+        ] {
+            assert_eq!(subrank_progress(progress), expected, "{progress}");
+        }
+    }
+
     fn last_ranked_match(initial_badge: u32, final_progress: Option<u32>) -> LastRankedMatch {
         LastRankedMatch {
             match_id: 1,
@@ -545,6 +598,16 @@ mod tests {
     fn test_badge_falls_back_and_stays_zero_in_placement() {
         assert_eq!(last_ranked_match(84, None).badge(), 84);
         assert_eq!(last_ranked_match(0, Some(53_225)).badge(), 0);
+    }
+
+    #[test]
+    fn test_progress_needs_final_flat_progress_and_a_rank() {
+        assert_eq!(
+            last_ranked_match(84, Some(53_225)).progress(),
+            Some((225, 1000))
+        );
+        assert_eq!(last_ranked_match(84, None).progress(), None);
+        assert_eq!(last_ranked_match(0, Some(53_225)).progress(), None);
     }
 
     #[test]

@@ -97,7 +97,9 @@ pub(super) enum Variable {
     PredictedRank,
     PredictedRankImg,
     Rank,
+    RankAndProgress,
     RankImg,
+    RankProgress,
     TotalKd,
     TotalKills,
     TotalMatches,
@@ -253,7 +255,9 @@ impl Variable {
             | Self::PredictedRank
             | Self::PredictedRankImg
             | Self::Rank
-            | Self::RankImg => VariableCategory::General,
+            | Self::RankAndProgress
+            | Self::RankImg
+            | Self::RankProgress => VariableCategory::General,
 
             Self::LossesToday
             | Self::MatchesToday
@@ -304,6 +308,10 @@ impl Variable {
             | Self::PredictedRankImg
             | Self::MMRHistoryRank
             | Self::MMRHistoryRankImg => "Get the rank",
+            Self::RankProgress => "Get the progress within the current subrank, e.g. 250/1000",
+            Self::RankAndProgress => {
+                "Get the rank together with the progress within it, e.g. Oracle 5 (250/1000)"
+            }
             Self::HeroHoursPlayed => {
                 "Get the total hours played in all matches for a specific hero"
             }
@@ -361,7 +369,8 @@ impl Variable {
             Self::HeroWins => Some("{hero_name} Wins"),
             Self::WinsLossesToday => Some("Daily W-L"),
             Self::LeaderboardPlace => Some("Place"),
-            Self::MMRHistoryRank => Some("Rank"),
+            Self::MMRHistoryRank | Self::RankAndProgress => Some("Rank"),
+            Self::RankProgress => Some("Progress"),
             _ => None,
         }
     }
@@ -399,6 +408,19 @@ impl Variable {
                     .find(|r| r.tier == rank)
                     .ok_or(VariableResolveError::NoData("rank"))?;
                 Ok(format!("{} {subrank}", rank.name))
+            }
+            Self::RankProgress => {
+                let (_, progress, width) = Self::fetch_rank_progress(state, steam_id).await?;
+                Ok(format!("{progress}/{width}"))
+            }
+            Self::RankAndProgress => {
+                let (badge, progress, width) = Self::fetch_rank_progress(state, steam_id).await?;
+                let ranks = state.assets_client.fetch_ranks().await?;
+                let rank = ranks
+                    .iter()
+                    .find(|r| r.tier == badge / 10)
+                    .ok_or(VariableResolveError::NoData("rank"))?;
+                Ok(format!("{} {} ({progress}/{width})", rank.name, badge % 10))
             }
             Self::RankImg | Self::PredictedRankImg | Self::MMRHistoryRankImg => {
                 let (rank, _) = Self::fetch_player_ranks(state, steam_id).await?;
@@ -767,6 +789,22 @@ impl Variable {
             .ok_or(VariableResolveError::NoData("rank"))?
             .badge();
         Ok((badge / 10, badge % 10))
+    }
+
+    /// Returns `(badge, progress, subrank width)`. Progress is only reported on ranked matches, so
+    /// unlike [`Self::fetch_player_ranks`] there is no player card fallback; the badge is returned
+    /// alongside it so both are read from the same match.
+    async fn fetch_rank_progress(
+        state: &AppState,
+        steam_id: u32,
+    ) -> Result<(u32, u32, u32), VariableResolveError> {
+        let last_match = fetch_last_ranked_match(&state.ch_client_ro, steam_id)
+            .await?
+            .ok_or(VariableResolveError::NoData("rank progress"))?;
+        let (progress, width) = last_match
+            .progress()
+            .ok_or(VariableResolveError::NoData("rank progress"))?;
+        Ok((last_match.badge(), progress, width))
     }
 
     async fn fetch_card_ranks(
