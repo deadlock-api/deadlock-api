@@ -79,7 +79,7 @@ function BadgeDistributionPage() {
   const { isPending, isError, error } = combineQueryStates(badgeDistributionQuery, ranks);
 
   return (
-    <div className="flex h-[calc(100dvh-2rem)] flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <div className="shrink-0 text-center">
         <h1 className="text-3xl font-bold tracking-tight">Deadlock Rank Distribution</h1>
         <p className="mt-1 text-sm text-muted-foreground">Average match rank distribution across all badges</p>
@@ -97,7 +97,7 @@ function BadgeDistributionPage() {
         />
         <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
       </Filter.Root>
-      <div className="flex min-h-0 flex-1 items-center justify-center">
+      <div className="flex h-[60dvh] items-center justify-center">
         {isPending ? (
           <div className="flex items-center justify-center">
             <LoadingLogo />
