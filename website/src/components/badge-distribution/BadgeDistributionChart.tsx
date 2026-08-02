@@ -1,9 +1,10 @@
 import type { Rank } from "deadlock_api_client";
 import type { BadgeDistribution } from "deadlock_api_client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Customized, Label, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartContainer } from "~/components/ui/chart";
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { range } from "~/lib/utils";
 
@@ -12,14 +13,20 @@ export interface BadgeDistributionChartProps {
   ranksData: Rank[];
 }
 
+type Metric = "players" | "matches";
+
+const METRIC_LABEL: Record<Metric, string> = { players: "Players", matches: "Matches" };
+
 interface ChartEntry {
   badge: number;
   tier: number;
-  matches: number;
+  value: number;
   isSpacer?: boolean;
 }
 
 export default function BadgeDistributionChart({ badgeDistributionData, ranksData }: BadgeDistributionChartProps) {
+  const [metric, setMetric] = useState<Metric>("players");
+
   const tierData = useMemo(() => {
     const map = new Map<number, Rank>();
     ranksData.forEach((r) => {
@@ -30,13 +37,13 @@ export default function BadgeDistributionChart({ badgeDistributionData, ranksDat
 
   const badgeMap = useMemo(() => extractBadgeMap(ranksData), [ranksData]);
 
-  const matchePerBadge = useMemo(() => {
+  const valuePerBadge = useMemo(() => {
     const map = new Map<number, number>();
     badgeDistributionData.forEach((item) => {
-      map.set(item.badge_level, item.total_matches ?? 0);
+      map.set(item.badge_level, (metric === "players" ? item.unique_players : item.total_matches) ?? 0);
     });
     return map;
-  }, [badgeDistributionData]);
+  }, [badgeDistributionData, metric]);
 
   const chartData = useMemo(() => {
     const badges = badgeDistributionData.map((item) => item.badge_level);
@@ -47,15 +54,15 @@ export default function BadgeDistributionChart({ badgeDistributionData, ranksDat
     const result: ChartEntry[] = [];
     for (let tier = minTier; tier <= maxTier; tier++) {
       if (tier > minTier) {
-        result.push({ badge: tier * 10, tier, matches: 0, isSpacer: true });
+        result.push({ badge: tier * 10, tier, value: 0, isSpacer: true });
       }
       for (let sub = 1; sub <= 6; sub++) {
         const badge = tier * 10 + sub;
-        result.push({ badge, tier, matches: matchePerBadge.get(badge) ?? 0 });
+        result.push({ badge, tier, value: valuePerBadge.get(badge) ?? 0 });
       }
     }
     return result;
-  }, [badgeDistributionData, matchePerBadge]);
+  }, [badgeDistributionData, valuePerBadge]);
 
   const ticks = useMemo(() => {
     const badges = badgeDistributionData.map((item) => item.badge_level);
@@ -137,62 +144,82 @@ export default function BadgeDistributionChart({ badgeDistributionData, ranksDat
   }, [tierCenters, tierData]);
 
   return (
-    <div
-      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
-      role="img"
-      aria-label="Rank badge distribution chart showing matches per rank"
-      className="h-full w-full"
-    >
-      <ChartContainer config={{ matches: { label: "Matches" } }} className="h-full w-full">
-        <BarChart accessibilityLayer data={chartData}>
-          <CartesianGrid vertical={false} />
-          <Bar dataKey="matches" fill="var(--color-accent)" radius={4}>
-            {chartData.map((entry) => (
-              <Cell
-                key={`cell-${entry.badge}`}
-                fill={entry.isSpacer ? "transparent" : (tierData.get(entry.tier)?.color ?? "var(--color-accent)")}
-              />
-            ))}
-          </Bar>
-          <Tooltip
-            cursor={false}
-            isAnimationActive={false}
-            content={({ active, payload }) => {
-              if (!active || !payload?.length) return null;
-              const entry = payload[0].payload as ChartEntry;
-              if (entry.isSpacer) return null;
-              const rankName = tierData.get(entry.tier)?.name ?? "";
-              const subtier = entry.badge % 10;
-              const info = badgeMap.get(entry.badge);
-              const imageUrl = info?.large_webp ?? info?.large;
-              return (
-                <div className="flex items-center gap-2 rounded-md bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
-                  {imageUrl && <img src={imageUrl} alt={`${rankName} ${subtier}`} className="size-5" />}
-                  <div>
-                    <div className="font-medium">
-                      {rankName} {subtier}
+    <div className="flex h-full w-full flex-col">
+      <div className="flex shrink-0 justify-end">
+        <ToggleGroup
+          type="single"
+          value={metric}
+          onValueChange={(v) => v && setMetric(v as Metric)}
+          variant="outline"
+          size="sm"
+        >
+          <ToggleGroupItem value="players" className="px-6">
+            Players
+          </ToggleGroupItem>
+          <ToggleGroupItem value="matches" className="px-6">
+            Matches
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+      <div
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
+        role="img"
+        aria-label={`Rank badge distribution chart showing ${metric} per rank`}
+        className="min-h-0 w-full flex-1"
+      >
+        <ChartContainer config={{ value: { label: METRIC_LABEL[metric] } }} className="h-full w-full">
+          <BarChart accessibilityLayer data={chartData}>
+            <CartesianGrid vertical={false} />
+            <Bar dataKey="value" fill="var(--color-accent)" radius={4}>
+              {chartData.map((entry) => (
+                <Cell
+                  key={`cell-${entry.badge}`}
+                  fill={entry.isSpacer ? "transparent" : (tierData.get(entry.tier)?.color ?? "var(--color-accent)")}
+                />
+              ))}
+            </Bar>
+            <Tooltip
+              cursor={false}
+              isAnimationActive={false}
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const entry = payload[0].payload as ChartEntry;
+                if (entry.isSpacer) return null;
+                const rankName = tierData.get(entry.tier)?.name ?? "";
+                const subtier = entry.badge % 10;
+                const info = badgeMap.get(entry.badge);
+                const imageUrl = info?.large_webp ?? info?.large;
+                return (
+                  <div className="flex items-center gap-2 rounded-md bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
+                    {imageUrl && <img src={imageUrl} alt={`${rankName} ${subtier}`} className="size-5" />}
+                    <div>
+                      <div className="font-medium">
+                        {rankName} {subtier}
+                      </div>
+                      <div>
+                        {entry.value.toLocaleString()} {metric}
+                      </div>
                     </div>
-                    <div>{entry.matches.toLocaleString()} matches</div>
                   </div>
-                </div>
-              );
-            }}
-          />
-          <XAxis
-            dataKey="badge"
-            tickLine={false}
-            minTickGap={0}
-            ticks={ticks}
-            textAnchor="middle"
-            tickFormatter={xAxisTickFormatter}
-            dx={7}
-          />
-          <YAxis dataKey="matches" tickCount={4} textAnchor="end">
-            <Label value="Matches" position="middle" textAnchor="middle" />
-          </YAxis>
-          <Customized component={RankIconsOverlay} />
-        </BarChart>
-      </ChartContainer>
+                );
+              }}
+            />
+            <XAxis
+              dataKey="badge"
+              tickLine={false}
+              minTickGap={0}
+              ticks={ticks}
+              textAnchor="middle"
+              tickFormatter={xAxisTickFormatter}
+              dx={7}
+            />
+            <YAxis dataKey="value" tickCount={4} textAnchor="end">
+              <Label value={METRIC_LABEL[metric]} position="middle" textAnchor="middle" />
+            </YAxis>
+            <Customized component={RankIconsOverlay} />
+          </BarChart>
+        </ChartContainer>
+      </div>
     </div>
   );
 }
