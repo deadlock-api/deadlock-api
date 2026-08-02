@@ -116,6 +116,16 @@ fn map_ranked_type(raw: &str) -> String {
     }
 }
 
+/// The interval running at `now` (unix seconds), as accepted by the
+/// `rank_interval` field of `CMsgClientToGCGetMatchHistory`.
+pub(crate) fn interval_at(seasons: &[RankedSeason], now: i64) -> Option<u32> {
+    seasons
+        .iter()
+        .flat_map(|s| &s.intervals)
+        .find(|i| (i.start_timestamp..=i.end_timestamp).contains(&now))
+        .map(|i| i.interval)
+}
+
 // ----- Cached fetch -----
 
 #[cached(

@@ -14,7 +14,7 @@
 mod types;
 
 use core::time::Duration;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, LazyLock};
 
 use futures::StreamExt;
@@ -25,13 +25,18 @@ use tokio::time::Instant;
 use tracing::{debug, error, info, instrument, warn};
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_history_response::EResult;
 use valveprotos::deadlock::{
-    CMsgClientToGcGetMatchHistory, CMsgClientToGcGetMatchHistoryResponse, EgcCitadelClientMessages,
+    CMsgClientToGcGetMatchHistory, CMsgClientToGcGetMatchHistoryResponse, ECitadelGameMode,
+    ECitadelMatchMode, EgcCitadelClientMessages,
 };
 
 use crate::types::PlayerMatchHistoryEntry;
 
 static HISTORY_COOLDOWN_MILLIS: LazyLock<u64> =
     LazyLock::new(|| common::env_or("HISTORY_COOLDOWN_MILLIS", 24 * 60 * 60 * 1000 / 50));
+
+/// Ranked interval to request alongside each account's plain match history.
+/// `None` until the first refresh succeeds, and between seasons.
+static RANK_INTERVAL: LazyLock<RwLock<Option<u32>>> = LazyLock::new(|| RwLock::new(None));
 
 /// Interval in seconds to refresh the prioritized accounts list from the database.
 /// Default: 300 seconds (5 minutes).
@@ -102,6 +107,8 @@ async fn main() -> anyhow::Result<()> {
     // Spawn background task to periodically refresh prioritized accounts
     spawn_prioritization_refresh_task(pg_pool.clone(), prioritized_accounts.clone());
 
+    spawn_rank_interval_refresh_task(http_client.clone());
+
     // Spawn batch inserter task(s). All fetchers send InsertRequests through
     // this channel; the inserter accumulates entries up to HISTORY_BATCH_SIZE
     // (or HISTORY_FLUSH_INTERVAL_MS elapsed) and flushes them in one CH insert.
@@ -160,6 +167,24 @@ async fn main() -> anyhow::Result<()> {
             .collect::<Vec<_>>()
             .await;
     }
+}
+
+/// Keeps [`RANK_INTERVAL`] current. Seasons turn over on the order of months, so
+/// an hourly refresh is ample; the first tick fires immediately.
+fn spawn_rank_interval_refresh_task(http_client: reqwest::Client) {
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_hours(1));
+        loop {
+            interval.tick().await;
+            match common::fetch_current_rank_interval(&http_client).await {
+                Ok(v) => {
+                    debug!(rank_interval = ?v, "Refreshed ranked interval");
+                    *RANK_INTERVAL.write().await = v;
+                }
+                Err(e) => warn!("Failed to refresh ranked interval: {e:?}"),
+            }
+        }
+    });
 }
 
 /// Long-running batch inserter for `player_match_history`.
@@ -334,7 +359,9 @@ async fn update_account(
     account: u32,
     bot_username: Option<&str>,
 ) -> bool {
-    let match_history = match fetch_account_match_history(http_client, account, bot_username).await
+    let rank_interval = *RANK_INTERVAL.read().await;
+    let match_history = match fetch_account_match_history(http_client, account, bot_username, None)
+        .await
     {
         Ok((_, r)) => r,
         Err(e) => {
@@ -355,13 +382,28 @@ async fn update_account(
         );
         return false;
     }
-    let matches = match_history.matches;
+    // Ranked entries first: they are a field-wise superset, so the dedup below keeps
+    // their ranked_* values. Failing here only costs those fields.
+    let mut matches = Vec::new();
+    if let Some(interval) = rank_interval {
+        match fetch_account_match_history(http_client, account, bot_username, Some(interval)).await
+        {
+            Ok((_, r)) if r.result == Some(EResult::KEResultSuccess as i32) => {
+                matches = r.matches;
+            }
+            Ok((_, r)) => warn!("Ranked match history for {account} failed: {:?}", r.result),
+            Err(e) => warn!("Failed to fetch ranked match history for {account}: {e:?}"),
+        }
+    }
+    matches.extend(match_history.matches);
     if matches.is_empty() {
         debug!("No new matches {account}");
         return true;
     }
+    let mut seen = HashSet::new();
     let entries: Vec<PlayerMatchHistoryEntry> = matches
         .into_iter()
+        .filter(|m| m.match_id.is_some_and(|id| seen.insert(id)))
         .filter_map(|r| PlayerMatchHistoryEntry::from_protobuf(account, r))
         .collect();
     if entries.is_empty() {
@@ -398,13 +440,24 @@ async fn update_account(
     }
 }
 
+/// With `rank_interval` set the GC returns only that interval's ranked matches, but
+/// each entry then carries the ranked_* fields. It gates them on all three of
+/// `game_mode`, `match_mode` and `rank_interval`; with any one unset it omits them.
 async fn fetch_account_match_history(
     http_client: &reqwest::Client,
     account: u32,
     bot_username: Option<&str>,
+    rank_interval: Option<u32>,
 ) -> anyhow::Result<(String, CMsgClientToGcGetMatchHistoryResponse)> {
     let msg = CMsgClientToGcGetMatchHistory {
         account_id: account.into(),
+        game_mode: rank_interval
+            .is_some()
+            .then_some(ECitadelGameMode::KECitadelGameModeNormal as i32),
+        match_mode: rank_interval
+            .is_some()
+            .then_some(ECitadelMatchMode::KECitadelMatchModeRanked as i32),
+        rank_interval,
         ..Default::default()
     };
     let job_cooldown = Duration::from_millis(*HISTORY_COOLDOWN_MILLIS);

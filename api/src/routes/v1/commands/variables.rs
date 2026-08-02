@@ -877,13 +877,17 @@ impl Variable {
         match_history_insert_batcher: &MatchHistoryInsertBatcher,
         account_id: u32,
     ) -> Result<PlayerMatchHistory, VariableResolveError> {
-        let matches = match fetch_steam_match_history(steam_client, account_id, false, None).await {
-            Ok(m) => {
-                match_history_insert_batcher.insert(m.clone()).await;
-                m
-            }
-            Err(_) => match_history_read_batcher.load(account_id).await?,
-        };
+        // No ranked interval: this runs per chat command and only reads the newest
+        // match, so the extra call would double the busiest consumer of the match
+        // history rate limit for fields it never uses.
+        let matches =
+            match fetch_steam_match_history(steam_client, account_id, false, None, None).await {
+                Ok(m) => {
+                    match_history_insert_batcher.insert(m.clone()).await;
+                    m
+                }
+                Err(_) => match_history_read_batcher.load(account_id).await?,
+            };
 
         let first_match = matches
             .first()

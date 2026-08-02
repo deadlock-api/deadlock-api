@@ -1,23 +1,26 @@
 use core::time::Duration;
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum_extra::extract::Query;
 use cached::macros::cached;
+use chrono::Utc;
 use clickhouse::Row;
 use itertools::{Itertools, chain};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 use valveprotos::deadlock::{
-    CMsgClientToGcGetMatchHistory, CMsgClientToGcGetMatchHistoryResponse, EgcCitadelClientMessages,
-    c_msg_client_to_gc_get_match_history_response,
+    CMsgClientToGcGetMatchHistory, CMsgClientToGcGetMatchHistoryResponse, ECitadelGameMode,
+    ECitadelMatchMode, EgcCitadelClientMessages, c_msg_client_to_gc_get_match_history_response,
 };
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::assets::common::{Language, resolve_version};
+use crate::services::assets::versions::ranked_seasons::{fetch_ranked_seasons, interval_at};
 use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti, in_clause};
 use crate::services::clickhouse_insert_batcher::{BatchInsert, ClickhouseInsertBatcher};
 use crate::services::rate_limiter::Quota;
@@ -37,8 +40,11 @@ impl BatchQueryMulti for MatchHistoryReadQuery {
     type Value = PlayerMatchHistoryEntry;
 
     fn build_query(keys: &[u32]) -> String {
+        // FINAL, not `DISTINCT ON (match_id)`: only FINAL applies the table's
+        // per-column coalescing, and it dedups per (account_id, match_id), which
+        // this query needs since batched accounts can share a match.
         format!(
-            "SELECT DISTINCT ON (match_id) ?fields FROM player_match_history \
+            "SELECT ?fields FROM player_match_history FINAL \
              WHERE account_id IN ({}) ORDER BY match_id DESC \
              SETTINGS log_comment = 'match_history'",
             in_clause(keys)
@@ -156,6 +162,27 @@ impl PlayerMatchHistoryEntry {
     pub(crate) fn won(&self) -> bool {
         i8::try_from(self.match_result).is_ok_and(|r| r == self.player_team)
     }
+
+    fn has_ranked_data(&self) -> bool {
+        self.ranked_display_badge.is_some()
+            || self.ranked_delta.is_some()
+            || self.ranked_calibration_match.is_some()
+            || self.ranked_used_demotion_protection.is_some()
+    }
+
+    /// Fills unset ranked fields from `fallback`, mirroring the table's
+    /// `CoalescingMergeTree` merge.
+    fn coalesce_ranked(mut self, fallback: &Self) -> Self {
+        self.ranked_display_badge = self.ranked_display_badge.or(fallback.ranked_display_badge);
+        self.ranked_delta = self.ranked_delta.or(fallback.ranked_delta);
+        self.ranked_calibration_match = self
+            .ranked_calibration_match
+            .or(fallback.ranked_calibration_match);
+        self.ranked_used_demotion_protection = self
+            .ranked_used_demotion_protection
+            .or(fallback.ranked_used_demotion_protection);
+        self
+    }
 }
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
@@ -166,6 +193,55 @@ pub(crate) struct MatchHistoryQuery {
     #[serde(default)]
     #[param(default)]
     force_refetch: bool,
+}
+
+/// Queues for insertion whatever `ClickHouse` is missing or has no ranked data for,
+/// then merges both sides. Steam wins, but keeps ranked fields only `ClickHouse`
+/// has: the ranked call covers just the current interval, so older ranked matches
+/// are stored, never re-fetched.
+async fn merge_and_store(
+    state: &AppState,
+    ch_match_history: PlayerMatchHistory,
+    steam_match_history: PlayerMatchHistory,
+) -> PlayerMatchHistory {
+    let mut ch_by_match: HashMap<u64, PlayerMatchHistoryEntry> = ch_match_history
+        .into_iter()
+        .map(|e| (e.match_id, e))
+        .collect();
+
+    let pending = steam_match_history
+        .iter()
+        .filter(|e| {
+            ch_by_match
+                .get(&e.match_id)
+                .is_none_or(|ch| e.has_ranked_data() && !ch.has_ranked_data())
+        })
+        .cloned()
+        .collect_vec();
+    if !pending.is_empty() {
+        state.batchers.match_history_insert.insert(pending).await;
+    }
+
+    let merged = steam_match_history
+        .into_iter()
+        .map(|e| match ch_by_match.remove(&e.match_id) {
+            Some(ch) => e.coalesce_ranked(&ch),
+            None => e,
+        })
+        .collect_vec();
+    chain!(merged, ch_by_match.into_values())
+        .sorted_by_key(|e| e.match_id)
+        .rev()
+        .collect_vec()
+}
+
+/// `None` skips the ranked call, leaving the ranked_* fields to `ClickHouse`.
+async fn current_rank_interval(state: &AppState) -> Option<u32> {
+    let version = resolve_version(state, None).await.ok()?;
+    let seasons = fetch_ranked_seasons(&state.r2_client, version, Language::default().as_str())
+        .await
+        .ok()?;
+    interval_at(&seasons, Utc::now().timestamp())
 }
 
 async fn fetch_bot_username(
@@ -183,19 +259,28 @@ async fn fetch_bot_username(
     .map(|r| r.bot_id)
 }
 
+/// With `rank_interval` set the GC returns only that interval's ranked matches, but
+/// each entry then carries the ranked_* fields.
 async fn fetch_match_history_raw(
     steam_client: &SteamClient,
     account_id: u32,
     continue_cursor: Option<u64>,
     bot_username: Option<String>,
+    rank_interval: Option<u32>,
 ) -> APIResult<(PlayerMatchHistory, Option<u64>)> {
+    // The GC gates the ranked_* fields on all three of `game_mode`, `match_mode` and
+    // `rank_interval` being set; with any one unset it omits all four.
     let msg = CMsgClientToGcGetMatchHistory {
         account_id: Some(account_id),
         continue_cursor,
-        game_mode: None,
-        match_mode: None,
+        game_mode: rank_interval
+            .is_some()
+            .then_some(ECitadelGameMode::KECitadelGameModeNormal as i32),
+        match_mode: rank_interval
+            .is_some()
+            .then_some(ECitadelMatchMode::KECitadelMatchModeRanked as i32),
         ranked_type: None,
-        rank_interval: None,
+        rank_interval,
     };
     let response: CMsgClientToGcGetMatchHistoryResponse = steam_client
         .call_steam_proxy(SteamProxyQuery {
@@ -246,6 +331,7 @@ pub(crate) async fn fetch_steam_match_history(
     account_id: u32,
     force_refetch: bool,
     bot_username: Option<String>,
+    rank_interval: Option<u32>,
 ) -> Result<PlayerMatchHistory, APIError> {
     debug!("Fetching match history from Steam for account_id {account_id}");
     let mut continue_cursor = None;
@@ -258,6 +344,7 @@ pub(crate) async fn fetch_steam_match_history(
             account_id,
             continue_cursor,
             bot_username.clone(),
+            None,
         )
         .await?;
 
@@ -294,8 +381,26 @@ pub(crate) async fn fetch_steam_match_history(
         // Update the continue cursor
         continue_cursor = result.1;
     }
-    Ok(all_matches
-        .into_iter()
+
+    // Returns the whole interval's ranked history in one response, no cursor. Its
+    // entries are a field-wise superset, so chaining it first makes `unique_by`
+    // prefer it. Failing here only costs the ranked fields.
+    let ranked_matches = match rank_interval {
+        Some(interval) => {
+            fetch_match_history_raw(steam_client, account_id, None, bot_username, Some(interval))
+                .await
+                .map_or_else(
+                    |e| {
+                        warn!("Failed to fetch ranked match history for {account_id}: {e:?}");
+                        vec![]
+                    },
+                    |r| r.0,
+                )
+        }
+        None => vec![],
+    };
+
+    Ok(chain!(ranked_matches, all_matches)
         .unique_by(|e| e.match_id)
         .sorted_by_key(|e| e.match_id)
         .rev()
@@ -410,6 +515,7 @@ pub(super) async fn match_history(
         account_id,
         query.force_refetch,
         bot_username,
+        current_rank_interval(&state).await,
     )
     .await
     {
@@ -420,27 +526,8 @@ pub(super) async fn match_history(
         }
     };
 
-    // Queue missing entries for batch insertion to ClickHouse
-    let ch_match_ids: HashSet<u64> = ch_match_history.iter().map(|e| e.match_id).collect();
-    let ch_missing_entries = steam_match_history
-        .iter()
-        .filter(|e| !ch_match_ids.contains(&e.match_id))
-        .cloned()
-        .collect_vec();
-    if !ch_missing_entries.is_empty() {
-        state
-            .batchers
-            .match_history_insert
-            .insert(ch_missing_entries)
-            .await;
-    }
-
-    // Combine and return player match history
-    let combined_match_history = chain!(ch_match_history, steam_match_history)
-        .sorted_by_key(|e| e.match_id)
-        .rev()
-        .unique_by(|e| e.match_id)
-        .collect_vec();
+    let combined_match_history =
+        merge_and_store(&state, ch_match_history, steam_match_history).await;
     let mut headers = HeaderMap::new();
     headers.insert("Called-Steam", "true".parse().unwrap());
     Ok((StatusCode::OK, headers, Json(combined_match_history)))
