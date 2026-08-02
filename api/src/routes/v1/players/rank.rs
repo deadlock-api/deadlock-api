@@ -4,6 +4,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::IntoResponse;
 use cached::macros::cached;
+use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -38,6 +39,32 @@ pub(crate) struct RankResponse {
     pub(crate) rank: u32,
     /// Sub-rank within the tier, `0` when unknown.
     pub(crate) subrank: u32,
+    /// Rank metadata of the ranked match the badge was read from. `null` when none of the player's
+    /// recent ranked matches reports a rank.
+    pub(crate) last_match: Option<LastRankedMatch>,
+}
+
+#[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
+pub(crate) struct LastRankedMatch {
+    pub(crate) match_id: u64,
+    /// Match start time as a unix timestamp.
+    pub(crate) start_time: u32,
+    /// Rank badge the player entered the match with, `tier * 10 + subrank`.
+    pub(crate) player_rank_initial_display_rank: u32,
+    /// Rank progress the player entered the match with.
+    pub(crate) player_rank_initial_flat_progress: Option<u32>,
+    /// Rank progress the player ended the match with.
+    pub(crate) player_rank_final_flat_progress: Option<u32>,
+    /// Progress change the match was supposed to award, before demotion protection is applied.
+    pub(crate) player_rank_desired_progress_change: Option<i32>,
+    /// Remaining placement games at the start of the match.
+    pub(crate) player_rank_initial_calibration_games: Option<u32>,
+    /// Remaining demotion protection games at the start of the match.
+    pub(crate) player_rank_initial_demotion_protection_games: Option<u32>,
+    /// Whether the match used up one of the player's demotion protection games.
+    pub(crate) player_rank_consumed_demotion_protection: Option<bool>,
+    /// Win streak the player entered the match with.
+    pub(crate) player_rank_initial_win_streak: Option<u32>,
 }
 
 /// `initial_display_rank` is `0` while the player is still in placement games and is only set on
@@ -51,14 +78,24 @@ pub(crate) struct RankResponse {
     sync_writes = "by_key",
     key = "u32"
 )]
-pub(crate) async fn fetch_last_ranked_match_badge(
+pub(crate) async fn fetch_last_ranked_match(
     ch_client: &clickhouse::Client,
     account_id: u32,
-) -> Result<Option<u32>, APIError> {
+) -> Result<Option<LastRankedMatch>, APIError> {
     ch_client
         .query(
             "
-            SELECT assumeNotNull(player_rank_initial_display_rank)
+            SELECT
+                match_id,
+                start_time,
+                assumeNotNull(player_rank_initial_display_rank),
+                player_rank_initial_flat_progress,
+                player_rank_final_flat_progress,
+                player_rank_desired_progress_change,
+                player_rank_initial_calibration_games,
+                player_rank_initial_demotion_protection_games,
+                player_rank_consumed_demotion_protection,
+                player_rank_initial_win_streak
             FROM match_player
             WHERE
                 account_id = ?
@@ -99,7 +136,10 @@ Returns the player's rank as Valve reported it on their latest ranked match.
 
 Only ranked matches carry a rank, and it stays unset while the player is in placement games.
 When none of the player's recent ranked matches reports a rank, `badge`, `rank` and `subrank` are
-all `0`, which is the `Obscurus` (unranked) tier.
+all `0`, which is the `Obscurus` (unranked) tier, and `last_match` is `null`.
+
+`last_match` carries the rank metadata Valve reported on that match, e.g. rank progress, remaining
+placement games and demotion protection.
 "
 )]
 pub(super) async fn rank(
@@ -114,14 +154,16 @@ pub(super) async fn rank(
         return Err(APIError::protected_user());
     }
 
-    let badge = fetch_last_ranked_match_badge(&state.ch_client_ro, account_id)
-        .await?
-        .unwrap_or_default();
+    let last_match = fetch_last_ranked_match(&state.ch_client_ro, account_id).await?;
+    let badge = last_match
+        .as_ref()
+        .map_or(0, |m| m.player_rank_initial_display_rank);
 
     Ok(Json(RankResponse {
         badge,
         rank: badge / 10,
         subrank: badge % 10,
+        last_match,
     }))
 }
 
@@ -181,9 +223,9 @@ pub(super) async fn rank_image(
         return Err(APIError::protected_user());
     }
 
-    let badge = fetch_last_ranked_match_badge(&state.ch_client_ro, account_id)
+    let badge = fetch_last_ranked_match(&state.ch_client_ro, account_id)
         .await?
-        .unwrap_or_default();
+        .map_or(0, |m| m.player_rank_initial_display_rank);
     serve_rank_image(&state, badge, format).await
 }
 
@@ -315,11 +357,12 @@ pub(super) async fn rank_avg_image(
     let badges: Vec<u32> = futures::future::try_join_all(
         unique_ids
             .iter()
-            .map(|&account_id| fetch_last_ranked_match_badge(&state.ch_client_ro, account_id)),
+            .map(|&account_id| fetch_last_ranked_match(&state.ch_client_ro, account_id)),
     )
     .await?
     .into_iter()
     .flatten()
+    .map(|m| m.player_rank_initial_display_rank)
     .collect();
 
     // Badge values are not contiguous (16 is followed by 21), so the average is taken over the

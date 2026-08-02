@@ -21,7 +21,7 @@ use crate::routes::v1::players::match_history::{
 };
 use crate::routes::v1::players::mmr;
 use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
-use crate::routes::v1::players::rank::fetch_last_ranked_match_badge;
+use crate::routes::v1::players::rank::fetch_last_ranked_match;
 use crate::services::assets::client::AssetsClient;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
@@ -774,9 +774,10 @@ impl Variable {
         {
             return Ok((rank, subrank));
         }
-        let badge = fetch_last_ranked_match_badge(&state.ch_client_ro, steam_id)
+        let badge = fetch_last_ranked_match(&state.ch_client_ro, steam_id)
             .await?
-            .ok_or(VariableResolveError::NoData("rank"))?;
+            .ok_or(VariableResolveError::NoData("rank"))?
+            .player_rank_initial_display_rank;
         Ok((badge / 10, badge % 10))
     }
 
