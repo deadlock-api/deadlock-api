@@ -193,6 +193,12 @@ impl Variable {
         self.into()
     }
 
+    /// Deprecated variables still resolve, so existing commands keep working, but they are hidden
+    /// from the available variables list.
+    pub(super) fn is_deprecated(self) -> bool {
+        matches!(self, Self::PredictedRank | Self::PredictedRankImg)
+    }
+
     fn needs_all_matches(self) -> bool {
         matches!(
             self,

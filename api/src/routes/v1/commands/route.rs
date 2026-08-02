@@ -69,6 +69,7 @@ pub(super) async fn available_variables() -> APIResult<impl IntoResponse> {
     let variable_descriptions = Variable::VARIANTS
         .iter()
         .copied()
+        .filter(|v| !v.is_deprecated())
         .map_into::<VariableDescription>()
         .collect_vec();
     Ok(Json(variable_descriptions))
