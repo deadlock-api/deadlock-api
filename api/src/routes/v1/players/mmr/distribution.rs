@@ -11,6 +11,7 @@ use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::players::mmr::apply_mmr_rate_limits;
 use crate::routes::v1::players::mmr::batch::HeroMMRPath;
+use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::default_last_month_timestamp;
 
@@ -52,6 +53,7 @@ fn build_filters(query: &MMRDistributionQuery) -> Vec<String> {
         "game_mode = 'Normal'".to_owned(),
         "match_mode = 'Ranked'".to_owned(),
         "player_rank_initial_display_rank > 0".to_owned(),
+        "player_rank_final_flat_progress IS NOT NULL".to_owned(),
     ];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         filters.push(format!("start_time >= {min_unix_timestamp}"));
@@ -95,11 +97,15 @@ fn build_mmr_distribution_query(hero_id: Option<u8>, query: &MMRDistributionQuer
         "mmr_distribution"
     };
 
+    let badge = badge_from_flat_progress_sql(
+        "assumeNotNull(argMax(player_rank_final_flat_progress, match_id))",
+    );
+
     format!(
         "
     SELECT rank, count() AS players
     FROM (
-        SELECT toUInt8(assumeNotNull(argMax(player_rank_initial_display_rank, match_id))) AS rank
+        SELECT toUInt8({badge}) AS rank
         FROM match_player
         WHERE {where_clause}
         GROUP BY account_id
@@ -123,8 +129,8 @@ fn build_mmr_distribution_query(hero_id: Option<u8>, query: &MMRDistributionQuer
     tags = ["MMR"],
     summary = "MMR Distribution (Deprecated)",
     description = "
-Deprecated. The MMR estimate is gone, this now counts players by the rank Valve reported on their
-latest ranked match within the filtered range.
+Deprecated. The MMR estimate is gone, this now counts players by the rank Valve reported at the end
+of their latest ranked match within the filtered range.
 
 Use `/v1/analytics/badge-distribution` instead.
 ",

@@ -30,9 +30,27 @@ fn idx_to_badge(idx: i32) -> i32 {
     10 * ((idx - 1) / 6) + 11 + (idx - 1) % 6
 }
 
+/// Convert Valve's flat rank progress to a badge ID.
+///
+/// Progress is a ladder-wide counter in fixed 1000-point steps, seven per tier, with the sixth
+/// subtier spanning two of them.
+fn badge_from_flat_progress(flat_progress: u32) -> u32 {
+    let idx = flat_progress / 1000;
+    (idx / 7 + 1) * 10 + (idx % 7 + 1).min(6)
+}
+
+/// `ClickHouse` expression equivalent to [`badge_from_flat_progress`]. `flat_progress` must be a
+/// non-nullable numeric expression; it is inlined twice.
+pub(crate) fn badge_from_flat_progress_sql(flat_progress: &str) -> String {
+    format!(
+        "toUInt32((intDiv(intDiv({flat_progress}, 1000), 7) + 1) * 10 + least(intDiv({flat_progress}, 1000) % 7 + 1, 6))"
+    )
+}
+
 #[derive(Debug, Serialize, ToSchema)]
 pub(crate) struct RankResponse {
-    /// Rank badge, `tier * 10 + subrank`. `0` when no recent ranked match reports a rank.
+    /// Rank badge, `tier * 10 + subrank`, including the progress the last ranked match awarded.
+    /// `0` when no recent ranked match reports a rank.
     /// See more: <https://api.deadlock-api.com/v1/assets/ranks>
     pub(crate) badge: u32,
     /// Rank tier, `0` when unknown.
@@ -65,6 +83,20 @@ pub(crate) struct LastRankedMatch {
     pub(crate) player_rank_consumed_demotion_protection: Option<bool>,
     /// Win streak the player entered the match with.
     pub(crate) player_rank_initial_win_streak: Option<u32>,
+}
+
+impl LastRankedMatch {
+    /// The badge the player left the match with, i.e. the badge they entered it with plus the
+    /// progress the match awarded. `0` while the player is still in placement games.
+    pub(crate) fn badge(&self) -> u32 {
+        if self.player_rank_initial_display_rank == 0 {
+            return 0;
+        }
+        self.player_rank_final_flat_progress.map_or(
+            self.player_rank_initial_display_rank,
+            badge_from_flat_progress,
+        )
+    }
 }
 
 /// `initial_display_rank` is `0` while the player is still in placement games and is only set on
@@ -124,7 +156,9 @@ pub(crate) async fn fetch_last_ranked_match(
     tags = ["Players"],
     summary = "Rank",
     description = "
-Returns the player's rank as Valve reported it on their latest ranked match.
+Returns the player's rank at the end of their latest ranked match, i.e. the rank they entered that
+match with plus the progress the match awarded. A subrank spans 1000 progress points, so a single
+match can move the badge.
 
 Only ranked matches carry a rank, and it stays unset while the player is in placement games.
 When none of the player's recent ranked matches reports a rank, `badge`, `rank` and `subrank` are
@@ -147,9 +181,7 @@ pub(super) async fn rank(
     }
 
     let last_match = fetch_last_ranked_match(&state.ch_client_ro, account_id).await?;
-    let badge = last_match
-        .as_ref()
-        .map_or(0, |m| m.player_rank_initial_display_rank);
+    let badge = last_match.as_ref().map_or(0, LastRankedMatch::badge);
 
     Ok(Json(RankResponse {
         badge,
@@ -217,7 +249,8 @@ pub(super) async fn rank_image(
 
     let badge = fetch_last_ranked_match(&state.ch_client_ro, account_id)
         .await?
-        .map_or(0, |m| m.player_rank_initial_display_rank);
+        .as_ref()
+        .map_or(0, LastRankedMatch::badge);
     serve_rank_image(&state, badge, format).await
 }
 
@@ -354,7 +387,7 @@ pub(super) async fn rank_avg_image(
     .await?
     .into_iter()
     .flatten()
-    .map(|m| m.player_rank_initial_display_rank)
+    .map(|m| m.badge())
     .collect();
 
     // Badge values are not contiguous (16 is followed by 21), so the average is taken over the
@@ -466,6 +499,52 @@ mod tests {
         assert_eq!(badge_to_idx(21), 7);
         assert_eq!(badge_to_idx(82), 44);
         assert_eq!(badge_to_idx(116), 66);
+    }
+
+    #[test]
+    fn test_badge_from_flat_progress() {
+        // Subtier 6 spans two 1000-point steps, so each tier covers seven of them.
+        for (progress, expected) in [
+            (0, 11),
+            (999, 11),
+            (1_000, 12),
+            (4_000, 15),
+            (5_000, 16),
+            (6_975, 16),
+            (7_000, 21),
+            (35_000, 61),
+            (53_225, 85),
+        ] {
+            assert_eq!(badge_from_flat_progress(progress), expected, "{progress}");
+        }
+    }
+
+    fn last_ranked_match(initial_badge: u32, final_progress: Option<u32>) -> LastRankedMatch {
+        LastRankedMatch {
+            match_id: 1,
+            start_time: 0,
+            player_rank_initial_display_rank: initial_badge,
+            player_rank_initial_flat_progress: None,
+            player_rank_final_flat_progress: final_progress,
+            player_rank_desired_progress_change: None,
+            player_rank_initial_calibration_games: None,
+            player_rank_initial_demotion_protection_games: None,
+            player_rank_consumed_demotion_protection: None,
+            player_rank_initial_win_streak: None,
+        }
+    }
+
+    #[test]
+    fn test_badge_includes_progress_made_in_the_match() {
+        // Entered subrank 84 at 52_800, the match pushed them over the 53_000 line into 85.
+        assert_eq!(last_ranked_match(84, Some(53_225)).badge(), 85);
+        assert_eq!(last_ranked_match(85, Some(52_800)).badge(), 84);
+    }
+
+    #[test]
+    fn test_badge_falls_back_and_stays_zero_in_placement() {
+        assert_eq!(last_ranked_match(84, None).badge(), 84);
+        assert_eq!(last_ranked_match(0, Some(53_225)).badge(), 0);
     }
 
     #[test]

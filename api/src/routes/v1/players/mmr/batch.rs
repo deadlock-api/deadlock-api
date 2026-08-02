@@ -12,6 +12,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::players::mmr::apply_mmr_rate_limits;
 use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
+use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::comma_separated_deserialize;
 
@@ -56,6 +57,9 @@ fn build_mmr_query_inner(
     let hero_filter = hero_id
         .map(|id| format!("AND hero_id = {id}"))
         .unwrap_or_default();
+    let badge = badge_from_flat_progress_sql(
+        "assumeNotNull(argMax(player_rank_final_flat_progress, match_id))",
+    );
     format!(
         "
     SELECT
@@ -71,11 +75,12 @@ fn build_mmr_query_inner(
             account_id,
             max(match_id) AS latest_match_id,
             argMax(start_time, match_id) AS latest_start_time,
-            toUInt32(assumeNotNull(argMax(player_rank_initial_display_rank, match_id))) AS rank
+            {badge} AS rank
         FROM match_player
         WHERE account_id IN ({account_ids})
           AND match_mode = 'Ranked'
           AND player_rank_initial_display_rank > 0
+          AND player_rank_final_flat_progress IS NOT NULL
           {hero_filter}
           {match_id_filter}
         GROUP BY account_id
@@ -113,8 +118,8 @@ async fn get_mmr(
     tags = ["MMR"],
     summary = "Batch MMR (Deprecated)",
     description = "
-Deprecated. The MMR estimate is gone, this now returns the rank Valve reported for each player on
-their latest ranked match. Players without a ranked match carrying a rank are left out.
+Deprecated. The MMR estimate is gone, this now returns the rank Valve reported for each player at
+the end of their latest ranked match. Players without a ranked match carrying a rank are left out.
 
 Use `/v1/players/{account_id}/rank` instead.
 ",

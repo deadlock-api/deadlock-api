@@ -10,6 +10,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
@@ -103,6 +104,9 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
     let filters = format!(" AND {}", info_filters.join(" AND "));
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
+    let player_badge = badge_from_flat_progress_sql(
+        "assumeNotNull(argMax(player_rank_final_flat_progress, match_id))",
+    );
     // The only projection covering these columns is ordered by hero_id and carries no skip indexes,
     // so ClickHouse picks it and then can't prune by start_time: ~70x more rows read.
     format!(
@@ -125,9 +129,10 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
             toUInt64(0) as total_matches,
             COUNT() as unique_players
         FROM (
-            SELECT toUInt32(assumeNotNull(argMax(player_rank_initial_display_rank, match_id))) AS badge_level
+            SELECT {player_badge} AS badge_level
             FROM match_player
-            WHERE match_mode = 'Ranked' AND {game_mode_filter} AND player_rank_initial_display_rank > 0 {filters}
+            WHERE match_mode = 'Ranked' AND {game_mode_filter} AND player_rank_initial_display_rank > 0
+              AND player_rank_final_flat_progress IS NOT NULL {filters}
             GROUP BY account_id
         )
         GROUP BY badge_level
@@ -163,8 +168,9 @@ async fn get_badge_distribution(
 This endpoint returns the player badge distribution.
 
 `total_matches` counts matches by their average badge, while `unique_players` counts players by the
-rank Valve reported on their latest ranked match within the filtered range. Since only ranked matches
-carry a rank, `unique_players` ignores the `match_mode` filter and always looks at ranked matches.
+rank Valve reported at the end of their latest ranked match within the filtered range. Since only
+ranked matches carry a rank, `unique_players` ignores the `match_mode` filter and always looks at
+ranked matches.
 
 Ranks exist only from the first ranked season on, so `min_unix_timestamp` is clamped to its start.
 

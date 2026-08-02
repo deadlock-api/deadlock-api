@@ -751,7 +751,7 @@ impl Variable {
     }
 
     /// Player cards are only readable for accounts befriended by one of our bots, so fall back to
-    /// the `initial_display_rank` Valve reports for the player on their latest ranked match.
+    /// the rank Valve reports for the player at the end of their latest ranked match.
     /// A card rank of `0` means the card carries no rank and is treated the same as a failure.
     async fn fetch_player_ranks(
         state: &AppState,
@@ -765,7 +765,7 @@ impl Variable {
         let badge = fetch_last_ranked_match(&state.ch_client_ro, steam_id)
             .await?
             .ok_or(VariableResolveError::NoData("rank"))?
-            .player_rank_initial_display_rank;
+            .badge();
         Ok((badge / 10, badge % 10))
     }
 

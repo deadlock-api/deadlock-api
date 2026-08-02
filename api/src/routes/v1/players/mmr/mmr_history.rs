@@ -9,6 +9,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::players::mmr::apply_mmr_rate_limits;
+use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::parse_steam_id;
 use crate::utils::types::AccountIdQuery;
@@ -56,6 +57,7 @@ fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String
     } else {
         "mmr_history"
     };
+    let badge = badge_from_flat_progress_sql("assumeNotNull(player_rank_final_flat_progress)");
     format!(
         "
     SELECT
@@ -71,12 +73,13 @@ fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String
             account_id,
             match_id,
             start_time,
-            toUInt32(assumeNotNull(player_rank_initial_display_rank)) AS rank
+            {badge} AS rank
         FROM match_player
         WHERE account_id = {account_id}
         {hero_filter}
         AND match_mode = 'Ranked'
         AND player_rank_initial_display_rank > 0
+        AND player_rank_final_flat_progress IS NOT NULL
     )
     ORDER BY match_id
     SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0
@@ -116,7 +119,7 @@ async fn get_hero_mmr_history(
     summary = "MMR History (Deprecated)",
     description = "
 Deprecated. The MMR estimate is gone, this now returns one entry per ranked match with the rank
-Valve reported for the player at the start of that match.
+Valve reported for the player at the end of that match.
 
 Use the `ranked_display_badge` and `ranked_delta` fields of `/v1/players/{account_id}/match-history`
 instead.
@@ -154,7 +157,7 @@ pub(super) async fn mmr_history(
     summary = "Hero MMR History (Deprecated)",
     description = "
 Deprecated. Valve reports a single account-wide rank, not a per-hero one, so this returns the
-player's rank at the start of each ranked match they played on that hero.
+player's rank at the end of each ranked match they played on that hero.
 
 Use the `ranked_display_badge` and `ranked_delta` fields of `/v1/players/{account_id}/match-history`
 instead.
