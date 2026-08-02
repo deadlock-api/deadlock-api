@@ -88,7 +88,7 @@ pub(crate) async fn fetch_last_ranked_match(
             SELECT
                 match_id,
                 start_time,
-                assumeNotNull(player_rank_initial_display_rank),
+                assumeNotNull(player_rank_initial_display_rank) AS player_rank_initial_display_rank,
                 player_rank_initial_flat_progress,
                 player_rank_final_flat_progress,
                 player_rank_desired_progress_change,
@@ -99,20 +99,12 @@ pub(crate) async fn fetch_last_ranked_match(
             FROM match_player
             WHERE
                 account_id = ?
-                AND match_id IN (
-                    SELECT match_id
-                    FROM match_player
-                    WHERE account_id = ? AND match_mode = 'Ranked'
-                    ORDER BY match_id DESC
-                    LIMIT 20
-                )
-                AND player_rank_initial_display_rank > 0
+                AND match_mode = 'Ranked'
             ORDER BY match_id DESC
             LIMIT 1
-            SETTINGS log_comment = 'player_rank', apply_patch_parts = 0
+            SETTINGS log_comment = 'player_rank'
             ",
         )
-        .bind(account_id)
         .bind(account_id)
         .fetch_optional()
         .await
