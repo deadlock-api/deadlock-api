@@ -32,7 +32,8 @@ pub(crate) struct BadgeDistributionQuery {
         )
     )]
     match_mode: Option<Vec<MatchMode>>,
-    /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
+    /// Filter matches based on their start time (Unix timestamp). Values below the start of the
+    /// first ranked season (1785430800) are clamped to it. **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
     min_unix_timestamp: Option<i64>,
@@ -62,13 +63,20 @@ pub(crate) struct BadgeDistribution {
     badge_level: u32,
     /// The total number of matches.
     total_matches: u64,
+    /// The number of unique players whose rank on their latest ranked match in the filtered range is this badge level.
+    unique_players: u64,
 }
 
+/// Start of the first ranked season. No match before it carries a player rank.
+const FIRST_RANKED_SEASON_START: i64 = 1785430800;
+
 fn build_query(query: &BadgeDistributionQuery) -> String {
-    let mut info_filters = vec![];
-    if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        info_filters.push(format!("start_time >= {min_unix_timestamp}"));
-    }
+    let min_unix_timestamp = query
+        .min_unix_timestamp
+        .map_or(FIRST_RANKED_SEASON_START, |t| {
+            t.max(FIRST_RANKED_SEASON_START)
+        });
+    let mut info_filters = vec![format!("start_time >= {min_unix_timestamp}")];
     if let Some(max_unix_timestamp) = query.max_unix_timestamp {
         info_filters.push(format!("start_time <= {max_unix_timestamp}"));
     }
@@ -92,28 +100,41 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
     if let Some(is_new_player_pool) = query.is_new_player_pool {
         info_filters.push(format!("new_player_pool = {is_new_player_pool}"));
     }
-    let filters = if info_filters.is_empty() {
-        String::new()
-    } else {
-        format!(" AND {}", info_filters.join(" AND "))
-    };
+    let filters = format!(" AND {}", info_filters.join(" AND "));
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
+    // The only projection covering these columns is ordered by hero_id and carries no skip indexes,
+    // so ClickHouse picks it and then can't prune by start_time: ~70x more rows read.
     format!(
         "
     SELECT
-        coalesce(t_badge_level, 0) as badge_level,
-        COUNT() as total_matches
+        badge_level,
+        sum(total_matches) as total_matches,
+        sum(unique_players) as unique_players
     FROM (
-        SELECT any(average_badge) AS t_badge_level
+        SELECT
+            toUInt32(assumeNotNull(average_badge)) as badge_level,
+            uniqExact(match_id) as total_matches,
+            toUInt64(0) as unique_players
         FROM match_player
-        WHERE {match_mode_filter} AND {game_mode_filter} {filters}
-        GROUP BY match_id
+        WHERE {match_mode_filter} AND {game_mode_filter} AND average_badge > 0 {filters}
+        GROUP BY average_badge
+        UNION ALL
+        SELECT
+            badge_level,
+            toUInt64(0) as total_matches,
+            COUNT() as unique_players
+        FROM (
+            SELECT toUInt32(assumeNotNull(argMax(player_rank_initial_display_rank, match_id))) AS badge_level
+            FROM match_player
+            WHERE match_mode = 'Ranked' AND {game_mode_filter} AND player_rank_initial_display_rank > 0 {filters}
+            GROUP BY account_id
+        )
+        GROUP BY badge_level
     )
-    WHERE badge_level > 0
     GROUP BY badge_level
     ORDER BY badge_level
-    SETTINGS log_comment = 'badge_distribution', apply_patch_parts = 0
+    SETTINGS log_comment = 'badge_distribution', apply_patch_parts = 0, optimize_use_projections = 0
     "
     )
 }
@@ -140,6 +161,12 @@ async fn get_badge_distribution(
     summary = "Badge Distribution",
     description = "
 This endpoint returns the player badge distribution.
+
+`total_matches` counts matches by their average badge, while `unique_players` counts players by the
+rank Valve reported on their latest ranked match within the filtered range. Since only ranked matches
+carry a rank, `unique_players` ignores the `match_mode` filter and always looks at ranked matches.
+
+Ranks exist only from the first ranked season on, so `min_unix_timestamp` is clamped to its start.
 
 ### Rate Limits:
 > The rate limits below are **shared across all analytics endpoints**.
