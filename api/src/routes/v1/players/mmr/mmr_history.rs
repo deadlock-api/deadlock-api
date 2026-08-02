@@ -13,9 +13,6 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::parse_steam_id;
 use crate::utils::types::AccountIdQuery;
 
-pub const WINDOW_SIZE: usize = 40;
-pub const SMOOTHING_FACTOR: f32 = 0.8;
-
 #[derive(Deserialize, IntoParams, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub(super) struct HeroMMRHistoryPath {
     /// The players `SteamID3`
@@ -32,14 +29,14 @@ pub struct MMRHistory {
     match_id: u64,
     /// Start time of the match
     pub start_time: u32,
-    /// Player Score is the index for the rank array (internally used for the rank regression)
+    /// Contiguous index of the rank (1-66), derived from `rank`
     player_score: f64,
     /// The Player Rank (tier = first digits, subtier = last digit). See more: <https://api.deadlock-api.com/v1/assets/ranks>
     rank: u32,
     /// Extracted from the rank the division (rank // 10)
-    pub(crate) division: u32,
+    division: u32,
     /// Extracted from the rank the division tier (rank % 10)
-    pub(crate) division_tier: u32,
+    division_tier: u32,
 }
 
 fn build_mmr_history_query(account_id: u32) -> String {
@@ -61,43 +58,27 @@ fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String
     };
     format!(
         "
-    WITH
-        {WINDOW_SIZE} as window_size,
-        {SMOOTHING_FACTOR} as k,
-        t_matches AS (
-            SELECT
-                account_id,
-                match_id,
-                start_time,
-                assumeNotNull(average_badge) AS current_match_badge,
-                (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10) AS mmr
-            FROM match_player
-            WHERE account_id = {account_id}
-            {hero_filter}
-            AND game_mode = 'Normal'
-            AND match_mode IN ('Ranked', 'Unranked')
-            ORDER BY account_id, match_id
-        ),
-        mmr_data AS (
-            SELECT
-                account_id,
-                match_id,
-                start_time,
-                groupArray(mmr) OVER (PARTITION BY account_id ORDER BY match_id ROWS BETWEEN window_size - 1 PRECEDING AND CURRENT ROW) AS mmr_window,
-                groupArray(start_time) OVER (PARTITION BY account_id ORDER BY match_id ROWS BETWEEN window_size - 1 PRECEDING AND CURRENT ROW) AS time_window,
-                arrayMap(i -> pow(k, date_diff('hour', time_window[i], start_time)), range(1, length(time_window) + 1)) AS weights
-            FROM t_matches
-            ORDER BY match_id
-        )
     SELECT
         account_id,
         match_id,
         start_time,
-        clamp(dotProduct(mmr_window, weights) / arraySum(weights), 0, 66) AS player_score,
-        toUInt32(if(toUInt32(round(player_score)) = 0, 0, 10 * intDiv(toUInt32(round(player_score)) - 1, 6) + 11 + modulo(toUInt32(round(player_score)) - 1, 6))) AS rank,
-        toUInt32(floor(rank / 10)) AS division,
+        toFloat64((intDiv(rank, 10) - 1) * 6 + rank % 10) AS player_score,
+        rank,
+        toUInt32(intDiv(rank, 10)) AS division,
         toUInt32(rank % 10) AS division_tier
-    FROM mmr_data
+    FROM (
+        SELECT
+            account_id,
+            match_id,
+            start_time,
+            toUInt32(assumeNotNull(player_rank_initial_display_rank)) AS rank
+        FROM match_player
+        WHERE account_id = {account_id}
+        {hero_filter}
+        AND match_mode = 'Ranked'
+        AND player_rank_initial_display_rank > 0
+    )
+    ORDER BY match_id
     SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0
     "
     )
@@ -132,9 +113,16 @@ async fn get_hero_mmr_history(
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch mmr history")
     ),
     tags = ["MMR"],
-    summary = "MMR History",
-    description = "Player MMR History",
+    summary = "MMR History (Deprecated)",
+    description = "
+Deprecated. The MMR estimate is gone, this now returns one entry per ranked match with the rank
+Valve reported for the player at the start of that match.
+
+Use the `ranked_display_badge` and `ranked_delta` fields of `/v1/players/{account_id}/match-history`
+instead.
+",
 )]
+#[deprecated(note = "use the ranked_* fields of `/v1/players/{account_id}/match-history`")]
 pub(super) async fn mmr_history(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     State(state): State<AppState>,
@@ -163,9 +151,16 @@ pub(super) async fn mmr_history(
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch hero mmr history")
     ),
     tags = ["MMR"],
-    summary = "Hero MMR History",
-    description = "Player Hero MMR History",
+    summary = "Hero MMR History (Deprecated)",
+    description = "
+Deprecated. Valve reports a single account-wide rank, not a per-hero one, so this returns the
+player's rank at the start of each ranked match they played on that hero.
+
+Use the `ranked_display_badge` and `ranked_delta` fields of `/v1/players/{account_id}/match-history`
+instead.
+",
 )]
+#[deprecated(note = "use the ranked_* fields of `/v1/players/{account_id}/match-history`")]
 pub(super) async fn hero_mmr_history(
     Path(HeroMMRHistoryPath {
         account_id,

@@ -19,8 +19,6 @@ use crate::routes::v1::players::match_history::{
     MatchHistoryInsertBatcher, MatchHistoryReadBatcher, PlayerMatchHistory,
     PlayerMatchHistoryEntry, fetch_steam_match_history,
 };
-use crate::routes::v1::players::mmr;
-use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
 use crate::routes::v1::players::rank::fetch_last_ranked_match;
 use crate::services::assets::client::AssetsClient;
 use crate::services::rate_limiter::extractor::RateLimitKey;
@@ -196,7 +194,13 @@ impl Variable {
     /// Deprecated variables still resolve, so existing commands keep working, but they are hidden
     /// from the available variables list.
     pub(super) fn is_deprecated(self) -> bool {
-        matches!(self, Self::PredictedRank | Self::PredictedRankImg)
+        matches!(
+            self,
+            Self::PredictedRank
+                | Self::PredictedRankImg
+                | Self::MMRHistoryRank
+                | Self::MMRHistoryRankImg
+        )
     }
 
     fn needs_all_matches(self) -> bool {
@@ -294,9 +298,12 @@ impl Variable {
 
     pub(super) fn get_description(self) -> &'static str {
         match self {
-            Self::Rank | Self::RankImg | Self::PredictedRank | Self::PredictedRankImg => {
-                "Get the rank"
-            }
+            Self::Rank
+            | Self::RankImg
+            | Self::PredictedRank
+            | Self::PredictedRankImg
+            | Self::MMRHistoryRank
+            | Self::MMRHistoryRankImg => "Get the rank",
             Self::HeroHoursPlayed => {
                 "Get the total hours played in all matches for a specific hero"
             }
@@ -339,7 +346,6 @@ impl Variable {
             Self::MaxBonusHealthPerKill => "Get the max bonus health per kill on Mo & Krill",
             Self::MaxGuidedOwlStacks => "Get the max guided owl stacks on Grey Talon",
             Self::MaxTrophyCollectorStacks => "Get the max stacks on Trophy Collector",
-            Self::MMRHistoryRank | Self::MMRHistoryRankImg => "Get the MMR history rank",
         }
     }
 
@@ -385,7 +391,7 @@ impl Variable {
         context: &ResolverContext,
     ) -> Result<String, VariableResolveError> {
         match self {
-            Self::Rank | Self::PredictedRank => {
+            Self::Rank | Self::PredictedRank | Self::MMRHistoryRank => {
                 let (rank, subrank) = Self::fetch_player_ranks(state, steam_id).await?;
                 let ranks = state.assets_client.fetch_ranks().await?;
                 let rank = ranks
@@ -394,7 +400,7 @@ impl Variable {
                     .ok_or(VariableResolveError::NoData("rank"))?;
                 Ok(format!("{} {subrank}", rank.name))
             }
-            Self::RankImg | Self::PredictedRankImg => {
+            Self::RankImg | Self::PredictedRankImg | Self::MMRHistoryRankImg => {
                 let (rank, _) = Self::fetch_player_ranks(state, steam_id).await?;
                 state
                     .assets_client
@@ -741,30 +747,6 @@ impl Variable {
                     .map(|r| r.to_string())
                     .map_err(Into::into)
             }
-            Self::MMRHistoryRank => {
-                let mmr = get_last_mmr_history(&state.ch_client_ro, steam_id)
-                    .await?
-                    .ok_or(VariableResolveError::NoData("mmr history"))?;
-                let ranks = state.assets_client.fetch_ranks().await?;
-                let rank_name = ranks
-                    .iter()
-                    .find(|r| r.tier == mmr.division)
-                    .map(|r| r.name.clone())
-                    .ok_or(VariableResolveError::NoData("rank name"))?;
-                Ok(format!("{rank_name} {}", mmr.division_tier))
-            }
-            Self::MMRHistoryRankImg => {
-                let mmr = get_last_mmr_history(&state.ch_client_ro, steam_id)
-                    .await?
-                    .ok_or(VariableResolveError::NoData("mmr history"))?;
-                let ranks = state.assets_client.fetch_ranks().await?;
-                ranks
-                    .iter()
-                    .find(|r| r.tier == mmr.division)
-                    .and_then(|r| r.images.get("large").or(r.images.get("large_webp")))
-                    .cloned()
-                    .ok_or(VariableResolveError::NoData("rank img"))
-            }
         }
     }
 
@@ -941,16 +923,6 @@ impl Variable {
                 .is_some_and(|n| n == &steam_name)
         }))
     }
-}
-
-async fn get_last_mmr_history(
-    ch_client: &clickhouse::Client,
-    steam_id: u32,
-) -> clickhouse::error::Result<Option<MMRHistory>> {
-    Ok(mmr::batch::get_mmr(ch_client, &[steam_id], None)
-        .await?
-        .first()
-        .cloned())
 }
 
 async fn get_steam_account_name(

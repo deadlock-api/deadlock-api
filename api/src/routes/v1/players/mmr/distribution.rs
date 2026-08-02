@@ -11,7 +11,6 @@ use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::players::mmr::apply_mmr_rate_limits;
 use crate::routes::v1::players::mmr::batch::HeroMMRPath;
-use crate::routes::v1::players::mmr::mmr_history::{SMOOTHING_FACTOR, WINDOW_SIZE};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::default_last_month_timestamp;
 
@@ -51,7 +50,8 @@ pub(super) struct DistributionEntry {
 fn build_filters(query: &MMRDistributionQuery) -> Vec<String> {
     let mut filters = vec![
         "game_mode = 'Normal'".to_owned(),
-        "match_mode IN ('Ranked', 'Unranked')".to_owned(),
+        "match_mode = 'Ranked'".to_owned(),
+        "player_rank_initial_display_rank > 0".to_owned(),
     ];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         filters.push(format!("start_time >= {min_unix_timestamp}"));
@@ -89,16 +89,6 @@ fn build_mmr_distribution_query(hero_id: Option<u8>, query: &MMRDistributionQuer
     }
     let where_clause = filters.join(" AND ");
 
-    let min_window = if hero_id.is_some() {
-        "window_size"
-    } else {
-        "window_size / 2"
-    };
-    let rank_filter = if hero_id.is_none() {
-        "WHERE rank BETWEEN 11 AND 116"
-    } else {
-        ""
-    };
     let log_comment = if hero_id.is_some() {
         "mmr_distribution_hero"
     } else {
@@ -107,45 +97,14 @@ fn build_mmr_distribution_query(hero_id: Option<u8>, query: &MMRDistributionQuer
 
     format!(
         "
-    WITH
-        {WINDOW_SIZE} AS window_size,
-        {SMOOTHING_FACTOR} AS k
-    SELECT toUInt8(if(player_score <= 0, 0, 10 * intDiv(player_score - 1, 6) + 11 + modulo(player_score - 1, 6))) AS rank,
-           players
+    SELECT rank, count() AS players
     FROM (
-        SELECT toUInt32(clamp(
-                   dotProduct(mmr_window, arrayMap(t -> pow(k, date_diff('hour', t, latest_start_time)), time_window)) /
-                   arraySum(arrayMap(t -> pow(k, date_diff('hour', t, latest_start_time)), time_window)),
-                   0, 66
-               )) AS player_score,
-               uniq(account_id) AS players
-        FROM (
-            SELECT
-                account_id,
-                arrayMap(x -> x.2, recent_matches) AS mmr_window,
-                arrayMap(x -> x.3, recent_matches) AS time_window,
-                arrayMax(time_window) AS latest_start_time
-            FROM (
-                SELECT
-                    account_id,
-                    arraySlice(arraySort(x -> -x.1, groupArray((match_id, mmr, start_time))), 1, window_size) AS recent_matches
-                FROM (
-                    SELECT
-                        account_id,
-                        match_id,
-                        start_time,
-                        assumeNotNull(average_badge) AS current_match_badge,
-                        (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10) AS mmr
-                    FROM match_player
-                    WHERE {where_clause}
-                )
-                GROUP BY account_id
-                HAVING length(recent_matches) >= {min_window}
-            )
-        )
-        GROUP BY player_score
+        SELECT toUInt8(assumeNotNull(argMax(player_rank_initial_display_rank, match_id))) AS rank
+        FROM match_player
+        WHERE {where_clause}
+        GROUP BY account_id
     )
-    {rank_filter}
+    GROUP BY rank
     ORDER BY rank
     SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0
     "
@@ -162,11 +121,15 @@ fn build_mmr_distribution_query(hero_id: Option<u8>, query: &MMRDistributionQuer
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch mmr")
     ),
     tags = ["MMR"],
-    summary = "MMR Distribution",
+    summary = "MMR Distribution (Deprecated)",
     description = "
-Player MMR Distribution
+Deprecated. The MMR estimate is gone, this now counts players by the rank Valve reported on their
+latest ranked match within the filtered range.
+
+Use `/v1/analytics/badge-distribution` instead.
 ",
 )]
+#[deprecated(note = "use `/v1/analytics/badge-distribution`")]
 pub(super) async fn mmr_distribution(
     State(state): State<AppState>,
     rate_limit_key: RateLimitKey,
@@ -193,11 +156,15 @@ pub(super) async fn mmr_distribution(
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch hero mmr")
     ),
     tags = ["MMR"],
-    summary = "Hero MMR Distribution",
+    summary = "Hero MMR Distribution (Deprecated)",
     description = "
-Player Hero MMR Distribution
+Deprecated. Valve reports a single account-wide rank, not a per-hero one, so this counts players by
+the rank they had on their latest ranked match played on that hero.
+
+Use `/v1/analytics/badge-distribution` instead.
 ",
 )]
+#[deprecated(note = "use `/v1/analytics/badge-distribution`")]
 pub(super) async fn hero_mmr_distribution(
     Path(HeroMMRPath { hero_id }): Path<HeroMMRPath>,
     Query(query): Query<MMRDistributionQuery>,

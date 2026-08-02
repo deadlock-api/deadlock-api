@@ -11,7 +11,7 @@ use utoipa::IntoParams;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::players::mmr::apply_mmr_rate_limits;
-use crate::routes::v1::players::mmr::mmr_history::{MMRHistory, SMOOTHING_FACTOR, WINDOW_SIZE};
+use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::comma_separated_deserialize;
 
@@ -58,47 +58,28 @@ fn build_mmr_query_inner(
         .unwrap_or_default();
     format!(
         "
-    WITH
-        {WINDOW_SIZE} AS window_size,
-        {SMOOTHING_FACTOR} AS k
     SELECT
         account_id,
         latest_match_id AS match_id,
         latest_start_time AS start_time,
-        clamp(
-            dotProduct(mmr_window, arrayMap(t -> pow(k, date_diff('hour', t, latest_start_time)), time_window)) /
-            arraySum(arrayMap(t -> pow(k, date_diff('hour', t, latest_start_time)), time_window)),
-            0, 66
-        ) AS player_score,
-        toUInt32(if(toUInt32(round(player_score)) = 0, 0, 10 * intDiv(toUInt32(round(player_score)) - 1, 6) + 11 + modulo(toUInt32(round(player_score)) - 1, 6))) AS rank,
-        toUInt32(floor(rank / 10)) AS division,
+        toFloat64((intDiv(rank, 10) - 1) * 6 + rank % 10) AS player_score,
+        rank,
+        toUInt32(intDiv(rank, 10)) AS division,
         toUInt32(rank % 10) AS division_tier
     FROM (
         SELECT
             account_id,
             max(match_id) AS latest_match_id,
             argMax(start_time, match_id) AS latest_start_time,
-            groupArray(mmr) AS mmr_window,
-            groupArray(start_time) AS time_window
-        FROM (
-            SELECT
-                account_id,
-                match_id,
-                start_time,
-                assumeNotNull(average_badge) AS current_match_badge,
-                (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10) AS mmr
-            FROM match_player
-            WHERE account_id IN ({account_ids})
-              AND game_mode = 'Normal'
-              AND match_mode IN ('Ranked', 'Unranked')
-              {hero_filter}
-              {match_id_filter}
-            ORDER BY account_id, match_id DESC
-            LIMIT window_size BY account_id
-        )
+            toUInt32(assumeNotNull(argMax(player_rank_initial_display_rank, match_id))) AS rank
+        FROM match_player
+        WHERE account_id IN ({account_ids})
+          AND match_mode = 'Ranked'
+          AND player_rank_initial_display_rank > 0
+          {hero_filter}
+          {match_id_filter}
         GROUP BY account_id
     )
-    WHERE length(mmr_window) > 0
     SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0
     "
     )
@@ -110,7 +91,7 @@ fn build_mmr_query_inner(
     sync_writes = "by_key",
     key = "String"
 )]
-pub(crate) async fn get_mmr(
+async fn get_mmr(
     ch_client: &clickhouse::Client,
     account_ids: &[u32],
     max_match_id: Option<u64>,
@@ -130,11 +111,15 @@ pub(crate) async fn get_mmr(
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch mmr")
     ),
     tags = ["MMR"],
-    summary = "Batch MMR",
+    summary = "Batch MMR (Deprecated)",
     description = "
-Batch Player MMR
+Deprecated. The MMR estimate is gone, this now returns the rank Valve reported for each player on
+their latest ranked match. Players without a ranked match carrying a rank are left out.
+
+Use `/v1/players/{account_id}/rank` instead.
 ",
 )]
+#[deprecated(note = "use `/v1/players/{account_id}/rank`")]
 pub(super) async fn mmr(
     Query(MMRBatchQuery {
         account_ids,
@@ -173,11 +158,15 @@ pub(super) async fn mmr(
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch hero mmr")
     ),
     tags = ["MMR"],
-    summary = "Batch Hero MMR",
+    summary = "Batch Hero MMR (Deprecated)",
     description = "
-Batch Player Hero MMR
+Deprecated. Valve reports a single account-wide rank, not a per-hero one, so this returns each
+player's rank on their latest ranked match played on that hero.
+
+Use `/v1/players/{account_id}/rank` instead.
 ",
 )]
+#[deprecated(note = "use `/v1/players/{account_id}/rank`")]
 pub(super) async fn hero_mmr(
     Path(HeroMMRPath { hero_id }): Path<HeroMMRPath>,
     Query(MMRBatchQuery {
