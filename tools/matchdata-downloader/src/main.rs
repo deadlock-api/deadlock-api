@@ -31,8 +31,9 @@ mod models;
 const CONCURRENCY: usize = 10;
 const POLL_INTERVAL: Duration = Duration::from_secs(30);
 const ITERATION_BACKOFF: Duration = Duration::from_secs(5);
-const RETRY_INTERVAL: Duration = Duration::from_mins(3);
-const MAX_RETRIES: u8 = 30;
+const RETRY_INITIAL_INTERVAL: Duration = Duration::from_mins(3);
+const RETRY_MAX_INTERVAL: Duration = Duration::from_mins(30);
+const RETRY_WINDOW: Duration = Duration::from_hours(48);
 
 /// When set to a truthy value, the first iteration drops the 2-day recency
 /// filter so even very old matches missing player data are (re)downloaded.
@@ -252,22 +253,27 @@ async fn retry_match(
 ) {
     let match_id = salts.match_id;
     info!(
-        "Scheduling retries for match {match_id} (every {}s, up to {MAX_RETRIES} attempts)",
-        RETRY_INTERVAL.as_secs(),
+        "Scheduling retries for match {match_id} (backoff {}s..{}s, for up to {}h)",
+        RETRY_INITIAL_INTERVAL.as_secs(),
+        RETRY_MAX_INTERVAL.as_secs(),
+        RETRY_WINDOW.as_secs() / 3600,
     );
-    for attempt in 1..=MAX_RETRIES {
-        sleep(RETRY_INTERVAL).await;
+    let deadline = tokio::time::Instant::now() + RETRY_WINDOW;
+    let mut interval = RETRY_INITIAL_INTERVAL;
+    let mut attempt = 0u32;
+    while tokio::time::Instant::now() < deadline {
+        sleep(interval).await;
+        interval = (interval * 2).min(RETRY_MAX_INTERVAL);
+        attempt += 1;
         match download_match(store.as_ref(), cache_store.as_ref(), &salts).await {
             Ok(()) => {
-                info!("Match {match_id} downloaded on retry attempt {attempt}/{MAX_RETRIES}");
+                info!("Match {match_id} downloaded on retry attempt {attempt}");
                 counter!("matchdata_downloader.retry.success").increment(1);
                 state.mark_uploaded(match_id);
                 return;
             }
             Err(e) if is_retryable(&e) => {
-                debug!(
-                    "Transient error on retry {attempt}/{MAX_RETRIES} for match {match_id}: {e:#}"
-                );
+                debug!("Transient error on retry {attempt} for match {match_id}: {e:#}");
             }
             Err(e) => {
                 warn!("Non-retryable error retrying match {match_id}: {e:#}");
@@ -277,7 +283,7 @@ async fn retry_match(
             }
         }
     }
-    error!("Match {match_id} still failing after {MAX_RETRIES} retries; marking failed");
+    error!("Match {match_id} still failing after {attempt} retries; marking failed");
     counter!("matchdata_downloader.retry.exhausted").increment(1);
     state.mark_failed(match_id);
 }
