@@ -21,6 +21,7 @@ interface BoxWidgetConfigProps {
 export function BoxWidgetConfig({ config, updateConfig, availableVariables }: BoxWidgetConfigProps) {
   const showHeaderId = useId();
   const showBrandingId = useId();
+  const showOutlineId = useId();
   const showMatchHistoryId = useId();
   const matchHistoryShowsTodayId = useId();
 
@@ -39,10 +40,17 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
     updateConfig({ labels: newLabels });
   }
 
+  function updateSubtext(index: number, value: string) {
+    const newSubtexts = [...config.subtexts];
+    newSubtexts[index] = value;
+    updateConfig({ subtexts: newSubtexts });
+  }
+
   function removeVariable(index: number) {
     updateConfig({
       variables: config.variables.filter((_, i) => i !== index),
       labels: config.labels.filter((_, i) => i !== index),
+      subtexts: config.subtexts.filter((_, i) => i !== index),
     });
   }
 
@@ -50,6 +58,7 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
     updateConfig({
       variables: [...config.variables, ""],
       labels: [...config.labels, ""],
+      subtexts: [...config.subtexts, ""],
     });
   }
 
@@ -76,6 +85,15 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
             onCheckedChange={(checked) => updateConfig({ showBranding: checked === true })}
           />
           <Label htmlFor={showBrandingId}>Show Branding</Label>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id={showOutlineId}
+            checked={config.showOutline}
+            onCheckedChange={(checked) => updateConfig({ showOutline: checked === true })}
+          />
+          <Label htmlFor={showOutlineId}>Show Border &amp; Shadow</Label>
         </div>
 
         <div className="flex items-center gap-2">
@@ -117,25 +135,35 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
             // biome-ignore lint/suspicious/noArrayIndexKey: variables can be duplicated so there's no natural unique key; list is only appended/removed from end
             // eslint-disable-next-line react/no-array-index-key -- variables can be duplicated
             <div key={index} className="flex gap-3">
-              <Select value={variable} onValueChange={(value) => updateVariable(index, value)}>
-                <SelectTrigger className="w-1/2">
-                  <SelectValue placeholder="Select a variable" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableVariables.map((v) => (
-                    <SelectItem key={v.name} value={v.name}>
-                      {v.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                type="text"
-                value={config.labels[index]}
-                onChange={(e) => updateLabel(index, e.target.value)}
-                className="w-1/2"
-                placeholder="Label (optional)"
-              />
+              <div className="flex grow flex-col gap-2">
+                <div className="flex gap-3">
+                  <Select value={variable} onValueChange={(value) => updateVariable(index, value)}>
+                    <SelectTrigger className="w-1/2">
+                      <SelectValue placeholder="Select a variable" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableVariables.map((v) => (
+                        <SelectItem key={v.name} value={v.name}>
+                          {v.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="text"
+                    value={config.labels[index]}
+                    onChange={(e) => updateLabel(index, e.target.value)}
+                    className="w-1/2"
+                    placeholder="Label (optional)"
+                  />
+                </div>
+                <Input
+                  type="text"
+                  value={config.subtexts[index] ?? ""}
+                  onChange={(e) => updateSubtext(index, e.target.value)}
+                  placeholder="Second line (optional), e.g. {rank_progress}"
+                />
+              </div>
               <Button variant="destructive" onClick={() => removeVariable(index)}>
                 Remove
               </Button>

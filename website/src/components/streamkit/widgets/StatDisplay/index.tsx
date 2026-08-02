@@ -6,7 +6,7 @@ import type { StatDisplayProps } from "./StatDisplay.types";
 import { StatText } from "./StatText";
 
 export const StatDisplay: FC<StatDisplayProps> = ({ stat, theme = "dark", className }) => {
-  const { variable, label, value, prefix, suffix } = stat;
+  const { variable, label, value, prefix, suffix, subtext } = stat;
   const isImageStat = variable.endsWith("_img");
 
   return (
@@ -15,6 +15,16 @@ export const StatDisplay: FC<StatDisplayProps> = ({ stat, theme = "dark", classN
         <img src={value as string} alt={label} className="w-16" />
       ) : (
         <StatText label={label} value={value} prefix={prefix} suffix={suffix} theme={theme} />
+      )}
+      {subtext && (
+        <span
+          className={cn(
+            "mt-0.5 text-center text-[11px] font-medium tracking-wide text-nowrap",
+            theme === "light" ? "text-gray-500" : "text-white/60",
+          )}
+        >
+          {subtext}
+        </span>
       )}
     </div>
   );

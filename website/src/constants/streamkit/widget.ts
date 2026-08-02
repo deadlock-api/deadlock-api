@@ -4,6 +4,8 @@ export const DEFAULT_VARIABLES = ["rank_img", "leaderboard_place", "wins_losses_
 
 export const DEFAULT_LABELS = ["Rank", "Place", "Daily W-L", "K/D", "Hours Played"];
 
+export const DEFAULT_SUBTEXTS = ["{rank_progress}", "", "", "", ""];
+
 export const THEME_STYLES = {
   default: {
     container: "bg-[#0a0a0a]",

@@ -17,10 +17,12 @@ export function buildWidgetPreview(region: string, accountId: string, config: Wi
           accountId={accountId}
           variables={config.variables}
           labels={config.labels}
+          subtexts={config.subtexts}
           extraArgs={config.extraArgs}
           theme={config.theme}
           showHeader={config.showHeader}
           showBranding={config.showBranding}
+          showOutline={config.showOutline}
           showMatchHistory={config.showMatchHistory}
           matchHistoryShowsToday={config.matchHistoryShowsToday}
           numMatches={config.numMatches}

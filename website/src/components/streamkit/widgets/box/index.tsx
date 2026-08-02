@@ -12,11 +12,21 @@ import { BoxHeader } from "./BoxHeader";
 import { BoxStats } from "./BoxStats";
 
 const EMPTY_EXTRA_ARGS: Record<string, string> = {};
+const EMPTY_SUBTEXTS: string[] = [];
+
+const TEMPLATE_PLACEHOLDER = /\{(\w+)}/g;
+
+export const templateVariables = (templates: string[]): string[] =>
+  templates.flatMap((template) => [...template.matchAll(TEMPLATE_PLACEHOLDER)].map(([, name]) => name));
+
+const resolveTemplate = (template: string, stats: Record<string, string>): string =>
+  template.replaceAll(TEMPLATE_PLACEHOLDER, (_, name: string) => stats[name] ?? "");
 
 export const createStatDisplays = (
   stats: Record<string, string> | null,
   variables: string[],
   displayLabels: string[],
+  subtexts: string[] = EMPTY_SUBTEXTS,
   opacity = 100,
 ): Stat[] => {
   if (!stats) return [];
@@ -25,6 +35,7 @@ export const createStatDisplays = (
     variable,
     value: stats[variable],
     label: displayLabels[index] || snakeToPretty(variable),
+    subtext: subtexts[index] ? resolveTemplate(subtexts[index], stats) : undefined,
     opacity,
   }));
 };
@@ -44,22 +55,24 @@ export const BoxWidget = ({
   accountId,
   variables = DEFAULT_VARIABLES,
   labels = DEFAULT_LABELS,
+  subtexts = EMPTY_SUBTEXTS,
   extraArgs = EMPTY_EXTRA_ARGS,
   theme = "dark",
   showHeader = true,
   refreshInterval = UPDATE_INTERVAL_MS,
   showBranding = true,
+  showOutline = true,
   showMatchHistory = false,
   matchHistoryShowsToday = true,
   numMatches = 10,
   opacity = 100,
 }: BoxWidgetProps) => {
   const auxiliaryVariables = useMemo(() => {
-    const vars: string[] = [];
-    if (showHeader) vars.push("steam_account_name");
-    if (matchHistoryShowsToday) vars.push("matches_today");
-    return vars;
-  }, [showHeader, matchHistoryShowsToday]);
+    const vars = new Set(templateVariables(subtexts).filter((v) => !variables.includes(v)));
+    if (showHeader) vars.add("steam_account_name");
+    if (matchHistoryShowsToday) vars.add("matches_today");
+    return [...vars];
+  }, [showHeader, matchHistoryShowsToday, subtexts, variables]);
 
   const displayLabels = useMemo(() => {
     let resolvedLabels = labels;
@@ -78,7 +91,7 @@ export const BoxWidget = ({
     refreshInterval,
   });
 
-  const themeStyles = useWidgetTheme(theme, opacity);
+  const themeStyles = useWidgetTheme(theme, opacity, showOutline);
 
   const numMatchesToShow = useMemo(() => {
     if (!stats) return 0;
@@ -87,8 +100,8 @@ export const BoxWidget = ({
 
   const statDisplays = useMemo(() => {
     if (!stats) return [];
-    return createStatDisplays(stats, variables, displayLabels, opacity);
-  }, [stats, variables, displayLabels, opacity]);
+    return createStatDisplays(stats, variables, displayLabels, subtexts, opacity);
+  }, [stats, variables, displayLabels, subtexts, opacity]);
 
   const shouldShowHeader = showHeader && stats?.steam_account_name;
 

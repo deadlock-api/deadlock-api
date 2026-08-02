@@ -14,6 +14,7 @@ import type { Region, Theme } from "~/types/streamkit/widget";
 type WidgetSearch = {
   vars?: string;
   labels?: string;
+  subtexts?: string;
   theme?: string;
   variable?: string;
   prefix?: string;
@@ -21,13 +22,14 @@ type WidgetSearch = {
   fontColor?: string;
   showHeader?: boolean;
   showBranding?: boolean;
+  showOutline?: boolean;
   showMatchHistory?: boolean;
   matchHistoryShowsToday?: boolean;
   numMatches?: number;
   opacity?: number;
 };
 
-const BOOL_KEYS = new Set(["showHeader", "showBranding", "showMatchHistory", "matchHistoryShowsToday"]);
+const BOOL_KEYS = new Set(["showHeader", "showBranding", "showOutline", "showMatchHistory", "matchHistoryShowsToday"]);
 const NUM_KEYS = new Set(["numMatches", "opacity"]);
 
 // The router's default search parser coerces "false"->false and "10"->10, so values reach the route
@@ -107,9 +109,11 @@ function Widget() {
     case "box": {
       const variables = search.vars?.split(",");
       const labels = search.labels?.split(",") ?? variables?.map(snakeToPretty);
+      const subtexts = search.subtexts?.split(",");
       const theme = (search.theme ?? "dark") as Theme;
       const showHeader = search.showHeader ?? true;
       const showBranding = search.showBranding ?? true;
+      const showOutline = search.showOutline ?? true;
       const showMatchHistory = search.showMatchHistory ?? true;
       const matchHistoryShowsToday = search.matchHistoryShowsToday ?? true;
       const numMatches = Math.max(1, Math.min(20, search.numMatches ?? 10));
@@ -117,9 +121,11 @@ function Widget() {
       const reserved = new Set([
         "vars",
         "labels",
+        "subtexts",
         "theme",
         "showHeader",
         "showBranding",
+        "showOutline",
         "numMatches",
         "matchHistoryShowsToday",
         "showMatchHistory",
@@ -135,10 +141,12 @@ function Widget() {
           accountId={accountId}
           variables={variables}
           labels={labels}
+          subtexts={subtexts}
           extraArgs={extraArgs}
           theme={theme}
           showHeader={showHeader}
           showBranding={showBranding}
+          showOutline={showOutline}
           showMatchHistory={showMatchHistory}
           matchHistoryShowsToday={matchHistoryShowsToday}
           numMatches={numMatches}

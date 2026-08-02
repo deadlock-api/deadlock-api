@@ -20,9 +20,11 @@ export interface WidgetConfig {
   suffix: string;
   fontColor: Color;
   labels: string[];
+  subtexts: string[];
   extraArgs: { [key: string]: string };
   showHeader: boolean;
   showBranding: boolean;
+  showOutline: boolean;
   showMatchHistory: boolean;
   matchHistoryShowsToday: boolean;
   numMatches: number;

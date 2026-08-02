@@ -4,6 +4,7 @@ export interface Stat {
   variable: string;
   value: string | number | null;
   label: string;
+  subtext?: string;
   icon?: string;
   color?: string;
   prefix?: string;

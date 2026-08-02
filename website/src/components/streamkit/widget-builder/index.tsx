@@ -8,7 +8,7 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { CACHE_DURATIONS } from "~/constants/cache";
-import { DEFAULT_LABELS, DEFAULT_VARIABLES } from "~/constants/streamkit/widget";
+import { DEFAULT_LABELS, DEFAULT_SUBTEXTS, DEFAULT_VARIABLES } from "~/constants/streamkit/widget";
 import { API_ORIGIN } from "~/lib/constants";
 import { queryKeys } from "~/queries/query-keys";
 import type { Color } from "~/types/general";
@@ -39,9 +39,11 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
     suffix: "",
     fontColor: "#ffffff" as Color,
     labels: DEFAULT_LABELS,
+    subtexts: DEFAULT_SUBTEXTS,
     extraArgs: {},
     showHeader: true,
     showBranding: true,
+    showOutline: true,
     showMatchHistory: true,
     matchHistoryShowsToday: false,
     numMatches: 10,

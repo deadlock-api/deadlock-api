@@ -11,9 +11,11 @@ export function buildWidgetUrl(region: string, accountId: string, config: Widget
     case "box":
       if (config.variables.length > 0) url.searchParams.set("vars", config.variables.join(","));
       if (config.labels.length > 0) url.searchParams.set("labels", config.labels.join(","));
+      if (config.subtexts.some(Boolean)) url.searchParams.set("subtexts", config.subtexts.join(","));
       url.searchParams.set("theme", config.theme);
       url.searchParams.set("showHeader", config.showHeader.toString());
       url.searchParams.set("showBranding", config.showBranding.toString());
+      url.searchParams.set("showOutline", config.showOutline.toString());
       url.searchParams.set("showMatchHistory", config.showMatchHistory.toString());
       url.searchParams.set("matchHistoryShowsToday", config.matchHistoryShowsToday.toString());
       url.searchParams.set("numMatches", config.numMatches.toString());

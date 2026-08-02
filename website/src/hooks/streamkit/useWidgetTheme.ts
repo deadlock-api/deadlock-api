@@ -18,7 +18,7 @@ interface ThemeStyles {
   userNameClasses: string;
 }
 
-export const useWidgetTheme = (theme: Theme, opacity = 100) => {
+export const useWidgetTheme = (theme: Theme, opacity = 100, showOutline = true) => {
   const themeStyles = useMemo<ThemeStyles>(() => {
     const getBackgroundStyle = () => {
       if (theme === "glass") return "bg-black/10 backdrop-blur-md";
@@ -51,9 +51,9 @@ export const useWidgetTheme = (theme: Theme, opacity = 100) => {
         "inline-flex flex-col",
         "rounded-b-xl",
         getBackgroundStyle(),
-        theme !== "glass" && "border",
+        theme !== "glass" && showOutline && "border",
         showMatchHistory ? "border-t-0" : "rounded-t-xl",
-        "shadow-lg",
+        showOutline && "shadow-lg",
         THEME_STYLES[theme].container,
       );
     };
@@ -92,7 +92,7 @@ export const useWidgetTheme = (theme: Theme, opacity = 100) => {
       },
       userNameClasses: getUserNameClasses(),
     };
-  }, [theme]);
+  }, [theme, showOutline]);
 
   const cssVariables = useMemo(() => {
     return { "--bg-opacity": opacity / 100 } as React.CSSProperties;

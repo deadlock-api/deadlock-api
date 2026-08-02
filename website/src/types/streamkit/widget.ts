@@ -6,6 +6,7 @@ export type Stat = {
   variable: string;
   value: StatValue;
   label: string;
+  subtext?: string;
   icon?: string;
   color?: string;
   prefix?: string;
@@ -22,11 +23,14 @@ export type BoxWidgetProps = {
   accountId: string;
   variables?: string[];
   labels?: string[];
+  /** Per-stat second line, `{variable_name}` placeholders resolved against the fetched stats. */
+  subtexts?: string[];
   extraArgs?: Record<string, string>;
   theme?: Theme;
   showHeader?: boolean;
   refreshInterval?: number;
   showBranding?: boolean;
+  showOutline?: boolean;
   showMatchHistory?: boolean;
   matchHistoryShowsToday?: boolean;
   numMatches?: number;
