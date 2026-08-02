@@ -13,7 +13,7 @@
 #![allow(clippy::cast_possible_truncation)]
 #![allow(clippy::struct_field_names)]
 
-use core::sync::atomic::{AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 use core::time::Duration;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
@@ -39,6 +39,36 @@ use crate::models::clickhouse_match_metadata::ClickhouseMatchPlayer;
 use crate::models::clickhouse_player_match_history::PlayerMatchHistoryEntry;
 
 mod models;
+
+/// Current season's placement length, 0 until the first refresh succeeds. Needed to
+/// turn metadata's "placement games remaining" into the GC's match position.
+static CALIBRATION_MATCHES: AtomicU32 = AtomicU32::new(0);
+
+fn calibration_matches() -> Option<u32> {
+    Some(CALIBRATION_MATCHES.load(Ordering::Relaxed)).filter(|v| *v > 0)
+}
+
+/// Seasons turn over on the order of months; the first tick fires immediately.
+fn spawn_season_refresh_task() {
+    tokio::spawn(async move {
+        let http_client = reqwest::Client::new();
+        let mut interval = tokio::time::interval(Duration::from_hours(1));
+        loop {
+            interval.tick().await;
+            match common::fetch_current_season(&http_client).await {
+                Ok(Some(s)) => {
+                    debug!(
+                        calibration_matches = s.calibration_matches,
+                        "Refreshed season"
+                    );
+                    CALIBRATION_MATCHES.store(s.calibration_matches, Ordering::Relaxed);
+                }
+                Ok(None) => debug!("No ranked season in progress"),
+                Err(e) => warn!("Failed to refresh ranked season: {e:?}"),
+            }
+        }
+    });
+}
 
 #[derive(Parser)]
 #[command(about = "Deadlock match metadata ingest worker")]
@@ -117,6 +147,8 @@ async fn main() -> anyhow::Result<()> {
     common::init_metrics()?;
 
     let cli = Cli::parse();
+
+    spawn_season_refresh_task();
 
     let ch_client = common::get_ch_client()?;
     let store = Arc::new(common::get_store()?);
@@ -442,7 +474,9 @@ async fn fetch_parse_and_send<S: ObjectStore>(
     let history: Vec<PlayerMatchHistoryEntry> = match_info
         .players
         .iter()
-        .filter_map(|p| PlayerMatchHistoryEntry::from_info_and_player(&match_info, p))
+        .filter_map(|p| {
+            PlayerMatchHistoryEntry::from_info_and_player(&match_info, p, calibration_matches())
+        })
         .collect();
 
     let parsed = ParsedMatch { players, history };
@@ -701,7 +735,9 @@ async fn fetch_and_parse_match(
     let history: Vec<PlayerMatchHistoryEntry> = match_info
         .players
         .iter()
-        .filter_map(|p| PlayerMatchHistoryEntry::from_info_and_player(&match_info, p))
+        .filter_map(|p| {
+            PlayerMatchHistoryEntry::from_info_and_player(&match_info, p, calibration_matches())
+        })
         .collect();
 
     Ok(ParsedMatch { players, history })

@@ -18,14 +18,22 @@ pub struct SeasonInterval {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct RankedSeason {
+    pub calibration_matches: u32,
     pub intervals: Vec<SeasonInterval>,
 }
 
-/// The ranked interval running right now, as accepted by the `rank_interval` field
-/// of `CMsgClientToGCGetMatchHistory`. `None` between seasons.
-pub async fn fetch_current_rank_interval(
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+pub struct CurrentSeason {
+    /// Feeds the `rank_interval` field of `CMsgClientToGCGetMatchHistory`.
+    pub interval: u32,
+    /// How many placement matches the season runs.
+    pub calibration_matches: u32,
+}
+
+/// The ranked season running right now. `None` between seasons.
+pub async fn fetch_current_season(
     http_client: &reqwest::Client,
-) -> reqwest::Result<Option<u32>> {
+) -> reqwest::Result<Option<CurrentSeason>> {
     let seasons: Vec<RankedSeason> = http_client
         .get("https://api.deadlock-api.com/v1/assets/ranked-seasons")
         .send()
@@ -39,11 +47,15 @@ pub async fn fetch_current_rank_interval(
             .as_secs(),
     )
     .unwrap_or(i64::MAX);
-    Ok(seasons
-        .iter()
-        .flat_map(|s| &s.intervals)
-        .find(|i| (i.start_timestamp..=i.end_timestamp).contains(&now))
-        .map(|i| i.interval))
+    Ok(seasons.iter().find_map(|s| {
+        s.intervals
+            .iter()
+            .find(|i| (i.start_timestamp..=i.end_timestamp).contains(&now))
+            .map(|i| CurrentSeason {
+                interval: i.interval,
+                calibration_matches: s.calibration_matches,
+            })
+    }))
 }
 
 pub async fn fetch_hero_ids(http_client: &reqwest::Client) -> reqwest::Result<Vec<u32>> {

@@ -176,10 +176,11 @@ fn spawn_rank_interval_refresh_task(http_client: reqwest::Client) {
         let mut interval = tokio::time::interval(Duration::from_hours(1));
         loop {
             interval.tick().await;
-            match common::fetch_current_rank_interval(&http_client).await {
+            match common::fetch_current_season(&http_client).await {
                 Ok(v) => {
-                    debug!(rank_interval = ?v, "Refreshed ranked interval");
-                    *RANK_INTERVAL.write().await = v;
+                    let interval = v.map(|s| s.interval);
+                    debug!(rank_interval = ?interval, "Refreshed ranked interval");
+                    *RANK_INTERVAL.write().await = interval;
                 }
                 Err(e) => warn!("Failed to refresh ranked interval: {e:?}"),
             }
