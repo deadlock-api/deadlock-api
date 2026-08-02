@@ -87,6 +87,9 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
     if let Some(max_match_id) = query.max_match_id {
         info_filters.push(format!("match_id <= {max_match_id}"));
     }
+    if let Some(min_duration_s) = query.min_duration_s {
+        info_filters.push(format!("duration_s >= {min_duration_s}"));
+    }
     if let Some(max_duration_s) = query.max_duration_s {
         info_filters.push(format!("duration_s <= {max_duration_s}"));
     }
