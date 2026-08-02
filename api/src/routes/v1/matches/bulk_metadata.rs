@@ -428,7 +428,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
                 acc
             });
         let player_select_fields = format!(
-            "groupUniqArray(12)(CAST(formatRow('JSONEachRow', {static_part}{extras}), 'JSON')) as players"
+            "CAST(groupUniqArray(12)(formatRow('JSONEachRow', {static_part}{extras})), 'Array(JSON)') as players"
         );
         select_fields.push(player_select_fields);
     }
