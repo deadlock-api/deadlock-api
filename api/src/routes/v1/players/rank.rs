@@ -382,20 +382,23 @@ async fn serve_rank_image(
     let generated_response = if let Some(image_url) =
         generated_rank_image_url(badge, query.format, query.display, query.variant)
     {
-        let candidate = RANK_IMAGE_HTTP_CLIENT
-            .get(&image_url)
-            .send()
-            .await
-            .map_err(|e| APIError::internal(format!("Failed to fetch rank image: {e}")))?;
-        if candidate.status().is_success() {
-            Some(candidate)
-        } else if candidate.status() == StatusCode::NOT_FOUND {
-            None
-        } else {
-            return Err(APIError::internal(format!(
-                "Rank image request failed with status {}",
-                candidate.status()
-            )));
+        match RANK_IMAGE_HTTP_CLIENT.get(&image_url).send().await {
+            Ok(candidate) if candidate.status().is_success() => Some(candidate),
+            Ok(candidate) if candidate.status() == StatusCode::NOT_FOUND => None,
+            Ok(candidate) => {
+                return Err(APIError::internal(format!(
+                    "Rank image request failed with status {}",
+                    candidate.status()
+                )));
+            }
+            Err(error) => {
+                tracing::warn!(
+                    %error,
+                    %image_url,
+                    "Failed to fetch generated rank image; using tier fallback"
+                );
+                None
+            }
         }
     } else {
         None
