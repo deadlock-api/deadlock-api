@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = { workspace = true }
 cached = { workspace = true, features = ["async", "tokio"] }
+clap = { workspace = true }
 clickhouse = { workspace = true, features = ["time", "test-util"] }
 common = { workspace = true }
 futures = { workspace = true }
@@ -13,7 +14,7 @@ metrics = { workspace = true }
 object_store = { workspace = true }
 reqwest = { workspace = true, features = ["stream"] }
 serde = { workspace = true }
-time = "0.3.54"
 tokio = { workspace = true }
 tokio-util = { workspace = true, features = ["io"] }
 tracing = { workspace = true }
+

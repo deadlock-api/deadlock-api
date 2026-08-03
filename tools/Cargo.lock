@@ -2092,6 +2092,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cached",
+ "clap",
  "clickhouse",
  "common",
  "futures",
@@ -2099,7 +2100,6 @@ dependencies = [
  "object_store",
  "reqwest",
  "serde",
- "time",
  "tokio",
  "tokio-util",
  "tracing",
