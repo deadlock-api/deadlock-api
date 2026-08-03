@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use axum::Json;
 use axum::body::Bytes;
 use axum::extract::{Path, Query, State};
@@ -13,6 +15,8 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::assets::versions::common::IMAGE_BASE_URL;
 use crate::utils::types::AccountIdQuery;
+
+static RANK_IMAGE_HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(reqwest::Client::new);
 
 /// Convert a raw badge value (11–116) to a 1-based contiguous index (1–66).
 ///
@@ -251,6 +255,13 @@ impl RankImageFormat {
             Self::Webp => "webp",
         }
     }
+
+    fn content_type(self) -> &'static str {
+        match self {
+            Self::Png => "image/png",
+            Self::Webp => "image/webp",
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, ToSchema)]
@@ -349,16 +360,17 @@ fn generated_rank_image_url(
     let rank = badge / 10;
     let subrank = badge % 10;
     let extension = format.extension();
+    let is_ranked_badge = (1..=11).contains(&rank) && (1..=6).contains(&subrank);
     match display {
         RankImageDisplay::Tier => None,
-        RankImageDisplay::Subrank if rank == 0 => None,
-        RankImageDisplay::Subrank => Some(format!(
+        RankImageDisplay::Subrank if is_ranked_badge => Some(format!(
             "{IMAGE_BASE_URL}/ranks/generated/badges/rank{rank:02}_subrank{subrank}.{extension}"
         )),
-        RankImageDisplay::Card => Some(format!(
+        RankImageDisplay::Card if is_ranked_badge || (rank == 0 && subrank == 0) => Some(format!(
             "{IMAGE_BASE_URL}/ranks/generated/cards/english/{}/rank{rank:02}_subrank{subrank}.{extension}",
             variant.path()
         )),
+        RankImageDisplay::Subrank | RankImageDisplay::Card => None,
     }
 }
 
@@ -367,13 +379,10 @@ async fn serve_rank_image(
     badge: u32,
     query: RankImageQuery,
 ) -> APIResult<(HeaderMap, Bytes)> {
-    // Reuse one client for the generated asset and tier fallback so both
-    // attempts can share the same connection pool.
-    let client = reqwest::Client::new();
     let generated_response = if let Some(image_url) =
         generated_rank_image_url(badge, query.format, query.display, query.variant)
     {
-        let candidate = client
+        let candidate = RANK_IMAGE_HTTP_CLIENT
             .get(&image_url)
             .send()
             .await
@@ -410,7 +419,7 @@ async fn serve_rank_image(
             .ok_or_else(|| {
                 APIError::status_msg(StatusCode::NOT_FOUND, "No image available for the rank.")
             })?;
-        let fallback = client
+        let fallback = RANK_IMAGE_HTTP_CLIENT
             .get(&tier_url)
             .send()
             .await
@@ -434,7 +443,7 @@ async fn serve_rank_image(
         .headers()
         .get(reqwest::header::CONTENT_TYPE)
         .and_then(|v| v.to_str().ok())
-        .unwrap_or("image/png")
+        .unwrap_or(query.format.content_type())
         .to_owned();
 
     let bytes: Bytes = response
@@ -735,7 +744,14 @@ mod tests {
     }
 
     #[test]
+    fn rank_image_format_has_matching_content_type() {
+        assert_eq!(RankImageFormat::Png.content_type(), "image/png");
+        assert_eq!(RankImageFormat::Webp.content_type(), "image/webp");
+    }
+
+    #[test]
     fn generated_subrank_image_uses_current_badge_and_division() {
+        let expected = format!("{IMAGE_BASE_URL}/ranks/generated/badges/rank08_subrank4.webp");
         assert_eq!(
             generated_rank_image_url(
                 84,
@@ -744,9 +760,7 @@ mod tests {
                 RankCardVariant::Popup,
             )
             .as_deref(),
-            Some(
-                "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/generated/badges/rank08_subrank4.webp"
-            )
+            Some(expected.as_str())
         );
         assert!(
             generated_rank_image_url(
@@ -766,6 +780,17 @@ mod tests {
             )
             .is_none()
         );
+        for invalid_badge in [80, 87, 120] {
+            assert!(
+                generated_rank_image_url(
+                    invalid_badge,
+                    RankImageFormat::Webp,
+                    RankImageDisplay::Subrank,
+                    RankCardVariant::Popup,
+                )
+                .is_none()
+            );
+        }
     }
 
     #[test]
@@ -775,7 +800,7 @@ mod tests {
             (RankCardVariant::Profile, "profile"),
         ] {
             let expected = format!(
-                "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/generated/cards/english/{directory}/rank08_subrank4.png"
+                "{IMAGE_BASE_URL}/ranks/generated/cards/english/{directory}/rank08_subrank4.png"
             );
             assert_eq!(
                 generated_rank_image_url(
@@ -788,6 +813,8 @@ mod tests {
                 Some(expected.as_str())
             );
         }
+        let obscurus_expected =
+            format!("{IMAGE_BASE_URL}/ranks/generated/cards/english/popup/rank00_subrank0.webp");
         assert_eq!(
             generated_rank_image_url(
                 0,
@@ -796,9 +823,16 @@ mod tests {
                 RankCardVariant::Popup,
             )
             .as_deref(),
-            Some(
-                "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/generated/cards/english/popup/rank00_subrank0.webp"
+            Some(obscurus_expected.as_str())
+        );
+        assert!(
+            generated_rank_image_url(
+                80,
+                RankImageFormat::Webp,
+                RankImageDisplay::Card,
+                RankCardVariant::Popup,
             )
+            .is_none()
         );
     }
 }
