@@ -18,6 +18,8 @@ Wall time alone is misleading: page cache, file cache, and concurrent load skew 
 
 State the structural numbers before the wall numbers in every report.
 
+**Every wall-time or memory comparison must carry a significance check, not just point estimates.** Point averages from separate sequential runs are frequently reversed by system load drift — a candidate benchmarked after the baseline can look faster or slower purely from cache/load state at the time, not from the rewrite. Always use `scripts/compare.sh` (interleaved A/B runs + Welch's t-test) instead of running `bench.sh` on baseline and candidate as two separate sequential blocks. Never declare a win or regression on wall time or memory when `significant: false` — report it as noise and fall back to the structural metrics (read_rows/read_bytes are deterministic and don't need a significance test).
+
 ## Scope: query rewrites only
 
 This skill optimizes by **rewriting the query**. It does not propose, suggest, or apply any schema-level change. Off-limits:
@@ -55,24 +57,25 @@ For (2)/(3), realistic parameters matter — pick recent timestamps (e.g. last 3
 
 5. **Verify equivalence per candidate.** Use `scripts/equiv.sh`, which runs `cityHash64(groupArray(tuple of columns))` over both results and compares. If a transformation uses approximate functions (`uniq`, `quantile*`, `topK`), allow ≤1% delta but call it out explicitly. Never benchmark a candidate before checking equivalence — a faster wrong query is not faster.
 
-6. **Bench each candidate.** Same `bench.sh` invocation as baseline. Build a comparison table.
+6. **Compare each candidate against baseline with `scripts/compare.sh`.** This runs baseline and candidate interleaved (A,B,A,B,...) and reports a Welch's t-test p-value for wall_ms and for memory_usage, not just the mean. Do not use two separate sequential `bench.sh` calls to judge a win — see the significance note above.
 
-7. **Iterate.** Pick the best candidate (best structural delta, no regression on memory, equivalent result), make it the new baseline, propose more changes that compose with it, rerun. Stop when no candidate improves the chosen metrics by ≥5%, or the user is satisfied.
+7. **Iterate.** Pick the best candidate (best structural delta, no regression on memory, equivalent result, and a statistically significant improvement — or at minimum no significant regression — on wall time/memory), make it the new baseline, propose more changes that compose with it, rerun. Stop when no candidate improves the chosen metrics by ≥5% with `significant: true`, or the user is satisfied.
 
 ## Reporting format
 
-Present every result as a single table, structural metrics first:
+Present every result as a single table, structural metrics first, with a significance column on every wall/memory delta:
 
-| variant | read_rows | read_bytes | peak_mem | cpu_us | wall_ms (n=5) | equivalent |
-|---------|-----------|-----------|----------|--------|---------------|------------|
-| baseline | … | … | … | … | … ± … | — |
-| candidate_A | … (Δ%) | … (Δ%) | … (Δ%) | … (Δ%) | … ± … (Δ%) | yes |
+| variant | read_rows | read_bytes | peak_mem | cpu_us | wall_ms (n=5) | p(wall) | p(mem) | equivalent |
+|---------|-----------|-----------|----------|--------|---------------|---------|--------|------------|
+| baseline | … | … | … | … | … ± … | — | — | — |
+| candidate_A | … (Δ%) | … (Δ%) | … (Δ%) | … (Δ%) | … ± … (Δ%) | 0.004 (sig) | 0.31 (n.s.) | yes |
 
 End with a 1–2 sentence verdict and a clear recommendation:
-- "Ship variant X — N% less memory, equivalent results."
+- "Ship variant X — N% less memory (p=0.004), equivalent results."
 - "No improvement worth the complexity; keep baseline."
+- "Wall time delta not statistically significant (p=0.31) — treat as noise despite the point estimate looking faster."
 
-Show absolute numbers and percentage deltas. Don't hide regressions — if memory grew while wall time dropped, say so and let the user decide.
+Show absolute numbers and percentage deltas. Don't hide regressions — if memory grew while wall time dropped, say so and let the user decide. A metric with `p >= alpha` is reported as "no significant difference," never as a win or a loss, regardless of what the raw means suggest.
 
 ## Equivalence check
 
@@ -80,9 +83,12 @@ Two queries are equivalent if `cityHash64(groupArray(tuple_of_all_output_columns
 
 If equivalence fails, **stop**. Do not proceed to benchmarking. Either the rewrite is wrong, or the original behavior depended on something subtle (NULL ordering, dedup, FINAL semantics) that the user should know about.
 
+**On a live/actively-ingesting table, `equiv.sh`'s two sequential HTTP calls can show a false DIFFER** if rows change between them (observed firsthand: a query counting fully-ingested match groups gained 10–20 rows in the few hundred ms between the baseline and candidate call, purely from in-flight data completing). Before concluding a rewrite is wrong, re-run the check, and if it's still inconsistent, run both variants in a single round trip instead: `SELECT (SELECT cityHash64(groupArray(t)) FROM (... query A ... ORDER BY t)) AS hash_a, (SELECT cityHash64(groupArray(t)) FROM (... query B ... ORDER BY t)) AS hash_b, hash_a = hash_b`. That removes the timing gap entirely. Only treat it as a genuine semantic difference once a same-round-trip check confirms it.
+
 ## Anti-patterns to avoid
 
 - **Optimizing on a single run.** Variance is high; warm-up and average ≥5 runs.
+- **Judging a win from two sequential `bench.sh` blocks.** Load/cache state drifts over the seconds-to-minutes between "run baseline 5x" and "run candidate 5x" and can flip which one looks faster — this was observed firsthand while optimizing `hero_comb_stats`: a candidate that looked faster in isolated single-shot tests (5.5s vs 8.9s baseline) turned out slower (8.6s vs 5.3s) once measured with `compare.sh`'s interleaving. Always use `scripts/compare.sh` for the final verdict on any wall-time or memory claim.
 - **Ignoring memory.** A query that's 30% faster but uses 3× memory is a regression under load.
 - **Removing FINAL blindly.** ClickHouse's `FINAL` on a `ReplacingMergeTree` *whose sort key matches the dedup key* is heavily optimized — it streams the merge during read. Hand-rolled `LIMIT 1 BY (sort_key)` or `GROUP BY (sort_key) … any(col)` workarounds typically run 5–10× slower and use more memory because they force a full sort or hash aggregation. Always benchmark before recommending FINAL removal. See `references/clickhouse_optimizations.md` for the FINAL decision tree.
 - **Changing semantics silently.** If a transformation changes dedup behavior, NULL handling, JOIN strictness, or aggregate exactness, surface it in the verdict.
@@ -92,7 +98,9 @@ If equivalence fails, **stop**. Do not proceed to benchmarking. Either the rewri
 
 ## Scripts
 
-- `scripts/bench.sh <env_path> <sql_file> <label> [runs=5]` — warm-up + N runs, captures summary headers per run, pulls `system.query_log`, prints per-run JSON and aggregate mean/stddev.
+- `scripts/bench.sh <env_path> <sql_file> <label> [runs=5]` — warm-up + N runs, captures summary headers per run, pulls `system.query_log`, prints per-run JSON and aggregate mean/stddev. Use for characterizing a single query (e.g. initial baseline profiling), not for A/B verdicts.
+- `scripts/compare.sh <env_path> <sql_a> <label_a> <sql_b> <label_b> [runs=5] [alpha=0.05]` — the required tool for any baseline-vs-candidate verdict. Runs both interleaved (A,B,A,B,...), then reports Welch's t-test (mean, stddev, t, df, p-value, significant true/false) for wall_ms and memory_usage via `significance.py`.
+- `scripts/significance.py <label_a> <csv_a> <label_b> <csv_b> [alpha=0.05]` — standalone Welch's t-test on two comma-separated samples; `compare.sh` calls this internally, but it's also usable directly on numbers pulled some other way.
 - `scripts/equiv.sh <env_path> <sql_a> <sql_b>` — wraps each in a hash query and compares.
 - `scripts/run_query.sh <env_path> <sql_file> [format=Null]` — single-shot for ad-hoc inspection.
 
