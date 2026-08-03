@@ -36,10 +36,16 @@ const BATCH_LIMIT: usize = 5_000;
 const POLL_INTERVAL: Duration = Duration::from_secs(30);
 const ITERATION_BACKOFF: Duration = Duration::from_secs(5);
 /// Cooldown before the first re-attempt of a failed match; doubles per attempt
-/// up to [`RETRY_MAX_INTERVAL`]. Nothing is ever given up on permanently — a
-/// replay that is missing now may still show up later.
+/// up to [`RETRY_MAX_INTERVAL`].
 const RETRY_INITIAL_INTERVAL: Duration = Duration::from_mins(5);
-const RETRY_MAX_INTERVAL: Duration = Duration::from_hours(6);
+const RETRY_MAX_INTERVAL: Duration = Duration::from_hours(24);
+/// A large share of matches can never be fetched — Valve answers 502 for them
+/// indefinitely — and they stay in the pending set forever because they never
+/// reach `match_player`. Retrying them without limit would burn most of the
+/// download capacity on matches that will never arrive, so they are parked after
+/// this many attempts, which the backoff spreads over roughly a week. A restart
+/// re-examines them, which is a slow enough cadence to catch late arrivals.
+const MAX_ATTEMPTS: u32 = 12;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const REQUEST_TIMEOUT: Duration = Duration::from_mins(1);
 
@@ -264,9 +270,8 @@ fn handle_results(state: &State, salts: &[MatchSalts], results: Vec<anyhow::Resu
 }
 
 /// Exponential cooldown, saturating at [`RETRY_MAX_INTERVAL`]. A replay server
-/// returning 502 is indistinguishable from one that never had the replay, so
-/// matches are re-attempted indefinitely at an ever slower rate rather than
-/// being written off.
+/// returning 502 is indistinguishable from one that never had the replay, so a
+/// match is only written off after [`MAX_ATTEMPTS`] spread over about a week.
 fn retry_delay(attempts: u32) -> Duration {
     RETRY_INITIAL_INTERVAL
         .saturating_mul(2u32.saturating_pow(attempts.saturating_sub(1).min(16)))
@@ -306,6 +311,10 @@ impl State {
         });
         attempt.count += 1;
         attempt.next = tokio::time::Instant::now() + retry_delay(attempt.count);
+        if attempt.count == MAX_ATTEMPTS {
+            debug!("Giving up on match {id} after {MAX_ATTEMPTS} attempts");
+            counter!("matchdata_downloader.match.given_up").increment(1);
+        }
     }
 
     /// Drop entries for matches that have left the pending set — they are ingested
@@ -329,7 +338,9 @@ impl State {
             .into_iter()
             .filter(|s| {
                 !uploaded.contains(&s.match_id)
-                    && failed.get(&s.match_id).is_none_or(|a| now >= a.next)
+                    && failed
+                        .get(&s.match_id)
+                        .is_none_or(|a| a.count < MAX_ATTEMPTS && now >= a.next)
             })
             .collect()
     }
@@ -485,7 +496,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_failed_match_is_held_back_but_never_dropped() {
+    async fn a_failed_match_is_held_back_until_its_cooldown_elapses() {
         let state = State::new();
         state.back_off(1);
 
@@ -496,6 +507,19 @@ mod tests {
         assert_eq!(state.failed.lock().unwrap().len(), 1);
         state.failed.lock().unwrap().get_mut(&1).unwrap().next = tokio::time::Instant::now();
         assert_eq!(state.select_eligible(vec![salts(1)]).len(), 1);
+    }
+
+    #[tokio::test]
+    async fn a_match_that_never_arrives_is_parked_rather_than_retried_forever() {
+        let state = State::new();
+        for _ in 0..MAX_ATTEMPTS {
+            state.back_off(1);
+            state.failed.lock().unwrap().get_mut(&1).unwrap().next = tokio::time::Instant::now();
+        }
+
+        // Cooldown elapsed, but the attempt budget is spent, so it no longer
+        // competes for download slots with matches that can still arrive.
+        assert!(state.select_eligible(vec![salts(1)]).is_empty());
     }
 
     #[tokio::test]
