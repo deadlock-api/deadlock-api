@@ -367,55 +367,68 @@ async fn serve_rank_image(
     badge: u32,
     query: RankImageQuery,
 ) -> APIResult<(HeaderMap, Bytes)> {
-    let rank = badge / 10;
-    let suffix = query.format.suffix();
-
-    let tier_url = state
-        .assets_client
-        .fetch_ranks()
-        .await
-        .map_err(|e| APIError::internal(format!("Failed to fetch ranks: {e}")))?
-        .iter()
-        .find(|r| r.tier == rank)
-        .and_then(|r| r.images.get(&format!("large{suffix}")).cloned())
-        .ok_or_else(|| {
-            APIError::status_msg(StatusCode::NOT_FOUND, "No image available for the rank.")
-        })?;
-
-    let mut urls = Vec::with_capacity(2);
-    if let Some(generated) =
-        generated_rank_image_url(badge, query.format, query.display, query.variant)
-    {
-        urls.push(generated);
-    }
-    // Keep serving the existing tier badge until the generated assets for a
-    // newly deployed game build have reached R2, and as a permanent fallback.
-    urls.push(tier_url);
-
     // Reuse one client for the generated asset and tier fallback so both
     // attempts can share the same connection pool.
     let client = reqwest::Client::new();
-    let mut response = None;
-    for image_url in urls {
+    let generated_response = if let Some(image_url) =
+        generated_rank_image_url(badge, query.format, query.display, query.variant)
+    {
         let candidate = client
             .get(&image_url)
             .send()
             .await
             .map_err(|e| APIError::internal(format!("Failed to fetch rank image: {e}")))?;
         if candidate.status().is_success() {
-            response = Some(candidate);
-            break;
-        }
-        if candidate.status() != StatusCode::NOT_FOUND {
+            Some(candidate)
+        } else if candidate.status() == StatusCode::NOT_FOUND {
+            None
+        } else {
             return Err(APIError::internal(format!(
                 "Rank image request failed with status {}",
                 candidate.status()
             )));
         }
-    }
-    let response = response.ok_or_else(|| {
-        APIError::status_msg(StatusCode::NOT_FOUND, "No image available for the rank.")
-    })?;
+    } else {
+        None
+    };
+
+    let response = if let Some(response) = generated_response {
+        response
+    } else {
+        // Look up the existing tier badge lazily: generated images remain
+        // available even if the ranks metadata service is temporarily down.
+        let rank = badge / 10;
+        let suffix = query.format.suffix();
+        let tier_url = state
+            .assets_client
+            .fetch_ranks()
+            .await
+            .map_err(|e| APIError::internal(format!("Failed to fetch ranks: {e}")))?
+            .iter()
+            .find(|r| r.tier == rank)
+            .and_then(|r| r.images.get(&format!("large{suffix}")).cloned())
+            .ok_or_else(|| {
+                APIError::status_msg(StatusCode::NOT_FOUND, "No image available for the rank.")
+            })?;
+        let fallback = client
+            .get(&tier_url)
+            .send()
+            .await
+            .map_err(|e| APIError::internal(format!("Failed to fetch rank image: {e}")))?;
+        if !fallback.status().is_success() {
+            if fallback.status() == StatusCode::NOT_FOUND {
+                return Err(APIError::status_msg(
+                    StatusCode::NOT_FOUND,
+                    "No image available for the rank.",
+                ));
+            }
+            return Err(APIError::internal(format!(
+                "Rank image request failed with status {}",
+                fallback.status()
+            )));
+        }
+        fallback
+    };
 
     let content_type = response
         .headers()
