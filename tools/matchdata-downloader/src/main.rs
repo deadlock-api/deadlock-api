@@ -43,8 +43,8 @@ const RETRY_MAX_INTERVAL: Duration = Duration::from_hours(24);
 /// indefinitely — and they stay in the pending set forever because they never
 /// reach `match_player`. Retrying them without limit would burn most of the
 /// download capacity on matches that will never arrive, so they are parked after
-/// this many attempts, which the backoff spreads over roughly a week. A restart
-/// re-examines them, which is a slow enough cadence to catch late arrivals.
+/// this many attempts, which the backoff spreads over roughly four days. A
+/// restart re-examines them, a slow enough cadence to still catch late arrivals.
 const MAX_ATTEMPTS: u32 = 12;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const REQUEST_TIMEOUT: Duration = Duration::from_mins(1);
@@ -271,7 +271,7 @@ fn handle_results(state: &State, salts: &[MatchSalts], results: Vec<anyhow::Resu
 
 /// Exponential cooldown, saturating at [`RETRY_MAX_INTERVAL`]. A replay server
 /// returning 502 is indistinguishable from one that never had the replay, so a
-/// match is only written off after [`MAX_ATTEMPTS`] spread over about a week.
+/// match is only written off after [`MAX_ATTEMPTS`] spread over about four days.
 fn retry_delay(attempts: u32) -> Duration {
     RETRY_INITIAL_INTERVAL
         .saturating_mul(2u32.saturating_pow(attempts.saturating_sub(1).min(16)))
