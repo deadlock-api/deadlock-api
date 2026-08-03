@@ -327,6 +327,15 @@ safe_cp -r "$citadel_folder"/panorama/images/minimap/base/* images/maps/
 mkdir -p images/ranks
 safe_cp -r "$citadel_folder"/panorama/images/ranked/badges/* images/ranks/
 
+# Current Ranked uses a tier badge plus a separate numeral texture. Generate
+# the finite set of composed badges/cards once per game build so the public API
+# only performs static lookups; no image rendering happens per player request.
+echo "Generating current Ranked subrank badges and English rank cards..."
+uv run --with pillow --with zstandard python "$SCRIPT_DIR/generate_rank_images.py" \
+    --ranks-dir images/ranks \
+    --font fonts/valveoracle-semibold.ttf \
+    --localization "$VERSION_DIR/localization/english.json.zst"
+
 # Generate webp images
 find images -type f -name "*.png" -print0 | xargs -0 -P 24 -I {} sh -c '
         base_name=$(basename "{}")

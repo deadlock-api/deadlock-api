@@ -11,6 +11,7 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::services::assets::versions::common::IMAGE_BASE_URL;
 use crate::utils::types::AccountIdQuery;
 
 /// Convert a raw badge value (11–116) to a 1-based contiguous index (1–66).
@@ -243,6 +244,44 @@ impl RankImageFormat {
             Self::Webp => "_webp",
         }
     }
+
+    fn extension(self) -> &'static str {
+        match self {
+            Self::Png => "png",
+            Self::Webp => "webp",
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum RankImageDisplay {
+    /// Current tier badge without a division numeral (backwards compatible default).
+    #[default]
+    Tier,
+    /// Current tier badge with the native I-VI division numeral.
+    Subrank,
+    /// Badge, division numeral and English name, e.g. `Oracle IV`.
+    Card,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum RankCardVariant {
+    /// Compact horizontal image intended for tooltips and profile popups.
+    #[default]
+    Popup,
+    /// Vertical image intended for a full profile page.
+    Profile,
+}
+
+impl RankCardVariant {
+    fn path(self) -> &'static str {
+        match self {
+            Self::Popup => "popup",
+            Self::Profile => "profile",
+        }
+    }
 }
 
 #[derive(Debug, Default, Deserialize, utoipa::IntoParams)]
@@ -251,6 +290,15 @@ pub(crate) struct RankImageQuery {
     #[serde(default)]
     #[param(inline)]
     format: RankImageFormat,
+    /// Image contents. `tier` preserves the original response, `subrank` adds the native I-VI
+    /// numeral, and `card` also adds the English rank name (for example `Oracle IV`).
+    #[serde(default)]
+    #[param(inline)]
+    display: RankImageDisplay,
+    /// Layout used when `display=card`. Ignored for `tier` and `subrank`.
+    #[serde(default)]
+    #[param(inline)]
+    variant: RankCardVariant,
 }
 
 #[utoipa::path(
@@ -269,11 +317,11 @@ pub(crate) struct RankImageQuery {
     ),
     tags = ["Players"],
     summary = "Rank Image",
-    description = "Returns the rank badge image directly (binary), not a URL. Players whose recent ranked matches carry no rank get the `Obscurus` image. Use `?format=webp` for WebP."
+    description = "Returns the rank image directly (binary), not a URL. Players whose recent ranked matches carry no rank get the `Obscurus` image. Use `?format=webp` for WebP, `?display=subrank` for the native I-VI numeral, or `?display=card&variant=popup|profile` for a badge with an English label such as `Oracle IV`."
 )]
 pub(super) async fn rank_image(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
-    Query(RankImageQuery { format }): Query<RankImageQuery>,
+    Query(query): Query<RankImageQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     if state
@@ -288,18 +336,40 @@ pub(super) async fn rank_image(
         .await?
         .as_ref()
         .map_or(0, LastRankedMatch::badge);
-    serve_rank_image(&state, badge, format).await
+    serve_rank_image(&state, badge, query).await
+}
+
+fn generated_rank_image_url(
+    badge: u32,
+    format: RankImageFormat,
+    display: RankImageDisplay,
+    variant: RankCardVariant,
+) -> Option<String> {
+    let rank = badge / 10;
+    let subrank = badge % 10;
+    let extension = format.extension();
+    match display {
+        RankImageDisplay::Tier => None,
+        RankImageDisplay::Subrank if rank == 0 => None,
+        RankImageDisplay::Subrank => Some(format!(
+            "{IMAGE_BASE_URL}/ranks/generated/badges/rank{rank:02}_subrank{subrank}.{extension}"
+        )),
+        RankImageDisplay::Card => Some(format!(
+            "{IMAGE_BASE_URL}/ranks/generated/cards/english/{}/rank{rank:02}_subrank{subrank}.{extension}",
+            variant.path()
+        )),
+    }
 }
 
 async fn serve_rank_image(
     state: &AppState,
     badge: u32,
-    format: RankImageFormat,
+    query: RankImageQuery,
 ) -> APIResult<(HeaderMap, Bytes)> {
     let rank = badge / 10;
-    let suffix = format.suffix();
+    let suffix = query.format.suffix();
 
-    let image_url = state
+    let tier_url = state
         .assets_client
         .fetch_ranks()
         .await
@@ -311,16 +381,35 @@ async fn serve_rank_image(
             APIError::status_msg(StatusCode::NOT_FOUND, "No image available for the rank.")
         })?;
 
-    let response = reqwest::get(&image_url)
-        .await
-        .map_err(|e| APIError::internal(format!("Failed to fetch rank image: {e}")))?;
-
-    if !response.status().is_success() {
-        return Err(APIError::internal(format!(
-            "Rank image request failed with status {}",
-            response.status()
-        )));
+    let mut urls = Vec::with_capacity(2);
+    if let Some(generated) =
+        generated_rank_image_url(badge, query.format, query.display, query.variant)
+    {
+        urls.push(generated);
     }
+    // Keep serving the existing tier badge until the generated assets for a
+    // newly deployed game build have reached R2, and as a permanent fallback.
+    urls.push(tier_url);
+
+    let mut response = None;
+    for image_url in urls {
+        let candidate = reqwest::get(&image_url)
+            .await
+            .map_err(|e| APIError::internal(format!("Failed to fetch rank image: {e}")))?;
+        if candidate.status().is_success() {
+            response = Some(candidate);
+            break;
+        }
+        if candidate.status() != StatusCode::NOT_FOUND {
+            return Err(APIError::internal(format!(
+                "Rank image request failed with status {}",
+                candidate.status()
+            )));
+        }
+    }
+    let response = response.ok_or_else(|| {
+        APIError::status_msg(StatusCode::NOT_FOUND, "No image available for the rank.")
+    })?;
 
     let content_type = response
         .headers()
@@ -437,7 +526,15 @@ pub(super) async fn rank_avg_image(
         idx_to_badge((f64::from(sum) / badges.len() as f64).round() as i32).cast_unsigned()
     };
 
-    serve_rank_image(&state, avg_badge, format).await
+    serve_rank_image(
+        &state,
+        avg_badge,
+        RankImageQuery {
+            format,
+            ..RankImageQuery::default()
+        },
+    )
+    .await
 }
 
 #[utoipa::path(
@@ -616,5 +713,73 @@ mod tests {
             let badge = idx_to_badge(idx);
             assert_eq!(badge_to_idx(badge), idx);
         }
+    }
+
+    #[test]
+    fn generated_subrank_image_uses_current_badge_and_division() {
+        assert_eq!(
+            generated_rank_image_url(
+                84,
+                RankImageFormat::Webp,
+                RankImageDisplay::Subrank,
+                RankCardVariant::Popup,
+            )
+            .as_deref(),
+            Some(
+                "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/generated/badges/rank08_subrank4.webp"
+            )
+        );
+        assert!(
+            generated_rank_image_url(
+                84,
+                RankImageFormat::Png,
+                RankImageDisplay::Tier,
+                RankCardVariant::Profile,
+            )
+            .is_none()
+        );
+        assert!(
+            generated_rank_image_url(
+                0,
+                RankImageFormat::Png,
+                RankImageDisplay::Subrank,
+                RankCardVariant::Popup,
+            )
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn generated_rank_card_selects_popup_and_profile_layouts() {
+        for (variant, directory) in [
+            (RankCardVariant::Popup, "popup"),
+            (RankCardVariant::Profile, "profile"),
+        ] {
+            let expected = format!(
+                "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/generated/cards/english/{directory}/rank08_subrank4.png"
+            );
+            assert_eq!(
+                generated_rank_image_url(
+                    84,
+                    RankImageFormat::Png,
+                    RankImageDisplay::Card,
+                    variant,
+                )
+                .as_deref(),
+                Some(expected.as_str())
+            );
+        }
+        assert_eq!(
+            generated_rank_image_url(
+                0,
+                RankImageFormat::Webp,
+                RankImageDisplay::Card,
+                RankCardVariant::Popup,
+            )
+            .as_deref(),
+            Some(
+                "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/generated/cards/english/popup/rank00_subrank0.webp"
+            )
+        );
     }
 }
