@@ -16,6 +16,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 
 ROMAN = ("", "I", "II", "III", "IV", "V", "VI")
+NUMERAL_ALPHA_CROP_THRESHOLD = 32
 FALLBACK_NAMES = (
     "Obscurus",
     "Initiate",
@@ -114,7 +115,16 @@ def _contain(source: Image.Image, size: tuple[int, int]) -> Image.Image:
 
 def _tinted_numeral(source: Image.Image, color: str, height: int, opacity: float = 1.0) -> Image.Image:
     alpha = source.convert("RGBA").getchannel("A")
-    bounds = alpha.getbbox()
+    # The exported textures contain very faint alpha data extending to the
+    # right edge of the original 512 px canvas (especially numeral_01). Using
+    # getbbox() directly would treat that residue as part of the glyph and
+    # visibly push the roman numeral left. Measure the visible silhouette, then
+    # crop the original antialiased alpha so every numeral is centered by its
+    # actual shape.
+    visible = alpha.point(
+        lambda value: 255 if value >= NUMERAL_ALPHA_CROP_THRESHOLD else 0
+    )
+    bounds = visible.getbbox()
     if bounds is None:
         raise ValueError("numeral has no visible alpha pixels")
     alpha = alpha.crop(bounds)
