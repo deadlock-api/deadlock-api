@@ -51,7 +51,7 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
     steps:
       - uses: actions/checkout@v7
-      - uses: taiki-e/cache-cargo-install-action@v3
+      - uses: taiki-e/cache-cargo-install-action@v3.0.7
         with:
           tool: cargo-machete
       - name: Machete
@@ -65,7 +65,7 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
     steps:
       - uses: actions/checkout@v7
-      - uses: taiki-e/cache-cargo-install-action@v3
+      - uses: taiki-e/cache-cargo-install-action@v3.0.7
         with:
           tool: typos-cli
       - name: Typos Check
