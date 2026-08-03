@@ -3,6 +3,8 @@
 The source badge, numeral textures and VALVEOracle font are extracted from the
 current Deadlock depot by ``build_version_and_upload.sh``.  Generated files are
 build artifacts uploaded to R2; no Valve assets are committed to this repo.
+Ranked cards include a localized name and division; Obscurus intentionally
+remains badge-only because it has no ranked division.
 """
 
 from __future__ import annotations
@@ -213,6 +215,8 @@ def _compose_card(
     badge = badge.resize((badge_size, badge_size), Image.Resampling.LANCZOS)
     result = Image.new("RGBA", (width, height))
     result.alpha_composite(badge, ((width - badge_size) // 2 if profile else 0, 0))
+    # Tier 0 is an intentional badge-only Obscurus card. It has neither a
+    # division nor a ranked label; all ranked tiers include both below.
     if tier:
         _draw_centered_text(
             result,

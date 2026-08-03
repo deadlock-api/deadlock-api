@@ -261,7 +261,7 @@ pub(crate) enum RankImageDisplay {
     Tier,
     /// Current tier badge with the native I-VI division numeral.
     Subrank,
-    /// Badge, division numeral and English name, e.g. `Oracle IV`.
+    /// Badge, division numeral and English name, e.g. `Oracle IV`. Obscurus is badge-only.
     Card,
 }
 
@@ -292,6 +292,7 @@ pub(crate) struct RankImageQuery {
     format: RankImageFormat,
     /// Image contents. `tier` preserves the original response, `subrank` adds the native I-VI
     /// numeral, and `card` also adds the English rank name (for example `Oracle IV`).
+    /// Obscurus remains badge-only because it has no ranked division.
     #[serde(default)]
     #[param(inline)]
     display: RankImageDisplay,
@@ -317,7 +318,7 @@ pub(crate) struct RankImageQuery {
     ),
     tags = ["Players"],
     summary = "Rank Image",
-    description = "Returns the rank image directly (binary), not a URL. Players whose recent ranked matches carry no rank get the `Obscurus` image. Use `?format=webp` for WebP, `?display=subrank` for the native I-VI numeral, or `?display=card&variant=popup|profile` for a badge with an English label such as `Oracle IV`."
+    description = "Returns the rank image directly (binary), not a URL. Players whose recent ranked matches carry no rank get a badge-only `Obscurus` image. Use `?format=webp` for WebP, `?display=subrank` for the native I-VI numeral, or `?display=card&variant=popup|profile` for a ranked badge with an English label such as `Oracle IV`."
 )]
 pub(super) async fn rank_image(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
@@ -391,9 +392,14 @@ async fn serve_rank_image(
     // newly deployed game build have reached R2, and as a permanent fallback.
     urls.push(tier_url);
 
+    // Reuse one client for the generated asset and tier fallback so both
+    // attempts can share the same connection pool.
+    let client = reqwest::Client::new();
     let mut response = None;
     for image_url in urls {
-        let candidate = reqwest::get(&image_url)
+        let candidate = client
+            .get(&image_url)
+            .send()
             .await
             .map_err(|e| APIError::internal(format!("Failed to fetch rank image: {e}")))?;
         if candidate.status().is_success() {
