@@ -223,20 +223,7 @@ async fn fetch_match_metadata_raw(
         }
     };
 
-    // Signal the downloader to retry this match since we know it's fetchable now
-    set_force_retry(state, match_id).await;
-
     Ok(metadata)
-}
-
-async fn set_force_retry(state: &AppState, match_id: u64) {
-    if let Err(e) = state.ch_client
-        .query(&format!("ALTER TABLE match_salts UPDATE force_retry_at = now() WHERE match_id = {match_id} SETTINGS log_comment = 'metadata_endpoint_force_retry'"))
-        .execute()
-        .await
-    {
-        error!(match_id, "Failed to set force_retry_at: {e}");
-    }
 }
 
 /// Decompress a `.meta.bz2` payload, sniffing the container from its magic bytes.
