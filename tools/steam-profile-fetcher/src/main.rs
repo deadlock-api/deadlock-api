@@ -13,7 +13,7 @@
 #![allow(clippy::cast_possible_truncation)]
 
 use core::time::Duration;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use anyhow::Result;
 use cached::macros::cached;
@@ -119,30 +119,6 @@ async fn fetch_and_update_profiles(
     };
 
     attach_friends(&mut profiles, &mut friends_by_account);
-
-    let fetched_ids: HashSet<u32> = profiles.iter().map(|p| p.account_id).collect();
-    let unavailable_profiles = batch
-        .into_iter()
-        .filter(|id| !fetched_ids.contains(id))
-        .copied()
-        .collect_vec();
-    if !unavailable_profiles.is_empty() {
-        match delete_profiles(ch_client, &unavailable_profiles).await {
-            Ok(()) => {
-                info!(
-                    "Deleted {} unavailable profiles",
-                    unavailable_profiles.len()
-                );
-                counter!("steam_profile_fetcher.deleted_profiles.success")
-                    .increment(unavailable_profiles.len() as u64);
-            }
-            Err(e) => {
-                error!("Failed to delete unavailable profiles: {e}");
-                counter!("steam_profile_fetcher.deleted_profiles.failure")
-                    .increment(unavailable_profiles.len() as u64);
-            }
-        }
-    }
 
     match save_profiles(ch_client, &profiles).await {
         Ok(()) => {
@@ -264,18 +240,6 @@ async fn save_profiles(
         inserter.write(profile).await?;
     }
     inserter.end().await
-}
-
-#[instrument(skip_all)]
-async fn delete_profiles(
-    ch_client: &clickhouse::Client,
-    profiles: &[u32],
-) -> clickhouse::error::Result<()> {
-    ch_client
-        .query("DELETE FROM steam_profiles WHERE account_id IN ? SETTINGS log_comment = 'steam_profile_fetcher_delete_profiles'")
-        .bind(profiles)
-        .execute()
-        .await
 }
 
 #[cached(ttl = 86400, convert = "{ 0 }", key = "u8", sync_writes = "default")]
