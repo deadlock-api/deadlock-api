@@ -52,14 +52,48 @@ function flattenUrls(obj: unknown, prefix = ""): [string, string][] {
   return results;
 }
 
-function resolveAbilityName(path: string, heroAbilities: Ability[]): string | null {
-  const slugMatch = path.match(/a\d+_([^/]+)/);
-  if (!slugMatch) return null;
-  const slug = slugMatch[1].toLowerCase();
+const CAST_FILE = /^(.+?)_cast(_01)?$/;
+const PARTIAL_CAST = /lyr|layer|pre_?cast|delay|global|distant|loop|_lp$/;
+
+function compact(value: string): string {
+  return value.replaceAll(/[^a-z0-9]/g, "");
+}
+
+function matchAbility(slug: string, heroAbilities: Ability[]): string | null {
+  if (slug.length < 3 || /^a\d+$/.test(slug)) return null;
 
   for (const ability of heroAbilities) {
-    if (ability.class_name.toLowerCase().includes(slug)) return ability.name;
-    if (ability.name.toLowerCase().replaceAll(/[\s'-]/g, "_") === slug) return ability.name;
+    if (compact(ability.class_name.toLowerCase()).includes(compact(slug))) return ability.name;
+    if (compact(ability.name.toLowerCase()) === compact(slug)) return ability.name;
+  }
+
+  return null;
+}
+
+/**
+ * Sound folders keep stale ability slots (Pocket's barrage sounds live under `a1_plasma_flux`,
+ * Mirage's `a1_beetles` holds `mirage_a2_beetle_*`), so the file name is trusted over its folder.
+ */
+function resolveAbilityName(path: string, heroCodename: string, heroAbilities: Ability[]): string | null {
+  const segments = path.toLowerCase().split("/");
+  const fileMatch = segments.at(-1)?.match(CAST_FILE);
+  if (!fileMatch) return null;
+
+  const prefix = fileMatch[1];
+  const fileSlugs = [
+    prefix.match(/(?:^|_)a\d+_(.+)$/)?.[1],
+    prefix.startsWith(`${heroCodename}_`) ? prefix.slice(heroCodename.length + 1) : undefined,
+    prefix,
+  ];
+  for (const slug of fileSlugs) {
+    const name = slug ? matchAbility(slug, heroAbilities) : null;
+    if (name) return name;
+  }
+
+  for (const segment of segments.slice(0, -1).reverse()) {
+    const folderSlug = segment.match(/^a\d+_(.+)$/)?.[1];
+    const name = folderSlug ? matchAbility(folderSlug, heroAbilities) : null;
+    if (name) return name;
   }
 
   return null;
@@ -86,24 +120,16 @@ function extractPlayableSounds(
 
     const urls = flattenUrls(heroAbilities);
     for (const [path, url] of urls) {
-      const lower = path.toLowerCase();
-      if (
-        !lower.includes("cast") ||
-        lower.includes("lyr") ||
-        lower.includes("layer") ||
-        lower.includes("precast") ||
-        lower.includes("_02") ||
-        lower.includes("_03") ||
-        lower.includes("_04") ||
-        lower.includes("_05")
-      ) {
-        continue;
-      }
+      // Unprefixed `cast.mp3` files are shared leftovers — Abrams' `a2_charge/cast.mp3` sits next to
+      // step sounds byte-identical to Dynamo's retired charged tackle. Only named files are trusted.
+      const file = path.toLowerCase().split("/").at(-1) ?? "";
+      if (PARTIAL_CAST.test(file)) continue;
 
-      const abilityName = resolveAbilityName(path, heroAbilityList);
+      const abilityName = resolveAbilityName(path, heroCodename, heroAbilityList);
       if (!abilityName) continue;
 
-      const key = `${heroCodename}:${abilityName}`;
+      // Keyed on the hero id, not the codename: Pocket ships the same files under `pocket` and `synth`.
+      const key = `${heroInfo.id}:${abilityName}`;
       if (seen.has(key)) continue;
       seen.add(key);
 
