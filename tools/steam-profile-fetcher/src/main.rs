@@ -13,7 +13,8 @@
 #![allow(clippy::cast_possible_truncation)]
 
 use core::time::Duration;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::time::Instant;
 
 use anyhow::Result;
 use cached::macros::cached;
@@ -30,6 +31,13 @@ mod steam_api;
 
 static FETCH_INTERVAL: std::sync::LazyLock<Duration> =
     std::sync::LazyLock::new(|| Duration::from_secs(common::env_or("FETCH_INTERVAL_SECONDS", 120)));
+
+// A DELETE on steam_profiles is a mutation that rewrites _row_exists across every
+// part (~3.7 GiB) regardless of how many rows it matches, so unavailable accounts
+// are buffered and flushed at most once per interval instead of once per cycle.
+static DELETE_INTERVAL: std::sync::LazyLock<Duration> = std::sync::LazyLock::new(|| {
+    Duration::from_secs(common::env_or("PROFILE_DELETE_INTERVAL_SECONDS", 86400))
+});
 
 // Re-fetch cadence, tiered by how recently the account played. Best effort:
 // every account is eligible once its profile is older than its tier's interval,
@@ -54,10 +62,19 @@ async fn main() -> Result<()> {
     let pg_client = common::get_pg_client().await?;
 
     let mut interval = tokio::time::interval(*FETCH_INTERVAL);
+    let mut pending_deletions = HashSet::new();
+    let mut last_deletion = Instant::now();
     loop {
         interval.tick().await;
-        if let Err(e) = fetch_and_update_profiles(&http_client, &ch_client, &pg_client).await {
+        if let Err(e) =
+            fetch_and_update_profiles(&http_client, &ch_client, &pg_client, &mut pending_deletions)
+                .await
+        {
             error!("Error updating Steam profiles: {e}");
+        }
+        if !pending_deletions.is_empty() && last_deletion.elapsed() >= *DELETE_INTERVAL {
+            flush_profile_deletions(&ch_client, &mut pending_deletions).await;
+            last_deletion = Instant::now();
         }
     }
 }
@@ -67,6 +84,7 @@ async fn fetch_and_update_profiles(
     http_client: &reqwest::Client,
     ch_client: &clickhouse::Client,
     pg_client: &sqlx::Pool<sqlx::Postgres>,
+    pending_deletions: &mut HashSet<u32>,
 ) -> Result<()> {
     let protected_users = get_protected_users_cached(pg_client).await?;
     let limited_account_ids = get_account_ids_to_update(ch_client, Some(100)).await?;
@@ -120,6 +138,8 @@ async fn fetch_and_update_profiles(
 
     attach_friends(&mut profiles, &mut friends_by_account);
 
+    queue_unavailable_profiles(ch_client, &batch_ids, &profiles, pending_deletions).await;
+
     match save_profiles(ch_client, &profiles).await {
         Ok(()) => {
             info!(
@@ -140,6 +160,79 @@ async fn fetch_and_update_profiles(
     }
 
     Ok(())
+}
+
+#[instrument(skip_all)]
+async fn queue_unavailable_profiles(
+    ch_client: &clickhouse::Client,
+    batch_ids: &[u32],
+    profiles: &[SteamPlayerSummary],
+    pending_deletions: &mut HashSet<u32>,
+) {
+    // A batch Steam answers with nothing is indistinguishable from a batch of deleted
+    // accounts, so treat it as an API hiccup rather than dropping 100 live profiles.
+    if profiles.is_empty() {
+        warn!(
+            "Steam returned no profiles for {} accounts, not queueing them for deletion",
+            batch_ids.len()
+        );
+        return;
+    }
+
+    let fetched_ids: HashSet<u32> = profiles.iter().map(|p| p.account_id).collect();
+
+    // An unavailable account stays eligible for the queue, so it can come back before
+    // the buffer is flushed; without this the flush would delete the profile we just
+    // re-saved for it.
+    pending_deletions.retain(|id| !fetched_ids.contains(id));
+
+    let unavailable = batch_ids
+        .iter()
+        .filter(|id| !fetched_ids.contains(id))
+        .copied()
+        .collect_vec();
+    if !unavailable.is_empty() {
+        // Most unavailable accounts were never stored in the first place, and a DELETE
+        // matching zero rows costs a full mutation all the same, so drop them here.
+        match stored_profile_ids(ch_client, &unavailable).await {
+            Ok(stored) => pending_deletions.extend(stored),
+            Err(e) => error!("Failed to look up stored profiles for unavailable accounts: {e}"),
+        }
+    }
+    gauge!("steam_profile_fetcher.pending_deletions").set(pending_deletions.len() as f64);
+}
+
+async fn stored_profile_ids(
+    ch_client: &clickhouse::Client,
+    account_ids: &[u32],
+) -> clickhouse::error::Result<Vec<u32>> {
+    ch_client
+        .query("SELECT DISTINCT account_id FROM steam_profiles WHERE account_id IN ? SETTINGS log_comment = 'steam_profile_fetcher_stored_profile_ids'")
+        .bind(account_ids)
+        .fetch_all()
+        .await
+}
+
+#[instrument(skip_all)]
+async fn flush_profile_deletions(
+    ch_client: &clickhouse::Client,
+    pending_deletions: &mut HashSet<u32>,
+) {
+    let account_ids = pending_deletions.iter().copied().collect_vec();
+    match delete_profiles(ch_client, &account_ids).await {
+        Ok(()) => {
+            info!("Deleted {} unavailable profiles", account_ids.len());
+            counter!("steam_profile_fetcher.deleted_profiles.success")
+                .increment(account_ids.len() as u64);
+            pending_deletions.clear();
+            gauge!("steam_profile_fetcher.pending_deletions").set(0.0);
+        }
+        Err(e) => {
+            error!("Failed to delete unavailable profiles: {e}");
+            counter!("steam_profile_fetcher.deleted_profiles.failure")
+                .increment(account_ids.len() as u64);
+        }
+    }
 }
 
 #[instrument(skip_all, fields(accounts = account_ids.len()))]
@@ -240,6 +333,18 @@ async fn save_profiles(
         inserter.write(profile).await?;
     }
     inserter.end().await
+}
+
+#[instrument(skip_all)]
+async fn delete_profiles(
+    ch_client: &clickhouse::Client,
+    account_ids: &[u32],
+) -> clickhouse::error::Result<()> {
+    ch_client
+        .query("DELETE FROM steam_profiles WHERE account_id IN ? SETTINGS log_comment = 'steam_profile_fetcher_delete_profiles'")
+        .bind(account_ids)
+        .execute()
+        .await
 }
 
 #[cached(ttl = 86400, convert = "{ 0 }", key = "u8", sync_writes = "default")]
