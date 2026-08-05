@@ -1,9 +1,6 @@
-use std::sync::LazyLock;
-
 use axum::Json;
-use axum::body::Bytes;
 use axum::extract::{Path, Query, State};
-use axum::http::{HeaderMap, StatusCode, header};
+use axum::http::{StatusCode, header};
 use axum::response::IntoResponse;
 use cached::macros::cached;
 use clickhouse::Row;
@@ -13,10 +10,8 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::services::assets::versions::common::IMAGE_BASE_URL;
+use crate::services::rank_image::{self, RankImageFormat, RankImageQuery};
 use crate::utils::types::AccountIdQuery;
-
-static RANK_IMAGE_HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(reqwest::Client::new);
 
 /// Convert a raw badge value (11–116) to a 1-based contiguous index (1–66).
 ///
@@ -233,86 +228,6 @@ pub(super) async fn rank(
     }))
 }
 
-#[derive(Debug, Default, Clone, Copy, Deserialize, ToSchema)]
-#[serde(rename_all = "lowercase")]
-pub(crate) enum RankImageFormat {
-    #[default]
-    Png,
-    Webp,
-}
-
-impl RankImageFormat {
-    fn suffix(self) -> &'static str {
-        match self {
-            Self::Png => "",
-            Self::Webp => "_webp",
-        }
-    }
-
-    fn extension(self) -> &'static str {
-        match self {
-            Self::Png => "png",
-            Self::Webp => "webp",
-        }
-    }
-
-    fn content_type(self) -> &'static str {
-        match self {
-            Self::Png => "image/png",
-            Self::Webp => "image/webp",
-        }
-    }
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, ToSchema)]
-#[serde(rename_all = "lowercase")]
-pub(crate) enum RankImageDisplay {
-    /// Current tier badge without a division numeral (backwards compatible default).
-    #[default]
-    Tier,
-    /// Current tier badge with the native I-VI division numeral.
-    Subrank,
-    /// Badge, division numeral and English name, e.g. `Oracle IV`. Obscurus is badge-only.
-    Card,
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, ToSchema)]
-#[serde(rename_all = "lowercase")]
-pub(crate) enum RankCardVariant {
-    /// Compact horizontal image intended for tooltips and profile popups.
-    #[default]
-    Popup,
-    /// Vertical image intended for a full profile page.
-    Profile,
-}
-
-impl RankCardVariant {
-    fn path(self) -> &'static str {
-        match self {
-            Self::Popup => "popup",
-            Self::Profile => "profile",
-        }
-    }
-}
-
-#[derive(Debug, Default, Deserialize, utoipa::IntoParams)]
-pub(crate) struct RankImageQuery {
-    /// Image format. Defaults to `png`. Supported: `png`, `webp`.
-    #[serde(default)]
-    #[param(inline)]
-    format: RankImageFormat,
-    /// Image contents. `tier` preserves the original response, `subrank` adds the native I-VI
-    /// numeral, and `card` also adds the English rank name (for example `Oracle IV`).
-    /// Obscurus remains badge-only because it has no ranked division.
-    #[serde(default)]
-    #[param(inline)]
-    display: RankImageDisplay,
-    /// Layout used when `display=card`. Ignored for `tier` and `subrank`.
-    #[serde(default)]
-    #[param(inline)]
-    variant: RankCardVariant,
-}
-
 #[utoipa::path(
     get,
     path = "/{account_id}/rank/image",
@@ -329,7 +244,7 @@ pub(crate) struct RankImageQuery {
     ),
     tags = ["Players"],
     summary = "Rank Image",
-    description = "Returns the rank image directly (binary), not a URL. Players whose recent ranked matches carry no rank get a badge-only `Obscurus` image. Use `?format=webp` for WebP, `?display=subrank` for the native I-VI numeral, or `?display=card&variant=popup|profile` for a ranked badge with an English label such as `Oracle IV`."
+    description = "Returns the rank badge image directly (binary), not a URL, with the player's I-VI division numeral drawn on it. Players whose recent ranked matches carry no rank, and players still in placement, get the plain tier badge. Use `?format=webp` for WebP."
 )]
 pub(super) async fn rank_image(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
@@ -351,114 +266,20 @@ pub(super) async fn rank_image(
     serve_rank_image(&state, badge, query).await
 }
 
-fn generated_rank_image_url(
-    badge: u32,
-    format: RankImageFormat,
-    display: RankImageDisplay,
-    variant: RankCardVariant,
-) -> Option<String> {
-    let rank = badge / 10;
-    let subrank = badge % 10;
-    let extension = format.extension();
-    let is_ranked_badge = (1..=11).contains(&rank) && (1..=6).contains(&subrank);
-    match display {
-        RankImageDisplay::Tier => None,
-        RankImageDisplay::Subrank if is_ranked_badge => Some(format!(
-            "{IMAGE_BASE_URL}/ranks/generated/badges/rank{rank:02}_subrank{subrank}.{extension}"
-        )),
-        RankImageDisplay::Card if is_ranked_badge || (rank == 0 && subrank == 0) => Some(format!(
-            "{IMAGE_BASE_URL}/ranks/generated/cards/english/{}/rank{rank:02}_subrank{subrank}.{extension}",
-            variant.path()
-        )),
-        RankImageDisplay::Subrank | RankImageDisplay::Card => None,
-    }
-}
-
 async fn serve_rank_image(
     state: &AppState,
     badge: u32,
     query: RankImageQuery,
-) -> APIResult<(HeaderMap, Bytes)> {
-    let generated_response = if let Some(image_url) =
-        generated_rank_image_url(badge, query.format, query.display, query.variant)
-    {
-        match RANK_IMAGE_HTTP_CLIENT.get(&image_url).send().await {
-            Ok(candidate) if candidate.status().is_success() => Some(candidate),
-            Ok(candidate) if candidate.status() == StatusCode::NOT_FOUND => None,
-            Ok(candidate) => {
-                return Err(APIError::internal(format!(
-                    "Rank image request failed with status {}",
-                    candidate.status()
-                )));
-            }
-            Err(error) => {
-                tracing::warn!(
-                    %error,
-                    %image_url,
-                    "Failed to fetch generated rank image; using tier fallback"
-                );
-                None
-            }
-        }
+) -> APIResult<impl IntoResponse + use<>> {
+    // A badge without a division - Obscurus, or a player still in placement - has no numeral to
+    // draw, so it is served as the published tier image.
+    let bytes = if badge.is_multiple_of(10) {
+        rank_image::fetch_tier_image(state, badge, query.format).await?
     } else {
-        None
+        rank_image::render(state, badge, query.format).await?
     };
 
-    let response = if let Some(response) = generated_response {
-        response
-    } else {
-        // Look up the existing tier badge lazily: generated images remain
-        // available even if the ranks metadata service is temporarily down.
-        let rank = badge / 10;
-        let suffix = query.format.suffix();
-        let tier_url = state
-            .assets_client
-            .fetch_ranks()
-            .await
-            .map_err(|e| APIError::internal(format!("Failed to fetch ranks: {e}")))?
-            .iter()
-            .find(|r| r.tier == rank)
-            .and_then(|r| r.images.get(&format!("large{suffix}")).cloned())
-            .ok_or_else(|| {
-                APIError::status_msg(StatusCode::NOT_FOUND, "No image available for the rank.")
-            })?;
-        let fallback = RANK_IMAGE_HTTP_CLIENT
-            .get(&tier_url)
-            .send()
-            .await
-            .map_err(|e| APIError::internal(format!("Failed to fetch rank image: {e}")))?;
-        if !fallback.status().is_success() {
-            if fallback.status() == StatusCode::NOT_FOUND {
-                return Err(APIError::status_msg(
-                    StatusCode::NOT_FOUND,
-                    "No image available for the rank.",
-                ));
-            }
-            return Err(APIError::internal(format!(
-                "Rank image request failed with status {}",
-                fallback.status()
-            )));
-        }
-        fallback
-    };
-
-    let content_type = response
-        .headers()
-        .get(reqwest::header::CONTENT_TYPE)
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or(query.format.content_type())
-        .to_owned();
-
-    let bytes: Bytes = response
-        .bytes()
-        .await
-        .map_err(|e| APIError::internal(format!("Failed to read rank image bytes: {e}")))?;
-
-    let mut headers = HeaderMap::new();
-    if let Ok(value) = content_type.parse() {
-        headers.insert(header::CONTENT_TYPE, value);
-    }
-    Ok((headers, bytes))
+    Ok(([(header::CONTENT_TYPE, query.format.content_type())], bytes))
 }
 
 const MAX_AVG_ACCOUNT_IDS: usize = 12;
@@ -557,15 +378,7 @@ pub(super) async fn rank_avg_image(
         idx_to_badge((f64::from(sum) / badges.len() as f64).round() as i32).cast_unsigned()
     };
 
-    serve_rank_image(
-        &state,
-        avg_badge,
-        RankImageQuery {
-            format,
-            ..RankImageQuery::default()
-        },
-    )
-    .await
+    serve_rank_image(&state, avg_badge, RankImageQuery { format }).await
 }
 
 #[utoipa::path(
@@ -744,98 +557,5 @@ mod tests {
             let badge = idx_to_badge(idx);
             assert_eq!(badge_to_idx(badge), idx);
         }
-    }
-
-    #[test]
-    fn rank_image_format_has_matching_content_type() {
-        assert_eq!(RankImageFormat::Png.content_type(), "image/png");
-        assert_eq!(RankImageFormat::Webp.content_type(), "image/webp");
-    }
-
-    #[test]
-    fn generated_subrank_image_uses_current_badge_and_division() {
-        let expected = format!("{IMAGE_BASE_URL}/ranks/generated/badges/rank08_subrank4.webp");
-        assert_eq!(
-            generated_rank_image_url(
-                84,
-                RankImageFormat::Webp,
-                RankImageDisplay::Subrank,
-                RankCardVariant::Popup,
-            )
-            .as_deref(),
-            Some(expected.as_str())
-        );
-        assert!(
-            generated_rank_image_url(
-                84,
-                RankImageFormat::Png,
-                RankImageDisplay::Tier,
-                RankCardVariant::Profile,
-            )
-            .is_none()
-        );
-        assert!(
-            generated_rank_image_url(
-                0,
-                RankImageFormat::Png,
-                RankImageDisplay::Subrank,
-                RankCardVariant::Popup,
-            )
-            .is_none()
-        );
-        for invalid_badge in [80, 87, 120] {
-            assert!(
-                generated_rank_image_url(
-                    invalid_badge,
-                    RankImageFormat::Webp,
-                    RankImageDisplay::Subrank,
-                    RankCardVariant::Popup,
-                )
-                .is_none()
-            );
-        }
-    }
-
-    #[test]
-    fn generated_rank_card_selects_popup_and_profile_layouts() {
-        for (variant, directory) in [
-            (RankCardVariant::Popup, "popup"),
-            (RankCardVariant::Profile, "profile"),
-        ] {
-            let expected = format!(
-                "{IMAGE_BASE_URL}/ranks/generated/cards/english/{directory}/rank08_subrank4.png"
-            );
-            assert_eq!(
-                generated_rank_image_url(
-                    84,
-                    RankImageFormat::Png,
-                    RankImageDisplay::Card,
-                    variant,
-                )
-                .as_deref(),
-                Some(expected.as_str())
-            );
-        }
-        let obscurus_expected =
-            format!("{IMAGE_BASE_URL}/ranks/generated/cards/english/popup/rank00_subrank0.webp");
-        assert_eq!(
-            generated_rank_image_url(
-                0,
-                RankImageFormat::Webp,
-                RankImageDisplay::Card,
-                RankCardVariant::Popup,
-            )
-            .as_deref(),
-            Some(obscurus_expected.as_str())
-        );
-        assert!(
-            generated_rank_image_url(
-                80,
-                RankImageFormat::Webp,
-                RankImageDisplay::Card,
-                RankCardVariant::Popup,
-            )
-            .is_none()
-        );
     }
 }

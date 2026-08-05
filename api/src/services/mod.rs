@@ -4,6 +4,7 @@ pub(crate) mod clickhouse_insert_batcher;
 pub(crate) mod cohort_agg_refresh;
 pub(crate) mod game_server;
 pub(crate) mod patreon;
+pub(crate) mod rank_image;
 pub(super) mod rate_limiter;
 pub(crate) mod request_logger;
 pub(super) mod steam;

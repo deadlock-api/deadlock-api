@@ -15,6 +15,9 @@ use crate::services::assets::versions::localization;
 
 const NUM_TIERS: u32 = 12;
 
+/// Base URL of this API, which serves the composed division badges.
+const API_BASE_URL: &str = "https://api.deadlock-api.com";
+
 const RANK_COLORS: [&str; NUM_TIERS as usize] = [
     "#333333", "#6A3E1E", "#882355", "#5C6DAB", "#719C47", "#DDA326", "#EE4F57", "#B47FEB",
     "#955138", "#7C7C7C", "#C39751", "#5CE9A9",
@@ -137,6 +140,31 @@ pub(crate) struct RankImages {
     #[schema(deprecated)]
     #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
     pub small_subrank6_webp: Option<String>,
+    /// Tier badge with the division numeral drawn on it, composed on demand by this API.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subrank1: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subrank1_webp: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subrank2: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subrank2_webp: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subrank3: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subrank3_webp: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subrank4: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subrank4_webp: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subrank5: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subrank5_webp: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subrank6: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subrank6_webp: Option<String>,
 }
 
 impl RankImages {
@@ -161,6 +189,12 @@ impl RankImages {
         }
 
         let sub = |size: &str, ext: &str, n: u32| legacy(&format!("badge_{size}_subrank{n}"), ext);
+        let composed = |n: u32, webp: bool| {
+            let query = if webp { "?format=webp" } else { "" };
+            Some(format!(
+                "{API_BASE_URL}/v1/assets/ranks/{tier}/{n}/image{query}"
+            ))
+        };
         Self {
             large: url("lg", "png"),
             large_webp: url("lg", "webp"),
@@ -192,6 +226,18 @@ impl RankImages {
             small_subrank6_webp: sub("sm", "webp", 6),
             small: None,
             small_webp: None,
+            subrank1: composed(1, false),
+            subrank1_webp: composed(1, true),
+            subrank2: composed(2, false),
+            subrank2_webp: composed(2, true),
+            subrank3: composed(3, false),
+            subrank3_webp: composed(3, true),
+            subrank4: composed(4, false),
+            subrank4_webp: composed(4, true),
+            subrank5: composed(5, false),
+            subrank5_webp: composed(5, true),
+            subrank6: composed(6, false),
+            subrank6_webp: composed(6, true),
         }
     }
 }
