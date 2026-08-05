@@ -271,8 +271,7 @@ async fn serve_rank_image(
     badge: u32,
     query: RankImageQuery,
 ) -> APIResult<impl IntoResponse + use<>> {
-    // A badge without a division - Obscurus, or a player still in placement - has no numeral to
-    // draw, so it is served as the published tier image.
+    // Obscurus and players still in placement have no division to draw.
     let bytes = if badge.is_multiple_of(10) {
         rank_image::fetch_tier_image(state, badge, query.format).await?
     } else {

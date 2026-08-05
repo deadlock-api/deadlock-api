@@ -15,7 +15,6 @@ use crate::services::assets::versions::localization;
 
 const NUM_TIERS: u32 = 12;
 
-/// Base URL of this API, which serves the composed division badges.
 const API_BASE_URL: &str = "https://api.deadlock-api.com";
 
 const RANK_COLORS: [&str; NUM_TIERS as usize] = [

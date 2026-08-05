@@ -1,10 +1,8 @@
 //! Rank badges composed on demand from the published tier badge artwork.
 //!
-//! Valve ships the tier badge and the division numeral as separate Panorama assets and only the
-//! badge is published to the assets bucket, so the numeral is drawn as text here. Geometry and
-//! styling mirror the `.rank-badge` component on deadlock-api.com: the badge is cropped to its
-//! visible area and the roman numeral is centred at 79% of that height, white with a heavy
-//! darkened-metal stroke.
+//! Valve ships the division numeral as a separate Panorama texture that is not published to the
+//! assets bucket, so it is drawn as text instead. The constants below are taken from the
+//! `.rank-badge` component on deadlock-api.com.
 
 #![expect(
     clippy::cast_possible_truncation,
@@ -30,28 +28,25 @@ use utoipa::ToSchema;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 
-/// A tier/division badge only changes when a new asset build lands, so both the composition
-/// below and the responses that serve it are cached for a day.
+/// There are only 66 badges per format and they change only when a new asset build lands.
 pub(crate) const CACHE_TTL: Duration = Duration::from_hours(24);
 
 const FONT_KEY: &str = "assets-api-res/fonts/valveoracle-semibold.ttf";
 
 const ROMAN: [&str; 6] = ["I", "II", "III", "IV", "V", "VI"];
 
-/// Visible badge area inside the published artwork, as fractions of the source image. The badges
-/// carry a wide transparent margin that the game crops away in Panorama.
+/// Visible badge area, as fractions of the source image: the artwork carries a wide transparent
+/// margin that the game crops away in Panorama.
 const CROP: (f32, f32, f32, f32) = (0.228, 0.082_985, 0.53, 0.906_844);
 
-/// Numeral centre, as fractions of the cropped badge.
+/// Numeral centre as fractions of the cropped badge; the rest as fractions of the font size.
 const NUMERAL_CENTER: (f32, f32) = (0.5, 0.79);
-/// Numeral font size, as a fraction of the cropped badge width.
 const NUMERAL_SIZE: f32 = 0.643_11;
-/// Letter spacing and stroke width, as fractions of the numeral font size.
 const NUMERAL_LETTER_SPACING: f32 = 0.04;
 const NUMERAL_STROKE: f32 = 0.05;
 
-/// The numeral outline is the badge's own metal, darkened. Measured against the reference
-/// rendering: Sentinel's badge averages `#7d4c2c`, which lands on its `#674423` outline.
+/// Verified against the reference rendering: Sentinel's badge averages `#7d4c2c`, which lands on
+/// its `#674423` outline.
 const STROKE_DARKEN: f32 = 0.83;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Deserialize, ToSchema)]
@@ -63,7 +58,6 @@ pub(crate) enum RankImageFormat {
 }
 
 impl RankImageFormat {
-    /// Suffix of the matching `images` key in the ranks asset metadata.
     fn suffix(self) -> &'static str {
         match self {
             Self::Png => "",
@@ -87,9 +81,6 @@ pub(crate) struct RankImageQuery {
     pub(crate) format: RankImageFormat,
 }
 
-/// Compose the badge for `badge`, which must carry a division (`badge % 10` in `1..=6`). There are
-/// only 66 of these per format, and they change only when a new asset build lands, so the result is
-/// cached for [`CACHE_TTL`].
 #[cached(
     ttl = 86400,
     convert = "{ (badge, format) }",
@@ -112,7 +103,6 @@ pub(crate) async fn render(
     encode(&image, format)
 }
 
-/// The tier badge exactly as published in the assets bucket.
 pub(crate) async fn fetch_tier_image(
     state: &AppState,
     badge: u32,
@@ -150,7 +140,6 @@ pub(crate) async fn fetch_tier_image(
         .map_err(|e| APIError::internal(format!("Failed to read rank image bytes: {e}")))
 }
 
-/// The published tier badge, decoded and cropped to its visible area.
 async fn cropped_badge(state: &AppState, badge: u32) -> APIResult<RgbaImage> {
     let png = fetch_tier_image(state, badge, RankImageFormat::Png).await?;
     let source = image::load_from_memory_with_format(&png, image::ImageFormat::Png)
@@ -169,7 +158,6 @@ fn crop_badge(source: &RgbaImage) -> RgbaImage {
     imageops::crop_imm(source, x, y, width, height).to_image()
 }
 
-/// Mean colour of the opaque badge pixels, darkened into the numeral's outline colour.
 fn stroke_color(badge: &RgbaImage) -> Rgba<u8> {
     let mut total = [0u64; 3];
     let mut count = 0u64;
@@ -201,7 +189,7 @@ fn draw_numeral(image: &mut RgbaImage, font: &FontVec, numeral: &str) {
     text.draw(image, font, origin, Rgba([255, 255, 255, 255]), 0.0);
 }
 
-/// A laid-out run of glyphs, positioned relative to the text origin (left edge, baseline).
+/// Glyphs positioned relative to the text origin, which is its left edge on the baseline.
 struct Text {
     glyphs: Vec<Glyph>,
     width: f32,
@@ -228,8 +216,7 @@ impl Text {
         }
     }
 
-    /// Blend the run onto `canvas` at `origin`. A non-zero `stroke` dilates the glyph coverage by
-    /// that radius, which is how the outline is drawn.
+    /// A non-zero `stroke` dilates the glyph coverage by that radius, drawing the outline.
     fn draw(
         &self,
         canvas: &mut RgbaImage,
@@ -272,7 +259,6 @@ impl Text {
     }
 }
 
-/// Grow a coverage mask by `radius` pixels, taking the maximum over a disc.
 fn dilate(coverage: &[f32], width: usize, height: usize, radius: f32) -> Vec<f32> {
     let limit = radius.ceil() as i32;
     let disc: Vec<(i32, i32)> = (-limit..=limit)
@@ -300,7 +286,6 @@ fn dilate(coverage: &[f32], width: usize, height: usize, radius: f32) -> Vec<f32
     out
 }
 
-/// Source-over blend of `color` at `alpha` coverage onto `target`.
 fn blend(target: &mut Rgba<u8>, color: Rgba<u8>, alpha: f32) {
     let source_alpha = alpha.clamp(0.0, 1.0);
     let target_alpha = f32::from(target[3]) / 255.0;
@@ -314,9 +299,7 @@ fn blend(target: &mut Rgba<u8>, color: Rgba<u8>, alpha: f32) {
         let existing = f32::from(target[index]) * target_alpha * (1.0 - source_alpha);
         target[index] = ((source + existing) / out_alpha).round() as u8;
     }
-    {
-        target[3] = (out_alpha * 255.0).round() as u8;
-    }
+    target[3] = (out_alpha * 255.0).round() as u8;
 }
 
 fn encode(image: &RgbaImage, format: RankImageFormat) -> APIResult<Bytes> {
@@ -334,7 +317,6 @@ fn encode(image: &RgbaImage, format: RankImageFormat) -> APIResult<Bytes> {
     Ok(Bytes::from(out))
 }
 
-/// The game's own display font, published alongside the images.
 #[cached(ttl = 86400, key = "u8", convert = "{ 0 }", sync_writes = "default")]
 async fn font(state: &AppState) -> Result<Arc<FontVec>, APIError> {
     let bytes = state
