@@ -70,9 +70,9 @@ Projection/filter queries emit rows continuously as they are decoded. A whole-ma
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | With broadcast_url: 20req/m<br>With match_id: 20req/m + 2req/h |
-| Key | With broadcast_url: -<br>With match_id: 5req/m, 100req/h |
-| Global | With broadcast_url: 100req/m<br>With match_id: 100req/m + 5req/10s, 500req/h |
+| IP | With broadcast_url: 20req/m<br>With match_id: 6req/h |
+| Key | With broadcast_url: -<br>With match_id: 20req/10m, 100req/h |
+| Global | With broadcast_url: 100req/m<br>With match_id: 100req/10m, 500req/h |
 "
 )]
 pub(super) async fn live_query(

@@ -164,9 +164,9 @@ Example Parsers:
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | 2req/h |
-| Key | 5req/m, 100req/h |
-| Global | 5req/10s, 500req/h |
+| IP | 6req/h |
+| Key | 20req/10m, 100req/h |
+| Global | 100req/10m, 500req/h |
     "
 )]
 pub(super) async fn url(
@@ -229,10 +229,10 @@ pub(super) async fn resolve_broadcast_url(
             rate_limit_key,
             "spectate",
             &[
-                Quota::ip_limit(2, Duration::from_hours(1)),
-                Quota::key_limit(5, Duration::from_mins(1)),
+                Quota::ip_limit(6, Duration::from_hours(1)),
+                Quota::key_limit(20, Duration::from_mins(10)),
                 Quota::key_limit(100, Duration::from_hours(1)),
-                Quota::global_limit(5, Duration::from_secs(10)),
+                Quota::global_limit(100, Duration::from_mins(10)),
                 Quota::global_limit(500, Duration::from_hours(1)),
             ],
         )
