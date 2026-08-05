@@ -41,7 +41,7 @@ futures = "0.3.33"
 snap = "1.1.2"
 valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "a23b534ea8ef5f64e4c4aff8657547cdb3bee26d", features = ["gc-client", "serde", "user-msgs", "reflect"] }
 prost = "0.14.4"
-base64 = "0.23.0"
+base64 = "0.23.1"
 tryhard = "0.5.2"
 async-compression = { version = "0.4.43", features = ["bzip2", "zstd", "tokio"] }
 bzip2 = "0.6"
@@ -90,6 +90,8 @@ haste_core = { git = "https://github.com/deadlock-api/haste.git", rev = "77e8c5a
 haste_broadcast = { git = "https://github.com/deadlock-api/haste.git", rev = "77e8c5ac10b6ac64dd64c0d19455243de8bc1a92" }
 rayon = "1"
 tokio-util = { version = "0.7.19", features = ["io"] }
+image = { version = "0.25.10", default-features = false, features = ["png", "webp"] }
+ab_glyph = "0.2.32"
 
 [build-dependencies]
 prost-reflect = "0.16"
@@ -110,6 +112,4 @@ split-debuginfo = "unpacked"
 debug = false
 
 [profile.test.package.clickhouse-sql-parser]
-opt-level = 3
-[profile.test.package.antlr4rust]
 opt-level = 3
