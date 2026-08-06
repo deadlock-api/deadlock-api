@@ -13,10 +13,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { HeroDetailsTooltip } from "~/components/heroes-page/HeroDetailsTooltip";
-import { type SortDir, type SortKey, SortableHeader } from "~/components/heroes-page/SortableHeader";
+import { type SortKey, SortableHeader } from "~/components/heroes-page/SortableHeader";
 import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -54,6 +54,9 @@ const HERO_TYPE_ORDER: HeroType[] = ["assassin", "brawler", "marksman", "mystic"
 
 const PICK_RATE_MODES = ["pickRate", "banRate", "presence"] as const;
 
+const parseAsSortKey = parseAsStringLiteral(["hero", "winrate", "zScore", "residual", "pickRate", "banRate"] as const);
+const parseAsSortDir = parseAsStringLiteral(["asc", "desc"] as const);
+
 export function HeroStatsTable({
   columns,
   limit,
@@ -85,8 +88,8 @@ export function HeroStatsTable({
   prevMaxDate?: Dayjs;
   gameMode?: GameMode;
 }) {
-  const [activeSortKey, setActiveSortKey] = useState<SortKey>("winrate");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [activeSortKey, setActiveSortKey] = useQueryState("hero_sort_key", parseAsSortKey.withDefault("winrate"));
+  const [sortDir, setSortDir] = useQueryState("hero_sort_dir", parseAsSortDir.withDefault("desc"));
   const [pickRateMode, setPickRateMode] = useQueryState(
     "pick_rate_mode",
     parseAsStringLiteral(PICK_RATE_MODES).withDefault("presence"),

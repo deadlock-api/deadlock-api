@@ -1,6 +1,7 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { ArrowDown, ArrowUp, ChevronsUpDown, Minus, Search, TrendingDown, TrendingUp } from "lucide-react";
+import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useDeferredValue, useMemo, useState } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
@@ -32,6 +33,12 @@ const MIN_MATCHES_PER_BUCKET = 10;
 const BASELINE_BUCKET = 0;
 
 type SortKey = "name" | "trend" | `value-${number}` | `delta-${number}`;
+
+const SORT_KEYS: SortKey[] = [
+  "name",
+  "trend",
+  ...EXPERIENCE_BUCKETS.flatMap((_, i): SortKey[] => [`value-${i}`, `delta-${i}`]),
+];
 
 interface HeroRow {
   heroId: number;
@@ -149,8 +156,8 @@ export function HeroStatsByExperienceTable({
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
 
-  const [sortKey, setSortKey] = useState<SortKey>("trend");
-  const [sortAsc, setSortAsc] = useState(false);
+  const [sortKey, setSortKey] = useQueryState("exp_sort_key", parseAsStringLiteral(SORT_KEYS).withDefault("trend"));
+  const [sortAsc, setSortAsc] = useQueryState("exp_sort_asc", parseAsBoolean.withDefault(false));
 
   const filteredRows = useMemo(() => {
     const q = deferredSearch.trim().toLowerCase();
