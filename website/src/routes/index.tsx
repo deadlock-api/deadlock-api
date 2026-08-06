@@ -14,7 +14,6 @@ import {
   MessageCircle,
   Package,
   Radio,
-  Server,
   ShoppingBag,
   Swords,
   Trophy,
@@ -178,12 +177,6 @@ const analyticsLinks = [
     description: "Visualize where kills happen on the map to understand positioning and hotspots.",
     href: "/heatmap",
     icon: Map,
-  },
-  {
-    title: "Game Servers",
-    description: "Browse live community servers by region and game mode, then connect with one click.",
-    href: "/servers",
-    icon: Server,
   },
   {
     title: "AI Chat",

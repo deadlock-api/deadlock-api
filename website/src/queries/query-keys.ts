@@ -57,10 +57,6 @@ export const queryKeys = {
     playerHeroBuilds: (accountId: number, heroId: number, minUnixTimestamp?: number, maxUnixTimestamp?: number) =>
       ["api-player-hero-builds", accountId, heroId, minUnixTimestamp ?? null, maxUnixTimestamp ?? null] as const,
   },
-  servers: {
-    list: () => ["api-servers-list"] as const,
-    steamList: () => ["api-servers-steam-list"] as const,
-  },
   steam: {
     profiles: (batch: number[]) => ["steam-profiles", batch] as const,
     profile: (accountId: number | undefined) => ["steam-profile", accountId] as const,

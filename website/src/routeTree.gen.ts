@@ -25,7 +25,6 @@ import { Route as ItemsRouteImport } from './routes/items'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as PatronRouteImport } from './routes/patron'
 import { Route as PlayersRouteImport } from './routes/players'
-import { Route as ServersRouteImport } from './routes/servers'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as Sitemap_indexDotxmlRouteImport } from './routes/sitemap_index[.]xml'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
@@ -127,11 +126,6 @@ const PatronRoute = PatronRouteImport.update({
 const PlayersRoute = PlayersRouteImport.update({
   id: '/players',
   path: '/players',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ServersRoute = ServersRouteImport.update({
-  id: '/servers',
-  path: '/servers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -263,7 +257,6 @@ export interface FileRoutesByFullPath {
   '/leaderboard': typeof LeaderboardRoute
   '/patron': typeof PatronRoute
   '/players': typeof PlayersRoute
-  '/servers': typeof ServersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -301,7 +294,6 @@ export interface FileRoutesByTo {
   '/leaderboard': typeof LeaderboardRoute
   '/patron': typeof PatronRoute
   '/players': typeof PlayersRoute
-  '/servers': typeof ServersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -343,7 +335,6 @@ export interface FileRoutesById {
   '/leaderboard': typeof LeaderboardRoute
   '/patron': typeof PatronRoute
   '/players': typeof PlayersRoute
-  '/servers': typeof ServersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -386,7 +377,6 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/patron'
     | '/players'
-    | '/servers'
     | '/sitemap.xml'
     | '/sitemap_index.xml'
     | '/blog/$slug'
@@ -424,7 +414,6 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/patron'
     | '/players'
-    | '/servers'
     | '/sitemap.xml'
     | '/sitemap_index.xml'
     | '/blog/$slug'
@@ -465,7 +454,6 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/patron'
     | '/players'
-    | '/servers'
     | '/sitemap.xml'
     | '/sitemap_index.xml'
     | '/blog/$slug'
@@ -507,7 +495,6 @@ export interface RootRouteChildren {
   LeaderboardRoute: typeof LeaderboardRoute
   PatronRoute: typeof PatronRoute
   PlayersRoute: typeof PlayersRoute
-  ServersRoute: typeof ServersRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   Sitemap_indexDotxmlRoute: typeof Sitemap_indexDotxmlRoute
   BlogSlugRoute: typeof BlogSlugRoute
@@ -633,13 +620,6 @@ declare module '@tanstack/react-router' {
       path: '/players'
       fullPath: '/players'
       preLoaderRoute: typeof PlayersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/servers': {
-      id: '/servers'
-      path: '/servers'
-      fullPath: '/servers'
-      preLoaderRoute: typeof ServersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -865,7 +845,6 @@ const rootRouteChildren: RootRouteChildren = {
   LeaderboardRoute: LeaderboardRoute,
   PatronRoute: PatronRoute,
   PlayersRoute: PlayersRoute,
-  ServersRoute: ServersRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   Sitemap_indexDotxmlRoute: Sitemap_indexDotxmlRoute,
   BlogSlugRoute: BlogSlugRoute,
