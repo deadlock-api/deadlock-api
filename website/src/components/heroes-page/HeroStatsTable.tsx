@@ -12,6 +12,7 @@ import {
   Swords,
   type LucideIcon,
 } from "lucide-react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 
 import { HeroDetailsTooltip } from "~/components/heroes-page/HeroDetailsTooltip";
@@ -51,6 +52,8 @@ type HeroType = keyof typeof HERO_TYPE_CONFIG;
 
 const HERO_TYPE_ORDER: HeroType[] = ["assassin", "brawler", "marksman", "mystic"];
 
+const PICK_RATE_MODES = ["pickRate", "banRate", "presence"] as const;
+
 export function HeroStatsTable({
   columns,
   limit,
@@ -84,7 +87,10 @@ export function HeroStatsTable({
 }) {
   const [activeSortKey, setActiveSortKey] = useState<SortKey>("winrate");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [pickRateMode, setPickRateMode] = useState<"pickRate" | "banRate" | "presence">("presence");
+  const [pickRateMode, setPickRateMode] = useQueryState(
+    "pick_rate_mode",
+    parseAsStringLiteral(PICK_RATE_MODES).withDefault("presence"),
+  );
 
   const handleSort = (key: SortKey) => {
     if (key === activeSortKey) {
