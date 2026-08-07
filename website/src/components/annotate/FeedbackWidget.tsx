@@ -21,6 +21,16 @@ const MAX_URL_LENGTH = 500;
 const COUNTER_VISIBLE_FROM = 1800;
 const NICKNAME_STORAGE_KEY = "feedback-nickname";
 
+// Textareas render newlines in a placeholder, so the prompts can ask for more
+// than bug reports without turning into one long sentence.
+const TARGET_PROMPT = `What is wrong with this part?
+What would you change about it?
+What would you like to see here instead?`;
+
+const GENERAL_PROMPT = `What could be better?
+Which feature are you missing?
+What would make this site more useful to you?`;
+
 interface Target {
   id: string;
   source: SourceLocation | null;
@@ -201,8 +211,8 @@ export function FeedbackWidget() {
             onKeyDown={(event) => {
               if (event.key === "Escape") setOpen(false);
             }}
-            placeholder={targets.length > 0 ? "What is wrong with this part?" : "What could be better?"}
-            rows={4}
+            placeholder={targets.length > 0 ? TARGET_PROMPT : GENERAL_PROMPT}
+            rows={5}
             className="w-full resize-y rounded-lg border border-white/10 bg-background/60 p-2 text-sm outline-none focus:border-primary"
           />
           {comment.length >= COUNTER_VISIBLE_FROM && (
