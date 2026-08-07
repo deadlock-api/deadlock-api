@@ -7,8 +7,13 @@ export interface SourceLocation {
   line: number;
   column: number;
   component?: string;
-  /** Enclosing component names from the DOM ancestry, outermost first. */
+  /** Components that rendered this element, outermost first. */
   chain: string[];
+}
+
+interface Fiber {
+  return: Fiber | null;
+  type: unknown;
 }
 
 interface Manifest {
@@ -49,6 +54,35 @@ export function annotatedAncestor(node: Element | null): HTMLElement | null {
   return node?.closest<HTMLElement>("[data-dl]") ?? null;
 }
 
+function componentName(type: unknown): string | undefined {
+  // Both a plain function component and a memo/forwardRef object carry it.
+  if (typeof type !== "function" && typeof type !== "object") return undefined;
+  const name = (type as { dlName?: unknown } | null)?.dlName;
+  return typeof name === "string" ? name : undefined;
+}
+
+/**
+ * Walks React's fiber tree for the components that actually rendered this
+ * element. The DOM cannot answer this: a component that delegates its host
+ * element to a library — `SmartLink` rendering the router's `<Link>` — leaves no
+ * mark of its own in the tree, so ancestry read off the DOM skips straight past
+ * it. Names come from the `dlName` property stamped in by
+ * plugins/annotate-source.mjs, so the chain only ever holds components whose
+ * source the reader can open.
+ */
+function componentChain(element: HTMLElement): string[] {
+  const key = Object.keys(element).find((k) => k.startsWith("__reactFiber$"));
+  let fiber = key ? ((element as unknown as Record<string, Fiber | undefined>)[key] ?? null) : null;
+
+  const chain: string[] = [];
+  while (fiber && chain.length < MAX_CHAIN_LENGTH) {
+    const name = componentName(fiber.type);
+    if (name && name !== chain[0]) chain.unshift(name);
+    fiber = fiber.return;
+  }
+  return chain;
+}
+
 export function resolveSource(element: HTMLElement): SourceLocation | null {
   const id = element.dataset.dl;
   if (!manifest || !id) return null;
@@ -56,15 +90,7 @@ export function resolveSource(element: HTMLElement): SourceLocation | null {
   const location = lookup(manifest, id);
   if (!location) return null;
 
-  const chain: string[] = [];
-  let ancestor: HTMLElement | null = element.parentElement?.closest<HTMLElement>("[data-dl]") ?? null;
-  while (ancestor && chain.length < MAX_CHAIN_LENGTH) {
-    const component = ancestor.dataset.dl ? lookup(manifest, ancestor.dataset.dl)?.component : undefined;
-    if (component && component !== chain[0] && component !== location.component) chain.unshift(component);
-    ancestor = ancestor.parentElement?.closest<HTMLElement>("[data-dl]") ?? null;
-  }
-
-  return { ...location, chain };
+  return { ...location, chain: componentChain(element) };
 }
 
 export function buildSelector(element: HTMLElement): string {

@@ -66,10 +66,38 @@ function enclosingComponent(elementPath) {
   let fn = elementPath.getFunctionParent();
   while (fn) {
     const name = functionName(fn);
-    if (name && /^[A-Z]/.test(name)) return name;
+    if (name && /^[A-Z]/.test(name)) return { fn, name };
     fn = fn.getFunctionParent();
   }
   return undefined;
+}
+
+/**
+ * The name under which the surrounding scope can reach this function, or
+ * undefined when it has none. `functionName` is happy to name an object method
+ * or a named function expression after something that is not in scope at the
+ * declaration site; assigning to those would throw at module load.
+ */
+function bindingName(fn) {
+  if (fn.isFunctionDeclaration() && fn.node.id?.name) return fn.node.id.name;
+  const parent = fn.parentPath;
+  if (parent?.isVariableDeclarator() && parent.node.id.type === "Identifier") return parent.node.id.name;
+  if (parent?.isCallExpression()) {
+    const grandparent = parent.parentPath;
+    if (grandparent?.isVariableDeclarator() && grandparent.node.id.type === "Identifier") {
+      return grandparent.node.id.name;
+    }
+  }
+  return undefined;
+}
+
+/** The enclosing statement to hang a sibling off, unwrapping `export` and `const`. */
+function statementSlot(fn) {
+  let node = fn;
+  while (node.parentPath && !node.parentPath.isBlockStatement() && !node.parentPath.isProgram()) {
+    node = node.parentPath;
+  }
+  return node.parentPath ? node : undefined;
 }
 
 /** Creates the Vite plugin: one Babel pass plus the manifest it fills. */
@@ -79,10 +107,45 @@ export function annotateSource() {
   let root = process.cwd();
   const id = buildId();
 
+  /** Function nodes already named, so each is stamped once. */
+  const named = new WeakSet();
+
+  /**
+   * Pins the component's name to the function object so it survives minification —
+   * the picker reads the rendered component chain off React's fiber tree, where
+   * `type.name` is a mangled identifier in a production bundle.
+   *
+   * Deliberately not `displayName`: a chain is at most a handful of entries, and
+   * libraries that set `displayName` on their own internals (Radix wraps each
+   * primitive in a `*Provider` and a `*Context`) would fill it with names from
+   * code the reader cannot open.
+   */
+  function stampComponentName(t, fn, path) {
+    if (named.has(path.node)) return;
+    named.add(path.node);
+    const name = bindingName(path);
+    const slot = name && statementSlot(path);
+    if (!slot) return;
+    slot.insertAfter(
+      t.expressionStatement(
+        t.assignmentExpression(
+          "=",
+          t.memberExpression(t.identifier(name), t.identifier("dlName")),
+          t.stringLiteral(fn),
+        ),
+      ),
+    );
+  }
+
   const babelPlugin = ({ types: t }) => ({
     name: "annotate-jsx-source",
     visitor: {
       JSXOpeningElement(elementPath, state) {
+        // Runs for component elements too, so a wrapper that renders nothing but
+        // another component still gets a name in the chain.
+        const enclosing = enclosingComponent(elementPath);
+        if (enclosing) stampComponentName(t, enclosing.name, enclosing.fn);
+
         const name = elementPath.node.name;
         if (name.type !== "JSXIdentifier" || !/^[a-z]/.test(name.name) || SKIPPED_ELEMENTS.has(name.name)) return;
 
@@ -100,7 +163,7 @@ export function annotateSource() {
         const { file, line, column } = resolved;
         const key = locationId(file, line, column);
         const existing = locations.get(key);
-        const entry = { file, line, column, component: enclosingComponent(elementPath) };
+        const entry = { file, line, column, component: enclosing?.name };
         if (existing && (existing.file !== file || existing.line !== line || existing.column !== column)) {
           throw new Error(
             `data-dl id collision between ${existing.file}:${existing.line}:${existing.column} and ${file}:${line}:${column}`,
