@@ -4,8 +4,12 @@ import viteReact from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 import babel from "vite-plugin-babel";
 
+import { annotateSource } from "./plugins/annotate-source.mjs";
+
 const ReactCompilerConfig = {};
 const isDev = process.env.NODE_ENV !== "production";
+
+const annotation = annotateSource();
 
 // recharts imports es-toolkit's deep `es-toolkit/compat/<name>` modules, whose
 // package export map only resolves to CommonJS (no `import` condition). The
@@ -60,6 +64,22 @@ export default defineConfig({
       },
       pages: [{ path: "/" }, { path: "/blog" }, { path: "/sitemap.xml" }, { path: "/sitemap_index.xml" }],
     }),
+    annotation.vitePlugin,
+    // Own Babel pass rather than sharing the React Compiler one below: the
+    // include has to tolerate a query string, because TanStack splits route
+    // components into `?tsr-split=component` modules that would otherwise be
+    // left uninstrumented. Set VITE_ANNOTATE=0 to skip it for faster dev HMR.
+    ...(process.env.VITE_ANNOTATE !== "0"
+      ? [
+          babel({
+            include: /src[\\/].*\.[jt]sx?(\?.*)?$/,
+            babelConfig: {
+              presets: [["@babel/preset-typescript", { isTSX: true, allExtensions: true }]],
+              plugins: [annotation.babelPlugin],
+            },
+          }),
+        ]
+      : []),
     viteReact(),
     // React Compiler via Babel — only run for production builds (slow in dev)
     ...(!isDev

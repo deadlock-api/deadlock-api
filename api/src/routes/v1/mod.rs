@@ -9,6 +9,7 @@ mod auth;
 pub mod builds;
 mod commands;
 pub(crate) mod data_privacy;
+mod feedback;
 mod graphql;
 pub mod info;
 mod leaderboard;
@@ -37,6 +38,7 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
         .nest("/sql", sql::router())
         .nest("/servers", servers::router())
         .nest("/assets", assets::router())
+        .nest("/feedback", feedback::router())
         .merge(graphql::router())
         .layer(cors::public())
         .merge(credentialed)

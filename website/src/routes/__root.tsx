@@ -7,6 +7,7 @@ import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
 import * as React from "react";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
+import { FeedbackWidget } from "~/components/annotate/FeedbackWidget";
 import { ApiErrorFallback } from "~/components/ApiErrorFallback";
 import { AppSidebar, MobileMenuButton } from "~/components/AppSidebar";
 import { Breadcrumbs } from "~/components/Breadcrumbs";
@@ -164,6 +165,7 @@ function RootComponent() {
                 </main>
               </div>
               <Toaster />
+              <FeedbackWidget />
             </TooltipProvider>
           </NuqsAdapter>
         </PatronAuthProvider>
