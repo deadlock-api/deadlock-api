@@ -56,7 +56,8 @@ pub(super) async fn submit_feedback(
         .await?;
 
     let page_path = submission.validate()?;
-    let source = submission.source.as_ref();
+    let primary = submission.targets.first();
+    let source = primary.and_then(|t| t.source.as_ref());
     let user_agent = headers
         .get("user-agent")
         .and_then(|v| v.to_str().ok())
@@ -67,8 +68,8 @@ pub(super) async fn submit_feedback(
         INSERT INTO website_feedback (id, kind, comment, nickname, page_path, page_url, build_id,
                                       source_file, source_line, source_column, component, component_chain,
                                       selector, element_text, viewport_width, viewport_height,
-                                      device_pixel_ratio, user_agent)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+                                      device_pixel_ratio, user_agent, targets)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
         ",
     )
     .bind(Uuid::new_v4())
@@ -83,12 +84,13 @@ pub(super) async fn submit_feedback(
     .bind(source.map(|s| s.column))
     .bind(source.and_then(|s| s.component.as_deref()))
     .bind(source.map(|s| s.chain.as_slice()))
-    .bind(&submission.selector)
-    .bind(&submission.element_text)
+    .bind(primary.and_then(|t| t.selector.as_deref()))
+    .bind(primary.and_then(|t| t.element_text.as_deref()))
     .bind(submission.viewport.map(|v| v.width))
     .bind(submission.viewport.map(|v| v.height))
     .bind(submission.viewport.map(|v| v.device_pixel_ratio))
     .bind(user_agent)
+    .bind((!submission.targets.is_empty()).then_some(sqlx::types::Json(&submission.targets)))
     .execute(&state.pg_client)
     .await
     .map_err(|e| {

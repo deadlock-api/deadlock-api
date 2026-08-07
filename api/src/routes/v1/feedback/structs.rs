@@ -1,10 +1,11 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use strum::IntoStaticStr;
 use utoipa::ToSchema;
 
 use crate::error::{APIError, APIResult};
 
 const MAX_COMMENT_LEN: usize = 2000;
+const MAX_TARGETS: usize = 20;
 const MAX_NICKNAME_LEN: usize = 40;
 const MAX_URL_LEN: usize = 500;
 const MAX_BUILD_ID_LEN: usize = 100;
@@ -27,7 +28,7 @@ pub(super) enum FeedbackKind {
     General,
 }
 
-#[derive(Debug, Clone, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 pub(super) struct SourceLocation {
     pub(super) file: String,
     pub(super) line: i32,
@@ -35,6 +36,15 @@ pub(super) struct SourceLocation {
     pub(super) component: Option<String>,
     #[serde(default)]
     pub(super) chain: Vec<String>,
+}
+
+/// One annotated element. A submission carries several when the visitor picked
+/// more than one.
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+pub(super) struct FeedbackTarget {
+    pub(super) source: Option<SourceLocation>,
+    pub(super) selector: Option<String>,
+    pub(super) element_text: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema)]
@@ -51,6 +61,11 @@ pub(super) struct FeedbackSubmission {
     pub(super) nickname: Option<String>,
     pub(super) page_url: String,
     pub(super) build_id: Option<String>,
+    /// The annotated elements. Left empty for general feedback.
+    #[serde(default)]
+    pub(super) targets: Vec<FeedbackTarget>,
+    /// Superseded by `targets`; still accepted so pages cached from an older
+    /// build keep submitting successfully.
     pub(super) source: Option<SourceLocation>,
     pub(super) selector: Option<String>,
     pub(super) element_text: Option<String>,
@@ -101,6 +116,31 @@ impl FeedbackSubmission {
         if let Some(build_id) = &self.build_id {
             check_len("build_id", build_id, MAX_BUILD_ID_LEN)?;
         }
+
+        if self.targets.is_empty()
+            && (self.source.is_some() || self.selector.is_some() || self.element_text.is_some())
+        {
+            self.targets.push(FeedbackTarget {
+                source: self.source.take(),
+                selector: self.selector.take(),
+                element_text: self.element_text.take(),
+            });
+        }
+        if self.targets.len() > MAX_TARGETS {
+            return Err(bad_request(format!(
+                "`targets` must have at most {MAX_TARGETS} entries"
+            )));
+        }
+        for target in &mut self.targets {
+            target.validate()?;
+        }
+
+        Ok(url.path().to_owned())
+    }
+}
+
+impl FeedbackTarget {
+    fn validate(&mut self) -> APIResult<()> {
         if let Some(selector) = &self.selector {
             check_len("selector", selector, MAX_SELECTOR_LEN)?;
         }
@@ -122,8 +162,7 @@ impl FeedbackSubmission {
                 check_len("source.chain", component, MAX_COMPONENT_LEN)?;
             }
         }
-
-        Ok(url.path().to_owned())
+        Ok(())
     }
 }
 
@@ -144,6 +183,7 @@ mod tests {
             nickname: None,
             page_url: page_url.to_owned(),
             build_id: None,
+            targets: Vec::new(),
             source: None,
             selector: None,
             element_text: None,
@@ -172,6 +212,32 @@ mod tests {
             &"a".repeat(MAX_COMMENT_LEN + 1),
             "https://deadlock-api.com/",
         );
+        assert!(s.validate().is_err());
+    }
+
+    #[test]
+    fn validate_folds_legacy_single_target() {
+        let mut s = submission("hi", "https://deadlock-api.com/");
+        s.selector = Some("div > span".to_owned());
+        s.element_text = Some("  hello  ".to_owned());
+        s.validate().unwrap();
+
+        assert!(s.selector.is_none());
+        assert_eq!(s.targets.len(), 1);
+        assert_eq!(s.targets[0].selector.as_deref(), Some("div > span"));
+        assert_eq!(s.targets[0].element_text.as_deref(), Some("hello"));
+    }
+
+    #[test]
+    fn validate_rejects_too_many_targets() {
+        let mut s = submission("hi", "https://deadlock-api.com/");
+        s.targets = (0..=MAX_TARGETS)
+            .map(|_| FeedbackTarget {
+                source: None,
+                selector: Some("div".to_owned()),
+                element_text: None,
+            })
+            .collect();
         assert!(s.validate().is_err());
     }
 

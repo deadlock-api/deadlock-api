@@ -22,6 +22,7 @@ const COUNTER_VISIBLE_FROM = 1800;
 const NICKNAME_STORAGE_KEY = "feedback-nickname";
 
 interface Target {
+  id: string;
   source: SourceLocation | null;
   selector: string;
   elementText: string;
@@ -41,45 +42,49 @@ function pageUrl(): string {
   return href.length <= MAX_URL_LENGTH ? href : `${origin}${pathname}`;
 }
 
-function TargetCard({
-  target,
-  onPickAnother,
+function TargetList({
+  targets,
+  onPickAgain,
   onDetach,
 }: {
-  target: Target;
-  onPickAnother: () => void;
-  onDetach: () => void;
+  targets: Target[];
+  onPickAgain: () => void;
+  onDetach: (id: string) => void;
 }) {
   return (
     <div className="mb-3 rounded-lg border border-primary/40 bg-primary/5 p-2.5">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5 text-sm font-medium">
-            <Check className="size-3.5 shrink-0 text-primary" />
-            <span className="truncate">{target.source?.component ?? "Selected element"}</span>
+      <div className="max-h-52 space-y-2 overflow-y-auto">
+        {targets.map((target) => (
+          <div key={target.id} className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-sm font-medium">
+                <Check className="size-3.5 shrink-0 text-primary" />
+                <span className="truncate">{target.source?.component ?? "Selected element"}</span>
+              </div>
+              <div
+                className="truncate font-mono text-[0.7rem] text-muted-foreground"
+                title={target.source ? formatSource(target.source) : target.selector}
+              >
+                {target.source ? formatSource(target.source) : target.selector}
+              </div>
+              {target.elementText && (
+                <div className="mt-1 truncate text-xs text-muted-foreground italic">"{target.elementText}"</div>
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-6 shrink-0"
+              onClick={() => onDetach(target.id)}
+              aria-label="Remove the attached element"
+            >
+              <X className="size-3.5" />
+            </Button>
           </div>
-          <div
-            className="truncate font-mono text-[0.7rem] text-muted-foreground"
-            title={target.source ? formatSource(target.source) : target.selector}
-          >
-            {target.source ? formatSource(target.source) : target.selector}
-          </div>
-          {target.elementText && (
-            <div className="mt-1 truncate text-xs text-muted-foreground italic">"{target.elementText}"</div>
-          )}
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-6 shrink-0"
-          onClick={onDetach}
-          aria-label="Remove the attached element"
-        >
-          <X className="size-3.5" />
-        </Button>
+        ))}
       </div>
-      <Button variant="secondary" size="sm" className="mt-2 h-7 w-full text-xs" onClick={onPickAnother}>
-        Pick a different element
+      <Button variant="secondary" size="sm" className="mt-2 h-7 w-full text-xs" onClick={onPickAgain}>
+        Pick different elements
       </Button>
     </div>
   );
@@ -88,7 +93,7 @@ function TargetCard({
 export function FeedbackWidget() {
   const [open, setOpen] = useState(false);
   const [picking, setPicking] = useState(false);
-  const [target, setTarget] = useState<Target | null>(null);
+  const [targets, setTargets] = useState<Target[]>([]);
   const [comment, setComment] = useState("");
   const [nickname, setNickname] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -106,12 +111,15 @@ export function FeedbackWidget() {
     setOpen(false);
   }, []);
 
-  const handlePick = useCallback((element: HTMLElement) => {
-    setTarget({
-      source: resolveSource(element),
-      selector: buildSelector(element),
-      elementText: (element.textContent ?? "").trim().slice(0, MAX_ELEMENT_TEXT_LENGTH),
-    });
+  const handlePick = useCallback((elements: HTMLElement[]) => {
+    setTargets(
+      elements.map((element) => ({
+        id: crypto.randomUUID(),
+        source: resolveSource(element),
+        selector: buildSelector(element),
+        elementText: (element.textContent ?? "").trim().slice(0, MAX_ELEMENT_TEXT_LENGTH),
+      })),
+    );
     setPicking(false);
     setOpen(true);
   }, []);
@@ -126,14 +134,16 @@ export function FeedbackWidget() {
     setSubmitting(true);
     try {
       const submission: FeedbackSubmission = {
-        kind: target ? "annotation" : "general",
+        kind: targets.length > 0 ? "annotation" : "general",
         comment: comment.trim(),
         nickname: nickname.trim() || undefined,
         page_url: pageUrl(),
         build_id: BUILD_ID,
-        source: target?.source ?? undefined,
-        selector: target?.selector,
-        element_text: target?.elementText || undefined,
+        targets: targets.map((target) => ({
+          source: target.source ?? undefined,
+          selector: target.selector,
+          element_text: target.elementText || undefined,
+        })),
         viewport: {
           width: window.innerWidth,
           height: window.innerHeight,
@@ -144,7 +154,7 @@ export function FeedbackWidget() {
       localStorage.setItem(NICKNAME_STORAGE_KEY, nickname.trim());
       toast.success("Thanks! Your feedback was sent.");
       setComment("");
-      setTarget(null);
+      setTargets([]);
       setOpen(false);
     } catch (error) {
       toast.error(userFacingError(error));
@@ -171,8 +181,12 @@ export function FeedbackWidget() {
             Tell us what is off. Attach a component and we will know exactly which part of the code to look at.
           </p>
 
-          {target ? (
-            <TargetCard target={target} onPickAnother={startPicking} onDetach={() => setTarget(null)} />
+          {targets.length > 0 ? (
+            <TargetList
+              targets={targets}
+              onPickAgain={startPicking}
+              onDetach={(id) => setTargets((current) => current.filter((target) => target.id !== id))}
+            />
           ) : (
             <Button variant="secondary" size="sm" className="mb-3 w-full" onClick={startPicking}>
               <MousePointerClick className="size-4" />
@@ -187,7 +201,7 @@ export function FeedbackWidget() {
             onKeyDown={(event) => {
               if (event.key === "Escape") setOpen(false);
             }}
-            placeholder={target ? "What is wrong with this part?" : "What could be better?"}
+            placeholder={targets.length > 0 ? "What is wrong with this part?" : "What could be better?"}
             rows={4}
             className="w-full resize-y rounded-lg border border-white/10 bg-background/60 p-2 text-sm outline-none focus:border-primary"
           />

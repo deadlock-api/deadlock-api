@@ -2,12 +2,7 @@ import { fetchApi } from "~/lib/http";
 
 export type FeedbackKind = "annotation" | "general";
 
-export interface FeedbackSubmission {
-  kind: FeedbackKind;
-  comment: string;
-  nickname?: string;
-  page_url: string;
-  build_id?: string;
+export interface FeedbackTarget {
   source?: {
     file: string;
     line: number;
@@ -17,6 +12,15 @@ export interface FeedbackSubmission {
   };
   selector?: string;
   element_text?: string;
+}
+
+export interface FeedbackSubmission {
+  kind: FeedbackKind;
+  comment: string;
+  nickname?: string;
+  page_url: string;
+  build_id?: string;
+  targets: FeedbackTarget[];
   viewport?: {
     width: number;
     height: number;
