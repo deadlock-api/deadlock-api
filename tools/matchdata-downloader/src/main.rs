@@ -86,7 +86,7 @@ fn pending_salts_query() -> String {
         "
 SELECT {SALT_COLUMNS}
 FROM match_salts
-WHERE match_id NOT IN (SELECT DISTINCT match_id FROM match_player)
+WHERE match_id NOT IN (SELECT match_id FROM match_player)
 GROUP BY match_id
 HAVING {VALID_SALTS}
 ORDER BY max(created_at) DESC
