@@ -64,22 +64,11 @@ export default defineConfig({
       },
       pages: [{ path: "/" }, { path: "/blog" }, { path: "/sitemap.xml" }, { path: "/sitemap_index.xml" }],
     }),
+    // Runs its own Babel pass rather than sharing the React Compiler one below:
+    // it has to see route modules while TanStack's source map is still readable,
+    // which is before any non-`pre` plugin gets them. Set VITE_ANNOTATE=0 to
+    // skip the pass for faster dev HMR.
     annotation.vitePlugin,
-    // Own Babel pass rather than sharing the React Compiler one below: the
-    // include has to tolerate a query string, because TanStack splits route
-    // components into `?tsr-split=component` modules that would otherwise be
-    // left uninstrumented. Set VITE_ANNOTATE=0 to skip it for faster dev HMR.
-    ...(process.env.VITE_ANNOTATE !== "0"
-      ? [
-          babel({
-            include: /src[\\/].*\.[jt]sx?(\?.*)?$/,
-            babelConfig: {
-              presets: [["@babel/preset-typescript", { isTSX: true, allExtensions: true }]],
-              plugins: [annotation.babelPlugin],
-            },
-          }),
-        ]
-      : []),
     viteReact(),
     // React Compiler via Babel — only run for production builds (slow in dev)
     ...(!isDev

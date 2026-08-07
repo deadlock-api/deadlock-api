@@ -2,6 +2,10 @@ import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import path from "node:path";
 
+import * as babel from "@babel/core";
+import presetTypescript from "@babel/preset-typescript";
+import { originalPositionFor, TraceMap } from "@jridgewell/trace-mapping";
+
 /**
  * Stamps every host JSX element with a short `data-dl` id and emits a manifest
  * mapping those ids back to `file:line:column` plus the enclosing component.
@@ -14,6 +18,8 @@ import path from "node:path";
  */
 
 const MANIFEST_FILE_NAME = "annotation-manifest.json";
+
+const INCLUDED_MODULES = /src[\\/].*\.[jt]sx?(\?.*)?$/;
 
 const SKIPPED_ELEMENTS = new Set([
   "html",
@@ -66,7 +72,7 @@ function enclosingComponent(elementPath) {
   return undefined;
 }
 
-/** Creates the Babel plugin and the Vite plugin that share one registry. */
+/** Creates the Vite plugin: one Babel pass plus the manifest it fills. */
 export function annotateSource() {
   /** @type {Map<string, {file: string, line: number, column: number, component?: string}>} */
   const locations = new Map();
@@ -80,12 +86,6 @@ export function annotateSource() {
         const name = elementPath.node.name;
         if (name.type !== "JSXIdentifier" || !/^[a-z]/.test(name.name) || SKIPPED_ELEMENTS.has(name.name)) return;
 
-        const filename = state.filename;
-        if (!filename) return;
-        // Route components arrive as `index.tsx?tsr-split=component`.
-        const file = path.relative(root, filename.split("?")[0]).split(path.sep).join("/");
-        if (!file.startsWith("src/")) return;
-
         const loc = elementPath.node.loc;
         if (!loc) return;
 
@@ -94,7 +94,10 @@ export function annotateSource() {
         );
         if (alreadyStamped) return;
 
-        const { line, column } = loc.start;
+        const resolved = state.opts.resolveLocation(loc.start.line, loc.start.column);
+        if (!resolved) return;
+
+        const { file, line, column } = resolved;
         const key = locationId(file, line, column);
         const existing = locations.get(key);
         const entry = { file, line, column, component: enclosingComponent(elementPath) };
@@ -126,8 +129,67 @@ export function annotateSource() {
     return JSON.stringify({ buildId: id, files, locations: entries });
   };
 
+  /**
+   * Maps a position in the module Babel is looking at back to the position in
+   * the file a human would open. TanStack regenerates route files — the
+   * component moves into a `?tsr-split=component` module and the reference
+   * module loses it again — so a route element's line number in the code we see
+   * has nothing to do with its line number on disk. Every such rewrite ships a
+   * source map, which is the only thing that survives the move.
+   */
+  function locationResolver(context, id) {
+    const generatedFile = id.split("?")[0];
+    /** @type {TraceMap | null | undefined} undefined until first lookup, null when unmapped. */
+    let trace;
+
+    return (line, column) => {
+      if (trace === undefined) {
+        let map;
+        try {
+          map = context.getCombinedSourcemap();
+        } catch {
+          map = undefined;
+        }
+        trace = map?.mappings ? new TraceMap(map) : null;
+      }
+
+      let file = generatedFile;
+      if (trace) {
+        const original = originalPositionFor(trace, { line, column });
+        if (original.source && original.line !== null) {
+          // TanStack names the split module's source after its own module id,
+          // query and all: `src/routes/index.tsx?tsr-split=component`.
+          file = path.resolve(path.dirname(generatedFile), original.source.split("?")[0]);
+          line = original.line;
+          column = original.column;
+        }
+      }
+
+      const relative = path.relative(root, file).split(path.sep).join("/");
+      return relative.startsWith("src/") ? { file: relative, line, column } : null;
+    };
+  }
+
   const vitePlugin = {
     name: "annotation-manifest",
+    // Must observe route modules after TanStack's code splitter (also `pre`)
+    // has rewritten them, so the source map above is there to be read.
+    enforce: "pre",
+    async transform(code, id) {
+      if (process.env.VITE_ANNOTATE === "0") return null;
+      if (id.includes("node_modules") || !INCLUDED_MODULES.test(id)) return null;
+
+      const result = await babel.transformAsync(code, {
+        filename: id.split("?")[0],
+        babelrc: false,
+        configFile: false,
+        sourceMaps: true,
+        presets: [[presetTypescript, { isTSX: true, allExtensions: true }]],
+        plugins: [[babelPlugin, { resolveLocation: locationResolver(this, id) }]],
+      });
+      if (!result?.code) return null;
+      return { code: result.code, map: result.map };
+    },
     config() {
       return { define: { "import.meta.env.VITE_BUILD_ID": JSON.stringify(id) } };
     },
@@ -147,5 +209,5 @@ export function annotateSource() {
     },
   };
 
-  return { babelPlugin, vitePlugin };
+  return { vitePlugin };
 }

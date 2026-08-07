@@ -147,9 +147,15 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
     devDependencies:
+      '@babel/core':
+        specifier: ^7.29.7
+        version: 7.29.7
       '@babel/preset-typescript':
         specifier: ^7.29.7
         version: 7.29.7(@babel/core@7.29.7)
+      '@jridgewell/trace-mapping':
+        specifier: ^0.3.31
+        version: 0.3.31
       '@types/node':
         specifier: ^25.9.5
         version: 25.9.5
