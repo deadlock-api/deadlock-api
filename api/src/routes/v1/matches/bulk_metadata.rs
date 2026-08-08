@@ -8,12 +8,13 @@ use axum::extract::State;
 use axum::http::{StatusCode, header};
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
+use cached::macros::cached;
 use clickhouse::query::BytesCursor;
 use itertools::Itertools;
 use serde::Deserialize;
 use strum::Display;
 use tokio::io::Lines;
-use tracing::debug;
+use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
@@ -274,8 +275,163 @@ fn qualify_match_player_filter(filter: &str) -> String {
     }
 }
 
+/// `(select expression, output name)` for each column inside the per-match `players` array.
+/// Empty when the request selects no player fields at all.
+fn player_columns(query: &BulkMatchMetadataQuery) -> Vec<(String, String)> {
+    let extra_player_columns = query
+        .extra_player_columns
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .map(|col| (quote_extra_column(col), col.replace('.', "_")))
+        .collect_vec();
+    let has_player_fields = query.include_player_info
+        || query.include_player_kda
+        || query.include_player_items
+        || query.include_player_stats
+        || query.include_player_final_stats
+        || query.include_player_death_details
+        || !extra_player_columns.is_empty();
+    if !has_player_fields {
+        return vec![];
+    }
+    let mut names = vec![
+        "account_id",
+        "hero_id",
+        "player_slot",
+        "team",
+        "hero_build_id",
+    ];
+    if query.include_player_info || query.include_player_kda {
+        names.extend(vec!["kills", "deaths", "assists"]);
+    }
+    if query.include_player_info {
+        names.extend(vec![
+            "net_worth",
+            "last_hits",
+            "denies",
+            "ability_points",
+            "assigned_lane",
+            "player_level",
+            "abandon_match_time_s",
+            "mvp_rank",
+            "player_tracked_stats",
+            "accolades",
+            "hero_xp_rewards",
+            "player_match_outcome",
+            "player_rank_initial_display_rank",
+            "player_rank_initial_flat_progress",
+            "player_rank_final_flat_progress",
+            "player_rank_desired_progress_change",
+            "player_rank_initial_calibration_games",
+            "player_rank_initial_demotion_protection_games",
+            "player_rank_consumed_demotion_protection",
+            "player_rank_initial_win_streak",
+        ]);
+    }
+    if query.include_player_items {
+        names.push("items");
+    }
+    if query.include_player_stats {
+        names.push("stats");
+    }
+    if query.include_player_final_stats {
+        names.push("final_stats");
+    }
+    if query.include_player_death_details {
+        names.push("death_details");
+    }
+    names
+        .into_iter()
+        .map(|name| (name.to_owned(), name.to_owned()))
+        .chain(extra_player_columns)
+        .collect()
+}
+
+fn players_select_field(columns: &[(String, String)], tuple_type: Option<&str>) -> String {
+    let Some(tuple_type) = tuple_type else {
+        let select_list = columns
+            .iter()
+            .map(|(expr, alias)| {
+                if expr == alias {
+                    expr.clone()
+                } else {
+                    format!("{expr} AS `{alias}`")
+                }
+            })
+            .join(", ");
+        return format!(
+            "CAST(groupUniqArray(12)(formatRow('JSONEachRow', {select_list})), 'Array(JSON)') as players"
+        );
+    };
+    let exprs = columns.iter().map(|(expr, _)| expr.as_str()).join(", ");
+    let escaped_type = tuple_type.replace('\'', "\\'");
+    format!("groupUniqArray(12)(CAST(tuple({exprs}), '{escaped_type}')) as players")
+}
+
+/// Removes `LowCardinality(...)` wrappers, which `CAST` rejects unless
+/// `allow_suspicious_low_cardinality_types` is set.
+fn strip_low_cardinality(ch_type: &str) -> String {
+    const MARKER: &str = "LowCardinality(";
+    let mut out = ch_type.to_owned();
+    while let Some(start) = out.find(MARKER) {
+        let open = start + MARKER.len();
+        let mut depth = 1usize;
+        let Some(close) = out[open..].char_indices().find_map(|(idx, c)| {
+            match c {
+                '(' => depth += 1,
+                ')' => depth -= 1,
+                _ => {}
+            }
+            (depth == 0).then_some(open + idx)
+        }) else {
+            break;
+        };
+        out.replace_range(close..=close, "");
+        out.replace_range(start..open, "");
+    }
+    out
+}
+
+/// Resolves the `ClickHouse` `Tuple(...)` type of one `players` element, so it can be built natively
+/// instead of via a JSON text round trip. `None` when the lookup fails; only successes are cached.
+#[cached(
+    ttl = 3600,
+    convert = r#"{ columns.iter().map(|(expr, _)| expr.as_str()).join(",") }"#,
+    sync_writes = "by_key",
+    key = "String"
+)]
+async fn players_tuple_type(
+    ch_client: &clickhouse::Client,
+    columns: &[(String, String)],
+) -> Option<String> {
+    let type_exprs = columns
+        .iter()
+        .map(|(expr, _)| format!("toTypeName({expr})"))
+        .join(", ");
+    let rows: Vec<Vec<String>> = ch_client
+        .query(&format!("SELECT [{type_exprs}] FROM match_player LIMIT 1"))
+        .fetch_all()
+        .await
+        .inspect_err(|error| warn!(?error, "failed to resolve player column types"))
+        .ok()?;
+    let types = rows.into_iter().next()?;
+    if types.len() != columns.len() {
+        return None;
+    }
+    let fields = columns
+        .iter()
+        .zip(types)
+        .map(|((_, alias), ch_type)| format!("{alias} {}", strip_low_cardinality(&ch_type)))
+        .join(", ");
+    Some(format!("Tuple({fields})"))
+}
+
 #[allow(clippy::too_many_lines)]
-fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
+fn build_query(
+    query: BulkMatchMetadataQuery,
+    players_tuple_type: Option<&str>,
+) -> APIResult<String> {
     if (query.include_item_ids.is_some() || query.exclude_item_ids.is_some())
         && query.item_filter_hero_id.is_none()
     {
@@ -353,84 +509,10 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
             select_fields.push(format!("any({quoted}) as `{alias}`"));
         }
     }
-    // Player Select Fields
-    let has_extra_player_columns = query
-        .extra_player_columns
-        .as_ref()
-        .is_some_and(|c| !c.is_empty());
-    let has_player_fields = query.include_player_info
-        || query.include_player_kda
-        || query.include_player_items
-        || query.include_player_stats
-        || query.include_player_final_stats
-        || query.include_player_death_details
-        || has_extra_player_columns;
+    let player_columns = player_columns(&query);
+    let has_player_fields = !player_columns.is_empty();
     if has_player_fields {
-        let mut player_select_fields = vec![
-            "account_id",
-            "hero_id",
-            "player_slot",
-            "team",
-            "hero_build_id",
-        ];
-        if query.include_player_info || query.include_player_kda {
-            player_select_fields.extend(vec!["kills", "deaths", "assists"]);
-        }
-        if query.include_player_info {
-            player_select_fields.extend(vec![
-                "net_worth",
-                "last_hits",
-                "denies",
-                "ability_points",
-                "assigned_lane",
-                "player_level",
-                "abandon_match_time_s",
-                "mvp_rank",
-                "player_tracked_stats",
-                "accolades",
-                "hero_xp_rewards",
-                "player_match_outcome",
-                "player_rank_initial_display_rank",
-                "player_rank_initial_flat_progress",
-                "player_rank_final_flat_progress",
-                "player_rank_desired_progress_change",
-                "player_rank_initial_calibration_games",
-                "player_rank_initial_demotion_protection_games",
-                "player_rank_consumed_demotion_protection",
-                "player_rank_initial_win_streak",
-            ]);
-        }
-        if query.include_player_items {
-            player_select_fields.push("items");
-        }
-        if query.include_player_stats {
-            player_select_fields.push("stats");
-        }
-        if query.include_player_final_stats {
-            player_select_fields.push("final_stats");
-        }
-        if query.include_player_death_details {
-            player_select_fields.push("death_details");
-        }
-        let static_part = player_select_fields.join(", ");
-        let extras = query
-            .extra_player_columns
-            .as_deref()
-            .unwrap_or(&[])
-            .iter()
-            .fold(String::new(), |mut acc, col| {
-                let _ = write!(
-                    acc,
-                    ", {} AS `{}`",
-                    quote_extra_column(col),
-                    col.replace('.', "_")
-                );
-                acc
-            });
-        let player_select_fields = format!(
-            "CAST(groupUniqArray(12)(formatRow('JSONEachRow', {static_part}{extras})), 'Array(JSON)') as players"
-        );
-        select_fields.push(player_select_fields);
+        select_fields.push(players_select_field(&player_columns, players_tuple_type));
     }
 
     if select_fields.is_empty() {
@@ -440,6 +522,13 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         ));
     }
 
+    // Only meaningful for the named-tuple path, and it restores exactly the null-dropping
+    // that `Array(JSON)` did before.
+    let settings = if players_tuple_type.is_some() {
+        " SETTINGS log_comment = 'bulk_metadata', output_format_json_skip_null_value_in_named_tuples = 1 "
+    } else {
+        " SETTINGS log_comment = 'bulk_metadata' "
+    };
     let has_explicit_match_ids = query.match_ids.as_ref().is_some_and(|ids| !ids.is_empty());
 
     let mut info_filters = vec![];
@@ -612,7 +701,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         query.push_str(" GROUP BY match_player.match_id ");
         query.push_str(&outer_order);
         query.push_str(&limit);
-        query.push_str(" SETTINGS log_comment = 'bulk_metadata' ");
+        query.push_str(settings);
     } else {
         // CTE path: materialize qualifying match_ids first, then aggregate.
         // Required when there are no explicit match_ids because ORDER+LIMIT must
@@ -640,7 +729,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         query.push_str(" GROUP BY match_player.match_id ");
         query.push_str(&outer_order);
         query.push_str(&limit);
-        query.push_str(" SETTINGS log_comment = 'bulk_metadata' ");
+        query.push_str(settings);
     }
     debug!(?query);
     Ok(query)
@@ -729,7 +818,13 @@ pub(super) async fn bulk_metadata(
     }
     debug!(?query);
     let format = query.format;
-    let query = build_query(query)?;
+    let player_columns = player_columns(&query);
+    let players_tuple_type = if player_columns.is_empty() {
+        None
+    } else {
+        players_tuple_type(&state.ch_client_ro, &player_columns).await
+    };
+    let query = build_query(query, players_tuple_type.as_deref())?;
     let lines = fetch_lines(&state.ch_client_ro, &query)?;
     let Some(body) = stream_rows(lines, format).await? else {
         return Err(APIError::status_msg(
@@ -754,7 +849,7 @@ mod proptests {
         fn bulk_metadata_build_query_is_valid_sql(query: BulkMatchMetadataQuery) {
             // build_query returns Err for invalid param combos (e.g. item filter
             // without hero id); those aren't SQL bugs — only validate the Ok path.
-            if let Ok(sql) = build_query(query) {
+            if let Ok(sql) = build_query(query, None) {
                 assert_valid_sql(&sql);
             }
         }
@@ -762,21 +857,24 @@ mod proptests {
 
     #[test]
     fn advanced_player_filter_subquery_includes_match_filters() {
-        let sql = build_query(BulkMatchMetadataQuery {
-            include_info: true,
-            include_player_info: true,
-            include_player_items: true,
-            game_mode: Some(GameMode::Normal),
-            min_unix_timestamp: Some(1_780_256_805),
-            max_unix_timestamp: Some(1_780_270_000),
-            min_average_badge: Some(101),
-            hero_ids: Some(vec![7]),
-            item_filter_hero_id: Some(7),
-            include_item_ids: Some(vec![1_282_141_666]),
-            order_by: SortKey::AverageBadge,
-            limit: 10,
-            ..BulkMatchMetadataQuery::default()
-        })
+        let sql = build_query(
+            BulkMatchMetadataQuery {
+                include_info: true,
+                include_player_info: true,
+                include_player_items: true,
+                game_mode: Some(GameMode::Normal),
+                min_unix_timestamp: Some(1_780_256_805),
+                max_unix_timestamp: Some(1_780_270_000),
+                min_average_badge: Some(101),
+                hero_ids: Some(vec![7]),
+                item_filter_hero_id: Some(7),
+                include_item_ids: Some(vec![1_282_141_666]),
+                order_by: SortKey::AverageBadge,
+                limit: 10,
+                ..BulkMatchMetadataQuery::default()
+            },
+            None,
+        )
         .expect("query should build");
 
         assert!(sql.contains(

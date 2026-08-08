@@ -251,6 +251,27 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
     };
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
+
+    let mut required_hero_ids: Vec<u32> = Vec::new();
+    if let Some(include_hero_ids) = &query.include_hero_ids {
+        required_hero_ids.extend(include_hero_ids.iter().copied());
+    }
+    if let Some(include_enemy_hero_ids) = &query.include_enemy_hero_ids {
+        required_hero_ids.extend(include_enemy_hero_ids.iter().copied());
+    }
+    required_hero_ids.sort_unstable();
+    required_hero_ids.dedup();
+    let hero_prefilter = if required_hero_ids.is_empty() {
+        String::new()
+    } else {
+        let hero_list = required_hero_ids.iter().map(ToString::to_string).join(", ");
+        let hero_mask = hero_id_mask(&required_hero_ids);
+        format!(
+            " AND match_id IN (SELECT match_id FROM match_player WHERE {match_mode_filter} AND \
+             {game_mode_filter} {info_filters} AND hero_id IN ({hero_list}) GROUP BY match_id \
+             HAVING groupBitOr(bitShiftLeft(toUInt128(1), hero_id)) = {hero_mask})"
+        )
+    };
     let (cte_account_select, array_join_account) = if has_account_filter {
         (
             ",\n        groupArrayIf(account_id, team = 'Team0') AS team0_account_ids,\n        \
@@ -269,7 +290,7 @@ WITH hero_combinations AS (
         anyIf(won, team = 'Team0') AS team0_won,
         anyIf(won, team = 'Team1') AS team1_won{cte_account_select}
     FROM match_player
-    WHERE {match_mode_filter} AND {game_mode_filter} {info_filters}{account_prefilter} {player_filters}
+    WHERE {match_mode_filter} AND {game_mode_filter} {info_filters}{account_prefilter}{hero_prefilter} {player_filters}
     GROUP BY match_id
     HAVING bitCount(team0_mask) = {team_size} AND bitCount(team1_mask) = {team_size}
 )

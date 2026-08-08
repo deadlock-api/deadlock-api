@@ -406,10 +406,18 @@ fn build_query(query: &HeroStatsQuery) -> String {
     } else {
         ""
     };
-    // Deduplicate match_player with `LIMIT 1 BY match_id, account_id` instead of FINAL.
-    // match_player is a ReplacingMergeTree with no version column, and duplicate rows are always
-    // full duplicates, so this is equivalent to FINAL while letting the `hero_stats_by_account` /
-    // `hero_stats_by_hero` projections be used (FINAL disables projection usage entirely).
+    #[allow(deprecated)]
+    let has_account_filter = query.account_id.is_some()
+        || query
+            .account_ids
+            .as_ref()
+            .is_some_and(|ids| !ids.is_empty());
+    let use_final = !has_account_filter && !has_player_hero_cte && !has_player_hero_total_cte;
+    let (final_modifier, dedup_clause) = if use_final {
+        (" FINAL", "")
+    } else {
+        ("", "LIMIT 1 BY match_id, account_id")
+    };
     ctes.push(format!(
         "mp AS (
         SELECT
@@ -417,13 +425,13 @@ fn build_query(query: &HeroStatsQuery) -> String {
             max_player_damage, max_player_damage_taken, max_boss_damage, max_creep_damage,
             max_neutral_damage, max_max_health, max_shots_hit, max_shots_missed,
             start_time, average_badge
-        FROM match_player
+        FROM match_player{final_modifier}
         WHERE TRUE
             {player_filters}
             {match_filters}
             {hero_matches_join}
             {hero_total_join}
-        LIMIT 1 BY match_id, account_id
+        {dedup_clause}
     )"
     ));
     let with_clause = ctes.join(",\n    ");
