@@ -37,51 +37,51 @@ pub(crate) struct RankImages {
     pub chalk_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank1`.")]
     pub large_subrank1: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank1_webp`.")]
     pub large_subrank1_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank2`.")]
     pub large_subrank2: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank2_webp`.")]
     pub large_subrank2_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank3`.")]
     pub large_subrank3: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank3_webp`.")]
     pub large_subrank3_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank4`.")]
     pub large_subrank4: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank4_webp`.")]
     pub large_subrank4_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank5`.")]
     pub large_subrank5: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank5_webp`.")]
     pub large_subrank5_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank6`.")]
     pub large_subrank6: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank6_webp`.")]
     pub large_subrank6_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
@@ -93,51 +93,51 @@ pub(crate) struct RankImages {
     pub small_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank1`.")]
     pub small_subrank1: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank1_webp`.")]
     pub small_subrank1_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank2`.")]
     pub small_subrank2: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank2_webp`.")]
     pub small_subrank2_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank3`.")]
     pub small_subrank3: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank3_webp`.")]
     pub small_subrank3_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank4`.")]
     pub small_subrank4: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank4_webp`.")]
     pub small_subrank4_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank5`.")]
     pub small_subrank5: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank5_webp`.")]
     pub small_subrank5_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank6`.")]
     pub small_subrank6: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(deprecated)]
-    #[graphql(deprecation = "No longer produced by the game assets; use `large`/`chalk` instead.")]
+    #[graphql(deprecation = "Size variants are gone; this is an alias of `subrank6_webp`.")]
     pub small_subrank6_webp: Option<String>,
     /// Tier badge with the division numeral drawn on it, composed on demand by this API.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -173,21 +173,17 @@ impl RankImages {
                 "{IMAGE_BASE_URL}/ranks/rank{tier:02}_{variant}.{ext}"
             ))
         };
-        let legacy_prefix = format!("{IMAGE_BASE_URL}/ranks/rank{tier}");
-        let legacy = |name: &str, ext: &str| Some(format!("{legacy_prefix}/{name}.{ext}"));
-
         // Tier 0 has neither a chalk variant nor subranks — only a plain badge.
         if tier == 0 {
             return Self {
                 large: url("lg", "png"),
                 large_webp: url("lg", "webp"),
-                small: legacy("badge_sm", "png"),
-                small_webp: legacy("badge_sm", "webp"),
+                small: url("lg", "png"),
+                small_webp: url("lg", "webp"),
                 ..Self::default()
             };
         }
 
-        let sub = |size: &str, ext: &str, n: u32| legacy(&format!("badge_{size}_subrank{n}"), ext);
         let composed = |n: u32, webp: bool| {
             let query = if webp { "?format=webp" } else { "" };
             Some(format!(
@@ -199,30 +195,30 @@ impl RankImages {
             large_webp: url("lg", "webp"),
             chalk: url("chalk", "png"),
             chalk_webp: url("chalk", "webp"),
-            large_subrank1: sub("lg", "png", 1),
-            large_subrank1_webp: sub("lg", "webp", 1),
-            large_subrank2: sub("lg", "png", 2),
-            large_subrank2_webp: sub("lg", "webp", 2),
-            large_subrank3: sub("lg", "png", 3),
-            large_subrank3_webp: sub("lg", "webp", 3),
-            large_subrank4: sub("lg", "png", 4),
-            large_subrank4_webp: sub("lg", "webp", 4),
-            large_subrank5: sub("lg", "png", 5),
-            large_subrank5_webp: sub("lg", "webp", 5),
-            large_subrank6: sub("lg", "png", 6),
-            large_subrank6_webp: sub("lg", "webp", 6),
-            small_subrank1: sub("sm", "png", 1),
-            small_subrank1_webp: sub("sm", "webp", 1),
-            small_subrank2: sub("sm", "png", 2),
-            small_subrank2_webp: sub("sm", "webp", 2),
-            small_subrank3: sub("sm", "png", 3),
-            small_subrank3_webp: sub("sm", "webp", 3),
-            small_subrank4: sub("sm", "png", 4),
-            small_subrank4_webp: sub("sm", "webp", 4),
-            small_subrank5: sub("sm", "png", 5),
-            small_subrank5_webp: sub("sm", "webp", 5),
-            small_subrank6: sub("sm", "png", 6),
-            small_subrank6_webp: sub("sm", "webp", 6),
+            large_subrank1: composed(1, false),
+            large_subrank1_webp: composed(1, true),
+            large_subrank2: composed(2, false),
+            large_subrank2_webp: composed(2, true),
+            large_subrank3: composed(3, false),
+            large_subrank3_webp: composed(3, true),
+            large_subrank4: composed(4, false),
+            large_subrank4_webp: composed(4, true),
+            large_subrank5: composed(5, false),
+            large_subrank5_webp: composed(5, true),
+            large_subrank6: composed(6, false),
+            large_subrank6_webp: composed(6, true),
+            small_subrank1: composed(1, false),
+            small_subrank1_webp: composed(1, true),
+            small_subrank2: composed(2, false),
+            small_subrank2_webp: composed(2, true),
+            small_subrank3: composed(3, false),
+            small_subrank3_webp: composed(3, true),
+            small_subrank4: composed(4, false),
+            small_subrank4_webp: composed(4, true),
+            small_subrank5: composed(5, false),
+            small_subrank5_webp: composed(5, true),
+            small_subrank6: composed(6, false),
+            small_subrank6_webp: composed(6, true),
             small: None,
             small_webp: None,
             subrank1: composed(1, false),

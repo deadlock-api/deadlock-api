@@ -1,8 +1,8 @@
 //! Rank badges composed on demand from the published tier badge artwork.
 //!
-//! Valve ships the division numeral as a separate Panorama texture that is not published to the
-//! assets bucket, so it is drawn as text instead. The constants below are taken from the
-//! `.rank-badge` component on deadlock-api.com.
+//! Panorama draws the division numeral as a text label over the tier badge, so this reproduces
+//! that layout. Every constant below is taken from `.BadgeImage .Subrank` in
+//! `panorama/styles/citadel_ranked_badge.vcss` (client 6670).
 
 #![expect(
     clippy::cast_possible_truncation,
@@ -19,7 +19,7 @@ use ab_glyph::{Font, FontVec, Glyph, PxScale, ScaleFont, point};
 use axum::body::Bytes;
 use axum::http::StatusCode;
 use cached::macros::cached;
-use image::{ImageEncoder, Rgba, RgbaImage, imageops};
+use image::{ImageEncoder, Rgba, RgbaImage};
 use object_store::ObjectStoreExt;
 use object_store::path::Path as ObjectPath;
 use serde::Deserialize;
@@ -35,19 +35,54 @@ const FONT_KEY: &str = "assets-api-res/fonts/valveoracle-semibold.ttf";
 
 const ROMAN: [&str; 6] = ["I", "II", "III", "IV", "V", "VI"];
 
-/// Visible badge area, as fractions of the source image: the artwork carries a wide transparent
-/// margin that the game crops away in Panorama.
-const CROP: (f32, f32, f32, f32) = (0.228, 0.082_985, 0.53, 0.906_844);
+/// Panorama lays the badge out in a 256x256 `.BadgeImage` panel with `background-size: contain`,
+/// so every length below is in that space and scales with the source artwork.
+const LAYOUT_BOX: f32 = 256.0;
 
-/// Numeral centre as fractions of the cropped badge; the rest as fractions of the font size.
-const NUMERAL_CENTER: (f32, f32) = (0.5, 0.79);
-const NUMERAL_SIZE: f32 = 0.643_11;
-const NUMERAL_LETTER_SPACING: f32 = 0.04;
-const NUMERAL_STROKE: f32 = 0.05;
+/// `text-shadow: 0px 1px`, in layout-box pixels.
+const SHADOW_DROP: f32 = 1.0;
 
-/// Verified against the reference rendering: Sentinel's badge averages `#7d4c2c`, which lands on
-/// its `#674423` outline.
-const STROKE_DARKEN: f32 = 0.83;
+/// Placement of `.Subrank` for one tier: the `translateX`/`translateY` applied to the label, its
+/// `font-size`, and the `color`/`text-shadow` colours.
+struct Numeral {
+    offset: (f32, f32),
+    size: f32,
+    color: Rgba<u8>,
+    shadow: Rgba<u8>,
+}
+
+const fn rgba(hex: u32) -> Rgba<u8> {
+    Rgba([
+        (hex >> 24) as u8,
+        (hex >> 16) as u8,
+        (hex >> 8) as u8,
+        hex as u8,
+    ])
+}
+
+const fn numeral(offset: (f32, f32), size: f32, color: u32, shadow: u32) -> Numeral {
+    Numeral {
+        offset,
+        size,
+        color: rgba(color),
+        shadow: rgba(shadow),
+    }
+}
+
+/// Indexed by tier - 1. Tiers 9-11 use the larger winged artwork and a smaller numeral.
+const NUMERALS: [Numeral; 11] = [
+    numeral((-1.0, 46.0), 30.0, 0x0000_00dd, 0x7856_31ff),
+    numeral((-2.0, 52.0), 30.0, 0x0000_00dd, 0x7c6e_63ff),
+    numeral((-1.0, 36.0), 30.0, 0x0000_00dd, 0x8b90_92ff),
+    numeral((-2.0, 40.0), 30.0, 0x0000_00dd, 0xa579_41ff),
+    numeral((-2.0, 48.0), 30.0, 0x0000_00dd, 0xb9d0_e0ff),
+    numeral((-1.0, 40.0), 30.0, 0x0000_00dd, 0xddb8_54ff),
+    numeral((-1.0, 50.0), 30.0, 0x050a_27dd, 0xe3ea_deff),
+    numeral((-1.0, 48.0), 30.0, 0x0000_00dd, 0xd7e1_ebff),
+    numeral((0.0, 77.0), 24.0, 0x0000_00cc, 0xd2dc_efff),
+    numeral((0.0, 76.0), 24.0, 0x0000_00cc, 0xf2fe_d6ff),
+    numeral((0.0, 76.0), 24.0, 0x0000_00cc, 0xfafd_fcff),
+];
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
@@ -92,14 +127,19 @@ pub(crate) async fn render(
     badge: u32,
     format: RankImageFormat,
 ) -> Result<Bytes, APIError> {
-    let subrank = badge % 10;
-    let numeral = ROMAN.get(subrank.wrapping_sub(1) as usize).ok_or_else(|| {
-        APIError::status_msg(StatusCode::NOT_FOUND, "No image available for the rank.")
-    })?;
+    let (Some(numeral), Some(spec)) = (
+        ROMAN.get((badge % 10).wrapping_sub(1) as usize),
+        NUMERALS.get((badge / 10).wrapping_sub(1) as usize),
+    ) else {
+        return Err(APIError::status_msg(
+            StatusCode::NOT_FOUND,
+            "No image available for the rank.",
+        ));
+    };
 
-    let mut image = cropped_badge(state, badge).await?;
+    let mut image = badge_image(state, badge).await?;
     let font = font(state).await?;
-    draw_numeral(&mut image, &font, numeral);
+    draw_numeral(&mut image, &font, spec, numeral);
     encode(&image, format)
 }
 
@@ -140,53 +180,54 @@ pub(crate) async fn fetch_tier_image(
         .map_err(|e| APIError::internal(format!("Failed to read rank image bytes: {e}")))
 }
 
-async fn cropped_badge(state: &AppState, badge: u32) -> APIResult<RgbaImage> {
+async fn badge_image(state: &AppState, badge: u32) -> APIResult<RgbaImage> {
     let png = fetch_tier_image(state, badge, RankImageFormat::Png).await?;
-    let source = image::load_from_memory_with_format(&png, image::ImageFormat::Png)
-        .map_err(|e| APIError::internal(format!("Failed to decode rank badge: {e}")))?
-        .to_rgba8();
-    Ok(crop_badge(&source))
+    Ok(
+        image::load_from_memory_with_format(&png, image::ImageFormat::Png)
+            .map_err(|e| APIError::internal(format!("Failed to decode rank badge: {e}")))?
+            .to_rgba8(),
+    )
 }
 
-fn crop_badge(source: &RgbaImage) -> RgbaImage {
-    let (x, y, width, height) = (
-        (CROP.0 * source.width() as f32) as u32,
-        (CROP.1 * source.height() as f32) as u32,
-        (CROP.2 * source.width() as f32) as u32,
-        (CROP.3 * source.height() as f32) as u32,
-    );
-    imageops::crop_imm(source, x, y, width, height).to_image()
+/// Centre of the numeral's line box, mapping the layout box onto the artwork the way
+/// `background-size: contain` does.
+fn numeral_center(spec: &Numeral, width: f32, height: f32, scale: f32) -> (f32, f32) {
+    (
+        width / 2.0 + spec.offset.0 * scale,
+        height / 2.0 + spec.offset.1 * scale,
+    )
 }
 
-fn stroke_color(badge: &RgbaImage) -> Rgba<u8> {
-    let mut total = [0u64; 3];
-    let mut count = 0u64;
-    for pixel in badge.pixels().filter(|p| p[3] > 200) {
-        for (sum, channel) in total.iter_mut().zip(pixel.0) {
-            *sum += u64::from(channel);
-        }
-        count += 1;
-    }
-    if count == 0 {
-        return Rgba([0, 0, 0, 255]);
-    }
-    let channel = |sum: u64| (sum as f32 / count as f32 * STROKE_DARKEN) as u8;
-    Rgba([channel(total[0]), channel(total[1]), channel(total[2]), 255])
+/// `PxScale` scales glyphs by the font's ascent-to-descent height, whereas a CSS `font-size` is
+/// the em size. Without this the numeral renders at `units_per_em / height` of its intended size.
+fn px_scale(font: &FontVec, size: f32) -> PxScale {
+    font.units_per_em().map_or_else(
+        || PxScale::from(size),
+        |em| PxScale::from(size * font.height_unscaled() / em),
+    )
 }
 
-fn draw_numeral(image: &mut RgbaImage, font: &FontVec, numeral: &str) {
+fn draw_numeral(image: &mut RgbaImage, font: &FontVec, spec: &Numeral, numeral: &str) {
     let (width, height) = (image.width() as f32, image.height() as f32);
-    let size = NUMERAL_SIZE * width;
-    let stroke = stroke_color(image);
+    let scale = width.max(height) / LAYOUT_BOX;
+    let font_scale = px_scale(font, spec.size * scale);
 
-    let text = Text::layout(font, numeral, size, NUMERAL_LETTER_SPACING * size);
+    let text = Text::layout(font, numeral, font_scale);
+    let scaled = font.as_scaled(font_scale);
+    // `vertical-align: middle` centres the line box, which sits above the baseline.
+    let center = numeral_center(spec, width, height, scale);
     let origin = (
-        NUMERAL_CENTER.0 * width - text.width / 2.0,
-        NUMERAL_CENTER.1 * height,
+        center.0 - text.width / 2.0,
+        center.1 + f32::midpoint(scaled.ascent(), scaled.descent()),
     );
-    // `paint-order: stroke` puts the outline under the fill, so only its outer half shows.
-    text.draw(image, font, origin, stroke, NUMERAL_STROKE * size);
-    text.draw(image, font, origin, Rgba([255, 255, 255, 255]), 0.0);
+
+    text.draw(
+        image,
+        font,
+        (origin.0, origin.1 + SHADOW_DROP * scale),
+        spec.shadow,
+    );
+    text.draw(image, font, origin, spec.color);
 }
 
 /// Glyphs positioned relative to the text origin, which is its left edge on the baseline.
@@ -196,8 +237,8 @@ struct Text {
 }
 
 impl Text {
-    fn layout(font: &FontVec, text: &str, size: f32, letter_spacing: f32) -> Self {
-        let scaled = font.as_scaled(PxScale::from(size));
+    fn layout(font: &FontVec, text: &str, scale: PxScale) -> Self {
+        let scaled = font.as_scaled(scale);
         let mut glyphs = Vec::with_capacity(text.chars().count());
         let mut pen = 0.0;
         let mut previous = None;
@@ -206,27 +247,16 @@ impl Text {
             if let Some(previous) = previous {
                 pen += scaled.kern(previous, id);
             }
-            glyphs.push(id.with_scale_and_position(size, point(pen, 0.0)));
-            pen += scaled.h_advance(id) + letter_spacing;
+            glyphs.push(id.with_scale_and_position(scale, point(pen, 0.0)));
+            pen += scaled.h_advance(id);
             previous = Some(id);
         }
-        Self {
-            width: (pen - letter_spacing).max(0.0),
-            glyphs,
-        }
+        Self { width: pen, glyphs }
     }
 
-    /// A non-zero `stroke` dilates the glyph coverage by that radius, drawing the outline.
-    fn draw(
-        &self,
-        canvas: &mut RgbaImage,
-        font: &FontVec,
-        origin: (f32, f32),
-        color: Rgba<u8>,
-        stroke: f32,
-    ) {
-        let (width, height) = (canvas.width() as usize, canvas.height() as usize);
-        let mut coverage = vec![0f32; width * height];
+    fn draw(&self, canvas: &mut RgbaImage, font: &FontVec, origin: (f32, f32), color: Rgba<u8>) {
+        let (width, height) = (canvas.width() as i32, canvas.height() as i32);
+        let alpha = f32::from(color[3]) / 255.0;
 
         for glyph in &self.glyphs {
             let mut glyph = glyph.clone();
@@ -239,51 +269,16 @@ impl Text {
             let (min_x, min_y) = (bounds.min.x as i32, bounds.min.y as i32);
             outline.draw(|x, y, value| {
                 let (x, y) = (min_x + x as i32, min_y + y as i32);
-                if x >= 0 && y >= 0 && (x as usize) < width && (y as usize) < height {
-                    let slot = &mut coverage[y as usize * width + x as usize];
-                    *slot = slot.max(value);
+                if x >= 0 && y >= 0 && x < width && y < height {
+                    blend(
+                        canvas.get_pixel_mut(x as u32, y as u32),
+                        color,
+                        value * alpha,
+                    );
                 }
             });
         }
-
-        if stroke > 0.0 {
-            coverage = dilate(&coverage, width, height, stroke);
-        }
-
-        for (index, value) in coverage.iter().enumerate() {
-            if *value > 0.0 {
-                let (x, y) = ((index % width) as u32, (index / width) as u32);
-                blend(canvas.get_pixel_mut(x, y), color, *value);
-            }
-        }
     }
-}
-
-fn dilate(coverage: &[f32], width: usize, height: usize, radius: f32) -> Vec<f32> {
-    let limit = radius.ceil() as i32;
-    let disc: Vec<(i32, i32)> = (-limit..=limit)
-        .flat_map(|dy| (-limit..=limit).map(move |dx| (dx, dy)))
-        .filter(|(dx, dy)| {
-            let distance = ((dx * dx + dy * dy) as f32).sqrt();
-            distance <= radius
-        })
-        .collect();
-
-    let mut out = vec![0f32; coverage.len()];
-    for y in 0..height {
-        for x in 0..width {
-            let (x, y) = (x as i32, y as i32);
-            let mut best = 0f32;
-            for (dx, dy) in &disc {
-                let (sx, sy) = (x + dx, y + dy);
-                if sx >= 0 && sy >= 0 && (sx as usize) < width && (sy as usize) < height {
-                    best = best.max(coverage[sy as usize * width + sx as usize]);
-                }
-            }
-            out[y as usize * width + x as usize] = best;
-        }
-    }
-    out
 }
 
 fn blend(target: &mut Rgba<u8>, color: Rgba<u8>, alpha: f32) {
@@ -336,20 +331,30 @@ async fn font(state: &AppState) -> Result<Arc<FontVec>, APIError> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn numeral_stroke_matches_the_reference_rendering() {
-        // Sentinel's badge averages #7d4c2c; the reference outline is #674423.
-        let badge = RgbaImage::from_pixel(4, 4, Rgba([0x7d, 0x4c, 0x2c, 255]));
-        let Rgba([r, g, b, _]) = stroke_color(&badge);
-        assert!(r.abs_diff(0x67) <= 6, "red {r:#04x}");
-        assert!(g.abs_diff(0x44) <= 6, "green {g:#04x}");
-        assert!(b.abs_diff(0x23) <= 6, "blue {b:#04x}");
+    /// Reproduces Panorama's `contain` fit for one tier's published artwork.
+    fn center_for(tier: usize, width: f32, height: f32) -> (f32, f32) {
+        let spec = &NUMERALS[tier - 1];
+        numeral_center(spec, width, height, width.max(height) / LAYOUT_BOX)
     }
 
     #[test]
-    fn stroke_ignores_transparent_padding() {
-        let mut badge = RgbaImage::from_pixel(4, 4, Rgba([255, 255, 255, 0]));
-        badge.put_pixel(0, 0, Rgba([100, 100, 100, 255]));
-        assert_eq!(stroke_color(&badge), Rgba([83, 83, 83, 255]));
+    fn numeral_sits_on_the_plate_of_the_small_artwork() {
+        // rank01_lg.png is 404x324, so the 256px layout box scales by 1.578.
+        let (x, y) = center_for(1, 404.0, 324.0);
+        assert!((x - 200.4).abs() < 0.1, "x {x}");
+        assert!((y - 234.6).abs() < 0.1, "y {y}");
+    }
+
+    #[test]
+    fn numeral_sits_on_the_plate_of_the_winged_artwork() {
+        // rank11_lg.png is 512x404, so the layout box scales by exactly 2.
+        let (x, y) = center_for(11, 512.0, 404.0);
+        assert!((x - 256.0).abs() < 0.1, "x {x}");
+        assert!((y - 354.0).abs() < 0.1, "y {y}");
+    }
+
+    #[test]
+    fn every_tier_has_a_placement() {
+        assert_eq!(NUMERALS.len(), 11);
     }
 }
