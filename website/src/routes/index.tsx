@@ -2,7 +2,6 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import {
   ArrowRight,
   BarChart3,
-  Bot,
   Code,
   Database,
   ExternalLink,
@@ -179,12 +178,6 @@ const analyticsLinks = [
     icon: Map,
   },
   {
-    title: "AI Chat",
-    description: "Ask questions about Deadlock heroes, items, abilities, and strategies powered by AI.",
-    href: "/chat",
-    icon: Bot,
-  },
-  {
     title: "Stream Kit",
     description: "Enhance your livestreams with real-time game data overlays and widgets.",
     href: "/streamkit",
@@ -314,19 +307,6 @@ function IndexRoute() {
                       {feature}
                     </div>
                   ))}
-                </div>
-                <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    <Bot className="size-4 text-primary" />
-                    AI Coach
-                  </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Pledge $3/month or more to unlock the{" "}
-                    <Link to="/chat" preload="intent" className="font-medium text-primary underline underline-offset-4">
-                      AI Coach
-                    </Link>
-                    . Every $0.30/month of your pledge includes one chat message per month.
-                  </p>
                 </div>
               </div>
               <Link to="/patron" preload="intent" className="shrink-0">

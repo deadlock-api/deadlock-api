@@ -16,7 +16,7 @@ const annotation = annotateSource();
 // bundler's CJS interop wraps each in a lazy accessor whose name collides with the local
 // it references (`var require_identity = require_identity()`); minified, that
 // becomes a self-referential `n=n()` that throws "n is not a function" at runtime
-// and crashes the coach charts. Redirect those default imports to the named
+// and crashes the charts. Redirect those default imports to the named
 // export on the ESM barrel (`es-toolkit/compat`, which has a clean `import`
 // condition) so the CJS interop is never involved.
 function esToolkitCompatEsm(): Plugin {

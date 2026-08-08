@@ -12,7 +12,6 @@ import {
   Map,
   Medal,
   Menu,
-  MessageSquare,
   Radio,
   Shield,
   ShoppingBag,
@@ -70,7 +69,6 @@ const navGroups: NavGroup[] = [
   {
     label: "Tools",
     links: [
-      { to: "/chat", label: "AI Chat", icon: MessageSquare },
       { to: "/streamkit", label: "Stream Kit", icon: Radio },
       { to: "/data-dumps", label: "Data Dumps", icon: HardDrive },
       { to: "/blog", label: "Blog", icon: BookOpen },

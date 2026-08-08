@@ -7,7 +7,6 @@
 - [Ranked Leaderboard](https://deadlock-api.com/leaderboard): Top-ranked players by region with hero filters and name search
 - [Badge Distribution](https://deadlock-api.com/badge-distribution): Match rank distribution chart over time
 - [Stream Toolkit](https://deadlock-api.com/streamkit): Chatbot command builder and OBS overlay widget generator for streamers
-- [AI Chat](https://deadlock-api.com/chat): Natural-language assistant for querying Deadlock game data
 
 ## APIs
 - [Game Data API](https://api.deadlock-api.com): Real-time and historical match data, hero and item analytics, leaderboard endpoints, game assets (OpenAPI spec: https://api.deadlock-api.com/openapi.json)

@@ -34,7 +34,6 @@ const OG_IMAGES: Record<string, string> = {
   "/heatmap": "/og/heatmap.png",
   "/players": "/og/player-scoreboard.png",
   "/streamkit": "/og/streamkit.png",
-  "/chat": "/og/chat.png",
   "/data-privacy": "/og/default.png",
   "/data-dumps": "/og/default.png",
   "/ingest-cache": "/og/ingest-cache.png",
