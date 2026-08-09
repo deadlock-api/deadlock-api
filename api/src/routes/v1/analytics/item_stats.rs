@@ -91,7 +91,7 @@ impl BucketQuery {
     fn get_select_clause(self) -> String {
         match self {
             Self::NoBucket => "toUInt32(0)".to_owned(),
-            Self::Hero => "hero_id".to_owned(),
+            Self::Hero => "toUInt32(hero_id)".to_owned(),
             Self::Team => "toUInt32(if(team = 'Team0', 0, 1))".to_owned(),
             Self::StartTimeHour => "toStartOfHour(start_time)".to_owned(),
             Self::StartTimeDay => "toStartOfDay(start_time)".to_owned(),
@@ -139,7 +139,7 @@ impl BucketQuery {
     fn mv_bucket_expr(self) -> Option<&'static str> {
         match self {
             Self::NoBucket => Some("toUInt32(0)"),
-            Self::Hero => Some("hero_id"),
+            Self::Hero => Some("toUInt32(hero_id)"),
             Self::Team => Some("toUInt32(if(team = 'Team0', 0, 1))"),
             Self::StartTimeDay => Some("toStartOfDay(toDateTime(day))"),
             Self::StartTimeWeek => Some("toDateTime(toStartOfWeek(day))"),
@@ -433,10 +433,10 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
 SELECT
     item_id,
     {bucket_expr}    AS bucket,
-    sum(n_wins)                  AS wins,
-    sum(n_matches) - sum(n_wins) AS losses,
-    sum(n_matches)               AS matches,
-    uniqMerge(players_state)     AS players,
+    sum(n_wins)                            AS wins,
+    toUInt64(sum(n_matches) - sum(n_wins)) AS losses,
+    sum(n_matches)                         AS matches,
+    uniqMerge(players_state)               AS players,
     sum(sum_buy_time) / sum(n_matches)                       AS avg_buy_time_s,
     if(sum(n_sold) = 0, 0, sum(sum_sold_time) / sum(n_sold)) AS avg_sell_time_s,
     sum(sum_buy_rel) / sum(n_matches)                        AS avg_buy_time_relative,
@@ -581,10 +581,10 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
 SELECT
     item_id,
     {bucket_expr}    AS bucket,
-    sum(n_wins)                  AS wins,
-    sum(n_matches) - sum(n_wins) AS losses,
-    sum(n_matches)               AS matches,
-    uniqMerge(players_state)     AS players,
+    sum(n_wins)                            AS wins,
+    toUInt64(sum(n_matches) - sum(n_wins)) AS losses,
+    sum(n_matches)                         AS matches,
+    uniqMerge(players_state)               AS players,
     sum(sum_buy_time) / sum(n_matches)                       AS avg_buy_time_s,
     if(sum(n_sold) = 0, 0, sum(sum_sold_time) / sum(n_sold)) AS avg_sell_time_s,
     sum(sum_buy_rel) / sum(n_matches)                        AS avg_buy_time_relative,
