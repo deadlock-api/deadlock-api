@@ -243,7 +243,11 @@ async fn fetch_salts(
         ..Default::default()
     };
     let job_cooldown = Duration::from_millis(*SALTS_COOLDOWN_MILLIS);
-    let soft_cooldown = Some(job_cooldown / 2);
+    // sv-proxy counts a bot as ready when `cooldown <= now + soft_cooldown`, so the window
+    // decides who wins a contended pool. A full one lets a prioritized match take a bot that
+    // is still cooling down; the on-demand salts endpoint asks for no window at all and gives
+    // these bots up instead.
+    let soft_cooldown = Some(job_cooldown);
     common::call_steam_proxy(
         &HTTP_CLIENT,
         EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,

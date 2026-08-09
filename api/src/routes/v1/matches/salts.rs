@@ -25,6 +25,9 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
 use crate::utils::types::MatchIdQuery;
 
+/// Bot cooldown after a `GetMatchMetaData` job, i.e. 50 of them per bot per day.
+const SALTS_JOB_COOLDOWN: Duration = Duration::from_secs(24 * 60 * 60 / 50);
+
 pub(crate) struct MatchSaltsReadQuery;
 
 impl BatchQuery for MatchSaltsReadQuery {
@@ -220,10 +223,19 @@ pub(super) async fn fetch_match_salts(
             msg,
             in_all_groups: Some(vec!["GetMatchMetaData".to_owned()]),
             in_any_groups: None,
-            cooldown_time: Duration::from_secs(24 * 60 * 60 / 50),
+            cooldown_time: SALTS_JOB_COOLDOWN,
             request_timeout: Duration::from_secs(2),
             username: None,
-            soft_cooldown_millis: is_custom.then_some(Duration::from_secs(24 * 60 * 60 / 50)),
+            // The salt scraper claims a full soft cooldown for prioritized matches, so an
+            // on-demand lookup takes none and 503s rather than borrowing a bot that is still
+            // cooling down. Custom matches keep half a window, as their salts have no other
+            // source. `None` is not the strict choice here: the client substitutes
+            // `cooldown_time / 2`.
+            soft_cooldown_millis: Some(if is_custom {
+                SALTS_JOB_COOLDOWN / 2
+            } else {
+                Duration::ZERO
+            }),
         })
         .await?;
     let username = result.username.clone();
