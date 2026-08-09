@@ -33,6 +33,12 @@ mod models;
 /// keeps a single iteration running for hours, during which matches that got
 /// salts in the meantime are never picked up.
 const BATCH_LIMIT: usize = 5_000;
+/// How much of [`BATCH_LIMIT`] a single iteration may spend on re-attempts. Fresh
+/// salts are claimed first and retries only fill what is left, but the backlog is
+/// far larger than one batch, so it also needs a cap of its own: without it every
+/// iteration would run the full 5 000 and stretch well past [`POLL_INTERVAL`],
+/// delaying the fresh salts that arrive in the meantime.
+const RETRY_BATCH_LIMIT: usize = 500;
 const POLL_INTERVAL: Duration = Duration::from_secs(30);
 const ITERATION_BACKOFF: Duration = Duration::from_secs(5);
 /// Cooldown before the first re-attempt of a failed match; doubles per attempt
@@ -191,7 +197,7 @@ async fn download_from_file(
     let failed = process_batch(store.as_ref(), cache_store.as_ref(), &salts)
         .await
         .iter()
-        .filter(|r| r.is_err())
+        .filter(|(_, r)| r.is_err())
         .count();
     info!(
         "Downloaded {} matches, {failed} failed",
@@ -216,31 +222,40 @@ async fn run_iteration(
     gauge!("matchdata_downloader.matches_to_download").set(pending.len() as f64);
 
     state.prune(&pending.iter().map(|s| s.match_id).collect());
-    let mut to_fetch = state.select_eligible(pending);
-    gauge!("matchdata_downloader.matches_eligible_now").set(to_fetch.len() as f64);
+    let (mut to_fetch, retries) = state.select_eligible(pending);
+    let eligible = to_fetch.len() + retries.len();
+    gauge!("matchdata_downloader.matches_eligible_now").set(eligible as f64);
+    gauge!("matchdata_downloader.matches_retryable_now").set(retries.len() as f64);
 
-    if to_fetch.is_empty() {
+    if eligible == 0 {
         info!("No matches eligible for download");
         return Ok(());
     }
 
-    let eligible = to_fetch.len();
+    // Fresh salts claim capacity first; retries only get what is left over.
     to_fetch.truncate(BATCH_LIMIT);
+    let n_fresh = to_fetch.len();
+    let retry_budget = BATCH_LIMIT.saturating_sub(n_fresh).min(RETRY_BATCH_LIMIT);
+    to_fetch.extend(retries.into_iter().take(retry_budget));
     info!(
-        "Downloading {} of {eligible} eligible matches (newest first)",
-        to_fetch.len()
+        "Downloading {} of {eligible} eligible matches ({n_fresh} fresh, {} retries, newest first)",
+        to_fetch.len(),
+        to_fetch.len() - n_fresh,
     );
 
     let results = process_batch(store.as_ref(), cache_store.as_ref(), &to_fetch).await;
-    handle_results(state, &to_fetch, results);
+    handle_results(state, results);
     Ok(())
 }
 
+/// Each result carries its own match id: [`futures::StreamExt::buffer_unordered`]
+/// yields in completion order, so the results cannot be zipped back onto `salts`
+/// by position.
 async fn process_batch<B, C>(
     bucket: &B,
     cache_bucket: &C,
     salts: &[MatchSalts],
-) -> Vec<anyhow::Result<()>>
+) -> Vec<(u64, anyhow::Result<()>)>
 where
     B: ObjectStore + ?Sized,
     C: ObjectStore + ?Sized,
@@ -253,18 +268,18 @@ where
             } else if let Err(e) = &r {
                 error!("Failed to download match {}: {e:#}", s.match_id);
             }
-            r
+            (s.match_id, r)
         })
         .buffer_unordered(*CONCURRENCY)
         .collect()
         .await
 }
 
-fn handle_results(state: &State, salts: &[MatchSalts], results: Vec<anyhow::Result<()>>) {
-    for (s, result) in salts.iter().zip(results) {
+fn handle_results(state: &State, results: Vec<(u64, anyhow::Result<()>)>) {
+    for (match_id, result) in results {
         match result {
-            Ok(()) => state.mark_uploaded(s.match_id),
-            Err(_) => state.back_off(s.match_id),
+            Ok(()) => state.mark_uploaded(match_id),
+            Err(_) => state.back_off(match_id),
         }
     }
 }
@@ -330,19 +345,26 @@ impl State {
             .retain(|id, _| valid.contains(id));
     }
 
-    fn select_eligible(&self, pending: Vec<MatchSalts>) -> Vec<MatchSalts> {
+    /// Splits the pending set into matches that were never attempted and those
+    /// whose retry cooldown has elapsed, so the caller can serve the fresh ones
+    /// first. Both keep the newest-first order of the query.
+    fn select_eligible(&self, pending: Vec<MatchSalts>) -> (Vec<MatchSalts>, Vec<MatchSalts>) {
         let now = tokio::time::Instant::now();
         let uploaded = self.uploaded.lock().unwrap();
         let failed = self.failed.lock().unwrap();
-        pending
-            .into_iter()
-            .filter(|s| {
-                !uploaded.contains(&s.match_id)
-                    && failed
-                        .get(&s.match_id)
-                        .is_none_or(|a| a.count < MAX_ATTEMPTS && now >= a.next)
-            })
-            .collect()
+        let mut fresh = Vec::new();
+        let mut retries = Vec::new();
+        for s in pending {
+            if uploaded.contains(&s.match_id) {
+                continue;
+            }
+            match failed.get(&s.match_id) {
+                None => fresh.push(s),
+                Some(a) if a.count < MAX_ATTEMPTS && now >= a.next => retries.push(s),
+                Some(_) => {}
+            }
+        }
+        (fresh, retries)
     }
 }
 
@@ -500,13 +522,16 @@ mod tests {
         let state = State::new();
         state.back_off(1);
 
-        assert!(state.select_eligible(vec![salts(1)]).is_empty());
+        assert_eq!(state.select_eligible(vec![salts(1)]), (vec![], vec![]));
         // The entry survives pruning, so the cooldown is not lost while the match
         // is still pending, and it becomes eligible again once the delay elapses.
         state.prune(&HashSet::from([1]));
         assert_eq!(state.failed.lock().unwrap().len(), 1);
         state.failed.lock().unwrap().get_mut(&1).unwrap().next = tokio::time::Instant::now();
-        assert_eq!(state.select_eligible(vec![salts(1)]).len(), 1);
+        assert_eq!(
+            state.select_eligible(vec![salts(1)]),
+            (vec![], vec![salts(1)])
+        );
     }
 
     #[tokio::test]
@@ -519,7 +544,7 @@ mod tests {
 
         // Cooldown elapsed, but the attempt budget is spent, so it no longer
         // competes for download slots with matches that can still arrive.
-        assert!(state.select_eligible(vec![salts(1)]).is_empty());
+        assert_eq!(state.select_eligible(vec![salts(1)]), (vec![], vec![]));
     }
 
     #[tokio::test]
@@ -529,7 +554,62 @@ mod tests {
         state.mark_uploaded(1);
 
         assert!(state.failed.lock().unwrap().is_empty());
-        assert!(state.select_eligible(vec![salts(1)]).is_empty());
+        assert_eq!(state.select_eligible(vec![salts(1)]), (vec![], vec![]));
+    }
+
+    /// A backlog of retryable matches must never displace matches whose salts just
+    /// arrived: fresh ones are reported separately so they can claim capacity first.
+    #[tokio::test]
+    async fn fresh_matches_are_kept_separate_from_the_retry_backlog() {
+        let state = State::new();
+        for id in [20, 30] {
+            state.back_off(id);
+            state.failed.lock().unwrap().get_mut(&id).unwrap().next = tokio::time::Instant::now();
+        }
+
+        // Newest first, as the pending query returns them.
+        let (fresh, retries) =
+            state.select_eligible(vec![salts(40), salts(30), salts(20), salts(10)]);
+
+        assert_eq!(fresh, vec![salts(40), salts(10)]);
+        assert_eq!(retries, vec![salts(30), salts(20)]);
+    }
+
+    /// `buffer_unordered` completes fast failures before slow successes, so results
+    /// arrive in an order unrelated to the requested batch. Attributing them by
+    /// position marks failed matches as uploaded, which excludes them from every
+    /// later iteration because they never reach `match_player`.
+    #[tokio::test]
+    async fn results_are_attributed_by_match_id_not_by_position() {
+        let state = State::new();
+        let batch = [salts(10), salts(20), salts(30)];
+
+        handle_results(
+            &state,
+            vec![
+                (30, Err(anyhow::anyhow!("502 Bad Gateway"))),
+                (10, Ok(())),
+                (20, Err(anyhow::anyhow!("502 Bad Gateway"))),
+            ],
+        );
+
+        assert_eq!(
+            *state.uploaded.lock().unwrap(),
+            HashSet::from([10]),
+            "only the match that actually succeeded may be marked uploaded"
+        );
+        let failed = state.failed.lock().unwrap();
+        assert!(failed.contains_key(&20) && failed.contains_key(&30));
+        drop(failed);
+
+        // The two failures stay candidates once their cooldown elapses.
+        for id in [20, 30] {
+            state.failed.lock().unwrap().get_mut(&id).unwrap().next = tokio::time::Instant::now();
+        }
+        assert_eq!(
+            state.select_eligible(batch.to_vec()),
+            (vec![], vec![salts(20), salts(30)])
+        );
     }
 
     #[tokio::test]
