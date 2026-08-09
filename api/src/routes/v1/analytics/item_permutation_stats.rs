@@ -160,17 +160,13 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
     );
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
-    let mut having_filters = vec![];
-    if let Some(min_matches) = query.min_matches {
-        having_filters.push(format!("matches >= {min_matches}"));
-    }
-    if let Some(max_matches) = query.max_matches {
-        having_filters.push(format!("matches <= {max_matches}"));
-    }
-    let having_clause = if having_filters.is_empty() {
-        String::new()
-    } else {
-        format!("HAVING {}", having_filters.join(" AND "))
+    // `min_matches`/`max_matches` are pure post-aggregation filters, so keeping them out of the
+    // SQL lets every value share one cached result instead of triggering a fresh multi-second
+    // scan per value. The floor is clamped rather than dropped so the cached superset stays no
+    // larger than the default query already returns; the exact bounds are applied in Rust.
+    let having_clause = match query.min_matches.min(default_min_matches_u32()) {
+        Some(min_matches) => format!("HAVING matches >= {min_matches}"),
+        None => String::new(),
     };
     if let Some(item_ids) = &query.item_ids {
         if item_ids.len() < 2 {
@@ -247,9 +243,14 @@ async fn get_item_permutation_stats(
     mut query: ItemPermutationStatsQuery,
 ) -> APIResult<Vec<ItemPermutationStats>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
-    let query = build_query(&query);
-    debug!(?query);
-    Ok(run_query(ch_client, &query).await?)
+    let query_str = build_query(&query);
+    debug!(?query_str);
+    let mut stats = run_query(ch_client, &query_str).await?;
+    stats.retain(|s| {
+        query.min_matches.is_none_or(|m| s.matches >= u64::from(m))
+            && query.max_matches.is_none_or(|m| s.matches <= u64::from(m))
+    });
+    Ok(stats)
 }
 
 #[utoipa::path(
@@ -307,6 +308,38 @@ pub(super) async fn item_permutation_stats(
     get_item_permutation_stats(&state.ch_client_cached, query)
         .await
         .map(Json)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[allow(deprecated)]
+    fn query_with(min_matches: Option<u32>, max_matches: Option<u32>) -> String {
+        build_query(&ItemPermutationStatsQuery {
+            min_matches,
+            max_matches,
+            ..Default::default()
+        })
+    }
+
+    #[test]
+    fn match_count_bounds_at_or_above_the_default_share_one_query() {
+        let baseline = query_with(default_min_matches_u32(), None);
+        for min_matches in [20, 100, 500, 1000] {
+            assert_eq!(baseline, query_with(Some(min_matches), None));
+        }
+        for max_matches in [None, Some(50), Some(900)] {
+            assert_eq!(baseline, query_with(Some(500), max_matches));
+        }
+    }
+
+    #[test]
+    fn min_matches_below_the_default_lowers_the_sql_floor() {
+        let looser = query_with(Some(5), None);
+        assert!(looser.contains("matches >= 5"));
+        assert_ne!(query_with(default_min_matches_u32(), None), looser);
+    }
 }
 
 #[cfg(test)]
