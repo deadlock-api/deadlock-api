@@ -120,6 +120,71 @@ impl PlayerFilters<'_> {
     }
 }
 
+pub(super) fn id_list(ids: &[u32]) -> String {
+    ids.iter().map(ToString::to_string).join(", ")
+}
+
+/// Scopes a duo-versus-duo lane query to the requested accounts and hero pairings.
+pub(super) struct LaneDuoFilters<'a> {
+    pub accounts: Option<&'a [u32]>,
+    pub heroes: Option<&'a [u32]>,
+    pub enemy_heroes: Option<&'a [u32]>,
+}
+
+pub(super) struct LaneDuoFilterSql {
+    /// ` AND ...` restricting the scanned matches, applied before the per-lane `GROUP BY`.
+    pub account_prefilter: String,
+    /// ` AND ...` restricting the scanned players, applied before the per-lane `GROUP BY`.
+    pub hero_prefilter: String,
+    /// ` AND ...` on the assembled `hero_ids`/`enemy_hero_ids` duos.
+    pub duo_filters: String,
+}
+
+impl LaneDuoFilters<'_> {
+    pub(super) fn build(&self) -> LaneDuoFilterSql {
+        let account_prefilter = self.accounts.map_or_else(String::new, |ids| {
+            format!(
+                " AND match_id IN (SELECT match_id FROM match_player WHERE account_id IN ({}))",
+                id_list(ids)
+            )
+        });
+
+        // Dropping players before the GROUP BY is sound only with both lists set: every player of
+        // a surviving lane is then in their union, so the prefilter cannot truncate a duo we still
+        // want.
+        let hero_scope = match (self.heroes, self.enemy_heroes) {
+            (Some(hero_ids), Some(enemy_hero_ids)) => {
+                hero_ids.iter().chain(enemy_hero_ids).copied().collect_vec()
+            }
+            _ => vec![],
+        };
+        let hero_prefilter = join_filters(
+            &PlayerFilters {
+                hero_ids: Some(&hero_scope),
+                ..Default::default()
+            }
+            .build(),
+        );
+
+        let mut duo_filters = vec![];
+        if let Some(hero_ids) = self.heroes {
+            duo_filters.push(format!("hasAll([{}], hero_ids)", id_list(hero_ids)));
+        }
+        if let Some(enemy_hero_ids) = self.enemy_heroes {
+            duo_filters.push(format!(
+                "hasAll([{}], enemy_hero_ids)",
+                id_list(enemy_hero_ids)
+            ));
+        }
+
+        LaneDuoFilterSql {
+            account_prefilter,
+            hero_prefilter,
+            duo_filters: join_filters(&duo_filters),
+        }
+    }
+}
+
 /// Formats a filter vec as ` AND ...` or empty string.
 pub(super) fn join_filters(filters: &[String]) -> String {
     if filters.is_empty() {

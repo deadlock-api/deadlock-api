@@ -15,6 +15,7 @@ mod item_permutation_stats;
 pub mod item_stats;
 mod kill_death_stats;
 pub mod lane_matchup_stats;
+pub mod lane_soul_curve;
 pub mod player_performance_curve;
 pub mod player_scoreboard;
 mod player_stats_metrics;
@@ -66,6 +67,7 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
             .routes(routes!(hero_synergies_stats::hero_synergies_stats))
             .routes(routes!(hero_comb_stats::hero_comb_stats))
             .routes(routes!(lane_matchup_stats::lane_matchup_stats))
+            .routes(routes!(lane_soul_curve::lane_soul_curve))
             .routes(routes!(build_item_stats::build_item_stats))
             .routes(routes!(badge_distribution::badge_distribution))
             .routes(routes!(game_stats::game_stats))

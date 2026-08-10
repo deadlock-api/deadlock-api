@@ -10,20 +10,20 @@ use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
     LaneDuoFilterSql, LaneDuoFilters, MatchInfoFilters, default_min_matches_u64,
-    filter_protected_accounts, round_timestamps,
+    filter_protected_accounts, id_list, round_timestamps,
 };
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
-/// Last stats sample before the cadence coarsens: `stats.time_stamp_s` runs every 180s up to 900,
-/// then jumps to 300s steps. Sampling here keeps the laning read on the finest grid available.
-const NET_WORTH_SAMPLE_S: u32 = 900;
+/// `stats.time_stamp_s` is recorded every 180s only up to 900, then coarsens to 300s steps, so any
+/// other offset matches no sample at all.
+const SAMPLE_TIMES_S: [u32; 5] = [180, 360, 540, 720, 900];
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
-pub(super) struct LaneMatchupStatsQuery {
+pub(super) struct LaneSoulCurveQuery {
     /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
     #[serde(
         default = "GameMode::default_option",
@@ -81,10 +81,6 @@ pub(super) struct LaneMatchupStatsQuery {
     #[serde(default = "default_min_matches_u64")]
     #[param(minimum = 1, default = 20)]
     min_matches: Option<u64>,
-    /// The maximum number of lane matchups played for a duo pairing to be included in the response.
-    #[serde(default)]
-    #[param(minimum = 1)]
-    max_matches: Option<u64>,
     /// Comma separated list of account ids to include
     #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
@@ -96,25 +92,31 @@ pub(super) struct LaneMatchupStatsQuery {
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct LaneMatchupStats {
+pub struct LaneSoulCurve {
     /// The lane the matchup was played in. See the `lane_info` array of <https://api.deadlock-api.com/v1/assets/generic-data>.
     pub assigned_lane: u32,
     /// The ascending hero id pair that shared the lane. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     pub hero_ids: Vec<u32>,
     /// The ascending hero id pair they laned against.
     pub enemy_hero_ids: Vec<u32>,
-    /// The number of matches `hero_ids` won against `enemy_hero_ids` in this lane.
-    pub wins: u64,
-    /// The total number of lane matchups between `hero_ids` and `enemy_hero_ids` in this lane.
+    /// Seconds into the match each entry of `net_worth_diff` was sampled at, ascending.
+    pub sample_times_s: Vec<u32>,
+    /// Mean souls the duo is ahead by at the matching entry of `sample_times_s`. Negative means
+    /// behind. Same length as `sample_times_s`.
+    pub net_worth_diff: Vec<f64>,
+    /// Population standard deviation of the lead across the counted matchups, at the matching entry
+    /// of `sample_times_s`. Same length as `sample_times_s`.
+    ///
+    /// Spread between individual games, not uncertainty about the mean: it stays wide however many
+    /// matchups are counted, because lane outcomes genuinely differ that much.
+    pub net_worth_diff_std: Vec<f64>,
+    /// Lane matchups behind the curve, counted at its *least* covered sample. A match that ended
+    /// before 900s still contributes to the earlier points, so the earlier points rest on at least
+    /// this many matchups and never fewer.
     pub matches_played: u64,
-    /// Mean souls the duo is ahead by 15 minutes in, against that duo. Negative means behind.
-    /// `0` when no counted matchup had net-worth samples for all four players.
-    pub net_worth_diff_15min: f64,
-    /// How many of `matches_played` carried net-worth samples for all four players.
-    pub net_worth_matches: u64,
 }
 
-fn build_query(query: &LaneMatchupStatsQuery) -> String {
+fn build_query(query: &LaneSoulCurveQuery) -> String {
     let info_filters = MatchInfoFilters {
         min_unix_timestamp: query.min_unix_timestamp,
         max_unix_timestamp: query.max_unix_timestamp,
@@ -128,6 +130,7 @@ fn build_query(query: &LaneMatchupStatsQuery) -> String {
     .build();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
+    let sample_times = id_list(&SAMPLE_TIMES_S);
 
     let LaneDuoFilterSql {
         account_prefilter,
@@ -140,57 +143,57 @@ fn build_query(query: &LaneMatchupStatsQuery) -> String {
     }
     .build();
 
-    let mut having_filters = vec![];
-    if let Some(min_matches) = query.min_matches {
-        having_filters.push(format!("matches_played >= {min_matches}"));
-    }
-    if let Some(max_matches) = query.max_matches {
-        having_filters.push(format!("matches_played <= {max_matches}"));
-    }
-    let having_clause = if having_filters.is_empty() {
-        String::new()
-    } else {
-        format!("HAVING {}", having_filters.join(" AND "))
-    };
+    let having_clause = query
+        .min_matches
+        .map_or_else(String::new, |min| format!("HAVING matches_played >= {min}"));
 
-    // `groupUniqArrayIf` rather than `groupArrayIf`: without FINAL an unmerged replica row
-    // would duplicate a hero and push the duo past the `length = 2` check.
+    // `groupUniqArrayIf` rather than `groupArrayIf`: without FINAL an unmerged replica row would
+    // duplicate a hero and push the duo past the `length = 2` check.
     format!(
         "
-WITH lane_duos AS (
-    WITH arrayFirst((nw, t) -> t >= {NET_WORTH_SAMPLE_S}, stats.net_worth, stats.time_stamp_s) AS sample_net_worth
+WITH lane_samples AS (
     SELECT
         assigned_lane,
+        time_stamp_s AS t,
         arraySort(groupUniqArrayIf(hero_id, team = 'Team0')) AS team0,
         arraySort(groupUniqArrayIf(hero_id, team = 'Team1')) AS team1,
-        anyIf(won, team = 'Team0') AS team0_won,
-        anyIf(won, team = 'Team1') AS team1_won,
-        toFloat64(sumIf(sample_net_worth, team = 'Team0')) - toFloat64(sumIf(sample_net_worth, team = 'Team1')) AS net_worth_lead,
-        (countIf(sample_net_worth > 0, team = 'Team0') = 2 AND countIf(sample_net_worth > 0, team = 'Team1') = 2) AS both_sampled
+        toFloat64(sumIf(sample_net_worth, team = 'Team0')) - toFloat64(sumIf(sample_net_worth, team = 'Team1')) AS lead
     FROM match_player
-    WHERE {match_mode_filter} AND {game_mode_filter}{info_filters} AND team IN ('Team0', 'Team1') AND assigned_lane > 0{account_prefilter}{hero_prefilter}
-    GROUP BY match_id, assigned_lane
+    ARRAY JOIN stats.net_worth AS sample_net_worth, stats.time_stamp_s AS time_stamp_s
+    WHERE {match_mode_filter} AND {game_mode_filter}{info_filters} AND team IN ('Team0', 'Team1') AND assigned_lane > 0 AND time_stamp_s IN ({sample_times}){account_prefilter}{hero_prefilter}
+    GROUP BY match_id, assigned_lane, time_stamp_s
     HAVING length(team0) = 2 AND length(team1) = 2
+),
+per_time AS (
+    SELECT
+        assigned_lane,
+        arrayMap(h -> toUInt32(h), duo) AS hero_ids,
+        arrayMap(h -> toUInt32(h), enemy_duo) AS enemy_hero_ids,
+        t,
+        round(avg(net_worth_diff), 1) AS mean_diff,
+        round(stddevPop(net_worth_diff), 1) AS std_diff,
+        COUNT() AS sample_matches
+    FROM lane_samples
+    ARRAY JOIN
+        [team0, team1] AS duo,
+        [team1, team0] AS enemy_duo,
+        [lead, -lead] AS net_worth_diff
+    WHERE true{duo_filters}
+    GROUP BY assigned_lane, hero_ids, enemy_hero_ids, t
 )
 SELECT
     assigned_lane,
-    arrayMap(h -> toUInt32(h), duo) AS hero_ids,
-    arrayMap(h -> toUInt32(h), enemy_duo) AS enemy_hero_ids,
-    countIf(won) AS wins,
-    COUNT() AS matches_played,
-    round(avgIfOrDefault(net_worth_diff, both_sampled), 1) AS net_worth_diff_15min,
-    countIf(both_sampled) AS net_worth_matches
-FROM lane_duos
-ARRAY JOIN
-    [team0, team1] AS duo,
-    [team1, team0] AS enemy_duo,
-    [team0_won, team1_won] AS won,
-    [net_worth_lead, -net_worth_lead] AS net_worth_diff
-WHERE true{duo_filters}
+    hero_ids,
+    enemy_hero_ids,
+    arrayMap(x -> x.1, arraySort(groupArray((t, mean_diff, std_diff))) AS curve) AS sample_times_s,
+    arrayMap(x -> x.2, curve) AS net_worth_diff,
+    arrayMap(x -> x.3, curve) AS net_worth_diff_std,
+    min(sample_matches) AS matches_played
+FROM per_time
 GROUP BY assigned_lane, hero_ids, enemy_hero_ids
 {having_clause}
 ORDER BY matches_played DESC
-SETTINGS log_comment = 'lane_matchup_stats', apply_patch_parts = 0
+SETTINGS log_comment = 'lane_soul_curve', apply_patch_parts = 0
     "
     )
 }
@@ -204,14 +207,14 @@ SETTINGS log_comment = 'lane_matchup_stats', apply_patch_parts = 0
 async fn run_query(
     ch_client: &clickhouse::Client,
     query_str: &str,
-) -> clickhouse::error::Result<Vec<LaneMatchupStats>> {
+) -> clickhouse::error::Result<Vec<LaneSoulCurve>> {
     ch_client.query(query_str).fetch_all().await
 }
 
-async fn get_lane_matchup_stats(
+async fn get_lane_soul_curve(
     ch_client: &clickhouse::Client,
-    mut query: LaneMatchupStatsQuery,
-) -> APIResult<Vec<LaneMatchupStats>> {
+    mut query: LaneSoulCurveQuery,
+) -> APIResult<Vec<LaneSoulCurve>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let ch_query = build_query(&query);
     debug!(?ch_query);
@@ -220,23 +223,23 @@ async fn get_lane_matchup_stats(
 
 #[utoipa::path(
     get,
-    path = "/lane-matchup-stats",
-    params(LaneMatchupStatsQuery),
+    path = "/lane-soul-curve",
+    params(LaneSoulCurveQuery),
     responses(
-        (status = OK, description = "Lane Matchup Stats", body = [LaneMatchupStats]),
+        (status = OK, description = "Lane Soul Curve", body = [LaneSoulCurve]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
-        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch lane matchup stats")
+        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch lane soul curve")
     ),
     tags = ["Analytics"],
-    summary = "Lane Matchup Stats",
+    summary = "Lane Soul Curve",
     description = "
-Retrieves duo-versus-duo lane statistics: how a pair of heroes sharing a lane performed against the pair of heroes they laned against.
+Retrieves how a duo's soul lead over the duo they laned against develops through the first 15 minutes.
 
-Only lanes where *both* sides fielded exactly two players are counted, and each lane contributes one row per side, so every matchup appears twice with the two sides swapped.
+The curve is sampled at 180, 360, 540, 720 and 900 seconds and is not interpolated; its last point is the `net_worth_diff_15min` of `/lane-matchup-stats`. Only lanes where *both* sides fielded exactly two players are counted, and each lane contributes one row per side, so every matchup appears twice with the two sides swapped.
 
 Pass `hero_ids` and `enemy_hero_ids` to scope the response to the duos you care about. Without them the full duo-versus-duo matrix is computed, which is a considerably more expensive query.
 
-Results are cached for **1 hour**. The cache key is determined by the specific combination of filter parameters used in the query. Subsequent requests using the exact same filters within this timeframe will receive the cached response.
+Results are cached for **1 hour** based on the combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
 
 ### Rate Limits:
 > The rate limits below are **shared across all analytics endpoints**.
@@ -248,12 +251,12 @@ Results are cached for **1 hour**. The cache key is determined by the specific c
 | Global | 2000req/min |
     "
 )]
-pub(super) async fn lane_matchup_stats(
-    Query(mut query): Query<LaneMatchupStatsQuery>,
+pub(super) async fn lane_soul_curve(
+    Query(mut query): Query<LaneSoulCurveQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     filter_protected_accounts(&state, &mut query.account_ids, None).await?;
-    get_lane_matchup_stats(&state.ch_client_cached, query)
+    get_lane_soul_curve(&state.ch_client_cached, query)
         .await
         .map(Json)
 }
@@ -269,7 +272,7 @@ mod proptests {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
         #[test]
-        fn lane_matchup_stats_build_query_is_valid_sql(query: LaneMatchupStatsQuery) {
+        fn lane_soul_curve_build_query_is_valid_sql(query: LaneSoulCurveQuery) {
             assert_valid_sql(&build_query(&query));
         }
     }
