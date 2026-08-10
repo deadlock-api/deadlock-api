@@ -20,12 +20,12 @@ use clap::Parser;
 use clickhouse::Client;
 use futures::StreamExt;
 use metrics::{counter, gauge};
-use models::MatchSalts;
+use models::{MatchCandidates, MatchSalts};
 use object_store::path::Path;
 use object_store::{ObjectStore, ObjectStoreExt, PutPayload};
 use tokio::time::sleep;
 use tokio_util::bytes::Bytes;
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, info, instrument, warn};
 
 mod models;
 
@@ -52,6 +52,7 @@ const RETRY_MAX_INTERVAL: Duration = Duration::from_hours(24);
 /// this many attempts, which the backoff spreads over roughly four days. A
 /// restart re-examines them, a slow enough cadence to still catch late arrivals.
 const MAX_ATTEMPTS: u32 = 12;
+const GC_INTERVAL: Duration = Duration::from_hours(1);
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const REQUEST_TIMEOUT: Duration = Duration::from_mins(1);
 
@@ -79,23 +80,32 @@ static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
 /// Salts of 0 are placeholders that can never resolve to a replay URL.
 const VALID_SALTS: &str = "cluster_id > 0 AND metadata_salt > 0";
 
+/// Aggregated rather than read with `FINAL` so a verdict still hides its candidate while its
+/// part is unmerged.
+const UNRESOLVED: &str = "max(verified_at) IS NULL AND max(failed_at) IS NULL";
+
+/// Coalescing keeps the earliest `created_at`, so `min` is the value a verdict must repeat.
 const SALT_COLUMNS: &str = "
     match_id,
-    argMax(cluster_id,    created_at) AS cluster_id,
-    argMax(metadata_salt, created_at) AS metadata_salt";
+    cluster_id,
+    metadata_salt,
+    toUnixTimestamp(min(created_at)) AS created_at";
 
-/// Every match that has salts but no player rows yet, newest salts first. There is
-/// deliberately no recency cut-off: a match that could not be downloaded within a
-/// couple of days must stay a candidate rather than silently disappear.
+const SALT_GROUPING: &str = "
+GROUP BY match_id, cluster_id, metadata_salt";
+
+/// Every candidate of every match that has salts but no player rows yet, newest first. There
+/// is deliberately no recency cut-off: a match that could not be downloaded within a couple of
+/// days must stay a candidate rather than silently disappear.
 fn pending_salts_query() -> String {
     format!(
         "
 SELECT {SALT_COLUMNS}
 FROM match_salts
-WHERE match_id NOT IN (SELECT match_id FROM match_player)
-GROUP BY match_id
-HAVING {VALID_SALTS}
-ORDER BY max(created_at) DESC
+WHERE match_id NOT IN (SELECT match_id FROM match_player) AND {VALID_SALTS}
+{SALT_GROUPING}
+HAVING {UNRESOLVED}
+ORDER BY created_at DESC
 SETTINGS log_comment = 'matchdata_downloader_fetch_pending_salts'
 "
     )
@@ -111,12 +121,31 @@ fn salts_by_id_query(match_ids: &[u64]) -> String {
         "
 SELECT {SALT_COLUMNS}
 FROM match_salts
-WHERE match_id IN ({ids})
-GROUP BY match_id
-HAVING {VALID_SALTS}
+WHERE match_id IN ({ids}) AND {VALID_SALTS}
+{SALT_GROUPING}
+HAVING {UNRESOLVED}
+ORDER BY created_at DESC
 SETTINGS log_comment = 'matchdata_downloader_fetch_salts_by_id'
 "
     )
+}
+
+/// Keeps the newest-first order of both the matches and the candidates within them.
+fn group_by_match(rows: Vec<MatchSalts>) -> Vec<MatchCandidates> {
+    let mut grouped: Vec<MatchCandidates> = Vec::new();
+    let mut position: HashMap<u64, usize> = HashMap::new();
+    for row in rows {
+        if let Some(&i) = position.get(&row.match_id) {
+            grouped[i].candidates.push(row);
+        } else {
+            position.insert(row.match_id, grouped.len());
+            grouped.push(MatchCandidates {
+                match_id: row.match_id,
+                candidates: vec![row],
+            });
+        }
+    }
+    grouped
 }
 
 #[derive(Parser)]
@@ -144,6 +173,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let state = State::new();
+    let mut last_gc = tokio::time::Instant::now();
     loop {
         let started = tokio::time::Instant::now();
         if let Err(e) = run_iteration(&ch_client, &store, &cache_store, &state).await {
@@ -151,6 +181,12 @@ async fn main() -> anyhow::Result<()> {
             error!("Iteration failed: {e:#}");
             sleep(ITERATION_BACKOFF).await;
             continue;
+        }
+        if last_gc.elapsed() >= GC_INTERVAL {
+            last_gc = tokio::time::Instant::now();
+            if let Err(e) = collect_garbage(&ch_client).await {
+                warn!("Collecting superseded salt candidates failed: {e:#}");
+            }
         }
         if let Some(remaining) = POLL_INTERVAL.checked_sub(started.elapsed()) {
             sleep(remaining).await;
@@ -182,11 +218,13 @@ async fn download_from_file(
         bail!("No match ids found in {file_path}");
     }
 
-    let salts = ch_client
-        .query(&salts_by_id_query(&match_ids))
-        .fetch_all::<MatchSalts>()
-        .await
-        .context("fetching salts for the requested match ids")?;
+    let salts = group_by_match(
+        ch_client
+            .query(&salts_by_id_query(&match_ids))
+            .fetch_all::<MatchSalts>()
+            .await
+            .context("fetching salts for the requested match ids")?,
+    );
     info!(
         "Downloading {} of {} requested matches; {} have no usable salts",
         salts.len(),
@@ -194,11 +232,16 @@ async fn download_from_file(
         match_ids.len() - salts.len(),
     );
 
-    let failed = process_batch(store.as_ref(), cache_store.as_ref(), &salts)
-        .await
-        .iter()
-        .filter(|(_, r)| r.is_err())
-        .count();
+    let results = process_batch(store.as_ref(), cache_store.as_ref(), &salts).await;
+    let failed = results.iter().filter(|(_, r)| r.is_err()).count();
+    let verdicts = Verdicts {
+        verified: results
+            .into_iter()
+            .filter_map(|(_, r)| r.ok().flatten())
+            .collect(),
+        failed: vec![],
+    };
+    stamp(ch_client, &verdicts).await?;
     info!(
         "Downloaded {} matches, {failed} failed",
         salts.len() - failed
@@ -213,11 +256,13 @@ async fn run_iteration(
     state: &State,
 ) -> anyhow::Result<()> {
     info!("Fetching match ids to download");
-    let pending = ch_client
-        .query(&pending_salts_query())
-        .fetch_all::<MatchSalts>()
-        .await
-        .context("fetching pending match salts")?;
+    let pending = group_by_match(
+        ch_client
+            .query(&pending_salts_query())
+            .fetch_all::<MatchSalts>()
+            .await
+            .context("fetching pending match salts")?,
+    );
 
     gauge!("matchdata_downloader.matches_to_download").set(pending.len() as f64);
 
@@ -244,8 +289,63 @@ async fn run_iteration(
     );
 
     let results = process_batch(store.as_ref(), cache_store.as_ref(), &to_fetch).await;
-    handle_results(state, results);
+    stamp(ch_client, &handle_results(state, &to_fetch, results)).await?;
     Ok(())
+}
+
+/// Each row repeats its candidate's sorting key, so coalescing folds the verdict onto that row
+/// rather than adding one. The column a row does not speak to stays NULL, which coalescing
+/// skips, so both verdicts fit in one statement.
+async fn stamp(ch_client: &Client, verdicts: &Verdicts) -> anyhow::Result<()> {
+    let row = |s: &MatchSalts, verified: &str, failed: &str| {
+        format!(
+            "({},{},{},toDateTime({}),{verified},{failed})",
+            s.match_id,
+            s.cluster_id.unwrap_or_default(),
+            s.metadata_salt.unwrap_or_default(),
+            s.created_at,
+        )
+    };
+    let values = verdicts
+        .verified
+        .iter()
+        .map(|s| row(s, "now()", "NULL"))
+        .chain(verdicts.failed.iter().map(|s| row(s, "NULL", "now()")))
+        .collect::<Vec<_>>();
+    if values.is_empty() {
+        return Ok(());
+    }
+    ch_client
+        .query(&format!(
+            "INSERT INTO match_salts \
+             (match_id, cluster_id, metadata_salt, created_at, verified_at, failed_at) \
+             VALUES {}",
+            values.join(",")
+        ))
+        .execute()
+        .await
+        .context("stamping salt verdicts")?;
+    counter!("matchdata_downloader.salts_stamped", "verdict" => "verified")
+        .increment(verdicts.verified.len() as u64);
+    counter!("matchdata_downloader.salts_stamped", "verdict" => "failed")
+        .increment(verdicts.failed.len() as u64);
+    Ok(())
+}
+
+/// Drops candidates that lost to a verified sibling. Pure cleanup: readers already prefer the
+/// verified candidate, so a failure only warns.
+async fn collect_garbage(ch_client: &Client) -> anyhow::Result<()> {
+    ch_client
+        .query(
+            "DELETE FROM match_salts \
+             WHERE match_id IN (SELECT match_id FROM match_salts WHERE verified_at IS NOT NULL) \
+               AND (match_id, cluster_id, metadata_salt) NOT IN ( \
+                   SELECT match_id, cluster_id, metadata_salt \
+                   FROM match_salts WHERE verified_at IS NOT NULL)",
+        )
+        .execute()
+        .await
+        .context("deleting superseded salt candidates")
 }
 
 /// Each result carries its own match id: [`futures::StreamExt::buffer_unordered`]
@@ -254,8 +354,8 @@ async fn run_iteration(
 async fn process_batch<B, C>(
     bucket: &B,
     cache_bucket: &C,
-    salts: &[MatchSalts],
-) -> Vec<(u64, anyhow::Result<()>)>
+    salts: &[MatchCandidates],
+) -> Vec<(u64, anyhow::Result<Option<MatchSalts>>)>
 where
     B: ObjectStore + ?Sized,
     C: ObjectStore + ?Sized,
@@ -275,13 +375,37 @@ where
         .await
 }
 
-fn handle_results(state: &State, results: Vec<(u64, anyhow::Result<()>)>) {
+#[derive(Default)]
+struct Verdicts {
+    verified: Vec<MatchSalts>,
+    failed: Vec<MatchSalts>,
+}
+
+/// A failure proves nothing until the attempt budget is spent, at which point every candidate
+/// is written off: each was tried on every attempt.
+fn handle_results(
+    state: &State,
+    batch: &[MatchCandidates],
+    results: Vec<(u64, anyhow::Result<Option<MatchSalts>>)>,
+) -> Verdicts {
+    let by_id: HashMap<u64, &MatchCandidates> = batch.iter().map(|m| (m.match_id, m)).collect();
+    let mut verdicts = Verdicts::default();
     for (match_id, result) in results {
         match result {
-            Ok(()) => state.mark_uploaded(match_id),
-            Err(_) => state.back_off(match_id),
+            Ok(winner) => {
+                state.mark_uploaded(match_id);
+                verdicts.verified.extend(winner);
+            }
+            Err(_) => {
+                if state.back_off(match_id) == GaveUp::Yes
+                    && let Some(m) = by_id.get(&match_id)
+                {
+                    verdicts.failed.extend(m.candidates.iter().cloned());
+                }
+            }
         }
     }
+    verdicts
 }
 
 /// Exponential cooldown, saturating at [`RETRY_MAX_INTERVAL`]. A replay server
@@ -296,6 +420,12 @@ fn retry_delay(attempts: u32) -> Duration {
 struct Attempt {
     next: tokio::time::Instant,
     count: u32,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum GaveUp {
+    Yes,
+    No,
 }
 
 struct State {
@@ -318,7 +448,7 @@ impl State {
         self.failed.lock().unwrap().remove(&id);
     }
 
-    fn back_off(&self, id: u64) {
+    fn back_off(&self, id: u64) -> GaveUp {
         let mut failed = self.failed.lock().unwrap();
         let attempt = failed.entry(id).or_insert(Attempt {
             next: tokio::time::Instant::now(),
@@ -329,7 +459,9 @@ impl State {
         if attempt.count == MAX_ATTEMPTS {
             debug!("Giving up on match {id} after {MAX_ATTEMPTS} attempts");
             counter!("matchdata_downloader.match.given_up").increment(1);
+            return GaveUp::Yes;
         }
+        GaveUp::No
     }
 
     /// Drop entries for matches that have left the pending set — they are ingested
@@ -348,7 +480,10 @@ impl State {
     /// Splits the pending set into matches that were never attempted and those
     /// whose retry cooldown has elapsed, so the caller can serve the fresh ones
     /// first. Both keep the newest-first order of the query.
-    fn select_eligible(&self, pending: Vec<MatchSalts>) -> (Vec<MatchSalts>, Vec<MatchSalts>) {
+    fn select_eligible(
+        &self,
+        pending: Vec<MatchCandidates>,
+    ) -> (Vec<MatchCandidates>, Vec<MatchCandidates>) {
         let now = tokio::time::Instant::now();
         let uploaded = self.uploaded.lock().unwrap();
         let failed = self.failed.lock().unwrap();
@@ -368,12 +503,14 @@ impl State {
     }
 }
 
+/// Returns the candidate that produced the file, or `None` when the metadata was already in
+/// the bucket and no candidate was exercised.
 #[instrument(skip(bucket, cache_bucket))]
 async fn download_match<B, C>(
     bucket: &B,
     cache_bucket: &C,
-    salts: &MatchSalts,
-) -> anyhow::Result<()>
+    salts: &MatchCandidates,
+) -> anyhow::Result<Option<MatchSalts>>
 where
     B: ObjectStore + ?Sized,
     C: ObjectStore + ?Sized,
@@ -383,10 +520,10 @@ where
     let outdated_hltv_key = outdated_hltv_metadata_key(salts.match_id);
 
     if key_exists(bucket, &main_key).await {
-        return Ok(());
+        return Ok(None);
     }
 
-    let bytes = fetch_metadata(salts)
+    let (winner, bytes) = fetch_first_working(&salts.candidates)
         .await
         .with_context(|| format!("fetching metadata for match {}", salts.match_id))?;
 
@@ -402,7 +539,23 @@ where
     del_cache.context("deleting outdated HLTV metadata (cache)")?;
 
     info!("Match downloaded");
-    Ok(())
+    Ok(Some(winner))
+}
+
+/// Sequential rather than concurrent: all but one candidate are expected to be wrong, and a
+/// wrong salt still costs the replay server a request.
+async fn fetch_first_working(candidates: &[MatchSalts]) -> anyhow::Result<(MatchSalts, Bytes)> {
+    let mut last_err = None;
+    for candidate in candidates {
+        match fetch_metadata(candidate).await {
+            Ok(bytes) => return Ok((candidate.clone(), bytes)),
+            Err(e) => last_err = Some(e),
+        }
+    }
+    match last_err {
+        Some(e) => Err(e).context("every candidate salt failed"),
+        None => bail!("no candidate salts"),
+    }
 }
 
 fn main_metadata_key(match_id: u64) -> Path {
@@ -501,12 +654,83 @@ async fn key_exists<S: ObjectStore + ?Sized>(store: &S, file_path: &Path) -> boo
 mod tests {
     use super::*;
 
-    fn salts(match_id: u64) -> MatchSalts {
+    fn candidate(match_id: u64, cluster_id: u32) -> MatchSalts {
         MatchSalts {
             match_id,
-            cluster_id: Some(1),
+            cluster_id: Some(cluster_id),
             metadata_salt: Some(2),
+            created_at: 0,
         }
+    }
+
+    fn salts(match_id: u64) -> MatchCandidates {
+        MatchCandidates {
+            match_id,
+            candidates: vec![candidate(match_id, 1)],
+        }
+    }
+
+    #[test]
+    fn candidates_of_one_match_are_grouped_without_disturbing_the_order() {
+        let grouped = group_by_match(vec![
+            candidate(40, 1),
+            candidate(20, 7),
+            candidate(40, 2),
+            candidate(10, 1),
+        ]);
+
+        assert_eq!(
+            grouped,
+            vec![
+                MatchCandidates {
+                    match_id: 40,
+                    candidates: vec![candidate(40, 1), candidate(40, 2)],
+                },
+                MatchCandidates {
+                    match_id: 20,
+                    candidates: vec![candidate(20, 7)],
+                },
+                MatchCandidates {
+                    match_id: 10,
+                    candidates: vec![candidate(10, 1)],
+                },
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn candidates_are_only_written_off_once_the_attempt_budget_is_spent() {
+        let state = State::new();
+        let batch = [MatchCandidates {
+            match_id: 1,
+            candidates: vec![candidate(1, 187), candidate(1, 390)],
+        }];
+        let fail = || vec![(1, Err(anyhow::anyhow!("502 Bad Gateway")))];
+
+        for _ in 1..MAX_ATTEMPTS {
+            assert!(handle_results(&state, &batch, fail()).failed.is_empty());
+        }
+        let verdicts = handle_results(&state, &batch, fail());
+
+        assert_eq!(
+            verdicts.failed,
+            vec![candidate(1, 187), candidate(1, 390)],
+            "every candidate was tried on every attempt, so all of them are written off"
+        );
+    }
+
+    #[tokio::test]
+    async fn only_the_candidate_that_produced_the_file_is_verified() {
+        let state = State::new();
+        let batch = [MatchCandidates {
+            match_id: 1,
+            candidates: vec![candidate(1, 187), candidate(1, 390)],
+        }];
+
+        let verdicts = handle_results(&state, &batch, vec![(1, Ok(Some(candidate(1, 390))))]);
+
+        assert_eq!(verdicts.verified, vec![candidate(1, 390)]);
+        assert!(verdicts.failed.is_empty());
     }
 
     #[test]
@@ -586,9 +810,10 @@ mod tests {
 
         handle_results(
             &state,
+            &batch,
             vec![
                 (30, Err(anyhow::anyhow!("502 Bad Gateway"))),
-                (10, Ok(())),
+                (10, Ok(Some(candidate(10, 1)))),
                 (20, Err(anyhow::anyhow!("502 Bad Gateway"))),
             ],
         );

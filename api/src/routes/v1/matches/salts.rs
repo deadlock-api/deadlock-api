@@ -35,9 +35,14 @@ impl BatchQuery for MatchSaltsReadQuery {
     type Value = ClickhouseSalts;
 
     fn build_query(keys: &[u64]) -> String {
+        // FINAL is required: an unmerged verification stamp carries only the sorting key and
+        // would otherwise win the ordering with a NULL replay salt.
         format!(
             "SELECT ?fields FROM match_salts FINAL \
              WHERE match_id IN ({}) AND metadata_salt > 0 AND cluster_id > 0 \
+               AND failed_at IS NULL \
+             ORDER BY verified_at IS NOT NULL DESC, created_at DESC \
+             LIMIT 1 BY match_id \
              SETTINGS log_comment = 'salts_read'",
             in_clause(keys)
         )
@@ -76,10 +81,12 @@ impl BatchQuery for MatchSaltsExistsQuery {
     type Value = MatchSaltsExistsRow;
 
     fn build_query(keys: &[u64]) -> String {
+        // Replay salts are never exercised by the downloader, so they can only be gated on the
+        // absence of a recorded failure rather than on proof.
         format!(
             "SELECT match_id, \
-                max(metadata_salt) > 0 AS has_metadata, \
-                max(replay_salt) > 0 AS has_replay \
+                maxIf(metadata_salt, verified_at IS NOT NULL) > 0 AS has_metadata, \
+                maxIf(replay_salt, failed_at IS NULL) > 0 AS has_replay \
              FROM match_salts \
              WHERE match_id IN ({}) \
              GROUP BY match_id \

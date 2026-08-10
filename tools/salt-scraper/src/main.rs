@@ -88,13 +88,18 @@ async fn main() -> anyhow::Result<()> {
 
         // Scans full history via LEFT ANTI JOIN against a merged, bounded anti-set.
         // The `match_id < MAX_VALID_MATCH_ID` bound on match_salts strips garbage sentinels
-        // so the join side stays dense.
+        // so the join side stays dense. A match whose every candidate salt has been written off
+        // counts as uncovered: the GC is the only source that can replace them.
         let prio_query = format!(
             r"
         SELECT pmh.match_id, groupArray(pmh.account_id) AS participants
         FROM player_match_history pmh
         LEFT ANTI JOIN (
-            SELECT match_id FROM match_salts WHERE match_id >= 31247321 AND match_id < {MAX_VALID_MATCH_ID}
+            SELECT match_id FROM match_salts
+            WHERE match_id >= 31247321 AND match_id < {MAX_VALID_MATCH_ID}
+            GROUP BY match_id
+            HAVING uniqExact((cluster_id, metadata_salt))
+                 > uniqExactIf((cluster_id, metadata_salt), failed_at IS NOT NULL)
             UNION DISTINCT
             SELECT match_id FROM match_player WHERE match_id >= 31247321
         ) ex ON ex.match_id = pmh.match_id

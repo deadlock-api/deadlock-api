@@ -158,6 +158,9 @@ async fn fetch_pending_matches(
                  WHERE created_at > now() - INTERVAL 30 DAY \
                    AND replay_salt IS NOT NULL AND replay_salt > 0 \
                    AND cluster_id IS NOT NULL AND cluster_id > 0 \
+                   AND failed_at IS NULL \
+                 ORDER BY verified_at IS NOT NULL DESC \
+                 LIMIT 1 BY match_id \
              ) ms \
              INNER JOIN ( \
                  SELECT match_id, any(start_time) AS start_time, max(demo_processed) AS demo_processed \
@@ -167,6 +170,7 @@ async fn fetch_pending_matches(
                      WHERE created_at > now() - INTERVAL 30 DAY \
                        AND replay_salt IS NOT NULL AND replay_salt > 0 \
                        AND cluster_id IS NOT NULL AND cluster_id > 0 \
+                       AND failed_at IS NULL \
                  ) \
                  AND game_mode = 'Normal' \
                  GROUP BY match_id \
