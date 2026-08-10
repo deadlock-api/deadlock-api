@@ -1096,6 +1096,7 @@ mod tests {
     const SNAPSHOT_VERSION: u32 = 6064;
     const PUBLIC_BASE: &str = "https://assets-bucket.deadlock-api.com/assets-api-res/versions";
 
+    #[allow(clippy::std_instead_of_core)]
     async fn fetch_zst(client: &reqwest::Client, version: u32, rel: &str) -> String {
         use async_compression::tokio::bufread::ZstdDecoder;
         use tokio::io::AsyncReadExt;
