@@ -230,62 +230,45 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
               </StatTooltip>
             )}
 
-            {/* The breakdown sits with the number it explains, each term next to the sample it
-                rests on, so weight and reliability read together. It opens on the even-match
-                baseline and closes on the total, because the model is exactly `50 + Σ terms` —
-                stating both ends turns four loose numbers into an arithmetic the reader can check. */}
-            <div className="mt-3 w-64 border-t border-border pt-2.5">
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                <span className="flex-1 text-left">Even match</span>
-                <span className="w-10 text-right tabular-nums">50.0</span>
-              </div>
-              <div className="mt-2 space-y-2">
-                {analysis.contributions.map((contribution, i) => {
-                  const filledPips = confidencePips(contribution.matches);
-                  const shown = displayValues[i];
-                  return (
-                    <StatTooltip
-                      key={contribution.key}
-                      title={contribution.label}
-                      rows={[
-                        {
-                          label: "Contribution",
-                          value: formatPoints(contribution.value),
-                          className: deltaClass(contribution.value),
-                        },
-                        { label: "Thinnest sample", value: formatCount(contribution.matches) },
-                        { label: "Confidence", value: `${filledPips} of ${MAX_CONFIDENCE_PIPS}` },
-                      ]}
-                    >
-                      {/* A button so Radix opens the card on focus, not just on hover. */}
-                      <button type="button" className="flex w-full cursor-default items-center gap-2 text-[11px]">
-                        <span className="min-w-0 flex-1 truncate text-left text-muted-foreground">
-                          {contribution.label}
-                        </span>
-                        <span className="flex shrink-0 gap-0.5" aria-hidden="true">
-                          {Array.from({ length: MAX_CONFIDENCE_PIPS }, (_, pip) => (
-                            <span
-                              key={pip}
-                              className={cn(
-                                "h-3 w-1.5 rounded-[1px]",
-                                pip < filledPips ? pipColor(filledPips) : "bg-border",
-                              )}
-                            />
-                          ))}
-                        </span>
-                        <DeltaValue value={shown} className="w-10 shrink-0 text-right font-semibold" />
-                      </button>
-                    </StatTooltip>
-                  );
-                })}
-              </div>
-
-              {analysis.predicted !== undefined && (
-                <div className="mt-2.5 flex items-center gap-2 border-t border-border pt-2 text-[11px] font-semibold">
-                  <span className="flex-1 text-left">Predicted</span>
-                  <span className="w-10 text-right tabular-nums">{analysis.predicted.toFixed(1)}</span>
-                </div>
-              )}
+            <div className="mt-2 w-64 space-y-2 border-t border-border pt-2.5">
+              {analysis.contributions.map((contribution, i) => {
+                const filledPips = confidencePips(contribution.matches);
+                const shown = displayValues[i];
+                return (
+                  <StatTooltip
+                    key={contribution.key}
+                    title={contribution.label}
+                    rows={[
+                      {
+                        label: "Contribution",
+                        value: formatPoints(contribution.value),
+                        className: deltaClass(contribution.value),
+                      },
+                      { label: "Thinnest sample", value: formatCount(contribution.matches) },
+                      { label: "Confidence", value: `${filledPips} of ${MAX_CONFIDENCE_PIPS}` },
+                    ]}
+                  >
+                    {/* A button so Radix opens the card on focus, not just on hover. */}
+                    <button type="button" className="flex w-full cursor-default items-center gap-2 text-[11px]">
+                      <span className="min-w-0 flex-1 truncate text-left text-muted-foreground">
+                        {contribution.label}
+                      </span>
+                      <span className="flex shrink-0 gap-0.5" aria-hidden="true">
+                        {Array.from({ length: MAX_CONFIDENCE_PIPS }, (_, pip) => (
+                          <span
+                            key={pip}
+                            className={cn(
+                              "h-3 w-1.5 rounded-[1px]",
+                              pip < filledPips ? pipColor(filledPips) : "bg-border",
+                            )}
+                          />
+                        ))}
+                      </span>
+                      <DeltaValue value={shown} className="w-10 shrink-0 text-right font-semibold" />
+                    </button>
+                  </StatTooltip>
+                );
+              })}
             </div>
           </>
         )}
