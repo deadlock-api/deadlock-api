@@ -72,6 +72,8 @@ const ROBOTS_TXT: &str = r"
 User-agent: *
 Disallow: /
 Allow: /docs
+Allow: /openapi.json
+Allow: /cdn-cgi/
 ";
 
 async fn no_store_on_error(req: Request, next: Next) -> Response {

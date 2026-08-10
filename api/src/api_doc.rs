@@ -47,11 +47,27 @@ pub(super) struct ApiDoc;
 pub(super) const SCALAR_HTML: &str = r#"<!doctype html>
 <html>
 <head>
-    <title>Deadlock API</title>
+    <title>Deadlock API - Free REST API for Deadlock Match, Player and Hero Data</title>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="description" content="Free open REST API for Valve's Deadlock: match history, player stats, hero and item analytics, leaderboards and live game events. Full endpoint reference with request and response schemas."/>
+    <link rel="canonical" href="https://api.deadlock-api.com/docs"/>
+    <meta property="og:type" content="website"/>
+    <meta property="og:url" content="https://api.deadlock-api.com/docs"/>
+    <meta property="og:title" content="Deadlock API - Free REST API for Deadlock Match, Player and Hero Data"/>
+    <meta property="og:description" content="Match history, player stats, hero and item analytics, leaderboards and live game events for Valve's Deadlock."/>
 </head>
 <body>
+<noscript>
+    <h1>Deadlock API</h1>
+    <p>A free, open REST API for Valve's Deadlock, serving match history and metadata, player
+    statistics and MMR, hero and item analytics, ability and build data, leaderboards, patch notes
+    and live in-game events, all derived from real match data.</p>
+    <p>The interactive endpoint reference on this page needs JavaScript. The machine-readable
+    specification is at <a href="https://api.deadlock-api.com/openapi.json">/openapi.json</a>, and
+    pre-generated clients for many languages are at
+    <a href="https://github.com/deadlock-api/openapi-clients">github.com/deadlock-api/openapi-clients</a>.</p>
+</noscript>
 <script id="api-reference" type="application/json" data-configuration='{"hideModels":true,"customCss":".text-sidebar-c-2.cursor-auto>.group\\/button-label{text-align:center;font-size:1rem;font-weight:700}"}'>
     $spec
 </script>
