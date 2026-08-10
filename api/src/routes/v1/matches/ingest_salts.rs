@@ -105,9 +105,9 @@ pub(super) async fn ingest_salts(
                 .get(&salt.match_id)
                 .copied()
                 .unwrap_or((false, false));
-            let metadata_needed = salt.metadata_salt.is_some();
-            let replay_needed = salt.replay_salt.is_some();
-            !((has_metadata && metadata_needed) || (has_replay && replay_needed))
+            let metadata_new = salt.metadata_salt.is_some() && !has_metadata;
+            let replay_new = salt.replay_salt.is_some() && !has_replay;
+            metadata_new || replay_new
         })
         .collect();
 
