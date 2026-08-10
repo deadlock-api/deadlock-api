@@ -1,6 +1,6 @@
 [tools]
 pnpm = "11.6.0"
-rust = "1.96"
+rust = "1.97"
 java = "temurin-21"
 uv = "latest"
 lefthook = "latest"
