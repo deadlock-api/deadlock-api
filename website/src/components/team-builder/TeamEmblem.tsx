@@ -1,4 +1,5 @@
 import type { Side } from "~/lib/team-builder/analysis";
+import { TEAM_NAMES } from "~/lib/team-builder/lanes";
 import { cn } from "~/lib/utils";
 
 /** Team1 is the Hidden King's side, Team2 the Archmother's, matching `Team0`/`Team1` in match data. */
@@ -17,6 +18,7 @@ export function TeamEmblem({ side, className }: { side: Side; className?: string
   return (
     <span
       aria-hidden
+      title={TEAM_NAMES[side]}
       className={cn("inline-block shrink-0 bg-current", className)}
       style={{ mask, WebkitMask: mask }}
     />
