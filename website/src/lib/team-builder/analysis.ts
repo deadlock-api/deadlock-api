@@ -399,9 +399,6 @@ export function analyzeDraft(draft: Draft, index: StatsIndex): DraftAnalysis {
     { key: "synergy", label: "Pair synergy", value: terms.synergy, matches: minOf(pairMatches) },
     { key: "counters", label: "Counter picks", value: terms.counters, matches: minOf(counterMatches) },
     { key: "lanes", label: "Lane matchups", value: terms.lanes, matches: minOf(laneMatches) },
-    { key: "synergy", label: "Pair synergy", value: terms.synergy, matches: minOf(pairMatches) },
-    { key: "counters", label: "Counter picks", value: terms.counters, matches: minOf(counterMatches) },
-    { key: "solo", label: "Solo hero win rates", value: terms.solo, matches: minOf(heroMatches) },
   ];
 
   return {
