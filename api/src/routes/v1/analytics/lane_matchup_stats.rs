@@ -18,8 +18,9 @@ use crate::error::APIResult;
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
-/// End of the laning phase: late enough to separate duos, early enough to precede mid-game rotations.
-const NET_WORTH_SAMPLE_S: u32 = 540;
+/// Last stats sample before the cadence coarsens: `stats.time_stamp_s` runs every 180s up to 900,
+/// then jumps to 300s steps. Sampling here keeps the laning read on the finest grid available.
+const NET_WORTH_SAMPLE_S: u32 = 900;
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -107,9 +108,9 @@ pub struct LaneMatchupStats {
     pub wins: u64,
     /// The total number of lane matchups between `hero_ids` and `enemy_hero_ids` in this lane.
     pub matches_played: u64,
-    /// Mean souls the duo is ahead by 9 minutes in, against that duo. Negative means behind.
+    /// Mean souls the duo is ahead by 15 minutes in, against that duo. Negative means behind.
     /// `0` when no counted matchup had net-worth samples for all four players.
-    pub net_worth_diff_9min: f64,
+    pub net_worth_diff_15min: f64,
     /// How many of `matches_played` carried net-worth samples for all four players.
     pub net_worth_matches: u64,
 }
@@ -207,7 +208,7 @@ SELECT
     arrayMap(h -> toUInt32(h), enemy_duo) AS enemy_hero_ids,
     countIf(won) AS wins,
     COUNT() AS matches_played,
-    round(avgIfOrDefault(net_worth_diff, both_sampled), 1) AS net_worth_diff_9min,
+    round(avgIfOrDefault(net_worth_diff, both_sampled), 1) AS net_worth_diff_15min,
     countIf(both_sampled) AS net_worth_matches
 FROM lane_duos
 ARRAY JOIN
