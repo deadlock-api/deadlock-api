@@ -26,6 +26,7 @@ import { Route as PatronRouteImport } from './routes/patron'
 import { Route as PlayersRouteImport } from './routes/players'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as Sitemap_indexDotxmlRouteImport } from './routes/sitemap_index[.]xml'
+import { Route as TeamBuilderRouteImport } from './routes/team-builder'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
 import { Route as DeadlockdleIndexRouteImport } from './routes/deadlockdle/index'
@@ -128,6 +129,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const Sitemap_indexDotxmlRoute = Sitemap_indexDotxmlRouteImport.update({
   id: '/sitemap_index.xml',
   path: '/sitemap_index.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeamBuilderRoute = TeamBuilderRouteImport.update({
+  id: '/team-builder',
+  path: '/team-builder',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
@@ -240,6 +246,7 @@ export interface FileRoutesByFullPath {
   '/players': typeof PlayersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
+  '/team-builder': typeof TeamBuilderRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/deadlockdle/guess-ability': typeof DeadlockdleGuessAbilityRoute
   '/deadlockdle/guess-hero': typeof DeadlockdleGuessHeroRoute
@@ -275,6 +282,7 @@ export interface FileRoutesByTo {
   '/players': typeof PlayersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
+  '/team-builder': typeof TeamBuilderRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/deadlockdle/guess-ability': typeof DeadlockdleGuessAbilityRoute
   '/deadlockdle/guess-hero': typeof DeadlockdleGuessHeroRoute
@@ -313,6 +321,7 @@ export interface FileRoutesById {
   '/players': typeof PlayersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
+  '/team-builder': typeof TeamBuilderRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/deadlockdle/guess-ability': typeof DeadlockdleGuessAbilityRoute
   '/deadlockdle/guess-hero': typeof DeadlockdleGuessHeroRoute
@@ -352,6 +361,7 @@ export interface FileRouteTypes {
     | '/players'
     | '/sitemap.xml'
     | '/sitemap_index.xml'
+    | '/team-builder'
     | '/blog/$slug'
     | '/deadlockdle/guess-ability'
     | '/deadlockdle/guess-hero'
@@ -387,6 +397,7 @@ export interface FileRouteTypes {
     | '/players'
     | '/sitemap.xml'
     | '/sitemap_index.xml'
+    | '/team-builder'
     | '/blog/$slug'
     | '/deadlockdle/guess-ability'
     | '/deadlockdle/guess-hero'
@@ -424,6 +435,7 @@ export interface FileRouteTypes {
     | '/players'
     | '/sitemap.xml'
     | '/sitemap_index.xml'
+    | '/team-builder'
     | '/blog/$slug'
     | '/deadlockdle/guess-ability'
     | '/deadlockdle/guess-hero'
@@ -462,6 +474,7 @@ export interface RootRouteChildren {
   PlayersRoute: typeof PlayersRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   Sitemap_indexDotxmlRoute: typeof Sitemap_indexDotxmlRoute
+  TeamBuilderRoute: typeof TeamBuilderRoute
   BlogSlugRoute: typeof BlogSlugRoute
   FlashcardsHeroesRoute: typeof FlashcardsHeroesRoute
   FlashcardsItemUpgradesRoute: typeof FlashcardsItemUpgradesRoute
@@ -592,6 +605,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap_index.xml'
       fullPath: '/sitemap_index.xml'
       preLoaderRoute: typeof Sitemap_indexDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/team-builder': {
+      id: '/team-builder'
+      path: '/team-builder'
+      fullPath: '/team-builder'
+      preLoaderRoute: typeof TeamBuilderRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/': {
@@ -778,6 +798,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlayersRoute: PlayersRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   Sitemap_indexDotxmlRoute: Sitemap_indexDotxmlRoute,
+  TeamBuilderRoute: TeamBuilderRoute,
   BlogSlugRoute: BlogSlugRoute,
   FlashcardsHeroesRoute: FlashcardsHeroesRoute,
   FlashcardsItemUpgradesRoute: FlashcardsItemUpgradesRoute,

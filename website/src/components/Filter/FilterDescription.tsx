@@ -67,9 +67,11 @@ function Hl({ children }: { children: React.ReactNode }) {
 const SEGMENT_DEFS: {
   key: string;
   prefix: string;
+  suffix?: string;
   dynamic?: boolean;
 }[] = [
-  { key: "gameMode", prefix: "" },
+  { key: "gameMode", prefix: "", suffix: "matches" },
+  { key: "matchMode", prefix: "", suffix: "matches" },
   { key: "dateRange", prefix: "between" },
   { key: "rankRange", prefix: "with rank" },
   { key: "hero", prefix: "on" },
@@ -121,17 +123,12 @@ function buildSentence(parts: Map<string, string>): Segment[] | null {
       const value = parts.get(def.key);
       if (!value) continue;
 
-      if (def.key === "gameMode") {
-        segments.push({ key: "gameMode", node: <Hl>{value}</Hl> });
-        segments.push({ key: "gameMode-suffix", node: "matches" });
-        continue;
-      }
-
       segments.push({
         key: def.key,
         node: (
           <span>
             {def.prefix} <Hl>{value}</Hl>
+            {def.suffix ? ` ${def.suffix}` : ""}
           </span>
         ),
       });

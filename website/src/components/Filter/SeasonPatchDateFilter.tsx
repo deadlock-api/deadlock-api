@@ -3,28 +3,7 @@ import type { Dayjs } from "~/dayjs";
 import { PATCHES } from "~/lib/constants";
 
 import { createFilter } from "./createFilter";
-
-function formatDateRange(startDate: Dayjs | null | undefined, endDate: Dayjs | null | undefined): string | null {
-  if (!startDate && !endDate) return null;
-  const fmt = (d: Dayjs) =>
-    d.toDate().toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  const fmtShort = (d: Dayjs) => d.toDate().toLocaleDateString(undefined, { month: "short", day: "numeric" });
-
-  if (startDate && endDate) {
-    const sameYear = startDate.year() === endDate.year();
-    if (sameYear) {
-      return `${fmtShort(startDate)} - ${fmt(endDate)}`;
-    }
-    return `${fmt(startDate)} - ${fmt(endDate)}`;
-  }
-  if (startDate) return `since ${fmt(startDate)}`;
-  if (endDate) return `until ${fmt(endDate)}`;
-  return null;
-}
+import { formatDateRange } from "./utils";
 
 export const SeasonPatchDateFilter = createFilter<{
   startDate?: Dayjs;

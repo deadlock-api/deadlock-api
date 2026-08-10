@@ -5,6 +5,7 @@ import { HeatmapViewModeFilter } from "./HeatmapViewModeFilter";
 import { HeroFilter } from "./HeroFilter";
 import { ItemsTriStateFilter } from "./ItemsTriStateFilter";
 import { MatchDurationFilter } from "./MatchDurationFilter";
+import { MatchModeFilter } from "./MatchModeFilter";
 import { MinMatchesFilter } from "./MinMatchesFilter";
 import { RankRangeFilter } from "./RankRangeFilter";
 import { RegionFilter } from "./RegionFilter";
@@ -24,6 +25,7 @@ export const Filter = {
   RankRange: RankRangeFilter,
   MinMatches: MinMatchesFilter,
   ItemsTriState: ItemsTriStateFilter,
+  MatchMode: MatchModeFilter,
   SeasonPatchDate: SeasonPatchDateFilter,
   MatchDuration: MatchDurationFilter,
   Team: TeamFilter,

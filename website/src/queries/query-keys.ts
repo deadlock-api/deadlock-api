@@ -11,6 +11,7 @@ import type {
   AnalyticsApiItemPermutationStatsRequest,
   AnalyticsApiItemStatsRequest,
   AnalyticsApiKillDeathStatsRequest,
+  AnalyticsApiLaneMatchupStatsRequest,
   AnalyticsApiPlayerPerformanceCurveRequest,
   AnalyticsApiPlayerScoreboardRequest,
   AnalyticsApiPlayerStatsMetricsRequest,
@@ -42,6 +43,7 @@ export const queryKeys = {
     heroSynergyStats: (params: AnalyticsApiHeroSynergiesStatsRequest) => ["api-hero-synergy-stats", params] as const,
     heroCounterStats: (params: AnalyticsApiHeroCountersStatsRequest) => ["api-hero-counter-stats", params] as const,
     heroCombStats: (params: AnalyticsApiHeroCombStatsRequest) => ["api-hero-comb-stats", params] as const,
+    laneMatchupStats: (params: AnalyticsApiLaneMatchupStatsRequest) => ["api-lane-matchup-stats", params] as const,
     heroStatsByRank: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-by-rank", params] as const,
     heroStatsOverTime: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-over-time", params] as const,
     heroStatsByDuration: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-by-duration", params] as const,
@@ -56,6 +58,9 @@ export const queryKeys = {
     topBuilds: (params: MatchesApiBulkMetadataRequest) => ["api-top-builds", params] as const,
     playerHeroBuilds: (accountId: number, heroId: number, minUnixTimestamp?: number, maxUnixTimestamp?: number) =>
       ["api-player-hero-builds", accountId, heroId, minUnixTimestamp ?? null, maxUnixTimestamp ?? null] as const,
+  },
+  matches: {
+    importedDraft: (matchId: number | null) => ["api-imported-draft", matchId] as const,
   },
   steam: {
     profiles: (batch: number[]) => ["steam-profiles", batch] as const,

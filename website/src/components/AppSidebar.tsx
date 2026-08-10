@@ -18,6 +18,7 @@ import {
   Swords,
   Trophy,
   Users,
+  UsersRound,
   Zap,
 } from "lucide-react";
 import { VisuallyHidden } from "radix-ui";
@@ -56,6 +57,7 @@ const navGroups: NavGroup[] = [
       { to: "/items", label: "Items", icon: ShoppingBag },
       { to: "/abilities", label: "Abilities", icon: ListOrdered },
       { to: "/players", label: "Players", icon: Users },
+      { to: "/team-builder", label: "Team Builder", icon: UsersRound },
     ],
   },
   {
