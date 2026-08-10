@@ -2,7 +2,8 @@
 import interWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext, useRouterState } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { Agentation } from "agentation";
+import { debounce } from "nuqs";
 import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
 import * as React from "react";
 import { Component, type ErrorInfo, type ReactNode } from "react";
@@ -128,7 +129,7 @@ function RootComponent() {
     <RootDocument>
       <ThemeProvider>
         <PatronAuthProvider>
-          <NuqsAdapter>
+          <NuqsAdapter defaultOptions={{ history: "push", limitUrlUpdates: debounce(300) }}>
             <TooltipProvider>
               <div className="flex min-h-screen">
                 <AppSidebar />
@@ -165,7 +166,7 @@ function RootComponent() {
                 </main>
               </div>
               <Toaster />
-              <FeedbackWidget />
+              {import.meta.env.DEV ? <Agentation /> : <FeedbackWidget />}
             </TooltipProvider>
           </NuqsAdapter>
         </PatronAuthProvider>
@@ -199,7 +200,6 @@ function RootDocument({ children, bare = false }: { children: React.ReactNode; b
       >
         <div className="pointer-events-none fixed inset-0 z-0 bg-gradient-to-br from-black/35 to-transparent" />
         <div className="relative z-10">{children}</div>
-        <TanStackRouterDevtools position="bottom-right" />
         <Scripts />
       </body>
     </html>
