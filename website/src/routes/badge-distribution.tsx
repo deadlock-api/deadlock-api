@@ -1,7 +1,7 @@
 import { useQueries } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { parseAsInteger, useQueryState } from "nuqs";
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 
 import BadgeDistributionChart from "~/components/badge-distribution/BadgeDistributionChart";
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
@@ -78,16 +78,26 @@ function BadgeDistributionPage() {
 
   const { isPending, isError, error } = combineQueryStates(badgeDistributionQuery, ranks);
 
+  const rankNames = useMemo(
+    () =>
+      [...(ranks.data ?? [])]
+        .sort((a, b) => a.tier - b.tier)
+        .map((rank) => rank.name)
+        .filter((name): name is string => !!name),
+    [ranks.data],
+  );
+
   return (
     <div className="flex flex-col gap-4">
       <div className="shrink-0 text-center">
         <h1 className="text-3xl font-bold tracking-tight">Deadlock Rank Distribution</h1>
         <p className="mt-1 text-sm text-muted-foreground">Average match rank distribution across all badges</p>
-        <p className="mx-auto mt-2 max-w-3xl text-sm text-muted-foreground">
-          Deadlock ranks climb from Obscurus, Initiate, Seeker, Alchemist, Arcanist, Ritualist, Emissary, Archon,
-          Oracle, Phantom, Ascendant to Eternus, with every rank except Obscurus and Eternus split into 6 subrank
-          badges.
-        </p>
+        {rankNames.length > 1 && (
+          <p className="mx-auto mt-2 max-w-3xl text-sm text-muted-foreground">
+            Deadlock ranks climb from {rankNames.slice(0, -1).join(", ")} to {rankNames.at(-1)}, with every rank except{" "}
+            {rankNames[0]} split into 6 subrank badges.
+          </p>
+        )}
       </div>
       <Filter.Root>
         <Filter.MatchDuration
