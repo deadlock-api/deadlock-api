@@ -42,7 +42,12 @@ import { filterPlayableHeroes, heroesQueryOptions } from "~/queries/asset-querie
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { laneMatchupStatsQueryOptions } from "~/queries/lane-matchup-query";
 import { laneSoulCurveQueryOptions } from "~/queries/lane-soul-curve-query";
-import { type ImportedMatch, matchMetadataQueryOptions, parseImportedMatch } from "~/queries/match-import-query";
+import {
+  type ImportedMatch,
+  matchMetadataQueryOptions,
+  parseImportedMatch,
+  recentMatchesQueryOptions,
+} from "~/queries/match-import-query";
 import { draftCounterStatsQueryOptions, draftSynergyStatsQueryOptions } from "~/queries/team-builder-queries";
 
 const DEFAULT_MIN_RANK = 91;
@@ -248,11 +253,33 @@ function TeamBuilderPage() {
     clearAll();
   };
 
-  const randomComp = () => {
+  const randomHeroes = () => {
     const pool = [...candidates].sort(() => Math.random() - 0.5).slice(0, TEAM_SIZE * 2);
     forgetImport();
     setSide("ally", pool.slice(0, TEAM_SIZE));
     setSide("enemy", pool.slice(TEAM_SIZE));
+  };
+
+  /** Seeds the board from a recently played draft, falling back to a shuffle of the roster. */
+  const randomComp = async () => {
+    setImportError(null);
+    setImporting(true);
+    try {
+      const matches = await queryClient.fetchQuery(recentMatchesQueryOptions);
+      const match = matches[Math.floor(Math.random() * matches.length)];
+      if (match) {
+        const metadata = await queryClient.fetchQuery(matchMetadataQueryOptions(match.match_id));
+        void setSidesSwapped(null);
+        void setImportedMatchId(match.match_id);
+        draftFromMatch(parseImportedMatch(metadata, 0));
+        return;
+      }
+    } catch {
+      // The fallback below still produces a comp.
+    } finally {
+      setImporting(false);
+    }
+    randomHeroes();
   };
 
   const pickInto = (heroId: number) => {
@@ -342,7 +369,12 @@ function TeamBuilderPage() {
                   <SearchIcon className="size-3.5" />
                   Add hero
                 </Button>
-                <Button variant="secondary" className="gap-1.5 rounded-full" onClick={randomComp}>
+                <Button
+                  variant="secondary"
+                  className="gap-1.5 rounded-full"
+                  disabled={importing}
+                  onClick={() => void randomComp()}
+                >
                   <DicesIcon className="size-3.5" />
                   Random comp
                 </Button>

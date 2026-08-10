@@ -104,6 +104,22 @@ async function fetchMatchMetadata(matchId: number): Promise<MatchMetadata> {
   return metadata;
 }
 
+/** Ranked, normal game mode: the only combination the board models a draft for. */
+const RANDOM_MATCH_MODE = 1;
+const RANDOM_GAME_MODE = 1;
+
+/** Matches fetched in the last ten minutes. The endpoint takes no filters, so modes are cut here. */
+export const recentMatchesQueryOptions = queryOptions({
+  queryKey: queryKeys.matches.recentlyFetched(),
+  queryFn: async () => {
+    const response = await api.matches_api.recentlyFetched();
+    return response.data.filter(
+      (match) => match.match_mode === RANDOM_MATCH_MODE && match.game_mode === RANDOM_GAME_MODE,
+    );
+  },
+  staleTime: CACHE_DURATIONS.FIVE_MINUTES,
+});
+
 /**
  * Keyed on the match alone. Which team sits on which side is a view of the same payload, so both
  * orientations share one cache entry and swapping sides never costs a second metadata fetch.

@@ -63,6 +63,7 @@ export const queryKeys = {
   },
   matches: {
     importedDraft: (matchId: number | null) => ["api-imported-draft", matchId] as const,
+    recentlyFetched: () => ["api-recently-fetched-matches"] as const,
   },
   steam: {
     profiles: (batch: number[]) => ["steam-profiles", batch] as const,
