@@ -5,7 +5,7 @@ import { Badge } from "~/components/ui/badge";
 import { useHeroById } from "~/hooks/useAssetById";
 import type { Side, Swap } from "~/lib/team-builder/analysis";
 import { formatPoints } from "~/lib/team-builder/format";
-import { laneOfSlot } from "~/lib/team-builder/lanes";
+import { laneOfSlot, TEAM_NAMES } from "~/lib/team-builder/lanes";
 import { cn } from "~/lib/utils";
 
 import { HeroPortrait } from "./HeroPortrait";
@@ -33,32 +33,27 @@ export interface DraftSlotProps {
 }
 
 /**
- * `gain` belongs to the side that owns the slot, so an enemy suggestion is a loss for the reader and
- * is signed and coloured against them — green everywhere else here means "better for you".
+ * `gain` already reads from the side that owns the slot — `searchSwaps` flips the sign for the enemy
+ * — so it is positive on both sides and printed as it arrives. Negating it again for the enemy made
+ * an upgrade for them read as a loss.
  */
 function SwapHint({ heroId, gain, side, onApply }: { heroId: number; gain: number; side: Side; onApply: () => void }) {
   const { hero } = useHeroById(heroId);
   const ally = side === "ally";
-  const shown = ally ? gain : -gain;
   const label = ally
     ? `Swap to ${hero?.name ?? "this hero"} for ${formatPoints(gain)} predicted win rate`
-    : `Their best upgrade here: ${hero?.name ?? "this hero"}, costing you ${formatPoints(-gain)} predicted win rate`;
+    : `Their best upgrade here: ${hero?.name ?? "this hero"}, worth ${formatPoints(gain)} to their predicted win rate`;
 
   return (
     <Badge
       asChild
       variant="outline"
-      className={cn(
-        "cursor-pointer px-1 py-px text-[10px] font-semibold",
-        ally
-          ? "border-green-400/25 bg-green-400/10 text-green-400 hover:border-green-400/50 hover:bg-green-400/20"
-          : "border-red-400/25 bg-red-400/10 text-red-400 hover:border-red-400/50 hover:bg-red-400/20",
-      )}
+      className="cursor-pointer border-green-400/25 bg-green-400/10 px-1 py-px text-[10px] font-semibold text-green-400 hover:border-green-400/50 hover:bg-green-400/20"
     >
       <button type="button" onClick={onApply} aria-label={label} title={label}>
         <ArrowRightIcon className="size-2.5" />
         <HeroPortrait heroId={heroId} size="size-4" />
-        {formatPoints(shown)}
+        {formatPoints(gain)}
       </button>
     </Badge>
   );
@@ -121,7 +116,7 @@ export function DraftSlot({
       <button
         type="button"
         onClick={onPick}
-        aria-label={`Add hero to ${side === "ally" ? "Amber Hand" : "Sapphire Flame"} ${laneOfSlot(slot).name} lane`}
+        aria-label={`Add hero to ${TEAM_NAMES[side]} ${laneOfSlot(slot).name} lane`}
         {...dropTargetProps}
         className={cn(
           "mx-auto flex cursor-pointer items-center justify-center rounded-full border border-dashed",

@@ -7,8 +7,8 @@ import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/c
 import { Input } from "~/components/ui/input";
 import type { Draft, Side, StatsIndex } from "~/lib/team-builder/analysis";
 import { recommendPicks } from "~/lib/team-builder/analysis";
-import { deltaClass, formatCount, formatPoints, formatRate } from "~/lib/team-builder/format";
-import { laneOfSlot } from "~/lib/team-builder/lanes";
+import { deltaClass, formatPoints, formatRate } from "~/lib/team-builder/format";
+import { laneOfSlot, TEAM_NAMES } from "~/lib/team-builder/lanes";
 import { cn } from "~/lib/utils";
 
 import { DetailDialog } from "./DetailDialog";
@@ -58,7 +58,6 @@ interface HeroPickerDialogProps {
   index: StatsIndex;
   /** The playable roster, already filtered by the page so both rankings share one candidate list. */
   heroes: Hero[];
-  minMatches: number;
   onSelect: (heroId: number) => void;
   onClose: () => void;
 }
@@ -77,7 +76,6 @@ function PickerBody({
   draft,
   index,
   heroes,
-  minMatches,
   onSelect,
 }: Omit<HeroPickerDialogProps, "target" | "onClose"> & { target: PickerTarget }) {
   const [search, setSearch] = useState("");
@@ -105,7 +103,7 @@ function PickerBody({
       draft[side].forEach((heroId, slot) => {
         if (heroId === null) return;
         const own = side === target.side && slot === target.slot;
-        const team = side === "ally" ? "Amber Hand" : "Sapphire Flame";
+        const team = TEAM_NAMES[side];
         map.set(heroId, own ? "in this slot" : `${team} · ${laneOfSlot(slot).name}`);
       });
     }
@@ -159,7 +157,7 @@ function PickerBody({
           className="h-7 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
         />
         <Badge variant="outline" className="text-[11px] text-muted-foreground">
-          {target.side === "ally" ? "Amber Hand" : "Sapphire Flame"} · {lane.name}
+          {TEAM_NAMES[target.side]} · {lane.name}
         </Badge>
       </DialogHeader>
 
@@ -196,9 +194,6 @@ function PickerBody({
             <span className="flex flex-1 items-center gap-2.5">
               <HeroPortrait heroId={row.heroId} size="size-7.5" />
               {namesById.get(row.heroId) ?? "Unknown"}
-              {row.matches < minMatches && (
-                <span className="text-[11px] text-muted-foreground">{formatCount(row.matches)} matches</span>
-              )}
             </span>
             <span className={cn("w-20 text-right font-semibold tabular-nums", deltaClass(row.synergy))}>
               {formatPoints(row.synergy)}

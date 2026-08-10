@@ -2,7 +2,7 @@ import { ChartNoAxesGanttIcon, ListIcon } from "lucide-react";
 import { useState } from "react";
 
 import { HeroName } from "~/components/HeroName";
-import type { PairRow, StatsIndex } from "~/lib/team-builder/analysis";
+import type { PairRow, Side, StatsIndex } from "~/lib/team-builder/analysis";
 import { formatCount, formatRate } from "~/lib/team-builder/format";
 import { cn } from "~/lib/utils";
 
@@ -11,6 +11,7 @@ import { HeroPortrait } from "./HeroPortrait";
 import { PairsChart } from "./PairsChart";
 import { PairTooltip } from "./PairTooltip";
 import { Panel, PanelHeader, PanelMessage, PanelShowMore, PanelSkeleton, PanelViewToggle } from "./Panel";
+import { SideToggle } from "./SideToggle";
 
 /** How many of the 15 pairings show before the list has to be expanded. */
 const COLLAPSED_ROWS = 8;
@@ -23,19 +24,23 @@ const COLLAPSED_ROWS = 8;
 const COLUMNS = "grid grid-cols-[3.5rem_minmax(5rem,1fr)_3rem_3.5rem_3rem] items-center gap-x-2 px-3";
 
 interface PairsPanelProps {
-  pairs: PairRow[];
+  allyPairs: PairRow[];
+  enemyPairs: PairRow[];
   index: StatsIndex;
   loading: boolean;
   onOpen: (pair: PairRow) => void;
 }
 
-export function PairsPanel({ pairs, index, loading, onOpen }: PairsPanelProps) {
+export function PairsPanel({ allyPairs, enemyPairs, index, loading, onOpen }: PairsPanelProps) {
   const [expanded, setExpanded] = useState(false);
   const [view, setView] = useState<"list" | "chart">("list");
+  const [side, setSide] = useState<Side>("ally");
+  const pairs = side === "ally" ? allyPairs : enemyPairs;
   const visible = expanded ? pairs : pairs.slice(0, COLLAPSED_ROWS);
   return (
     <Panel>
-      <PanelHeader title="Pairs in your team" note={loading ? undefined : `${pairs.length} combos`}>
+      <PanelHeader title="Pairs">
+        <SideToggle side={side} onChange={setSide} />
         <PanelViewToggle
           value={view}
           onChange={setView}
@@ -48,7 +53,9 @@ export function PairsPanel({ pairs, index, loading, onOpen }: PairsPanelProps) {
       {loading ? (
         <PanelSkeleton rows={6} />
       ) : pairs.length === 0 ? (
-        <PanelMessage>Pick at least two heroes on your side to compare pairings.</PanelMessage>
+        <PanelMessage>
+          Pick at least two heroes on {side === "ally" ? "your side" : "their side"} to compare pairings.
+        </PanelMessage>
       ) : view === "chart" ? (
         <PairsChart pairs={pairs} index={index} onOpen={onOpen} />
       ) : (

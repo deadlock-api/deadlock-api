@@ -12,21 +12,12 @@ export function Panel({ children, className }: { children: React.ReactNode; clas
   return <Card className={cn("min-w-0 gap-0 overflow-hidden py-0", className)}>{children}</Card>;
 }
 
-export function PanelHeader({
-  title,
-  note,
-  children,
-}: {
-  title: string;
-  note?: React.ReactNode;
-  children?: React.ReactNode;
-}) {
+export function PanelHeader({ title, children }: { title: string; children?: React.ReactNode }) {
   return (
     // `min-h-12`, not a fixed height: a wrapped title would overflow and be cut by the card's
-    // own `overflow-hidden`.
-    <div className="flex min-h-12 shrink-0 items-center justify-between gap-x-3 border-b border-border px-4 py-2">
+    // own `overflow-hidden`. `@container` lets controls inside decide what they have room for.
+    <div className="@container flex min-h-12 shrink-0 items-center justify-between gap-x-3 border-b border-border px-4 py-2">
       <span className="truncate text-sm font-semibold sm:text-[15px]">{title}</span>
-      {note !== undefined && <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground">{note}</span>}
       {children}
     </div>
   );

@@ -1,30 +1,60 @@
-import { useQuery } from "@tanstack/react-query";
 import { Fragment } from "react";
 
 import { HeroName } from "~/components/HeroName";
-import type { MatchupCell, StatsIndex } from "~/lib/team-builder/analysis";
-import { deltaClass, formatCount, formatPoints, formatRate, heatBackground, NO_DATA } from "~/lib/team-builder/format";
+import { type MatchupCell, mean, type StatsIndex } from "~/lib/team-builder/analysis";
+import {
+  compactNumber,
+  deltaClass,
+  formatCount,
+  formatPoints,
+  formatRate,
+  heatBackground,
+} from "~/lib/team-builder/format";
 import { cn } from "~/lib/utils";
-import { heroesQueryOptions } from "~/queries/asset-queries";
 
 import { DeltaValue } from "./DeltaBar";
 import { HeroPortrait } from "./HeroPortrait";
 import { HeroTooltip, StatTooltip } from "./StatTooltip";
 
-/**
- * `matrix` is the full draft grid, which stretches to fill the panel it shares with the prediction.
- * `duel` is the four-cell lane close-up, which is small enough to print each sample underneath.
- */
+/** `matrix` is the full draft grid; `duel` is the four-cell lane close-up in a third-width card. */
 const VARIANTS = {
-  matrix: { cellHeight: "h-full min-h-9 max-h-16", showCounts: false, fill: true, decimals: 1 },
-  duel: { cellHeight: "h-14", showCounts: true, fill: false, decimals: 1 },
+  matrix: {
+    // Squaring off is handled by capping the grid, not the cell: a cap here would leave the cell
+    // centred in a taller row and reopen the gaps between cells.
+    cell: "h-full w-full",
+    fill: true,
+    portrait: "size-8",
+    /** Widths of the leading portrait column and the trailing average column. */
+    track: { head: "2.75rem", avg: "2.5rem" },
+    /** Height in rem of the header and average rows, which the square cap has to leave room for. */
+    cap: 4.25,
+    showCounts: true,
+  },
+  duel: {
+    cell: "aspect-square w-full",
+    fill: false,
+    cap: undefined,
+    portrait: "size-6",
+    track: { head: "2.25rem", avg: "1.75rem" },
+    showCounts: false,
+  },
 } as const;
 
-/** A signed value at the precision a cell has room for. */
-function cellPoints(value: number | undefined, decimals: number): string {
-  if (value === undefined || !Number.isFinite(value)) return NO_DATA;
-  return `${value >= 0 ? "+" : ""}${value.toFixed(decimals)}`;
-}
+/**
+ * Rules separating the margins from the body. The clearance is a real grid track rather than a
+ * margin on the cells: the duel cells are `aspect-square`, so narrowing the last column would have
+ * shortened it too. Every cell along a rule has to carry it, or the line breaks where it crosses.
+ */
+const RULE_GAP = "0.375rem";
+const RULE_BOX = "flex items-center justify-center self-stretch";
+const COLUMN_RULE = `${RULE_BOX} border-l border-white/25`;
+const ROW_RULE = `${RULE_BOX} border-t border-white/25`;
+
+/** The tenth is dropped from ten points up: four characters is all a square cell fits. */
+const gridPoints = (value: number | undefined) => formatPoints(value, Math.abs(value ?? 0) >= 10 ? 0 : 1);
+
+/** An unsampled matchup prints a dash: `0` would read as a measurement rather than the absence of one. */
+const compactCount = (matches: number) => (matches > 0 ? compactNumber(matches) : "—");
 
 interface MatchupGridProps {
   /** Ally rows by enemy columns; the heroes on both axes are read back off the cells. */
@@ -32,10 +62,16 @@ interface MatchupGridProps {
   index: StatsIndex;
   /** Points of edge that saturate the colour ramp. */
   scale: number;
-  /** Optional trailing column, one value per row. */
-  averages?: (number | undefined)[];
+  /**
+   * Per-column averages, which turn on the trailing average row and column as a whole; the row
+   * averages and the corner are derived from the cells.
+   *
+   * Stated from the *column* hero's own side — the opposite direction to the cells and to the row
+   * averages — so green here means that column's hero is winning, while green in a cell means the
+   * ally row is.
+   */
+  columnMargins?: (number | undefined)[];
   variant: keyof typeof VARIANTS;
-  onSelect?: (cell: MatchupCell) => void;
 }
 
 function GridCell({
@@ -43,20 +79,13 @@ function GridCell({
   index,
   scale,
   showCounts,
-  cellHeight,
-  decimals,
-  nameOf,
-  onSelect,
+  cellClass,
 }: {
   cell: MatchupCell;
   index: StatsIndex;
   scale: number;
   showCounts: boolean;
-  cellHeight: string;
-  decimals: number;
-  /** Resolved once for the whole grid, so 36 cells do not each subscribe to the hero roster. */
-  nameOf: (heroId: number) => string;
-  onSelect?: (cell: MatchupCell) => void;
+  cellClass: string;
 }) {
   // The styling lives on the trigger element itself: a `display: contents` wrapper has no box, so
   // Radix could not measure it and parked the card in the page corner.
@@ -64,21 +93,9 @@ function GridCell({
   // Text stays neutral: the fill already carries sign and magnitude, and matching its hue put the
   // strongest cells around 3.3:1.
   const className = cn(
-    "flex flex-col items-center justify-center gap-0.5 rounded-md text-[11px] font-semibold tabular-nums",
-    onSelect ? "cursor-pointer transition-transform hover:scale-105" : "cursor-default",
+    "flex cursor-default flex-col items-center justify-center gap-0.5 text-[11px] font-semibold tabular-nums",
     cell.edge === undefined ? "text-muted-foreground" : "text-foreground",
-    cellHeight,
-  );
-  const style = { background: heatBackground(cell.edge, scale) };
-  const body = (
-    <>
-      <span className={showCounts ? "text-sm font-bold" : undefined}>{cellPoints(cell.edge, decimals)}</span>
-      {showCounts && (
-        <span className="text-[10px] font-normal text-muted-foreground">
-          {cell.matches > 0 ? `${formatCount(cell.matches)} games` : "no data"}
-        </span>
-      )}
-    </>
+    cellClass,
   );
 
   return (
@@ -97,56 +114,67 @@ function GridCell({
         { label: "Matches", value: formatCount(cell.matches) },
       ]}
     >
-      {onSelect ? (
-        // Labelled: the visible content is a bare number, and the heroes it relates are carried
-        // only by the portraits heading its row and column.
-        <button
-          type="button"
-          onClick={() => onSelect(cell)}
-          aria-label={`${nameOf(cell.hero)} versus ${nameOf(cell.enemy)}: ${formatPoints(cell.edge)} win-rate points`}
-          className={className}
-          style={style}
-        >
-          {body}
-        </button>
-      ) : (
-        <div className={className} style={style}>
-          {body}
-        </div>
-      )}
+      <div className={className} style={{ background: heatBackground(cell.edge, scale) }}>
+        <span>{gridPoints(cell.edge)}</span>
+        {showCounts && (
+          <span className="text-[9px] leading-none font-normal text-muted-foreground">
+            {compactCount(cell.matches)}
+          </span>
+        )}
+      </div>
     </StatTooltip>
   );
 }
 
 /** The ally-rows by enemy-columns heat grid, shared by the counter matrix and the lane deep dive. */
-export function MatchupGrid({ cells, index, scale, averages, variant, onSelect }: MatchupGridProps) {
-  const { cellHeight, showCounts, fill, decimals } = VARIANTS[variant];
-  const { data: heroes } = useQuery(heroesQueryOptions);
-  const nameOf = (heroId: number) => heroes?.find((hero) => hero.id === heroId)?.name ?? "Unknown hero";
+export function MatchupGrid({ cells, index, scale, columnMargins, variant }: MatchupGridProps) {
+  const { cell: cellClass, cap, fill, portrait, track, showCounts } = VARIANTS[variant];
   const columns = cells[0]?.map((cell) => cell.enemy) ?? [];
-  const template = `2rem repeat(${columns.length}, minmax(0, 1fr))${averages ? " 2.5rem" : ""}`;
-  const rowTemplate = fill ? `auto repeat(${cells.length}, minmax(0, 1fr))` : undefined;
+  const margins = columnMargins && {
+    columns: columnMargins,
+    rows: cells.map((row) => mean(row.map((cell) => cell.edge))),
+    corner: mean(cells.flat().map((cell) => cell.edge)),
+  };
+  const template = `${track.head} repeat(${columns.length}, minmax(0, 1fr))${margins ? ` ${RULE_GAP} ${track.avg}` : ""}`;
+  const rowTemplate = fill
+    ? `auto repeat(${cells.length}, minmax(0, 1fr))${margins ? ` ${RULE_GAP} auto` : ""}`
+    : undefined;
+  /**
+   * Stops a row growing past its own column width. `cqw` is the only place the column width can be
+   * derived from, so the caller has to establish a `@container` for it to measure.
+   */
+  const maxHeight =
+    cap && margins && columns.length > 0
+      ? `calc(${cells.length} * (100cqw - ${track.head} - ${RULE_GAP} - ${track.avg}) / ${columns.length} + ${cap}rem)`
+      : undefined;
 
   return (
     <div
-      className={cn("grid items-center gap-1", fill && "h-full")}
-      style={{ gridTemplateColumns: template, gridTemplateRows: rowTemplate }}
+      className={cn("grid items-center", fill && "h-full")}
+      style={{ gridTemplateColumns: template, gridTemplateRows: rowTemplate, maxHeight }}
     >
       <div />
       {columns.map((enemy) => (
-        <div key={enemy} className="flex justify-center pb-1">
+        <div key={enemy} className="flex justify-center pb-1.5">
           <HeroTooltip heroId={enemy} index={index}>
-            <HeroPortrait heroId={enemy} size="size-8" />
+            <HeroPortrait heroId={enemy} size={portrait} />
           </HeroTooltip>
         </div>
       ))}
-      {averages && <div className="pb-1 text-center text-[11px] text-muted-foreground">Avg</div>}
+      {margins && (
+        <>
+          <div />
+          <div className={cn("pb-1.5 text-[11px] text-muted-foreground", COLUMN_RULE)}>Avg</div>
+        </>
+      )}
 
       {cells.map((row, rowIndex) => (
         <Fragment key={row[0].hero}>
-          <HeroTooltip heroId={row[0].hero} index={index}>
-            <HeroPortrait heroId={row[0].hero} size="size-8" />
-          </HeroTooltip>
+          <div className="flex justify-center pr-1.5">
+            <HeroTooltip heroId={row[0].hero} index={index}>
+              <HeroPortrait heroId={row[0].hero} size={portrait} />
+            </HeroTooltip>
+          </div>
           {row.map((cell) => (
             <GridCell
               key={cell.enemy}
@@ -154,46 +182,79 @@ export function MatchupGrid({ cells, index, scale, averages, variant, onSelect }
               index={index}
               scale={scale}
               showCounts={showCounts}
-              cellHeight={cellHeight}
-              decimals={decimals}
-              nameOf={nameOf}
-              onSelect={onSelect}
+              cellClass={cellClass}
             />
           ))}
-          {averages && (
-            <StatTooltip
-              title="Average edge"
-              rows={[
-                { label: "Edge", value: formatPoints(averages[rowIndex]), className: deltaClass(averages[rowIndex]) },
-                { label: "Matchups", value: String(row.length) },
-              ]}
-            >
-              <DeltaValue value={averages[rowIndex]} className="block cursor-default text-center text-xs font-bold" />
-            </StatTooltip>
+          {margins && (
+            <>
+              <div />
+              <StatTooltip
+                title="Average edge"
+                rows={[
+                  {
+                    label: "Edge",
+                    value: formatPoints(margins.rows[rowIndex]),
+                    className: deltaClass(margins.rows[rowIndex]),
+                  },
+                  { label: "Matchups", value: String(row.length) },
+                ]}
+              >
+                <DeltaValue
+                  value={margins.rows[rowIndex]}
+                  format={gridPoints}
+                  className={cn("cursor-default text-xs font-bold", COLUMN_RULE)}
+                />
+              </StatTooltip>
+            </>
           )}
         </Fragment>
       ))}
-    </div>
-  );
-}
 
-/** The legend that explains the grid's colour ramp. */
-export function MatchupLegend({ scale }: { scale: number }) {
-  return (
-    <div className="mt-4 flex flex-wrap items-center gap-2.5 border-t border-border pt-3.5 text-[11px] text-muted-foreground">
-      <span>−{scale}</span>
-      {/* Painted by the same function as the cells: fills top out at 40% alpha, so a full-saturation
-          gradient could not be used to read a cell back to a value. */}
-      <div className="flex h-2.5 min-w-20 flex-1 overflow-hidden rounded-full">
-        {Array.from({ length: 11 }, (_, i) => (
-          <div key={i} className="flex-1" style={{ background: heatBackground((scale * (i - 5)) / 5, scale) }} />
-        ))}
-      </div>
-      <span>+{scale}</span>
-      <span className="inline-flex items-center gap-1">
-        <span className="size-2.5 rounded-[2px]" style={{ background: heatBackground(undefined, scale) }} />
-        no data
-      </span>
+      {margins && (
+        <>
+          {/* The spacer row. Its cell in the average column still draws the vertical rule, so the
+              line runs unbroken into the corner. */}
+          <div style={{ height: RULE_GAP }} />
+          {columns.map((enemy) => (
+            <div key={`vgap-${enemy}`} />
+          ))}
+          <div />
+          <div className={COLUMN_RULE} />
+
+          <div className={cn("pt-1.5 text-[11px] text-muted-foreground", ROW_RULE)}>Avg</div>
+          {margins.columns.map((value, columnIndex) => (
+            <StatTooltip
+              key={columns[columnIndex]}
+              title={<HeroName heroId={columns[columnIndex]} />}
+              rows={[
+                { label: "Own edge in this lane", value: formatPoints(value) },
+                { label: "Measured from", value: "their side" },
+                { label: "Matchups", value: String(cells.length) },
+              ]}
+            >
+              <DeltaValue
+                value={value}
+                format={gridPoints}
+                className={cn("cursor-default pt-1.5 text-xs font-bold", ROW_RULE)}
+              />
+            </StatTooltip>
+          ))}
+          <div className={ROW_RULE} />
+          <StatTooltip
+            title="Whole matchup"
+            rows={[
+              { label: "Edge", value: formatPoints(margins.corner), className: deltaClass(margins.corner) },
+              { label: "Matchups", value: String(cells.length * columns.length) },
+            ]}
+          >
+            <DeltaValue
+              value={margins.corner}
+              format={gridPoints}
+              className={cn("cursor-default pt-1.5 text-xs font-bold", COLUMN_RULE, ROW_RULE)}
+            />
+          </StatTooltip>
+        </>
+      )}
     </div>
   );
 }

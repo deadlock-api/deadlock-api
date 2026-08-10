@@ -51,9 +51,6 @@ export function PairsChart({
 
   return (
     <div className="p-4">
-      <p className="mb-2 text-xs text-muted-foreground">
-        Win-rate points each pairing wins above what its two heroes win apart.
-      </p>
       <div className="space-y-0.5">
         {pairs.map((pair) => (
           <PairBar key={`${pair.a}-${pair.b}`} pair={pair} index={index} scale={scale} onOpen={onOpen} />

@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { ShieldIcon, SwordsIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
@@ -14,9 +13,8 @@ import {
   formatPoints,
   MAX_CONFIDENCE_PIPS,
   NO_DATA,
-  roundToSum,
 } from "~/lib/team-builder/format";
-import { LANES, slotsOfLane } from "~/lib/team-builder/lanes";
+import { LANES, slotsOfLane, TEAM_NAMES } from "~/lib/team-builder/lanes";
 import { cn } from "~/lib/utils";
 import type { ImportedMatch } from "~/queries/match-import-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -25,6 +23,7 @@ import { DeltaValue } from "./DeltaBar";
 import { DraftSlot, type SlotRef } from "./DraftSlot";
 import { LaneSwapBanner } from "./LaneSwapBanner";
 import { StatTooltip } from "./StatTooltip";
+import { TeamEmblem } from "./TeamEmblem";
 
 function pipColor(filledPips: number): string {
   if (filledPips >= 4) return "bg-green-400";
@@ -85,15 +84,14 @@ interface DraftBoardProps {
 
 function SideHeader({ side, badge }: { side: Side; badge?: number }) {
   const ally = side === "ally";
-  const Icon = ally ? ShieldIcon : SwordsIcon;
   // `/v1/matches/{id}/metadata` reports the badge per team, not per player, so it belongs here.
   const { data: ranks = [] } = useQuery({ ...ranksQueryOptions, enabled: badge !== undefined });
 
   return (
     <div className={cn("mb-2 flex items-center gap-2", !ally && "flex-row-reverse")}>
-      <Icon className={cn("size-3.5", ally ? "text-green-400" : "text-primary")} />
+      <TeamEmblem side={side} className={cn("size-7", ally ? "text-green-400" : "text-primary")} />
       <span className={cn("text-[13px] font-semibold", ally ? "text-green-400" : "text-primary")}>
-        {ally ? "Amber Hand" : "Sapphire Flame"}
+        {TEAM_NAMES[side]}
       </span>
       {badge !== undefined && ranks.length > 0 && (
         <BadgeImage badge={badge} ranks={ranks} className="size-5" title="Team average rank" />
@@ -120,15 +118,8 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
     return accountId === undefined ? undefined : profiles[accountId]?.personaname;
   };
 
-  const { predicted, margin, contributions } = analysis;
+  const { margin } = analysis;
   const decimals = margin !== undefined && margin > COARSE_MARGIN ? 0 : 1;
-  // An undefined term prints `n/a` and contributes nothing to the sum the total has to match.
-  const displayValues = useMemo(() => {
-    if (predicted === undefined) return contributions.map((c) => c.value);
-    const known = contributions.map((c) => c.value ?? 0);
-    const adjusted = roundToSum(known, predicted - 50);
-    return contributions.map((c, i) => (c.value === undefined ? undefined : adjusted[i]));
-  }, [contributions, predicted]);
 
   const renderSide = (side: Side) => {
     const laneSuggestion = laneSuggestions[side];
@@ -231,9 +222,8 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
             )}
 
             <div className="mt-2 w-64 space-y-2 border-t border-border pt-2.5">
-              {analysis.contributions.map((contribution, i) => {
+              {analysis.contributions.map((contribution) => {
                 const filledPips = confidencePips(contribution.matches);
-                const shown = displayValues[i];
                 return (
                   <StatTooltip
                     key={contribution.key}
@@ -244,15 +234,15 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
                         value: formatPoints(contribution.value),
                         className: deltaClass(contribution.value),
                       },
+                      { label: TEAM_NAMES.ally, value: formatPoints(contribution.ally) },
+                      { label: TEAM_NAMES.enemy, value: formatPoints(contribution.enemy) },
                       { label: "Thinnest sample", value: formatCount(contribution.matches) },
                       { label: "Confidence", value: `${filledPips} of ${MAX_CONFIDENCE_PIPS}` },
                     ]}
                   >
                     {/* A button so Radix opens the card on focus, not just on hover. */}
                     <button type="button" className="flex w-full cursor-default items-center gap-2 text-[11px]">
-                      <span className="min-w-0 flex-1 truncate text-left text-muted-foreground">
-                        {contribution.label}
-                      </span>
+                      <span className="flex-1 text-left text-muted-foreground">{contribution.label}</span>
                       <span className="flex shrink-0 gap-0.5" aria-hidden="true">
                         {Array.from({ length: MAX_CONFIDENCE_PIPS }, (_, pip) => (
                           <span
@@ -264,7 +254,16 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
                           />
                         ))}
                       </span>
-                      <DeltaValue value={shown} className="w-10 shrink-0 text-right font-semibold" />
+                      {/* Fixed tracks: a wider number would push the pips left and leave the four
+                          rows' meters out of line with each other. */}
+                      <span className="flex shrink-0 items-center gap-2 text-[11px] font-semibold">
+                        {(["ally", "enemy"] as const).map((side) => (
+                          <span key={side} className="flex w-12 items-center gap-1">
+                            <TeamEmblem side={side} className="size-3 shrink-0 text-muted-foreground" />
+                            <DeltaValue value={contribution[side]} className="flex-1 text-right" />
+                          </span>
+                        ))}
+                      </span>
                     </button>
                   </StatTooltip>
                 );

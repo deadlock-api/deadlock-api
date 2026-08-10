@@ -23,3 +23,10 @@ export function laneOfSlot(slot: number): LaneInfo {
 export function slotsOfLane(laneIndex: number): number[] {
   return Array.from({ length: SLOTS_PER_LANE }, (_, i) => laneIndex * SLOTS_PER_LANE + i);
 }
+
+/**
+ * The faction each side plays for. Renamed in the Old Gods, New Blood update: what the game called
+ * The Amber Hand and The Sapphire Flame are now The Hidden King and The Archmother.
+ * See <https://deadlock.wiki/Teams>.
+ */
+export const TEAM_NAMES = { ally: "The Hidden King", enemy: "The Archmother" } as const;

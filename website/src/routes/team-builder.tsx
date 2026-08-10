@@ -14,9 +14,7 @@ import { DetailDialog } from "~/components/team-builder/DetailDialog";
 import { DraftBoard } from "~/components/team-builder/DraftBoard";
 import { HeroPickerDialog, type PickerTarget } from "~/components/team-builder/HeroPickerDialog";
 import { LaneCards } from "~/components/team-builder/LaneCards";
-import { LaneDetailBody } from "~/components/team-builder/LaneDetailDialog";
 import { MatchImportControl } from "~/components/team-builder/MatchImportControl";
-import { MatchupDetailBody } from "~/components/team-builder/MatchupDetailDialog";
 import { NextPickPanel } from "~/components/team-builder/NextPickPanel";
 import { PairDetailBody } from "~/components/team-builder/PairDetailDialog";
 import { PairsPanel } from "~/components/team-builder/PairsPanel";
@@ -30,21 +28,20 @@ import { seo } from "~/lib/seo";
 import {
   analyzeDraft,
   filled,
-  type LaneRow,
-  type MatchupCell,
   type PairRow,
   rankSwaps,
   recommendPicks,
   type Side,
+  SoulCurves,
   StatsIndex,
   type Swap,
   suggestLaneAssignment,
-  suggestSwaps,
 } from "~/lib/team-builder/analysis";
 import { TEAM_SIZE } from "~/lib/team-builder/lanes";
 import { filterPlayableHeroes, heroesQueryOptions } from "~/queries/asset-queries";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { laneMatchupStatsQueryOptions } from "~/queries/lane-matchup-query";
+import { laneSoulCurveQueryOptions } from "~/queries/lane-soul-curve-query";
 import { type ImportedMatch, matchMetadataQueryOptions, parseImportedMatch } from "~/queries/match-import-query";
 import { draftCounterStatsQueryOptions, draftSynergyStatsQueryOptions } from "~/queries/team-builder-queries";
 
@@ -78,16 +75,11 @@ function TeamBuilderPage() {
   const [matchMode, setMatchMode] = useQueryState("match_mode", parseAsMatchMode);
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(DEFAULT_MIN_RANK));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(DEFAULT_MAX_RANK));
-  // 20, not the 500 a hero-level stat would use: these are per-*pairing* samples, and on a single
-  // patch at a narrow rank band even the most common duo only reaches a few hundred games.
-  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(20));
   const { startDate, endDate, handleDateChange } = useDateRangeState();
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
 
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null);
   const [pairDetail, setPairDetail] = useState<PairRow | null>(null);
-  const [laneDetail, setLaneDetail] = useState<LaneRow | null>(null);
-  const [matchupDetail, setMatchupDetail] = useState<MatchupCell | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
 
@@ -104,10 +96,7 @@ function TeamBuilderPage() {
 
   // Synergy and counters are read lane-agnostically; the lane endpoint is what supplies the
   // laning-phase term, so the three model inputs stay independent of one another.
-  //
-  // The Min Matches filter gates the stats themselves, not just the recommendation list: a pairing
-  // under the threshold is dropped server-side so it can never move the prediction.
-  const matrixParams = { ...sharedFilters, sameLaneFilter: false, minMatches: minMatches || 1 };
+  const matrixParams = { ...sharedFilters, sameLaneFilter: false, minMatches: 1 };
   const laneCounterParams: AnalyticsApiHeroCountersStatsRequest = { ...matrixParams, sameLaneFilter: true };
 
   const [heroesQuery, heroStatsQuery, synergyQuery, counterQuery, laneCounterQuery] = useQueries({
@@ -131,39 +120,51 @@ function TeamBuilderPage() {
   const enemyHeroes = filled(draft.enemy);
   // The endpoint filters by set membership, so sorting keeps a pure lane reshuffle on the same
   // cache entry instead of refetching identical rows under a new key.
-  const laneQuery = useQuery(
-    laneMatchupStatsQueryOptions({
-      ...sharedFilters,
-      heroIds: [...allyHeroes].sort((a, b) => a - b),
-      enemyHeroIds: [...enemyHeroes].sort((a, b) => a - b),
-      minMatches: 1,
-    }),
-  );
+  const laneParams = {
+    ...sharedFilters,
+    heroIds: [...allyHeroes].sort((a, b) => a - b),
+    enemyHeroIds: [...enemyHeroes].sort((a, b) => a - b),
+    minMatches: 1,
+  };
+  const laneQuery = useQuery(laneMatchupStatsQueryOptions(laneParams));
+  const soulCurveQuery = useQuery(laneSoulCurveQueryOptions(laneParams));
 
   const index = useMemo(
     () =>
       new StatsIndex(heroStatsQuery.data, synergyQuery.data, counterQuery.data, laneCounterQuery.data, laneQuery.data),
     [heroStatsQuery.data, synergyQuery.data, counterQuery.data, laneCounterQuery.data, laneQuery.data],
   );
+  const soulCurves = useMemo(() => new SoulCurves(soulCurveQuery.data), [soulCurveQuery.data]);
 
   const playableHeroes = useMemo(() => filterPlayableHeroes(heroesQuery.data ?? []), [heroesQuery.data]);
   const candidates = useMemo(() => playableHeroes.map((hero) => hero.id), [playableHeroes]);
 
   const analysis = useMemo(() => analyzeDraft(draft, index), [draft, index]);
   const recommendations = useMemo(
-    () => recommendPicks(draft, index, "ally", candidates, minMatches),
-    [draft, index, candidates, minMatches],
+    () => ({
+      ally: recommendPicks(draft, index, "ally", candidates),
+      enemy: recommendPicks(draft, index, "enemy", candidates),
+    }),
+    [draft, index, candidates],
   );
-  const allySwaps = useMemo(() => rankSwaps(draft, index, "ally", candidates), [draft, index, candidates]);
+  const rankedSwaps = useMemo(
+    () => ({
+      ally: rankSwaps(draft, index, "ally", candidates),
+      enemy: rankSwaps(draft, index, "enemy", candidates),
+    }),
+    [draft, index, candidates],
+  );
+  // `rankedSwaps` is already sorted by gain, so the first entry seen for a slot is that slot's best.
+  // Searching again here would double the heaviest recompute on the page for the same answer.
   const swapsBySlot = useMemo(() => {
     const bySide: Record<Side, Map<number, Swap>> = { ally: new Map(), enemy: new Map() };
     for (const side of ["ally", "enemy"] as const) {
-      for (const swap of suggestSwaps(draft, index, side, candidates)) {
-        bySide[side].set(swap.slot, swap);
+      for (const swap of rankedSwaps[side]) {
+        if (!bySide[side].has(swap.slot)) bySide[side].set(swap.slot, swap);
       }
     }
     return bySide;
-  }, [draft, index, candidates]);
+  }, [rankedSwaps]);
 
   const laneSuggestions = useMemo(
     () => ({
@@ -285,7 +286,6 @@ function TeamBuilderPage() {
           }}
         />
         <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
-        <Filter.MinMatches value={minMatches} onChange={setMinMatches} label="Min Matches" step={10} min={0} />
         <MatchImportControl
           matchId={importedMatchId}
           isLoading={importQuery.isFetching || importing}
@@ -350,7 +350,13 @@ function TeamBuilderPage() {
             </Panel>
           ) : (
             <>
-              <LaneCards lanes={analysis.lanes} index={index} loading={isPending} onOpen={setLaneDetail} />
+              <LaneCards
+                lanes={analysis.lanes}
+                index={index}
+                loading={isPending}
+                soulCurves={soulCurves}
+                curveLoading={soulCurveQuery.isFetching}
+              />
 
               {incompleteLanes > 0 && (
                 <Alert className="border-primary/25 bg-primary/[0.06] [&>svg]:text-primary">
@@ -368,19 +374,25 @@ function TeamBuilderPage() {
               <div className="grid gap-3 lg:grid-cols-2 2xl:auto-rows-fr 2xl:grid-cols-3">
                 <NextPickPanel
                   recommendations={recommendations}
-                  swaps={allySwaps}
-                  hasOpenSlot={nextOpenSlot("ally") !== null}
+                  swaps={rankedSwaps}
+                  hasOpenSlot={{ ally: nextOpenSlot("ally") !== null, enemy: nextOpenSlot("enemy") !== null }}
                   loading={isPending}
-                  onPick={(heroId) => {
-                    const slot = nextOpenSlot("ally");
-                    if (slot !== null) setSlot("ally", slot, heroId);
+                  onPick={(side, heroId) => {
+                    const slot = nextOpenSlot(side);
+                    if (slot !== null) setSlot(side, slot, heroId);
                   }}
-                  onApplySwap={(swap) => setSlot("ally", swap.slot, swap.in)}
+                  onApplySwap={(side, swap) => setSlot(side, swap.slot, swap.in)}
                 />
 
-                <PairsPanel pairs={analysis.allyPairs} index={index} loading={isPending} onOpen={setPairDetail} />
+                <PairsPanel
+                  allyPairs={analysis.allyPairs}
+                  enemyPairs={analysis.enemyPairs}
+                  index={index}
+                  loading={isPending}
+                  onOpen={setPairDetail}
+                />
 
-                <CounterMatrix analysis={analysis} index={index} loading={isPending} onOpen={setMatchupDetail} />
+                <CounterMatrix analysis={analysis} index={index} loading={isPending} />
               </div>
             </>
           )}
@@ -392,18 +404,11 @@ function TeamBuilderPage() {
         draft={draft}
         index={index}
         heroes={playableHeroes}
-        minMatches={minMatches}
         onSelect={pickInto}
         onClose={() => setPickerTarget(null)}
       />
       <DetailDialog value={pairDetail} onClose={() => setPairDetail(null)}>
         {(pair) => <PairDetailBody pair={pair} analysis={analysis} index={index} filterSummary={filterSummary} />}
-      </DetailDialog>
-      <DetailDialog value={laneDetail} onClose={() => setLaneDetail(null)}>
-        {(lane) => <LaneDetailBody lane={lane} index={index} filterSummary={filterSummary} />}
-      </DetailDialog>
-      <DetailDialog value={matchupDetail} onClose={() => setMatchupDetail(null)}>
-        {(cell) => <MatchupDetailBody cell={cell} index={index} filterSummary={filterSummary} />}
       </DetailDialog>
     </div>
   );

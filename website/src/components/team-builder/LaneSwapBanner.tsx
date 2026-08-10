@@ -73,7 +73,7 @@ export function LaneSwapBanner({ suggestion, side, onApply }: LaneSwapBannerProp
           ally ? "group-hover:text-green-400" : "group-hover:text-red-400",
         )}
       >
-        {ally ? "Apply" : "Apply for them"}
+        Apply
       </span>
     </button>
   );

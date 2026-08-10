@@ -1,4 +1,10 @@
-import type { AnalyticsHeroStats, HeroCounterStats, HeroSynergyStats, LaneMatchupStats } from "deadlock_api_client";
+import type {
+  AnalyticsHeroStats,
+  HeroCounterStats,
+  HeroSynergyStats,
+  LaneMatchupStats,
+  LaneSoulCurve,
+} from "deadlock_api_client";
 
 import { LANES, type LaneInfo, laneOfSlot, slotsOfLane, TEAM_SIZE } from "./lanes";
 
@@ -18,6 +24,23 @@ export interface Sample {
   matches: number;
 }
 
+/** Mean souls the ally duo led by, `timeS` seconds into the match, with the band around that mean. */
+export interface LaneSoulPoint {
+  timeS: number;
+  diff: number;
+  /** 95% confidence bounds on `diff`. */
+  lo: number;
+  hi: number;
+}
+
+/**
+ * Half-width of the 95% interval around a mean of `matches` samples with population deviation `std`.
+ *
+ * The band belongs on the *mean*, so it is the standard error rather than the raw deviation: souls
+ * scatter by thousands between games, which says nothing about how well this average is pinned down.
+ */
+const meanInterval = (std: number, matches: number) => (matches > 0 ? (1.96 * std) / Math.sqrt(matches) : 0);
+
 const pairKey = (a: number, b: number) => (a < b ? `${a}:${b}` : `${b}:${a}`);
 const duoKey = (duo: number[]) => [...duo].sort((x, y) => x - y).join(",");
 const laneKey = (lane: number, ally: number[], enemy: number[]) => `${lane}|${duoKey(ally)}|${duoKey(enemy)}`;
@@ -33,6 +56,28 @@ export const toPoints = (value: number | undefined) => (value === undefined ? un
  */
 const MIN_LANE_DUO_MATCHES = 20;
 
+/**
+ * Kept out of `StatsIndex` on purpose: nothing in the model reads these, and they arrive from their
+ * own request. Folding them in would invalidate the index a second time on every pick and re-run the
+ * whole prediction and swap search for a chart.
+ */
+export class SoulCurves {
+  private readonly byLane = new Map<string, LaneSoulCurve>();
+
+  constructor(rows: LaneSoulCurve[] = []) {
+    for (const s of rows) this.byLane.set(laneKey(s.assigned_lane, s.hero_ids, s.enemy_hero_ids), s);
+  }
+
+  get(lane: number, ally: number[], enemy: number[]): LaneSoulPoint[] | undefined {
+    const row = this.byLane.get(laneKey(lane, ally, enemy));
+    return row?.sample_times_s.map((timeS, i) => {
+      const diff = row.net_worth_diff[i];
+      const half = meanInterval(row.net_worth_diff_std[i] ?? 0, row.matches_played);
+      return { timeS, diff, lo: diff - half, hi: diff + half };
+    });
+  }
+}
+
 /** Every hero-pair / matchup number the model needs, indexed for O(1) lookup during recompute. */
 export class StatsIndex {
   private readonly hero = new Map<number, Sample>();
@@ -40,7 +85,6 @@ export class StatsIndex {
   private readonly counters = new Map<string, Sample>();
   private readonly laneCounters = new Map<string, Sample>();
   private readonly lanes = new Map<string, Sample>();
-  private readonly laneSouls = new Map<string, { diff: number; matches: number }>();
 
   constructor(
     heroStats: AnalyticsHeroStats[] = [],
@@ -64,11 +108,10 @@ export class StatsIndex {
       this.pairs.set(pairKey(s.hero_id1, s.hero_id2), { wins: s.wins, matches: s.matches_played });
     }
     for (const s of laneMatchups) {
-      const key = laneKey(s.assigned_lane, s.hero_ids, s.enemy_hero_ids);
-      this.lanes.set(key, { wins: s.wins, matches: s.matches_played });
-      if (s.net_worth_matches > 0) {
-        this.laneSouls.set(key, { diff: s.net_worth_diff_9min, matches: s.net_worth_matches });
-      }
+      this.lanes.set(laneKey(s.assigned_lane, s.hero_ids, s.enemy_hero_ids), {
+        wins: s.wins,
+        matches: s.matches_played,
+      });
     }
   }
 
@@ -91,11 +134,6 @@ export class StatsIndex {
 
   laneSample(lane: number, ally: number[], enemy: number[]): Sample | undefined {
     return this.lanes.get(laneKey(lane, ally, enemy));
-  }
-
-  /** Mean soul lead of the duo over the enemy duo at the 9 minute mark. */
-  laneSoulLead(lane: number, ally: number[], enemy: number[]): { diff: number; matches: number } | undefined {
-    return this.laneSouls.get(laneKey(lane, ally, enemy));
   }
 
   heroWinRate(heroId: number): number | undefined {
@@ -178,8 +216,6 @@ export interface LaneRow {
   winRate: number | undefined;
   edge: number | undefined;
   matches: number;
-  /** Mean soul lead at 9 minutes, when the exact duo pairing has net-worth samples. */
-  soulLead: { diff: number; matches: number } | undefined;
   /** Same-lane hero-versus-hero cells, ally rows by enemy columns. */
   duel: MatchupCell[][];
 }
@@ -189,6 +225,13 @@ export interface Contribution {
   label: string;
   /** Win-rate points this term adds to the prediction. */
   value: number | undefined;
+  /**
+   * The same term measured for one side on its own. These do not always net out to `value`: the
+   * counter term is read from the ally direction alone, because both directions cover the same
+   * matchups and subtracting one from the other would count every one of them twice.
+   */
+  ally: number | undefined;
+  enemy: number | undefined;
   /** Thinnest sample the term rests on, so its weight and its reliability read together. */
   matches: number;
 }
@@ -202,8 +245,8 @@ export interface DraftAnalysis {
   margin: number | undefined;
   contributions: Contribution[];
   allyPairs: PairRow[];
+  enemyPairs: PairRow[];
   counterMatrix: MatchupCell[][];
-  counterAverages: (number | undefined)[];
   lanes: LaneRow[];
 }
 
@@ -246,7 +289,9 @@ function draftTerms(draft: Draft, index: StatsIndex) {
   const counters = mean(allyHeroes.flatMap((hero) => enemyHeroes.map((enemy) => index.counterEdge(hero, enemy))));
   const lanes = mean(laneEdges(draft, index));
 
-  return { solo, synergy, counters, lanes };
+  // Only the per-side halves already computed here: this runs once per candidate in the swap
+  // search, so nothing is derived for the breakdown panel that the prediction does not need.
+  return { solo, synergy, counters, lanes, soloAlly, soloEnemy, synergyAlly, synergyEnemy };
 }
 
 function predictedFrom(terms: ReturnType<typeof draftTerms>) {
@@ -347,7 +392,6 @@ export function laneRows(draft: Draft, index: StatsIndex): LaneRow[] {
       enemy,
       complete,
       duel,
-      soulLead: complete ? index.laneSoulLead(lane.id, ally, enemy) : undefined,
       winRate: estimate.winRate,
       edge: toPoints(estimate.winRate),
       matches: estimate.matches,
@@ -384,9 +428,10 @@ export function analyzeDraft(draft: Draft, index: StatsIndex): DraftAnalysis {
       };
     }),
   );
-  const counterAverages = counterMatrix.map((row) => mean(row.map((c) => c.edge)));
-
   const terms = draftTerms(draft, index);
+  // Measured against the enemy heroes' own baselines, so it is a second set of lookups rather than
+  // the negation of the ally direction.
+  const countersEnemy = mean(counterMatrix.flat().map((c) => index.counterEdge(c.enemy, c.hero)));
 
   const minOf = (values: number[]) => (values.length ? Math.min(...values) : 0);
   const pairMatches = [...allyPairs, ...enemyPairs].map((p) => p.matches);
@@ -395,10 +440,39 @@ export function analyzeDraft(draft: Draft, index: StatsIndex): DraftAnalysis {
   const heroMatches = [...allyHeroes, ...enemyHeroes].map((h) => index.heroSample(h)?.matches ?? 0);
 
   const contributions: Contribution[] = [
-    { key: "solo", label: "Solo hero win rates", value: terms.solo, matches: minOf(heroMatches) },
-    { key: "synergy", label: "Pair synergy", value: terms.synergy, matches: minOf(pairMatches) },
-    { key: "counters", label: "Counter picks", value: terms.counters, matches: minOf(counterMatches) },
-    { key: "lanes", label: "Lane matchups", value: terms.lanes, matches: minOf(laneMatches) },
+    {
+      key: "solo",
+      label: "Solo win rates",
+      value: terms.solo,
+      ally: terms.soloAlly,
+      enemy: terms.soloEnemy,
+      matches: minOf(heroMatches),
+    },
+    {
+      key: "synergy",
+      label: "Pair synergy",
+      value: terms.synergy,
+      ally: terms.synergyAlly,
+      enemy: terms.synergyEnemy,
+      matches: minOf(pairMatches),
+    },
+    {
+      key: "counters",
+      label: "Counter picks",
+      value: terms.counters,
+      ally: terms.counters,
+      enemy: countersEnemy,
+      matches: minOf(counterMatches),
+    },
+    {
+      key: "lanes",
+      label: "Lane matchups",
+      value: terms.lanes,
+      // A win rate, so a side's own number is the exact mirror of the other's.
+      ally: terms.lanes,
+      enemy: terms.lanes === undefined ? undefined : -terms.lanes,
+      matches: minOf(laneMatches),
+    },
   ];
 
   return {
@@ -413,46 +487,30 @@ export function analyzeDraft(draft: Draft, index: StatsIndex): DraftAnalysis {
     ]),
     contributions,
     allyPairs,
+    enemyPairs,
     counterMatrix,
-    counterAverages,
     lanes,
   };
 }
 
-export interface LaneHeroRow {
-  heroId: number;
-  side: Side;
-  winRate: number | undefined;
-  edge: number | undefined;
-  matches: number;
-}
-
 /**
- * Each of a lane's four heroes against the two it lanes into, averaged. Same population as the duel
- * grid, collapsed to one row per hero so the two sides are directly comparable.
+ * The same matchups read from the other side. Each edge is measured against its own hero's baseline,
+ * so the two directions are separate lookups and not sign flips of one another. Only the win rate is
+ * a true complement.
  */
-export function laneHeroRows(lane: LaneRow): LaneHeroRow[] {
-  const entries: { heroId: number; side: Side; cells: MatchupCell[] }[] = [
-    ...lane.ally.map((heroId, row) => ({ heroId, side: "ally" as Side, cells: lane.duel[row] })),
-    ...lane.enemy.map((heroId, column) => ({
-      heroId,
-      side: "enemy" as Side,
-      cells: lane.duel.map((row) => row[column]),
-    })),
-  ];
-
-  return entries.map(({ heroId, side, cells }) => {
-    const own = mean(cells.map((cell) => cell.winRate));
-    // The grid stores the ally view, so an enemy hero's own win rate is the complement of its column.
-    const winRate = own === undefined || side === "ally" ? own : 1 - own;
-    return {
-      heroId,
-      side,
-      winRate,
-      edge: toPoints(winRate),
-      matches: cells.reduce((sum, cell) => sum + (cell.winRate === undefined ? 0 : cell.matches), 0),
-    };
-  });
+export function transposeMatchups(matrix: MatchupCell[][], index: StatsIndex): MatchupCell[][] {
+  return (matrix[0] ?? []).map((_, column) =>
+    matrix.map((row) => {
+      const cell = row[column];
+      return {
+        hero: cell.enemy,
+        enemy: cell.hero,
+        edge: index.counterEdge(cell.enemy, cell.hero),
+        winRate: cell.winRate === undefined ? undefined : 1 - cell.winRate,
+        matches: cell.matches,
+      };
+    }),
+  );
 }
 
 export interface PairEnemyRow {
@@ -486,13 +544,7 @@ export interface Recommendation {
  * out on purpose: lane numbers only exist for duos that were actually queried, so including them
  * would rank the few heroes with lane data above everyone else rather than by strength.
  */
-export function recommendPicks(
-  draft: Draft,
-  index: StatsIndex,
-  side: Side,
-  candidates: number[],
-  minMatches = 0,
-): Recommendation[] {
+export function recommendPicks(draft: Draft, index: StatsIndex, side: Side, candidates: number[]): Recommendation[] {
   const own = filled(draft[side]);
   const opposing = filled(draft[side === "ally" ? "enemy" : "ally"]);
   const drafted = new Set([...filled(draft.ally), ...filled(draft.enemy)]);
@@ -514,7 +566,6 @@ export function recommendPicks(
         score: (synergy ?? 0) + (counter ?? 0) + (solo ?? 0),
       };
     })
-    .filter((r) => r.matches >= minMatches)
     .sort((a, b) => b.score - a.score);
 }
 
@@ -567,19 +618,10 @@ function searchSwaps(draft: Draft, index: StatsIndex, side: Side, candidates: nu
   return found;
 }
 
-export function suggestSwaps(draft: Draft, index: StatsIndex, side: Side, candidates: number[]): Swap[] {
-  const bySlot = new Map<number, Swap>();
-  for (const swap of searchSwaps(draft, index, side, candidates)) {
-    const best = bySlot.get(swap.slot);
-    if (!best || swap.gain > best.gain) bySlot.set(swap.slot, swap);
-  }
-  return [...bySlot.values()];
-}
-
 /**
- * Every worthwhile replacement across the side, best first: `suggestSwaps` without the collapse to
- * one row per slot. Scored by re-predicting the draft, so the numbers match the board's own chips —
- * ranking by `recommendPicks` would quote a gain the swap does not deliver.
+ * Every worthwhile replacement across the side, sorted by gain — so a caller wanting one row per
+ * slot can take the first it sees for each. Scored by re-predicting the draft, so the numbers match
+ * the board's own chips; ranking by `recommendPicks` would quote a gain the swap does not deliver.
  */
 export function rankSwaps(draft: Draft, index: StatsIndex, side: Side, candidates: number[]): Swap[] {
   return searchSwaps(draft, index, side, candidates).sort((a, b) => b.gain - a.gain);

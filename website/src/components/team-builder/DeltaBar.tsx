@@ -2,8 +2,16 @@ import { barGeometry, deltaBarColor, deltaClass, formatPoints } from "~/lib/team
 import { cn } from "~/lib/utils";
 
 /** A signed number of win-rate points, coloured by its sign. */
-export function DeltaValue({ value, className }: { value: number | undefined; className?: string }) {
-  return <span className={cn("tabular-nums", deltaClass(value), className)}>{formatPoints(value)}</span>;
+export function DeltaValue({
+  value,
+  className,
+  format = formatPoints,
+}: {
+  value: number | undefined;
+  className?: string;
+  format?: (value: number | undefined) => string;
+}) {
+  return <span className={cn("tabular-nums", deltaClass(value), className)}>{format(value)}</span>;
 }
 
 /** Centre-anchored bar with a tick on the even point, so the sign reads before the magnitude. */

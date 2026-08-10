@@ -1,9 +1,11 @@
 import { Skeleton } from "~/components/ui/skeleton";
-import type { LaneRow, Side, StatsIndex } from "~/lib/team-builder/analysis";
-import { deltaClass, formatCount, formatRate } from "~/lib/team-builder/format";
+import { type LaneRow, mean, type Side, type SoulCurves, type StatsIndex } from "~/lib/team-builder/analysis";
+import { autoScale, formatCount, formatRate, NO_DATA } from "~/lib/team-builder/format";
 import { cn } from "~/lib/utils";
 
 import { HeroPortrait } from "./HeroPortrait";
+import { LaneSoulCurve } from "./LaneSoulCurve";
+import { MatchupGrid } from "./MatchupGrid";
 import { HeroTooltip } from "./StatTooltip";
 
 function LaneSide({ heroes, side, index }: { heroes: number[]; side: Side; index: StatsIndex }) {
@@ -33,35 +35,53 @@ const LANE_BAR_SCALE = 10;
 /** A side's share of the track, in win-rate points away from even. */
 const halfWidth = (share: number) => `${Math.min(100, Math.max(0, ((share - 0.5) * 100 * 100) / LANE_BAR_SCALE))}%`;
 
+function LaneMatchupMatrix({ row, index }: { row: LaneRow; index: StatsIndex }) {
+  // These edges are measured against an even lane rather than against each hero's own baseline, so
+  // the column hero's view really is the negation of the ally's.
+  const columnAverages = row.duel[0].map((_, column) => {
+    const allyView = mean(row.duel.map((cells) => cells[column].edge));
+    return allyView === undefined ? undefined : -allyView;
+  });
+
+  return (
+    <MatchupGrid
+      cells={row.duel}
+      index={index}
+      scale={autoScale(
+        row.duel.flat().map((cell) => cell.edge),
+        3,
+      )}
+      columnMargins={columnAverages}
+      variant="duel"
+    />
+  );
+}
+
 export function LaneCards({
   lanes,
   index,
   loading,
-  onOpen,
+  soulCurves,
+  curveLoading,
 }: {
   lanes: LaneRow[];
   index: StatsIndex;
   loading: boolean;
-  onOpen: (lane: LaneRow) => void;
+  soulCurves: SoulCurves;
+  /** Tracked apart from `loading`: the curve is a separate request and lands after the rest. */
+  curveLoading: boolean;
 }) {
   return (
-    // Three across only from lg: four portraits plus a centred readout do not fit a narrower card.
-    <div className="grid gap-3 lg:grid-cols-3">
+    <div className="grid items-start gap-3 lg:grid-cols-3">
       {lanes.map((row) => {
         const pending = loading || !row.complete || row.winRate === undefined;
         const share = row.winRate ?? 0.5;
+        const curve = row.complete ? soulCurves.get(row.lane.id, row.ally, row.enemy) : undefined;
         return (
-          <button
+          <div
             key={row.lane.id}
-            type="button"
-            onClick={() => !pending && onOpen(row)}
-            disabled={pending}
             style={{ borderTopColor: row.lane.color, borderTopWidth: 2 }}
-            title={`${row.lane.name} lane`}
-            className={cn(
-              "rounded-xl border border-border bg-card p-3.5 text-left transition-colors",
-              pending ? "opacity-55" : "cursor-pointer hover:border-white/20",
-            )}
+            className={cn("rounded-xl border border-border bg-card p-3.5 text-left", pending && "opacity-55")}
           >
             {/* Named in text, not only by the coloured top border, which is not an identity cue a
                 reader who does not separate these hues can use. */}
@@ -77,46 +97,65 @@ export function LaneCards({
             <div className="flex items-center gap-2">
               <LaneSide heroes={row.ally} side="ally" index={index} />
               {/* The lane's numbers sit where the "vs" would be: they belong to the matchup, not a side. */}
-              <div className="min-w-14 text-center">
+              <div className="min-w-28 text-center 2xl:min-w-44">
                 {loading ? (
-                  <Skeleton className="mx-auto h-8 w-14" />
+                  <Skeleton className="mx-auto h-8 w-28" />
                 ) : (
                   <>
-                    <div className="text-base leading-tight font-bold tabular-nums">{formatRate(row.winRate)}</div>
-                    {row.soulLead && (
-                      <div
-                        className={cn("text-[10px] tabular-nums", deltaClass(row.soulLead.diff))}
-                        title={`Mean soul lead 9 minutes in, over ${formatCount(row.soulLead.matches)} lane matchups`}
-                      >
-                        {row.soulLead.diff >= 0 ? "+" : ""}
-                        {Math.round(row.soulLead.diff).toLocaleString()} souls after 9min
+                    <div className="text-lg leading-tight font-bold whitespace-nowrap tabular-nums">
+                      {row.winRate === undefined ? (
+                        NO_DATA
+                      ) : (
+                        <>
+                          <span className="text-green-400">{formatRate(row.winRate)}</span>
+                          <span className="mx-0.5 text-muted-foreground">:</span>
+                          <span className="text-primary">{formatRate(1 - row.winRate)}</span>
+                        </>
+                      )}
+                    </div>
+                    <div
+                      className="relative mt-1.5 flex h-1.5 gap-px rounded-full bg-muted"
+                      title={`Each half is one duo's share, full at ±${LANE_BAR_SCALE} points`}
+                    >
+                      <div className="flex flex-1 justify-end">
+                        <div className="h-full rounded-l-full bg-green-400/70" style={{ width: halfWidth(share) }} />
                       </div>
-                    )}
+                      <div className="flex flex-1">
+                        <div className="h-full rounded-r-full bg-primary/70" style={{ width: halfWidth(1 - share) }} />
+                      </div>
+                      <div className="absolute inset-y-[-2px] left-1/2 w-px -translate-x-1/2 bg-white/60" />
+                    </div>
                   </>
                 )}
               </div>
               <LaneSide heroes={row.enemy} side="enemy" index={index} />
             </div>
 
-            {/* Two-sided fill: each half of the track is one side's share of the matchup, growing
-                outwards from the centre. */}
-            <div className="relative mt-3 mb-1.5 flex h-1.5 gap-px rounded-full bg-muted">
-              <div className="flex flex-1 justify-end">
-                <div className="h-full rounded-l-full bg-primary/70" style={{ width: halfWidth(1 - share) }} />
+            {!pending && (
+              <div className="mt-3.5 flex items-stretch gap-3 border-t border-border pt-3">
+                <div className="w-40 shrink-0">
+                  <div className="mb-1 text-[11px] font-semibold">Matchups</div>
+                  <LaneMatchupMatrix row={row} index={index} />
+                </div>
+                {/* Always laid out, even with nothing to draw yet: the curve resolves after the rest
+                    of the card, and leaving the column out until then shifted the matrix sideways. */}
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <div className="mb-1 text-[11px] font-semibold">Soul lead</div>
+                  <div className="min-h-0 flex-1">
+                    {curve && curve.length > 1 ? (
+                      <LaneSoulCurve points={curve} />
+                    ) : curveLoading ? (
+                      <Skeleton className="h-full min-h-16 w-full" />
+                    ) : (
+                      <div className="flex h-full min-h-16 items-center justify-center rounded-md border border-dashed border-white/[0.12] px-2 text-center text-[10px] text-muted-foreground">
+                        No souls recorded for this pairing
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-1">
-                <div className="h-full rounded-r-full bg-green-400/70" style={{ width: halfWidth(share) }} />
-              </div>
-              {/* Marks the even point the two fills grow away from. */}
-              <div className="absolute inset-y-[-2px] left-1/2 w-px -translate-x-1/2 bg-white/60" />
-            </div>
-
-            <div className="flex justify-between text-[10px] text-muted-foreground">
-              <span>their duo</span>
-              <span>±{LANE_BAR_SCALE} pts</span>
-              <span>your duo</span>
-            </div>
-          </button>
+            )}
+          </div>
         );
       })}
     </div>

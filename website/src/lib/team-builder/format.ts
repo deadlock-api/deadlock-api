@@ -2,16 +2,21 @@
 export const GOOD_RGB = "74, 222, 128";
 export const BAD_RGB = "248, 113, 113";
 
-/** The dark ground the heat ramp passes through at zero, shared by the cells and their legend. */
+/** The dark ground the heat ramp passes through at zero. */
 export const HEAT_BASE = "#151b23";
 
 /** What every Team Builder number prints when it has nothing to report. */
 export const NO_DATA = "n/a";
 
 /** A signed number of win-rate points, e.g. `+2.6`. */
-export function formatPoints(value: number | undefined): string {
+export function formatPoints(value: number | undefined, decimals = 1): string {
   if (value === undefined || !Number.isFinite(value)) return NO_DATA;
-  return `${value >= 0 ? "+" : ""}${value.toFixed(1)}`;
+  return `${value >= 0 ? "+" : ""}${value.toFixed(decimals)}`;
+}
+
+/** A magnitude a few characters wide, e.g. `1.2k`. Whole thousands drop the tenth. */
+export function compactNumber(value: number): string {
+  return value >= 1000 ? `${(value / 1000).toFixed(value % 1000 === 0 ? 0 : 1)}k` : String(value);
 }
 
 /** A rate in `[0,1]` as a percentage, e.g. `52.6%`. */
@@ -64,32 +69,6 @@ export const MAX_CONFIDENCE_PIPS = CONFIDENCE_STEPS.length;
 /** Filled pips out of `MAX_CONFIDENCE_PIPS`: each step is roughly a quarter of the remaining uncertainty. */
 export function confidencePips(matches: number): number {
   return CONFIDENCE_STEPS.filter((step) => matches >= step).length;
-}
-
-/**
- * Rounds `values` to one decimal so they still add up to `total` at that precision.
- *
- * The prediction is `50 + Σ terms`, so a reader can add the printed breakdown up. Rounding each term
- * independently would let the rows disagree with the headline they explain; largest-remainder puts
- * the leftover tenths on the terms that were rounded furthest.
- */
-export function roundToSum(values: number[], total: number): number[] {
-  const scaled = values.map((v) => v * 10);
-  const floors = scaled.map(Math.floor);
-  let residual = Math.round(total * 10) - floors.reduce((sum, n) => sum + n, 0);
-  const order = scaled
-    .map((v, i) => ({ i, fraction: v - floors[i] }))
-    .sort((a, b) => b.fraction - a.fraction)
-    .map((entry) => entry.i);
-
-  const out = [...floors];
-  // `residual` can be negative when every term sat just below its floor boundary.
-  for (let k = 0; residual !== 0 && k < order.length * 2; k++) {
-    const i = order[k % order.length];
-    out[i] += Math.sign(residual);
-    residual -= Math.sign(residual);
-  }
-  return out.map((n) => n / 10);
 }
 
 /** Colour-ramp bound for a set of edges: the largest magnitude present, rounded to a readable step. */

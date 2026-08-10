@@ -2,7 +2,7 @@ import { ChartScatterIcon, ListIcon } from "lucide-react";
 import { useState } from "react";
 
 import { HeroName } from "~/components/HeroName";
-import type { Recommendation, Swap } from "~/lib/team-builder/analysis";
+import type { Recommendation, Side, Swap } from "~/lib/team-builder/analysis";
 import { deltaClass, formatPoints, formatRate } from "~/lib/team-builder/format";
 import { laneOfSlot } from "~/lib/team-builder/lanes";
 import { cn } from "~/lib/utils";
@@ -12,6 +12,7 @@ import { HeroPortrait } from "./HeroPortrait";
 import { Panel, PanelHeader, PanelMessage, PanelShowMore, PanelSkeleton, PanelViewToggle } from "./Panel";
 import { PickExplorer } from "./PickExplorer";
 import { RecommendationTooltip } from "./RecommendationTooltip";
+import { SideToggle } from "./SideToggle";
 import { StatTooltip } from "./StatTooltip";
 
 /** Matches the pairs panel so the two columns line up at rest. */
@@ -49,34 +50,39 @@ function SwapTooltip({ swap, children }: { swap: Swap; children: React.ReactNode
 }
 
 interface NextPickPanelProps {
-  recommendations: Recommendation[];
+  recommendations: Record<Side, Recommendation[]>;
   /** Ranked replacements, used when the side is full and there is nothing to pick *into*. */
-  swaps: Swap[];
-  hasOpenSlot: boolean;
+  swaps: Record<Side, Swap[]>;
+  hasOpenSlot: Record<Side, boolean>;
   loading: boolean;
-  onPick: (heroId: number) => void;
-  onApplySwap: (swap: Swap) => void;
+  onPick: (side: Side, heroId: number) => void;
+  onApplySwap: (side: Side, swap: Swap) => void;
 }
 
 export function NextPickPanel({
   recommendations,
   swaps,
-  hasOpenSlot,
+  hasOpenSlot: openSlots,
   loading,
   onPick,
   onApplySwap,
 }: NextPickPanelProps) {
   const [view, setView] = useState<"list" | "plot">("list");
   const [expanded, setExpanded] = useState(false);
-  const top = recommendations.slice(0, expanded ? MAX_ROWS : COLLAPSED_ROWS);
-  const topSwaps = swaps.slice(0, expanded ? MAX_ROWS : COLLAPSED_ROWS);
+  const [side, setSide] = useState<Side>("ally");
+  const sideRecommendations = recommendations[side];
+  const sideSwaps = swaps[side];
+  const hasOpenSlot = openSlots[side];
+  const top = sideRecommendations.slice(0, expanded ? MAX_ROWS : COLLAPSED_ROWS);
+  const topSwaps = sideSwaps.slice(0, expanded ? MAX_ROWS : COLLAPSED_ROWS);
 
   // With every slot filled there is nothing to pick *into*, so the panel switches to swaps: each
   // row names the hero it would replace and applies that exact change.
   if (!hasOpenSlot && view === "list") {
     return (
       <Panel>
-        <PanelHeader title="Best replacement" note="for your side">
+        <PanelHeader title="Best replacement">
+          <SideToggle side={side} onChange={setSide} />
           <PanelViewToggle
             value={view}
             onChange={setView}
@@ -104,7 +110,7 @@ export function NextPickPanel({
               <SwapTooltip key={`${swap.slot}-${swap.in}`} swap={swap}>
                 <button
                   type="button"
-                  onClick={() => onApplySwap(swap)}
+                  onClick={() => onApplySwap(side, swap)}
                   className={cn(
                     SWAP_COLUMNS,
                     "h-11 w-full cursor-pointer border-b border-border/60 text-left text-[13px] hover:bg-white/[0.03]",
@@ -123,10 +129,10 @@ export function NextPickPanel({
                 </button>
               </SwapTooltip>
             ))}
-            {swaps.length > COLLAPSED_ROWS && (
+            {sideSwaps.length > COLLAPSED_ROWS && (
               <PanelShowMore
                 expanded={expanded}
-                total={Math.min(swaps.length, MAX_ROWS)}
+                total={Math.min(sideSwaps.length, MAX_ROWS)}
                 onToggle={() => setExpanded((open) => !open)}
               />
             )}
@@ -138,7 +144,8 @@ export function NextPickPanel({
 
   return (
     <Panel>
-      <PanelHeader title={hasOpenSlot ? "Best next pick" : "Best replacement"} note="for your side">
+      <PanelHeader title={hasOpenSlot ? "Best next pick" : "Best replacement"}>
+        <SideToggle side={side} onChange={setSide} />
         <PanelViewToggle
           value={view}
           onChange={setView}
@@ -152,7 +159,7 @@ export function NextPickPanel({
       {loading ? (
         <PanelSkeleton rows={COLLAPSED_ROWS} />
       ) : view === "plot" ? (
-        <PickExplorer recommendations={recommendations} onPick={onPick} />
+        <PickExplorer recommendations={sideRecommendations} onPick={(heroId) => onPick(side, heroId)} />
       ) : top.length === 0 ? (
         <PanelMessage>No candidate clears the minimum match count. Lower it in the filter bar.</PanelMessage>
       ) : (
@@ -168,7 +175,7 @@ export function NextPickPanel({
             <RecommendationTooltip key={rec.heroId} rec={rec}>
               <button
                 type="button"
-                onClick={() => onPick(rec.heroId)}
+                onClick={() => onPick(side, rec.heroId)}
                 className={cn(
                   COLUMNS,
                   "h-11 w-full cursor-pointer border-b border-border/60 text-left text-[13px] hover:bg-white/[0.03]",
@@ -185,10 +192,10 @@ export function NextPickPanel({
               </button>
             </RecommendationTooltip>
           ))}
-          {recommendations.length > COLLAPSED_ROWS && (
+          {sideRecommendations.length > COLLAPSED_ROWS && (
             <PanelShowMore
               expanded={expanded}
-              total={Math.min(recommendations.length, MAX_ROWS)}
+              total={Math.min(sideRecommendations.length, MAX_ROWS)}
               onToggle={() => setExpanded((open) => !open)}
             />
           )}
