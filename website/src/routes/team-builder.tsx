@@ -50,7 +50,7 @@ import {
 } from "~/queries/match-import-query";
 import { draftCounterStatsQueryOptions, draftSynergyStatsQueryOptions } from "~/queries/team-builder-queries";
 
-const DEFAULT_MIN_RANK = 91;
+const DEFAULT_MIN_RANK = 0;
 const DEFAULT_MAX_RANK = 116;
 
 export const Route = createFileRoute("/team-builder")({

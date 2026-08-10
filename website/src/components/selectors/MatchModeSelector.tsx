@@ -6,7 +6,7 @@ import { StringSelector } from "./StringSelector";
 export const MATCH_MODES = ["ranked,unranked", "ranked", "unranked"] as const;
 export type MatchMode = (typeof MATCH_MODES)[number];
 
-export const DEFAULT_MATCH_MODE: MatchMode = "ranked";
+export const DEFAULT_MATCH_MODE: MatchMode = "ranked,unranked";
 export const parseAsMatchMode = parseAsStringLiteral(MATCH_MODES).withDefault(DEFAULT_MATCH_MODE);
 
 export const MATCH_MODE_LABELS: Record<MatchMode, string> = {
