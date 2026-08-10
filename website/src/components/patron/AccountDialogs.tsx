@@ -209,7 +209,7 @@ export function AddBotDialog({
             <div className="space-y-2">
               <p>
                 Our bot needs to be on your Steam friends list to access your match history. This is how your matches
-                get ingested with priority — without it, only public data is available.
+                get ingested with priority. Without it, only public data is available.
               </p>
               <p>Click one of the invite links below, accept the friend request in Steam, then check the connection.</p>
             </div>

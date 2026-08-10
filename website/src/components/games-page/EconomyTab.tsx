@@ -72,7 +72,7 @@ export default function EconomyTab({ params, isStreetBrawl = false }: EconomyTab
         <Section
           icon={Trophy}
           title="Soul Sources by Rank"
-          description="How the soul economy shifts across skill tiers — toggle between each source's share and raw souls."
+          description="How the soul economy shifts across skill tiers. Toggle between each source's share and raw souls."
         >
           <EconomySourcesByRank params={params} />
         </Section>

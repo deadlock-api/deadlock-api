@@ -272,7 +272,7 @@ function IndexRoute() {
             </div>
 
             <p className="mx-auto max-w-2xl text-center text-base leading-relaxed text-pretty text-muted-foreground">
-              Track Deadlock stats — hero win rates, pick rates, item analytics, rank distribution, and leaderboards,
+              Track Deadlock stats: hero win rates, pick rates, item analytics, rank distribution, and leaderboards,
               updated live from Valve's servers. A comprehensive set of endpoints also gives developers access to
               Deadlock game data, match history, player statistics, hero analytics, and more.
             </p>
@@ -297,7 +297,7 @@ function IndexRoute() {
                 </div>
                 <p className="max-w-xl text-sm text-muted-foreground">
                   We fetch match data for millions of players. With prioritized fetching, your Steam accounts jump to
-                  the front of the queue — your matches and stats are updated more frequently so you always have the
+                  the front of the queue, so your matches and stats are updated more frequently and you always have the
                   latest data for analysis.
                 </p>
                 <div className="flex flex-wrap gap-x-5 gap-y-2">

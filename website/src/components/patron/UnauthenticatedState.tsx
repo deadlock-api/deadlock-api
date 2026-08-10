@@ -60,7 +60,7 @@ export function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
               </a>
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">Starting at $1.50/month — every cent goes to infrastructure</p>
+          <p className="text-xs text-muted-foreground">Starting at $1.50/month, every cent goes to infrastructure</p>
         </div>
       </section>
 
@@ -122,7 +122,7 @@ export function NotSubscribedState() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </a>
             </Button>
-            <p className="text-xs text-muted-foreground">Starting at $1.50/month — every cent goes to infrastructure</p>
+            <p className="text-xs text-muted-foreground">Starting at $1.50/month, every cent goes to infrastructure</p>
           </div>
         </CardContent>
       </Card>

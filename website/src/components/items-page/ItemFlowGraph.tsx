@@ -581,7 +581,7 @@ export function ItemFlowGraph({
             <p className="mt-2 text-[11px] text-muted-foreground/80">
               {isStreetBrawl
                 ? "Win rate reflects players who bought the item, not its causal effect."
-                : "Win rates are adjusted for net worth at purchase (so they're not just “rich players win”), but remain observational — not a controlled causal estimate."}
+                : "Win rates are adjusted for net worth at purchase (so they're not just “rich players win”), but remain observational, not a controlled causal estimate."}
             </p>
           </PopoverContent>
         </Popover>
@@ -790,7 +790,7 @@ export function ItemFlowGraph({
                                 {node.locked && <Lock className="size-3 text-primary" />}
                                 <span
                                   className={cn(conf.icon, "size-3.5", conf.color)}
-                                  title={`Confidence: ${conf.label} — ${node.matches.toLocaleString()} matches, 95% CI ${(node.wrLow * 100).toFixed(1)}–${(node.wrHigh * 100).toFixed(1)}%`}
+                                  title={`Confidence: ${conf.label} (${node.matches.toLocaleString()} matches, 95% CI ${(node.wrLow * 100).toFixed(1)}–${(node.wrHigh * 100).toFixed(1)}%)`}
                                 />
                               </div>
                               <div className="flex items-center gap-2 pr-9">
@@ -949,7 +949,7 @@ export function ItemFlowGraph({
                     return (
                       <span
                         className={cn(c.icon, "size-4", c.color)}
-                        title={`Confidence: ${c.label} — ${pathStats.matches.toLocaleString()} matches`}
+                        title={`Confidence: ${c.label} (${pathStats.matches.toLocaleString()} matches)`}
                       />
                     );
                   })()}
@@ -969,7 +969,7 @@ export function ItemFlowGraph({
                   {locked.length > 0 && (
                     <div
                       className="text-[10px] text-muted-foreground"
-                      title="Difference vs the unlocked population. Not a controlled comparison — players who commit to a build may differ in skill/lead."
+                      title="Difference vs the unlocked population. Not a controlled comparison: players who commit to a build may differ in skill/lead."
                     >
                       {pathStats.winRate - pathStats.baseWinRate >= 0 ? "+" : ""}
                       {((pathStats.winRate - pathStats.baseWinRate) * 100).toFixed(1)} pts vs baseline*

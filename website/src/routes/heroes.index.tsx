@@ -134,7 +134,7 @@ export const Route = createFileRoute("/heroes/")({
   },
   head: () =>
     seo({
-      title: "Deadlock Hero Win Rates & Pick Rates — Live Match Data",
+      title: "Deadlock Hero Win Rates & Pick Rates: Live Match Data",
       description:
         "Deadlock hero win rates, pick rates, matchups, and synergies for every hero. Filter by rank and patch. Updated daily from live match data.",
       path: "/heroes",

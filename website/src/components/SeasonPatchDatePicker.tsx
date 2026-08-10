@@ -244,7 +244,7 @@ export function SeasonPatchDatePicker({
               <div className="h-9 animate-pulse rounded-md bg-muted" />
             ) : seasons.length === 0 ? (
               <p className="text-xs text-muted-foreground">
-                Ranked seasons are unavailable right now — pick a patch or a custom range instead.
+                Ranked seasons are unavailable right now. Pick a patch or a custom range instead.
               </p>
             ) : (
               <Select value={matchingSeason?.id || ""} onValueChange={handleSeasonSelect}>

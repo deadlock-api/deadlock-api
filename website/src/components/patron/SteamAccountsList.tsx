@@ -148,9 +148,9 @@ function RefetchMatchHistoryCell({ steamId3, isActive }: { steamId3: number; isA
           const retryAfter = Number(error.response.headers["retry-after"]);
           if (retryAfter && retryAfter > 0) {
             const minutes = Math.ceil(retryAfter / 60);
-            toast.error(`Rate limited — try again in ${minutes} minute${minutes !== 1 ? "s" : ""}`);
+            toast.error(`Rate limited, try again in ${minutes} minute${minutes !== 1 ? "s" : ""}`);
           } else {
-            toast.error("Rate limited — please wait before trying again");
+            toast.error("Rate limited, please wait before trying again");
           }
         } else if (isAxiosError(error)) {
           const detail = error.response?.data?.detail ?? error.response?.data?.message;

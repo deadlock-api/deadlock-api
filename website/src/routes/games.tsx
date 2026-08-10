@@ -58,7 +58,7 @@ export const Route = createFileRoute("/games")({
     seo({
       title: "Deadlock Game Stats: Match Trends, Avg Kills & Souls by Rank",
       description:
-        "Deadlock match stats by rank and game mode — average match length, kills, souls, and objective timings. See how long a typical Deadlock game lasts.",
+        "Deadlock match stats by rank and game mode: average match length, kills, souls, and objective timings. See how long a typical Deadlock game lasts.",
       path: "/games",
       jsonLd: [
         {

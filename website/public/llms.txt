@@ -1,5 +1,5 @@
 # Deadlock API
-> Free, open-source game statistics, analytics, and REST API for Valve's Deadlock — tracking millions of matches with hero analytics, item statistics, ranked leaderboards, and more.
+> Free, open-source game statistics, analytics, and REST API for Valve's Deadlock, tracking millions of matches with hero analytics, item statistics, ranked leaderboards, and more.
 
 ## Analytics Pages
 - [Hero Analytics](https://deadlock-api.com/heroes): Win rates, pick rates, matchups, and performance stats for all Deadlock heroes, filterable by rank and patch

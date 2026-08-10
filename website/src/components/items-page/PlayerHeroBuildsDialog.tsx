@@ -138,7 +138,7 @@ export function PlayerHeroBuildsDialog({
           <DialogTitle className="flex flex-wrap items-center gap-2">
             <HeroImage heroId={heroId} className="size-7 shrink-0 rounded-md border border-border/50" />
             <span>{effectiveName ?? "Player"}</span>
-            <span className="text-sm font-normal text-muted-foreground">— recent builds</span>
+            <span className="text-sm font-normal text-muted-foreground">(recent builds)</span>
             <PlayerSearch
               onSelect={(profile) => setOverridePlayer({ accountId: profile.account_id, name: profile.personaname })}
             />

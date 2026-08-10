@@ -74,7 +74,7 @@ export const Route = createFileRoute("/heroes/$heroName")({
   head: ({ loaderData }) => {
     if (!loaderData) {
       return seo({
-        title: "Hero Not Found — Deadlock",
+        title: "Hero Not Found | Deadlock",
         description: "The requested Deadlock hero could not be found.",
         path: "/heroes",
       });
@@ -82,7 +82,7 @@ export const Route = createFileRoute("/heroes/$heroName")({
     const { heroName, slug, cardImage } = loaderData;
     const url = `${SITE_URL}/heroes/${slug}`;
     return seo({
-      title: `${heroName} Win Rate & Pick Rate — Deadlock`,
+      title: `${heroName} Win Rate & Pick Rate | Deadlock`,
       description: `${heroName} win rate, pick rate, best items, and matchups in Deadlock. Live stats from tracked ranked matches, updated daily.`,
       path: `/heroes/${slug}`,
       ogImage: cardImage ?? undefined,
@@ -90,7 +90,7 @@ export const Route = createFileRoute("/heroes/$heroName")({
         {
           "@context": "https://schema.org",
           "@type": "Dataset",
-          name: `${heroName} Win Rate & Pick Rate — Deadlock`,
+          name: `${heroName} Win Rate & Pick Rate | Deadlock`,
           description: `Win rate, pick rate, ban rate, and matchup statistics for ${heroName} in Deadlock, calculated from tracked ranked matches and updated daily.`,
           url,
           keywords: ["Deadlock", heroName, "win rate", "pick rate", "matchups"],
@@ -152,7 +152,7 @@ function HeroDetailPage() {
 
       <div className="flex items-center gap-3">
         <HeroImage heroId={heroId} className="size-12" />
-        <h1 className="text-3xl font-bold tracking-tight">{heroName} — Deadlock Win Rate &amp; Pick Rate</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{heroName}: Deadlock Win Rate &amp; Pick Rate</h1>
       </div>
 
       {summary ? (

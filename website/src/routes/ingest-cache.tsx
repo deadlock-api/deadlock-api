@@ -90,7 +90,7 @@ function IngestCache() {
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <span className="size-1.5 shrink-0 rounded-full bg-primary" />
-              Privacy-focused — only match IDs are submitted
+              Privacy-focused: only match IDs are submitted
             </div>
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <span className="size-1.5 shrink-0 rounded-full bg-primary" />
