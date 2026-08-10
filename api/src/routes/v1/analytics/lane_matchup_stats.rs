@@ -95,6 +95,7 @@ pub(super) struct LaneMatchupStatsQuery {
     account_ids: Option<Vec<u32>>,
 }
 
+/// **⚠️ Subject to change:** newly added, fields may change or be removed without notice.
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct LaneMatchupStats {
     /// The lane the matchup was played in. See the `lane_info` array of <https://api.deadlock-api.com/v1/assets/generic-data>.
@@ -228,8 +229,10 @@ async fn get_lane_matchup_stats(
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch lane matchup stats")
     ),
     tags = ["Analytics"],
-    summary = "Lane Matchup Stats",
+    summary = "Lane Matchup Stats (Subject to Change)",
     description = "
+> **⚠️ Subject to change:** This endpoint is newly added and not yet stable. Its parameters, response fields and semantics may change or be removed without notice.
+
 Retrieves duo-versus-duo lane statistics: how a pair of heroes sharing a lane performed against the pair of heroes they laned against.
 
 Only lanes where *both* sides fielded exactly two players are counted, and each lane contributes one row per side, so every matchup appears twice with the two sides swapped.

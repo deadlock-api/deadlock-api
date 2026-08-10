@@ -91,6 +91,7 @@ pub(super) struct LaneSoulCurveQuery {
     account_ids: Option<Vec<u32>>,
 }
 
+/// **⚠️ Subject to change:** newly added, fields may change or be removed without notice.
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct LaneSoulCurve {
     /// The lane the matchup was played in. See the `lane_info` array of <https://api.deadlock-api.com/v1/assets/generic-data>.
@@ -231,8 +232,10 @@ async fn get_lane_soul_curve(
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch lane soul curve")
     ),
     tags = ["Analytics"],
-    summary = "Lane Soul Curve",
+    summary = "Lane Soul Curve (Subject to Change)",
     description = "
+> **⚠️ Subject to change:** This endpoint is newly added and not yet stable. Its parameters, response fields and semantics may change or be removed without notice.
+
 Retrieves how a duo's soul lead over the duo they laned against develops through the first 15 minutes.
 
 The curve is sampled at 180, 360, 540, 720 and 900 seconds and is not interpolated; its last point is the `net_worth_diff_15min` of `/lane-matchup-stats`. Only lanes where *both* sides fielded exactly two players are counted, and each lane contributes one row per side, so every matchup appears twice with the two sides swapped.
