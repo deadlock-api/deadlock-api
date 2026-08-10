@@ -275,7 +275,7 @@ fn average_badge(match_info: &MatchInfo) -> Option<u32> {
     .flatten()
     .filter(|badge| *badge > 0)
     .collect();
-    if let Some(avg) = mean(&team_badges) {
+    if let Some(avg) = mean_badge(&team_badges) {
         return Some(avg);
     }
 
@@ -286,17 +286,26 @@ fn average_badge(match_info: &MatchInfo) -> Option<u32> {
         .filter_map(|rank| rank.initial_display_rank)
         .filter(|rank| *rank > 0)
         .collect();
-    mean(&player_ranks)
+    mean_badge(&player_ranks)
 }
 
-/// Ties round to even, matching the `ClickHouse` `round()` in the `average_badge` column's
-/// DEFAULT expression, so rows written here agree with rows derived from the legacy
-/// `average_badge_team{0,1}` columns instead of drifting by one on exact .5 averages.
+/// The `tier * 10 + subrank` encoding is not a linear scale: subranks stop at 6, so `x0` and
+/// `x7`..=`x9` are unreachable. Averaging it directly lands in those gaps and yields badges that
+/// do not exist (Mystic 6 and Ritualist 1 average to 58, i.e. "Mystic 8"). Badges are therefore
+/// projected onto the dense `tier * 6 + subrank` scale, averaged there, and projected back.
+///
+/// Ties round half up, matching the `average_badge` column's DEFAULT expression in `ClickHouse`,
+/// so rows written here agree with rows the database derives from `average_badge_team{0,1}`.
+/// Half up rather than to even because a two-team average is a tie half the time, and ties to
+/// even would starve odd ranks of that mass and leave a sawtooth in the rank distribution.
+///
+/// Callers filter out zero badges, so the dense mean is at least 1.
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-fn mean(values: &[u32]) -> Option<u32> {
-    let count = u32::try_from(values.len()).ok().filter(|c| *c > 0)?;
-    let mean = f64::from(values.iter().sum::<u32>()) / f64::from(count);
-    Some(mean.round_ties_even() as u32)
+fn mean_badge(badges: &[u32]) -> Option<u32> {
+    let count = u32::try_from(badges.len()).ok().filter(|c| *c > 0)?;
+    let dense_sum: u32 = badges.iter().map(|badge| badge - 4 * (badge / 10)).sum();
+    let dense_mean = (f64::from(dense_sum) / f64::from(count) + 0.5).floor() as u32;
+    Some(dense_mean + 4 * ((dense_mean - 1) / 6))
 }
 
 /// Zeroes the low 4 bits of each position sample, keeping the 0..=16383 fixed-point
@@ -795,8 +804,22 @@ mod tests {
 
     #[test]
     fn prefers_team_averages_over_player_ranks() {
-        let info = match_info(Some(60), Some(80), &[Some(100), Some(100)]);
-        assert_eq!(average_badge(&info), Some(70));
+        let info = match_info(Some(61), Some(81), &[Some(111), Some(111)]);
+        assert_eq!(average_badge(&info), Some(71));
+    }
+
+    #[test]
+    fn averages_across_a_tier_boundary_stay_on_the_badge_scale() {
+        // Mystic 6 and Ritualist 1 are adjacent ranks; the mean of the raw encoding is 58.5,
+        // which decodes to the nonexistent "Mystic 8".
+        assert_eq!(
+            average_badge(&match_info(Some(56), Some(61), &[])),
+            Some(61)
+        );
+        assert_eq!(
+            average_badge(&match_info(Some(31), Some(56), &[])),
+            Some(44)
+        );
     }
 
     #[test]
@@ -807,10 +830,10 @@ mod tests {
 
     #[test]
     fn falls_back_to_player_ranks() {
-        let absent = match_info(None, None, &[Some(80), Some(84)]);
-        assert_eq!(average_badge(&absent), Some(82));
-        let zeroed = match_info(Some(0), Some(0), &[Some(80), Some(84)]);
-        assert_eq!(average_badge(&zeroed), Some(82));
+        let absent = match_info(None, None, &[Some(82), Some(84)]);
+        assert_eq!(average_badge(&absent), Some(83));
+        let zeroed = match_info(Some(0), Some(0), &[Some(82), Some(84)]);
+        assert_eq!(average_badge(&zeroed), Some(83));
     }
 
     #[test]
@@ -820,8 +843,8 @@ mod tests {
     }
 
     #[test]
-    fn ties_round_to_even_like_clickhouse() {
-        // 21.5 -> 22, 15.5 -> 16, 2.5 -> 2
+    fn ties_round_half_up_like_clickhouse() {
+        // Dense means 13.5 -> 14, 11.5 -> 12, 2.5 -> 3
         assert_eq!(
             average_badge(&match_info(Some(21), Some(22), &[])),
             Some(22)
@@ -830,7 +853,21 @@ mod tests {
             average_badge(&match_info(Some(15), Some(16), &[])),
             Some(16)
         );
-        assert_eq!(average_badge(&match_info(Some(2), Some(3), &[])), Some(2));
+        assert_eq!(average_badge(&match_info(Some(2), Some(3), &[])), Some(3));
+    }
+
+    #[test]
+    fn every_badge_is_a_reachable_rank() {
+        let badges: Vec<u32> = (11..=116).filter(|b| (1..=6).contains(&(b % 10))).collect();
+        for team0 in &badges {
+            for team1 in &badges {
+                let avg = average_badge(&match_info(Some(*team0), Some(*team1), &[])).unwrap();
+                assert!(
+                    (1..=6).contains(&(avg % 10)) && (11..=116).contains(&avg),
+                    "{team0} and {team1} averaged to {avg}"
+                );
+            }
+        }
     }
 
     #[test]
