@@ -22,9 +22,11 @@ export function PanelHeader({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex h-12 shrink-0 items-center justify-between gap-x-3 border-b border-border px-4">
-      <span className="text-sm font-semibold sm:text-[15px]">{title}</span>
-      {note !== undefined && <span className="text-xs text-muted-foreground">{note}</span>}
+    // `min-h-12`, not a fixed height: a wrapped title would overflow and be cut by the card's
+    // own `overflow-hidden`.
+    <div className="flex min-h-12 shrink-0 items-center justify-between gap-x-3 border-b border-border px-4 py-2">
+      <span className="truncate text-sm font-semibold sm:text-[15px]">{title}</span>
+      {note !== undefined && <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground">{note}</span>}
       {children}
     </div>
   );

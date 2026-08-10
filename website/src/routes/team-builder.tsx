@@ -1,7 +1,7 @@
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { AnalyticsApiHeroCountersStatsRequest } from "deadlock_api_client";
-import { DicesIcon, SearchIcon, TriangleAlertIcon, UsersRoundIcon } from "lucide-react";
+import { DicesIcon, RotateCwIcon, SearchIcon, TriangleAlertIcon, UsersRoundIcon } from "lucide-react";
 import { parseAsBoolean, parseAsInteger, useQueryState } from "nuqs";
 import { useCallback, useMemo, useState } from "react";
 
@@ -16,6 +16,7 @@ import { HeroPickerDialog, type PickerTarget } from "~/components/team-builder/H
 import { LaneCards } from "~/components/team-builder/LaneCards";
 import { LaneDetailBody } from "~/components/team-builder/LaneDetailDialog";
 import { MatchImportControl } from "~/components/team-builder/MatchImportControl";
+import { MatchupDetailBody } from "~/components/team-builder/MatchupDetailDialog";
 import { NextPickPanel } from "~/components/team-builder/NextPickPanel";
 import { PairDetailBody } from "~/components/team-builder/PairDetailDialog";
 import { PairsPanel } from "~/components/team-builder/PairsPanel";
@@ -30,7 +31,9 @@ import {
   analyzeDraft,
   filled,
   type LaneRow,
+  type MatchupCell,
   type PairRow,
+  rankSwaps,
   recommendPicks,
   type Side,
   StatsIndex,
@@ -84,6 +87,9 @@ function TeamBuilderPage() {
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null);
   const [pairDetail, setPairDetail] = useState<PairRow | null>(null);
   const [laneDetail, setLaneDetail] = useState<LaneRow | null>(null);
+  const [matchupDetail, setMatchupDetail] = useState<MatchupCell | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
 
   // Street Brawl is deliberately not offered: it is four a side with no lanes, so nothing on this
   // page would mean anything there.
@@ -148,6 +154,7 @@ function TeamBuilderPage() {
     () => recommendPicks(draft, index, "ally", candidates, minMatches),
     [draft, index, candidates, minMatches],
   );
+  const allySwaps = useMemo(() => rankSwaps(draft, index, "ally", candidates), [draft, index, candidates]);
   const swapsBySlot = useMemo(() => {
     const bySide: Record<Side, Map<number, Swap>> = { ally: new Map(), enemy: new Map() };
     for (const side of ["ally", "enemy"] as const) {
@@ -175,6 +182,15 @@ function TeamBuilderPage() {
     counterQuery,
     laneCounterQuery,
   );
+  const refetchStats = () =>
+    Promise.all([
+      heroesQuery.refetch(),
+      heroStatsQuery.refetch(),
+      synergyQuery.refetch(),
+      counterQuery.refetch(),
+      laneCounterQuery.refetch(),
+    ]);
+
   const totalPicked = allyHeroes.length + enemyHeroes.length;
   const incompleteLanes = analysis.lanes.filter((lane) => !lane.complete).length;
 
@@ -196,10 +212,27 @@ function TeamBuilderPage() {
     draftFromMatch(parseImportedMatch(metadata, allyTeam));
   };
 
+  // The id is written only once the fetch succeeds: setting it first left a failed import with
+  // `match=<id>` in the URL, so a shared link claimed to reference a match that does not exist.
   const loadMatch = async (matchId: number) => {
-    void setSidesSwapped(null);
-    void setImportedMatchId(matchId);
-    await applyMatch(matchId, 0);
+    setImportError(null);
+    setImporting(true);
+    try {
+      const metadata = await queryClient.fetchQuery(matchMetadataQueryOptions(matchId));
+      void setSidesSwapped(null);
+      void setImportedMatchId(matchId);
+      draftFromMatch(parseImportedMatch(metadata, 0));
+    } catch (error) {
+      // A transport failure carries a status and an unreadable message; anything the query threw
+      // itself already reads as a sentence and is kept.
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      const thrown = error instanceof Error ? error.message : "";
+      if (status === 404) setImportError(`No match found with ID ${matchId}.`);
+      else if (status !== undefined) setImportError(`Could not load match ${matchId}. Please try again.`);
+      else setImportError(thrown || `Could not load match ${matchId}.`);
+    } finally {
+      setImporting(false);
+    }
   };
 
   const flipSides = async () => {
@@ -255,37 +288,47 @@ function TeamBuilderPage() {
         <Filter.MinMatches value={minMatches} onChange={setMinMatches} label="Min Matches" step={10} min={0} />
         <MatchImportControl
           matchId={importedMatchId}
-          isLoading={importQuery.isFetching}
-          error={(importQuery.error as Error | null)?.message}
+          isLoading={importQuery.isFetching || importing}
+          error={importError ?? (importQuery.error as Error | null)?.message}
           onLoad={(id) => void loadMatch(id)}
           onFlipSides={() => void flipSides()}
           onClear={clearDraft}
         />
       </Filter.Root>
 
-      {isError ? (
+      {/* Above the board rather than replacing it: the stats failing says nothing about the draft,
+          and swapping the page out would take the user's picks off screen with it. */}
+      {isError && (
         <Alert variant="destructive">
           <TriangleAlertIcon />
           <AlertTitle>Could not load the draft stats</AlertTitle>
-          <AlertDescription>{error?.message}</AlertDescription>
+          <AlertDescription className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span title={error?.message}>Your draft is unchanged. The numbers below need the stats to load.</span>
+            <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs" onClick={() => void refetchStats()}>
+              <RotateCwIcon className="size-3" />
+              Try again
+            </Button>
+          </AlertDescription>
         </Alert>
-      ) : (
-        <>
-          {/* The board only needs hero assets, so it stays interactive while the stats load and the
-              panels below carry their own skeletons. Blocking the whole page on a full matrix fetch
-              would make every filter change feel like a reload. */}
-          <Panel className="px-5 py-4">
-            <DraftBoard
-              controls={controls}
-              analysis={analysis}
-              imported={imported}
-              loading={isPending}
-              swaps={swapsBySlot}
-              laneSuggestions={laneSuggestions}
-              onPick={(side, slot) => setPickerTarget({ side, slot })}
-            />
-          </Panel>
+      )}
 
+      {/* The board only needs hero assets, so it stays interactive while the stats load and the
+          panels below carry their own skeletons. Blocking the whole page on a full matrix fetch
+          would make every filter change feel like a reload. */}
+      <Panel className="px-5 py-4">
+        <DraftBoard
+          controls={controls}
+          analysis={analysis}
+          imported={imported}
+          loading={isPending}
+          swaps={swapsBySlot}
+          laneSuggestions={laneSuggestions}
+          onPick={(side, slot) => setPickerTarget({ side, slot })}
+        />
+      </Panel>
+
+      {!isError && (
+        <>
           {totalPicked === 0 ? (
             <Panel className="items-center px-6 py-10 text-center">
               <UsersRoundIcon className="size-9 text-muted-foreground/40" />
@@ -320,29 +363,24 @@ function TeamBuilderPage() {
               )}
 
               {/* Equal-height columns: each panel is its own grid item, so the three stay level
-                  however tall their contents run. */}
-              <div className="grid gap-3 sm:auto-rows-fr sm:grid-cols-3">
+                  however tall their contents run. Three across only from 2xl — each needs ~340px for
+                  a hero column plus three numeric ones, and the sidebar takes 256px off the viewport. */}
+              <div className="grid gap-3 lg:grid-cols-2 2xl:auto-rows-fr 2xl:grid-cols-3">
                 <NextPickPanel
                   recommendations={recommendations}
+                  swaps={allySwaps}
                   hasOpenSlot={nextOpenSlot("ally") !== null}
                   loading={isPending}
                   onPick={(heroId) => {
                     const slot = nextOpenSlot("ally");
                     if (slot !== null) setSlot("ally", slot, heroId);
                   }}
+                  onApplySwap={(swap) => setSlot("ally", swap.slot, swap.in)}
                 />
 
                 <PairsPanel pairs={analysis.allyPairs} index={index} loading={isPending} onOpen={setPairDetail} />
 
-                <CounterMatrix
-                  analysis={analysis}
-                  index={index}
-                  loading={isPending}
-                  onOpen={(cell) => {
-                    const pair = analysis.allyPairs.find((p) => p.a === cell.hero || p.b === cell.hero);
-                    if (pair) setPairDetail(pair);
-                  }}
-                />
+                <CounterMatrix analysis={analysis} index={index} loading={isPending} onOpen={setMatchupDetail} />
               </div>
             </>
           )}
@@ -363,6 +401,9 @@ function TeamBuilderPage() {
       </DetailDialog>
       <DetailDialog value={laneDetail} onClose={() => setLaneDetail(null)}>
         {(lane) => <LaneDetailBody lane={lane} index={index} filterSummary={filterSummary} />}
+      </DetailDialog>
+      <DetailDialog value={matchupDetail} onClose={() => setMatchupDetail(null)}>
+        {(cell) => <MatchupDetailBody cell={cell} index={index} filterSummary={filterSummary} />}
       </DetailDialog>
     </div>
   );

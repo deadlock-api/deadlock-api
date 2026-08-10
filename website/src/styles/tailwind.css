@@ -467,3 +467,16 @@
     stroke-opacity 0.15s,
     stroke-width 0.15s;
 }
+
+/* Users who ask the OS to reduce motion get no transitions or animations. Applied globally rather
+   than per-component so hover scales, spinners and chart tweens are all covered at once. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

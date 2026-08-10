@@ -59,7 +59,7 @@ export function PairsChart({
           <PairBar key={`${pair.a}-${pair.b}`} pair={pair} index={index} scale={scale} onOpen={onOpen} />
         ))}
       </div>
-      <div className="mt-2 flex justify-between text-[11px] text-muted-foreground/70">
+      <div className="mt-2 flex justify-between text-[11px] text-muted-foreground">
         <span>−{scale} pts</span>
         <span>even</span>
         <span>+{scale} pts</span>

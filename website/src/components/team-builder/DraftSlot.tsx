@@ -5,6 +5,7 @@ import { Badge } from "~/components/ui/badge";
 import { useHeroById } from "~/hooks/useAssetById";
 import type { Side, Swap } from "~/lib/team-builder/analysis";
 import { formatPoints } from "~/lib/team-builder/format";
+import { laneOfSlot } from "~/lib/team-builder/lanes";
 import { cn } from "~/lib/utils";
 
 import { HeroPortrait } from "./HeroPortrait";
@@ -31,22 +32,33 @@ export interface DraftSlotProps {
   onSwap: (heroId: number) => void;
 }
 
-function SwapHint({ heroId, gain, onApply }: { heroId: number; gain: number; onApply: () => void }) {
+/**
+ * `gain` belongs to the side that owns the slot, so an enemy suggestion is a loss for the reader and
+ * is signed and coloured against them — green everywhere else here means "better for you".
+ */
+function SwapHint({ heroId, gain, side, onApply }: { heroId: number; gain: number; side: Side; onApply: () => void }) {
   const { hero } = useHeroById(heroId);
+  const ally = side === "ally";
+  const shown = ally ? gain : -gain;
+  const label = ally
+    ? `Swap to ${hero?.name ?? "this hero"} for ${formatPoints(gain)} predicted win rate`
+    : `Their best upgrade here: ${hero?.name ?? "this hero"}, costing you ${formatPoints(-gain)} predicted win rate`;
+
   return (
     <Badge
       asChild
       variant="outline"
-      className="cursor-pointer border-green-400/25 bg-green-400/10 px-1 py-px text-[10px] font-semibold text-green-400 hover:border-green-400/50 hover:bg-green-400/20"
+      className={cn(
+        "cursor-pointer px-1 py-px text-[10px] font-semibold",
+        ally
+          ? "border-green-400/25 bg-green-400/10 text-green-400 hover:border-green-400/50 hover:bg-green-400/20"
+          : "border-red-400/25 bg-red-400/10 text-red-400 hover:border-red-400/50 hover:bg-red-400/20",
+      )}
     >
-      <button
-        type="button"
-        onClick={onApply}
-        title={`Swap to ${hero?.name ?? "this hero"} for ${formatPoints(gain)} predicted win rate`}
-      >
+      <button type="button" onClick={onApply} aria-label={label} title={label}>
         <ArrowRightIcon className="size-2.5" />
         <HeroPortrait heroId={heroId} size="size-4" />
-        {formatPoints(gain)}
+        {formatPoints(shown)}
       </button>
     </Badge>
   );
@@ -82,7 +94,10 @@ export function DraftSlot({
 }: DraftSlotProps) {
   const { hero } = useHeroById(heroId ?? -1);
   const [isOver, setIsOver] = useState(false);
-  const box = "size-13 xl:size-15";
+  // The portrait is an <img> with an explicit height, so a slot narrower than the art leaves
+  // preflight's `max-width: 100%` clamping width alone and the hero renders as an oval. The 44px
+  // floor is also the touch-target minimum.
+  const box = "size-11 sm:size-13 2xl:size-15";
 
   // Both filled and empty slots take a drop: dropping on an empty one moves a hero to another lane,
   // dropping on a filled one swaps the two.
@@ -106,7 +121,7 @@ export function DraftSlot({
       <button
         type="button"
         onClick={onPick}
-        aria-label="Add hero to this lane slot"
+        aria-label={`Add hero to ${side === "ally" ? "Amber Hand" : "Sapphire Flame"} ${laneOfSlot(slot).name} lane`}
         {...dropTargetProps}
         className={cn(
           "mx-auto flex cursor-pointer items-center justify-center rounded-full border border-dashed",
@@ -144,24 +159,29 @@ export function DraftSlot({
           type="button"
           onClick={onClear}
           aria-label={`Remove ${hero?.name ?? "hero"}`}
+          // Hover-revealed on pointer devices only: there is no hover to reveal it on a phone.
           className={cn(
-            "absolute -top-0.5 -right-0.5 hidden size-5 cursor-pointer items-center justify-center rounded-full",
+            "absolute -top-0.5 -right-0.5 flex size-6 cursor-pointer items-center justify-center rounded-full sm:size-5",
             "border border-border bg-background text-muted-foreground shadow-sm",
-            "group-hover:flex hover:border-destructive/60 hover:text-destructive",
+            "hover:border-destructive/60 hover:text-destructive md:hidden md:group-hover:flex",
           )}
         >
           <XIcon className="size-3" />
         </button>
       </div>
 
-      <div className="mt-1 text-[11px] leading-tight text-balance text-muted-foreground">{hero?.name ?? "…"}</div>
+      <div className="mt-1 truncate text-[11px] leading-tight text-foreground" title={hero?.name}>
+        {hero?.name ?? "…"}
+      </div>
       {player && (
-        <div className="truncate text-[10px] text-foreground" title={player}>
+        <div className="truncate text-[10px] text-muted-foreground" title={player}>
           {player}
         </div>
       )}
       <div className="mt-1 flex h-5 items-center justify-center">
-        {suggestion && <SwapHint heroId={suggestion.in} gain={suggestion.gain} onApply={() => onSwap(suggestion.in)} />}
+        {suggestion && (
+          <SwapHint heroId={suggestion.in} gain={suggestion.gain} side={side} onApply={() => onSwap(suggestion.in)} />
+        )}
       </div>
     </div>
   );

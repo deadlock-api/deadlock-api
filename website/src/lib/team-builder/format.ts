@@ -20,8 +20,12 @@ export function formatRate(value: number | undefined): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
+/**
+ * Pinned to en-US: every other number here prints through `toFixed`, so a locale-grouped count would
+ * render 1234 as "1.234" beside deltas that use "." as a decimal point. Also an SSR hazard.
+ */
 export function formatCount(value: number | undefined): string {
-  return value === undefined ? NO_DATA : value.toLocaleString();
+  return value === undefined ? NO_DATA : value.toLocaleString("en-US");
 }
 
 export function deltaClass(value: number | undefined): string {
@@ -52,13 +56,40 @@ export function heatBackground(value: number | undefined, scale: number): string
   return `rgba(${rgb}, ${(0.08 + 0.32 * Math.abs(t)).toFixed(3)})`;
 }
 
-const CONFIDENCE_STEPS = [50, 200, 1_000, 5_000, 20_000];
+/** Calibrated to what a per-pairing sample reaches on one patch at a narrow rank band. */
+const CONFIDENCE_STEPS = [20, 60, 150, 400, 1_000];
 
 export const MAX_CONFIDENCE_PIPS = CONFIDENCE_STEPS.length;
 
 /** Filled pips out of `MAX_CONFIDENCE_PIPS`: each step is roughly a quarter of the remaining uncertainty. */
 export function confidencePips(matches: number): number {
   return CONFIDENCE_STEPS.filter((step) => matches >= step).length;
+}
+
+/**
+ * Rounds `values` to one decimal so they still add up to `total` at that precision.
+ *
+ * The prediction is `50 + Σ terms`, so a reader can add the printed breakdown up. Rounding each term
+ * independently would let the rows disagree with the headline they explain; largest-remainder puts
+ * the leftover tenths on the terms that were rounded furthest.
+ */
+export function roundToSum(values: number[], total: number): number[] {
+  const scaled = values.map((v) => v * 10);
+  const floors = scaled.map(Math.floor);
+  let residual = Math.round(total * 10) - floors.reduce((sum, n) => sum + n, 0);
+  const order = scaled
+    .map((v, i) => ({ i, fraction: v - floors[i] }))
+    .sort((a, b) => b.fraction - a.fraction)
+    .map((entry) => entry.i);
+
+  const out = [...floors];
+  // `residual` can be negative when every term sat just below its floor boundary.
+  for (let k = 0; residual !== 0 && k < order.length * 2; k++) {
+    const i = order[k % order.length];
+    out[i] += Math.sign(residual);
+    residual -= Math.sign(residual);
+  }
+  return out.map((n) => n / 10);
 }
 
 /** Colour-ramp bound for a set of edges: the largest magnitude present, rounded to a readable step. */

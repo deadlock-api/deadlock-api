@@ -15,8 +15,12 @@ import { Panel, PanelHeader, PanelMessage, PanelShowMore, PanelSkeleton, PanelVi
 /** How many of the 15 pairings show before the list has to be expanded. */
 const COLLAPSED_ROWS = 8;
 
-/** Header and rows share this template so the columns line up regardless of hero name length. */
-const COLUMNS = "grid grid-cols-[auto_minmax(0,1fr)_3.5rem_4rem_4rem] items-center gap-x-2.5 px-4";
+/**
+ * Header and rows share this template so the columns line up regardless of hero name length. The
+ * name column carries a floor so it cannot be the one that collapses, and the trailing count track
+ * fits four digits so a sample count can never lose a digit off the panel edge.
+ */
+const COLUMNS = "grid grid-cols-[3.5rem_minmax(5rem,1fr)_3rem_3.5rem_3rem] items-center gap-x-2 px-3";
 
 interface PairsPanelProps {
   pairs: PairRow[];
@@ -49,17 +53,12 @@ export function PairsPanel({ pairs, index, loading, onOpen }: PairsPanelProps) {
         <PairsChart pairs={pairs} index={index} onOpen={onOpen} />
       ) : (
         <>
-          <div
-            className={cn(
-              COLUMNS,
-              "border-b border-border py-2 text-[11px] tracking-[0.05em] text-muted-foreground uppercase",
-            )}
-          >
-            <span className="w-12">Pair</span>
+          <div className={cn(COLUMNS, "border-b border-border py-2 text-[10px] text-muted-foreground uppercase")}>
+            <span>Pair</span>
             <span />
-            <span className="text-right">Δ</span>
+            <span className="text-right">Syn pts</span>
             <span className="text-right">Win rate</span>
-            <span className="text-right">Matches</span>
+            <span className="text-right">Games</span>
           </div>
           <div>
             {visible.map((pair) => (

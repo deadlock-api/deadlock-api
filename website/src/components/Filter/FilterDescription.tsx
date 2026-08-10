@@ -72,7 +72,8 @@ const SEGMENT_DEFS: {
 }[] = [
   { key: "gameMode", prefix: "", suffix: "matches" },
   { key: "matchMode", prefix: "", suffix: "matches" },
-  { key: "dateRange", prefix: "between" },
+  // No prefix: `formatDateRange` already carries the preposition its own shape requires.
+  { key: "dateRange", prefix: "" },
   { key: "rankRange", prefix: "with rank" },
   { key: "hero", prefix: "on" },
   { key: "team", prefix: "on team" },

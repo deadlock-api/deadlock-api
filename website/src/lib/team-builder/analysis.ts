@@ -533,7 +533,7 @@ export interface Swap {
  * changes the lane duo it belongs to, and leaving that out made the quoted gain disagree with the
  * number the board then showed.
  */
-export function suggestSwaps(draft: Draft, index: StatsIndex, side: Side, candidates: number[]): Swap[] {
+function searchSwaps(draft: Draft, index: StatsIndex, side: Side, candidates: number[]): Swap[] {
   const own = filled(draft[side]);
   const opposing = filled(draft[side === "ally" ? "enemy" : "ally"]);
   const drafted = new Set([...filled(draft.ally), ...filled(draft.enemy)]);
@@ -550,23 +550,39 @@ export function suggestSwaps(draft: Draft, index: StatsIndex, side: Side, candid
   // original hero is put back before moving on, so nothing here is allocated per candidate.
   const hypothetical: Draft = { ally: [...draft.ally], enemy: [...draft.enemy] };
 
-  const best: Swap[] = [];
+  const found: Swap[] = [];
   draft[side].forEach((out, slot) => {
     if (out === null) return;
-    let bestSwap: Swap | undefined;
     for (const candidate of candidates) {
       if (drafted.has(candidate)) continue;
       hypothetical[side][slot] = candidate;
       const predicted = predictDraft(hypothetical, index);
       if (predicted === undefined) continue;
       const gain = (predicted - baseline) * sign;
-      if (gain >= MIN_GAIN && gain > (bestSwap?.gain ?? 0)) bestSwap = { slot, out, in: candidate, gain };
+      if (gain >= MIN_GAIN) found.push({ slot, out, in: candidate, gain });
     }
     hypothetical[side][slot] = out;
-    if (bestSwap) best.push(bestSwap);
   });
 
-  return best;
+  return found;
+}
+
+export function suggestSwaps(draft: Draft, index: StatsIndex, side: Side, candidates: number[]): Swap[] {
+  const bySlot = new Map<number, Swap>();
+  for (const swap of searchSwaps(draft, index, side, candidates)) {
+    const best = bySlot.get(swap.slot);
+    if (!best || swap.gain > best.gain) bySlot.set(swap.slot, swap);
+  }
+  return [...bySlot.values()];
+}
+
+/**
+ * Every worthwhile replacement across the side, best first: `suggestSwaps` without the collapse to
+ * one row per slot. Scored by re-predicting the draft, so the numbers match the board's own chips —
+ * ranking by `recommendPicks` would quote a gain the swap does not deliver.
+ */
+export function rankSwaps(draft: Draft, index: StatsIndex, side: Side, candidates: number[]): Swap[] {
+  return searchSwaps(draft, index, side, candidates).sort((a, b) => b.gain - a.gain);
 }
 
 export interface LaneReassignment {

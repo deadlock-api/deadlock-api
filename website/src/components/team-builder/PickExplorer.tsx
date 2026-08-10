@@ -178,15 +178,15 @@ export function PickExplorer({ recommendations, onPick }: PickExplorerProps) {
           {yTicks.map((tick) => (
             <span
               key={`yl${tick.value}`}
-              className="pointer-events-none absolute left-1 text-[9px] text-muted-foreground/60 tabular-nums"
+              className="pointer-events-none absolute left-1 text-[10px] text-muted-foreground tabular-nums"
               style={{ top: tick.at - 6 }}
             >
               {formatPoints(tick.value)}
             </span>
           ))}
 
-          <span className="absolute top-2 right-3 text-[10px] font-semibold text-green-400/80">best of both</span>
-          <span className="absolute bottom-2 left-3 text-[10px] font-semibold text-red-400/70">weak on both</span>
+          <span className="absolute top-2 right-3 text-[10px] font-semibold text-green-400">best of both</span>
+          <span className="absolute bottom-2 left-3 text-[10px] font-semibold text-red-400">weak on both</span>
 
           {nodes.map((node) => (
             <RecommendationTooltip key={node.rec.heroId} rec={node.rec}>
@@ -212,14 +212,14 @@ export function PickExplorer({ recommendations, onPick }: PickExplorerProps) {
           {xTicks.map((tick) => (
             <span
               key={tick.value}
-              className="absolute -translate-x-1/2 text-[9px] text-muted-foreground/60 tabular-nums"
+              className="absolute -translate-x-1/2 text-[10px] text-muted-foreground tabular-nums"
               style={{ left: tick.at }}
             >
               {formatPoints(tick.value)}
             </span>
           ))}
         </div>
-        <div className="flex justify-between text-[11px] text-muted-foreground/70">
+        <div className="flex justify-between text-[11px] text-muted-foreground">
           <span>← weaker synergy</span>
           <span>stronger synergy →</span>
         </div>

@@ -8,15 +8,18 @@ import { HeroTooltip } from "./StatTooltip";
 
 function LaneSide({ heroes, side, index }: { heroes: number[]; side: Side; index: StatsIndex }) {
   return (
-    <div className={cn("flex flex-1 gap-1.5", side === "enemy" && "justify-end")}>
+    <div className={cn("flex min-w-0 flex-1 gap-1.5", side === "enemy" && "justify-end")}>
       {/* Keyed by slot position, not by occupant: hero ids and slot indices overlap, so a lane
           holding hero 1 next to an empty slot would otherwise render two children keyed "1". */}
       {[0, 1].map((i) =>
         heroes[i] === undefined ? (
-          <div key={`slot-${i}`} className="size-9.5 rounded-full border border-dashed border-white/[0.12]" />
+          <div
+            key={`slot-${i}`}
+            className="size-8 rounded-full border border-dashed border-white/[0.12] 2xl:size-9.5"
+          />
         ) : (
           <HeroTooltip key={`slot-${i}`} heroId={heroes[i]} index={index}>
-            <HeroPortrait heroId={heroes[i]} size="size-9.5" side={side} />
+            <HeroPortrait heroId={heroes[i]} size="size-8 2xl:size-9.5" side={side} />
           </HeroTooltip>
         ),
       )}
@@ -24,8 +27,11 @@ function LaneSide({ heroes, side, index }: { heroes: number[]; side: Side; index
   );
 }
 
-/** A side's share of the track: 50% of the matchup fills nothing, 100% fills its whole half. */
-const halfWidth = (share: number) => `${Math.min(100, Math.max(0, share * 200 - 100))}%`;
+/** Points of win rate that fill a half-track. Real lane matchups land within a few points of even. */
+const LANE_BAR_SCALE = 10;
+
+/** A side's share of the track, in win-rate points away from even. */
+const halfWidth = (share: number) => `${Math.min(100, Math.max(0, ((share - 0.5) * 100 * 100) / LANE_BAR_SCALE))}%`;
 
 export function LaneCards({
   lanes,
@@ -39,7 +45,8 @@ export function LaneCards({
   onOpen: (lane: LaneRow) => void;
 }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    // Three across only from lg: four portraits plus a centred readout do not fit a narrower card.
+    <div className="grid gap-3 lg:grid-cols-3">
       {lanes.map((row) => {
         const pending = loading || !row.complete || row.winRate === undefined;
         const share = row.winRate ?? 0.5;
@@ -56,10 +63,21 @@ export function LaneCards({
               pending ? "opacity-55" : "cursor-pointer hover:border-white/20",
             )}
           >
+            {/* Named in text, not only by the coloured top border, which is not an identity cue a
+                reader who does not separate these hues can use. */}
+            <div className="mb-2 flex items-baseline justify-between gap-2">
+              <span className="text-[11px] font-semibold" style={{ color: row.lane.color }}>
+                {row.lane.name} lane
+              </span>
+              {!loading && row.matches > 0 && (
+                <span className="text-[10px] text-muted-foreground tabular-nums">{formatCount(row.matches)} games</span>
+              )}
+            </div>
+
             <div className="flex items-center gap-2">
               <LaneSide heroes={row.ally} side="ally" index={index} />
               {/* The lane's numbers sit where the "vs" would be: they belong to the matchup, not a side. */}
-              <div className="min-w-16 text-center">
+              <div className="min-w-14 text-center">
                 {loading ? (
                   <Skeleton className="mx-auto h-8 w-14" />
                 ) : (
@@ -82,7 +100,7 @@ export function LaneCards({
 
             {/* Two-sided fill: each half of the track is one side's share of the matchup, growing
                 outwards from the centre. */}
-            <div className="relative my-3 flex h-1.5 gap-px rounded-full bg-muted">
+            <div className="relative mt-3 mb-1.5 flex h-1.5 gap-px rounded-full bg-muted">
               <div className="flex flex-1 justify-end">
                 <div className="h-full rounded-l-full bg-primary/70" style={{ width: halfWidth(1 - share) }} />
               </div>
@@ -91,6 +109,12 @@ export function LaneCards({
               </div>
               {/* Marks the even point the two fills grow away from. */}
               <div className="absolute inset-y-[-2px] left-1/2 w-px -translate-x-1/2 bg-white/60" />
+            </div>
+
+            <div className="flex justify-between text-[10px] text-muted-foreground">
+              <span>their duo</span>
+              <span>±{LANE_BAR_SCALE} pts</span>
+              <span>your duo</span>
             </div>
           </button>
         );

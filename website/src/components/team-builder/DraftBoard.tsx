@@ -14,6 +14,7 @@ import {
   formatPoints,
   MAX_CONFIDENCE_PIPS,
   NO_DATA,
+  roundToSum,
 } from "~/lib/team-builder/format";
 import { LANES, slotsOfLane } from "~/lib/team-builder/lanes";
 import { cn } from "~/lib/utils";
@@ -32,7 +33,44 @@ function pipColor(filledPips: number): string {
 }
 
 /** The interval half-width is in win-rate points, so these thresholds read directly off it. */
-const CONFIDENCE_LABEL = (margin: number) => (margin <= 1.5 ? "high" : margin <= 3 ? "medium" : "low");
+const CONFIDENCE_LABEL = (margin: number) =>
+  margin <= 3 ? "firm" : margin <= 6 ? "usable" : margin <= 10 ? "rough" : "a guess";
+
+/** Above this half-width the second decimal claims precision the model does not have. */
+const COARSE_MARGIN = 2;
+
+/** The window the uncertainty bar spans. Predictions outside it are pinned to the end. */
+const BAR_LO = 30;
+const BAR_HI = 70;
+
+/** The interval as a band: its width is the uncertainty, so a firm draft and a coin-flip differ at a glance. */
+function IntervalBar({ predicted, margin }: { predicted: number; margin: number }) {
+  const at = (value: number) => `${((Math.min(BAR_HI, Math.max(BAR_LO, value)) - BAR_LO) / (BAR_HI - BAR_LO)) * 100}%`;
+
+  return (
+    <div className="mt-2.5 w-52">
+      <div className="relative h-2 rounded-full bg-muted">
+        <div
+          className="absolute inset-y-0 rounded-full bg-foreground/25"
+          style={{ left: at(predicted - margin), right: `calc(100% - ${at(predicted + margin)})` }}
+        />
+        <div className="absolute inset-y-[-3px] left-1/2 w-px -translate-x-1/2 bg-white/50" />
+        <div
+          className={cn(
+            "absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background",
+            predicted >= 50 ? "bg-green-400" : "bg-primary",
+          )}
+          style={{ left: at(predicted) }}
+        />
+      </div>
+      <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+        <span>{BAR_LO}%</span>
+        <span>even</span>
+        <span>{BAR_HI}%</span>
+      </div>
+    </div>
+  );
+}
 
 interface DraftBoardProps {
   controls: DraftControls;
@@ -81,6 +119,16 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
     const accountId = accountBySlot.get(`${side}:${slot}`);
     return accountId === undefined ? undefined : profiles[accountId]?.personaname;
   };
+
+  const { predicted, margin, contributions } = analysis;
+  const decimals = margin !== undefined && margin > COARSE_MARGIN ? 0 : 1;
+  // An undefined term prints `n/a` and contributes nothing to the sum the total has to match.
+  const displayValues = useMemo(() => {
+    if (predicted === undefined) return contributions.map((c) => c.value);
+    const known = contributions.map((c) => c.value ?? 0);
+    const adjusted = roundToSum(known, predicted - 50);
+    return contributions.map((c, i) => (c.value === undefined ? undefined : adjusted[i]));
+  }, [contributions, predicted]);
 
   const renderSide = (side: Side) => {
     const laneSuggestion = laneSuggestions[side];
@@ -136,7 +184,9 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
   };
 
   return (
-    <div className="flex flex-col items-stretch gap-5 xl:flex-row xl:items-stretch xl:gap-6">
+    // Side-by-side only from 2xl: the centre column is a fixed ~280px, so a row any earlier leaves
+    // each six-slot side under 40px per portrait.
+    <div className="flex flex-col items-stretch gap-5 2xl:flex-row 2xl:items-stretch 2xl:gap-6">
       {renderSide("ally")}
 
       <div className="flex flex-none flex-col items-center px-3 text-center">
@@ -155,12 +205,13 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
                 NO_DATA
               ) : (
                 <>
-                  <span className="text-green-400">{analysis.predicted.toFixed(1)}%</span>
+                  <span className="text-green-400">{analysis.predicted.toFixed(decimals)}%</span>
                   <span className="mx-1.5 text-muted-foreground">:</span>
-                  <span className="text-primary">{(100 - analysis.predicted).toFixed(1)}%</span>
+                  <span className="text-primary">{(100 - analysis.predicted).toFixed(decimals)}%</span>
                 </>
               )}
             </div>
+
             {analysis.margin !== undefined && analysis.predicted !== undefined && (
               <StatTooltip
                 title="How firm is this number?"
@@ -170,53 +221,71 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
                     value: `${(analysis.predicted - analysis.margin).toFixed(1)}% to ${(analysis.predicted + analysis.margin).toFixed(1)}%`,
                   },
                   { label: "Confidence", value: CONFIDENCE_LABEL(analysis.margin) },
+                  { label: "Widest term", value: `±${analysis.margin.toFixed(1)} pts` },
                 ]}
               >
-                <div className="cursor-default text-xs text-muted-foreground tabular-nums">
-                  ±{analysis.margin.toFixed(1)} · {CONFIDENCE_LABEL(analysis.margin)} confidence
-                </div>
+                <button type="button" className="cursor-default rounded">
+                  <IntervalBar predicted={analysis.predicted} margin={analysis.margin} />
+                </button>
               </StatTooltip>
             )}
 
             {/* The breakdown sits with the number it explains, each term next to the sample it
-                rests on, so weight and reliability read together. */}
-            <div className="mt-3 w-64 space-y-2 border-t border-border pt-2.5">
-              {analysis.contributions.map((contribution) => {
-                const filledPips = confidencePips(contribution.matches);
-                return (
-                  <StatTooltip
-                    key={contribution.key}
-                    title={contribution.label}
-                    rows={[
-                      {
-                        label: "Contribution",
-                        value: formatPoints(contribution.value),
-                        className: deltaClass(contribution.value),
-                      },
-                      { label: "Thinnest sample", value: formatCount(contribution.matches) },
-                      { label: "Confidence", value: `${filledPips} of ${MAX_CONFIDENCE_PIPS}` },
-                    ]}
-                  >
-                    <div className="flex cursor-default items-center gap-2 text-[11px]">
-                      <span className="min-w-0 flex-1 truncate text-left text-muted-foreground">
-                        {contribution.label}
-                      </span>
-                      <span className="flex shrink-0 gap-0.5">
-                        {Array.from({ length: MAX_CONFIDENCE_PIPS }, (_, i) => (
-                          <span
-                            key={i}
-                            className={cn(
-                              "h-3 w-1.5 rounded-[1px]",
-                              i < filledPips ? pipColor(filledPips) : "bg-border",
-                            )}
-                          />
-                        ))}
-                      </span>
-                      <DeltaValue value={contribution.value} className="w-10 shrink-0 text-right font-semibold" />
-                    </div>
-                  </StatTooltip>
-                );
-              })}
+                rests on, so weight and reliability read together. It opens on the even-match
+                baseline and closes on the total, because the model is exactly `50 + Σ terms` —
+                stating both ends turns four loose numbers into an arithmetic the reader can check. */}
+            <div className="mt-3 w-64 border-t border-border pt-2.5">
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                <span className="flex-1 text-left">Even match</span>
+                <span className="w-10 text-right tabular-nums">50.0</span>
+              </div>
+              <div className="mt-2 space-y-2">
+                {analysis.contributions.map((contribution, i) => {
+                  const filledPips = confidencePips(contribution.matches);
+                  const shown = displayValues[i];
+                  return (
+                    <StatTooltip
+                      key={contribution.key}
+                      title={contribution.label}
+                      rows={[
+                        {
+                          label: "Contribution",
+                          value: formatPoints(contribution.value),
+                          className: deltaClass(contribution.value),
+                        },
+                        { label: "Thinnest sample", value: formatCount(contribution.matches) },
+                        { label: "Confidence", value: `${filledPips} of ${MAX_CONFIDENCE_PIPS}` },
+                      ]}
+                    >
+                      {/* A button so Radix opens the card on focus, not just on hover. */}
+                      <button type="button" className="flex w-full cursor-default items-center gap-2 text-[11px]">
+                        <span className="min-w-0 flex-1 truncate text-left text-muted-foreground">
+                          {contribution.label}
+                        </span>
+                        <span className="flex shrink-0 gap-0.5" aria-hidden="true">
+                          {Array.from({ length: MAX_CONFIDENCE_PIPS }, (_, pip) => (
+                            <span
+                              key={pip}
+                              className={cn(
+                                "h-3 w-1.5 rounded-[1px]",
+                                pip < filledPips ? pipColor(filledPips) : "bg-border",
+                              )}
+                            />
+                          ))}
+                        </span>
+                        <DeltaValue value={shown} className="w-10 shrink-0 text-right font-semibold" />
+                      </button>
+                    </StatTooltip>
+                  );
+                })}
+              </div>
+
+              {analysis.predicted !== undefined && (
+                <div className="mt-2.5 flex items-center gap-2 border-t border-border pt-2 text-[11px] font-semibold">
+                  <span className="flex-1 text-left">Predicted</span>
+                  <span className="w-10 text-right tabular-nums">{analysis.predicted.toFixed(1)}</span>
+                </div>
+              )}
             </div>
           </>
         )}

@@ -28,9 +28,14 @@ export function AssetImage({ asset, isLoading, skeletonClassName, emptyClassName
   const src = asset.fallbackSrc ?? asset.webp ?? asset.png ?? "";
 
   return (
-    <picture>
-      {asset.webp && <source srcSet={asset.webp} type="image/webp" />}
-      {asset.png && <source srcSet={asset.png} type="image/png" />}
+    // Sizing lands on the <img>, so the <picture> must not be a flex/grid item itself: its unstyled
+    // box would collapse and preflight's `img { max-width: 100% }` would squash the art to fit.
+    <picture className="contents">
+      {/* `display: contents` promotes these to layout children, and preflight leaves <source> as
+          `inline` rather than the UA sheet's `none`, so each portrait would count as three grid
+          items. Resource selection is unaffected by CSS display. */}
+      {asset.webp && <source className="hidden" srcSet={asset.webp} type="image/webp" />}
+      {asset.png && <source className="hidden" srcSet={asset.png} type="image/png" />}
       <img loading="lazy" src={src} alt={asset.alt} title={asset.title ?? asset.alt} className={imgClassName} />
     </picture>
   );

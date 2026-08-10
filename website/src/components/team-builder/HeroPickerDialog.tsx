@@ -98,12 +98,33 @@ function PickerBody({
     [target.side, draft, index, heroes],
   );
 
+  // Where each drafted hero sits, so the picker can list them as taken rather than omitting them.
+  const takenBy = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const side of ["ally", "enemy"] as const) {
+      draft[side].forEach((heroId, slot) => {
+        if (heroId === null) return;
+        const own = side === target.side && slot === target.slot;
+        const team = side === "ally" ? "Amber Hand" : "Sapphire Flame";
+        map.set(heroId, own ? "in this slot" : `${team} · ${laneOfSlot(slot).name}`);
+      });
+    }
+    return map;
+  }, [draft, target]);
+
   const rows = useMemo(() => {
     const term = search.trim().toLowerCase();
     return recommendations
       .filter((r) => !term || (namesById.get(r.heroId) ?? "").toLowerCase().includes(term))
       .sort((a, b) => (b[sort] ?? Number.NEGATIVE_INFINITY) - (a[sort] ?? Number.NEGATIVE_INFINITY));
   }, [recommendations, search, sort, namesById]);
+
+  const takenRows = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return [...takenBy.keys()]
+      .filter((heroId) => !term || (namesById.get(heroId) ?? "").toLowerCase().includes(term))
+      .sort((a, b) => (namesById.get(a) ?? "").localeCompare(namesById.get(b) ?? ""));
+  }, [takenBy, search, namesById]);
 
   const cursor = Math.min(rawCursor, Math.max(0, rows.length - 1));
 
@@ -158,7 +179,7 @@ function PickerBody({
       </div>
 
       <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto">
-        {rows.length === 0 && (
+        {rows.length === 0 && takenRows.length === 0 && (
           <p className="py-10 text-center text-sm text-muted-foreground">No hero matches “{search}”.</p>
         )}
         {rows.map((row, i) => (
@@ -188,6 +209,24 @@ function PickerBody({
             <span className="w-18 text-right tabular-nums">{formatRate(row.winRate)}</span>
           </button>
         ))}
+
+        {takenRows.length > 0 && (
+          <>
+            <div className="border-b border-border bg-white/[0.02] px-4 py-1.5 text-[11px] text-muted-foreground">
+              Already drafted
+            </div>
+            {takenRows.map((heroId) => (
+              <div
+                key={heroId}
+                className="flex w-full items-center gap-2.5 border-b border-border/60 px-4 py-2.5 text-[13px] opacity-45"
+              >
+                <HeroPortrait heroId={heroId} size="size-7.5" />
+                <span className="flex-1">{namesById.get(heroId) ?? "Unknown"}</span>
+                <span className="text-[11px] text-muted-foreground">{takenBy.get(heroId)}</span>
+              </div>
+            ))}
+          </>
+        )}
       </div>
 
       <div className="flex justify-between border-t border-border px-4 py-2.5 text-[11px] text-muted-foreground">

@@ -77,7 +77,9 @@ export function HeroTooltip({
         { label: "Matches", value: formatCount(sample?.matches ?? 0) },
       ]}
     >
-      {children}
+      {/* A real element for Radix to hold: `AssetImage` forwards neither ref nor pointer handlers,
+          so a portrait passed straight to the trigger drops them silently. */}
+      <span className="inline-flex">{children}</span>
     </StatTooltip>
   );
 }
