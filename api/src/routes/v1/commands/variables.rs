@@ -784,7 +784,7 @@ impl Variable {
         {
             return Ok((rank, subrank));
         }
-        let badge = fetch_last_ranked_match(&state.ch_client_ro, steam_id)
+        let badge = fetch_last_ranked_match(&state.batchers.player_rank, steam_id)
             .await?
             .ok_or(VariableResolveError::NoData("rank"))?
             .badge();
@@ -798,7 +798,7 @@ impl Variable {
         state: &AppState,
         steam_id: u32,
     ) -> Result<(u32, u32, u32), VariableResolveError> {
-        let last_match = fetch_last_ranked_match(&state.ch_client_ro, steam_id)
+        let last_match = fetch_last_ranked_match(&state.batchers.player_rank, steam_id)
             .await?
             .ok_or(VariableResolveError::NoData("rank progress"))?;
         let (progress, width) = last_match

@@ -10,6 +10,7 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
 use crate::services::rank_image::{self, RankImageFormat, RankImageQuery};
 use crate::utils::types::AccountIdQuery;
 
@@ -119,34 +120,71 @@ impl LastRankedMatch {
     }
 }
 
+#[derive(Debug, Clone, Row, Deserialize)]
+pub(crate) struct LastRankedMatchRow {
+    account_id: u32,
+    match_id: u64,
+    start_time: u32,
+    player_rank_initial_display_rank: u32,
+    player_rank_initial_flat_progress: Option<u32>,
+    player_rank_final_flat_progress: Option<u32>,
+    player_rank_desired_progress_change: Option<i32>,
+    player_rank_initial_calibration_games: Option<u32>,
+    player_rank_initial_demotion_protection_games: Option<u32>,
+    player_rank_consumed_demotion_protection: Option<bool>,
+    player_rank_initial_win_streak: Option<u32>,
+}
+
+impl From<LastRankedMatchRow> for LastRankedMatch {
+    fn from(row: LastRankedMatchRow) -> Self {
+        Self {
+            match_id: row.match_id,
+            start_time: row.start_time,
+            player_rank_initial_display_rank: row.player_rank_initial_display_rank,
+            player_rank_initial_flat_progress: row.player_rank_initial_flat_progress,
+            player_rank_final_flat_progress: row.player_rank_final_flat_progress,
+            player_rank_desired_progress_change: row.player_rank_desired_progress_change,
+            player_rank_initial_calibration_games: row.player_rank_initial_calibration_games,
+            player_rank_initial_demotion_protection_games: row
+                .player_rank_initial_demotion_protection_games,
+            player_rank_consumed_demotion_protection: row.player_rank_consumed_demotion_protection,
+            player_rank_initial_win_streak: row.player_rank_initial_win_streak,
+        }
+    }
+}
+
+pub(crate) struct PlayerRankQuery;
+
 /// `initial_display_rank` is `0` while the player is still in placement games and is only set on
 /// ranked matches.
 ///
 /// `match_player` is sorted by `(match_id, account_id)`, so filtering on `account_id` alone falls
 /// back to a bloom-filter index scan that opens every one of its parts. `player_match_history` is
-/// sorted by `(account_id, match_id)`, so it resolves the player's recent ranked `match_id`s with a
-/// primary-key lookup; feeding those back in prunes `match_player` by partition and granule.
+/// sorted by `(account_id, match_id)`, so it resolves each player's recent ranked `match_id`s with
+/// a primary-key lookup; feeding those back in prunes `match_player` by partition and granule.
 ///
 /// The window is 50 rather than 1 because `player_match_history` ingests ahead of `match_player`:
 /// its newest ranked matches may not have landed in `match_player` yet (observed lead: up to 15
 /// matches). Taking the newest row that exists in both keeps the result identical to scanning
 /// `match_player` directly.
 ///
-/// Returns `None` when none of those matches carries a rank.
-#[cached(
-    ttl = 600,
-    convert = "{ account_id }",
-    sync_writes = "by_key",
-    key = "u32"
-)]
-pub(crate) async fn fetch_last_ranked_match(
-    ch_client: &clickhouse::Client,
-    account_id: u32,
-) -> Result<Option<LastRankedMatch>, APIError> {
-    ch_client
-        .query(
+/// The history subquery is matched on `(account_id, match_id)` rather than `match_id` alone:
+/// batched accounts frequently share matches, and a bare `match_id IN` would let one account's
+/// history contribute candidate matches to another's.
+impl BatchQuery for PlayerRankQuery {
+    type Key = u32;
+    type Value = LastRankedMatchRow;
+
+    fn batch_window_ms() -> u64 {
+        500
+    }
+
+    fn build_query(keys: &[u32]) -> String {
+        let ids = in_clause(keys);
+        format!(
             "
             SELECT
+                account_id,
                 match_id,
                 start_time,
                 assumeNotNull(player_rank_initial_display_rank) AS player_rank_initial_display_rank,
@@ -159,25 +197,45 @@ pub(crate) async fn fetch_last_ranked_match(
                 player_rank_initial_win_streak
             FROM match_player
             WHERE
-                account_id = ?
+                account_id IN ({ids})
                 AND match_mode = 'Ranked'
-                AND match_id IN (
-                    SELECT match_id
+                AND (account_id, match_id) IN (
+                    SELECT account_id, match_id
                     FROM player_match_history
-                    WHERE account_id = ? AND match_mode = 'Ranked'
+                    WHERE account_id IN ({ids}) AND match_mode = 'Ranked'
                     ORDER BY match_id DESC
-                    LIMIT 50
+                    LIMIT 50 BY account_id
                 )
             ORDER BY match_id DESC
-            LIMIT 1
+            LIMIT 1 BY account_id
             SETTINGS log_comment = 'player_rank'
-            ",
+            "
         )
-        .bind(account_id)
-        .bind(account_id)
-        .fetch_optional()
-        .await
-        .map_err(|e| APIError::internal(format!("ClickHouse query failed: {e}")))
+    }
+
+    fn key_of(value: &LastRankedMatchRow) -> u32 {
+        value.account_id
+    }
+}
+
+pub(crate) type PlayerRankBatcher = ClickhouseBatcher<PlayerRankQuery>;
+
+/// Returns `None` when none of the player's recent ranked matches carries a rank.
+#[cached(
+    ttl = 600,
+    convert = "{ account_id }",
+    sync_writes = "by_key",
+    key = "u32"
+)]
+pub(crate) async fn fetch_last_ranked_match(
+    batcher: &PlayerRankBatcher,
+    account_id: u32,
+) -> Result<Option<LastRankedMatch>, APIError> {
+    match batcher.load(account_id).await {
+        Ok(row) => Ok(Some(row.into())),
+        Err(APIError::StatusMsg { status, .. }) if status == StatusCode::NOT_FOUND => Ok(None),
+        Err(e) => Err(e),
+    }
 }
 
 #[utoipa::path(
@@ -217,7 +275,7 @@ pub(super) async fn rank(
         return Err(APIError::protected_user());
     }
 
-    let last_match = fetch_last_ranked_match(&state.ch_client_ro, account_id).await?;
+    let last_match = fetch_last_ranked_match(&state.batchers.player_rank, account_id).await?;
     let badge = last_match.as_ref().map_or(0, LastRankedMatch::badge);
 
     Ok(Json(RankResponse {
@@ -259,7 +317,7 @@ pub(super) async fn rank_image(
         return Err(APIError::protected_user());
     }
 
-    let badge = fetch_last_ranked_match(&state.ch_client_ro, account_id)
+    let badge = fetch_last_ranked_match(&state.batchers.player_rank, account_id)
         .await?
         .as_ref()
         .map_or(0, LastRankedMatch::badge);
@@ -359,7 +417,7 @@ pub(super) async fn rank_avg_image(
     let badges: Vec<u32> = futures::future::try_join_all(
         unique_ids
             .iter()
-            .map(|&account_id| fetch_last_ranked_match(&state.ch_client_ro, account_id)),
+            .map(|&account_id| fetch_last_ranked_match(&state.batchers.player_rank, account_id)),
     )
     .await?
     .into_iter()
