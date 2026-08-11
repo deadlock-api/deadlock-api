@@ -198,6 +198,17 @@ impl BatchQuery for SteamProfileQuery {
     type Key = u32;
     type Value = SteamProfileRow;
 
+    fn batch_window_ms() -> u64 {
+        500
+    }
+
+    /// Scan cost grows linearly with the batch (~7 ms and ~10k rows per account), so a large batch
+    /// buys no throughput while stalling every request in it behind the slowest one. The cap is
+    /// well under the 1000 default to bound that tail.
+    fn max_batch_size() -> usize {
+        100
+    }
+
     fn build_query(keys: &[u32]) -> String {
         format!(
             "
