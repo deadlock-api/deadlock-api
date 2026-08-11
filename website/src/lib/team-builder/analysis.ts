@@ -47,6 +47,39 @@ const laneKey = (lane: number, ally: number[], enemy: number[]) => `${lane}|${du
 
 const rate = (s: Sample | undefined) => (s && s.matches > 0 ? s.wins / s.matches : undefined);
 
+const logit = (p: number) => Math.log(p / (1 - p));
+const sigmoid = (z: number) => 1 / (1 + Math.exp(-z));
+
+/** The endpoints are queried with `minMatches: 1`, so a cell can rest on a single game. */
+const shrunk = (sample: Sample | undefined, prior: number, k: number) =>
+  ((sample?.wins ?? 0) + k * prior) / ((sample?.matches ?? 0) + k);
+
+/**
+ * Fitted offline against 2.95M matches, on stats windows of 14, 30 and 56 days at once so the
+ * shrinkage holds whichever range the filter asks for.
+ *
+ * Each term is a residual in log-odds — what it explains that the terms before it do not — which is
+ * what keeps every weight positive instead of large opposing numbers cancelling out.
+ */
+const MODEL = {
+  kHero: 42.644182237950695,
+  kPair: 1.4857045045494808,
+  kCounter: 10.683978070496247,
+  kLaneDuel: 84.84019781031493,
+  /** Applied in order: each term drops what the earlier ones already account for. */
+  residual: [
+    [],
+    [-0.055780428039267506],
+    [0.02708740701388334, -0.046651247349320066],
+    [-0.9789111182741357, -0.11369824594208155, -1.1947748577064772],
+  ] as readonly (readonly number[])[],
+  weights: [5.938602463232448, 12.739331784185998, 33.487383014478006, 3.3804476974274964] as const,
+  intercept: 0.0016751056557140426,
+} as const;
+
+/** Win-rate points per unit of log-odds at an even match — the slope of the logistic at 50%. */
+const POINTS_PER_LOG_ODDS = 25;
+
 /** A rate in `[0,1]` as win-rate points either side of an even match. */
 export const toPoints = (value: number | undefined) => (value === undefined ? undefined : (value - 0.5) * 100);
 
@@ -85,6 +118,9 @@ export class StatsIndex {
   private readonly counters = new Map<string, Sample>();
   private readonly laneCounters = new Map<string, Sample>();
   private readonly lanes = new Map<string, Sample>();
+  /** Summed over all heroes, wins and matches are 6n and 12n whichever side won, so this is exact. */
+  readonly baseRate = 0.5;
+  readonly hasData: boolean = false;
 
   constructor(
     heroStats: AnalyticsHeroStats[] = [],
@@ -113,6 +149,32 @@ export class StatsIndex {
         matches: s.matches_played,
       });
     }
+
+    this.hasData = this.hero.size > 0;
+  }
+
+  /** Every other term is measured against this, so hero strength is never counted twice. */
+  heroEdge(heroId: number): number {
+    return logit(shrunk(this.hero.get(heroId), this.baseRate, MODEL.kHero)) - logit(this.baseRate);
+  }
+
+  /**
+   * Baseline is the *sum* of the two hero edges, not their average: a pair's win rate is a team win
+   * rate carrying both contributions, so averaging removes only half and leaves the rest in here.
+   */
+  synergyEdge(a: number, b: number): number {
+    const pair = logit(shrunk(this.pairSample(a, b), this.baseRate, MODEL.kPair)) - logit(this.baseRate);
+    return pair - (this.heroEdge(a) + this.heroEdge(b));
+  }
+
+  /** Worth of the matchup once *both* heroes' own strength is taken out. */
+  counterMatchupEdge(hero: number, enemy: number): number {
+    const cell = logit(shrunk(this.counterSample(hero, enemy), this.baseRate, MODEL.kCounter)) - logit(this.baseRate);
+    return cell - (this.heroEdge(hero) - this.heroEdge(enemy));
+  }
+
+  laneDuelEdge(hero: number, enemy: number): number {
+    return logit(shrunk(this.laneCounterSample(hero, enemy), 0.5, MODEL.kLaneDuel));
   }
 
   heroSample(heroId: number): Sample | undefined {
@@ -145,33 +207,22 @@ export class StatsIndex {
     return toPoints(this.heroWinRate(heroId));
   }
 
-  /**
-   * What the two heroes win separately — the baseline `synergyDelta` measures the pair against.
-   * Both baselines have to be known, so the quoted expectation always matches the quoted delta.
-   */
+  /** The win rate a pair would post on its two heroes' strength alone. */
   expectedApart(a: number, b: number): number | undefined {
-    const wrA = this.heroWinRate(a);
-    const wrB = this.heroWinRate(b);
-    return wrA === undefined || wrB === undefined ? undefined : (wrA + wrB) / 2;
+    if (this.hero.get(a) === undefined || this.hero.get(b) === undefined) return undefined;
+    return sigmoid(logit(this.baseRate) + this.heroEdge(a) + this.heroEdge(b));
   }
 
-  /**
-   * Points the pair wins above what its two heroes win separately. Measuring against the pair's own
-   * baseline is what makes this synergy rather than "two strong heroes happen to be picked together".
-   */
+  /** Points the pair wins above what its two heroes bring on their own. */
   synergyDelta(a: number, b: number): number | undefined {
-    const pair = rate(this.pairSample(a, b));
-    const apart = this.expectedApart(a, b);
-    if (pair === undefined || apart === undefined) return undefined;
-    return (pair - apart) * 100;
+    if (this.pairSample(a, b) === undefined) return undefined;
+    return POINTS_PER_LOG_ODDS * this.synergyEdge(a, b);
   }
 
-  /** Points the hero wins above its own baseline when this enemy is in the game. */
+  /** Points the matchup is worth once both heroes' own strength is out of it. */
   counterEdge(hero: number, enemy: number): number | undefined {
-    const matchup = rate(this.counterSample(hero, enemy));
-    const base = this.heroWinRate(hero);
-    if (matchup === undefined || base === undefined) return undefined;
-    return (matchup - base) * 100;
+    if (this.counterSample(hero, enemy) === undefined) return undefined;
+    return POINTS_PER_LOG_ODDS * this.counterMatchupEdge(hero, enemy);
   }
 }
 
@@ -251,22 +302,21 @@ export interface DraftAnalysis {
 }
 
 /**
- * Propagates the sampling error of every rate the prediction is built from. Each term is a mean of
- * `k` win rates, so its variance is `Σ var_i / k²`, and a win rate measured over `n` matches has
- * variance at most `50²/n` in points. Taking the worst-case `p = 0.5` keeps this conservative
- * without needing each rate's own `p`, and averaging is what stops one thin pairing from blowing
- * the interval up the way a plain "smallest sample" rule does.
+ * A shrunk rate on `n` matches behaves like one measured over `n + k`, so its log-odds variance is
+ * about `4/(n + k)` near an even split; averaging divides that by the cell count squared.
  */
-function predictionMargin(termSamples: number[][]): number | undefined {
+function predictionMargin(termSamples: number[][], shrinkage: number[], logOdds: number): number | undefined {
   let variance = 0;
-  let terms = 0;
-  for (const samples of termSamples) {
-    const usable = samples.filter((n) => n > 0);
-    if (usable.length === 0) continue;
-    variance += usable.reduce((sum, n) => sum + 2500 / n, 0) / usable.length ** 2;
-    terms += 1;
-  }
-  return terms === 0 ? undefined : 1.96 * Math.sqrt(variance);
+  let known = false;
+  termSamples.forEach((samples, i) => {
+    if (samples.length === 0) return;
+    known = true;
+    const cellVariance = samples.reduce((sum, n) => sum + 4 / (n + shrinkage[i]), 0) / samples.length ** 2;
+    variance += MODEL.weights[i] ** 2 * cellVariance;
+  });
+  if (!known) return undefined;
+  const p = sigmoid(logOdds);
+  return 100 * 1.96 * Math.sqrt(variance) * p * (1 - p);
 }
 
 /**
@@ -277,30 +327,55 @@ function draftTerms(draft: Draft, index: StatsIndex) {
   const allyHeroes = filled(draft.ally);
   const enemyHeroes = filled(draft.enemy);
 
-  const soloAlly = mean(allyHeroes.map((h) => index.soloEdge(h)));
-  const soloEnemy = mean(enemyHeroes.map((h) => index.soloEdge(h)));
-  const solo = soloAlly === undefined && soloEnemy === undefined ? undefined : (soloAlly ?? 0) - (soloEnemy ?? 0);
+  const soloAlly = mean(allyHeroes.map((h) => index.heroEdge(h)));
+  const soloEnemy = mean(enemyHeroes.map((h) => index.heroEdge(h)));
+  const solo = (soloAlly ?? 0) - (soloEnemy ?? 0);
 
-  const synergyAlly = mean(unorderedPairs(allyHeroes).map(([a, b]) => index.synergyDelta(a, b)));
-  const synergyEnemy = mean(unorderedPairs(enemyHeroes).map(([a, b]) => index.synergyDelta(a, b)));
-  const synergy =
-    synergyAlly === undefined && synergyEnemy === undefined ? undefined : (synergyAlly ?? 0) - (synergyEnemy ?? 0);
+  const synergyAlly = mean(unorderedPairs(allyHeroes).map(([a, b]) => index.synergyEdge(a, b)));
+  const synergyEnemy = mean(unorderedPairs(enemyHeroes).map(([a, b]) => index.synergyEdge(a, b)));
+  const synergy = (synergyAlly ?? 0) - (synergyEnemy ?? 0);
 
-  const counters = mean(allyHeroes.flatMap((hero) => enemyHeroes.map((enemy) => index.counterEdge(hero, enemy))));
-  const lanes = mean(laneEdges(draft, index));
+  const counters =
+    mean(allyHeroes.flatMap((hero) => enemyHeroes.map((enemy) => index.counterMatchupEdge(hero, enemy)))) ?? 0;
+  const lanes = mean(laneDuelEdges(draft, index)) ?? 0;
 
   // Only the per-side halves already computed here: this runs once per candidate in the swap
   // search, so nothing is derived for the breakdown panel that the prediction does not need.
-  return { solo, synergy, counters, lanes, soloAlly, soloEnemy, synergyAlly, synergyEnemy };
+  return {
+    solo,
+    synergy,
+    counters,
+    lanes,
+    soloAlly,
+    soloEnemy,
+    synergyAlly,
+    synergyEnemy,
+    empty: !allyHeroes.length && !enemyHeroes.length,
+  };
+}
+
+/** Each term with its overlap with the earlier ones removed. */
+function residualTerms(terms: ReturnType<typeof draftTerms>): number[] {
+  const raw = [terms.solo, terms.synergy, terms.counters, terms.lanes];
+  const out: number[] = [];
+  raw.forEach((value, i) => {
+    out.push(MODEL.residual[i].reduce((sum, coefficient, j) => sum + coefficient * out[j], value));
+  });
+  return out;
+}
+
+/** Log-odds the ally side wins. */
+function draftLogOdds(terms: ReturnType<typeof draftTerms>): number {
+  return residualTerms(terms).reduce((sum, value, i) => sum + MODEL.weights[i] * value, MODEL.intercept);
 }
 
 function predictedFrom(terms: ReturnType<typeof draftTerms>) {
-  const known = [terms.lanes, terms.synergy, terms.counters, terms.solo].filter((v): v is number => v !== undefined);
-  return known.length ? Math.min(99, Math.max(1, 50 + known.reduce((sum, v) => sum + v, 0))) : undefined;
+  return terms.empty ? undefined : 100 * sigmoid(draftLogOdds(terms));
 }
 
 /** Predicted ally win rate for a draft, in percent. */
 function predictDraft(draft: Draft, index: StatsIndex): number | undefined {
+  if (!index.hasData) return undefined;
   return predictedFrom(draftTerms(draft, index));
 }
 
@@ -357,11 +432,16 @@ function duoOf(side: (number | null)[], laneIndex: number): number[] {
   return filled(slotsOfLane(laneIndex).map((s) => side[s]));
 }
 
-/** Just the lane term, for the hypothetical drafts the searches score. */
-function laneEdges(draft: Draft, index: StatsIndex): (number | undefined)[] {
-  return LANES.map((lane, laneIndex) =>
-    toPoints(laneEstimate(index, lane.id, duoOf(draft.ally, laneIndex), duoOf(draft.enemy, laneIndex)).winRate),
-  );
+/**
+ * The duo-versus-duo endpoint is deliberately not read here even though the lane cards show it: a
+ * specific two against a specific two holds only a handful of games and earned no weight in the fit.
+ */
+function laneDuelEdges(draft: Draft, index: StatsIndex): (number | undefined)[] {
+  return LANES.map((_, laneIndex) => {
+    const ally = duoOf(draft.ally, laneIndex);
+    const enemy = duoOf(draft.enemy, laneIndex);
+    return mean(ally.flatMap((hero) => enemy.map((enemyHero) => index.laneDuelEdge(hero, enemyHero))));
+  });
 }
 
 export function laneRows(draft: Draft, index: StatsIndex): LaneRow[] {
@@ -429,62 +509,65 @@ export function analyzeDraft(draft: Draft, index: StatsIndex): DraftAnalysis {
     }),
   );
   const terms = draftTerms(draft, index);
-  // Measured against the enemy heroes' own baselines, so it is a second set of lookups rather than
-  // the negation of the ally direction.
-  const countersEnemy = mean(counterMatrix.flat().map((c) => index.counterEdge(c.enemy, c.hero)));
+  const residual = residualTerms(terms);
 
   const minOf = (values: number[]) => (values.length ? Math.min(...values) : 0);
   const pairMatches = [...allyPairs, ...enemyPairs].map((p) => p.matches);
   const counterMatches = counterMatrix.flat().map((c) => c.matches);
-  const laneMatches = lanes.filter((l) => l.complete).map((l) => l.matches);
   const heroMatches = [...allyHeroes, ...enemyHeroes].map((h) => index.heroSample(h)?.matches ?? 0);
+  const duelMatches = lanes.flatMap((l) => l.duel.flat().map((cell) => cell.matches));
+
+  // Read off a fixed slope rather than the draft's own, so the four rows stay on one scale
+  // instead of shrinking together as the prediction gets lopsided.
+  const points = (value: number, i: number) => POINTS_PER_LOG_ODDS * MODEL.weights[i] * value;
+  const half = (value: number | undefined, i: number) =>
+    value === undefined ? undefined : POINTS_PER_LOG_ODDS * MODEL.weights[i] * value;
 
   const contributions: Contribution[] = [
     {
       key: "solo",
       label: "Solo win rates",
-      value: terms.solo,
-      ally: terms.soloAlly,
-      enemy: terms.soloEnemy,
+      value: points(residual[0], 0),
+      ally: half(terms.soloAlly, 0),
+      enemy: half(terms.soloEnemy, 0),
       matches: minOf(heroMatches),
     },
     {
       key: "synergy",
       label: "Pair synergy",
-      value: terms.synergy,
-      ally: terms.synergyAlly,
-      enemy: terms.synergyEnemy,
+      value: points(residual[1], 1),
+      ally: half(terms.synergyAlly, 1),
+      enemy: half(terms.synergyEnemy, 1),
       matches: minOf(pairMatches),
     },
     {
       key: "counters",
       label: "Counter picks",
-      value: terms.counters,
-      ally: terms.counters,
-      enemy: countersEnemy,
+      value: points(residual[2], 2),
+      // Both heroes' strength is already out of this term, so the enemy view is an exact mirror.
+      ally: points(residual[2], 2),
+      enemy: -points(residual[2], 2),
       matches: minOf(counterMatches),
     },
     {
       key: "lanes",
       label: "Lane matchups",
-      value: terms.lanes,
-      // A win rate, so a side's own number is the exact mirror of the other's.
-      ally: terms.lanes,
-      enemy: terms.lanes === undefined ? undefined : -terms.lanes,
-      matches: minOf(laneMatches),
+      value: points(residual[3], 3),
+      ally: points(residual[3], 3),
+      enemy: -points(residual[3], 3),
+      matches: minOf(duelMatches),
     },
   ];
 
   return {
     allyHeroes,
     enemyHeroes,
-    predicted: predictedFrom(terms),
-    margin: predictionMargin([
-      allyPairs.map((p) => p.matches),
-      enemyPairs.map((p) => p.matches),
-      counterMatches,
-      laneMatches,
-    ]),
+    predicted: index.hasData ? predictedFrom(terms) : undefined,
+    margin: predictionMargin(
+      [heroMatches, pairMatches, counterMatches, duelMatches],
+      [MODEL.kHero, MODEL.kPair, MODEL.kCounter, MODEL.kLaneDuel],
+      draftLogOdds(terms),
+    ),
     contributions,
     allyPairs,
     enemyPairs,
@@ -556,6 +639,11 @@ export function recommendPicks(draft: Draft, index: StatsIndex, side: Side, cand
       const counter = mean(opposing.map((enemy) => index.counterEdge(heroId, enemy)));
       const solo = index.soloEdge(heroId);
       const sample = index.heroSample(heroId);
+      // Weighted like the prediction, so this order agrees with the gains the swap chips quote.
+      const score =
+        MODEL.weights[0] * (index.heroEdge(heroId) * POINTS_PER_LOG_ODDS) +
+        MODEL.weights[1] * (synergy ?? 0) +
+        MODEL.weights[2] * (counter ?? 0);
       return {
         heroId,
         synergy,
@@ -563,7 +651,7 @@ export function recommendPicks(draft: Draft, index: StatsIndex, side: Side, cand
         solo,
         winRate: index.heroWinRate(heroId),
         matches: sample?.matches ?? 0,
-        score: (synergy ?? 0) + (counter ?? 0) + (solo ?? 0),
+        score,
       };
     })
     .sort((a, b) => b.score - a.score);
