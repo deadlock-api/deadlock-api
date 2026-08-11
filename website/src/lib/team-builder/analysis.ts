@@ -90,6 +90,12 @@ export const toPoints = (value: number | undefined) => (value === undefined ? un
 const MIN_LANE_DUO_MATCHES = 20;
 
 /**
+ * The endpoint now follows a matchup to the end of its match. This page only ever asks about the
+ * lane, so the rest of the curve is dropped rather than drawn as if the duo were still laning.
+ */
+const LANING_PHASE_END_S = 900;
+
+/**
  * Kept out of `StatsIndex` on purpose: nothing in the model reads these, and they arrive from their
  * own request. Folding them in would invalidate the index a second time on every pick and re-run the
  * whole prediction and swap search for a chart.
@@ -103,11 +109,13 @@ export class SoulCurves {
 
   get(lane: number, ally: number[], enemy: number[]): LaneSoulPoint[] | undefined {
     const row = this.byLane.get(laneKey(lane, ally, enemy));
-    return row?.sample_times_s.map((timeS, i) => {
-      const diff = row.net_worth_diff[i];
-      const half = meanInterval(row.net_worth_diff_std[i] ?? 0, row.matches_played);
-      return { timeS, diff, lo: diff - half, hi: diff + half };
-    });
+    return row?.sample_times_s
+      .map((timeS, i) => {
+        const diff = row.net_worth_diff[i];
+        const half = meanInterval(row.net_worth_diff_std[i] ?? 0, row.matches_played);
+        return { timeS, diff, lo: diff - half, hi: diff + half };
+      })
+      .filter((p) => p.timeS <= LANING_PHASE_END_S);
   }
 }
 

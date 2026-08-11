@@ -14,6 +14,7 @@ pub mod item_flow_stats;
 mod item_permutation_stats;
 pub mod item_stats;
 mod kill_death_stats;
+mod lane_common;
 pub mod lane_matchup_stats;
 pub mod lane_soul_curve;
 pub mod player_performance_curve;

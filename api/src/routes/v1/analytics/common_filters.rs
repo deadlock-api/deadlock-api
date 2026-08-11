@@ -136,7 +136,9 @@ pub(super) struct LaneDuoFilterSql {
     pub account_prefilter: String,
     /// ` AND ...` restricting the scanned players, applied before the per-lane `GROUP BY`.
     pub hero_prefilter: String,
-    /// ` AND ...` on the assembled `hero_ids`/`enemy_hero_ids` duos.
+    /// ` AND ...` on the `duo`/`enemy_duo` arrays of the per-side `ARRAY JOIN`. Deliberately not on
+    /// the `hero_ids`/`enemy_hero_ids` output columns: those disappear when the caller groups them
+    /// away, and the filter has to survive that.
     pub duo_filters: String,
 }
 
@@ -168,11 +170,14 @@ impl LaneDuoFilters<'_> {
 
         let mut duo_filters = vec![];
         if let Some(hero_ids) = self.heroes {
-            duo_filters.push(format!("hasAll([{}], hero_ids)", id_list(hero_ids)));
+            duo_filters.push(format!(
+                "hasAll([{}], arrayMap(h -> toUInt32(h), duo))",
+                id_list(hero_ids)
+            ));
         }
         if let Some(enemy_hero_ids) = self.enemy_heroes {
             duo_filters.push(format!(
-                "hasAll([{}], enemy_hero_ids)",
+                "hasAll([{}], arrayMap(h -> toUInt32(h), enemy_duo))",
                 id_list(enemy_hero_ids)
             ));
         }
