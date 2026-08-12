@@ -7,6 +7,7 @@ import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
+import { DEFAULT_MATCH_MODE, parseAsMatchMode } from "~/components/selectors/MatchModeSelector";
 import type { TriState } from "~/components/selectors/TriStateSelector";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { prefetchSafe } from "~/lib/prefetch-safe";
@@ -25,6 +26,7 @@ export const Route = createFileRoute("/abilities")({
         abilityOrderQueryOptions({
           heroId: 2,
           gameMode: "normal",
+          matchMode: DEFAULT_MATCH_MODE,
           minAverageBadge: 0,
           maxAverageBadge: 116,
           minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
@@ -48,6 +50,7 @@ function AbilitiesPage() {
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
+  const [matchMode, setMatchMode] = useQueryState("match_mode", parseAsMatchMode);
   const { startDate, endDate, handleDateChange } = useDateRangeState();
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(20));
   const [itemSelections, setItemSelections] = useState<Map<number, TriState>>(new Map());
@@ -81,6 +84,7 @@ function AbilitiesPage() {
             if (id != null) setHeroId(id);
           }}
         />
+        <Filter.MatchMode value={matchMode} onChange={setMatchMode} />
         <Filter.GameModeWithRank
           gameMode={gameMode}
           onGameModeChange={setGameMode}
@@ -106,6 +110,7 @@ function AbilitiesPage() {
             maxDate={endDate}
             minMatches={minMatches}
             gameMode={gameMode}
+            matchMode={matchMode}
             defaultDepth={2}
             includeItemIds={includeItemIds}
             excludeItemIds={excludeItemIds}

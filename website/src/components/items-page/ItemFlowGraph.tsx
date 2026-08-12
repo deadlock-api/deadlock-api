@@ -7,6 +7,7 @@ import { ItemImage } from "~/components/ItemImage";
 import { ItemName } from "~/components/ItemName";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import type { MatchMode } from "~/components/selectors/MatchModeSelector";
 import { Button } from "~/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
@@ -102,6 +103,7 @@ interface ItemFlowGraphProps {
   maxDate?: Dayjs;
   minMatches?: number | null;
   gameMode?: GameMode;
+  matchMode?: MatchMode;
 }
 
 interface PlacedNode {
@@ -234,6 +236,7 @@ export function ItemFlowGraph({
   maxDate,
   minMatches,
   gameMode,
+  matchMode,
 }: ItemFlowGraphProps) {
   // View controls persisted in the URL (shareable), prefixed `flow_` to avoid clashing with
   // the page's other filters.
@@ -293,6 +296,7 @@ export function ItemFlowGraph({
     itemFlowQueryOptions({
       heroIds: heroId != null ? String(heroId) : undefined,
       gameMode,
+      matchMode,
       minAverageBadge: minRankId,
       maxAverageBadge: maxRankId,
       minUnixTimestamp: minUnixTimestamp ?? 0,

@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { ItemBuyTimingChart } from "~/components/items-page/ItemBuyTimingChart";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { ItemSelectorMultiple } from "~/components/selectors/ItemSelector";
+import type { MatchMode } from "~/components/selectors/MatchModeSelector";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
@@ -19,6 +20,7 @@ export function ItemPurchaseAnalysis({
   minBoughtAtS,
   maxBoughtAtS,
   gameMode,
+  matchMode,
 }: {
   minRankId?: number;
   maxRankId?: number;
@@ -29,6 +31,7 @@ export function ItemPurchaseAnalysis({
   minBoughtAtS?: number;
   maxBoughtAtS?: number;
   gameMode?: GameMode;
+  matchMode?: MatchMode;
 }) {
   const [itemIds, setItemIds] = useQueryState("item_ids", parseAsSetOf(parseAsInteger).withDefault(new Set()));
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
@@ -44,8 +47,20 @@ export function ItemPurchaseAnalysis({
       minBoughtAtS,
       maxBoughtAtS,
       gameMode,
+      matchMode,
     }),
-    [minMatches, hero, minRankId, maxRankId, minUnixTimestamp, maxUnixTimestamp, minBoughtAtS, maxBoughtAtS, gameMode],
+    [
+      minMatches,
+      hero,
+      minRankId,
+      maxRankId,
+      minUnixTimestamp,
+      maxUnixTimestamp,
+      minBoughtAtS,
+      maxBoughtAtS,
+      gameMode,
+      matchMode,
+    ],
   );
 
   return (

@@ -5,6 +5,7 @@ import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, X
 
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import type { MatchMode } from "~/components/selectors/MatchModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { type Dayjs, day } from "~/dayjs";
 import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
@@ -143,6 +144,7 @@ export function HeroStatsOverTimeChart({
   minDate,
   maxDate,
   gameMode,
+  matchMode,
   bumpChart = false,
 }: {
   heroStat: (typeof HERO_STATS_WITH_BAN_RATE)[number];
@@ -154,6 +156,7 @@ export function HeroStatsOverTimeChart({
   minDate?: Dayjs;
   maxDate?: Dayjs;
   gameMode?: GameMode;
+  matchMode?: MatchMode;
   bumpChart?: boolean;
 }) {
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
@@ -169,6 +172,7 @@ export function HeroStatsOverTimeChart({
     maxUnixTimestamp,
     bucket: heroTimeInterval,
     gameMode: gameMode,
+    matchMode,
   };
   const { data: heroData, isLoading: isLoadingHeroStats } = useQuery({
     queryKey: queryKeys.analytics.heroStatsOverTime(heroStatsOverTimeQuery),
@@ -186,6 +190,7 @@ export function HeroStatsOverTimeChart({
     maxAverageBadge: maxRankId,
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
+    matchMode,
   };
   const { data: banData, isLoading: isLoadingBanStats } = useQuery({
     queryKey: queryKeys.analytics.heroBanStats(banStatsOverTimeQuery),

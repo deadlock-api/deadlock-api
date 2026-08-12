@@ -36,7 +36,7 @@ export function formatDateRange(startDate: Dayjs | null | undefined, endDate: Da
  * Format a game mode into a readable string.
  */
 export function formatGameMode(gameMode: string | null | undefined): string | null {
-  if (!gameMode || gameMode === "normal") return "Ranked";
+  if (!gameMode || gameMode === "normal") return "Normal";
   if (gameMode === "street_brawl") return "Street Brawl";
   return gameMode;
 }

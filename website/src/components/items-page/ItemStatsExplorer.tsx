@@ -10,6 +10,7 @@ import { PlayerHeroBuildsDialog } from "~/components/items-page/PlayerHeroBuilds
 import { LoadingLogo } from "~/components/LoadingLogo";
 import MatchHistoryCard from "~/components/MatchHistoryCard";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import type { MatchMode } from "~/components/selectors/MatchModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -41,6 +42,7 @@ export function ItemStatsExplorer({
   minBoughtAtS,
   maxBoughtAtS,
   gameMode,
+  matchMode,
 }: {
   minRankId?: number;
   maxRankId?: number;
@@ -55,6 +57,7 @@ export function ItemStatsExplorer({
   minBoughtAtS?: number;
   maxBoughtAtS?: number;
   gameMode?: GameMode;
+  matchMode?: MatchMode;
 }) {
   const [includeItems] = useQueryState("include_items", parseAsSetOf(parseAsInteger).withDefault(new Set()));
   const [excludeItems] = useQueryState("exclude_items", parseAsSetOf(parseAsInteger).withDefault(new Set()));
@@ -87,6 +90,7 @@ export function ItemStatsExplorer({
       minBoughtAtS,
       maxBoughtAtS,
       gameMode,
+      matchMode,
     }),
     [
       minMatches,
@@ -100,6 +104,7 @@ export function ItemStatsExplorer({
       minBoughtAtS,
       maxBoughtAtS,
       gameMode,
+      matchMode,
     ],
   );
 
@@ -125,6 +130,7 @@ export function ItemStatsExplorer({
       minBoughtAtS,
       maxBoughtAtS,
       gameMode,
+      matchMode,
     }),
     [
       minMatches,
@@ -138,6 +144,7 @@ export function ItemStatsExplorer({
       minBoughtAtS,
       maxBoughtAtS,
       gameMode,
+      matchMode,
     ],
   );
 
@@ -185,6 +192,7 @@ export function ItemStatsExplorer({
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     gameMode: gameMode as MatchesApiBulkMetadataRequest["gameMode"],
+    matchMode,
     orderBy: "average_badge",
     orderDirection: "desc",
     limit: topBuildsLimit,

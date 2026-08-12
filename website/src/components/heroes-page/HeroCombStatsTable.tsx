@@ -7,6 +7,7 @@ import { HeroName } from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import type { MatchMode } from "~/components/selectors/MatchModeSelector";
 import { Slider } from "~/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -29,6 +30,7 @@ export function HeroCombStatsTable({
   prevMinDate,
   prevMaxDate,
   gameMode,
+  matchMode,
 }: {
   columns: string[];
   limit?: number;
@@ -42,6 +44,7 @@ export function HeroCombStatsTable({
   prevMinDate?: Dayjs;
   prevMaxDate?: Dayjs;
   gameMode?: GameMode;
+  matchMode?: MatchMode;
 }) {
   const combSizeId = useId();
   const combsToShowId = useId();
@@ -66,6 +69,7 @@ export function HeroCombStatsTable({
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     gameMode: gameMode,
+    matchMode,
   };
   const { data: heroData, isLoading } = useQuery({
     queryKey: queryKeys.analytics.heroCombStats(combStatsQuery),
@@ -84,6 +88,7 @@ export function HeroCombStatsTable({
     minUnixTimestamp: prevMinTimestamp ?? 0,
     maxUnixTimestamp: prevMaxTimestamp,
     gameMode: gameMode,
+    matchMode,
   };
   const { data: prevHeroData } = useQuery({
     queryKey: queryKeys.analytics.heroCombStats(prevCombStatsQuery),

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import type { MatchMode } from "~/components/selectors/MatchModeSelector";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { playerStatsMetricsQueryOptions } from "~/queries/player-stats-metrics-query";
@@ -24,6 +25,7 @@ const CATEGORY_CONFIG: Record<PlayerMetricCategory, { icon: LucideIcon; color: s
 export function PlayerStatsDistributionCharts({
   heroId,
   gameMode,
+  matchMode,
   minRankId,
   maxRankId,
   minDate,
@@ -31,6 +33,7 @@ export function PlayerStatsDistributionCharts({
 }: {
   heroId?: number | null;
   gameMode?: GameMode;
+  matchMode?: MatchMode;
   minRankId?: number;
   maxRankId?: number;
   minDate?: Dayjs;
@@ -43,6 +46,7 @@ export function PlayerStatsDistributionCharts({
     playerStatsMetricsQueryOptions({
       heroIds: heroId != null ? String(heroId) : undefined,
       gameMode: gameMode ?? undefined,
+      matchMode,
       minAverageBadge: minRankId,
       maxAverageBadge: maxRankId,
       minUnixTimestamp: minUnixTimestamp ?? 0,

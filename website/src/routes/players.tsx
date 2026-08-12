@@ -12,6 +12,7 @@ import { ALL_SORT_BY_VALUES } from "~/components/player-scoreboard/sort-options"
 import { QueryRenderer } from "~/components/QueryRenderer";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
+import { DEFAULT_MATCH_MODE, parseAsMatchMode } from "~/components/selectors/MatchModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
@@ -50,6 +51,7 @@ export const Route = createFileRoute("/players")({
           sortBy: "kills" as PlayerScoreboardSortByEnum,
           sortDirection: "desc",
           gameMode: "normal",
+          matchMode: DEFAULT_MATCH_MODE,
           minMatches: 0,
           minAverageBadge: 0,
           maxAverageBadge: 116,
@@ -106,6 +108,7 @@ function PlayersPage() {
     parseAsStringLiteral(["desc", "asc"] as const).withDefault("desc"),
   );
   const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
+  const [matchMode, setMatchMode] = useQueryState("match_mode", parseAsMatchMode);
   const [heroId, setHeroId] = useQueryState("hero", parseAsInteger);
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(0));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
@@ -122,6 +125,7 @@ function PlayersPage() {
       sortBy: sortBy as PlayerScoreboardSortByEnum,
       sortDirection: sortDirection as "desc" | "asc",
       gameMode: gameMode ?? undefined,
+      matchMode,
       heroId: heroId ?? undefined,
       minMatches,
       minAverageBadge: effectiveMinRankId,
@@ -145,6 +149,7 @@ function PlayersPage() {
       </div>
 
       <Filter.Root>
+        <Filter.MatchMode value={matchMode} onChange={setMatchMode} />
         <Filter.GameMode value={gameMode} onChange={setGameMode} />
         <Filter.Hero value={heroId} onChange={setHeroId} allowNull label="Hero" />
         {!isStreetBrawl && (
@@ -210,6 +215,7 @@ function PlayersPage() {
                 <PlayerStatsDistributionCharts
                   heroId={heroId}
                   gameMode={gameMode}
+                  matchMode={matchMode}
                   minRankId={effectiveMinRankId}
                   maxRankId={effectiveMaxRankId}
                   minDate={startDate}

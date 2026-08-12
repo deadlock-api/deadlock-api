@@ -10,6 +10,7 @@ import HeatmapCanvas from "~/components/heatmap/HeatmapCanvas";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
 import { type GameMode, parseAsGameMode } from "~/components/selectors/GameModeSelector";
+import { DEFAULT_MATCH_MODE, parseAsMatchMode } from "~/components/selectors/MatchModeSelector";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { prefetchSafe } from "~/lib/prefetch-safe";
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/heatmap")({
     const defaultKdParams: AnalyticsApiKillDeathStatsRequest = {
       team: 0,
       gameMode: "normal",
+      matchMode: DEFAULT_MATCH_MODE,
       minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
       maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
     };
@@ -53,6 +55,7 @@ function HeatmapPage() {
   const [is3D, setIs3D] = useQueryState("3d", parseAsBoolean.withDefault(false));
   const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger);
   const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
+  const [matchMode, setMatchMode] = useQueryState("match_mode", parseAsMatchMode);
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const [minGameTime, setMinGameTime] = useQueryState("min_game_time", parseAsInteger.withDefault(0));
@@ -66,6 +69,7 @@ function HeatmapPage() {
     team: team,
     heroIds: heroId ? String(heroId) : undefined,
     gameMode: gameMode === "street_brawl" ? "street_brawl" : "normal",
+    matchMode,
     minAverageBadge: minRankId || undefined,
     maxAverageBadge: maxRankId < 116 ? maxRankId : undefined,
     minUnixTimestamp: minUnixTimestamp ?? 0,
@@ -97,6 +101,7 @@ function HeatmapPage() {
         <Filter.HeatmapViewMode value={viewMode} onChange={(m) => setViewMode(m as typeof viewMode)} />
         <Filter.DimensionToggle value={is3D} onChange={setIs3D} />
         <Filter.Hero value={heroId} onChange={setHeroId} allowNull label="Hero" />
+        <Filter.MatchMode value={matchMode} onChange={setMatchMode} />
         <Filter.GameModeWithRank
           gameMode={gameMode as GameMode}
           onGameModeChange={setGameMode}

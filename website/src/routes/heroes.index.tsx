@@ -14,6 +14,7 @@ import { ALL_SORT_BY_VALUES } from "~/components/player-scoreboard/sort-options"
 import { QueryRenderer } from "~/components/QueryRenderer";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { HeroSelector } from "~/components/selectors/HeroSelector";
+import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
@@ -90,6 +91,7 @@ export const Route = createFileRoute("/heroes/")({
       minAverageBadge: DEFAULT_MIN_RANK,
       maxAverageBadge: DEFAULT_MAX_RANK,
       gameMode: "normal" as const,
+      matchMode: DEFAULT_MATCH_MODE,
     };
     await Promise.all([
       prefetchSafe(
@@ -113,6 +115,7 @@ export const Route = createFileRoute("/heroes/")({
       prefetchSafe(
         queryClient.ensureQueryData(
           heroBanStatsQueryOptions({
+            matchMode: DEFAULT_MATCH_MODE,
             minAverageBadge: DEFAULT_MIN_RANK,
             maxAverageBadge: DEFAULT_MAX_RANK,
             minUnixTimestamp: r.minUnixTimestamp,
@@ -123,6 +126,7 @@ export const Route = createFileRoute("/heroes/")({
       prefetchSafe(
         queryClient.ensureQueryData(
           heroBanStatsQueryOptions({
+            matchMode: DEFAULT_MATCH_MODE,
             minAverageBadge: DEFAULT_MIN_RANK,
             maxAverageBadge: DEFAULT_MAX_RANK,
             minUnixTimestamp: r.prevMinUnixTimestamp,
@@ -175,6 +179,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
       sortBy: scoreboardSortBy as HeroScoreboardSortByEnum,
       sortDirection: scoreboardSortDirection as "desc" | "asc",
       gameMode: filters.gameMode ?? undefined,
+      matchMode: filters.matchMode,
       minMatches: filters.minMatches,
       minAverageBadge: filters.effectiveMinRankId,
       maxAverageBadge: filters.effectiveMaxRankId,
@@ -239,6 +244,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
               prevMinDate={filters.prevStartDate}
               prevMaxDate={filters.prevEndDate}
               gameMode={filters.gameMode}
+              matchMode={filters.matchMode}
             />
           </div>
         </TabsContent>
@@ -275,6 +281,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
                   minDate={filters.startDate}
                   maxDate={filters.endDate}
                   gameMode={filters.gameMode}
+                  matchMode={filters.matchMode}
                   bumpChart={false}
                 />
               </Suspense>
@@ -306,6 +313,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
                   minDate={filters.startDate}
                   maxDate={filters.endDate}
                   gameMode={filters.gameMode}
+                  matchMode={filters.matchMode}
                 />
               </Suspense>
             </ChunkErrorBoundary>
@@ -341,6 +349,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
                   minDate={filters.startDate}
                   maxDate={filters.endDate}
                   gameMode={"normal"}
+                  matchMode={filters.matchMode}
                   xStat={filters.byRankX}
                   yStat={filters.byRankY}
                 />
@@ -372,6 +381,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
                   minDate={filters.startDate}
                   maxDate={filters.endDate}
                   gameMode={filters.gameMode}
+                  matchMode={filters.matchMode}
                 />
               </Suspense>
             </ChunkErrorBoundary>
@@ -406,6 +416,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
                     minMatches={filters.minMatches}
                     sameLaneFilter={filters.sameLaneFilter}
                     gameMode={filters.gameMode}
+                    matchMode={filters.matchMode}
                   />
                 </Suspense>
               </ChunkErrorBoundary>
@@ -428,6 +439,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
                   prevMaxDate={filters.prevEndDate}
                   minMatches={filters.minMatches}
                   gameMode={filters.gameMode}
+                  matchMode={filters.matchMode}
                 />
               </Suspense>
             </ChunkErrorBoundary>
@@ -477,6 +489,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
                     sameLaneFilter={filters.sameLaneFilter}
                     minHeroMatches={filters.minMatches}
                     gameMode={filters.gameMode}
+                    matchMode={filters.matchMode}
                   />
                   <HeroMatchupDetailsStatsTable
                     heroId={filters.heroId}
@@ -494,6 +507,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
                     sameLaneFilter={filters.sameLaneFilter}
                     minHeroMatches={filters.minMatches}
                     gameMode={filters.gameMode}
+                    matchMode={filters.matchMode}
                   />
                 </div>
               </Suspense>

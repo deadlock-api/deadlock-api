@@ -15,6 +15,7 @@ import {
 
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import type { MatchMode } from "~/components/selectors/MatchModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
@@ -35,6 +36,7 @@ interface HeroStatsByRankChartProps {
   minDate?: Dayjs;
   maxDate?: Dayjs;
   gameMode?: GameMode;
+  matchMode?: MatchMode;
   xStat?: ByRankStat;
   yStat?: ByRankStat;
 }
@@ -201,6 +203,7 @@ export function HeroStatsByRankChart({
   minDate,
   maxDate,
   gameMode,
+  matchMode,
   xStat = "pickrate",
   yStat = "winrate",
 }: HeroStatsByRankChartProps) {
@@ -215,6 +218,7 @@ export function HeroStatsByRankChart({
     maxUnixTimestamp,
     bucket: "avg_badge" as const,
     gameMode: gameMode,
+    matchMode,
   };
   const { data: heroData, isLoading: isLoadingHeroStats } = useQuery({
     queryKey: queryKeys.analytics.heroStatsByRank(heroStatsByRankQuery),
@@ -231,6 +235,7 @@ export function HeroStatsByRankChart({
     maxAverageBadge: undefined,
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
+    matchMode,
   };
   const { data: banData, isLoading: isLoadingBanStats } = useQuery({
     queryKey: queryKeys.analytics.heroBanStats(banStatsByRankQuery),

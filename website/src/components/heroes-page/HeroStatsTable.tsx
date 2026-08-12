@@ -22,6 +22,7 @@ import { HeroName } from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import type { MatchMode } from "~/components/selectors/MatchModeSelector";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -72,6 +73,7 @@ export function HeroStatsTable({
   prevMinDate,
   prevMaxDate,
   gameMode,
+  matchMode,
 }: {
   columns: string[];
   limit?: number;
@@ -87,6 +89,7 @@ export function HeroStatsTable({
   prevMinDate?: Dayjs;
   prevMaxDate?: Dayjs;
   gameMode?: GameMode;
+  matchMode?: MatchMode;
 }) {
   const [activeSortKey, setActiveSortKey] = useQueryState("hero_sort_key", parseAsSortKey.withDefault("winrate"));
   const [sortDir, setSortDir] = useQueryState("hero_sort_dir", parseAsSortDir.withDefault("desc"));
@@ -118,6 +121,7 @@ export function HeroStatsTable({
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     gameMode: gameMode,
+    matchMode,
   };
   const { data: heroData, isLoading } = useQuery({
     queryKey: queryKeys.analytics.heroStats(heroStatsQuery),
@@ -138,6 +142,7 @@ export function HeroStatsTable({
     minUnixTimestamp: prevMinTimestamp ?? 0,
     maxUnixTimestamp: prevMaxTimestamp,
     gameMode: gameMode,
+    matchMode,
   };
   const { data: prevHeroData } = useQuery({
     queryKey: queryKeys.analytics.heroStats(prevHeroStatsQuery),
@@ -154,6 +159,7 @@ export function HeroStatsTable({
     maxAverageBadge: maxRankId,
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
+    matchMode,
   };
   const { data: banData } = useQuery({
     queryKey: queryKeys.analytics.heroBanStats(banStatsQuery),
@@ -169,6 +175,7 @@ export function HeroStatsTable({
     maxAverageBadge: maxRankId,
     minUnixTimestamp: prevMinTimestamp ?? 0,
     maxUnixTimestamp: prevMaxTimestamp,
+    matchMode,
   };
   const { data: prevBanData } = useQuery({
     queryKey: queryKeys.analytics.heroBanStats(prevBanStatsQuery),

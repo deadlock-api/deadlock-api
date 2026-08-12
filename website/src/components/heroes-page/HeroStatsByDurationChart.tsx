@@ -4,6 +4,7 @@ import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, X
 
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import type { MatchMode } from "~/components/selectors/MatchModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
@@ -22,6 +23,7 @@ interface HeroStatsByDurationChartProps {
   minDate?: Dayjs;
   maxDate?: Dayjs;
   gameMode?: GameMode;
+  matchMode?: MatchMode;
 }
 
 export function HeroStatsByDurationChart({
@@ -33,6 +35,7 @@ export function HeroStatsByDurationChart({
   minDate,
   maxDate,
   gameMode,
+  matchMode,
 }: HeroStatsByDurationChartProps) {
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
 
@@ -49,6 +52,7 @@ export function HeroStatsByDurationChart({
         maxDurationS: bucket.maxS,
         bucket: "no_bucket" as const,
         gameMode,
+        matchMode,
       };
       return {
         queryKey: queryKeys.analytics.heroStatsByDuration(heroStatsByDurationQuery),

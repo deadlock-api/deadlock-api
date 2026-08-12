@@ -12,6 +12,8 @@ type HeroFiltersProps = Pick<
   | "setMinMatches"
   | "gameMode"
   | "setGameMode"
+  | "matchMode"
+  | "setMatchMode"
   | "minRankId"
   | "maxRankId"
   | "setMinRankId"
@@ -31,6 +33,8 @@ export function HeroFiltersSection({
   setMinMatches,
   gameMode,
   setGameMode,
+  matchMode,
+  setMatchMode,
   minRankId,
   maxRankId,
   setMinRankId,
@@ -59,6 +63,7 @@ export function HeroFiltersSection({
       ) : (
         <Filter.MinMatches value={minMatches} onChange={setMinMatches} label="Min Matches (Total)" step={10} />
       )}
+      <Filter.MatchMode value={matchMode} onChange={setMatchMode} />
       {tab !== "stats-by-rank" && (
         <Filter.GameModeWithRank
           gameMode={gameMode}

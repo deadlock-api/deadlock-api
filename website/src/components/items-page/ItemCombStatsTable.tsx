@@ -7,6 +7,7 @@ import { ItemName } from "~/components/ItemName";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import type { MatchMode } from "~/components/selectors/MatchModeSelector";
 import { Slider } from "~/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -30,6 +31,7 @@ export function ItemCombStatsTable({
   prevMinDate,
   prevMaxDate,
   gameMode,
+  matchMode,
   hero,
 }: {
   columns: string[];
@@ -44,6 +46,7 @@ export function ItemCombStatsTable({
   prevMinDate?: Dayjs;
   prevMaxDate?: Dayjs;
   gameMode?: GameMode;
+  matchMode?: MatchMode;
   hero?: number | null;
 }) {
   const combSizeId = useId();
@@ -76,6 +79,7 @@ export function ItemCombStatsTable({
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     gameMode: gameMode,
+    matchMode,
   };
   const { data: itemCombData, isLoading } = useQuery({
     queryKey: queryKeys.analytics.itemPermutationStats(combStatsQuery),
@@ -95,6 +99,7 @@ export function ItemCombStatsTable({
     minUnixTimestamp: prevMinTimestamp ?? 0,
     maxUnixTimestamp: prevMaxTimestamp,
     gameMode: gameMode,
+    matchMode,
   };
   const { data: prevItemCombData } = useQuery({
     queryKey: queryKeys.analytics.itemPermutationStats(prevCombStatsQuery),

@@ -50,6 +50,7 @@ export default function EconomyTab({ params, isStreetBrawl = false }: EconomyTab
 
   const perfParams: AnalyticsApiPlayerPerformanceCurveRequest = {
     gameMode: params.gameMode as PlayerPerformanceCurveGameModeEnum | undefined,
+    matchMode: params.matchMode,
     minUnixTimestamp: params.minUnixTimestamp,
     maxUnixTimestamp: params.maxUnixTimestamp,
     minDurationS: params.minDurationS,

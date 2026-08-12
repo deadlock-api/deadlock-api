@@ -70,8 +70,8 @@ const SEGMENT_DEFS: {
   suffix?: string;
   dynamic?: boolean;
 }[] = [
-  { key: "gameMode", prefix: "", suffix: "matches" },
   { key: "matchMode", prefix: "", suffix: "matches" },
+  { key: "gameMode", prefix: "in", suffix: "mode" },
   // No prefix: `formatDateRange` already carries the preposition its own shape requires.
   { key: "dateRange", prefix: "" },
   { key: "rankRange", prefix: "with rank" },

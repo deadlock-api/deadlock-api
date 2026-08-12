@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
+import type { MatchMode } from "~/components/selectors/MatchModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -25,6 +26,7 @@ interface AbilityOrderTreeProps {
   maxDate?: Dayjs;
   minMatches?: number | null;
   gameMode?: AbilityOrderStatsGameModeEnum;
+  matchMode?: MatchMode;
   defaultDepth: number;
   includeItemIds?: number[];
   excludeItemIds?: number[];
@@ -38,6 +40,7 @@ export default function AbilityOrderTree({
   maxDate,
   minMatches,
   gameMode,
+  matchMode,
   defaultDepth,
   includeItemIds,
   excludeItemIds,
@@ -55,6 +58,7 @@ export default function AbilityOrderTree({
     maxUnixTimestamp,
     minMatches: minMatches,
     gameMode,
+    matchMode,
     includeItemIds: includeItemIds?.length ? includeItemIds : undefined,
     excludeItemIds: excludeItemIds?.length ? excludeItemIds : undefined,
   };

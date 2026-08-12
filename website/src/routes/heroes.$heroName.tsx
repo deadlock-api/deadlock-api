@@ -6,6 +6,7 @@ import { Breadcrumb } from "~/components/Breadcrumb";
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { HeroImage } from "~/components/HeroImage";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
 import { useSeasons } from "~/hooks/useSeasons";
 import { computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
@@ -35,12 +36,14 @@ function currentStatsParams(seasons: readonly SeasonInfo[]) {
     minAverageBadge: DEFAULT_MIN_RANK,
     maxAverageBadge: DEFAULT_MAX_RANK,
     gameMode: GAME_MODE,
+    matchMode: DEFAULT_MATCH_MODE,
     ...currentTimestamps(seasons),
   };
 }
 
 function currentBanParams(seasons: readonly SeasonInfo[]) {
   return {
+    matchMode: DEFAULT_MATCH_MODE,
     minAverageBadge: DEFAULT_MIN_RANK,
     maxAverageBadge: DEFAULT_MAX_RANK,
     ...currentTimestamps(seasons),
@@ -203,6 +206,7 @@ function HeroDetailPage() {
                 prevMinDate={prevStart}
                 prevMaxDate={prevEnd}
                 gameMode={GAME_MODE}
+                matchMode={DEFAULT_MATCH_MODE}
               />
               <HeroMatchupDetailsStatsTable
                 heroId={heroId}
@@ -214,6 +218,7 @@ function HeroDetailPage() {
                 prevMinDate={prevStart}
                 prevMaxDate={prevEnd}
                 gameMode={GAME_MODE}
+                matchMode={DEFAULT_MATCH_MODE}
               />
             </div>
           </Suspense>

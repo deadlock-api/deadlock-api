@@ -8,6 +8,7 @@ import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import type { MatchMode } from "~/components/selectors/MatchModeSelector";
 import { Input } from "~/components/ui/input";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -57,6 +58,7 @@ interface HeroStatsByExperienceTableProps {
   minDate?: Dayjs;
   maxDate?: Dayjs;
   gameMode?: GameMode;
+  matchMode?: MatchMode;
 }
 
 export function HeroStatsByExperienceTable({
@@ -67,6 +69,7 @@ export function HeroStatsByExperienceTable({
   minDate,
   maxDate,
   gameMode,
+  matchMode,
 }: HeroStatsByExperienceTableProps) {
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
 
@@ -82,6 +85,7 @@ export function HeroStatsByExperienceTable({
         maxUnixTimestamp,
         bucket: "no_bucket" as const,
         gameMode,
+        matchMode,
       };
       return {
         queryKey: queryKeys.analytics.heroStatsByExperience(heroStatsByExperienceQuery),

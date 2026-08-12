@@ -10,6 +10,7 @@ import { ALL_STAT_KEYS } from "~/components/games-page/stat-definitions";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
+import { DEFAULT_MATCH_MODE, parseAsMatchMode } from "~/components/selectors/MatchModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -35,6 +36,7 @@ export const Route = createFileRoute("/games")({
     const [prevStart, prevEnd] = defaultPrevDateRange(seasons);
     const baseParams: AnalyticsApiGameStatsRequest = {
       gameMode: "normal",
+      matchMode: DEFAULT_MATCH_MODE,
       minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
       maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
       minAverageBadge: 0,
@@ -94,6 +96,7 @@ function Games() {
     parseAsStringLiteral(["overview", "over-time", "by-rank", "economy"] as const).withDefault("overview"),
   );
   const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
+  const [matchMode, setMatchMode] = useQueryState("match_mode", parseAsMatchMode);
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange } = useDateRangeState();
@@ -120,6 +123,7 @@ function Games() {
 
   const baseParams: AnalyticsApiGameStatsRequest = {
     gameMode: gameMode ?? undefined,
+    matchMode,
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     minDurationS: minDurationS ?? undefined,
@@ -154,6 +158,7 @@ function Games() {
       </section>
 
       <Filter.Root>
+        <Filter.MatchMode value={matchMode} onChange={setMatchMode} />
         <Filter.GameModeWithRank
           gameMode={gameMode}
           onGameModeChange={setGameMode}

@@ -7,6 +7,7 @@ import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
+import { DEFAULT_MATCH_MODE, parseAsMatchMode } from "~/components/selectors/MatchModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { getEffectiveRankRange } from "~/lib/game-mode";
@@ -46,6 +47,7 @@ export const Route = createFileRoute("/items")({
       minBoughtAtS: undefined,
       maxBoughtAtS: undefined,
       gameMode: "normal" as const,
+      matchMode: DEFAULT_MATCH_MODE,
     };
     await Promise.all([
       prefetchSafe(
@@ -84,6 +86,7 @@ export const Route = createFileRoute("/items")({
 
 function ItemsPage() {
   const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
+  const [matchMode, setMatchMode] = useQueryState("match_mode", parseAsMatchMode);
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(91));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const [minBoughtAtS, setMinBoughtAtS] = useQueryState("min_bought_at", parseAsInteger);
@@ -113,6 +116,7 @@ function ItemsPage() {
       </div>
       <Filter.Root>
         <Filter.Hero value={hero} onChange={setHero} allowNull />
+        <Filter.MatchMode value={matchMode} onChange={setMatchMode} />
         <Filter.MinMatches value={minMatches} onChange={setMinMatches} />
         <Filter.GameModeWithRank
           gameMode={gameMode}
@@ -166,6 +170,7 @@ function ItemsPage() {
                 minBoughtAtS={minBoughtAtS ?? undefined}
                 maxBoughtAtS={maxBoughtAtS ?? undefined}
                 gameMode={gameMode}
+                matchMode={matchMode}
               />
             </Suspense>
           </ChunkErrorBoundary>
@@ -184,6 +189,7 @@ function ItemsPage() {
                 minBoughtAtS={minBoughtAtS ?? undefined}
                 maxBoughtAtS={maxBoughtAtS ?? undefined}
                 gameMode={gameMode}
+                matchMode={matchMode}
               />
             </Suspense>
           </ChunkErrorBoundary>
@@ -200,6 +206,7 @@ function ItemsPage() {
                 maxDate={endDate || undefined}
                 minMatches={minMatches}
                 gameMode={gameMode}
+                matchMode={matchMode}
               />
             </Suspense>
           </ChunkErrorBoundary>
@@ -219,6 +226,7 @@ function ItemsPage() {
                 prevMinDate={prevStartDate}
                 prevMaxDate={prevEndDate}
                 gameMode={gameMode}
+                matchMode={matchMode}
               />
             </Suspense>
           </ChunkErrorBoundary>

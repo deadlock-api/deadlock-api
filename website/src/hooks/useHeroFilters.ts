@@ -2,6 +2,7 @@ import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } f
 
 import { BY_RANK_STATS } from "~/components/heroes-page/HeroStatSelectors";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
+import { parseAsMatchMode } from "~/components/selectors/MatchModeSelector";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
 
@@ -29,6 +30,7 @@ export type HeroTab = (typeof TAB_VALUES)[number];
 
 export function useHeroFilters(initialTab: HeroTab = "stats") {
   const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
+  const [matchMode, setMatchMode] = useQueryState("match_mode", parseAsMatchMode);
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(10));
   const [minHeroMatches, setMinHeroMatches] = useQueryState("min_hero_matches", parseAsInteger.withDefault(0));
   const [minHeroMatchesTotal, setMinHeroMatchesTotal] = useQueryState(
@@ -61,6 +63,8 @@ export function useHeroFilters(initialTab: HeroTab = "stats") {
   return {
     gameMode,
     setGameMode,
+    matchMode,
+    setMatchMode,
     minMatches,
     setMinMatches,
     minHeroMatches,

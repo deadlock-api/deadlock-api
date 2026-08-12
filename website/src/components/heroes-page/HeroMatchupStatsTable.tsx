@@ -7,6 +7,7 @@ import { HeroName } from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import type { MatchMode } from "~/components/selectors/MatchModeSelector";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
@@ -219,6 +220,7 @@ export function HeroMatchupStatsTable({
   prevMaxDate,
   sameLaneFilter,
   gameMode,
+  matchMode,
 }: {
   hideHeader?: boolean;
   minRankId?: number;
@@ -230,6 +232,7 @@ export function HeroMatchupStatsTable({
   prevMaxDate?: Dayjs;
   sameLaneFilter?: boolean;
   gameMode?: GameMode;
+  matchMode?: MatchMode;
 }) {
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
   const { minUnixTimestamp: prevMinTimestamp, maxUnixTimestamp: prevMaxTimestamp } = useNormalizedTimeRange(
@@ -244,6 +247,7 @@ export function HeroMatchupStatsTable({
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     gameMode: gameMode,
+    matchMode,
   };
   const { data: heroData, isLoading: isLoadingHero } = useQuery({
     queryKey: queryKeys.analytics.heroStats(heroStatsQuery),
@@ -262,6 +266,7 @@ export function HeroMatchupStatsTable({
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     gameMode: gameMode,
+    matchMode,
   };
   const { data: synergyData, isLoading: isLoadingSynergy } = useQuery({
     queryKey: queryKeys.analytics.heroSynergyStats(synergyStatsQuery),
@@ -280,6 +285,7 @@ export function HeroMatchupStatsTable({
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     gameMode: gameMode,
+    matchMode,
   };
   const { data: counterData, isLoading: isLoadingCounter } = useQuery({
     queryKey: queryKeys.analytics.heroCounterStats(counterStatsQuery),
@@ -299,6 +305,7 @@ export function HeroMatchupStatsTable({
     minUnixTimestamp: prevMinTimestamp ?? 0,
     maxUnixTimestamp: prevMaxTimestamp,
     gameMode: gameMode,
+    matchMode,
   };
   const { data: prevHeroData } = useQuery({
     queryKey: queryKeys.analytics.heroStats(prevHeroStatsQuery),
@@ -318,6 +325,7 @@ export function HeroMatchupStatsTable({
     minUnixTimestamp: prevMinTimestamp ?? 0,
     maxUnixTimestamp: prevMaxTimestamp,
     gameMode: gameMode,
+    matchMode,
   };
   const { data: prevSynergyData } = useQuery({
     queryKey: queryKeys.analytics.heroSynergyStats(prevSynergyStatsQuery),
@@ -337,6 +345,7 @@ export function HeroMatchupStatsTable({
     minUnixTimestamp: prevMinTimestamp ?? 0,
     maxUnixTimestamp: prevMaxTimestamp,
     gameMode: gameMode,
+    matchMode,
   };
   const { data: prevCounterData } = useQuery({
     queryKey: queryKeys.analytics.heroCounterStats(prevCounterStatsQuery),
