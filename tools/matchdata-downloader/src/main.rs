@@ -97,14 +97,26 @@ GROUP BY match_id, cluster_id, metadata_salt";
 /// Every candidate of every match that has salts but no player rows yet, newest first. There
 /// is deliberately no recency cut-off: a match that could not be downloaded within a couple of
 /// days must stay a candidate rather than silently disappear.
+///
+/// The inner `match_id IN (SELECT match_id FROM candidates)` looks redundant but carries the
+/// whole cost of this query: without it the `NOT IN` builds a set over all of `match_player`
+/// (~340M rows, ~21 GiB peak, ~69s), whereas bounding the probe by the ~32k candidates lets it
+/// prune by `match_player`'s `match_id` primary key and partitions instead (~2.5s).
 fn pending_salts_query() -> String {
     format!(
         "
-SELECT {SALT_COLUMNS}
-FROM match_salts
-WHERE match_id NOT IN (SELECT match_id FROM match_player) AND {VALID_SALTS}
-{SALT_GROUPING}
-HAVING {UNRESOLVED}
+WITH candidates AS (
+    SELECT {SALT_COLUMNS}
+    FROM match_salts
+    WHERE {VALID_SALTS}
+    {SALT_GROUPING}
+    HAVING {UNRESOLVED}
+)
+SELECT match_id, cluster_id, metadata_salt, created_at
+FROM candidates
+WHERE match_id NOT IN (
+    SELECT match_id FROM match_player WHERE match_id IN (SELECT match_id FROM candidates)
+)
 ORDER BY created_at DESC
 SETTINGS log_comment = 'matchdata_downloader_fetch_pending_salts'
 "
