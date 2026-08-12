@@ -6,10 +6,11 @@ import AbilityOrderTree from "~/components/abilities/AbilityOrderTree";
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
-import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
-import { DEFAULT_MATCH_MODE, parseAsMatchMode } from "~/components/selectors/MatchModeSelector";
+import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
 import type { TriState } from "~/components/selectors/TriStateSelector";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
+import { useModeState } from "~/hooks/useModeState";
+import { getEffectiveRankRange } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultDateRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
@@ -49,11 +50,12 @@ function AbilitiesPage() {
   const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(2));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
-  const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
-  const [matchMode, setMatchMode] = useQueryState("match_mode", parseAsMatchMode);
+  const { mode, setMode, gameMode, matchMode } = useModeState();
   const { startDate, endDate, handleDateChange } = useDateRangeState();
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(20));
   const [itemSelections, setItemSelections] = useState<Map<number, TriState>>(new Map());
+
+  const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
 
   const includeItemIds = useMemo(
     () => [...itemSelections.entries()].filter(([_, s]) => s === "included").map(([id]) => id),
@@ -84,10 +86,9 @@ function AbilitiesPage() {
             if (id != null) setHeroId(id);
           }}
         />
-        <Filter.MatchMode value={matchMode} onChange={setMatchMode} />
-        <Filter.GameModeWithRank
-          gameMode={gameMode}
-          onGameModeChange={setGameMode}
+        <Filter.ModeWithRank
+          mode={mode}
+          onModeChange={setMode}
           minRank={minRankId}
           maxRank={maxRankId}
           onRankChange={(min, max) => {
@@ -104,8 +105,8 @@ function AbilitiesPage() {
         <Suspense fallback={<LoadingLogo />}>
           <AbilityOrderTree
             heroId={heroId}
-            minRankId={gameMode !== "street_brawl" ? minRankId : undefined}
-            maxRankId={gameMode !== "street_brawl" ? maxRankId : undefined}
+            minRankId={effectiveMinRankId}
+            maxRankId={effectiveMaxRankId}
             minDate={startDate}
             maxDate={endDate}
             minMatches={minMatches}

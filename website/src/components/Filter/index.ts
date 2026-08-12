@@ -1,12 +1,11 @@
 import { DimensionToggleFilter } from "./DimensionToggleFilter";
-import { GameModeFilter } from "./GameModeFilter";
-import { GameModeWithRankFilter } from "./GameModeWithRankFilter";
 import { HeatmapViewModeFilter } from "./HeatmapViewModeFilter";
 import { HeroFilter } from "./HeroFilter";
 import { ItemsTriStateFilter } from "./ItemsTriStateFilter";
 import { MatchDurationFilter } from "./MatchDurationFilter";
 import { MatchModeFilter } from "./MatchModeFilter";
 import { MinMatchesFilter } from "./MinMatchesFilter";
+import { ModeWithRankFilter } from "./ModeWithRankFilter";
 import { RankRangeFilter } from "./RankRangeFilter";
 import { RegionFilter } from "./RegionFilter";
 import { Root } from "./Root";
@@ -20,8 +19,7 @@ export const Filter = {
   Root,
   Hero: HeroFilter,
   Region: RegionFilter,
-  GameMode: GameModeFilter,
-  GameModeWithRank: GameModeWithRankFilter,
+  ModeWithRank: ModeWithRankFilter,
   RankRange: RankRangeFilter,
   MinMatches: MinMatchesFilter,
   ItemsTriState: ItemsTriStateFilter,

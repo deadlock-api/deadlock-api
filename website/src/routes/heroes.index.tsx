@@ -178,7 +178,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
     heroScoreboardQueryOptions({
       sortBy: scoreboardSortBy as HeroScoreboardSortByEnum,
       sortDirection: scoreboardSortDirection as "desc" | "asc",
-      gameMode: filters.gameMode ?? undefined,
+      gameMode: filters.gameMode,
       matchMode: filters.matchMode,
       minMatches: filters.minMatches,
       minAverageBadge: filters.effectiveMinRankId,

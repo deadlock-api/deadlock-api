@@ -10,10 +10,8 @@ type HeroFiltersProps = Pick<
   | "setMinHeroMatchesTotal"
   | "minMatches"
   | "setMinMatches"
-  | "gameMode"
-  | "setGameMode"
-  | "matchMode"
-  | "setMatchMode"
+  | "mode"
+  | "setMode"
   | "minRankId"
   | "maxRankId"
   | "setMinRankId"
@@ -31,10 +29,8 @@ export function HeroFiltersSection({
   setMinHeroMatchesTotal,
   minMatches,
   setMinMatches,
-  gameMode,
-  setGameMode,
-  matchMode,
-  setMatchMode,
+  mode,
+  setMode,
   minRankId,
   maxRankId,
   setMinRankId,
@@ -63,19 +59,17 @@ export function HeroFiltersSection({
       ) : (
         <Filter.MinMatches value={minMatches} onChange={setMinMatches} label="Min Matches (Total)" step={10} />
       )}
-      <Filter.MatchMode value={matchMode} onChange={setMatchMode} />
-      {tab !== "stats-by-rank" && (
-        <Filter.GameModeWithRank
-          gameMode={gameMode}
-          onGameModeChange={setGameMode}
-          minRank={minRankId}
-          maxRank={maxRankId}
-          onRankChange={(min, max) => {
-            setMinRankId(min);
-            setMaxRankId(max);
-          }}
-        />
-      )}
+      <Filter.ModeWithRank
+        mode={mode}
+        onModeChange={setMode}
+        hideRankRange={tab === "stats-by-rank"}
+        minRank={minRankId}
+        maxRank={maxRankId}
+        onRankChange={(min, max) => {
+          setMinRankId(min);
+          setMaxRankId(max);
+        }}
+      />
       <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
     </Filter.Root>
   );

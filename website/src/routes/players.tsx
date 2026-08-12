@@ -11,13 +11,14 @@ import { ScoreboardTable } from "~/components/player-scoreboard/ScoreboardTable"
 import { ALL_SORT_BY_VALUES } from "~/components/player-scoreboard/sort-options";
 import { QueryRenderer } from "~/components/QueryRenderer";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
-import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
-import { DEFAULT_MATCH_MODE, parseAsMatchMode } from "~/components/selectors/MatchModeSelector";
+import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
+import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
+import { getEffectiveRankRange } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultDateRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
@@ -107,8 +108,7 @@ function PlayersPage() {
     "sort_dir",
     parseAsStringLiteral(["desc", "asc"] as const).withDefault("desc"),
   );
-  const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
-  const [matchMode, setMatchMode] = useQueryState("match_mode", parseAsMatchMode);
+  const { mode, setMode, gameMode, matchMode } = useModeState();
   const [heroId, setHeroId] = useQueryState("hero", parseAsInteger);
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(0));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
@@ -116,15 +116,13 @@ function PlayersPage() {
   const { startDate, endDate, handleDateChange } = useDateRangeState();
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
 
-  const isStreetBrawl = gameMode === "street_brawl";
-  const effectiveMinRankId = isStreetBrawl ? undefined : minRankId;
-  const effectiveMaxRankId = isStreetBrawl ? undefined : maxRankId;
+  const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
 
   const scoreboardQuery = useQuery(
     playerScoreboardQueryOptions({
       sortBy: sortBy as PlayerScoreboardSortByEnum,
       sortDirection: sortDirection as "desc" | "asc",
-      gameMode: gameMode ?? undefined,
+      gameMode,
       matchMode,
       heroId: heroId ?? undefined,
       minMatches,
@@ -149,19 +147,17 @@ function PlayersPage() {
       </div>
 
       <Filter.Root>
-        <Filter.MatchMode value={matchMode} onChange={setMatchMode} />
-        <Filter.GameMode value={gameMode} onChange={setGameMode} />
+        <Filter.ModeWithRank
+          mode={mode}
+          onModeChange={setMode}
+          minRank={minRankId}
+          maxRank={maxRankId}
+          onRankChange={(min, max) => {
+            setMinRankId(min);
+            setMaxRankId(max);
+          }}
+        />
         <Filter.Hero value={heroId} onChange={setHeroId} allowNull label="Hero" />
-        {!isStreetBrawl && (
-          <Filter.RankRange
-            minRank={minRankId}
-            maxRank={maxRankId}
-            onRankChange={(min, max) => {
-              setMinRankId(min);
-              setMaxRankId(max);
-            }}
-          />
-        )}
         <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
       </Filter.Root>
 

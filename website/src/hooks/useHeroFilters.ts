@@ -1,9 +1,9 @@
 import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 
 import { BY_RANK_STATS } from "~/components/heroes-page/HeroStatSelectors";
-import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
-import { parseAsMatchMode } from "~/components/selectors/MatchModeSelector";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
+import { useModeState } from "~/hooks/useModeState";
+import { getEffectiveRankRange } from "~/lib/game-mode";
 import { HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
 
 const TAB_VALUES = [
@@ -29,8 +29,7 @@ export const STATS_TABS: readonly HeroTab[] = [
 export type HeroTab = (typeof TAB_VALUES)[number];
 
 export function useHeroFilters(initialTab: HeroTab = "stats") {
-  const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
-  const [matchMode, setMatchMode] = useQueryState("match_mode", parseAsMatchMode);
+  const { mode, setMode, gameMode, matchMode } = useModeState();
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(10));
   const [minHeroMatches, setMinHeroMatches] = useQueryState("min_hero_matches", parseAsInteger.withDefault(0));
   const [minHeroMatchesTotal, setMinHeroMatchesTotal] = useQueryState(
@@ -56,15 +55,13 @@ export function useHeroFilters(initialTab: HeroTab = "stats") {
   const [byRankX, setByRankX] = useQueryState("by_rank_x", parseAsStringLiteral(BY_RANK_STATS).withDefault("pickrate"));
   const [byRankY, setByRankY] = useQueryState("by_rank_y", parseAsStringLiteral(BY_RANK_STATS).withDefault("winrate"));
 
-  const isStreetBrawl = gameMode === "street_brawl";
-  const effectiveMinRankId = isStreetBrawl ? undefined : minRankId;
-  const effectiveMaxRankId = isStreetBrawl ? undefined : maxRankId;
+  const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
 
   return {
+    mode,
+    setMode,
     gameMode,
-    setGameMode,
     matchMode,
-    setMatchMode,
     minMatches,
     setMinMatches,
     minHeroMatches,

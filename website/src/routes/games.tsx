@@ -9,12 +9,12 @@ import GamesOverview from "~/components/games-page/GamesOverview";
 import { ALL_STAT_KEYS } from "~/components/games-page/stat-definitions";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
-import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
-import { DEFAULT_MATCH_MODE, parseAsMatchMode } from "~/components/selectors/MatchModeSelector";
+import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
+import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { isStreetBrawlMode } from "~/lib/game-mode";
+import { getEffectiveRankRange } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultDateRange, defaultPrevDateRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
@@ -95,8 +95,8 @@ function Games() {
     "tab",
     parseAsStringLiteral(["overview", "over-time", "by-rank", "economy"] as const).withDefault("overview"),
   );
-  const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
-  const [matchMode, setMatchMode] = useQueryState("match_mode", parseAsMatchMode);
+  const { mode, setMode, gameMode, matchMode } = useModeState();
+  const isStreetBrawl = mode === "street_brawl";
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange } = useDateRangeState();
@@ -113,8 +113,7 @@ function Games() {
     ),
   );
 
-  const isStreetBrawl = isStreetBrawlMode(gameMode);
-
+  const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
   const { minUnixTimestamp: prevMinUnix, maxUnixTimestamp: prevMaxUnix } = useNormalizedTimeRange(
     prevStartDate,
@@ -122,14 +121,14 @@ function Games() {
   );
 
   const baseParams: AnalyticsApiGameStatsRequest = {
-    gameMode: gameMode ?? undefined,
+    gameMode,
     matchMode,
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     minDurationS: minDurationS ?? undefined,
     maxDurationS: maxDurationS ?? undefined,
-    minAverageBadge: isStreetBrawl ? undefined : minRankId,
-    maxAverageBadge: isStreetBrawl ? undefined : maxRankId,
+    minAverageBadge: effectiveMinRankId,
+    maxAverageBadge: effectiveMaxRankId,
   };
 
   const prevParams: AnalyticsApiGameStatsRequest | null =
@@ -158,10 +157,9 @@ function Games() {
       </section>
 
       <Filter.Root>
-        <Filter.MatchMode value={matchMode} onChange={setMatchMode} />
-        <Filter.GameModeWithRank
-          gameMode={gameMode}
-          onGameModeChange={setGameMode}
+        <Filter.ModeWithRank
+          mode={mode}
+          onModeChange={setMode}
           minRank={minRankId}
           maxRank={maxRankId}
           onRankChange={(min, max) => {

@@ -7,7 +7,7 @@ export const MatchModeFilter = createFilter<{
   onChange: (mode: MatchMode) => void;
 }>({
   useDescription(props) {
-    return { matchMode: MATCH_MODE_LABELS[props.value] };
+    return { mode: MATCH_MODE_LABELS[props.value] };
   },
   Render({ value, onChange }) {
     return <MatchModeSelector value={value} onChange={onChange} />;

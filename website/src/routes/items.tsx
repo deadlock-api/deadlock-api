@@ -6,10 +6,10 @@ import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
-import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
-import { DEFAULT_MATCH_MODE, parseAsMatchMode } from "~/components/selectors/MatchModeSelector";
+import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
+import { useModeState } from "~/hooks/useModeState";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultDateRange, defaultPrevDateRange } from "~/lib/seasons";
@@ -85,8 +85,7 @@ export const Route = createFileRoute("/items")({
 });
 
 function ItemsPage() {
-  const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
-  const [matchMode, setMatchMode] = useQueryState("match_mode", parseAsMatchMode);
+  const { mode, setMode, gameMode, matchMode } = useModeState();
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(91));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const [minBoughtAtS, setMinBoughtAtS] = useQueryState("min_bought_at", parseAsInteger);
@@ -94,7 +93,7 @@ function ItemsPage() {
   const [hero, setHero] = useQueryState("hero", parseAsInteger);
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(10));
   const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange } = useDateRangeState();
-  const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(gameMode, minRankId, maxRankId);
+  const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
 
   const [tab, setTab] = useQueryState(
     "tab",
@@ -116,11 +115,10 @@ function ItemsPage() {
       </div>
       <Filter.Root>
         <Filter.Hero value={hero} onChange={setHero} allowNull />
-        <Filter.MatchMode value={matchMode} onChange={setMatchMode} />
         <Filter.MinMatches value={minMatches} onChange={setMinMatches} />
-        <Filter.GameModeWithRank
-          gameMode={gameMode}
-          onGameModeChange={setGameMode}
+        <Filter.ModeWithRank
+          mode={mode}
+          onModeChange={setMode}
           minRank={minRankId}
           maxRank={maxRankId}
           onRankChange={(min, max) => {

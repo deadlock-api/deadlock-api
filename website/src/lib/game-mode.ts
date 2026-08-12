@@ -1,15 +1,11 @@
-import type { GameMode } from "~/components/selectors/GameModeSelector";
-
-export function isStreetBrawlMode(gameMode: GameMode | null | undefined): boolean {
-  return gameMode === "street_brawl";
-}
+import { type Mode, MODE_CONFIG } from "~/components/selectors/ModeSelector";
 
 export function getEffectiveRankRange(
-  gameMode: GameMode | null | undefined,
+  mode: Mode,
   minRankId: number | null | undefined,
   maxRankId: number | null | undefined,
 ): { effectiveMinRankId: number | undefined; effectiveMaxRankId: number | undefined } {
-  if (isStreetBrawlMode(gameMode)) {
+  if (!MODE_CONFIG[mode].supportsRank) {
     return { effectiveMinRankId: undefined, effectiveMaxRankId: undefined };
   }
   return {

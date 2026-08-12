@@ -9,10 +9,11 @@ import { Filter } from "~/components/Filter";
 import HeatmapCanvas from "~/components/heatmap/HeatmapCanvas";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
-import { type GameMode, parseAsGameMode } from "~/components/selectors/GameModeSelector";
-import { DEFAULT_MATCH_MODE, parseAsMatchMode } from "~/components/selectors/MatchModeSelector";
+import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
+import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import { getEffectiveRankRange } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultDateRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
@@ -54,8 +55,7 @@ function HeatmapPage() {
   const [team, setTeam] = useQueryState("team", parseAsInteger.withDefault(0));
   const [is3D, setIs3D] = useQueryState("3d", parseAsBoolean.withDefault(false));
   const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger);
-  const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
-  const [matchMode, setMatchMode] = useQueryState("match_mode", parseAsMatchMode);
+  const { mode, setMode, gameMode, matchMode } = useModeState();
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const [minGameTime, setMinGameTime] = useQueryState("min_game_time", parseAsInteger.withDefault(0));
@@ -63,15 +63,16 @@ function HeatmapPage() {
   const [sensitivity, setOutlierSensitivity] = useQueryState("outlier", parseAsInteger.withDefault(9900));
   const { startDate, endDate, handleDateChange } = useDateRangeState();
 
+  const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
 
   const requestParams: AnalyticsApiKillDeathStatsRequest = {
     team: team,
     heroIds: heroId ? String(heroId) : undefined,
-    gameMode: gameMode === "street_brawl" ? "street_brawl" : "normal",
+    gameMode,
     matchMode,
-    minAverageBadge: minRankId || undefined,
-    maxAverageBadge: maxRankId < 116 ? maxRankId : undefined,
+    minAverageBadge: effectiveMinRankId || undefined,
+    maxAverageBadge: effectiveMaxRankId != null && effectiveMaxRankId < 116 ? effectiveMaxRankId : undefined,
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     minGameTimeS: minGameTime || undefined,
@@ -101,10 +102,9 @@ function HeatmapPage() {
         <Filter.HeatmapViewMode value={viewMode} onChange={(m) => setViewMode(m as typeof viewMode)} />
         <Filter.DimensionToggle value={is3D} onChange={setIs3D} />
         <Filter.Hero value={heroId} onChange={setHeroId} allowNull label="Hero" />
-        <Filter.MatchMode value={matchMode} onChange={setMatchMode} />
-        <Filter.GameModeWithRank
-          gameMode={gameMode as GameMode}
-          onGameModeChange={setGameMode}
+        <Filter.ModeWithRank
+          mode={mode}
+          onModeChange={setMode}
           minRank={minRankId}
           maxRank={maxRankId}
           onRankChange={handleRankChange}
