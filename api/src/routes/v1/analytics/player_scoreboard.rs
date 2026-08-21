@@ -271,12 +271,6 @@ async fn get_player_scoreboard(
     description = "
 This endpoint returns the player scoreboard.
 
-`sort_by=rank` sorts players by the rank badge Valve reported at the end of their latest ranked
-match inside the filtered range, i.e. the rank they entered that match with plus the progress it
-awarded. Combined with `hero_id` and a time range it answers \"who are the highest ranked players
-on this hero right now\" without having to pick a badge range by hand. Only ranked matches carry a
-rank, so players without one in range come back with a `value` of `0`.
-
 ### Rate Limits:
 > The rate limits below are **shared across all analytics endpoints**.
 
@@ -310,8 +304,6 @@ mod tests {
     use super::*;
     use crate::utils::proptest_utils::assert_valid_sql;
 
-    /// The dedup subquery has to carry both rank columns through, otherwise the outer
-    /// `argMaxIf` has nothing to read.
     #[test]
     fn rank_sort_carries_both_rank_columns_through_the_dedup_subquery() {
         let sql = build_query(&PlayerScoreboardQuery {
@@ -343,8 +335,6 @@ mod tests {
         assert!(sql.contains("argMaxIf(player_rank_final_flat_progress, match_id"));
     }
 
-    /// Players with no ranked match in range sort as unranked rather than blowing up the
-    /// non-nullable `value` column.
     #[test]
     fn rank_sort_falls_back_to_zero_when_no_ranked_match_is_in_range() {
         let sql = build_query(&PlayerScoreboardQuery {
