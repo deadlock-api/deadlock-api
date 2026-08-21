@@ -2,6 +2,8 @@ use serde::Deserialize;
 use strum::Display;
 use utoipa::ToSchema;
 
+use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
+
 #[derive(Copy, Clone, Debug, Deserialize, ToSchema, Display, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[serde(rename_all = "snake_case")]
@@ -10,6 +12,9 @@ pub enum ScoreboardQuerySortBy {
     /// Sort by the number of matches
     #[default]
     Matches,
+    /// Sort by the rank badge (tier = first digits, subtier = last digit) the player ended their
+    /// latest ranked match in the filtered range on. Only supported by the player scoreboard.
+    Rank,
     /// Sort by the number of wins
     Wins,
     /// Sort by the number of losses
@@ -132,9 +137,25 @@ pub enum ScoreboardQuerySortBy {
     HeroBulletsHitCrit,
 }
 
+/// `ClickHouse` expression for the badge a player ended their latest ranked match on, i.e. the
+/// rank they entered it with plus the progress it awarded. `0` when none of the grouped rows
+/// carries a rank.
+///
+/// Only ranked matches report a rank, and `initial_display_rank` stays `0` for the whole of
+/// placement, so those rows must not contribute a badge — hence the `-If` guard rather than a
+/// plain `argMax`.
+fn latest_badge_clause() -> String {
+    let latest_progress = "argMaxIf(player_rank_final_flat_progress, match_id, \
+                           ifNull(player_rank_initial_display_rank, 0) > 0)";
+    let badge = badge_from_flat_progress_sql(&format!("assumeNotNull({latest_progress})"));
+    format!("if({latest_progress} IS NULL, 0, {badge})")
+}
+
 impl ScoreboardQuerySortBy {
-    pub(super) fn get_select_clause(self) -> &'static str {
-        match self {
+    pub(super) fn get_select_clause(self) -> String {
+        let clause = match self {
+            // Not a plain aggregate: the badge is read off the player's latest ranked row.
+            Self::Rank => return latest_badge_clause(),
             Self::Matches => "uniq(match_id)",
             Self::Wins => "countIf(won)",
             Self::Losses => "countIf(not won)",
@@ -196,7 +217,8 @@ impl ScoreboardQuerySortBy {
             Self::MaxHeroBulletsHitCritPerMatch => "max(max_hero_bullets_hit_crit)",
             Self::AvgHeroBulletsHitCritPerMatch => "avg(max_hero_bullets_hit_crit)",
             Self::HeroBulletsHitCrit => "sum(max_hero_bullets_hit_crit)",
-        }
+        };
+        clause.to_owned()
     }
 
     /// Whether the sort's aggregate ignores duplicate `ReplacingMergeTree` rows, letting
@@ -209,63 +231,67 @@ impl ScoreboardQuerySortBy {
         matches!(self, Self::Matches)
     }
 
-    /// Column from `match_player` that must be carried through the per-(`account_id`, `match_id`)
-    /// dedup subquery. `None` means the sort only needs `match_id`, which is always projected.
-    /// Used by `player_scoreboard` to deduplicate `ReplacingMergeTree` rows without `FINAL`
-    /// while still getting correct `sum` / `countIf` aggregates.
-    pub(super) fn inner_column(self) -> Option<&'static str> {
+    /// Columns from `match_player` that must be carried through the per-(`account_id`,
+    /// `match_id`) dedup subquery. Empty means the sort only needs `match_id`, which is always
+    /// projected. Used by `player_scoreboard` to deduplicate `ReplacingMergeTree` rows without
+    /// `FINAL` while still getting correct `sum` / `countIf` aggregates.
+    pub(super) fn inner_columns(self) -> &'static [&'static str] {
         match self {
-            Self::Matches => None,
-            Self::Wins | Self::Losses | Self::Winrate => Some("won"),
-            Self::MaxKillsPerMatch | Self::AvgKillsPerMatch | Self::Kills => Some("kills"),
-            Self::MaxDeathsPerMatch | Self::AvgDeathsPerMatch | Self::Deaths => Some("deaths"),
+            Self::Matches => &[],
+            Self::Rank => &[
+                "player_rank_final_flat_progress",
+                "player_rank_initial_display_rank",
+            ],
+            Self::Wins | Self::Losses | Self::Winrate => &["won"],
+            Self::MaxKillsPerMatch | Self::AvgKillsPerMatch | Self::Kills => &["kills"],
+            Self::MaxDeathsPerMatch | Self::AvgDeathsPerMatch | Self::Deaths => &["deaths"],
             Self::MaxDamageTakenPerMatch | Self::AvgDamageTakenPerMatch | Self::DamageTaken => {
-                Some("max_player_damage_taken")
+                &["max_player_damage_taken"]
             }
-            Self::MaxAssistsPerMatch | Self::AvgAssistsPerMatch | Self::Assists => Some("assists"),
+            Self::MaxAssistsPerMatch | Self::AvgAssistsPerMatch | Self::Assists => &["assists"],
             Self::MaxNetWorthPerMatch | Self::AvgNetWorthPerMatch | Self::NetWorth => {
-                Some("net_worth")
+                &["net_worth"]
             }
             Self::MaxLastHitsPerMatch | Self::AvgLastHitsPerMatch | Self::LastHits => {
-                Some("last_hits")
+                &["last_hits"]
             }
-            Self::MaxDeniesPerMatch | Self::AvgDeniesPerMatch | Self::Denies => Some("denies"),
+            Self::MaxDeniesPerMatch | Self::AvgDeniesPerMatch | Self::Denies => &["denies"],
             Self::MaxPlayerLevelPerMatch | Self::AvgPlayerLevelPerMatch | Self::PlayerLevel => {
-                Some("player_level")
+                &["player_level"]
             }
             Self::MaxCreepKillsPerMatch | Self::AvgCreepKillsPerMatch | Self::CreepKills => {
-                Some("max_creep_kills")
+                &["max_creep_kills"]
             }
             Self::MaxNeutralKillsPerMatch | Self::AvgNeutralKillsPerMatch | Self::NeutralKills => {
-                Some("max_neutral_kills")
+                &["max_neutral_kills"]
             }
             Self::MaxCreepDamagePerMatch | Self::AvgCreepDamagePerMatch | Self::CreepDamage => {
-                Some("max_creep_damage")
+                &["max_creep_damage"]
             }
             Self::MaxPlayerDamagePerMatch | Self::AvgPlayerDamagePerMatch | Self::PlayerDamage => {
-                Some("max_player_damage")
+                &["max_player_damage"]
             }
             Self::MaxNeutralDamagePerMatch
             | Self::AvgNeutralDamagePerMatch
-            | Self::NeutralDamage => Some("max_neutral_damage"),
+            | Self::NeutralDamage => &["max_neutral_damage"],
             Self::MaxBossDamagePerMatch | Self::AvgBossDamagePerMatch | Self::BossDamage => {
-                Some("max_boss_damage")
+                &["max_boss_damage"]
             }
             Self::MaxMaxHealthPerMatch | Self::AvgMaxHealthPerMatch | Self::MaxHealth => {
-                Some("max_max_health")
+                &["max_max_health"]
             }
             Self::MaxShotsHitPerMatch | Self::AvgShotsHitPerMatch | Self::ShotsHit => {
-                Some("max_shots_hit")
+                &["max_shots_hit"]
             }
             Self::MaxShotsMissedPerMatch | Self::AvgShotsMissedPerMatch | Self::ShotsMissed => {
-                Some("max_shots_missed")
+                &["max_shots_missed"]
             }
             Self::MaxHeroBulletsHitPerMatch
             | Self::AvgHeroBulletsHitPerMatch
-            | Self::HeroBulletsHit => Some("max_hero_bullets_hit"),
+            | Self::HeroBulletsHit => &["max_hero_bullets_hit"],
             Self::MaxHeroBulletsHitCritPerMatch
             | Self::AvgHeroBulletsHitCritPerMatch
-            | Self::HeroBulletsHitCrit => Some("max_hero_bullets_hit_crit"),
+            | Self::HeroBulletsHitCrit => &["max_hero_bullets_hit_crit"],
         }
     }
 }

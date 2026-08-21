@@ -1,12 +1,16 @@
+import { useQuery } from "@tanstack/react-query";
 import type { PlayerEntry } from "deadlock_api_client";
 import Fuse from "fuse.js";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { BadgeImage } from "~/components/BadgeImage";
 import { PaginationControls } from "~/components/PaginationControls";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
+import { extractBadgeMap } from "~/lib/leaderboard";
+import { ranksQueryOptions } from "~/queries/ranks-query";
 
 import { formatStatValue } from "./sort-options";
 import { SortBySelector } from "./SortBySelector";
@@ -41,6 +45,24 @@ export function ScoreboardTable({
   );
 
   const { profiles, isLoading: isLoadingProfiles } = useSteamProfiles(steamAccountIds);
+
+  // `sort_by=rank` reports the badge the player ended their latest ranked match on, so show it as
+  // a badge rather than as the bare number.
+  const isRankSort = sortBy === "rank";
+  const { data: ranks } = useQuery({ ...ranksQueryOptions, enabled: isRankSort });
+  const badgeMap = useMemo(() => extractBadgeMap(ranks ?? []), [ranks]);
+
+  const renderValue = (value: number) => {
+    if (!isRankSort) return formatStatValue(value, sortBy);
+    const badge = badgeMap.get(value);
+    if (!badge) return <span className="text-muted-foreground">Unranked</span>;
+    return (
+      <div className="flex items-center justify-end gap-1.5">
+        <BadgeImage badge={value} ranks={ranks ?? []} className="size-6" />
+        <span>{`${badge.name} ${badge.subtier}`}</span>
+      </div>
+    );
+  };
 
   const enrichedEntries = useMemo(
     () =>
@@ -165,7 +187,7 @@ export function ScoreboardTable({
                   </div>
                 </TableCell>
                 {sortBy !== "matches" && <TableCell className="text-right">{entry.matches.toLocaleString()}</TableCell>}
-                <TableCell className="text-right">{formatStatValue(entry.value, sortBy)}</TableCell>
+                <TableCell className="text-right">{renderValue(entry.value)}</TableCell>
               </TableRow>
             );
           })}
