@@ -208,7 +208,7 @@ const mainSponsor = {
   height: 140,
 };
 
-const sponsors = [
+const sponsors: { href: string; title: string; logo: string; width?: number; height?: number }[] = [
   {
     href: "https://statlocker.gg/?ref=deadlock-api.com",
     title: "Statlocker.GG",
@@ -222,6 +222,11 @@ const sponsors = [
     logo: "/logo/blast.svg",
     width: 996,
     height: 188,
+  },
+  {
+    href: "https://edl.gg/?ref=deadlock-api.com",
+    title: "EDL.GG",
+    logo: "https://media.edl.gg/gallery/organizer/3aa64a56-2d98-4eec-a1f6-e0d69fbd7e03/image.webp?v=1787256639789",
   },
 ];
 
