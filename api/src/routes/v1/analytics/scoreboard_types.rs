@@ -12,8 +12,7 @@ pub enum ScoreboardQuerySortBy {
     /// Sort by the number of matches
     #[default]
     Matches,
-    /// Sort by the rank badge (tier = first digits, subtier = last digit) the player ended their
-    /// latest ranked match in the filtered range on. Only supported by the player scoreboard.
+    /// Sort by the rank badge of the player's latest ranked match. Player scoreboard only.
     Rank,
     /// Sort by the number of wins
     Wins,
@@ -137,13 +136,8 @@ pub enum ScoreboardQuerySortBy {
     HeroBulletsHitCrit,
 }
 
-/// `ClickHouse` expression for the badge a player ended their latest ranked match on, i.e. the
-/// rank they entered it with plus the progress it awarded. `0` when none of the grouped rows
-/// carries a rank.
-///
-/// Only ranked matches report a rank, and `initial_display_rank` stays `0` for the whole of
-/// placement, so those rows must not contribute a badge — hence the `-If` guard rather than a
-/// plain `argMax`.
+/// Badge the player ended their latest ranked match on, `0` when no grouped row carries a rank.
+/// `initial_display_rank` stays `0` through placement, so those rows must not contribute a badge.
 fn latest_badge_clause() -> String {
     let latest_progress = "argMaxIf(player_rank_final_flat_progress, match_id, \
                            ifNull(player_rank_initial_display_rank, 0) > 0)";
@@ -154,7 +148,6 @@ fn latest_badge_clause() -> String {
 impl ScoreboardQuerySortBy {
     pub(super) fn get_select_clause(self) -> String {
         let clause = match self {
-            // Not a plain aggregate: the badge is read off the player's latest ranked row.
             Self::Rank => return latest_badge_clause(),
             Self::Matches => "uniq(match_id)",
             Self::Wins => "countIf(won)",

@@ -46,8 +46,6 @@ export function ScoreboardTable({
 
   const { profiles, isLoading: isLoadingProfiles } = useSteamProfiles(steamAccountIds);
 
-  // `sort_by=rank` reports the badge the player ended their latest ranked match on, so show it as
-  // a badge rather than as the bare number.
   const isRankSort = sortBy === "rank";
   const { data: ranks } = useQuery({ ...ranksQueryOptions, enabled: isRankSort });
   const badgeMap = useMemo(() => extractBadgeMap(ranks ?? []), [ranks]);
