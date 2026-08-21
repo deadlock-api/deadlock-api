@@ -36,6 +36,7 @@ const ALL_VARIANTS: SortVariant[] = ["avg", "max", "total"];
 
 export const SORT_CATEGORIES: SortCategory[] = [
   { label: "Matches", key: "matches" },
+  { label: "Rank", key: "rank" },
   { label: "Wins", key: "wins" },
   { label: "Losses", key: "losses" },
   { label: "Winrate", key: "winrate" },

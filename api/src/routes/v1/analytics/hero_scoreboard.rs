@@ -197,6 +197,8 @@ async fn get_hero_scoreboard(
     description = "
 This endpoint returns the hero scoreboard.
 
+`sort_by=rank` is rejected here: a rank belongs to a player, use the player scoreboard for it.
+
 ### Rate Limits:
 > The rate limits below are **shared across all analytics endpoints**.
 
@@ -218,6 +220,13 @@ pub(super) async fn hero_scoreboard(
             status: StatusCode::BAD_REQUEST,
             message: "Cannot filter by average badge for street brawl game mode".to_string(),
         });
+    }
+    // A rank belongs to a player, not to a hero, so there is nothing to sort heroes by.
+    if query.sort_by == ScoreboardQuerySortBy::Rank {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "sort_by=rank is only supported by the player scoreboard",
+        ));
     }
     #[allow(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
