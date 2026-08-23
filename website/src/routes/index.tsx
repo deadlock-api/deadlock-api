@@ -223,6 +223,13 @@ const sponsors = [
     width: 996,
     height: 188,
   },
+  {
+    href: "https://edl.gg",
+    title: "EDL",
+    logo: "/logo/edl.webp",
+    width: 578,
+    height: 177,
+  },
 ];
 
 function IndexRoute() {
