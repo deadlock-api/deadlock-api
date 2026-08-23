@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { FilterPill } from "~/components/FilterPill";
 import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
+import { FilteredSelectPopover } from "~/components/selectors/FilteredSelectPopover";
 import { Input } from "~/components/ui/input";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 
@@ -95,5 +96,43 @@ export function HeroSelector({
         ))}
       </div>
     </FilterPill>
+  );
+}
+
+export function HeroSelectorMultiple({
+  onHeroesSelected,
+  selectedHeroes,
+  label,
+}: {
+  onHeroesSelected: (selectedHeroes: number[]) => void;
+  selectedHeroes: number[];
+  label?: string;
+}) {
+  const { sortedHeroes, isLoading } = useHeroes();
+
+  if (isLoading) {
+    return null;
+  }
+
+  return (
+    <FilteredSelectPopover
+      items={sortedHeroes}
+      selectedIds={selectedHeroes}
+      onSelectedIdsChange={onHeroesSelected}
+      getId={(hero: Hero) => hero.id}
+      emptyLabel={label ?? "Select Heroes..."}
+      renderChip={(heroId) => (
+        <>
+          <HeroImage heroId={heroId} className="size-4 shrink-0 object-contain" />
+          <HeroName heroId={heroId} className="truncate text-xs" />
+        </>
+      )}
+      renderRow={(hero: Hero) => (
+        <>
+          <HeroImage heroId={hero.id} className="size-5 shrink-0 object-contain" />
+          <HeroName heroId={hero.id} className="truncate text-sm" />
+        </>
+      )}
+    />
   );
 }
