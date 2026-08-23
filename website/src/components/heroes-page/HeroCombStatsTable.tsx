@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { parseAsInteger, useQueryState } from "nuqs";
+import { parseAsArrayOf, parseAsInteger, useQueryState } from "nuqs";
 import { useId, useMemo } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
@@ -7,6 +7,7 @@ import { HeroName } from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import type { MatchMode } from "~/components/selectors/MatchModeSelector";
 import { Slider } from "~/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -53,6 +54,14 @@ export function HeroCombStatsTable({
   const [combSizeDraft, setCombSizeDraft] = useDraftValue(combSizeFilter);
   const [combsToShow, setCombsToShow] = useQueryState("combs_to_show", parseAsInteger.withDefault(limit ?? 50));
   const [combsToShowDraft, setCombsToShowDraft] = useDraftValue(combsToShow);
+  const [includeHeroIds, setIncludeHeroIds] = useQueryState(
+    "comb_include_heroes",
+    parseAsArrayOf(parseAsInteger).withDefault([]),
+  );
+  const [excludeHeroIds, setExcludeHeroIds] = useQueryState(
+    "comb_exclude_heroes",
+    parseAsArrayOf(parseAsInteger).withDefault([]),
+  );
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
   const { minUnixTimestamp: prevMinTimestamp, maxUnixTimestamp: prevMaxTimestamp } = useNormalizedTimeRange(
@@ -61,8 +70,22 @@ export function HeroCombStatsTable({
   );
   const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
+  const handleIncludeHeroesChange = (heroIds: number[]) => {
+    setIncludeHeroIds(heroIds);
+    setExcludeHeroIds((prev) => prev.filter((heroId) => !heroIds.includes(heroId)));
+  };
+  const handleExcludeHeroesChange = (heroIds: number[]) => {
+    setExcludeHeroIds(heroIds);
+    setIncludeHeroIds((prev) => prev.filter((heroId) => !heroIds.includes(heroId)));
+  };
+
+  const includeHeroIdsParam = includeHeroIds.length > 0 ? includeHeroIds : undefined;
+  const excludeHeroIdsParam = excludeHeroIds.length > 0 ? excludeHeroIds : undefined;
+
   const combStatsQuery = {
     combSize: combSizeFilter,
+    includeHeroIds: includeHeroIdsParam,
+    excludeHeroIds: excludeHeroIdsParam,
     minMatches: minHeroMatches ?? 0,
     minAverageBadge: minRankId,
     maxAverageBadge: maxRankId,
@@ -82,6 +105,8 @@ export function HeroCombStatsTable({
 
   const prevCombStatsQuery = {
     combSize: combSizeFilter,
+    includeHeroIds: includeHeroIdsParam,
+    excludeHeroIds: excludeHeroIdsParam,
     minMatches: minHeroMatches ?? 0,
     minAverageBadge: minRankId,
     maxAverageBadge: maxRankId,
@@ -123,8 +148,11 @@ export function HeroCombStatsTable({
     () =>
       [...(heroData || [])]
         .filter((row) => new Set(row.hero_ids).size === combSizeFilter)
+        // The API filters whole teams, so a combination may still be missing an included hero.
+        .filter((row) => includeHeroIds.every((heroId) => row.hero_ids.includes(heroId)))
+        .filter((row) => !excludeHeroIds.some((heroId) => row.hero_ids.includes(heroId)))
         .sort((a, b) => b?.wins / b?.matches - a?.wins / a?.matches),
-    [heroData, combSizeFilter],
+    [heroData, combSizeFilter, includeHeroIds, excludeHeroIds],
   );
   const minWinrate = useMemo(
     () => sortedData[sortedData.length - 1]?.wins / sortedData[sortedData.length - 1]?.matches || 0,
@@ -181,7 +209,31 @@ export function HeroCombStatsTable({
             <span className="ml-2">{combsToShowDraft}</span>
           </div>
         </div>
+
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm text-nowrap text-muted-foreground">Include Heroes</span>
+          <HeroSelectorMultiple
+            selectedHeroes={includeHeroIds}
+            onHeroesSelected={handleIncludeHeroesChange}
+            label="Any Hero"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm text-nowrap text-muted-foreground">Exclude Heroes</span>
+          <HeroSelectorMultiple
+            selectedHeroes={excludeHeroIds}
+            onHeroesSelected={handleExcludeHeroesChange}
+            label="No Hero"
+          />
+        </div>
       </div>
+      {includeHeroIds.length > combSizeFilter && (
+        <p className="mx-auto text-sm text-muted-foreground">
+          No combination can contain all {includeHeroIds.length} included heroes at a combination size of{" "}
+          {combSizeFilter}. Increase the combination size to see results.
+        </p>
+      )}
       {isLoading ? (
         <div className="flex h-full w-full items-center justify-center py-16">
           <LoadingLogo />
