@@ -686,7 +686,7 @@ fn decode_friends(bytes: &[u8]) -> Vec<(u32, u32)> {
         return Vec::new();
     }
     let mut out = Vec::with_capacity(count);
-    for chunk in body.chunks_exact(8).take(count) {
+    for chunk in body.as_chunks::<8>().0.iter().take(count) {
         let aid = u32::from_le_bytes(chunk[..4].try_into().unwrap_or([0; 4]));
         let ts = u32::from_le_bytes(chunk[4..8].try_into().unwrap_or([0; 4]));
         out.push((aid, ts));

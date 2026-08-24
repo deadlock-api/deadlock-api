@@ -1,3 +1,4 @@
+use core::future::{Future, ready};
 use core::net::Ipv4Addr;
 
 use axum::extract::FromRequestParts;
@@ -18,7 +19,10 @@ where
 {
     type Rejection = APIError;
 
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+    fn from_request_parts(
+        parts: &mut Parts,
+        _state: &S,
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
         let ip = parts
             .headers
             .get("Cf-Pseudo-IPv4")
@@ -32,7 +36,7 @@ where
             .get("X-API-Key")
             .and_then(|v| v.to_str().ok())
             .and_then(|s| Uuid::parse_str(s.strip_prefix("HEXE-").unwrap_or(s)).ok());
-        Ok(Self { api_key, ip })
+        ready(Ok(Self { api_key, ip }))
     }
 }
 
