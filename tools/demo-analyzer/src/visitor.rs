@@ -116,12 +116,12 @@ impl Visitor for DemoAnalyzerVisitor {
         &mut self,
         ctx: &Context,
     ) -> impl Future<Output = Result<(), Self::Error>> + Send + Sync {
-        ready(self.handle_tick_end(ctx))
+        ready(Self::handle_tick_end(ctx))
     }
 }
 
 /// The callback bodies. `Visitor`'s `on_*` methods return a future, but none of this
-/// work is asynchronous, so each one is a plain method wrapped in `ready` above.
+/// work is asynchronous, so each body is a plain function wrapped in `ready` above.
 impl DemoAnalyzerVisitor {
     fn handle_entity(&mut self, ctx: &Context, entity: &Entity) -> Result<(), VisitorError> {
         let hash = entity.serializer().serializer_name.hash;
@@ -226,7 +226,7 @@ impl DemoAnalyzerVisitor {
         Ok(())
     }
 
-    fn handle_tick_end(&mut self, ctx: &Context) -> Result<(), VisitorError> {
+    fn handle_tick_end(ctx: &Context) -> Result<(), VisitorError> {
         if ctx.tick() > MAX_PARSE_TICKS {
             debug!(
                 tick = ctx.tick(),
