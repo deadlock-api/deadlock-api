@@ -29,7 +29,7 @@ fn worklist(ids: Vec<u64>) -> impl IntoResponse {
     )
 }
 
-#[cached(ttl = 300, convert = "{ 0 }", key = "u8", sync_writes = "default")]
+#[cached(ttl_secs = 300, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 async fn prioritized_account_ids(pg_client: &Pool<Postgres>) -> Result<Arc<Vec<u32>>, sqlx::Error> {
     let ids: Vec<i64> = sqlx::query_scalar(
         "SELECT steam_id3 FROM prioritized_steam_accounts WHERE deleted_at IS NULL",
@@ -43,7 +43,7 @@ async fn prioritized_account_ids(pg_client: &Pool<Postgres>) -> Result<Arc<Vec<u
     ))
 }
 
-#[cached(ttl = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
+#[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 async fn pending_pool(
     ch_client: &clickhouse::Client,
     prioritized: &[u32],
@@ -72,7 +72,7 @@ async fn pending_pool(
 }
 
 #[cached(
-    ttl = 60,
+    ttl_secs = 60,
     convert = "{ account_id }",
     key = "u32",
     sync_writes = "by_key"

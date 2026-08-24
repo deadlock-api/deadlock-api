@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use cached::Cached;
+use cached::CachedExt;
 use chrono::{DateTime, Duration, Utc};
 use sqlx::{Pool, Postgres};
 use thiserror::Error;
@@ -241,11 +241,7 @@ impl SteamAccountsRepository {
         .fetch_one(&self.pg_client)
         .await?;
 
-        IS_ACCOUNT_PRIORITIZED
-            .0
-            .write()
-            .await
-            .cache_remove(&steam_id3);
+        IS_ACCOUNT_PRIORITIZED.write().await.remove(&steam_id3);
 
         Ok(SteamAccount {
             id: row.id,
@@ -282,11 +278,7 @@ impl SteamAccountsRepository {
         match result {
             None => Err(SteamAccountsRepositoryError::AccountNotFound),
             Some(row) => {
-                IS_ACCOUNT_PRIORITIZED
-                    .0
-                    .write()
-                    .await
-                    .cache_remove(&row.steam_id3);
+                IS_ACCOUNT_PRIORITIZED.write().await.remove(&row.steam_id3);
                 Ok(())
             }
         }
@@ -315,11 +307,7 @@ impl SteamAccountsRepository {
         match result {
             None => Err(SteamAccountsRepositoryError::AccountNotFound),
             Some(row) => {
-                IS_ACCOUNT_PRIORITIZED
-                    .0
-                    .write()
-                    .await
-                    .cache_remove(&row.steam_id3);
+                IS_ACCOUNT_PRIORITIZED.write().await.remove(&row.steam_id3);
                 Ok(())
             }
         }
@@ -349,11 +337,7 @@ impl SteamAccountsRepository {
 
         match row {
             Some(row) => {
-                IS_ACCOUNT_PRIORITIZED
-                    .0
-                    .write()
-                    .await
-                    .cache_remove(&row.steam_id3);
+                IS_ACCOUNT_PRIORITIZED.write().await.remove(&row.steam_id3);
                 Ok(SteamAccount {
                     id: row.id,
                     patron_id: row.patron_id,
@@ -471,11 +455,7 @@ impl SteamAccountsRepository {
         .await?;
 
         for row in &result {
-            IS_ACCOUNT_PRIORITIZED
-                .0
-                .write()
-                .await
-                .cache_remove(&row.steam_id3);
+            IS_ACCOUNT_PRIORITIZED.write().await.remove(&row.steam_id3);
         }
 
         Ok(result.len() as u64)
@@ -496,11 +476,7 @@ impl SteamAccountsRepository {
         .await?;
 
         for row in &result {
-            IS_ACCOUNT_PRIORITIZED
-                .0
-                .write()
-                .await
-                .cache_remove(&row.steam_id3);
+            IS_ACCOUNT_PRIORITIZED.write().await.remove(&row.steam_id3);
         }
 
         Ok(result.len() as u64)
@@ -534,11 +510,7 @@ impl SteamAccountsRepository {
         .await?;
 
         for row in &result {
-            IS_ACCOUNT_PRIORITIZED
-                .0
-                .write()
-                .await
-                .cache_remove(&row.steam_id3);
+            IS_ACCOUNT_PRIORITIZED.write().await.remove(&row.steam_id3);
         }
 
         Ok(result.len() as u64)

@@ -532,7 +532,7 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
 }
 
 #[cached(
-    ttl = 3600,
+    ttl_secs = 3600,
     convert = "{ query_str.to_string() }",
     sync_writes = "by_key",
     key = "String"

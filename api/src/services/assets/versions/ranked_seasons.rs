@@ -130,7 +130,7 @@ pub(crate) fn interval_at(seasons: &[RankedSeason], now: i64) -> Option<u32> {
 
 #[cached(
     max_size = 64,
-    ttl = 86400,
+    ttl_secs = 86400,
     convert = r#"{ (version, language.to_owned()) }"#,
     key = "(u32, String)",
     sync_writes = "by_key"

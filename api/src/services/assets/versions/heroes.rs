@@ -1084,7 +1084,7 @@ struct ParsedSources {
 
 #[cached(
     max_size = 8,
-    ttl = 86400,
+    ttl_secs = 86400,
     convert = "{ version }",
     key = "u32",
     sync_writes = "by_key"
@@ -1132,7 +1132,7 @@ async fn fetch_optional_text(
 
 #[cached(
     max_size = 64,
-    ttl = 86400,
+    ttl_secs = 86400,
     convert = r#"{ (version, language.to_owned()) }"#,
     key = "(u32, String)",
     sync_writes = "by_key"

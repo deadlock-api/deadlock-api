@@ -117,7 +117,7 @@ pub(crate) struct RankImageQuery {
 }
 
 #[cached(
-    ttl = 86400,
+    ttl_secs = 86400,
     convert = "{ (badge, format) }",
     key = "(u32, RankImageFormat)",
     sync_writes = "by_key"
@@ -312,7 +312,14 @@ fn encode(image: &RgbaImage, format: RankImageFormat) -> APIResult<Bytes> {
     Ok(Bytes::from(out))
 }
 
-#[cached(ttl = 86400, key = "u8", convert = "{ 0 }", sync_writes = "default")]
+// `result_fallback`: the font never changes, so an R2 hiccup should not take rank
+// image rendering down for a whole TTL.
+#[cached(
+    ttl_secs = 86400,
+    key = "u8",
+    convert = "{ 0 }",
+    result_fallback = true
+)]
 async fn font(state: &AppState) -> Result<Arc<FontVec>, APIError> {
     let bytes = state
         .r2_client

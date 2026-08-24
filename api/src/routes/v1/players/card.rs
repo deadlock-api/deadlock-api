@@ -148,7 +148,7 @@ impl From<&PlayerCard> for PlayerCardClickhouse {
 }
 
 #[cached(
-    ttl = 300,
+    ttl_secs = 300,
     convert = "{ account_id }",
     sync_writes = "by_key",
     key = "u32"

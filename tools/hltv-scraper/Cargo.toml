@@ -8,7 +8,7 @@ anyhow = { workspace = true }
 async-compression = { workspace = true, features = ["tokio", "bzip2", "zstd"] }
 axum = "0.8.9"
 base64 = { workspace = true }
-cached = { workspace = true, features = ["async", "async_tokio_rt_multi_thread"] }
+cached = { workspace = true, features = ["async"] }
 clap = { workspace = true, features = ["env"] }
 common = { workspace = true }
 dashmap = "6.2.1"

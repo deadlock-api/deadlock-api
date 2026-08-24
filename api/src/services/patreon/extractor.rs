@@ -90,7 +90,7 @@ fn extract_token_from_auth_header(headers: &axum::http::HeaderMap) -> Option<Str
 /// Returns `None` if the API key is not found, is disabled, or has no patron linked.
 /// Results are cached for 10 minutes.
 #[cached(
-    ttl = 600,
+    ttl_secs = 600,
     convert = "{ api_key }",
     sync_writes = "by_key",
     key = "Uuid",

@@ -66,7 +66,7 @@ impl From<ClickhouseMatchInfoRow> for ClickhouseMatchInfo {
     }
 }
 
-#[cached(ttl = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
+#[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 async fn get_recently_fetched_match_ids(
     ch_client: &clickhouse::Client,
 ) -> clickhouse::error::Result<Vec<ClickhouseMatchInfo>> {

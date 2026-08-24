@@ -21,7 +21,7 @@ redis = { version = "1.5.0", default-features = false, features = ["tokio-comp"]
 clickhouse = { version = "0.15.1", features = ["chrono", "uuid"] }
 sqlx = { version = "0.9.0", features = ["chrono", "derive", "postgres", "runtime-tokio", "uuid"] }
 uuid = { version = "1.24.0", features = ["serde", "v4"] }
-cached = { version = "2.0", features = ["async", "serde"] }
+cached = { version = "3.0", features = ["async"] }
 axum = "0.8.9"
 utoipa-axum = "0.2.0"
 utoipa = { version = "5.5.0", features = ["axum_extras", "chrono", "uuid"] }

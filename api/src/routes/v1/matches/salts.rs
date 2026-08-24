@@ -162,7 +162,7 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for MatchSaltsResponse 
 }
 
 #[cached(
-    ttl = 60,
+    ttl_secs = 60,
     convert = "{ match_id }",
     sync_writes = "by_key",
     key = "u64"

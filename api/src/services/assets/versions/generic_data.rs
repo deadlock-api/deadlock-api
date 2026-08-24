@@ -808,7 +808,7 @@ fn street_brawl_out(r: RawStreetBrawl) -> StreetBrawl {
 
 #[cached(
     max_size = 64,
-    ttl = 86400,
+    ttl_secs = 86400,
     convert = "{ version }",
     key = "u32",
     sync_writes = "by_key"

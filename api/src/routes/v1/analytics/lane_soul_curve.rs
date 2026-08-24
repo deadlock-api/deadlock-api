@@ -427,7 +427,7 @@ SETTINGS log_comment = 'lane_soul_curve', apply_patch_parts = 0
 }
 
 #[cached(
-    ttl = 3600,
+    ttl_secs = 3600,
     convert = "{ query_str.to_string() }",
     sync_writes = "by_key",
     key = "String"

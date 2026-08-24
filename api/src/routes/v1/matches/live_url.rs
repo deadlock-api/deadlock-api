@@ -59,7 +59,7 @@ pub(super) struct IngestLiveUrl {
 }
 
 #[cached(
-    ttl = 3600,
+    ttl_secs = 3600,
     convert = "{ api_key }",
     sync_writes = "by_key",
     key = "Uuid"
@@ -78,7 +78,7 @@ async fn uses_live_events_pool(
 }
 
 #[cached(
-    ttl = 60,
+    ttl_secs = 60,
     convert = "{ match_id }",
     sync_writes = "by_key",
     key = "u64"

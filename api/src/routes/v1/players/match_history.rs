@@ -80,7 +80,7 @@ impl BatchQueryMulti for MatchHistoryReadQuery {
 pub(crate) type MatchHistoryReadBatcher = ClickhouseBatcherMulti<MatchHistoryReadQuery>;
 
 #[cached(
-    ttl = 600,
+    ttl_secs = 600,
     convert = "{ account_id }",
     sync_writes = "by_key",
     key = "u32"
@@ -341,11 +341,15 @@ async fn fetch_match_history_raw(
     ))
 }
 
+// `force_refetch` bypasses the cached entry instead of being part of the key: a
+// forced refetch must actually reach Steam, and its (superset) result refreshes the
+// same entry normal callers read.
 #[cached(
-    ttl = 480,
-    convert = "{ (account_id, force_refetch) }",
+    ttl_secs = 480,
+    convert = "{ account_id }",
     sync_writes = "by_key",
-    key = "(u32, bool)"
+    key = "u32",
+    force_refresh = "{ force_refetch }"
 )]
 pub(crate) async fn fetch_steam_match_history(
     steam_client: &SteamClient,
