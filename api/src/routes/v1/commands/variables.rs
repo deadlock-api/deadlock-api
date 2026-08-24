@@ -899,7 +899,9 @@ impl Variable {
     ) -> Result<PlayerMatchHistory, VariableResolveError> {
         // No ranked interval: this runs per chat command and only reads the newest
         // match, so the extra call would double the busiest consumer of the match
-        // history rate limit for fields it never uses.
+        // history rate limit for fields it never uses. `rank_interval` is part of the
+        // cache key, so this keeps its own entry rather than handing the route a
+        // result that never made the ranked call.
         let matches =
             match fetch_steam_match_history(steam_client, account_id, false, None, None).await {
                 Ok(m) => {
