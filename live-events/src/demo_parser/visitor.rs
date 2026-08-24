@@ -87,8 +87,6 @@ impl Visitor for SendingVisitor {
     }
 }
 
-/// The callback bodies. `Visitor`'s `on_*` methods return a future, but none of this
-/// work is asynchronous, so each body is a plain function wrapped in `ready` above.
 impl SendingVisitor {
     fn handle_entity(
         &mut self,

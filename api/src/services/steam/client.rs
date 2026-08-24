@@ -260,8 +260,6 @@ fn build_forum_client() -> wreq::Client {
         })
 }
 
-// `result_fallback`: the forum RSS sits behind a bot wall and fails in bursts.
-// Serving the last successfully parsed patch notes beats a 500.
 #[cached(ttl_secs = 1800, convert = "{ 0 }", key = "u8", result_fallback = true)]
 async fn fetch_patch_notes(http_client: &wreq::Client) -> Result<Vec<Patch>, APIError> {
     let rss = fetch_rss_text(http_client, RSS_ENDPOINT).await?;
@@ -343,8 +341,6 @@ fn meta_refresh_target(body: &str) -> Option<String> {
     Some(target.replace("&amp;", "&"))
 }
 
-// `result_fallback`: as above, and this one needs *both* upstream feeds to answer,
-// so it fails more often than either alone.
 #[cached(ttl_secs = 1800, convert = "{ 0 }", key = "u8", result_fallback = true)]
 async fn fetch_combined_patch_feed(http_client: &wreq::Client) -> Result<Vec<FeedItem>, APIError> {
     let (forum_rss, steam_rss) = tokio::try_join!(
@@ -398,8 +394,6 @@ async fn fetch_steam_server_list(
     Ok(response.response.servers)
 }
 
-// `result_fallback`: keeping the last known opt-out list on a Postgres blip is the
-// fail-safe direction -- an empty list would silently unprotect every account.
 #[cached(
     ttl_secs = 86400,
     convert = "{ 0 }",
@@ -430,8 +424,6 @@ struct SteamClientVersionResult {
     min_allowed_version: Option<u32>,
 }
 
-// `result_fallback`: the version only ever moves forward, so the last known one is a
-// better answer than an error when both Steam and GitHub are unreachable.
 #[cached(ttl_secs = 300, convert = "{ 0 }", key = "u8", result_fallback = true)]
 async fn get_current_client_version(http_client: &reqwest::Client) -> Result<u32, APIError> {
     // Try the official Steam API first
