@@ -347,8 +347,6 @@ async fn delete_profiles(
         .await
 }
 
-// `result_fallback`: keep the last known opt-out list on a Postgres blip rather than
-// treating every account as unprotected.
 #[cached(
     ttl_secs = 86400,
     convert = "{ 0 }",

@@ -120,8 +120,6 @@ impl Visitor for DemoAnalyzerVisitor {
     }
 }
 
-/// The callback bodies. `Visitor`'s `on_*` methods return a future, but none of this
-/// work is asynchronous, so each body is a plain function wrapped in `ready` above.
 impl DemoAnalyzerVisitor {
     fn handle_entity(&mut self, ctx: &Context, entity: &Entity) -> Result<(), VisitorError> {
         let hash = entity.serializer().serializer_name.hash;

@@ -115,8 +115,6 @@ const ALL_STEAM_INFO_KEY: &str = "assets-api-res/steam-info/all.json.zst";
 /// The script collects and parses each version's `steam.inf` offline, so this
 /// is served as the raw JSON bytes it produced — already in the same shape and
 /// field order as [`SteamInfo`] — without re-fetching N files per request.
-// `result_fallback`: serving the previous aggregate beats failing the endpoint when R2
-// is unreachable.
 #[cached(
     ttl_secs = 900,
     convert = "{ 0_u8 }",

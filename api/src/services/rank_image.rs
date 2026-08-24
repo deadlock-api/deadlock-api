@@ -312,8 +312,6 @@ fn encode(image: &RgbaImage, format: RankImageFormat) -> APIResult<Bytes> {
     Ok(Bytes::from(out))
 }
 
-// `result_fallback`: the font never changes, so an R2 hiccup should not take rank
-// image rendering down for a whole TTL.
 #[cached(
     ttl_secs = 86400,
     key = "u8",

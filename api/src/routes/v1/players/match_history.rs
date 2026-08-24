@@ -341,11 +341,6 @@ async fn fetch_match_history_raw(
     ))
 }
 
-// `rank_interval` is part of the key because it changes the shape of the result:
-// `None` skips the ranked call entirely, so a `None` entry must never be served to a
-// caller that asked for ranked data. `force_refetch` is deliberately *not* part of the
-// key -- a forced refetch must actually reach Steam, and its (superset) result refreshes
-// the same entry normal callers read.
 #[cached(
     ttl_secs = 480,
     convert = "{ (account_id, rank_interval) }",
