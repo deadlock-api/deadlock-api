@@ -238,7 +238,12 @@ pub(super) async fn list_tables(
     Ok(Json(fetch_list_tables(&state.ch_client_restricted).await?))
 }
 
-#[cached(ttl = 3600, convert = "{ 0 }", key = "u8", sync_writes = "default")]
+#[cached(
+    ttl_secs = 3600,
+    convert = "{ 0 }",
+    key = "u8",
+    sync_writes = "default"
+)]
 async fn fetch_list_tables(
     ch_client: &clickhouse::Client,
 ) -> clickhouse::error::Result<Vec<String>> {
@@ -315,8 +320,8 @@ pub(super) async fn table_schema(
 }
 
 #[cached(
-    ttl = 3600,
-    convert = r#"{ format!("{table}") }"#,
+    ttl_secs = 3600,
+    convert = r#"{ table.to_string() }"#,
     sync_writes = "by_key",
     key = "String"
 )]

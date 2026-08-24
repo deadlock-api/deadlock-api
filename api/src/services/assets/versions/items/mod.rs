@@ -39,7 +39,7 @@ pub(crate) use types::Item;
 
 #[cached(
     max_size = 32,
-    ttl = 86400,
+    ttl_secs = 86400,
     convert = r#"{ (version, language.to_owned()) }"#,
     key = "(u32, String)",
     sync_writes = "by_key"

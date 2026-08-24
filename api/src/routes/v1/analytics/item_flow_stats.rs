@@ -535,7 +535,7 @@ fn build_edges_query(query: &ItemFlowStatsQuery) -> String {
 }
 
 #[cached(
-    ttl = 3600,
+    ttl_secs = 3600,
     convert = "{ query_str.to_string() }",
     sync_writes = "by_key",
     key = "String"
@@ -548,7 +548,7 @@ async fn run_nodes_query(
 }
 
 #[cached(
-    ttl = 3600,
+    ttl_secs = 3600,
     convert = "{ query_str.to_string() }",
     sync_writes = "by_key",
     key = "String"
@@ -585,7 +585,7 @@ struct ItemFlowTotalsRow {
 }
 
 #[cached(
-    ttl = 3600,
+    ttl_secs = 3600,
     convert = "{ query_str.to_string() }",
     sync_writes = "by_key",
     key = "String"

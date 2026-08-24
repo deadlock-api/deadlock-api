@@ -17,7 +17,7 @@ fn http() -> &'static reqwest::Client {
 
 #[cached(
     max_size = 256,
-    ttl = 86400,
+    ttl_secs = 86400,
     convert = r#"{ name.to_owned() }"#,
     key = "String",
     sync_writes = "by_key"

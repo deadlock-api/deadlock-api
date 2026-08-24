@@ -981,28 +981,28 @@ dependencies = [
 
 [[package]]
 name = "cached"
-version = "2.0.2"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc0df7748fe2f601e376916ab19e7bfc2c74461b8abe3bce2ce20036ad8de38f"
+checksum = "585e27624275176f4fc72161f2a2d629c2a13fa8dea40df288d59965a0e49ad4"
 dependencies = [
  "ahash",
+ "async-lock",
  "cached_proc_macro",
  "cached_proc_macro_types",
- "hashbrown 0.16.1",
+ "hashbrown 0.17.1",
  "parking_lot",
- "serde",
  "thiserror",
- "tokio",
  "web-time",
 ]
 
 [[package]]
 name = "cached_proc_macro"
-version = "2.0.0"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66e734c52502e6cf54dce2ba07108906b04b8fe57f4f5e3ef7d58267b4abf060"
+checksum = "da80977bd46ecf98c593b651e393260f852678283989b8b7c4079304fe5e8936"
 dependencies = [
  "darling 0.20.11",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
@@ -1010,9 +1010,9 @@ dependencies = [
 
 [[package]]
 name = "cached_proc_macro_types"
-version = "1.0.0"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26cf465651fa6ad902a2d327ba60c3a6bc61c6a2f4ad70d091cf20dfda0074ef"
+checksum = "f5813789573ae815c8b4be58c4428e0e7ae05f0227678ba9de332ded585b9159"
 
 [[package]]
 name = "cc"
@@ -6762,7 +6762,6 @@ dependencies = [
  "bytes",
  "libc",
  "mio",
- "parking_lot",
  "pin-project-lite",
  "signal-hook-registry",
  "socket2 0.6.5",

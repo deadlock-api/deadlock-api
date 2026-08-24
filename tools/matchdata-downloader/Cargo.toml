@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = { workspace = true }
-cached = { workspace = true, features = ["async", "tokio"] }
+cached = { workspace = true, features = ["async"] }
 clap = { workspace = true }
 clickhouse = { workspace = true, features = ["time", "test-util"] }
 common = { workspace = true }

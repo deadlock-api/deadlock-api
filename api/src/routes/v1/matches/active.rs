@@ -34,7 +34,7 @@ pub(super) struct ActiveMatchesQuery {
     account_ids: Option<Vec<u32>>,
 }
 
-#[cached(ttl = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
+#[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 async fn fetch_active_matches_raw(state: &AppState) -> Result<Vec<u8>, APIError> {
     let steam_response = state
         .steam_client

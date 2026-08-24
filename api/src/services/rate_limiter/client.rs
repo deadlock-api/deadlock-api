@@ -48,7 +48,7 @@ impl RateLimitClient {
 
         if let Some(api_key) = rate_limit_key.api_key {
             // If API key is present, check if it is valid
-            match is_api_key_valid(&self.pg_client, api_key).await {
+            match self.is_api_key_valid(api_key).await {
                 Ok(false) => {
                     return Err(APIError::status_msg(
                         StatusCode::FORBIDDEN,
@@ -93,7 +93,7 @@ impl RateLimitClient {
         let quotas = match rate_limit_key.api_key {
             None => quotas.to_vec(),
             Some(api_key) => {
-                let custom_quotas = match get_custom_quotas(&self.pg_client, api_key, key).await {
+                let custom_quotas = match self.get_custom_quotas(api_key, key).await {
                     Ok(quotas) => quotas,
                     Err(e) => {
                         warn!("Failed to fetch custom quotas due to DB error: {e}, using defaults");
@@ -147,6 +147,54 @@ impl RateLimitClient {
         Ok(all_statuses.into_iter().min_by_key(Status::remaining))
     }
 
+    #[cached(
+        ttl_secs = 3600,
+        convert = "{ api_key }",
+        sync_writes = "by_key",
+        key = "Uuid",
+        in_impl = true
+    )]
+    async fn is_api_key_valid(&self, api_key: Uuid) -> Result<bool, sqlx::Error> {
+        let row = sqlx::query!(
+            "SELECT COUNT(*) FROM api_keys WHERE key = $1 AND disabled IS false",
+            api_key
+        )
+        .fetch_one(&self.pg_client)
+        .await?;
+        Ok(row.count.is_some_and(|c| c > 0))
+    }
+
+    #[cached(
+        ttl_secs = 600,
+        convert = r#"{ format!("{api_key}-{path}") }"#,
+        sync_writes = "by_key",
+        key = "String",
+        in_impl = true
+    )]
+    async fn get_custom_quotas(
+        &self,
+        api_key: Uuid,
+        path: &str,
+    ) -> Result<Vec<Quota>, sqlx::Error> {
+        let rows = sqlx::query!(
+            "SELECT rate_limit, rate_period FROM api_key_limits WHERE key = $1 AND path = $2",
+            api_key,
+            path
+        )
+        .fetch_all(&self.pg_client)
+        .await?;
+        Ok(rows
+            .iter()
+            .map(|row| Quota {
+                #[allow(clippy::cast_sign_loss)]
+                limit: row.rate_limit as usize,
+                #[allow(clippy::cast_sign_loss)]
+                period: Duration::from_micros(row.rate_period.microseconds as u64),
+                r#type: QuotaType::Key,
+            })
+            .collect())
+    }
+
     async fn check_requests(
         &self,
         key: &str,
@@ -182,51 +230,4 @@ impl RateLimitClient {
             .exec_async(&mut self.redis_client.clone())
             .await
     }
-}
-
-// Helper functions outside the impl block since cached macros cannot be used directly on methods
-#[cached(
-    ttl = 3600,
-    convert = "{ api_key }",
-    sync_writes = "by_key",
-    key = "Uuid"
-)]
-async fn is_api_key_valid(pg_client: &Pool<Postgres>, api_key: Uuid) -> Result<bool, sqlx::Error> {
-    let row = sqlx::query!(
-        "SELECT COUNT(*) FROM api_keys WHERE key = $1 AND disabled IS false",
-        api_key
-    )
-    .fetch_one(pg_client)
-    .await?;
-    Ok(row.count.is_some_and(|c| c > 0))
-}
-
-#[cached(
-    ttl = 600,
-    convert = r#"{ format!("{api_key}-{path}") }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
-async fn get_custom_quotas(
-    pg_client: &Pool<Postgres>,
-    api_key: Uuid,
-    path: &str,
-) -> Result<Vec<Quota>, sqlx::Error> {
-    let rows = sqlx::query!(
-        "SELECT rate_limit, rate_period FROM api_key_limits WHERE key = $1 AND path = $2",
-        api_key,
-        path
-    )
-    .fetch_all(pg_client)
-    .await?;
-    Ok(rows
-        .iter()
-        .map(|row| Quota {
-            #[allow(clippy::cast_sign_loss)]
-            limit: row.rate_limit as usize,
-            #[allow(clippy::cast_sign_loss)]
-            period: Duration::from_micros(row.rate_period.microseconds as u64),
-            r#type: QuotaType::Key,
-        })
-        .collect())
 }

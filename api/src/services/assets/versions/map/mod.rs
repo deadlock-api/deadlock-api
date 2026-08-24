@@ -201,7 +201,7 @@ pub(crate) fn build_map(css: &str) -> Result<MapData, AssetsError> {
 
 #[cached(
     max_size = 64,
-    ttl = 86400,
+    ttl_secs = 86400,
     convert = r#"{ version }"#,
     key = "u32",
     sync_writes = "by_key"

@@ -12,7 +12,7 @@ use cached::macros::cached;
 use sqlx::{Pool, Postgres};
 
 #[cached(
-    ttl = 3600,
+    ttl_secs = 3600,
     convert = "{ steam_id3 }",
     sync_writes = "by_key",
     key = "i64"

@@ -49,7 +49,7 @@ pub(super) struct LeaderboardHeroQuery {
 }
 
 #[cached(
-    ttl = 600,
+    ttl_secs = 600,
     convert = "{ (region, hero_id) }",
     sync_writes = "by_key",
     key = "(LeaderboardRegion, Option<u32>)"
@@ -77,7 +77,12 @@ pub(crate) async fn fetch_leaderboard_raw(
         .await
 }
 
-#[cached(ttl = 86400, convert = "{ 0 }", key = "u8", sync_writes = "default")]
+#[cached(
+    ttl_secs = 86400,
+    convert = "{ 0 }",
+    key = "u8",
+    sync_writes = "default"
+)]
 async fn fetch_all_steam_names(
     ch_client: &clickhouse::Client,
 ) -> clickhouse::error::Result<HashMap<String, Vec<u32>>> {

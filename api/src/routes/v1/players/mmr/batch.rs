@@ -91,7 +91,7 @@ fn build_mmr_query_inner(
 }
 
 #[cached(
-    ttl = 60,
+    ttl_secs = 60,
     convert = r#"{ format!("{account_ids:?}-{max_match_id:?}") }"#,
     sync_writes = "by_key",
     key = "String"

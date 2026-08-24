@@ -347,7 +347,14 @@ async fn delete_profiles(
         .await
 }
 
-#[cached(ttl = 86400, convert = "{ 0 }", key = "u8", sync_writes = "default")]
+// `result_fallback`: keep the last known opt-out list on a Postgres blip rather than
+// treating every account as unprotected.
+#[cached(
+    ttl_secs = 86400,
+    convert = "{ 0 }",
+    key = "u8",
+    result_fallback = true
+)]
 async fn get_protected_users_cached(
     ph_client: &sqlx::Pool<sqlx::Postgres>,
 ) -> sqlx::Result<Vec<u32>> {

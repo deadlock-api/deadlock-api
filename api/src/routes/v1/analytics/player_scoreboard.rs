@@ -235,7 +235,7 @@ SETTINGS log_comment = 'player_scoreboard', apply_patch_parts = 0, do_not_merge_
 }
 
 #[cached(
-    ttl = 3600,
+    ttl_secs = 3600,
     convert = "{ query_str.to_string() }",
     sync_writes = "by_key",
     key = "String"

@@ -166,7 +166,7 @@ async fn fetch_valid_build_ids(pg_client: &Pool<Postgres>, hero_id: u32) -> sqlx
 }
 
 #[cached(
-    ttl = 3600,
+    ttl_secs = 3600,
     convert = "{ query_str.to_string() }",
     sync_writes = "by_key",
     key = "String"

@@ -314,7 +314,7 @@ SETTINGS log_comment = 'hero_comb_stats', apply_patch_parts = 0, query_plan_exec
 }
 
 #[cached(
-    ttl = 3600,
+    ttl_secs = 3600,
     convert = "{ query_str.to_string() }",
     sync_writes = "by_key",
     key = "String"

@@ -34,7 +34,7 @@ pub struct Status {
     pub services: StatusServices,
 }
 
-#[cached(ttl = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
+#[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 async fn check_health(
     ch_client: clickhouse::Client,
     pg_client: Pool<Postgres>,

@@ -19,7 +19,7 @@ pub(crate) fn localize(loc: &HashMap<String, String>, token: &str) -> String {
 /// Falls back to english when the requested language is missing.
 #[cached(
     max_size = 64,
-    ttl = 86400,
+    ttl_secs = 86400,
     convert = r#"{ (version, language.to_owned()) }"#,
     key = "(u32, String)",
     sync_writes = "by_key"

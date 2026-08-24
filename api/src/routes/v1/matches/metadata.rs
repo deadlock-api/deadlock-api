@@ -88,7 +88,7 @@ static METADATA_FETCH_FAILURES: LazyLock<Mutex<TtlCache<u64, ()>>> = LazyLock::n
     Mutex::new(
         TtlCache::<u64, ()>::builder()
             .ttl(Duration::from_mins(1))
-            .capacity(100_000)
+            .initial_capacity(100_000)
             .build()
             .expect("ttl is set"),
     )

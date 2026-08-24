@@ -133,11 +133,16 @@ pub(crate) async fn fetch_decompressed(
     fetch_decompressed_cached(r2, version, rel_path.to_owned()).await
 }
 
+// `result_fallback` gives the whole versioned-asset stack resilience to an R2 blip in
+// one place: a versioned file is immutable, so the previously fetched bytes stay
+// correct forever and every `fetch_*` parser above this layer inherits the fallback.
+// Dropping `sync_writes` costs nothing here -- the parsers are already coalesced
+// per-version, so concurrent callers rarely reach this function with the same key.
 #[cached(
-    ttl = 3600,
+    ttl_secs = 3600,
     convert = r#"{ (version, rel_path.clone()) }"#,
     key = "(u32, String)",
-    sync_writes = "by_key"
+    result_fallback = true
 )]
 async fn fetch_decompressed_cached(
     r2: &AmazonS3,
