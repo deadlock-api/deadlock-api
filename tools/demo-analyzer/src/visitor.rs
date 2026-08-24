@@ -1,3 +1,4 @@
+use core::future::{Future, ready};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -93,12 +94,36 @@ impl DemoAnalyzerVisitor {
 impl Visitor for DemoAnalyzerVisitor {
     type Error = VisitorError;
 
-    async fn on_entity(
+    fn on_entity(
         &mut self,
         ctx: &Context,
         _delta_header: DeltaHeader,
         entity: &Entity,
-    ) -> Result<(), Self::Error> {
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send + Sync {
+        ready(self.handle_entity(ctx, entity))
+    }
+
+    fn on_packet(
+        &mut self,
+        ctx: &Context,
+        packet_type: u32,
+        data: &[u8],
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send + Sync {
+        ready(self.handle_packet(ctx, packet_type, data))
+    }
+
+    fn on_tick_end(
+        &mut self,
+        ctx: &Context,
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send + Sync {
+        ready(self.handle_tick_end(ctx))
+    }
+}
+
+/// The callback bodies. `Visitor`'s `on_*` methods return a future, but none of this
+/// work is asynchronous, so each one is a plain method wrapped in `ready` above.
+impl DemoAnalyzerVisitor {
+    fn handle_entity(&mut self, ctx: &Context, entity: &Entity) -> Result<(), VisitorError> {
         let hash = entity.serializer().serializer_name.hash;
 
         if hash == PLAYER_CONTROLLER_HASH {
@@ -177,12 +202,12 @@ impl Visitor for DemoAnalyzerVisitor {
         Ok(())
     }
 
-    async fn on_packet(
+    fn handle_packet(
         &mut self,
         ctx: &Context,
         packet_type: u32,
         data: &[u8],
-    ) -> Result<(), Self::Error> {
+    ) -> Result<(), VisitorError> {
         if packet_type == CitadelUserMessageIds::KEUserMsgBannedHeroes as u32 {
             let msg = CCitadelUserMsgBannedHeroes::decode(data)?;
             let mut state = self
@@ -201,7 +226,7 @@ impl Visitor for DemoAnalyzerVisitor {
         Ok(())
     }
 
-    async fn on_tick_end(&mut self, ctx: &Context) -> Result<(), Self::Error> {
+    fn handle_tick_end(&mut self, ctx: &Context) -> Result<(), VisitorError> {
         if ctx.tick() > MAX_PARSE_TICKS {
             debug!(
                 tick = ctx.tick(),

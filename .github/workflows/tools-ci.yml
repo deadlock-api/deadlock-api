@@ -36,11 +36,12 @@ jobs:
         working-directory: tools
     steps:
       - uses: actions/checkout@v7
-      - name: Update Rust toolchain
-        run: |
-          rustup override set stable
-          rustup update stable
-          rustup component add rustfmt
+      - name: Install pinned Rust toolchain
+        # No `rustup override set stable`: honour tools/rust-toolchain.toml, so a new
+        # stable release cannot fail CI on unchanged code (clippy 1.98's
+        # unused_async_trait_impl did exactly that). The api workflow already
+        # relies on its pin the same way.
+        run: rustup component add rustfmt
       - name: Rustfmt Check
         uses: actions-rust-lang/rustfmt@v1
         with:
@@ -54,10 +55,12 @@ jobs:
         working-directory: tools
     steps:
       - uses: actions/checkout@v7
-      - name: Update Rust toolchain to stable
-        run: |
-          rustup override set stable
-          rustup update stable
+      - name: Install pinned Rust toolchain
+        # No `rustup override set stable`: honour tools/rust-toolchain.toml, so a new
+        # stable release cannot fail CI on unchanged code (clippy 1.98's
+        # unused_async_trait_impl did exactly that). The api workflow already
+        # relies on its pin the same way.
+        run: rustup show active-toolchain
       - name: Machete
         uses: bnjbvr/cargo-machete@ac30a525c0a8d163a92d727b3ff079ee3f6ecb08
         with:
@@ -78,11 +81,12 @@ jobs:
         with:
           shared-key: "tools-build-cache-${{ runner.os }}-${{ runner.arch }}"
           workspaces: "tools -> target"
-      - name: Update Rust toolchain
-        run: |
-          rustup override set stable
-          rustup update stable
-          rustup component add clippy
+      - name: Install pinned Rust toolchain
+        # No `rustup override set stable`: honour tools/rust-toolchain.toml, so a new
+        # stable release cannot fail CI on unchanged code (clippy 1.98's
+        # unused_async_trait_impl did exactly that). The api workflow already
+        # relies on its pin the same way.
+        run: rustup component add clippy
       - name: Cargo Clippy
         run: cargo clippy --all-targets --locked --all-features -- -D warnings
 
