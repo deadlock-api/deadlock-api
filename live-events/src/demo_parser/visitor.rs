@@ -1,3 +1,4 @@
+use core::future::{Future, ready};
 use std::collections::HashSet;
 
 use axum::response::sse::Event;
@@ -50,12 +51,51 @@ impl SendingVisitor {
 impl Visitor for SendingVisitor {
     type Error = DemoParseError;
 
-    async fn on_entity(
+    fn on_entity(
         &mut self,
         ctx: &Context,
         delta_header: DeltaHeader,
         entity: &Entity,
-    ) -> Result<(), Self::Error> {
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send + Sync {
+        ready(self.handle_entity(ctx, delta_header, entity))
+    }
+
+    fn on_cmd(
+        &mut self,
+        ctx: &Context,
+        cmd_header: &CmdHeader,
+        _data: &[u8],
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send + Sync {
+        self.handle_cmd(ctx, cmd_header);
+        ready(Ok(()))
+    }
+
+    fn on_packet(
+        &mut self,
+        ctx: &Context,
+        packet_type: u32,
+        data: &[u8],
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send + Sync {
+        ready(self.handle_packet(ctx, packet_type, data))
+    }
+
+    fn on_tick_end(
+        &mut self,
+        ctx: &Context,
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send + Sync {
+        ready(self.handle_tick_end(ctx))
+    }
+}
+
+/// The callback bodies. `Visitor`'s `on_*` methods return a future, but none of this
+/// work is asynchronous, so each body is a plain function wrapped in `ready` above.
+impl SendingVisitor {
+    fn handle_entity(
+        &mut self,
+        ctx: &Context,
+        delta_header: DeltaHeader,
+        entity: &Entity,
+    ) -> Result<(), DemoParseError> {
         let Some(entity_type) = EntityType::from_opt(entity) else {
             return Ok(());
         };
@@ -97,25 +137,19 @@ impl Visitor for SendingVisitor {
         Ok(())
     }
 
-    async fn on_cmd(
-        &mut self,
-        ctx: &Context,
-        cmd_header: &CmdHeader,
-        _data: &[u8],
-    ) -> Result<(), Self::Error> {
+    fn handle_cmd(&mut self, ctx: &Context, cmd_header: &CmdHeader) {
         if cmd_header.cmd == EDemoCommands::DemSyncTick {
             debug!("Updating tick interval");
             self.tick_interval = ctx.tick_interval();
         }
-        Ok(())
     }
 
-    async fn on_packet(
+    fn handle_packet(
         &mut self,
         ctx: &Context,
         packet_type: u32,
         data: &[u8],
-    ) -> Result<(), Self::Error> {
+    ) -> Result<(), DemoParseError> {
         if self.subscribed_chat_messages
             && packet_type == CitadelUserMessageIds::KEUserMsgChatMsg as u32
             && let Ok(msg) = CCitadelUserMsgChatMsg::decode(data)
@@ -172,7 +206,7 @@ impl Visitor for SendingVisitor {
         Ok(())
     }
 
-    async fn on_tick_end(&mut self, ctx: &Context) -> Result<(), Self::Error> {
+    fn handle_tick_end(&mut self, ctx: &Context) -> Result<(), DemoParseError> {
         #[allow(clippy::cast_precision_loss)]
         {
             let ticks = ctx.tick() - self.rules.total_paused_ticks.unwrap_or_default();
