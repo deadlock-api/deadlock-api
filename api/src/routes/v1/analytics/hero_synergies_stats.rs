@@ -343,7 +343,6 @@ mod proptests {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
         #[test]
-        #[expect(deprecated)]
         fn hero_synergies_stats_build_query_is_valid_sql(query: HeroSynergyStatsQuery) {
             assert_valid_sql(&build_query(&query));
         }

@@ -20,7 +20,6 @@ use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::utils::parse::comma_separated_deserialize_option;
 use crate::utils::types::SortDirectionDesc;
 
-#[expect(clippy::unnecessary_wraps)]
 fn default_limit() -> Option<u32> {
     100.into()
 }

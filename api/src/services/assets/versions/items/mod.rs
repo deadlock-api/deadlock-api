@@ -4,14 +4,9 @@
 
 #![expect(
     clippy::too_many_lines,
-    clippy::too_many_arguments,
     clippy::case_sensitive_file_extension_comparisons,
     clippy::cast_possible_truncation,
-    clippy::cast_precision_loss,
-    clippy::cast_sign_loss,
     clippy::cast_lossless,
-    clippy::large_enum_variant,
-    clippy::module_name_repetitions,
     clippy::similar_names,
     clippy::if_not_else
 )]

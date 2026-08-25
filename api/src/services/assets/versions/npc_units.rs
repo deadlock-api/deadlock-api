@@ -54,7 +54,6 @@ pub(crate) enum SpreadPenalty {
 }
 
 #[derive(Debug, Deserialize)]
-#[expect(clippy::struct_excessive_bools)]
 struct RawWeaponInfo {
     #[serde(default, rename = "m_bCanZoom")]
     can_zoom: Option<bool>,
@@ -254,7 +253,6 @@ struct RawObjectiveHealthGrowthPhase {
 }
 
 #[derive(Debug, Deserialize)]
-#[expect(clippy::struct_excessive_bools)]
 struct RawNpcUnit {
     #[serde(default, rename = "m_WeaponInfo")]
     weapon_info: Option<RawWeaponInfo>,
@@ -409,7 +407,6 @@ pub(crate) struct VerticalRecoil {
 }
 
 #[derive(Debug, Serialize, Clone, Default, ToSchema)]
-#[expect(clippy::struct_excessive_bools)]
 pub(crate) struct WeaponInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_zoom: Option<bool>,
@@ -623,7 +620,6 @@ pub(crate) struct ObjectiveHealthGrowthPhase {
 }
 
 #[derive(Debug, Serialize, Clone, ToSchema)]
-#[expect(clippy::struct_excessive_bools)]
 pub(crate) struct NpcUnit {
     pub class_name: String,
     pub id: u32,

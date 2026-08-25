@@ -666,7 +666,6 @@ fn build_weapon_info(w: &RawWeaponInfo) -> WeaponInfo {
 
     let cycle_time = w.cycle_time;
     let intra = w.intra_burst_cycle_time.unwrap_or(0.0);
-    #[expect(clippy::cast_precision_loss)]
     let burst = w.burst_shot_count.unwrap_or(1).max(1) as f64;
 
     let shots_per_second = cycle_time.map(|ct| {
@@ -676,14 +675,8 @@ fn build_weapon_info(w: &RawWeaponInfo) -> WeaponInfo {
 
     let shots_per_second_with_reload = match (cycle_time, w.reload_duration, w.clip_size) {
         (Some(ct), Some(rd), Some(clip)) => {
-            #[expect(clippy::cast_precision_loss)]
             let clip_f = clip as f64;
             let recoil_recovery = w.recoil_shot_index_recovery_time_factor.unwrap_or(0.0);
-            #[expect(
-                clippy::cast_precision_loss,
-                clippy::cast_sign_loss,
-                clippy::cast_possible_truncation
-            )]
             let full_bursts = (clip as f64 / burst).floor();
             let total_burst = full_bursts * (burst * intra + ct) - intra;
             let remaining = clip_f % burst;
@@ -1096,7 +1089,6 @@ mod tests {
     const SNAPSHOT_VERSION: u32 = 6064;
     const PUBLIC_BASE: &str = "https://assets-bucket.deadlock-api.com/assets-api-res/versions";
 
-    #[expect(clippy::std_instead_of_core)]
     async fn fetch_zst(client: &reqwest::Client, version: u32, rel: &str) -> String {
         use async_compression::tokio::bufread::ZstdDecoder;
         use tokio::io::AsyncReadExt;

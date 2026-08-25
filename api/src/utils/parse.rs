@@ -236,7 +236,6 @@ pub(crate) fn default_last_month_timestamp() -> Option<i64> {
     last_month.and_utc().timestamp().into()
 }
 
-#[expect(clippy::unnecessary_wraps)]
 pub(crate) fn default_true_option() -> Option<bool> {
     true.into()
 }

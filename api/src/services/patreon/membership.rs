@@ -7,7 +7,6 @@ use super::types::calculate_slot_limit;
 ///
 /// When a patron re-subscribes (pays again) or has a slot override, reactivate their
 /// previously soft-deleted accounts so they don't have to re-add them manually.
-#[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 pub(crate) async fn handle_reactivation(
     steam_accounts_repository: &SteamAccountsRepository,
     patron_id: uuid::Uuid,

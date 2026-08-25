@@ -17,17 +17,14 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
-#[expect(clippy::unnecessary_wraps)]
 fn default_min_matches() -> Option<u32> {
     20.into()
 }
 
-#[expect(clippy::unnecessary_wraps)]
 fn default_phase_interval_s() -> Option<u32> {
     600.into()
 }
 
-#[expect(clippy::unnecessary_wraps)]
 fn default_phase_count() -> Option<u8> {
     4.into()
 }

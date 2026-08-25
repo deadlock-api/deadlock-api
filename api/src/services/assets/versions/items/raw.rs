@@ -513,7 +513,6 @@ pub(crate) struct RawWeaponInfoVerticalRecoil {
 
 /// `m_WeaponInfo` for weapon-typed items.
 #[derive(Debug, Deserialize, Clone, Default)]
-#[expect(clippy::struct_excessive_bools)]
 pub(crate) struct RawWeaponInfo {
     #[serde(default, rename = "m_bCanZoom")]
     pub(crate) can_zoom: Option<bool>,

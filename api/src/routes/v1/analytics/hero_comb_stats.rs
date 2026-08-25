@@ -24,7 +24,6 @@ use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
 
-#[expect(clippy::unnecessary_wraps)]
 fn default_comb_size() -> Option<u8> {
     6.into()
 }
@@ -422,7 +421,6 @@ mod proptests {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
         #[test]
-        #[expect(deprecated)]
         fn hero_comb_stats_build_query_is_valid_sql(query: HeroCombStatsQuery) {
             assert_valid_sql(&build_query(&query));
         }
