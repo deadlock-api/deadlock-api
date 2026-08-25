@@ -1,4 +1,3 @@
-#![expect(clippy::std_instead_of_core)]
 
 use std::io::Cursor;
 use std::sync::Arc;

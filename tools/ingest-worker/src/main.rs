@@ -11,7 +11,6 @@
 #![expect(clippy::cast_sign_loss)]
 #![expect(clippy::cast_precision_loss)]
 #![expect(clippy::cast_possible_truncation)]
-#![expect(clippy::struct_field_names)]
 
 use core::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 use core::time::Duration;
