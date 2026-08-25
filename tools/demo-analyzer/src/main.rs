@@ -8,10 +8,7 @@
 #![deny(clippy::perf)]
 #![deny(clippy::pedantic)]
 #![deny(clippy::std_instead_of_core)]
-#![expect(clippy::cast_sign_loss)]
 #![expect(clippy::cast_precision_loss)]
-#![expect(clippy::cast_possible_truncation)]
-#![expect(clippy::struct_field_names)]
 
 use core::time::Duration;
 use std::collections::{HashMap, HashSet};

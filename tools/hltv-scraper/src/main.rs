@@ -10,7 +10,6 @@
 #![deny(clippy::std_instead_of_core)]
 #![expect(clippy::cast_precision_loss)]
 #![expect(clippy::cast_sign_loss)]
-#![expect(clippy::cast_possible_wrap)]
 #![expect(clippy::cast_possible_truncation)]
 #![expect(clippy::too_many_lines)]
 #![expect(clippy::unreadable_literal)]
