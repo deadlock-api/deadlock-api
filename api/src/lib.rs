@@ -8,11 +8,11 @@
 #![deny(clippy::perf)]
 #![deny(clippy::pedantic)]
 #![deny(clippy::std_instead_of_core)]
-#![allow(clippy::unreadable_literal)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::needless_for_each)] // This is currently caused by an issue in utoipa, see: https://github.com/juhaku/utoipa/pull/1423
-#![allow(clippy::large_stack_arrays)] // Triggered by utoipa's `IntoParams` derive on large query-param structs.
-#![allow(clippy::unused_async_trait_impl)]
+#![expect(clippy::unreadable_literal)]
+#![expect(clippy::missing_errors_doc)]
+#![expect(clippy::needless_for_each)] // This is currently caused by an issue in utoipa, see: https://github.com/juhaku/utoipa/pull/1423
+#![expect(clippy::large_stack_arrays)] // Triggered by utoipa's `IntoParams` derive on large query-param structs.
+#![expect(clippy::unused_async_trait_impl)]
 
 mod api_doc;
 mod context;

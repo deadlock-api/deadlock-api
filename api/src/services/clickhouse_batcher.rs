@@ -245,7 +245,7 @@ async fn batch_loop<I: BatcherInner>(
     }
 }
 
-#[allow(clippy::cast_precision_loss)]
+#[expect(clippy::cast_precision_loss)]
 async fn execute_batch<I: BatcherInner>(
     ch_client: &clickhouse::Client,
     group: &I::Group,

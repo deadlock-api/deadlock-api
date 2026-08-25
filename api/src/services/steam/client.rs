@@ -100,7 +100,7 @@ impl SteamClient {
         body: &T,
     ) -> SteamProxyResult<SteamProxyRawResponse> {
         let url = if self.steam_proxy_urls.len() == 1 {
-            #[allow(clippy::indexing_slicing, reason = "We checked the length")]
+            #[expect(clippy::indexing_slicing, reason = "We checked the length")]
             &self.steam_proxy_urls[0]
         } else {
             self.steam_proxy_urls

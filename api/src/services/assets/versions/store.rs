@@ -148,7 +148,7 @@ async fn fetch_decompressed_cached(
 }
 
 /// Fetch a zstd-compressed object by its full bucket key and decompress it.
-#[allow(clippy::std_instead_of_core)]
+#[expect(clippy::std_instead_of_core)]
 pub(crate) async fn fetch_zst(r2: &AmazonS3, key: &str) -> Result<Bytes, VersionStoreError> {
     debug!("Fetching asset: {key}");
     let res = r2.get(&ObjectPath::from(key.to_owned())).await?;

@@ -205,7 +205,7 @@ const MV_ROUTING_MARGIN_DAYS: i64 = 5;
 fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
     let bucket_expr = query.bucket.mv_bucket_expr()?;
     // Per-player / per-row filters the grain cannot express → base table.
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     let personalized = query.account_id.is_some()
         || query.account_ids.as_ref().is_some_and(|v| !v.is_empty())
         || query
@@ -311,7 +311,7 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
     ))
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn build_query(query: &HeroStatsQuery) -> String {
     let info_filters = MatchInfoFilters {
         min_unix_timestamp: query.min_unix_timestamp,
@@ -324,7 +324,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         max_duration_s: query.max_duration_s,
     }
     .build();
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     let player_filters = PlayerFilters {
         account_id: query.account_id,
         account_ids: query.account_ids.as_deref(),
@@ -406,7 +406,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
     } else {
         ""
     };
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     let has_account_filter = query.account_id.is_some()
         || query
             .account_ids
@@ -532,7 +532,7 @@ pub(crate) async fn hero_stats(
             message: "Cannot filter by average badge for street brawl game mode".to_string(),
         });
     }
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     get_hero_stats(&state.ch_client_cached, query)
         .await
@@ -558,7 +558,7 @@ mod proptests {
         fn hero_stats_build_mv_query_is_valid_sql(mut query: HeroStatsQuery) {
             // Force routing into the MV path: clear the filters that disqualify it
             // and pick a min timestamp comfortably inside the horizon.
-            #[allow(deprecated)]
+            #[expect(deprecated)]
             {
                 query.account_id = None;
             }

@@ -20,7 +20,7 @@ pub enum StartupError {
     AppState(#[from] AppStateError),
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 #[derive(Debug, Error)]
 pub(super) enum APIError {
     #[error("Status {status}")]

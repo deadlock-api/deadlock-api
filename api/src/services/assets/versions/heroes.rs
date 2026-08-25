@@ -22,7 +22,7 @@ const SVGS_BASE_URL: &str = "https://assets-bucket.deadlock-api.com/assets-api-r
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-#[allow(clippy::struct_field_names)]
+#[expect(clippy::struct_field_names)]
 struct RawStartingStats {
     #[serde(rename = "EMaxMoveSpeed")]
     e_max_move_speed: f64,
@@ -103,7 +103,7 @@ struct RawShopWeaponStatsDisplay {
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(clippy::struct_field_names)]
+#[expect(clippy::struct_field_names)]
 struct RawShopStatDisplay {
     #[serde(rename = "m_eSpiritStatsDisplay")]
     e_spirit_stats_display: RawShopSpiritStatsDisplay,
@@ -114,7 +114,7 @@ struct RawShopStatDisplay {
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(clippy::struct_field_names)]
+#[expect(clippy::struct_field_names)]
 struct RawHeroStatsDisplay {
     #[serde(rename = "m_vecHealthHeaderStats", default)]
     health_header_stats: Vec<String>,
@@ -200,7 +200,7 @@ pub(crate) struct DraftBucketing {
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 struct RawHero {
     #[serde(rename = "m_HeroID")]
     id: u32,
@@ -301,7 +301,7 @@ struct RawHero {
 
 #[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
 #[graphql(complex, rename_fields = "snake_case")]
-#[allow(clippy::struct_excessive_bools, clippy::struct_field_names)]
+#[expect(clippy::struct_excessive_bools, clippy::struct_field_names)]
 pub(crate) struct Hero {
     pub id: u32,
     pub class_name: String,
@@ -482,7 +482,7 @@ pub(crate) struct HeroColors {
 
 #[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
 #[graphql(rename_fields = "snake_case")]
-#[allow(clippy::struct_field_names)]
+#[expect(clippy::struct_field_names)]
 pub(crate) struct ShopStatDisplay {
     pub spirit_stats_display: ShopSpiritStatsDisplay,
     pub vitality_stats_display: ShopVitalityStatsDisplay,
@@ -515,7 +515,7 @@ pub(crate) struct ShopWeaponStatsDisplay {
 
 #[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
 #[graphql(rename_fields = "snake_case")]
-#[allow(clippy::struct_field_names)]
+#[expect(clippy::struct_field_names)]
 pub(crate) struct StatsDisplay {
     pub health_header_stats: Vec<String>,
     pub health_stats: Vec<String>,
@@ -676,7 +676,7 @@ fn transform_root(
     out
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn transform(
     class_name: &str,
     r: RawHero,
@@ -871,7 +871,7 @@ fn build_shop_stat_display(r: RawShopStatDisplay) -> ShopStatDisplay {
     }
 }
 
-#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+#[expect(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
 fn build_starting_stats(s: &RawStartingStats) -> StartingStats {
     macro_rules! mk {
         ($v:expr, $name:literal) => {

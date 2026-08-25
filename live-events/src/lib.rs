@@ -8,8 +8,8 @@
 #![deny(clippy::perf)]
 #![deny(clippy::pedantic)]
 #![deny(clippy::std_instead_of_core)]
-#![allow(clippy::unreadable_literal)]
-#![allow(clippy::missing_errors_doc)]
+#![expect(clippy::unreadable_literal)]
+#![expect(clippy::missing_errors_doc)]
 
 mod demo;
 mod demo_parser;

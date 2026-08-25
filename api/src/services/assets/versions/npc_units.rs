@@ -54,7 +54,7 @@ pub(crate) enum SpreadPenalty {
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 struct RawWeaponInfo {
     #[serde(default, rename = "m_bCanZoom")]
     can_zoom: Option<bool>,
@@ -254,7 +254,7 @@ struct RawObjectiveHealthGrowthPhase {
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 struct RawNpcUnit {
     #[serde(default, rename = "m_WeaponInfo")]
     weapon_info: Option<RawWeaponInfo>,
@@ -409,7 +409,7 @@ pub(crate) struct VerticalRecoil {
 }
 
 #[derive(Debug, Serialize, Clone, Default, ToSchema)]
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 pub(crate) struct WeaponInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_zoom: Option<bool>,
@@ -623,7 +623,7 @@ pub(crate) struct ObjectiveHealthGrowthPhase {
 }
 
 #[derive(Debug, Serialize, Clone, ToSchema)]
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 pub(crate) struct NpcUnit {
     pub class_name: String,
     pub id: u32,
@@ -765,7 +765,7 @@ pub(crate) fn build_npc_units(vdata: &str) -> Result<Vec<NpcUnit>, AssetsError> 
     build_from_kv3(vdata, "npc unit", |_, value| value.is_object(), transform)
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn transform(class_name: String, r: RawNpcUnit) -> NpcUnit {
     let id = entity_id(&class_name);
 
@@ -915,7 +915,7 @@ fn obj_health_phase_out(r: RawObjectiveHealthGrowthPhase) -> ObjectiveHealthGrow
     }
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn weapon_info_out(r: RawWeaponInfo) -> WeaponInfo {
     let reload_duration = r.reload_duration_a.or(r.reload_duration_b);
     let cycle_time = r.cycle_time;
@@ -927,7 +927,7 @@ fn weapon_info_out(r: RawWeaponInfo) -> WeaponInfo {
     let bullet_damage = r.bullet_damage;
 
     let shots_per_second = cycle_time.map(|ct| {
-        #[allow(clippy::cast_precision_loss)]
+        #[expect(clippy::cast_precision_loss)]
         let bc = burst_shot_count.unwrap_or(1) as f64;
         let ib = intra_burst.unwrap_or(0.0);
         let adjusted = bc * ib + ct;
@@ -937,25 +937,25 @@ fn weapon_info_out(r: RawWeaponInfo) -> WeaponInfo {
     let shots_per_second_with_reload = match (cycle_time, reload_duration, clip_size) {
         (Some(ct), Some(reload), Some(cs)) => {
             let bc_i = burst_shot_count.unwrap_or(1);
-            #[allow(clippy::cast_precision_loss)]
+            #[expect(clippy::cast_precision_loss)]
             let bc = bc_i as f64;
             let ib = intra_burst.unwrap_or(0.0);
             let recoil = recoil_recov.unwrap_or(0.0);
             let full_bursts = if bc_i == 0 { 0 } else { cs.div_euclid(bc_i) };
             let remaining = if bc_i == 0 { 0 } else { cs.rem_euclid(bc_i) };
-            #[allow(clippy::cast_precision_loss)]
+            #[expect(clippy::cast_precision_loss)]
             let total_burst = (full_bursts as f64) * (bc * ib + ct) - ib;
-            #[allow(clippy::cast_precision_loss)]
+            #[expect(clippy::cast_precision_loss)]
             let total_remaining = (remaining as f64) * ib;
             let total = total_burst + total_remaining + reload + recoil;
-            #[allow(clippy::cast_precision_loss)]
+            #[expect(clippy::cast_precision_loss)]
             let cs_f = cs as f64;
             Some(if total == 0.0 { 0.0 } else { cs_f / total })
         }
         _ => None,
     };
 
-    #[allow(clippy::cast_precision_loss)]
+    #[expect(clippy::cast_precision_loss)]
     let bullets_f = bullets.map(|b| b as f64);
     let bps = match (shots_per_second, bullets_f) {
         (Some(s), Some(b)) if s != 0.0 && b != 0.0 => Some(s * b),
@@ -980,7 +980,7 @@ fn weapon_info_out(r: RawWeaponInfo) -> WeaponInfo {
     let dmg_per_mag = match (clip_size, dmg_per_shot) {
         (Some(cs), Some(d)) if cs > 0 && d != 0.0 =>
         {
-            #[allow(clippy::cast_precision_loss)]
+            #[expect(clippy::cast_precision_loss)]
             Some((cs as f64) * d)
         }
         _ => None,

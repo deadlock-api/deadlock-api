@@ -34,7 +34,7 @@ impl FieldType {
             | FieldType::Vector3 { base }
             | FieldType::Vector4 { base } => base.clone(),
             FieldType::FixedArray { element, length } => {
-                #[allow(
+                #[expect(
                     clippy::cast_possible_truncation,
                     clippy::cast_possible_wrap,
                     reason = "fixed-array length comes from proto descriptors and fits in i32"

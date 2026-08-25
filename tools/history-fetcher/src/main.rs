@@ -8,8 +8,8 @@
 #![deny(clippy::perf)]
 #![deny(clippy::pedantic)]
 #![deny(clippy::std_instead_of_core)]
-#![allow(clippy::cast_precision_loss)]
-#![allow(clippy::cast_possible_truncation)]
+#![expect(clippy::cast_precision_loss)]
+#![expect(clippy::cast_possible_truncation)]
 
 mod types;
 
@@ -553,7 +553,7 @@ async fn get_due_prioritized_accounts(accounts: &PrioritizedAccountsMap) -> Vec<
                     );
                     counter!("history_fetcher.prioritized_fetch.sla_breach").increment(1);
                 }
-                #[allow(clippy::cast_sign_loss)]
+                #[expect(clippy::cast_sign_loss)]
                 Some((steam_id3 as u32, bot_id.clone()))
             } else {
                 None

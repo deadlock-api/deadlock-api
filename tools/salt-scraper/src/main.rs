@@ -8,7 +8,7 @@
 #![deny(clippy::perf)]
 #![deny(clippy::pedantic)]
 #![deny(clippy::std_instead_of_core)]
-#![allow(clippy::cast_precision_loss)]
+#![expect(clippy::cast_precision_loss)]
 
 use core::time::Duration;
 use std::sync::LazyLock;
@@ -46,7 +46,7 @@ static PRIORITIZATION_MAX_RETRIES: LazyLock<u32> =
     LazyLock::new(|| common::env_or("PRIORITIZATION_MAX_RETRIES", 5));
 
 #[tokio::main]
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 async fn main() -> anyhow::Result<()> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;

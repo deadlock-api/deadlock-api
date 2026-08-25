@@ -113,7 +113,7 @@ async fn fetch_ch_info(ch_client: &clickhouse::Client) -> APIInfo {
                 .map(|row| (row.table.clone(), row.into()))
                 .collect()
         });
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     APIInfo {
         fetched_matches_per_day,
         table_sizes,

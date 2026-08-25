@@ -111,7 +111,7 @@ impl utoipa::ToSchema for RollType {
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 struct RawMiscEntity {
     #[serde(default, rename = "m_Color")]
     color: Option<Color>,
@@ -238,7 +238,7 @@ pub(crate) enum CurveOrFloat {
 }
 
 #[derive(Debug, Serialize, Clone, ToSchema)]
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 pub(crate) struct MiscEntity {
     pub class_name: String,
     pub id: u32,

@@ -13,7 +13,7 @@ use tracing::{error, trace};
 use crate::hltv::FragmentType;
 use crate::hltv::hltv_extract_meta::analyze_fragment;
 
-#[allow(unused)]
+#[expect(unused)]
 #[derive(Debug)]
 pub(crate) struct HltvFragment {
     pub match_id: u64,
@@ -42,7 +42,7 @@ pub(crate) enum DownloadError {
     ReceiverDropped,
 }
 
-#[allow(unused)]
+#[expect(unused)]
 #[derive(Deserialize)]
 struct SyncResponse {
     tick: u64,

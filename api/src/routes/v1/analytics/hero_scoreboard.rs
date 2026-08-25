@@ -115,7 +115,7 @@ fn build_query(query: &HeroScoreboardQuery) -> String {
     let mut player_filters = vec![format!(
         "{match_mode_filter} AND {game_mode_filter} {match_info_filters}"
     )];
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     if let Some(account_id) = query.account_id {
         player_filters.push(format!("account_id = {account_id}"));
     }
@@ -225,7 +225,7 @@ pub(super) async fn hero_scoreboard(
             "sort_by=rank is only supported by the player scoreboard",
         ));
     }
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     get_hero_scoreboard(&state.ch_client_cached, query)
         .await
@@ -242,7 +242,7 @@ mod proptests {
     proptest! {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
-        #[allow(deprecated)]
+        #[expect(deprecated)]
         #[test]
         fn hero_scoreboard_build_query_is_valid_sql(query: HeroScoreboardQuery) {
             assert_valid_sql(&build_query(&query));

@@ -19,7 +19,7 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
-#[allow(clippy::unnecessary_wraps)]
+#[expect(clippy::unnecessary_wraps)]
 fn default_resolution() -> Option<u8> {
     10.into()
 }
@@ -170,7 +170,7 @@ pub struct PlayerPerformanceCurvePoint {
     pub gold_death_loss_avg: f64,
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
     let info_filters = MatchInfoFilters {
         min_unix_timestamp: query.min_unix_timestamp,

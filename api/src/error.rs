@@ -22,7 +22,7 @@ pub enum StartupError {
     AppState(#[from] AppStateError),
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 #[derive(Debug, Error)]
 pub(super) enum APIError {
     #[error("Status {status}")]
@@ -101,7 +101,7 @@ fn build_error_response(status: StatusCode, error: impl serde::Serialize) -> Res
 }
 
 impl IntoResponse for APIError {
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     fn into_response(self) -> Response<Body> {
         match self {
             Self::Status { status } => {

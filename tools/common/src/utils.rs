@@ -45,7 +45,7 @@ pub struct SteamProxyResponse {
     pub username: String,
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 #[instrument(skip(http_client, msg))]
 pub async fn call_steam_proxy<T: Message + Default>(
     http_client: &reqwest::Client,

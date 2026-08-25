@@ -210,7 +210,7 @@ impl Metric {
         }
     }
 
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     pub(super) fn extract_values(self, row: &AnalyticsPlayerStatsMetricsRow) -> MetricValues {
         match self {
             Self::Kills => {
@@ -437,7 +437,7 @@ pub(super) struct AnalyticsPlayerStatsMetricsRow {
     quantiles_heal_prevented: Vec<f64>,
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn build_query(query: &PlayerStatsMetricsQuery) -> String {
     let info_filters = MatchInfoFilters {
         min_unix_timestamp: query.min_unix_timestamp,

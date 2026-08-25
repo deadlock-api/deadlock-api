@@ -31,7 +31,7 @@ const FIRST_SAMPLE_S: u32 = 180;
 /// `t` and `sample_matchups` lead every sample tuple; each stat then contributes four aggregates.
 const CURVE_TUPLE_LEADING: usize = 2;
 
-#[allow(clippy::unnecessary_wraps)]
+#[expect(clippy::unnecessary_wraps)]
 fn default_min_time_s() -> Option<u32> {
     Some(FIRST_SAMPLE_S)
 }

@@ -210,12 +210,12 @@ pub(super) fn round_timestamps(
 
 pub(super) const DEFAULT_MIN_MATCHES: u64 = 20;
 
-#[allow(clippy::unnecessary_wraps, clippy::cast_possible_truncation)]
+#[expect(clippy::unnecessary_wraps, clippy::cast_possible_truncation)]
 pub(super) fn default_min_matches_u32() -> Option<u32> {
     Some(DEFAULT_MIN_MATCHES as u32)
 }
 
-#[allow(clippy::unnecessary_wraps)]
+#[expect(clippy::unnecessary_wraps)]
 pub(super) fn default_min_matches_u64() -> Option<u64> {
     Some(DEFAULT_MIN_MATCHES)
 }

@@ -8,7 +8,7 @@
 //! passthrough — clients still get column-level projection (the SELECT only
 //! includes the requested column) without us having to model dozens of nested
 //! `ClickHouse` types as GraphQL objects in v1.
-#![allow(clippy::struct_field_names)]
+#![expect(clippy::struct_field_names)]
 
 use async_graphql::SimpleObject;
 use serde::{Deserialize, Serialize};

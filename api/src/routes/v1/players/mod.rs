@@ -179,7 +179,7 @@ pub(super) async fn resolve_bot_for_account(
     })
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(match_history::match_history))

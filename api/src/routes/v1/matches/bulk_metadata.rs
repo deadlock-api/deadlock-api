@@ -1,5 +1,5 @@
-#![allow(clippy::struct_excessive_bools)]
-#![allow(clippy::large_stack_arrays)]
+#![expect(clippy::struct_excessive_bools)]
+#![expect(clippy::large_stack_arrays)]
 
 use core::fmt::Write;
 use core::time::Duration;
@@ -427,7 +427,7 @@ async fn players_tuple_type(
     Some(format!("Tuple({fields})"))
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn build_query(
     query: BulkMatchMetadataQuery,
     players_tuple_type: Option<&str>,

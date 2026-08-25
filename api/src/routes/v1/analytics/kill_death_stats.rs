@@ -1,4 +1,4 @@
-#![allow(clippy::large_stack_arrays)]
+#![expect(clippy::large_stack_arrays)]
 
 use axum::Json;
 use axum::extract::State;
@@ -112,7 +112,7 @@ pub(crate) struct KillDeathStats {
     kills: u64,
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn build_query(query: &KillDeathStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {

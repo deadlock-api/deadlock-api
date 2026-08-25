@@ -2,7 +2,7 @@
 //! transform, and cache the public item list. SVG icons are fetched from
 //! the public asset bucket (see `svg`).
 
-#![allow(
+#![expect(
     clippy::too_many_lines,
     clippy::too_many_arguments,
     clippy::case_sensitive_file_extension_comparisons,

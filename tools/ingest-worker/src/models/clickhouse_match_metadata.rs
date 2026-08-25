@@ -300,7 +300,7 @@ fn average_badge(match_info: &MatchInfo) -> Option<u32> {
 /// even would starve odd ranks of that mass and leave a sawtooth in the rank distribution.
 ///
 /// Callers filter out zero badges, so the dense mean is at least 1.
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+#[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn mean_badge(badges: &[u32]) -> Option<u32> {
     let count = u32::try_from(badges.len()).ok().filter(|c| *c > 0)?;
     let dense_sum: u32 = badges.iter().map(|badge| badge - 4 * (badge / 10)).sum();
@@ -313,7 +313,7 @@ fn mean_badge(badges: &[u32]) -> Option<u32> {
 /// sub-16-unit precision. Trades imperceptible accuracy for ~36% smaller `x_pos`/`y_pos`.
 const POS_QUANTIZATION_MASK: u16 = 0xFFF0;
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 impl From<(&MatchInfo, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer {
     fn from(
         (match_info, won, match_path, value): (&MatchInfo, bool, Option<&Path>, Players),

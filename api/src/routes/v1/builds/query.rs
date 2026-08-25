@@ -6,7 +6,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::utils::parse::parse_steam_id_option;
 use crate::utils::types::SortDirectionDesc;
 
-#[allow(clippy::unnecessary_wraps)]
+#[expect(clippy::unnecessary_wraps)]
 fn default_limit() -> Option<u32> {
     100.into()
 }
@@ -119,7 +119,7 @@ impl Default for BuildsSearchQuery {
             search_name: None,
             search_description: None,
             only_latest: None,
-            #[allow(deprecated)]
+            #[expect(deprecated)]
             language: None,
             build_language: None,
             build_id: None,
@@ -161,7 +161,7 @@ pub(super) fn sql_query(params: &BuildsSearchQuery) -> String {
         query_builder.push(search_description.to_lowercase());
         query_builder.push("%'");
     }
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     if let Some(language) = params.language {
         query_builder.push(" AND language = ");
         query_builder.push(language.to_string());

@@ -1,4 +1,4 @@
-#![allow(clippy::large_stack_arrays)]
+#![expect(clippy::large_stack_arrays)]
 
 use axum::Json;
 use axum::extract::State;
@@ -327,13 +327,13 @@ const MV_ROUTING_MARGIN_DAYS: i64 = 5;
 /// request falls within the "global meta" subset it materializes, else `None`
 /// (the caller then uses the base-table query). See `clickhouse/item_stats_agg.sql`
 /// for the grain and the list of what is and isn't covered.
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
     let bucket_expr = query.bucket.mv_bucket_expr()?;
 
     // Fold the deprecated single hero_id into hero_ids.
     let mut hero_ids = query.hero_ids.clone().unwrap_or_default();
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     if let Some(hero_id) = query.hero_id {
         hero_ids.push(hero_id);
     }
@@ -342,7 +342,7 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
     // per-purchase data, item-set membership, per-account/enemy context, or a
     // dimension not in the grain (sub-day time, match_id, duration, final net
     // worth, buy time), or a match mode the view does not ingest, must use the base table.
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     let personalized = query.account_id.is_some()
         || query.account_ids.as_ref().is_some_and(|v| !v.is_empty())
         || query.enemy_hero_ids.as_ref().is_some_and(|v| !v.is_empty())
@@ -509,7 +509,7 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
     // outside it falls back. Badge bounds use the same >11 / <116 no-op guards
     // as MatchInfoFilters. Hero-filtered cohort queries are deliberately
     // excluded: they are served fast by the base-table projection.
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     let unsupported = query.hero_id.is_some()
         || query.hero_ids.as_ref().is_some_and(|v| !v.is_empty())
         || query.account_id.is_some()
@@ -604,7 +604,7 @@ SETTINGS log_comment = 'item_stats_cohort_mv'
 /// `item_cohort_stats_*_agg` rollups. `"eligible"` means the rollup was not declined
 /// (so a routed query must have errored and fallen back). Keep the checks in sync with
 /// `build_cohort_mv_query`'s `None` branches; diagnostic only, no effect on results.
-#[allow(deprecated)]
+#[expect(deprecated)]
 fn cohort_mv_skip_reason(query: &ItemStatsQuery) -> &'static str {
     fn nonempty<T>(v: Option<&[T]>) -> bool {
         v.is_some_and(|v| !v.is_empty())
@@ -728,7 +728,7 @@ fn validate_item_order(chains: Option<&[Vec<u32>]>) -> APIResult<()> {
     Ok(())
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn build_query(query: &ItemStatsQuery) -> String {
     /* ---------- match_info filters ---------- */
     let info_filters = MatchInfoFilters {
@@ -745,12 +745,12 @@ fn build_query(query: &ItemStatsQuery) -> String {
 
     /* ---------- match_player filters ---------- */
     let mut hero_ids = query.hero_ids.clone().unwrap_or_default();
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     if let Some(hero_id) = query.hero_id {
         hero_ids.push(hero_id);
     }
     let has_buyer_hero_filter = !hero_ids.is_empty();
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     let mut player_filters = PlayerFilters {
         hero_ids: if hero_ids.is_empty() {
             None
@@ -1036,7 +1036,7 @@ pub(crate) async fn item_stats(
         });
     }
     validate_item_order(query.item_order.as_deref())?;
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     get_item_stats(&state.ch_client_cached, query)
         .await
@@ -1054,13 +1054,13 @@ mod proptests {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
         #[test]
-        #[allow(deprecated)]
+        #[expect(deprecated)]
         fn item_stats_build_query_is_valid_sql(query: ItemStatsQuery) {
             assert_valid_sql(&build_query(&query));
         }
 
         #[test]
-        #[allow(deprecated)]
+        #[expect(deprecated)]
         fn item_stats_build_mv_query_is_valid_sql(query: ItemStatsQuery) {
             if let Some(sql) = build_mv_query(&query) {
                 assert_valid_sql(&sql);

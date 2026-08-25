@@ -111,7 +111,7 @@ pub struct HeroStats {
     matches: Vec<u64>,
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn build_query(query: &HeroStatsQuery) -> String {
     let account_ids = query.account_ids.iter().map(ToString::to_string).join(",");
     let hero_ids_in = query
