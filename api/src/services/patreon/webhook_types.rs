@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 /// Patreon webhook event types parsed from the `X-Patreon-Event` header.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(clippy::enum_variant_names)]
+#[expect(clippy::enum_variant_names)]
 pub(crate) enum PatreonWebhookEvent {
     MembersCreate,
     MembersUpdate,

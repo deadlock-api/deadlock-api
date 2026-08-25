@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![expect(dead_code)]
 
 use cached::CachedExt;
 use chrono::{DateTime, Duration, Utc};
@@ -113,7 +113,7 @@ impl SteamAccountsRepository {
     }
 
     /// Counts active (non-deleted) Steam accounts for a patron.
-    #[allow(clippy::cast_possible_truncation)]
+    #[expect(clippy::cast_possible_truncation)]
     pub(crate) async fn count_active_accounts(
         &self,
         patron_id: Uuid,
@@ -135,7 +135,7 @@ impl SteamAccountsRepository {
     }
 
     /// Counts Steam accounts in cooldown (deleted within the last 24 hours) for a patron.
-    #[allow(clippy::cast_possible_truncation)]
+    #[expect(clippy::cast_possible_truncation)]
     pub(crate) async fn count_accounts_in_cooldown(
         &self,
         patron_id: Uuid,

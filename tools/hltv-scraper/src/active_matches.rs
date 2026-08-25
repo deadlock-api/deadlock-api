@@ -14,7 +14,7 @@ pub(crate) struct ActiveMatch {
     pub match_score: Option<u32>,
 }
 
-#[allow(unused)]
+#[expect(unused)]
 impl ActiveMatch {
     pub(crate) fn is_core_exposed(&self) -> bool {
         use ECitadelTeamObjective::KECitadelTeamObjectiveTitan;

@@ -1,7 +1,7 @@
 // Casts in this module either round-trip u32 through Tantivy's u64 FAST fields
 // (safe by construction) or feed jaro-winkler math that doesn't care about
 // sub-f64 precision on tiny strings.
-#![allow(
+#![expect(
     clippy::cast_precision_loss,
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap
@@ -335,7 +335,7 @@ impl SteamSearchIndex {
 
     /// Search the index. Returns up to `limit` profiles ranked by
     /// `jaro_winkler(personaname_lc, query) + matches_played_weight * log1p(matches)`.
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     pub(crate) fn search(
         &self,
         query: &str,

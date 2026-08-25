@@ -10,7 +10,7 @@ use haste_core::fieldvalue::FieldValue;
 
 use super::error::Result;
 
-#[allow(
+#[expect(
     clippy::cast_possible_truncation,
     reason = "dynamic FieldValue coerced to the column's declared i32 type"
 )]
@@ -30,7 +30,7 @@ fn push_i64(b: &mut Int64Builder, v: Option<&FieldValue>) {
     }
 }
 
-#[allow(
+#[expect(
     clippy::cast_possible_truncation,
     clippy::cast_sign_loss,
     reason = "dynamic FieldValue coerced to the column's declared u32 type"

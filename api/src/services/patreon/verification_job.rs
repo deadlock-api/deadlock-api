@@ -115,7 +115,7 @@ impl PatreonVerificationJob {
     }
 
     /// Signal shutdown
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub(crate) fn signal_shutdown(&self) {
         self.shutdown.store(true, Ordering::Relaxed);
     }

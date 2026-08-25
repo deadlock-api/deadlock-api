@@ -29,7 +29,7 @@ fn verify_signature(body: &[u8], secret: &str, signature_hex: &str) -> bool {
 ///
 /// Receives Patreon webhook events, verifies the HMAC-MD5 signature,
 /// and processes membership updates in the background.
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 pub(crate) async fn webhook(
     State(app_state): State<AppState>,
     headers: HeaderMap,

@@ -21,7 +21,7 @@ use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
 
-#[allow(clippy::unnecessary_wraps)]
+#[expect(clippy::unnecessary_wraps)]
 fn default_comb_size() -> Option<u8> {
     2.into()
 }
@@ -124,7 +124,7 @@ struct ItemPermutationStats {
     matches: u64,
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn build_query(query: &ItemPermutationStatsQuery) -> String {
     let info_filters = MatchInfoFilters {
         min_unix_timestamp: query.min_unix_timestamp,
@@ -138,11 +138,11 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
     }
     .build();
     let mut hero_ids = query.hero_ids.clone().unwrap_or_default();
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     if let Some(hero_id) = query.hero_id {
         hero_ids.push(hero_id);
     }
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     let player_filters = join_filters(
         &PlayerFilters {
             hero_ids: if hero_ids.is_empty() {
@@ -291,7 +291,7 @@ pub(super) async fn item_permutation_stats(
             message: "Cannot filter by average badge for street brawl game mode".to_string(),
         });
     }
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     if query.comb_size.is_some() && query.item_ids.is_some() {
         return Err(APIError::status_msg(
@@ -314,7 +314,7 @@ pub(super) async fn item_permutation_stats(
 mod tests {
     use super::*;
 
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     fn query_with(min_matches: Option<u32>, max_matches: Option<u32>) -> String {
         build_query(&ItemPermutationStatsQuery {
             min_matches,
@@ -353,7 +353,7 @@ mod proptests {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
         #[test]
-        #[allow(deprecated)]
+        #[expect(deprecated)]
         fn item_permutation_stats_build_query_is_valid_sql(query: ItemPermutationStatsQuery) {
             let sql = build_query(&query);
             if !sql.is_empty() {

@@ -20,7 +20,7 @@ fn get_header(req: &Request, name: &str) -> Option<String> {
         .map(ToOwned::to_owned)
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 pub(crate) async fn track_requests(
     State(AppState { request_logger, .. }): State<AppState>,
     matched_path: MatchedPath,

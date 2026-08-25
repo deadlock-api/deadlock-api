@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![expect(dead_code)]
 
 use aes_gcm::Aes256Gcm;
 use aes_gcm::aead::{Aead, Generate, Key, KeyInit, Nonce};
@@ -179,7 +179,7 @@ pub(crate) fn calculate_slot_limit(
         if pledge_amount_cents <= 0 {
             0
         } else {
-            #[allow(clippy::cast_possible_truncation)]
+            #[expect(clippy::cast_possible_truncation)]
             let slots = (f64::from(pledge_amount_cents) / 150.0).round() as i32;
             slots.clamp(1, 50)
         }

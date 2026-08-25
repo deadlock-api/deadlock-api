@@ -82,12 +82,12 @@ impl<T: BatchInsert> ClickhouseInsertBatcher<T> {
         })
     }
 
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub(crate) fn signal_shutdown(&self) {
         self.shutdown.store(true, Ordering::Relaxed);
     }
 
-    #[allow(clippy::cast_precision_loss)]
+    #[expect(clippy::cast_precision_loss)]
     async fn flush(&self) {
         let rows: Vec<T::Row> = {
             let mut buffer = self.buffer.lock().await;

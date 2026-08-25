@@ -14,7 +14,7 @@ pub(crate) struct MatchSalts {
 }
 
 /// Salts are secrets: anyone holding one can pull the replay.
-#[allow(clippy::missing_fields_in_debug)]
+#[expect(clippy::missing_fields_in_debug)]
 impl Debug for MatchSalts {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("MatchSalts")

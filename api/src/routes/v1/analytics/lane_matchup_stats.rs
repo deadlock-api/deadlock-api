@@ -27,7 +27,7 @@ use crate::utils::parse::{comma_separated_deserialize_option, default_last_month
 /// Last sample before the recording cadence coarsens from 180s steps to 300s.
 const DEFAULT_SAMPLE_S: u32 = 900;
 
-#[allow(clippy::unnecessary_wraps)]
+#[expect(clippy::unnecessary_wraps)]
 fn default_sample_time_s() -> Option<u32> {
     Some(DEFAULT_SAMPLE_S)
 }

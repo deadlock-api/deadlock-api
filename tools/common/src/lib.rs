@@ -8,9 +8,9 @@
 #![deny(clippy::perf)]
 #![deny(clippy::pedantic)]
 #![deny(clippy::std_instead_of_core)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::unreadable_literal)]
+#![expect(clippy::missing_errors_doc)]
+#![expect(clippy::cast_possible_truncation)]
+#![expect(clippy::unreadable_literal)]
 
 mod assets;
 mod clients;

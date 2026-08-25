@@ -186,9 +186,9 @@ impl RateLimitClient {
         Ok(rows
             .iter()
             .map(|row| Quota {
-                #[allow(clippy::cast_sign_loss)]
+                #[expect(clippy::cast_sign_loss)]
                 limit: row.rate_limit as usize,
-                #[allow(clippy::cast_sign_loss)]
+                #[expect(clippy::cast_sign_loss)]
                 period: Duration::from_micros(row.rate_period.microseconds as u64),
                 r#type: QuotaType::Key,
             })

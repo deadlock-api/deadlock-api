@@ -1,4 +1,4 @@
-#![allow(clippy::std_instead_of_core)]
+#![expect(clippy::std_instead_of_core)]
 
 mod collecting_visitor;
 mod schema_discovery;

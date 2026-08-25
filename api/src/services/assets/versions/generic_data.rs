@@ -1,6 +1,6 @@
 //! `/v1/assets/generic-data` data layer — fetch + parse + transform.
 
-#![allow(clippy::struct_field_names, clippy::needless_pass_by_value)]
+#![expect(clippy::struct_field_names, clippy::needless_pass_by_value)]
 
 use std::sync::Arc;
 

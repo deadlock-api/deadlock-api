@@ -205,7 +205,7 @@ impl SendingVisitor {
     }
 
     fn handle_tick_end(&mut self, ctx: &Context) -> Result<(), DemoParseError> {
-        #[allow(clippy::cast_precision_loss)]
+        #[expect(clippy::cast_precision_loss)]
         {
             let ticks = ctx.tick() - self.rules.total_paused_ticks.unwrap_or_default();
             let total_time = ticks as f32 * self.tick_interval;

@@ -144,7 +144,7 @@ pub struct HeroCounterStats {
     enemy_creeps: u64,
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn build_query(query: &HeroCounterStatsQuery) -> String {
     let info_filters = MatchInfoFilters {
         min_unix_timestamp: query.min_unix_timestamp,
@@ -162,7 +162,7 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
     let match_filters = format!("{match_mode_filter} AND {game_mode_filter}{info_filters}");
     let mut p1_filters = vec![match_filters.clone()];
     let mut p2_filters = vec![match_filters];
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     if let Some(account_id) = query.account_id {
         p1_filters.push(format!("account_id = {account_id}"));
     }
@@ -203,7 +203,7 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
     } else {
         "ON p1.match_id = p2.match_id AND p1.team != p2.team"
     };
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     let needs_account_id = query.account_id.is_some() || query.account_ids.is_some();
     let p1_account_col = if needs_account_id { "account_id, " } else { "" };
     let p1_cols = format!(
@@ -319,7 +319,7 @@ pub(super) async fn hero_counters_stats(
     Query(mut query): Query<HeroCounterStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     get_hero_counter_stats(&state.ch_client_cached, query)
         .await
@@ -337,7 +337,7 @@ mod proptests {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
         #[test]
-        #[allow(deprecated)]
+        #[expect(deprecated)]
         fn hero_counters_stats_build_query_is_valid_sql(query: HeroCounterStatsQuery) {
             assert_valid_sql(&build_query(&query));
         }

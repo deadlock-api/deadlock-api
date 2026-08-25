@@ -389,7 +389,7 @@ impl Variable {
         }
     }
 
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     pub(super) async fn resolve(
         &self,
         rate_limit_key: &RateLimitKey,

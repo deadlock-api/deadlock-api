@@ -135,7 +135,7 @@ pub(crate) async fn logout(State(state): State<AppState>) -> impl IntoResponse {
 /// 4. Creates or updates patron record in database
 /// 5. Generates JWT session token and sets it as a cookie
 /// 6. Redirects to the frontend redirect URL
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 pub(crate) async fn callback(
     State(app_state): State<AppState>,
     headers: HeaderMap,

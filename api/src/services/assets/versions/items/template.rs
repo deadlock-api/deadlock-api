@@ -2,7 +2,7 @@
 //! Async because keybind and inline-attribute icons are fetched lazily from
 //! the public asset bucket.
 
-#![allow(clippy::too_many_lines)]
+#![expect(clippy::too_many_lines)]
 
 use std::collections::HashMap;
 use std::sync::OnceLock;

@@ -2,7 +2,7 @@
 //! Returns intermediate panorama-style URL strings that the pipeline then
 //! runs through `parse_img_path` to produce public URLs.
 
-#![allow(clippy::doc_markdown)]
+#![expect(clippy::doc_markdown)]
 
 use std::collections::HashMap;
 

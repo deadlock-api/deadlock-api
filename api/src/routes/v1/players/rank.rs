@@ -427,7 +427,7 @@ pub(super) async fn rank_avg_image(
 
     // Badge values are not contiguous (16 is followed by 21), so the average is taken over the
     // badge index rather than the badge itself.
-    #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+    #[expect(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
     let avg_badge = if badges.is_empty() {
         0
     } else {

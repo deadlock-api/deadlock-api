@@ -64,7 +64,7 @@ pub(crate) struct ListSteamAccountsResponse {
 /// - `SteamID3` must be a valid 32-bit unsigned integer (0 to 4,294,967,295)
 /// - Total active accounts + accounts in cooldown must not exceed `slot_limit`
 /// - The specific `steam_id3` must not be in cooldown (deleted within 24 hours)
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 pub(crate) async fn add_steam_account(
     State(app_state): State<AppState>,
     session: PatronSession,

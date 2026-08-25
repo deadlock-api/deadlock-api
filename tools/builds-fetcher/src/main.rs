@@ -8,8 +8,8 @@
 #![deny(clippy::perf)]
 #![deny(clippy::pedantic)]
 #![deny(clippy::std_instead_of_core)]
-#![allow(clippy::cast_precision_loss)]
-#![allow(clippy::cast_possible_wrap)]
+#![expect(clippy::cast_precision_loss)]
+#![expect(clippy::cast_possible_wrap)]
 
 use core::time::Duration;
 

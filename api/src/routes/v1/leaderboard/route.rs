@@ -118,7 +118,7 @@ async fn insert_leaderboard_to_ch(
     region: LeaderboardRegion,
     entries: &[c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry],
 ) {
-    #[allow(clippy::cast_possible_truncation)]
+    #[expect(clippy::cast_possible_truncation)]
     let Ok(now) = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs() as u32)
@@ -144,7 +144,7 @@ async fn insert_leaderboard_to_ch(
             region: region as i8,
             account_name: entry.account_name.clone(),
             rank,
-            #[allow(clippy::cast_possible_truncation)]
+            #[expect(clippy::cast_possible_truncation)]
             leaderboard_position: (i as u32) + 1,
             top_hero_ids: entry
                 .top_hero_ids
@@ -168,7 +168,7 @@ async fn insert_hero_leaderboard_to_ch(
     hero_id: u32,
     entries: &[c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry],
 ) {
-    #[allow(clippy::cast_possible_truncation)]
+    #[expect(clippy::cast_possible_truncation)]
     let Ok(now) = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs() as u32)
@@ -195,7 +195,7 @@ async fn insert_hero_leaderboard_to_ch(
             hero_id: u8::try_from(hero_id).unwrap_or_default(),
             account_name: entry.account_name.clone(),
             rank,
-            #[allow(clippy::cast_possible_truncation)]
+            #[expect(clippy::cast_possible_truncation)]
             leaderboard_position: (i as u32) + 1,
             top_hero_ids: entry
                 .top_hero_ids

@@ -20,7 +20,6 @@ pub(crate) struct AppState {
 }
 
 impl AppState {
-    #[allow(clippy::too_many_lines)]
     pub(crate) fn from_env() -> Result<AppState, AppStateError> {
         let config = serde_env::from_env()?;
         let http_client = reqwest::Client::new();

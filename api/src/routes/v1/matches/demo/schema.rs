@@ -157,7 +157,7 @@ pub(super) async fn schema(
 ///
 /// A demo's schema is immutable, so results are cached for 24h keyed on the demo URL,
 /// matching the endpoint's `Cache-Control`.
-#[allow(clippy::std_instead_of_core)]
+#[expect(clippy::std_instead_of_core)]
 async fn fetch_demo_schema(url: &str) -> Result<Vec<TableSchema>, APIError> {
     let response = HTTP_CLIENT
         .get(url)

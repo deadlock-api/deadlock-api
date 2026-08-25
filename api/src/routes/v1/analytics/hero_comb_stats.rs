@@ -24,7 +24,7 @@ use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
 
-#[allow(clippy::unnecessary_wraps)]
+#[expect(clippy::unnecessary_wraps)]
 fn default_comb_size() -> Option<u8> {
     6.into()
 }
@@ -158,7 +158,7 @@ impl AddAssign<&HeroCombStats> for HeroCombStats {
     }
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn build_query(query: &HeroCombStatsQuery) -> String {
     let team_size = if query.game_mode == Some(GameMode::StreetBrawl) {
         4
@@ -185,7 +185,7 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
         .build(),
     );
     let mut account_filter_values: Vec<u32> = Vec::new();
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     if let Some(account_id) = query.account_id {
         account_filter_values.push(account_id);
     }
@@ -404,7 +404,7 @@ pub(crate) async fn hero_comb_stats(
     Query(mut query): Query<HeroCombStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     get_comb_stats(&state.ch_client_cached, query)
         .await
@@ -422,7 +422,7 @@ mod proptests {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
         #[test]
-        #[allow(deprecated)]
+        #[expect(deprecated)]
         fn hero_comb_stats_build_query_is_valid_sql(query: HeroCombStatsQuery) {
             assert_valid_sql(&build_query(&query));
         }

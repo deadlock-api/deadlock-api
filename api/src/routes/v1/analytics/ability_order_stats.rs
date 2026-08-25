@@ -19,7 +19,7 @@ use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
 
-#[allow(clippy::unnecessary_wraps)]
+#[expect(clippy::unnecessary_wraps)]
 fn default_min_matches() -> Option<u32> {
     10.into()
 }
@@ -123,7 +123,7 @@ pub struct AnalyticsAbilityOrderStats {
     pub total_assists: u64,
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn build_query(query: &AbilityOrderStatsQuery) -> String {
     let info_filters = MatchInfoFilters {
         min_unix_timestamp: query.min_unix_timestamp,
@@ -136,7 +136,7 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
         max_duration_s: query.max_duration_s,
     }
     .build();
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     let mut player_filters = PlayerFilters {
         hero_id: Some(query.hero_id),
         account_id: query.account_id,
@@ -241,7 +241,7 @@ pub(super) async fn ability_order_stats(
             message: "Cannot filter by average badge for street brawl game mode".to_string(),
         });
     }
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     if !state.assets_client.validate_hero_id(query.hero_id).await {
         return Err(APIError::status_msg(
@@ -265,7 +265,7 @@ mod proptests {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
         #[test]
-        #[allow(deprecated)]
+        #[expect(deprecated)]
         fn ability_order_stats_build_query_is_valid_sql(query: AbilityOrderStatsQuery) {
             assert_valid_sql(&build_query(&query));
         }

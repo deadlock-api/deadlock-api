@@ -706,7 +706,7 @@ mod tests {
                 f();
             }
             let avg: Duration = t0.elapsed() / n;
-            #[allow(clippy::cast_precision_loss)]
+            #[expect(clippy::cast_precision_loss)]
             let mb = (len as f64) / avg.as_secs_f64() / 1024.0 / 1024.0;
             println!("{label:>32}: {len} bytes, avg {avg:?}, {mb:.1} MB/s");
         }

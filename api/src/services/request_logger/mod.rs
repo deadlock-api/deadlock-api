@@ -62,7 +62,7 @@ impl RequestLogger {
     }
 
     /// Signal shutdown and wait for the background task to complete
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub(crate) fn signal_shutdown(&self) {
         self.shutdown.store(true, Ordering::Relaxed);
     }

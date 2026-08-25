@@ -188,7 +188,7 @@ pub struct AnalyticsGameStats {
     pub team1_wins: u64,
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn build_query(query: &GameStatsQuery) -> String {
     let info_filters = MatchInfoFilters {
         min_unix_timestamp: query.min_unix_timestamp,

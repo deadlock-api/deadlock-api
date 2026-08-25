@@ -227,7 +227,7 @@ The bot will leave the match 15 minutes after creation, regardless of match stat
 | Global | 1000req/h |
 "
 )]
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 pub(super) async fn create_custom(
     rate_limit_key: RateLimitKey,
     State(mut state): State<AppState>,

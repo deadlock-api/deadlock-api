@@ -8,12 +8,12 @@
 #![deny(clippy::perf)]
 #![deny(clippy::pedantic)]
 #![deny(clippy::std_instead_of_core)]
-#![allow(clippy::cast_precision_loss)]
-#![allow(clippy::cast_sign_loss)]
-#![allow(clippy::cast_possible_wrap)]
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::too_many_lines)]
-#![allow(clippy::unreadable_literal)]
+#![expect(clippy::cast_precision_loss)]
+#![expect(clippy::cast_sign_loss)]
+#![expect(clippy::cast_possible_wrap)]
+#![expect(clippy::cast_possible_truncation)]
+#![expect(clippy::too_many_lines)]
+#![expect(clippy::unreadable_literal)]
 
 use crate::cli::run_cli;
 
