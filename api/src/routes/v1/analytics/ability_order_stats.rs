@@ -19,7 +19,6 @@ use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
 
-#[expect(clippy::unnecessary_wraps)]
 fn default_min_matches() -> Option<u32> {
     10.into()
 }
@@ -123,7 +122,6 @@ pub struct AnalyticsAbilityOrderStats {
     pub total_assists: u64,
 }
 
-#[expect(clippy::too_many_lines)]
 fn build_query(query: &AbilityOrderStatsQuery) -> String {
     let info_filters = MatchInfoFilters {
         min_unix_timestamp: query.min_unix_timestamp,
@@ -265,7 +263,6 @@ mod proptests {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
         #[test]
-        #[expect(deprecated)]
         fn ability_order_stats_build_query_is_valid_sql(query: AbilityOrderStatsQuery) {
             assert_valid_sql(&build_query(&query));
         }

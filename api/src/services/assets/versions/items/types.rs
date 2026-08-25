@@ -1,11 +1,7 @@
 //! Public `/v1/assets/items` JSON types. Field order matches the legacy
 //! `/v2/items` output so existing clients keep working.
 
-#![expect(
-    clippy::too_many_lines,
-    clippy::large_enum_variant,
-    clippy::struct_field_names
-)]
+#![expect(clippy::large_enum_variant, clippy::struct_field_names)]
 
 use async_graphql::{ComplexObject, Enum, Json, SimpleObject, Union};
 use indexmap::IndexMap;

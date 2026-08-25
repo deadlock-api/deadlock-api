@@ -5,7 +5,10 @@ use haste::parser::Context;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString, FromRepr, VariantArray};
 
-#[allow(clippy::wildcard_imports)]
+#[allow(
+    clippy::wildcard_imports,
+    reason = "`expect` on a `use` item is not fulfilled"
+)]
 use crate::demo_parser::hashes::*;
 use crate::demo_parser::types::Delta;
 use crate::demo_parser::utils;

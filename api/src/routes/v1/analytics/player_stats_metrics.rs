@@ -437,7 +437,6 @@ pub(super) struct AnalyticsPlayerStatsMetricsRow {
     quantiles_heal_prevented: Vec<f64>,
 }
 
-#[expect(clippy::too_many_lines)]
 fn build_query(query: &PlayerStatsMetricsQuery) -> String {
     let info_filters = MatchInfoFilters {
         min_unix_timestamp: query.min_unix_timestamp,

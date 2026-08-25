@@ -53,7 +53,6 @@ pub(crate) struct VersionQuery {
 )]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
-#[expect(clippy::enum_variant_names)]
 pub(crate) enum Language {
     Brazilian,
     Bulgarian,

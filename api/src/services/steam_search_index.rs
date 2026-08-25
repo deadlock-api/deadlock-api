@@ -1,11 +1,7 @@
 // Casts in this module either round-trip u32 through Tantivy's u64 FAST fields
 // (safe by construction) or feed jaro-winkler math that doesn't care about
 // sub-f64 precision on tiny strings.
-#![expect(
-    clippy::cast_precision_loss,
-    clippy::cast_possible_truncation,
-    clippy::cast_possible_wrap
-)]
+#![expect(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
 
 use core::fmt::Display;
 use core::ops::Bound;

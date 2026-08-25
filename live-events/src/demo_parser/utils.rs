@@ -1,6 +1,9 @@
 use haste::entities::{Entity, deadlock_coord_from_cell};
 
-#[allow(clippy::wildcard_imports)]
+#[allow(
+    clippy::wildcard_imports,
+    reason = "`expect` on a `use` item is not fulfilled"
+)]
 use crate::demo_parser::hashes::*;
 
 fn get_entity_coord(entity: &Entity, cell_key: u64, vec_key: u64) -> Option<f32> {

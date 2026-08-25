@@ -1054,13 +1054,11 @@ mod proptests {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
         #[test]
-        #[expect(deprecated)]
         fn item_stats_build_query_is_valid_sql(query: ItemStatsQuery) {
             assert_valid_sql(&build_query(&query));
         }
 
         #[test]
-        #[expect(deprecated)]
         fn item_stats_build_mv_query_is_valid_sql(query: ItemStatsQuery) {
             if let Some(sql) = build_mv_query(&query) {
                 assert_valid_sql(&sql);

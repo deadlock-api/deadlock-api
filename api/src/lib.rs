@@ -10,7 +10,6 @@
 #![deny(clippy::std_instead_of_core)]
 #![expect(clippy::unreadable_literal)]
 #![expect(clippy::missing_errors_doc)]
-#![expect(clippy::needless_for_each)] // This is currently caused by an issue in utoipa, see: https://github.com/juhaku/utoipa/pull/1423
 #![expect(clippy::large_stack_arrays)] // Triggered by utoipa's `IntoParams` derive on large query-param structs.
 #![expect(clippy::unused_async_trait_impl)]
 

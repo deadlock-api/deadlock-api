@@ -22,7 +22,10 @@ pub enum StartupError {
     AppState(#[from] AppStateError),
 }
 
-#[expect(dead_code)]
+#[allow(
+    dead_code,
+    reason = "used by tests, so `expect` would be unfulfilled in the test build"
+)]
 #[derive(Debug, Error)]
 pub(super) enum APIError {
     #[error("Status {status}")]

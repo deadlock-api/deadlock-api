@@ -21,7 +21,6 @@ use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
 
-#[expect(clippy::unnecessary_wraps)]
 fn default_comb_size() -> Option<u8> {
     2.into()
 }
@@ -124,7 +123,6 @@ struct ItemPermutationStats {
     matches: u64,
 }
 
-#[expect(clippy::too_many_lines)]
 fn build_query(query: &ItemPermutationStatsQuery) -> String {
     let info_filters = MatchInfoFilters {
         min_unix_timestamp: query.min_unix_timestamp,
@@ -314,7 +312,6 @@ pub(super) async fn item_permutation_stats(
 mod tests {
     use super::*;
 
-    #[expect(deprecated)]
     fn query_with(min_matches: Option<u32>, max_matches: Option<u32>) -> String {
         build_query(&ItemPermutationStatsQuery {
             min_matches,
@@ -353,7 +350,6 @@ mod proptests {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
         #[test]
-        #[expect(deprecated)]
         fn item_permutation_stats_build_query_is_valid_sql(query: ItemPermutationStatsQuery) {
             let sql = build_query(&query);
             if !sql.is_empty() {

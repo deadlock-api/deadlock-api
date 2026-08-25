@@ -254,7 +254,6 @@ mod proptests {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
         #[test]
-        #[expect(deprecated)]
         fn hero_build_stats_build_query_is_valid_sql(
             hero_id in any::<u32>(),
             valid_build_ids in prop::collection::vec(any::<i32>(), 0..16),
