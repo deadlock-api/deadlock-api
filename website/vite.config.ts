@@ -2,12 +2,12 @@ import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
-import babel from "vite-plugin-babel";
 
 import { annotateSource } from "./plugins/annotate-source.mjs";
 
-const ReactCompilerConfig = {};
-const isDev = process.env.NODE_ENV !== "production";
+// React Compiler options, forwarded to the Rust port in `oxc-transform-react`.
+// https://react.dev/reference/react-compiler/configuration
+const reactCompilerConfig = {};
 
 const annotation = annotateSource();
 
@@ -64,26 +64,16 @@ export default defineConfig({
       },
       pages: [{ path: "/" }, { path: "/blog" }, { path: "/sitemap.xml" }, { path: "/sitemap_index.xml" }],
     }),
-    // Runs its own Babel pass rather than sharing the React Compiler one below:
-    // it has to see route modules while TanStack's source map is still readable,
-    // which is before any non-`pre` plugin gets them. Set VITE_ANNOTATE=0 to
-    // skip the pass for faster dev HMR.
+    // Runs its own Babel pass, ahead of the React transform below: it has to see
+    // route modules while TanStack's source map is still readable, which is
+    // before any non-`pre` plugin gets them. Set VITE_ANNOTATE=0 to skip the
+    // pass for faster dev HMR.
     annotation.vitePlugin,
-    viteReact(),
-    // React Compiler via Babel — only run for production builds (slow in dev)
-    ...(!isDev
-      ? [
-          babel({
-            include: ["./src/**/*"],
-            filter: /\.[jt]sx?$/,
-            babelConfig: {
-              presets: ["@babel/preset-typescript"],
-              plugins: [["babel-plugin-react-compiler", ReactCompilerConfig]],
-              sourceMaps: true,
-            },
-          }),
-        ]
-      : []),
+    // React Compiler runs inside the plugin's own oxc pass (`oxc-transform-react`,
+    // the Rust port), alongside the TypeScript and JSX transforms. Unlike the
+    // Babel plugin it replaced, it is cheap enough to keep on in dev, so dev and
+    // production now compile the same way.
+    viteReact({ compiler: reactCompilerConfig }),
     tailwindcss(),
   ],
 });

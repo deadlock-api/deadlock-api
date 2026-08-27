@@ -66,16 +66,15 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@types/three": "^0.184.1",
-    "@vitejs/plugin-react": "^6.0.5",
+    "@vitejs/plugin-react": "^6.1.0",
     "agentation": "^3.0.2",
-    "babel-plugin-react-compiler": "^1.0.0",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "oxc-transform-react": "^0.145.0",
     "oxfmt": "^0.54.0",
     "oxlint": "^1.76.0",
     "tsx": "^4.23.1",
     "typescript": "^6.0.3",
     "vite": "^8.2.0",
-    "vite-plugin-babel": "^1.7.3",
     "wrangler": "^4.118.0"
   },
   "engines": {
