@@ -63,15 +63,8 @@ Requires `wrangler login` (or `CLOUDFLARE_API_TOKEN`) and a Cloudflare account c
 
 ## Conventions
 
-- React Compiler runs in every build, dev included, via `@vitejs/plugin-react`'s `compiler`
-  option. That option is backed by `oxc-transform-react` — the Rust port of React Compiler —
-  which runs in the same oxc pass as the TypeScript and JSX transforms, so it is cheap enough
-  not to need the production-only gate the old Babel plugin did.
-- Constructs the compiler cannot lower (`try`/`finally`, `throw` inside `try`, `++`/`--` on a
-  captured variable) leave that component unoptimized. The Babel plugin skipped them silently;
-  the oxc one prints them as `react-compiler(Todo)` build warnings. The set of skipped
-  components is the same — the warnings are new, the behaviour is not — so treat them as a
-  to-do list, not a build failure.
+- React Compiler runs in every build, dev included, via `@vitejs/plugin-react`'s `compiler` option — backed by `oxc-transform-react` (the Rust port), which shares the oxc pass with the TypeScript and JSX transforms and so needs no production-only gate.
+- Constructs it cannot lower (`try`/`finally`, `throw` inside `try`, `++`/`--` on a captured variable) leave that component unoptimized and print a `react-compiler(Todo)` warning. Same components the Babel plugin skipped silently — a to-do list, not a build failure.
 - shadcn primitives live in `src/components/ui/`. Add new ones with `pnpm dlx shadcn@latest add <component>` against the existing `components.json`.
 - Tailwind v4: `@plugin` directives in `tailwind.css` for typography/iconify/animations (no JS plugin array).
 - TypeScript override `^6.0.3` is enforced via `package.json > pnpm.overrides`.
