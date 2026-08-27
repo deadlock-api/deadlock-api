@@ -5,10 +5,6 @@ import { defineConfig, type Plugin } from "vite";
 
 import { annotateSource } from "./plugins/annotate-source.mjs";
 
-// React Compiler options, forwarded to the Rust port in `oxc-transform-react`.
-// https://react.dev/reference/react-compiler/configuration
-const reactCompilerConfig = {};
-
 const annotation = annotateSource();
 
 // recharts imports es-toolkit's deep `es-toolkit/compat/<name>` modules, whose
@@ -64,16 +60,8 @@ export default defineConfig({
       },
       pages: [{ path: "/" }, { path: "/blog" }, { path: "/sitemap.xml" }, { path: "/sitemap_index.xml" }],
     }),
-    // Runs its own Babel pass, ahead of the React transform below: it has to see
-    // route modules while TanStack's source map is still readable, which is
-    // before any non-`pre` plugin gets them. Set VITE_ANNOTATE=0 to skip the
-    // pass for faster dev HMR.
     annotation.vitePlugin,
-    // React Compiler runs inside the plugin's own oxc pass (`oxc-transform-react`,
-    // the Rust port), alongside the TypeScript and JSX transforms. Unlike the
-    // Babel plugin it replaced, it is cheap enough to keep on in dev, so dev and
-    // production now compile the same way.
-    viteReact({ compiler: reactCompilerConfig }),
+    viteReact({ compiler: true }),
     tailwindcss(),
   ],
 });

@@ -1,6 +1,5 @@
 overrides:
   typescript: ^6.0.3
-  # postcss accepts any nanoid ^3.3.x, which keeps resolving to 3.3.16 (GHSA-2v37-7h3g-55p8).
   nanoid: ^3.3.18
 
 onlyBuiltDependencies:
