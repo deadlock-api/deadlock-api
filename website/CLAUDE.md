@@ -15,7 +15,7 @@ tanstack-start
 ├── content/blog/               # markdown blog posts (bundled at build time via Vite glob)
 ├── public
 │   └── _headers                # Cloudflare security headers
-├── vite.config.ts              # @tanstack/react-start plugin + Tailwind v4 + React Compiler (prod only)
+├── vite.config.ts              # @tanstack/react-start plugin + Tailwind v4 + React Compiler (oxc)
 ├── wrangler.jsonc              # Workers config: main=dist/server/server.js, assets=dist/client
 ├── components.json             # shadcn aliases (~/ -> src/)
 ├── .oxlintrc.jsonc / .oxfmtrc.json
@@ -63,7 +63,15 @@ Requires `wrangler login` (or `CLOUDFLARE_API_TOKEN`) and a Cloudflare account c
 
 ## Conventions
 
-- React Compiler runs only in production builds (slow in dev) via `vite-plugin-babel`.
+- React Compiler runs in every build, dev included, via `@vitejs/plugin-react`'s `compiler`
+  option. That option is backed by `oxc-transform-react` — the Rust port of React Compiler —
+  which runs in the same oxc pass as the TypeScript and JSX transforms, so it is cheap enough
+  not to need the production-only gate the old Babel plugin did.
+- Constructs the compiler cannot lower (`try`/`finally`, `throw` inside `try`, `++`/`--` on a
+  captured variable) leave that component unoptimized. The Babel plugin skipped them silently;
+  the oxc one prints them as `react-compiler(Todo)` build warnings. The set of skipped
+  components is the same — the warnings are new, the behaviour is not — so treat them as a
+  to-do list, not a build failure.
 - shadcn primitives live in `src/components/ui/`. Add new ones with `pnpm dlx shadcn@latest add <component>` against the existing `components.json`.
 - Tailwind v4: `@plugin` directives in `tailwind.css` for typography/iconify/animations (no JS plugin array).
 - TypeScript override `^6.0.3` is enforced via `package.json > pnpm.overrides`.
