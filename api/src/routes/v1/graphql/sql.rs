@@ -73,7 +73,12 @@ pub(super) struct BuildArgs<'a> {
 /// A query that neither selects nor filters on any of these can set
 /// `apply_patch_parts = 0`, which lets `ClickHouse` serve it from the
 /// `match_player` projections instead of falling back to a base-table scan.
-const PATCHED_COLUMNS: [&str; 3] = ["banned_hero_ids", "hero_build_id", "demo_processed"];
+const PATCHED_COLUMNS: [&str; 4] = [
+    "banned_hero_ids",
+    "hero_build_id",
+    "pregame_hero_id",
+    "demo_processed",
+];
 
 /// True when the projection or filters reference any demo-analyzer patched
 /// column, meaning patch parts must be applied for correct results.

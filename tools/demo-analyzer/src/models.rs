@@ -21,6 +21,7 @@ pub(crate) struct MatchUpdate {
 pub(crate) struct DemoPlayer {
     pub account_id: u32,
     pub hero_build_id: u64,
+    pub pregame_hero_id: u32,
     pub observed_name: Option<String>,
 }
 

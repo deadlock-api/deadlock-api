@@ -111,6 +111,7 @@ pub(super) const PLAYER_COLUMNS: &[Column] = &[
     mp("player_tracked_stats", "player_tracked_stats"),
     mp("stats_type_stat", "stats_type_stat"),
     mp("hero_build_id", "hero_build_id"),
+    mp("pregame_hero_id", "pregame_hero_id"),
     mp("hero_xp_rewards", "hero_xp_rewards"),
     mp("player_match_outcome", "player_match_outcome"),
     mp(

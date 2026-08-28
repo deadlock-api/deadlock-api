@@ -301,6 +301,7 @@ fn player_columns(query: &BulkMatchMetadataQuery) -> Vec<(String, String)> {
         "player_slot",
         "team",
         "hero_build_id",
+        "pregame_hero_id",
     ];
     if query.include_player_info || query.include_player_kda {
         names.extend(vec!["kills", "deaths", "assists"]);
@@ -759,9 +760,11 @@ fn fetch_lines(
     description = "
 This endpoints lets you fetch multiple match metadata at once. The response is a JSON array of match metadata.
 
-When player info is included, each player object contains a `hero_build_id` field (if available) from demo analysis.
+When player info is included, each player object contains `hero_build_id` and `pregame_hero_id` fields (if available) from demo analysis.
 
 > **Note:** The `hero_build_id` represents the first build the player had selected when the game started. It does not reflect any build changes made during the match.
+
+> **Note:** The `pregame_hero_id` is the hero the player had locked before the pre-game swap window (0 if unknown). A player swapped heroes when it differs from their `hero_id`.
 
 ### Rate Limits:
 | Type | Limit |

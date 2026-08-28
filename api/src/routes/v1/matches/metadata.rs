@@ -41,6 +41,7 @@ pub(crate) struct DemoPlayerRow {
     match_id: u64,
     account_id: u32,
     hero_build_id: u64,
+    pregame_hero_id: u32,
     banned_hero_ids: Vec<u8>,
 }
 
@@ -52,7 +53,7 @@ impl BatchQueryMulti for DemoPlayerQuery {
 
     fn build_query(keys: &[u64]) -> String {
         format!(
-            "SELECT match_id, account_id, hero_build_id, banned_hero_ids \
+            "SELECT match_id, account_id, hero_build_id, pregame_hero_id, banned_hero_ids \
              FROM match_player WHERE match_id IN ({}) AND demo_processed = 1 \
              SETTINGS log_comment = 'metadata_demo_player'",
             in_clause(keys)
@@ -75,6 +76,10 @@ struct MatchMetadataResponse {
     /// The `hero_build_id` is the first build the player had selected when the game started.
     /// It does not reflect any build changes made during the match.
     hero_build_ids: std::collections::HashMap<u32, u64>,
+    /// Map of `account_id` to the hero the player had locked before the pre-game swap window.
+    /// Only present for players where this is known; a player swapped heroes when it differs
+    /// from their `hero_id`.
+    pregame_hero_ids: std::collections::HashMap<u32, u32>,
     /// List of hero IDs that were banned in this match.
     banned_hero_ids: Vec<u8>,
 }
@@ -378,6 +383,8 @@ Each player object is enriched with a `hero_build_id` field (if available) from 
 
 > **Note:** The `hero_build_id` represents the first build the player had selected when the game started. It does not reflect any build changes made during the match.
 
+`pregame_hero_ids` maps `account_id` to the hero the player had locked before the pre-game swap window (if available from demo analysis). A player swapped heroes when it differs from their `hero_id`.
+
 Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
 
 Relevant Protobuf Messages:
@@ -424,6 +431,11 @@ pub(super) async fn metadata(
         .first()
         .map(|r| r.banned_hero_ids.clone())
         .unwrap_or_default();
+    let pregame_hero_ids = demo_rows
+        .iter()
+        .filter(|r| r.pregame_hero_id != 0)
+        .map(|r| (r.account_id, r.pregame_hero_id))
+        .collect();
     let hero_build_ids = demo_rows
         .into_iter()
         .map(|r| (r.account_id, r.hero_build_id))
@@ -432,6 +444,7 @@ pub(super) async fn metadata(
     Ok(Json(MatchMetadataResponse {
         metadata: metadata?,
         hero_build_ids,
+        pregame_hero_ids,
         banned_hero_ids,
     }))
 }

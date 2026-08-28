@@ -9,7 +9,9 @@ use prost::Message;
 use tracing::debug;
 use valveprotos::deadlock::{CCitadelUserMsgBannedHeroes, CitadelUserMessageIds};
 
-use crate::hashes::{CONTROLLER_HASH, HERO_BUILD_ID_HASH, STEAM_ID_HASH, STEAM_NAME_HASH};
+use crate::hashes::{
+    CONTROLLER_HASH, HERO_BUILD_ID_HASH, PREGAME_HERO_ID_HASH, STEAM_ID_HASH, STEAM_NAME_HASH,
+};
 
 const PLAYER_CONTROLLER_HASH: u64 = fxhash::hash_bytes(b"CCitadelPlayerController");
 const PLAYER_PAWN_HASH: u64 = fxhash::hash_bytes(b"CCitadelPlayerPawn");
@@ -18,6 +20,7 @@ const PLAYER_PAWN_HASH: u64 = fxhash::hash_bytes(b"CCitadelPlayerPawn");
 pub(crate) struct ControllerData {
     pub steam_id: Option<u64>,
     pub steam_name: Option<String>,
+    pub pregame_hero_id: Option<u32>,
 }
 
 impl ControllerData {
@@ -137,6 +140,9 @@ impl DemoAnalyzerVisitor {
             }
             if let Some(v) = entity.get_value::<String>(&STEAM_NAME_HASH) {
                 entry.steam_name = Some(v);
+            }
+            if let Some(v) = entity.get_value::<u32>(&PREGAME_HERO_ID_HASH) {
+                entry.pregame_hero_id = Some(v);
             }
             if !was_complete && entry.is_complete() {
                 let steam_id = entry.steam_id;

@@ -1,6 +1,9 @@
+use haste::entities::fkey_from_path;
 use haste::fxhash;
 
 pub(crate) const CONTROLLER_HASH: u64 = fxhash::hash_bytes(b"m_hController");
 pub(crate) const STEAM_ID_HASH: u64 = fxhash::hash_bytes(b"m_steamID");
 pub(crate) const STEAM_NAME_HASH: u64 = fxhash::hash_bytes(b"m_iszPlayerName");
 pub(crate) const HERO_BUILD_ID_HASH: u64 = fxhash::hash_bytes(b"m_unHeroBuildID");
+pub(crate) const PREGAME_HERO_ID_HASH: u64 =
+    fkey_from_path(&["m_PlayerDataGlobal", "m_nPreGameHeroID"]);

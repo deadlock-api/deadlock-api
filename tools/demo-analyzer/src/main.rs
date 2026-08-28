@@ -269,6 +269,7 @@ fn correlate(match_info: &MatchWithReplay, state: &SharedState) -> MatchUpdate {
         players.push(DemoPlayer {
             account_id,
             hero_build_id,
+            pregame_hero_id: ctrl.pregame_hero_id.unwrap_or(0),
             observed_name: ctrl.steam_name.as_deref().and_then(normalize_observed_name),
         });
     }
@@ -295,6 +296,7 @@ async fn apply_update(ch_client: &clickhouse::Client, update: &MatchUpdate) -> a
     let bans = format_array(update.banned_hero_ids.iter().copied());
     let accounts = format_array(update.players.iter().map(|p| p.account_id));
     let builds = format_array(update.players.iter().map(|p| p.hero_build_id));
+    let pregame_heroes = format_array(update.players.iter().map(|p| p.pregame_hero_id));
     let match_id = update.match_id;
 
     // transform(account_id, [accounts], [builds], 0) maps each player's
@@ -303,6 +305,7 @@ async fn apply_update(ch_client: &clickhouse::Client, update: &MatchUpdate) -> a
         "UPDATE match_player \
          SET banned_hero_ids = {bans}, \
              hero_build_id = transform(account_id, {accounts}, {builds}, toUInt64(0)), \
+             pregame_hero_id = transform(account_id, {accounts}, {pregame_heroes}, toUInt32(0)), \
              demo_processed = 1 \
          WHERE match_id = {match_id}"
     );
