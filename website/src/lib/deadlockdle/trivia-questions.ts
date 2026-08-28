@@ -579,7 +579,8 @@ export function generateDailyQuestions(
   rng: () => number,
 ): TriviaQuestion[] {
   const heroes = filterPlayableHeroes(rawHeroes);
-  const items = filterShopableItems(rawItems);
+  // Legendary (tier 5) items are flagged shopable with a placeholder cost of 9999
+  const items = filterShopableItems(rawItems).filter((i) => i.item_tier >= 1 && i.item_tier <= 4);
 
   const questions: TriviaQuestion[] = [];
   const generatorUsage = new Map<number, number>();
