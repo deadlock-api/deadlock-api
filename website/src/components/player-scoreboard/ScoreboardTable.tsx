@@ -163,7 +163,7 @@ export function ScoreboardTable({
             return (
               // oxlint-disable-next-line react/no-array-index-key
               <TableRow key={`${accountId ?? i}-${entry.rank}`}>
-                <TableCell className="text-right">{entry.rank}</TableCell>
+                <TableCell className="text-right">{entry.rank + 1}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     {isLoadingProfiles && !profile ? (
