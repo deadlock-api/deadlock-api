@@ -31,11 +31,20 @@ fn idx_to_badge(idx: i32) -> i32 {
     10 * ((idx - 1) / 6) + 11 + (idx - 1) % 6
 }
 
+/// Progress at which Eternus I starts. Progress keeps accumulating past it without a ceiling.
+const ETERNUS_PROGRESS: u32 = 70_000;
+
 /// Convert Valve's flat rank progress to a badge ID.
 ///
-/// Progress is a ladder-wide counter in fixed 1000-point steps, seven per tier, with the sixth
-/// subtier spanning two of them.
-fn badge_from_flat_progress(flat_progress: u32) -> u32 {
+/// Below Eternus, progress is a ladder-wide counter in fixed 1000-point steps, seven per tier,
+/// with the sixth subtier spanning two of them. Eternus subranks are percentile cuts Valve
+/// recomputes daily, so progress alone can't place a player within Eternus: the division comes
+/// from `initial_display_rank`, the badge the player entered the match with, and is at least
+/// Eternus I in case the match promoted them into it.
+fn badge_from_flat_progress(flat_progress: u32, initial_display_rank: u32) -> u32 {
+    if flat_progress >= ETERNUS_PROGRESS {
+        return initial_display_rank.max(111);
+    }
     let idx = flat_progress / 1000;
     (idx / 7 + 1) * 10 + (idx % 7 + 1).min(6)
 }
@@ -50,17 +59,23 @@ fn subrank_progress(flat_progress: u32) -> (u32, u32) {
     (progress, width)
 }
 
-/// `ClickHouse` expression equivalent to [`badge_from_flat_progress`]. `flat_progress` must be a
-/// non-nullable numeric expression; it is inlined twice.
-pub(crate) fn badge_from_flat_progress_sql(flat_progress: &str) -> String {
+/// `ClickHouse` expression equivalent to [`badge_from_flat_progress`]. Both arguments must be
+/// non-nullable numeric expressions; `flat_progress` is inlined three times.
+pub(crate) fn badge_from_flat_progress_sql(
+    flat_progress: &str,
+    initial_display_rank: &str,
+) -> String {
     format!(
-        "toUInt32((intDiv(intDiv({flat_progress}, 1000), 7) + 1) * 10 + least(intDiv({flat_progress}, 1000) % 7 + 1, 6))"
+        "toUInt32(if({flat_progress} >= {ETERNUS_PROGRESS}, greatest(111, {initial_display_rank}), \
+         (intDiv(intDiv({flat_progress}, 1000), 7) + 1) * 10 + least(intDiv({flat_progress}, 1000) % 7 + 1, 6)))"
     )
 }
 
 #[derive(Debug, Serialize, ToSchema)]
 pub(crate) struct RankResponse {
     /// Rank badge, `tier * 10 + subrank`, including the progress the last ranked match awarded.
+    /// Eternus subranks are percentile-based and refreshed daily by Valve, so within Eternus this
+    /// is the badge the player entered their latest ranked match with.
     /// `0` when no recent ranked match reports a rank.
     /// See more: <https://api.deadlock-api.com/v1/assets/ranks>
     pub(crate) badge: u32,
@@ -103,20 +118,22 @@ impl LastRankedMatch {
         if self.player_rank_initial_display_rank == 0 {
             return 0;
         }
-        self.player_rank_final_flat_progress.map_or(
-            self.player_rank_initial_display_rank,
-            badge_from_flat_progress,
-        )
+        self.player_rank_final_flat_progress
+            .map_or(self.player_rank_initial_display_rank, |progress| {
+                badge_from_flat_progress(progress, self.player_rank_initial_display_rank)
+            })
     }
 
     /// Progress into the badge from [`Self::badge`] and the width of that subrank, in progress
-    /// points. `None` while the player is in placement games or when the match reports no final
-    /// progress.
+    /// points. `None` while the player is in placement games, when the match reports no final
+    /// progress, or in Eternus, where subranks are percentile cuts rather than point spans.
     pub(crate) fn progress(&self) -> Option<(u32, u32)> {
         if self.player_rank_initial_display_rank == 0 {
             return None;
         }
-        self.player_rank_final_flat_progress.map(subrank_progress)
+        self.player_rank_final_flat_progress
+            .filter(|&progress| progress < ETERNUS_PROGRESS)
+            .map(subrank_progress)
     }
 }
 
@@ -253,7 +270,8 @@ pub(crate) async fn fetch_last_ranked_match(
     description = "
 Returns the player's rank at the end of their latest ranked match, i.e. the rank they entered that
 match with plus the progress the match awarded. A subrank spans 1000 progress points, so a single
-match can move the badge.
+match can move the badge. Eternus subranks are instead percentile cuts Valve recomputes daily, so
+within Eternus the badge is the one the player entered the match with.
 
 Only ranked matches carry a rank, and it stays unset while the player is in placement games.
 When none of the player's recent ranked matches reports a rank, `badge`, `rank` and `subrank` are
@@ -549,9 +567,22 @@ mod tests {
             (7_000, 21),
             (35_000, 61),
             (53_225, 85),
+            (69_999, 106),
         ] {
-            assert_eq!(badge_from_flat_progress(progress), expected, "{progress}");
+            assert_eq!(
+                badge_from_flat_progress(progress, 84),
+                expected,
+                "{progress}"
+            );
         }
+    }
+
+    #[test]
+    fn test_badge_in_eternus_comes_from_the_initial_display_rank() {
+        // Promoted into Eternus by this match: the initial badge is still Ascendant VI.
+        assert_eq!(badge_from_flat_progress(70_000, 106), 111);
+        assert_eq!(badge_from_flat_progress(84_830, 112), 112);
+        assert_eq!(badge_from_flat_progress(84_830, 116), 116);
     }
 
     #[test]
@@ -606,6 +637,7 @@ mod tests {
         );
         assert_eq!(last_ranked_match(84, None).progress(), None);
         assert_eq!(last_ranked_match(0, Some(53_225)).progress(), None);
+        assert_eq!(last_ranked_match(111, Some(72_170)).progress(), None);
     }
 
     #[test]

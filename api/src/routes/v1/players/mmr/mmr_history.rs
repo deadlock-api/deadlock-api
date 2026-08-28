@@ -57,7 +57,10 @@ fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String
     } else {
         "mmr_history"
     };
-    let badge = badge_from_flat_progress_sql("assumeNotNull(player_rank_final_flat_progress)");
+    let badge = badge_from_flat_progress_sql(
+        "assumeNotNull(player_rank_final_flat_progress)",
+        "assumeNotNull(player_rank_initial_display_rank)",
+    );
     format!(
         "
     SELECT

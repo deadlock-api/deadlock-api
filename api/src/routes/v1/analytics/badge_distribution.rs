@@ -109,6 +109,7 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     let player_badge = badge_from_flat_progress_sql(
         "assumeNotNull(argMax(player_rank_final_flat_progress, match_id))",
+        "assumeNotNull(argMax(player_rank_initial_display_rank, match_id))",
     );
     // The only projection covering these columns is ordered by hero_id and carries no skip indexes,
     // so ClickHouse picks it and then can't prune by start_time: ~70x more rows read.

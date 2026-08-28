@@ -141,7 +141,12 @@ pub enum ScoreboardQuerySortBy {
 fn latest_badge_clause() -> String {
     let latest_progress = "argMaxIf(player_rank_final_flat_progress, match_id, \
                            ifNull(player_rank_initial_display_rank, 0) > 0)";
-    let badge = badge_from_flat_progress_sql(&format!("assumeNotNull({latest_progress})"));
+    let latest_display_rank = "argMaxIf(player_rank_initial_display_rank, match_id, \
+                               ifNull(player_rank_initial_display_rank, 0) > 0)";
+    let badge = badge_from_flat_progress_sql(
+        &format!("assumeNotNull({latest_progress})"),
+        &format!("assumeNotNull({latest_display_rank})"),
+    );
     format!("if({latest_progress} IS NULL, 0, {badge})")
 }
 
