@@ -204,6 +204,7 @@ const mainSponsor = {
   href: "https://www.deadchaps.gg/?ref=deadlock-api.com",
   title: "DeadChaps",
   logo: "/logo/deadchaps.png",
+  logo2x: "/logo/deadchaps@2x.png",
   width: 600,
   height: 127,
 };
@@ -255,6 +256,7 @@ function IndexRoute() {
               >
                 <img
                   src={mainSponsor.logo}
+                  srcSet={`${mainSponsor.logo} 1x, ${mainSponsor.logo2x} 2x`}
                   alt={`${mainSponsor.title} Logo`}
                   width={600}
                   height={127}
@@ -452,6 +454,7 @@ function IndexRoute() {
           >
             <img
               src={mainSponsor.logo}
+              srcSet={`${mainSponsor.logo} 1x, ${mainSponsor.logo2x} 2x`}
               alt={`${mainSponsor.title} Logo`}
               width={mainSponsor.width}
               height={mainSponsor.height}
