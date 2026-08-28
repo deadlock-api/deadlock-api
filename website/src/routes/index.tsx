@@ -201,11 +201,11 @@ const analyticsLinks = [
 ];
 
 const mainSponsor = {
-  href: "https://www.deadchaps.com/?ref=deadlock-api.com",
-  title: "Dead Chaps",
+  href: "https://www.deadchaps.gg/?ref=deadlock-api.com",
+  title: "DeadChaps",
   logo: "/logo/deadchaps.png",
   width: 600,
-  height: 140,
+  height: 127,
 };
 
 const sponsors = [
