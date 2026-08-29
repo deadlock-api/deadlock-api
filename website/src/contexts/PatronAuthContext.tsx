@@ -77,10 +77,9 @@ export function PatronAuthProvider({ children }: PatronAuthProviderProps) {
       });
     } catch (error) {
       console.error("Failed to logout:", error);
-    } finally {
-      setIsLoggingOut(false);
-      queryClient.setQueryData(queryKeys.patron.status(), null);
     }
+    setIsLoggingOut(false);
+    queryClient.setQueryData(queryKeys.patron.status(), null);
   }, [queryClient]);
 
   const refreshStatus = useCallback(async () => {
