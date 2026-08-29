@@ -1,27 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { createContext, type ReactNode, useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 
+import { PatronAuthContext, type PatronAuthContextValue, type PatronAuthState } from "~/contexts/patron-auth-context";
 import { API_ORIGIN } from "~/lib/constants";
 import type { PatronStatus } from "~/lib/patron-api";
 import { usePatronStatus } from "~/queries/patron-queries";
 import { queryKeys } from "~/queries/query-keys";
-
-export interface PatronAuthState {
-  isAuthenticated: boolean;
-  isActive: boolean;
-  pledgeAmountCents: number | null;
-  totalSlots: number;
-  isLoading: boolean;
-  isLoggingOut: boolean;
-}
-
-export interface PatronAuthContextValue extends PatronAuthState {
-  login: () => void;
-  logout: () => Promise<void>;
-  refreshStatus: () => Promise<void>;
-}
-
-export const PatronAuthContext = createContext<PatronAuthContextValue | null>(null);
 
 interface PatronAuthProviderProps {
   children: ReactNode;

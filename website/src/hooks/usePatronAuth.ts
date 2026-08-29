@@ -1,6 +1,6 @@
 import { useContext } from "react";
 
-import { PatronAuthContext, type PatronAuthContextValue } from "~/contexts/PatronAuthContext";
+import { PatronAuthContext, type PatronAuthContextValue } from "~/contexts/patron-auth-context";
 
 export function usePatronAuth(): PatronAuthContextValue {
   const context = useContext(PatronAuthContext);
