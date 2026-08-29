@@ -5,16 +5,15 @@ resolver = "2"
 [workspace.dependencies]
 anyhow = "1.0.104"
 async-compression = "0.4.43"
-base64 = "0.23.0"
-cached = "3.0"
-clap = { version = "4.6.4", features = ["derive", "env"] }
-clickhouse = "0.15.1"
+base64 = "0.23.1"
+cached = "3.1"
+clap = { version = "4.6.6", features = ["derive", "env"] }
+clickhouse = "0.15.2"
 common = { version = "0.1.0", path = "common" }
 fred = { version = "10.1.0", features = ["i-hexpire"] }
-futures = "0.3.33"
+futures = "0.3.34"
 itertools = "0.15.0"
-# Pinned: 0.24.4/0.24.5 break counter aggregation (counters stop incrementing past 1).
-metrics = "=0.24.3"
+metrics = "0.24.6"
 object_store = { version = "0.14.1", features = ["aws"] }
 opentelemetry = { version = "0.32", features = ["logs", "trace"] }
 opentelemetry_sdk = { version = "0.32", features = ["logs", "trace"] }
@@ -27,11 +26,11 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 serde_repr = "0.1.21"
 sqlx = "0.9.0"
-thiserror = "2.0.19"
+thiserror = "2.0.20"
 tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros"] }
 tokio-util = "0.7.19"
 tracing = "0.1.44"
 tracing-opentelemetry = "0.33"
 tryhard = "0.5.2"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "a23b534ea8ef5f64e4c4aff8657547cdb3bee26d" }
-haste = { git = "https://github.com/deadlock-api/haste.git", rev = "77e8c5ac10b6ac64dd64c0d19455243de8bc1a92", features = ["async"] }
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "4f4a3cb1b0c6f19af59a722acb79ecccd01f61f6" }
+haste = { git = "https://github.com/deadlock-api/haste.git", rev = "95b6104fc41837cc4c5495f4a4de8afc531b9195", features = ["async"] }

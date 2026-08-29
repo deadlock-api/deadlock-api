@@ -8,8 +8,8 @@ license = "MIT"
 
 [dependencies]
 reqwest = { version = "0.13.4", features = ["json", "http2", "zstd", "gzip", "form", "stream"] }
-wreq = { version = "5.3.0", features = ["cookies"] }
-wreq-util = "2.2.6"
+wreq = { version = "6.0.0-rc.31", features = ["cookies"] }
+wreq-util = "3.0.0-rc.14"
 tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "signal", "time"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 opentelemetry = { version = "0.32", features = ["logs", "trace"] }
@@ -17,11 +17,11 @@ opentelemetry_sdk = { version = "0.32", features = ["logs", "trace"] }
 opentelemetry-otlp = { version = "0.32", features = ["grpc-tonic", "logs", "trace"] }
 opentelemetry-appender-tracing = { version = "0.32", features = ["experimental_metadata_attributes", "experimental_span_attributes"] }
 tracing-opentelemetry = "0.33"
-redis = { version = "1.5.0", default-features = false, features = ["tokio-comp"] }
-clickhouse = { version = "0.15.1", features = ["chrono", "uuid"] }
+redis = { version = "1.6.0", default-features = false, features = ["tokio-comp"] }
+clickhouse = { version = "0.15.2", features = ["chrono", "uuid"] }
 sqlx = { version = "0.9.0", features = ["chrono", "derive", "postgres", "runtime-tokio", "uuid"] }
-uuid = { version = "1.24.0", features = ["serde", "v4"] }
-cached = { version = "3.0", features = ["async"] }
+uuid = { version = "1.26.0", features = ["serde", "v4"] }
+cached = { version = "3.1", features = ["async"] }
 axum = "0.8.9"
 utoipa-axum = "0.2.0"
 utoipa = { version = "5.5.0", features = ["axum_extras", "chrono", "uuid"] }
@@ -35,28 +35,27 @@ tower-service = "0.3.3"
 tower-http = { version = "0.7.0", features = ["compression-full", "cors", "decompression-full", "normalize-path", "trace", "limit"] }
 tracing = "0.1.44"
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
-axum-prometheus = "0.10.0"
+axum-prometheus = "0.10.1"
 itertools = "0.15.0"
-futures = "0.3.33"
+futures = "0.3.34"
 snap = "1.1.2"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "a23b534ea8ef5f64e4c4aff8657547cdb3bee26d", features = ["gc-client", "serde", "user-msgs", "reflect"] }
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "4f4a3cb1b0c6f19af59a722acb79ecccd01f61f6", features = ["gc-client", "serde", "user-msgs", "reflect"] }
 prost = "0.14.4"
-base64 = "0.23.0"
+base64 = "0.23.1"
 tryhard = "0.5.2"
 async-compression = { version = "0.4.43", features = ["bzip2", "zstd", "tokio"] }
 bzip2 = "0.6"
 zstd = "0.13"
-arrow = { version = "58", features = ["json"] }
+arrow = { version = "59", features = ["json"] }
 strum = { version = "0.28.0", features = ["derive"] }
 axum-extra = { version = "0.12.6", features = ["query"] }
 async-graphql = { version = "7", features = ["chrono", "uuid"] }
 async-graphql-axum = "7"
-# Pinned: 0.24.4/0.24.5 break counter aggregation (counters stop incrementing past 1).
-metrics = "=0.24.3"
+metrics = "0.24.6"
 bytes = { version = "1.12.1", features = ["serde"] }
-thiserror = "2.0.19"
+thiserror = "2.0.20"
 rand = "0.10.2"
-quick-xml = { version = "0.41.0", features = ["serde", "serialize"] }
+quick-xml = { version = "0.42.0", features = ["serde", "serialize"] }
 serde-env = "0.3.0"
 regex = "1.13.1"
 memchr = "2"
@@ -68,13 +67,13 @@ hex = "0.4"
 hmac = "0.13"
 md5 = { package = "md-5", version = "0.11" }
 jsonwebtoken = { version = "11", features = ["rust_crypto"] }
-async-trait = "0.1.91"
+async-trait = "0.1.92"
 tantivy = { version = "0.26.1", features = ["zstd-compression"] }
 arc-swap = "1.9.2"
 cssparser = "0.37"
 indexmap = { version = "2", features = ["serde"] }
 murmur2 = "0.1.0"
-datafusion = { version = "54", default-features = false, features = [
+datafusion = { version = "55", default-features = false, features = [
     "sql",
     "parquet",
     "recursive_protection",
@@ -86,8 +85,8 @@ datafusion = { version = "54", default-features = false, features = [
     "crypto_expressions",
     "encoding_expressions",
 ] }
-haste_core = { git = "https://github.com/deadlock-api/haste.git", rev = "77e8c5ac10b6ac64dd64c0d19455243de8bc1a92" }
-haste_broadcast = { git = "https://github.com/deadlock-api/haste.git", rev = "77e8c5ac10b6ac64dd64c0d19455243de8bc1a92" }
+haste_core = { git = "https://github.com/deadlock-api/haste.git", rev = "95b6104fc41837cc4c5495f4a4de8afc531b9195" }
+haste_broadcast = { git = "https://github.com/deadlock-api/haste.git", rev = "95b6104fc41837cc4c5495f4a4de8afc531b9195" }
 rayon = "1"
 tokio-util = { version = "0.7.19", features = ["io"] }
 image = { version = "0.25.10", default-features = false, features = ["png", "webp"] }

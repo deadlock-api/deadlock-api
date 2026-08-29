@@ -10,8 +10,9 @@ use rand::prelude::IndexedRandom;
 use reqwest::Response;
 use serde_json::json;
 use tracing::{debug, warn};
+use url::Url;
 use valveprotos::deadlock::CMsgClientToGcGetMatchMetaDataResponse;
-use wreq::{Url, redirect};
+use wreq::redirect;
 use wreq_util::Emulation;
 
 use crate::context::AppState;
@@ -311,11 +312,11 @@ async fn fetch_through_stile(http_client: &wreq::Client, url: &str) -> APIResult
     let mut next = Url::parse(url).map_err(fetch_error)?;
     for _ in 0..STILE_MAX_HOPS {
         let response = http_client
-            .get(next.clone())
+            .get(next.as_str())
             .send()
             .await
             .map_err(fetch_error)?;
-        let current = response.url().clone();
+        let current = Url::parse(&response.uri().to_string()).map_err(fetch_error)?;
         let body = response.text().await.map_err(fetch_error)?;
         if body.trim_start().starts_with("<?xml") {
             return Ok(body);
