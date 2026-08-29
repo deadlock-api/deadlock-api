@@ -106,7 +106,7 @@ const tagColors: Record<string, string> = {
 };
 
 const proseClasses =
-  "prose prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-2xl prose-h3:mt-7 prose-h3:mb-3 prose-h3:text-lg prose-p:leading-relaxed prose-p:text-muted-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-strong:text-foreground prose-li:text-muted-foreground prose-ol:text-muted-foreground prose-ul:text-muted-foreground prose-img:rounded-lg prose-img:border prose-img:border-border prose-pre:bg-muted/50 prose-pre:border prose-pre:border-border prose-code:text-foreground";
+  "prose prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-2xl prose-h3:mt-7 prose-h3:mb-3 prose-h3:text-lg prose-p:leading-relaxed prose-p:text-muted-foreground prose-a:text-primary prose-a:no-underline prose-a:hover:underline prose-strong:text-foreground prose-li:text-muted-foreground prose-ol:text-muted-foreground prose-ul:text-muted-foreground prose-img:rounded-lg prose-img:border prose-img:border-border prose-pre:bg-muted/50 prose-pre:border prose-pre:border-border prose-code:text-foreground";
 
 function PostNotFound() {
   return (
