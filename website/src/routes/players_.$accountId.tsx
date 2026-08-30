@@ -56,7 +56,7 @@ export const Route = createFileRoute("/players_/$accountId")({
 function TrackerRoute() {
   const { accountId } = Route.useLoaderData();
   return (
-    <TrackerGate>
+    <TrackerGate accountId={accountId}>
       <TrackerContent accountId={accountId} />
     </TrackerGate>
   );
