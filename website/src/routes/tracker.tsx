@@ -123,7 +123,7 @@ function PlayerSearchCard() {
 }
 
 function MyAccountsCard() {
-  const { isAuthenticated, isActive, isLoading, login } = usePatronAuth();
+  const { isAuthenticated, isActive, isLoading, login, totalSlots } = usePatronAuth();
 
   const accountsQuery = useQuery({ ...steamAccountsQueryOptions(), enabled: isAuthenticated });
   const activeAccounts = useMemo(
@@ -162,7 +162,7 @@ function MyAccountsCard() {
         ) : activeAccounts.length === 0 ? (
           <div className="space-y-3 px-3 py-2">
             <p className="text-sm text-muted-foreground">
-              {isActive
+              {isActive || totalSlots > 0
                 ? "You haven't added any Steam accounts yet. Add one on the Prioritized Fetching page."
                 : "Your Patreon membership is inactive. Reactivate it to use the tracker."}
             </p>

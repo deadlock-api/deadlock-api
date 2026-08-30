@@ -8,7 +8,7 @@ import { usePatronAuth } from "~/hooks/usePatronAuth";
 import { IS_DEV } from "~/lib/constants";
 
 export function TrackerGate({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isActive, isLoading, login } = usePatronAuth();
+  const { isAuthenticated, isActive, isLoading, login, totalSlots } = usePatronAuth();
 
   // Patreon OAuth is unavailable against localhost, so the gate would make the page untestable in dev.
   if (IS_DEV) return children;
@@ -21,7 +21,8 @@ export function TrackerGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (isAuthenticated && isActive) {
+  // An inactive membership can still hold prioritized account slots (e.g. a slot override).
+  if (isAuthenticated && (isActive || totalSlots > 0)) {
     return children;
   }
 
