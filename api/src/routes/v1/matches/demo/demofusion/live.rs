@@ -18,7 +18,7 @@ use datafusion::datasource::MemTable;
 use datafusion::execution::{SendableRecordBatchStream, TaskContext};
 use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
 use datafusion::physical_plan::streaming::PartitionStream;
-use datafusion::prelude::SessionContext;
+use datafusion::prelude::{SessionConfig, SessionContext};
 use haste_broadcast::{BroadcastHttp, BroadcastHttpClientError};
 use haste_core::demostream::{
     CmdHeader, DecodeCmdError, DemoStream, ReadCmdError, ReadCmdHeaderError,
@@ -95,7 +95,10 @@ pub(crate) async fn query_live(
     let (bytes_tx, bytes_rx) = std::sync::mpsc::channel::<Bytes>();
     let _ = bytes_tx.send(signon);
 
-    let ctx = SessionContext::new();
+    // Every live table is a single channel, so repartitioning buys no parallelism — and
+    // `RepartitionExec` coalesces batches from bounded inputs, which would hold decoded rows
+    // back until the broadcast ends instead of streaming them as they arrive.
+    let ctx = SessionContext::new_with_config(SessionConfig::new().with_target_partitions(1));
     let mut entities: HashMap<u64, Channel<EntityBatchBuilder>> = HashMap::new();
     for (schema, projection) in &entity_specs {
         let (tx, rx) = unbounded_channel();
@@ -427,5 +430,90 @@ impl DemoStream for LiveBroadcastStream {
     fn skip_cmd(&mut self, cmd_header: &CmdHeader) -> core::result::Result<(), io::Error> {
         self.buf.resize(cmd_header.body_size as usize, 0);
         self.reader.read_exact(&mut self.buf)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use datafusion::arrow::array::{Int32Array, StringArray, UInt32Array, UInt64Array};
+    use datafusion::arrow::datatypes::{DataType, Field, Schema};
+    use futures::StreamExt;
+
+    use super::*;
+
+    fn schema(extra: (&str, DataType)) -> SchemaRef {
+        Arc::new(Schema::new(vec![
+            Field::new("tick", DataType::Int32, false),
+            Field::new("entity_index", DataType::Int32, false),
+            Field::new("delta_type", DataType::Utf8, false),
+            Field::new(extra.0, extra.1, true),
+        ]))
+    }
+
+    /// A `UNION ALL` whose branches need nullability coercion makes `DataFusion` insert a
+    /// projection — and, with the default partition count, a batch-coalescing `RepartitionExec`
+    /// that would hold rows back until the sources close. Rows must flow while the tables are open.
+    #[tokio::test]
+    async fn union_all_streams_rows_while_sources_are_open() {
+        let ctx = SessionContext::new_with_config(SessionConfig::new().with_target_partitions(1));
+        let ctrl = schema(("m_steamID", DataType::UInt64));
+        let pawn = schema(("CBodyComponent__m_cellX", DataType::UInt32));
+        let (ctrl_tx, rx) = unbounded_channel();
+        register_streaming_table(&ctx, "CCitadelPlayerController", Arc::clone(&ctrl), rx).unwrap();
+        let (pawn_tx, rx) = unbounded_channel();
+        register_streaming_table(&ctx, "CCitadelPlayerPawn", Arc::clone(&pawn), rx).unwrap();
+
+        let query = r#"SELECT 'ctrl' AS row_kind, "tick", "entity_index", "delta_type" AS delta, "m_steamID" AS steam_id, NULL AS position_x FROM CCitadelPlayerController
+            UNION ALL
+            SELECT 'pawn' AS row_kind, "tick", NULL AS entity_index, NULL AS delta, NULL AS steam_id, "CBodyComponent__m_cellX" AS position_x FROM CCitadelPlayerPawn"#;
+        let mut stream = ctx
+            .sql(query)
+            .await
+            .unwrap()
+            .execute_stream()
+            .await
+            .unwrap();
+
+        ctrl_tx
+            .send(
+                RecordBatch::try_new(
+                    ctrl,
+                    vec![
+                        Arc::new(Int32Array::from(vec![1])),
+                        Arc::new(Int32Array::from(vec![5])),
+                        Arc::new(StringArray::from(vec!["update"])),
+                        Arc::new(UInt64Array::from(vec![Some(7)])),
+                    ],
+                )
+                .unwrap(),
+            )
+            .unwrap();
+        pawn_tx
+            .send(
+                RecordBatch::try_new(
+                    pawn,
+                    vec![
+                        Arc::new(Int32Array::from(vec![1])),
+                        Arc::new(Int32Array::from(vec![6])),
+                        Arc::new(StringArray::from(vec!["update"])),
+                        Arc::new(UInt32Array::from(vec![Some(3)])),
+                    ],
+                )
+                .unwrap(),
+            )
+            .unwrap();
+
+        let mut rows = 0;
+        while rows < 2 {
+            let next = tokio::time::timeout(Duration::from_secs(3), stream.next())
+                .await
+                .expect("rows must stream while the sources are still open");
+            rows += next.expect("stream ended early").unwrap().num_rows();
+        }
+        drop(ctrl_tx);
+        drop(pawn_tx);
+        while let Some(batch) = stream.next().await {
+            batch.unwrap();
+        }
     }
 }
