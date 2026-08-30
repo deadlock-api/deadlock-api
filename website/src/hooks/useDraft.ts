@@ -1,4 +1,4 @@
-import { createParser, useQueryState } from "nuqs";
+import { createParser, type Options, useQueryState } from "nuqs";
 import { useCallback, useMemo } from "react";
 
 import type { GameMode } from "~/components/selectors/GameModeSelector";
@@ -28,7 +28,7 @@ export interface DraftControls {
   moveSlot: (from: { side: Side; slot: number }, to: { side: Side; slot: number }) => void;
   clearAll: () => void;
   /** Replaces a whole side without counting as a manual edit, for filling the board from a match. */
-  setSide: (side: Side, heroes: (number | null)[]) => void;
+  setSide: (side: Side, heroes: (number | null)[], options?: Options) => void;
   /** Rearranges a side the user already drafted, so it drops the imported-match reference. */
   reorderSide: (side: Side, heroes: (number | null)[]) => void;
   /** First empty slot of a side, or `null` when it is full. */
@@ -46,12 +46,12 @@ export function useDraft(gameMode: GameMode, onManualEdit?: () => void): DraftCo
   const draft = useMemo<Draft>(() => ({ gameMode, ally, enemy }), [gameMode, ally, enemy]);
 
   const setSide = useCallback(
-    (side: Side, heroes: (number | null)[]) => {
+    (side: Side, heroes: (number | null)[], options?: Options) => {
       // Padded up to the side's width but never cut down to it: a match from the other game mode
       // arrives before the mode switch re-sizes the parser, and must not lose its last picks.
       const padded = [...heroes, ...emptySide(teamSize)].slice(0, Math.max(teamSize, heroes.length));
       const setter = side === "ally" ? setAlly : setEnemy;
-      void setter(padded.every((h) => h === null) ? null : padded);
+      void setter(padded.every((h) => h === null) ? null : padded, options);
     },
     [teamSize, setAlly, setEnemy],
   );

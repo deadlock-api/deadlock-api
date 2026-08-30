@@ -1,4 +1,4 @@
-import { useQueryState } from "nuqs";
+import { type Options, useQueryState } from "nuqs";
 
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { type MatchMode, parseAsMatchMode } from "~/components/selectors/MatchModeSelector";
@@ -21,9 +21,9 @@ export function useModeState() {
 
   const mode: Mode = gameModeParam === "street_brawl" ? "street_brawl" : NORMAL_MODE_BY_MATCH_MODE[matchModeParam];
 
-  const setMode = (next: Mode) => {
-    setGameMode(MODE_CONFIG[next].gameMode);
-    setMatchMode(MODE_CONFIG[next].matchMode);
+  const setMode = (next: Mode, options?: Options) => {
+    setGameMode(MODE_CONFIG[next].gameMode, options);
+    setMatchMode(MODE_CONFIG[next].matchMode, options);
   };
 
   const { gameMode, matchMode } = MODE_CONFIG[mode];
