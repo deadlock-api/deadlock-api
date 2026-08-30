@@ -33,6 +33,16 @@ const MAX_REFETCH_ITERATIONS: i32 = 100;
 
 pub(crate) type PlayerMatchHistory = Vec<PlayerMatchHistoryEntry>;
 
+/// Eternus badge bounds (tier 11, subranks 1-6). Eternus subranks are percentile cuts Valve
+/// recomputes daily, but the GC's after-match `ranked_display_badge` keeps extending the
+/// flat-progress ladder formula instead, yielding subranks Valve never displays (even badges
+/// past 116). Within Eternus the badge the player *entered* the match with, from
+/// `match_player.player_rank_initial_display_rank`, is the percentile-correct one, so reads
+/// substitute it; entries whose rank metadata has not landed yet fall back to capping at
+/// Eternus 6.
+const ETERNUS_MIN_BADGE: u32 = 111;
+const ETERNUS_MAX_BADGE: u32 = 116;
+
 /// Columns the table coalesces to the latest non-NULL value; every other column
 /// takes the latest row's value.
 const COALESCED_COLUMNS: [&str; 4] = [
@@ -49,11 +59,12 @@ impl BatchQueryMulti for MatchHistoryReadQuery {
     type Value = PlayerMatchHistoryEntry;
 
     fn build_query(keys: &[u32]) -> String {
+        let ids = in_clause(keys);
         // Reproduces the table's CoalescingMergeTree merge rather than using FINAL,
         // which costs ~11x the time and ~35x the memory on a 20-account batch.
         // Grouping by (account_id, match_id) also keeps a match shared by two
         // batched accounts, which the previous `DISTINCT ON (match_id)` dropped.
-        let columns = PlayerMatchHistoryEntry::COLUMN_NAMES
+        let inner_columns = PlayerMatchHistoryEntry::COLUMN_NAMES
             .iter()
             .map(|c| match *c {
                 "account_id" | "match_id" => (*c).to_owned(),
@@ -63,12 +74,40 @@ impl BatchQueryMulti for MatchHistoryReadQuery {
                 c => format!("argMax({c}, created_at) AS {c}"),
             })
             .join(", ");
+        // Within Eternus, replace the GC's extrapolated after-match badge with the badge the
+        // player entered the match with (see ETERNUS_MIN_BADGE). The join is pruned to the
+        // Eternus entries; `match_player` filtered on `account_id` alone would fall back to a
+        // bloom-filter scan over every part.
+        let outer_columns = PlayerMatchHistoryEntry::COLUMN_NAMES
+            .iter()
+            .map(|c| match *c {
+                "ranked_display_badge" => format!(
+                    "if(ranked_display_badge >= {ETERNUS_MIN_BADGE}, \
+                     if(initial_display_rank > 0, \
+                     greatest({ETERNUS_MIN_BADGE}, initial_display_rank), \
+                     least(ranked_display_badge, {ETERNUS_MAX_BADGE})), \
+                     ranked_display_badge) AS ranked_display_badge"
+                ),
+                c => (*c).to_owned(),
+            })
+            .join(", ");
         format!(
-            "SELECT {columns} FROM player_match_history \
-             WHERE account_id IN ({}) GROUP BY account_id, match_id \
+            "SELECT {outer_columns} FROM ( \
+                 SELECT {inner_columns} FROM player_match_history \
+                 WHERE account_id IN ({ids}) GROUP BY account_id, match_id \
+             ) AS history \
+             LEFT JOIN ( \
+                 SELECT account_id, match_id, \
+                        max(assumeNotNull(player_rank_initial_display_rank)) AS initial_display_rank \
+                 FROM match_player \
+                 WHERE account_id IN ({ids}) AND match_mode = 'Ranked' AND (account_id, match_id) IN ( \
+                     SELECT account_id, match_id FROM player_match_history \
+                     WHERE account_id IN ({ids}) AND ranked_display_badge >= {ETERNUS_MIN_BADGE} \
+                 ) \
+                 GROUP BY account_id, match_id \
+             ) AS ranks USING (account_id, match_id) \
              ORDER BY match_id DESC \
-             SETTINGS log_comment = 'match_history'",
-            in_clause(keys)
+             SETTINGS log_comment = 'match_history'"
         )
     }
 
@@ -132,7 +171,7 @@ pub(crate) struct PlayerMatchHistoryEntry {
     brawl_avg_round_time_s: Option<u32>,
     /// How the match was scored for the player: 0 = invalid, 1 = win, 2 = loss, 3 = penalized, 4 = penalized party, 5 = not scored.
     player_match_outcome: i8,
-    /// The ranked badge shown for the player after the match (tier = first digits, subtier = last digit). See more: <https://api.deadlock-api.com/v1/assets/ranks>
+    /// The ranked badge shown for the player after the match (tier = first digits, subtier = last digit). Within Eternus, where subranks are percentile cuts the GC misreports, this is the badge the player entered the match with. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     ranked_display_badge: Option<u32>,
     /// The ranked progress change the player got from this match.
     ranked_delta: Option<i32>,
@@ -173,7 +212,9 @@ impl PlayerMatchHistoryEntry {
             brawl_avg_round_time_s: entry.brawl_avg_round_time_s,
             player_match_outcome: i8::try_from(entry.player_match_outcome.unwrap_or_default())
                 .ok()?,
-            ranked_display_badge: entry.ranked_display_badge,
+            ranked_display_badge: entry
+                .ranked_display_badge
+                .map(|badge| badge.min(ETERNUS_MAX_BADGE)),
             ranked_delta: entry.ranked_delta,
             ranked_calibration_match: entry.ranked_calibration_match,
             ranked_used_demotion_protection: entry.ranked_used_demotion_protection,
