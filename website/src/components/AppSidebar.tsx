@@ -18,6 +18,7 @@ import {
   Swords,
   Trophy,
   Users,
+  UserSearch,
   UsersRound,
   Zap,
 } from "lucide-react";
@@ -43,12 +44,16 @@ interface NavGroup {
   links: NavLink[];
 }
 
-const topLinks: NavLink[] = [
-  { to: "/patron", label: "Prioritized Fetching", icon: Zap, special: true },
-  { to: "/", label: "Home", icon: Home },
-];
+const topLinks: NavLink[] = [{ to: "/", label: "Home", icon: Home }];
 
 const navGroups: NavGroup[] = [
+  {
+    label: "Patron",
+    links: [
+      { to: "/patron", label: "Prioritized Fetching", icon: Zap, special: true },
+      { to: "/tracker", label: "Player Tracker", icon: UserSearch },
+    ],
+  },
   {
     label: "Analytics",
     links: [
@@ -154,6 +159,8 @@ const socialLinks = [
 
 function isActive(pathname: string, to: string) {
   if (to === "/") return pathname === "/";
+  // Tracker pages live under /players/:accountId but belong to the /tracker nav entry.
+  if (/^\/players\/\d+/.test(pathname)) return to === "/tracker";
   return pathname.startsWith(to);
 }
 

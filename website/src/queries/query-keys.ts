@@ -17,6 +17,9 @@ import type {
   AnalyticsApiPlayerScoreboardRequest,
   AnalyticsApiPlayerStatsMetricsRequest,
   MatchesApiBulkMetadataRequest,
+  PlayersApiEnemyStatsRequest,
+  PlayersApiMateStatsRequest,
+  PlayersApiPlayerHeroStatsRequest,
 } from "deadlock_api_client";
 
 export const queryKeys = {
@@ -79,6 +82,14 @@ export const queryKeys = {
     version: (widgetType: string | undefined) => ["streamkit-version", widgetType] as const,
   },
   map: () => ["assets-map"] as const,
+  players: {
+    matchHistory: (accountId: number) => ["api-player-match-history", accountId] as const,
+    rank: (accountId: number) => ["api-player-rank", accountId] as const,
+    heroStats: (params: PlayersApiPlayerHeroStatsRequest) => ["api-player-hero-stats", params] as const,
+    mateStats: (params: PlayersApiMateStatsRequest) => ["api-player-mate-stats", params] as const,
+    enemyStats: (params: PlayersApiEnemyStatsRequest) => ["api-player-enemy-stats", params] as const,
+    matchMetadata: (matchId: number) => ["api-tracker-match-metadata", matchId] as const,
+  },
   patron: {
     all: ["patron"] as const,
     status: () => [...queryKeys.patron.all, "status"] as const,

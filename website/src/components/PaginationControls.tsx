@@ -6,8 +6,8 @@ import { Input } from "~/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 
 export interface PaginationControlsProps {
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
   itemsPerPage: number;
   onItemsPerPageChange: (items: number) => void;
   currentPage: number;
@@ -28,7 +28,7 @@ export function PaginationControls({
 }: PaginationControlsProps) {
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      onSearchChange(e.target.value);
+      onSearchChange?.(e.target.value);
     },
     [onSearchChange],
   );
@@ -52,9 +52,16 @@ export function PaginationControls({
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 py-4">
-      <div className="flex items-center space-x-2">
-        <Input placeholder={searchPlaceholder} value={searchQuery} onChange={handleSearchChange} className="h-8 w-40" />
-      </div>
+      {onSearchChange && (
+        <div className="flex items-center space-x-2">
+          <Input
+            placeholder={searchPlaceholder}
+            value={searchQuery}
+            onChange={handleSearchChange}
+            className="h-8 w-40"
+          />
+        </div>
+      )}
       <div className="flex items-center space-x-2">
         <span className="text-sm text-muted-foreground">Rows per page</span>
         <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>

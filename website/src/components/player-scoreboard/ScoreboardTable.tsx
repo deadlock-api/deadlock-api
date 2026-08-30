@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import type { PlayerEntry } from "deadlock_api_client";
 import Fuse from "fuse.js";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
@@ -176,9 +177,18 @@ export function ScoreboardTable({
                         {profile?.avatar && (
                           <img src={profile.avatar} alt="" className="h-6 w-6 rounded-full" loading="lazy" />
                         )}
-                        <span className="max-w-[200px] truncate">
-                          {profile?.personaname ?? (accountId != null ? `Player ${accountId}` : `#${entry.rank}`)}
-                        </span>
+                        {accountId != null ? (
+                          <Link
+                            to="/players/$accountId"
+                            params={{ accountId: String(accountId) }}
+                            className="max-w-[200px] truncate hover:text-primary hover:underline"
+                            title="Open player tracker"
+                          >
+                            {profile?.personaname ?? `Player ${accountId}`}
+                          </Link>
+                        ) : (
+                          <span className="max-w-[200px] truncate">{profile?.personaname ?? `#${entry.rank}`}</span>
+                        )}
                       </>
                     )}
                     {accountId != null && <span className="text-xs text-muted-foreground">[{accountId}]</span>}

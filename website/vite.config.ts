@@ -56,7 +56,9 @@ export default defineConfig({
       prerender: {
         enabled: true,
         crawlLinks: true,
-        filter: ({ path }) => path !== "/auth" && path !== "/auth/patreon",
+        filter: ({ path }) =>
+          // Tracker pages are patron-gated and per-user; prerendering them would bake gate HTML.
+          path !== "/auth" && path !== "/auth/patreon" && !/^\/players\/\d+$/.test(path),
       },
       pages: [{ path: "/" }, { path: "/blog" }, { path: "/sitemap.xml" }, { path: "/sitemap_index.xml" }],
     }),

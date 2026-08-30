@@ -27,6 +27,7 @@ import { Route as PlayersRouteImport } from './routes/players'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as Sitemap_indexDotxmlRouteImport } from './routes/sitemap_index[.]xml'
 import { Route as TeamBuilderRouteImport } from './routes/team-builder'
+import { Route as TrackerRouteImport } from './routes/tracker'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
 import { Route as DeadlockdleIndexRouteImport } from './routes/deadlockdle/index'
@@ -42,6 +43,7 @@ import { Route as FlashcardsItemUpgradesRouteImport } from './routes/flashcards/
 import { Route as FlashcardsItemsRouteImport } from './routes/flashcards/items'
 import { Route as HeroesIndexRouteImport } from './routes/heroes.index'
 import { Route as HeroesHeroNameRouteImport } from './routes/heroes.$heroName'
+import { Route as PlayersAccountIdRouteImport } from './routes/players_.$accountId'
 import { Route as StreamkitIndexRouteImport } from './routes/streamkit/index'
 import { Route as AuthPatreonCallbackRouteImport } from './routes/auth/patreon/callback'
 import { Route as StreamkitWidgetsRegionAccountIdWidgetTypeRouteImport } from './routes/streamkit/widgets/$region/$accountId/$widgetType'
@@ -136,6 +138,11 @@ const TeamBuilderRoute = TeamBuilderRouteImport.update({
   path: '/team-builder',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TrackerRoute = TrackerRouteImport.update({
+  id: '/tracker',
+  path: '/tracker',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
   id: '/blog/',
   path: '/blog/',
@@ -211,6 +218,11 @@ const HeroesHeroNameRoute = HeroesHeroNameRouteImport.update({
   path: '/$heroName',
   getParentRoute: () => HeroesRoute,
 } as any)
+const PlayersAccountIdRoute = PlayersAccountIdRouteImport.update({
+  id: '/players_/$accountId',
+  path: '/players/$accountId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StreamkitIndexRoute = StreamkitIndexRouteImport.update({
   id: '/streamkit/',
   path: '/streamkit/',
@@ -247,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
   '/team-builder': typeof TeamBuilderRoute
+  '/tracker': typeof TrackerRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/deadlockdle/guess-ability': typeof DeadlockdleGuessAbilityRoute
   '/deadlockdle/guess-hero': typeof DeadlockdleGuessHeroRoute
@@ -258,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/flashcards/item-upgrades': typeof FlashcardsItemUpgradesRoute
   '/flashcards/items': typeof FlashcardsItemsRoute
   '/heroes/$heroName': typeof HeroesHeroNameRoute
+  '/players/$accountId': typeof PlayersAccountIdRoute
   '/blog/': typeof BlogIndexRoute
   '/deadlockdle/': typeof DeadlockdleIndexRoute
   '/flashcards/': typeof FlashcardsIndexRoute
@@ -283,6 +297,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
   '/team-builder': typeof TeamBuilderRoute
+  '/tracker': typeof TrackerRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/deadlockdle/guess-ability': typeof DeadlockdleGuessAbilityRoute
   '/deadlockdle/guess-hero': typeof DeadlockdleGuessHeroRoute
@@ -294,6 +309,7 @@ export interface FileRoutesByTo {
   '/flashcards/item-upgrades': typeof FlashcardsItemUpgradesRoute
   '/flashcards/items': typeof FlashcardsItemsRoute
   '/heroes/$heroName': typeof HeroesHeroNameRoute
+  '/players/$accountId': typeof PlayersAccountIdRoute
   '/blog': typeof BlogIndexRoute
   '/deadlockdle': typeof DeadlockdleIndexRoute
   '/flashcards': typeof FlashcardsIndexRoute
@@ -322,6 +338,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
   '/team-builder': typeof TeamBuilderRoute
+  '/tracker': typeof TrackerRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/deadlockdle/guess-ability': typeof DeadlockdleGuessAbilityRoute
   '/deadlockdle/guess-hero': typeof DeadlockdleGuessHeroRoute
@@ -333,6 +350,7 @@ export interface FileRoutesById {
   '/flashcards/item-upgrades': typeof FlashcardsItemUpgradesRoute
   '/flashcards/items': typeof FlashcardsItemsRoute
   '/heroes/$heroName': typeof HeroesHeroNameRoute
+  '/players_/$accountId': typeof PlayersAccountIdRoute
   '/blog/': typeof BlogIndexRoute
   '/deadlockdle/': typeof DeadlockdleIndexRoute
   '/flashcards/': typeof FlashcardsIndexRoute
@@ -362,6 +380,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/sitemap_index.xml'
     | '/team-builder'
+    | '/tracker'
     | '/blog/$slug'
     | '/deadlockdle/guess-ability'
     | '/deadlockdle/guess-hero'
@@ -373,6 +392,7 @@ export interface FileRouteTypes {
     | '/flashcards/item-upgrades'
     | '/flashcards/items'
     | '/heroes/$heroName'
+    | '/players/$accountId'
     | '/blog/'
     | '/deadlockdle/'
     | '/flashcards/'
@@ -398,6 +418,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/sitemap_index.xml'
     | '/team-builder'
+    | '/tracker'
     | '/blog/$slug'
     | '/deadlockdle/guess-ability'
     | '/deadlockdle/guess-hero'
@@ -409,6 +430,7 @@ export interface FileRouteTypes {
     | '/flashcards/item-upgrades'
     | '/flashcards/items'
     | '/heroes/$heroName'
+    | '/players/$accountId'
     | '/blog'
     | '/deadlockdle'
     | '/flashcards'
@@ -436,6 +458,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/sitemap_index.xml'
     | '/team-builder'
+    | '/tracker'
     | '/blog/$slug'
     | '/deadlockdle/guess-ability'
     | '/deadlockdle/guess-hero'
@@ -447,6 +470,7 @@ export interface FileRouteTypes {
     | '/flashcards/item-upgrades'
     | '/flashcards/items'
     | '/heroes/$heroName'
+    | '/players_/$accountId'
     | '/blog/'
     | '/deadlockdle/'
     | '/flashcards/'
@@ -475,10 +499,12 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   Sitemap_indexDotxmlRoute: typeof Sitemap_indexDotxmlRoute
   TeamBuilderRoute: typeof TeamBuilderRoute
+  TrackerRoute: typeof TrackerRoute
   BlogSlugRoute: typeof BlogSlugRoute
   FlashcardsHeroesRoute: typeof FlashcardsHeroesRoute
   FlashcardsItemUpgradesRoute: typeof FlashcardsItemUpgradesRoute
   FlashcardsItemsRoute: typeof FlashcardsItemsRoute
+  PlayersAccountIdRoute: typeof PlayersAccountIdRoute
   BlogIndexRoute: typeof BlogIndexRoute
   FlashcardsIndexRoute: typeof FlashcardsIndexRoute
   StreamkitIndexRoute: typeof StreamkitIndexRoute
@@ -614,6 +640,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeamBuilderRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tracker': {
+      id: '/tracker'
+      path: '/tracker'
+      fullPath: '/tracker'
+      preLoaderRoute: typeof TrackerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/blog/': {
       id: '/blog/'
       path: '/blog'
@@ -719,6 +752,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HeroesHeroNameRouteImport
       parentRoute: typeof HeroesRoute
     }
+    '/players_/$accountId': {
+      id: '/players_/$accountId'
+      path: '/players/$accountId'
+      fullPath: '/players/$accountId'
+      preLoaderRoute: typeof PlayersAccountIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/streamkit/': {
       id: '/streamkit/'
       path: '/streamkit'
@@ -799,10 +839,12 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   Sitemap_indexDotxmlRoute: Sitemap_indexDotxmlRoute,
   TeamBuilderRoute: TeamBuilderRoute,
+  TrackerRoute: TrackerRoute,
   BlogSlugRoute: BlogSlugRoute,
   FlashcardsHeroesRoute: FlashcardsHeroesRoute,
   FlashcardsItemUpgradesRoute: FlashcardsItemUpgradesRoute,
   FlashcardsItemsRoute: FlashcardsItemsRoute,
+  PlayersAccountIdRoute: PlayersAccountIdRoute,
   BlogIndexRoute: BlogIndexRoute,
   FlashcardsIndexRoute: FlashcardsIndexRoute,
   StreamkitIndexRoute: StreamkitIndexRoute,

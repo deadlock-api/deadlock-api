@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { isAxiosError } from "axios";
 import { AlertCircle, AlertTriangle, CheckCircle, Clock, ExternalLink, RefreshCw, XCircle } from "lucide-react";
 import { useState } from "react";
@@ -200,7 +201,16 @@ function AccountRow({
 
   return (
     <TableRow>
-      <TableCell className="font-mono">{account.steam_id3}</TableCell>
+      <TableCell className="font-mono">
+        <Link
+          to="/players/$accountId"
+          params={{ accountId: String(account.steam_id3) }}
+          className="hover:text-primary hover:underline"
+          title="Open player tracker"
+        >
+          {account.steam_id3}
+        </Link>
+      </TableCell>
       <TableCell className="font-mono text-muted-foreground">
         <a
           href={`https://steamcommunity.com/profiles/${steamId3ToSteamId64(account.steam_id3)}`}
