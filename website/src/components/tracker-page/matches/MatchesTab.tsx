@@ -57,7 +57,9 @@ export function MatchesTab({
             <TableHead>Mode</TableHead>
             <TableHead className="text-right">K / D / A</TableHead>
             <TableHead className="text-right">Souls</TableHead>
-            <TableHead className="text-right">LH / DN</TableHead>
+            <TableHead className="text-right" title="Last hits / Denies">
+              LH / DN
+            </TableHead>
             <TableHead className="text-right">Duration</TableHead>
             <TableHead className="text-right">Rank</TableHead>
             <TableHead className="text-right">Played</TableHead>
