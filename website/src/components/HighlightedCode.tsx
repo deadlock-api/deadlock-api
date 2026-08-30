@@ -1,6 +1,8 @@
 import hljs from "highlight.js/lib/core";
 import bash from "highlight.js/lib/languages/bash";
+import ini from "highlight.js/lib/languages/ini";
 import javascript from "highlight.js/lib/languages/javascript";
+import json from "highlight.js/lib/languages/json";
 import python from "highlight.js/lib/languages/python";
 import sql from "highlight.js/lib/languages/sql";
 import { useMemo } from "react";
@@ -11,8 +13,10 @@ hljs.registerLanguage("bash", bash);
 hljs.registerLanguage("python", python);
 hljs.registerLanguage("javascript", javascript);
 hljs.registerLanguage("sql", sql);
+hljs.registerLanguage("json", json);
+hljs.registerLanguage("toml", ini);
 
-export type HighlightLanguage = "bash" | "python" | "javascript" | "sql";
+export type HighlightLanguage = "bash" | "python" | "javascript" | "sql" | "json" | "toml";
 
 export function HighlightedCode({
   code,

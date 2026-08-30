@@ -7,6 +7,7 @@ import { Suspense, lazy, useCallback, useMemo, useState } from "react";
 import { CopyButton } from "~/components/copy-button";
 import { ColumnMatchBadge } from "~/components/data-dumps/ColumnMatchBadge";
 import { FileRow } from "~/components/data-dumps/FileRow";
+import { McpInstructions } from "~/components/data-dumps/McpSection";
 import { ShardGroupRow } from "~/components/data-dumps/ShardGroupRow";
 import {
   SQL_PLAYGROUND_DEFAULT_QUERY,
@@ -46,7 +47,7 @@ export const Route = createFileRoute("/data-dumps")({
     seo({
       title: "Database Dumps | Deadlock API",
       description:
-        "Browse, query and download daily database snapshots in Parquet and SQL format for offline analysis or research.",
+        "Query daily database snapshots through a read-only MCP server, or browse and download them in Parquet and SQL format for offline analysis or research.",
       path: "/data-dumps",
     }),
 });
@@ -403,8 +404,8 @@ function DataDumps() {
       <section className="space-y-2 text-center">
         <h1 className="text-3xl font-bold tracking-tight">Database Dumps</h1>
         <p className="mx-auto max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Browse, query and download daily snapshots of the Deadlock API database. Files are provided as Parquet (data)
-          and SQL (schema) for offline analysis, research, or community projects.
+          Query daily snapshots of the Deadlock API database from your AI assistant via MCP, or browse and download them
+          as Parquet (data) and SQL (schema) for offline analysis, research, or community projects.
         </p>
       </section>
 
@@ -805,13 +806,34 @@ if __name__ == "__main__":
         # Put your queries here
         # e.g. con.sql("SELECT count(*) FROM heroes").show()`;
 
+function DuckDbInstructions() {
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <p className="text-sm">
+          <span className="font-medium">DuckLake catalog.</span> Attach the pre-built catalog and every table is ready
+          to query; no listing or view setup needed.
+        </p>
+        <CodeBlock code={DUCKLAKE_EXAMPLE} language="python" />
+      </div>
+      <div className="space-y-2">
+        <p className="text-sm">
+          <span className="font-medium">Raw parquet files.</span> List the bucket yourself and register one view per
+          table, useful if you want full control over which files are read.
+        </p>
+        <CodeBlock code={DUCKDB_EXAMPLE} language="python" />
+      </div>
+    </div>
+  );
+}
+
 const STATIC_TABS = [
-  { id: "ducklake", label: "DuckLake (recommended)", language: "python", code: DUCKLAKE_EXAMPLE },
+  { id: "mcp", label: "MCP Server (AI assistants)", language: "bash", code: "" },
+  { id: "duckdb", label: "DuckDB", language: "python", code: "" },
   { id: "aws-cli", label: "AWS CLI", language: "bash", code: AWS_CLI_EXAMPLE },
   { id: "mc", label: "MinIO Client (mc)", language: "bash", code: MC_CLI_EXAMPLE },
   { id: "python", label: "Python", language: "python", code: PYTHON_EXAMPLE },
   { id: "js", label: "JavaScript", language: "javascript", code: JS_EXAMPLE },
-  { id: "duckdb", label: "DuckDB (raw parquet)", language: "python", code: DUCKDB_EXAMPLE },
 ] as const;
 
 function UsageInstructions() {
@@ -827,7 +849,13 @@ function UsageInstructions() {
         </TabsList>
         {STATIC_TABS.map((t) => (
           <TabsContent key={t.id} value={t.id} className="mt-2">
-            <CodeBlock code={t.code} language={t.language} />
+            {t.id === "mcp" ? (
+              <McpInstructions />
+            ) : t.id === "duckdb" ? (
+              <DuckDbInstructions />
+            ) : (
+              <CodeBlock code={t.code} language={t.language} />
+            )}
           </TabsContent>
         ))}
       </Tabs>
