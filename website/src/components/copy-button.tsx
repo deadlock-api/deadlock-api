@@ -12,11 +12,16 @@ type CopyButtonProps = Omit<ComponentProps<typeof Button>, "onClick"> & {
 export function CopyButton({ text, iconOnly, children = "Copy", className, variant, size, ...props }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [text]);
+  const handleCopy = useCallback(
+    (event: React.MouseEvent) => {
+      // Copying must not also activate a clickable ancestor, like an expandable table row.
+      event.stopPropagation();
+      navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    },
+    [text],
+  );
 
   if (iconOnly) {
     return (

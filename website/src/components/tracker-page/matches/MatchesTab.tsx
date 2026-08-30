@@ -5,6 +5,7 @@ import { ChevronDown, UsersRound } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
+import { CopyButton } from "~/components/copy-button";
 import { HeroImage } from "~/components/HeroImage";
 import { PaginationControls } from "~/components/PaginationControls";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -64,6 +65,7 @@ export function MatchesTab({
             <TableHead className="text-right">Duration</TableHead>
             <TableHead className="text-right">Rank</TableHead>
             <TableHead className="text-right">Played</TableHead>
+            <TableHead className="text-right">Match ID</TableHead>
             <TableHead className="w-8" />
             <TableHead className="w-8" />
           </TableRow>
@@ -131,6 +133,12 @@ export function MatchesTab({
                     </Tooltip>
                   </TableCell>
                   <TableCell>
+                    <div className="flex items-center justify-end gap-0.5 text-muted-foreground tabular-nums">
+                      {entry.match_id}
+                      <CopyButton text={String(entry.match_id)} iconOnly title="Copy match ID" className="size-6" />
+                    </div>
+                  </TableCell>
+                  <TableCell>
                     <Link
                       to="/team-builder"
                       search={{ match: entry.match_id }}
@@ -149,7 +157,7 @@ export function MatchesTab({
                 </TableRow>
                 {expanded && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={11} className="bg-muted/30 p-4">
+                    <TableCell colSpan={12} className="bg-muted/30 p-4">
                       <MatchRowDetails matchId={entry.match_id} accountId={accountId} ranks={ranks} />
                     </TableCell>
                   </TableRow>
@@ -159,7 +167,7 @@ export function MatchesTab({
           })}
           {paginatedEntries.length === 0 && (
             <TableRow>
-              <TableCell colSpan={11} className="py-8 text-center text-muted-foreground">
+              <TableCell colSpan={12} className="py-8 text-center text-muted-foreground">
                 No matches found
               </TableCell>
             </TableRow>
