@@ -6,13 +6,17 @@ import type {
   LaneSoulCurve,
 } from "deadlock_api_client";
 
-import { LANES, type LaneInfo, laneOfSlot, slotsOfLane, TEAM_SIZE } from "./lanes";
+import type { GameMode } from "~/components/selectors/GameModeSelector";
+
+import { type LaneInfo, laneOfSlot, lanesOf, slotsOfLane, TEAM_SIZE } from "./lanes";
 
 /**
- * A draft is `TEAM_SIZE` ordered slots per side; `null` is an empty slot. The slot index carries
- * the lane assignment (see `laneOfSlot`), so no separate lane mapping has to be tracked.
+ * A draft is `TEAM_SIZE[gameMode]` ordered slots per side; `null` is an empty slot. In normal mode
+ * the slot index carries the lane assignment (see `laneOfSlot`), so no separate lane mapping has to
+ * be tracked; Street Brawl has no lanes, so there the order means nothing.
  */
 export interface Draft {
+  gameMode: GameMode;
   ally: (number | null)[];
   enemy: (number | null)[];
 }
@@ -54,28 +58,42 @@ const sigmoid = (z: number) => 1 / (1 + Math.exp(-z));
 const shrunk = (sample: Sample | undefined, prior: number, k: number) =>
   ((sample?.wins ?? 0) + k * prior) / ((sample?.matches ?? 0) + k);
 
+export interface DraftModel {
+  /** Shrinkage per sample kind, in term order: hero, pair, counter, then same-lane duel where the mode has lanes. */
+  shrinkage: readonly number[];
+  /** Applied in order: each term drops what the earlier ones already account for. */
+  residual: readonly (readonly number[])[];
+  weights: readonly number[];
+  intercept: number;
+}
+
 /**
- * Fitted offline against 2.95M matches, on stats windows of 14, 30 and 56 days at once so the
- * shrinkage holds whichever range the filter asks for.
+ * Fitted by `tools/analysis/team-builder`, one model per game mode, on stats windows of 14, 30 and
+ * 56 days at once so the shrinkage holds whichever range the filter asks for.
  *
  * Each term is a residual in log-odds — what it explains that the terms before it do not — which is
- * what keeps every weight positive instead of large opposing numbers cancelling out.
+ * what keeps every weight positive instead of large opposing numbers cancelling out. Street Brawl
+ * has no lanes, so its model stops at the counter term.
  */
-const MODEL = {
-  kHero: 42.644182237950695,
-  kPair: 1.4857045045494808,
-  kCounter: 10.683978070496247,
-  kLaneDuel: 84.84019781031493,
-  /** Applied in order: each term drops what the earlier ones already account for. */
-  residual: [
-    [],
-    [-0.055780428039267506],
-    [0.02708740701388334, -0.046651247349320066],
-    [-0.9789111182741357, -0.11369824594208155, -1.1947748577064772],
-  ] as readonly (readonly number[])[],
-  weights: [5.938602463232448, 12.739331784185998, 33.487383014478006, 3.3804476974274964] as const,
-  intercept: 0.0016751056557140426,
-} as const;
+const MODELS: Record<GameMode, DraftModel> = {
+  normal: {
+    shrinkage: [2598.6579886700933, 358.4017260781841, 9.892310322931293, 2273.8132480986283],
+    residual: [
+      [],
+      [-0.05674818459652491],
+      [0.015431293083736548, -0.055119163030623794],
+      [-0.8891944972609316, -0.12380371682980615, -0.7425754038708353],
+    ],
+    weights: [6.349178219853301, 16.146715619589376, 36.58001804439864, 2.546237216569832],
+    intercept: 0.006113147717260851,
+  },
+  street_brawl: {
+    shrinkage: [184.91084756299617, 2.16716063533213, 3.3008231408431983],
+    residual: [[], [-0.06805400659962195], [0.01647961217737887, -0.005413604374195742]],
+    weights: [4.055949548037143, 1.959517101974825, 7.289563897774962],
+    intercept: 0.005646332953986097,
+  },
+};
 
 /** Win-rate points per unit of log-odds at an even match — the slope of the logistic at 50%. */
 const POINTS_PER_LOG_ODDS = 25;
@@ -129,8 +147,10 @@ export class StatsIndex {
   /** Summed over all heroes, wins and matches are 6n and 12n whichever side won, so this is exact. */
   readonly baseRate = 0.5;
   readonly hasData: boolean = false;
+  readonly model: DraftModel;
 
   constructor(
+    gameMode: GameMode,
     heroStats: AnalyticsHeroStats[] = [],
     synergies: HeroSynergyStats[] = [],
     counters: HeroCounterStats[] = [],
@@ -140,6 +160,7 @@ export class StatsIndex {
     const indexCounters = (rows: HeroCounterStats[], into: Map<string, Sample>) => {
       for (const s of rows) into.set(`${s.hero_id}:${s.enemy_hero_id}`, { wins: s.wins, matches: s.matches_played });
     };
+    this.model = MODELS[gameMode];
     indexCounters(counters, this.counters);
     indexCounters(laneCounters, this.laneCounters);
 
@@ -163,7 +184,7 @@ export class StatsIndex {
 
   /** Every other term is measured against this, so hero strength is never counted twice. */
   heroEdge(heroId: number): number {
-    return logit(shrunk(this.hero.get(heroId), this.baseRate, MODEL.kHero)) - logit(this.baseRate);
+    return logit(shrunk(this.hero.get(heroId), this.baseRate, this.model.shrinkage[0])) - logit(this.baseRate);
   }
 
   /**
@@ -171,18 +192,19 @@ export class StatsIndex {
    * rate carrying both contributions, so averaging removes only half and leaves the rest in here.
    */
   synergyEdge(a: number, b: number): number {
-    const pair = logit(shrunk(this.pairSample(a, b), this.baseRate, MODEL.kPair)) - logit(this.baseRate);
+    const pair = logit(shrunk(this.pairSample(a, b), this.baseRate, this.model.shrinkage[1])) - logit(this.baseRate);
     return pair - (this.heroEdge(a) + this.heroEdge(b));
   }
 
   /** Worth of the matchup once *both* heroes' own strength is taken out. */
   counterMatchupEdge(hero: number, enemy: number): number {
-    const cell = logit(shrunk(this.counterSample(hero, enemy), this.baseRate, MODEL.kCounter)) - logit(this.baseRate);
+    const cell =
+      logit(shrunk(this.counterSample(hero, enemy), this.baseRate, this.model.shrinkage[2])) - logit(this.baseRate);
     return cell - (this.heroEdge(hero) - this.heroEdge(enemy));
   }
 
   laneDuelEdge(hero: number, enemy: number): number {
-    return logit(shrunk(this.laneCounterSample(hero, enemy), 0.5, MODEL.kLaneDuel));
+    return logit(shrunk(this.laneCounterSample(hero, enemy), 0.5, this.model.shrinkage[3]));
   }
 
   heroSample(heroId: number): Sample | undefined {
@@ -313,14 +335,14 @@ export interface DraftAnalysis {
  * A shrunk rate on `n` matches behaves like one measured over `n + k`, so its log-odds variance is
  * about `4/(n + k)` near an even split; averaging divides that by the cell count squared.
  */
-function predictionMargin(termSamples: number[][], shrinkage: number[], logOdds: number): number | undefined {
+function predictionMargin(termSamples: number[][], model: DraftModel, logOdds: number): number | undefined {
   let variance = 0;
   let known = false;
   termSamples.forEach((samples, i) => {
     if (samples.length === 0) return;
     known = true;
-    const cellVariance = samples.reduce((sum, n) => sum + 4 / (n + shrinkage[i]), 0) / samples.length ** 2;
-    variance += MODEL.weights[i] ** 2 * cellVariance;
+    const cellVariance = samples.reduce((sum, n) => sum + 4 / (n + model.shrinkage[i]), 0) / samples.length ** 2;
+    variance += model.weights[i] ** 2 * cellVariance;
   });
   if (!known) return undefined;
   const p = sigmoid(logOdds);
@@ -350,6 +372,7 @@ function draftTerms(draft: Draft, index: StatsIndex) {
   // Only the per-side halves already computed here: this runs once per candidate in the swap
   // search, so nothing is derived for the breakdown panel that the prediction does not need.
   return {
+    hasLanes: hasLanes(draft),
     solo,
     synergy,
     counters,
@@ -362,29 +385,35 @@ function draftTerms(draft: Draft, index: StatsIndex) {
   };
 }
 
-/** Each term with its overlap with the earlier ones removed. */
-function residualTerms(terms: ReturnType<typeof draftTerms>): number[] {
-  const raw = [terms.solo, terms.synergy, terms.counters, terms.lanes];
+const hasLanes = (draft: Draft) => lanesOf(draft.gameMode).length > 0;
+
+/**
+ * Each term with its overlap with the earlier ones removed. Without lanes the fourth term is left
+ * out altogether rather than scored at zero: its residual still subtracts a share of the first
+ * three, so a zero lane edge would have shifted the prediction on a term that does not exist.
+ */
+function residualTerms(terms: ReturnType<typeof draftTerms>, model: DraftModel): number[] {
+  const raw = [terms.solo, terms.synergy, terms.counters, ...(terms.hasLanes ? [terms.lanes] : [])];
   const out: number[] = [];
   raw.forEach((value, i) => {
-    out.push(MODEL.residual[i].reduce((sum, coefficient, j) => sum + coefficient * out[j], value));
+    out.push(model.residual[i].reduce((sum, coefficient, j) => sum + coefficient * out[j], value));
   });
   return out;
 }
 
 /** Log-odds the ally side wins. */
-function draftLogOdds(terms: ReturnType<typeof draftTerms>): number {
-  return residualTerms(terms).reduce((sum, value, i) => sum + MODEL.weights[i] * value, MODEL.intercept);
+function draftLogOdds(terms: ReturnType<typeof draftTerms>, model: DraftModel): number {
+  return residualTerms(terms, model).reduce((sum, value, i) => sum + model.weights[i] * value, model.intercept);
 }
 
-function predictedFrom(terms: ReturnType<typeof draftTerms>) {
-  return terms.empty ? undefined : 100 * sigmoid(draftLogOdds(terms));
+function predictedFrom(terms: ReturnType<typeof draftTerms>, model: DraftModel) {
+  return terms.empty ? undefined : 100 * sigmoid(draftLogOdds(terms, model));
 }
 
 /** Predicted ally win rate for a draft, in percent. */
 function predictDraft(draft: Draft, index: StatsIndex): number | undefined {
   if (!index.hasData) return undefined;
-  return predictedFrom(draftTerms(draft, index));
+  return predictedFrom(draftTerms(draft, index), index.model);
 }
 
 function pairRows(index: StatsIndex, heroes: number[]): PairRow[] {
@@ -445,7 +474,7 @@ function duoOf(side: (number | null)[], laneIndex: number): number[] {
  * specific two against a specific two holds only a handful of games and earned no weight in the fit.
  */
 function laneDuelEdges(draft: Draft, index: StatsIndex): (number | undefined)[] {
-  return LANES.map((_, laneIndex) => {
+  return lanesOf(draft.gameMode).map((_, laneIndex) => {
     const ally = duoOf(draft.ally, laneIndex);
     const enemy = duoOf(draft.enemy, laneIndex);
     return mean(ally.flatMap((hero) => enemy.map((enemyHero) => index.laneDuelEdge(hero, enemyHero))));
@@ -453,7 +482,7 @@ function laneDuelEdges(draft: Draft, index: StatsIndex): (number | undefined)[] 
 }
 
 export function laneRows(draft: Draft, index: StatsIndex): LaneRow[] {
-  return LANES.map((lane, laneIndex) => {
+  return lanesOf(draft.gameMode).map((lane, laneIndex) => {
     const ally = duoOf(draft.ally, laneIndex);
     const enemy = duoOf(draft.enemy, laneIndex);
     const complete = ally.length === 2 && enemy.length === 2;
@@ -517,7 +546,8 @@ export function analyzeDraft(draft: Draft, index: StatsIndex): DraftAnalysis {
     }),
   );
   const terms = draftTerms(draft, index);
-  const residual = residualTerms(terms);
+  const { model } = index;
+  const residual = residualTerms(terms, model);
 
   const minOf = (values: number[]) => (values.length ? Math.min(...values) : 0);
   const pairMatches = [...allyPairs, ...enemyPairs].map((p) => p.matches);
@@ -527,9 +557,9 @@ export function analyzeDraft(draft: Draft, index: StatsIndex): DraftAnalysis {
 
   // Read off a fixed slope rather than the draft's own, so the four rows stay on one scale
   // instead of shrinking together as the prediction gets lopsided.
-  const points = (value: number, i: number) => POINTS_PER_LOG_ODDS * MODEL.weights[i] * value;
+  const points = (value: number, i: number) => POINTS_PER_LOG_ODDS * model.weights[i] * value;
   const half = (value: number | undefined, i: number) =>
-    value === undefined ? undefined : POINTS_PER_LOG_ODDS * MODEL.weights[i] * value;
+    value === undefined ? undefined : POINTS_PER_LOG_ODDS * model.weights[i] * value;
 
   const contributions: Contribution[] = [
     {
@@ -557,24 +587,28 @@ export function analyzeDraft(draft: Draft, index: StatsIndex): DraftAnalysis {
       enemy: -points(residual[2], 2),
       matches: minOf(counterMatches),
     },
-    {
+  ];
+  if (terms.hasLanes) {
+    contributions.push({
       key: "lanes",
       label: "Lane matchups",
       value: points(residual[3], 3),
       ally: points(residual[3], 3),
       enemy: -points(residual[3], 3),
       matches: minOf(duelMatches),
-    },
-  ];
+    });
+  }
 
   return {
     allyHeroes,
     enemyHeroes,
-    predicted: index.hasData ? predictedFrom(terms) : undefined,
+    predicted: index.hasData ? predictedFrom(terms, model) : undefined,
     margin: predictionMargin(
-      [heroMatches, pairMatches, counterMatches, duelMatches],
-      [MODEL.kHero, MODEL.kPair, MODEL.kCounter, MODEL.kLaneDuel],
-      draftLogOdds(terms),
+      terms.hasLanes
+        ? [heroMatches, pairMatches, counterMatches, duelMatches]
+        : [heroMatches, pairMatches, counterMatches],
+      model,
+      draftLogOdds(terms, model),
     ),
     contributions,
     allyPairs,
@@ -648,10 +682,11 @@ export function recommendPicks(draft: Draft, index: StatsIndex, side: Side, cand
       const solo = index.soloEdge(heroId);
       const sample = index.heroSample(heroId);
       // Weighted like the prediction, so this order agrees with the gains the swap chips quote.
+      const { weights } = index.model;
       const score =
-        MODEL.weights[0] * (index.heroEdge(heroId) * POINTS_PER_LOG_ODDS) +
-        MODEL.weights[1] * (synergy ?? 0) +
-        MODEL.weights[2] * (counter ?? 0);
+        weights[0] * (index.heroEdge(heroId) * POINTS_PER_LOG_ODDS) +
+        weights[1] * (synergy ?? 0) +
+        weights[2] * (counter ?? 0);
       return {
         heroId,
         synergy,
@@ -695,7 +730,7 @@ function searchSwaps(draft: Draft, index: StatsIndex, side: Side, candidates: nu
 
   // One scratch draft for the whole search: every candidate overwrites the same slot and the
   // original hero is put back before moving on, so nothing here is allocated per candidate.
-  const hypothetical: Draft = { ally: [...draft.ally], enemy: [...draft.enemy] };
+  const hypothetical: Draft = { ...draft, ally: [...draft.ally], enemy: [...draft.enemy] };
 
   const found: Swap[] = [];
   draft[side].forEach((out, slot) => {
@@ -741,9 +776,10 @@ export interface LaneReassignment {
  * the 90 distinct lane splits rather than all 6! = 720 orderings, and still misses nothing.
  */
 export function suggestLaneAssignment(draft: Draft, index: StatsIndex, side: Side): LaneReassignment | undefined {
+  const lanes = lanesOf(draft.gameMode);
   const current = draft[side];
   const heroes = filled(current);
-  if (heroes.length < TEAM_SIZE) return undefined;
+  if (lanes.length === 0 || heroes.length < TEAM_SIZE[draft.gameMode]) return undefined;
 
   const opposing = draft[side === "ally" ? "enemy" : "ally"];
   // The opposing side is fixed for the whole search, so a lane's edge depends only on which two of
@@ -754,13 +790,13 @@ export function suggestLaneAssignment(draft: Draft, index: StatsIndex, side: Sid
     if (!cache.has(key)) {
       const other = duoOf(opposing, laneIndex);
       const [ally, enemy] = side === "ally" ? [duo, other] : [other, duo];
-      cache.set(key, toPoints(laneEstimate(index, LANES[laneIndex].id, ally, enemy).winRate));
+      cache.set(key, toPoints(laneEstimate(index, lanes[laneIndex].id, ally, enemy).winRate));
     }
     return cache.get(key);
   };
 
   const laneEdgeOf = (slots: (number | null)[]) =>
-    mean(LANES.map((_, laneIndex) => edgeOfLane(laneIndex, duoOf(slots, laneIndex))));
+    mean(lanes.map((_, laneIndex) => edgeOfLane(laneIndex, duoOf(slots, laneIndex))));
 
   const baseline = laneEdgeOf(current);
   if (baseline === undefined) return undefined;

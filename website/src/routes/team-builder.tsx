@@ -8,7 +8,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Filter } from "~/components/Filter";
 import { formatDateRange } from "~/components/Filter/utils";
 import { combineQueryStates } from "~/components/QueryRenderer";
-import { MATCH_MODE_LABELS, parseAsMatchMode } from "~/components/selectors/MatchModeSelector";
+import { type Mode, MODE_CONFIG } from "~/components/selectors/ModeSelector";
 import { CounterMatrix } from "~/components/team-builder/CounterMatrix";
 import { DetailDialog } from "~/components/team-builder/DetailDialog";
 import { DraftBoard } from "~/components/team-builder/DraftBoard";
@@ -23,6 +23,7 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useDraft } from "~/hooks/useDraft";
+import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { seo } from "~/lib/seo";
 import {
@@ -37,13 +38,14 @@ import {
   type Swap,
   suggestLaneAssignment,
 } from "~/lib/team-builder/analysis";
-import { TEAM_SIZE } from "~/lib/team-builder/lanes";
+import { lanesOf, TEAM_SIZE } from "~/lib/team-builder/lanes";
 import { filterPlayableHeroes, heroesQueryOptions } from "~/queries/asset-queries";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { laneMatchupStatsQueryOptions } from "~/queries/lane-matchup-query";
 import { laneSoulCurveQueryOptions } from "~/queries/lane-soul-curve-query";
 import {
   type ImportedMatch,
+  type MatchMetadata,
   matchMetadataQueryOptions,
   parseImportedMatch,
   recentMatchesQueryOptions,
@@ -57,9 +59,9 @@ export const Route = createFileRoute("/team-builder")({
   component: TeamBuilderPage,
   head: () =>
     seo({
-      title: "Deadlock Team Builder: Draft a 6v6 and Read the Win Rate",
+      title: "Deadlock Team Builder: Draft a 6v6 or Street Brawl 4v4 and Read the Win Rate",
       description:
-        "Draft a full Deadlock 6v6, assign the three lanes, and see the predicted win rate broken down into lane matchups, pair synergy, counter picks and solo hero strength.",
+        "Draft a full Deadlock 6v6 with its three lanes, or a 4v4 Street Brawl, and see the predicted win rate broken down into lane matchups, pair synergy, counter picks and solo hero strength.",
       path: "/team-builder",
     }),
 });
@@ -74,10 +76,20 @@ function TeamBuilderPage() {
     void setImportedMatchId(null);
     void setSidesSwapped(null);
   }, [setImportedMatchId, setSidesSwapped]);
-  const controls = useDraft(forgetImport);
+  const { mode, setMode, gameMode, matchMode } = useModeState();
+  const controls = useDraft(gameMode, forgetImport);
   const { draft, setSlot, setSide, clearAll, nextOpenSlot } = controls;
+  const hasLanes = lanesOf(gameMode).length > 0;
 
-  const [matchMode, setMatchMode] = useQueryState("match_mode", parseAsMatchMode);
+  // A 6v6 draft says nothing about a 4v4 and the other way round, so crossing between the two game
+  // modes starts the board over. Ranked and unranked share a board.
+  const changeMode = (next: Mode) => {
+    if (MODE_CONFIG[next].gameMode !== gameMode) {
+      forgetImport();
+      clearAll();
+    }
+    setMode(next);
+  };
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(DEFAULT_MIN_RANK));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(DEFAULT_MAX_RANK));
   const { startDate, endDate, handleDateChange } = useDateRangeState();
@@ -88,15 +100,14 @@ function TeamBuilderPage() {
   const [importError, setImportError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
 
-  // Street Brawl is deliberately not offered: it is four a side with no lanes, so nothing on this
-  // page would mean anything there.
+  const supportsRank = MODE_CONFIG[mode].supportsRank;
   const sharedFilters = {
-    gameMode: "normal" as const,
+    gameMode,
     matchMode,
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
-    minAverageBadge: minRankId === 0 ? undefined : minRankId,
-    maxAverageBadge: maxRankId >= DEFAULT_MAX_RANK ? undefined : maxRankId,
+    minAverageBadge: !supportsRank || minRankId === 0 ? undefined : minRankId,
+    maxAverageBadge: !supportsRank || maxRankId >= DEFAULT_MAX_RANK ? undefined : maxRankId,
   };
 
   // Synergy and counters are read lane-agnostically; the lane endpoint is what supplies the
@@ -131,13 +142,23 @@ function TeamBuilderPage() {
     enemyHeroIds: [...enemyHeroes].sort((a, b) => a - b),
     minMatches: 1,
   };
-  const laneQuery = useQuery(laneMatchupStatsQueryOptions(laneParams));
-  const soulCurveQuery = useQuery(laneSoulCurveQueryOptions(laneParams));
+  // Both lane endpoints are meaningless without lanes, so Street Brawl never asks for them.
+  const laneMatchupOptions = laneMatchupStatsQueryOptions(laneParams);
+  const laneQuery = useQuery({ ...laneMatchupOptions, enabled: hasLanes && laneMatchupOptions.enabled });
+  const soulCurveOptions = laneSoulCurveQueryOptions(laneParams);
+  const soulCurveQuery = useQuery({ ...soulCurveOptions, enabled: hasLanes && soulCurveOptions.enabled });
 
   const index = useMemo(
     () =>
-      new StatsIndex(heroStatsQuery.data, synergyQuery.data, counterQuery.data, laneCounterQuery.data, laneQuery.data),
-    [heroStatsQuery.data, synergyQuery.data, counterQuery.data, laneCounterQuery.data, laneQuery.data],
+      new StatsIndex(
+        gameMode,
+        heroStatsQuery.data,
+        synergyQuery.data,
+        counterQuery.data,
+        laneCounterQuery.data,
+        laneQuery.data,
+      ),
+    [gameMode, heroStatsQuery.data, synergyQuery.data, counterQuery.data, laneCounterQuery.data, laneQuery.data],
   );
   const soulCurves = useMemo(() => new SoulCurves(soulCurveQuery.data), [soulCurveQuery.data]);
 
@@ -201,14 +222,23 @@ function TeamBuilderPage() {
   const incompleteLanes = analysis.lanes.filter((lane) => !lane.complete).length;
 
   const dateSummary = formatDateRange(startDate, endDate);
-  const filterSummary = `${MATCH_MODE_LABELS[matchMode]}${dateSummary ? ` · ${dateSummary}` : ""}`;
+  const filterSummary = `${MODE_CONFIG[mode].label}${dateSummary ? ` · ${dateSummary}` : ""}`;
 
   const draftFromMatch = (match: ImportedMatch) => {
     for (const side of ["ally", "enemy"] as const) {
-      const slots: (number | null)[] = Array(TEAM_SIZE).fill(null);
+      const slots: (number | null)[] = Array(TEAM_SIZE[match.gameMode]).fill(null);
       for (const player of match.players.filter((p) => p.side === side)) slots[player.slot] = player.heroId;
       setSide(side, slots);
     }
+  };
+
+  /** Puts a fetched match on the board, moving the page to that match's game mode if it is in the other one. */
+  const adoptMatch = (matchId: number, metadata: MatchMetadata) => {
+    const match = parseImportedMatch(metadata, 0);
+    if (match.gameMode !== gameMode) setMode(match.gameMode === "street_brawl" ? "street_brawl" : "normal_all");
+    void setSidesSwapped(null);
+    void setImportedMatchId(matchId);
+    draftFromMatch(match);
   };
 
   // The URL already carries the draft, so a reload restores the picks; refetching the match only
@@ -224,10 +254,7 @@ function TeamBuilderPage() {
     setImportError(null);
     setImporting(true);
     try {
-      const metadata = await queryClient.fetchQuery(matchMetadataQueryOptions(matchId));
-      void setSidesSwapped(null);
-      void setImportedMatchId(matchId);
-      draftFromMatch(parseImportedMatch(metadata, 0));
+      adoptMatch(matchId, await queryClient.fetchQuery(matchMetadataQueryOptions(matchId)));
     } catch (error) {
       // A transport failure carries a status and an unreadable message; anything the query threw
       // itself already reads as a sentence and is kept.
@@ -254,24 +281,30 @@ function TeamBuilderPage() {
   };
 
   const randomHeroes = () => {
-    const pool = [...candidates].sort(() => Math.random() - 0.5).slice(0, TEAM_SIZE * 2);
+    const teamSize = TEAM_SIZE[gameMode];
+    const pool = [...candidates].sort(() => Math.random() - 0.5).slice(0, teamSize * 2);
     forgetImport();
-    setSide("ally", pool.slice(0, TEAM_SIZE));
-    setSide("enemy", pool.slice(TEAM_SIZE));
+    setSide("ally", pool.slice(0, teamSize));
+    setSide("enemy", pool.slice(teamSize));
   };
 
-  /** Seeds the board from a recently played draft, falling back to a shuffle of the roster. */
+  /**
+   * Seeds the board from a recently played draft, falling back to a shuffle of the roster. Real
+   * matches are only drawn for normal mode: Street Brawl games are never used as a seed.
+   */
   const randomComp = async () => {
+    if (gameMode !== "normal") {
+      randomHeroes();
+      return;
+    }
     setImportError(null);
     setImporting(true);
     try {
       const matches = await queryClient.fetchQuery(recentMatchesQueryOptions);
+
       const match = matches[Math.floor(Math.random() * matches.length)];
       if (match) {
-        const metadata = await queryClient.fetchQuery(matchMetadataQueryOptions(match.match_id));
-        void setSidesSwapped(null);
-        void setImportedMatchId(match.match_id);
-        draftFromMatch(parseImportedMatch(metadata, 0));
+        adoptMatch(match.match_id, await queryClient.fetchQuery(matchMetadataQueryOptions(match.match_id)));
         return;
       }
     } catch {
@@ -298,13 +331,16 @@ function TeamBuilderPage() {
       <div className="text-center">
         <h1 className="text-3xl font-bold tracking-tight">Team Builder</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Draft a full 6v6, set the three lanes, and read the win rate that comes out of it
+          {hasLanes
+            ? "Draft a full 6v6, set the three lanes, and read the win rate that comes out of it"
+            : "Draft a full Street Brawl 4v4 and read the win rate that comes out of it"}
         </p>
       </div>
 
       <Filter.Root>
-        <Filter.MatchMode value={matchMode} onChange={setMatchMode} />
-        <Filter.RankRange
+        <Filter.ModeWithRank
+          mode={mode}
+          onModeChange={changeMode}
           minRank={minRankId}
           maxRank={maxRankId}
           onRankChange={(min, max) => {
@@ -361,8 +397,9 @@ function TeamBuilderPage() {
               <UsersRoundIcon className="size-9 text-muted-foreground/40" />
               <div className="mt-3 text-base font-semibold">Pick a hero to start</div>
               <p className="mt-1 max-w-105 text-sm text-balance text-muted-foreground">
-                Win rate, synergy and lane matchups appear as soon as two heroes share a side. Lanes are optional; the
-                team-wide numbers work without them.
+                {hasLanes
+                  ? "Win rate, synergy and lane matchups appear as soon as two heroes share a side. Lanes are optional; the team-wide numbers work without them."
+                  : "Win rate, synergy and counters appear as soon as two heroes share a side."}
               </p>
               <div className="mt-4 flex flex-wrap justify-center gap-2">
                 <Button className="gap-1.5 rounded-full" onClick={() => openNextSlot("ally")}>
@@ -382,13 +419,15 @@ function TeamBuilderPage() {
             </Panel>
           ) : (
             <>
-              <LaneCards
-                lanes={analysis.lanes}
-                index={index}
-                loading={isPending}
-                soulCurves={soulCurves}
-                curveLoading={soulCurveQuery.isFetching}
-              />
+              {hasLanes && (
+                <LaneCards
+                  lanes={analysis.lanes}
+                  index={index}
+                  loading={isPending}
+                  soulCurves={soulCurves}
+                  curveLoading={soulCurveQuery.isFetching}
+                />
+              )}
 
               {incompleteLanes > 0 && (
                 <Alert className="border-primary/25 bg-primary/[0.06] [&>svg]:text-primary">
@@ -405,6 +444,7 @@ function TeamBuilderPage() {
                   a hero column plus three numeric ones, and the sidebar takes 256px off the viewport. */}
               <div className="grid gap-3 lg:grid-cols-2 2xl:auto-rows-fr 2xl:grid-cols-3">
                 <NextPickPanel
+                  gameMode={gameMode}
                   recommendations={recommendations}
                   swaps={rankedSwaps}
                   hasOpenSlot={{ ally: nextOpenSlot("ally") !== null, enemy: nextOpenSlot("enemy") !== null }}

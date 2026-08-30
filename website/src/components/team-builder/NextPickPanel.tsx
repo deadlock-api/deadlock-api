@@ -2,9 +2,10 @@ import { ChartScatterIcon, ListIcon } from "lucide-react";
 import { useState } from "react";
 
 import { HeroName } from "~/components/HeroName";
+import type { GameMode } from "~/components/selectors/GameModeSelector";
 import type { Recommendation, Side, Swap } from "~/lib/team-builder/analysis";
 import { deltaClass, formatPoints, formatRate } from "~/lib/team-builder/format";
-import { laneOfSlot } from "~/lib/team-builder/lanes";
+import { slotLane } from "~/lib/team-builder/lanes";
 import { cn } from "~/lib/utils";
 
 import { DeltaValue } from "./DeltaBar";
@@ -28,8 +29,8 @@ const COLUMNS = "grid grid-cols-[1.25rem_minmax(5rem,1fr)_3.25rem_3.25rem_3.5rem
 /** Header and rows for the replacement view, which trades the stat columns for the outgoing hero. */
 const SWAP_COLUMNS = "grid grid-cols-[1.25rem_minmax(0,1fr)_minmax(0,1fr)_3.5rem] items-center gap-x-2 px-3";
 
-function SwapTooltip({ swap, children }: { swap: Swap; children: React.ReactNode }) {
-  const lane = laneOfSlot(swap.slot);
+function SwapTooltip({ swap, gameMode, children }: { swap: Swap; gameMode: GameMode; children: React.ReactNode }) {
+  const lane = slotLane(gameMode, swap.slot);
   return (
     <StatTooltip
       title={
@@ -40,7 +41,7 @@ function SwapTooltip({ swap, children }: { swap: Swap; children: React.ReactNode
       }
       rows={[
         { label: "Predicted win rate", value: formatPoints(swap.gain), className: deltaClass(swap.gain) },
-        { label: "Lane", value: lane.name },
+        ...(lane ? [{ label: "Lane", value: lane.name }] : []),
         { label: "Click to", value: "apply this swap" },
       ]}
     >
@@ -50,6 +51,7 @@ function SwapTooltip({ swap, children }: { swap: Swap; children: React.ReactNode
 }
 
 interface NextPickPanelProps {
+  gameMode: GameMode;
   recommendations: Record<Side, Recommendation[]>;
   /** Ranked replacements, used when the side is full and there is nothing to pick *into*. */
   swaps: Record<Side, Swap[]>;
@@ -60,6 +62,7 @@ interface NextPickPanelProps {
 }
 
 export function NextPickPanel({
+  gameMode,
   recommendations,
   swaps,
   hasOpenSlot: openSlots,
@@ -107,7 +110,7 @@ export function NextPickPanel({
               <span className="text-right">Gain</span>
             </div>
             {topSwaps.map((swap, index) => (
-              <SwapTooltip key={`${swap.slot}-${swap.in}`} swap={swap}>
+              <SwapTooltip key={`${swap.slot}-${swap.in}`} swap={swap} gameMode={gameMode}>
                 <button
                   type="button"
                   onClick={() => onApplySwap(side, swap)}

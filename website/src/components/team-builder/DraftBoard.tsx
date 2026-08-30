@@ -14,7 +14,7 @@ import {
   MAX_CONFIDENCE_PIPS,
   NO_DATA,
 } from "~/lib/team-builder/format";
-import { LANES, slotsOfLane, TEAM_NAMES } from "~/lib/team-builder/lanes";
+import { type LaneInfo, lanesOf, slotsOfLane, TEAM_NAMES, TEAM_SIZE } from "~/lib/team-builder/lanes";
 import { cn } from "~/lib/utils";
 import type { ImportedMatch } from "~/queries/match-import-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -121,48 +121,60 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
   const { margin } = analysis;
   const decimals = margin !== undefined && margin > COARSE_MARGIN ? 0 : 1;
 
+  const lanes = lanesOf(draft.gameMode);
+
+  const renderSlot = (side: Side, slot: number, lane?: LaneInfo) => (
+    <DraftSlot
+      key={`${side}-${slot}`}
+      heroId={draft[side][slot] ?? null}
+      slot={slot}
+      side={side}
+      lane={lane}
+      player={playerName(side, slot)}
+      suggestion={swaps[side].get(slot)}
+      onSwap={(heroId) => setSlot(side, slot, heroId)}
+      isDragging={dragging?.side === side && dragging.slot === slot}
+      onPick={() => onPick(side, slot)}
+      onClear={() => setSlot(side, slot, null)}
+      onDragStart={() => setDragging({ side, slot })}
+      onDragEnd={() => setDragging(null)}
+      onDropHero={(from) => {
+        moveSlot(from, { side, slot });
+        setDragging(null);
+      }}
+    />
+  );
+
   const renderSide = (side: Side) => {
     const laneSuggestion = laneSuggestions[side];
     return (
       <div className="flex min-w-0 flex-1 flex-col">
         <SideHeader side={side} badge={imported?.badges[side]} />
-        {/* One boxed group per lane: the two slots that share a box are the two heroes that share a
-          lane, which is what the slot ordering encodes. */}
-        <div className="grid grid-cols-3 gap-2">
-          {LANES.map((lane, laneIndex) => (
-            <div
-              key={lane.id}
-              className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-1.5"
-              style={{ borderTopColor: lane.color, borderTopWidth: 2 }}
-            >
-              <div className="mb-1 text-center text-[10px] font-semibold" style={{ color: lane.color }}>
-                {lane.name}
+        {lanes.length === 0 ? (
+          // No lanes to group by, so the side is one row of interchangeable slots.
+          <div className="flex items-start justify-center gap-1.5 rounded-lg border border-white/[0.07] bg-white/[0.02] p-1.5">
+            {Array.from({ length: TEAM_SIZE[draft.gameMode] }, (_, slot) => renderSlot(side, slot))}
+          </div>
+        ) : (
+          /* One boxed group per lane: the two slots that share a box are the two heroes that share a
+          lane, which is what the slot ordering encodes. */
+          <div className="grid grid-cols-3 gap-2">
+            {lanes.map((lane, laneIndex) => (
+              <div
+                key={lane.id}
+                className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-1.5"
+                style={{ borderTopColor: lane.color, borderTopWidth: 2 }}
+              >
+                <div className="mb-1 text-center text-[10px] font-semibold" style={{ color: lane.color }}>
+                  {lane.name}
+                </div>
+                <div className="flex items-start justify-center gap-1.5">
+                  {slotsOfLane(laneIndex).map((slot) => renderSlot(side, slot, lane))}
+                </div>
               </div>
-              <div className="flex items-start justify-center gap-1.5">
-                {slotsOfLane(laneIndex).map((slot) => (
-                  <DraftSlot
-                    key={`${side}-${slot}`}
-                    heroId={draft[side][slot] ?? null}
-                    slot={slot}
-                    side={side}
-                    player={playerName(side, slot)}
-                    suggestion={swaps[side].get(slot)}
-                    onSwap={(heroId) => setSlot(side, slot, heroId)}
-                    isDragging={dragging?.side === side && dragging.slot === slot}
-                    onPick={() => onPick(side, slot)}
-                    onClear={() => setSlot(side, slot, null)}
-                    onDragStart={() => setDragging({ side, slot })}
-                    onDragEnd={() => setDragging(null)}
-                    onDropHero={(from) => {
-                      moveSlot(from, { side, slot });
-                      setDragging(null);
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
         {laneSuggestion && (
           <LaneSwapBanner
             suggestion={laneSuggestion}

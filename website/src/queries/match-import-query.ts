@@ -1,9 +1,10 @@
 import { queryOptions } from "@tanstack/react-query";
 
+import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import type { Side } from "~/lib/team-builder/analysis";
-import { LANES, slotsOfLane, TEAM_SIZE } from "~/lib/team-builder/lanes";
+import { lanesOf, slotsOfLane, TEAM_SIZE } from "~/lib/team-builder/lanes";
 
 import { queryKeys } from "./query-keys";
 
@@ -15,6 +16,7 @@ export interface ImportedPlayer {
 }
 
 export interface ImportedMatch {
+  gameMode: GameMode;
   /** Average badge of the team currently shown on each side. */
   badges: { ally?: number; enemy?: number };
   players: ImportedPlayer[];
@@ -27,10 +29,13 @@ interface RawPlayer {
   assigned_lane?: number;
 }
 
-/** `game_mode` 2 is Street Brawl: four a side, no lanes, and none of the draft stats apply to it. */
-const STREET_BRAWL_GAME_MODE = 2;
+/** `game_mode` as the match endpoints number it (`ECitadelGameMode`: Normal 1, StreetBrawl 4). */
+const GAME_MODE_IDS: Record<GameMode, number> = { normal: 1, street_brawl: 4 };
 
-interface MatchMetadata {
+const gameModeOf = (id: number | undefined): GameMode =>
+  id === GAME_MODE_IDS.street_brawl ? "street_brawl" : "normal";
+
+export interface MatchMetadata {
   match_info: {
     game_mode?: number;
     average_badge_team0?: number | null;
@@ -41,10 +46,11 @@ interface MatchMetadata {
 
 /**
  * Lane assignment drives the slot, since slot position *is* the lane on the board. Players the game
- * left unassigned (`assigned_lane` 0) fall into whatever slots the lanes did not claim.
+ * left unassigned (`assigned_lane` 0, or every player in Street Brawl) fall into whatever slots the
+ * lanes did not claim.
  */
-function toSlots(players: RawPlayer[], side: Side): ImportedPlayer[] {
-  const placed: (ImportedPlayer | undefined)[] = Array(TEAM_SIZE).fill(undefined);
+function toSlots(players: RawPlayer[], side: Side, gameMode: GameMode): ImportedPlayer[] {
+  const placed: (ImportedPlayer | undefined)[] = Array(TEAM_SIZE[gameMode]).fill(undefined);
   const leftovers: RawPlayer[] = [];
 
   const place = (slot: number, player: RawPlayer) => {
@@ -52,7 +58,7 @@ function toSlots(players: RawPlayer[], side: Side): ImportedPlayer[] {
   };
 
   for (const player of players) {
-    const laneIndex = LANES.findIndex((lane) => lane.id === player.assigned_lane);
+    const laneIndex = lanesOf(gameMode).findIndex((lane) => lane.id === player.assigned_lane);
     const free = laneIndex === -1 ? undefined : slotsOfLane(laneIndex).find((s) => placed[s] === undefined);
     if (free === undefined) {
       leftovers.push(player);
@@ -76,17 +82,21 @@ export function parseImportedMatch(metadata: MatchMetadata, allyTeam: 0 | 1): Im
   const raw = (info.players ?? []).filter((p) => p.hero_id > 0);
   const enemyTeam = allyTeam === 0 ? 1 : 0;
   const badgeOf = (team: 0 | 1) => (team === 0 ? info.average_badge_team0 : info.average_badge_team1) || undefined;
+  const gameMode = gameModeOf(info.game_mode);
 
   return {
+    gameMode,
     badges: { ally: badgeOf(allyTeam), enemy: badgeOf(enemyTeam) },
     players: [
       ...toSlots(
         raw.filter((p) => p.team === allyTeam),
         "ally",
+        gameMode,
       ),
       ...toSlots(
         raw.filter((p) => p.team === enemyTeam),
         "enemy",
+        gameMode,
       ),
     ],
   };
@@ -96,17 +106,12 @@ async function fetchMatchMetadata(matchId: number): Promise<MatchMetadata> {
   const response = await api.matches_api.metadata({ matchId });
   const metadata = response.data as unknown as MatchMetadata;
   if (!metadata?.match_info?.players?.length) throw new Error(`No metadata on record for match ${matchId}`);
-  if (metadata.match_info.game_mode === STREET_BRAWL_GAME_MODE) {
-    throw new Error(
-      "That is a Street Brawl match. Team Builder models a 6v6 draft with three duo lanes, so Street Brawl cannot be analysed here.",
-    );
-  }
   return metadata;
 }
 
-/** Ranked, normal game mode: the only combination the board models a draft for. */
-const RANDOM_MATCH_MODE = 1;
-const RANDOM_GAME_MODE = 1;
+/** Ranked, normal game mode: the only combination a random comp is seeded from. `ECitadelMatchMode`: Ranked is 4. */
+const RANDOM_MATCH_MODE = 4;
+const RANDOM_GAME_MODE = GAME_MODE_IDS.normal;
 
 /** Matches fetched in the last ten minutes. The endpoint takes no filters, so modes are cut here. */
 export const recentMatchesQueryOptions = queryOptions({

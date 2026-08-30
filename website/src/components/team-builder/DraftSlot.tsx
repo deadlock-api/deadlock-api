@@ -5,7 +5,7 @@ import { Badge } from "~/components/ui/badge";
 import { useHeroById } from "~/hooks/useAssetById";
 import type { Side, Swap } from "~/lib/team-builder/analysis";
 import { formatPoints } from "~/lib/team-builder/format";
-import { laneOfSlot, TEAM_NAMES } from "~/lib/team-builder/lanes";
+import { type LaneInfo, TEAM_NAMES } from "~/lib/team-builder/lanes";
 import { cn } from "~/lib/utils";
 
 import { HeroPortrait } from "./HeroPortrait";
@@ -19,6 +19,8 @@ export interface DraftSlotProps {
   heroId: number | null;
   slot: number;
   side: Side;
+  /** The lane this slot sits in; absent in modes without lanes. */
+  lane?: LaneInfo;
   /** Steam persona of the player who picked this hero, when the draft came from a real match. */
   player?: string;
   /** Best single replacement for this slot, offered inline instead of in a separate panel. */
@@ -77,6 +79,7 @@ export function DraftSlot({
   heroId,
   slot,
   side,
+  lane,
   player,
   suggestion,
   isDragging,
@@ -116,7 +119,7 @@ export function DraftSlot({
       <button
         type="button"
         onClick={onPick}
-        aria-label={`Add hero to ${TEAM_NAMES[side]} ${laneOfSlot(slot).name} lane`}
+        aria-label={`Add hero to ${TEAM_NAMES[side]} ${lane ? `${lane.name} lane` : `slot ${slot + 1}`}`}
         {...dropTargetProps}
         className={cn(
           "mx-auto flex cursor-pointer items-center justify-center rounded-full border border-dashed",

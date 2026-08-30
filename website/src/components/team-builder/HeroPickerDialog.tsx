@@ -8,7 +8,7 @@ import { Input } from "~/components/ui/input";
 import type { Draft, Side, StatsIndex } from "~/lib/team-builder/analysis";
 import { recommendPicks } from "~/lib/team-builder/analysis";
 import { deltaClass, formatPoints, formatRate } from "~/lib/team-builder/format";
-import { laneOfSlot, TEAM_NAMES } from "~/lib/team-builder/lanes";
+import { slotLane, TEAM_NAMES } from "~/lib/team-builder/lanes";
 import { cn } from "~/lib/utils";
 
 import { DetailDialog } from "./DetailDialog";
@@ -103,8 +103,8 @@ function PickerBody({
       draft[side].forEach((heroId, slot) => {
         if (heroId === null) return;
         const own = side === target.side && slot === target.slot;
-        const team = TEAM_NAMES[side];
-        map.set(heroId, own ? "in this slot" : `${team} · ${laneOfSlot(slot).name}`);
+        const where = slotLane(draft.gameMode, slot)?.name ?? `slot ${slot + 1}`;
+        map.set(heroId, own ? "in this slot" : `${TEAM_NAMES[side]} · ${where}`);
       });
     }
     return map;
@@ -138,7 +138,7 @@ function PickerBody({
     }
   };
 
-  const lane = laneOfSlot(target.slot);
+  const lane = slotLane(draft.gameMode, target.slot);
 
   return (
     <DialogContent className="flex max-h-[80dvh] flex-col gap-0 p-0 sm:max-w-2xl" showCloseButton={false}>
@@ -157,7 +157,7 @@ function PickerBody({
           className="h-7 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
         />
         <Badge variant="outline" className="text-[11px] text-muted-foreground">
-          {TEAM_NAMES[target.side]} · {lane.name}
+          {TEAM_NAMES[target.side]} · {lane ? lane.name : `Slot ${target.slot + 1}`}
         </Badge>
       </DialogHeader>
 
