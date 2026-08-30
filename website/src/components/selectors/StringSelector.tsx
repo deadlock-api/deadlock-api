@@ -28,13 +28,13 @@ export function StringSelector({
   const isActive = defaultValue != null ? selected !== defaultValue : selected != null;
 
   return (
-    <FilterPill label={label ?? ""} value={displayValue} active={isActive} className="w-40">
+    <FilterPill label={label ?? ""} value={displayValue} active={isActive} className="w-48">
       <div className="flex flex-col">
         {allowSelectNull && (
           <button
             type="button"
             className={cn(
-              "flex cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent",
+              "flex cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-sm whitespace-nowrap hover:bg-accent",
               !selected && "font-medium",
             )}
             onClick={() => onSelect("")}
@@ -48,7 +48,7 @@ export function StringSelector({
             key={item.value}
             type="button"
             className={cn(
-              "flex cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent",
+              "flex cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-left text-sm whitespace-nowrap hover:bg-accent",
               selected === item.value && "font-medium",
             )}
             onClick={() => onSelect(item.value)}
