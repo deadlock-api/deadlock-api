@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { AnalyticsApiHeroCountersStatsRequest } from "deadlock_api_client";
 import { DicesIcon, RotateCwIcon, SearchIcon, TriangleAlertIcon, UsersRoundIcon } from "lucide-react";
 import { parseAsBoolean, parseAsInteger, useQueryState } from "nuqs";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Filter } from "~/components/Filter";
 import { formatDateRange } from "~/components/Filter/utils";
@@ -224,13 +224,24 @@ function TeamBuilderPage() {
   const dateSummary = formatDateRange(startDate, endDate);
   const filterSummary = `${MODE_CONFIG[mode].label}${dateSummary ? ` · ${dateSummary}` : ""}`;
 
-  const draftFromMatch = (match: ImportedMatch) => {
-    for (const side of ["ally", "enemy"] as const) {
-      const slots: (number | null)[] = Array(TEAM_SIZE[match.gameMode]).fill(null);
-      for (const player of match.players.filter((p) => p.side === side)) slots[player.slot] = player.heroId;
-      setSide(side, slots);
-    }
-  };
+  const draftFromMatch = useCallback(
+    (match: ImportedMatch) => {
+      for (const side of ["ally", "enemy"] as const) {
+        const slots: (number | null)[] = Array(TEAM_SIZE[match.gameMode]).fill(null);
+        for (const player of match.players.filter((p) => p.side === side)) slots[player.slot] = player.heroId;
+        setSide(side, slots);
+      }
+    },
+    [setSide],
+  );
+
+  // A link can carry `match=` alone, without the `ally`/`enemy` params a share link writes. Once
+  // the metadata arrives, an empty board is filled from it; a board that already holds picks wins.
+  useEffect(() => {
+    if (imported === null || totalPicked > 0) return;
+    if (imported.gameMode !== gameMode) setMode(imported.gameMode === "street_brawl" ? "street_brawl" : "normal_all");
+    draftFromMatch(imported);
+  }, [imported, totalPicked, gameMode, setMode, draftFromMatch]);
 
   /** Puts a fetched match on the board, moving the page to that match's game mode if it is in the other one. */
   const adoptMatch = (matchId: number, metadata: MatchMetadata) => {
