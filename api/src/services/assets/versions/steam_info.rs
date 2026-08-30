@@ -1,10 +1,7 @@
 //! `/v1/assets/steam-info` data layer — fetch + parse the per-version
 //! `steam.inf` manifest produced by the game build.
 //!
-//! The file is a flat `key=value` text document (no quoting, no nesting). The
-//! original `steam_info.json` shape served by the Python assets API is
-//! preserved verbatim, including field order, so this endpoint can swap in
-//! transparently.
+//! The file is a flat `key=value` text document (no quoting, no nesting).
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -21,8 +18,7 @@ use crate::services::assets::versions::store;
 
 /// Per-patch Steam manifest as served by the public assets API.
 ///
-/// Field order is load-bearing — it sets the JSON key order, which matches the
-/// legacy Python endpoint.
+/// Field order is load-bearing — it sets the JSON key order.
 #[derive(Debug, Serialize, Clone, ToSchema)]
 pub(crate) struct SteamInfo {
     pub client_version: u32,
@@ -35,7 +31,7 @@ pub(crate) struct SteamInfo {
     pub version_date: String,
     pub version_time: String,
     /// `version_date` + `version_time` combined into a naive ISO-8601 string
-    /// (`YYYY-MM-DDTHH:MM:SS`, no timezone) — matches the Python output.
+    /// (`YYYY-MM-DDTHH:MM:SS`, no timezone).
     pub version_datetime: String,
 }
 

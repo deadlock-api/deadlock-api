@@ -471,11 +471,9 @@ async fn build_ability_tooltip_details(
     let mut info_sections: Vec<TooltipDetailsInfoSection> = Vec::new();
     if let Some(sections) = &td.info_sections {
         for s in sections {
-            // Treat empty loc_string as absent (matches Python's truthiness check).
+            // Treat empty loc_string as absent.
             let section_loc = s.loc_string.as_deref().filter(|ls| !ls.is_empty());
-            // Drop empty sections (all fields None/empty).
-            // Matches Python's `any(s.model_dump().values())` truthiness check —
-            // empty strings/lists count as falsy.
+            // Drop empty sections (all fields None/empty); empty strings/lists count as empty.
             let has_content = section_loc.is_some()
                 || s.property_upgrade_required
                     .as_deref()
@@ -718,10 +716,8 @@ fn build_weapon_info(w: &RawWeaponInfo) -> WeaponInfo {
     };
 
     // Normalize each computed float through a JSON shortest-repr round-trip so
-    // that values match what consumers (Python's `json.dumps` -> serde_json
-    // round-trip) see. Without this, sub-ULP discrepancies appear at the JSON
-    // layer even though the in-process f64 math is identical to the Python
-    // reference implementation.
+    // that values match what consumers see after JSON serialization. Without
+    // this, sub-ULP discrepancies appear at the JSON layer.
     let normalize = |v: Option<f64>| -> Option<f64> {
         let f = v?;
         let s = serde_json::to_string(&f).ok()?;

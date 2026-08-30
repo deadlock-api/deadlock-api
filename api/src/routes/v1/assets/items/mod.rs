@@ -11,8 +11,7 @@ use crate::context::AppState;
 #[derive(OpenApi)]
 #[openapi(tags((
     name = "Items",
-    description = "Item, ability, and weapon definitions parsed from the patch's KV3 source files. \
-                   Mirrors the previous Python `/v2/items` endpoint."
+    description = "Item, ability, and weapon definitions parsed from the patch's KV3 source files."
 )))]
 struct ApiDoc;
 

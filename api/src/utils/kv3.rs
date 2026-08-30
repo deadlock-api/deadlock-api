@@ -4,8 +4,7 @@
 //! deserializing directly into any `serde::Deserialize` type. A
 //! [`parse_to_json`] helper converts to [`serde_json::Value`] when needed.
 //!
-//! Ported from the Python parser in `src/utils/kv3.py`. Behaviour mirrors that
-//! implementation: flagged values (`key:flag = value`) wrap as
+//! Flagged values (`key:flag = value`) wrap as
 //! `{"value": v, "flag": "<flag>"}` and `value = subclass: {...}` wraps as
 //! `{"subclass": {...}}`.
 
