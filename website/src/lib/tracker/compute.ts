@@ -18,17 +18,13 @@ const GAME_MODE_STREET_BRAWL = 4;
 const MATCH_MODE_UNRANKED = 1;
 const MATCH_MODE_RANKED = 4;
 
-/** `player_match_outcome`: 0 = invalid, 1 = win, 2 = loss, 3/4 = penalized, 5 = not scored. */
+/** `match_result` carries the winning team, mirroring the API's own `won()`. */
 export function isWin(entry: PlayerMatchHistoryEntry): boolean {
-  return entry.player_match_outcome === 1;
+  return entry.match_result === entry.player_team;
 }
 
 export function isLoss(entry: PlayerMatchHistoryEntry): boolean {
-  return entry.player_match_outcome === 2;
-}
-
-export function isScored(entry: PlayerMatchHistoryEntry): boolean {
-  return isWin(entry) || isLoss(entry);
+  return !isWin(entry);
 }
 
 export type ResultFilter = "all" | "win" | "loss";
@@ -175,13 +171,7 @@ export function perHeroRows(entries: PlayerMatchHistoryEntry[]): TrackerHeroRow[
 
 /** Win/loss sequence of the most recent scored matches, newest first. */
 export function recentForm(entries: PlayerMatchHistoryEntry[], count: number): ("win" | "loss")[] {
-  const form: ("win" | "loss")[] = [];
-  for (const entry of entries) {
-    if (!isScored(entry)) continue;
-    form.push(isWin(entry) ? "win" : "loss");
-    if (form.length >= count) break;
-  }
-  return form;
+  return entries.slice(0, count).map((entry) => (isWin(entry) ? "win" : "loss"));
 }
 
 export interface StreakInfo {
@@ -192,9 +182,8 @@ export interface StreakInfo {
 }
 
 export function computeStreaks(entries: PlayerMatchHistoryEntry[]): StreakInfo {
-  const scored = entries.filter(isScored);
   let current = 0;
-  for (const entry of scored) {
+  for (const entry of entries) {
     const win = isWin(entry);
     if (current === 0) current = win ? 1 : -1;
     else if (current > 0 && win) current++;
@@ -205,8 +194,8 @@ export function computeStreaks(entries: PlayerMatchHistoryEntry[]): StreakInfo {
   let longestLoss = 0;
   let run = 0;
   let runIsWin = false;
-  for (let i = scored.length - 1; i >= 0; i--) {
-    const win = isWin(scored[i]);
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const win = isWin(entries[i]);
     if (run > 0 && win === runIsWin) run++;
     else {
       run = 1;
@@ -253,27 +242,57 @@ export function rankHistoryPoints(entries: PlayerMatchHistoryEntry[]): RankHisto
     .sort((a, b) => a.time - b.time);
 }
 
+export type ActivityGranularity = "week" | "month";
+
 export interface ActivityBucket {
-  weekStartUnix: number;
+  bucketStartUnix: number;
   wins: number;
   losses: number;
   other: number;
 }
 
-export function activityByWeek(entries: PlayerMatchHistoryEntry[]): ActivityBucket[] {
-  const buckets = new Map<number, ActivityBucket>();
+export interface Activity {
+  granularity: ActivityGranularity;
+  buckets: ActivityBucket[];
+}
+
+const MAX_WEEK_BUCKETS = 30;
+
+/**
+ * Buckets matches per week, or per month once the span between the first and last match would
+ * exceed the number of week-sized bars a chart can render legibly. Empty buckets between the
+ * first and last match are filled in, so the timeline is continuous but cropped to the range
+ * that actually has matches.
+ */
+export function computeActivity(entries: PlayerMatchHistoryEntry[]): Activity {
+  if (entries.length === 0) return { granularity: "week", buckets: [] };
+  let minTime = Number.POSITIVE_INFINITY;
+  let maxTime = Number.NEGATIVE_INFINITY;
   for (const entry of entries) {
-    const weekStartUnix = day.unix(entry.start_time).startOf("week").unix();
-    let bucket = buckets.get(weekStartUnix);
-    if (!bucket) {
-      bucket = { weekStartUnix, wins: 0, losses: 0, other: 0 };
-      buckets.set(weekStartUnix, bucket);
-    }
+    minTime = Math.min(minTime, entry.start_time);
+    maxTime = Math.max(maxTime, entry.start_time);
+  }
+  const spanWeeks = (maxTime - minTime) / (7 * 24 * 3600);
+  const granularity: ActivityGranularity = spanWeeks > MAX_WEEK_BUCKETS ? "month" : "week";
+
+  const buckets = new Map<number, ActivityBucket>();
+  let cursor = day.unix(minTime).startOf(granularity);
+  const last = day.unix(maxTime).startOf(granularity);
+  while (cursor.unix() <= last.unix()) {
+    buckets.set(cursor.unix(), { bucketStartUnix: cursor.unix(), wins: 0, losses: 0, other: 0 });
+    cursor = cursor.add(1, granularity);
+  }
+  for (const entry of entries) {
+    const bucket = buckets.get(day.unix(entry.start_time).startOf(granularity).unix());
+    if (!bucket) continue;
     if (isWin(entry)) bucket.wins++;
     else if (isLoss(entry)) bucket.losses++;
     else bucket.other++;
   }
-  return Array.from(buckets.values()).sort((a, b) => a.weekStartUnix - b.weekStartUnix);
+  return {
+    granularity,
+    buckets: Array.from(buckets.values()).sort((a, b) => a.bucketStartUnix - b.bucketStartUnix),
+  };
 }
 
 export function formatMatchDuration(seconds: number): string {

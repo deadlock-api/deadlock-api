@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, UsersRound } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
@@ -63,6 +64,7 @@ export function MatchesTab({
             <TableHead className="text-right">Duration</TableHead>
             <TableHead className="text-right">Rank</TableHead>
             <TableHead className="text-right">Played</TableHead>
+            <TableHead className="w-8" />
             <TableHead className="w-8" />
           </TableRow>
         </TableHeader>
@@ -129,6 +131,17 @@ export function MatchesTab({
                     </Tooltip>
                   </TableCell>
                   <TableCell>
+                    <Link
+                      to="/team-builder"
+                      search={{ match: entry.match_id }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-muted-foreground transition-colors hover:text-foreground"
+                      title="Analyze this draft in the Team Builder"
+                    >
+                      <UsersRound className="size-4" />
+                    </Link>
+                  </TableCell>
+                  <TableCell>
                     <ChevronDown
                       className={cn("size-4 text-muted-foreground transition-transform", expanded && "rotate-180")}
                     />
@@ -136,7 +149,7 @@ export function MatchesTab({
                 </TableRow>
                 {expanded && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={10} className="bg-muted/30 p-4">
+                    <TableCell colSpan={11} className="bg-muted/30 p-4">
                       <MatchRowDetails matchId={entry.match_id} accountId={accountId} ranks={ranks} />
                     </TableCell>
                   </TableRow>
@@ -146,7 +159,7 @@ export function MatchesTab({
           })}
           {paginatedEntries.length === 0 && (
             <TableRow>
-              <TableCell colSpan={10} className="py-8 text-center text-muted-foreground">
+              <TableCell colSpan={11} className="py-8 text-center text-muted-foreground">
                 No matches found
               </TableCell>
             </TableRow>

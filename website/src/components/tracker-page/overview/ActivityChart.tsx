@@ -3,7 +3,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { day } from "~/dayjs";
-import type { ActivityBucket } from "~/lib/tracker/compute";
+import type { Activity, ActivityBucket } from "~/lib/tracker/compute";
 
 import { LOSS_COLOR, WIN_COLOR } from "../shared/colors";
 
@@ -11,12 +11,22 @@ interface ActivityDatum extends ActivityBucket {
   label: string;
 }
 
-function ActivityTooltipContent({ active, payload }: { active?: boolean; payload?: { payload: ActivityDatum }[] }) {
+function ActivityTooltipContent({
+  active,
+  payload,
+  granularity,
+}: {
+  active?: boolean;
+  payload?: { payload: ActivityDatum }[];
+  granularity: Activity["granularity"];
+}) {
   if (!active || !payload?.length) return null;
   const bucket = payload[0].payload;
   return (
     <div className="rounded-md border bg-popover px-3 py-2 text-xs shadow-md">
-      <div className="mb-1 text-muted-foreground">Week of {bucket.label}</div>
+      <div className="mb-1 text-muted-foreground">
+        {granularity === "week" ? `Week of ${bucket.label}` : bucket.label}
+      </div>
       <div className="flex items-center gap-1.5">
         <span className="h-0.5 w-3 rounded-full" style={{ backgroundColor: WIN_COLOR }} />
         <span className="font-semibold text-popover-foreground">{bucket.wins}</span>
@@ -40,10 +50,15 @@ function LegendSwatch({ color, label }: { color: string; label: string }) {
   );
 }
 
-export function ActivityChart({ buckets }: { buckets: ActivityBucket[] }) {
+export function ActivityChart({ activity }: { activity: Activity }) {
+  const { granularity, buckets } = activity;
   const data: ActivityDatum[] = useMemo(
-    () => buckets.map((bucket) => ({ ...bucket, label: day.unix(bucket.weekStartUnix).format("MMM D") })),
-    [buckets],
+    () =>
+      buckets.map((bucket) => ({
+        ...bucket,
+        label: day.unix(bucket.bucketStartUnix).format(granularity === "week" ? "MMM D" : "MMM YYYY"),
+      })),
+    [buckets, granularity],
   );
 
   return (
@@ -51,7 +66,7 @@ export function ActivityChart({ buckets }: { buckets: ActivityBucket[] }) {
       <CardHeader className="flex-row items-start justify-between space-y-0">
         <div>
           <CardTitle className="text-base">Activity</CardTitle>
-          <CardDescription>Matches per week</CardDescription>
+          <CardDescription>{granularity === "week" ? "Matches per week" : "Matches per month"}</CardDescription>
         </div>
         <div className="flex items-center gap-3">
           <LegendSwatch color={WIN_COLOR} label="Wins" />
@@ -81,7 +96,10 @@ export function ActivityChart({ buckets }: { buckets: ActivityBucket[] }) {
                 tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                 width={28}
               />
-              <Tooltip cursor={{ fill: "var(--accent)", opacity: 0.35 }} content={<ActivityTooltipContent />} />
+              <Tooltip
+                cursor={{ fill: "var(--accent)", opacity: 0.35 }}
+                content={<ActivityTooltipContent granularity={granularity} />}
+              />
               <Bar
                 dataKey="wins"
                 stackId="matches"

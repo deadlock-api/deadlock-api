@@ -8,7 +8,7 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { day } from "~/dayjs";
 import {
-  activityByWeek,
+  computeActivity,
   computeStreaks,
   formatMatchDuration,
   isWin,
@@ -65,7 +65,7 @@ export function OverviewTab({
   const streaks = useMemo(() => computeStreaks(entries), [entries]);
   const heroRows = useMemo(() => perHeroRows(entries).slice(0, 8), [entries]);
   const rankPoints = useMemo(() => rankHistoryPoints(entries), [entries]);
-  const buckets = useMemo(() => activityByWeek(entries), [entries]);
+  const activity = useMemo(() => computeActivity(entries), [entries]);
   const recentMatches = useMemo(() => entries.slice(0, 8), [entries]);
 
   return (
@@ -93,7 +93,7 @@ export function OverviewTab({
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <RankHistoryChart points={rankPoints} />
-          <ActivityChart buckets={buckets} />
+          <ActivityChart activity={activity} />
         </div>
         <div className="space-y-4">
           <Card>
