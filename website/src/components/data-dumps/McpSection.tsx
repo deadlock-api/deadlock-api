@@ -109,16 +109,22 @@ export function McpInstructions() {
 
       <div className="space-y-2">
         <p className="text-sm font-medium">Set it up in your assistant</p>
-        <Tabs defaultValue={CLIENTS[0].id}>
-          <TabsList variant="line" className="flex-wrap">
+        <Tabs defaultValue={CLIENTS[0].id} orientation="vertical" className="gap-6">
+          <TabsList variant="line" className="shrink-0">
             {CLIENTS.map((c) => (
-              <TabsTrigger key={c.id} value={c.id}>
+              <TabsTrigger
+                key={c.id}
+                value={c.id}
+                // nested inside the horizontal snippet tabs, whose group/tabs styles also match
+                // these triggers and mangle the active-line indicator — force the vertical geometry
+                className="after:inset-y-0! after:-right-1! after:left-auto! after:h-auto! after:w-0.5!"
+              >
                 {c.name}
               </TabsTrigger>
             ))}
           </TabsList>
           {CLIENTS.map((c) => (
-            <TabsContent key={c.id} value={c.id} className="mt-3">
+            <TabsContent key={c.id} value={c.id}>
               <ol className="space-y-3">
                 {c.steps.map((step, i) => (
                   <li key={step.text} className="flex gap-3">
