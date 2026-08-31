@@ -58,16 +58,29 @@ fn derived_badge(rank: &CMsgMatchPlayerRankData) -> Option<u32> {
     Some((idx / 7 + 1) * 10 + (idx % 7 + 1).min(6))
 }
 
-/// `desired_progress_change` is the uncapped intent; the GC reports what actually
-/// landed after tier floors and demotion protection. Calibration matches move
-/// progress but the GC reports no change for them.
+/// The GC (and the in-game history screen) reports `desired_progress_change` on the
+/// loss that triggers demotion protection (`initial_demotion_protection_games == 0`),
+/// even though the realised change is clamped at the tier floor; while protection
+/// games remain it reports the realised flat diff. Verified against 12,556
+/// history-fetcher rows with zero exceptions. Calibration matches move progress but
+/// the GC reports no change for them.
 fn derived_delta(rank: &CMsgMatchPlayerRankData, in_calibration: bool) -> Option<i32> {
     if in_calibration {
         return Some(0);
     }
+    if rank.initial_demotion_protection_games? == 0 {
+        return rank.desired_progress_change;
+    }
     let final_progress = i32::try_from(rank.final_flat_progress?).ok()?;
     let initial = i32::try_from(rank.initial_flat_progress?).ok()?;
     Some(final_progress - initial)
+}
+
+/// The GC only flags demotion protection while protection games remain; on the
+/// trigger loss it reports `consumed_demotion_protection` as false.
+fn derived_used_demotion_protection(rank: &CMsgMatchPlayerRankData) -> Option<bool> {
+    let consumed = rank.consumed_demotion_protection?;
+    Some(consumed && rank.initial_demotion_protection_games.unwrap_or(0) > 0)
 }
 
 impl PlayerMatchHistoryEntry {
@@ -137,7 +150,9 @@ impl PlayerMatchHistoryEntry {
             } else {
                 Some(0)
             },
-            ranked_used_demotion_protection: rank.and_then(|r| r.consumed_demotion_protection),
+            ranked_used_demotion_protection: rank
+                .as_ref()
+                .and_then(derived_used_demotion_protection),
             source: Source::MatchPlayer,
         })
     }
@@ -182,14 +197,31 @@ mod tests {
     }
 
     #[test]
-    fn delta_is_the_realised_progress_change_not_the_desired_one() {
+    fn delta_is_the_desired_change_on_the_protection_trigger_loss() {
         let r = CMsgMatchPlayerRankData {
             initial_flat_progress: Some(53_225),
             final_flat_progress: Some(53_000),
             desired_progress_change: Some(-250),
+            initial_demotion_protection_games: Some(0),
+            consumed_demotion_protection: Some(true),
             ..Default::default()
         };
-        assert_eq!(derived_delta(&r, false), Some(-225));
+        assert_eq!(derived_delta(&r, false), Some(-250));
         assert_eq!(derived_delta(&r, true), Some(0));
+        assert_eq!(derived_used_demotion_protection(&r), Some(false));
+    }
+
+    #[test]
+    fn delta_is_the_realised_progress_change_while_in_protection() {
+        let r = CMsgMatchPlayerRankData {
+            initial_flat_progress: Some(53_000),
+            final_flat_progress: Some(53_000),
+            desired_progress_change: Some(-250),
+            initial_demotion_protection_games: Some(2),
+            consumed_demotion_protection: Some(true),
+            ..Default::default()
+        };
+        assert_eq!(derived_delta(&r, false), Some(0));
+        assert_eq!(derived_used_demotion_protection(&r), Some(true));
     }
 }
