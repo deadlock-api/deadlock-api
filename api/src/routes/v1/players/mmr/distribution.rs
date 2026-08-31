@@ -113,7 +113,7 @@ fn build_mmr_distribution_query(hero_id: Option<u8>, query: &MMRDistributionQuer
     )
     GROUP BY rank
     ORDER BY rank
-    SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0
+    SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0, max_threads = 32
     "
     )
 }

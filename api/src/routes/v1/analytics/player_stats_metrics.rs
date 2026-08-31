@@ -525,7 +525,7 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
         "
     SELECT {selects}
     FROM {t_data}
-    SETTINGS log_comment = 'player_stats_metrics', apply_patch_parts = 0
+    SETTINGS log_comment = 'player_stats_metrics', apply_patch_parts = 0, max_threads = 32
     "
     )
 }

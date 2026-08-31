@@ -86,7 +86,7 @@ fn build_mmr_query_inner(
           {match_id_filter}
         GROUP BY account_id
     )
-    SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0
+    SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0, max_threads = 32
     "
     )
 }

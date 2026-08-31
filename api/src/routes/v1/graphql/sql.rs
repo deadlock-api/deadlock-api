@@ -101,7 +101,10 @@ fn references_patched_column(args: &BuildArgs<'_>) -> bool {
 /// Builds the trailing `SETTINGS` clause, appending `apply_patch_parts = 0`
 /// whenever the query touches none of the [`PATCHED_COLUMNS`].
 fn settings_clause(args: &BuildArgs<'_>) -> String {
-    let mut clause = format!("SETTINGS log_comment = '{}'", super::RATE_LIMIT_KEY);
+    let mut clause = format!(
+        "SETTINGS log_comment = '{}', max_threads = 32",
+        super::RATE_LIMIT_KEY
+    );
     if !references_patched_column(args) {
         clause.push_str(", apply_patch_parts = 0");
     }

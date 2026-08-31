@@ -294,7 +294,7 @@ WHERE true{duo_filters}
 {group_by_clause}
 {having_clause}
 ORDER BY matches_played DESC
-SETTINGS log_comment = 'lane_matchup_stats', apply_patch_parts = 0
+SETTINGS log_comment = 'lane_matchup_stats', apply_patch_parts = 0, max_threads = 32
     "
     )
 }

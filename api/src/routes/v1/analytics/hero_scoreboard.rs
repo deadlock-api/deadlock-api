@@ -153,7 +153,7 @@ FROM match_player
 GROUP BY hero_id
 {player_having}
 ORDER BY value {}
-SETTINGS log_comment = 'hero_scoreboard', apply_patch_parts = 0
+SETTINGS log_comment = 'hero_scoreboard', apply_patch_parts = 0, max_threads = 32
     ",
         query.sort_by.get_select_clause(),
         query.sort_direction,
