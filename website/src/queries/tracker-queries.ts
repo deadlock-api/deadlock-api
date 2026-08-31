@@ -9,8 +9,8 @@ import type {
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
-import type { BulkMatchMetadata } from "~/lib/build-transform";
 import { API_ORIGIN } from "~/lib/constants";
+import { graphql } from "~/lib/graphql";
 
 import { queryKeys } from "./query-keys";
 
@@ -86,15 +86,37 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
   return queryOptions({
     queryKey: queryKeys.players.matchMetadata(matchId),
     queryFn: async () => {
-      const response = await api.matches_api.bulkMetadata({
-        includeInfo: true,
-        includePlayerInfo: true,
-        includePlayerKda: true,
-        matchIds: [matchId],
-        limit: 1,
+      const { matches } = await graphql.query({
+        matches: {
+          __args: { where: { match_id: { eq: matchId } }, limit: 1 },
+          winning_team: true,
+          average_badge_team_0: true,
+          average_badge_team_1: true,
+          players: {
+            account_id: true,
+            team: true,
+            hero_id: true,
+            kills: true,
+            deaths: true,
+            assists: true,
+          },
+        },
       });
-      const matches = response.data as unknown as BulkMatchMetadata[];
-      return matches[0] ?? null;
+      const match = matches[0];
+      if (!match) return null;
+      return {
+        winning_team: match.winning_team,
+        average_badge_team0: match.average_badge_team_0,
+        average_badge_team1: match.average_badge_team_1,
+        players: (match.players ?? []).map((player) => ({
+          account_id: player.account_id ?? 0,
+          team: player.team ?? "",
+          hero_id: player.hero_id ?? 0,
+          kills: player.kills ?? 0,
+          deaths: player.deaths ?? 0,
+          assists: player.assists ?? 0,
+        })),
+      };
     },
     staleTime: CACHE_DURATIONS.FOREVER,
   });

@@ -81,6 +81,9 @@ importers:
       deadlock_api_client:
         specifier: github:deadlock-api/openapi-clients#path:/typescript
         version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/e47748042ee7312f97ce869cc35741f0c9be0281#path:/typescript
+      deadlock_api_graphql_client:
+        specifier: github:deadlock-api/openapi-clients#path:/typescript-graphql
+        version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d1f9fcfca4c0be2af91d2f97b0abb1d6fdc1bc9c#path:/typescript-graphql
       framer-motion:
         specifier: ^12.43.0
         version: 12.43.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -2844,6 +2847,10 @@ packages:
 
   deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/e47748042ee7312f97ce869cc35741f0c9be0281#path:/typescript:
     resolution: {path: /typescript, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/e47748042ee7312f97ce869cc35741f0c9be0281}
+    version: 0.1.0
+
+  deadlock_api_graphql_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d1f9fcfca4c0be2af91d2f97b0abb1d6fdc1bc9c#path:/typescript-graphql:
+    resolution: {path: /typescript-graphql, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d1f9fcfca4c0be2af91d2f97b0abb1d6fdc1bc9c}
     version: 0.1.0
 
   debug@4.4.3:
@@ -6966,6 +6973,8 @@ snapshots:
     transitivePeerDependencies:
       - debug
       - supports-color
+
+  deadlock_api_graphql_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d1f9fcfca4c0be2af91d2f97b0abb1d6fdc1bc9c#path:/typescript-graphql: {}
 
   debug@4.4.3:
     dependencies:
