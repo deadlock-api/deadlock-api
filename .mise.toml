@@ -1,5 +1,5 @@
 [tools]
-pnpm = "11.6.0"
+pnpm = "12.1.0"
 rust = "1.98"
 java = "temurin-21"
 uv = "latest"
