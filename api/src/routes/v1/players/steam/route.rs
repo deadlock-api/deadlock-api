@@ -210,6 +210,8 @@ impl BatchQuery for SteamProfileQuery {
     }
 
     fn build_query(keys: &[u32]) -> String {
+        // use_statistics = 0: since 26.8 loading per-part statistics at plan time costs
+        // more than it saves on this query (benchmarked 83ms -> 62ms without).
         format!(
             "
             SELECT
@@ -231,7 +233,7 @@ impl BatchQuery for SteamProfileQuery {
             WHERE sp.account_id IN ({})
             ORDER BY last_updated DESC
             LIMIT 1 BY sp.account_id
-            SETTINGS log_comment = 'steam_profile'
+            SETTINGS log_comment = 'steam_profile', use_statistics = 0
              ",
             in_clause(keys)
         )

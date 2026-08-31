@@ -198,6 +198,8 @@ impl BatchQuery for PlayerRankQuery {
 
     fn build_query(keys: &[u32]) -> String {
         let ids = in_clause(keys);
+        // use_statistics = 0: since 26.8 loading per-part statistics at plan time costs
+        // more than it saves on this query (benchmarked 91ms -> 50ms without).
         format!(
             "
             SELECT
@@ -225,7 +227,7 @@ impl BatchQuery for PlayerRankQuery {
                 )
             ORDER BY match_id DESC
             LIMIT 1 BY account_id
-            SETTINGS log_comment = 'player_rank'
+            SETTINGS log_comment = 'player_rank', use_statistics = 0
             "
         )
     }

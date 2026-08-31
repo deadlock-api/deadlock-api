@@ -78,6 +78,10 @@ impl BatchQueryMulti for MatchHistoryReadQuery {
         // player entered the match with (see ETERNUS_MIN_BADGE). The join is pruned to the
         // Eternus entries; `match_player` filtered on `account_id` alone would fall back to a
         // bloom-filter scan over every part.
+        //
+        // use_statistics/join-order-limit are off: since 26.8 the planner loads per-part
+        // column statistics and reorders joins at plan time, ~200ms per query here for a
+        // slightly worse plan (benchmarked 236ms -> 70ms with both disabled).
         let outer_columns = PlayerMatchHistoryEntry::COLUMN_NAMES
             .iter()
             .map(|c| match *c {
@@ -107,7 +111,8 @@ impl BatchQueryMulti for MatchHistoryReadQuery {
                  GROUP BY account_id, match_id \
              ) AS ranks USING (account_id, match_id) \
              ORDER BY match_id DESC \
-             SETTINGS log_comment = 'match_history'"
+             SETTINGS log_comment = 'match_history', \
+                 use_statistics = 0, query_plan_optimize_join_order_limit = 0"
         )
     }
 

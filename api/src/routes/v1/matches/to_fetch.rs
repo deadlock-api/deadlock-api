@@ -81,13 +81,15 @@ async fn pending_pool_for_account(
     ch_client: &clickhouse::Client,
     account_id: u32,
 ) -> clickhouse::error::Result<Arc<Vec<u64>>> {
+    // use_statistics = 0: since 26.8 loading per-part statistics at plan time costs
+    // more than it saves on this query (benchmarked 58ms -> 19ms without).
     let query = format!(
         "SELECT match_id FROM pending_matches FINAL \
          WHERE state = 'pending' AND match_id >= {MIN_MATCH_ID} \
            AND match_id IN (SELECT match_id FROM player_match_history \
                WHERE account_id = {account_id} AND match_id >= {MIN_MATCH_ID}) \
          ORDER BY match_id DESC LIMIT {POOL_LIMIT} \
-         SETTINGS log_comment = 'matches_to_fetch_pool_account'"
+         SETTINGS log_comment = 'matches_to_fetch_pool_account', use_statistics = 0"
     );
     let ids: Vec<u64> = ch_client.query(&query).fetch_all().await?;
     Ok(Arc::new(ids))

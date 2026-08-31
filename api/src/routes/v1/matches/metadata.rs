@@ -52,10 +52,12 @@ impl BatchQueryMulti for DemoPlayerQuery {
     type Value = DemoPlayerRow;
 
     fn build_query(keys: &[u64]) -> String {
+        // use_statistics = 0: since 26.8 loading per-part statistics at plan time costs
+        // more than it saves on this query (benchmarked 18ms -> 15ms without).
         format!(
             "SELECT match_id, account_id, hero_build_id, pregame_hero_id, banned_hero_ids \
              FROM match_player WHERE match_id IN ({}) AND demo_processed = 1 \
-             SETTINGS log_comment = 'metadata_demo_player'",
+             SETTINGS log_comment = 'metadata_demo_player', use_statistics = 0",
             in_clause(keys)
         )
     }
