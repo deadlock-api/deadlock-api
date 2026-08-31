@@ -11,8 +11,9 @@ use async_graphql::InputObject;
 use itertools::Itertools;
 
 use crate::routes::v1::graphql::projection::{
-    SQL_AVG_BADGE, SQL_AVG_BADGE_T0, SQL_AVG_BADGE_T1, SQL_START_TIME_UNIX,
+    MATCH_HISTORY_COLUMNS, SQL_AVG_BADGE, SQL_AVG_BADGE_T0, SQL_AVG_BADGE_T1, SQL_START_TIME_UNIX,
 };
+use crate::routes::v1::graphql::sql::match_history_merge_expr;
 
 fn escape_sql_string(s: &str) -> String {
     s.replace('\\', "\\\\").replace('\'', "\\'")
@@ -87,6 +88,7 @@ macro_rules! numeric_filter {
 numeric_filter!(U64Filter, u64);
 numeric_filter!(U32Filter, u32);
 numeric_filter!(I64Filter, i64);
+numeric_filter!(I32Filter, i32);
 
 #[derive(Clone, Debug, Default, InputObject)]
 #[graphql(rename_fields = "snake_case")]
@@ -212,6 +214,99 @@ impl MatchPlayerWhere {
     }
 }
 
+/// Filter input for the `match_history` query. Operations across fields are AND-ed.
+#[derive(Clone, Debug, Default, InputObject)]
+#[graphql(rename_fields = "snake_case")]
+pub(super) struct MatchHistoryWhere {
+    pub(super) account_id: Option<U32Filter>,
+    pub(super) match_id: Option<U64Filter>,
+    pub(super) hero_id: Option<U32Filter>,
+    pub(super) hero_level: Option<U32Filter>,
+    pub(super) start_time: Option<I64Filter>,
+    pub(super) game_mode: Option<StringFilter>,
+    pub(super) match_mode: Option<StringFilter>,
+    pub(super) player_team: Option<StringFilter>,
+    pub(super) player_kills: Option<U32Filter>,
+    pub(super) player_deaths: Option<U32Filter>,
+    pub(super) player_assists: Option<U32Filter>,
+    pub(super) denies: Option<U32Filter>,
+    pub(super) net_worth: Option<U32Filter>,
+    pub(super) last_hits: Option<U32Filter>,
+    pub(super) team_abandoned: Option<BoolFilter>,
+    pub(super) match_duration_s: Option<U32Filter>,
+    pub(super) match_result: Option<U32Filter>,
+    pub(super) won: Option<BoolFilter>,
+    pub(super) player_match_outcome: Option<StringFilter>,
+    pub(super) ranked_display_badge: Option<U32Filter>,
+    pub(super) ranked_delta: Option<I32Filter>,
+    pub(super) ranked_calibration_match: Option<U32Filter>,
+    pub(super) ranked_used_demotion_protection: Option<BoolFilter>,
+}
+
+/// Compiled `match_history` filters. `player_match_history` is a
+/// `CoalescingMergeTree` the query merges via `GROUP BY (account_id, match_id)`,
+/// so filters on the coalesced `ranked_*` columns must run post-merge: they land
+/// in `having` (compiled against the merged aggregate expression), while every
+/// other column is identical across duplicate rows and filters pre-merge in
+/// `where_`.
+#[derive(Debug, Default)]
+pub(super) struct MatchHistorySqlFilters {
+    pub(super) where_: Vec<String>,
+    pub(super) having: Vec<String>,
+}
+
+impl MatchHistoryWhere {
+    pub(super) fn to_sql_filters(&self) -> MatchHistorySqlFilters {
+        let mut out = MatchHistorySqlFilters::default();
+        macro_rules! push {
+            ($field:ident, $col:expr) => {
+                if let Some(f) = &self.$field
+                    && let Some(s) = f.to_sql($col)
+                {
+                    out.where_.push(s);
+                }
+            };
+        }
+        macro_rules! push_having {
+            ($field:ident, $col:expr) => {
+                if let Some(f) = &self.$field
+                    && let Some(col) = MATCH_HISTORY_COLUMNS.iter().find(|c| c.gql == $col)
+                    && let Some(s) = f.to_sql(&match_history_merge_expr(col))
+                {
+                    out.having.push(s);
+                }
+            };
+        }
+        push!(account_id, "account_id");
+        push!(match_id, "match_id");
+        push!(hero_id, "hero_id");
+        push!(hero_level, "hero_level");
+        push!(start_time, SQL_START_TIME_UNIX);
+        push!(game_mode, "game_mode");
+        push!(match_mode, "match_mode");
+        push!(player_team, "player_team");
+        push!(player_kills, "player_kills");
+        push!(player_deaths, "player_deaths");
+        push!(player_assists, "player_assists");
+        push!(denies, "denies");
+        push!(net_worth, "net_worth");
+        push!(last_hits, "last_hits");
+        push!(team_abandoned, "team_abandoned");
+        push!(match_duration_s, "match_duration_s");
+        push!(match_result, "match_result");
+        push!(won, "won");
+        push!(player_match_outcome, "player_match_outcome");
+        push_having!(ranked_display_badge, "ranked_display_badge");
+        push_having!(ranked_delta, "ranked_delta");
+        push_having!(ranked_calibration_match, "ranked_calibration_match");
+        push_having!(
+            ranked_used_demotion_protection,
+            "ranked_used_demotion_protection"
+        );
+        out
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -251,6 +346,27 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(f.to_sql("match_mode").unwrap(), "match_mode = 'Ran\\'ked'");
+    }
+
+    #[test]
+    fn match_history_where_splits_coalesced_columns_into_having() {
+        let w = MatchHistoryWhere {
+            account_id: Some(U32Filter {
+                eq: Some(123),
+                ..Default::default()
+            }),
+            ranked_delta: Some(I32Filter {
+                gt: Some(0),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let f = w.to_sql_filters();
+        assert_eq!(f.where_, vec!["account_id = 123".to_owned()]);
+        assert_eq!(
+            f.having,
+            vec!["argMaxIf(ranked_delta, created_at, ranked_delta IS NOT NULL) > 0".to_owned()]
+        );
     }
 
     #[test]

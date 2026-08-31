@@ -41,11 +41,11 @@ pub(crate) type PlayerMatchHistory = Vec<PlayerMatchHistoryEntry>;
 /// substitute it; entries whose rank metadata has not landed yet fall back to capping at
 /// Eternus 6.
 const ETERNUS_MIN_BADGE: u32 = 111;
-const ETERNUS_MAX_BADGE: u32 = 116;
+pub(crate) const ETERNUS_MAX_BADGE: u32 = 116;
 
 /// Columns the table coalesces to the latest non-NULL value; every other column
 /// takes the latest row's value.
-const COALESCED_COLUMNS: [&str; 4] = [
+pub(crate) const COALESCED_COLUMNS: [&str; 4] = [
     "ranked_display_badge",
     "ranked_delta",
     "ranked_calibration_match",

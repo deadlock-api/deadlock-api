@@ -9,7 +9,7 @@ use object_store::aws::AmazonS3;
 use crate::context::AppState;
 use crate::routes::v1::assets::common::{AssetsQuery, Language, load_localized};
 use crate::routes::v1::graphql::schema::app_state;
-use crate::routes::v1::graphql::types::{Item as GameplayItem, MatchPlayer};
+use crate::routes::v1::graphql::types::{Item as GameplayItem, MatchHistoryEntry, MatchPlayer};
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::heroes::{Hero, fetch_heroes};
 use crate::services::assets::versions::items::{Item as AssetItem, fetch_items};
@@ -60,6 +60,18 @@ pub(super) async fn load_ranks(
 #[ComplexObject(rename_fields = "snake_case")]
 impl MatchPlayer {
     /// Hero asset metadata for this player's `hero_id` (latest version, English).
+    async fn hero(&self, ctx: &Context<'_>) -> GqlResult<Option<Hero>> {
+        let Some(id) = self.hero_id else {
+            return Ok(None);
+        };
+        let heroes = load_heroes(app_state(ctx)?, None, None).await?;
+        Ok(heroes.iter().find(|h| h.id == id).cloned())
+    }
+}
+
+#[ComplexObject(rename_fields = "snake_case")]
+impl MatchHistoryEntry {
+    /// Hero asset metadata for this entry's `hero_id` (latest version, English).
     async fn hero(&self, ctx: &Context<'_>) -> GqlResult<Option<Hero>> {
         let Some(id) = self.hero_id else {
             return Ok(None);

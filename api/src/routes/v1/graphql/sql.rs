@@ -1,8 +1,11 @@
-//! SQL assembly for the GraphQL `matches` and `match_players` resolvers.
+//! SQL assembly for the GraphQL `matches`, `match_players` and `match_history`
+//! resolvers.
 
 use core::fmt::Write;
 
-use crate::routes::v1::graphql::projection::{Column, Projection};
+use crate::routes::v1::graphql::filters::MatchHistorySqlFilters;
+use crate::routes::v1::graphql::projection::{Column, MATCH_HISTORY_COLUMNS, Projection};
+use crate::routes::v1::players::match_history::{COALESCED_COLUMNS, ETERNUS_MAX_BADGE};
 
 #[derive(Clone, Copy, Debug)]
 pub(super) enum OrderKey {
@@ -207,6 +210,97 @@ pub(super) fn build_match_players_query(args: &BuildArgs<'_>) -> Result<String, 
     Ok(sql)
 }
 
+/// Inputs of the `match_history` query shape.
+#[derive(Debug)]
+pub(super) struct MatchHistoryBuildArgs<'a> {
+    pub(super) columns: &'a [Column],
+    pub(super) filters: &'a MatchHistorySqlFilters,
+    pub(super) order_by: OrderKey,
+    pub(super) order_dir: OrderDir,
+    pub(super) limit: u32,
+    pub(super) offset: u32,
+}
+
+/// Merged (post-`CoalescingMergeTree`) expression for a `player_match_history`
+/// column, without an alias. Shared by the SELECT list, HAVING fragments and
+/// ORDER BY — the latter two can't reference the SELECT aliases because the
+/// query runs with `prefer_column_name_to_alias = 1` (see
+/// [`build_match_history_query`]).
+///
+/// `ranked_display_badge` also caps extrapolated Eternus badges (see
+/// `ETERNUS_MIN_BADGE` in `players::match_history`). The REST reader's
+/// initial-rank substitution needs a `match_player` join pruned by
+/// `account_id`, which an arbitrarily filtered query can't guarantee, so
+/// GraphQL returns the capped fallback instead.
+pub(super) fn match_history_merge_expr(col: &Column) -> String {
+    match col.gql {
+        "account_id" | "match_id" => col.ch_expr.to_owned(),
+        "ranked_display_badge" => format!(
+            "least(argMaxIf(ranked_display_badge, created_at, ranked_display_badge IS NOT NULL), {ETERNUS_MAX_BADGE})"
+        ),
+        c if COALESCED_COLUMNS.contains(&c) => {
+            format!("argMaxIf({c}, created_at, {c} IS NOT NULL)")
+        }
+        _ => format!("argMax({}, created_at)", col.ch_expr),
+    }
+}
+
+fn match_history_column_expr(col: &Column) -> String {
+    match col.gql {
+        "account_id" | "match_id" => col.ch_expr.to_owned(),
+        _ => format!("{} AS {}", match_history_merge_expr(col), col.gql),
+    }
+}
+
+/// `player_match_history` query: one row per (`account_id`, `match_id`).
+/// Reproduces the table's `CoalescingMergeTree` merge with `GROUP BY` +
+/// `argMax` rather than FINAL, like the REST reader in
+/// `players::match_history` (benchmarked ~11x faster, ~35x less memory).
+///
+/// Runs with `prefer_column_name_to_alias = 1`: most SELECT aliases equal the
+/// table column they aggregate, and without the setting `ClickHouse`
+/// substitutes the alias into WHERE fragments, turning e.g.
+/// `WHERE hero_id = 1` into an `ILLEGAL_AGGREGATION` error.
+pub(super) fn build_match_history_query(
+    args: &MatchHistoryBuildArgs<'_>,
+) -> Result<String, core::fmt::Error> {
+    let select = args
+        .columns
+        .iter()
+        .map(match_history_column_expr)
+        .collect::<Vec<_>>()
+        .join(", ");
+    let order_expr = match args.order_by {
+        OrderKey::StartTime => MATCH_HISTORY_COLUMNS
+            .iter()
+            .find(|c| c.gql == "start_time")
+            .map_or_else(|| "match_id".to_owned(), match_history_merge_expr),
+        OrderKey::AccountId => "account_id".to_owned(),
+        // AverageBadge is unreachable (OrderByMatchHistory doesn't expose it).
+        OrderKey::MatchId | OrderKey::AverageBadge => "match_id".to_owned(),
+    };
+    let dir = args.order_dir.as_sql();
+
+    let mut sql = String::new();
+    sql.push_str("SELECT ");
+    sql.push_str(&select);
+    sql.push_str(" FROM player_match_history");
+    sql.push_str(&where_clause(&args.filters.where_));
+    sql.push_str(" GROUP BY account_id, match_id");
+    if !args.filters.having.is_empty() {
+        write!(&mut sql, " HAVING {}", args.filters.having.join(" AND "))?;
+    }
+    write!(
+        &mut sql,
+        " ORDER BY {order_expr} {dir} LIMIT {limit} OFFSET {offset} \
+         SETTINGS log_comment = '{key}', max_threads = 32, prefer_column_name_to_alias = 1",
+        limit = args.limit,
+        offset = args.offset,
+        key = super::RATE_LIMIT_KEY,
+    )?;
+    Ok(sql)
+}
+
 fn build_players_aggregate(
     player_columns: &[Column],
     items_subfields: &[&str],
@@ -382,6 +476,97 @@ mod tests {
         assert!(!sql.contains("apply_patch_parts"));
     }
 
+    fn match_history_columns(names: &[&str]) -> Vec<Column> {
+        MATCH_HISTORY_COLUMNS
+            .iter()
+            .filter(|c| names.contains(&c.gql))
+            .copied()
+            .collect()
+    }
+
+    #[test]
+    fn match_history_merges_via_group_by() {
+        let columns = match_history_columns(&["account_id", "match_id", "hero_id", "ranked_delta"]);
+        let filters = MatchHistorySqlFilters {
+            where_: vec!["account_id = 123".into()],
+            ..Default::default()
+        };
+        let sql = build_match_history_query(&MatchHistoryBuildArgs {
+            columns: &columns,
+            filters: &filters,
+            order_by: OrderKey::MatchId,
+            order_dir: OrderDir::Desc,
+            limit: 10,
+            offset: 0,
+        })
+        .unwrap();
+        assert!(sql.contains("FROM player_match_history"));
+        assert!(sql.contains("WHERE account_id = 123"));
+        assert!(sql.contains("GROUP BY account_id, match_id"));
+        assert!(sql.contains("argMax(hero_id, created_at) AS hero_id"));
+        assert!(sql.contains(
+            "argMaxIf(ranked_delta, created_at, ranked_delta IS NOT NULL) AS ranked_delta"
+        ));
+        assert!(!sql.contains("FINAL"));
+        crate::utils::proptest_utils::assert_valid_sql(&sql);
+    }
+
+    #[test]
+    fn match_history_caps_eternus_badge() {
+        let columns = match_history_columns(&["ranked_display_badge"]);
+        let sql = build_match_history_query(&MatchHistoryBuildArgs {
+            columns: &columns,
+            filters: &MatchHistorySqlFilters::default(),
+            order_by: OrderKey::MatchId,
+            order_dir: OrderDir::Desc,
+            limit: 10,
+            offset: 0,
+        })
+        .unwrap();
+        assert!(sql.contains(&format!("least(argMaxIf(ranked_display_badge, created_at, ranked_display_badge IS NOT NULL), {ETERNUS_MAX_BADGE}) AS ranked_display_badge")));
+    }
+
+    #[test]
+    fn match_history_having_uses_merged_expression() {
+        // ranked_delta is filtered but not selected — HAVING carries the full
+        // merged aggregate expression, no alias needed.
+        let columns = match_history_columns(&["account_id", "match_id"]);
+        let filters = MatchHistorySqlFilters {
+            having: vec!["argMaxIf(ranked_delta, created_at, ranked_delta IS NOT NULL) > 0".into()],
+            ..Default::default()
+        };
+        let sql = build_match_history_query(&MatchHistoryBuildArgs {
+            columns: &columns,
+            filters: &filters,
+            order_by: OrderKey::MatchId,
+            order_dir: OrderDir::Desc,
+            limit: 10,
+            offset: 0,
+        })
+        .unwrap();
+        assert!(
+            sql.contains("HAVING argMaxIf(ranked_delta, created_at, ranked_delta IS NOT NULL) > 0")
+        );
+        crate::utils::proptest_utils::assert_valid_sql(&sql);
+    }
+
+    #[test]
+    fn match_history_order_by_start_time_uses_merged_expression() {
+        let columns = match_history_columns(&["account_id", "match_id"]);
+        let sql = build_match_history_query(&MatchHistoryBuildArgs {
+            columns: &columns,
+            filters: &MatchHistorySqlFilters::default(),
+            order_by: OrderKey::StartTime,
+            order_dir: OrderDir::Asc,
+            limit: 10,
+            offset: 5,
+        })
+        .unwrap();
+        assert!(sql.contains("ORDER BY argMax(toUnixTimestamp(start_time), created_at) ASC"));
+        assert!(sql.contains("LIMIT 10 OFFSET 5"));
+        assert!(sql.contains("prefer_column_name_to_alias = 1"));
+    }
+
     #[test]
     fn player_row_without_patched_column_skips_patches() {
         let projection = Projection {
@@ -410,6 +595,30 @@ mod proptests {
     use proptest::prelude::*;
 
     use super::*;
+    fn arb_match_history_filters() -> impl Strategy<Value = MatchHistorySqlFilters> {
+        let where_ = prop::collection::vec(
+            prop_oneof![
+                (1u32..1_000_000u32).prop_map(|v| format!("account_id = {v}")),
+                (1u32..200u32).prop_map(|v| format!("hero_id = {v}")),
+                Just("match_mode = 'Ranked'".to_owned()),
+            ],
+            0..=3,
+        );
+        let having = prop::collection::vec(
+            prop_oneof![
+                Just(
+                    "argMaxIf(ranked_delta, created_at, ranked_delta IS NOT NULL) IS NOT NULL"
+                        .to_owned()
+                ),
+                (1u32..116u32).prop_map(|v| format!(
+                    "least(argMaxIf(ranked_display_badge, created_at, ranked_display_badge IS NOT NULL), 116) >= {v}"
+                )),
+            ],
+            0..=2,
+        );
+        (where_, having).prop_map(|(where_, having)| MatchHistorySqlFilters { where_, having })
+    }
+
     use crate::routes::v1::graphql::projection::{Column, MATCH_COLUMNS, PLAYER_COLUMNS};
     use crate::utils::proptest_utils::assert_valid_sql;
 
@@ -512,6 +721,34 @@ mod proptests {
             };
             let sql = build_match_players_query(&BuildArgs {
                 projection: &projection,
+                filters: &filters,
+                order_by,
+                order_dir,
+                limit,
+                offset,
+            }).unwrap();
+            assert_valid_sql(&sql);
+        }
+
+        #[test]
+        fn match_history_query_is_valid_sql(
+            mut columns in arb_columns(crate::routes::v1::graphql::projection::MATCH_HISTORY_COLUMNS),
+            filters in arb_match_history_filters(),
+            order_by in arb_order_key(),
+            order_dir in arb_order_dir(),
+            limit in 1u32..=10_000u32,
+            offset in 0u32..=100u32,
+        ) {
+            // The resolver always ensures the merge keys via project_match_history.
+            for key in ["account_id", "match_id"] {
+                if !columns.iter().any(|c| c.gql == key)
+                    && let Some(c) = MATCH_HISTORY_COLUMNS.iter().find(|c| c.gql == key)
+                {
+                    columns.push(*c);
+                }
+            }
+            let sql = build_match_history_query(&MatchHistoryBuildArgs {
+                columns: &columns,
                 filters: &filters,
                 order_by,
                 order_dir,

@@ -148,6 +148,43 @@ pub(super) const PLAYER_COLUMNS: &[Column] = &[
     ),
 ];
 
+/// Columns of the `player_match_history` table. `account_id` and `match_id`
+/// are the merge keys and always projected.
+pub(super) const MATCH_HISTORY_COLUMNS: &[Column] = &[
+    mp("account_id", "account_id"),
+    mp("match_id", "match_id"),
+    mp("hero_id", "hero_id"),
+    mp("hero_level", "hero_level"),
+    mp("start_time", SQL_START_TIME_UNIX),
+    mp("game_mode", "game_mode"),
+    mp("match_mode", "match_mode"),
+    mp("player_team", "player_team"),
+    mp("player_kills", "player_kills"),
+    mp("player_deaths", "player_deaths"),
+    mp("player_assists", "player_assists"),
+    mp("denies", "denies"),
+    mp("net_worth", "net_worth"),
+    mp("last_hits", "last_hits"),
+    mp("team_abandoned", "team_abandoned"),
+    mp("abandoned_time_s", "abandoned_time_s"),
+    mp("match_duration_s", "match_duration_s"),
+    mp("match_result", "match_result"),
+    mp("objectives_mask_team_0", "objectives_mask_team0"),
+    mp("objectives_mask_team_1", "objectives_mask_team1"),
+    mp("brawl_score_team_0", "brawl_score_team0"),
+    mp("brawl_score_team_1", "brawl_score_team1"),
+    mp("brawl_avg_round_time_s", "brawl_avg_round_time_s"),
+    mp("won", "won"),
+    mp("player_match_outcome", "player_match_outcome"),
+    mp("ranked_display_badge", "ranked_display_badge"),
+    mp("ranked_delta", "ranked_delta"),
+    mp("ranked_calibration_match", "ranked_calibration_match"),
+    mp(
+        "ranked_used_demotion_protection",
+        "ranked_used_demotion_protection",
+    ),
+];
+
 /// Sub-fields of the `items` Nested column. All `UInt32`.
 pub(super) const ITEM_SUBFIELDS: &[&str] = &[
     "game_time_s",
@@ -278,6 +315,22 @@ pub(super) fn project_match_players(look: &Lookahead<'_>) -> Projection {
     projection
 }
 
+pub(super) fn project_match_history(look: &Lookahead<'_>) -> Vec<Column> {
+    let mut columns: Vec<Column> = MATCH_HISTORY_COLUMNS
+        .iter()
+        .filter(|col| look.field(col.gql).exists())
+        .copied()
+        .collect();
+    // The merge keys must always be grouped on and selected.
+    ensure_present(&mut columns, MATCH_HISTORY_COLUMNS, "account_id");
+    ensure_present(&mut columns, MATCH_HISTORY_COLUMNS, "match_id");
+    // The nested `hero` asset resolver reads `hero_id` from the row.
+    if look.field("hero").exists() {
+        ensure_present(&mut columns, MATCH_HISTORY_COLUMNS, "hero_id");
+    }
+    columns
+}
+
 fn collect_subfields(
     parent: &Lookahead<'_>,
     field: &'static str,
@@ -333,6 +386,19 @@ mod tests {
                 assert_ne!(
                     a.gql, b.gql,
                     "duplicate GQL name in PLAYER_COLUMNS: {}",
+                    a.gql
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn no_duplicate_gql_names_in_match_history_columns() {
+        for (i, a) in MATCH_HISTORY_COLUMNS.iter().enumerate() {
+            for b in &MATCH_HISTORY_COLUMNS[i + 1..] {
+                assert_ne!(
+                    a.gql, b.gql,
+                    "duplicate GQL name in MATCH_HISTORY_COLUMNS: {}",
                     a.gql
                 );
             }

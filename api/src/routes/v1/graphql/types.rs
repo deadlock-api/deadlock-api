@@ -171,6 +171,50 @@ pub(super) struct MatchPlayer {
     pub(super) hero_xp_rewards: Option<JsonScalar>,
 }
 
+/// One `player_match_history` row per (`account_id`, `match_id`) — the same
+/// data as the REST `/v1/players/{account_id}/match-history` endpoint, minus
+/// the on-demand Steam fetch (only what `ClickHouse` has stored).
+#[derive(Clone, Debug, Default, Deserialize, SimpleObject)]
+#[graphql(complex, rename_fields = "snake_case")]
+pub(super) struct MatchHistoryEntry {
+    pub(super) account_id: Option<u32>,
+    pub(super) match_id: Option<u64>,
+    /// See more: <https://api.deadlock-api.com/v1/assets/heroes>
+    pub(super) hero_id: Option<u32>,
+    pub(super) hero_level: Option<u32>,
+    pub(super) start_time: Option<i64>,
+    pub(super) game_mode: Option<String>,
+    pub(super) match_mode: Option<String>,
+    pub(super) player_team: Option<String>,
+    pub(super) player_kills: Option<u32>,
+    pub(super) player_deaths: Option<u32>,
+    pub(super) player_assists: Option<u32>,
+    pub(super) denies: Option<u32>,
+    pub(super) net_worth: Option<u32>,
+    pub(super) last_hits: Option<u32>,
+    pub(super) team_abandoned: Option<bool>,
+    pub(super) abandoned_time_s: Option<u32>,
+    pub(super) match_duration_s: Option<u32>,
+    /// The winning team id.
+    pub(super) match_result: Option<u32>,
+    pub(super) objectives_mask_team_0: Option<u32>,
+    pub(super) objectives_mask_team_1: Option<u32>,
+    pub(super) brawl_score_team_0: Option<u32>,
+    pub(super) brawl_score_team_1: Option<u32>,
+    pub(super) brawl_avg_round_time_s: Option<u32>,
+    pub(super) won: Option<bool>,
+    /// How the match was scored for the player.
+    pub(super) player_match_outcome: Option<String>,
+    /// The ranked badge shown for the player after the match (tier = first digits, subtier = last digit), capped at Eternus 6. See more: <https://api.deadlock-api.com/v1/assets/ranks>
+    pub(super) ranked_display_badge: Option<u32>,
+    /// The ranked progress change the player got from this match.
+    pub(super) ranked_delta: Option<i32>,
+    /// Non-zero if this match counted towards the player's ranked calibration.
+    pub(super) ranked_calibration_match: Option<u32>,
+    /// Whether the player's demotion protection absorbed a loss in this match.
+    pub(super) ranked_used_demotion_protection: Option<bool>,
+}
+
 #[derive(Clone, Debug, Default, Deserialize, SimpleObject)]
 #[graphql(complex, rename_fields = "snake_case")]
 pub(super) struct Item {

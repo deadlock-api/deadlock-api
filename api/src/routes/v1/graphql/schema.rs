@@ -14,13 +14,16 @@ use crate::context::AppState;
 use crate::routes::v1::assets::common::Language;
 use crate::routes::v1::graphql::assets::{load_heroes, load_items, load_ranks};
 use crate::routes::v1::graphql::cost::{COMPLEXITY_LIMIT, DEPTH_LIMIT, MAX_LIMIT};
-use crate::routes::v1::graphql::filters::MatchPlayerWhere;
+use crate::routes::v1::graphql::filters::{MatchHistoryWhere, MatchPlayerWhere};
 use crate::routes::v1::graphql::metrics_ext::MetricsExtension;
-use crate::routes::v1::graphql::projection::{project_match_players, project_matches};
-use crate::routes::v1::graphql::sql::{
-    BuildArgs, OrderDir, OrderKey, build_match_players_query, build_matches_query,
+use crate::routes::v1::graphql::projection::{
+    project_match_history, project_match_players, project_matches,
 };
-use crate::routes::v1::graphql::types::{Match, MatchPlayer};
+use crate::routes::v1::graphql::sql::{
+    BuildArgs, MatchHistoryBuildArgs, OrderDir, OrderKey, build_match_history_query,
+    build_match_players_query, build_matches_query,
+};
+use crate::routes::v1::graphql::types::{Match, MatchHistoryEntry, MatchPlayer};
 use crate::services::assets::versions::heroes::Hero;
 use crate::services::assets::versions::items::Item as AssetItem;
 use crate::services::assets::versions::ranks::Rank;
@@ -70,6 +73,23 @@ impl From<OrderByMatchPlayer> for OrderKey {
             OrderByMatchPlayer::MatchId => Self::MatchId,
             OrderByMatchPlayer::AccountId => Self::AccountId,
             OrderByMatchPlayer::StartTime => Self::StartTime,
+        }
+    }
+}
+
+#[derive(Enum, Copy, Clone, Eq, PartialEq, Debug)]
+pub(super) enum OrderByMatchHistory {
+    MatchId,
+    AccountId,
+    StartTime,
+}
+
+impl From<OrderByMatchHistory> for OrderKey {
+    fn from(v: OrderByMatchHistory) -> Self {
+        match v {
+            OrderByMatchHistory::MatchId => Self::MatchId,
+            OrderByMatchHistory::AccountId => Self::AccountId,
+            OrderByMatchHistory::StartTime => Self::StartTime,
         }
     }
 }
@@ -158,6 +178,39 @@ impl QueryRoot {
         Ok(rows)
     }
 
+    /// Player match history — one node per (account_id, match_id), from the
+    /// stored `player_match_history` table (no on-demand Steam fetch).
+    async fn match_history(
+        &self,
+        ctx: &Context<'_>,
+        #[graphql(name = "where")] where_: Option<MatchHistoryWhere>,
+        order_by: Option<OrderByMatchHistory>,
+        order_direction: Option<OrderDirection>,
+        #[graphql(default = 100)] limit: u32,
+        #[graphql(default = 0)] offset: u32,
+    ) -> GqlResult<Vec<MatchHistoryEntry>> {
+        let state = app_state(ctx)?;
+        let columns = project_match_history(&ctx.look_ahead());
+        let filters = where_.map(|w| w.to_sql_filters()).unwrap_or_default();
+        let sql = build_match_history_query(&MatchHistoryBuildArgs {
+            columns: &columns,
+            filters: &filters,
+            order_by: order_by.unwrap_or(OrderByMatchHistory::MatchId).into(),
+            order_dir: order_direction.unwrap_or_default().into(),
+            limit: limit.clamp(1, MAX_LIMIT),
+            offset,
+        })
+        .map_err(|e| async_graphql::Error::new(format!("SQL build error: {e}")))?;
+        debug!(?sql, "graphql.match_history built sql");
+        let rows = run_query::<MatchHistoryEntry>(&state.ch_client_ro, &sql)
+            .instrument(info_span!("graphql.clickhouse", operation = "match_history", sql = %sql))
+            .await?;
+        #[expect(clippy::cast_precision_loss)]
+        metrics::histogram!("graphql_rows_returned", "operation" => "match_history")
+            .record(rows.len() as f64);
+        Ok(rows)
+    }
+
     /// All heroes for the given client version (defaults to latest), localized
     /// to `language` (defaults to English). Sourced from the versioned assets,
     /// not ClickHouse.
@@ -232,5 +285,7 @@ mod tests {
         assert!(sdl.contains("heroes("));
         assert!(sdl.contains("hero:")); // MatchPlayer.hero enrichment
         assert!(sdl.contains("asset:")); // Item.asset enrichment
+        assert!(sdl.contains("type MatchHistoryEntry"));
+        assert!(sdl.contains("match_history("));
     }
 }
