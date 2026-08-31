@@ -7,6 +7,7 @@ import { BadgeImage } from "~/components/BadgeImage";
 import { HeroImage } from "~/components/HeroImage";
 import { Skeleton } from "~/components/ui/skeleton";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
+import { IS_DEV } from "~/lib/constants";
 import { cn } from "~/lib/utils";
 import { trackerMatchMetadataQueryOptions } from "~/queries/tracker-queries";
 
@@ -76,7 +77,7 @@ export function MatchRowDetails({ matchId, accountId, ranks }: { matchId: number
                   )}
                 >
                   <HeroImage heroId={player.hero_id} className="size-6 rounded-full" />
-                  {isTracked ? (
+                  {isTracked || !IS_DEV ? (
                     <span className="min-w-0 flex-1 truncate">{name}</span>
                   ) : (
                     <Link
