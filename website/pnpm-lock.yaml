@@ -83,7 +83,7 @@ importers:
         version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/e47748042ee7312f97ce869cc35741f0c9be0281#path:/typescript
       deadlock_api_graphql_client:
         specifier: github:deadlock-api/openapi-clients#path:/typescript-graphql
-        version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d1f9fcfca4c0be2af91d2f97b0abb1d6fdc1bc9c#path:/typescript-graphql
+        version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/1563e208518698658ab526e6191bc1c4b0eabc9d#path:/typescript-graphql
       framer-motion:
         specifier: ^12.43.0
         version: 12.43.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -387,6 +387,9 @@ packages:
 
   '@codemirror/commands@6.10.4':
     resolution: {integrity: sha512-Ryk9y9T0FFVF0cUGhAknveAyUOl/A1qReTFi+qPKtOh2Z9F4AUBz3XOrYD4ZEgZirdugVzHvd/2/Wcwy5OliTg==}
+
+  '@codemirror/commands@6.11.0':
+    resolution: {integrity: sha512-/K4Rl5BN0OtTiPWmJCdqODu38XnDMsDxKY5rgrPnCkutPTJf2wVbkoixLfealF5Kwse/s8P8M5jAiURiwSwnFA==}
 
   '@codemirror/lang-sql@6.10.0':
     resolution: {integrity: sha512-6ayPkEd/yRw0XKBx5uAiToSgGECo/GY2NoJIHXIIQh1EVwLuKoU8BP/qK0qH5NLXAbtJRLuT73hx7P9X34iO4w==}
@@ -2849,8 +2852,8 @@ packages:
     resolution: {path: /typescript, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/e47748042ee7312f97ce869cc35741f0c9be0281}
     version: 0.1.0
 
-  deadlock_api_graphql_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d1f9fcfca4c0be2af91d2f97b0abb1d6fdc1bc9c#path:/typescript-graphql:
-    resolution: {path: /typescript-graphql, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d1f9fcfca4c0be2af91d2f97b0abb1d6fdc1bc9c}
+  deadlock_api_graphql_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/1563e208518698658ab526e6191bc1c4b0eabc9d#path:/typescript-graphql:
+    resolution: {path: /typescript-graphql, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/1563e208518698658ab526e6191bc1c4b0eabc9d}
     version: 0.1.0
 
   debug@4.4.3:
@@ -4710,6 +4713,13 @@ snapshots:
       '@lezer/common': 1.5.2
 
   '@codemirror/commands@6.10.4':
+    dependencies:
+      '@codemirror/language': 6.12.4
+      '@codemirror/state': 6.7.1
+      '@codemirror/view': 6.43.7
+      '@lezer/common': 1.5.2
+
+  '@codemirror/commands@6.11.0':
     dependencies:
       '@codemirror/language': 6.12.4
       '@codemirror/state': 6.7.1
@@ -6841,7 +6851,7 @@ snapshots:
   codemirror@6.0.2:
     dependencies:
       '@codemirror/autocomplete': 6.20.3
-      '@codemirror/commands': 6.10.4
+      '@codemirror/commands': 6.11.0
       '@codemirror/language': 6.12.4
       '@codemirror/lint': 6.9.6
       '@codemirror/search': 6.7.0
@@ -6974,7 +6984,7 @@ snapshots:
       - debug
       - supports-color
 
-  deadlock_api_graphql_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d1f9fcfca4c0be2af91d2f97b0abb1d6fdc1bc9c#path:/typescript-graphql: {}
+  deadlock_api_graphql_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/1563e208518698658ab526e6191bc1c4b0eabc9d#path:/typescript-graphql: {}
 
   debug@4.4.3:
     dependencies:

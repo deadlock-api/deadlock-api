@@ -20,8 +20,11 @@ const TEAMS = [
 export function MatchRowDetails({ matchId, accountId, ranks }: { matchId: number; accountId: number; ranks: Rank[] }) {
   const { data: match, isPending, isError } = useQuery(trackerMatchMetadataQueryOptions(matchId));
 
-  const accountIds = useMemo(() => match?.players.map((player) => player.account_id) ?? [], [match]);
-  const { profiles } = useSteamProfiles(accountIds);
+  const unnamedAccountIds = useMemo(
+    () => match?.players.filter((player) => !player.personaname).map((player) => player.account_id) ?? [],
+    [match],
+  );
+  const { profiles } = useSteamProfiles(unnamedAccountIds);
 
   if (isPending) {
     return (
@@ -62,7 +65,8 @@ export function MatchRowDetails({ matchId, accountId, ranks }: { matchId: number
             </div>
             {players.map((player) => {
               const isTracked = player.account_id === accountId;
-              const name = profiles[player.account_id]?.personaname ?? `Player ${player.account_id}`;
+              const name =
+                player.personaname ?? profiles[player.account_id]?.personaname ?? `Player ${player.account_id}`;
               return (
                 <div
                   key={player.account_id}
