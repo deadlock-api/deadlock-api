@@ -13,6 +13,8 @@
 use async_graphql::SimpleObject;
 use serde::{Deserialize, Serialize};
 
+use crate::routes::v1::players::steam::route::SteamProfileRow;
+
 /// Generic JSON scalar used for `ClickHouse` Nested / Map / Array columns that
 /// would otherwise need bespoke GraphQL types.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -213,6 +215,38 @@ pub(super) struct MatchHistoryEntry {
     pub(super) ranked_calibration_match: Option<u32>,
     /// Whether the player's demotion protection absorbed a loss in this match.
     pub(super) ranked_used_demotion_protection: Option<bool>,
+}
+
+/// Stored Steam profile of a player, from the `steam_profiles` table (no live
+/// Steam Web API fetch). Same data as the REST `/v1/players/steam` endpoint.
+#[derive(Clone, Debug, SimpleObject)]
+#[graphql(rename_fields = "snake_case")]
+pub(super) struct SteamProfile {
+    pub(super) account_id: u32,
+    pub(super) personaname: String,
+    pub(super) profileurl: String,
+    pub(super) avatar: String,
+    pub(super) avatarmedium: String,
+    pub(super) avatarfull: String,
+    pub(super) realname: Option<String>,
+    pub(super) countrycode: Option<String>,
+    pub(super) last_updated: chrono::DateTime<chrono::Utc>,
+}
+
+impl From<SteamProfileRow> for SteamProfile {
+    fn from(row: SteamProfileRow) -> Self {
+        Self {
+            account_id: row.account_id,
+            personaname: row.personaname,
+            profileurl: row.profileurl,
+            avatar: row.avatar,
+            avatarmedium: row.avatarmedium,
+            avatarfull: row.avatarfull,
+            realname: row.realname,
+            countrycode: row.countrycode,
+            last_updated: row.last_updated,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize, SimpleObject)]

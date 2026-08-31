@@ -1,15 +1,20 @@
-//! GraphQL asset resolvers: top-level `heroes`/`items`/`ranks` queries and
-//! nested `MatchPlayer.hero` / `Item.asset` enrichment.
+//! GraphQL enrichment resolvers: top-level `heroes`/`items`/`ranks` queries,
+//! nested `MatchPlayer.hero` / `Item.asset` asset enrichment, and the
+//! `MatchPlayer.steam` profile enrichment.
 
 use std::sync::Arc;
 
 use async_graphql::{ComplexObject, Context, Result as GqlResult};
+use axum::http::StatusCode;
 use object_store::aws::AmazonS3;
 
 use crate::context::AppState;
+use crate::error::APIError;
 use crate::routes::v1::assets::common::{AssetsQuery, Language, load_localized};
 use crate::routes::v1::graphql::schema::app_state;
-use crate::routes::v1::graphql::types::{Item as GameplayItem, MatchHistoryEntry, MatchPlayer};
+use crate::routes::v1::graphql::types::{
+    Item as GameplayItem, MatchHistoryEntry, MatchPlayer, SteamProfile,
+};
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::heroes::{Hero, fetch_heroes};
 use crate::services::assets::versions::items::{Item as AssetItem, fetch_items};
@@ -66,6 +71,32 @@ impl MatchPlayer {
         };
         let heroes = load_heroes(app_state(ctx)?, None, None).await?;
         Ok(heroes.iter().find(|h| h.id == id).cloned())
+    }
+
+    /// Stored Steam profile for this player's `account_id` (no live Steam
+    /// fetch). `null` for protected users and accounts without a stored
+    /// profile.
+    async fn steam(&self, ctx: &Context<'_>) -> GqlResult<Option<SteamProfile>> {
+        let Some(account_id) = self.account_id else {
+            return Ok(None);
+        };
+        let state = app_state(ctx)?;
+        if state
+            .steam_client
+            .is_user_protected(&state.pg_client, account_id)
+            .await
+            .map_err(|e| async_graphql::Error::new(format!("Protected user lookup failed: {e}")))?
+        {
+            return Ok(None);
+        }
+        match state.batchers.steam_profile_graphql.load(account_id).await {
+            Ok(row) => Ok(Some(row.into())),
+            Err(APIError::StatusMsg {
+                status: StatusCode::NOT_FOUND,
+                ..
+            }) => Ok(None),
+            Err(e) => Err(async_graphql::Error::new(e.to_string())),
+        }
     }
 }
 

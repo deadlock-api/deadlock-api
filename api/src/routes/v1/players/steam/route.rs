@@ -246,6 +246,35 @@ impl BatchQuery for SteamProfileQuery {
 
 pub(crate) type SteamProfileBatcher = ClickhouseBatcher<SteamProfileQuery>;
 
+/// Same lookup as [`SteamProfileQuery`] with a much shorter collection window.
+/// The GraphQL nested `steam` resolvers all enqueue at the same instant (right
+/// after the parent rows arrive), so the long REST window would only add
+/// response latency instead of coalescing more work.
+pub(crate) struct SteamProfileGraphQlQuery;
+
+impl BatchQuery for SteamProfileGraphQlQuery {
+    type Key = u32;
+    type Value = SteamProfileRow;
+
+    fn batch_window_ms() -> u64 {
+        10
+    }
+
+    fn max_batch_size() -> usize {
+        SteamProfileQuery::max_batch_size()
+    }
+
+    fn build_query(keys: &[u32]) -> String {
+        SteamProfileQuery::build_query(keys)
+    }
+
+    fn key_of(value: &SteamProfileRow) -> u32 {
+        SteamProfileQuery::key_of(value)
+    }
+}
+
+pub(crate) type SteamProfileGraphQlBatcher = ClickhouseBatcher<SteamProfileGraphQlQuery>;
+
 pub(crate) async fn steam_single(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     State(state): State<AppState>,

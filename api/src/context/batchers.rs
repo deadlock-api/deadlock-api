@@ -9,7 +9,7 @@ use crate::routes::v1::players::match_history::{
     MatchHistoryInsertBatcher, MatchHistoryReadBatcher,
 };
 use crate::routes::v1::players::rank::PlayerRankBatcher;
-use crate::routes::v1::players::steam::route::SteamProfileBatcher;
+use crate::routes::v1::players::steam::route::{SteamProfileBatcher, SteamProfileGraphQlBatcher};
 use crate::routes::v1::servers::metrics::GameServerMetricsInsertBatcher;
 
 #[derive(Clone)]
@@ -24,6 +24,7 @@ pub(crate) struct Batchers {
     pub(crate) player_hero_stats: PlayerHeroStatsBatcher,
     pub(crate) demo_player: DemoPlayerBatcher,
     pub(crate) steam_profile: SteamProfileBatcher,
+    pub(crate) steam_profile_graphql: SteamProfileGraphQlBatcher,
     pub(crate) player_rank: PlayerRankBatcher,
 }
 
@@ -40,6 +41,7 @@ impl Batchers {
             player_hero_stats: PlayerHeroStatsBatcher::new(ch_client_ro.clone()),
             demo_player: DemoPlayerBatcher::new(ch_client_ro.clone()),
             steam_profile: SteamProfileBatcher::new(ch_client_ro.clone()),
+            steam_profile_graphql: SteamProfileGraphQlBatcher::new(ch_client_ro.clone()),
             player_rank: PlayerRankBatcher::new(ch_client_ro.clone()),
         }
     }

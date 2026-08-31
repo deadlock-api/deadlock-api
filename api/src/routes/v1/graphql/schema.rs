@@ -287,5 +287,7 @@ mod tests {
         assert!(sdl.contains("asset:")); // Item.asset enrichment
         assert!(sdl.contains("type MatchHistoryEntry"));
         assert!(sdl.contains("match_history("));
+        assert!(sdl.contains("type SteamProfile"));
+        assert!(sdl.contains("steam:")); // MatchPlayer.steam enrichment
     }
 }
