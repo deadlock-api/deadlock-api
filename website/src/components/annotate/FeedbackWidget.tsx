@@ -168,9 +168,8 @@ export function FeedbackWidget() {
       setOpen(false);
     } catch (error) {
       toast.error(userFacingError(error));
-    } finally {
-      setSubmitting(false);
     }
+    setSubmitting(false);
   };
 
   if (picking) {

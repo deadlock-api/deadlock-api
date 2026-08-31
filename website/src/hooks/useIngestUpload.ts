@@ -97,10 +97,9 @@ export function useIngestUpload() {
           : "Failed to scan directory or upload salts. Please try again.",
       );
       console.error("Scan/upload failed:", error);
-    } finally {
-      dispatch({ type: "SCAN_DONE" });
-      isLoadingRef.current = false;
     }
+    dispatch({ type: "SCAN_DONE" });
+    isLoadingRef.current = false;
   };
 
   const openDirectoryPicker = async () => {

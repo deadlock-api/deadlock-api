@@ -14,24 +14,40 @@ import { TemplateInput } from "./TemplateInput";
 import { UrlDisplay } from "./UrlDisplay";
 import { VariablesList } from "./VariablesList";
 
+async function fetchVariables(): Promise<Variable[]> {
+  try {
+    const res = await fetch(`${API_ORIGIN}/v1/commands/variables/available`);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch variables: ${res.status} ${res.statusText}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("Failed to fetch variables:", error);
+    throw error;
+  }
+}
+
+async function fetchPreview(url: string): Promise<string> {
+  try {
+    if (!url) return "";
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch preview: ${res.status} ${res.statusText}`);
+    }
+    return await res.text();
+  } catch (error) {
+    console.error("Failed to fetch preview:", error);
+    throw error;
+  }
+}
+
 export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
   const [template, debouncedTemplate, setTemplate] = useDebouncedState("", 500);
   const [extraArgs, setExtraArgs] = useState<{ [key: string]: string }>({});
 
   const { data, error } = useQuery<Variable[]>({
     queryKey: queryKeys.streamkit.availableVariables(),
-    queryFn: async () => {
-      try {
-        const res = await fetch(`${API_ORIGIN}/v1/commands/variables/available`);
-        if (!res.ok) {
-          throw new Error(`Failed to fetch variables: ${res.status} ${res.statusText}`);
-        }
-        return await res.json();
-      } catch (error) {
-        console.error("Failed to fetch variables:", error);
-        throw error;
-      }
-    },
+    queryFn: fetchVariables,
     staleTime: CACHE_DURATIONS.FOREVER,
   });
 
@@ -82,19 +98,7 @@ export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
     isLoading: previewLoading,
   } = useQuery<string>({
     queryKey: queryKeys.streamkit.preview(debouncedGeneratedUrl),
-    queryFn: async () => {
-      try {
-        if (!debouncedGeneratedUrl) return "";
-        const res = await fetch(debouncedGeneratedUrl);
-        if (!res.ok) {
-          throw new Error(`Failed to fetch preview: ${res.status} ${res.statusText}`);
-        }
-        return await res.text();
-      } catch (error) {
-        console.error("Failed to fetch preview:", error);
-        throw error;
-      }
-    },
+    queryFn: () => fetchPreview(debouncedGeneratedUrl),
     staleTime: 60 * 1000,
   });
 

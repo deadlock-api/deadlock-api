@@ -128,9 +128,8 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
       setResult(null);
       setDuration(null);
       setStatus(null);
-    } finally {
-      setRunning(false);
     }
+    setRunning(false);
   }, [handle, query, tableMap]);
 
   const cmExtensions = useMemo(

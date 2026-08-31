@@ -157,10 +157,9 @@ function DataPrivacy() {
           type: "error",
           text: error instanceof Error ? error.message : "Failed to process your request. Please try again.",
         });
-      } finally {
-        setIsLoading(false);
-        cleanupCallbackUrl();
       }
+      setIsLoading(false);
+      cleanupCallbackUrl();
     };
 
     processCallback();

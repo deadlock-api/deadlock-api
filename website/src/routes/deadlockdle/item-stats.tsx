@@ -179,13 +179,15 @@ function ItemStatsQuiz() {
 
   const handleSubmit = useCallback(() => {
     if (!allFieldsFilled || state.submitted) return;
-    let score = 0;
-    for (const item of dailyItems) {
+    const score = dailyItems.reduce((total, item) => {
       const answer = state.answers[item.id];
-      if (answer?.active === item.is_active_item) score++;
-      if (answer?.tier === item.item_tier) score++;
-      if (answer?.slot === item.item_slot_type) score++;
-    }
+      return (
+        total +
+        Number(answer?.active === item.is_active_item) +
+        Number(answer?.tier === item.item_tier) +
+        Number(answer?.slot === item.item_slot_type)
+      );
+    }, 0);
 
     setState((prev) => {
       const next: ItemStatsState = {

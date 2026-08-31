@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { Ability } from "deadlock_api_client";
 import { motion } from "framer-motion";
 import { Pause, Play, Volume2, VolumeX } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { GameShell } from "~/components/deadlockdle/GameShell";
 import { GuessFeedback } from "~/components/deadlockdle/GuessFeedback";
@@ -174,6 +174,23 @@ function buildAbilitiesByHero(abilities: Ability[]): Map<number, Ability[]> {
   return map;
 }
 
+function startProgressLoop(
+  audioRef: RefObject<HTMLAudioElement | null>,
+  animRef: RefObject<number>,
+  setProgress: (progress: number) => void,
+) {
+  const tick = () => {
+    const audio = audioRef.current;
+    if (audio?.duration) {
+      setProgress(audio.currentTime / audio.duration);
+    }
+    if (audio && !audio.paused) {
+      animRef.current = requestAnimationFrame(tick);
+    }
+  };
+  animRef.current = requestAnimationFrame(tick);
+}
+
 function useAudioPlayer(url: string | null) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -214,16 +231,6 @@ function useAudioPlayer(url: string | null) {
     }
   }, []);
 
-  function updateProgress() {
-    const audio = audioRef.current;
-    if (audio?.duration) {
-      setProgress(audio.currentTime / audio.duration);
-    }
-    if (audioRef.current && !audioRef.current.paused) {
-      animRef.current = requestAnimationFrame(updateProgress);
-    }
-  }
-
   const togglePlayPause = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -232,7 +239,7 @@ function useAudioPlayer(url: string | null) {
       audio.volume = volume;
       audio.play();
       setIsPlaying(true);
-      animRef.current = requestAnimationFrame(updateProgress);
+      startProgressLoop(audioRef, animRef, setProgress);
     } else {
       audio.pause();
       setIsPlaying(false);

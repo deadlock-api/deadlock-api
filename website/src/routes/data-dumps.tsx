@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { type UseQueryResult, useQueries, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { ChevronRight, Folder, Home, Loader2, Search, Terminal, X } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
@@ -277,25 +277,29 @@ function DataDumps() {
     return [...new Set([...current, ...all])];
   }, [listing.data?.files, allKeys.data?.sql]);
 
-  const sqlContents = useQueries({
+  // `combine` memoizes the map on the raw results and this callback, so the map keeps its
+  // identity across renders while any query is unchanged.
+  const combineSqlContents = useCallback(
+    (results: UseQueryResult<string>[]) => {
+      const map = new Map<string, string>();
+      sqlKeys.forEach((key, i) => {
+        const content = results[i]?.data;
+        if (content) map.set(key, content);
+      });
+      return map;
+    },
+    [sqlKeys],
+  );
+
+  const sqlContentByKey = useQueries({
     queries: sqlKeys.map((key) => ({
       queryKey: ["s3-sql", key],
       queryFn: () => fetchSqlContent(key),
       staleTime: Infinity,
       gcTime: Infinity,
     })),
+    combine: combineSqlContents,
   });
-
-  const sqlContentSignature = sqlContents.map((q) => q.dataUpdatedAt).join("|");
-  const sqlContentByKey = useMemo(() => {
-    const map = new Map<string, string>();
-    sqlKeys.forEach((key, i) => {
-      const content = sqlContents[i]?.data;
-      if (content) map.set(key, content);
-    });
-    return map;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- sqlContentSignature stably reflects sqlContents changes; depending on the array re-runs every render
-  }, [sqlKeys, sqlContentSignature]);
 
   const schemaByTable = useMemo(() => {
     const map = new Map<string, { columns: ColumnInfo[]; sql: string; key: string }>();

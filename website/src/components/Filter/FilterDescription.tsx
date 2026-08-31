@@ -1,13 +1,4 @@
-import {
-  createContext,
-  type RefObject,
-  useCallback,
-  useContext,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from "react";
 
 // --- Context for automatic filter description assembly ---
 
@@ -140,16 +131,15 @@ function buildSentence(parts: Map<string, string>): Segment[] | null {
 
 function FilterDescriptionDisplay({
   parts,
-  partsRef,
+  renderParts,
 }: {
   parts: Map<string, string>;
-  partsRef: RefObject<Map<string, string>>;
+  renderParts: Map<string, string>;
 }) {
-  // On SSR/first paint, effect-driven `parts` is empty but `partsRef` is populated
+  // On SSR/first paint, effect-driven `parts` is empty but `renderParts` is populated
   // by render-phase writes from filter children. Once effects fire on the client,
-  // `parts` mirrors `partsRef` and becomes the source of re-render reactivity.
-  // oxlint-disable-next-line react-hooks-js/refs -- intentional: render-phase fallback for SSR
-  const source = parts.size > 0 ? parts : partsRef.current;
+  // `parts` mirrors `renderParts` and becomes the source of re-render reactivity.
+  const source = parts.size > 0 ? parts : renderParts;
   const sentence = useMemo(() => buildSentence(source), [source]);
   if (!sentence) return null;
   return (
@@ -166,16 +156,23 @@ function FilterDescriptionDisplay({
 }
 
 export function FilterDescriptionProvider({ children }: { children: React.ReactNode }) {
-  const partsRef = useRef<Map<string, string>>(new Map());
+  // Deliberately a mutable Map with stable identity, not a ref: filter children write into it
+  // during their render (via registerSync) so the sentence exists on SSR/first paint, before
+  // effects run. Held in state so reading it during render stays within the rules React
+  // Compiler enforces.
+  const [renderParts] = useState(() => new Map<string, string>());
   const [parts, setParts] = useState(() => new Map<string, string>());
 
-  const registerSync = useCallback((key: string, value: string | null) => {
-    if (value != null) {
-      partsRef.current.set(key, value);
-    } else {
-      partsRef.current.delete(key);
-    }
-  }, []);
+  const registerSync = useCallback(
+    (key: string, value: string | null) => {
+      if (value != null) {
+        renderParts.set(key, value);
+      } else {
+        renderParts.delete(key);
+      }
+    },
+    [renderParts],
+  );
 
   const registerEffect = useCallback((key: string, value: string | null) => {
     setParts((prev) => {
@@ -200,7 +197,7 @@ export function FilterDescriptionProvider({ children }: { children: React.ReactN
   return (
     <FilterDescCtx.Provider value={ctxValue}>
       {children}
-      <FilterDescriptionDisplay parts={parts} partsRef={partsRef} />
+      <FilterDescriptionDisplay parts={parts} renderParts={renderParts} />
     </FilterDescCtx.Provider>
   );
 }

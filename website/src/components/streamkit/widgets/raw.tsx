@@ -8,6 +8,27 @@ import type { RawWidgetProps, Region } from "~/types/streamkit/widget";
 
 const EMPTY_EXTRA_ARGS: Record<string, string> = {};
 
+const fetchStats = async (r: Region, id: string, v: string, args: Record<string, string>) => {
+  const url = new URL(`${API_ORIGIN}/v1/commands/variables/resolve`);
+  url.searchParams.append("region", r);
+  url.searchParams.append("account_id", id);
+  url.searchParams.append("variables", [v].join(","));
+
+  for (const [key, value] of Object.entries(args)) {
+    if (value) url.searchParams.append(key, value);
+  }
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch stats: ${res.status} ${res.statusText}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("Failed to fetch stats:", error);
+    throw error;
+  }
+};
+
 export const RawWidget: FC<RawWidgetProps> = ({
   region,
   accountId,
@@ -18,27 +39,6 @@ export const RawWidget: FC<RawWidgetProps> = ({
   fontColor = "#ffffff",
   refreshInterval = UPDATE_INTERVAL_MS,
 }) => {
-  const fetchStats = async (r: Region, id: string, v: string, args: Record<string, string>) => {
-    const url = new URL(`${API_ORIGIN}/v1/commands/variables/resolve`);
-    url.searchParams.append("region", r);
-    url.searchParams.append("account_id", id);
-    url.searchParams.append("variables", [v].join(","));
-
-    for (const [key, value] of Object.entries(args)) {
-      if (value) url.searchParams.append(key, value);
-    }
-    try {
-      const res = await fetch(url);
-      if (!res.ok) {
-        throw new Error(`Failed to fetch stats: ${res.status} ${res.statusText}`);
-      }
-      return await res.json();
-    } catch (error) {
-      console.error("Failed to fetch stats:", error);
-      throw error;
-    }
-  };
-
   const {
     data,
     isLoading: statsLoading,

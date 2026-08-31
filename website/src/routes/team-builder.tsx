@@ -278,9 +278,8 @@ function TeamBuilderPage() {
       if (status === 404) setImportError(`No match found with ID ${matchId}.`);
       else if (status !== undefined) setImportError(`Could not load match ${matchId}. Please try again.`);
       else setImportError(thrown || `Could not load match ${matchId}.`);
-    } finally {
-      setImporting(false);
     }
+    setImporting(false);
   };
 
   const flipSides = async () => {
@@ -314,20 +313,20 @@ function TeamBuilderPage() {
     }
     setImportError(null);
     setImporting(true);
+    let seeded = false;
     try {
       const matches = await queryClient.fetchQuery(recentMatchesQueryOptions);
 
       const match = matches[Math.floor(Math.random() * matches.length)];
       if (match) {
         adoptMatch(match.match_id, await queryClient.fetchQuery(matchMetadataQueryOptions(match.match_id)));
-        return;
+        seeded = true;
       }
     } catch {
       // The fallback below still produces a comp.
-    } finally {
-      setImporting(false);
     }
-    randomHeroes();
+    setImporting(false);
+    if (!seeded) randomHeroes();
   };
 
   const pickInto = (heroId: number) => {
