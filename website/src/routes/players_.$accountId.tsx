@@ -10,6 +10,7 @@ import { TrackerFilterBar } from "~/components/tracker-page/filters/TrackerFilte
 import { HeroesTab } from "~/components/tracker-page/heroes/HeroesTab";
 import { MatchesTab } from "~/components/tracker-page/matches/MatchesTab";
 import { OverviewTab } from "~/components/tracker-page/overview/OverviewTab";
+import { FeedbackNoticeDialog } from "~/components/tracker-page/shared/FeedbackNoticeDialog";
 import { PlayerHeader } from "~/components/tracker-page/shared/PlayerHeader";
 import { TrackerGate } from "~/components/tracker-page/shared/TrackerGate";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
@@ -95,6 +96,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
 
   return (
     <div className="space-y-6">
+      <FeedbackNoticeDialog />
       <PlayerHeader accountId={accountId} entries={historyQuery.data} ranks={ranks} />
 
       {historyQuery.data?.length === 0 && (

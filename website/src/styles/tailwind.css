@@ -117,6 +117,40 @@
   filter: drop-shadow(0 0 4px rgba(250, 68, 84, 0.6)) drop-shadow(0 0 10px rgba(250, 68, 84, 0.25));
 }
 
+/* Pulsing glow on the feedback launcher while a feedback notice dialog is open
+   (the dialog sets data-feedback-spotlight on <body>; the launcher sits at z-90,
+   above the dialog overlay, so the glow stays visible through the modal). */
+@keyframes feedback-spotlight {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(255, 255, 255, 0.4),
+      0 0 18px 5px rgba(250, 68, 84, 0.9),
+      0 0 45px 14px rgba(250, 68, 84, 0.55);
+    filter: brightness(1.1);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgba(255, 255, 255, 0.75),
+      0 0 34px 12px rgba(250, 68, 84, 1),
+      0 0 80px 28px rgba(250, 68, 84, 0.75);
+    filter: brightness(1.4);
+    transform: scale(1.06);
+  }
+}
+
+body[data-feedback-spotlight] [data-feedback-ui] > button {
+  animation: feedback-spotlight 1.5s ease-in-out infinite;
+}
+
+/* Clear the modal backdrop's darkening around the launcher (fixed at right-4 bottom-4)
+   so the spotlighted button sits in a lit pocket while the rest of the page stays dimmed. */
+body[data-feedback-spotlight] [data-slot="dialog-overlay"] {
+  -webkit-mask-image: radial-gradient(circle 320px at calc(100% - 80px) calc(100% - 38px), transparent 35%, black 90%);
+  mask-image: radial-gradient(circle 320px at calc(100% - 80px) calc(100% - 38px), transparent 35%, black 90%);
+}
+
 /* Electric Border */
 .eb-root {
   position: relative;
