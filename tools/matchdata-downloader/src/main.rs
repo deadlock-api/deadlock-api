@@ -39,7 +39,11 @@ const BATCH_LIMIT: usize = 5_000;
 /// iteration would run the full 5 000 and stretch well past [`POLL_INTERVAL`],
 /// delaying the fresh salts that arrive in the meantime.
 const RETRY_BATCH_LIMIT: usize = 500;
-const POLL_INTERVAL: Duration = Duration::from_secs(30);
+/// Each iteration opens with [`pending_salts_query`], which aggregates all of `match_salts`
+/// and anti-joins `match_player` for ~29 CPU-seconds regardless of how little it finds. New
+/// candidates arrive at ~27/min against a [`BATCH_LIMIT`] of 5 000, so polling faster than
+/// this only re-pays that fixed cost to discover a few dozen matches.
+const POLL_INTERVAL: Duration = Duration::from_secs(120);
 const ITERATION_BACKOFF: Duration = Duration::from_secs(5);
 /// Cooldown before the first re-attempt of a failed match; doubles per attempt
 /// up to [`RETRY_MAX_INTERVAL`].
