@@ -191,6 +191,13 @@ pub(crate) async fn get_player_card(
     let proto_player_card: SteamProxyResponse<CMsgCitadelProfileCard> = raw_data.try_into()?;
     let player_card: PlayerCard = proto_player_card.msg.into();
     let ch_player_card = PlayerCardClickhouse::from(&player_card);
+    let ch_client = ch_client
+        .clone()
+        .with_setting("async_insert", "1")
+        .with_setting("wait_for_async_insert", "0")
+        .with_setting("async_insert_use_adaptive_busy_timeout", "0")
+        .with_setting("async_insert_busy_timeout_ms", "30000")
+        .with_setting("async_insert_busy_timeout_max_ms", "30000");
     let Ok(mut inserter) = ch_client
         .insert::<PlayerCardClickhouse>("player_card")
         .await
