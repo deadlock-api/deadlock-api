@@ -85,7 +85,7 @@ fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String
         AND player_rank_final_flat_progress IS NOT NULL
     )
     ORDER BY match_id
-    SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0, max_threads = 32
+    SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0
     "
     )
 }
