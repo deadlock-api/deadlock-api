@@ -182,6 +182,27 @@ pub(super) async fn url(
     }))
 }
 
+/// Lower bound on match IDs that could still be live, used only to reject clearly-too-old matches.
+///
+/// `start_time` is not part of the sort key, so this touches the minmax index of every part
+/// (~420) to return one number. It takes no arguments and every caller wants the same value, so
+/// it is cached: staleness moves the bound backwards, which can only be more permissive, never
+/// reject a match that is genuinely live.
+#[cached(
+    ttl_secs = 300,
+    convert = "{ 0_u8 }",
+    key = "u8",
+    result_fallback = true
+)]
+async fn oldest_possibly_live_match_id(
+    ch_client: &clickhouse::Client,
+) -> clickhouse::error::Result<u64> {
+    ch_client
+        .query("SELECT min(match_id) FROM match_player WHERE start_time >= now() - INTERVAL 4 HOUR SETTINGS log_comment = 'live_url', apply_patch_parts = 0, optimize_use_projections = 0")
+        .fetch_one::<u64>()
+        .await
+}
+
 /// Resolve a match's live broadcast URL, reusing a cached one when present and otherwise spectating
 /// the lobby (rate-limited, since spectating is expensive) and caching the result for 15 minutes.
 ///
@@ -194,11 +215,7 @@ pub(super) async fn resolve_broadcast_url(
     rate_limit_key: &RateLimitKey,
     match_id: u64,
 ) -> APIResult<(String, Option<u64>)> {
-    let oldest_possibly_live_match_id = state
-        .ch_client
-        .query("SELECT min(match_id) FROM match_player WHERE start_time >= now() - INTERVAL 4 HOUR SETTINGS log_comment = 'live_url', apply_patch_parts = 0, optimize_use_projections = 0")
-        .fetch_one::<u64>()
-        .await?;
+    let oldest_possibly_live_match_id = oldest_possibly_live_match_id(&state.ch_client).await?;
 
     if match_id < oldest_possibly_live_match_id {
         return Err(APIError::status_msg(
