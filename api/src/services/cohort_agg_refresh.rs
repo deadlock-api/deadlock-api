@@ -15,13 +15,15 @@ const PER_DAY_MAX_MEMORY_BYTES: u64 = 15_032_385_536;
 const MIN_NEW_MATCHES: u64 = 10;
 
 /// A day is rebuilt only once new source matches exceed `1/REBUILD_THRESHOLD_DIVISOR`
-/// of the day's total (≈0.5%), floored at [`MIN_NEW_MATCHES`]. Late backfill trickles
+/// of the day's total (≈2%), floored at [`MIN_NEW_MATCHES`]. Late backfill trickles
 /// matches into nearly every historical day every cycle; a flat floor made a 40-day-old,
 /// ~57k-match day rebuild ~9x/day to absorb <0.1% churn — full ~30s/6+GiB partition
 /// rebuilds that dominated background DB load. Scaling with day size keeps fresh days
 /// (huge inflow) rebuilding every cycle while old days rebuild only when late arrivals
-/// actually cross ~0.5%, bounding worst-case staleness to that fraction.
-const REBUILD_THRESHOLD_DIVISOR: u64 = 200;
+/// actually cross ~2%, bounding worst-case staleness to that fraction. At 0.5% the
+/// settled days still crossed the line every few hours and accounted for two thirds of
+/// this job's CPU; ~50 late matches/hour against a ~48k-match day needs ~2% to settle.
+const REBUILD_THRESHOLD_DIVISOR: u64 = 50;
 
 /// New-match count a day must gain since its last build before it is rebuilt.
 fn rebuild_threshold(day_matches: u64) -> u64 {
