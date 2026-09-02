@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
@@ -102,7 +104,7 @@ pub struct HeroBuildStats {
     pub players: u64,
 }
 
-fn build_query(hero_id: u32, valid_build_ids: &[i32], query: &HeroBuildStatsQuery) -> String {
+fn build_query(hero_id: u32, query: &HeroBuildStatsQuery) -> String {
     let info_filters = MatchInfoFilters {
         min_unix_timestamp: query.min_unix_timestamp,
         max_unix_timestamp: query.max_unix_timestamp,
@@ -128,12 +130,6 @@ fn build_query(hero_id: u32, valid_build_ids: &[i32], query: &HeroBuildStatsQuer
     }
     if let Some(hero_build_id) = query.hero_build_id {
         player_filters.push(format!("mp.hero_build_id = {hero_build_id}"));
-    }
-    if !valid_build_ids.is_empty() {
-        player_filters.push(format!(
-            "mp.hero_build_id IN ({})",
-            valid_build_ids.iter().map(ToString::to_string).join(",")
-        ));
     }
     let player_filters = format!(" AND {}", player_filters.join(" AND "));
     let min_matches = query.min_matches.unwrap_or(20);
@@ -191,13 +187,31 @@ async fn get_hero_build_stats(
             .unwrap_or(MIN_DEMO_PLAYER_TIMESTAMP)
             .max(MIN_DEMO_PLAYER_TIMESTAMP),
     );
-    let query_str = build_query(hero_id, valid_build_ids, &query);
+    let query_str = build_query(hero_id, &query);
     debug!(
         hero_id,
         num_valid_builds = valid_build_ids.len(),
         "running hero build stats query"
     );
-    Ok(run_query(ch_client, &query_str).await?)
+    let stats = run_query(ch_client, &query_str).await?;
+    Ok(retain_valid_builds(stats, valid_build_ids))
+}
+
+/// Popular heroes have tens of thousands of builds, more than fit in a query as an `IN` list
+/// before `max_query_size` rejects the statement, so the query returns every build and the
+/// set is applied here. An empty set applies no filter, as the `IN` list never did.
+fn retain_valid_builds(stats: Vec<HeroBuildStats>, valid_build_ids: &[i32]) -> Vec<HeroBuildStats> {
+    if valid_build_ids.is_empty() {
+        return stats;
+    }
+    let valid: HashSet<u64> = valid_build_ids
+        .iter()
+        .filter_map(|id| u64::try_from(*id).ok())
+        .collect();
+    stats
+        .into_iter()
+        .filter(|s| valid.contains(&s.hero_build_id))
+        .collect()
 }
 
 #[utoipa::path(
@@ -256,10 +270,39 @@ mod proptests {
         #[test]
         fn hero_build_stats_build_query_is_valid_sql(
             hero_id in any::<u32>(),
-            valid_build_ids in prop::collection::vec(any::<i32>(), 0..16),
             query: HeroBuildStatsQuery,
         ) {
-            assert_valid_sql(&build_query(hero_id, &valid_build_ids, &query));
+            assert_valid_sql(&build_query(hero_id, &query));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn stats(hero_build_id: u64) -> HeroBuildStats {
+        HeroBuildStats {
+            hero_id: 13,
+            hero_build_id,
+            wins: 1,
+            losses: 1,
+            matches: 2,
+            players: 2,
+        }
+    }
+
+    #[test]
+    fn unknown_builds_are_dropped_in_place() {
+        let kept: Vec<_> = retain_valid_builds(vec![stats(3), stats(1), stats(2)], &[1, 3, -3])
+            .into_iter()
+            .map(|s| s.hero_build_id)
+            .collect();
+        assert_eq!(kept, vec![3, 1]);
+    }
+
+    #[test]
+    fn no_known_builds_means_no_filter() {
+        assert_eq!(retain_valid_builds(vec![stats(1), stats(2)], &[]).len(), 2);
     }
 }
