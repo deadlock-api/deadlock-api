@@ -1,4 +1,5 @@
 use core::time::Duration;
+use std::sync::LazyLock;
 
 use axum::Json;
 use axum::extract::{Path, State};
@@ -6,8 +7,10 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use cached::macros::cached;
+use cached::{Cached, TtlCache};
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
+use tokio::sync::Mutex;
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 use valveprotos::deadlock::{
@@ -161,6 +164,27 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for MatchSaltsResponse 
     }
 }
 
+/// Matches Steam has just reported no salts for. The `cached` wrapper below keeps only
+/// successes, so every miss re-ran both `ClickHouse` lookups and a Steam call, and callers poll:
+/// a third of the metadata endpoint's 404s repeat within a minute. A miss is stable for at
+/// least that long; `ingest_salts` clears the entry when salts arrive through the API.
+pub(super) static SALTS_NOT_FOUND: LazyLock<Mutex<TtlCache<u64, ()>>> = LazyLock::new(|| {
+    Mutex::new(
+        TtlCache::<u64, ()>::builder()
+            .ttl(Duration::from_mins(1))
+            .initial_capacity(100_000)
+            .build()
+            .expect("ttl is set"),
+    )
+});
+
+fn not_found(match_id: u64) -> APIError {
+    APIError::status_msg(
+        StatusCode::NOT_FOUND,
+        format!("Match salts for match {match_id} not found"),
+    )
+}
+
 #[cached(
     ttl_secs = 60,
     convert = "{ match_id }",
@@ -174,6 +198,10 @@ pub(super) async fn fetch_match_salts(
     is_custom: bool,
     disable_steam: bool,
 ) -> Result<CMsgClientToGcGetMatchMetaDataResponse, APIError> {
+    if SALTS_NOT_FOUND.lock().await.cache_get(&match_id).is_some() {
+        return Err(not_found(match_id));
+    }
+
     // Try fetch from Clickhouse via batcher
     if let Ok(salts) = state.batchers.match_salts_read.load(match_id).await {
         debug!("Match salts found in Clickhouse");
@@ -251,6 +279,7 @@ pub(super) async fn fetch_match_salts(
     if salts.result.is_none_or(|r| {
         r != c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultSuccess as i32
     }) {
+        SALTS_NOT_FOUND.lock().await.cache_set(match_id, ());
         return Err(APIError::status_msg(
             StatusCode::NOT_FOUND,
             format!("Failed to fetch match salts for match {match_id}"),
@@ -266,10 +295,8 @@ pub(super) async fn fetch_match_salts(
         debug!("Match salts fetched from Steam");
         return Ok(salts);
     }
-    Err(APIError::status_msg(
-        StatusCode::NOT_FOUND,
-        format!("Match salts for match {match_id} not found"),
-    ))
+    SALTS_NOT_FOUND.lock().await.cache_set(match_id, ());
+    Err(not_found(match_id))
 }
 
 #[derive(Deserialize, IntoParams)]

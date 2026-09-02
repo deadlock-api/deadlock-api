@@ -5,11 +5,13 @@ use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use cached::Cached;
 use serde_json::json;
 use tracing::debug;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::salts::SALTS_NOT_FOUND;
 use crate::routes::v1::matches::types::ClickhouseSalts;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
@@ -117,6 +119,13 @@ pub(super) async fn ingest_salts(
     }
 
     let count = new_salts.len();
+    // A poller that was just told "not found" should see these on its next try.
+    {
+        let mut not_found = SALTS_NOT_FOUND.lock().await;
+        for salt in &new_salts {
+            let _ = not_found.cache_remove(&salt.match_id);
+        }
+    }
     if count > 1 {
         debug!("Inserting salts: {}", count);
     }
