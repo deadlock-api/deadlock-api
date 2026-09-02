@@ -141,14 +141,14 @@ fn build_query(hero_id: u32, valid_build_ids: &[i32], query: &HeroBuildStatsQuer
         "
     SELECT
         mp.hero_id AS hero_id,
-        mp.hero_build_id AS hero_build_id,
+        assumeNotNull(mp.hero_build_id) AS hero_build_id,
         countIf(mp.won) AS wins,
         countIf(NOT mp.won) AS losses,
         wins + losses AS matches,
         uniq(mp.account_id) AS players
     FROM match_player mp
     WHERE {match_mode_filter} AND mp.game_mode = 1
-      AND mp.demo_processed = 1 AND mp.hero_build_id != 0
+      AND mp.demo_processed = 1 AND mp.hero_build_id IS NOT NULL
       {info_filters} {player_filters}
     GROUP BY hero_id, hero_build_id
     HAVING matches >= {min_matches}

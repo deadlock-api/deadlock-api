@@ -40,8 +40,8 @@ use crate::utils::types::MatchIdQuery;
 pub(crate) struct DemoPlayerRow {
     match_id: u64,
     account_id: u32,
-    hero_build_id: u64,
-    pregame_hero_id: u32,
+    hero_build_id: Option<u64>,
+    pregame_hero_id: Option<u32>,
     banned_hero_ids: Vec<u8>,
 }
 
@@ -435,12 +435,11 @@ pub(super) async fn metadata(
         .unwrap_or_default();
     let pregame_hero_ids = demo_rows
         .iter()
-        .filter(|r| r.pregame_hero_id != 0)
-        .map(|r| (r.account_id, r.pregame_hero_id))
+        .filter_map(|r| r.pregame_hero_id.map(|h| (r.account_id, h)))
         .collect();
     let hero_build_ids = demo_rows
         .into_iter()
-        .map(|r| (r.account_id, r.hero_build_id))
+        .filter_map(|r| r.hero_build_id.map(|b| (r.account_id, b)))
         .collect();
 
     Ok(Json(MatchMetadataResponse {

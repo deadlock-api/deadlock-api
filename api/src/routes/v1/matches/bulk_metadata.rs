@@ -764,7 +764,7 @@ When player info is included, each player object contains `hero_build_id` and `p
 
 > **Note:** The `hero_build_id` represents the first build the player had selected when the game started. It does not reflect any build changes made during the match.
 
-> **Note:** The `pregame_hero_id` is the hero the player had locked before the pre-game swap window (0 if unknown). A player swapped heroes when it differs from their `hero_id`.
+> **Note:** The `pregame_hero_id` is the hero the player had locked before the pre-game swap window (`null` if unknown). A player swapped heroes when it differs from their `hero_id`.
 
 ### Rate Limits:
 | Type | Limit |

@@ -148,7 +148,7 @@ pub(super) struct MatchPlayer {
 
     // Demo-derived
     pub(super) hero_build_id: Option<u32>,
-    /// Hero locked before the pre-game swap window; 0 when unknown. Differs from `hero_id` when the player swapped.
+    /// Hero locked before the pre-game swap window; null when unknown. Differs from `hero_id` when the player swapped.
     pub(super) pregame_hero_id: Option<u32>,
 
     #[graphql(complexity = "20 + 5 * child_complexity")]
