@@ -372,12 +372,40 @@ fn build_query(query: &HeroStatsQuery) -> String {
         .min_hero_matches_total
         .or(query.max_hero_matches_total)
         .is_some_and(|v| v > 1);
+    #[expect(deprecated)]
+    let has_account_filter = query.account_id.is_some()
+        || query
+            .account_ids
+            .as_ref()
+            .is_some_and(|ids| !ids.is_empty());
+    let has_item_filter = query
+        .include_item_ids
+        .as_ref()
+        .is_some_and(|ids| !ids.is_empty())
+        || query
+            .exclude_item_ids
+            .as_ref()
+            .is_some_and(|ids| !ids.is_empty());
+    // An account-scoped read is a primary-key range on player_match_stats but opens every part
+    // of match_player; only the item arrays, which player_match_stats does not carry, force the
+    // wide table.
+    let source_table = if has_account_filter && !has_item_filter {
+        "player_match_stats"
+    } else {
+        "match_player"
+    };
+    let use_final = !has_account_filter && !has_player_hero_cte && !has_player_hero_total_cte;
+    let (final_modifier, dedup_clause) = if use_final {
+        (" FINAL", "")
+    } else {
+        ("", "LIMIT 1 BY match_id, account_id")
+    };
     let mut ctes: Vec<String> = vec![];
     if has_player_hero_cte {
         ctes.push(format!(
             "t_players AS (
             SELECT account_id, hero_id
-            FROM match_player
+            FROM {source_table}
             WHERE TRUE
                 {player_filters}
                 {match_filters}
@@ -406,18 +434,6 @@ fn build_query(query: &HeroStatsQuery) -> String {
     } else {
         ""
     };
-    #[expect(deprecated)]
-    let has_account_filter = query.account_id.is_some()
-        || query
-            .account_ids
-            .as_ref()
-            .is_some_and(|ids| !ids.is_empty());
-    let use_final = !has_account_filter && !has_player_hero_cte && !has_player_hero_total_cte;
-    let (final_modifier, dedup_clause) = if use_final {
-        (" FINAL", "")
-    } else {
-        ("", "LIMIT 1 BY match_id, account_id")
-    };
     ctes.push(format!(
         "mp AS (
         SELECT
@@ -425,7 +441,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
             max_player_damage, max_player_damage_taken, max_boss_damage, max_creep_damage,
             max_neutral_damage, max_max_health, max_shots_hit, max_shots_missed,
             start_time, average_badge
-        FROM match_player{final_modifier}
+        FROM {source_table}{final_modifier}
         WHERE TRUE
             {player_filters}
             {match_filters}

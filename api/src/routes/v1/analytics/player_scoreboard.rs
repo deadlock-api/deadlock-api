@@ -113,6 +113,7 @@ pub struct PlayerEntry {
 /// `WHERE`, and the per-account match-count expression.
 fn from_clause_parts(
     query: &PlayerScoreboardQuery,
+    table: &str,
     where_clause: &str,
 ) -> (String, bool, &'static str) {
     // FINAL streams the ReplacingMergeTree merge during read and beats the
@@ -122,9 +123,9 @@ fn from_clause_parts(
     let use_final = query.hero_id.is_none() && query.account_ids.is_none();
 
     if query.sort_by.dedup_free() {
-        (" FROM match_player ".to_owned(), true, "uniq(match_id)")
+        (format!(" FROM {table} "), true, "uniq(match_id)")
     } else if use_final {
-        (" FROM match_player FINAL ".to_owned(), true, "count()")
+        (format!(" FROM {table} FINAL "), true, "count()")
     } else {
         let inner_projection = query
             .sort_by
@@ -137,7 +138,7 @@ fn from_clause_parts(
                 "
 FROM (
     SELECT account_id, match_id{inner_projection}
-    FROM match_player
+    FROM {table}
     {where_clause}
     GROUP BY account_id, match_id
 )"
@@ -159,6 +160,19 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
         || query.min_duration_s.is_some()
         || query.max_duration_s.is_some()
         || query.game_mode.is_some_and(|g| g != GameMode::Normal);
+    // Account-scoped reads are primary-key ranges on player_match_stats but open every part of
+    // match_player, and an all-time scan aggregates there in sort order instead of hashing
+    // every account (~15 GiB peak). Time and hero filters stay on match_player, whose
+    // partitions and projections prune them while player_match_stats cannot.
+    let has_account_filter = query
+        .account_ids
+        .as_ref()
+        .is_some_and(|ids| !ids.is_empty());
+    let table = if has_account_filter || (!needs_match_info_filter && query.hero_id.is_none()) {
+        "player_match_stats"
+    } else {
+        "match_player"
+    };
     if needs_match_info_filter {
         let match_info_filters = MatchInfoFilters {
             min_unix_timestamp: query.min_unix_timestamp,
@@ -194,7 +208,8 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
     }
     let where_clause = format!(" WHERE {} ", inner_filters.join(" AND "));
 
-    let (from_clause, needs_outer_where, matches_expr) = from_clause_parts(query, &where_clause);
+    let (from_clause, needs_outer_where, matches_expr) =
+        from_clause_parts(query, table, &where_clause);
     let outer_where = if needs_outer_where {
         where_clause.as_str()
     } else {
@@ -330,8 +345,33 @@ mod tests {
             ..Default::default()
         });
         assert_valid_sql(&sql);
-        assert!(sql.contains("FROM match_player FINAL"));
+        assert!(sql.contains("FROM player_match_stats FINAL"));
         assert!(sql.contains("argMaxIf(player_rank_final_flat_progress, match_id"));
+    }
+
+    #[test]
+    fn time_and_hero_filtered_scans_stay_on_match_player() {
+        let by_time = build_query(&PlayerScoreboardQuery {
+            min_unix_timestamp: Some(1_785_715_200),
+            ..Default::default()
+        });
+        assert!(by_time.contains("FROM match_player FINAL"));
+        let by_hero = build_query(&PlayerScoreboardQuery {
+            hero_id: Some(15),
+            ..Default::default()
+        });
+        assert!(by_hero.contains("FROM match_player "));
+    }
+
+    #[test]
+    fn account_scoped_scans_read_player_match_stats_even_with_a_time_filter() {
+        let sql = build_query(&PlayerScoreboardQuery {
+            account_ids: Some(vec![1, 2]),
+            min_unix_timestamp: Some(1_785_715_200),
+            ..Default::default()
+        });
+        assert!(sql.contains("FROM player_match_stats "));
+        assert!(!sql.contains("match_player"));
     }
 
     #[test]
