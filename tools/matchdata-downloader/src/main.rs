@@ -56,7 +56,10 @@ const RETRY_MAX_INTERVAL: Duration = Duration::from_hours(24);
 /// this many attempts, which the backoff spreads over roughly four days. A
 /// restart re-examines them, a slow enough cadence to still catch late arrivals.
 const MAX_ATTEMPTS: u32 = 12;
-const GC_INTERVAL: Duration = Duration::from_hours(1);
+/// A DELETE is a mutation that rewrites every part of `match_salts` (~80) whether or not it
+/// holds a superseded candidate: hourly, that was ~1 800 part rewrites and 11 GiB a day. Readers
+/// never depend on the losers being gone, so once a day is plenty.
+const GC_INTERVAL: Duration = Duration::from_hours(24);
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const REQUEST_TIMEOUT: Duration = Duration::from_mins(1);
 
