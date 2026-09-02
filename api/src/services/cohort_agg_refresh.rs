@@ -44,18 +44,21 @@ struct CohortSpec {
     extra_array_join: &'static str,
 }
 
+// The _v2 tables carry uniqCombined(14) player states (migration 40); the plain uniq states
+// of the v1 tables were ~90% of item_stats_cohort_mv's CPU. Pointing the job here builds them
+// from scratch while the API keeps reading v1 until they cover the horizon.
 fn cohort_specs() -> [CohortSpec; 2] {
     [
         CohortSpec {
-            table: "default.item_cohort_stats_time_agg",
-            staging: "default.item_cohort_stats_time_agg_staging",
+            table: "default.item_cohort_stats_time_agg_v2",
+            staging: "default.item_cohort_stats_time_agg_v2_staging",
             bucket_select: "toUInt32(floor(buy_time / 60)) AS bucket_minute",
             bucket_col: "bucket_minute",
             extra_array_join: "",
         },
         CohortSpec {
-            table: "default.item_cohort_stats_net_worth_agg",
-            staging: "default.item_cohort_stats_net_worth_agg_staging",
+            table: "default.item_cohort_stats_net_worth_agg_v2",
+            staging: "default.item_cohort_stats_net_worth_agg_v2_staging",
             bucket_select: "toUInt32(floor(net_worth_at_buy / 1000) * 1000) AS bucket_net_worth",
             bucket_col: "bucket_net_worth",
             extra_array_join: ",\n    `upgrades.net_worth_at_buy` AS net_worth_at_buy",
@@ -79,7 +82,7 @@ fn select_body(spec: &CohortSpec, since_clause: &str) -> String {
     sum(if(sold_time > 0, sold_time, 0)) AS sum_sold_time,
     sum(toUInt64(sold_time > 0)) AS n_sold,
     sum(if(sold_time > 0, (sold_time / duration_s) * 100, 0)) AS sum_sold_rel,
-    uniqState(account_id) AS players_state
+    uniqCombinedState(14)(account_id) AS players_state
 FROM default.match_player
 ARRAY JOIN
     `upgrades.item_id` AS item_id,

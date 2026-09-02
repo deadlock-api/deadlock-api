@@ -458,8 +458,8 @@ SETTINGS log_comment = 'item_stats_mv'
 /// day/week/month) merges its states exactly; the net-worth view stores step-1000
 /// buckets, so the wider steps (all multiples of 1000) re-bucket exactly.
 fn cohort_mv_bucket(bucket: BucketQuery) -> Option<(&'static str, String)> {
-    const TIME_AGG: &str = "item_cohort_stats_time_agg";
-    const NW_AGG: &str = "item_cohort_stats_net_worth_agg";
+    const TIME_AGG: &str = "item_cohort_stats_time_agg_v2";
+    const NW_AGG: &str = "item_cohort_stats_net_worth_agg_v2";
     match bucket {
         BucketQuery::NoBucket => Some((TIME_AGG, "toUInt32(0)".to_owned())),
         BucketQuery::StartTimeDay => Some((TIME_AGG, "toStartOfDay(toDateTime(day))".to_owned())),
@@ -585,7 +585,7 @@ SELECT
     sum(n_wins)                            AS wins,
     toUInt64(sum(n_matches) - sum(n_wins)) AS losses,
     sum(n_matches)                         AS matches,
-    uniqMerge(players_state)               AS players,
+    uniqCombinedMerge(14)(players_state)   AS players,
     sum(sum_buy_time) / sum(n_matches)                       AS avg_buy_time_s,
     if(sum(n_sold) = 0, 0, sum(sum_sold_time) / sum(n_sold)) AS avg_sell_time_s,
     sum(sum_buy_rel) / sum(n_matches)                        AS avg_buy_time_relative,
