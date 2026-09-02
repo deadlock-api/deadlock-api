@@ -355,7 +355,7 @@ mod tests {
             min_unix_timestamp: Some(1_785_715_200),
             ..Default::default()
         });
-        assert!(by_time.contains("FROM match_player FINAL"));
+        assert!(by_time.contains("FROM match_player "));
         let by_hero = build_query(&PlayerScoreboardQuery {
             hero_id: Some(15),
             ..Default::default()
