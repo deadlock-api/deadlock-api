@@ -205,7 +205,12 @@ fn stat_columns(stats: &LaneStats, aggregate: &str, measure: &str) -> String {
     })
 }
 
-fn scan_filters(query: &LaneMatchupStatsQuery, accounts: &str, heroes: &str) -> String {
+fn scan_filters(
+    query: &LaneMatchupStatsQuery,
+    accounts: &str,
+    heroes: &str,
+    required_heroes: &[u32],
+) -> String {
     LaneScanFilters {
         game_mode: query.game_mode,
         match_mode: query.match_mode.as_deref(),
@@ -222,6 +227,7 @@ fn scan_filters(query: &LaneMatchupStatsQuery, accounts: &str, heroes: &str) -> 
         assigned_lanes: query.assigned_lanes.as_deref(),
         accounts,
         heroes,
+        required_heroes,
     }
     .build()
 }
@@ -230,6 +236,7 @@ fn build_query(query: &LaneMatchupStatsQuery, stats: &LaneStats) -> String {
     let LaneDuoFilterSql {
         account_prefilter,
         hero_prefilter,
+        required_heroes,
         duo_filters,
     } = LaneDuoFilters {
         accounts: query.account_ids.as_deref(),
@@ -237,7 +244,7 @@ fn build_query(query: &LaneMatchupStatsQuery, stats: &LaneStats) -> String {
         enemy_heroes: query.enemy_hero_ids.as_deref(),
     }
     .build();
-    let scan_filters = scan_filters(query, &account_prefilter, &hero_prefilter);
+    let scan_filters = scan_filters(query, &account_prefilter, &hero_prefilter, &required_heroes);
 
     let grouping = LaneGrouping::new(query.group_by.as_deref());
     let dims = grouping.select_all_defined();
@@ -404,6 +411,42 @@ pub(super) async fn lane_matchup_stats(
     get_lane_matchup_stats(&state.ch_client_cached, query)
         .await
         .map(Json)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn one_sided_hero_filter_prefilters_the_scanned_matches() {
+        let stats = LaneStats::new(None).unwrap();
+        let one_side = build_query(
+            &LaneMatchupStatsQuery {
+                hero_ids: Some(vec![81, 80]),
+                ..Default::default()
+            },
+            &stats,
+        );
+        assert!(
+            one_side.contains(
+                "AND hero_id IN (81, 80) GROUP BY match_id HAVING uniqExact(hero_id) = 2)"
+            )
+        );
+
+        // Both sides set: the player prefilter narrows the scan instead.
+        let both_sides = build_query(
+            &LaneMatchupStatsQuery {
+                hero_ids: Some(vec![81, 80]),
+                enemy_hero_ids: Some(vec![6]),
+                ..Default::default()
+            },
+            &stats,
+        );
+        assert!(both_sides.contains("hero_id IN (81, 80, 6)"));
+        assert!(!both_sides.contains("uniqExact"));
+
+        assert!(!build_query(&LaneMatchupStatsQuery::default(), &stats).contains("uniqExact"));
+    }
 }
 
 #[cfg(test)]

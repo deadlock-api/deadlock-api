@@ -136,6 +136,9 @@ pub(super) struct LaneDuoFilterSql {
     pub account_prefilter: String,
     /// ` AND ...` restricting the scanned players, applied before the per-lane `GROUP BY`.
     pub hero_prefilter: String,
+    /// Heroes every surviving matchup must contain, for the match-level prefilter in
+    /// [`super::lane_common::LaneScanFilters`]. Empty when the player prefilter is active.
+    pub required_heroes: Vec<u32>,
     /// ` AND ...` on the `duo`/`enemy_duo` arrays of the per-side `ARRAY JOIN`. Deliberately not on
     /// the `hero_ids`/`enemy_hero_ids` output columns: those disappear when the caller groups them
     /// away, and the filter has to survive that.
@@ -168,6 +171,15 @@ impl LaneDuoFilters<'_> {
             .build(),
         );
 
+        // With one side set nothing above narrows the scan, so the match-level prefilter is what
+        // keeps it from aggregating every match in the window. With both sides set the player
+        // prefilter already does that and the extra subquery costs more than it saves
+        // (measured +27% wall time).
+        let required_heroes = match (self.heroes, self.enemy_heroes) {
+            (Some(ids), None) | (None, Some(ids)) => ids.iter().copied().unique().collect_vec(),
+            _ => vec![],
+        };
+
         let mut duo_filters = vec![];
         if let Some(hero_ids) = self.heroes {
             duo_filters.push(format!(
@@ -185,6 +197,7 @@ impl LaneDuoFilters<'_> {
         LaneDuoFilterSql {
             account_prefilter,
             hero_prefilter,
+            required_heroes,
             duo_filters: join_filters(&duo_filters),
         }
     }

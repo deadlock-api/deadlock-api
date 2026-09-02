@@ -297,7 +297,12 @@ kept_matches AS (
     }
 }
 
-fn scan_filters(query: &LaneSoulCurveQuery, accounts: &str, heroes: &str) -> String {
+fn scan_filters(
+    query: &LaneSoulCurveQuery,
+    accounts: &str,
+    heroes: &str,
+    required_heroes: &[u32],
+) -> String {
     LaneScanFilters {
         game_mode: query.game_mode,
         match_mode: query.match_mode.as_deref(),
@@ -314,6 +319,7 @@ fn scan_filters(query: &LaneSoulCurveQuery, accounts: &str, heroes: &str) -> Str
         assigned_lanes: query.assigned_lanes.as_deref(),
         accounts,
         heroes,
+        required_heroes,
     }
     .build()
 }
@@ -330,6 +336,7 @@ fn build_query(query: &LaneSoulCurveQuery, stats: &LaneStats) -> String {
     let LaneDuoFilterSql {
         account_prefilter,
         hero_prefilter,
+        required_heroes,
         duo_filters,
     } = LaneDuoFilters {
         accounts: query.account_ids.as_deref(),
@@ -337,7 +344,7 @@ fn build_query(query: &LaneSoulCurveQuery, stats: &LaneStats) -> String {
         enemy_heroes: query.enemy_hero_ids.as_deref(),
     }
     .build();
-    let scan_filters = scan_filters(query, &account_prefilter, &hero_prefilter);
+    let scan_filters = scan_filters(query, &account_prefilter, &hero_prefilter, &required_heroes);
 
     let grouping = LaneGrouping::new(query.group_by.as_deref());
     let grouped_select = grouping.select_grouped();
