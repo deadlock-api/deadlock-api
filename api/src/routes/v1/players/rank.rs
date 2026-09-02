@@ -175,19 +175,8 @@ pub(crate) struct PlayerRankQuery;
 /// `initial_display_rank` is `0` while the player is still in placement games and is only set on
 /// ranked matches.
 ///
-/// `match_player` is sorted by `(match_id, account_id)`, so filtering on `account_id` alone falls
-/// back to a bloom-filter index scan that opens every one of its parts. `player_match_history` is
-/// sorted by `(account_id, match_id)`, so it resolves each player's recent ranked `match_id`s with
-/// a primary-key lookup; feeding those back in prunes `match_player` by partition and granule.
-///
-/// The window is 50 rather than 1 because `player_match_history` ingests ahead of `match_player`:
-/// its newest ranked matches may not have landed in `match_player` yet (observed lead: up to 15
-/// matches). Taking the newest row that exists in both keeps the result identical to scanning
-/// `match_player` directly.
-///
-/// The history subquery is matched on `(account_id, match_id)` rather than `match_id` alone:
-/// batched accounts frequently share matches, and a bare `match_id IN` would let one account's
-/// history contribute candidate matches to another's.
+/// `player_match_stats` is sorted by `(account_id, match_id)`, so the newest ranked row per
+/// account is a primary-key range read; no detour through `player_match_history` is needed.
 impl BatchQuery for PlayerRankQuery {
     type Key = u32;
     type Value = LastRankedMatchRow;
@@ -198,8 +187,6 @@ impl BatchQuery for PlayerRankQuery {
 
     fn build_query(keys: &[u32]) -> String {
         let ids = in_clause(keys);
-        // use_statistics = 0: since 26.8 loading per-part statistics at plan time costs
-        // more than it saves on this query (benchmarked 91ms -> 50ms without).
         format!(
             "
             SELECT
@@ -214,20 +201,11 @@ impl BatchQuery for PlayerRankQuery {
                 player_rank_initial_demotion_protection_games,
                 player_rank_consumed_demotion_protection,
                 player_rank_initial_win_streak
-            FROM match_player
-            WHERE
-                account_id IN ({ids})
-                AND match_mode = 'Ranked'
-                AND (account_id, match_id) IN (
-                    SELECT account_id, match_id
-                    FROM player_match_history
-                    WHERE account_id IN ({ids}) AND match_mode = 'Ranked'
-                    ORDER BY match_id DESC
-                    LIMIT 50 BY account_id
-                )
+            FROM player_match_stats
+            WHERE account_id IN ({ids}) AND match_mode = 'Ranked'
             ORDER BY match_id DESC
             LIMIT 1 BY account_id
-            SETTINGS log_comment = 'player_rank', use_statistics = 0
+            SETTINGS log_comment = 'player_rank'
             "
         )
     }

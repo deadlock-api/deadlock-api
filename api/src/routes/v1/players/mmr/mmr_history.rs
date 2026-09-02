@@ -77,7 +77,7 @@ fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String
             match_id,
             start_time,
             {badge} AS rank
-        FROM match_player
+        FROM player_match_stats
         WHERE account_id = {account_id}
         {hero_filter}
         AND match_mode = 'Ranked'
@@ -85,7 +85,7 @@ fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String
         AND player_rank_final_flat_progress IS NOT NULL
     )
     ORDER BY match_id
-    SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0
+    SETTINGS log_comment = '{log_comment}'
     "
     )
 }

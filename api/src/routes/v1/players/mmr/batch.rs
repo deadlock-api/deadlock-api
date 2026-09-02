@@ -77,7 +77,7 @@ fn build_mmr_query_inner(
             max(match_id) AS latest_match_id,
             argMax(start_time, match_id) AS latest_start_time,
             {badge} AS rank
-        FROM match_player
+        FROM player_match_stats
         WHERE account_id IN ({account_ids})
           AND match_mode = 'Ranked'
           AND player_rank_initial_display_rank > 0
@@ -86,7 +86,7 @@ fn build_mmr_query_inner(
           {match_id_filter}
         GROUP BY account_id
     )
-    SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0
+    SETTINGS log_comment = '{log_comment}'
     "
     )
 }
