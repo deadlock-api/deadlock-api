@@ -427,7 +427,8 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
     };
 
     // The per-row averages equal the base query's avg()/avgIf(): the denominators
-    // (matches, n_sold) are the same counts.
+    // (matches, n_sold) are the same counts. players_state is a uniqCombined(14) state
+    // (migration 39): merging plain uniq states was ~99% of this query's CPU.
     Some(format!(
         "
 SELECT
@@ -436,7 +437,7 @@ SELECT
     sum(n_wins)                            AS wins,
     toUInt64(sum(n_matches) - sum(n_wins)) AS losses,
     sum(n_matches)                         AS matches,
-    uniqMerge(players_state)               AS players,
+    uniqCombinedMerge(14)(players_state)   AS players,
     sum(sum_buy_time) / sum(n_matches)                       AS avg_buy_time_s,
     if(sum(n_sold) = 0, 0, sum(sum_sold_time) / sum(n_sold)) AS avg_sell_time_s,
     sum(sum_buy_rel) / sum(n_matches)                        AS avg_buy_time_relative,
