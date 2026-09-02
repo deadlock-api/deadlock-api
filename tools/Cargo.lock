@@ -1457,7 +1457,7 @@ dependencies = [
 [[package]]
 name = "haste"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=95b6104fc41837cc4c5495f4a4de8afc531b9195#95b6104fc41837cc4c5495f4a4de8afc531b9195"
+source = "git+https://github.com/deadlock-api/haste.git?rev=bfb292d4798031350861ad297aa26753267a1ea6#bfb292d4798031350861ad297aa26753267a1ea6"
 dependencies = [
  "haste_broadcast",
  "haste_core",
@@ -1466,7 +1466,7 @@ dependencies = [
 [[package]]
 name = "haste_broadcast"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=95b6104fc41837cc4c5495f4a4de8afc531b9195#95b6104fc41837cc4c5495f4a4de8afc531b9195"
+source = "git+https://github.com/deadlock-api/haste.git?rev=bfb292d4798031350861ad297aa26753267a1ea6#bfb292d4798031350861ad297aa26753267a1ea6"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1485,7 +1485,7 @@ dependencies = [
 [[package]]
 name = "haste_core"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=95b6104fc41837cc4c5495f4a4de8afc531b9195#95b6104fc41837cc4c5495f4a4de8afc531b9195"
+source = "git+https://github.com/deadlock-api/haste.git?rev=bfb292d4798031350861ad297aa26753267a1ea6#bfb292d4798031350861ad297aa26753267a1ea6"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1505,7 +1505,7 @@ dependencies = [
 [[package]]
 name = "haste_vartype"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=95b6104fc41837cc4c5495f4a4de8afc531b9195#95b6104fc41837cc4c5495f4a4de8afc531b9195"
+source = "git+https://github.com/deadlock-api/haste.git?rev=bfb292d4798031350861ad297aa26753267a1ea6#bfb292d4798031350861ad297aa26753267a1ea6"
 dependencies = [
  "dungers",
  "thiserror",
@@ -1715,7 +1715,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.6.5",
+ "socket2 0.5.10",
  "system-configuration",
  "tokio",
  "tower-service",
@@ -2778,7 +2778,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash",
  "rustls",
- "socket2 0.6.5",
+ "socket2 0.5.10",
  "thiserror",
  "tokio",
  "tracing",
@@ -2817,7 +2817,7 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.6.5",
+ "socket2 0.5.10",
  "tracing",
  "windows-sys 0.61.2",
 ]

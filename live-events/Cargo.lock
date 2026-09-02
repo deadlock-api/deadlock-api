@@ -636,7 +636,7 @@ checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 [[package]]
 name = "haste"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=95b6104fc41837cc4c5495f4a4de8afc531b9195#95b6104fc41837cc4c5495f4a4de8afc531b9195"
+source = "git+https://github.com/deadlock-api/haste.git?rev=bfb292d4798031350861ad297aa26753267a1ea6#bfb292d4798031350861ad297aa26753267a1ea6"
 dependencies = [
  "haste_broadcast",
  "haste_core",
@@ -645,7 +645,7 @@ dependencies = [
 [[package]]
 name = "haste_broadcast"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=95b6104fc41837cc4c5495f4a4de8afc531b9195#95b6104fc41837cc4c5495f4a4de8afc531b9195"
+source = "git+https://github.com/deadlock-api/haste.git?rev=bfb292d4798031350861ad297aa26753267a1ea6#bfb292d4798031350861ad297aa26753267a1ea6"
 dependencies = [
  "anyhow",
  "bytes",
@@ -664,7 +664,7 @@ dependencies = [
 [[package]]
 name = "haste_core"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=95b6104fc41837cc4c5495f4a4de8afc531b9195#95b6104fc41837cc4c5495f4a4de8afc531b9195"
+source = "git+https://github.com/deadlock-api/haste.git?rev=bfb292d4798031350861ad297aa26753267a1ea6#bfb292d4798031350861ad297aa26753267a1ea6"
 dependencies = [
  "anyhow",
  "bytes",
@@ -684,7 +684,7 @@ dependencies = [
 [[package]]
 name = "haste_vartype"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=95b6104fc41837cc4c5495f4a4de8afc531b9195#95b6104fc41837cc4c5495f4a4de8afc531b9195"
+source = "git+https://github.com/deadlock-api/haste.git?rev=bfb292d4798031350861ad297aa26753267a1ea6#bfb292d4798031350861ad297aa26753267a1ea6"
 dependencies = [
  "dungers",
  "thiserror",

@@ -85,8 +85,8 @@ datafusion = { version = "55", default-features = false, features = [
     "crypto_expressions",
     "encoding_expressions",
 ] }
-haste_core = { git = "https://github.com/deadlock-api/haste.git", rev = "95b6104fc41837cc4c5495f4a4de8afc531b9195" }
-haste_broadcast = { git = "https://github.com/deadlock-api/haste.git", rev = "95b6104fc41837cc4c5495f4a4de8afc531b9195" }
+haste_core = { git = "https://github.com/deadlock-api/haste.git", rev = "bfb292d4798031350861ad297aa26753267a1ea6" }
+haste_broadcast = { git = "https://github.com/deadlock-api/haste.git", rev = "bfb292d4798031350861ad297aa26753267a1ea6" }
 rayon = "1"
 tokio-util = { version = "0.7.19", features = ["io"] }
 image = { version = "0.25.10", default-features = false, features = ["png", "webp"] }

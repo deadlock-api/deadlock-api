@@ -33,4 +33,4 @@ tracing = "0.1.44"
 tracing-opentelemetry = "0.33"
 tryhard = "0.5.2"
 valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "4f4a3cb1b0c6f19af59a722acb79ecccd01f61f6" }
-haste = { git = "https://github.com/deadlock-api/haste.git", rev = "95b6104fc41837cc4c5495f4a4de8afc531b9195", features = ["async"] }
+haste = { git = "https://github.com/deadlock-api/haste.git", rev = "bfb292d4798031350861ad297aa26753267a1ea6", features = ["async"] }

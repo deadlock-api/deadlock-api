@@ -44,7 +44,7 @@ fn all_sse_events() -> Vec<String> {
             ]
         })
         .chain(
-            ["tick_end", "hero_killed", "end"]
+            ["tick_end", "hero_killed", "end", "error"]
                 .into_iter()
                 .map(ToString::to_string),
         )
@@ -77,23 +77,20 @@ async fn demo_event_stream(
     // bounded channel. The bound provides backpressure; dropping the parser closes the channel
     // and stops the pump.
     let (packet_tx, packet_rx) = tokio::sync::mpsc::channel::<Bytes>(32);
-    tokio::spawn(async move {
+    let pump = tokio::spawn(async move {
         loop {
             debug!("Waiting for next packet in broadcast stream");
             match broadcast.next_packet().await {
                 Some(Ok(packet)) => {
                     if packet_tx.send(packet).await.is_err() {
                         debug!("Packet receiver dropped, stopping broadcast pump");
-                        break;
+                        return Ok(());
                     }
                 }
-                Some(Err(err)) => {
-                    error!("Error while fetching broadcast packet: {err}");
-                    break;
-                }
+                Some(Err(err)) => return Err(err),
                 None => {
                     debug!("Broadcast stream ended");
-                    break;
+                    return Ok(());
                 }
             }
         }
@@ -102,11 +99,32 @@ async fn demo_event_stream(
     let demo_stream = PacketChannelBroadcastStream::new(packet_rx);
     let mut parser = AsyncStreamingParser::from_stream_with_visitor(demo_stream, visitor)?;
     tokio::spawn(async move {
-        if let Err(e) = parser.run_to_end().await {
-            error!("Error while parsing demo stream: {e}");
+        // The parser only sees the closed channel, so a broadcast fetch failure has to be read
+        // back from the pump to tell a relay outage apart from the match actually ending.
+        let error = match parser.run_to_end().await {
+            Err(e) => Some(e.to_string()),
+            Ok(()) => match pump.await {
+                Ok(Ok(())) => None,
+                Ok(Err(e)) => Some(e.to_string()),
+                Err(e) => Some(e.to_string()),
+            },
+        };
+        if sender.is_closed() {
+            debug!("Client disconnected, stopping demo stream");
+            return;
         }
-        if let Err(e) = sender.send(Event::default().event("end").data("end")) {
-            warn!("Failed to send end event: {e}");
+        let event = match error {
+            None => {
+                info!("Demo stream ended");
+                Event::default().event("end").data("end")
+            }
+            Some(message) => {
+                error!("Demo stream failed: {message}");
+                Event::default().event("error").data(message)
+            }
+        };
+        if let Err(e) = sender.send(event) {
+            warn!("Failed to send final event: {e}");
         }
     });
     Ok(try_stream! {
