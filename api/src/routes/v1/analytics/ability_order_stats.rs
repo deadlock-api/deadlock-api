@@ -10,7 +10,8 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    MatchInfoFilters, PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
+    MatchInfoFilters, PlayerFilters, account_match_prefilter, filter_protected_accounts,
+    join_filters, round_timestamps,
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -132,10 +133,11 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
         max_average_badge: query.max_average_badge,
         min_duration_s: query.min_duration_s,
         max_duration_s: query.max_duration_s,
-    }
-    .build();
+    };
+    let game_mode_filter = GameMode::sql_filter(query.game_mode);
+    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     #[expect(deprecated)]
-    let mut player_filters = PlayerFilters {
+    let player_filter_inputs = PlayerFilters {
         hero_id: Some(query.hero_id),
         account_id: query.account_id,
         account_ids: query.account_ids.as_deref(),
@@ -144,8 +146,15 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
         include_item_ids: query.include_item_ids.as_deref(),
         exclude_item_ids: query.exclude_item_ids.as_deref(),
         ..Default::default()
-    }
-    .build();
+    };
+    let mut player_filters = player_filter_inputs.build();
+    player_filters.extend(account_match_prefilter(
+        player_filter_inputs,
+        &info_filters,
+        &match_mode_filter,
+        &game_mode_filter,
+    ));
+    let info_filters = info_filters.build();
     if let Some(min_ability_upgrades) = query.min_ability_upgrades {
         player_filters.push(format!("length(abilities) >= {min_ability_upgrades}"));
     }
@@ -153,8 +162,6 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
         player_filters.push(format!("length(abilities) <= {max_ability_upgrades}"));
     }
     let player_filters = join_filters(&player_filters);
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     format!(
         "
     SELECT

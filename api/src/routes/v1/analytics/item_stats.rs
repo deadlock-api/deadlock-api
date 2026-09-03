@@ -14,8 +14,8 @@ use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    MatchInfoFilters, PlayerFilters, default_min_matches_u32, filter_protected_accounts,
-    join_filters, round_timestamps,
+    MatchInfoFilters, PlayerFilters, account_match_prefilter, default_min_matches_u32,
+    filter_protected_accounts, join_filters, round_timestamps,
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -741,8 +741,9 @@ fn build_query(query: &ItemStatsQuery) -> String {
         max_average_badge: query.max_average_badge,
         min_duration_s: query.min_duration_s,
         max_duration_s: query.max_duration_s,
-    }
-    .build();
+    };
+    let game_mode_filter = GameMode::sql_filter(query.game_mode);
+    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
 
     /* ---------- match_player filters ---------- */
     let mut hero_ids = query.hero_ids.clone().unwrap_or_default();
@@ -752,7 +753,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
     }
     let has_buyer_hero_filter = !hero_ids.is_empty();
     #[expect(deprecated)]
-    let mut player_filters = PlayerFilters {
+    let player_filter_inputs = PlayerFilters {
         hero_ids: if hero_ids.is_empty() {
             None
         } else {
@@ -765,8 +766,15 @@ fn build_query(query: &ItemStatsQuery) -> String {
         include_item_ids: query.include_item_ids.as_deref(),
         exclude_item_ids: query.exclude_item_ids.as_deref(),
         ..Default::default()
-    }
-    .build();
+    };
+    let mut player_filters = player_filter_inputs.build();
+    player_filters.extend(account_match_prefilter(
+        player_filter_inputs,
+        &info_filters,
+        &match_mode_filter,
+        &game_mode_filter,
+    ));
+    let info_filters = info_filters.build();
     if let Some(min_bought_at_s) = query.min_bought_at_s {
         player_filters.push(format!("buy_time >= {min_bought_at_s}"));
     }
@@ -795,8 +803,6 @@ fn build_query(query: &ItemStatsQuery) -> String {
     };
 
     /* ---------- enemy-team filter (optional) ---------- */
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     let enemy_hero_ids = query
         .enemy_hero_ids
         .as_deref()

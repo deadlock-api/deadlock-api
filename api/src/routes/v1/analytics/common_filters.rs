@@ -63,7 +63,7 @@ impl MatchInfoFilters {
 /// Common player-level filters shared across analytics queries.
 /// Returns a `Vec<String>` so callers can extend with file-specific filters
 /// before formatting.
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub(super) struct PlayerFilters<'a> {
     pub account_id: Option<u32>,
     pub account_ids: Option<&'a [u32]>,
@@ -118,6 +118,41 @@ impl PlayerFilters<'_> {
         }
         filters
     }
+}
+
+/// `match_id IN (SELECT ... FROM player_match_stats ...)` for account-scoped reads of
+/// `match_player`, or `None` without an account filter.
+///
+/// An `account_id` predicate on `match_player` is served by its bloom-filter skip index, which
+/// visits every part, and a hero filter on top makes the planner pick a hero-sorted projection
+/// that brute-forces the account filter over the hero's rows. The `match_id` set is a primary-key
+/// range on `player_match_stats` and a primary-key lookup on `match_player` (measured -85% to
+/// -95% CPU, identical rows). The subquery repeats every filter `player_match_stats` can
+/// evaluate, so it only ever narrows to matches the outer predicate keeps anyway.
+pub(super) fn account_match_prefilter(
+    player_filters: PlayerFilters<'_>,
+    info_filters: &MatchInfoFilters,
+    match_mode_filter: &str,
+    game_mode_filter: &str,
+) -> Option<String> {
+    let has_account_filter = player_filters.account_id.is_some()
+        || player_filters
+            .account_ids
+            .is_some_and(|ids| !ids.is_empty());
+    if !has_account_filter {
+        return None;
+    }
+    let stats_filters = PlayerFilters {
+        include_item_ids: None,
+        exclude_item_ids: None,
+        ..player_filters
+    }
+    .build();
+    Some(format!(
+        "match_id IN (SELECT match_id FROM player_match_stats WHERE {match_mode_filter} AND {game_mode_filter}{}{})",
+        info_filters.build(),
+        join_filters(&stats_filters)
+    ))
 }
 
 pub(super) fn id_list(ids: &[u32]) -> String {

@@ -394,11 +394,16 @@ fn build_query(query: &HeroStatsQuery) -> String {
     } else {
         "match_player"
     };
-    let use_final = !has_account_filter && !has_player_hero_cte && !has_player_hero_total_cte;
-    let (final_modifier, dedup_clause) = if use_final {
-        (" FINAL", "")
+    // Deduplicating with `LIMIT 1 BY` instead of `FINAL` on the window-wide read: FINAL merges
+    // every part in the window (measured 2x CPU, 50x peak memory, 10x bytes read for the same
+    // rows). Without FINAL the planner would pick the hero_stats_by_hero projection, which cannot
+    // prune by start_time and reads the whole table, so projections are disabled on that path.
+    let disable_projections =
+        !has_account_filter && !has_player_hero_cte && !has_player_hero_total_cte;
+    let projection_setting = if disable_projections {
+        ", optimize_use_projections = 0"
     } else {
-        ("", "LIMIT 1 BY match_id, account_id")
+        ""
     };
     let mut ctes: Vec<String> = vec![];
     if has_player_hero_cte {
@@ -441,13 +446,13 @@ fn build_query(query: &HeroStatsQuery) -> String {
             max_player_damage, max_player_damage_taken, max_boss_damage, max_creep_damage,
             max_neutral_damage, max_max_health, max_shots_hit, max_shots_missed,
             start_time, average_badge
-        FROM {source_table}{final_modifier}
+        FROM {source_table}
         WHERE TRUE
             {player_filters}
             {match_filters}
             {hero_matches_join}
             {hero_total_join}
-        {dedup_clause}
+        LIMIT 1 BY match_id, account_id
     )"
     ));
     let with_clause = ctes.join(",\n    ");
@@ -484,7 +489,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
     FROM mp
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
-    SETTINGS log_comment = 'hero_stats', apply_patch_parts = 0
+    SETTINGS log_comment = 'hero_stats', apply_patch_parts = 0{projection_setting}
     "
     )
 }
