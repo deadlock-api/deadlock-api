@@ -10,7 +10,15 @@ import { NextGameButton } from "~/components/deadlockdle/NextGameButton";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
 import { useAbilities, useHeroes, useItems, useNpcUnits } from "~/lib/deadlockdle/queries";
-import { getDayNumber, getModeSeed, getTodayDate, seededRandom } from "~/lib/deadlockdle/seed";
+import {
+  getDayNumber,
+  getModeSeed,
+  getTodayDate,
+  resolvePuzzleDate,
+  seededRandom,
+  validatePuzzleDateSearch,
+} from "~/lib/deadlockdle/seed";
+import { gameStorageKey } from "~/lib/deadlockdle/storage";
 import {
   buildAbilitiesWithHeroes,
   generateDailyQuestions,
@@ -23,6 +31,7 @@ import { filterPlayableHeroes } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/deadlockdle/trivia")({
   component: Trivia,
+  validateSearch: validatePuzzleDateSearch,
   head: () =>
     seo({
       title: "Deadlock Trivia - Deadlockdle | Deadlock API",
@@ -33,7 +42,6 @@ export const Route = createFileRoute("/deadlockdle/trivia")({
 });
 
 const QUESTION_COUNT = 10;
-const STORAGE_KEY = "deadlockdle:trivia:game";
 const ADVANCE_DELAY_MS = 1200;
 
 interface TriviaState {
@@ -52,20 +60,26 @@ const DEFAULT_STATE: TriviaState = {
   completed: false,
 };
 
-function loadState(): TriviaState {
-  if (typeof window === "undefined") return DEFAULT_STATE;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_STATE;
-    return JSON.parse(raw) as TriviaState;
-  } catch {
-    return DEFAULT_STATE;
-  }
+function saveState(key: string, state: TriviaState): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(key, JSON.stringify(state));
 }
 
-function saveState(state: TriviaState): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function initialState(key: string, date: string): TriviaState {
+  if (typeof window === "undefined") return DEFAULT_STATE;
+  let saved = DEFAULT_STATE;
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) saved = JSON.parse(raw) as TriviaState;
+  } catch {
+    saved = DEFAULT_STATE;
+  }
+  if (saved.date !== date) {
+    const fresh = { ...DEFAULT_STATE, date };
+    saveState(key, fresh);
+    return fresh;
+  }
+  return saved;
 }
 
 function Trivia() {
@@ -74,20 +88,20 @@ function Trivia() {
   const { data: npcUnits, isLoading: npcsLoading } = useNpcUnits();
   const { data: rawAbilities, isLoading: abilitiesLoading } = useAbilities();
 
-  const today = getTodayDate();
+  const { date: dateParam } = Route.useSearch();
+  const date = resolvePuzzleDate(dateParam);
+  const isArchive = date !== getTodayDate();
+  const storageKey = gameStorageKey("trivia", date);
   const countdown = useCountdown();
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [state, setState] = useState<TriviaState>(() => {
-    if (typeof window === "undefined") return DEFAULT_STATE;
-    const saved = loadState();
-    if (saved.date !== today) {
-      const fresh = { ...DEFAULT_STATE, date: today };
-      saveState(fresh);
-      return fresh;
-    }
-    return saved;
-  });
+  const [state, setState] = useState<TriviaState>(() => initialState(storageKey, date));
+  const [loadedKey, setLoadedKey] = useState(storageKey);
+
+  if (loadedKey !== storageKey) {
+    setLoadedKey(storageKey);
+    setState(initialState(storageKey, date));
+  }
 
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [isRevealed, setIsRevealed] = useState(false);
@@ -104,10 +118,10 @@ function Trivia() {
   const questions: TriviaQuestion[] = useMemo(() => {
     if (!heroes || !items || !npcUnits) return [];
 
-    const seed = getModeSeed(today, "trivia");
+    const seed = getModeSeed(date, "trivia");
     const rng = seededRandom(seed);
     return generateDailyQuestions(heroes, items, npcUnits, abilitiesWithHeroes, rng);
-  }, [heroes, items, npcUnits, abilitiesWithHeroes, today]);
+  }, [heroes, items, npcUnits, abilitiesWithHeroes, date]);
 
   const currentQ = questions[state.currentQuestion] ?? null;
 
@@ -140,7 +154,7 @@ function Trivia() {
         completed: isLastQuestion,
         currentQuestion: isLastQuestion ? state.currentQuestion : state.currentQuestion,
       };
-      saveState(newState);
+      saveState(storageKey, newState);
       setState(newState);
 
       advanceTimerRef.current = setTimeout(() => {
@@ -152,18 +166,18 @@ function Trivia() {
             ...newState,
             currentQuestion: newState.currentQuestion + 1,
           };
-          saveState(advancedState);
+          saveState(storageKey, advancedState);
           setState(advancedState);
         }
       }, ADVANCE_DELAY_MS);
     },
-    [state, isRevealed, currentQ],
+    [state, isRevealed, currentQ, storageKey],
   );
 
   const shareText = useMemo(() => {
-    const dayNum = getDayNumber(today);
+    const dayNum = getDayNumber(date);
     return `Deadlockdle #${dayNum} - Trivia ${state.score}/${QUESTION_COUNT}\nhttps://deadlock-api.com/deadlockdle`;
-  }, [today, state.score]);
+  }, [date, state.score]);
 
   async function handleCopy() {
     await navigator.clipboard.writeText(shareText);
@@ -195,6 +209,7 @@ function Trivia() {
       usedAttempts={0}
       status={state.completed ? "won" : "playing"}
       hideAttempts
+      date={date}
     >
       <GuessFeedback type={feedbackType} triggerKey={state.currentQuestion} />
 
@@ -318,10 +333,12 @@ function Trivia() {
               })}
             </div>
 
-            <div className="border border-muted-foreground/10 py-4 text-center">
-              <p className="mb-1 text-[10px] tracking-wider text-muted-foreground/40 uppercase">Next Trivia</p>
-              <p className="font-mono text-lg font-bold tracking-widest">{countdown}</p>
-            </div>
+            {!isArchive && (
+              <div className="border border-muted-foreground/10 py-4 text-center">
+                <p className="mb-1 text-[10px] tracking-wider text-muted-foreground/40 uppercase">Next Trivia</p>
+                <p className="font-mono text-lg font-bold tracking-widest">{countdown}</p>
+              </div>
+            )}
 
             <div className="flex flex-col items-center gap-3">
               <Button
@@ -339,7 +356,7 @@ function Trivia() {
                   </>
                 )}
               </Button>
-              <NextGameButton currentMode="trivia" />
+              <NextGameButton currentMode="trivia" date={date} />
             </div>
           </motion.div>
         ) : null}

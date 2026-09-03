@@ -10,7 +10,7 @@ import { HintReveal } from "~/components/deadlockdle/HintReveal";
 import { ResultModal } from "~/components/deadlockdle/ResultModal";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { useAbilities, useHeroes } from "~/lib/deadlockdle/queries";
-import { getModeSeed, seededPick, seededRandom } from "~/lib/deadlockdle/seed";
+import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
 import { seo } from "~/lib/seo";
 import { cn } from "~/lib/utils";
@@ -18,6 +18,7 @@ import { filterPlayableHeroes } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/deadlockdle/guess-ability")({
   component: GuessAbility,
+  validateSearch: validatePuzzleDateSearch,
   head: () =>
     seo({
       title: "Guess the Ability - Deadlockdle | Deadlock API",
@@ -67,7 +68,12 @@ function buildGuessableAbilities(abilities: Ability[], playableHeroes: Hero[]): 
 function GuessAbility() {
   const { data: heroes, isLoading: heroesLoading } = useHeroes();
   const { data: abilities, isLoading: abilitiesLoading } = useAbilities();
-  const { gameState, streakState, isFinished, submitGuess, today } = useDailyGame("guess-ability", MAX_ATTEMPTS);
+  const { date: dateParam } = Route.useSearch();
+  const { gameState, streakState, isFinished, submitGuess, date, isArchive } = useDailyGame(
+    "guess-ability",
+    MAX_ATTEMPTS,
+    dateParam,
+  );
 
   const [shakeKey, setShakeKey] = useState(0);
   const [feedbackType, setFeedbackType] = useState<"correct" | "wrong" | null>(null);
@@ -81,10 +87,10 @@ function GuessAbility() {
 
   const dailyEntry = useMemo(() => {
     if (guessableAbilities.length === 0) return null;
-    const seed = getModeSeed(today, "guess-ability");
+    const seed = getModeSeed(date, "guess-ability");
     const rng = seededRandom(seed);
     return seededPick(guessableAbilities, rng);
-  }, [guessableAbilities, today]);
+  }, [guessableAbilities, date]);
 
   const hints = useMemo(() => {
     if (!dailyEntry) return [];
@@ -154,6 +160,7 @@ function GuessAbility() {
       totalAttempts={MAX_ATTEMPTS}
       usedAttempts={gameState.guesses.length}
       status={gameState.status}
+      date={date}
     >
       <GuessFeedback type={feedbackType} triggerKey={shakeKey} />
 
@@ -223,10 +230,11 @@ function GuessAbility() {
         status={gameState.status}
         answer={ability.name}
         mode="guess-ability"
-        date={today}
+        date={date}
         guesses={gameState.guesses}
         maxAttempts={MAX_ATTEMPTS}
         streakState={streakState}
+        isArchive={isArchive}
       />
     </GameShell>
   );

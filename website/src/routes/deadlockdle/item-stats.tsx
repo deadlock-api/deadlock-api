@@ -8,7 +8,16 @@ import { NextGameButton } from "~/components/deadlockdle/NextGameButton";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
 import { useItems } from "~/lib/deadlockdle/queries";
-import { getDayNumber, getModeSeed, getTodayDate, seededRandom, seededShuffle } from "~/lib/deadlockdle/seed";
+import {
+  getDayNumber,
+  getModeSeed,
+  getTodayDate,
+  seededRandom,
+  resolvePuzzleDate,
+  seededShuffle,
+  validatePuzzleDateSearch,
+} from "~/lib/deadlockdle/seed";
+import { gameStorageKey } from "~/lib/deadlockdle/storage";
 import { useCountdown } from "~/lib/deadlockdle/use-countdown";
 import { seo } from "~/lib/seo";
 import { cn } from "~/lib/utils";
@@ -16,6 +25,7 @@ import { filterShopableItems } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/deadlockdle/item-stats")({
   component: ItemStatsQuiz,
+  validateSearch: validatePuzzleDateSearch,
   head: () =>
     seo({
       title: "Item Stats Quiz - Deadlockdle | Deadlock API",
@@ -27,7 +37,6 @@ export const Route = createFileRoute("/deadlockdle/item-stats")({
 const ITEMS_COUNT = 5;
 const FIELDS_PER_ITEM = 3;
 const TOTAL_FIELDS = ITEMS_COUNT * FIELDS_PER_ITEM;
-const STORAGE_KEY = "deadlockdle:item-stats:game";
 
 const SLOT_TYPES = ["weapon", "spirit", "vitality"] as const;
 type SlotType = (typeof SLOT_TYPES)[number];
@@ -54,20 +63,26 @@ const DEFAULT_STATE: ItemStatsState = {
   totalFields: TOTAL_FIELDS,
 };
 
-function loadState(): ItemStatsState {
-  if (typeof window === "undefined") return DEFAULT_STATE;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_STATE;
-    return JSON.parse(raw) as ItemStatsState;
-  } catch {
-    return DEFAULT_STATE;
-  }
+function saveState(key: string, state: ItemStatsState): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(key, JSON.stringify(state));
 }
 
-function saveState(state: ItemStatsState): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function initialState(key: string, date: string): ItemStatsState {
+  if (typeof window === "undefined") return DEFAULT_STATE;
+  let saved = DEFAULT_STATE;
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) saved = JSON.parse(raw) as ItemStatsState;
+  } catch {
+    saved = DEFAULT_STATE;
+  }
+  if (saved.date !== date) {
+    const fresh = { ...DEFAULT_STATE, date };
+    saveState(key, fresh);
+    return fresh;
+  }
+  return saved;
 }
 
 function formatSlotLabel(slot: string): string {
@@ -103,20 +118,20 @@ function getSlotColor(slot: SlotType): {
 
 function ItemStatsQuiz() {
   const { data: items, isLoading } = useItems();
-  const today = getTodayDate();
+  const { date: dateParam } = Route.useSearch();
+  const date = resolvePuzzleDate(dateParam);
+  const isArchive = date !== getTodayDate();
+  const storageKey = gameStorageKey("item-stats", date);
   const countdown = useCountdown();
 
   const [copied, setCopied] = useState(false);
-  const [state, setState] = useState<ItemStatsState>(() => {
-    if (typeof window === "undefined") return DEFAULT_STATE;
-    const saved = loadState();
-    if (saved.date !== today) {
-      const fresh = { ...DEFAULT_STATE, date: today };
-      saveState(fresh);
-      return fresh;
-    }
-    return saved;
-  });
+  const [state, setState] = useState<ItemStatsState>(() => initialState(storageKey, date));
+  const [loadedKey, setLoadedKey] = useState(storageKey);
+
+  if (loadedKey !== storageKey) {
+    setLoadedKey(storageKey);
+    setState(initialState(storageKey, date));
+  }
 
   const shopableItems = useMemo(
     () =>
@@ -128,11 +143,11 @@ function ItemStatsQuiz() {
 
   const dailyItems = useMemo(() => {
     if (shopableItems.length === 0) return [];
-    const seed = getModeSeed(today, "item-stats");
+    const seed = getModeSeed(date, "item-stats");
     const rng = seededRandom(seed);
     const shuffled = seededShuffle([...shopableItems], rng);
     return shuffled.slice(0, ITEMS_COUNT);
-  }, [shopableItems, today]);
+  }, [shopableItems, date]);
 
   const setAnswer = useCallback(
     (itemId: number, field: keyof ItemAnswer, value: number | string | boolean) => {
@@ -148,11 +163,11 @@ function ItemStatsQuiz() {
             },
           },
         };
-        saveState(next);
+        saveState(storageKey, next);
         return next;
       });
     },
-    [state.submitted],
+    [state.submitted, storageKey],
   );
 
   const allFieldsFilled = useMemo(() => {
@@ -196,10 +211,10 @@ function ItemStatsQuiz() {
         score,
         totalFields: TOTAL_FIELDS,
       };
-      saveState(next);
+      saveState(storageKey, next);
       return next;
     });
-  }, [allFieldsFilled, state.submitted, state.answers, dailyItems]);
+  }, [allFieldsFilled, state.submitted, state.answers, dailyItems, storageKey]);
 
   const scoreScrollRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
     if (node) {
@@ -223,6 +238,7 @@ function ItemStatsQuiz() {
       usedAttempts={0}
       status={state.submitted ? "won" : "playing"}
       hideAttempts
+      date={date}
     >
       <div className="space-y-4">
         {dailyItems.map((item, index) => {
@@ -439,10 +455,12 @@ function ItemStatsQuiz() {
               </p>
               <p className="mt-1 text-[10px] tracking-wider text-muted-foreground/50 uppercase">Correct Answers</p>
             </div>
-            <div className="border border-muted-foreground/10 py-4 text-center">
-              <p className="mb-1 text-[10px] tracking-wider text-muted-foreground/40 uppercase">Next Quiz</p>
-              <p className="font-mono text-lg font-bold tracking-widest">{countdown}</p>
-            </div>
+            {!isArchive && (
+              <div className="border border-muted-foreground/10 py-4 text-center">
+                <p className="mb-1 text-[10px] tracking-wider text-muted-foreground/40 uppercase">Next Quiz</p>
+                <p className="font-mono text-lg font-bold tracking-widest">{countdown}</p>
+              </div>
+            )}
             <div className="flex flex-col items-center gap-3">
               <Button
                 onClick={async () => {
@@ -464,7 +482,7 @@ function ItemStatsQuiz() {
                   </>
                 )}
               </Button>
-              <NextGameButton currentMode="item-stats" />
+              <NextGameButton currentMode="item-stats" date={date} />
             </div>
           </motion.div>
         )}

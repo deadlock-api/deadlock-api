@@ -3,6 +3,7 @@ import { ArrowRight, Home } from "lucide-react";
 import { useMemo } from "react";
 
 import { Button } from "~/components/ui/button";
+import { getTodayDate } from "~/lib/deadlockdle/seed";
 import type { GameMode } from "~/lib/deadlockdle/types";
 
 import { getDailyStatus } from "./GameCard";
@@ -16,16 +17,18 @@ const GAMES: { mode: GameMode; title: string; path: string }[] = [
   { mode: "trivia", title: "Deadlock Trivia", path: "/deadlockdle/trivia" },
 ];
 
-export function NextGameButton({ currentMode }: { currentMode: GameMode }) {
+export function NextGameButton({ currentMode, date = getTodayDate() }: { currentMode: GameMode; date?: string }) {
+  const search = date === getTodayDate() ? {} : { date };
+
   const next = useMemo(() => {
     const currentIndex = GAMES.findIndex((g) => g.mode === currentMode);
     for (let i = 1; i < GAMES.length; i++) {
       const candidate = GAMES[(currentIndex + i) % GAMES.length];
-      const status = getDailyStatus(candidate.mode);
+      const status = getDailyStatus(candidate.mode, date);
       if (status !== "won" && status !== "lost") return candidate;
     }
     return null;
-  }, [currentMode]);
+  }, [currentMode, date]);
 
   if (!next) {
     return (
@@ -34,7 +37,7 @@ export function NextGameButton({ currentMode }: { currentMode: GameMode }) {
         variant="outline"
         className="cursor-target font-mono text-xs tracking-wider uppercase hover:border-primary/60 hover:bg-primary/10"
       >
-        <Link to="/deadlockdle" preload="intent">
+        <Link to="/deadlockdle" search={search} preload="intent">
           <Home className="mr-1.5 h-3.5 w-3.5" />
           All Complete
         </Link>
@@ -48,7 +51,7 @@ export function NextGameButton({ currentMode }: { currentMode: GameMode }) {
       variant="outline"
       className="cursor-target border-primary/40 font-mono text-xs font-semibold tracking-wider text-primary uppercase hover:border-primary/60 hover:bg-primary/10"
     >
-      <Link to={next.path} preload="intent">
+      <Link to={next.path} search={search} preload="intent">
         {next.title}
         <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
       </Link>

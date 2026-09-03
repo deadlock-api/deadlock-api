@@ -9,7 +9,7 @@ import { HintReveal } from "~/components/deadlockdle/HintReveal";
 import { ResultModal } from "~/components/deadlockdle/ResultModal";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { useHeroes } from "~/lib/deadlockdle/queries";
-import { getModeSeed, seededPick, seededRandom } from "~/lib/deadlockdle/seed";
+import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
 import { seo } from "~/lib/seo";
 import { cn, snakeToPretty } from "~/lib/utils";
@@ -17,6 +17,7 @@ import { filterPlayableHeroes } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/deadlockdle/guess-hero")({
   component: GuessHero,
+  validateSearch: validatePuzzleDateSearch,
   head: () =>
     seo({
       title: "Guess the Hero - Deadlockdle | Deadlock API",
@@ -66,7 +67,12 @@ function getSilhouetteFilter(guessCount: number, isFinished: boolean): string {
 
 function GuessHero() {
   const { data: heroes, isLoading } = useHeroes();
-  const { gameState, streakState, isFinished, submitGuess, today } = useDailyGame("guess-hero", MAX_ATTEMPTS);
+  const { date: dateParam } = Route.useSearch();
+  const { gameState, streakState, isFinished, submitGuess, date, isArchive } = useDailyGame(
+    "guess-hero",
+    MAX_ATTEMPTS,
+    dateParam,
+  );
 
   const [shakeKey, setShakeKey] = useState(0);
   const [feedbackType, setFeedbackType] = useState<"correct" | "wrong" | null>(null);
@@ -78,10 +84,10 @@ function GuessHero() {
 
   const dailyHero = useMemo(() => {
     if (playableHeroes.length === 0) return null;
-    const seed = getModeSeed(today, "guess-hero");
+    const seed = getModeSeed(date, "guess-hero");
     const rng = seededRandom(seed);
     return seededPick(playableHeroes, rng);
-  }, [playableHeroes, today]);
+  }, [playableHeroes, date]);
 
   const hints = useMemo(() => {
     if (!dailyHero) return [];
@@ -165,6 +171,7 @@ function GuessHero() {
       totalAttempts={MAX_ATTEMPTS}
       usedAttempts={gameState.guesses.length}
       status={gameState.status}
+      date={date}
     >
       <GuessFeedback type={feedbackType} triggerKey={shakeKey} />
       <WarpFilters />
@@ -244,10 +251,11 @@ function GuessHero() {
         status={gameState.status}
         answer={dailyHero.name}
         mode="guess-hero"
-        date={today}
+        date={date}
         guesses={gameState.guesses}
         maxAttempts={MAX_ATTEMPTS}
         streakState={streakState}
+        isArchive={isArchive}
       />
     </GameShell>
   );

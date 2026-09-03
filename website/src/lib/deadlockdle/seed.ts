@@ -45,8 +45,29 @@ export function getModeSeed(date: string, mode: string): number {
   return getDailySeed(`${date}:${mode}`);
 }
 
+/** First Deadlockdle puzzle, i.e. day 1 */
+export const EPOCH_DATE = "2026-03-22";
+
 /** Day number since epoch (for share text "Deadlockdle #N") */
 export function getDayNumber(date: string): number {
-  const epoch = day("2026-03-22");
-  return day(date).diff(epoch, "day") + 1;
+  return day(date).diff(day(EPOCH_DATE), "day") + 1;
+}
+
+/** A playable puzzle day: from the epoch up to today. ISO dates compare lexicographically. */
+export function isValidPuzzleDate(date: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) && day.utc(date).isValid() && date >= EPOCH_DATE && date <= getTodayDate();
+}
+
+/** A `?date=` search param, falling back to today when absent or out of range */
+export function resolvePuzzleDate(date: string | undefined): string {
+  return date != null && isValidPuzzleDate(date) ? date : getTodayDate();
+}
+
+export interface PuzzleDateSearch {
+  date?: string;
+}
+
+/** Route `?date=` validator; an absent or out-of-range date falls back to today */
+export function validatePuzzleDateSearch(search: Record<string, unknown>): PuzzleDateSearch {
+  return typeof search.date === "string" && isValidPuzzleDate(search.date) ? { date: search.date } : {};
 }

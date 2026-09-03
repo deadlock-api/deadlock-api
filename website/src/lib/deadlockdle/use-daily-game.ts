@@ -2,12 +2,9 @@ import { useCallback, useState } from "react";
 
 import { day } from "~/dayjs";
 
-import { getTodayDate } from "./seed";
+import { getTodayDate, resolvePuzzleDate } from "./seed";
+import { gameStorageKey } from "./storage";
 import type { DailyGameState, GameMode, GameStatus, StreakState } from "./types";
-
-function getStorageKey(mode: GameMode, kind: "game" | "streak"): string {
-  return `deadlockdle:${mode}:${kind}`;
-}
 
 function loadState<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -40,24 +37,33 @@ const DEFAULT_STREAK_STATE: StreakState = {
   gamesWon: 0,
 };
 
+function initialGameState(key: string, date: string): DailyGameState {
+  const saved = loadState(key, DEFAULT_GAME_STATE);
+  if (saved.date !== date) {
+    const fresh = { ...DEFAULT_GAME_STATE, date };
+    saveState(key, fresh);
+    return fresh;
+  }
+  return saved;
+}
+
 function dayDiff(a: string, b: string): number {
   return day(b).diff(day(a), "day");
 }
 
-export function useDailyGame(mode: GameMode, maxAttempts: number) {
-  const today = getTodayDate();
-  const gameKey = getStorageKey(mode, "game");
-  const streakKey = getStorageKey(mode, "streak");
+export function useDailyGame(mode: GameMode, maxAttempts: number, date?: string) {
+  const puzzleDate = resolvePuzzleDate(date);
+  const isArchive = puzzleDate !== getTodayDate();
+  const gameKey = gameStorageKey(mode, puzzleDate);
+  const streakKey = `deadlockdle:${mode}:streak`;
 
-  const [gameState, setGameState] = useState<DailyGameState>(() => {
-    const saved = loadState(gameKey, DEFAULT_GAME_STATE);
-    if (saved.date !== today) {
-      const fresh = { ...DEFAULT_GAME_STATE, date: today };
-      saveState(gameKey, fresh);
-      return fresh;
-    }
-    return saved;
-  });
+  const [gameState, setGameState] = useState<DailyGameState>(() => initialGameState(gameKey, puzzleDate));
+  const [loadedKey, setLoadedKey] = useState(gameKey);
+
+  if (loadedKey !== gameKey) {
+    setLoadedKey(gameKey);
+    setGameState(initialGameState(gameKey, puzzleDate));
+  }
 
   const [streakState, setStreakState] = useState<StreakState>(() => loadState(streakKey, DEFAULT_STREAK_STATE));
 
@@ -67,12 +73,12 @@ export function useDailyGame(mode: GameMode, maxAttempts: number) {
   const updateStreak = useCallback(
     (won: boolean) => {
       setStreakState((prev) => {
-        const isConsecutive = prev.lastPlayedDate === "" || dayDiff(prev.lastPlayedDate, today) === 1;
+        const isConsecutive = prev.lastPlayedDate === "" || dayDiff(prev.lastPlayedDate, puzzleDate) === 1;
         const newStreak = won ? (isConsecutive ? prev.currentStreak + 1 : 1) : 0;
         const next: StreakState = {
           currentStreak: newStreak,
           maxStreak: Math.max(prev.maxStreak, newStreak),
-          lastPlayedDate: today,
+          lastPlayedDate: puzzleDate,
           gamesPlayed: prev.gamesPlayed + 1,
           gamesWon: prev.gamesWon + (won ? 1 : 0),
         };
@@ -80,7 +86,7 @@ export function useDailyGame(mode: GameMode, maxAttempts: number) {
         return next;
       });
     },
-    [streakKey, today],
+    [streakKey, puzzleDate],
   );
 
   const submitGuess = useCallback(
@@ -106,14 +112,14 @@ export function useDailyGame(mode: GameMode, maxAttempts: number) {
         };
         saveState(gameKey, next);
 
-        if (status !== "playing") {
+        if (status !== "playing" && !isArchive) {
           setTimeout(() => updateStreak(status === "won"), 0);
         }
 
         return next;
       });
     },
-    [gameKey, maxAttempts, isFinished, updateStreak],
+    [gameKey, maxAttempts, isFinished, isArchive, updateStreak],
   );
 
   return {
@@ -122,6 +128,7 @@ export function useDailyGame(mode: GameMode, maxAttempts: number) {
     attemptsLeft,
     isFinished,
     submitGuess,
-    today,
+    date: puzzleDate,
+    isArchive,
   };
 }

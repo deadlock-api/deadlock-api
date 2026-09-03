@@ -1,17 +1,38 @@
 import newRockerWoff2 from "@fontsource/new-rocker/files/new-rocker-latin-400-normal.woff2?url";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Copy, Crosshair, Ear, HelpCircle, Puzzle, ShoppingBag, Swords } from "lucide-react";
+import {
+  CalendarDays,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Crosshair,
+  Ear,
+  HelpCircle,
+  Puzzle,
+  ShoppingBag,
+  Swords,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { type DailyStatus, GameCard, getDailyResult, getDailyStatus } from "~/components/deadlockdle/GameCard";
 import { Button } from "~/components/ui/button";
-import { getDayNumber, getTodayDate } from "~/lib/deadlockdle/seed";
+import { day } from "~/dayjs";
+import {
+  EPOCH_DATE,
+  getDayNumber,
+  getTodayDate,
+  isValidPuzzleDate,
+  resolvePuzzleDate,
+  validatePuzzleDateSearch,
+} from "~/lib/deadlockdle/seed";
 import type { GameMode } from "~/lib/deadlockdle/types";
 import { seo } from "~/lib/seo";
 
 export const Route = createFileRoute("/deadlockdle/")({
   component: DeadlockdleHub,
+  validateSearch: validatePuzzleDateSearch,
   head: () => {
     const s = seo({
       title: "Deadlockdle - Daily Deadlock Minigames | Deadlock API",
@@ -106,12 +127,12 @@ const fadeUp = {
   },
 };
 
-function buildShareText(dayNum: number, statuses: Record<GameMode, DailyStatus>): string {
-  const lines: string[] = [`Deadlockdle Day ${dayNum}`, ""];
+function buildShareText(date: string, statuses: Record<GameMode, DailyStatus>): string {
+  const lines: string[] = [`Deadlockdle Day ${getDayNumber(date)}`, ""];
 
   for (const game of GAMES) {
     const status = statuses[game.mode];
-    const result = getDailyResult(game.mode);
+    const result = getDailyResult(game.mode, date);
     const emoji = status === "won" ? "✅" : "❌";
     const detail = result ? ` (${result})` : "";
     lines.push(`${emoji} ${game.shareLabel}${detail}`);
@@ -122,17 +143,30 @@ function buildShareText(dayNum: number, statuses: Record<GameMode, DailyStatus>)
 }
 
 function DeadlockdleHub() {
+  const { date: dateParam } = Route.useSearch();
+  const navigate = useNavigate();
   const today = getTodayDate();
-  const dayNum = getDayNumber(today);
+  const date = resolvePuzzleDate(dateParam);
+  const isArchive = date !== today;
+  const dayNum = getDayNumber(date);
   const [copied, setCopied] = useState(false);
-  const [statuses] = useState<Record<GameMode, DailyStatus> | null>(() => {
+
+  const statuses = useMemo(() => {
     if (typeof window === "undefined") return null;
     const result = {} as Record<GameMode, DailyStatus>;
     for (const game of GAMES) {
-      result[game.mode] = getDailyStatus(game.mode);
+      result[game.mode] = getDailyStatus(game.mode, date);
     }
     return result;
-  });
+  }, [date]);
+
+  const prevDate = day(date).subtract(1, "day").format("YYYY-MM-DD");
+  const nextDate = day(date).add(1, "day").format("YYYY-MM-DD");
+
+  function goToDate(target: string) {
+    if (!isValidPuzzleDate(target)) return;
+    navigate({ to: "/deadlockdle", search: target === today ? {} : { date: target } });
+  }
 
   const allFinished = useMemo(
     () => statuses != null && GAMES.every((g) => statuses[g.mode] === "won" || statuses[g.mode] === "lost"),
@@ -166,8 +200,54 @@ function DeadlockdleHub() {
           transition={{ delay: 0.15, duration: 0.4 }}
           className="mx-auto mt-3 max-w-lg text-sm text-muted-foreground"
         >
-          Test your Deadlock knowledge with daily puzzles. New challenges every day.
+          {isArchive
+            ? `Replaying the puzzles from ${day(date).format("MMMM D, YYYY")}.`
+            : "Test your Deadlock knowledge with daily puzzles. New challenges every day."}
         </motion.p>
+
+        <div className="relative mt-5 flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => goToDate(prevDate)}
+            disabled={!isValidPuzzleDate(prevDate)}
+            title="Previous day"
+            className="cursor-target flex size-8 items-center justify-center border border-border bg-card text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary disabled:pointer-events-none disabled:opacity-30"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+
+          <label className="flex items-center gap-2 border border-border bg-card px-3 py-1.5 text-muted-foreground focus-within:border-primary/40">
+            <CalendarDays className="size-3.5 text-muted-foreground/50" />
+            <input
+              type="date"
+              value={date}
+              min={EPOCH_DATE}
+              max={today}
+              onChange={(e) => goToDate(e.target.value)}
+              className="cursor-target bg-transparent font-mono text-xs text-foreground [color-scheme:dark] outline-none"
+            />
+          </label>
+
+          <button
+            type="button"
+            onClick={() => goToDate(nextDate)}
+            disabled={!isValidPuzzleDate(nextDate)}
+            title="Next day"
+            className="cursor-target flex size-8 items-center justify-center border border-border bg-card text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary disabled:pointer-events-none disabled:opacity-30"
+          >
+            <ChevronRight className="size-4" />
+          </button>
+
+          {isArchive && (
+            <Button
+              onClick={() => goToDate(today)}
+              variant="outline"
+              className="cursor-target h-8 border-primary/30 font-mono text-xs tracking-wider uppercase hover:border-primary/50 hover:bg-primary/5"
+            >
+              Today
+            </Button>
+          )}
+        </div>
       </section>
 
       <section>
@@ -180,7 +260,7 @@ function DeadlockdleHub() {
         >
           {GAMES.map((game) => (
             <motion.div key={game.mode} variants={fadeUp}>
-              <GameCard {...game} />
+              <GameCard {...game} date={date} />
             </motion.div>
           ))}
         </motion.div>
@@ -196,7 +276,7 @@ function DeadlockdleHub() {
           >
             <Button
               onClick={async () => {
-                const text = buildShareText(dayNum, statuses);
+                const text = buildShareText(date, statuses);
                 await navigator.clipboard.writeText(text);
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);

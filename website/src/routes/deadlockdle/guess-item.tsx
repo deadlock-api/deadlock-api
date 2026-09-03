@@ -9,7 +9,7 @@ import { HintReveal } from "~/components/deadlockdle/HintReveal";
 import { ResultModal } from "~/components/deadlockdle/ResultModal";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { useItems } from "~/lib/deadlockdle/queries";
-import { getModeSeed, seededPick, seededRandom } from "~/lib/deadlockdle/seed";
+import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
 import { seo } from "~/lib/seo";
 import { cn } from "~/lib/utils";
@@ -17,6 +17,7 @@ import { filterShopableItems } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/deadlockdle/guess-item")({
   component: GuessItem,
+  validateSearch: validatePuzzleDateSearch,
   head: () =>
     seo({
       title: "Guess the Item - Deadlockdle | Deadlock API",
@@ -61,7 +62,12 @@ function getPropertyHint(
 
 function GuessItem() {
   const { data: items, isLoading } = useItems();
-  const { gameState, streakState, isFinished, submitGuess, today } = useDailyGame("guess-item", MAX_ATTEMPTS);
+  const { date: dateParam } = Route.useSearch();
+  const { gameState, streakState, isFinished, submitGuess, date, isArchive } = useDailyGame(
+    "guess-item",
+    MAX_ATTEMPTS,
+    dateParam,
+  );
 
   const [shakeKey, setShakeKey] = useState(0);
   const [feedbackType, setFeedbackType] = useState<"correct" | "wrong" | null>(null);
@@ -70,10 +76,10 @@ function GuessItem() {
 
   const dailyItem = useMemo(() => {
     if (shopableItems.length === 0) return null;
-    const seed = getModeSeed(today, "guess-item");
+    const seed = getModeSeed(date, "guess-item");
     const rng = seededRandom(seed);
     return seededPick(shopableItems, rng);
-  }, [shopableItems, today]);
+  }, [shopableItems, date]);
 
   const hints = useMemo(() => {
     if (!dailyItem) return [];
@@ -128,6 +134,7 @@ function GuessItem() {
       totalAttempts={MAX_ATTEMPTS}
       usedAttempts={gameState.guesses.length}
       status={gameState.status}
+      date={date}
     >
       <GuessFeedback type={feedbackType} triggerKey={shakeKey} />
 
@@ -203,10 +210,11 @@ function GuessItem() {
         status={gameState.status}
         answer={dailyItem.name}
         mode="guess-item"
-        date={today}
+        date={date}
         guesses={gameState.guesses}
         maxAttempts={MAX_ATTEMPTS}
         streakState={streakState}
+        isArchive={isArchive}
       />
     </GameShell>
   );

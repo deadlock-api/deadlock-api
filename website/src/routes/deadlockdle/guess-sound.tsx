@@ -11,7 +11,7 @@ import { HintReveal } from "~/components/deadlockdle/HintReveal";
 import { ResultModal } from "~/components/deadlockdle/ResultModal";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { useAbilities, useHeroes, useSounds } from "~/lib/deadlockdle/queries";
-import { getModeSeed, seededPick, seededRandom } from "~/lib/deadlockdle/seed";
+import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
 import { seo } from "~/lib/seo";
 import { cn } from "~/lib/utils";
@@ -19,6 +19,7 @@ import { filterPlayableHeroes } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/deadlockdle/guess-sound")({
   component: GuessSound,
+  validateSearch: validatePuzzleDateSearch,
   head: () =>
     seo({
       title: "Guess the Sound - Deadlockdle | Deadlock API",
@@ -283,7 +284,12 @@ function GuessSound() {
   const { data: heroes, isLoading: heroesLoading } = useHeroes();
   const { data: soundsData, isLoading: soundsLoading } = useSounds();
   const { data: rawAbilities, isLoading: abilitiesLoading } = useAbilities();
-  const { gameState, streakState, isFinished, submitGuess, today } = useDailyGame("guess-sound", MAX_ATTEMPTS);
+  const { date: dateParam } = Route.useSearch();
+  const { gameState, streakState, isFinished, submitGuess, date, isArchive } = useDailyGame(
+    "guess-sound",
+    MAX_ATTEMPTS,
+    dateParam,
+  );
 
   const [shakeKey, setShakeKey] = useState(0);
   const [feedbackType, setFeedbackType] = useState<"correct" | "wrong" | null>(null);
@@ -314,10 +320,10 @@ function GuessSound() {
 
   const dailySound = useMemo(() => {
     if (allSounds.length === 0) return null;
-    const seed = getModeSeed(today, "guess-sound");
+    const seed = getModeSeed(date, "guess-sound");
     const rng = seededRandom(seed);
     return seededPick(allSounds, rng);
-  }, [allSounds, today]);
+  }, [allSounds, date]);
 
   const {
     audioRef,
@@ -406,6 +412,7 @@ function GuessSound() {
       totalAttempts={MAX_ATTEMPTS}
       usedAttempts={gameState.guesses.length}
       status={gameState.status}
+      date={date}
     >
       <GuessFeedback type={feedbackType} triggerKey={shakeKey} />
 
@@ -543,10 +550,11 @@ function GuessSound() {
         status={gameState.status}
         answer={dailySound.abilityName}
         mode="guess-sound"
-        date={today}
+        date={date}
         guesses={gameState.guesses}
         maxAttempts={MAX_ATTEMPTS}
         streakState={streakState}
+        isArchive={isArchive}
       />
     </GameShell>
   );

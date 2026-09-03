@@ -19,6 +19,7 @@ interface ResultModalProps {
   guesses: string[];
   maxAttempts: number;
   streakState: StreakState;
+  isArchive?: boolean;
 }
 
 const stagger = {
@@ -31,7 +32,17 @@ const fadeUp = {
   show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" as const } },
 };
 
-export function ResultModal({ open, status, answer, mode, date, guesses, maxAttempts, streakState }: ResultModalProps) {
+export function ResultModal({
+  open,
+  status,
+  answer,
+  mode,
+  date,
+  guesses,
+  maxAttempts,
+  streakState,
+  isArchive,
+}: ResultModalProps) {
   const countdown = useCountdown();
   const containerRef = useRef<HTMLDivElement>(null);
   const isWin = status === "won";
@@ -166,25 +177,27 @@ export function ResultModal({ open, status, answer, mode, date, guesses, maxAtte
                 })}
               </motion.div>
 
-              <motion.div
-                variants={fadeUp}
-                className="mb-4 flex items-center justify-between border border-muted-foreground/10 bg-muted/10 px-3.5 py-2.5"
-              >
-                <div className="flex items-center gap-2">
-                  <Clock className="size-3.5 text-muted-foreground/30" />
-                  <span className="font-mono text-[10px] tracking-wider text-muted-foreground/40 uppercase">
-                    Next Puzzle
-                  </span>
-                </div>
-                <span className="font-mono text-sm font-bold tracking-widest text-foreground">{countdown}</span>
-              </motion.div>
+              {!isArchive && (
+                <motion.div
+                  variants={fadeUp}
+                  className="mb-4 flex items-center justify-between border border-muted-foreground/10 bg-muted/10 px-3.5 py-2.5"
+                >
+                  <div className="flex items-center gap-2">
+                    <Clock className="size-3.5 text-muted-foreground/30" />
+                    <span className="font-mono text-[10px] tracking-wider text-muted-foreground/40 uppercase">
+                      Next Puzzle
+                    </span>
+                  </div>
+                  <span className="font-mono text-sm font-bold tracking-widest text-foreground">{countdown}</span>
+                </motion.div>
+              )}
 
               <motion.div
                 variants={fadeUp}
                 className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end"
               >
                 <ShareButton mode={mode} date={date} guesses={guesses} maxAttempts={maxAttempts} status={status} />
-                <NextGameButton currentMode={mode} />
+                <NextGameButton currentMode={mode} date={date} />
               </motion.div>
             </motion.div>
           </div>

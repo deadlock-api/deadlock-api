@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { useMemo } from "react";
 
 import { getTodayDate } from "~/lib/deadlockdle/seed";
+import { gameStorageKey } from "~/lib/deadlockdle/storage";
 import type { GameMode } from "~/lib/deadlockdle/types";
 import { cn } from "~/lib/utils";
 
@@ -15,15 +16,16 @@ interface GameCardProps {
   description: string;
   icon: LucideIcon;
   path: string;
+  date: string;
 }
 
-export function getDailyStatus(mode: GameMode): DailyStatus {
+export function getDailyStatus(mode: GameMode, date: string = getTodayDate()): DailyStatus {
   if (typeof window === "undefined") return "untouched";
   try {
-    const raw = localStorage.getItem(`deadlockdle:${mode}:game`);
+    const raw = localStorage.getItem(gameStorageKey(mode, date));
     if (!raw) return "untouched";
     const state = JSON.parse(raw);
-    if (state.date !== getTodayDate()) return "untouched";
+    if (state.date !== date) return "untouched";
 
     if (state.status) return state.status;
 
@@ -45,13 +47,13 @@ export function getDailyStatus(mode: GameMode): DailyStatus {
   }
 }
 
-export function getDailyResult(mode: GameMode): string | null {
+export function getDailyResult(mode: GameMode, date: string = getTodayDate()): string | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(`deadlockdle:${mode}:game`);
+    const raw = localStorage.getItem(gameStorageKey(mode, date));
     if (!raw) return null;
     const state = JSON.parse(raw);
-    if (state.date !== getTodayDate()) return null;
+    if (state.date !== date) return null;
 
     if (state.status === "won") return null;
     if (state.status === "lost") return null;
@@ -80,12 +82,17 @@ const STATUS_BORDER = {
   lost: "border-primary/20 hover:border-primary/40",
 } as const;
 
-export function GameCard({ mode, title, description, icon: Icon, path }: GameCardProps) {
-  const status = useMemo(() => getDailyStatus(mode), [mode]);
+export function GameCard({ mode, title, description, icon: Icon, path, date }: GameCardProps) {
+  const status = useMemo(() => getDailyStatus(mode, date), [mode, date]);
   const badge = STATUS_BADGE[status];
 
   return (
-    <Link to={path} preload="intent" className="cursor-target group block h-full">
+    <Link
+      to={path}
+      search={date === getTodayDate() ? {} : { date }}
+      preload="intent"
+      className="cursor-target group block h-full"
+    >
       <div
         className={cn(
           "flex h-full flex-col border bg-card p-4 transition-colors hover:bg-muted/30",
