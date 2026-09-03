@@ -505,7 +505,7 @@ const npcHealthQuestion: QuestionGenerator = (_heroes, _items, npcs, _abilities,
   return { question: `What is the max health of ${displayName}?`, options, correctIndex, category: "NPC" };
 };
 
-/** "How much gold does {npc} reward?" */
+/** "How many souls does {npc} reward?" */
 const npcGoldRewardQuestion: QuestionGenerator = (_heroes, _items, npcs, _abilities, rng) => {
   const rewardNpcs = npcs.filter((n) => n.gold_reward != null && n.gold_reward > 0);
   if (rewardNpcs.length === 0) return null;
@@ -516,7 +516,7 @@ const npcGoldRewardQuestion: QuestionGenerator = (_heroes, _items, npcs, _abilit
   const wrong = generateNumericOptions(npc.gold_reward, rng, 3, [0.5, 0.75, 1.3, 1.6]);
   const { options, correctIndex } = buildOptions(String(npc.gold_reward), wrong, rng);
 
-  return { question: `How much gold does ${displayName} reward?`, options, correctIndex, category: "NPC" };
+  return { question: `How many souls does ${displayName} reward?`, options, correctIndex, category: "NPC" };
 };
 
 // ============================================================
