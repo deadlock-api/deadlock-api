@@ -34,13 +34,23 @@ hero-scoped variants no longer differ per hero: they report the account-wide ran
 matches played on that hero.
 
 ### Rate Limits:
+
+The rank and rank-history endpoints share one bucket:
+
+| Type | Limit |
+| ---- | ----- |
+| IP | 20req/min |
+| Key | 100req/min & 2000req/h |
+| Global | 200req/min |
+
+The distribution endpoints aggregate over every ranked match and are far more expensive, so they
+have their own, tighter bucket:
+
 | Type | Limit |
 | ---- | ----- |
 | IP | 5req/min |
 | Key | 25req/min |
 | Global | 50req/min |
-
-Rate limits are shared across all MMR endpoints (single bucket).
     "
 )))]
 struct ApiDoc;
@@ -54,6 +64,28 @@ pub(super) async fn apply_mmr_rate_limits(
         .apply_limits(
             rate_limit_key,
             "mmr",
+            &[
+                Quota::ip_limit(20, Duration::from_mins(1)),
+                Quota::key_limit(100, Duration::from_mins(1)),
+                Quota::key_limit(2_000, Duration::from_hours(1)),
+                Quota::global_limit(200, Duration::from_mins(1)),
+            ],
+        )
+        .await?;
+    Ok(())
+}
+
+/// The distribution queries scan every ranked match instead of a primary-key range, costing roughly
+/// two orders of magnitude more than the account-scoped MMR endpoints, so they get their own bucket.
+pub(super) async fn apply_mmr_distribution_rate_limits(
+    state: &AppState,
+    rate_limit_key: &RateLimitKey,
+) -> APIResult<()> {
+    state
+        .rate_limit_client
+        .apply_limits(
+            rate_limit_key,
+            "mmr_distribution",
             &[
                 Quota::ip_limit(5, Duration::from_mins(1)),
                 Quota::key_limit(25, Duration::from_mins(1)),
