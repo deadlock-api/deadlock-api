@@ -148,7 +148,7 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
     // Tuple layout for each player (positions used by the SELECT below):
     //   1: hero_id, 2: won, 3: kills, 4: deaths, 5: assists, 6: denies,
     //   7: last_hits, 8: net_worth, 9: max_boss_damage, 10: max_creep_kills,
-    //   11: account_id (used only for the asymmetric account filter on p1)
+    //   11: account_id, appended only when an account filter needs it
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let mut where_filters = vec![
         "team IN ('Team0', 'Team1')".to_owned(),
@@ -195,6 +195,14 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
 
     // The original query applied account filters only to p1 (the lower-hero-id
     // side of the pair). Replicate that asymmetry on `pair.1` post-arrayJoin.
+    #[expect(deprecated)]
+    let needs_account_id = query.account_id.is_some() || query.account_ids.is_some();
+    let account_col = if needs_account_id {
+        ",\n                   account_id"
+    } else {
+        ""
+    };
+
     let mut pair_filters = vec!["(p.1).1 < (p.2).1".to_owned()];
     #[expect(deprecated)]
     if let Some(account_id) = query.account_id {
@@ -251,8 +259,7 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
     FROM (
         SELECT groupArray((
                    hero_id, toUInt32(won), kills, deaths, assists, denies,
-                   last_hits, net_worth, max_boss_damage, max_creep_kills,
-                   account_id
+                   last_hits, net_worth, max_boss_damage, max_creep_kills{account_col}
                )) AS arr
         FROM match_player
         WHERE {where_clause}
