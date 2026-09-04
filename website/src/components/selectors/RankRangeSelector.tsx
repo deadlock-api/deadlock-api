@@ -7,6 +7,7 @@ import { FilterPill } from "~/components/FilterPill";
 import { Slider } from "~/components/ui/slider";
 import { useDraftValue } from "~/hooks/useDraftValue";
 import { getRankImageUrl, getRankLabel } from "~/lib/rank-utils";
+import { cn } from "~/lib/utils";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
 import { ImgWithSkeleton } from "../primitives/ImgWithSkeleton";
@@ -21,6 +22,25 @@ interface RankOption {
   rank: Rank;
   subrank: number;
   label: string;
+}
+
+function RankIcon({ option, className }: { option: RankOption; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-white/[0.08] bg-white/[0.1]",
+        className,
+      )}
+    >
+      <ImgWithSkeleton
+        src={getRankImageUrl(option.rank, "webp", option.subrank) ?? ""}
+        alt={option.label}
+        // The badge art sits flush to the bottom of a canvas padded with transparency,
+        // so scaling from the bottom crops the empty margins without clipping the subrank numeral.
+        className="size-full origin-bottom scale-130 object-contain"
+      />
+    </span>
+  );
 }
 
 interface RankRangeSelectorProps {
@@ -96,11 +116,7 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: Ran
 
   const triggerIcon =
     committedMinOption && !isMinAtStart ? (
-      <ImgWithSkeleton
-        src={getRankImageUrl(committedMinOption.rank, "webp") ?? ""}
-        alt={committedMinOption.label}
-        className="size-4 shrink-0 object-contain"
-      />
+      <RankIcon option={committedMinOption} className="size-6" />
     ) : (
       <ShieldIcon className="size-3.5 shrink-0" />
     );
@@ -116,24 +132,12 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: Ran
       <div className="grid gap-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {localMinOption && (
-              <ImgWithSkeleton
-                src={getRankImageUrl(localMinOption.rank, "webp") ?? ""}
-                alt={localMinOption.label}
-                className="size-6 shrink-0 object-contain"
-              />
-            )}
+            {localMinOption && <RankIcon option={localMinOption} className="size-11" />}
             <span className="text-sm font-medium">{localMinOption?.label}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">{localMaxOption?.label}</span>
-            {localMaxOption && (
-              <ImgWithSkeleton
-                src={getRankImageUrl(localMaxOption.rank, "webp") ?? ""}
-                alt={localMaxOption.label}
-                className="size-6 shrink-0 object-contain"
-              />
-            )}
+            {localMaxOption && <RankIcon option={localMaxOption} className="size-11" />}
           </div>
         </div>
         <div className="pt-2 pb-2">
