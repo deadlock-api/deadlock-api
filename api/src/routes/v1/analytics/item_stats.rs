@@ -884,8 +884,14 @@ fn build_query(query: &ItemStatsQuery) -> String {
      *
      * (Originally this carve-out covered only account-only shapes; it was generalized to
      * all no-hero shapes after benchmarking the projection vs base-table access paths.)
+     *
+     * An enemy hero filter counts too, even though the buyer side has no hero
+     * predicate: the enemy-team CTE selects on `hero_id`, which is exactly the
+     * projection's leading key, so it prunes to ~1.1k marks instead of ~38k. The
+     * main ARRAY JOIN scan reads `upgrades.*`, which the projection does not
+     * store, so it falls back to the base table on its own.
      */
-    if !has_buyer_hero_filter {
+    if !has_buyer_hero_filter && enemy_hero_ids.is_none() {
         settings.push("optimize_use_projections = 0");
     }
     let settings_clause = settings.join(", ");
