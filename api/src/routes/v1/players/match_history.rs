@@ -82,6 +82,12 @@ impl BatchQueryMulti for MatchHistoryReadQuery {
         // use_statistics/join-order-limit are off: since 26.8 the planner loads per-part
         // column statistics and reorders joins at plan time, ~200ms per query here for a
         // slightly worse plan (benchmarked 236ms -> 70ms with both disabled).
+        //
+        // max_threads is capped at 2: the inner GROUP BY builds one hash table of ~28
+        // argMax states per thread, so the client default of 16 costs 29 MiB peak for no
+        // latency gain (benchmarked 29 MiB -> 13 MiB, wall unchanged at p=0.93). This is a
+        // point-lookup endpoint at ~185k calls/week, so the headroom matters more than
+        // per-query parallelism.
         let outer_columns = PlayerMatchHistoryEntry::COLUMN_NAMES
             .iter()
             .map(|c| match *c {
@@ -112,7 +118,8 @@ impl BatchQueryMulti for MatchHistoryReadQuery {
              ) AS ranks USING (account_id, match_id) \
              ORDER BY match_id DESC \
              SETTINGS log_comment = 'match_history', \
-                 use_statistics = 0, query_plan_optimize_join_order_limit = 0"
+                 use_statistics = 0, query_plan_optimize_join_order_limit = 0, \
+                 max_threads = 2"
         )
     }
 
