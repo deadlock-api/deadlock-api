@@ -241,6 +241,12 @@ impl AppState {
         // up to `query_cache_ttl` staleness should use this; per-account, background, and
         // sub-200ms queries stay on `ch_client_ro` so they neither serve stale data nor
         // evict hot analytics entries.
+        //
+        // Endpoints that wrap their ClickHouse call in an in-process `#[cached]` with a
+        // TTL longer than `query_cache_ttl` must NOT use this client: the process cache
+        // absorbs every repeat, so the query cache only ever stores and never reads back.
+        // Measured over 7 days, such endpoints hit 0-2.4% while the two without a process
+        // cache (badge_distribution, kill_death_stats) hit 44% and 17%.
         debug!("Creating cached Clickhouse client");
         let ch_client_cached = ch_client_ro
             .clone()

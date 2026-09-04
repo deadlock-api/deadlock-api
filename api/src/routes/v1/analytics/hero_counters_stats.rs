@@ -321,7 +321,7 @@ pub(super) async fn hero_counters_stats(
 ) -> APIResult<impl IntoResponse> {
     #[expect(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
-    get_hero_counter_stats(&state.ch_client_cached, query)
+    get_hero_counter_stats(&state.ch_client_ro, query)
         .await
         .map(Json)
 }

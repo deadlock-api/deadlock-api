@@ -537,7 +537,7 @@ pub(super) async fn lane_soul_curve(
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     filter_protected_accounts(&state, &mut query.account_ids, None).await?;
-    get_lane_soul_curve(&state.ch_client_cached, query)
+    get_lane_soul_curve(&state.ch_client_ro, query)
         .await
         .map(Json)
 }

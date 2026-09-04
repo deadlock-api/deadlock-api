@@ -707,7 +707,7 @@ pub(super) async fn item_flow_stats(
         ));
     }
     filter_protected_accounts(&state, &mut query.account_ids, None).await?;
-    get_item_flow_stats(&state.ch_client_cached, query)
+    get_item_flow_stats(&state.ch_client_ro, query)
         .await
         .map(Json)
 }
