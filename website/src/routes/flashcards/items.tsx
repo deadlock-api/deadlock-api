@@ -34,10 +34,11 @@ function ItemFlashcards() {
       title="Item Flashcards"
       subtitle="Identify the shop item from its icon. Pick the correct name."
       pool={pool}
-      getIcon={itemIconSrc}
+      renderPrompt={(entry) => (
+        <img src={itemIconSrc(entry)} alt="Mystery item" className="size-full object-contain" draggable={false} />
+      )}
       isLoading={isLoading}
       storageKey="flashcards:items:no-repeats"
-      altLabel="Mystery item"
       masteredLabel="All items mastered"
     />
   );

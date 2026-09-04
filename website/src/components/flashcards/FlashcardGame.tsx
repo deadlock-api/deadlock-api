@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, Check, RotateCcw, X } from "lucide-react";
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -51,11 +52,17 @@ export interface FlashcardGameProps<T extends FlashcardEntry> {
   title: string;
   subtitle: string;
   pool: T[];
-  getIcon: (entry: T) => string;
+  renderPrompt: (entry: T) => ReactNode;
+  renderOption?: (entry: T) => ReactNode;
+  promptClassName?: string;
+  controls?: ReactNode;
   isLoading: boolean;
   storageKey: string;
-  altLabel: string;
   masteredLabel: string;
+}
+
+function renderNameOption<T extends FlashcardEntry>(entry: T): ReactNode {
+  return <span className="truncate tracking-wide uppercase">{entry.name}</span>;
 }
 
 export function FlashcardGame<T extends FlashcardEntry>(props: FlashcardGameProps<T>) {
@@ -73,9 +80,11 @@ function FlashcardGameReady<T extends FlashcardEntry>({
   title,
   subtitle,
   pool,
-  getIcon,
+  renderPrompt,
+  renderOption = renderNameOption,
+  promptClassName = "size-40 sm:size-52",
+  controls,
   storageKey,
-  altLabel,
   masteredLabel,
 }: FlashcardGameProps<T>) {
   const [card, setCard] = useState<Card<T> | null>(() => (pool.length > 0 ? pickCard(pool, new Set()) : null));
@@ -203,6 +212,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
             </span>
           )}
         </Label>
+        {controls}
       </div>
 
       {empty ? (
@@ -245,10 +255,10 @@ function FlashcardGameReady<T extends FlashcardEntry>({
             transition={{ duration: 0.18, ease: "easeOut" }}
             className="flex flex-col items-center gap-6"
           >
-            <div className="relative">
+            <div className={cn("relative", promptClassName)}>
               <div
                 className={cn(
-                  "flex size-40 items-center justify-center overflow-hidden rounded-2xl border bg-muted/30 ring-1 transition-colors duration-200 sm:size-52",
+                  "size-full overflow-hidden rounded-2xl border bg-muted/30 ring-1 transition-colors duration-200",
                   selected === null
                     ? "border-border/80 ring-border/30"
                     : selected === card.answer.id
@@ -256,7 +266,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
                       : "border-primary/50 ring-primary/30",
                 )}
               >
-                <img src={getIcon(card.answer)} alt={altLabel} className="size-full object-contain" draggable={false} />
+                {renderPrompt(card.answer)}
               </div>
               <AnimatePresence>
                 {selected !== null && (
@@ -290,7 +300,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
                     onClick={() => handleChoice(option.id)}
                     disabled={revealed}
                     className={cn(
-                      "flex items-center justify-between border px-4 py-3 text-left font-mono text-sm font-medium tracking-wide uppercase transition-colors duration-150",
+                      "flex items-center justify-between gap-3 border px-4 py-3 text-left font-mono text-sm font-medium transition-colors duration-150",
                       !revealed &&
                         "border-border bg-card hover:border-primary/50 hover:bg-primary/5 hover:text-primary",
                       revealed && isAnswer && "border-green-500/60 bg-green-500/10 text-green-300",
@@ -298,7 +308,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
                       revealed && !isAnswer && !isPicked && "border-border/50 bg-card/40 text-muted-foreground/60",
                     )}
                   >
-                    <span className="truncate">{option.name}</span>
+                    {renderOption(option)}
                     {revealed && isAnswer && <Check className="size-4 shrink-0 text-green-400" />}
                     {revealed && !isAnswer && isPicked && <X className="size-4 shrink-0 text-primary" />}
                   </button>

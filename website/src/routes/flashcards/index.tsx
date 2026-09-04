@@ -1,7 +1,7 @@
 import newRockerWoff2 from "@fontsource/new-rocker/files/new-rocker-latin-400-normal.woff2?url";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ArrowRight, GitBranch, ShoppingBag, Swords } from "lucide-react";
+import { ArrowRight, GitBranch, ScrollText, ShoppingBag, Swords } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { seo } from "~/lib/seo";
@@ -48,6 +48,12 @@ const GAMES: {
     description: "Identify shop items by their icon. Pick the correct name from four choices.",
     icon: ShoppingBag,
     path: "/flashcards/items",
+  },
+  {
+    title: "Item Effects",
+    description: "Identify items by their stats and effects, or pick the right effects for a named item.",
+    icon: ScrollText,
+    path: "/flashcards/item-effects",
   },
   {
     title: "Item Upgrade Paths",

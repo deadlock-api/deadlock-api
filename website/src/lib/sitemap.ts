@@ -35,6 +35,7 @@ const STATIC_ENTRIES: SitemapEntry[] = [
   { path: "/flashcards", changefreq: "weekly", priority: 0.6 },
   { path: "/flashcards/heroes", changefreq: "weekly", priority: 0.6 },
   { path: "/flashcards/items", changefreq: "weekly", priority: 0.6 },
+  { path: "/flashcards/item-effects", changefreq: "weekly", priority: 0.6 },
   { path: "/flashcards/item-upgrades", changefreq: "weekly", priority: 0.6 },
   { path: "/data-dumps", changefreq: "weekly", priority: 0.6 },
 ];

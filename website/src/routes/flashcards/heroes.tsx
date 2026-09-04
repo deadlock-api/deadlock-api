@@ -34,10 +34,11 @@ function HeroFlashcards() {
       title="Hero Flashcards"
       subtitle="Identify the hero from their icon. Pick the correct name."
       pool={pool}
-      getIcon={heroIconSrc}
+      renderPrompt={(entry) => (
+        <img src={heroIconSrc(entry)} alt="Mystery hero" className="size-full object-contain" draggable={false} />
+      )}
       isLoading={isLoading}
       storageKey="flashcards:heroes:no-repeats"
-      altLabel="Mystery hero"
       masteredLabel="All heroes mastered"
     />
   );
