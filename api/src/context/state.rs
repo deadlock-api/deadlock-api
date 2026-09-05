@@ -14,6 +14,7 @@ use tracing::{debug, warn};
 
 use crate::context::batchers::Batchers;
 use crate::context::config::Config;
+use crate::routes::v1::mcp::{CatalogError, SnapshotCatalog};
 use crate::services::assets::client::AssetsClient;
 use crate::services::assets::versions::store::VersionStore;
 use crate::services::rate_limiter::RateLimitClient;
@@ -37,6 +38,8 @@ pub enum AppStateError {
     ParsingJson(#[from] serde_json::Error),
     #[error("IO error: {0}")]
     Io(#[from] io::Error),
+    #[error("MCP catalog error: {0}")]
+    McpCatalog(#[from] CatalogError),
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -66,6 +69,7 @@ pub(crate) struct AppState {
     pub(crate) steam_search_index: SteamSearchIndex,
     pub(crate) version_store: VersionStore,
     pub(crate) demo_query_queue: crate::routes::v1::matches::demo::DemoQueryQueue,
+    pub(crate) mcp_catalog: Arc<SnapshotCatalog>,
 }
 
 impl AppState {
@@ -380,6 +384,10 @@ impl AppState {
             &config.demo_extracts_public_url,
         );
 
+        debug!("Creating MCP snapshot catalog");
+        let mcp_catalog = Arc::new(SnapshotCatalog::new(&config.mcp_snapshot)?);
+        mcp_catalog.clone().spawn_refresh_loop();
+
         Ok(Self {
             config,
             s3_client,
@@ -400,6 +408,7 @@ impl AppState {
             steam_search_index,
             version_store,
             demo_query_queue,
+            mcp_catalog,
         })
     }
 }

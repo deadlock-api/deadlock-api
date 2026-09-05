@@ -14,6 +14,7 @@ mod graphql;
 pub mod info;
 mod leaderboard;
 pub mod matches;
+pub(crate) mod mcp;
 mod patches;
 mod patron;
 pub mod players;
@@ -40,6 +41,7 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
         .nest("/assets", assets::router())
         .nest("/feedback", feedback::router())
         .merge(graphql::router())
+        .merge(mcp::router(state))
         .layer(cors::public())
         .merge(credentialed)
 }

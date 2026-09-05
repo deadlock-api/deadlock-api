@@ -28,7 +28,7 @@ utoipa = { version = "5.5.0", features = ["axum_extras", "chrono", "uuid"] }
 serde = { version = "1.0.229", features = ["derive"] }
 chrono = { version = "0.4.45", features = ["serde"] }
 serde_json = "1.0.151"
-object_store = { version = "0.14.1", features = ["aws"], default-features = false }
+object_store = { version = "0.13", features = ["aws"], default-features = false }
 tower = { version = "0.5.3", features = ["limit", "tokio"] }
 tower-layer = "0.3.3"
 tower-service = "0.3.3"
@@ -91,6 +91,7 @@ rayon = "1"
 tokio-util = { version = "0.7.19", features = ["io"] }
 image = { version = "0.25.10", default-features = false, features = ["png", "webp"] }
 ab_glyph = "0.2.32"
+rmcp = { version = "3.2.0", default-features = false, features = ["server", "transport-streamable-http-server"] }
 
 [build-dependencies]
 prost-reflect = "0.16"
