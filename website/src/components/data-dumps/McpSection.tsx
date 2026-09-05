@@ -3,7 +3,7 @@ import { HighlightedCode, type HighlightLanguage } from "~/components/Highlighte
 import { Button } from "~/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 
-export const MCP_URL = "https://mcp.deadlock-api.com/mcp";
+export const MCP_URL = "https://api.deadlock-api.com/v1/mcp";
 const NAME = "deadlock";
 
 const CURSOR_INSTALL_LINK = `cursor://anysphere.cursor-deeplink/mcp/install?name=${NAME}&config=${btoa(
