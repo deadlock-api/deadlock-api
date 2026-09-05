@@ -423,14 +423,19 @@ impl Variable {
                 Ok(format!("{} {} ({progress}/{width})", rank.name, badge % 10))
             }
             Self::RankImg | Self::PredictedRankImg | Self::MMRHistoryRankImg => {
-                let (rank, _) = Self::fetch_player_ranks(state, steam_id).await?;
+                let (rank, subrank) = Self::fetch_player_ranks(state, steam_id).await?;
                 state
                     .assets_client
                     .fetch_ranks()
                     .await?
                     .iter()
                     .find(|r| r.tier == rank)
-                    .and_then(|r| r.images.get("large").or(r.images.get("large_webp")))
+                    .and_then(|r| {
+                        r.images
+                            .get(&format!("subrank{subrank}"))
+                            .or(r.images.get("large"))
+                            .or(r.images.get("large_webp"))
+                    })
                     .cloned()
                     .ok_or(VariableResolveError::NoData("rank img"))
             }
