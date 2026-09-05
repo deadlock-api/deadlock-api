@@ -45,7 +45,7 @@ export const Route = createFileRoute("/data-dumps")({
   component: DataDumps,
   head: () =>
     seo({
-      title: "Database Dumps | Deadlock API",
+      title: "MCP & Data Dumps | Deadlock API",
       description:
         "Query daily database snapshots through a read-only MCP server, or browse and download them in Parquet and SQL format for offline analysis or research.",
       path: "/data-dumps",
@@ -406,7 +406,7 @@ function DataDumps() {
   return (
     <div className="space-y-6">
       <section className="space-y-2 text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Database Dumps</h1>
+        <h1 className="text-3xl font-bold tracking-tight">MCP & Data Dumps</h1>
         <p className="mx-auto max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Query daily snapshots of the Deadlock API database from your AI assistant via MCP, or browse and download them
           as Parquet (data) and SQL (schema) for offline analysis, research, or community projects.
