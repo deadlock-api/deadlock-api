@@ -1,6 +1,5 @@
 use std::sync::{Arc, LazyLock};
 
-use datafusion::error::DataFusionError;
 use rmcp::ServerHandler;
 use rmcp::handler::server::tool::parse_json_object;
 use rmcp::model::{
@@ -14,17 +13,18 @@ use serde_json::{Value, json};
 use tracing::{debug, warn};
 
 use super::catalog::{DATABASE, QueryError, SCHEMA, SnapshotCatalog};
-use super::format::{format_query_output, sql_type_name};
+use super::format::format_query_output;
 
 const INSTRUCTIONS: &str = "\
 Read-only SQL access to hourly parquet snapshots of the Deadlock API database (https://deadlock-api.com).
 
 - Database `deadlock`, schema `main`; unqualified table names resolve there.
-- Engine: Apache DataFusion (PostgreSQL-style SQL). Only SELECT/WITH/EXPLAIN/SHOW/DESCRIBE are accepted.
+- Engine: DuckDB (DuckDB SQL dialect). The database is attached read-only: CREATE, INSERT, UPDATE, DELETE, DROP, SET and extension loading fail.
 - Results are capped at 1,024 rows and 50 KB per query; queries time out after 300 seconds.
 - Table comments carry the ClickHouse engine, partition and ordering keys; column comments carry the original ClickHouse type.
 - `match_player` and the `player_match_*` tables hold hundreds of gigabytes: always filter on their ordering columns (`match_id`, `account_id`, `start_time`), select only needed columns and use LIMIT.
-- Schema exploration: `SHOW TABLES`, `DESCRIBE match_player`, `information_schema.columns`.";
+- Schema exploration: `SHOW TABLES`, `DESCRIBE match_player`, `SUMMARIZE heroes`, `duckdb_columns()`.
+- DuckDB extras: `SELECT * EXCLUDE (col)`, `GROUP BY ALL`, `QUALIFY`, `arg_max(x, y)`, list/struct literals, `strftime`/`date_trunc`.";
 
 pub(super) struct McpServer {
     pub(super) catalog: Arc<SnapshotCatalog>,
@@ -94,7 +94,7 @@ struct ListColumnsArgs {
 struct ToolError {
     success: bool,
     error: String,
-    error_type: &'static str,
+    error_type: String,
 }
 
 #[derive(Serialize)]
@@ -122,11 +122,12 @@ impl McpServer {
         match self.catalog.query(sql).await {
             Ok(output) => match format_query_output(&output) {
                 Ok(result) => success(&result),
-                Err(e) => query_error(e.to_string(), "SerializationError"),
+                Err(e) => query_error(e.to_string(), "SerializationError".to_owned()),
             },
             Err(e) => {
                 warn!("MCP query failed: {e}");
-                query_error(e.to_string(), query_error_type(&e))
+                let (error, error_type) = describe_query_error(&e);
+                query_error(error, error_type)
             }
         }
     }
@@ -144,16 +145,16 @@ impl McpServer {
             .tables
             .iter()
             .map(|(name, info)| {
-                json!({ "schema": SCHEMA, "name": name, "type": "table", "comment": info.comment })
+                json!({ "schema": SCHEMA, "name": name, "type": "view", "comment": info.comment })
             })
             .collect();
         success(&json!({
             "success": true,
             "database": database,
             "schema": schema,
-            "tableCount": tables.len(),
             "tables": tables,
-            "viewCount": 0,
+            "tableCount": 0,
+            "viewCount": snapshot.tables.len(),
         }))
     }
 
@@ -170,15 +171,14 @@ impl McpServer {
             return not_found(Missing::Table, database, schema, Some(args.table));
         };
         let columns: Vec<_> = info
-            .schema
-            .fields()
+            .columns
             .iter()
-            .map(|field| {
+            .map(|column| {
                 json!({
-                    "name": field.name(),
-                    "type": sql_type_name(field.data_type()),
-                    "nullable": field.is_nullable(),
-                    "comment": info.column_types.get(field.name()).map(|t| format!("ClickHouse type: {t}")),
+                    "name": column.name,
+                    "type": column.data_type,
+                    "nullable": column.nullable,
+                    "comment": column.comment,
                 })
             })
             .collect();
@@ -187,9 +187,9 @@ impl McpServer {
             "database": database,
             "schema": schema,
             "table": args.table,
-            "objectType": "table",
-            "columnCount": columns.len(),
+            "objectType": "view",
             "columns": columns,
+            "columnCount": info.columns.len(),
         }))
     }
 }
@@ -197,7 +197,7 @@ impl McpServer {
 fn list_databases() -> CallToolResult {
     success(&json!({
         "success": true,
-        "databases": [{ "name": DATABASE, "type": "datafusion" }],
+        "databases": [{ "name": DATABASE, "type": "duckdb" }],
         "databaseCount": 1,
     }))
 }
@@ -223,7 +223,7 @@ fn success(value: &impl Serialize) -> CallToolResult {
     result
 }
 
-fn query_error(error: String, error_type: &'static str) -> CallToolResult {
+fn query_error(error: String, error_type: String) -> CallToolResult {
     let text = pretty(&ToolError {
         success: false,
         error,
@@ -238,7 +238,7 @@ fn not_ready() -> CallToolResult {
     success(&ToolError {
         success: false,
         error: QueryError::NotReady.to_string(),
-        error_type: "NotReadyError",
+        error_type: "NotReadyError".to_owned(),
     })
 }
 
@@ -266,24 +266,30 @@ fn not_found(
     })
 }
 
-fn query_error_type(error: &QueryError) -> &'static str {
-    match error {
-        QueryError::NotReady => "NotReadyError",
-        QueryError::Timeout => "TimeoutError",
-        QueryError::Cancelled => "CancelledError",
-        QueryError::DataFusion(e) => match e.find_root() {
-            DataFusionError::ArrowError(..) => "ArrowError",
-            DataFusionError::ParquetError(..) => "ParquetError",
-            DataFusionError::ObjectStore(_) => "ObjectStoreError",
-            DataFusionError::IoError(_) => "IoError",
-            DataFusionError::SQL(..) => "ParserError",
-            DataFusionError::NotImplemented(_) => "NotImplementedError",
-            DataFusionError::Plan(_) | DataFusionError::SchemaError(..) => "PlanError",
-            DataFusionError::ResourcesExhausted(_) => "ResourcesExhaustedError",
-            DataFusionError::Execution(_) | DataFusionError::ExecutionJoin(_) => "ExecutionError",
-            _ => "DataFusionError",
-        },
-    }
+/// `DuckDB` prefixes messages with their exception class ("Catalog Error: ..."), which the
+/// previous server exposed as `errorType` (`CatalogException`).
+fn describe_query_error(error: &QueryError) -> (String, String) {
+    let QueryError::DuckDb(duckdb::Error::DuckDBFailure(_, Some(message))) = error else {
+        let error_type = match error {
+            QueryError::NotReady => "NotReadyError",
+            QueryError::Timeout => "TimeoutError",
+            QueryError::Cancelled => "CancelledError",
+            QueryError::DuckDb(_) => "DuckDBError",
+        };
+        return (error.to_string(), error_type.to_owned());
+    };
+    let error_type = message
+        .split_once(':')
+        .map(|(prefix, _)| prefix.trim())
+        .filter(|prefix| prefix.len() < 40 && prefix.ends_with(" Error"))
+        .map_or_else(
+            || "DuckDBError".to_owned(),
+            |prefix| {
+                let class = prefix.trim_end_matches(" Error").replace(' ', "");
+                format!("{class}Exception")
+            },
+        );
+    (message.clone(), error_type)
 }
 
 fn optional_string(description: &str) -> Value {
@@ -310,7 +316,7 @@ static TOOLS: LazyLock<Vec<Tool>> = LazyLock::new(|| {
             "Execute a read-only SQL query on the Deadlock database (hourly parquet snapshots of the ClickHouse tables). Unqualified table names resolve to the `deadlock` database and `main` schema automatically. Results are limited to 1,024 rows and 50 KB.",
             object(json!({
                 "properties": {
-                    "sql": { "type": "string", "description": "SQL query to execute (DataFusion SQL dialect, PostgreSQL-like)" }
+                    "sql": { "type": "string", "description": "SQL query to execute (DuckDB SQL dialect)" }
                 },
                 "required": ["sql"],
                 "type": "object",
