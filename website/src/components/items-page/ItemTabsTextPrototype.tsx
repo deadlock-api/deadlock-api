@@ -11,10 +11,7 @@ const options = [
 export function ItemTabsTextPrototype() {
   return (
     <div className="-mx-4 -mb-2 border-t border-white/[0.06] bg-white/[0.015] sm:-mx-6">
-      <Tabs.List
-        aria-label="Item analytics"
-        className="flex min-w-0 gap-1 overflow-x-auto px-2 sm:gap-3 sm:px-4"
-      >
+      <Tabs.List aria-label="Item analytics" className="flex min-w-0 gap-1 overflow-x-auto px-2 sm:gap-3 sm:px-4">
         {options.map(({ value, label }) => (
           <Tabs.Trigger
             key={value}
