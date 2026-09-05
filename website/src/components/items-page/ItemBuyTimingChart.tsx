@@ -377,7 +377,6 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
                         activeDot={{ r: 6 }}
                         strokeWidth={2}
                         name={itemNameMap?.[itemId]}
-                        isAnimationActive={false}
                       />
                     ))}
                   </LineChart>

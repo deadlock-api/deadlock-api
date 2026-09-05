@@ -16,7 +16,7 @@ export function ItemTabsJoinedPrototype() {
           <Tabs.Trigger
             key={value}
             value={value}
-            className="relative shrink-0 rounded-t-md border border-transparent border-b-white/10 px-4 py-2.5 text-[13px] font-medium whitespace-nowrap text-muted-foreground transition-colors duration-150 hover:bg-white/[0.025] hover:text-foreground focus-visible:z-10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary data-[state=active]:border-white/10 data-[state=active]:border-b-transparent data-[state=active]:bg-white/[0.025] data-[state=active]:text-foreground sm:px-5 motion-reduce:transition-none"
+            className="relative shrink-0 rounded-t-md border border-transparent border-b-white/10 px-4 py-2.5 text-[13px] font-medium whitespace-nowrap text-muted-foreground transition-colors duration-150 hover:bg-white/[0.025] hover:text-foreground focus-visible:z-10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary data-[state=active]:border-white/10 data-[state=active]:border-b-transparent data-[state=active]:bg-white/[0.025] data-[state=active]:text-foreground motion-reduce:transition-none sm:px-5"
           >
             {label}
           </Tabs.Trigger>

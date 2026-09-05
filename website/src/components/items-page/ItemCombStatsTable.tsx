@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { parseAsInteger, useQueryState } from "nuqs";
-import { Fragment, useId, useMemo } from "react";
+import { Fragment, memo, useId, useMemo } from "react";
 
 import { ItemImage } from "~/components/ItemImage";
 import { ItemName } from "~/components/ItemName";
@@ -18,7 +18,7 @@ import { api } from "~/lib/api";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
 
-function ComboItems({ itemIds }: { itemIds: number[] }) {
+const ComboItems = memo(function ComboItems({ itemIds }: { itemIds: number[] }) {
   return (
     <TableCell>
       <div className="flex items-center gap-2">
@@ -34,7 +34,7 @@ function ComboItems({ itemIds }: { itemIds: number[] }) {
       </div>
     </TableCell>
   );
-}
+});
 
 export function ItemCombStatsTable({
   columns,
