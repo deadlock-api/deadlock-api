@@ -1,3 +1,4 @@
+mod live;
 pub mod query;
 mod route;
 pub mod structs;
@@ -23,5 +24,11 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .layer(
             CacheControlMiddleware::new(Duration::from_hours(1))
                 .with_stale_while_revalidate(Duration::from_hours(1)),
+        )
+        .merge(
+            OpenApiRouter::new()
+                .routes(routes!(live::fetch_build_live))
+                .routes(routes!(live::fetch_builds_by_author_live))
+                .layer(CacheControlMiddleware::new(Duration::from_mins(1))),
         )
 }
