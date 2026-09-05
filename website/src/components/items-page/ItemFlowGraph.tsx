@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Lock, Plus } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ItemImage } from "~/components/ItemImage";
 import { ItemName } from "~/components/ItemName";
@@ -183,7 +183,7 @@ function useContainerWidth() {
   return [ref, width] as const;
 }
 
-function StageLockPicker({
+const StageLockPicker = memo(function StageLockPicker({
   candidates,
   column,
   onLock,
@@ -234,9 +234,9 @@ function StageLockPicker({
       </PopoverContent>
     </Popover>
   );
-}
+});
 
-function ItemFlowCard({
+const ItemFlowCard = memo(function ItemFlowCard({
   node,
   meta,
   dimmed,
@@ -407,7 +407,7 @@ function ItemFlowCard({
       </TooltipContent>
     </Tooltip>
   );
-}
+});
 
 export function ItemFlowGraph({
   heroId,

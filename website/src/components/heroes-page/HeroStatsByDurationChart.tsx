@@ -165,7 +165,6 @@ export function HeroStatsByDurationChart({
                   strokeWidth={2}
                   name={heroIdMap[heroId]?.name}
                   hide={!effectiveVisibleSet.has(heroId)}
-                  isAnimationActive={false}
                   connectNulls
                 />
               ))}
