@@ -160,8 +160,7 @@ export default function HeatmapCanvas({
 
   useEffect(() => {
     if (!mapImagesLoaded) return;
-    renderHeatmap();
-
+    // Observing a mounted element also schedules its initial draw.
     const observer = new ResizeObserver(() => renderHeatmap());
     if (containerRef.current) observer.observe(containerRef.current);
     return () => observer.disconnect();

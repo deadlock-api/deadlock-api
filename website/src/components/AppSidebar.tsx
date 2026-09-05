@@ -165,8 +165,7 @@ function isActive(pathname: string, to: string) {
 }
 
 function NavItem({ link, onNavigate }: { link: NavLink; onNavigate?: () => void }) {
-  const { pathname } = useLocation();
-  const active = isActive(pathname, link.to);
+  const active = useLocation({ select: (location) => isActive(location.pathname, link.to) });
   const Icon = link.icon;
 
   if (link.special) {

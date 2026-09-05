@@ -18,6 +18,24 @@ import { api } from "~/lib/api";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
 
+function ComboItems({ itemIds }: { itemIds: number[] }) {
+  return (
+    <TableCell>
+      <div className="flex items-center gap-2">
+        {itemIds.map((itemId, i) => (
+          <Fragment key={itemId}>
+            {i > 0 && <span className="text-2xl">+</span>}
+            <div className="flex items-center gap-2">
+              <ItemImage itemId={itemId} />
+              <ItemName itemId={itemId} />
+            </div>
+          </Fragment>
+        ))}
+      </div>
+    </TableCell>
+  );
+}
+
 export function ItemCombStatsTable({
   columns,
   limit,
@@ -142,21 +160,19 @@ export function ItemCombStatsTable({
   );
   const maxWinrate = useMemo(() => limitedData[0]?.wins / limitedData[0]?.matches || 0, [limitedData]);
 
-  // Normalized against the current period's displayed-row basis (sumMatches/maxMatchesVal), not
-  // the previous period's own full fetched set, so the delta compares like with like.
+  // Keep raw counts so changing the display limit does not rebuild this full-data lookup.
   const prevStatsMap = useMemo(() => {
     if (!prevItemCombData) return undefined;
-    const map = new Map<string, { winrate: number; pickrate: number; normalizedPickrate: number }>();
+    const map = new Map<string, { winrate: number; matches: number }>();
     for (const row of prevItemCombData) {
       const key = [...row.item_ids].sort((a, b) => a - b).join("-");
       map.set(key, {
         winrate: row.wins / row.matches,
-        pickrate: row.matches / sumMatches,
-        normalizedPickrate: row.matches / maxMatchesVal,
+        matches: row.matches,
       });
     }
     return map;
-  }, [prevItemCombData, sumMatches, maxMatchesVal]);
+  }, [prevItemCombData]);
 
   return (
     <>
@@ -230,109 +246,86 @@ export function ItemCombStatsTable({
             </TableHeader>
           )}
           <TableBody>
-            {limitedData?.map((row, index) => (
-              <TableRow key={row.item_ids.join("-")}>
-                {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    {row.item_ids.map((itemId, i) => (
-                      <Fragment key={itemId}>
-                        {i > 0 && <span className="text-2xl">+</span>}
-                        <div className="flex items-center gap-2">
-                          <ItemImage itemId={itemId} />
-                          <ItemName itemId={itemId} />
-                        </div>
-                      </Fragment>
-                    ))}
-                  </div>
-                </TableCell>
-                {columns.includes("winRate") && (
-                  <TableCell className="text-center">
-                    <ProgressBarWithLabel
-                      min={minWinrate}
-                      max={maxWinrate}
-                      value={row.wins / row.matches}
-                      color={"#fa4454"}
-                      label={`${Math.round((row.wins / row.matches) * 100).toFixed(0)}% `}
-                      delta={(() => {
-                        const key = [...row.item_ids].sort((a, b) => a - b).join("-");
-                        const prev = prevStatsMap?.get(key);
-                        return prev !== undefined ? row.wins / row.matches - prev.winrate : undefined;
-                      })()}
-                      tooltip={
-                        <div className="flex flex-col gap-1 text-xs">
-                          <div className="flex justify-between gap-4">
-                            <span className="text-muted-foreground">Matches</span>
-                            <span className="font-medium">{row.matches.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between gap-4">
-                            <span className="text-muted-foreground">Wins</span>
-                            <span className="font-medium">{row.wins.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between gap-4">
-                            <span className="text-muted-foreground">Win rate</span>
-                            <span className="font-medium">{((row.wins / row.matches) * 100).toFixed(2)}%</span>
-                          </div>
-                          {(() => {
-                            const key = [...row.item_ids].sort((a, b) => a - b).join("-");
-                            const prev = prevStatsMap?.get(key);
-                            return prev !== undefined ? (
+            {limitedData.map((row, index) => {
+              const prev = prevStatsMap?.get([...row.item_ids].sort((a, b) => a - b).join("-"));
+              return (
+                <TableRow key={row.item_ids.join("-")}>
+                  {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
+                  <ComboItems itemIds={row.item_ids} />
+                  {columns.includes("winRate") && (
+                    <TableCell className="text-center">
+                      <ProgressBarWithLabel
+                        min={minWinrate}
+                        max={maxWinrate}
+                        value={row.wins / row.matches}
+                        color={"#fa4454"}
+                        label={`${Math.round((row.wins / row.matches) * 100).toFixed(0)}% `}
+                        delta={prev !== undefined ? row.wins / row.matches - prev.winrate : undefined}
+                        tooltip={
+                          <div className="flex flex-col gap-1 text-xs">
+                            <div className="flex justify-between gap-4">
+                              <span className="text-muted-foreground">Matches</span>
+                              <span className="font-medium">{row.matches.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-muted-foreground">Wins</span>
+                              <span className="font-medium">{row.wins.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-muted-foreground">Win rate</span>
+                              <span className="font-medium">{((row.wins / row.matches) * 100).toFixed(2)}%</span>
+                            </div>
+                            {prev !== undefined && (
                               <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
                                 <span className="text-muted-foreground">Previous</span>
                                 <span className="font-medium">{(prev.winrate * 100).toFixed(2)}%</span>
                               </div>
-                            ) : null;
-                          })()}
-                        </div>
-                      }
-                    />
-                  </TableCell>
-                )}
-                {columns.includes("pickRate") && (
-                  <TableCell className="text-center">
-                    <ProgressBarWithLabel
-                      min={minMatchesVal}
-                      max={maxMatchesVal}
-                      value={row.matches}
-                      color={"#22d3ee"}
-                      label={`${Math.round((row.matches / maxMatchesVal) * 100).toFixed(0)}%`}
-                      delta={(() => {
-                        const key = [...row.item_ids].sort((a, b) => a - b).join("-");
-                        const prev = prevStatsMap?.get(key);
-                        return prev !== undefined ? row.matches / maxMatchesVal - prev.normalizedPickrate : undefined;
-                      })()}
-                      tooltip={
-                        <div className="flex flex-col gap-1 text-xs">
-                          <div className="flex justify-between gap-4">
-                            <span className="text-muted-foreground">Matches</span>
-                            <span className="font-medium">
-                              {row.matches.toLocaleString()} / {sumMatches.toLocaleString()}
-                            </span>
+                            )}
                           </div>
-                          <div className="flex justify-between gap-4">
-                            <span className="text-muted-foreground">Pick rate</span>
-                            <span className="font-medium">{((row.matches / sumMatches) * 100).toFixed(4)}%</span>
-                          </div>
-                          {(() => {
-                            const key = [...row.item_ids].sort((a, b) => a - b).join("-");
-                            const prev = prevStatsMap?.get(key);
-                            return prev !== undefined ? (
+                        }
+                      />
+                    </TableCell>
+                  )}
+                  {columns.includes("pickRate") && (
+                    <TableCell className="text-center">
+                      <ProgressBarWithLabel
+                        min={minMatchesVal}
+                        max={maxMatchesVal}
+                        value={row.matches}
+                        color={"#22d3ee"}
+                        label={`${Math.round((row.matches / maxMatchesVal) * 100).toFixed(0)}%`}
+                        delta={
+                          prev !== undefined ? row.matches / maxMatchesVal - prev.matches / maxMatchesVal : undefined
+                        }
+                        tooltip={
+                          <div className="flex flex-col gap-1 text-xs">
+                            <div className="flex justify-between gap-4">
+                              <span className="text-muted-foreground">Matches</span>
+                              <span className="font-medium">
+                                {row.matches.toLocaleString()} / {sumMatches.toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-muted-foreground">Pick rate</span>
+                              <span className="font-medium">{((row.matches / sumMatches) * 100).toFixed(4)}%</span>
+                            </div>
+                            {prev !== undefined && (
                               <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
                                 <span className="text-muted-foreground">Previous</span>
-                                <span className="font-medium">{(prev.pickrate * 100).toFixed(4)}%</span>
+                                <span className="font-medium">{((prev.matches / sumMatches) * 100).toFixed(4)}%</span>
                               </div>
-                            ) : null;
-                          })()}
-                        </div>
-                      }
-                    />
-                  </TableCell>
-                )}
-                {columns.includes("totalMatches") && (
-                  <TableCell className="text-center">{row.matches.toLocaleString()}</TableCell>
-                )}
-              </TableRow>
-            ))}
+                            )}
+                          </div>
+                        }
+                      />
+                    </TableCell>
+                  )}
+                  {columns.includes("totalMatches") && (
+                    <TableCell className="text-center">{row.matches.toLocaleString()}</TableCell>
+                  )}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       )}

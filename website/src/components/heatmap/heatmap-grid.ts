@@ -31,12 +31,6 @@ export function interpolateColor(t: number): [number, number, number] {
   return [last.r, last.g, last.b];
 }
 
-export interface HeatGridResult {
-  normalized: Float32Array;
-  raw: Float32Array;
-  maxValue: number;
-}
-
 function buildRawGrid(data: KillDeathStats[], viewMode: "kills" | "deaths", radius: number): Float32Array {
   const grid = new Float32Array(GRID_RES * GRID_RES);
   const diameter = 2 * radius;
@@ -71,38 +65,14 @@ function buildRawGrid(data: KillDeathStats[], viewMode: "kills" | "deaths", radi
 }
 
 function clampAndNormalize(grid: Float32Array, percentile = 0.99): { grid: Float32Array; maxValue: number } {
-  const nonZero: number[] = [];
-  for (let i = 0; i < grid.length; i++) {
-    if (grid[i] > 0) nonZero.push(grid[i]);
-  }
-  if (nonZero.length > 0) {
-    nonZero.sort((a, b) => a - b);
-    const pVal = nonZero[Math.floor(nonZero.length * percentile)];
-    for (let i = 0; i < grid.length; i++) {
-      if (grid[i] > pVal) grid[i] = pVal;
-    }
-  }
-
-  let gridMax = 0;
-  for (let i = 0; i < grid.length; i++) {
-    if (grid[i] > gridMax) gridMax = grid[i];
-  }
+  const nonZero = grid.filter((value) => value > 0).sort();
+  const gridMax = nonZero[Math.floor(nonZero.length * percentile)] ?? nonZero.at(-1) ?? 0;
   if (gridMax > 0) {
     for (let i = 0; i < grid.length; i++) {
-      grid[i] /= gridMax;
+      grid[i] = Math.min(grid[i], gridMax) / gridMax;
     }
   }
   return { grid, maxValue: gridMax };
-}
-
-export function buildHeatGrid(
-  data: KillDeathStats[],
-  viewMode: "kills" | "deaths" | "kd",
-  radius: number,
-  sensitivity = 0.99,
-): { grid: Float32Array; maxValue: number } {
-  if (viewMode !== "kd") return clampAndNormalize(buildRawGrid(data, viewMode, radius), sensitivity);
-  return normalizeHeatGrids(buildHeatGrids(data, radius), viewMode, sensitivity);
 }
 
 /** Normalize a copy so cached raw counts remain usable by tooltips and other views. */

@@ -39,7 +39,11 @@ export function HeroStatsByDurationChart({
 }: HeroStatsByDurationChartProps) {
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
 
-  const bucketQueries = useQueries({
+  const { data: bucketData, isLoading: isLoadingBuckets } = useQueries({
+    combine: (queries) => ({
+      data: queries.map((query) => query.data),
+      isLoading: queries.some((query) => query.isLoading),
+    }),
     queries: DURATION_BUCKETS.map((bucket) => {
       const heroStatsByDurationQuery = {
         minHeroMatches,
@@ -68,14 +72,14 @@ export function HeroStatsByDurationChart({
   const { heroIdMap, isLoadingHeroes } = useHeroColorMap();
   const { allHeroIds, effectiveVisibleSet, handleLegendClick } = useChartHeroVisibility(heroIdMap);
 
-  const isLoading = bucketQueries.some((q) => q.isLoading) || isLoadingHeroes;
-  const allLoaded = bucketQueries.every((q) => q.data != null);
+  const isLoading = isLoadingBuckets || isLoadingHeroes;
+  const allLoaded = bucketData.every((data) => data != null);
 
   const formattedData = useMemo(() => {
     if (!allLoaded) return [];
 
     return DURATION_BUCKETS.map((bucket, i) => {
-      const queryData = bucketQueries[i].data;
+      const queryData = bucketData[i];
       if (!queryData) return { label: bucket.label };
 
       const row: Record<string, string | number> = { label: bucket.label };
@@ -86,7 +90,7 @@ export function HeroStatsByDurationChart({
       }
       return row;
     });
-  }, [allLoaded, bucketQueries, heroStat]);
+  }, [allLoaded, bucketData, heroStat]);
 
   const sortedStats = useMemo(() => {
     const out: number[] = [];
@@ -161,6 +165,7 @@ export function HeroStatsByDurationChart({
                   strokeWidth={2}
                   name={heroIdMap[heroId]?.name}
                   hide={!effectiveVisibleSet.has(heroId)}
+                  isAnimationActive={false}
                   connectNulls
                 />
               ))}

@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "module",
+  "dependencies": { "bippy": "0.5.43", "esbuild": "0.25.12" }
+}

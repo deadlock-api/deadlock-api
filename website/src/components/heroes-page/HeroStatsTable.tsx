@@ -660,9 +660,8 @@ export function HeroStatsTable({
     </TableHeader>
   );
 
-  const renderHeroRow = (row: AnalyticsHeroStats, index: number, showIndex: boolean) => (
-    <TableRow key={row.hero_id}>
-      {showIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
+  const renderHeroCells = (row: AnalyticsHeroStats) => (
+    <>
       <TableCell>
         <div className="flex items-center gap-2">
           <HeroImage heroId={row.hero_id} />
@@ -969,6 +968,15 @@ export function HeroStatsTable({
           <HeroDetailsTooltip row={row} sumMatches={sumMatches} pickrateMultiplier={pickrateMultiplier} />
         </TableCell>
       )}
+    </>
+  );
+
+  // Cell contents depend on the data, not the row's position in the sorted table.
+  const heroCells = new Map(heroData?.map((row) => [row.hero_id, renderHeroCells(row)]));
+  const renderHeroRow = (row: AnalyticsHeroStats, index: number, showIndex: boolean) => (
+    <TableRow key={row.hero_id}>
+      {showIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
+      {heroCells.get(row.hero_id)}
     </TableRow>
   );
 

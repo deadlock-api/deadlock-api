@@ -183,7 +183,15 @@ function useContainerWidth() {
   return [ref, width] as const;
 }
 
-function StageLockPicker({ candidates, onLock }: { candidates: Candidate[]; onLock: (id: number) => void }) {
+function StageLockPicker({
+  candidates,
+  column,
+  onLock,
+}: {
+  candidates: Candidate[];
+  column: number;
+  onLock: (key: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -202,7 +210,7 @@ function StageLockPicker({ candidates, onLock }: { candidates: Candidate[]; onLo
               key={c.id}
               type="button"
               onClick={() => {
-                onLock(c.id);
+                onLock(`${column}:${c.id}`);
                 setOpen(false);
               }}
               className="flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-accent"
@@ -225,6 +233,179 @@ function StageLockPicker({ candidates, onLock }: { candidates: Candidate[]; onLo
         )}
       </PopoverContent>
     </Popover>
+  );
+}
+
+function ItemFlowCard({
+  node,
+  meta,
+  dimmed,
+  showRaw,
+  isStreetBrawl,
+  onHover,
+  onLock,
+}: {
+  node: PlacedNode;
+  meta?: { slot?: string; cost: number; tier: number };
+  dimmed: boolean;
+  showRaw: boolean;
+  isStreetBrawl: boolean;
+  onHover: (key: string | null) => void;
+  onLock: (key: string) => void;
+}) {
+  const slotColor = (meta?.slot && SLOT_COLORS[meta.slot]) || "var(--muted-foreground)";
+  const tier = meta?.tier ?? 0;
+  const cost = meta?.cost ?? 0;
+  // Headline win rate: adjusted by default, raw if toggled (always raw for brawl).
+  const displayWr = showRaw ? node.winRate : node.adjWinRate;
+  const wrPct = displayWr * 100;
+  const wrBar = showRaw ? node.wrBarRaw : node.wrBar;
+  const conf = confidenceLevel(node.wrLow, node.wrHigh);
+  return (
+    <Tooltip key={node.key}>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "absolute flex flex-col justify-center gap-1.5 rounded-lg border border-l-2 bg-card/90 p-2 text-left backdrop-blur-sm transition-[opacity,border-color,background-color] duration-200",
+            dimmed ? "opacity-30" : "opacity-100",
+            node.locked ? "border-primary bg-primary/10" : "border-border hover:border-muted-foreground",
+          )}
+          style={{
+            left: node.x,
+            top: node.y,
+            width: CARD_W,
+            height: CARD_H,
+            borderLeftColor: node.locked ? undefined : slotColor,
+          }}
+          onMouseEnter={() => onHover(node.key)}
+          onMouseLeave={() => onHover(null)}
+          onClick={() => onLock(node.key)}
+        >
+          <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
+            {node.locked && <Lock className="size-3 text-primary" />}
+            <span
+              className={cn(conf.icon, "size-3.5", conf.color)}
+              title={`Confidence: ${conf.label} (${node.matches.toLocaleString()} matches, 95% CI ${(node.wrLow * 100).toFixed(1)}–${(node.wrHigh * 100).toFixed(1)}%)`}
+            />
+          </div>
+          <div className="flex items-center gap-2 pr-9">
+            <ItemImage itemId={node.itemId} className="size-9 shrink-0 rounded-lg" />
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <ItemName itemId={node.itemId} className="truncate text-xs leading-tight font-semibold" />
+              <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                {tier > 0 && <span className="rounded-full bg-muted px-1.5 py-px font-medium">T{tier}</span>}
+                {cost > 0 && <span className="tabular-nums">{cost.toLocaleString()}</span>}
+              </span>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-[10px]">
+              <span className="w-[16px] shrink-0 font-medium text-muted-foreground">WR</span>
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full" style={{ width: `${wrBar * 100}%`, backgroundColor: "#fa4454" }} />
+              </div>
+              <span
+                className={cn(
+                  "w-[34px] shrink-0 text-right font-semibold tabular-nums",
+                  displayWr >= 0.5 ? "text-green-400" : "text-red-400",
+                )}
+              >
+                {wrPct.toFixed(1)}%
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px]">
+              <span className="w-[16px] shrink-0 font-medium text-muted-foreground">PR</span>
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${node.pickBar * 100}%`, backgroundColor: "#22d3ee" }}
+                />
+              </div>
+              <span className="w-[34px] shrink-0 text-right font-semibold text-cyan-400 tabular-nums">
+                {(node.pickRate * 100).toFixed(1)}%
+              </span>
+            </div>
+          </div>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent
+        side="top"
+        className="border border-border bg-popover text-xs text-popover-foreground [&>svg]:bg-popover [&>svg]:fill-popover"
+      >
+        <div className="space-y-1">
+          <div className="font-semibold">
+            <ItemName itemId={node.itemId} />
+          </div>
+          {isStreetBrawl ? (
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Win Rate</span>
+              <span className={node.winRate >= 0.5 ? "text-green-400" : "text-red-400"}>
+                {(node.winRate * 100).toFixed(1)}%
+              </span>
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Win Rate (adj.)</span>
+                <span className={node.adjWinRate >= 0.5 ? "text-green-400" : "text-red-400"}>
+                  {(node.adjWinRate * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Raw win rate</span>
+                <span className="tabular-nums">{(node.winRate * 100).toFixed(1)}%</span>
+              </div>
+            </>
+          )}
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">95% CI (raw)</span>
+            <span className="tabular-nums">
+              {(node.wrLow * 100).toFixed(1)}–{(node.wrHigh * 100).toFixed(1)}%
+            </span>
+          </div>
+          {!isStreetBrawl && (
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Avg net worth at buy</span>
+              <span className="tabular-nums">{Math.round(node.avgNetWorth).toLocaleString()}</span>
+            </div>
+          )}
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Pick Rate (phase)</span>
+            <span className="text-cyan-400">{(node.pickRate * 100).toFixed(1)}%</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Chained Pick Rate</span>
+            <span className="text-cyan-400/70">{(node.chainPickRate * 100).toFixed(1)}%</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Matches</span>
+            <span>{node.matches.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Players</span>
+            <span>{node.players.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">W / L</span>
+            <span>
+              <span className="text-green-400">{node.wins.toLocaleString()}</span>
+              {" / "}
+              <span className="text-red-400">{node.losses.toLocaleString()}</span>
+            </span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Avg KDA</span>
+            <span>
+              {node.avgKills.toFixed(1)} / {node.avgDeaths.toFixed(1)} / {node.avgAssists.toFixed(1)}
+            </span>
+          </div>
+          <div className="border-t border-border pt-1 text-[10px] text-muted-foreground">
+            {node.locked ? "Click to remove from build path" : "Click to lock into build path"}
+          </div>
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -721,10 +902,7 @@ export function ItemFlowGraph({
                             })}
                           </div>
                         )}
-                        <StageLockPicker
-                          candidates={meta.candidates}
-                          onLock={(id) => toggleLock(`${meta.column}:${id}`)}
-                        />
+                        <StageLockPicker candidates={meta.candidates} column={meta.column} onLock={toggleLock} />
                       </div>
                     );
                   })}
@@ -755,176 +933,18 @@ export function ItemFlowGraph({
 
                   {/* Nodes */}
                   <TooltipProvider delayDuration={150}>
-                    {layout.placed.map((node) => {
-                      const dimmed = highlight != null && !highlight.nodes.has(node.key);
-                      const meta = itemMeta.get(node.itemId);
-                      const slotColor = (meta?.slot && SLOT_COLORS[meta.slot]) || "var(--muted-foreground)";
-                      const tier = meta?.tier ?? 0;
-                      const cost = meta?.cost ?? 0;
-                      // Headline win rate: adjusted by default, raw if toggled (always raw for brawl).
-                      const showRaw = wrMode === "raw" || isStreetBrawl;
-                      const displayWr = showRaw ? node.winRate : node.adjWinRate;
-                      const wrPct = displayWr * 100;
-                      const wrBar = showRaw ? node.wrBarRaw : node.wrBar;
-                      const conf = confidenceLevel(node.wrLow, node.wrHigh);
-                      return (
-                        <Tooltip key={node.key}>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              className={cn(
-                                "absolute flex flex-col justify-center gap-1.5 rounded-lg border border-l-2 bg-card/90 p-2 text-left backdrop-blur-sm transition-[opacity,border-color,background-color] duration-200",
-                                dimmed ? "opacity-30" : "opacity-100",
-                                node.locked
-                                  ? "border-primary bg-primary/10"
-                                  : "border-border hover:border-muted-foreground",
-                              )}
-                              style={{
-                                left: node.x,
-                                top: node.y,
-                                width: CARD_W,
-                                height: CARD_H,
-                                borderLeftColor: node.locked ? undefined : slotColor,
-                              }}
-                              onMouseEnter={() => setHoveredKey(node.key)}
-                              onMouseLeave={() => setHoveredKey(null)}
-                              onClick={() => toggleLock(node.key)}
-                            >
-                              <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
-                                {node.locked && <Lock className="size-3 text-primary" />}
-                                <span
-                                  className={cn(conf.icon, "size-3.5", conf.color)}
-                                  title={`Confidence: ${conf.label} (${node.matches.toLocaleString()} matches, 95% CI ${(node.wrLow * 100).toFixed(1)}–${(node.wrHigh * 100).toFixed(1)}%)`}
-                                />
-                              </div>
-                              <div className="flex items-center gap-2 pr-9">
-                                <ItemImage itemId={node.itemId} className="size-9 shrink-0 rounded-lg" />
-                                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                                  <ItemName
-                                    itemId={node.itemId}
-                                    className="truncate text-xs leading-tight font-semibold"
-                                  />
-                                  <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
-                                    {tier > 0 && (
-                                      <span className="rounded-full bg-muted px-1.5 py-px font-medium">T{tier}</span>
-                                    )}
-                                    {cost > 0 && <span className="tabular-nums">{cost.toLocaleString()}</span>}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-1.5 text-[10px]">
-                                  <span className="w-[16px] shrink-0 font-medium text-muted-foreground">WR</span>
-                                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                                    <div
-                                      className="h-full rounded-full"
-                                      style={{ width: `${wrBar * 100}%`, backgroundColor: "#fa4454" }}
-                                    />
-                                  </div>
-                                  <span
-                                    className={cn(
-                                      "w-[34px] shrink-0 text-right font-semibold tabular-nums",
-                                      displayWr >= 0.5 ? "text-green-400" : "text-red-400",
-                                    )}
-                                  >
-                                    {wrPct.toFixed(1)}%
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-1.5 text-[10px]">
-                                  <span className="w-[16px] shrink-0 font-medium text-muted-foreground">PR</span>
-                                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                                    <div
-                                      className="h-full rounded-full"
-                                      style={{ width: `${node.pickBar * 100}%`, backgroundColor: "#22d3ee" }}
-                                    />
-                                  </div>
-                                  <span className="w-[34px] shrink-0 text-right font-semibold text-cyan-400 tabular-nums">
-                                    {(node.pickRate * 100).toFixed(1)}%
-                                  </span>
-                                </div>
-                              </div>
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent
-                            side="top"
-                            className="border border-border bg-popover text-xs text-popover-foreground [&>svg]:bg-popover [&>svg]:fill-popover"
-                          >
-                            <div className="space-y-1">
-                              <div className="font-semibold">
-                                <ItemName itemId={node.itemId} />
-                              </div>
-                              {isStreetBrawl ? (
-                                <div className="flex justify-between gap-4">
-                                  <span className="text-muted-foreground">Win Rate</span>
-                                  <span className={node.winRate >= 0.5 ? "text-green-400" : "text-red-400"}>
-                                    {(node.winRate * 100).toFixed(1)}%
-                                  </span>
-                                </div>
-                              ) : (
-                                <>
-                                  <div className="flex justify-between gap-4">
-                                    <span className="text-muted-foreground">Win Rate (adj.)</span>
-                                    <span className={node.adjWinRate >= 0.5 ? "text-green-400" : "text-red-400"}>
-                                      {(node.adjWinRate * 100).toFixed(1)}%
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between gap-4">
-                                    <span className="text-muted-foreground">Raw win rate</span>
-                                    <span className="tabular-nums">{(node.winRate * 100).toFixed(1)}%</span>
-                                  </div>
-                                </>
-                              )}
-                              <div className="flex justify-between gap-4">
-                                <span className="text-muted-foreground">95% CI (raw)</span>
-                                <span className="tabular-nums">
-                                  {(node.wrLow * 100).toFixed(1)}–{(node.wrHigh * 100).toFixed(1)}%
-                                </span>
-                              </div>
-                              {!isStreetBrawl && (
-                                <div className="flex justify-between gap-4">
-                                  <span className="text-muted-foreground">Avg net worth at buy</span>
-                                  <span className="tabular-nums">{Math.round(node.avgNetWorth).toLocaleString()}</span>
-                                </div>
-                              )}
-                              <div className="flex justify-between gap-4">
-                                <span className="text-muted-foreground">Pick Rate (phase)</span>
-                                <span className="text-cyan-400">{(node.pickRate * 100).toFixed(1)}%</span>
-                              </div>
-                              <div className="flex justify-between gap-4">
-                                <span className="text-muted-foreground">Chained Pick Rate</span>
-                                <span className="text-cyan-400/70">{(node.chainPickRate * 100).toFixed(1)}%</span>
-                              </div>
-                              <div className="flex justify-between gap-4">
-                                <span className="text-muted-foreground">Matches</span>
-                                <span>{node.matches.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between gap-4">
-                                <span className="text-muted-foreground">Players</span>
-                                <span>{node.players.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between gap-4">
-                                <span className="text-muted-foreground">W / L</span>
-                                <span>
-                                  <span className="text-green-400">{node.wins.toLocaleString()}</span>
-                                  {" / "}
-                                  <span className="text-red-400">{node.losses.toLocaleString()}</span>
-                                </span>
-                              </div>
-                              <div className="flex justify-between gap-4">
-                                <span className="text-muted-foreground">Avg KDA</span>
-                                <span>
-                                  {node.avgKills.toFixed(1)} / {node.avgDeaths.toFixed(1)} /{" "}
-                                  {node.avgAssists.toFixed(1)}
-                                </span>
-                              </div>
-                              <div className="border-t border-border pt-1 text-[10px] text-muted-foreground">
-                                {node.locked ? "Click to remove from build path" : "Click to lock into build path"}
-                              </div>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    })}
+                    {layout.placed.map((node) => (
+                      <ItemFlowCard
+                        key={node.key}
+                        node={node}
+                        meta={itemMeta.get(node.itemId)}
+                        dimmed={highlight != null && !highlight.nodes.has(node.key)}
+                        showRaw={wrMode === "raw" || isStreetBrawl}
+                        isStreetBrawl={isStreetBrawl}
+                        onHover={setHoveredKey}
+                        onLock={toggleLock}
+                      />
+                    ))}
                   </TooltipProvider>
                 </div>
               </div>

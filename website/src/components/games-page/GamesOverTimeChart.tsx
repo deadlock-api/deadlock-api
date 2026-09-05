@@ -113,6 +113,7 @@ export default function GamesOverTimeChart({
                 />
                 <Line
                   type="monotone"
+                  isAnimationActive={false}
                   dataKey="value"
                   stroke="var(--color-primary)"
                   dot={{ r: 3 }}

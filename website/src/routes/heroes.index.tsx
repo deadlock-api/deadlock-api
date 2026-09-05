@@ -282,7 +282,6 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
                   maxDate={filters.endDate}
                   gameMode={filters.gameMode}
                   matchMode={filters.matchMode}
-                  bumpChart={false}
                 />
               </Suspense>
             </ChunkErrorBoundary>

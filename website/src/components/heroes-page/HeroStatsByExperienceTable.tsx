@@ -73,7 +73,8 @@ export function HeroStatsByExperienceTable({
 }: HeroStatsByExperienceTableProps) {
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
 
-  const bucketQueries = useQueries({
+  const bucketData = useQueries({
+    combine: (queries) => queries.map((query) => query.data),
     queries: EXPERIENCE_BUCKETS.map((bucket) => {
       const heroStatsByExperienceQuery = {
         minHeroMatches,
@@ -108,9 +109,9 @@ export function HeroStatsByExperienceTable({
     return map;
   }, [assetsHeroes]);
 
-  const anyLoaded = bucketQueries.some((q) => q.data != null);
+  const anyLoaded = bucketData.some((data) => data != null);
   const allLoading = !anyLoaded || isLoadingAssetsHeroes;
-  const bucketLoading = bucketQueries.map((q) => q.data == null);
+  const bucketLoading = bucketData.map((data) => data == null);
   const baselineLoading = bucketLoading[BASELINE_BUCKET];
 
   const isPercentStat = heroStat === "winrate";
@@ -119,8 +120,8 @@ export function HeroStatsByExperienceTable({
     if (!anyLoaded) return [];
 
     const heroIds = new Set<number>();
-    for (const q of bucketQueries) {
-      for (const entry of q.data || []) {
+    for (const data of bucketData) {
+      for (const entry of data || []) {
         heroIds.add(entry.hero_id);
       }
     }
@@ -129,7 +130,7 @@ export function HeroStatsByExperienceTable({
 
     for (const heroId of heroIds) {
       const bucketEntries = EXPERIENCE_BUCKETS.map((_, i) => {
-        const entry = bucketQueries[i].data?.find((e) => e.hero_id === heroId);
+        const entry = bucketData[i]?.find((e) => e.hero_id === heroId);
         if (!entry || entry.matches < MIN_MATCHES_PER_BUCKET) return null;
         return entry;
       });
@@ -155,7 +156,7 @@ export function HeroStatsByExperienceTable({
     }
 
     return rows;
-  }, [anyLoaded, bucketQueries, heroStat]);
+  }, [anyLoaded, bucketData, heroStat]);
 
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
@@ -239,6 +240,56 @@ export function HeroStatsByExperienceTable({
       </div>
     );
   }
+
+  const heroCells = new Map(
+    heroRows.map((row) => [
+      row.heroId,
+      <>
+        <TableCell>
+          <div className="flex items-center gap-2">
+            <HeroImage heroId={row.heroId} />
+            <HeroName heroId={row.heroId} />
+          </div>
+        </TableCell>
+        {row.bucketValues.map((val, i) => (
+          // eslint-disable-next-line react/no-array-index-key -- key is EXPERIENCE_BUCKETS[i].label, not raw index
+          <TableCell key={EXPERIENCE_BUCKETS[i].label} className="text-center tabular-nums">
+            {bucketLoading[i] ? (
+              <Skeleton className="mx-auto h-4 w-12" />
+            ) : (
+              <div className="flex flex-col items-center gap-1">
+                <BucketTooltip
+                  entry={row.bucketEntries[i]}
+                  heroStat={heroStat}
+                  bucketLabel={EXPERIENCE_BUCKETS[i].label}
+                >
+                  <span className="font-medium">{formatValue(val)}</span>
+                </BucketTooltip>
+                {i !== BASELINE_BUCKET &&
+                  (baselineLoading ? (
+                    <Skeleton className="h-4 w-10" />
+                  ) : (
+                    <DeltaTooltip
+                      baselineEntry={row.bucketEntries[BASELINE_BUCKET]}
+                      bucketEntry={row.bucketEntries[i]}
+                      bucketLabel={EXPERIENCE_BUCKETS[i].label}
+                      heroStat={heroStat}
+                    >
+                      <DeltaBadge delta={row.bucketDeltas[i]} isPercent={isPercentStat} />
+                    </DeltaTooltip>
+                  ))}
+              </div>
+            )}
+          </TableCell>
+        ))}
+        <TableCell className="text-center">
+          <div className="flex items-center justify-center">
+            <Sparkline values={row.bucketValues} trend={row.trend} />
+          </div>
+        </TableCell>
+      </>,
+    ]),
+  );
 
   return (
     <div className="flex flex-col gap-3">
@@ -328,48 +379,7 @@ export function HeroStatsByExperienceTable({
               sortedRows.map((row, index) => (
                 <TableRow key={row.heroId} className="hover:bg-muted/40">
                   <TableCell className="text-center font-semibold text-muted-foreground">{index + 1}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <HeroImage heroId={row.heroId} />
-                      <HeroName heroId={row.heroId} />
-                    </div>
-                  </TableCell>
-                  {row.bucketValues.map((val, i) => (
-                    // eslint-disable-next-line react/no-array-index-key -- key is EXPERIENCE_BUCKETS[i].label, not raw index
-                    <TableCell key={EXPERIENCE_BUCKETS[i].label} className="text-center tabular-nums">
-                      {bucketLoading[i] ? (
-                        <Skeleton className="mx-auto h-4 w-12" />
-                      ) : (
-                        <div className="flex flex-col items-center gap-1">
-                          <BucketTooltip
-                            entry={row.bucketEntries[i]}
-                            heroStat={heroStat}
-                            bucketLabel={EXPERIENCE_BUCKETS[i].label}
-                          >
-                            <span className="font-medium">{formatValue(val)}</span>
-                          </BucketTooltip>
-                          {i !== BASELINE_BUCKET &&
-                            (baselineLoading ? (
-                              <Skeleton className="h-4 w-10" />
-                            ) : (
-                              <DeltaTooltip
-                                baselineEntry={row.bucketEntries[BASELINE_BUCKET]}
-                                bucketEntry={row.bucketEntries[i]}
-                                bucketLabel={EXPERIENCE_BUCKETS[i].label}
-                                heroStat={heroStat}
-                              >
-                                <DeltaBadge delta={row.bucketDeltas[i]} isPercent={isPercentStat} />
-                              </DeltaTooltip>
-                            ))}
-                        </div>
-                      )}
-                    </TableCell>
-                  ))}
-                  <TableCell className="text-center">
-                    <div className="flex items-center justify-center">
-                      <Sparkline values={row.bucketValues} trend={row.trend} />
-                    </div>
-                  </TableCell>
+                  {heroCells.get(row.heroId)}
                 </TableRow>
               ))
             )}

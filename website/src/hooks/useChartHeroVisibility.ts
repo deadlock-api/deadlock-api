@@ -36,10 +36,9 @@ export function useChartHeroVisibility(
   heroIdMap: Record<number, { name: string; color: string }>,
   options: {
     heroIdFilter?: number[];
-    showAllByDefault?: boolean;
   } = {},
 ) {
-  const { heroIdFilter, showAllByDefault = false } = options;
+  const { heroIdFilter } = options;
   const allHeroIds = useMemo(() => {
     const ids = heroIdFilter ?? Object.keys(heroIdMap).map(Number);
     return ids.sort((a, b) => (heroIdMap[a]?.name ?? "").localeCompare(heroIdMap[b]?.name ?? ""));
@@ -62,11 +61,5 @@ export function useChartHeroVisibility(
     });
   }, []);
 
-  const allHeroIdSet = useMemo(() => new Set(allHeroIds), [allHeroIds]);
-  const effectiveVisibleSet = useMemo(
-    () => (showAllByDefault ? allHeroIdSet : visibleHeroSet),
-    [showAllByDefault, allHeroIdSet, visibleHeroSet],
-  );
-
-  return { allHeroIds, effectiveVisibleSet, handleLegendClick };
+  return { allHeroIds, effectiveVisibleSet: visibleHeroSet, handleLegendClick };
 }

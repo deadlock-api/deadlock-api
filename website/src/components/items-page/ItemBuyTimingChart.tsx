@@ -16,7 +16,6 @@ import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
 const chartConfig = {
   winrate: { label: "Win Rate", color: "hsl(var(--chart-1))" },
-  ema: { label: "Moving Average", color: "hsl(var(--chart-3))" },
 };
 
 type BucketType = Exclude<AnalyticsApiItemStatsRequest["bucket"], undefined>;
@@ -26,15 +25,12 @@ const MIN_AVG_THRESHOLD = 0.1; // 5 %
 const BUCKET_INCREMENTS = [1000, 2000, 3000, 5000, 7000, 10000] as const;
 
 interface ChartPoint {
-  bucket: number;
   displayBucket: number;
   bucketStart: number;
   bucketEnd: number;
   winrate: number | null;
   trueWinrate: number | null;
-  wilsonLowerBound: number | null;
   matches: number;
-  ema: number | null;
 }
 
 function wilsonLowerBound(wins: number, total: number) {
@@ -45,42 +41,6 @@ function wilsonLowerBound(wins: number, total: number) {
   const numerator = p + (z * z) / (2 * n) - z * Math.sqrt((p * (1 - p) + (z * z) / (4 * n)) / n);
   const denominator = 1 + (z * z) / n;
   return Math.max(0, numerator / denominator);
-}
-
-function movingAverage(arr: Array<number | null | undefined>, window: number) {
-  const n = arr.length;
-  const result = new Array<number | null>(n);
-  const half = Math.floor(window / 2);
-  let first = 0;
-  while (first < n && (arr[first] === null || arr[first] === undefined)) first++;
-  let last = n - 1;
-  while (last >= 0 && (arr[last] === null || arr[last] === undefined)) last--;
-  for (let i = 0; i < n; i++) {
-    if (i < first || i > last) {
-      result[i] = null;
-      continue;
-    }
-    const s = Math.max(0, i - half);
-    const e = Math.min(n - 1, i + half);
-    let sum = 0;
-    let count = 0;
-    for (let j = s; j <= e; j++) {
-      const v = arr[j];
-      if (v !== null && v !== undefined) {
-        sum += v;
-        count++;
-      }
-    }
-    result[i] = count ? sum / count : null;
-  }
-  return result;
-}
-
-function calculateSMA(data: Array<{ winrate: number | null }>, windowSize: number) {
-  return movingAverage(
-    data.map((d) => d.winrate),
-    windowSize,
-  );
 }
 
 function computeAverageMatchCount(itemData: { bucket: number | null; matches: number }[], increment: number): number {
@@ -147,14 +107,8 @@ function buildChartData({
         const avgPercent = rowTotalMatches ? avgMatches / rowTotalMatches : 0;
         if (avgPercent >= minAvgThreshold) {
           increment = inc;
-          console.log(
-            `increment: ${inc}, because ${avgPercent} >= ${minAvgThreshold} (value is ${avgMatches} / ${rowTotalMatches})`,
-          );
           break;
         }
-        console.log(
-          `NOT increment: ${inc}, because ${avgPercent} < ${minAvgThreshold} (value is ${avgMatches} / ${rowTotalMatches})`,
-        );
       }
     }
 
@@ -180,15 +134,12 @@ function buildChartData({
 
       if (!group.matches) {
         points.push({
-          bucket: key,
           displayBucket,
           bucketStart,
           bucketEnd,
           winrate: null,
           trueWinrate: null,
-          wilsonLowerBound: null,
           matches: 0,
-          ema: null,
         });
         continue;
       }
@@ -196,23 +147,16 @@ function buildChartData({
       const trueWR = (group.wins / group.matches) * 100;
       const wilson = wilsonLowerBound(group.wins, group.matches) * 100;
       points.push({
-        bucket: key,
         displayBucket,
         bucketStart,
         bucketEnd,
         winrate: useWilsonInterval ? wilson : trueWR,
         trueWinrate: trueWR,
-        wilsonLowerBound: wilson,
         matches: group.matches,
-        ema: null,
       });
     }
 
-    const sma = calculateSMA(points, increment);
-    result[String(itemId)] = points.map((point, index) => {
-      point.ema = sma[index];
-      return point;
-    });
+    result[String(itemId)] = points;
   }
 
   return result;
@@ -433,6 +377,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
                         activeDot={{ r: 6 }}
                         strokeWidth={2}
                         name={itemNameMap?.[itemId]}
+                        isAnimationActive={false}
                       />
                     ))}
                   </LineChart>
