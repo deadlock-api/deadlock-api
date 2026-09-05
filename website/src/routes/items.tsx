@@ -4,6 +4,7 @@ import { lazy, Suspense } from "react";
 
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
+import { ItemTabsPrototype } from "~/components/items-page/ItemTabsPrototype";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
@@ -141,17 +142,21 @@ function ItemsPage() {
       </Filter.Root>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="tabs-nav w-full">
-        <ResponsiveTabsList
-          value={tab ?? undefined}
-          onValueChange={(value) => setTab(value as typeof tab)}
-          options={[
-            { value: "item-stats", label: "Item Stats" },
-            { value: "item-purchase-analysis", label: "Purchase Analysis" },
-            { value: "build-flow", label: "Build Flow" },
-            { value: "item-combos", label: "Item Combos" },
-          ]}
-        />
-        <TabsContent value="item-stats">
+        {import.meta.env.DEV ? (
+          <ItemTabsPrototype value={tab} />
+        ) : (
+          <ResponsiveTabsList
+            value={tab ?? undefined}
+            onValueChange={(value) => setTab(value as typeof tab)}
+            options={[
+              { value: "item-stats", label: "Item Stats" },
+              { value: "item-purchase-analysis", label: "Purchase Analysis" },
+              { value: "build-flow", label: "Build Flow" },
+              { value: "item-combos", label: "Item Combos" },
+            ]}
+          />
+        )}
+        <TabsContent value="item-stats" className="-mx-4 sm:-mx-6">
           <h2 className="sr-only">Item Stats</h2>
           <ChunkErrorBoundary>
             <Suspense fallback={<LoadingLogo />}>

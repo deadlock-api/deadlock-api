@@ -147,7 +147,7 @@ function RootComponent() {
                         WebkitMaskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
                       }}
                     />
-                    <div className="relative m-2 w-full rounded-xl border border-white/10 bg-background/60 p-4 shadow-xl backdrop-blur-md sm:p-6 xl:w-[92%]">
+                    <div className="relative m-2 min-h-[calc(100dvh-1rem)] min-w-0 w-full rounded-xl border border-white/10 bg-background/60 p-4 shadow-xl backdrop-blur-md sm:p-6 xl:w-[92%]">
                       <Breadcrumbs />
                       <QueryErrorResetBoundary>
                         {({ reset }) => (

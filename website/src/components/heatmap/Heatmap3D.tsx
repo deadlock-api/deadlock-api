@@ -1,10 +1,10 @@
 import { OrbitControls } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import type { KillDeathStats, MapData } from "deadlock_api_client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
-import { buildHeatGrid, GRID_RES, interpolateColor, sampleBilinear } from "./heatmap-grid";
+import { buildHeatGrids, GRID_RES, interpolateColor, normalizeHeatGrids, sampleBilinear } from "./heatmap-grid";
 import { HeatmapLegend } from "./HeatmapLegend";
 import { SensitivitySlider } from "./SensitivitySlider";
 
@@ -40,6 +40,7 @@ function HeatBarBand({
   opacity: number;
 }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
+  const invalidate = useThree((state) => state.invalidate);
 
   useEffect(() => {
     const mesh = meshRef.current;
@@ -53,7 +54,9 @@ function HeatBarBand({
     }
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [count, matrices, colorData]);
+    mesh.computeBoundingSphere();
+    invalidate();
+  }, [count, matrices, colorData, invalidate]);
 
   if (count === 0) return null;
 
@@ -131,16 +134,18 @@ function MapPlane({ mapImages }: { mapImages: { background: string; frame: strin
   const [texture, setTexture] = useState<THREE.Texture | null>(null);
 
   useEffect(() => {
-    const loader = new THREE.TextureLoader();
-    const load = (url: string) => new Promise<THREE.Texture>((res) => loader.load(url, res));
+    let cancelled = false;
+    let compositeTexture: THREE.CanvasTexture | undefined;
+    const loader = new THREE.ImageLoader();
+    const load = (url: string) => loader.loadAsync(url);
 
     const loadAll = async () => {
-      const [bgTex, frameTex, midTex] = await Promise.all([
+      const [bgImg, frameImg, midImg] = await Promise.all([
         load(mapImages.background),
         load(mapImages.frame),
         load(mapImages.mid),
       ]);
-      const bgImg = bgTex.image as HTMLImageElement;
+      if (cancelled) return;
       const size = bgImg.width;
       const canvas = document.createElement("canvas");
       canvas.width = size;
@@ -148,16 +153,23 @@ function MapPlane({ mapImages }: { mapImages: { background: string; frame: strin
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
       ctx.drawImage(bgImg, 0, 0, size, size);
-      ctx.drawImage(midTex.image as HTMLImageElement, 0, 0, size, size);
+      ctx.drawImage(midImg, 0, 0, size, size);
       ctx.globalCompositeOperation = "multiply";
-      ctx.drawImage(frameTex.image as HTMLImageElement, 0, 0, size, size);
+      ctx.drawImage(frameImg, 0, 0, size, size);
 
       const tex = new THREE.CanvasTexture(canvas);
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.needsUpdate = true;
+      compositeTexture = tex;
       setTexture(tex);
     };
-    void loadAll();
+    void loadAll().catch((error) => {
+      if (!cancelled) console.error("Failed to load heatmap images", error);
+    });
+    return () => {
+      cancelled = true;
+      compositeTexture?.dispose();
+    };
   }, [mapImages.background, mapImages.frame, mapImages.mid]);
 
   if (!texture) return null;
@@ -182,16 +194,21 @@ function BasePlane() {
 export default function Heatmap3D({ data, mapData, viewMode, sensitivity, onSensitivityChange }: Heatmap3DProps) {
   const radius = mapData.radius ?? 10752;
   const [opacity, setOpacity] = useState(0.85);
+  const rawGrids = useMemo(() => (data.length > 0 ? buildHeatGrids(data, radius) : null), [data, radius]);
 
   const { grid, legendMax } = useMemo(() => {
-    if (data.length === 0) return { grid: new Float32Array(GRID_RES * GRID_RES), legendMax: 0 };
-    const result = buildHeatGrid(data, viewMode, radius, sensitivity);
+    if (!rawGrids) return { grid: new Float32Array(GRID_RES * GRID_RES), legendMax: 0 };
+    const result = normalizeHeatGrids(rawGrids, viewMode, sensitivity);
     return { grid: result.grid, legendMax: result.maxValue };
-  }, [data, viewMode, radius, sensitivity]);
+  }, [rawGrids, viewMode, sensitivity]);
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-lg">
-      <Canvas camera={{ position: [0, 3.5, 3.5], fov: 50, near: 0.1, far: 100 }} gl={{ antialias: true, alpha: true }}>
+      <Canvas
+        frameloop="demand"
+        camera={{ position: [0, 3.5, 3.5], fov: 50, near: 0.1, far: 100 }}
+        gl={{ antialias: true, alpha: true }}
+      >
         <color attach="background" args={["#050810"]} />
         <ambientLight intensity={0.6} />
         <directionalLight position={[5, 8, 5]} intensity={1} />

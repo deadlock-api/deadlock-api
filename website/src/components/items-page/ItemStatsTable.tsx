@@ -1,12 +1,11 @@
 import type { Upgrade } from "deadlock_api_client";
 import type { ItemStats } from "deadlock_api_client";
 import { parseAsArrayOf, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { type ReactNode, useMemo, useState } from "react";
+import { memo, type ReactNode, useCallback, useMemo, useState } from "react";
 
-import { ItemImage } from "~/components/ItemImage";
+import { ItemImage, ItemImageFromAsset } from "~/components/ItemImage";
 import { ItemName } from "~/components/ItemName";
 import { ItemQuickSelectDialog } from "~/components/items-page/ItemQuickSelectDialog";
-import { ItemTier } from "~/components/ItemTier";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import { ItemTierSelector } from "~/components/selectors/ItemTierSelector";
@@ -88,6 +87,7 @@ export interface ItemStatsTableProps {
 }
 
 export interface DisplayItemStats {
+  item?: Upgrade;
   item_id: number;
   wins: number;
   losses: number;
@@ -137,9 +137,10 @@ export function getDisplayItemStats(data: ItemStats[] | undefined, assetsItems: 
   const baselineRow = data.reduce((max, d) => (d.matches > max.matches ? d : max), data[0]);
   const [baselineLower, baselineUpper] = wilsonScoreInterval(baselineRow.wins, baselineRow.matches);
   const baselineWidth = baselineUpper - baselineLower;
+  const itemsById = new Map(assetsItems.map((item) => [item.id, item]));
 
   return data.map((d): DisplayItemStats => {
-    const item = assetsItems.find((i) => i.id === d.item_id);
+    const item = itemsById.get(d.item_id);
     const [lower, upper] = wilsonScoreInterval(d.wins, d.matches);
 
     const width = upper - lower;
@@ -153,6 +154,7 @@ export function getDisplayItemStats(data: ItemStats[] | undefined, assetsItems: 
 
     return {
       ...d,
+      item,
       winRate: d.wins / d.matches,
       itemTier: item?.item_tier || 0,
       confidenceTier: confidenceTier,
@@ -218,7 +220,7 @@ function ConfidenceTierBadge({ tier }: { tier: number }) {
   );
 }
 
-function ItemStatsTableRow({
+const ItemStatsTableRow = memo(function ItemStatsTableRow({
   row,
   index,
   columns,
@@ -269,15 +271,13 @@ function ItemStatsTableRow({
         {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
         <TableCell>
           <div className="flex items-center gap-2">
-            <ItemImage itemId={row.item_id} />
-            <ItemName itemId={row.item_id} />
+            <ItemImageFromAsset item={row.item} />
+            <span className="truncate">{row.item?.name ?? "Unknown Item"}</span>
           </div>
         </TableCell>
         {columns.includes("itemsTier") && (
           <TableCell>
-            <div className="flex items-center gap-2">
-              <ItemTier itemId={row.item_id} />
-            </div>
+            <div className="flex items-center gap-2">{row.item?.item_tier ?? "?"}</div>
           </TableCell>
         )}
         {columns.includes("winRate") && (
@@ -391,7 +391,8 @@ function ItemStatsTableRow({
       {customDropdownContent && open && (
         <TableRow>
           <TableCell colSpan={totalColumns} className="border-0 p-0">
-            <div className="border-t border-border bg-muted p-4">
+            {/* Keep chart contents out of the table's intrinsic column sizing, while allowing natural height. */}
+            <div className="border-t border-border bg-muted p-4 [contain:inline-size]">
               {customDropdownContent({
                 itemId: row.item_id,
                 rowWins: row.wins,
@@ -404,7 +405,7 @@ function ItemStatsTableRow({
       )}
     </>
   );
-}
+});
 
 export function ItemStatsTable({
   data,
@@ -454,26 +455,32 @@ export function ItemStatsTable({
     setExcludeItems(nextExclude);
   };
 
-  const addInclude = (id: number) => {
-    const next = new Set(includeItems);
-    next.add(id);
-    setIncludeItems(next);
-    if (excludeItems.has(id)) {
-      const nextExclude = new Set(excludeItems);
-      nextExclude.delete(id);
-      setExcludeItems(nextExclude);
-    }
-  };
-  const addExclude = (id: number) => {
-    const next = new Set(excludeItems);
-    next.add(id);
-    setExcludeItems(next);
-    if (includeItems.has(id)) {
-      const nextInclude = new Set(includeItems);
-      nextInclude.delete(id);
-      setIncludeItems(nextInclude);
-    }
-  };
+  const addInclude = useCallback(
+    (id: number) => {
+      const next = new Set(includeItems);
+      next.add(id);
+      setIncludeItems(next);
+      if (excludeItems.has(id)) {
+        const nextExclude = new Set(excludeItems);
+        nextExclude.delete(id);
+        setExcludeItems(nextExclude);
+      }
+    },
+    [includeItems, excludeItems, setIncludeItems, setExcludeItems],
+  );
+  const addExclude = useCallback(
+    (id: number) => {
+      const next = new Set(excludeItems);
+      next.add(id);
+      setExcludeItems(next);
+      if (includeItems.has(id)) {
+        const nextInclude = new Set(includeItems);
+        nextInclude.delete(id);
+        setIncludeItems(nextInclude);
+      }
+    },
+    [includeItems, excludeItems, setIncludeItems, setExcludeItems],
+  );
   const removeInclude = (id: number) => {
     const next = new Set(includeItems);
     next.delete(id);
@@ -537,7 +544,7 @@ export function ItemStatsTable({
         initialExclude={excludeItems}
         onApply={handleApply}
       />
-      <div className="my-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+      <div className="my-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 sm:px-6">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex items-center gap-1.5">
             <span className="icon-[mdi--filter-variant] size-4 text-muted-foreground" />
@@ -629,7 +636,7 @@ export function ItemStatsTable({
                     <ItemStatsTableRow
                       key={row.item_id}
                       row={row}
-                      index={index}
+                      index={hideIndex ? 0 : index}
                       columns={columns}
                       hideIndex={hideIndex}
                       dimLowConfidence={false}

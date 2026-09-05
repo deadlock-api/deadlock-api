@@ -1,3 +1,5 @@
+import type { Upgrade } from "deadlock_api_client";
+
 import { AssetImage } from "~/components/AssetImage";
 import { useItemById } from "~/hooks/useAssetById";
 import { cn } from "~/lib/utils";
@@ -5,6 +7,19 @@ import { cn } from "~/lib/utils";
 export function ItemImage({ itemId, className }: { itemId: number; className?: string }) {
   const { item, isLoading } = useItemById(itemId);
 
+  return <ItemImageFromAsset item={item} isLoading={isLoading} className={className} />;
+}
+
+/** Use already-loaded assets in tables instead of subscribing once per image. */
+export function ItemImageFromAsset({
+  item,
+  isLoading = false,
+  className,
+}: {
+  item: Upgrade | undefined;
+  isLoading?: boolean;
+  className?: string;
+}) {
   return (
     <AssetImage
       asset={

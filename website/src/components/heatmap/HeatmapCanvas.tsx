@@ -2,7 +2,7 @@ import type { MapData } from "deadlock_api_client";
 import type { KillDeathStats } from "deadlock_api_client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { buildHeatGrid, buildHeatGrids, COLOR_LUT, GRID_RES, sampleBilinear } from "./heatmap-grid";
+import { buildHeatGrids, COLOR_LUT, GRID_RES, normalizeHeatGrids, sampleBilinear } from "./heatmap-grid";
 import { HeatmapLegend } from "./HeatmapLegend";
 import { SensitivitySlider } from "./SensitivitySlider";
 
@@ -41,8 +41,8 @@ export default function HeatmapCanvas({
 
   const rawGrids = useMemo(() => (data.length > 0 ? buildHeatGrids(data, radius) : null), [data, radius]);
   const heatGrid = useMemo(
-    () => (data.length > 0 ? buildHeatGrid(data, viewMode, radius, sensitivity) : null),
-    [data, viewMode, radius, sensitivity],
+    () => (rawGrids ? normalizeHeatGrids(rawGrids, viewMode, sensitivity) : null),
+    [rawGrids, viewMode, sensitivity],
   );
   const legendMax = heatGrid?.maxValue ?? 0;
 

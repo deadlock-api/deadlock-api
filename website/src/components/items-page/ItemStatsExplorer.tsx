@@ -1,11 +1,12 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { ItemStats } from "deadlock_api_client";
 import type { AnalyticsApiItemStatsRequest, MatchesApiBulkMetadataRequest } from "deadlock_api_client";
+import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { parseAsInteger, useQueryState } from "nuqs";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { ItemBuyTimingChart } from "~/components/items-page/ItemBuyTimingChart";
-import { getDisplayItemStats, ItemStatsTable } from "~/components/items-page/ItemStatsTable";
+import { getDisplayItemStats, ItemStatsTable, type ItemStatsTableProps } from "~/components/items-page/ItemStatsTable";
 import { PlayerHeroBuildsDialog } from "~/components/items-page/PlayerHeroBuildsDialog";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import MatchHistoryCard from "~/components/MatchHistoryCard";
@@ -27,6 +28,8 @@ import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } f
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { queryKeys } from "~/queries/query-keys";
 import { ranksQueryOptions } from "~/queries/ranks-query";
+
+const TABLE_COLUMNS = ["winRate", "matches", "itemsTier", "confidence"];
 
 export function ItemStatsExplorer({
   minRankId,
@@ -176,6 +179,7 @@ export function ItemStatsExplorer({
 
   const TOP_BUILDS_PAGE_SIZE = 20;
   const [topBuildsLimit, setTopBuildsLimit] = useState(TOP_BUILDS_PAGE_SIZE);
+  const [topBuildsOpen, setTopBuildsOpen] = useState(false);
 
   const topBuildsEnabled = !!hero && includeItems.size > 0;
   const topBuildsQuery: MatchesApiBulkMetadataRequest = {
@@ -223,16 +227,14 @@ export function ItemStatsExplorer({
   const maxWinRate = useMemo(() => Math.max(...data.map((item) => item.wins / item.matches)), [data]);
   const minUsage = useMemo(() => Math.min(...data.map((item) => item.matches)), [data]);
   const maxUsage = useMemo(() => Math.max(...data.map((item) => item.matches)), [data]);
-  const filteredData = useMemo(
+  const shopableItemIds = useMemo(
     () =>
-      data?.filter((d) =>
-        assetsItems
-          ?.filter((i) => !i.disabled && i.shopable && i.shop_image_webp)
-          .map((i) => i.id)
-          .includes(d.item_id),
+      new Set(
+        assetsItems?.filter((item) => !item.disabled && item.shopable && item.shop_image_webp).map((item) => item.id),
       ),
-    [data, assetsItems],
+    [assetsItems],
   );
+  const filteredData = useMemo(() => data.filter((item) => shopableItemIds.has(item.item_id)), [data, shopableItemIds]);
 
   const sortedData = useMemo(
     () =>
@@ -248,6 +250,12 @@ export function ItemStatsExplorer({
 
   const limitedData = useMemo(() => (limit ? sortedData?.slice(0, limit) : sortedData), [sortedData, limit]);
   const displayData = useMemo(() => getDisplayItemStats(limitedData, assetsItems || []), [limitedData, assetsItems]);
+  const renderBuyTiming = useCallback<NonNullable<ItemStatsTableProps["customDropdownContent"]>>(
+    ({ itemId, rowTotal }) => (
+      <ItemBuyTimingChart itemIds={[itemId]} baseQueryOptions={queryStatOptions} rowTotalMatches={rowTotal} />
+    ),
+    [queryStatOptions],
+  );
 
   if (isLoadingItemAssets) {
     return (
@@ -259,70 +267,105 @@ export function ItemStatsExplorer({
 
   return (
     <div className="space-y-4">
-      <div className={cn("gap-4", topBuildsEnabled ? "flex flex-col lg:flex-row" : "")}>
-        <div className="min-w-0 flex-1 overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]">
-          <div className="flex items-center gap-2 border-b border-white/[0.06] bg-white/[0.015] px-4 py-2.5">
-            <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Item Stats</h3>
-          </div>
-          <div className="p-4">
-            <ItemStatsTable
-              data={displayData}
-              isLoading={isLoadingItemStats || isLoadingItemAssets}
-              isRefetching={isRefetchingItemStats}
-              columns={["winRate", "matches", "itemsTier", "confidence"]}
-              hideHeader={false}
-              hideIndex={true}
-              hideItemTierFilter={false}
-              minWinRate={minWinRate}
-              maxWinRate={maxWinRate}
-              minUsage={minUsage}
-              maxUsage={maxUsage}
-              prevStatsMap={prevStatsMap}
-              customDropdownContent={({ itemId, rowTotal }) => (
-                <ItemBuyTimingChart itemIds={[itemId]} baseQueryOptions={queryStatOptions} rowTotalMatches={rowTotal} />
+      <div className="overflow-clip border border-white/[0.06] bg-white/[0.02]">
+        <div className="relative flex items-center gap-2 border-b border-white/[0.06] bg-white/[0.015] px-4 py-2.5">
+          <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Item Stats</h3>
+          {topBuildsEnabled && (
+            <span
+              aria-hidden="true"
+              className={cn(
+                "pointer-events-none absolute inset-y-0 hidden border-l border-white/[0.06] transition-[width,opacity] duration-300 ease-in-out motion-reduce:transition-none lg:right-0 lg:block",
+                topBuildsOpen ? "w-96 opacity-100" : "w-0 opacity-0",
               )}
             />
-          </div>
+          )}
+          {topBuildsEnabled && (
+            <button
+              type="button"
+              aria-expanded={topBuildsOpen}
+              onClick={() => setTopBuildsOpen((open) => !open)}
+              className={cn(
+                "absolute right-4 flex items-center gap-2 rounded text-xs font-semibold tracking-wider text-muted-foreground uppercase transition-[right,translate] duration-300 ease-in-out hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring motion-reduce:transition-none",
+                topBuildsOpen && "lg:right-[calc(24rem-1rem)] lg:translate-x-full",
+              )}
+            >
+              Top Builds
+              {topBuildsOpen ? (
+                <PanelRightClose aria-hidden="true" className="size-4" />
+              ) : (
+                <PanelRightOpen aria-hidden="true" className="size-4" />
+              )}
+            </button>
+          )}
         </div>
-
-        {topBuildsEnabled && (
-          <div className="flex flex-col overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02] lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:w-96 lg:shrink-0 lg:self-start">
-            <div className="flex shrink-0 items-center gap-2 border-b border-white/[0.06] bg-white/[0.015] px-4 py-2.5">
-              <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Top Builds</h3>
+        <div className={cn(topBuildsEnabled && "flex flex-col lg:flex-row")}>
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <div className="py-4">
+              <ItemStatsTable
+                data={displayData}
+                isLoading={isLoadingItemStats || isLoadingItemAssets}
+                isRefetching={isRefetchingItemStats}
+                columns={TABLE_COLUMNS}
+                hideHeader={false}
+                hideIndex={true}
+                hideItemTierFilter={false}
+                minWinRate={minWinRate}
+                maxWinRate={maxWinRate}
+                minUsage={minUsage}
+                maxUsage={maxUsage}
+                prevStatsMap={prevStatsMap}
+                customDropdownContent={renderBuyTiming}
+              />
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-4">
-              {isLoadingTopBuilds ? (
-                <div className="flex items-center justify-center py-8">
-                  <LoadingLogo />
-                </div>
-              ) : topBuildsCards.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {topBuildsCards.map((card) => (
-                    <MatchHistoryCard
-                      key={card.matchId}
-                      {...card}
-                      ranks={ranksData}
-                      expandable={false}
-                      onPlayerClick={(name) => setSelectedPlayer({ accountId: card.accountId, name })}
-                    />
-                  ))}
-                  {(isFetchingTopBuilds || (topBuildsData?.length ?? 0) >= topBuildsLimit) && (
-                    <button
-                      type="button"
-                      onClick={() => setTopBuildsLimit((prev) => prev + TOP_BUILDS_PAGE_SIZE)}
-                      disabled={isFetchingTopBuilds}
-                      className="mt-1 flex items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase transition-colors hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {isFetchingTopBuilds ? "Loading…" : "Load more"}
-                    </button>
+          </div>
+
+          {topBuildsEnabled && (
+            <div
+              aria-hidden={!topBuildsOpen}
+              inert={!topBuildsOpen}
+              className={cn(
+                "grid min-w-0 overflow-clip border-white/[0.06] transition-[width,grid-template-rows,opacity] duration-300 ease-in-out motion-reduce:transition-none lg:shrink-0 lg:grid-rows-[1fr]",
+                topBuildsOpen
+                  ? "grid-rows-[1fr] border-t opacity-100 lg:w-96 lg:border-t-0 lg:border-l"
+                  : "grid-rows-[0fr] opacity-0 lg:w-0",
+              )}
+            >
+              <div className="flex min-h-0 min-w-0 flex-col overflow-hidden lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:w-[calc(24rem-1px)]">
+                <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                  {isLoadingTopBuilds ? (
+                    <div className="flex items-center justify-center py-8">
+                      <LoadingLogo />
+                    </div>
+                  ) : topBuildsCards.length > 0 ? (
+                    <div className="flex flex-col gap-2">
+                      {topBuildsCards.map((card) => (
+                        <MatchHistoryCard
+                          key={card.matchId}
+                          {...card}
+                          ranks={ranksData}
+                          expandable={false}
+                          onPlayerClick={(name) => setSelectedPlayer({ accountId: card.accountId, name })}
+                        />
+                      ))}
+                      {(isFetchingTopBuilds || (topBuildsData?.length ?? 0) >= topBuildsLimit) && (
+                        <button
+                          type="button"
+                          onClick={() => setTopBuildsLimit((prev) => prev + TOP_BUILDS_PAGE_SIZE)}
+                          disabled={isFetchingTopBuilds}
+                          className="mt-1 flex items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase transition-colors hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isFetchingTopBuilds ? "Loading…" : "Load more"}
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="py-4 text-center text-sm text-muted-foreground">No matching builds found.</p>
                   )}
                 </div>
-              ) : (
-                <p className="py-4 text-center text-sm text-muted-foreground">No matching builds found.</p>
-              )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {hero != null && (

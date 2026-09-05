@@ -101,9 +101,17 @@ export function buildHeatGrid(
   radius: number,
   sensitivity = 0.99,
 ): { grid: Float32Array; maxValue: number } {
+  if (viewMode !== "kd") return clampAndNormalize(buildRawGrid(data, viewMode, radius), sensitivity);
+  return normalizeHeatGrids(buildHeatGrids(data, radius), viewMode, sensitivity);
+}
+
+/** Normalize a copy so cached raw counts remain usable by tooltips and other views. */
+export function normalizeHeatGrids(
+  { killsRaw, deathsRaw }: ReturnType<typeof buildHeatGrids>,
+  viewMode: "kills" | "deaths" | "kd",
+  sensitivity = 0.99,
+): { grid: Float32Array; maxValue: number } {
   if (viewMode === "kd") {
-    const killsRaw = buildRawGrid(data, "kills", radius);
-    const deathsRaw = buildRawGrid(data, "deaths", radius);
     const grid = new Float32Array(GRID_RES * GRID_RES);
 
     const minActivity = 1;
@@ -116,7 +124,7 @@ export function buildHeatGrid(
     return clampAndNormalize(grid, sensitivity);
   }
 
-  const grid = buildRawGrid(data, viewMode, radius);
+  const grid = (viewMode === "kills" ? killsRaw : deathsRaw).slice();
   return clampAndNormalize(grid, sensitivity);
 }
 

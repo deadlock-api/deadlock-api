@@ -1,4 +1,4 @@
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, type UseQueryResult } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -15,6 +15,15 @@ export type SteamProfileMap = Record<number, SteamProfile>;
 
 const STEAM_BATCH_SIZE = 500;
 
+// A stable combine function lets Query preserve the result when batch data is unchanged.
+function combineProfiles(queries: UseQueryResult<SteamProfileMap>[]) {
+  const profiles: SteamProfileMap = {};
+  for (const query of queries) {
+    if (query.data) Object.assign(profiles, query.data);
+  }
+  return { profiles, isLoading: queries.some((query) => query.isLoading) };
+}
+
 function chunk<T>(arr: T[], size: number): T[][] {
   const chunks: T[][] = [];
   for (let i = 0; i < arr.length; i += size) {
@@ -26,7 +35,8 @@ function chunk<T>(arr: T[], size: number): T[][] {
 export function useSteamProfiles(accountIds: number[]) {
   const batches = useMemo(() => chunk(accountIds, STEAM_BATCH_SIZE), [accountIds]);
 
-  const queries = useQueries({
+  return useQueries({
+    combine: combineProfiles,
     queries: batches.map((batch) => ({
       queryKey: queryKeys.steam.profiles(batch),
       queryFn: async () => {
@@ -45,16 +55,4 @@ export function useSteamProfiles(accountIds: number[]) {
       staleTime: CACHE_DURATIONS.ONE_DAY,
     })),
   });
-
-  const isLoading = queries.some((q) => q.isLoading);
-
-  const profiles = useMemo(() => {
-    const merged: SteamProfileMap = {};
-    for (const query of queries) {
-      if (query.data) Object.assign(merged, query.data);
-    }
-    return merged;
-  }, [queries]);
-
-  return { profiles, isLoading };
 }
