@@ -77,7 +77,7 @@ const navGroups: NavGroup[] = [
     label: "Tools",
     links: [
       { to: "/streamkit", label: "Stream Kit", icon: Radio },
-      { to: "/data-dumps", label: "Data Dumps", icon: HardDrive },
+      { to: "/data-dumps", label: "MCP & Data Dumps", icon: HardDrive },
       { to: "/blog", label: "Blog", icon: BookOpen },
     ],
   },

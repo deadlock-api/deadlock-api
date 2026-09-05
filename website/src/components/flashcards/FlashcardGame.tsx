@@ -56,6 +56,8 @@ export interface FlashcardGameProps<T extends FlashcardEntry> {
   renderOption?: (entry: T) => ReactNode;
   promptClassName?: string;
   controls?: ReactNode;
+  /** Changing this value draws a fresh card (stats and progress are kept). */
+  reshuffleKey?: string;
   isLoading: boolean;
   storageKey: string;
   masteredLabel: string;
@@ -84,6 +86,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
   renderOption = renderNameOption,
   promptClassName = "size-40 sm:size-52",
   controls,
+  reshuffleKey,
   storageKey,
   masteredLabel,
 }: FlashcardGameProps<T>) {
@@ -97,6 +100,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
   });
   const advanceTimer = useRef<number | null>(null);
   const noRepeatsRef = useRef(noRepeats);
+  const prevReshuffleKey = useRef(reshuffleKey);
 
   const updateNoRepeats = useCallback(
     (value: boolean) => {
@@ -141,6 +145,19 @@ function FlashcardGameReady<T extends FlashcardEntry>({
     },
     [card, selected, pool, seenIds],
   );
+
+  const redraw = useCallback(() => {
+    if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current);
+    setSelected(null);
+    const exclude = noRepeatsRef.current ? seenIds : new Set<number>(card ? [card.answer.id] : []);
+    setCard(pickCard(pool, exclude));
+  }, [pool, seenIds, card]);
+
+  useEffect(() => {
+    if (prevReshuffleKey.current === reshuffleKey) return;
+    prevReshuffleKey.current = reshuffleKey;
+    redraw();
+  }, [reshuffleKey, redraw]);
 
   const resetStats = useCallback(() => {
     if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current);

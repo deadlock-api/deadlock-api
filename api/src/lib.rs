@@ -1,3 +1,4 @@
+#![recursion_limit = "256"]
 #![forbid(unsafe_code)]
 #![deny(clippy::all)]
 #![deny(unreachable_pub)]

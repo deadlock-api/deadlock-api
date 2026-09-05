@@ -146,6 +146,26 @@ pub(super) struct PostgresConfig {
     pub(super) pool_size: u32,
 }
 
+/// Public parquet dumps the MCP server queries. The bucket is world-readable, so
+/// requests are sent unsigned.
+#[derive(Deserialize, Debug, Clone)]
+#[serde(default)]
+pub(crate) struct McpSnapshotConfig {
+    pub(crate) endpoint: String,
+    pub(crate) bucket: String,
+    pub(crate) prefix: String,
+}
+
+impl Default for McpSnapshotConfig {
+    fn default() -> Self {
+        Self {
+            endpoint: "https://s3-cache.deadlock-api.com".to_owned(),
+            bucket: "db-snapshot".to_owned(),
+            prefix: "public/".to_owned(),
+        }
+    }
+}
+
 #[derive(Deserialize, Debug, Clone)]
 pub(crate) struct Config {
     #[serde(default)]
@@ -171,6 +191,8 @@ pub(crate) struct Config {
 
     #[serde(default)]
     pub(crate) game_server_secret: String,
+    #[serde(default)]
+    pub(crate) mcp_snapshot: McpSnapshotConfig,
 }
 
 impl Config {
