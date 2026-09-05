@@ -18,7 +18,7 @@ use datafusion::prelude::{SQLOptions, SessionConfig, SessionContext};
 use futures::{StreamExt, TryStreamExt};
 use object_store::aws::AmazonS3Builder;
 use object_store::path::Path;
-use object_store::{ObjectMeta, ObjectStore, ObjectStoreExt, RetryConfig};
+use object_store::{ClientOptions, ObjectMeta, ObjectStore, ObjectStoreExt, RetryConfig};
 use regex::Regex;
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
@@ -114,6 +114,9 @@ impl SnapshotCatalog {
                 .with_bucket_name(&config.bucket)
                 .with_skip_signature(true)
                 .with_allow_http(true)
+                // Range reads on the multi-gigabyte parts outlive the 30s client default; the
+                // query timeout still bounds the whole request.
+                .with_client_options(ClientOptions::new().with_timeout(QUERY_TIMEOUT))
                 .with_retry(RetryConfig {
                     max_retries: 3,
                     retry_timeout: Duration::from_secs(10),
