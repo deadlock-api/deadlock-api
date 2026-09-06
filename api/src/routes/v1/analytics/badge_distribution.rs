@@ -2,6 +2,7 @@ use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
+use cached::macros::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
@@ -148,13 +149,26 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
     )
 }
 
+#[cached(
+    ttl_secs = 1800,
+    convert = "{ query_str.to_string() }",
+    sync_writes = "by_key",
+    key = "String"
+)]
+async fn run_query(
+    ch_client: &clickhouse::Client,
+    query_str: &str,
+) -> clickhouse::error::Result<Vec<BadgeDistribution>> {
+    ch_client.query(query_str).fetch_all().await
+}
+
 async fn get_badge_distribution(
     ch_client: &clickhouse::Client,
     query: BadgeDistributionQuery,
 ) -> APIResult<Vec<BadgeDistribution>> {
-    let query = build_query(&query);
-    debug!(?query);
-    Ok(ch_client.query(&query).fetch_all().await?)
+    let query_str = build_query(&query);
+    debug!(?query_str);
+    Ok(run_query(ch_client, &query_str).await?)
 }
 
 #[utoipa::path(
@@ -192,7 +206,7 @@ pub(crate) async fn badge_distribution(
     Query(query): Query<BadgeDistributionQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_badge_distribution(&state.ch_client_cached, query)
+    get_badge_distribution(&state.ch_client_ro, query)
         .await
         .map(Json)
 }

@@ -5,6 +5,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
+use cached::macros::cached;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -270,13 +271,26 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
     )
 }
 
+#[cached(
+    ttl_secs = 1800,
+    convert = "{ query_str.to_string() }",
+    sync_writes = "by_key",
+    key = "String"
+)]
+async fn run_query(
+    ch_client: &clickhouse::Client,
+    query_str: &str,
+) -> clickhouse::error::Result<Vec<KillDeathStats>> {
+    ch_client.query(query_str).fetch_all().await
+}
+
 async fn get_kill_death_stats(
     ch_client: &clickhouse::Client,
     query: KillDeathStatsQuery,
 ) -> APIResult<Vec<KillDeathStats>> {
-    let query = build_query(&query);
-    debug!(?query);
-    Ok(ch_client.query(&query).fetch_all().await?)
+    let query_str = build_query(&query);
+    debug!(?query_str);
+    Ok(run_query(ch_client, &query_str).await?)
 }
 
 #[utoipa::path(
@@ -315,7 +329,7 @@ pub(crate) async fn kill_death_stats(
             message: "Cannot filter by average badge for street brawl game mode".to_string(),
         });
     }
-    get_kill_death_stats(&state.ch_client_cached, query)
+    get_kill_death_stats(&state.ch_client_ro, query)
         .await
         .map(Json)
 }

@@ -56,8 +56,6 @@ pub(crate) struct AppState {
     pub(crate) redis_client: redis::aio::MultiplexedConnection,
     pub(crate) ch_client: clickhouse::Client,
     pub(crate) ch_client_ro: clickhouse::Client,
-    /// Read-only client with the query cache enabled, for expensive shared analytics.
-    pub(crate) ch_client_cached: clickhouse::Client,
     pub(crate) ch_client_restricted: clickhouse::Client,
     pub(crate) pg_client: Pool<Postgres>,
     pub(crate) feature_flags: FeatureFlags,
@@ -204,8 +202,6 @@ impl AppState {
 
         // Create a Clickhouse readonly connection pool
         debug!("Creating readonly Clickhouse client");
-        // Read-only client for per-account, cheap, and non-cacheable analytics reads.
-        // No query cache by default; cacheable shared analytics use `ch_client_cached`.
         let ch_client_ro = clickhouse::Client::default()
             .with_url(format!(
                 "http://{}:{}",
@@ -238,28 +234,6 @@ impl AppState {
         {
             return Err(AppStateError::Clickhouse(e));
         }
-
-        // Opt-in cached client for expensive, shared analytics reads. Built on top of
-        // the read-only client, so it inherits readonly/threads/etc. and only adds the
-        // query cache. Only endpoints whose results are shared across users and tolerate
-        // up to `query_cache_ttl` staleness should use this; per-account, background, and
-        // sub-200ms queries stay on `ch_client_ro` so they neither serve stale data nor
-        // evict hot analytics entries.
-        //
-        // Endpoints that wrap their ClickHouse call in an in-process `#[cached]` with a
-        // TTL longer than `query_cache_ttl` must NOT use this client: the process cache
-        // absorbs every repeat, so the query cache only ever stores and never reads back.
-        // Measured over 7 days, such endpoints hit 0-2.4% while the two without a process
-        // cache (badge_distribution, kill_death_stats) hit 44% and 17%.
-        debug!("Creating cached Clickhouse client");
-        let ch_client_cached = ch_client_ro
-            .clone()
-            .with_setting("use_query_cache", "1")
-            .with_setting("query_cache_ttl", "1800")
-            .with_setting("query_cache_min_query_duration", "200")
-            .with_setting("query_cache_share_between_users", "1")
-            .with_setting("query_cache_nondeterministic_function_handling", "save")
-            .with_setting("query_cache_system_table_handling", "ignore");
 
         // Create a Clickhouse restricted connection pool
         debug!("Creating restricted Clickhouse client");
@@ -396,7 +370,6 @@ impl AppState {
             redis_client,
             ch_client,
             ch_client_ro,
-            ch_client_cached,
             ch_client_restricted,
             pg_client,
             feature_flags,
