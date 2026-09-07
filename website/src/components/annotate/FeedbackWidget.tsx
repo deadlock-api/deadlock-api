@@ -231,9 +231,9 @@ export function FeedbackWidget() {
           </Button>
         </div>
       ) : (
-        <Button size="sm" className="shadow-lg" onClick={openPanel}>
+        <Button size="sm" className="shadow-lg" onClick={openPanel} aria-label="Feedback">
           <MessageSquarePlus className="size-4" />
-          Feedback
+          <span className="hidden sm:inline">Feedback</span>
         </Button>
       )}
     </div>
