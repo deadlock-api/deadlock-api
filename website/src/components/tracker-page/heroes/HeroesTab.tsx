@@ -260,7 +260,16 @@ export function HeroesTab({
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <HeroImage heroId={row.heroId} className="size-7 rounded-full" />
-                        <HeroName heroId={row.heroId} className="max-w-[80px] @md:max-w-[120px]" />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectHero(row.heroId);
+                          }}
+                          className="flex cursor-pointer rounded-sm text-left outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                        >
+                          <HeroName heroId={row.heroId} className="max-w-[80px] @md:max-w-[120px]" />
+                        </button>
                       </div>
                     </TableCell>
                     {COLUMNS.map((column) => {

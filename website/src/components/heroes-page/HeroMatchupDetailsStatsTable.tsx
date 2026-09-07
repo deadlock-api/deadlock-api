@@ -309,7 +309,20 @@ export function HeroMatchupDetailsStatsTable({
             <TableCell>
               <div className="flex items-center gap-2">
                 <HeroImage heroId={row.heroId} />
-                <HeroName heroId={row.heroId} linkToDetail={linkHeroes} />
+                {onHeroSelected ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onHeroSelected(row.heroId);
+                    }}
+                    className="cursor-pointer rounded-sm text-left outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  >
+                    <HeroName heroId={row.heroId} />
+                  </button>
+                ) : (
+                  <HeroName heroId={row.heroId} linkToDetail={linkHeroes} />
+                )}
               </div>
             </TableCell>
             <TableCell>

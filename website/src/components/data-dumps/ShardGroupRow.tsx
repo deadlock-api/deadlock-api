@@ -43,7 +43,20 @@ export function ShardGroupRow({
         <TableCell className="hidden text-muted-foreground tabular-nums md:table-cell">
           {formatS3Timestamp(group.lastModified)}
         </TableCell>
-        <TableCell className="text-right text-xs text-muted-foreground">{open ? "Hide" : "Preview"}</TableCell>
+        <TableCell className="text-right text-xs text-muted-foreground">
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-label={`${open ? "Hide" : "Preview"} ${group.base}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen(!open);
+            }}
+            className="cursor-pointer rounded-sm px-1 outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          >
+            {open ? "Hide" : "Preview"}
+          </button>
+        </TableCell>
       </TableRow>
       {open && (
         <TableRow className="bg-black/20">
