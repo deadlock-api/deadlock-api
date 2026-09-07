@@ -161,7 +161,9 @@ export function MatchRow({
       <TableCell>
         <div className="flex items-center justify-end gap-1.5 [&_picture]:shrink-0">
           {entry.ranked_display_badge != null && entry.ranked_display_badge > 0 && (
-            <BadgeImage badge={entry.ranked_display_badge} ranks={ranks} className="size-6 max-w-none" />
+            <span className="hidden @sm:contents">
+              <BadgeImage badge={entry.ranked_display_badge} ranks={ranks} className="size-6 max-w-none" />
+            </span>
           )}
           <RankDelta value={entry.ranked_delta} className="text-xs" />
           {entry.ranked_used_demotion_protection && (

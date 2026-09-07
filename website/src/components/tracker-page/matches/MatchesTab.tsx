@@ -98,7 +98,11 @@ function SessionRow({ session }: { session: PlaySession }) {
 
 const round = (value: number) => Math.round(value).toLocaleString("en-US");
 
-/** Averages over the filtered history, laid out under the matching table columns. */
+/**
+ * Averages over the filtered history, laid out under the matching table columns. On narrow layouts
+ * the label and the K/D/A precision drop to the row content's width, since the footer would
+ * otherwise widen the table past its container.
+ */
 function AverageRow({ summary }: { summary: TrackerSummary }) {
   return (
     <TableRow
@@ -108,10 +112,18 @@ function AverageRow({ summary }: { summary: TrackerSummary }) {
       <TableCell title="Win rate" className="tabular-nums">
         {Math.round(summary.winrate * 100)}%
       </TableCell>
-      <TableCell>Average</TableCell>
+      <TableCell>
+        <span className="@xl:hidden">Avg</span>
+        <span className="hidden @xl:inline">Average</span>
+      </TableCell>
       <TableCell className="hidden @3xl:table-cell" />
       <TableCell className="text-right tabular-nums">
-        {summary.avgKills.toFixed(1)} / {summary.avgDeaths.toFixed(1)} / {summary.avgAssists.toFixed(1)}
+        <span className="@md:hidden">
+          {round(summary.avgKills)} / {round(summary.avgDeaths)} / {round(summary.avgAssists)}
+        </span>
+        <span className="hidden @md:inline">
+          {summary.avgKills.toFixed(1)} / {summary.avgDeaths.toFixed(1)} / {summary.avgAssists.toFixed(1)}
+        </span>
       </TableCell>
       <TableCell className="hidden text-right tabular-nums @md:table-cell">{round(summary.avgSouls)}</TableCell>
       <TableCell className="hidden text-right tabular-nums @2xl:table-cell">{round(summary.soulsPerMin)}</TableCell>
@@ -122,7 +134,7 @@ function AverageRow({ summary }: { summary: TrackerSummary }) {
         {formatMatchDuration(summary.avgDurationS)}
       </TableCell>
       <TableCell className="text-right" title="Net rank change">
-        <RankDelta value={summary.rankDelta} className="text-xs" />
+        <RankDelta value={summary.rankDelta} className="hidden text-xs @sm:inline" />
       </TableCell>
       <TableCell colSpan={COLUMN_COUNT - 9} />
     </TableRow>
@@ -249,7 +261,8 @@ export function MatchesTab({
               Rank
             </SortableHead>
             <SortableHead sortKey="played" {...sortProps} className="text-right">
-              Played
+              <span className="@xl:hidden">Date</span>
+              <span className="hidden @xl:inline">Played</span>
             </SortableHead>
             <TableHead className="hidden text-right @5xl:table-cell">Match ID</TableHead>
             <TableHead className="hidden w-8 @5xl:table-cell" />
