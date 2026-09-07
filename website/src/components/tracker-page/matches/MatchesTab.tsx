@@ -238,8 +238,17 @@ export function MatchesTab({
                 {startsSession && <SessionRow session={session} />}
                 <TableRow
                   ref={expanded ? linkedRowRef : undefined}
-                  className="cursor-pointer"
+                  tabIndex={0}
+                  aria-expanded={expanded}
+                  className="cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none"
                   onClick={() => setExpandedMatchId(expanded ? null : entry.match_id)}
+                  onKeyDown={(event) => {
+                    // Buttons and links inside the row handle their own keys.
+                    if (event.target !== event.currentTarget) return;
+                    if (event.key !== "Enter" && event.key !== " ") return;
+                    event.preventDefault();
+                    setExpandedMatchId(expanded ? null : entry.match_id);
+                  }}
                 >
                   <TableCell>
                     <div className="flex items-center gap-1">
