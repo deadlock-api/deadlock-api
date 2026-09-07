@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { ChevronDown, UsersRound } from "lucide-react";
+import { ChevronDown, LogOut, ShieldCheck, UsersRound } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
@@ -140,7 +140,17 @@ export function MatchesTab({
                   onClick={() => setExpandedMatchId(expanded ? null : entry.match_id)}
                 >
                   <TableCell>
-                    <span className={cn("font-bold", win ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS)}>{win ? "W" : "L"}</span>
+                    <div className="flex items-center gap-1">
+                      <span className={cn("font-bold", win ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS)}>{win ? "W" : "L"}</span>
+                      {entry.abandoned_time_s != null && entry.abandoned_time_s > 0 && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <LogOut className="size-3.5 text-muted-foreground" aria-label="Abandoned" />
+                          </TooltipTrigger>
+                          <TooltipContent>Abandoned at {formatMatchDuration(entry.abandoned_time_s)}</TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -179,6 +189,14 @@ export function MatchesTab({
                         >
                           {entry.ranked_delta > 0 ? `+${entry.ranked_delta}` : entry.ranked_delta}
                         </span>
+                      )}
+                      {entry.ranked_used_demotion_protection && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <ShieldCheck className="size-3.5 text-muted-foreground" aria-label="Demotion protection" />
+                          </TooltipTrigger>
+                          <TooltipContent>Demotion protection prevented a rank drop</TooltipContent>
+                        </Tooltip>
                       )}
                       {entry.ranked_calibration_match != null && entry.ranked_calibration_match !== 0 && (
                         <span className="text-xs text-muted-foreground" title="Calibration match">
