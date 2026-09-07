@@ -6,11 +6,12 @@ import { type ComponentProps, Fragment, useEffect, useMemo, useRef, useState } f
 
 import { PaginationControls } from "~/components/PaginationControls";
 import { Button } from "~/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
 import {
   computeRecords,
   computeSessions,
+  formatMatchDuration,
   formatPlaytime,
   MATCH_SORT_KEYS,
   type MatchSortKey,
@@ -19,6 +20,7 @@ import {
   SORT_DIRS,
   type SortDir,
   sortMatches,
+  summarize,
   summarizeByHero,
   type TrackerSummary,
 } from "~/lib/tracker/compute";
@@ -100,6 +102,43 @@ function SessionRow({ session }: { session: PlaySession }) {
   );
 }
 
+const round = (value: number) => Math.round(value).toLocaleString("en-US");
+
+/** Averages over the filtered history, laid out under the matching table columns. */
+function AverageRow({ summary }: { summary: TrackerSummary }) {
+  return (
+    <TableRow
+      className="text-muted-foreground hover:bg-transparent"
+      title={`Average over ${summary.matches.toLocaleString("en-US")} matches`}
+    >
+      <TableCell title="Win rate" className="tabular-nums">
+        {Math.round(summary.winrate * 100)}%
+      </TableCell>
+      <TableCell>Average</TableCell>
+      <TableCell className="hidden @3xl:table-cell" />
+      <TableCell className="text-right tabular-nums">
+        {summary.avgKills.toFixed(1)} / {summary.avgDeaths.toFixed(1)} / {summary.avgAssists.toFixed(1)}
+      </TableCell>
+      <TableCell className="hidden text-right tabular-nums @md:table-cell">{round(summary.avgSouls)}</TableCell>
+      <TableCell className="hidden text-right tabular-nums @2xl:table-cell">{round(summary.soulsPerMin)}</TableCell>
+      <TableCell className="hidden text-right tabular-nums @4xl:table-cell">
+        {round(summary.avgLastHits)} / {round(summary.avgDenies)}
+      </TableCell>
+      <TableCell className="hidden text-right tabular-nums @3xl:table-cell">
+        {formatMatchDuration(summary.avgDurationS)}
+      </TableCell>
+      <TableCell className="text-right tabular-nums" title="Net rank change">
+        {summary.rankDelta != null && summary.rankDelta !== 0 && (
+          <span className={cn("text-xs", summary.rankDelta > 0 ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS)}>
+            {summary.rankDelta > 0 ? `+${summary.rankDelta}` : summary.rankDelta}
+          </span>
+        )}
+      </TableCell>
+      <TableCell colSpan={COLUMN_COUNT - 9} />
+    </TableRow>
+  );
+}
+
 export function MatchesTab({
   entries,
   ranks,
@@ -144,6 +183,7 @@ export function MatchesTab({
     [entries, sortKey],
   );
   const heroSummaries = useMemo(() => summarizeByHero(entries), [entries]);
+  const summary = useMemo(() => summarize(entries), [entries]);
   const heldRecords = useMemo(
     () => (entries.length >= MIN_MATCHES_FOR_RECORDS ? recordsByMatchId(computeRecords(entries)) : null),
     [entries],
@@ -257,6 +297,11 @@ export function MatchesTab({
             </TableRow>
           )}
         </TableBody>
+        {entries.length > 1 && (
+          <TableFooter>
+            <AverageRow summary={summary} />
+          </TableFooter>
+        )}
       </Table>
     </div>
   );

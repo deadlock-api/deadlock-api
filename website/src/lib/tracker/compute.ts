@@ -147,10 +147,15 @@ export interface TrackerSummary {
   avgKills: number;
   avgDeaths: number;
   avgAssists: number;
+  avgSouls: number;
   soulsPerMin: number;
+  avgLastHits: number;
+  avgDenies: number;
   lastHitsPerMin: number;
   avgDurationS: number;
   totalTimeS: number;
+  /** Sum of the ranked deltas, or null when no match had one. */
+  rankDelta: number | null;
   lastPlayedUnix: number | null;
 }
 
@@ -162,7 +167,9 @@ export function summarize(entries: PlayerMatchHistoryEntry[]): TrackerSummary {
   let assists = 0;
   let souls = 0;
   let lastHits = 0;
+  let denies = 0;
   let totalTimeS = 0;
+  let rankDelta: number | null = null;
   let lastPlayedUnix: number | null = null;
   for (const entry of entries) {
     if (isWin(entry)) wins++;
@@ -172,7 +179,9 @@ export function summarize(entries: PlayerMatchHistoryEntry[]): TrackerSummary {
     assists += entry.player_assists;
     souls += entry.net_worth;
     lastHits += entry.last_hits;
+    denies += entry.denies;
     totalTimeS += entry.match_duration_s;
+    if (entry.ranked_delta != null) rankDelta = (rankDelta ?? 0) + entry.ranked_delta;
     if (lastPlayedUnix === null || entry.start_time > lastPlayedUnix) lastPlayedUnix = entry.start_time;
   }
   const matches = entries.length;
@@ -187,10 +196,14 @@ export function summarize(entries: PlayerMatchHistoryEntry[]): TrackerSummary {
     avgKills: matches > 0 ? kills / matches : 0,
     avgDeaths: matches > 0 ? deaths / matches : 0,
     avgAssists: matches > 0 ? assists / matches : 0,
+    avgSouls: matches > 0 ? souls / matches : 0,
     soulsPerMin: minutes > 0 ? souls / minutes : 0,
+    avgLastHits: matches > 0 ? lastHits / matches : 0,
+    avgDenies: matches > 0 ? denies / matches : 0,
     lastHitsPerMin: minutes > 0 ? lastHits / minutes : 0,
     avgDurationS: matches > 0 ? totalTimeS / matches : 0,
     totalTimeS,
+    rankDelta,
     lastPlayedUnix,
   };
 }
