@@ -58,7 +58,7 @@ export function Breadcrumbs() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
-      <nav aria-label="Breadcrumb" className="mb-4">
+      <nav aria-label="Breadcrumb" className="mb-4 pl-8 md:pl-0">
         <ol className="flex items-center gap-1 text-sm text-muted-foreground">
           <li>
             <Link to="/" className="flex items-center gap-1 transition-colors hover:text-foreground" aria-label="Home">

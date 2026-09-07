@@ -237,13 +237,13 @@ function IndexRoute() {
   return (
     <div className="space-y-16">
       {/* Hero */}
-      <section className="relative pt-4 pb-2">
+      <section className="relative pt-8 pb-2 md:pt-4">
         <div className="pointer-events-none absolute top-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/8 blur-[100px]" />
 
         <div className="relative flex flex-col gap-8">
           <div className="min-w-0 flex-1">
             <div className="mb-5 flex flex-col items-center gap-2">
-              <h1 className="bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-6xl font-bold tracking-tight text-transparent lg:text-7xl">
+              <h1 className="bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-5xl font-bold tracking-tight text-transparent sm:text-6xl lg:text-7xl">
                 Deadlock API
               </h1>
               <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">sponsored by</span>
