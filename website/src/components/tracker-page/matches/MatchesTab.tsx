@@ -43,7 +43,7 @@ export function MatchesTab({
   );
 
   return (
-    <div className="space-y-3">
+    <div className="@container space-y-3">
       <PaginationControls
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={setItemsPerPage}
@@ -54,20 +54,23 @@ export function MatchesTab({
       <Table>
         <TableHeader className="bg-muted">
           <TableRow>
-            <TableHead className="w-14">Result</TableHead>
+            <TableHead className="w-14">
+              <span className="@md:hidden">W/L</span>
+              <span className="hidden @md:inline">Result</span>
+            </TableHead>
             <TableHead>Hero</TableHead>
-            <TableHead>Mode</TableHead>
+            <TableHead className="hidden @3xl:table-cell">Mode</TableHead>
             <TableHead className="text-right">K / D / A</TableHead>
-            <TableHead className="text-right">Souls</TableHead>
-            <TableHead className="text-right" title="Last hits / Denies">
+            <TableHead className="hidden text-right @md:table-cell">Souls</TableHead>
+            <TableHead className="hidden text-right @4xl:table-cell" title="Last hits / Denies">
               LH / DN
             </TableHead>
-            <TableHead className="text-right">Duration</TableHead>
+            <TableHead className="hidden text-right @3xl:table-cell">Duration</TableHead>
             <TableHead className="text-right">Rank</TableHead>
             <TableHead className="text-right">Played</TableHead>
-            <TableHead className="text-right">Match ID</TableHead>
-            <TableHead className="w-8" />
-            <TableHead className="w-8" />
+            <TableHead className="hidden text-right @4xl:table-cell">Match ID</TableHead>
+            <TableHead className="hidden w-8 @4xl:table-cell" />
+            <TableHead className="hidden w-8 @md:table-cell" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -86,26 +89,30 @@ export function MatchesTab({
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <HeroImage heroId={entry.hero_id} className="size-7 rounded-full" />
-                      <span className="max-w-[120px] truncate">{heroNames?.get(entry.hero_id) ?? "Unknown"}</span>
+                      <span className="hidden max-w-[120px] truncate @xl:inline">
+                        {heroNames?.get(entry.hero_id) ?? "Unknown"}
+                      </span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="hidden text-muted-foreground @3xl:table-cell">
                     {MATCH_MODE_LABELS_BY_ID[entry.match_mode] ?? "Unknown"}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {entry.player_kills} / {entry.player_deaths} / {entry.player_assists}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{entry.net_worth.toLocaleString("en-US")}</TableCell>
-                  <TableCell className="text-right text-muted-foreground tabular-nums">
+                  <TableCell className="hidden text-right tabular-nums @md:table-cell">
+                    {entry.net_worth.toLocaleString("en-US")}
+                  </TableCell>
+                  <TableCell className="hidden text-right text-muted-foreground tabular-nums @4xl:table-cell">
                     {entry.last_hits} / {entry.denies}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="hidden text-right tabular-nums @3xl:table-cell">
                     {formatMatchDuration(entry.match_duration_s)}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center justify-end gap-1.5">
+                    <div className="flex items-center justify-end gap-1.5 [&_picture]:shrink-0">
                       {entry.ranked_display_badge != null && entry.ranked_display_badge > 0 && (
-                        <BadgeImage badge={entry.ranked_display_badge} ranks={ranks} className="size-6" />
+                        <BadgeImage badge={entry.ranked_display_badge} ranks={ranks} className="size-6 max-w-none" />
                       )}
                       {entry.ranked_delta != null && entry.ranked_delta !== 0 && (
                         <span
@@ -127,18 +134,21 @@ export function MatchesTab({
                   <TableCell className="text-right whitespace-nowrap text-muted-foreground">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span>{day.unix(entry.start_time).fromNow()}</span>
+                        <span>
+                          <span className="@xl:hidden">{day.unix(entry.start_time).format("MMM D")}</span>
+                          <span className="hidden @xl:inline">{day.unix(entry.start_time).fromNow()}</span>
+                        </span>
                       </TooltipTrigger>
                       <TooltipContent>{day.unix(entry.start_time).format("MMM D, YYYY HH:mm")}</TooltipContent>
                     </Tooltip>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden @4xl:table-cell">
                     <div className="flex items-center justify-end gap-0.5 text-muted-foreground tabular-nums">
                       {entry.match_id}
                       <CopyButton text={String(entry.match_id)} iconOnly title="Copy match ID" className="size-6" />
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden @4xl:table-cell">
                     <Link
                       to="/team-builder"
                       search={{ match: entry.match_id }}
@@ -149,7 +159,7 @@ export function MatchesTab({
                       <UsersRound className="size-4" />
                     </Link>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden @md:table-cell">
                     <ChevronDown
                       className={cn("size-4 text-muted-foreground transition-transform", expanded && "rotate-180")}
                     />
