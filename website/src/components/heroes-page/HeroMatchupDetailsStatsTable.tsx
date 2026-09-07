@@ -52,6 +52,7 @@ export function HeroMatchupDetailsStatsTable({
   prevMinDate,
   prevMaxDate,
   onHeroSelected,
+  linkHeroes,
   sameLaneFilter,
   minHeroMatches,
   gameMode,
@@ -66,6 +67,7 @@ export function HeroMatchupDetailsStatsTable({
   prevMinDate?: Dayjs;
   prevMaxDate?: Dayjs;
   onHeroSelected?: (heroId: number) => void;
+  linkHeroes?: boolean;
   sameLaneFilter?: boolean;
   minHeroMatches?: number;
   gameMode?: GameMode;
@@ -307,7 +309,7 @@ export function HeroMatchupDetailsStatsTable({
             <TableCell>
               <div className="flex items-center gap-2">
                 <HeroImage heroId={row.heroId} />
-                <HeroName heroId={row.heroId} />
+                <HeroName heroId={row.heroId} linkToDetail={linkHeroes} />
               </div>
             </TableCell>
             <TableCell>

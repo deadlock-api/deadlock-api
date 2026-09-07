@@ -194,6 +194,7 @@ function HeroDetailPage() {
                 prevMaxDate={prevEnd}
                 gameMode={GAME_MODE}
                 matchMode={DEFAULT_MATCH_MODE}
+                linkHeroes
               />
               <HeroMatchupDetailsStatsTable
                 heroId={heroId}
@@ -206,6 +207,7 @@ function HeroDetailPage() {
                 prevMaxDate={prevEnd}
                 gameMode={GAME_MODE}
                 matchMode={DEFAULT_MATCH_MODE}
+                linkHeroes
               />
             </div>
           </Suspense>
