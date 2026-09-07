@@ -104,8 +104,18 @@ export interface TrackerMatchStat {
   net_worth: number;
 }
 
+export interface TrackerMatchDeath {
+  game_time_s: number;
+  /** `player_slot` of the killer; null when no player was credited, e.g. a guardian or creep kill. */
+  killer_player_slot: number | null;
+  death_duration_s: number;
+  time_to_kill_s: number;
+}
+
 export interface TrackerMatchPlayer {
   account_id: number;
+  /** 1-12; `TrackerMatchDeath.killer_player_slot` refers to it. */
+  player_slot: number;
   team: string;
   hero_id: number;
   /** `LANES` id, or 0 when the game assigned none. */
@@ -163,6 +173,7 @@ interface RestMatchMetadata {
     mid_boss?: { team_claimed?: number | null; destroyed_time_s?: number | null }[];
     players?: {
       account_id?: number;
+      player_slot?: number;
       team?: number | null;
       hero_id?: number;
       assigned_lane?: number | null;
@@ -176,6 +187,7 @@ interface RestMatchMetadata {
       mvp_rank?: number | null;
       player_rank_data?: { initial_display_rank?: number | null } | null;
       items?: { item_id?: number; game_time_s?: number; sold_time_s?: number }[];
+      death_details?: RawDeath[] | null;
       stats?: {
         time_stamp_s?: number;
         net_worth?: number;
@@ -185,6 +197,23 @@ interface RestMatchMetadata {
       }[];
     }[];
   };
+}
+
+/** `death_details` entries, spelled the same in the REST and GraphQL payloads. */
+interface RawDeath {
+  game_time_s?: number | null;
+  killer_player_slot?: number | null;
+  death_duration_s?: number | null;
+  time_to_kill_s?: number | null;
+}
+
+function deathDetails(raw: RawDeath[] | null | undefined): TrackerMatchDeath[] {
+  return (raw ?? []).map((death) => ({
+    game_time_s: death.game_time_s ?? 0,
+    killer_player_slot: death.killer_player_slot || null,
+    death_duration_s: death.death_duration_s ?? 0,
+    time_to_kill_s: death.time_to_kill_s ?? 0,
+  }));
 }
 
 /** Cumulative stats peak at the final sample, whichever order the timeline arrives in. */
@@ -243,9 +272,13 @@ function claimedMidBosses<T extends { destroyed_time_s?: number | null }>(
  * single metadata endpoint fetches on demand from Valve's replay CDN. It has no
  * steam names; the component backfills those via the steam profile endpoint.
  */
-async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<TrackerMatchMetadata | null> {
+async function fetchRestMatchInfo(matchId: number): Promise<RestMatchMetadata["match_info"]> {
   const response = await api.matches_api.metadata({ matchId });
-  const info = (response.data as unknown as RestMatchMetadata).match_info;
+  return (response.data as unknown as RestMatchMetadata).match_info;
+}
+
+async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<TrackerMatchMetadata | null> {
+  const info = await fetchRestMatchInfo(matchId);
   if (!info) return null;
   return {
     winning_team: info.winning_team == null ? null : restTeam(info.winning_team),
@@ -258,6 +291,7 @@ async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<Track
     mid_boss: claimedMidBosses(info.mid_boss, (boss) => restTeam(boss.team_claimed)),
     players: (info.players ?? []).map((player) => ({
       account_id: player.account_id ?? 0,
+      player_slot: player.player_slot ?? 0,
       team: restTeam(player.team),
       hero_id: player.hero_id ?? 0,
       assigned_lane: player.assigned_lane ?? 0,
@@ -313,6 +347,7 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
           mid_boss: true,
           players: {
             account_id: true,
+            player_slot: true,
             team: true,
             hero_id: true,
             assigned_lane: true,
@@ -346,6 +381,7 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
         mid_boss: claimedMidBosses(match.mid_boss as GraphqlMidBoss[] | null, (boss) => boss.team_claimed ?? ""),
         players: (match.players ?? []).map((player) => ({
           account_id: player.account_id ?? 0,
+          player_slot: player.player_slot ?? 0,
           team: player.team ?? "",
           hero_id: player.hero_id ?? 0,
           assigned_lane: player.assigned_lane ?? 0,
@@ -373,6 +409,30 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
           personaname: player.steam?.personaname,
         })),
       };
+    },
+    staleTime: CACHE_DURATIONS.FOREVER,
+  });
+}
+
+/**
+ * Fetched apart from the match metadata: `death_details` is priced at 100 complexity per
+ * player on the GraphQL side, which would push the full-lobby query over the server limit.
+ */
+export function trackerMatchDeathsQueryOptions(matchId: number, accountId: number) {
+  return queryOptions({
+    queryKey: queryKeys.players.matchDeaths(matchId, accountId),
+    queryFn: async (): Promise<TrackerMatchDeath[]> => {
+      const { match_players } = await graphql.query({
+        match_players: {
+          __args: { where: { match_id: { eq: matchId }, account_id: { eq: accountId } }, limit: 1 },
+          death_details: true,
+        },
+      });
+      const row = match_players[0];
+      if (row) return deathDetails(row.death_details as RawDeath[] | null);
+      const info = await fetchRestMatchInfo(matchId);
+      const player = info?.players?.find((candidate) => candidate.account_id === accountId);
+      return deathDetails(player?.death_details);
     },
     staleTime: CACHE_DURATIONS.FOREVER,
   });
