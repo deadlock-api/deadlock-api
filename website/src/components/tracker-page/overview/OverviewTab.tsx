@@ -10,6 +10,7 @@ import { day } from "~/dayjs";
 import {
   computeActivity,
   computePerformanceTrend,
+  computeRecords,
   computeStreaks,
   formatMatchDuration,
   isWin,
@@ -25,6 +26,7 @@ import { cn } from "~/lib/utils";
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { ActivityChart } from "./ActivityChart";
 import { PerformanceTrendChart } from "./PerformanceTrendChart";
+import { PersonalBestsCard } from "./PersonalBestsCard";
 import { RankHistoryChart } from "./RankHistoryChart";
 
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: React.ReactNode }) {
@@ -72,6 +74,7 @@ export function OverviewTab({
   const trendWindow = performanceWindow(entries.length);
   const trend = useMemo(() => computePerformanceTrend(entries, trendWindow), [entries, trendWindow]);
   const recentMatches = useMemo(() => entries.slice(0, 8), [entries]);
+  const records = useMemo(() => computeRecords(entries), [entries]);
 
   return (
     <div className="space-y-4">
@@ -168,6 +171,8 @@ export function OverviewTab({
               })}
             </CardContent>
           </Card>
+
+          <PersonalBestsCard records={records} />
         </div>
       </div>
     </div>

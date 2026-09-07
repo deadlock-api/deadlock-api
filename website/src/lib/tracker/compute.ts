@@ -423,3 +423,50 @@ export function computeSessions(entries: PlayerMatchHistoryEntry[]): Map<number,
   }
   return sessionByMatchId;
 }
+
+export interface RecordMatch {
+  entry: PlayerMatchHistoryEntry;
+  value: number;
+}
+
+export interface PersonalRecords {
+  kills: RecordMatch | null;
+  assists: RecordMatch | null;
+  netWorth: RecordMatch | null;
+  kda: RecordMatch | null;
+  soulsPerMin: RecordMatch | null;
+  rankGain: RecordMatch | null;
+}
+
+function best(
+  entries: PlayerMatchHistoryEntry[],
+  metric: (entry: PlayerMatchHistoryEntry) => number | null,
+): RecordMatch | null {
+  let record: RecordMatch | null = null;
+  for (const entry of entries) {
+    const value = metric(entry);
+    if (value === null) continue;
+    if (record === null || value > record.value) record = { entry, value };
+  }
+  return record;
+}
+
+/** Ties resolve to the earlier entry in the list, so pass entries newest first to favor recent matches. */
+export function computeRecords(entries: PlayerMatchHistoryEntry[]): PersonalRecords {
+  return {
+    kills: best(entries, (entry) => entry.player_kills),
+    assists: best(entries, (entry) => entry.player_assists),
+    netWorth: best(entries, (entry) => entry.net_worth),
+    kda: best(entries, (entry) =>
+      entry.player_deaths > 0
+        ? (entry.player_kills + entry.player_assists) / entry.player_deaths
+        : entry.player_kills + entry.player_assists,
+    ),
+    soulsPerMin: best(entries, (entry) =>
+      entry.match_duration_s > 0 ? entry.net_worth / (entry.match_duration_s / 60) : null,
+    ),
+    rankGain: best(entries, (entry) =>
+      entry.ranked_delta != null && entry.ranked_delta > 0 ? entry.ranked_delta : null,
+    ),
+  };
+}
