@@ -1,3 +1,12 @@
+import type { Element, Root } from "hast";
+import rehypeHighlight from "rehype-highlight";
+import rehypeStringify from "rehype-stringify";
+import remarkGfm from "remark-gfm";
+import remarkParse from "remark-parse";
+import remarkRehype from "remark-rehype";
+import { unified } from "unified";
+import { visit } from "unist-util-visit";
+
 export interface BlogPost {
   slug: string;
   title: string;
@@ -92,4 +101,53 @@ export function getRecentPosts(count?: number): BlogPost[] {
 
 export function getAllSlugs(): string[] {
   return loadPosts().map((post) => post.slug);
+}
+
+// A paragraph holding only an image becomes a full-width figure; the image title is the visible caption, the alt
+// stays a short description. Chart images are generated at a 4:3 aspect ratio, which the img reserves so the page
+// does not shift while they load. The first image is usually above the fold, so it loads eagerly.
+function rehypeBlogFigures() {
+  return (tree: Root) => {
+    let first = true;
+    visit(tree, "element", (node: Element, index, parent) => {
+      if (node.tagName !== "p" || index === undefined || !parent) return;
+      const img = node.children.length === 1 ? node.children[0] : null;
+      if (!img || img.type !== "element" || img.tagName !== "img") return;
+      const { title, ...props } = img.properties;
+      img.properties = {
+        ...props,
+        loading: first ? "eager" : "lazy",
+        fetchPriority: first ? "high" : undefined,
+        className: ["aspect-[4/3]", "w-full", "rounded-lg", "border", "border-border"],
+      };
+      first = false;
+      const figure: Element = {
+        type: "element",
+        tagName: "figure",
+        properties: { className: ["not-prose", "my-6"] },
+        children: [img],
+      };
+      if (typeof title === "string" && title) {
+        figure.children.push({
+          type: "element",
+          tagName: "figcaption",
+          properties: { className: ["mt-2", "text-[13px]", "leading-snug", "text-muted-foreground"] },
+          children: [{ type: "text", value: title }],
+        });
+      }
+      parent.children[index] = figure;
+    });
+  };
+}
+
+const markdown = unified()
+  .use(remarkParse)
+  .use(remarkGfm)
+  .use(remarkRehype)
+  .use(rehypeBlogFigures)
+  .use(rehypeHighlight)
+  .use(rehypeStringify);
+
+export async function renderBlogHtml(content: string): Promise<string> {
+  return String(await markdown.process(content));
 }

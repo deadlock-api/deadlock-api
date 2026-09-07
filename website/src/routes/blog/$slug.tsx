@@ -1,27 +1,15 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 import { ArrowLeft, Calendar, Tag } from "lucide-react";
-import type React from "react";
-import Markdown from "react-markdown";
-import rehypeHighlight from "rehype-highlight";
-import remarkGfm from "remark-gfm";
 
-import { getBlogPost, getRecentPosts } from "~/lib/blog";
+import { fetchBlogPost } from "~/lib/blog-fns";
 import { SITE_URL, getBlogOGImage, seo } from "~/lib/seo";
 import { cn } from "~/lib/utils";
 
 export const Route = createFileRoute("/blog/$slug")({
-  loader: ({ params }) => {
-    const post = getBlogPost(params.slug);
+  loader: async ({ params }) => {
+    const post = await fetchBlogPost({ data: params.slug });
     if (!post) throw notFound();
-    return {
-      slug: post.slug,
-      title: post.title,
-      description: post.description,
-      date: post.date,
-      author: post.author,
-      tags: post.tags,
-      content: post.content,
-    };
+    return post;
   },
   head: ({ loaderData }) => {
     if (!loaderData) {
@@ -111,37 +99,6 @@ const tagColors: Record<string, string> = {
 const proseClasses =
   "prose prose-invert max-w-none md:prose-p:text-justify md:prose-p:hyphens-auto prose-p:text-pretty prose-headings:font-semibold prose-headings:tracking-tight prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-2xl prose-h3:mt-7 prose-h3:mb-3 prose-h3:text-lg prose-p:leading-relaxed prose-p:text-muted-foreground prose-a:text-primary prose-a:no-underline prose-a:hover:underline prose-strong:text-foreground prose-li:text-muted-foreground prose-ol:text-muted-foreground prose-ul:text-muted-foreground prose-img:rounded-lg prose-img:border prose-img:border-border prose-pre:bg-muted/50 prose-pre:border prose-pre:border-border prose-code:text-foreground";
 
-// Markdown images render as full-width figures; the image title is the visible caption, the alt stays a short
-// description. Chart images are generated at a 4:3 aspect ratio, which the img reserves so the page does not shift while they load.
-function BlogImage({ src = "", alt, title, eager }: { src?: string; alt?: string; title?: string; eager?: boolean }) {
-  return (
-    <figure className="not-prose my-6">
-      <img
-        src={src}
-        alt={alt}
-        loading={eager ? "eager" : "lazy"}
-        fetchPriority={eager ? "high" : undefined}
-        className="aspect-[4/3] w-full rounded-lg border border-border"
-      />
-      {title && <figcaption className="mt-2 text-[13px] leading-snug text-muted-foreground">{title}</figcaption>}
-    </figure>
-  );
-}
-
-// react-markdown wraps a lone image in <p>; unwrap it so the <figure> is not nested inside a paragraph.
-function BlogParagraph({ children }: { children?: React.ReactNode }) {
-  const only = Array.isArray(children) && children.length === 1 ? children[0] : children;
-  if (
-    only &&
-    typeof only === "object" &&
-    "props" in (only as object) &&
-    typeof (only as { props?: { src?: string } }).props?.src === "string"
-  ) {
-    return <>{children}</>;
-  }
-  return <p>{children}</p>;
-}
-
 function PostNotFound() {
   return (
     <div className="flex flex-col items-center justify-center py-20">
@@ -160,8 +117,6 @@ function PostNotFound() {
 
 function BlogPostPage() {
   const post = Route.useLoaderData();
-  const firstImage = post.content.match(/!\[[^\]]*\]\(([^\s)]+)/)?.[1];
-  const recentPosts = getRecentPosts(4).filter((p) => p.slug !== post.slug);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -199,24 +154,14 @@ function BlogPostPage() {
         </div>
       </header>
 
-      <article className={proseClasses}>
-        <Markdown
-          remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeHighlight]}
-          components={{
-            img: (props) => <BlogImage {...props} eager={props.src === firstImage} />,
-            p: BlogParagraph,
-          }}
-        >
-          {post.content}
-        </Markdown>
-      </article>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: HTML is rendered on the server from our own markdown */}
+      <article className={proseClasses} dangerouslySetInnerHTML={{ __html: post.html }} />
 
-      {recentPosts.length > 0 && (
+      {post.related.length > 0 && (
         <section className="mt-12 border-t border-border pt-8">
           <h2 className="mb-4 text-lg font-semibold">More posts</h2>
           <div className="space-y-3">
-            {recentPosts.slice(0, 3).map((related) => (
+            {post.related.map((related) => (
               <Link
                 key={related.slug}
                 to="/blog/$slug"
