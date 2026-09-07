@@ -470,3 +470,88 @@ export function computeRecords(entries: PlayerMatchHistoryEntry[]): PersonalReco
     ),
   };
 }
+
+export interface PlaytimeCell {
+  /** 0 = Monday … 6 = Sunday, in the viewer's local time zone. */
+  weekday: number;
+  /** First hour of the bucket. */
+  hour: number;
+  matches: number;
+  wins: number;
+}
+
+export interface WeekdayStats {
+  weekday: number;
+  matches: number;
+  wins: number;
+}
+
+export interface PlaytimeHabits {
+  /** One cell per weekday and hour bucket, ordered by weekday then hour. */
+  cells: PlaytimeCell[];
+  maxMatches: number;
+  /** Weekday with the most matches. */
+  favoriteWeekday: WeekdayStats | null;
+  /** Weekday with the highest win rate among those with enough matches to mean something. */
+  bestWeekday: WeekdayStats | null;
+  /** Start hour of the three-hour window with the most matches; the window may wrap past midnight. */
+  peakHourStart: number | null;
+}
+
+const BEST_WEEKDAY_MIN_MATCHES = 10;
+export const PEAK_HOURS_WINDOW = 3;
+export const PLAYTIME_BUCKET_HOURS = 2;
+const PLAYTIME_BUCKETS_PER_DAY = 24 / PLAYTIME_BUCKET_HOURS;
+
+export function computePlaytimeHabits(entries: PlayerMatchHistoryEntry[]): PlaytimeHabits {
+  const cells: PlaytimeCell[] = [];
+  for (let weekday = 0; weekday < 7; weekday++) {
+    for (let bucket = 0; bucket < PLAYTIME_BUCKETS_PER_DAY; bucket++) {
+      cells.push({ weekday, hour: bucket * PLAYTIME_BUCKET_HOURS, matches: 0, wins: 0 });
+    }
+  }
+  const weekdays: WeekdayStats[] = Array.from({ length: 7 }, (_, weekday) => ({ weekday, matches: 0, wins: 0 }));
+  const hours = new Array<number>(24).fill(0);
+  for (const entry of entries) {
+    const started = day.unix(entry.start_time);
+    const weekday = (started.day() + 6) % 7;
+    const hour = started.hour();
+    const win = isWin(entry) ? 1 : 0;
+    const cell = cells[weekday * PLAYTIME_BUCKETS_PER_DAY + Math.floor(hour / PLAYTIME_BUCKET_HOURS)];
+    cell.matches++;
+    cell.wins += win;
+    weekdays[weekday].matches++;
+    weekdays[weekday].wins += win;
+    hours[hour]++;
+  }
+
+  let maxMatches = 0;
+  for (const cell of cells) maxMatches = Math.max(maxMatches, cell.matches);
+
+  let favoriteWeekday: WeekdayStats | null = null;
+  let bestWeekday: WeekdayStats | null = null;
+  for (const stats of weekdays) {
+    if (stats.matches > 0 && (favoriteWeekday === null || stats.matches > favoriteWeekday.matches)) {
+      favoriteWeekday = stats;
+    }
+    if (
+      stats.matches >= BEST_WEEKDAY_MIN_MATCHES &&
+      (bestWeekday === null || stats.wins / stats.matches > bestWeekday.wins / bestWeekday.matches)
+    ) {
+      bestWeekday = stats;
+    }
+  }
+
+  let peakHourStart: number | null = null;
+  let peakWindowMatches = 0;
+  for (let start = 0; start < 24; start++) {
+    let windowMatches = 0;
+    for (let offset = 0; offset < PEAK_HOURS_WINDOW; offset++) windowMatches += hours[(start + offset) % 24];
+    if (windowMatches > peakWindowMatches) {
+      peakWindowMatches = windowMatches;
+      peakHourStart = start;
+    }
+  }
+
+  return { cells, maxMatches, favoriteWeekday, bestWeekday, peakHourStart };
+}
