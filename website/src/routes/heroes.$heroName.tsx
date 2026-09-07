@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
+import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { lazy, Suspense, useMemo } from "react";
 
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
@@ -57,6 +58,34 @@ function currentTimestamps(seasons: readonly SeasonInfo[]) {
   };
 }
 
+/** 1-based position of `value` among `values` when sorted from highest to lowest. */
+function rankOf(value: number, values: number[]): number {
+  return 1 + values.filter((other) => other > value).length;
+}
+
+function summarizeHeroStats(rows: readonly AnalyticsHeroStats[] | undefined, heroId: number) {
+  if (!rows || rows.length === 0) return null;
+  const row = rows.find((r) => r.hero_id === heroId);
+  if (!row || row.matches === 0) return null;
+  let sumMatches = 0;
+  for (const r of rows) sumMatches += r.matches;
+  const played = rows.filter((r) => r.matches > 0);
+  return {
+    winRate: row.wins / row.matches,
+    pickRate: sumMatches > 0 ? getPickrateMultiplier(GAME_MODE) * (row.matches / sumMatches) : 0,
+    matches: row.matches,
+    heroCount: played.length,
+    winRateRank: rankOf(
+      row.wins / row.matches,
+      played.map((r) => r.wins / r.matches),
+    ),
+    pickRateRank: rankOf(
+      row.matches,
+      played.map((r) => r.matches),
+    ),
+  };
+}
+
 export const Route = createFileRoute("/heroes/$heroName")({
   component: HeroDetailPage,
   loader: async ({ context: { queryClient }, params }) => {
@@ -66,12 +95,25 @@ export const Route = createFileRoute("/heroes/$heroName")({
     ]);
     const hero = findHeroBySlug(filterPlayableHeroes(heroes), params.heroName);
     if (!hero) throw notFound();
-    await Promise.all([
+    const [stats] = await Promise.all([
       prefetchSafe(queryClient.ensureQueryData(heroStatsQueryOptions(currentStatsParams(seasons)))),
       prefetchSafe(queryClient.ensureQueryData(heroBanStatsQueryOptions(currentBanParams(seasons)))),
     ]);
     const cardImage = hero.images.hero_card_critical_webp ?? hero.images.icon_hero_card_webp ?? null;
-    return { heroId: hero.id, heroName: hero.name, slug: params.heroName, cardImage, breadcrumb: hero.name };
+    const summary = summarizeHeroStats(stats, hero.id);
+    return {
+      heroId: hero.id,
+      heroName: hero.name,
+      slug: params.heroName,
+      cardImage,
+      breadcrumb: hero.name,
+      summary: summary && {
+        winRate: summary.winRate,
+        pickRate: summary.pickRate,
+        rank: summary.winRateRank,
+        heroCount: summary.heroCount,
+      },
+    };
   },
   head: ({ loaderData }) => {
     if (!loaderData) {
@@ -81,11 +123,14 @@ export const Route = createFileRoute("/heroes/$heroName")({
         path: "/heroes",
       });
     }
-    const { heroName, slug, cardImage } = loaderData;
+    const { heroName, slug, cardImage, summary } = loaderData;
     const url = `${SITE_URL}/heroes/${slug}`;
+    const description = summary
+      ? `${heroName} holds a ${pct(summary.winRate)} win rate (#${summary.rank} of ${summary.heroCount} heroes) and a ${pct(summary.pickRate)} pick rate in Deadlock ranked matches. Live matchups, synergies, and counters, updated daily.`
+      : `${heroName} win rate, pick rate, best items, and matchups in Deadlock. Live stats from tracked ranked matches, updated daily.`;
     return seo({
       title: `${heroName} Win Rate & Pick Rate | Deadlock`,
-      description: `${heroName} win rate, pick rate, best items, and matchups in Deadlock. Live stats from tracked ranked matches, updated daily.`,
+      description,
       path: `/heroes/${slug}`,
       ogImage: cardImage ?? undefined,
       jsonLd: {
@@ -117,11 +162,6 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
   );
 }
 
-/** 1-based position of `value` among `values` when sorted from highest to lowest. */
-function rankOf(value: number, values: number[]): number {
-  return 1 + values.filter((other) => other > value).length;
-}
-
 function HeroDetailPage() {
   const { heroId, heroName } = Route.useLoaderData();
   const { seasons } = useSeasons();
@@ -131,28 +171,12 @@ function HeroDetailPage() {
   const banQuery = useQuery(heroBanStatsQueryOptions(currentBanParams(seasons)));
 
   const summary = useMemo(() => {
-    const rows = statsQuery.data;
-    if (!rows || rows.length === 0) return null;
-    const row = rows.find((r) => r.hero_id === heroId);
-    if (!row || row.matches === 0) return null;
-    let sumMatches = 0;
-    for (const r of rows) sumMatches += r.matches;
-    const winRate = row.wins / row.matches;
-    const pickRate = sumMatches > 0 ? getPickrateMultiplier(GAME_MODE) * (row.matches / sumMatches) : 0;
+    const base = summarizeHeroStats(statsQuery.data, heroId);
+    if (!base) return null;
     const banRates = banQuery.data ? computeBanRates(banQuery.data) : undefined;
     const banRate = banRates?.get(heroId);
-    const played = rows.filter((r) => r.matches > 0);
-    const heroCount = played.length;
-    const winRateRank = rankOf(
-      winRate,
-      played.map((r) => r.wins / r.matches),
-    );
-    const pickRateRank = rankOf(
-      row.matches,
-      played.map((r) => r.matches),
-    );
     const banRateRank = banRate !== undefined && banRates ? rankOf(banRate, [...banRates.values()]) : undefined;
-    return { winRate, pickRate, matches: row.matches, banRate, heroCount, winRateRank, pickRateRank, banRateRank };
+    return { ...base, banRate, banRateRank };
   }, [statsQuery.data, banQuery.data, heroId]);
 
   const rankLabel = (rank: number | undefined) =>
