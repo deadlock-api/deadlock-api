@@ -245,13 +245,13 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
                 size="sm"
                 className="justify-start"
               >
-                <ToggleGroupItem value="net_worth_by_1000" className="px-6">
+                <ToggleGroupItem value="net_worth_by_1000" className="px-3 sm:px-6">
                   Net Worth
                 </ToggleGroupItem>
-                <ToggleGroupItem value="game_time_min" className="px-6">
+                <ToggleGroupItem value="game_time_min" className="px-3 sm:px-6">
                   Time
                 </ToggleGroupItem>
-                <ToggleGroupItem value="game_time_normalized_percentage" className="px-6">
+                <ToggleGroupItem value="game_time_normalized_percentage" className="px-3 sm:px-6">
                   Time (Relative)
                 </ToggleGroupItem>
               </ToggleGroup>
