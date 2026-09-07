@@ -300,3 +300,59 @@ export function formatMatchDuration(seconds: number): string {
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
+
+/** Rolling window that grows with the history so long careers smooth into a readable line. */
+export function performanceWindow(matchCount: number): number {
+  return Math.max(10, Math.ceil(matchCount / 100));
+}
+
+export interface PerformancePoint {
+  /** 1-based position in chronological order. */
+  matchNumber: number;
+  time: number;
+  winrate: number;
+  kdaRatio: number;
+  soulsPerMin: number;
+}
+
+/**
+ * Rolling averages over the previous `window` matches, oldest first. The first point lands on
+ * match number `window`, so the early, half-filled windows never show up as noise.
+ */
+export function computePerformanceTrend(entries: PlayerMatchHistoryEntry[], window: number): PerformancePoint[] {
+  const chronological = [...entries].sort((a, b) => a.start_time - b.start_time);
+  const points: PerformancePoint[] = [];
+  let wins = 0;
+  let kills = 0;
+  let deaths = 0;
+  let assists = 0;
+  let souls = 0;
+  let seconds = 0;
+  for (let i = 0; i < chronological.length; i++) {
+    const entry = chronological[i];
+    if (isWin(entry)) wins++;
+    kills += entry.player_kills;
+    deaths += entry.player_deaths;
+    assists += entry.player_assists;
+    souls += entry.net_worth;
+    seconds += entry.match_duration_s;
+    if (i >= window) {
+      const dropped = chronological[i - window];
+      if (isWin(dropped)) wins--;
+      kills -= dropped.player_kills;
+      deaths -= dropped.player_deaths;
+      assists -= dropped.player_assists;
+      souls -= dropped.net_worth;
+      seconds -= dropped.match_duration_s;
+    }
+    if (i < window - 1) continue;
+    points.push({
+      matchNumber: i + 1,
+      time: entry.start_time,
+      winrate: wins / window,
+      kdaRatio: deaths > 0 ? (kills + assists) / deaths : kills + assists,
+      soulsPerMin: seconds > 0 ? souls / (seconds / 60) : 0,
+    });
+  }
+  return points;
+}

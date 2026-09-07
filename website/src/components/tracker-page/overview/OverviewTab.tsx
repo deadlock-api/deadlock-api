@@ -9,10 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { day } from "~/dayjs";
 import {
   computeActivity,
+  computePerformanceTrend,
   computeStreaks,
   formatMatchDuration,
   isWin,
   MATCH_MODE_LABELS_BY_ID,
+  performanceWindow,
   perHeroRows,
   rankHistoryPoints,
   recentForm,
@@ -22,6 +24,7 @@ import { cn } from "~/lib/utils";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { ActivityChart } from "./ActivityChart";
+import { PerformanceTrendChart } from "./PerformanceTrendChart";
 import { RankHistoryChart } from "./RankHistoryChart";
 
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: React.ReactNode }) {
@@ -66,6 +69,8 @@ export function OverviewTab({
   const heroRows = useMemo(() => perHeroRows(entries).slice(0, 8), [entries]);
   const rankPoints = useMemo(() => rankHistoryPoints(entries), [entries]);
   const activity = useMemo(() => computeActivity(entries), [entries]);
+  const trendWindow = performanceWindow(entries.length);
+  const trend = useMemo(() => computePerformanceTrend(entries, trendWindow), [entries, trendWindow]);
   const recentMatches = useMemo(() => entries.slice(0, 8), [entries]);
 
   return (
@@ -93,6 +98,7 @@ export function OverviewTab({
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <RankHistoryChart points={rankPoints} />
+          <PerformanceTrendChart points={trend} window={trendWindow} summary={summary} />
           <ActivityChart activity={activity} />
         </div>
         <div className="space-y-4">
