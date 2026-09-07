@@ -76,18 +76,18 @@ export function ProgressBarWithLabel({
   segments?: { value: number; color: string }[];
 }) {
   const percentage = Math.round((((value || 0) - (min || 0)) / ((max || 1) - (min || 0))) * 100);
-  const formatDelta = (d: number) => {
-    if (deltaFormat === "raw") return `${d > 0 ? "+" : ""}${d.toFixed(1)}`;
-    return `${d > 0 ? "+" : ""}${(d * 100).toFixed(1)}%`;
-  };
+  // Round to the displayed precision first so a tiny change is hidden rather than shown as "-0.0%".
+  const roundedDelta =
+    delta === undefined ? undefined : Math.round((deltaFormat === "raw" ? delta : delta * 100) * 10) / 10;
+  const formatDelta = (d: number) => `${d > 0 ? "+" : ""}${d.toFixed(1)}${deltaFormat === "raw" ? "" : "%"}`;
   const content = (
     <div className={`flex w-full flex-col gap-2 min-w-24${tooltip ? " cursor-default" : ""}`}>
       <ProgressBar value={value} min={min} max={max} color={color} segments={segments} />
       <div className="flex items-baseline gap-1.5">
         <span className="text-left text-sm text-muted-foreground">{label || `${percentage}%` || 0}</span>
-        {delta !== undefined && delta !== 0 && (
-          <span className={`text-xs font-medium ${delta > 0 ? "text-green-500" : "text-red-500"}`}>
-            {formatDelta(delta)}
+        {roundedDelta !== undefined && roundedDelta !== 0 && (
+          <span className={`text-xs font-medium ${roundedDelta > 0 ? "text-green-500" : "text-red-500"}`}>
+            {formatDelta(roundedDelta)}
           </span>
         )}
       </div>
