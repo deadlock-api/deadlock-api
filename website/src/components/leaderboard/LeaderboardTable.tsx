@@ -89,6 +89,13 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
               onHeroClick={onHeroClick}
             />
           ))}
+          {paginatedEntries.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={shouldShowTopHeroesColumn ? 3 : 2} className="py-8 text-center text-muted-foreground">
+                No results found
+              </TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
       {controls}
