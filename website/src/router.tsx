@@ -1,21 +1,28 @@
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
+import { isAxiosError } from "axios";
 
 import { NotFound } from "./components/NotFound";
 import { RouteError } from "./components/RouteError";
 import { isChunkLoadError, reloadOnceForStaleChunk } from "./lib/chunk-reload";
+import { ApiError } from "./lib/http";
 import { routeTree } from "./routeTree.gen";
 
 export interface RouterContext {
   queryClient: QueryClient;
 }
 
+function isClientError(error: unknown): boolean {
+  const status = isAxiosError(error) ? error.response?.status : error instanceof ApiError ? error.status : undefined;
+  return status !== undefined && status >= 400 && status < 500;
+}
+
 export function getRouter() {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        retry: 3,
+        retry: (failureCount, error) => failureCount < 3 && !isClientError(error),
       },
     },
   });
