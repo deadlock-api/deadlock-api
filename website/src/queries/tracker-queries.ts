@@ -108,6 +108,8 @@ export interface TrackerMatchPlayer {
   account_id: number;
   team: string;
   hero_id: number;
+  /** `LANES` id, or 0 when the game assigned none. */
+  assigned_lane: number;
   kills: number;
   deaths: number;
   assists: number;
@@ -141,6 +143,7 @@ interface RestMatchMetadata {
       account_id?: number;
       team?: number | null;
       hero_id?: number;
+      assigned_lane?: number | null;
       kills?: number;
       deaths?: number;
       assists?: number;
@@ -185,6 +188,7 @@ async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<Track
       account_id: player.account_id ?? 0,
       team: player.team == null ? "" : `Team${player.team}`,
       hero_id: player.hero_id ?? 0,
+      assigned_lane: player.assigned_lane ?? 0,
       kills: player.kills ?? 0,
       deaths: player.deaths ?? 0,
       assists: player.assists ?? 0,
@@ -224,6 +228,7 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
             account_id: true,
             team: true,
             hero_id: true,
+            assigned_lane: true,
             kills: true,
             deaths: true,
             assists: true,
@@ -250,6 +255,7 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
           account_id: player.account_id ?? 0,
           team: player.team ?? "",
           hero_id: player.hero_id ?? 0,
+          assigned_lane: player.assigned_lane ?? 0,
           kills: player.kills ?? 0,
           deaths: player.deaths ?? 0,
           assists: player.assists ?? 0,

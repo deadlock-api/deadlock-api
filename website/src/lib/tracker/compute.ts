@@ -27,6 +27,11 @@ export function isLoss(entry: PlayerMatchHistoryEntry): boolean {
   return !isWin(entry);
 }
 
+/** Street Brawl reports lane ids too, but its map has no lanes to speak of. */
+export function hasLanes(entry: PlayerMatchHistoryEntry): boolean {
+  return entry.game_mode === GAME_MODE_NORMAL;
+}
+
 export type ResultFilter = "all" | "win" | "loss";
 
 export interface TrackerFilterValues {

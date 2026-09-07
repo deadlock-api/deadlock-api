@@ -9,10 +9,15 @@ import { ItemImageFromAsset } from "~/components/ItemImage";
 import { Skeleton } from "~/components/ui/skeleton";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { IS_DEV } from "~/lib/constants";
+import { LANES } from "~/lib/team-builder/lanes";
 import { computeSoulLead } from "~/lib/tracker/soul-lead";
 import { cn } from "~/lib/utils";
 import { itemUpgradesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
-import { type TrackerMatchItem, trackerMatchMetadataQueryOptions } from "~/queries/tracker-queries";
+import {
+  type TrackerMatchItem,
+  type TrackerMatchPlayer,
+  trackerMatchMetadataQueryOptions,
+} from "~/queries/tracker-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { SoulLeadChart } from "./SoulLeadChart";
@@ -42,6 +47,16 @@ function StatCell({
   );
 }
 
+const laneIndex = (player: TrackerMatchPlayer) => {
+  const index = LANES.findIndex((lane) => lane.id === player.assigned_lane);
+  return index === -1 ? LANES.length : index;
+};
+
+/** Lane by lane so opponents line up across the two team tables; unassigned players sink to the bottom. */
+function byLane(players: TrackerMatchPlayer[]): TrackerMatchPlayer[] {
+  return [...players].sort((a, b) => laneIndex(a) - laneIndex(b));
+}
+
 /** Shop items still held at the end of the match, in purchase order. Ability upgrades share the list and are dropped. */
 function finalBuild(items: TrackerMatchItem[], itemsById: Map<number, SlimUpgrade>): SlimUpgrade[] {
   const seen = new Set<number>();
@@ -54,7 +69,18 @@ function finalBuild(items: TrackerMatchItem[], itemsById: Map<number, SlimUpgrad
     });
 }
 
-export function MatchRowDetails({ matchId, accountId, ranks }: { matchId: number; accountId: number; ranks: Rank[] }) {
+export function MatchRowDetails({
+  matchId,
+  accountId,
+  ranks,
+  laned,
+}: {
+  matchId: number;
+  accountId: number;
+  ranks: Rank[];
+  /** Whether the match was played on a map with lanes, so lane assignments mean something. */
+  laned: boolean;
+}) {
   const { data: match, isPending, isError } = useQuery(trackerMatchMetadataQueryOptions(matchId));
   const { data: itemsById } = useQuery({
     ...itemUpgradesQueryOptions,
@@ -115,7 +141,8 @@ export function MatchRowDetails({ matchId, accountId, ranks }: { matchId: number
       {soulLead && <SoulLeadChart lead={soulLead} />}
       <div className="grid gap-4 @2xl:grid-cols-2">
         {TEAMS.map((team, teamIndex) => {
-          const players = match.players.filter((player) => player.team === team.key);
+          const teamPlayers = match.players.filter((player) => player.team === team.key);
+          const players = laned ? byLane(teamPlayers) : teamPlayers;
           const won = match.winning_team === team.key;
           const averageBadge = teamIndex === 0 ? match.average_badge_team0 : match.average_badge_team1;
           return (
@@ -160,11 +187,16 @@ export function MatchRowDetails({ matchId, accountId, ranks }: { matchId: number
                     const name =
                       player.personaname ?? profiles[player.account_id]?.personaname ?? `Player ${player.account_id}`;
                     const build = itemsById ? finalBuild(player.items, itemsById) : [];
+                    const lane = laned ? LANES[laneIndex(player)] : undefined;
                     return (
                       <Fragment key={player.account_id}>
                         <tr className={cn(isTracked && "bg-accent font-medium")}>
                           <td className="w-8 py-1 pl-2">
-                            <div className="relative size-6">
+                            <div
+                              className="relative size-6 rounded-full"
+                              style={lane && { boxShadow: `0 0 0 2px ${lane.color}` }}
+                              title={lane && `${lane.name} lane`}
+                            >
                               <HeroImage heroId={player.hero_id} className="size-6 rounded-full" />
                               {player.level > 0 && (
                                 <span

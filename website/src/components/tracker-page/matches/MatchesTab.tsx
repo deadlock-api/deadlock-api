@@ -15,6 +15,7 @@ import {
   computeSessions,
   formatMatchDuration,
   formatPlaytime,
+  hasLanes,
   isWin,
   MATCH_MODE_LABELS_BY_ID,
   type MatchSortKey,
@@ -320,7 +321,12 @@ export function MatchesTab({
                 {expanded && (
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={12} className="bg-muted/30 p-4">
-                      <MatchRowDetails matchId={entry.match_id} accountId={accountId} ranks={ranks} />
+                      <MatchRowDetails
+                        matchId={entry.match_id}
+                        accountId={accountId}
+                        ranks={ranks}
+                        laned={hasLanes(entry)}
+                      />
                     </TableCell>
                   </TableRow>
                 )}
