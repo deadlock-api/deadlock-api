@@ -28,6 +28,7 @@ import { cn } from "~/lib/utils";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
+import { RankDelta } from "../shared/RankDelta";
 import { MatchRow } from "./MatchRow";
 import { MatchRowDetails } from "./MatchRowDetails";
 
@@ -85,14 +86,7 @@ function SessionRow({ session }: { session: PlaySession }) {
             <span className="text-muted-foreground"> – </span>
             <span className={cn("font-semibold", LOSS_TEXT_CLASS)}>{session.losses}L</span>
           </span>
-          {session.rankDelta != null && session.rankDelta !== 0 && (
-            <span
-              className={cn("font-semibold tabular-nums", session.rankDelta > 0 ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS)}
-              title="Net rank change over the session"
-            >
-              {session.rankDelta > 0 ? `+${session.rankDelta}` : session.rankDelta}
-            </span>
-          )}
+          <RankDelta value={session.rankDelta} className="font-semibold" title="Net rank change over the session" />
           <span className="ml-auto text-muted-foreground tabular-nums">
             {session.matches} {session.matches === 1 ? "match" : "matches"} · {formatPlaytime(session.totalTimeS)}
           </span>
@@ -127,12 +121,8 @@ function AverageRow({ summary }: { summary: TrackerSummary }) {
       <TableCell className="hidden text-right tabular-nums @3xl:table-cell">
         {formatMatchDuration(summary.avgDurationS)}
       </TableCell>
-      <TableCell className="text-right tabular-nums" title="Net rank change">
-        {summary.rankDelta != null && summary.rankDelta !== 0 && (
-          <span className={cn("text-xs", summary.rankDelta > 0 ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS)}>
-            {summary.rankDelta > 0 ? `+${summary.rankDelta}` : summary.rankDelta}
-          </span>
-        )}
+      <TableCell className="text-right" title="Net rank change">
+        <RankDelta value={summary.rankDelta} className="text-xs" />
       </TableCell>
       <TableCell colSpan={COLUMN_COUNT - 9} />
     </TableRow>

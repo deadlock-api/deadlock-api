@@ -22,6 +22,7 @@ import {
 import { cn } from "~/lib/utils";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
+import { RankDelta } from "../shared/RankDelta";
 
 const UNSCORED_OUTCOME_MARKERS: Record<UnscoredOutcome, { icon: typeof Gavel; label: string; description: string }> = {
   penalized: { icon: Gavel, label: "Penalized", description: "Penalized for this match" },
@@ -139,11 +140,7 @@ export function MatchRow({
           {entry.ranked_display_badge != null && entry.ranked_display_badge > 0 && (
             <BadgeImage badge={entry.ranked_display_badge} ranks={ranks} className="size-6 max-w-none" />
           )}
-          {entry.ranked_delta != null && entry.ranked_delta !== 0 && (
-            <span className={cn("text-xs tabular-nums", entry.ranked_delta > 0 ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS)}>
-              {entry.ranked_delta > 0 ? `+${entry.ranked_delta}` : entry.ranked_delta}
-            </span>
-          )}
+          <RankDelta value={entry.ranked_delta} className="text-xs" />
           {entry.ranked_used_demotion_protection && (
             <Tooltip>
               <TooltipTrigger asChild>
