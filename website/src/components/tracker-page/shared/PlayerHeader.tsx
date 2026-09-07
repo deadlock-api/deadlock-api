@@ -7,7 +7,7 @@ import { BadgeImage } from "~/components/BadgeImage";
 import { Skeleton } from "~/components/ui/skeleton";
 import { day } from "~/dayjs";
 import { extractBadgeMap } from "~/lib/leaderboard";
-import { summarize } from "~/lib/tracker/compute";
+import { peakRank, summarize } from "~/lib/tracker/compute";
 import { steamProfileQueryOptions, trackerRankQueryOptions } from "~/queries/tracker-queries";
 
 export function PlayerHeader({
@@ -29,6 +29,13 @@ export function PlayerHeader({
   }, [rank, ranks]);
 
   const summary = useMemo(() => (entries && entries.length > 0 ? summarize(entries) : null), [entries]);
+
+  const peak = useMemo(() => {
+    const found = entries ? peakRank(entries) : null;
+    if (!found || ranks.length === 0) return null;
+    const info = extractBadgeMap(ranks).get(found.badge);
+    return info ? { ...found, name: `${info.name} ${info.subtier}` } : null;
+  }, [entries, ranks]);
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -89,6 +96,14 @@ export function PlayerHeader({
               <div className="text-sm font-semibold">
                 {badgeInfo.name} {badgeInfo.subtier}
               </div>
+              {peak && peak.badge > rank.badge && (
+                <div
+                  className="text-xs whitespace-nowrap text-muted-foreground"
+                  title={`Peak reached ${day.unix(peak.time).format("MMM D, YYYY")}`}
+                >
+                  Peak {peak.name}
+                </div>
+              )}
             </div>
           )}
         </div>

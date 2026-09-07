@@ -356,3 +356,21 @@ export function computePerformanceTrend(entries: PlayerMatchHistoryEntry[], wind
   }
   return points;
 }
+
+export interface PeakRank {
+  badge: number;
+  time: number;
+}
+
+/** Highest ranked badge in the history and the first time it was reached. */
+export function peakRank(entries: PlayerMatchHistoryEntry[]): PeakRank | null {
+  let peak: PeakRank | null = null;
+  for (const entry of entries) {
+    const badge = entry.ranked_display_badge;
+    if (badge == null || badge <= 0) continue;
+    if (peak === null || badge > peak.badge || (badge === peak.badge && entry.start_time < peak.time)) {
+      peak = { badge, time: entry.start_time };
+    }
+  }
+  return peak;
+}
