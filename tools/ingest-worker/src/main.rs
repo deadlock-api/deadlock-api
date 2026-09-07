@@ -756,10 +756,6 @@ fn build_ch_players(match_info: &MatchInfo) -> Vec<ClickhouseMatchPlayer> {
                     .winning_team
                     .and_then(|t| p.team.map(|pt| pt == t))
                     .unwrap_or(false),
-                match_info
-                    .match_paths
-                    .as_ref()
-                    .and_then(|path| path.paths.iter().find(|pp| pp.player_slot == p.player_slot)),
                 p,
             )
                 .into()

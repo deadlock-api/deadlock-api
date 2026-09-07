@@ -5,7 +5,6 @@ use valveprotos::deadlock::c_msg_match_meta_data_contents::{
     BookReward, Deaths, Items, MatchInfo, MidBoss, Objective as ProtoObjective, PlayerAccolade,
     PlayerStats, Players, PowerUpBuff, StreetBrawlRound,
 };
-use valveprotos::deadlock::c_msg_match_player_paths_data::Path;
 
 use crate::models::enums::{
     BotDifficulty, GameMode, HeroXpGrantReason, MatchMode, MatchOutcome, Objective,
@@ -247,15 +246,6 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub player_rank_initial_demotion_protection_games: Option<u32>,
     pub player_rank_consumed_demotion_protection: Option<bool>,
     pub player_rank_initial_win_streak: Option<u32>,
-    pub x_min: Option<f32>,
-    pub y_min: Option<f32>,
-    pub x_max: Option<f32>,
-    pub y_max: Option<f32>,
-    pub x_pos: Vec<u16>,
-    pub y_pos: Vec<u16>,
-    pub health: Vec<u8>,
-    pub combat_type: Vec<u8>,
-    pub move_type: Vec<u8>,
 }
 
 /// Match-level average badge, in the `tier * 10 + subrank` encoding.
@@ -309,16 +299,9 @@ fn mean_badge(badges: &[u32]) -> Option<u32> {
     Some(dense_mean + 4 * ((dense_mean - 1) / 6))
 }
 
-/// Zeroes the low 4 bits of each position sample, keeping the 0..=16383 fixed-point
-/// domain intact (so the `x_min`/`x_max` reconstruction is unchanged) while dropping
-/// sub-16-unit precision. Trades imperceptible accuracy for ~36% smaller `x_pos`/`y_pos`.
-const POS_QUANTIZATION_MASK: u16 = 0xFFF0;
-
 #[expect(clippy::too_many_lines)]
-impl From<(&MatchInfo, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer {
-    fn from(
-        (match_info, won, match_path, value): (&MatchInfo, bool, Option<&Path>, Players),
-    ) -> Self {
+impl From<(&MatchInfo, bool, Players)> for ClickhouseMatchPlayer {
+    fn from((match_info, won, value): (&MatchInfo, bool, Players)) -> Self {
         Self {
             match_id: match_info.match_id(),
             start_time: match_info.start_time(),
@@ -763,35 +746,6 @@ impl From<(&MatchInfo, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer 
             player_rank_initial_win_streak: value
                 .player_rank_data
                 .and_then(|r| r.initial_win_streak),
-            x_min: match_path.as_ref().and_then(|p| p.x_min),
-            y_min: match_path.as_ref().and_then(|p| p.y_min),
-            x_max: match_path.as_ref().and_then(|p| p.x_max),
-            y_max: match_path.as_ref().and_then(|p| p.y_max),
-            x_pos: match_path
-                .map(|p| {
-                    p.x_pos
-                        .iter()
-                        .map(|&v| v as u16 & POS_QUANTIZATION_MASK)
-                        .collect()
-                })
-                .unwrap_or_default(),
-            y_pos: match_path
-                .map(|p| {
-                    p.y_pos
-                        .iter()
-                        .map(|&v| v as u16 & POS_QUANTIZATION_MASK)
-                        .collect()
-                })
-                .unwrap_or_default(),
-            health: match_path
-                .map(|p| p.health.iter().map(|&v| v as u8).collect())
-                .unwrap_or_default(),
-            combat_type: match_path
-                .map(|p| p.combat_type.iter().map(|&v| v as u8).collect())
-                .unwrap_or_default(),
-            move_type: match_path
-                .map(|p| p.move_type.iter().map(|&v| v as u8).collect())
-                .unwrap_or_default(),
         }
     }
 }
