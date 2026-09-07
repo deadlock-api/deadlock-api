@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
+import { Crown } from "lucide-react";
 import { Fragment, useMemo } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
 import { HeroImage } from "~/components/HeroImage";
 import { ItemImageFromAsset } from "~/components/ItemImage";
 import { Skeleton } from "~/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { IS_DEV } from "~/lib/constants";
 import { LANES } from "~/lib/team-builder/lanes";
@@ -170,7 +172,7 @@ export function MatchRowDetails({
           const won = match.winning_team === team.key;
           const averageBadge = teamIndex === 0 ? match.average_badge_team0 : match.average_badge_team1;
           return (
-            <div key={team.key} className="min-w-0 space-y-1.5">
+            <div key={team.key} className="@container min-w-0 space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold">{team.name}</span>
                 <span className={cn("text-xs font-bold", won ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS)}>
@@ -246,12 +248,12 @@ export function MatchRowDetails({
                                 </Link>
                               )}
                               {player.mvp_rank === 1 && (
-                                <span
-                                  className="shrink-0 rounded-sm bg-amber-500/15 px-1 text-[10px] font-semibold text-amber-500"
-                                  title="Match MVP"
-                                >
-                                  MVP
-                                </span>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Crown className="size-3.5 shrink-0 text-amber-500" aria-label="Match MVP" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>Match MVP</TooltipContent>
+                                </Tooltip>
                               )}
                             </div>
                           </td>

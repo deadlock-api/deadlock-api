@@ -8,6 +8,7 @@ import { cn } from "~/lib/utils";
 import { LOSS_COLOR, LOSS_TEXT_CLASS, WIN_COLOR, WIN_TEXT_CLASS } from "../shared/colors";
 
 function formatLead(lead: number): string {
+  if (Math.abs(lead) < 1000) return `${lead < 0 ? "−" : "+"}${Math.abs(lead)}`;
   const thousands = Math.abs(lead) / 1000;
   const magnitude = thousands >= 10 || Number.isInteger(thousands) ? Math.round(thousands) : thousands.toFixed(1);
   return `${lead < 0 ? "−" : "+"}${magnitude}k`;
