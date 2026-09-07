@@ -9,7 +9,7 @@ import { cn } from "~/lib/utils";
 export const FilterRootContext = createContext(false);
 
 const cellBase = "flex min-w-0 flex-col justify-center gap-0.5 px-4 py-2 text-left transition-colors";
-const cellInRoot = "border-r border-b lg:min-w-28 lg:shrink-0 lg:grow";
+const cellInRoot = "grow basis-1/2 border-r border-b md:basis-1/3 lg:min-w-28 lg:shrink-0 lg:basis-auto";
 const cellStandalone = "rounded-lg border bg-card";
 const activeUnderline = "shadow-[inset_0_-2px_0_0_var(--primary)]";
 
@@ -107,8 +107,8 @@ export function FilterToggleCell<T extends string>({
       className={cn(
         cellBase,
         inRoot ? cellInRoot : cellStandalone,
-        // Four or more segments outgrow a phone-width grid cell.
-        inRoot && options.length > 3 && "max-md:col-span-2",
+        // Four or more segments outgrow a half-width phone cell and a third-width tablet cell.
+        inRoot && options.length > 3 && "max-md:basis-full md:max-lg:basis-2/3",
         active && activeUnderline,
       )}
     >
