@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
+import { ListOrdered, type LucideIcon, Map, ShoppingBag, Trophy, Users } from "lucide-react";
 import { lazy, Suspense, useMemo } from "react";
 
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
@@ -162,6 +163,35 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
   );
 }
 
+function HeroLinkCard({
+  to,
+  search,
+  icon: Icon,
+  title,
+  description,
+}: {
+  to: "/items" | "/abilities" | "/leaderboard" | "/players" | "/heatmap";
+  search: Record<string, number>;
+  icon: LucideIcon;
+  title: string;
+  description: string;
+}) {
+  return (
+    <Link
+      to={to}
+      search={search}
+      preload="intent"
+      className="group flex items-start gap-3 rounded-lg border border-border bg-card px-4 py-3 transition-colors hover:border-primary/50 hover:bg-accent/40"
+    >
+      <Icon className="mt-0.5 size-5 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
+      <div className="min-w-0">
+        <div className="font-medium">{title}</div>
+        <div className="mt-0.5 text-xs text-muted-foreground">{description}</div>
+      </div>
+    </Link>
+  );
+}
+
 function HeroDetailPage() {
   const { heroId, heroName } = Route.useLoaderData();
   const { seasons } = useSeasons();
@@ -263,12 +293,50 @@ function HeroDetailPage() {
         </ChunkErrorBoundary>
       </section>
 
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold tracking-tight">More {heroName} Stats</h2>
+        <nav aria-label={`More ${heroName} stats`} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <HeroLinkCard
+            to="/items"
+            search={{ hero: heroId }}
+            icon={ShoppingBag}
+            title="Item Builds"
+            description={`Win rates, buy timings, and combos for every item on ${heroName}.`}
+          />
+          <HeroLinkCard
+            to="/abilities"
+            search={{ hero_id: heroId }}
+            icon={ListOrdered}
+            title="Ability Builds"
+            description={`The most common ${heroName} skill orders and how often they win.`}
+          />
+          <HeroLinkCard
+            to="/leaderboard"
+            search={{ hero_id: heroId }}
+            icon={Trophy}
+            title="Top Players"
+            description={`The highest ranked ${heroName} players in each region.`}
+          />
+          <HeroLinkCard
+            to="/players"
+            search={{ hero: heroId }}
+            icon={Users}
+            title="Player Scoreboard"
+            description={`Who racks up the most kills, souls, and damage on ${heroName}.`}
+          />
+          <HeroLinkCard
+            to="/heatmap"
+            search={{ hero_id: heroId }}
+            icon={Map}
+            title="Kill Heatmap"
+            description={`Where ${heroName} gets kills and dies across the map.`}
+          />
+        </nav>
+      </section>
+
       <nav aria-label="Related pages" className="flex flex-wrap gap-4 border-t border-border pt-4 text-sm">
         <Link to="/heroes" preload="intent" className="font-medium text-primary underline underline-offset-4">
           All hero win rates
-        </Link>
-        <Link to="/leaderboard" preload="intent" className="font-medium text-primary underline underline-offset-4">
-          Player leaderboard
         </Link>
       </nav>
     </div>
