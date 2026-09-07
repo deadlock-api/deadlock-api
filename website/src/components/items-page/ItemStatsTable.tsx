@@ -239,6 +239,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
 }: ItemStatsTableRowProps) {
   const [open, setOpen] = useState(false);
   const shouldDim = dimLowConfidence && row.confidenceLower < row.confidenceBaselineLower;
+  const itemName = row.item?.name ?? "Unknown Item";
 
   // Calculate total columns for colspan
   const totalColumns =
@@ -272,7 +273,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
         <TableCell>
           <div className="flex items-center gap-2">
             <ItemImageFromAsset item={row.item} />
-            <span className="truncate">{row.item?.name ?? "Unknown Item"}</span>
+            <span className="truncate">{itemName}</span>
           </div>
         </TableCell>
         {columns.includes("itemsTier") && (
@@ -366,6 +367,8 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
             <Button
               variant="secondary"
               disabled={isIncluded}
+              aria-label={`Include ${itemName} in filter`}
+              title={`Include ${itemName} in filter`}
               className="h-6 bg-green-700 px-1 text-lg hover:bg-green-500 disabled:bg-muted"
               onClick={(e) => {
                 e.stopPropagation();
@@ -377,6 +380,8 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
             <Button
               variant="destructive"
               disabled={isExcluded}
+              aria-label={`Exclude ${itemName} from filter`}
+              title={`Exclude ${itemName} from filter`}
               className="h-6 bg-red-700 px-1 hover:bg-red-500 disabled:bg-muted"
               onClick={(e) => {
                 e.stopPropagation();

@@ -82,6 +82,7 @@ export function PaginationControls({
         <span className="mx-2">
           <Input
             type="number"
+            aria-label="Page number"
             max={totalPages}
             min={1}
             value={currentPage + 1}
