@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { ChevronDown, LogOut, ShieldCheck, UsersRound } from "lucide-react";
-import { Fragment, useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, ChevronDown, LogOut, ShieldCheck, UsersRound } from "lucide-react";
+import { type ComponentProps, Fragment, useMemo, useState } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
 import { CopyButton } from "~/components/copy-button";
@@ -17,7 +17,10 @@ import {
   formatPlaytime,
   isWin,
   MATCH_MODE_LABELS_BY_ID,
+  type MatchSortKey,
   type PlaySession,
+  type SortDir,
+  sortMatches,
 } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions } from "~/queries/asset-queries";
@@ -31,6 +34,33 @@ function sessionDateLabel(unix: number): string {
   if (date.isSame(today, "day")) return "Today";
   if (date.isSame(today.subtract(1, "day"), "day")) return "Yesterday";
   return date.format(date.isSame(today, "year") ? "ddd, MMM D" : "ddd, MMM D, YYYY");
+}
+
+function SortableHead({
+  sortKey,
+  activeKey,
+  dir,
+  onSort,
+  children,
+  ...props
+}: {
+  sortKey: MatchSortKey;
+  activeKey: MatchSortKey;
+  dir: SortDir;
+  onSort: (key: MatchSortKey) => void;
+} & Omit<ComponentProps<"th">, "onClick">) {
+  return (
+    <TableHead {...props}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
+      >
+        {children}
+        {activeKey === sortKey && (dir === "desc" ? <ArrowDown className="size-3" /> : <ArrowUp className="size-3" />)}
+      </button>
+    </TableHead>
+  );
 }
 
 function SessionRow({ session }: { session: PlaySession }) {
@@ -76,17 +106,34 @@ export function MatchesTab({
   const [currentPage, setCurrentPage] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [expandedMatchId, setExpandedMatchId] = useState<number | null>(null);
+  const [sortKey, setSortKey] = useState<MatchSortKey>("played");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const handleSort = (key: MatchSortKey) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === "desc" ? "asc" : "desc");
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+    setCurrentPage(0);
+  };
 
   const { data: heroNames } = useQuery({
     ...heroesQueryOptions,
     select: (heroes) => new Map(heroes.map((hero) => [hero.id, hero.name])),
   });
 
-  const sessions = useMemo(() => computeSessions(entries), [entries]);
+  // Sessions are contiguous only in play order, so they are hidden under any other sort.
+  const sessions = useMemo(
+    () => (sortKey === "played" ? computeSessions(entries) : new Map<number, PlaySession>()),
+    [entries, sortKey],
+  );
+  const sortedEntries = useMemo(() => sortMatches(entries, sortKey, sortDir), [entries, sortKey, sortDir]);
   const totalPages = Math.max(1, Math.ceil(entries.length / itemsPerPage));
   const paginatedEntries = useMemo(
-    () => entries.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage),
-    [entries, currentPage, itemsPerPage],
+    () => sortedEntries.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage),
+    [sortedEntries, currentPage, itemsPerPage],
   );
 
   return (
@@ -107,14 +154,50 @@ export function MatchesTab({
             </TableHead>
             <TableHead>Hero</TableHead>
             <TableHead className="hidden @3xl:table-cell">Mode</TableHead>
-            <TableHead className="text-right">K / D / A</TableHead>
-            <TableHead className="hidden text-right @md:table-cell">Souls</TableHead>
-            <TableHead className="hidden text-right @4xl:table-cell" title="Last hits / Denies">
+            <SortableHead sortKey="kda" activeKey={sortKey} dir={sortDir} onSort={handleSort} className="text-right">
+              K / D / A
+            </SortableHead>
+            <SortableHead
+              sortKey="souls"
+              activeKey={sortKey}
+              dir={sortDir}
+              onSort={handleSort}
+              className="hidden text-right @md:table-cell"
+            >
+              Souls
+            </SortableHead>
+            <SortableHead
+              sortKey="lastHits"
+              activeKey={sortKey}
+              dir={sortDir}
+              onSort={handleSort}
+              className="hidden text-right @4xl:table-cell"
+              title="Last hits / Denies"
+            >
               LH / DN
-            </TableHead>
-            <TableHead className="hidden text-right @3xl:table-cell">Duration</TableHead>
-            <TableHead className="text-right">Rank</TableHead>
-            <TableHead className="text-right">Played</TableHead>
+            </SortableHead>
+            <SortableHead
+              sortKey="duration"
+              activeKey={sortKey}
+              dir={sortDir}
+              onSort={handleSort}
+              className="hidden text-right @3xl:table-cell"
+            >
+              Duration
+            </SortableHead>
+            <SortableHead
+              sortKey="rankDelta"
+              activeKey={sortKey}
+              dir={sortDir}
+              onSort={handleSort}
+              className="text-right"
+              title="Sort by rank change"
+            >
+              Rank
+            </SortableHead>
+            <SortableHead sortKey="played" activeKey={sortKey} dir={sortDir} onSort={handleSort} className="text-right">
+              Played
+            </SortableHead>
             <TableHead className="hidden text-right @4xl:table-cell">Match ID</TableHead>
             <TableHead className="hidden w-8 @4xl:table-cell" />
             <TableHead className="hidden w-8 @md:table-cell" />

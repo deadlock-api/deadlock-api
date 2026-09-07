@@ -71,6 +71,32 @@ export function filterMatches(
     .sort((a, b) => b.start_time - a.start_time);
 }
 
+export type MatchSortKey = "kda" | "souls" | "lastHits" | "duration" | "rankDelta" | "played";
+export type SortDir = "asc" | "desc";
+
+const MATCH_SORT_VALUES: Record<MatchSortKey, (entry: PlayerMatchHistoryEntry) => number> = {
+  kda: (entry) =>
+    entry.player_deaths > 0
+      ? (entry.player_kills + entry.player_assists) / entry.player_deaths
+      : entry.player_kills + entry.player_assists,
+  souls: (entry) => entry.net_worth,
+  lastHits: (entry) => entry.last_hits,
+  duration: (entry) => entry.match_duration_s,
+  rankDelta: (entry) => entry.ranked_delta ?? 0,
+  played: (entry) => entry.start_time,
+};
+
+/** Ties fall back to newest first so the order stays stable across sort keys. */
+export function sortMatches(
+  entries: PlayerMatchHistoryEntry[],
+  key: MatchSortKey,
+  dir: SortDir,
+): PlayerMatchHistoryEntry[] {
+  const value = MATCH_SORT_VALUES[key];
+  const sign = dir === "desc" ? -1 : 1;
+  return [...entries].sort((a, b) => sign * (value(a) - value(b)) || b.start_time - a.start_time);
+}
+
 export interface TrackerSummary {
   matches: number;
   wins: number;
