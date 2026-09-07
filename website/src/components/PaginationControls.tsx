@@ -65,7 +65,7 @@ export function PaginationControls({
       <div className="flex items-center space-x-2">
         <span className="text-sm text-muted-foreground">Rows per page</span>
         <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
-          <SelectTrigger className="h-8 w-20">
+          <SelectTrigger className="h-8 w-20" aria-label="Rows per page">
             <SelectValue placeholder={itemsPerPage} />
           </SelectTrigger>
           <SelectContent>
