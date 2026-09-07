@@ -190,8 +190,21 @@ export function MatchesTab({
     setCurrentPage(0);
   };
 
-  // Arrow keys step between the focusable match rows, skipping session and details rows.
+  const collapseExpanded = () => {
+    setExpandedMatchId(null);
+    // Brings the row back into view and keeps keyboard focus on it.
+    linkedRowRef.current?.focus();
+  };
+
+  // Arrow keys step between the focusable match rows, skipping session and details rows. Escape
+  // collapses the expanded match from its row or from anywhere inside its details.
   const handleRowKeyDown = (event: KeyboardEvent<HTMLTableSectionElement>) => {
+    if (event.key === "Escape") {
+      const expandedRow = linkedRowRef.current;
+      const target = event.target as Node;
+      if (expandedRow?.contains(target) || expandedRow?.nextElementSibling?.contains(target)) collapseExpanded();
+      return;
+    }
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
     const rows = [...event.currentTarget.querySelectorAll<HTMLTableRowElement>("tr[tabindex]")];
     const index = rows.indexOf(event.target as HTMLTableRowElement);
@@ -310,11 +323,7 @@ export function MatchesTab({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
-                            setExpandedMatchId(null);
-                            // Brings the row back into view and keeps keyboard focus on it.
-                            linkedRowRef.current?.focus();
-                          }}
+                          onClick={collapseExpanded}
                           className="h-6 gap-1 px-2 text-xs text-muted-foreground"
                         >
                           <ChevronUp className="size-3.5" />
