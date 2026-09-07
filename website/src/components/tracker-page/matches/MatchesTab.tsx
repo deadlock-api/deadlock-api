@@ -239,7 +239,7 @@ export function MatchesTab({
                 />
                 {expanded && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={COLUMN_COUNT} className="bg-muted/30 p-4">
+                    <TableCell colSpan={COLUMN_COUNT} className="bg-muted/30 p-4 whitespace-normal">
                       <MatchRowDetails
                         entry={entry}
                         accountId={accountId}

@@ -54,7 +54,7 @@ export function KillsDeathsStrip({
   return (
     <div className="rounded-md border border-border px-3 py-2">
       <div className="mb-2 flex items-baseline gap-2">
-        <span className="text-sm font-semibold">Kills & deaths</span>
+        <span className="text-sm font-semibold whitespace-nowrap">Kills & deaths</span>
         <span className="text-xs text-muted-foreground tabular-nums">
           {count(kills.length, "kill")} · {count(deaths.length, "death")}
           {deaths.length > 0 && ` · ${formatMatchDuration(deadForS)} dead · ${deadShare}% of the match`}
