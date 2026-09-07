@@ -54,7 +54,7 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
           <div
             key={category.label}
             className={cn(
-              "overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]",
+              "@container overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]",
               isWide && "lg:col-span-2",
             )}
           >
@@ -63,7 +63,7 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
               <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">{category.label}</h3>
             </div>
 
-            <div className={cn(isWide && "sm:grid sm:grid-cols-2")}>
+            <div className={cn(isWide && "@2xl:grid @2xl:grid-cols-2")}>
               {category.stats.map((stat, statIdx) => {
                 const value = current[stat.key] as number;
                 const prevValue = prev?.[stat.key] as number | undefined;
@@ -81,7 +81,7 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                         const prevT1Pct = prevTotal > 0 && prev ? (prev.team1_wins / prevTotal) * 100 : null;
                         return (
                           <div className="flex items-center justify-between gap-3 border-b border-white/4 px-4 py-2.5">
-                            <span className="text-sm text-muted-foreground sm:shrink-0">
+                            <span className="text-sm text-muted-foreground @2xl:shrink-0">
                               The Hidden King vs The Archmother
                             </span>
                             <div className="flex flex-wrap items-center justify-end gap-x-2.5 gap-y-1">
@@ -113,7 +113,7 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                             "flex w-full items-center justify-between px-4 py-2.5 transition-colors",
                             "border-b border-white/[0.04]",
                             !isWide && isLast && !teamWinRow && "border-b-0",
-                            isWide && statIdx >= category.stats.length - 2 && "sm:border-b-0",
+                            isWide && statIdx >= category.stats.length - 2 && "@2xl:border-b-0",
                             isWide && isLast && "border-b-0",
                             onStatClick && "cursor-pointer hover:bg-white/[0.04]",
                           )}
