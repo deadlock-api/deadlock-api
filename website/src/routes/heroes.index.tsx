@@ -434,7 +434,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
             <h2 className="sr-only">Hero Matchup Details</h2>
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingLogo />}>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 lg:grid-cols-2">
                   <HeroMatchupDetailsStatsTable
                     heroId={filters.heroId}
                     stat={0}
