@@ -55,15 +55,16 @@ function SortableHead({
   dir: SortDir;
   onSort: (key: MatchSortKey) => void;
 } & Omit<ComponentProps<"th">, "onClick">) {
+  const active = activeKey === sortKey;
   return (
-    <TableHead {...props}>
+    <TableHead aria-sort={active ? (dir === "desc" ? "descending" : "ascending") : undefined} {...props}>
       <button
         type="button"
         onClick={() => onSort(sortKey)}
         className="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
       >
         {children}
-        {activeKey === sortKey && (dir === "desc" ? <ArrowDown className="size-3" /> : <ArrowUp className="size-3" />)}
+        {active && (dir === "desc" ? <ArrowDown className="size-3" /> : <ArrowUp className="size-3" />)}
       </button>
     </TableHead>
   );
