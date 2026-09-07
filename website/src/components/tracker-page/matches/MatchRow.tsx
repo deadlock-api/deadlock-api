@@ -14,6 +14,7 @@ import {
   formatMatchDuration,
   type HeldRecord,
   isWin,
+  kdaRatio,
   MATCH_MODE_LABELS_BY_ID,
   soulsPerMinute,
   type UnscoredOutcome,
@@ -149,7 +150,7 @@ export function MatchRow({
       <TableCell className="hidden text-muted-foreground @3xl:table-cell">
         {MATCH_MODE_LABELS_BY_ID[entry.match_mode] ?? "Unknown"}
       </TableCell>
-      <TableCell className="text-right tabular-nums">
+      <TableCell className="text-right tabular-nums" title={`KDA ${kdaRatio(entry).toFixed(2)}`}>
         {entry.player_kills} / {entry.player_deaths} / {entry.player_assists}
       </TableCell>
       <TableCell className="hidden text-right tabular-nums @md:table-cell">
