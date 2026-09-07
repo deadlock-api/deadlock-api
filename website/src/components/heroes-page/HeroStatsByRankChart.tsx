@@ -23,7 +23,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { BANS_PER_MATCH } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
-import { extractBadgeMap } from "~/lib/leaderboard";
+import { getRankImageUrl } from "~/lib/rank-utils";
 import { queryKeys } from "~/queries/query-keys";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
@@ -75,15 +75,9 @@ function tickFormatter(stat: ByRankStat): (v: number) => string {
   return (v) => Number(v).toFixed(1);
 }
 
-function BadgePoint(props: ScatterProps & { badgeMap: Map<number, { large_webp?: string; large?: string }> }) {
-  const { cx, cy, payload, badgeMap } = props as {
-    cx: number;
-    cy: number;
-    payload: DataPoint;
-    badgeMap: Map<number, { large_webp?: string; large?: string }>;
-  };
-  const badgeInfo = badgeMap.get(payload.badge);
-  const imgUrl = badgeInfo?.large_webp || badgeInfo?.large;
+function BadgePoint(props: ScatterProps) {
+  const { cx, cy, payload } = props as { cx: number; cy: number; payload: DataPoint };
+  const imgUrl = payload.badgeImageUrl;
   if (!imgUrl) return <circle cx={cx} cy={cy} r={6} fill="#888" />;
   return <image x={cx - 18} y={cy - 18} width={36} height={36} href={imgUrl} />;
 }
@@ -277,8 +271,6 @@ export function HeroStatsByRankChart({
 
   const { heroIdMap, isLoadingHeroes } = useHeroColorMap();
 
-  const badgeMap = useMemo(() => (ranksData ? extractBadgeMap(ranksData) : new Map()), [ranksData]);
-
   // Aggregate subtiers into tiers per hero (only depends on raw data)
   const tierAggByHero = useMemo(() => {
     if (!heroData) return {};
@@ -301,16 +293,16 @@ export function HeroStatsByRankChart({
       for (const [tierStr, agg] of Object.entries(tiers)) {
         const tier = Number(tierStr);
         const badge = tier * 10 + 6;
-        const badgeInfo = badgeMap.get(badge);
+        const rank = ranksData?.find((candidate) => candidate.tier === tier);
         const hero = heroIdMap[heroId];
         grouped[heroId].push({
           badge,
           xValue: getStatValue(xStat, agg, gameMode, banRateByTier, heroId, tier),
           yValue: getStatValue(yStat, agg, gameMode, banRateByTier, heroId, tier),
-          rankName: badgeInfo?.name ?? `Rank ${tier}`,
+          rankName: rank?.name ?? `Rank ${tier}`,
           subtier: 6,
           matches: agg.matches,
-          badgeImageUrl: badgeInfo?.large_webp || badgeInfo?.large,
+          badgeImageUrl: getRankImageUrl(rank) ?? undefined,
           heroName: hero?.name ?? `Hero ${heroId}`,
           heroColor: hero?.color ?? "#ffffff",
         });
@@ -318,7 +310,7 @@ export function HeroStatsByRankChart({
       grouped[heroId].sort((a, b) => a.badge - b.badge);
     }
     return grouped;
-  }, [tierAggByHero, badgeMap, gameMode, heroIdMap, xStat, yStat, banRateByTier]);
+  }, [tierAggByHero, ranksData, gameMode, heroIdMap, xStat, yStat, banRateByTier]);
 
   const heroIdsWithData = useMemo(
     () =>
@@ -381,7 +373,7 @@ export function HeroStatsByRankChart({
                   data={heroDataByHero[heroId]}
                   fill={heroIdMap[heroId]?.color ?? "#ffffff"}
                   line={{ stroke: heroIdMap[heroId]?.color ?? "#ffffff", strokeWidth: 2 }}
-                  shape={<BadgePoint badgeMap={badgeMap} />}
+                  shape={<BadgePoint />}
                   hide={!effectiveVisibleSet.has(heroId)}
                 />
               ))}

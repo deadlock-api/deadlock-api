@@ -20,8 +20,8 @@ export function extractBadgeMap(ranks: Rank[]): Map<number, SubtierInfo> {
       badgeMap.set(badge, {
         name: rank.name,
         subtier,
-        large: rank.images.large ?? undefined,
-        large_webp: rank.images.large_webp ?? undefined,
+        large: rank.images[`large_subrank${subtier}`] ?? rank.images.large ?? undefined,
+        large_webp: rank.images[`large_subrank${subtier}_webp`] ?? rank.images.large_webp ?? undefined,
         color: rank.color ?? undefined,
       });
     }
