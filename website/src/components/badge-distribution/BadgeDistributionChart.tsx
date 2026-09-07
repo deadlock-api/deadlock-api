@@ -17,6 +17,8 @@ type Metric = "players" | "matches";
 
 const METRIC_LABEL: Record<Metric, string> = { players: "Players", matches: "Matches" };
 
+const formatPercent = (ratio: number) => `${(ratio * 100).toFixed(1)}%`;
+
 interface ChartEntry {
   badge: number;
   tier: number;
@@ -63,6 +65,17 @@ export default function BadgeDistributionChart({ badgeDistributionData, ranksDat
     }
     return result;
   }, [badgeDistributionData, valuePerBadge]);
+
+  const shares = useMemo(() => {
+    const total = chartData.reduce((sum, entry) => sum + entry.value, 0);
+    const atOrAbove = new Map<number, number>();
+    let running = 0;
+    for (const entry of chartData.toReversed()) {
+      running += entry.value;
+      atOrAbove.set(entry.badge, running);
+    }
+    return { total, atOrAbove };
+  }, [chartData]);
 
   const ticks = useMemo(() => {
     const badges = badgeDistributionData.map((item) => item.badge_level);
@@ -199,6 +212,12 @@ export default function BadgeDistributionChart({ badgeDistributionData, ranksDat
                       <div>
                         {entry.value.toLocaleString("en-US")} {metric}
                       </div>
+                      {shares.total > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          {formatPercent(entry.value / shares.total)} of {metric}, top{" "}
+                          {formatPercent((shares.atOrAbove.get(entry.badge) ?? 0) / shares.total)}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
