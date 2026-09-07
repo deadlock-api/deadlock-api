@@ -13,6 +13,7 @@
 use core::time::Duration;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use async_compression::tokio::bufread::{BzDecoder, ZstdDecoder};
 use clap::Parser;
@@ -29,6 +30,13 @@ mod models;
 mod visitor;
 
 const ZSTD_MAGIC: [u8; 4] = [0x28, 0xb5, 0x2f, 0xfd];
+
+/// `FINAL` over the whole `match_salts` table costs ~10 CPU-seconds however few rows the
+/// `created_at` filter keeps, so between full scans only salts created within
+/// [`INCREMENTAL_WINDOW`] are merged, which prunes by primary key. Matches whose metadata lands
+/// later than that, and matches whose update failed, are picked up by the next full scan.
+const FULL_SCAN_INTERVAL: Duration = Duration::from_mins(30);
+const INCREMENTAL_WINDOW: &str = "2 HOUR";
 
 use models::{
     DemoPlayer, MatchUpdate, MatchWithReplay, ObservedSteamName, ObservedSteamNameChange,
@@ -63,13 +71,18 @@ async fn main() -> anyhow::Result<()> {
         .build()?;
 
     let mut failed_matches: HashSet<u64> = HashSet::new();
+    let mut last_full_scan: Option<Instant> = None;
 
     loop {
-        let mut matches = fetch_pending_matches(&ch_client).await?;
-        // Prune failed_matches for ids that have aged out of the 30-day SQL window,
-        // otherwise the set grows unboundedly over the process lifetime.
-        let valid_ids: HashSet<u64> = matches.iter().map(|m| m.match_id).collect();
-        failed_matches.retain(|id| valid_ids.contains(id));
+        let full_scan = last_full_scan.is_none_or(|t| t.elapsed() >= FULL_SCAN_INTERVAL);
+        let mut matches = fetch_pending_matches(&ch_client, full_scan).await?;
+        if full_scan {
+            last_full_scan = Some(Instant::now());
+            // Prune failed_matches for ids that have aged out of the 30-day SQL window,
+            // otherwise the set grows unboundedly over the process lifetime.
+            let valid_ids: HashSet<u64> = matches.iter().map(|m| m.match_id).collect();
+            failed_matches.retain(|id| valid_ids.contains(id));
+        }
         matches.retain(|m| !failed_matches.contains(&m.match_id));
 
         if matches.is_empty() {
@@ -145,14 +158,22 @@ async fn main() -> anyhow::Result<()> {
 
 async fn fetch_pending_matches(
     ch_client: &clickhouse::Client,
+    full_scan: bool,
 ) -> anyhow::Result<Vec<MatchWithReplay>> {
+    let window = if full_scan {
+        "30 DAY"
+    } else {
+        INCREMENTAL_WINDOW
+    };
     let matches = ch_client
-        .query(
-            "SELECT ms.match_id, mp.start_time, ms.cluster_id, ms.replay_salt \
+        .query(&format!(
+            "WITH recent AS (SELECT match_id FROM match_salts WHERE created_at > now() - INTERVAL {window}) \
+             SELECT ms.match_id, mp.start_time, ms.cluster_id, ms.replay_salt \
              FROM ( \
                  SELECT match_id, cluster_id, replay_salt \
                  FROM match_salts FINAL \
-                 WHERE created_at > now() - INTERVAL 30 DAY \
+                 WHERE match_id IN recent \
+                   AND created_at > now() - INTERVAL {window} \
                    AND replay_salt IS NOT NULL AND replay_salt > 0 \
                    AND cluster_id IS NOT NULL AND cluster_id > 0 \
                    AND failed_at IS NULL \
@@ -162,21 +183,15 @@ async fn fetch_pending_matches(
              INNER JOIN ( \
                  SELECT match_id, any(start_time) AS start_time, max(demo_processed) AS demo_processed \
                  FROM match_player \
-                 WHERE match_id IN ( \
-                     SELECT match_id FROM match_salts FINAL \
-                     WHERE created_at > now() - INTERVAL 30 DAY \
-                       AND replay_salt IS NOT NULL AND replay_salt > 0 \
-                       AND cluster_id IS NOT NULL AND cluster_id > 0 \
-                       AND failed_at IS NULL \
-                 ) \
+                 WHERE match_id IN recent \
                  AND game_mode = 'Normal' \
                  GROUP BY match_id \
              ) mp ON mp.match_id = ms.match_id \
              WHERE mp.demo_processed = 0 \
              ORDER BY ms.match_id DESC \
              LIMIT 1000 \
-             SETTINGS log_comment = 'demo_analyzer_fetch_pending_matches'",
-        )
+             SETTINGS log_comment = 'demo_analyzer_fetch_pending_matches'"
+        ))
         .fetch_all::<MatchWithReplay>()
         .await?;
     Ok(matches)
