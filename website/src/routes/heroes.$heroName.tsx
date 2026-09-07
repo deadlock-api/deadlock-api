@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 import { lazy, Suspense, useMemo } from "react";
 
-import { Breadcrumb } from "~/components/Breadcrumb";
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { HeroImage } from "~/components/HeroImage";
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -89,28 +88,17 @@ export const Route = createFileRoute("/heroes/$heroName")({
       description: `${heroName} win rate, pick rate, best items, and matchups in Deadlock. Live stats from tracked ranked matches, updated daily.`,
       path: `/heroes/${slug}`,
       ogImage: cardImage ?? undefined,
-      jsonLd: [
-        {
-          "@context": "https://schema.org",
-          "@type": "Dataset",
-          name: `${heroName} Win Rate & Pick Rate | Deadlock`,
-          description: `Win rate, pick rate, ban rate, and matchup statistics for ${heroName} in Deadlock, calculated from tracked ranked matches and updated daily.`,
-          url,
-          keywords: ["Deadlock", heroName, "win rate", "pick rate", "matchups"],
-          creator: { "@type": "Organization", name: "Deadlock API", url: SITE_URL },
-          isAccessibleForFree: true,
-          license: "https://github.com/deadlock-api/",
-        },
-        {
-          "@context": "https://schema.org",
-          "@type": "BreadcrumbList",
-          itemListElement: [
-            { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-            { "@type": "ListItem", position: 2, name: "Heroes", item: `${SITE_URL}/heroes` },
-            { "@type": "ListItem", position: 3, name: heroName, item: url },
-          ],
-        },
-      ],
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        name: `${heroName} Win Rate & Pick Rate | Deadlock`,
+        description: `Win rate, pick rate, ban rate, and matchup statistics for ${heroName} in Deadlock, calculated from tracked ranked matches and updated daily.`,
+        url,
+        keywords: ["Deadlock", heroName, "win rate", "pick rate", "matchups"],
+        creator: { "@type": "Organization", name: "Deadlock API", url: SITE_URL },
+        isAccessibleForFree: true,
+        license: "https://github.com/deadlock-api/",
+      },
     });
   },
 });
@@ -151,8 +139,6 @@ function HeroDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Heroes", href: "/heroes" }, { label: heroName }]} />
-
       <div className="flex items-center gap-3">
         <HeroImage heroId={heroId} className="size-12" />
         <h1 className="text-3xl font-bold tracking-tight">{heroName}: Deadlock Win Rate &amp; Pick Rate</h1>
