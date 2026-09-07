@@ -104,10 +104,6 @@ CREATE TABLE IF NOT EXISTS match_player
         accolade_stat_value Int32,
         accolade_threshold_achieved Int32
     ) DEFAULT [],
-    x_min Nullable(Float32) DEFAULT NULL,
-    y_min Nullable(Float32) DEFAULT NULL,
-    x_max Nullable(Float32) DEFAULT NULL,
-    y_max Nullable(Float32) DEFAULT NULL,
     max_level UInt32 MATERIALIZED arrayMax(stats.level),
     max_player_damage UInt32 MATERIALIZED arrayMax(stats.player_damage),
     max_player_damage_taken UInt32 MATERIALIZED arrayMax(stats.player_damage_taken),
