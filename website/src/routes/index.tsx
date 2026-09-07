@@ -406,20 +406,18 @@ function IndexRoute() {
             const Icon = service.icon;
             const card = (
               <div className="group relative flex h-full flex-col rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/30 hover:bg-muted/30">
-                <div className="mb-3 flex items-start gap-4">
+                <div className="mb-3 flex items-center gap-3">
                   <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-muted transition-colors group-hover:border-primary/20 group-hover:bg-primary/5">
                     <Icon className="size-5 text-muted-foreground transition-colors group-hover:text-primary" />
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="flex items-center gap-1.5 font-semibold text-foreground">
-                      {service.title}
-                      {service.external && (
-                        <ExternalLink className="size-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                      )}
-                    </h3>
-                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{service.description}</p>
-                  </div>
+                  <h3 className="flex min-w-0 items-center gap-1.5 font-semibold text-foreground">
+                    {service.title}
+                    {service.external && (
+                      <ExternalLink className="size-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                    )}
+                  </h3>
                 </div>
+                <p className="text-sm leading-relaxed text-muted-foreground">{service.description}</p>
                 <div className="mt-auto pt-3">
                   <span className="flex items-center gap-1.5 text-sm font-medium text-primary transition-colors group-hover:text-primary">
                     {service.cta}
