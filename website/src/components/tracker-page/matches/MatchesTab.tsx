@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronUp } from "lucide-react";
 import { parseAsInteger, parseAsStringLiteral, useQueryState, useQueryStates } from "nuqs";
 import { type ComponentProps, Fragment, useEffect, useMemo, useRef, useState } from "react";
 
 import { PaginationControls } from "~/components/PaginationControls";
+import { Button } from "~/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
 import {
@@ -264,6 +265,17 @@ export function MatchesTab({
                         ranks={ranks}
                         heroSummary={heroSummaries.get(entry.hero_id) as TrackerSummary}
                       />
+                      <div className="mt-3 flex justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setExpandedMatchId(null)}
+                          className="h-6 gap-1 px-2 text-xs text-muted-foreground"
+                        >
+                          <ChevronUp className="size-3.5" />
+                          Collapse
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )}
