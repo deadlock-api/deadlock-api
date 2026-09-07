@@ -102,13 +102,18 @@ export function FilterToggleCell<T extends string>({
   active,
 }: FilterToggleCellProps<T>) {
   const inRoot = useContext(FilterRootContext);
+  const labelLength = options.reduce(
+    (length, option) => length + (typeof option.label === "string" ? option.label.length : 0),
+    0,
+  );
+  const isWide = options.length > 3 || labelLength > 10;
   return (
     <div
       className={cn(
         cellBase,
         inRoot ? cellInRoot : cellStandalone,
-        // Four or more segments outgrow a half-width phone cell and a third-width tablet cell.
-        inRoot && options.length > 3 && "max-md:basis-full md:max-lg:basis-2/3",
+        // Long segment rows outgrow a half-width phone cell and a third-width tablet cell.
+        inRoot && isWide && "max-md:basis-full md:max-lg:basis-2/3",
         active && activeUnderline,
       )}
     >
