@@ -1,9 +1,11 @@
 import { useQueries } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { parseAsInteger, useQueryState } from "nuqs";
+import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Suspense, useMemo } from "react";
 
-import BadgeDistributionChart from "~/components/badge-distribution/BadgeDistributionChart";
+import BadgeDistributionChart, {
+  BADGE_DISTRIBUTION_METRICS,
+} from "~/components/badge-distribution/BadgeDistributionChart";
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -57,6 +59,10 @@ function BadgeDistributionPage() {
   const { startDate, endDate, handleDateChange } = useDateRangeState();
   const [minDurationS, setMinDurationS] = useQueryState("min_duration_s", parseAsInteger);
   const [maxDurationS, setMaxDurationS] = useQueryState("max_duration_s", parseAsInteger);
+  const [metric, setMetric] = useQueryState(
+    "metric",
+    parseAsStringLiteral(BADGE_DISTRIBUTION_METRICS).withDefault("players"),
+  );
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
 
@@ -120,6 +126,8 @@ function BadgeDistributionPage() {
               <BadgeDistributionChart
                 badgeDistributionData={badgeDistributionQuery.data}
                 ranksData={ranks.data ?? []}
+                metric={metric}
+                onMetricChange={setMetric}
               />
             </Suspense>
           </ChunkErrorBoundary>

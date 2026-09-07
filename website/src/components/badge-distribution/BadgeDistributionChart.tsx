@@ -1,6 +1,6 @@
 import type { Rank } from "deadlock_api_client";
 import type { BadgeDistribution } from "deadlock_api_client";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Customized, Label, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartContainer } from "~/components/ui/chart";
@@ -8,12 +8,17 @@ import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { range } from "~/lib/utils";
 
+export const BADGE_DISTRIBUTION_METRICS = ["players", "matches"] as const;
+export type BadgeDistributionMetric = (typeof BADGE_DISTRIBUTION_METRICS)[number];
+
 export interface BadgeDistributionChartProps {
   badgeDistributionData: BadgeDistribution[];
   ranksData: Rank[];
+  metric: BadgeDistributionMetric;
+  onMetricChange: (metric: BadgeDistributionMetric) => void;
 }
 
-type Metric = "players" | "matches";
+type Metric = BadgeDistributionMetric;
 
 const METRIC_LABEL: Record<Metric, string> = { players: "Players", matches: "Matches" };
 
@@ -26,9 +31,12 @@ interface ChartEntry {
   isSpacer?: boolean;
 }
 
-export default function BadgeDistributionChart({ badgeDistributionData, ranksData }: BadgeDistributionChartProps) {
-  const [metric, setMetric] = useState<Metric>("players");
-
+export default function BadgeDistributionChart({
+  badgeDistributionData,
+  ranksData,
+  metric,
+  onMetricChange,
+}: BadgeDistributionChartProps) {
   const tierData = useMemo(() => {
     const map = new Map<number, Rank>();
     ranksData.forEach((r) => {
@@ -162,7 +170,7 @@ export default function BadgeDistributionChart({ badgeDistributionData, ranksDat
         <ToggleGroup
           type="single"
           value={metric}
-          onValueChange={(v) => v && setMetric(v as Metric)}
+          onValueChange={(v) => v && onMetricChange(v as Metric)}
           variant="outline"
           size="sm"
         >
