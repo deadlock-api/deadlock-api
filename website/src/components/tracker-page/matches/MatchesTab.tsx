@@ -11,12 +11,63 @@ import { PaginationControls } from "~/components/PaginationControls";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
-import { formatMatchDuration, isWin, MATCH_MODE_LABELS_BY_ID } from "~/lib/tracker/compute";
+import {
+  computeSessions,
+  formatMatchDuration,
+  isWin,
+  MATCH_MODE_LABELS_BY_ID,
+  type PlaySession,
+} from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { MatchRowDetails } from "./MatchRowDetails";
+
+function sessionDateLabel(unix: number): string {
+  const date = day.unix(unix);
+  const today = day().startOf("day");
+  if (date.isSame(today, "day")) return "Today";
+  if (date.isSame(today.subtract(1, "day"), "day")) return "Yesterday";
+  return date.format(date.isSame(today, "year") ? "ddd, MMM D" : "ddd, MMM D, YYYY");
+}
+
+function formatPlaytime(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.round((seconds % 3600) / 60);
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+}
+
+function SessionRow({ session }: { session: PlaySession }) {
+  return (
+    <TableRow className="hover:bg-transparent">
+      <TableCell colSpan={12} className="bg-muted/40 py-1.5 text-xs">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+          <span className="font-semibold">{sessionDateLabel(session.startUnix)}</span>
+          <span className="text-muted-foreground tabular-nums">
+            {day.unix(session.startUnix).format("HH:mm")} – {day.unix(session.endUnix).format("HH:mm")}
+          </span>
+          <span className="tabular-nums">
+            <span className={cn("font-semibold", WIN_TEXT_CLASS)}>{session.wins}W</span>
+            <span className="text-muted-foreground"> – </span>
+            <span className={cn("font-semibold", LOSS_TEXT_CLASS)}>{session.losses}L</span>
+          </span>
+          {session.rankDelta != null && session.rankDelta !== 0 && (
+            <span
+              className={cn("font-semibold tabular-nums", session.rankDelta > 0 ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS)}
+              title="Net rank change over the session"
+            >
+              {session.rankDelta > 0 ? `+${session.rankDelta}` : session.rankDelta}
+            </span>
+          )}
+          <span className="ml-auto text-muted-foreground tabular-nums">
+            {session.matches} {session.matches === 1 ? "match" : "matches"} · {formatPlaytime(session.totalTimeS)}
+          </span>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
 
 export function MatchesTab({
   entries,
@@ -36,6 +87,7 @@ export function MatchesTab({
     select: (heroes) => new Map(heroes.map((hero) => [hero.id, hero.name])),
   });
 
+  const sessions = useMemo(() => computeSessions(entries), [entries]);
   const totalPages = Math.max(1, Math.ceil(entries.length / itemsPerPage));
   const paginatedEntries = useMemo(
     () => entries.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage),
@@ -74,11 +126,15 @@ export function MatchesTab({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {paginatedEntries.map((entry) => {
+          {paginatedEntries.map((entry, index) => {
             const win = isWin(entry);
             const expanded = expandedMatchId === entry.match_id;
+            const session = sessions.get(entry.match_id);
+            const startsSession =
+              session != null && (index === 0 || sessions.get(paginatedEntries[index - 1].match_id) !== session);
             return (
               <Fragment key={entry.match_id}>
+                {startsSession && <SessionRow session={session} />}
                 <TableRow
                   className="cursor-pointer"
                   onClick={() => setExpandedMatchId(expanded ? null : entry.match_id)}

@@ -374,3 +374,52 @@ export function peakRank(entries: PlayerMatchHistoryEntry[]): PeakRank | null {
   }
   return peak;
 }
+
+export interface PlaySession {
+  /** Start time of the newest match in the session, unique per session. */
+  id: number;
+  startUnix: number;
+  endUnix: number;
+  matches: number;
+  wins: number;
+  losses: number;
+  /** Sum of the ranked deltas, or null when no match in the session had one. */
+  rankDelta: number | null;
+  totalTimeS: number;
+}
+
+const SESSION_GAP_S = 3 * 3600;
+
+/**
+ * Groups matches into play sessions, newest first. A new session begins once the time between the
+ * end of one match and the start of the next exceeds the gap. Expects entries sorted newest first.
+ */
+export function computeSessions(entries: PlayerMatchHistoryEntry[]): Map<number, PlaySession> {
+  const sessionByMatchId = new Map<number, PlaySession>();
+  let session: PlaySession | null = null;
+  let previous: PlayerMatchHistoryEntry | null = null;
+  for (const entry of entries) {
+    const endUnix = entry.start_time + entry.match_duration_s;
+    if (session === null || previous === null || previous.start_time - endUnix > SESSION_GAP_S) {
+      session = {
+        id: entry.start_time,
+        startUnix: entry.start_time,
+        endUnix,
+        matches: 0,
+        wins: 0,
+        losses: 0,
+        rankDelta: null,
+        totalTimeS: 0,
+      };
+    }
+    session.startUnix = entry.start_time;
+    session.matches++;
+    if (isWin(entry)) session.wins++;
+    else session.losses++;
+    session.totalTimeS += entry.match_duration_s;
+    if (entry.ranked_delta != null) session.rankDelta = (session.rankDelta ?? 0) + entry.ranked_delta;
+    sessionByMatchId.set(entry.match_id, session);
+    previous = entry;
+  }
+  return sessionByMatchId;
+}
