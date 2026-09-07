@@ -36,6 +36,8 @@ const ComboItems = memo(function ComboItems({ itemIds }: { itemIds: number[] }) 
   );
 });
 
+const combKey = (itemIds: number[]) => [...itemIds].sort((a, b) => a - b).join("-");
+
 export function ItemCombStatsTable({
   columns,
   limit,
@@ -165,14 +167,22 @@ export function ItemCombStatsTable({
     if (!prevItemCombData) return undefined;
     const map = new Map<string, { winrate: number; matches: number }>();
     for (const row of prevItemCombData) {
-      const key = [...row.item_ids].sort((a, b) => a - b).join("-");
-      map.set(key, {
+      map.set(combKey(row.item_ids), {
         winrate: row.wins / row.matches,
         matches: row.matches,
       });
     }
     return map;
   }, [prevItemCombData]);
+  // The previous interval is normalized against the same displayed rows so both
+  // periods share a scale; comparing raw counts across intervals of different
+  // length produced deltas of several thousand percent.
+  const prevMatchesOfDisplayed = useMemo(
+    () => limitedData.map((row) => prevStatsMap?.get(combKey(row.item_ids))?.matches ?? 0),
+    [limitedData, prevStatsMap],
+  );
+  const prevSumMatches = useMemo(() => prevMatchesOfDisplayed.reduce((acc, m) => acc + m, 0), [prevMatchesOfDisplayed]);
+  const prevMaxMatches = useMemo(() => Math.max(...prevMatchesOfDisplayed, 0), [prevMatchesOfDisplayed]);
 
   return (
     <>
@@ -247,7 +257,7 @@ export function ItemCombStatsTable({
           )}
           <TableBody>
             {limitedData.map((row, index) => {
-              const prev = prevStatsMap?.get([...row.item_ids].sort((a, b) => a - b).join("-"));
+              const prev = prevStatsMap?.get(combKey(row.item_ids));
               return (
                 <TableRow key={row.item_ids.join("-")}>
                   {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
@@ -295,7 +305,7 @@ export function ItemCombStatsTable({
                         color={"#22d3ee"}
                         label={`${Math.round((row.matches / maxMatchesVal) * 100).toFixed(0)}%`}
                         delta={
-                          prev !== undefined ? row.matches / maxMatchesVal - prev.matches / maxMatchesVal : undefined
+                          prev !== undefined ? row.matches / maxMatchesVal - prev.matches / prevMaxMatches : undefined
                         }
                         tooltip={
                           <div className="flex flex-col gap-1 text-xs">
@@ -312,7 +322,9 @@ export function ItemCombStatsTable({
                             {prev !== undefined && (
                               <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
                                 <span className="text-muted-foreground">Previous</span>
-                                <span className="font-medium">{((prev.matches / sumMatches) * 100).toFixed(4)}%</span>
+                                <span className="font-medium">
+                                  {((prev.matches / prevSumMatches) * 100).toFixed(4)}%
+                                </span>
                               </div>
                             )}
                           </div>
