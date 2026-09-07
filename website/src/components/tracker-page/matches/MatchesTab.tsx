@@ -308,7 +308,11 @@ export function MatchesTab({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setExpandedMatchId(null)}
+                          onClick={() => {
+                            setExpandedMatchId(null);
+                            // Brings the row back into view and keeps keyboard focus on it.
+                            linkedRowRef.current?.focus();
+                          }}
                           className="h-6 gap-1 px-2 text-xs text-muted-foreground"
                         >
                           <ChevronUp className="size-3.5" />
