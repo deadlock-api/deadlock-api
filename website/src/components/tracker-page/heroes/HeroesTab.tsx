@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { HeroStats, PlayersApiPlayerHeroStatsRequest } from "deadlock_api_client";
+import type { AnalyticsApiHeroStatsRequest, HeroStats, PlayersApiPlayerHeroStatsRequest } from "deadlock_api_client";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -9,10 +9,13 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { QueryRenderer } from "~/components/QueryRenderer";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
+import { extractBadgeMap } from "~/lib/leaderboard";
 import { cn } from "~/lib/utils";
-import { trackerHeroStatsQueryOptions } from "~/queries/tracker-queries";
+import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
+import { ranksQueryOptions } from "~/queries/ranks-query";
+import { trackerHeroStatsQueryOptions, trackerRankQueryOptions } from "~/queries/tracker-queries";
 
-import { WIN_COLOR } from "../shared/colors";
+import { LOSS_TEXT_CLASS, WIN_COLOR, WIN_TEXT_CLASS } from "../shared/colors";
 
 interface HeroRow {
   heroId: number;
@@ -43,6 +46,35 @@ function toRow(stats: HeroStats): HeroRow {
     lastHitsPerMin: stats.last_hits_per_min,
     lastPlayed: stats.last_played,
   };
+}
+
+interface HeroAverage {
+  winrate: number;
+  kda: number;
+}
+
+function DeltaBadge({
+  value,
+  digits,
+  suffix = "",
+  averageLabel,
+}: {
+  value: number;
+  digits: number;
+  suffix?: string;
+  averageLabel: string;
+}) {
+  if (Math.abs(value) < 0.5 * 10 ** -digits) return null;
+  return (
+    <span
+      className={cn("hidden text-xs tabular-nums @lg:inline", value > 0 ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS)}
+      title={averageLabel}
+    >
+      {value > 0 ? "+" : "−"}
+      {Math.abs(value).toFixed(digits)}
+      {suffix}
+    </span>
+  );
 }
 
 /** `className` hides a column until the table's container is wide enough for it. */
@@ -118,6 +150,45 @@ export function HeroesTab({
 
   const query = useQuery(trackerHeroStatsQueryOptions(params));
 
+  const { data: rank } = useQuery(trackerRankQueryOptions(accountId));
+  const { data: ranks = [] } = useQuery(ranksQueryOptions);
+  const badge = rank != null && rank.badge > 0 ? rank.badge : null;
+  const tier = badge != null ? Math.floor(badge / 10) : null;
+  const tierName = badge != null ? extractBadgeMap(ranks).get(badge)?.name : undefined;
+
+  const averageParams = useMemo(
+    (): AnalyticsApiHeroStatsRequest => ({
+      gameMode: gameMode as AnalyticsApiHeroStatsRequest["gameMode"],
+      matchMode,
+      minUnixTimestamp: minUnixTimestamp ?? undefined,
+      maxUnixTimestamp: maxUnixTimestamp ?? undefined,
+      minAverageBadge: tier != null ? tier * 10 + 1 : undefined,
+      maxAverageBadge: tier != null ? tier * 10 + 6 : undefined,
+      minHeroMatches: 0,
+      minHeroMatchesTotal: 0,
+    }),
+    [gameMode, matchMode, minUnixTimestamp, maxUnixTimestamp, tier],
+  );
+  const { data: averages } = useQuery({
+    ...heroStatsQueryOptions(averageParams),
+    select: (stats) =>
+      new Map<number, HeroAverage>(
+        stats
+          .filter((stat) => stat.matches > 0)
+          .map((stat) => [
+            stat.hero_id,
+            {
+              winrate: stat.wins / stat.matches,
+              kda:
+                stat.total_deaths > 0
+                  ? (stat.total_kills + stat.total_assists) / stat.total_deaths
+                  : stat.total_kills + stat.total_assists,
+            },
+          ]),
+      ),
+  });
+  const bracketLabel = tierName ? `${tierName} players` : "all players";
+
   const handleSort = (key: keyof Omit<HeroRow, "heroId">) => {
     if (sortKey === key) {
       setSortDir(sortDir === "desc" ? "asc" : "desc");
@@ -175,23 +246,45 @@ export function HeroesTab({
                         <HeroName heroId={row.heroId} className="max-w-[80px] @md:max-w-[120px]" />
                       </div>
                     </TableCell>
-                    {COLUMNS.map((column) => (
-                      <TableCell key={column.key} className={cn("text-right tabular-nums", column.className)}>
-                        {column.key === "winrate" ? (
-                          <div className="flex items-center justify-end gap-2">
-                            <span>{column.format(row)}</span>
-                            <div className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-muted @md:block">
-                              <div
-                                className="h-full rounded-full"
-                                style={{ width: `${Math.round(row.winrate * 100)}%`, backgroundColor: WIN_COLOR }}
-                              />
+                    {COLUMNS.map((column) => {
+                      const average = averages?.get(row.heroId);
+                      return (
+                        <TableCell key={column.key} className={cn("text-right tabular-nums", column.className)}>
+                          {column.key === "winrate" ? (
+                            <div className="flex items-center justify-end gap-2">
+                              {average && (
+                                <DeltaBadge
+                                  value={(row.winrate - average.winrate) * 100}
+                                  digits={1}
+                                  suffix="%"
+                                  averageLabel={`${bracketLabel} average: ${(average.winrate * 100).toFixed(1)}%`}
+                                />
+                              )}
+                              <span>{column.format(row)}</span>
+                              <div className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-muted @md:block">
+                                <div
+                                  className="h-full rounded-full"
+                                  style={{ width: `${Math.round(row.winrate * 100)}%`, backgroundColor: WIN_COLOR }}
+                                />
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          column.format(row)
-                        )}
-                      </TableCell>
-                    ))}
+                          ) : column.key === "kda" ? (
+                            <div className="flex items-center justify-end gap-2">
+                              {average && (
+                                <DeltaBadge
+                                  value={row.kda - average.kda}
+                                  digits={2}
+                                  averageLabel={`${bracketLabel} average: ${average.kda.toFixed(2)}`}
+                                />
+                              )}
+                              <span>{column.format(row)}</span>
+                            </div>
+                          ) : (
+                            column.format(row)
+                          )}
+                        </TableCell>
+                      );
+                    })}
                   </TableRow>
                 ))}
                 {rows.length === 0 && (
@@ -203,6 +296,11 @@ export function HeroesTab({
                 )}
               </TableBody>
             </Table>
+            {averages && rows.length > 0 && (
+              <p className="mt-2 hidden text-xs text-muted-foreground @lg:block">
+                Win rate and KDA deltas compare against {bracketLabel} on the same hero in the selected range.
+              </p>
+            )}
           </div>
         );
       }}
