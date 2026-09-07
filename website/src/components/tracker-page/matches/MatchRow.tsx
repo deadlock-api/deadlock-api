@@ -21,7 +21,7 @@ import {
 } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 
-import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
+import { LOSS_DOT_CLASS, LOSS_TEXT_CLASS, WIN_DOT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { RankDelta } from "../shared/RankDelta";
 
 const UNSCORED_OUTCOME_MARKERS: Record<UnscoredOutcome, { icon: typeof Gavel; label: string; description: string }> = {
@@ -29,6 +29,11 @@ const UNSCORED_OUTCOME_MARKERS: Record<UnscoredOutcome, { icon: typeof Gavel; la
   party_penalized: { icon: Gavel, label: "Party penalized", description: "Penalized with the party for this match" },
   not_scored: { icon: CircleDashed, label: "Not scored", description: "This match did not count" },
 };
+
+/** A thin bar along the left edge of a `relative` cell, colored by the match result. */
+export function ResultEdge({ win }: { win: boolean }) {
+  return <span aria-hidden className={cn("absolute inset-y-0 left-0 w-0.5", win ? WIN_DOT_CLASS : LOSS_DOT_CLASS)} />;
+}
 
 function UnscoredOutcomeMarker({ outcome }: { outcome: UnscoredOutcome }) {
   const { icon: Icon, label, description } = UNSCORED_OUTCOME_MARKERS[outcome];
@@ -87,7 +92,8 @@ export function MatchRow({
         onToggle();
       }}
     >
-      <TableCell>
+      <TableCell className="relative">
+        <ResultEdge win={win} />
         <div className="flex items-center gap-1">
           <span className={cn("font-bold", win ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS)}>{win ? "W" : "L"}</span>
           {rounds && (

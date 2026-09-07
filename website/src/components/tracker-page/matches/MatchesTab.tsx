@@ -13,6 +13,7 @@ import {
   computeSessions,
   formatMatchDuration,
   formatPlaytime,
+  isWin,
   MATCH_SORT_KEYS,
   type MatchSortKey,
   type PlaySession,
@@ -29,7 +30,7 @@ import { heroesQueryOptions } from "~/queries/asset-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { RankDelta } from "../shared/RankDelta";
-import { MatchRow } from "./MatchRow";
+import { MatchRow, ResultEdge } from "./MatchRow";
 import { MatchRowDetails } from "./MatchRowDetails";
 
 const COLUMN_COUNT = 13;
@@ -297,7 +298,8 @@ export function MatchesTab({
                 />
                 {expanded && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={COLUMN_COUNT} className="bg-muted/30 p-4 whitespace-normal">
+                    <TableCell colSpan={COLUMN_COUNT} className="relative bg-muted/30 p-4 whitespace-normal">
+                      <ResultEdge win={isWin(entry)} />
                       <MatchRowDetails
                         entry={entry}
                         accountId={accountId}
