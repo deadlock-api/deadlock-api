@@ -17,6 +17,7 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
+import { formatSignedPercent } from "~/lib/format";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
@@ -428,16 +429,18 @@ function SortableHead({
 
 function DeltaBadge({ delta, isPercent }: { delta: number | null; isPercent: boolean }) {
   if (delta === null) return <span className="text-xs text-muted-foreground/40">—</span>;
-  const dir = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
+  // Rounded to the displayed precision so the arrow and sign agree with the printed value.
+  const rounded = Math.round(delta * 10) / 10;
+  const dir = rounded > 0 ? "up" : rounded < 0 ? "down" : "flat";
   const cls = {
     up: "bg-green-500/10 text-green-500",
     down: "bg-red-500/10 text-red-500",
     flat: "bg-muted text-muted-foreground",
   }[dir];
-  const sign = delta > 0 ? "+" : "";
+  const sign = rounded > 0 ? "+" : "";
   const text = isPercent
-    ? `${sign}${delta.toFixed(1)}%`
-    : `${sign}${delta.toLocaleString(undefined, { maximumFractionDigits: 1 })}`;
+    ? `${sign}${rounded.toFixed(1)}%`
+    : `${sign}${rounded.toLocaleString(undefined, { maximumFractionDigits: 1 })}`;
   return (
     <span
       className={cn("inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[11px] font-medium tabular-nums", cls)}
@@ -582,7 +585,7 @@ function DeltaTooltip({
           <TooltipRow label={bucketLabel} value={fmt(bucketVal)} />
           <div className="my-1 border-t border-border" />
           <TooltipRow label="Difference" value={fmt(diff)} />
-          {pct !== null && <TooltipRow label="Relative" value={`${pct > 0 ? "+" : ""}${pct.toFixed(1)}%`} />}
+          {pct !== null && <TooltipRow label="Relative" value={formatSignedPercent(pct / 100)} />}
         </div>
       </TooltipContent>
     </Tooltip>
