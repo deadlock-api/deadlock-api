@@ -10,6 +10,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/games": "Games",
   "/heatmap": "Kill Heatmap",
   "/players": "Player Analytics",
+  "/tracker": "Player Tracker",
   "/streamkit": "Stream Kit",
   "/ingest-cache": "Data Ingest",
   "/data-privacy": "Data Privacy",

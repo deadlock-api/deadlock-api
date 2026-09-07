@@ -34,7 +34,7 @@ export const Route = createFileRoute("/players_/$accountId")({
   component: TrackerRoute,
   loader: async ({ context: { queryClient }, params }) => {
     const accountId = Number(parseSteamIdToId3(params.accountId.trim()));
-    if (!Number.isInteger(accountId) || accountId <= 0) throw notFound();
+    if (!Number.isInteger(accountId) || accountId <= 0 || accountId > 4294967295) throw notFound();
     // Canonicalize SteamID64 (or bracketed) URLs to the SteamID3 form.
     if (String(accountId) !== params.accountId) {
       throw redirect({ to: "/players/$accountId", params: { accountId: String(accountId) } });
