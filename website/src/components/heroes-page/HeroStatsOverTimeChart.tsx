@@ -81,11 +81,12 @@ export function HeroStatsOverTimeChart({
     enabled: isBanRate,
   });
 
-  const heroStatMap: { [key: number]: [number, number][] } = useMemo(() => {
+  // Entries are [heroId, stat, matches]; ban rates carry no match count.
+  const heroStatMap: { [key: number]: [number, number, number?][] } = useMemo(() => {
     if (isBanRate) {
       if (!banData) return {};
       const ratesByBucket = computeBanRatesByBucket(banData);
-      const map: Record<number, [number, number][]> = {};
+      const map: Record<number, [number, number, number?][]> = {};
       for (const [bucket, heroRates] of ratesByBucket) {
         map[bucket] = [];
         for (const [heroId, rate] of heroRates) {
@@ -94,11 +95,11 @@ export function HeroStatsOverTimeChart({
       }
       return map;
     }
-    const map: Record<number, [number, number][]> = {};
+    const map: Record<number, [number, number, number?][]> = {};
     if (heroData) {
       for (const hero of heroData) {
         if (!map[hero.bucket]) map[hero.bucket] = [];
-        map[hero.bucket].push([hero.hero_id, hero_stats_transform(hero, heroStat)]);
+        map[hero.bucket].push([hero.hero_id, hero_stats_transform(hero, heroStat), hero.matches]);
       }
     }
     return map;
@@ -138,8 +139,9 @@ export function HeroStatsOverTimeChart({
     () =>
       Object.entries(heroStatMap).map(([date, stats]) => {
         const point: Record<string, Date | number> = { date: day.unix(Number(date)).toDate() };
-        for (const [heroId, stat] of stats) {
+        for (const [heroId, stat, matches] of stats) {
           point[heroId] = stat > 100 ? Math.round(stat) : Math.round(stat * 100) / 100;
+          if (matches != null) point[`${heroId}_matches`] = matches;
         }
         return point;
       }),
@@ -291,7 +293,11 @@ export function HeroStatsOverTimeChart({
                 labelFormatter={(label) => day(label).format("YYYY-MM-DD")}
                 contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
                 itemStyle={{ color: "#e5e5e5" }}
-                formatter={(value) => value}
+                formatter={(value, _name, item) => {
+                  const matches = item.payload?.[`${item.dataKey}_matches`];
+                  if (matches == null || heroStat === "matches") return value;
+                  return `${value} (${matches.toLocaleString("en-US")} matches)`;
+                }}
                 itemSorter={() => 0}
               />
               <Legend
