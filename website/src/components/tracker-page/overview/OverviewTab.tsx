@@ -5,7 +5,7 @@ import { BadgeImage } from "~/components/BadgeImage";
 import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { day } from "~/dayjs";
 import {
   computeActivity,
@@ -132,11 +132,13 @@ export function OverviewTab({
           </Card>
 
           <Card>
-            <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardHeader>
               <CardTitle className="text-base">Recent matches</CardTitle>
-              <Button variant="ghost" size="sm" onClick={onViewAllMatches}>
-                View all
-              </Button>
+              <CardAction>
+                <Button variant="ghost" size="sm" onClick={onViewAllMatches} className="-my-1">
+                  View all
+                </Button>
+              </CardAction>
             </CardHeader>
             <CardContent className="space-y-1.5">
               {recentMatches.length === 0 && <div className="text-sm text-muted-foreground">No matches yet.</div>}

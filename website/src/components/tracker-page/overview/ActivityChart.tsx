@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { day } from "~/dayjs";
 import type { Activity, ActivityBucket } from "~/lib/tracker/compute";
 
@@ -63,15 +63,13 @@ export function ActivityChart({ activity }: { activity: Activity }) {
 
   return (
     <Card>
-      <CardHeader className="flex-row items-start justify-between space-y-0">
-        <div>
-          <CardTitle className="text-base">Activity</CardTitle>
-          <CardDescription>{granularity === "week" ? "Matches per week" : "Matches per month"}</CardDescription>
-        </div>
-        <div className="flex items-center gap-3">
+      <CardHeader>
+        <CardTitle className="text-base">Activity</CardTitle>
+        <CardDescription>{granularity === "week" ? "Matches per week" : "Matches per month"}</CardDescription>
+        <CardAction className="flex items-center gap-3">
           <LegendSwatch color={WIN_COLOR} label="Wins" />
           <LegendSwatch color={LOSS_COLOR} label="Losses" />
-        </div>
+        </CardAction>
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (

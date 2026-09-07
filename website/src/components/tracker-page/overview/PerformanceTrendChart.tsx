@@ -78,7 +78,7 @@ export function PerformanceTrendChart({
 
   return (
     <Card>
-      <CardHeader className="flex-row flex-wrap items-start justify-between gap-2 space-y-0">
+      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2">
         <div>
           <CardTitle className="text-base">Performance trend</CardTitle>
           <CardDescription>Rolling average over the last {window} matches</CardDescription>
