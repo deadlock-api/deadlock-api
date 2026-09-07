@@ -8,6 +8,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
+import { useHydrated } from "~/hooks/useHydrated";
 import { cn } from "~/lib/utils";
 
 const OPTION_COUNT = 4;
@@ -68,7 +69,9 @@ function renderNameOption<T extends FlashcardEntry>(entry: T): ReactNode {
 }
 
 export function FlashcardGame<T extends FlashcardEntry>(props: FlashcardGameProps<T>) {
-  if (props.isLoading) {
+  // The first card is drawn at random, so the server and client would disagree on it.
+  const hydrated = useHydrated();
+  if (props.isLoading || !hydrated) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <LoadingLogo className="h-16 w-16 animate-pulse" />

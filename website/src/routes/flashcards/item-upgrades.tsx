@@ -9,6 +9,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
+import { useHydrated } from "~/hooks/useHydrated";
 import { seo } from "~/lib/seo";
 import { cn } from "~/lib/utils";
 import { filterShopableItems, itemUpgradesQueryOptions } from "~/queries/asset-queries";
@@ -188,13 +189,15 @@ function pickCard(pool: UpgradePathEntry[], excludeIds: Set<number>): UpgradePat
 
 function ItemUpgradePathFlashcards() {
   const { data: items, isLoading } = useQuery(itemUpgradesQueryOptions);
+  // The first card is drawn at random, so the server and client would disagree on it.
+  const hydrated = useHydrated();
 
   const pool = useMemo(() => {
     if (!items) return [];
     return buildUpgradePathPool(items);
   }, [items]);
 
-  if (isLoading) {
+  if (isLoading || !hydrated) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <LoadingLogo className="h-16 w-16 animate-pulse" />
