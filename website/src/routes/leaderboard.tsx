@@ -10,13 +10,17 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { getDefaultRegion } from "~/lib/region";
+import { fetchDefaultRegion } from "~/lib/region-fns";
 import { seo } from "~/lib/seo";
 import { leaderboardQueryOptions } from "~/queries/leaderboard-queries";
 
 export const Route = createFileRoute("/leaderboard")({
   component: LeaderboardPage,
   loader: async ({ context: { queryClient } }) => {
-    await prefetchSafe(queryClient.ensureQueryData(leaderboardQueryOptions(getDefaultRegion(), null)));
+    // Resolve the default on the server so the client hydrates with the same region.
+    const defaultRegion = typeof window === "undefined" ? await fetchDefaultRegion() : getDefaultRegion();
+    await prefetchSafe(queryClient.ensureQueryData(leaderboardQueryOptions(defaultRegion, null)));
+    return { defaultRegion };
   },
   head: () =>
     seo({
@@ -41,10 +45,8 @@ export const Route = createFileRoute("/leaderboard")({
 const REGION_VALUES = Object.values(LeaderboardRegionEnum) as [LeaderboardRegionEnum, ...LeaderboardRegionEnum[]];
 
 function LeaderboardPage() {
-  const [region, setRegion] = useQueryState(
-    "region",
-    parseAsStringLiteral(REGION_VALUES).withDefault(getDefaultRegion()),
-  );
+  const { defaultRegion } = Route.useLoaderData();
+  const [region, setRegion] = useQueryState("region", parseAsStringLiteral(REGION_VALUES).withDefault(defaultRegion));
   const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger);
 
   const [leaderboardQuery] = useQueries({
