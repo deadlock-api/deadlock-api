@@ -41,6 +41,7 @@ export default function StatTrendChart({ params, stat, bucket, onBucketChange }:
       .map((entry) => ({
         date: day.unix(entry.bucket).valueOf(),
         value: entry[stat.key] as number,
+        matches: entry.total_matches,
       }));
   }, [data, stat.key]);
   const span = valueSpan(chartData);
@@ -108,7 +109,12 @@ export default function StatTrendChart({ params, stat, bucket, onBucketChange }:
               />
               <Tooltip
                 labelFormatter={(label) => day(label).format(bucketDef.tooltipFormat)}
-                formatter={(value) => [formatStatValue(value as number, stat.format), stat.label]}
+                formatter={(value, _name, item) => {
+                  const formatted = formatStatValue(value as number, stat.format);
+                  const matches = item.payload?.matches;
+                  if (matches == null || stat.key === "total_matches") return [formatted, stat.label];
+                  return [`${formatted} (${matches.toLocaleString("en-US")} matches)`, stat.label];
+                }}
                 contentStyle={{
                   backgroundColor: "#0a0a0a",
                   borderColor: "#27272a",

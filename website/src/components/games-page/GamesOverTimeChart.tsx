@@ -40,11 +40,12 @@ export default function GamesOverTimeChart({
 
   const chartData = useMemo(() => {
     if (!data) return [];
-    return data
+    return [...data]
       .sort((a, b) => a.bucket - b.bucket)
       .map((entry) => ({
         date: day.unix(entry.bucket).valueOf(),
         value: entry[stat as keyof typeof entry] as number,
+        matches: entry.total_matches,
       }));
   }, [data, stat]);
   const span = valueSpan(chartData);
@@ -105,10 +106,12 @@ export default function GamesOverTimeChart({
                 />
                 <Tooltip
                   labelFormatter={(label) => day(label).format("YYYY-MM-DD")}
-                  formatter={(value) => [
-                    statDef ? formatStatValue(value as number, statDef.format) : value,
-                    statDef?.label ?? stat,
-                  ]}
+                  formatter={(value, _name, item) => {
+                    const formatted = statDef ? formatStatValue(value as number, statDef.format) : value;
+                    const matches = item.payload?.matches;
+                    if (matches == null || stat === "total_matches") return [formatted, statDef?.label ?? stat];
+                    return [`${formatted} (${matches.toLocaleString("en-US")} matches)`, statDef?.label ?? stat];
+                  }}
                   contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
                   itemStyle={{ color: "#e5e5e5" }}
                 />
