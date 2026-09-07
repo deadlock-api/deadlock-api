@@ -93,8 +93,10 @@ export function soulsPerMinute(entry: PlayerMatchHistoryEntry): number {
   return entry.match_duration_s > 0 ? entry.net_worth / (entry.match_duration_s / 60) : 0;
 }
 
-export type MatchSortKey = "kda" | "souls" | "soulsPerMin" | "lastHits" | "duration" | "rankDelta" | "played";
-export type SortDir = "asc" | "desc";
+export const MATCH_SORT_KEYS = ["kda", "souls", "soulsPerMin", "lastHits", "duration", "rankDelta", "played"] as const;
+export type MatchSortKey = (typeof MATCH_SORT_KEYS)[number];
+export const SORT_DIRS = ["asc", "desc"] as const;
+export type SortDir = (typeof SORT_DIRS)[number];
 
 export function kdaRatio(entry: PlayerMatchHistoryEntry): number {
   return entry.player_deaths > 0

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
 import { ArrowDown, ArrowUp } from "lucide-react";
-import { parseAsInteger, useQueryState } from "nuqs";
+import { parseAsInteger, parseAsStringLiteral, useQueryState, useQueryStates } from "nuqs";
 import { type ComponentProps, Fragment, useEffect, useMemo, useRef, useState } from "react";
 
 import { PaginationControls } from "~/components/PaginationControls";
@@ -10,8 +10,10 @@ import { day } from "~/dayjs";
 import {
   computeSessions,
   formatPlaytime,
+  MATCH_SORT_KEYS,
   type MatchSortKey,
   type PlaySession,
+  SORT_DIRS,
   type SortDir,
   sortMatches,
   summarizeByHero,
@@ -103,14 +105,17 @@ export function MatchesTab({
   accountId: number;
 }) {
   const [expandedMatchId, setExpandedMatchId] = useQueryState("match", parseAsInteger);
+  const [{ sort: sortKey, dir: sortDir }, setSort] = useQueryStates({
+    sort: parseAsStringLiteral(MATCH_SORT_KEYS).withDefault("played"),
+    dir: parseAsStringLiteral(SORT_DIRS).withDefault("desc"),
+  });
+  const sortedEntries = useMemo(() => sortMatches(entries, sortKey, sortDir), [entries, sortKey, sortDir]);
   const [itemsPerPage, setItemsPerPage] = useState(25);
-  // A shared link opens on the page holding its match; entries arrive newest first, matching the default sort.
+  // A shared link opens on the page holding its match.
   const [currentPage, setCurrentPage] = useState(() => {
-    const index = entries.findIndex((entry) => entry.match_id === expandedMatchId);
+    const index = sortedEntries.findIndex((entry) => entry.match_id === expandedMatchId);
     return index === -1 ? 0 : Math.floor(index / itemsPerPage);
   });
-  const [sortKey, setSortKey] = useState<MatchSortKey>("played");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const linkedRowRef = useRef<HTMLTableRowElement>(null);
   useEffect(() => {
@@ -118,12 +123,7 @@ export function MatchesTab({
   }, []);
 
   const handleSort = (key: MatchSortKey) => {
-    if (sortKey === key) {
-      setSortDir(sortDir === "desc" ? "asc" : "desc");
-    } else {
-      setSortKey(key);
-      setSortDir("desc");
-    }
+    setSort(sortKey === key ? { dir: sortDir === "desc" ? "asc" : "desc" } : { sort: key, dir: "desc" });
     setCurrentPage(0);
   };
 
@@ -137,7 +137,6 @@ export function MatchesTab({
     () => (sortKey === "played" ? computeSessions(entries) : new Map<number, PlaySession>()),
     [entries, sortKey],
   );
-  const sortedEntries = useMemo(() => sortMatches(entries, sortKey, sortDir), [entries, sortKey, sortDir]);
   const heroSummaries = useMemo(() => summarizeByHero(entries), [entries]);
   const totalPages = Math.max(1, Math.ceil(entries.length / itemsPerPage));
   const paginatedEntries = useMemo(
