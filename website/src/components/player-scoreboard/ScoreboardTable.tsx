@@ -124,7 +124,7 @@ export function ScoreboardTable({
             <TableHead className="w-[5ch] text-right">#</TableHead>
             <TableHead>Player</TableHead>
             {sortBy !== "matches" && (
-              <TableHead className="text-right">
+              <TableHead className="hidden text-right sm:table-cell">
                 <button
                   type="button"
                   onClick={() => {
@@ -191,11 +191,15 @@ export function ScoreboardTable({
                         )}
                       </>
                     )}
-                    {accountId != null && <span className="text-xs text-muted-foreground">[{accountId}]</span>}
+                    {accountId != null && (
+                      <span className="hidden text-xs text-muted-foreground sm:inline">[{accountId}]</span>
+                    )}
                   </div>
                 </TableCell>
                 {sortBy !== "matches" && (
-                  <TableCell className="text-right">{entry.matches.toLocaleString("en-US")}</TableCell>
+                  <TableCell className="hidden text-right sm:table-cell">
+                    {entry.matches.toLocaleString("en-US")}
+                  </TableCell>
                 )}
                 <TableCell className="text-right">{renderValue(entry.value)}</TableCell>
               </TableRow>
