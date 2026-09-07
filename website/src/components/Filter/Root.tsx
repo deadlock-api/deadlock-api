@@ -1,18 +1,19 @@
 import { cn } from "~/lib/utils";
 
-import { FilterDescriptionProvider } from "./FilterDescription";
+import { FilterRootContext } from "./FilterCell";
 
 export function Root({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <div
       className={cn(
-        "relative mx-auto flex w-fit flex-wrap items-center justify-center gap-2",
-        "rounded-2xl border border-white/[0.06] bg-white/[0.03] px-5 py-3.5",
-        "shadow-[0_0_0_1px_rgba(0,0,0,0.3),0_2px_8px_rgba(0,0,0,0.25)]",
+        "relative mx-auto w-full overflow-hidden rounded-xl border bg-card shadow-[0_2px_8px_rgba(0,0,0,0.25)] lg:w-fit",
         className,
       )}
     >
-      <FilterDescriptionProvider>{children}</FilterDescriptionProvider>
+      {/* Every cell draws a right and bottom hairline; pulling the grid 1px past the edge hides the outer ones. */}
+      <div className="-mr-px -mb-px grid grid-cols-2 md:grid-cols-3 lg:flex lg:flex-wrap lg:items-stretch">
+        <FilterRootContext.Provider value={true}>{children}</FilterRootContext.Provider>
+      </div>
     </div>
   );
 }

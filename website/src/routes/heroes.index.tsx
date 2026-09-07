@@ -13,9 +13,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { ALL_SORT_BY_VALUES } from "~/components/player-scoreboard/sort-options";
 import { QueryRenderer } from "~/components/QueryRenderer";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
-import { HeroSelector } from "~/components/selectors/HeroSelector";
 import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
-import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
@@ -161,8 +159,6 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
   const filters = useHeroFilters(initialTab);
   const [groupByType, setGroupByType] = useQueryState("group_by_type", parseAsBoolean.withDefault(false));
   const groupByTypeId = useId();
-  const sameLaneFilterId1 = useId();
-  const sameLaneFilterId2 = useId();
 
   const [scoreboardSortBy, setScoreboardSortBy] = useQueryState(
     "scoreboard_sort_by",
@@ -390,18 +386,6 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
         <TabsContent value="matchups">
           <div className="mt-4 flex flex-col gap-4">
             <h2 className="sr-only">Hero Matchups</h2>
-            <div className="flex flex-wrap items-center justify-center gap-8 sm:flex-nowrap">
-              <div className="flex items-center gap-2">
-                <Label htmlFor={sameLaneFilterId1} className="text-sm font-semibold text-nowrap text-foreground">
-                  Same Lane Filter
-                </Label>
-                <Checkbox
-                  id={sameLaneFilterId1}
-                  checked={filters.sameLaneFilter}
-                  onCheckedChange={(i) => filters.setSameLaneFilter(i === true)}
-                />
-              </div>
-            </div>
             <div className="flex flex-col gap-4">
               <ChunkErrorBoundary>
                 <Suspense fallback={<LoadingLogo />}>
@@ -448,27 +432,6 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
         <TabsContent value="hero-matchup-details">
           <div className="flex flex-col gap-4">
             <h2 className="sr-only">Hero Matchup Details</h2>
-            <div className="flex flex-wrap items-center justify-center gap-8 sm:flex-nowrap">
-              <HeroSelector
-                selectedHero={filters.heroId}
-                onHeroSelected={(selectedHeroId) => {
-                  if (!selectedHeroId) return;
-                  filters.setHeroId(selectedHeroId);
-                }}
-              />
-              <div className="flex flex-col flex-wrap items-center gap-2 sm:flex-nowrap">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor={sameLaneFilterId2} className="text-sm font-semibold text-nowrap text-foreground">
-                    Same Lane Filter
-                  </Label>
-                  <Checkbox
-                    id={sameLaneFilterId2}
-                    checked={filters.sameLaneFilter}
-                    onCheckedChange={(i) => filters.setSameLaneFilter(i === true)}
-                  />
-                </div>
-              </div>
-            </div>
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingLogo />}>
                 <div className="grid grid-cols-2 gap-4">

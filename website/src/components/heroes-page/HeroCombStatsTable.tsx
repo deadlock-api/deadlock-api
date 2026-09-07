@@ -1,22 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
-import { parseAsArrayOf, parseAsInteger, useQueryState } from "nuqs";
-import { useId, useMemo } from "react";
+import { useMemo } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
-import { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import type { MatchMode } from "~/components/selectors/MatchModeSelector";
-import { Slider } from "~/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
-import { useDraftValue } from "~/hooks/useDraftValue";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { queryKeys } from "~/queries/query-keys";
+
+import { useHeroCombFilters } from "./useHeroCombFilters";
 
 export function HeroCombStatsTable({
   columns,
@@ -47,21 +45,7 @@ export function HeroCombStatsTable({
   gameMode?: GameMode;
   matchMode?: MatchMode;
 }) {
-  const combSizeId = useId();
-  const combsToShowId = useId();
-
-  const [combSizeFilter, setCombSizeFilter] = useQueryState("comb_size", parseAsInteger.withDefault(2));
-  const [combSizeDraft, setCombSizeDraft] = useDraftValue(combSizeFilter);
-  const [combsToShow, setCombsToShow] = useQueryState("combs_to_show", parseAsInteger.withDefault(limit ?? 50));
-  const [combsToShowDraft, setCombsToShowDraft] = useDraftValue(combsToShow);
-  const [includeHeroIds, setIncludeHeroIds] = useQueryState(
-    "comb_include_heroes",
-    parseAsArrayOf(parseAsInteger).withDefault([]),
-  );
-  const [excludeHeroIds, setExcludeHeroIds] = useQueryState(
-    "comb_exclude_heroes",
-    parseAsArrayOf(parseAsInteger).withDefault([]),
-  );
+  const { combSize: combSizeFilter, combsToShow, includeHeroIds, excludeHeroIds } = useHeroCombFilters(limit);
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
   const { minUnixTimestamp: prevMinTimestamp, maxUnixTimestamp: prevMaxTimestamp } = useNormalizedTimeRange(
@@ -69,15 +53,6 @@ export function HeroCombStatsTable({
     prevMaxDate,
   );
   const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
-
-  const handleIncludeHeroesChange = (heroIds: number[]) => {
-    setIncludeHeroIds(heroIds);
-    setExcludeHeroIds((prev) => prev.filter((heroId) => !heroIds.includes(heroId)));
-  };
-  const handleExcludeHeroesChange = (heroIds: number[]) => {
-    setExcludeHeroIds(heroIds);
-    setIncludeHeroIds((prev) => prev.filter((heroId) => !heroIds.includes(heroId)));
-  };
 
   const includeHeroIdsParam = includeHeroIds.length > 0 ? includeHeroIds : undefined;
   const excludeHeroIdsParam = excludeHeroIds.length > 0 ? excludeHeroIds : undefined;
@@ -159,75 +134,10 @@ export function HeroCombStatsTable({
     [sortedData],
   );
   const maxWinrate = useMemo(() => sortedData[0]?.wins / sortedData[0]?.matches || 0, [sortedData]);
-  const numCombs = useMemo(() => heroData?.length ?? 100, [heroData]);
   const limitedData = useMemo(() => sortedData?.slice(0, combsToShow), [combsToShow, sortedData]);
 
   return (
     <>
-      <div className="mx-auto flex flex-wrap gap-4">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor={combSizeId} className="text-sm text-nowrap text-muted-foreground">
-            Combination Size
-          </label>
-          <div className="flex items-center gap-2">
-            <Slider
-              id={combSizeId}
-              min={2}
-              max={6}
-              value={[combSizeDraft]}
-              onValueChange={([val]) => {
-                if (val !== undefined) setCombSizeDraft(val);
-              }}
-              onValueCommit={([val]) => {
-                if (val !== undefined) setCombSizeFilter(val);
-              }}
-              className="w-full"
-            />
-            <span className="ml-2">{combSizeDraft}</span>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor={combsToShowId} className="text-sm text-nowrap text-muted-foreground">
-            Combinations to Show
-          </label>
-          <div className="flex items-center gap-2">
-            <Slider
-              id={combsToShowId}
-              min={0}
-              step={100}
-              max={Math.min(500, numCombs)}
-              value={[combsToShowDraft]}
-              onValueChange={([val]) => {
-                if (val !== undefined) setCombsToShowDraft(val);
-              }}
-              onValueCommit={([val]) => {
-                if (val !== undefined) setCombsToShow(val);
-              }}
-              className="w-full"
-            />
-            <span className="ml-2">{combsToShowDraft}</span>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm text-nowrap text-muted-foreground">Include Heroes</span>
-          <HeroSelectorMultiple
-            selectedHeroes={includeHeroIds}
-            onHeroesSelected={handleIncludeHeroesChange}
-            label="Any Hero"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm text-nowrap text-muted-foreground">Exclude Heroes</span>
-          <HeroSelectorMultiple
-            selectedHeroes={excludeHeroIds}
-            onHeroesSelected={handleExcludeHeroesChange}
-            label="No Hero"
-          />
-        </div>
-      </div>
       {includeHeroIds.length > combSizeFilter && (
         <p className="mx-auto text-sm text-muted-foreground">
           No combination can contain all {includeHeroIds.length} included heroes at a combination size of{" "}

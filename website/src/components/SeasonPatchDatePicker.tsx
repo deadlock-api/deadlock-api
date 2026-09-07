@@ -1,17 +1,8 @@
 import { CalendarIcon, ClockIcon, TrophyIcon } from "lucide-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
-import { useId } from "react";
 
-import { FilterPill } from "~/components/FilterPill";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
+import { FilterCell } from "~/components/Filter/FilterCell";
+import { OptionRow } from "~/components/Filter/OptionRow";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
 import { useSeasons } from "~/hooks/useSeasons";
@@ -136,31 +127,12 @@ function groupPatchesBySeason(patches: readonly PatchInfo[], seasons: readonly S
   return groups;
 }
 
-function formatDay(date: Dayjs): string {
-  return date.format("MMM D, YYYY");
-}
-
-function describeSeason(season: SeasonInfo): string {
-  if (season.endDate) return `${formatDay(season.startDate)} – ${formatDay(season.endDate)}`;
-  return `${formatDay(season.startDate)} – ongoing · ends ${formatDay(season.scheduledEndDate)}`;
-}
-
-function describePatch(patch: PatchInfo, seasons: readonly SeasonInfo[]): string {
-  const range = patch.endDate
-    ? `${formatDay(patch.startDate)} – ${formatDay(patch.endDate)}`
-    : `${formatDay(patch.startDate)} – ongoing`;
-  const season = seasonContaining(seasons, patch.startDate);
-  return season ? `${range} · in ${season.name}` : range;
-}
-
 export function SeasonPatchDatePicker({
   patchDates,
   value,
   onValueChange,
   defaultTab = "season",
 }: SeasonPatchDatePickerProps) {
-  const seasonSelectId = useId();
-  const patchSelectId = useId();
   const { seasons, isPending: seasonsPending } = useSeasons();
 
   const { startDate: valueStart, endDate: valueEnd } = value;
@@ -213,12 +185,12 @@ export function SeasonPatchDatePicker({
   const isActive = value.startDate != null || value.endDate != null;
 
   return (
-    <FilterPill
+    <FilterCell
       label="Date"
       value={getDisplayValue()}
       active={isActive}
       icon={<CalendarIcon className="size-3.5 shrink-0" />}
-      className="w-auto min-w-[340px] p-3"
+      className="w-auto p-3 lg:min-w-[340px]"
     >
       <div className="flex flex-col gap-3">
         <Tabs value={tab} onValueChange={(value) => setQueryTab(value as PickerTab)}>
@@ -247,47 +219,45 @@ export function SeasonPatchDatePicker({
                 Ranked seasons are unavailable right now. Pick a patch or a custom range instead.
               </p>
             ) : (
-              <Select value={matchingSeason?.id || ""} onValueChange={handleSeasonSelect}>
-                <SelectTrigger id={seasonSelectId} className="h-9 w-full focus-visible:ring-0">
-                  <SelectValue placeholder="Select a season..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {seasons.map((season) => (
-                    <SelectItem key={season.id} value={season.id}>
-                      {season.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex max-h-64 flex-col overflow-y-auto">
+                {seasons.map((season) => (
+                  <OptionRow
+                    key={season.id}
+                    selected={matchingSeason?.id === season.id}
+                    onClick={() => handleSeasonSelect(season.id)}
+                    hint={season.endDate ? undefined : "current"}
+                  >
+                    {season.name}
+                  </OptionRow>
+                ))}
+              </div>
             )}
-            <p className="text-xs text-muted-foreground">
-              {matchingSeason ? describeSeason(matchingSeason) : "A season spans every patch released while it runs."}
-            </p>
           </div>
         )}
 
         {tab === "patch" && (
           <div className="flex flex-col gap-1.5">
-            <Select value={matchingPatch?.id || ""} onValueChange={handlePatchSelect}>
-              <SelectTrigger id={patchSelectId} className="h-9 w-full focus-visible:ring-0">
-                <SelectValue placeholder="Select a patch..." />
-              </SelectTrigger>
-              <SelectContent>
-                {groupPatchesBySeason(patchDates, seasons).map((group) => (
-                  <SelectGroup key={group.label ?? "patches"}>
-                    {group.label && <SelectLabel>{group.label}</SelectLabel>}
-                    {group.patches.map((patch) => (
-                      <SelectItem key={patch.id} value={patch.id}>
-                        {patch.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              {matchingPatch ? describePatch(matchingPatch, seasons) : "A single patch, narrower than a season."}
-            </p>
+            <div className="flex max-h-64 flex-col overflow-y-auto">
+              {groupPatchesBySeason(patchDates, seasons).map((group) => (
+                <div key={group.label ?? "patches"}>
+                  {group.label && (
+                    <div className="px-2 pt-2 pb-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase first:pt-0">
+                      {group.label}
+                    </div>
+                  )}
+                  {group.patches.map((patch) => (
+                    <OptionRow
+                      key={patch.id}
+                      selected={matchingPatch?.id === patch.id}
+                      onClick={() => handlePatchSelect(patch.id)}
+                      hint={patch.endDate ? undefined : "current"}
+                    >
+                      {patch.name}
+                    </OptionRow>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -299,6 +269,6 @@ export function SeasonPatchDatePicker({
           />
         )}
       </div>
-    </FilterPill>
+    </FilterCell>
   );
 }

@@ -1,7 +1,7 @@
 import { CircleMinus, CirclePlus, X } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { FilterPill } from "~/components/FilterPill";
+import { FilterCell } from "~/components/Filter/FilterCell";
 
 export type TriState = "included" | "excluded";
 
@@ -161,12 +161,12 @@ export function TriStateSelector({
   }
 
   return (
-    <FilterPill
+    <FilterCell
       label={label || "Items"}
       value={buildPillValue(includedItems, excludedItems)}
       active={hasSelections}
       icon={buildPillIcon(includedItems, excludedItems)}
-      className={`max-h-[400px] overflow-y-auto p-0 ${columnLayout ? "w-fit xl:w-fit" : "w-[260px]"}`}
+      className={`max-h-[400px] overflow-auto p-0 ${columnLayout ? "w-fit xl:w-fit" : "w-[260px]"}`}
     >
       {hasSelections && (
         <div className="sticky top-0 z-10 flex items-center justify-end border-b bg-popover px-2 py-1.5">
@@ -226,6 +226,6 @@ export function TriStateSelector({
               ))}
         </div>
       )}
-    </FilterPill>
+    </FilterCell>
   );
 }

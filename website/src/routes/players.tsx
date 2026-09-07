@@ -159,6 +159,7 @@ function PlayersPage() {
         />
         <Filter.Hero value={heroId} onChange={setHeroId} allowNull label="Hero" />
         <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
+        {tab === "scoreboard" && <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={1} />}
       </Filter.Root>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="tabs-nav w-full">
@@ -174,9 +175,6 @@ function PlayersPage() {
         <TabsContent value="scoreboard">
           <div className="flex flex-col gap-4">
             <h2 className="sr-only">Player Scoreboard</h2>
-            <div className="flex items-center justify-end gap-2">
-              <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={1} />
-            </div>
             <QueryRenderer
               query={scoreboardQuery}
               loadingFallback={

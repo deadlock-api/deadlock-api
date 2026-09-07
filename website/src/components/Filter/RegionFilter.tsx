@@ -1,23 +1,9 @@
 import { LeaderboardRegionEnum } from "deadlock_api_client";
 
-import { StringSelector } from "~/components/selectors/StringSelector";
+import { FilterToggleCell } from "./FilterCell";
 
-import { createFilter } from "./createFilter";
+const REGION_OPTIONS = Object.entries(LeaderboardRegionEnum).map(([key, value]) => ({ value, label: key }));
 
-const regionOptions = Object.entries(LeaderboardRegionEnum).map(([key, val]) => ({
-  label: key,
-  value: val,
-}));
-
-export const RegionFilter = createFilter<{
-  value: string;
-  onChange: (region: string) => void;
-}>({
-  useDescription(props) {
-    const label = regionOptions.find((o) => o.value === props.value)?.label ?? null;
-    return { region: label };
-  },
-  Render({ value, onChange }) {
-    return <StringSelector label="Region" options={regionOptions} selected={value} onSelect={onChange} />;
-  },
-});
+export function RegionFilter({ value, onChange }: { value: string; onChange: (region: string) => void }) {
+  return <FilterToggleCell label="Region" value={value} onValueChange={onChange} options={REGION_OPTIONS} />;
+}

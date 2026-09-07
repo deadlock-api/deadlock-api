@@ -1,7 +1,7 @@
 import { ClockIcon } from "lucide-react";
 
-import { FilterPill } from "~/components/FilterPill";
-import { Button } from "~/components/ui/button";
+import { FilterCell } from "~/components/Filter/FilterCell";
+import { Segmented } from "~/components/Segmented";
 import { Slider } from "~/components/ui/slider";
 import { useDraftValue } from "~/hooks/useDraftValue";
 
@@ -9,12 +9,10 @@ export interface MatchTimeRangeSelectorProps {
   minTime?: number;
   maxTime?: number;
   onTimeChange: (min: number | undefined, max: number | undefined) => void;
-  /** FilterPill label. @default "Time" */
+  /** Cell label. @default "Time" */
   label?: string;
   /** Popover heading. @default "Match Time Window" */
   title?: string;
-  /** Popover description. @default "Filter by when events occurred in the match." */
-  description?: string;
   /** Label shown when the slider end is at max. @default "End of Game" */
   maxLabel?: string;
   /** Max slider value in seconds. @default 3600 */
@@ -44,7 +42,6 @@ export function MatchTimeRangeSelector({
   onTimeChange,
   label = "Time",
   title = "Match Time Window",
-  description = "Filter by when events occurred in the match.",
   maxLabel = "End of Game",
   max = DEFAULT_MAX,
   step = DEFAULT_STEP,
@@ -69,9 +66,10 @@ export function MatchTimeRangeSelector({
   };
 
   const isActive = minTime != null || maxTime != null;
+  const activePreset = presets?.find((p) => p.start === committedValue[0] && p.end === committedValue[1])?.label ?? "";
 
   return (
-    <FilterPill
+    <FilterCell
       label={label}
       value={getLabel()}
       active={isActive}
@@ -79,10 +77,7 @@ export function MatchTimeRangeSelector({
       className="w-80 p-4"
     >
       <div className="grid gap-4">
-        <div className="space-y-2">
-          <h4 className="leading-none font-medium">{title}</h4>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </div>
+        <h4 className="leading-none font-medium">{title}</h4>
         <div className="pt-6 pb-2">
           <Slider
             defaultValue={[0, max]}
@@ -102,21 +97,17 @@ export function MatchTimeRangeSelector({
         </div>
 
         {presets && presets.length > 0 && (
-          <div className="grid grid-cols-3 gap-2 pt-2">
-            {presets.map((preset) => (
-              <Button
-                key={preset.label}
-                variant="outline"
-                size="sm"
-                onClick={() => handleValueCommit([preset.start, preset.end])}
-                className="h-8 px-2 text-xs"
-              >
-                {preset.label}
-              </Button>
-            ))}
-          </div>
+          <Segmented
+            value={activePreset}
+            onValueChange={(name) => {
+              const preset = presets.find((p) => p.label === name);
+              if (preset) handleValueCommit([preset.start, preset.end]);
+            }}
+            options={presets.map((p) => ({ value: p.label, label: p.label }))}
+            className="flex-nowrap"
+          />
         )}
       </div>
-    </FilterPill>
+    </FilterCell>
   );
 }

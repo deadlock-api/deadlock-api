@@ -4,7 +4,7 @@ import { lazy, Suspense } from "react";
 
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
-import { ItemTabsPrototype } from "~/components/items-page/ItemTabsPrototype";
+import { ItemCombFilters } from "~/components/items-page/ItemCombFilters";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
@@ -136,27 +136,23 @@ function ItemsPage() {
           }}
           label="Time"
           title="Purchase Time Window"
-          description="Filter items by when they were purchased in the match."
         />
         <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
+        {tab === "item-combos" && <ItemCombFilters />}
       </Filter.Root>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="tabs-nav w-full">
-        {import.meta.env.DEV ? (
-          <ItemTabsPrototype value={tab} />
-        ) : (
-          <ResponsiveTabsList
-            value={tab ?? undefined}
-            onValueChange={(value) => setTab(value as typeof tab)}
-            options={[
-              { value: "item-stats", label: "Item Stats" },
-              { value: "item-purchase-analysis", label: "Purchase Analysis" },
-              { value: "build-flow", label: "Build Flow" },
-              { value: "item-combos", label: "Item Combos" },
-            ]}
-          />
-        )}
-        <TabsContent value="item-stats" className="-mx-4 sm:-mx-6">
+        <ResponsiveTabsList
+          value={tab ?? undefined}
+          onValueChange={(value) => setTab(value as typeof tab)}
+          options={[
+            { value: "item-stats", label: "Item Stats" },
+            { value: "item-purchase-analysis", label: "Purchase Analysis" },
+            { value: "build-flow", label: "Build Flow" },
+            { value: "item-combos", label: "Item Combos" },
+          ]}
+        />
+        <TabsContent value="item-stats">
           <h2 className="sr-only">Item Stats</h2>
           <ChunkErrorBoundary>
             <Suspense fallback={<LoadingLogo />}>

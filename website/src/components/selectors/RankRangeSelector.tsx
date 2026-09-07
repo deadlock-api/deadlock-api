@@ -3,7 +3,8 @@ import type { Rank } from "deadlock_api_client";
 import { ShieldIcon } from "lucide-react";
 import { useMemo } from "react";
 
-import { FilterPill } from "~/components/FilterPill";
+import { FilterCell } from "~/components/Filter/FilterCell";
+import { Segmented } from "~/components/Segmented";
 import { Slider } from "~/components/ui/slider";
 import { useDraftValue } from "~/hooks/useDraftValue";
 import { getRankImageUrl, getRankLabel } from "~/lib/rank-utils";
@@ -16,6 +17,14 @@ function getRankId(tier: number, subrank: number): number {
   if (tier === 0) return 0;
   return tier * 10 + subrank;
 }
+
+/** Tier bands behind the preset buttons; each spans the first subrank of `from` to the last of `to`. */
+const PRESET_BANDS = [
+  { label: "Low", from: 1, to: 4 },
+  { label: "Mid", from: 5, to: 8 },
+  { label: "High", from: 9, to: 10 },
+  { label: "Top", from: 11, to: 11 },
+] as const;
 
 interface RankOption {
   rankId: number;
@@ -47,10 +56,9 @@ interface RankRangeSelectorProps {
   minRank: number;
   maxRank: number;
   onRankChange: (min: number, max: number) => void;
-  label?: string;
 }
 
-export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: RankRangeSelectorProps) {
+export function RankRangeSelector({ minRank, maxRank, onRankChange }: RankRangeSelectorProps) {
   const { data: ranksData, isLoading } = useQuery(ranksQueryOptions);
 
   const sortedRanks = useMemo(() => [...(ranksData ?? [])].sort((a: Rank, b: Rank) => a.tier - b.tier), [ranksData]);
@@ -102,9 +110,21 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: Ran
   const isMinAtStart = minIndex === 0;
   const isMaxAtEnd = maxIndex === options.length - 1;
 
+  const presets = useMemo(() => {
+    if (options.length === 0) return [];
+    const first = options[0].rankId;
+    const last = options[options.length - 1].rankId;
+    const bands = PRESET_BANDS.filter(
+      (band) => rankIdToIndex.has(getRankId(band.from, 1)) && rankIdToIndex.has(getRankId(band.to, 6)),
+    ).map((band) => ({ label: band.label, min: getRankId(band.from, 1), max: getRankId(band.to, 6) }));
+    return [{ label: "Any", min: first, max: last }, ...bands];
+  }, [options, rankIdToIndex]);
+
+  const activePreset = presets.find((p) => p.min === minRank && p.max === maxRank)?.label ?? "";
+
   const getTriggerLabel = () => {
     if (!committedMinOption || !committedMaxOption) return "Select Rank";
-    if (isFullRange) return "All Ranks";
+    if (isFullRange) return "Any";
     if (isMaxAtEnd) return `${committedMinOption.label}+`;
     if (isMinAtStart) return `Up to ${committedMaxOption.label}`;
     return `${committedMinOption.label} - ${committedMaxOption.label}`;
@@ -116,19 +136,13 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: Ran
 
   const triggerIcon =
     committedMinOption && !isMinAtStart ? (
-      <RankIcon option={committedMinOption} className="size-6" />
+      <RankIcon option={committedMinOption} className="size-5" />
     ) : (
       <ShieldIcon className="size-3.5 shrink-0" />
     );
 
   return (
-    <FilterPill
-      label={label ?? "Rank"}
-      value={getTriggerLabel()}
-      active={!isFullRange}
-      icon={triggerIcon}
-      className="w-80 p-4"
-    >
+    <FilterCell label="Rank" value={getTriggerLabel()} active={!isFullRange} icon={triggerIcon} className="w-80 p-4">
       <div className="grid gap-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -152,7 +166,15 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: Ran
             className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
           />
         </div>
+        <Segmented
+          value={activePreset}
+          onValueChange={(name) => {
+            const preset = presets.find((p) => p.label === name);
+            if (preset) onRankChange(preset.min, preset.max);
+          }}
+          options={presets.map((p) => ({ value: p.label, label: p.label }))}
+        />
       </div>
-    </FilterPill>
+    </FilterCell>
   );
 }

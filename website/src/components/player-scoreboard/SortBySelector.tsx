@@ -1,7 +1,8 @@
 import { CheckIcon } from "lucide-react";
 import { useMemo } from "react";
 
-import { FilterPill } from "~/components/FilterPill";
+import { FilterCell } from "~/components/Filter/FilterCell";
+import { Segmented } from "~/components/Segmented";
 import { cn } from "~/lib/utils";
 
 import { buildSortByValue, parseSortByValue, SORT_CATEGORIES, type SortVariant } from "./sort-options";
@@ -11,7 +12,7 @@ interface SortBySelectorProps {
   onChange: (value: string) => void;
 }
 
-const VARIANT_LABELS: { value: SortVariant; label: string }[] = [
+const VARIANT_OPTIONS: { value: SortVariant; label: string }[] = [
   { value: "avg", label: "AVG" },
   { value: "max", label: "MAX" },
   { value: "total", label: "TOTAL" },
@@ -33,32 +34,17 @@ export function SortBySelector({ value, onChange }: SortBySelectorProps) {
     }
   };
 
-  const handleVariantChange = (newVariant: SortVariant) => {
-    onChange(buildSortByValue(key, newVariant));
-  };
-
   const displayValue = currentCategory?.label ?? key;
 
   return (
-    <FilterPill label="" value={displayValue} active={false} className="w-52 p-2">
+    <FilterCell label="Sort by" value={displayValue} className="w-52 p-2">
       {hasVariants && (
-        <div className="mb-2 flex overflow-hidden rounded-md border border-input">
-          {VARIANT_LABELS.map((v) => (
-            <button
-              key={v.value}
-              type="button"
-              onClick={() => handleVariantChange(v.value)}
-              className={cn(
-                "flex-1 cursor-pointer px-2 py-1.5 text-xs font-medium transition-colors",
-                variant === v.value
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-              )}
-            >
-              {v.label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          value={variant ?? ""}
+          onValueChange={(newVariant) => onChange(buildSortByValue(key, newVariant))}
+          options={VARIANT_OPTIONS}
+          className="mb-2"
+        />
       )}
       <div className="flex max-h-[300px] flex-col overflow-y-auto">
         {SORT_CATEGORIES.map((cat) => (
@@ -76,6 +62,6 @@ export function SortBySelector({ value, onChange }: SortBySelectorProps) {
           </button>
         ))}
       </div>
-    </FilterPill>
+    </FilterCell>
   );
 }

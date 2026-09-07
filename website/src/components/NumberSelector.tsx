@@ -1,4 +1,5 @@
-import { FilterPill } from "~/components/FilterPill";
+import { FilterCell } from "~/components/Filter/FilterCell";
+import { Segmented } from "~/components/Segmented";
 
 export function NumberSelectorBare({
   value,
@@ -53,11 +54,24 @@ export function NumberSelector({
   min?: number;
   max?: number;
 }) {
-  const isActive = value > (min ?? 0);
+  const floor = min ?? 0;
+  const isActive = value > floor;
+
+  const presets = [...new Set([floor, step, step * 5, step * 10, step * 50])]
+    .filter((v) => v >= floor && v <= (max ?? Number.POSITIVE_INFINITY))
+    .map((v) => ({ value: String(v), label: v === 0 ? "Any" : String(v) }));
 
   return (
-    <FilterPill label={label} value={String(value)} active={isActive} className="w-44 p-3">
-      <NumberSelectorBare value={value} onChange={onChange} step={step} min={min} max={max} />
-    </FilterPill>
+    <FilterCell label={label} value={isActive ? `≥ ${value}` : "Any"} active={isActive} className="w-auto min-w-56 p-3">
+      <div className="flex flex-col gap-2">
+        <NumberSelectorBare value={value} onChange={onChange} step={step} min={min} max={max} />
+        <Segmented
+          value={String(value)}
+          onValueChange={(v) => onChange(Number(v))}
+          options={presets}
+          className="flex-nowrap"
+        />
+      </div>
+    </FilterCell>
   );
 }

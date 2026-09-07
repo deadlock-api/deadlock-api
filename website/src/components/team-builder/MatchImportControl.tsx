@@ -1,7 +1,7 @@
 import { DownloadIcon, HashIcon, Loader2Icon, RepeatIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 
-import { FilterPill } from "~/components/FilterPill";
+import { FilterCell } from "~/components/Filter/FilterCell";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 
@@ -35,7 +35,7 @@ export function MatchImportControl({
   };
 
   return (
-    <FilterPill
+    <FilterCell
       label="Match"
       value={matchId === null ? "none" : String(matchId)}
       active={matchId !== null}
@@ -75,6 +75,6 @@ export function MatchImportControl({
           </div>
         )}
       </div>
-    </FilterPill>
+    </FilterCell>
   );
 }

@@ -107,7 +107,6 @@ function HeatmapPage() {
           }}
           label="Match Time"
           title="Kill/Death Time Window"
-          description="Filter kills and deaths by when they occurred in the match."
         />
       </Filter.Root>
 

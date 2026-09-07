@@ -1,10 +1,9 @@
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, XIcon } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import type { DateRange } from "react-day-picker";
 
-import { Button } from "~/components/ui/button";
+import { Segmented } from "~/components/Segmented";
 import { Calendar } from "~/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import type { Dayjs } from "~/dayjs";
 import { day } from "~/dayjs";
 import { cn } from "~/lib/utils";
@@ -38,6 +37,9 @@ export interface DateRangePickerProps {
   /** When true, selections snap to full weeks (Monday–Sunday). */
   weekMode?: boolean;
 }
+
+const DAY_PRESETS = [7, 14, 30];
+const WEEK_PRESETS = [1, 2, 4];
 
 export function DateRangePicker({ startDate, endDate, onDateRangeChange, className, weekMode }: DateRangePickerProps) {
   // Convert dayjs dates to Date objects for react-day-picker
@@ -85,21 +87,11 @@ export function DateRangePicker({ startDate, endDate, onDateRangeChange, classNa
     [onDateRangeChange, weekMode],
   );
 
-  // Format the display text for the button
   const displayText = useMemo(() => {
-    if (startDate && endDate) {
-      return (
-        <>
-          {startDate.format("MMM DD, YYYY")} - {endDate.format("MMM DD, YYYY")}
-        </>
-      );
-    }
-
-    if (startDate) {
-      return startDate.format("MMM DD, YYYY");
-    }
-
-    return <span>Select date range</span>;
+    if (startDate && endDate) return `${startDate.format("MMM DD, YYYY")} - ${endDate.format("MMM DD, YYYY")}`;
+    if (startDate) return `since ${startDate.format("MMM DD, YYYY")}`;
+    if (endDate) return `until ${endDate.format("MMM DD, YYYY")}`;
+    return "Select a date range";
   }, [startDate, endDate]);
 
   function selectLastDays(days: number) {
@@ -126,66 +118,44 @@ export function DateRangePicker({ startDate, endDate, onDateRangeChange, classNa
     });
   }
 
+  const presets = weekMode
+    ? WEEK_PRESETS.map((n) => ({ value: String(n), label: n === 1 ? "Last week" : `Last ${n} weeks` }))
+    : DAY_PRESETS.map((n) => ({ value: String(n), label: `Last ${n} days` }));
+
   return (
-    <div className={cn("flex flex-col gap-1.5", className)}>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn("w-[300px] justify-between text-left font-normal", !startDate && "text-foreground")}
+    <div className={cn("flex flex-col gap-2", className)}>
+      <div className="flex items-center justify-between gap-2 px-1 text-sm">
+        <span className={cn("flex items-center gap-2", !startDate && !endDate && "text-muted-foreground")}>
+          <CalendarIcon className="size-4 shrink-0" />
+          {displayText}
+        </span>
+        {(startDate || endDate) && (
+          <button
+            type="button"
+            aria-label="Reset date range"
+            onClick={() => handleDateRangeSelect()}
+            className="cursor-pointer text-muted-foreground hover:text-foreground"
           >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {displayText}
-            <button
-              type="button"
-              onClick={() => handleDateRangeSelect()}
-              aria-label="Reset date range"
-              className="icon-[mdi--close] align-middle text-lg font-bold hover:text-red-500"
-            />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto min-w-[30rem] p-2" align="start">
-          <Calendar
-            // eslint-disable-next-line jsx-a11y/no-autofocus -- calendar needs immediate focus for keyboard nav
-            autoFocus={true}
-            mode="range"
-            defaultMonth={startDate?.toDate()}
-            selected={dateRange}
-            onSelect={handleDateRangeSelect}
-            numberOfMonths={2}
-            weekStartsOn={1}
-            showWeekNumber={weekMode}
-            className="w-full"
-          />
-          <div className="flex justify-center gap-2">
-            {weekMode ? (
-              <>
-                <Button variant="outline" onClick={() => selectLastWeeks(1)}>
-                  Last Week
-                </Button>
-                <Button variant="outline" onClick={() => selectLastWeeks(2)}>
-                  Last 2 Weeks
-                </Button>
-                <Button variant="outline" onClick={() => selectLastWeeks(4)}>
-                  Last 4 Weeks
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button variant="outline" onClick={() => selectLastDays(7)}>
-                  Last 7 Days
-                </Button>
-                <Button variant="outline" onClick={() => selectLastDays(14)}>
-                  Last 14 Days
-                </Button>
-                <Button variant="outline" onClick={() => selectLastDays(30)}>
-                  Last 30 Days
-                </Button>
-              </>
-            )}
-          </div>
-        </PopoverContent>
-      </Popover>
+            <XIcon className="size-3.5" />
+          </button>
+        )}
+      </div>
+      <Calendar
+        mode="range"
+        defaultMonth={startDate?.toDate()}
+        selected={dateRange}
+        onSelect={handleDateRangeSelect}
+        numberOfMonths={1}
+        weekStartsOn={1}
+        showWeekNumber={weekMode}
+        className="mx-auto p-0"
+      />
+      <Segmented
+        value=""
+        onValueChange={(v) => (weekMode ? selectLastWeeks(Number(v)) : selectLastDays(Number(v)))}
+        options={presets}
+        className="flex-nowrap"
+      />
     </div>
   );
 }

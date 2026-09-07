@@ -4,30 +4,85 @@ import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 
-interface FilteredSelectPopoverProps<T> {
+interface FilteredSelectListProps<T> {
   items: T[];
   selectedIds: number[];
   onSelectedIdsChange: (ids: number[]) => void;
   getId: (item: T) => number;
-  renderChip: (id: number) => React.ReactNode;
   renderRow: (item: T) => React.ReactNode;
-  emptyLabel: string;
 }
 
-export function FilteredSelectPopover<T>({
+/** Checkbox list with a select-all row; the body shared by every multi-select popover. */
+export function FilteredSelectList<T>({
   items,
   selectedIds,
   onSelectedIdsChange,
   getId,
-  renderChip,
   renderRow,
-  emptyLabel,
-}: FilteredSelectPopoverProps<T>) {
+}: FilteredSelectListProps<T>) {
   const selectAllId = useId();
 
   const allSelected = selectedIds.length === items.length;
   const noneSelected = selectedIds.length === 0;
   const indeterminate = !allSelected && !noneSelected;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="mb-1 flex items-center gap-2 border-b px-2 py-1">
+        <Checkbox
+          checked={allSelected ? true : indeterminate ? "indeterminate" : false}
+          onCheckedChange={(checked) => {
+            if (checked) {
+              onSelectedIdsChange(items.map(getId));
+            } else {
+              onSelectedIdsChange([]);
+            }
+          }}
+          id={selectAllId}
+        />
+        <label htmlFor={selectAllId} className="cursor-pointer text-sm select-none">
+          Select all
+        </label>
+      </div>
+      {items.map((item) => {
+        const id = getId(item);
+        const rowId = `filtered-select-checkbox-${selectAllId}-${id}`;
+        return (
+          <div key={id} className="flex cursor-pointer items-center gap-2 px-2 py-1 hover:bg-accent">
+            <Checkbox
+              checked={selectedIds.includes(id)}
+              tabIndex={-1}
+              className="mr-2"
+              onCheckedChange={() => {
+                if (selectedIds.includes(id)) {
+                  onSelectedIdsChange(selectedIds.filter((x) => x !== id));
+                } else {
+                  onSelectedIdsChange([...selectedIds, id]);
+                }
+              }}
+              id={rowId}
+            />
+            <label
+              htmlFor={rowId}
+              className="flex w-full cursor-pointer flex-nowrap items-center gap-2 truncate text-sm"
+            >
+              {renderRow(item)}
+            </label>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+interface FilteredSelectPopoverProps<T> extends FilteredSelectListProps<T> {
+  renderChip: (id: number) => React.ReactNode;
+  emptyLabel: string;
+}
+
+export function FilteredSelectPopover<T>({ renderChip, emptyLabel, ...listProps }: FilteredSelectPopoverProps<T>) {
+  const { selectedIds } = listProps;
+  const noneSelected = selectedIds.length === 0;
 
   return (
     <Popover>
@@ -53,51 +108,7 @@ export function FilteredSelectPopover<T>({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="max-h-[400px] w-[220px] overflow-y-auto p-2">
-        <div className="flex flex-col gap-1">
-          <div className="mb-1 flex items-center gap-2 border-b px-2 py-1">
-            <Checkbox
-              checked={allSelected ? true : indeterminate ? "indeterminate" : false}
-              onCheckedChange={(checked) => {
-                if (checked) {
-                  onSelectedIdsChange(items.map(getId));
-                } else {
-                  onSelectedIdsChange([]);
-                }
-              }}
-              id={selectAllId}
-            />
-            <label htmlFor={selectAllId} className="cursor-pointer text-sm select-none">
-              Select all
-            </label>
-          </div>
-          {items.map((item) => {
-            const id = getId(item);
-            const rowId = `filtered-select-checkbox-${selectAllId}-${id}`;
-            return (
-              <div key={id} className="flex cursor-pointer items-center gap-2 px-2 py-1 hover:bg-accent">
-                <Checkbox
-                  checked={selectedIds.includes(id)}
-                  tabIndex={-1}
-                  className="mr-2"
-                  onCheckedChange={() => {
-                    if (selectedIds.includes(id)) {
-                      onSelectedIdsChange(selectedIds.filter((x) => x !== id));
-                    } else {
-                      onSelectedIdsChange([...selectedIds, id]);
-                    }
-                  }}
-                  id={rowId}
-                />
-                <label
-                  htmlFor={rowId}
-                  className="flex w-full cursor-pointer flex-nowrap items-center gap-2 truncate text-sm"
-                >
-                  {renderRow(item)}
-                </label>
-              </div>
-            );
-          })}
-        </div>
+        <FilteredSelectList {...listProps} />
       </PopoverContent>
     </Popover>
   );

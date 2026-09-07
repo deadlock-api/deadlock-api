@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { parseAsInteger, useQueryState } from "nuqs";
-import { Fragment, memo, useId, useMemo } from "react";
+import { Fragment, memo, useMemo } from "react";
 
 import { ItemImage } from "~/components/ItemImage";
 import { ItemName } from "~/components/ItemName";
@@ -8,15 +7,15 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import type { MatchMode } from "~/components/selectors/MatchModeSelector";
-import { Slider } from "~/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
-import { useDraftValue } from "~/hooks/useDraftValue";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
+
+import { useItemCombFilters } from "./useItemCombFilters";
 
 const ComboItems = memo(function ComboItems({ itemIds }: { itemIds: number[] }) {
   return (
@@ -69,13 +68,7 @@ export function ItemCombStatsTable({
   matchMode?: MatchMode;
   hero?: number | null;
 }) {
-  const combSizeId = useId();
-  const combsToShowId = useId();
-
-  const [combSizeFilter, setCombSizeFilter] = useQueryState("item_comb_size", parseAsInteger.withDefault(2));
-  const [combSizeDraft, setCombSizeDraft] = useDraftValue(combSizeFilter);
-  const [combsToShow, setCombsToShow] = useQueryState("item_combs_to_show", parseAsInteger.withDefault(limit ?? 50));
-  const [combsToShowDraft, setCombsToShowDraft] = useDraftValue(combsToShow);
+  const { combSize: combSizeFilter, combsToShow } = useItemCombFilters(limit);
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
   const { minUnixTimestamp: prevMinTimestamp, maxUnixTimestamp: prevMaxTimestamp } = useNormalizedTimeRange(
@@ -140,7 +133,6 @@ export function ItemCombStatsTable({
     () => [...filteredData].sort((a, b) => b.wins / b.matches - a.wins / a.matches),
     [filteredData],
   );
-  const numCombs = useMemo(() => filteredData.length || 100, [filteredData]);
   const limitedData = useMemo(() => sortedData.slice(0, combsToShow), [combsToShow, sortedData]);
 
   // Normalized against the displayed rows, not the full fetched set: with hundreds of
@@ -186,52 +178,6 @@ export function ItemCombStatsTable({
 
   return (
     <>
-      <div className="mx-auto flex flex-wrap justify-center gap-4">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor={combSizeId} className="text-sm text-nowrap text-muted-foreground">
-            Combination Size
-          </label>
-          <div className="flex items-center gap-2">
-            <Slider
-              id={combSizeId}
-              min={2}
-              max={4}
-              value={[combSizeDraft]}
-              onValueChange={([val]) => {
-                if (val !== undefined) setCombSizeDraft(val);
-              }}
-              onValueCommit={([val]) => {
-                if (val !== undefined) setCombSizeFilter(val);
-              }}
-              className="w-full"
-            />
-            <span className="ml-2">{combSizeDraft}</span>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor={combsToShowId} className="text-sm text-nowrap text-muted-foreground">
-            Combinations to Show
-          </label>
-          <div className="flex items-center gap-2">
-            <Slider
-              id={combsToShowId}
-              min={0}
-              step={100}
-              max={Math.min(500, numCombs)}
-              value={[combsToShowDraft]}
-              onValueChange={([val]) => {
-                if (val !== undefined) setCombsToShowDraft(val);
-              }}
-              onValueCommit={([val]) => {
-                if (val !== undefined) setCombsToShow(val);
-              }}
-              className="w-full"
-            />
-            <span className="ml-2">{combsToShowDraft}</span>
-          </div>
-        </div>
-      </div>
       {isLoading ? (
         <div className="flex h-full w-full items-center justify-center py-16">
           <LoadingLogo />
