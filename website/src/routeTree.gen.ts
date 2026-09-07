@@ -16,6 +16,7 @@ import { Route as DataDumpsRouteImport } from './routes/data-dumps'
 import { Route as DataPrivacyRouteImport } from './routes/data-privacy'
 import { Route as DeadlockdleRouteImport } from './routes/deadlockdle'
 import { Route as DeadlockstatsPrivacyRouteImport } from './routes/deadlockstats-privacy'
+import { Route as FlashcardsRouteImport } from './routes/flashcards'
 import { Route as GamesRouteImport } from './routes/games'
 import { Route as HeatmapRouteImport } from './routes/heatmap'
 import { Route as HeroesRouteImport } from './routes/heroes'
@@ -82,6 +83,11 @@ const DeadlockdleRoute = DeadlockdleRouteImport.update({
 const DeadlockstatsPrivacyRoute = DeadlockstatsPrivacyRouteImport.update({
   id: '/deadlockstats-privacy',
   path: '/deadlockstats-privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FlashcardsRoute = FlashcardsRouteImport.update({
+  id: '/flashcards',
+  path: '/flashcards',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GamesRoute = GamesRouteImport.update({
@@ -190,29 +196,29 @@ const DeadlockdleTriviaRoute = DeadlockdleTriviaRouteImport.update({
   getParentRoute: () => DeadlockdleRoute,
 } as any)
 const FlashcardsIndexRoute = FlashcardsIndexRouteImport.update({
-  id: '/flashcards/',
-  path: '/flashcards/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => FlashcardsRoute,
 } as any)
 const FlashcardsHeroesRoute = FlashcardsHeroesRouteImport.update({
-  id: '/flashcards/heroes',
-  path: '/flashcards/heroes',
-  getParentRoute: () => rootRouteImport,
+  id: '/heroes',
+  path: '/heroes',
+  getParentRoute: () => FlashcardsRoute,
 } as any)
 const FlashcardsItemEffectsRoute = FlashcardsItemEffectsRouteImport.update({
-  id: '/flashcards/item-effects',
-  path: '/flashcards/item-effects',
-  getParentRoute: () => rootRouteImport,
+  id: '/item-effects',
+  path: '/item-effects',
+  getParentRoute: () => FlashcardsRoute,
 } as any)
 const FlashcardsItemUpgradesRoute = FlashcardsItemUpgradesRouteImport.update({
-  id: '/flashcards/item-upgrades',
-  path: '/flashcards/item-upgrades',
-  getParentRoute: () => rootRouteImport,
+  id: '/item-upgrades',
+  path: '/item-upgrades',
+  getParentRoute: () => FlashcardsRoute,
 } as any)
 const FlashcardsItemsRoute = FlashcardsItemsRouteImport.update({
-  id: '/flashcards/items',
-  path: '/flashcards/items',
-  getParentRoute: () => rootRouteImport,
+  id: '/items',
+  path: '/items',
+  getParentRoute: () => FlashcardsRoute,
 } as any)
 const HeroesIndexRoute = HeroesIndexRouteImport.update({
   id: '/',
@@ -254,6 +260,7 @@ export interface FileRoutesByFullPath {
   '/data-privacy': typeof DataPrivacyRoute
   '/deadlockdle': typeof DeadlockdleRouteWithChildren
   '/deadlockstats-privacy': typeof DeadlockstatsPrivacyRoute
+  '/flashcards': typeof FlashcardsRouteWithChildren
   '/games': typeof GamesRoute
   '/heatmap': typeof HeatmapRoute
   '/heroes': typeof HeroesRouteWithChildren
@@ -335,6 +342,7 @@ export interface FileRoutesById {
   '/data-privacy': typeof DataPrivacyRoute
   '/deadlockdle': typeof DeadlockdleRouteWithChildren
   '/deadlockstats-privacy': typeof DeadlockstatsPrivacyRoute
+  '/flashcards': typeof FlashcardsRouteWithChildren
   '/games': typeof GamesRoute
   '/heatmap': typeof HeatmapRoute
   '/heroes': typeof HeroesRouteWithChildren
@@ -378,6 +386,7 @@ export interface FileRouteTypes {
     | '/data-privacy'
     | '/deadlockdle'
     | '/deadlockstats-privacy'
+    | '/flashcards'
     | '/games'
     | '/heatmap'
     | '/heroes'
@@ -458,6 +467,7 @@ export interface FileRouteTypes {
     | '/data-privacy'
     | '/deadlockdle'
     | '/deadlockstats-privacy'
+    | '/flashcards'
     | '/games'
     | '/heatmap'
     | '/heroes'
@@ -500,6 +510,7 @@ export interface RootRouteChildren {
   DataPrivacyRoute: typeof DataPrivacyRoute
   DeadlockdleRoute: typeof DeadlockdleRouteWithChildren
   DeadlockstatsPrivacyRoute: typeof DeadlockstatsPrivacyRoute
+  FlashcardsRoute: typeof FlashcardsRouteWithChildren
   GamesRoute: typeof GamesRoute
   HeatmapRoute: typeof HeatmapRoute
   HeroesRoute: typeof HeroesRouteWithChildren
@@ -513,13 +524,8 @@ export interface RootRouteChildren {
   TeamBuilderRoute: typeof TeamBuilderRoute
   TrackerRoute: typeof TrackerRoute
   BlogSlugRoute: typeof BlogSlugRoute
-  FlashcardsHeroesRoute: typeof FlashcardsHeroesRoute
-  FlashcardsItemEffectsRoute: typeof FlashcardsItemEffectsRoute
-  FlashcardsItemUpgradesRoute: typeof FlashcardsItemUpgradesRoute
-  FlashcardsItemsRoute: typeof FlashcardsItemsRoute
   PlayersAccountIdRoute: typeof PlayersAccountIdRoute
   BlogIndexRoute: typeof BlogIndexRoute
-  FlashcardsIndexRoute: typeof FlashcardsIndexRoute
   StreamkitIndexRoute: typeof StreamkitIndexRoute
   AuthPatreonCallbackRoute: typeof AuthPatreonCallbackRoute
   StreamkitWidgetsRegionAccountIdWidgetTypeRoute: typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
@@ -574,6 +580,13 @@ declare module '@tanstack/react-router' {
       path: '/deadlockstats-privacy'
       fullPath: '/deadlockstats-privacy'
       preLoaderRoute: typeof DeadlockstatsPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/flashcards': {
+      id: '/flashcards'
+      path: '/flashcards'
+      fullPath: '/flashcards'
+      preLoaderRoute: typeof FlashcardsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/games': {
@@ -725,38 +738,38 @@ declare module '@tanstack/react-router' {
     }
     '/flashcards/': {
       id: '/flashcards/'
-      path: '/flashcards'
+      path: '/'
       fullPath: '/flashcards/'
       preLoaderRoute: typeof FlashcardsIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof FlashcardsRoute
     }
     '/flashcards/heroes': {
       id: '/flashcards/heroes'
-      path: '/flashcards/heroes'
+      path: '/heroes'
       fullPath: '/flashcards/heroes'
       preLoaderRoute: typeof FlashcardsHeroesRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof FlashcardsRoute
     }
     '/flashcards/item-effects': {
       id: '/flashcards/item-effects'
-      path: '/flashcards/item-effects'
+      path: '/item-effects'
       fullPath: '/flashcards/item-effects'
       preLoaderRoute: typeof FlashcardsItemEffectsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof FlashcardsRoute
     }
     '/flashcards/item-upgrades': {
       id: '/flashcards/item-upgrades'
-      path: '/flashcards/item-upgrades'
+      path: '/item-upgrades'
       fullPath: '/flashcards/item-upgrades'
       preLoaderRoute: typeof FlashcardsItemUpgradesRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof FlashcardsRoute
     }
     '/flashcards/items': {
       id: '/flashcards/items'
-      path: '/flashcards/items'
+      path: '/items'
       fullPath: '/flashcards/items'
       preLoaderRoute: typeof FlashcardsItemsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof FlashcardsRoute
     }
     '/heroes/': {
       id: '/heroes/'
@@ -827,6 +840,26 @@ const DeadlockdleRouteWithChildren = DeadlockdleRoute._addFileChildren(
   DeadlockdleRouteChildren,
 )
 
+interface FlashcardsRouteChildren {
+  FlashcardsHeroesRoute: typeof FlashcardsHeroesRoute
+  FlashcardsItemEffectsRoute: typeof FlashcardsItemEffectsRoute
+  FlashcardsItemUpgradesRoute: typeof FlashcardsItemUpgradesRoute
+  FlashcardsItemsRoute: typeof FlashcardsItemsRoute
+  FlashcardsIndexRoute: typeof FlashcardsIndexRoute
+}
+
+const FlashcardsRouteChildren: FlashcardsRouteChildren = {
+  FlashcardsHeroesRoute: FlashcardsHeroesRoute,
+  FlashcardsItemEffectsRoute: FlashcardsItemEffectsRoute,
+  FlashcardsItemUpgradesRoute: FlashcardsItemUpgradesRoute,
+  FlashcardsItemsRoute: FlashcardsItemsRoute,
+  FlashcardsIndexRoute: FlashcardsIndexRoute,
+}
+
+const FlashcardsRouteWithChildren = FlashcardsRoute._addFileChildren(
+  FlashcardsRouteChildren,
+)
+
 interface HeroesRouteChildren {
   HeroesHeroNameRoute: typeof HeroesHeroNameRoute
   HeroesIndexRoute: typeof HeroesIndexRoute
@@ -848,6 +881,7 @@ const rootRouteChildren: RootRouteChildren = {
   DataPrivacyRoute: DataPrivacyRoute,
   DeadlockdleRoute: DeadlockdleRouteWithChildren,
   DeadlockstatsPrivacyRoute: DeadlockstatsPrivacyRoute,
+  FlashcardsRoute: FlashcardsRouteWithChildren,
   GamesRoute: GamesRoute,
   HeatmapRoute: HeatmapRoute,
   HeroesRoute: HeroesRouteWithChildren,
@@ -861,13 +895,8 @@ const rootRouteChildren: RootRouteChildren = {
   TeamBuilderRoute: TeamBuilderRoute,
   TrackerRoute: TrackerRoute,
   BlogSlugRoute: BlogSlugRoute,
-  FlashcardsHeroesRoute: FlashcardsHeroesRoute,
-  FlashcardsItemEffectsRoute: FlashcardsItemEffectsRoute,
-  FlashcardsItemUpgradesRoute: FlashcardsItemUpgradesRoute,
-  FlashcardsItemsRoute: FlashcardsItemsRoute,
   PlayersAccountIdRoute: PlayersAccountIdRoute,
   BlogIndexRoute: BlogIndexRoute,
-  FlashcardsIndexRoute: FlashcardsIndexRoute,
   StreamkitIndexRoute: StreamkitIndexRoute,
   AuthPatreonCallbackRoute: AuthPatreonCallbackRoute,
   StreamkitWidgetsRegionAccountIdWidgetTypeRoute:

@@ -1,4 +1,3 @@
-import newRockerWoff2 from "@fontsource/new-rocker/files/new-rocker-latin-400-normal.woff2?url";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -39,19 +38,7 @@ export const Route = createFileRoute("/deadlockdle/")({
       description: "Test your Deadlock knowledge with daily puzzles. Guess heroes, items, sounds, abilities, and more.",
       path: "/deadlockdle",
     });
-    return {
-      ...s,
-      links: [
-        ...s.links,
-        {
-          rel: "preload",
-          href: newRockerWoff2,
-          as: "font",
-          type: "font/woff2",
-          crossOrigin: "anonymous",
-        },
-      ],
-    };
+    return s;
   },
 });
 

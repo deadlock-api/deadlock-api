@@ -1,4 +1,3 @@
-import newRockerWoff2 from "@fontsource/new-rocker/files/new-rocker-latin-400-normal.woff2?url";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { ArrowRight, GitBranch, ScrollText, ShoppingBag, Swords } from "lucide-react";
@@ -15,19 +14,7 @@ export const Route = createFileRoute("/flashcards/")({
         "Practice identifying Deadlock heroes, items, and item upgrade paths with multiple-choice flashcards.",
       path: "/flashcards",
     });
-    return {
-      ...s,
-      links: [
-        ...s.links,
-        {
-          rel: "preload",
-          href: newRockerWoff2,
-          as: "font",
-          type: "font/woff2",
-          crossOrigin: "anonymous",
-        },
-      ],
-    };
+    return s;
   },
 });
 

@@ -1,4 +1,3 @@
-import newRockerWoff2 from "@fontsource/new-rocker/files/new-rocker-latin-400-normal.woff2?url";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { Upgrade } from "deadlock_api_client";
@@ -45,19 +44,7 @@ export const Route = createFileRoute("/flashcards/item-upgrades")({
       description: "Study Deadlock item upgrade paths by matching upgraded items to their component items.",
       path: "/flashcards/item-upgrades",
     });
-    return {
-      ...s,
-      links: [
-        ...s.links,
-        {
-          rel: "preload",
-          href: newRockerWoff2,
-          as: "font",
-          type: "font/woff2",
-          crossOrigin: "anonymous",
-        },
-      ],
-    };
+    return s;
   },
 });
 

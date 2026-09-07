@@ -4,6 +4,7 @@ import { Crosshair } from "lucide-react";
 import { useCallback, useState } from "react";
 
 import { TargetCursor } from "~/components/deadlockdle/TargetCursor";
+import { NEW_ROCKER_PRELOAD } from "~/lib/fonts";
 
 const CURSOR_STORAGE_KEY = "deadlockdle:custom-cursor";
 
@@ -26,6 +27,7 @@ function useCursorToggle() {
 
 export const Route = createFileRoute("/deadlockdle")({
   component: DeadlockdleLayout,
+  head: () => ({ links: [NEW_ROCKER_PRELOAD] }),
 });
 
 function DeadlockdleLayout() {
