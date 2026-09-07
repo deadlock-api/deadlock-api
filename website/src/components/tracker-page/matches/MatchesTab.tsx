@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
 import { ArrowDown, ArrowUp, ChevronUp } from "lucide-react";
 import { parseAsInteger, parseAsStringLiteral, useQueryState, useQueryStates } from "nuqs";
-import { type ComponentProps, Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { type ComponentProps, Fragment, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { PaginationControls } from "~/components/PaginationControls";
 import { Button } from "~/components/ui/button";
@@ -162,6 +162,18 @@ export function MatchesTab({
   };
   const sortProps = { activeKey: sortKey, dir: sortDir, onSort: handleSort };
 
+  // Arrow keys step between the focusable match rows, skipping session and details rows.
+  const handleRowKeyDown = (event: KeyboardEvent<HTMLTableSectionElement>) => {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    const rows = [...event.currentTarget.querySelectorAll<HTMLTableRowElement>("tr[tabindex]")];
+    const index = rows.indexOf(event.target as HTMLTableRowElement);
+    if (index === -1) return;
+    const next = rows[index + (event.key === "ArrowDown" ? 1 : -1)];
+    if (!next) return;
+    event.preventDefault();
+    next.focus();
+  };
+
   const { data: heroNames } = useQuery({
     ...heroesQueryOptions,
     select: (heroes) => new Map(heroes.map((hero) => [hero.id, hero.name])),
@@ -235,7 +247,7 @@ export function MatchesTab({
             <TableHead className="hidden w-8 @md:table-cell" />
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody onKeyDown={handleRowKeyDown}>
           {paginatedEntries.map((entry, index) => {
             const expanded = expandedMatchId === entry.match_id;
             const session = sessions.get(entry.match_id);
