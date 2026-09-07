@@ -71,7 +71,7 @@ function BlogIndex() {
 
               <p className="mb-4 text-sm leading-relaxed text-muted-foreground">{post.description}</p>
 
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                 <div className="flex flex-wrap gap-2">
                   {post.tags.map((tag) => (
                     <span
@@ -86,7 +86,7 @@ function BlogIndex() {
                     </span>
                   ))}
                 </div>
-                <span className="flex items-center gap-1 text-xs font-medium text-primary transition-colors group-hover:text-primary">
+                <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-primary transition-colors group-hover:text-primary">
                   Read more
                   <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
                 </span>
