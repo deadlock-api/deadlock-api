@@ -80,9 +80,11 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                         const prevT0Pct = prevTotal > 0 && prev ? (prev.team0_wins / prevTotal) * 100 : null;
                         const prevT1Pct = prevTotal > 0 && prev ? (prev.team1_wins / prevTotal) * 100 : null;
                         return (
-                          <div className="flex items-center justify-between border-b border-white/4 px-4 py-2.5">
-                            <span className="text-sm text-muted-foreground">The Hidden King vs The Archmother</span>
-                            <div className="flex items-center gap-2.5">
+                          <div className="flex items-center justify-between gap-3 border-b border-white/4 px-4 py-2.5">
+                            <span className="text-sm text-muted-foreground sm:shrink-0">
+                              The Hidden King vs The Archmother
+                            </span>
+                            <div className="flex flex-wrap items-center justify-end gap-x-2.5 gap-y-1">
                               <span className="text-sm font-semibold tabular-nums">
                                 <span className="text-primary">{t0Pct.toFixed(2)}%</span>
                                 <span className="mx-1 text-muted-foreground">:</span>
