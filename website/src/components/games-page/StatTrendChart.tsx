@@ -8,7 +8,7 @@ import { day } from "~/dayjs";
 import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
-import { formatStatValue, type StatDefinition } from "./stat-definitions";
+import { formatAxisTick, formatStatValue, type StatDefinition, valueSpan } from "./stat-definitions";
 
 export const STAT_TREND_BUCKETS = [
   { value: "start_time_hour", label: "Hour", tickFormat: "MM/DD HH:mm", tooltipFormat: "YYYY-MM-DD HH:mm" },
@@ -43,6 +43,7 @@ export default function StatTrendChart({ params, stat, bucket, onBucketChange }:
         value: entry[stat.key] as number,
       }));
   }, [data, stat.key]);
+  const span = valueSpan(chartData);
 
   return (
     <div className="flex flex-col gap-2">
@@ -99,7 +100,7 @@ export default function StatTrendChart({ params, stat, bucket, onBucketChange }:
               />
               <YAxis
                 domain={["dataMin", "auto"]}
-                tickFormatter={(v) => formatStatValue(v, stat.format)}
+                tickFormatter={(v) => formatAxisTick(v, stat.format, span)}
                 stroke="#3f3f46"
                 tick={{ fontSize: 11, fill: "#a1a1aa" }}
                 tickMargin={6}

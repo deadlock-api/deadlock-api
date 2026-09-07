@@ -8,7 +8,7 @@ import { day } from "~/dayjs";
 import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
-import { formatStatValue, getStatDefinition } from "./stat-definitions";
+import { formatAxisTick, formatStatValue, getStatDefinition, valueSpan } from "./stat-definitions";
 import { StatSelector } from "./StatSelector";
 
 const TIME_BUCKETS = [
@@ -47,6 +47,7 @@ export default function GamesOverTimeChart({
         value: entry[stat as keyof typeof entry] as number,
       }));
   }, [data, stat]);
+  const span = valueSpan(chartData);
 
   return (
     <div className="flex flex-col gap-4">
@@ -93,7 +94,7 @@ export default function GamesOverTimeChart({
                 />
                 <YAxis
                   domain={["dataMin", "auto"]}
-                  tickFormatter={(v) => (statDef ? formatStatValue(v, statDef.format) : String(v))}
+                  tickFormatter={(v) => (statDef ? formatAxisTick(v, statDef.format, span) : String(v))}
                   stroke="#525252"
                   label={{
                     value: statDef?.label ?? stat,

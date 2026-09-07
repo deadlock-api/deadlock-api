@@ -9,7 +9,7 @@ import { extractBadgeMap } from "~/lib/leaderboard";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
-import { formatStatValue, getStatDefinition } from "./stat-definitions";
+import { formatAxisTick, formatStatValue, getStatDefinition, valueSpan } from "./stat-definitions";
 import { StatSelector } from "./StatSelector";
 
 interface GamesByRankChartProps {
@@ -81,6 +81,7 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
 
     return result;
   }, [data, stat, tierData]);
+  const span = valueSpan(chartData);
 
   const tierCenters = useMemo(() => {
     if (chartData.length === 0) return [];
@@ -188,7 +189,7 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
                 />
                 <YAxis
                   domain={["dataMin", "auto"]}
-                  tickFormatter={(v) => (statDef ? formatStatValue(v, statDef.format) : String(v))}
+                  tickFormatter={(v) => (statDef ? formatAxisTick(v, statDef.format, span) : String(v))}
                   stroke="#525252"
                   label={{
                     value: statDef?.label ?? stat,

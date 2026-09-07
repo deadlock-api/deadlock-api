@@ -133,6 +133,32 @@ export function getStatDefinition(key: string): StatDefinition | undefined {
   return undefined;
 }
 
+const BASE_DECIMALS: Record<Exclude<StatFormat, "duration">, number> = {
+  integer: 0,
+  percent: 1,
+  decimal1: 1,
+  decimal2: 2,
+};
+
+export function valueSpan(data: { value: number }[]): number {
+  const values = data.map((d) => d.value).filter(Number.isFinite);
+  return values.length > 0 ? Math.max(...values) - Math.min(...values) : 0;
+}
+
+/**
+ * Formats an axis tick with enough decimals that neighbouring ticks stay
+ * distinct. `span` is the plotted data range; recharts places roughly four
+ * intervals across it, so the estimated step decides the precision.
+ */
+export function formatAxisTick(value: number, format: StatFormat, span: number): string {
+  if (format === "duration") return formatStatValue(value, format);
+  const scale = format === "percent" ? 100 : 1;
+  const step = (span * scale) / 4;
+  const decimals = Math.min(4, Math.max(BASE_DECIMALS[format], step > 0 ? Math.ceil(-Math.log10(step)) : 0));
+  const text = decimals === 0 ? Math.round(value * scale).toLocaleString("en-US") : (value * scale).toFixed(decimals);
+  return format === "percent" ? `${text}%` : text;
+}
+
 export function formatStatValue(value: number | undefined | null, format: StatFormat): string {
   if (value == null || Number.isNaN(value)) return "-";
   switch (format) {
