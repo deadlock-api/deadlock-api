@@ -1,8 +1,18 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
+import { CopyButton } from "~/components/copy-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
+
+function PathBlock({ path }: { path: string }) {
+  return (
+    <div className="flex items-center gap-2 rounded bg-background py-1 pr-1 pl-3 font-mono text-sm text-foreground">
+      <span className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap">{path}</span>
+      <CopyButton iconOnly text={path} aria-label={`Copy ${path}`} />
+    </div>
+  );
+}
 
 export function DirectoryGuide() {
   const [openSection, setOpenSection] = useState<string | null>("windows");
@@ -27,9 +37,7 @@ export function DirectoryGuide() {
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-4 pb-2 pl-4">
             <p className="mb-3 text-sm text-muted-foreground">Default Steam installation path:</p>
-            <div className="overflow-x-auto rounded bg-background p-3 font-mono text-sm text-foreground">
-              C:\Program Files (x86)\Steam\appcache\httpcache
-            </div>
+            <PathBlock path="C:\Program Files (x86)\Steam\appcache\httpcache" />
           </CollapsibleContent>
         </Collapsible>
 
@@ -39,9 +47,7 @@ export function DirectoryGuide() {
             {openSection === "macos" ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-4 pb-2 pl-4">
-            <div className="overflow-x-auto rounded bg-background p-3 font-mono text-sm text-foreground">
-              ~/Library/Application Support/Steam/appcache/httpcache
-            </div>
+            <PathBlock path="~/Library/Application Support/Steam/appcache/httpcache" />
           </CollapsibleContent>
         </Collapsible>
 
@@ -53,39 +59,19 @@ export function DirectoryGuide() {
           <CollapsibleContent className="pt-4 pb-2 pl-4">
             <p className="mb-3 text-sm text-muted-foreground">Common locations (try these in order):</p>
             <div className="space-y-2 text-sm">
-              <div className="overflow-x-auto rounded bg-background p-2 font-mono text-foreground">
-                ~/.local/share/Steam/appcache/httpcache
-              </div>
-              <div className="overflow-x-auto rounded bg-background p-2 font-mono text-foreground">
-                ~/.steam/steam/appcache/httpcache
-              </div>
-              <div className="overflow-x-auto rounded bg-background p-2 font-mono text-foreground">
-                ~/.var/app/com.valvesoftware.Steam/.local/share/Steam/appcache/httpcache
-              </div>
+              <PathBlock path="~/.local/share/Steam/appcache/httpcache" />
+              <PathBlock path="~/.steam/steam/appcache/httpcache" />
+              <PathBlock path="~/.var/app/com.valvesoftware.Steam/.local/share/Steam/appcache/httpcache" />
               <details className="cursor-pointer text-xs text-muted-foreground">
                 <summary className="hover:text-foreground">Show all possible locations...</summary>
                 <div className="mt-2 space-y-2">
-                  <div className="overflow-x-auto rounded bg-background p-2 font-mono text-foreground">
-                    ~/.var/app/com.valvesoftware.Steam/.steam/steam/appcache/httpcache
-                  </div>
-                  <div className="overflow-x-auto rounded bg-background p-2 font-mono text-foreground">
-                    ~/.var/app/com.valvesoftware.Steam/.steam/root/appcache/httpcache
-                  </div>
-                  <div className="overflow-x-auto rounded bg-background p-2 font-mono text-foreground">
-                    ~/.steam/root/appcache/httpcache
-                  </div>
-                  <div className="overflow-x-auto rounded bg-background p-2 font-mono text-foreground">
-                    ~/.steam/debian-installation/appcache/httpcache
-                  </div>
-                  <div className="overflow-x-auto rounded bg-background p-2 font-mono text-foreground">
-                    ~/snap/steam/common/.local/share/Steam/appcache/httpcache
-                  </div>
-                  <div className="overflow-x-auto rounded bg-background p-2 font-mono text-foreground">
-                    ~/snap/steam/common/.steam/steam/appcache/httpcache
-                  </div>
-                  <div className="overflow-x-auto rounded bg-background p-2 font-mono text-foreground">
-                    ~/snap/steam/common/.steam/root/appcache/httpcache
-                  </div>
+                  <PathBlock path="~/.var/app/com.valvesoftware.Steam/.steam/steam/appcache/httpcache" />
+                  <PathBlock path="~/.var/app/com.valvesoftware.Steam/.steam/root/appcache/httpcache" />
+                  <PathBlock path="~/.steam/root/appcache/httpcache" />
+                  <PathBlock path="~/.steam/debian-installation/appcache/httpcache" />
+                  <PathBlock path="~/snap/steam/common/.local/share/Steam/appcache/httpcache" />
+                  <PathBlock path="~/snap/steam/common/.steam/steam/appcache/httpcache" />
+                  <PathBlock path="~/snap/steam/common/.steam/root/appcache/httpcache" />
                 </div>
               </details>
             </div>
