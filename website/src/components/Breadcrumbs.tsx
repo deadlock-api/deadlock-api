@@ -55,7 +55,11 @@ export function Breadcrumbs() {
       return labels;
     },
   });
-  const items = buildBreadcrumbs(pathname, labelsByPath);
+  // A not-found path has no page behind its segments, so a trail built from them would point nowhere.
+  const isNotFound = useMatches({
+    select: (matches) => matches.some((match) => match.status === "notFound" || match.globalNotFound),
+  });
+  const items = isNotFound ? [] : buildBreadcrumbs(pathname, labelsByPath);
 
   if (items.length === 0) return null;
 
