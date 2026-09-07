@@ -145,7 +145,15 @@ function TrackerContent({ accountId }: { accountId: number }) {
 
         <TabsContent value="matches">
           <QueryRenderer query={historyQuery} loadingFallback={loadingFallback}>
-            {() => <MatchesTab entries={filteredEntries} ranks={ranks} accountId={accountId} />}
+            {() => (
+              <MatchesTab
+                entries={filteredEntries}
+                ranks={ranks}
+                accountId={accountId}
+                heroId={heroId}
+                onHeroChange={setHeroId}
+              />
+            )}
           </QueryRenderer>
         </TabsContent>
 

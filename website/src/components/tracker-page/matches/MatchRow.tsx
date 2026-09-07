@@ -48,6 +48,8 @@ export function MatchRow({
   ranks,
   heroName,
   records,
+  heroFiltered,
+  onToggleHeroFilter,
   expanded,
   onToggle,
 }: {
@@ -57,6 +59,9 @@ export function MatchRow({
   heroName: string;
   /** Personal bests this match holds over the filtered history. */
   records?: HeldRecord[];
+  /** Whether the history is already narrowed to a hero. */
+  heroFiltered: boolean;
+  onToggleHeroFilter: () => void;
   expanded: boolean;
   onToggle: () => void;
 }) {
@@ -103,7 +108,21 @@ export function MatchRow({
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
-          <HeroImage heroId={entry.hero_id} className="size-7 rounded-full" />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onToggleHeroFilter();
+                }}
+                className="shrink-0 cursor-pointer rounded-full transition-shadow hover:ring-2 hover:ring-foreground/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              >
+                <HeroImage heroId={entry.hero_id} className="size-7 rounded-full" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{heroFiltered ? "Show all heroes" : `Show only ${heroName} matches`}</TooltipContent>
+          </Tooltip>
           <span className="hidden max-w-[120px] truncate @xl:inline">{heroName}</span>
           {records && (
             <Tooltip>

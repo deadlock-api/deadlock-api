@@ -133,10 +133,15 @@ export function MatchesTab({
   entries,
   ranks,
   accountId,
+  heroId,
+  onHeroChange,
 }: {
   entries: PlayerMatchHistoryEntry[];
   ranks: Rank[];
   accountId: number;
+  /** The active hero filter, which the rows can toggle. */
+  heroId: number | null;
+  onHeroChange: (heroId: number | null) => void;
 }) {
   const [expandedMatchId, setExpandedMatchId] = useQueryState("match", parseAsInteger);
   const [{ sort: sortKey, dir: sortDir }, setSort] = useQueryStates({
@@ -161,6 +166,10 @@ export function MatchesTab({
     setCurrentPage(0);
   };
   const sortProps = { activeKey: sortKey, dir: sortDir, onSort: handleSort };
+  const toggleHeroFilter = (rowHeroId: number) => {
+    onHeroChange(heroId == null ? rowHeroId : null);
+    setCurrentPage(0);
+  };
 
   // Arrow keys step between the focusable match rows, skipping session and details rows.
   const handleRowKeyDown = (event: KeyboardEvent<HTMLTableSectionElement>) => {
@@ -262,6 +271,8 @@ export function MatchesTab({
                   ranks={ranks}
                   heroName={heroNames?.get(entry.hero_id) ?? "Unknown"}
                   records={heldRecords?.get(entry.match_id)}
+                  heroFiltered={heroId != null}
+                  onToggleHeroFilter={() => toggleHeroFilter(entry.hero_id)}
                   expanded={expanded}
                   onToggle={() => setExpandedMatchId(expanded ? null : entry.match_id)}
                 />
