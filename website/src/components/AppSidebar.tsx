@@ -220,7 +220,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 pt-3 pb-1">
+      <nav aria-label="Main" className="flex-1 overflow-y-auto px-3 pt-3 pb-1">
         {/* Top links (ungrouped) */}
         <div className="space-y-0.5">
           {topLinks.map((link) => (

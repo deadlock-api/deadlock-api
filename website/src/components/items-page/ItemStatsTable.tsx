@@ -595,7 +595,11 @@ export function ItemStatsTable({
               {!hideHeader && (
                 <TableHeader className="bg-muted">
                   <TableRow>
-                    {customDropdownContent && <TableHead className="w-4 text-center" />}
+                    {customDropdownContent && (
+                      <TableHead className="w-4 text-center">
+                        <span className="sr-only">Details</span>
+                      </TableHead>
+                    )}
                     {!hideIndex && <TableHead className="text-center">#</TableHead>}
                     <TableHead>Item</TableHead>
                     {columns.includes("itemsTier") && <TableHead>Tier</TableHead>}
@@ -628,8 +632,9 @@ export function ItemStatsTable({
                       </TableHead>
                     )}
                     {columns.includes("confidence") && <TableHead className="text-center">Confidence</TableHead>}
-                    <TableHead className="text-center" aria-label="Include or exclude item from filters">
+                    <TableHead className="text-center">
                       <span className="icon-[mdi--filter-variant] inline-block size-4 align-middle text-muted-foreground" />
+                      <span className="sr-only">Filter</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>

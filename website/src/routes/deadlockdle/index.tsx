@@ -207,6 +207,7 @@ function DeadlockdleHub() {
             <CalendarDays className="size-3.5 text-muted-foreground/50" />
             <input
               type="date"
+              aria-label="Puzzle date"
               value={date}
               min={EPOCH_DATE}
               max={today}

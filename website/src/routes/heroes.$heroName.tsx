@@ -212,7 +212,7 @@ function HeroDetailPage() {
         </ChunkErrorBoundary>
       </section>
 
-      <nav className="flex flex-wrap gap-4 border-t border-border pt-4 text-sm">
+      <nav aria-label="Related pages" className="flex flex-wrap gap-4 border-t border-border pt-4 text-sm">
         <Link to="/heroes" preload="intent" className="font-medium text-primary underline underline-offset-4">
           All hero win rates
         </Link>

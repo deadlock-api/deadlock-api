@@ -90,7 +90,7 @@ function StreamKit() {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_auto_1fr]">
           <div className="space-y-3">
             <div className="space-y-1">
-              <h3 className="font-semibold text-foreground">Connect Your Account</h3>
+              <h2 className="font-semibold text-foreground">Connect Your Account</h2>
               <p className="text-sm text-muted-foreground">Enter your Steam ID manually</p>
             </div>
             <div className="space-y-2">
@@ -123,7 +123,7 @@ function StreamKit() {
 
           <div className="flex flex-col items-center justify-center gap-3 md:items-start">
             <div className="space-y-1 text-center md:text-left">
-              <h3 className="font-semibold text-foreground">Quick Connect</h3>
+              <h2 className="font-semibold text-foreground">Quick Connect</h2>
               <p className="text-sm text-muted-foreground">Sign in directly with Steam</p>
             </div>
             <Button

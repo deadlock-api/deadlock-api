@@ -107,7 +107,7 @@ function FlashcardsHub() {
                       <div className="flex size-8 shrink-0 items-center justify-center border border-border bg-muted transition-colors group-hover:border-primary/20 group-hover:bg-primary/5">
                         <Icon className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
                       </div>
-                      <h3 className="text-sm font-semibold text-foreground">{game.title}</h3>
+                      <h2 className="text-sm font-semibold text-foreground">{game.title}</h2>
                     </div>
                     <p className="text-xs leading-relaxed text-muted-foreground">{game.description}</p>
                     <div className="mt-auto flex items-center justify-between pt-2">
