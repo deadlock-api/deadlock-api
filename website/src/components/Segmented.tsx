@@ -12,12 +12,20 @@ interface SegmentedProps<T extends string> {
   onValueChange: (value: T) => void;
   options: readonly SegmentedOption<T>[];
   className?: string;
+  "aria-label"?: string;
 }
 
-export function Segmented<T extends string>({ value, onValueChange, options, className }: SegmentedProps<T>) {
+export function Segmented<T extends string>({
+  value,
+  onValueChange,
+  options,
+  className,
+  "aria-label": ariaLabel,
+}: SegmentedProps<T>) {
   return (
     <ToggleGroupPrimitive.Root
       type="single"
+      aria-label={ariaLabel}
       value={value}
       // Radix reports "" when the active item is clicked again; a segmented control has no empty state.
       onValueChange={(next) => next && onValueChange(next as T)}

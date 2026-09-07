@@ -118,7 +118,13 @@ export function FilterToggleCell<T extends string>({
       )}
     >
       <CellLabel active={active}>{label}</CellLabel>
-      <Segmented value={value} onValueChange={onValueChange} options={options} className="w-fit md:flex-nowrap" />
+      <Segmented
+        value={value}
+        onValueChange={onValueChange}
+        options={options}
+        aria-label={label}
+        className="w-fit md:flex-nowrap"
+      />
     </div>
   );
 }
