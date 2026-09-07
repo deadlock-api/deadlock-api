@@ -172,6 +172,12 @@ export function MatchesTab({
   useEffect(() => {
     linkedRowRef.current?.scrollIntoView({ block: "center" });
   }, []);
+  const tableTopRef = useRef<HTMLDivElement>(null);
+  // Turning the page from below the table would otherwise leave the reader at the end of the new page.
+  const turnPageFromBelow = (nextPage: number) => {
+    setCurrentPage(nextPage);
+    tableTopRef.current?.scrollIntoView({ block: "start" });
+  };
 
   const handleSort = (key: MatchSortKey) => {
     setSort(sortKey === key ? { dir: sortDir === "desc" ? "asc" : "desc" } : { sort: key, dir: "desc" });
@@ -220,7 +226,7 @@ export function MatchesTab({
   );
 
   return (
-    <div className="@container space-y-3">
+    <div ref={tableTopRef} className="@container space-y-3">
       <PaginationControls
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={setItemsPerPage}
@@ -329,6 +335,24 @@ export function MatchesTab({
           </TableFooter>
         )}
       </Table>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-end gap-2 text-sm text-muted-foreground">
+          <span className="mr-2 tabular-nums">
+            Page {page + 1} of {totalPages}
+          </span>
+          <Button variant="outline" size="sm" onClick={() => turnPageFromBelow(page - 1)} disabled={page === 0}>
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => turnPageFromBelow(page + 1)}
+            disabled={page >= totalPages - 1}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
