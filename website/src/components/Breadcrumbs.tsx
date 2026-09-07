@@ -82,10 +82,10 @@ export function Breadcrumbs() {
           {items.map((item, i) => {
             const isLast = i === items.length - 1;
             return (
-              <li key={item.path} className="flex items-center gap-1">
-                <ChevronRight className="size-3 text-muted-foreground/50" />
+              <li key={item.path} className="flex min-w-0 items-center gap-1">
+                <ChevronRight className="size-3 shrink-0 text-muted-foreground/50" />
                 {isLast ? (
-                  <span className="font-medium text-foreground" aria-current="page">
+                  <span className="truncate font-medium text-foreground" aria-current="page" title={item.label}>
                     {item.label}
                   </span>
                 ) : (
