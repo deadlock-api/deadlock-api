@@ -9,15 +9,12 @@ import { Filter } from "~/components/Filter";
 import HeatmapCanvas from "~/components/heatmap/HeatmapCanvas";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
-import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
-import { defaultDateRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
-import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { loadSeasons } from "~/queries/asset-queries";
 import { killDeathStatsQueryOptions, mapQueryOptions } from "~/queries/heatmap-queries";
 
@@ -27,19 +24,10 @@ const VIEW_MODES = ["kills", "deaths", "kd"] as const;
 
 export const Route = createFileRoute("/heatmap")({
   component: HeatmapPage,
+  // Kill/death stats are ~2 MB and only feed a client-side canvas, so they are
+  // fetched after hydration instead of being dehydrated into the HTML.
   loader: async ({ context: { queryClient } }) => {
-    const [defaultStart, defaultEnd] = defaultDateRange(await loadSeasons(queryClient));
-    const defaultKdParams: AnalyticsApiKillDeathStatsRequest = {
-      team: 0,
-      gameMode: "normal",
-      matchMode: DEFAULT_MATCH_MODE,
-      minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
-      maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
-    };
-    await Promise.all([
-      prefetchSafe(queryClient.ensureQueryData(mapQueryOptions)),
-      prefetchSafe(queryClient.ensureQueryData(killDeathStatsQueryOptions(defaultKdParams))),
-    ]);
+    await Promise.all([prefetchSafe(queryClient.ensureQueryData(mapQueryOptions)), loadSeasons(queryClient)]);
   },
   head: () =>
     seo({
