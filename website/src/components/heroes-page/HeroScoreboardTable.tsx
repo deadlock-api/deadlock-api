@@ -44,7 +44,7 @@ export function HeroScoreboardTable({
           <TableHead className="w-[5ch] text-right">#</TableHead>
           <TableHead>Hero</TableHead>
           {sortBy !== "matches" && (
-            <TableHead className="text-right">
+            <TableHead className="hidden text-right sm:table-cell">
               <button
                 type="button"
                 onClick={handleMatchesClick}
@@ -83,7 +83,7 @@ export function HeroScoreboardTable({
               </div>
             </TableCell>
             {sortBy !== "matches" && (
-              <TableCell className="text-right">{entry.matches.toLocaleString("en-US")}</TableCell>
+              <TableCell className="hidden text-right sm:table-cell">{entry.matches.toLocaleString("en-US")}</TableCell>
             )}
             <TableCell className="text-right">{formatStatValue(entry.value, sortBy)}</TableCell>
           </TableRow>
