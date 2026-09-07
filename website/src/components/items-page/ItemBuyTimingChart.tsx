@@ -293,6 +293,12 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
               <div className="flex h-120 items-center justify-center">
                 <LoadingLogo />
               </div>
+            ) : itemIds.length === 0 ? (
+              <div className="flex h-60 items-center justify-center">
+                <p className="max-w-sm text-center text-muted-foreground">
+                  Pick one or more items above to compare how their win rate changes with when they are bought.
+                </p>
+              </div>
             ) : !hasValidData ? (
               <div className="flex h-120 items-center justify-center">
                 <p className="text-muted-foreground">No data available</p>
