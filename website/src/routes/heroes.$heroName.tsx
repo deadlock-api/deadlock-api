@@ -71,7 +71,7 @@ export const Route = createFileRoute("/heroes/$heroName")({
       prefetchSafe(queryClient.ensureQueryData(heroBanStatsQueryOptions(currentBanParams(seasons)))),
     ]);
     const cardImage = hero.images.hero_card_critical_webp ?? hero.images.icon_hero_card_webp ?? null;
-    return { heroId: hero.id, heroName: hero.name, slug: params.heroName, cardImage };
+    return { heroId: hero.id, heroName: hero.name, slug: params.heroName, cardImage, breadcrumb: hero.name };
   },
   head: ({ loaderData }) => {
     if (!loaderData) {

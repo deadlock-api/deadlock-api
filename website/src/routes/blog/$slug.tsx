@@ -9,7 +9,7 @@ export const Route = createFileRoute("/blog/$slug")({
   loader: async ({ params }) => {
     const post = await fetchBlogPost({ data: params.slug });
     if (!post) throw notFound();
-    return post;
+    return { ...post, breadcrumb: post.title };
   },
   head: ({ loaderData }) => {
     if (!loaderData) {

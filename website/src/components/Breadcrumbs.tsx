@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useMatches, useRouterState } from "@tanstack/react-router";
 import { ChevronRight, Home } from "lucide-react";
 
 const ROUTE_LABELS: Record<string, string> = {
@@ -22,14 +22,17 @@ interface BreadcrumbItem {
   path: string;
 }
 
-function buildBreadcrumbs(pathname: string): BreadcrumbItem[] {
+function buildBreadcrumbs(pathname: string, labelsByPath: Map<string, string>): BreadcrumbItem[] {
   if (pathname === "/") return [];
   const segments = pathname.replace(/\/$/, "").split("/").filter(Boolean);
   const items: BreadcrumbItem[] = [];
   let path = "";
   for (const segment of segments) {
     path += `/${segment}`;
-    const label = ROUTE_LABELS[segment] ?? segment.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    const label =
+      labelsByPath.get(path) ??
+      ROUTE_LABELS[segment] ??
+      segment.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
     items.push({ label, path });
   }
   return items;
@@ -37,7 +40,18 @@ function buildBreadcrumbs(pathname: string): BreadcrumbItem[] {
 
 export function Breadcrumbs() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const items = buildBreadcrumbs(pathname);
+  // Routes with dynamic segments return a `breadcrumb` label from their loader.
+  const labelsByPath = useMatches({
+    select: (matches) => {
+      const labels = new Map<string, string>();
+      for (const match of matches) {
+        const data = match.loaderData as { breadcrumb?: unknown } | undefined;
+        if (typeof data?.breadcrumb === "string") labels.set(match.pathname.replace(/\/$/, ""), data.breadcrumb);
+      }
+      return labels;
+    },
+  });
+  const items = buildBreadcrumbs(pathname, labelsByPath);
 
   if (items.length === 0) return null;
 
