@@ -128,11 +128,29 @@ export interface TrackerMatchPlayer {
   personaname: string | undefined;
 }
 
+/** Objective tiers on the current map; the game's `Core` is the final Patron phase and ends the match. */
+export type TrackerObjectiveKind = "guardian" | "walker" | "baseGuardian" | "shrine" | "patron";
+
+export interface TrackerObjective {
+  /** The team that owned (and lost) the objective. */
+  team: string;
+  kind: TrackerObjectiveKind;
+  destroyed_time_s: number;
+}
+
+export interface TrackerMidBoss {
+  team_claimed: string;
+  destroyed_time_s: number;
+}
+
 export interface TrackerMatchMetadata {
   winning_team: string | null | undefined;
   average_badge_team0: number | null | undefined;
   average_badge_team1: number | null | undefined;
   players: TrackerMatchPlayer[];
+  /** Destroyed objectives only. */
+  objectives: TrackerObjective[];
+  mid_boss: TrackerMidBoss[];
 }
 
 /** Shape of the protobuf-JSON `/v1/matches/{id}/metadata` response. Teams are `ECitadelLobbyTeam` numbers (0/1). */
@@ -141,6 +159,8 @@ interface RestMatchMetadata {
     winning_team?: number | null;
     average_badge_team0?: number | null;
     average_badge_team1?: number | null;
+    objectives?: { team?: number | null; team_objective_id?: number | null; destroyed_time_s?: number | null }[];
+    mid_boss?: { team_claimed?: number | null; destroyed_time_s?: number | null }[];
     players?: {
       account_id?: number;
       team?: number | null;
@@ -174,6 +194,50 @@ function maxStat(stats: { [key: string]: number | null | undefined }[] | undefin
   return max;
 }
 
+const restTeam = (team: number | null | undefined) => (team == null ? "" : `Team${team}`);
+
+/** `ECitadelTeamObjective`: 0 Core, 1-4 Tier1 lanes, 5-8 Tier2 lanes, 9 Titan, 10-11 shield generators, 12-15 barrack bosses. */
+const REST_OBJECTIVE_KINDS: (TrackerObjectiveKind | undefined)[] = [
+  undefined,
+  ...Array<TrackerObjectiveKind>(4).fill("guardian"),
+  ...Array<TrackerObjectiveKind>(4).fill("walker"),
+  "patron",
+  "shrine",
+  "shrine",
+  ...Array<TrackerObjectiveKind>(4).fill("baseGuardian"),
+];
+
+/** GraphQL spells the same enum out, e.g. `Tier1Lane1`, `BarrackBossLane4`, `TitanShieldGenerator2`, `Titan`, `Core`. */
+function graphqlObjectiveKind(name: string): TrackerObjectiveKind | undefined {
+  if (name.startsWith("Tier1")) return "guardian";
+  if (name.startsWith("Tier2")) return "walker";
+  if (name.startsWith("BarrackBoss")) return "baseGuardian";
+  if (name.startsWith("TitanShieldGenerator")) return "shrine";
+  if (name === "Titan") return "patron";
+  return undefined;
+}
+
+function destroyedObjectives<T extends { destroyed_time_s?: number | null }>(
+  raw: T[] | null | undefined,
+  classify: (entry: T) => { team: string; kind: TrackerObjectiveKind | undefined },
+): TrackerObjective[] {
+  const objectives: TrackerObjective[] = [];
+  for (const entry of raw ?? []) {
+    const { team, kind } = classify(entry);
+    if (kind && entry.destroyed_time_s) objectives.push({ team, kind, destroyed_time_s: entry.destroyed_time_s });
+  }
+  return objectives;
+}
+
+function claimedMidBosses<T extends { destroyed_time_s?: number | null }>(
+  raw: T[] | null | undefined,
+  teamOf: (entry: T) => string,
+): TrackerMidBoss[] {
+  return (raw ?? [])
+    .filter((entry) => entry.destroyed_time_s)
+    .map((entry) => ({ team_claimed: teamOf(entry), destroyed_time_s: entry.destroyed_time_s as number }));
+}
+
 /**
  * Fallback for matches the GraphQL (ClickHouse) side has not ingested yet: the
  * single metadata endpoint fetches on demand from Valve's replay CDN. It has no
@@ -184,12 +248,17 @@ async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<Track
   const info = (response.data as unknown as RestMatchMetadata).match_info;
   if (!info) return null;
   return {
-    winning_team: info.winning_team == null ? null : `Team${info.winning_team}`,
+    winning_team: info.winning_team == null ? null : restTeam(info.winning_team),
     average_badge_team0: info.average_badge_team0,
     average_badge_team1: info.average_badge_team1,
+    objectives: destroyedObjectives(info.objectives, (objective) => ({
+      team: restTeam(objective.team),
+      kind: REST_OBJECTIVE_KINDS[objective.team_objective_id ?? -1],
+    })),
+    mid_boss: claimedMidBosses(info.mid_boss, (boss) => restTeam(boss.team_claimed)),
     players: (info.players ?? []).map((player) => ({
       account_id: player.account_id ?? 0,
-      team: player.team == null ? "" : `Team${player.team}`,
+      team: restTeam(player.team),
       hero_id: player.hero_id ?? 0,
       assigned_lane: player.assigned_lane ?? 0,
       kills: player.kills ?? 0,
@@ -218,6 +287,18 @@ async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<Track
   };
 }
 
+/** The `objectives` and `mid_boss` JSON scalars; teams are `Team0`/`Team1` strings here. */
+interface GraphqlObjective {
+  team?: string | null;
+  team_objective?: string | null;
+  destroyed_time_s?: number | null;
+}
+
+interface GraphqlMidBoss {
+  team_claimed?: string | null;
+  destroyed_time_s?: number | null;
+}
+
 export function trackerMatchMetadataQueryOptions(matchId: number) {
   return queryOptions({
     queryKey: queryKeys.players.matchMetadata(matchId),
@@ -228,6 +309,8 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
           winning_team: true,
           average_badge_team_0: true,
           average_badge_team_1: true,
+          objectives: true,
+          mid_boss: true,
           players: {
             account_id: true,
             team: true,
@@ -256,6 +339,11 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
         winning_team: match.winning_team,
         average_badge_team0: match.average_badge_team_0,
         average_badge_team1: match.average_badge_team_1,
+        objectives: destroyedObjectives(match.objectives as GraphqlObjective[] | null, (objective) => ({
+          team: objective.team ?? "",
+          kind: graphqlObjectiveKind(objective.team_objective ?? ""),
+        })),
+        mid_boss: claimedMidBosses(match.mid_boss as GraphqlMidBoss[] | null, (boss) => boss.team_claimed ?? ""),
         players: (match.players ?? []).map((player) => ({
           account_id: player.account_id ?? 0,
           team: player.team ?? "",

@@ -1,11 +1,55 @@
 import { useId } from "react";
-import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ReferenceDot,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { formatMatchDuration } from "~/lib/tracker/compute";
+import { OBJECTIVE_LABELS, type ObjectiveEvent, type ObjectiveEventKind } from "~/lib/tracker/objectives";
 import type { SoulLead, SoulLeadPoint } from "~/lib/tracker/soul-lead";
 import { cn } from "~/lib/utils";
 
 import { LOSS_COLOR, LOSS_TEXT_CLASS, WIN_COLOR, WIN_TEXT_CLASS } from "../shared/colors";
+
+/** Marker length in pixels; bigger objectives get longer ticks. */
+const MARKER_HEIGHTS: Record<ObjectiveEventKind, number> = {
+  guardian: 6,
+  walker: 9,
+  baseGuardian: 12,
+  shrine: 12,
+  patron: 16,
+  midBoss: 10,
+};
+
+function describeEvent(event: ObjectiveEvent): string {
+  const at = `at ${formatMatchDuration(event.time)}`;
+  if (event.kind === "midBoss") return `${event.own ? "Claimed" : "Enemy claimed"} the Mid Boss ${at}`;
+  const label = OBJECTIVE_LABELS[event.kind];
+  return event.own ? `Destroyed an enemy ${label} ${at}` : `Lost a ${label} ${at}`;
+}
+
+/** Own gains hang from the top edge of the plot, losses rise from the bottom edge; mid bosses are diamonds. */
+function ObjectiveMarker({ cx = 0, cy = 0, event }: { cx?: number; cy?: number; event: ObjectiveEvent }) {
+  const height = MARKER_HEIGHTS[event.kind];
+  const direction = event.own ? 1 : -1;
+  return (
+    <g fill={event.own ? WIN_COLOR : LOSS_COLOR}>
+      <title>{describeEvent(event)}</title>
+      {event.kind === "midBoss" ? (
+        <path d={`M${cx} ${cy}l4 ${4 * direction}l-4 ${4 * direction}l-4 ${-4 * direction}Z`} />
+      ) : (
+        <rect x={cx - 1} y={event.own ? cy : cy - height} width={2} height={height} rx={1} />
+      )}
+    </g>
+  );
+}
 
 function formatLead(lead: number): string {
   if (Math.abs(lead) < 1000) return `${lead < 0 ? "−" : "+"}${Math.abs(lead)}`;
@@ -49,18 +93,28 @@ function LeadTooltipContent({ active, payload }: { active?: boolean; payload?: {
   );
 }
 
-export function SoulLeadChart({ lead }: { lead: SoulLead }) {
+export function SoulLeadChart({ lead, events }: { lead: SoulLead; events: ObjectiveEvent[] }) {
   const gradientId = useId();
   const max = Math.max(0, lead.peak.lead);
   const min = Math.min(0, lead.trough.lead);
   const zeroOffset = max === min ? 0 : max / (max - min);
   const ticks = leadTicks(min, max);
+  const taken = events.filter((event) => event.own).length;
 
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
         <span className="font-semibold">Soul lead</span>
         <span className="text-muted-foreground">Ahead for {Math.round(lead.aheadShare * 100)}% of the match</span>
+        {events.length > 0 && (
+          <span
+            className="text-muted-foreground tabular-nums"
+            title="Objectives destroyed and mid bosses claimed by your team, then by the enemy"
+          >
+            Objectives <span className={cn("font-semibold", WIN_TEXT_CLASS)}>{taken}</span> –{" "}
+            <span className={cn("font-semibold", LOSS_TEXT_CLASS)}>{events.length - taken}</span>
+          </span>
+        )}
         {lead.peak.lead > 0 && (
           <span className="text-muted-foreground tabular-nums">
             Peak <span className={cn("font-semibold", WIN_TEXT_CLASS)}>{formatLead(lead.peak.lead)}</span> at{" "}
@@ -106,6 +160,16 @@ export function SoulLeadChart({ lead }: { lead: SoulLead }) {
           />
           <Tooltip cursor={{ stroke: "var(--border)", strokeWidth: 1 }} content={<LeadTooltipContent />} />
           <ReferenceLine y={0} stroke="var(--muted-foreground)" strokeOpacity={0.6} />
+          {events.map((event, index) => (
+            <ReferenceDot
+              // oxlint-disable-next-line react/no-array-index-key
+              key={index}
+              x={event.time}
+              y={event.own ? ticks[ticks.length - 1] : ticks[0]}
+              r={0}
+              shape={(props) => <ObjectiveMarker cx={props.cx} cy={props.cy} event={event} />}
+            />
+          ))}
           <Area
             type="monotone"
             dataKey="lead"

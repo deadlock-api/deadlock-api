@@ -15,6 +15,7 @@ import { LANES } from "~/lib/team-builder/lanes";
 import { hasLanes, type TrackerSummary } from "~/lib/tracker/compute";
 import { computeTeamContribution } from "~/lib/tracker/contribution";
 import { computeLaneMatchup } from "~/lib/tracker/lane-matchup";
+import { computeObjectiveEvents } from "~/lib/tracker/objectives";
 import { computeSoulLead } from "~/lib/tracker/soul-lead";
 import { cn } from "~/lib/utils";
 import { itemUpgradesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
@@ -119,11 +120,10 @@ export function MatchRowDetails({
   }, [match]);
 
   const tracked = match?.players.find((player) => player.account_id === accountId);
+  const ownTeam = tracked?.team ?? TEAMS[0].key;
 
-  const soulLead = useMemo(() => {
-    if (!match) return null;
-    return computeSoulLead(match.players, tracked?.team ?? TEAMS[0].key);
-  }, [match, tracked]);
+  const soulLead = useMemo(() => (match ? computeSoulLead(match.players, ownTeam) : null), [match, ownTeam]);
+  const objectiveEvents = useMemo(() => (match ? computeObjectiveEvents(match, ownTeam) : []), [match, ownTeam]);
 
   const laneMatchup = useMemo(
     () => (laned && match ? computeLaneMatchup(match.players, accountId) : null),
@@ -162,7 +162,7 @@ export function MatchRowDetails({
 
   return (
     <div className="@container space-y-4">
-      {soulLead && <SoulLeadChart lead={soulLead} />}
+      {soulLead && <SoulLeadChart lead={soulLead} events={objectiveEvents} />}
       {contribution && <PerformanceStrip entry={entry} contribution={contribution} heroSummary={heroSummary} />}
       {laneMatchup && <LaneMatchupCard matchup={laneMatchup} trackedAccountId={accountId} nameOf={nameOf} />}
       <div className="grid gap-4 @2xl:grid-cols-2">
