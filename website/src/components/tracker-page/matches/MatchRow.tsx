@@ -152,7 +152,7 @@ export function MatchRow({
       <TableCell className="hidden text-right text-muted-foreground tabular-nums @2xl:table-cell">
         {Math.round(soulsPerMinute(entry)).toLocaleString("en-US")}
       </TableCell>
-      <TableCell className="hidden text-right text-muted-foreground tabular-nums @4xl:table-cell">
+      <TableCell className="hidden text-right text-muted-foreground tabular-nums @5xl:table-cell">
         {entry.last_hits} / {entry.denies}
       </TableCell>
       <TableCell className="hidden text-right tabular-nums @3xl:table-cell">
@@ -190,13 +190,13 @@ export function MatchRow({
           <TooltipContent>{day.unix(entry.start_time).format("MMM D, YYYY HH:mm")}</TooltipContent>
         </Tooltip>
       </TableCell>
-      <TableCell className="hidden @4xl:table-cell">
+      <TableCell className="hidden @5xl:table-cell">
         <div className="flex items-center justify-end gap-0.5 text-muted-foreground tabular-nums">
           {entry.match_id}
           <CopyButton text={String(entry.match_id)} iconOnly title="Copy match ID" className="size-6" />
         </div>
       </TableCell>
-      <TableCell className="hidden @4xl:table-cell">
+      <TableCell className="hidden @5xl:table-cell">
         <Link
           to="/team-builder"
           search={{ match: entry.match_id }}

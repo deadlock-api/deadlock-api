@@ -136,14 +136,14 @@ export function MatchRowDetails({
               ` · ${formatMatchDuration(entry.brawl_avg_round_time_s)} avg round`}
           </span>
         )}
-        <span className="inline-flex items-center gap-0.5 tabular-nums @4xl:hidden">
+        <span className="inline-flex items-center gap-0.5 tabular-nums @5xl:hidden">
           Match {matchId}
           <CopyButton text={String(matchId)} iconOnly title="Copy match ID" className="size-6" />
         </span>
         <Link
           to="/team-builder"
           search={{ match: matchId }}
-          className="inline-flex items-center gap-1 transition-colors hover:text-foreground @4xl:hidden"
+          className="inline-flex items-center gap-1 transition-colors hover:text-foreground @5xl:hidden"
         >
           <UsersRound className="size-3.5" />
           Team Builder

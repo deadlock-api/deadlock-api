@@ -115,7 +115,7 @@ function AverageRow({ summary }: { summary: TrackerSummary }) {
       </TableCell>
       <TableCell className="hidden text-right tabular-nums @md:table-cell">{round(summary.avgSouls)}</TableCell>
       <TableCell className="hidden text-right tabular-nums @2xl:table-cell">{round(summary.soulsPerMin)}</TableCell>
-      <TableCell className="hidden text-right tabular-nums @4xl:table-cell">
+      <TableCell className="hidden text-right tabular-nums @5xl:table-cell">
         {round(summary.avgLastHits)} / {round(summary.avgDenies)}
       </TableCell>
       <TableCell className="hidden text-right tabular-nums @3xl:table-cell">
@@ -237,7 +237,7 @@ export function MatchesTab({
             <SortableHead
               sortKey="lastHits"
               {...sortProps}
-              className="hidden text-right @4xl:table-cell"
+              className="hidden text-right @5xl:table-cell"
               title="Last hits / Denies"
             >
               LH / DN
@@ -251,8 +251,8 @@ export function MatchesTab({
             <SortableHead sortKey="played" {...sortProps} className="text-right">
               Played
             </SortableHead>
-            <TableHead className="hidden text-right @4xl:table-cell">Match ID</TableHead>
-            <TableHead className="hidden w-8 @4xl:table-cell" />
+            <TableHead className="hidden text-right @5xl:table-cell">Match ID</TableHead>
+            <TableHead className="hidden w-8 @5xl:table-cell" />
             <TableHead className="hidden w-8 @md:table-cell" />
           </TableRow>
         </TableHeader>
