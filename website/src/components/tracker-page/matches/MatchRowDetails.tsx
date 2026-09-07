@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { Rank } from "deadlock_api_client";
+import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
 import { Fragment, useMemo } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
@@ -10,6 +10,8 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { IS_DEV } from "~/lib/constants";
 import { LANES } from "~/lib/team-builder/lanes";
+import { hasLanes, type TrackerSummary } from "~/lib/tracker/compute";
+import { computeTeamContribution } from "~/lib/tracker/contribution";
 import { computeLaneMatchup } from "~/lib/tracker/lane-matchup";
 import { computeSoulLead } from "~/lib/tracker/soul-lead";
 import { cn } from "~/lib/utils";
@@ -23,6 +25,7 @@ import {
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { BuildOrderStrip } from "./BuildOrderStrip";
 import { LaneMatchupCard } from "./LaneMatchupCard";
+import { PerformanceStrip } from "./PerformanceStrip";
 import { SoulLeadChart } from "./SoulLeadChart";
 
 const TEAMS = [
@@ -73,17 +76,20 @@ function finalBuild(items: TrackerMatchItem[], itemsById: Map<number, SlimUpgrad
 }
 
 export function MatchRowDetails({
-  matchId,
+  entry,
   accountId,
   ranks,
-  laned,
+  heroSummary,
 }: {
-  matchId: number;
+  entry: PlayerMatchHistoryEntry;
   accountId: number;
   ranks: Rank[];
-  /** Whether the match was played on a map with lanes, so lane assignments mean something. */
-  laned: boolean;
+  /** The player's summary on this match's hero over the filtered history. */
+  heroSummary: TrackerSummary;
 }) {
+  const matchId = entry.match_id;
+  // Street Brawl reports lane ids too, but its map has no lanes to speak of.
+  const laned = hasLanes(entry);
   const { data: match, isPending, isError } = useQuery(trackerMatchMetadataQueryOptions(matchId));
   const { data: itemsById } = useQuery({
     ...itemUpgradesQueryOptions,
@@ -121,6 +127,10 @@ export function MatchRowDetails({
     () => (laned && match ? computeLaneMatchup(match.players, accountId) : null),
     [laned, match, accountId],
   );
+  const contribution = useMemo(
+    () => (match ? computeTeamContribution(match.players, accountId) : null),
+    [match, accountId],
+  );
 
   const nameOf = (player: TrackerMatchPlayer) =>
     player.personaname ?? profiles[player.account_id]?.personaname ?? `Player ${player.account_id}`;
@@ -151,6 +161,7 @@ export function MatchRowDetails({
   return (
     <div className="@container space-y-4">
       {soulLead && <SoulLeadChart lead={soulLead} />}
+      {contribution && <PerformanceStrip entry={entry} contribution={contribution} heroSummary={heroSummary} />}
       {laneMatchup && <LaneMatchupCard matchup={laneMatchup} trackedAccountId={accountId} nameOf={nameOf} />}
       <div className="grid gap-4 @2xl:grid-cols-2">
         {TEAMS.map((team, teamIndex) => {

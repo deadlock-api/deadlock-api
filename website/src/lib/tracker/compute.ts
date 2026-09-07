@@ -83,11 +83,14 @@ export function soulsPerMinute(entry: PlayerMatchHistoryEntry): number {
 export type MatchSortKey = "kda" | "souls" | "soulsPerMin" | "lastHits" | "duration" | "rankDelta" | "played";
 export type SortDir = "asc" | "desc";
 
+export function kdaRatio(entry: PlayerMatchHistoryEntry): number {
+  return entry.player_deaths > 0
+    ? (entry.player_kills + entry.player_assists) / entry.player_deaths
+    : entry.player_kills + entry.player_assists;
+}
+
 const MATCH_SORT_VALUES: Record<MatchSortKey, (entry: PlayerMatchHistoryEntry) => number> = {
-  kda: (entry) =>
-    entry.player_deaths > 0
-      ? (entry.player_kills + entry.player_assists) / entry.player_deaths
-      : entry.player_kills + entry.player_assists,
+  kda: kdaRatio,
   souls: (entry) => entry.net_worth,
   soulsPerMin: soulsPerMinute,
   lastHits: (entry) => entry.last_hits,
@@ -178,16 +181,19 @@ export interface TrackerHeroRow {
   lastPlayedUnix: number;
 }
 
-export function perHeroRows(entries: PlayerMatchHistoryEntry[]): TrackerHeroRow[] {
+export function summarizeByHero(entries: PlayerMatchHistoryEntry[]): Map<number, TrackerSummary> {
   const byHero = new Map<number, PlayerMatchHistoryEntry[]>();
   for (const entry of entries) {
     const list = byHero.get(entry.hero_id);
     if (list) list.push(entry);
     else byHero.set(entry.hero_id, [entry]);
   }
+  return new Map([...byHero].map(([heroId, heroEntries]) => [heroId, summarize(heroEntries)]));
+}
+
+export function perHeroRows(entries: PlayerMatchHistoryEntry[]): TrackerHeroRow[] {
   const rows: TrackerHeroRow[] = [];
-  for (const [heroId, heroEntries] of byHero) {
-    const s = summarize(heroEntries);
+  for (const [heroId, s] of summarizeByHero(entries)) {
     rows.push({
       heroId,
       matches: s.matches,

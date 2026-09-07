@@ -16,7 +16,6 @@ import {
   computeSessions,
   formatMatchDuration,
   formatPlaytime,
-  hasLanes,
   isWin,
   MATCH_MODE_LABELS_BY_ID,
   type MatchSortKey,
@@ -24,6 +23,8 @@ import {
   type SortDir,
   sortMatches,
   soulsPerMinute,
+  summarizeByHero,
+  type TrackerSummary,
 } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions } from "~/queries/asset-queries";
@@ -142,6 +143,7 @@ export function MatchesTab({
     [entries, sortKey],
   );
   const sortedEntries = useMemo(() => sortMatches(entries, sortKey, sortDir), [entries, sortKey, sortDir]);
+  const heroSummaries = useMemo(() => summarizeByHero(entries), [entries]);
   const totalPages = Math.max(1, Math.ceil(entries.length / itemsPerPage));
   const paginatedEntries = useMemo(
     () => sortedEntries.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage),
@@ -346,10 +348,10 @@ export function MatchesTab({
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={13} className="bg-muted/30 p-4">
                       <MatchRowDetails
-                        matchId={entry.match_id}
+                        entry={entry}
                         accountId={accountId}
                         ranks={ranks}
-                        laned={hasLanes(entry)}
+                        heroSummary={heroSummaries.get(entry.hero_id) as TrackerSummary}
                       />
                     </TableCell>
                   </TableRow>
