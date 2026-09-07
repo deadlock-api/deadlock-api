@@ -27,6 +27,19 @@ export function isLoss(entry: PlayerMatchHistoryEntry): boolean {
   return !isWin(entry);
 }
 
+export type UnscoredOutcome = "penalized" | "party_penalized" | "not_scored";
+
+const UNSCORED_OUTCOMES: Record<number, UnscoredOutcome> = {
+  3: "penalized",
+  4: "party_penalized",
+  5: "not_scored",
+};
+
+/** Why the match did not count for the player, or null when it was scored as a plain win or loss. */
+export function unscoredOutcome(entry: PlayerMatchHistoryEntry): UnscoredOutcome | null {
+  return UNSCORED_OUTCOMES[entry.player_match_outcome] ?? null;
+}
+
 /** Street Brawl reports lane ids too, but its map has no lanes to speak of. */
 export function hasLanes(entry: PlayerMatchHistoryEntry): boolean {
   return entry.game_mode === GAME_MODE_NORMAL;

@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { ChevronDown, LogOut, ShieldCheck, UsersRound } from "lucide-react";
+import { ChevronDown, CircleDashed, Gavel, LogOut, ShieldCheck, UsersRound } from "lucide-react";
 import type { Ref } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
@@ -9,10 +9,35 @@ import { HeroImage } from "~/components/HeroImage";
 import { TableCell, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
-import { formatMatchDuration, isWin, MATCH_MODE_LABELS_BY_ID, soulsPerMinute } from "~/lib/tracker/compute";
+import {
+  formatMatchDuration,
+  isWin,
+  MATCH_MODE_LABELS_BY_ID,
+  soulsPerMinute,
+  type UnscoredOutcome,
+  unscoredOutcome,
+} from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
+
+const UNSCORED_OUTCOME_MARKERS: Record<UnscoredOutcome, { icon: typeof Gavel; label: string; description: string }> = {
+  penalized: { icon: Gavel, label: "Penalized", description: "Penalized for this match" },
+  party_penalized: { icon: Gavel, label: "Party penalized", description: "Penalized with the party for this match" },
+  not_scored: { icon: CircleDashed, label: "Not scored", description: "This match did not count" },
+};
+
+function UnscoredOutcomeMarker({ outcome }: { outcome: UnscoredOutcome }) {
+  const { icon: Icon, label, description } = UNSCORED_OUTCOME_MARKERS[outcome];
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Icon className="size-3.5 text-muted-foreground" aria-label={label} />
+      </TooltipTrigger>
+      <TooltipContent>{description}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 export function MatchRow({
   ref,
@@ -30,6 +55,7 @@ export function MatchRow({
   onToggle: () => void;
 }) {
   const win = isWin(entry);
+  const unscored = unscoredOutcome(entry);
   return (
     <TableRow
       ref={ref}
@@ -56,6 +82,7 @@ export function MatchRow({
               <TooltipContent>Abandoned at {formatMatchDuration(entry.abandoned_time_s)}</TooltipContent>
             </Tooltip>
           )}
+          {unscored && <UnscoredOutcomeMarker outcome={unscored} />}
         </div>
       </TableCell>
       <TableCell>
