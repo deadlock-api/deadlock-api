@@ -43,14 +43,14 @@ function toRow(stats: HeroStats): HeroRow {
 }
 
 const COLUMNS: { key: keyof Omit<HeroRow, "heroId">; label: string; format: (row: HeroRow) => string }[] = [
-  { key: "matches", label: "Matches", format: (row) => row.matches.toLocaleString() },
+  { key: "matches", label: "Matches", format: (row) => row.matches.toLocaleString("en-US") },
   { key: "winrate", label: "Win rate", format: (row) => `${(row.winrate * 100).toFixed(1)}%` },
   { key: "kda", label: "KDA", format: (row) => row.kda.toFixed(2) },
   { key: "kills", label: "Kills", format: (row) => row.kills.toFixed(1) },
   { key: "deaths", label: "Deaths", format: (row) => row.deaths.toFixed(1) },
   { key: "assists", label: "Assists", format: (row) => row.assists.toFixed(1) },
-  { key: "soulsPerMin", label: "Souls/min", format: (row) => Math.round(row.soulsPerMin).toLocaleString() },
-  { key: "dmgPerMin", label: "Dmg/min", format: (row) => Math.round(row.dmgPerMin).toLocaleString() },
+  { key: "soulsPerMin", label: "Souls/min", format: (row) => Math.round(row.soulsPerMin).toLocaleString("en-US") },
+  { key: "dmgPerMin", label: "Dmg/min", format: (row) => Math.round(row.dmgPerMin).toLocaleString("en-US") },
   { key: "lastHitsPerMin", label: "LH/min", format: (row) => row.lastHitsPerMin.toFixed(1) },
   { key: "lastPlayed", label: "Last played", format: (row) => day.unix(row.lastPlayed).fromNow() },
 ];

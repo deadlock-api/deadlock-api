@@ -162,8 +162,9 @@ function HeroDetailPage() {
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
           In the current patch, {heroName} holds a{" "}
           <span className="font-semibold text-foreground">{pct(summary.winRate)}</span> win rate across{" "}
-          <span className="font-semibold text-foreground">{summary.matches.toLocaleString()}</span> tracked ranked
-          matches, with a <span className="font-semibold text-foreground">{pct(summary.pickRate)}</span> pick rate
+          <span className="font-semibold text-foreground">{summary.matches.toLocaleString("en-US")}</span> tracked
+          ranked matches, with a <span className="font-semibold text-foreground">{pct(summary.pickRate)}</span> pick
+          rate
           {summary.banRate !== undefined && (
             <>
               {" "}
@@ -183,7 +184,7 @@ function HeroDetailPage() {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <StatCard label="Win Rate" value={pct(summary.winRate)} />
           <StatCard label="Pick Rate" value={pct(summary.pickRate)} />
-          <StatCard label="Matches" value={summary.matches.toLocaleString()} />
+          <StatCard label="Matches" value={summary.matches.toLocaleString("en-US")} />
           <StatCard label="Ban Rate" value={summary.banRate !== undefined ? pct(summary.banRate) : "—"} />
         </div>
       )}

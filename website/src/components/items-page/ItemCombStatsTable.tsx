@@ -265,11 +265,11 @@ export function ItemCombStatsTable({
                           <div className="flex flex-col gap-1 text-xs">
                             <div className="flex justify-between gap-4">
                               <span className="text-muted-foreground">Matches</span>
-                              <span className="font-medium">{row.matches.toLocaleString()}</span>
+                              <span className="font-medium">{row.matches.toLocaleString("en-US")}</span>
                             </div>
                             <div className="flex justify-between gap-4">
                               <span className="text-muted-foreground">Wins</span>
-                              <span className="font-medium">{row.wins.toLocaleString()}</span>
+                              <span className="font-medium">{row.wins.toLocaleString("en-US")}</span>
                             </div>
                             <div className="flex justify-between gap-4">
                               <span className="text-muted-foreground">Win rate</span>
@@ -302,7 +302,7 @@ export function ItemCombStatsTable({
                             <div className="flex justify-between gap-4">
                               <span className="text-muted-foreground">Matches</span>
                               <span className="font-medium">
-                                {row.matches.toLocaleString()} / {sumMatches.toLocaleString()}
+                                {row.matches.toLocaleString("en-US")} / {sumMatches.toLocaleString("en-US")}
                               </span>
                             </div>
                             <div className="flex justify-between gap-4">
@@ -321,7 +321,7 @@ export function ItemCombStatsTable({
                     </TableCell>
                   )}
                   {columns.includes("totalMatches") && (
-                    <TableCell className="text-center">{row.matches.toLocaleString()}</TableCell>
+                    <TableCell className="text-center">{row.matches.toLocaleString("en-US")}</TableCell>
                   )}
                 </TableRow>
               );

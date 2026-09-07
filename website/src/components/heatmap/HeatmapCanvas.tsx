@@ -232,11 +232,11 @@ export default function HeatmapCanvas({
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between gap-4">
               <span className="text-muted-foreground">Kills</span>
-              <span className="font-medium text-red-400">{tooltip.kills.toLocaleString()}</span>
+              <span className="font-medium text-red-400">{tooltip.kills.toLocaleString("en-US")}</span>
             </div>
             <div className="flex items-center justify-between gap-4">
               <span className="text-muted-foreground">Deaths</span>
-              <span className="font-medium text-blue-400">{tooltip.deaths.toLocaleString()}</span>
+              <span className="font-medium text-blue-400">{tooltip.deaths.toLocaleString("en-US")}</span>
             </div>
             {tooltip.deaths > 0 && (
               <div className="flex items-center justify-between gap-4 border-t border-white/10 pt-1">

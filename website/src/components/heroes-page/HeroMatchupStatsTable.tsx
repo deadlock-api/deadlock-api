@@ -124,11 +124,11 @@ function MatchupTooltip({
       </div>
       <div className="flex justify-between gap-4">
         <span className="text-muted-foreground">Matches</span>
-        <span className="font-medium">{matchesPlayed.toLocaleString()}</span>
+        <span className="font-medium">{matchesPlayed.toLocaleString("en-US")}</span>
       </div>
       <div className="flex justify-between gap-4">
         <span className="text-muted-foreground">Wins</span>
-        <span className="font-medium">{wins.toLocaleString()}</span>
+        <span className="font-medium">{wins.toLocaleString("en-US")}</span>
       </div>
       <div className="flex justify-between gap-4">
         <span className="text-muted-foreground">Win rate</span>

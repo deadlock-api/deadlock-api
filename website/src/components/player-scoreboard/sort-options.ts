@@ -72,7 +72,7 @@ export function formatStatValue(value: number, sortBy: string): string {
     return `${(value * 100).toFixed(1)}%`;
   }
   if (Number.isInteger(value)) {
-    return value.toLocaleString();
+    return value.toLocaleString("en-US");
   }
   return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }

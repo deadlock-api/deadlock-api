@@ -15,7 +15,7 @@ export function HeatmapLegend({ viewMode, maxValue }: HeatmapLegendProps) {
         }}
       />
       <span className="text-[10px] text-muted-foreground">
-        {viewMode === "kd" ? maxValue.toFixed(2) : Math.round(maxValue).toLocaleString()}
+        {viewMode === "kd" ? maxValue.toFixed(2) : Math.round(maxValue).toLocaleString("en-US")}
       </span>
     </div>
   );

@@ -75,7 +75,7 @@ export function PlayerHeader({
         {summary && (
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
             <span>
-              <span className="font-semibold tabular-nums">{summary.matches.toLocaleString()}</span>{" "}
+              <span className="font-semibold tabular-nums">{summary.matches.toLocaleString("en-US")}</span>{" "}
               <span className="text-muted-foreground">matches</span>
             </span>
             <span>
@@ -84,7 +84,7 @@ export function PlayerHeader({
             </span>
             <span>
               <span className="font-semibold tabular-nums">
-                {Math.round(summary.totalTimeS / 3600).toLocaleString()}h
+                {Math.round(summary.totalTimeS / 3600).toLocaleString("en-US")}h
               </span>{" "}
               <span className="text-muted-foreground">played</span>
             </span>

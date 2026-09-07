@@ -280,7 +280,7 @@ export function HeroStatsOverTimeChart({
                   position: "insideLeft",
                 }}
                 tickFormatter={(value) => {
-                  return heroStat === "winrate" ? `${Math.round(value)}%` : Math.round(value).toLocaleString();
+                  return heroStat === "winrate" ? `${Math.round(value)}%` : Math.round(value).toLocaleString("en-US");
                 }}
                 minTickGap={2}
                 tickCount={10}

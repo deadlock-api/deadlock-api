@@ -76,8 +76,11 @@ export function HeroDetailsTooltip({
         <div className="flex flex-col gap-2 text-xs">
           <div className="flex flex-col gap-1">
             <span className="text-xs font-semibold">General</span>
-            <Stat label="Matches" value={row.matches.toLocaleString()} />
-            <Stat label="Wins / Losses" value={`${row.wins.toLocaleString()} / ${row.losses.toLocaleString()}`} />
+            <Stat label="Matches" value={row.matches.toLocaleString("en-US")} />
+            <Stat
+              label="Wins / Losses"
+              value={`${row.wins.toLocaleString("en-US")} / ${row.losses.toLocaleString("en-US")}`}
+            />
             <Stat label="Win Rate" value={`${((row.wins / row.matches) * 100).toFixed(2)}%`} />
             <Stat
               label={pickrateLabel ?? "Pick Rate"}
@@ -93,23 +96,23 @@ export function HeroDetailsTooltip({
           </div>
           <div className="flex flex-col gap-1 border-t border-border pt-2">
             <span className="text-xs font-semibold">Economy (avg per match)</span>
-            <Stat label="Net Worth" value={Math.round(avgNetWorth).toLocaleString()} />
+            <Stat label="Net Worth" value={Math.round(avgNetWorth).toLocaleString("en-US")} />
             <Stat label="Last Hits" value={avgLastHits.toFixed(1)} />
             <Stat label="Denies" value={avgDenies.toFixed(1)} />
           </div>
           <div className="flex flex-col gap-1 border-t border-border pt-2">
             <span className="text-xs font-semibold">Damage (avg per match)</span>
-            <Stat label="Player Damage" value={Math.round(avgPlayerDmg).toLocaleString()} />
-            <Stat label="Damage Taken" value={Math.round(avgDmgTaken).toLocaleString()} />
-            <Stat label="Boss Damage" value={Math.round(avgBossDmg).toLocaleString()} />
-            <Stat label="Creep Damage" value={Math.round(avgCreepDmg).toLocaleString()} />
-            <Stat label="Neutral Damage" value={Math.round(avgNeutralDmg).toLocaleString()} />
+            <Stat label="Player Damage" value={Math.round(avgPlayerDmg).toLocaleString("en-US")} />
+            <Stat label="Damage Taken" value={Math.round(avgDmgTaken).toLocaleString("en-US")} />
+            <Stat label="Boss Damage" value={Math.round(avgBossDmg).toLocaleString("en-US")} />
+            <Stat label="Creep Damage" value={Math.round(avgCreepDmg).toLocaleString("en-US")} />
+            <Stat label="Neutral Damage" value={Math.round(avgNeutralDmg).toLocaleString("en-US")} />
           </div>
           <div className="flex flex-col gap-1 border-t border-border pt-2">
             <span className="text-xs font-semibold">Shooting</span>
             <Stat label="Accuracy" value={`${accuracy.toFixed(1)}%`} />
-            <Stat label="Shots Hit" value={row.total_shots_hit.toLocaleString()} />
-            <Stat label="Shots Missed" value={row.total_shots_missed.toLocaleString()} />
+            <Stat label="Shots Hit" value={row.total_shots_hit.toLocaleString("en-US")} />
+            <Stat label="Shots Missed" value={row.total_shots_missed.toLocaleString("en-US")} />
           </div>
         </div>
       </PopoverContent>

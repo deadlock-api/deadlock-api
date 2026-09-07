@@ -47,7 +47,7 @@ export function formatPlayerMetricValue(value: number | undefined | null, format
   if (value == null || Number.isNaN(value)) return "-";
   switch (format) {
     case "integer":
-      return Math.round(value).toLocaleString();
+      return Math.round(value).toLocaleString("en-US");
     case "decimal1":
       return value.toFixed(1);
     case "decimal2":

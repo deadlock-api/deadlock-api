@@ -286,7 +286,7 @@ const ItemFlowCard = memo(function ItemFlowCard({
             {node.locked && <Lock className="size-3 text-primary" />}
             <span
               className={cn(conf.icon, "size-3.5", conf.color)}
-              title={`Confidence: ${conf.label} (${node.matches.toLocaleString()} matches, 95% CI ${(node.wrLow * 100).toFixed(1)}–${(node.wrHigh * 100).toFixed(1)}%)`}
+              title={`Confidence: ${conf.label} (${node.matches.toLocaleString("en-US")} matches, 95% CI ${(node.wrLow * 100).toFixed(1)}–${(node.wrHigh * 100).toFixed(1)}%)`}
             />
           </div>
           <div className="flex items-center gap-2 pr-9">
@@ -295,7 +295,7 @@ const ItemFlowCard = memo(function ItemFlowCard({
               <ItemName itemId={node.itemId} className="truncate text-xs leading-tight font-semibold" />
               <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
                 {tier > 0 && <span className="rounded-full bg-muted px-1.5 py-px font-medium">T{tier}</span>}
-                {cost > 0 && <span className="tabular-nums">{cost.toLocaleString()}</span>}
+                {cost > 0 && <span className="tabular-nums">{cost.toLocaleString("en-US")}</span>}
               </span>
             </div>
           </div>
@@ -367,7 +367,7 @@ const ItemFlowCard = memo(function ItemFlowCard({
           {!isStreetBrawl && (
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">Avg net worth at buy</span>
-              <span className="tabular-nums">{Math.round(node.avgNetWorth).toLocaleString()}</span>
+              <span className="tabular-nums">{Math.round(node.avgNetWorth).toLocaleString("en-US")}</span>
             </div>
           )}
           <div className="flex justify-between gap-4">
@@ -380,18 +380,18 @@ const ItemFlowCard = memo(function ItemFlowCard({
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Matches</span>
-            <span>{node.matches.toLocaleString()}</span>
+            <span>{node.matches.toLocaleString("en-US")}</span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Players</span>
-            <span>{node.players.toLocaleString()}</span>
+            <span>{node.players.toLocaleString("en-US")}</span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">W / L</span>
             <span>
-              <span className="text-green-400">{node.wins.toLocaleString()}</span>
+              <span className="text-green-400">{node.wins.toLocaleString("en-US")}</span>
               {" / "}
-              <span className="text-red-400">{node.losses.toLocaleString()}</span>
+              <span className="text-red-400">{node.losses.toLocaleString("en-US")}</span>
             </span>
           </div>
           <div className="flex justify-between gap-4">
@@ -973,7 +973,7 @@ export function ItemFlowGraph({
                     return (
                       <span
                         className={cn(c.icon, "size-4", c.color)}
-                        title={`Confidence: ${c.label} (${pathStats.matches.toLocaleString()} matches)`}
+                        title={`Confidence: ${c.label} (${pathStats.matches.toLocaleString("en-US")} matches)`}
                       />
                     );
                   })()}
@@ -1005,18 +1005,18 @@ export function ItemFlowGraph({
               <dl className="grid grid-cols-2 gap-x-3 gap-y-2">
                 <div>
                   <dt className="text-muted-foreground">Matches</dt>
-                  <dd className="font-semibold tabular-nums">{pathStats.matches.toLocaleString()}</dd>
+                  <dd className="font-semibold tabular-nums">{pathStats.matches.toLocaleString("en-US")}</dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Players</dt>
-                  <dd className="font-semibold tabular-nums">{pathStats.players.toLocaleString()}</dd>
+                  <dd className="font-semibold tabular-nums">{pathStats.players.toLocaleString("en-US")}</dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">W / L</dt>
                   <dd className="font-semibold tabular-nums">
-                    <span className="text-green-400">{pathStats.wins.toLocaleString()}</span>
+                    <span className="text-green-400">{pathStats.wins.toLocaleString("en-US")}</span>
                     {" / "}
-                    <span className="text-red-400">{pathStats.losses.toLocaleString()}</span>
+                    <span className="text-red-400">{pathStats.losses.toLocaleString("en-US")}</span>
                   </dd>
                 </div>
                 <div>
@@ -1046,7 +1046,9 @@ export function ItemFlowGraph({
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Avg net worth</dt>
-                  <dd className="font-semibold tabular-nums">{Math.round(pathStats.avgNetWorth).toLocaleString()}</dd>
+                  <dd className="font-semibold tabular-nums">
+                    {Math.round(pathStats.avgNetWorth).toLocaleString("en-US")}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Avg game length</dt>
@@ -1058,7 +1060,7 @@ export function ItemFlowGraph({
                 <div className="col-span-2">
                   <dt className="text-muted-foreground">Total Cost</dt>
                   <dd className="font-semibold tabular-nums">
-                    {pathStats.totalCost > 0 ? `${pathStats.totalCost.toLocaleString()} souls` : "—"}
+                    {pathStats.totalCost > 0 ? `${pathStats.totalCost.toLocaleString("en-US")} souls` : "—"}
                   </dd>
                 </div>
               </dl>

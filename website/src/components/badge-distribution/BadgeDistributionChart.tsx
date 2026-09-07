@@ -197,7 +197,7 @@ export default function BadgeDistributionChart({ badgeDistributionData, ranksDat
                         {rankName} {subtier}
                       </div>
                       <div>
-                        {entry.value.toLocaleString()} {metric}
+                        {entry.value.toLocaleString("en-US")} {metric}
                       </div>
                     </div>
                   </div>

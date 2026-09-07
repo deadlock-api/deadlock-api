@@ -137,7 +137,7 @@ export function formatStatValue(value: number | undefined | null, format: StatFo
   if (value == null || Number.isNaN(value)) return "-";
   switch (format) {
     case "integer":
-      return Math.round(value).toLocaleString();
+      return Math.round(value).toLocaleString("en-US");
     case "duration": {
       const minutes = Math.floor(value / 60);
       const seconds = Math.round(value % 60);

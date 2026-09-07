@@ -131,7 +131,7 @@ export function HeroStatsByDurationChart({
                   position: "insideLeft",
                 }}
                 tickFormatter={(value) =>
-                  heroStat === "winrate" ? `${Number(value).toFixed(1)}%` : Math.round(value).toLocaleString()
+                  heroStat === "winrate" ? `${Number(value).toFixed(1)}%` : Math.round(value).toLocaleString("en-US")
                 }
                 minTickGap={2}
                 tickCount={10}
@@ -142,7 +142,7 @@ export function HeroStatsByDurationChart({
                 itemStyle={{ color: "#e5e5e5" }}
                 formatter={(value) => {
                   const v = value as number;
-                  return heroStat === "winrate" ? `${v.toFixed(2)}%` : v.toLocaleString();
+                  return heroStat === "winrate" ? `${v.toFixed(2)}%` : v.toLocaleString("en-US");
                 }}
               />
               <Legend

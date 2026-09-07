@@ -424,7 +424,7 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
                   {card.answer.target.cost != null && (
                     <>
                       <span className="text-muted-foreground/25">|</span>
-                      <span>{card.answer.target.cost.toLocaleString()} souls</span>
+                      <span>{card.answer.target.cost.toLocaleString("en-US")} souls</span>
                     </>
                   )}
                 </div>

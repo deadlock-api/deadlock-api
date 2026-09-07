@@ -57,7 +57,7 @@ export function groupSouls(stats: AnalyticsGameStats, group: SoulSourceGroup): n
 
 export function formatSouls(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) return "-";
-  return Math.round(value).toLocaleString();
+  return Math.round(value).toLocaleString("en-US");
 }
 
 export function formatSoulsCompact(value: number): string {

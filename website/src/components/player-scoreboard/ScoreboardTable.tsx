@@ -194,7 +194,9 @@ export function ScoreboardTable({
                     {accountId != null && <span className="text-xs text-muted-foreground">[{accountId}]</span>}
                   </div>
                 </TableCell>
-                {sortBy !== "matches" && <TableCell className="text-right">{entry.matches.toLocaleString()}</TableCell>}
+                {sortBy !== "matches" && (
+                  <TableCell className="text-right">{entry.matches.toLocaleString("en-US")}</TableCell>
+                )}
                 <TableCell className="text-right">{renderValue(entry.value)}</TableCell>
               </TableRow>
             );

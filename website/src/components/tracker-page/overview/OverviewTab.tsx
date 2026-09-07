@@ -73,7 +73,7 @@ export function OverviewTab({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         <StatTile
           label="Matches"
-          value={summary.matches.toLocaleString()}
+          value={summary.matches.toLocaleString("en-US")}
           sub={`${summary.wins}W – ${summary.losses}L`}
         />
         <StatTile label="Win rate" value={`${(summary.winrate * 100).toFixed(1)}%`} sub={<FormDots form={form} />} />
@@ -82,7 +82,7 @@ export function OverviewTab({
           value={summary.kdaRatio.toFixed(2)}
           sub={`${summary.avgKills.toFixed(1)} / ${summary.avgDeaths.toFixed(1)} / ${summary.avgAssists.toFixed(1)}`}
         />
-        <StatTile label="Souls per min" value={Math.round(summary.soulsPerMin).toLocaleString()} />
+        <StatTile label="Souls per min" value={Math.round(summary.soulsPerMin).toLocaleString("en-US")} />
         <StatTile
           label="Streak"
           value={streaks.current === 0 ? "—" : `${Math.abs(streaks.current)}${streaks.current > 0 ? "W" : "L"}`}

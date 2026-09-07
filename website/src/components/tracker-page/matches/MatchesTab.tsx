@@ -95,7 +95,7 @@ export function MatchesTab({
                   <TableCell className="text-right tabular-nums">
                     {entry.player_kills} / {entry.player_deaths} / {entry.player_assists}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{entry.net_worth.toLocaleString()}</TableCell>
+                  <TableCell className="text-right tabular-nums">{entry.net_worth.toLocaleString("en-US")}</TableCell>
                   <TableCell className="text-right text-muted-foreground tabular-nums">
                     {entry.last_hits} / {entry.denies}
                   </TableCell>

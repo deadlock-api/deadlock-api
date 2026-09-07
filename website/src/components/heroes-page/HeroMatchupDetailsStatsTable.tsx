@@ -364,11 +364,11 @@ export function HeroMatchupDetailsStatsTable({
                     <div className="flex flex-col gap-1 text-xs">
                       <div className="flex justify-between gap-4">
                         <span className="text-muted-foreground">Matches</span>
-                        <span className="font-medium">{synergy.matches_played.toLocaleString()}</span>
+                        <span className="font-medium">{synergy.matches_played.toLocaleString("en-US")}</span>
                       </div>
                       <div className="flex justify-between gap-4">
                         <span className="text-muted-foreground">Wins</span>
-                        <span className="font-medium">{synergy?.wins.toLocaleString()}</span>
+                        <span className="font-medium">{synergy?.wins.toLocaleString("en-US")}</span>
                       </div>
                       <div className="flex justify-between gap-4">
                         <span className="text-muted-foreground">Win rate change</span>
@@ -406,11 +406,11 @@ export function HeroMatchupDetailsStatsTable({
                     <div className="flex flex-col gap-1 text-xs">
                       <div className="flex justify-between gap-4">
                         <span className="text-muted-foreground">Matches</span>
-                        <span className="font-medium">{counter?.matches_played.toLocaleString()}</span>
+                        <span className="font-medium">{counter?.matches_played.toLocaleString("en-US")}</span>
                       </div>
                       <div className="flex justify-between gap-4">
                         <span className="text-muted-foreground">Wins</span>
-                        <span className="font-medium">{counter?.wins.toLocaleString()}</span>
+                        <span className="font-medium">{counter?.wins.toLocaleString("en-US")}</span>
                       </div>
                       <div className="flex justify-between gap-4">
                         <span className="text-muted-foreground">Win rate change</span>

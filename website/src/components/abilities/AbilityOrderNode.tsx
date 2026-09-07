@@ -245,18 +245,18 @@ export default function AbilityOrderNode({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Players</span>
-                  <span className="font-medium">{node.players.toLocaleString()}</span>
+                  <span className="font-medium">{node.players.toLocaleString("en-US")}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Matches</span>
-                  <span className="font-medium">{node.matches.toLocaleString()}</span>
+                  <span className="font-medium">{node.matches.toLocaleString("en-US")}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">W / L</span>
                   <span>
-                    <span className="font-medium text-green-400">{node.wins.toLocaleString()}</span>
+                    <span className="font-medium text-green-400">{node.wins.toLocaleString("en-US")}</span>
                     {" / "}
-                    <span className="font-medium text-red-400">{node.losses.toLocaleString()}</span>
+                    <span className="font-medium text-red-400">{node.losses.toLocaleString("en-US")}</span>
                   </span>
                 </div>
                 <div className="flex justify-between">

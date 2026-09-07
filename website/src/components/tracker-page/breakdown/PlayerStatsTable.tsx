@@ -143,8 +143,8 @@ function CompanionTable({ rows, isPending, isError, matchesLabel, winrateLabel }
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="text-right tabular-nums">{row.matches.toLocaleString()}</TableCell>
-                <TableCell className="text-right tabular-nums">{row.wins.toLocaleString()}</TableCell>
+                <TableCell className="text-right tabular-nums">{row.matches.toLocaleString("en-US")}</TableCell>
+                <TableCell className="text-right tabular-nums">{row.wins.toLocaleString("en-US")}</TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-2">
                     <span className="tabular-nums">{(winrate * 100).toFixed(1)}%</span>

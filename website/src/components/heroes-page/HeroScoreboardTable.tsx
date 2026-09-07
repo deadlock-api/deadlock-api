@@ -82,7 +82,9 @@ export function HeroScoreboardTable({
                 <HeroName heroId={entry.hero_id} className="max-w-[200px]" linkToDetail />
               </div>
             </TableCell>
-            {sortBy !== "matches" && <TableCell className="text-right">{entry.matches.toLocaleString()}</TableCell>}
+            {sortBy !== "matches" && (
+              <TableCell className="text-right">{entry.matches.toLocaleString("en-US")}</TableCell>
+            )}
             <TableCell className="text-right">{formatStatValue(entry.value, sortBy)}</TableCell>
           </TableRow>
         ))}

@@ -512,7 +512,7 @@ function BucketTooltip({
   const kills = (entry.total_kills / entry.matches).toFixed(1);
   const deaths = (entry.total_deaths / entry.matches).toFixed(1);
   const assists = (entry.total_assists / entry.matches).toFixed(1);
-  const netWorth = Math.round(entry.total_net_worth / entry.matches).toLocaleString();
+  const netWorth = Math.round(entry.total_net_worth / entry.matches).toLocaleString("en-US");
 
   return (
     <Tooltip>
@@ -522,7 +522,7 @@ function BucketTooltip({
       <TooltipContent className="border border-border bg-popover p-3 text-popover-foreground shadow-md">
         <div className="flex flex-col gap-1 text-xs">
           <div className="mb-1 font-medium text-foreground">{bucketLabel}</div>
-          <TooltipRow label="Matches" value={entry.matches.toLocaleString()} />
+          <TooltipRow label="Matches" value={entry.matches.toLocaleString("en-US")} />
           <TooltipRow label="Win rate" value={`${winrate}%`} highlight={heroStat === "winrate"} />
           <div className="my-1 border-t border-border" />
           <TooltipRow label="Kills/match" value={kills} highlight={heroStat === "kills_per_match"} />
@@ -558,7 +558,7 @@ function DeltaTooltip({
 
   const fmt = (v: number) => {
     if (isPercent) return `${v.toFixed(2)}%`;
-    return v > 100 ? Math.round(v).toLocaleString() : v.toFixed(1);
+    return v > 100 ? Math.round(v).toLocaleString("en-US") : v.toFixed(1);
   };
 
   return (

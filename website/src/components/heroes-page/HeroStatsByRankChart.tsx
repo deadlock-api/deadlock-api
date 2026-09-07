@@ -70,8 +70,8 @@ function formatStatLabel(stat: ByRankStat): string {
 
 function tickFormatter(stat: ByRankStat): (v: number) => string {
   if (stat === "winrate" || stat === "pickrate" || stat === "ban_rate") return (v) => `${Number(v).toFixed(0)}%`;
-  if (stat === "net_worth_per_match") return (v) => Number(v).toLocaleString();
-  if (stat === "wins" || stat === "losses" || stat === "matches") return (v) => Number(v).toLocaleString();
+  if (stat === "net_worth_per_match") return (v) => Number(v).toLocaleString("en-US");
+  if (stat === "wins" || stat === "losses" || stat === "matches") return (v) => Number(v).toLocaleString("en-US");
   return (v) => Number(v).toFixed(1);
 }
 
@@ -126,7 +126,9 @@ function CustomTooltip({
         </div>
         <div className="flex justify-between gap-4">
           <span className="text-muted-foreground">Matches</span>
-          <span className="font-mono font-medium text-foreground tabular-nums">{data.matches.toLocaleString()}</span>
+          <span className="font-mono font-medium text-foreground tabular-nums">
+            {data.matches.toLocaleString("en-US")}
+          </span>
         </div>
       </div>
     </div>
