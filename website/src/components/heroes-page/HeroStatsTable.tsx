@@ -31,6 +31,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { BANS_PER_MATCH, computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
+import { formatSignedPercent } from "~/lib/format";
 import {
   Z_SCORE_BR_WEIGHT,
   Z_SCORE_PR_WEIGHT,
@@ -1007,8 +1008,7 @@ export function HeroStatsTable({
                         <span
                           className={cn("text-xs font-medium", winrateDelta > 0 ? "text-green-500" : "text-red-500")}
                         >
-                          {winrateDelta > 0 ? "+" : ""}
-                          {(winrateDelta * 100).toFixed(1)}%
+                          {formatSignedPercent(winrateDelta)}
                         </span>
                       )}
                     </div>
@@ -1021,8 +1021,7 @@ export function HeroStatsTable({
                         <span
                           className={cn("text-xs font-medium", banRateDelta > 0 ? "text-red-500" : "text-green-500")}
                         >
-                          {banRateDelta > 0 ? "+" : ""}
-                          {(banRateDelta * 100).toFixed(1)}%
+                          {formatSignedPercent(banRateDelta)}
                         </span>
                       )}
                     </div>
@@ -1036,8 +1035,7 @@ export function HeroStatsTable({
                           <span
                             className={cn("text-xs font-medium", banRateDelta > 0 ? "text-red-500" : "text-green-500")}
                           >
-                            {banRateDelta > 0 ? "+" : ""}
-                            {(banRateDelta * 100).toFixed(1)}%
+                            {formatSignedPercent(banRateDelta)}
                           </span>
                         )}
                       </div>
@@ -1060,8 +1058,7 @@ export function HeroStatsTable({
                                   presenceDelta > 0 ? "text-green-500" : "text-red-500",
                                 )}
                               >
-                                {presenceDelta > 0 ? "+" : ""}
-                                {(presenceDelta * 100).toFixed(1)}%
+                                {formatSignedPercent(presenceDelta)}
                               </span>
                             )}
                           </div>
@@ -1075,8 +1072,7 @@ export function HeroStatsTable({
                           <span
                             className={cn("text-xs font-medium", pickrateDelta > 0 ? "text-green-500" : "text-red-500")}
                           >
-                            {pickrateDelta > 0 ? "+" : ""}
-                            {(pickrateDelta * 100).toFixed(1)}%
+                            {formatSignedPercent(pickrateDelta)}
                           </span>
                         )}
                       </div>

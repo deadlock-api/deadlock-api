@@ -5,6 +5,7 @@ import { lazy, Suspense, useState } from "react";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/hover-card";
+import { formatSignedPercent } from "~/lib/format";
 import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
@@ -67,7 +68,11 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
               {category.stats.map((stat, statIdx) => {
                 const value = current[stat.key] as number;
                 const prevValue = prev?.[stat.key] as number | undefined;
-                const delta = prevValue != null && prevValue !== 0 ? (value - prevValue) / Math.abs(prevValue) : null;
+                // Rounded to the displayed tenth of a percent so the arrow and colour agree with the printed value.
+                const delta =
+                  prevValue != null && prevValue !== 0
+                    ? Math.round(((value - prevValue) / Math.abs(prevValue)) * 1000) / 1000
+                    : null;
                 const isLast = statIdx === category.stats.length - 1;
 
                 const teamWinRow =
@@ -140,8 +145,7 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                                 ) : delta < 0 ? (
                                   <ArrowDown className="size-3" />
                                 ) : null}
-                                {delta > 0 ? "+" : ""}
-                                {(delta * 100).toFixed(1)}%
+                                {formatSignedPercent(delta)}
                               </span>
                             )}
                           </div>

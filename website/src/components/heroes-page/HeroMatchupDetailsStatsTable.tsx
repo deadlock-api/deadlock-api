@@ -13,6 +13,7 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
+import { formatSignedPercent } from "~/lib/format";
 import { cn } from "~/lib/utils";
 import { queryKeys } from "~/queries/query-keys";
 
@@ -27,11 +28,6 @@ interface MatchupRow {
   wins: number;
   relWinrate: number;
   prevRelWinrate: number | undefined;
-}
-
-function formatSignedPercent(value: number) {
-  const percent = Math.round(value * 1000) / 10;
-  return `${percent > 0 ? "+" : ""}${percent.toFixed(1)}%`;
 }
 
 function buildHeroStatsMap(data: AnalyticsHeroStats[] | undefined): Record<number, AnalyticsHeroStats> {
@@ -345,18 +341,12 @@ export function HeroMatchupDetailsStatsTable({
                     </div>
                     <div className="flex justify-between gap-4">
                       <span className="text-muted-foreground">Win rate change</span>
-                      <span className="font-medium">
-                        {row.relWinrate > 0 ? "+" : ""}
-                        {(row.relWinrate * 100).toFixed(2)}%
-                      </span>
+                      <span className="font-medium">{formatSignedPercent(row.relWinrate, 2)}</span>
                     </div>
                     {row.prevRelWinrate !== undefined && (
                       <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
                         <span className="text-muted-foreground">Previous</span>
-                        <span className="font-medium">
-                          {row.prevRelWinrate > 0 ? "+" : ""}
-                          {(row.prevRelWinrate * 100).toFixed(2)}%
-                        </span>
+                        <span className="font-medium">{formatSignedPercent(row.prevRelWinrate, 2)}</span>
                       </div>
                     )}
                   </div>

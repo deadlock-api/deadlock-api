@@ -62,3 +62,10 @@ export function formatCooldownRemaining(deletedAt: string): string | null {
   }
   return `${remainingMinutes}m`;
 }
+
+/** Formats a ratio as a signed percentage, deciding the sign after rounding so a tiny change never prints as "-0.0%". */
+export function formatSignedPercent(ratio: number, digits = 1): string {
+  const factor = 10 ** digits;
+  const percent = Math.round(ratio * 100 * factor) / factor;
+  return `${percent > 0 ? "+" : ""}${percent.toFixed(digits)}%`;
+}

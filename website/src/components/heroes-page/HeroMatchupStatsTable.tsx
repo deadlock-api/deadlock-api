@@ -13,6 +13,7 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
+import { formatSignedPercent } from "~/lib/format";
 import { queryKeys } from "~/queries/query-keys";
 import type { Color } from "~/types/general";
 
@@ -136,18 +137,12 @@ function MatchupTooltip({
       </div>
       <div className="flex justify-between gap-4">
         <span className="text-muted-foreground">Win rate change</span>
-        <span className="font-medium">
-          {relWinrate > 0 ? "+" : ""}
-          {(relWinrate * 100).toFixed(2)}%
-        </span>
+        <span className="font-medium">{formatSignedPercent(relWinrate, 2)}</span>
       </div>
       {prevRelWinrate !== undefined && (
         <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
           <span className="text-muted-foreground">Previous</span>
-          <span className="font-medium">
-            {prevRelWinrate > 0 ? "+" : ""}
-            {(prevRelWinrate * 100).toFixed(2)}%
-          </span>
+          <span className="font-medium">{formatSignedPercent(prevRelWinrate, 2)}</span>
         </div>
       )}
     </div>
@@ -190,7 +185,7 @@ function MatchupCell({
           max={max}
           value={relWinrate}
           color={color}
-          label={`${relWinrate > 0 ? "+" : ""}${Math.round(relWinrate * 100).toFixed(0)}% `}
+          label={formatSignedPercent(relWinrate)}
           delta={prevRelWinrate !== undefined ? relWinrate - prevRelWinrate : undefined}
           tooltip={
             <MatchupTooltip
