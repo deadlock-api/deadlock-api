@@ -1,11 +1,12 @@
 import type { Leaderboard } from "deadlock_api_client";
 import Fuse from "fuse.js";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { useHeroById } from "~/hooks/useAssetById";
+import { cn } from "~/lib/utils";
 
 import { LeaderboardControls } from "./LeaderboardControls";
 
@@ -16,6 +17,7 @@ export interface LeaderboardTableProps {
 
 interface LeaderboardTableRowProps {
   entry: Leaderboard["entries"][number];
+  isHighlighted: boolean;
   shouldShowTopHeroesColumn: boolean;
   onHeroClick: (heroId: number) => void;
 }
@@ -24,6 +26,7 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
   const [currentPage, setCurrentPage] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [searchQuery, setSearchQuery] = useState("");
+  const [highlightedRank, setHighlightedRank] = useState<number | null>(null);
 
   const sortedEntries = useMemo(
     () => [...leaderboard.entries].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0)),
@@ -59,8 +62,19 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
     return filteredEntries.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredEntries, currentPage, itemsPerPage]);
 
+  const jumpToRank = useCallback(
+    (rank: number) => {
+      const index = filteredEntries.findIndex((entry) => entry.rank === rank);
+      if (index < 0) return;
+      setCurrentPage(Math.floor(index / itemsPerPage));
+      setHighlightedRank(rank);
+    },
+    [filteredEntries, itemsPerPage],
+  );
+
   const controls = (
     <LeaderboardControls
+      onJumpToRank={jumpToRank}
       searchQuery={searchQuery}
       setSearchQuery={setSearchQuery}
       itemsPerPage={itemsPerPage}
@@ -87,6 +101,7 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
             <LeaderboardTableRow
               key={`${entry.account_name}-${entry.rank}`}
               entry={entry}
+              isHighlighted={entry.rank === highlightedRank}
               shouldShowTopHeroesColumn={shouldShowTopHeroesColumn}
               onHeroClick={onHeroClick}
             />
@@ -105,9 +120,19 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
   );
 }
 
-function LeaderboardTableRow({ entry, shouldShowTopHeroesColumn, onHeroClick }: LeaderboardTableRowProps) {
+function LeaderboardTableRow({
+  entry,
+  isHighlighted,
+  shouldShowTopHeroesColumn,
+  onHeroClick,
+}: LeaderboardTableRowProps) {
+  const rowRef = useRef<HTMLTableRowElement>(null);
+  useEffect(() => {
+    if (isHighlighted) rowRef.current?.scrollIntoView({ block: "center" });
+  }, [isHighlighted]);
+
   return (
-    <TableRow key={`${entry.account_name}-${entry.rank}`}>
+    <TableRow ref={rowRef} className={cn(isHighlighted && "bg-primary/10 hover:bg-primary/15")}>
       <TableCell className="text-right">{entry.rank}</TableCell>
       <TableCell className="max-w-[200px] truncate">{entry.account_name}</TableCell>
       {shouldShowTopHeroesColumn && (

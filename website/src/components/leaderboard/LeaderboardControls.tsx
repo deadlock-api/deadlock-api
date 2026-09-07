@@ -1,4 +1,5 @@
 import { PaginationControls } from "~/components/PaginationControls";
+import { Input } from "~/components/ui/input";
 
 export interface LeaderboardControlsProps {
   searchQuery: string;
@@ -8,6 +9,7 @@ export interface LeaderboardControlsProps {
   currentPage: number;
   setCurrentPage: (page: number | ((prev: number) => number)) => void;
   totalPages: number;
+  onJumpToRank: (rank: number) => void;
 }
 
 export function LeaderboardControls({
@@ -18,6 +20,7 @@ export function LeaderboardControls({
   currentPage,
   setCurrentPage,
   totalPages,
+  onJumpToRank,
 }: LeaderboardControlsProps) {
   return (
     <PaginationControls
@@ -35,6 +38,18 @@ export function LeaderboardControls({
       onPageChange={(page) => setCurrentPage(page)}
       totalPages={totalPages}
       searchPlaceholder="Search player..."
-    />
+    >
+      <Input
+        type="number"
+        min={1}
+        placeholder="Jump to rank"
+        aria-label="Jump to rank"
+        onChange={(e) => {
+          const rank = parseInt(e.target.value, 10);
+          if (!Number.isNaN(rank)) onJumpToRank(rank);
+        }}
+        className="h-8 w-32"
+      />
+    </PaginationControls>
   );
 }

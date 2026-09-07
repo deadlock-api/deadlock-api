@@ -14,6 +14,7 @@ export interface PaginationControlsProps {
   onPageChange: (page: number) => void;
   totalPages: number;
   searchPlaceholder?: string;
+  children?: React.ReactNode;
 }
 
 export function PaginationControls({
@@ -25,6 +26,7 @@ export function PaginationControls({
   onPageChange,
   totalPages,
   searchPlaceholder = "Search...",
+  children,
 }: PaginationControlsProps) {
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,6 +64,7 @@ export function PaginationControls({
           />
         </div>
       )}
+      {children}
       <div className="flex items-center space-x-2">
         <span className="text-sm text-muted-foreground">Rows per page</span>
         <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
