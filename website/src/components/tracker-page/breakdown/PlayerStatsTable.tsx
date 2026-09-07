@@ -72,7 +72,7 @@ function CompanionTable({ rows, isPending, isError, matchesLabel, winrateLabel }
   const paginatedRows = filteredRows.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
 
   return (
-    <div className="space-y-3">
+    <div className="@container space-y-3">
       <div className="flex flex-wrap items-center justify-end gap-3">
         <div className="flex items-center gap-2">
           <Label htmlFor="min-matches" className="text-xs text-muted-foreground">
@@ -109,7 +109,7 @@ function CompanionTable({ rows, isPending, isError, matchesLabel, winrateLabel }
           <TableRow>
             <TableHead>Player</TableHead>
             <TableHead className="text-right">{matchesLabel}</TableHead>
-            <TableHead className="text-right">Wins</TableHead>
+            <TableHead className="hidden text-right @md:table-cell">Wins</TableHead>
             <TableHead className="text-right">{winrateLabel}</TableHead>
           </TableRow>
         </TableHeader>
@@ -134,7 +134,7 @@ function CompanionTable({ rows, isPending, isError, matchesLabel, winrateLabel }
                         <Link
                           to="/players/$accountId"
                           params={{ accountId: String(row.accountId) }}
-                          className="max-w-[200px] truncate hover:text-primary hover:underline"
+                          className="max-w-[110px] truncate hover:text-primary hover:underline @md:max-w-[200px]"
                           title="Open player tracker"
                         >
                           {profile?.personaname ?? `Player ${row.accountId}`}
@@ -144,11 +144,13 @@ function CompanionTable({ rows, isPending, isError, matchesLabel, winrateLabel }
                   </div>
                 </TableCell>
                 <TableCell className="text-right tabular-nums">{row.matches.toLocaleString("en-US")}</TableCell>
-                <TableCell className="text-right tabular-nums">{row.wins.toLocaleString("en-US")}</TableCell>
+                <TableCell className="hidden text-right tabular-nums @md:table-cell">
+                  {row.wins.toLocaleString("en-US")}
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-2">
                     <span className="tabular-nums">{(winrate * 100).toFixed(1)}%</span>
-                    <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+                    <div className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-muted @md:block">
                       <div
                         className="h-full rounded-full"
                         style={{ width: `${winrate * 100}%`, backgroundColor: WIN_COLOR }}

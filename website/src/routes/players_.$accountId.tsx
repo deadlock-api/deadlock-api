@@ -154,7 +154,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
 
         <TabsContent value="mates">
           <div className="grid gap-6 xl:grid-cols-2">
-            <div>
+            <div className="min-w-0">
               <h3 className="mb-2 text-lg font-semibold">Mates</h3>
               <MatesTab
                 accountId={accountId}
@@ -164,7 +164,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
                 entries={filteredEntries}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="mb-2 text-lg font-semibold">Enemies</h3>
               <EnemiesTab
                 accountId={accountId}

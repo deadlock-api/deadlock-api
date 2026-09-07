@@ -9,6 +9,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { QueryRenderer } from "~/components/QueryRenderer";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
+import { cn } from "~/lib/utils";
 import { trackerHeroStatsQueryOptions } from "~/queries/tracker-queries";
 
 interface HeroRow {
@@ -42,17 +43,43 @@ function toRow(stats: HeroStats): HeroRow {
   };
 }
 
-const COLUMNS: { key: keyof Omit<HeroRow, "heroId">; label: string; format: (row: HeroRow) => string }[] = [
+/** `className` hides a column until the table's container is wide enough for it. */
+const COLUMNS: {
+  key: keyof Omit<HeroRow, "heroId">;
+  label: string;
+  format: (row: HeroRow) => string;
+  className?: string;
+}[] = [
   { key: "matches", label: "Matches", format: (row) => row.matches.toLocaleString("en-US") },
   { key: "winrate", label: "Win rate", format: (row) => `${(row.winrate * 100).toFixed(1)}%` },
   { key: "kda", label: "KDA", format: (row) => row.kda.toFixed(2) },
-  { key: "kills", label: "Kills", format: (row) => row.kills.toFixed(1) },
-  { key: "deaths", label: "Deaths", format: (row) => row.deaths.toFixed(1) },
-  { key: "assists", label: "Assists", format: (row) => row.assists.toFixed(1) },
-  { key: "soulsPerMin", label: "Souls/min", format: (row) => Math.round(row.soulsPerMin).toLocaleString("en-US") },
-  { key: "dmgPerMin", label: "Dmg/min", format: (row) => Math.round(row.dmgPerMin).toLocaleString("en-US") },
-  { key: "lastHitsPerMin", label: "LH/min", format: (row) => row.lastHitsPerMin.toFixed(1) },
-  { key: "lastPlayed", label: "Last played", format: (row) => day.unix(row.lastPlayed).fromNow() },
+  { key: "kills", label: "Kills", format: (row) => row.kills.toFixed(1), className: "hidden @3xl:table-cell" },
+  { key: "deaths", label: "Deaths", format: (row) => row.deaths.toFixed(1), className: "hidden @3xl:table-cell" },
+  { key: "assists", label: "Assists", format: (row) => row.assists.toFixed(1), className: "hidden @3xl:table-cell" },
+  {
+    key: "soulsPerMin",
+    label: "Souls/min",
+    format: (row) => Math.round(row.soulsPerMin).toLocaleString("en-US"),
+    className: "hidden @lg:table-cell",
+  },
+  {
+    key: "dmgPerMin",
+    label: "Dmg/min",
+    format: (row) => Math.round(row.dmgPerMin).toLocaleString("en-US"),
+    className: "hidden @2xl:table-cell",
+  },
+  {
+    key: "lastHitsPerMin",
+    label: "LH/min",
+    format: (row) => row.lastHitsPerMin.toFixed(1),
+    className: "hidden @2xl:table-cell",
+  },
+  {
+    key: "lastPlayed",
+    label: "Last played",
+    format: (row) => day.unix(row.lastPlayed).fromNow(),
+    className: "hidden @xl:table-cell",
+  },
 ];
 
 export function HeroesTab({
@@ -110,50 +137,52 @@ export function HeroesTab({
           .map(toRow)
           .sort((a, b) => (sortDir === "desc" ? b[sortKey] - a[sortKey] : a[sortKey] - b[sortKey]));
         return (
-          <Table>
-            <TableHeader className="bg-muted">
-              <TableRow>
-                <TableHead>Hero</TableHead>
-                {COLUMNS.map((column) => (
-                  <TableHead key={column.key} className="text-right">
-                    <button
-                      type="button"
-                      onClick={() => handleSort(column.key)}
-                      className="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
-                    >
-                      {column.label}
-                      {sortKey === column.key &&
-                        (sortDir === "desc" ? <ArrowDown className="size-3" /> : <ArrowUp className="size-3" />)}
-                    </button>
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.heroId}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <HeroImage heroId={row.heroId} className="size-7 rounded-full" />
-                      <HeroName heroId={row.heroId} className="max-w-[120px]" />
-                    </div>
-                  </TableCell>
+          <div className="@container">
+            <Table>
+              <TableHeader className="bg-muted">
+                <TableRow>
+                  <TableHead>Hero</TableHead>
                   {COLUMNS.map((column) => (
-                    <TableCell key={column.key} className="text-right tabular-nums">
-                      {column.format(row)}
-                    </TableCell>
+                    <TableHead key={column.key} className={cn("text-right", column.className)}>
+                      <button
+                        type="button"
+                        onClick={() => handleSort(column.key)}
+                        className="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
+                      >
+                        {column.label}
+                        {sortKey === column.key &&
+                          (sortDir === "desc" ? <ArrowDown className="size-3" /> : <ArrowUp className="size-3" />)}
+                      </button>
+                    </TableHead>
                   ))}
                 </TableRow>
-              ))}
-              {rows.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={COLUMNS.length + 1} className="py-8 text-center text-muted-foreground">
-                    No hero stats in the selected range
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow key={row.heroId}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <HeroImage heroId={row.heroId} className="size-7 rounded-full" />
+                        <HeroName heroId={row.heroId} className="max-w-[80px] @md:max-w-[120px]" />
+                      </div>
+                    </TableCell>
+                    {COLUMNS.map((column) => (
+                      <TableCell key={column.key} className={cn("text-right tabular-nums", column.className)}>
+                        {column.format(row)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+                {rows.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={COLUMNS.length + 1} className="py-8 text-center text-muted-foreground">
+                      No hero stats in the selected range
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         );
       }}
     </QueryRenderer>
