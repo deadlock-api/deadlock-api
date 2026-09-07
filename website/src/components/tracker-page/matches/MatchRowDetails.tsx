@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { UsersRound } from "lucide-react";
+import { Link2, UsersRound } from "lucide-react";
 import { useMemo } from "react";
 
 import { CopyButton } from "~/components/copy-button";
@@ -102,23 +102,38 @@ export function MatchRowDetails({
 
   return (
     <div className="@container space-y-4">
-      {/* Restates the match table columns that collapse on narrow layouts. */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground @4xl:hidden">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        {/* Restates the match table columns that collapse on narrow layouts. */}
         <span className="@3xl:hidden">
           {MATCH_MODE_LABELS_BY_ID[entry.match_mode] ?? "Unknown"} · {formatMatchDuration(entry.match_duration_s)}
         </span>
-        <span className="inline-flex items-center gap-0.5 tabular-nums">
+        <span className="inline-flex items-center gap-0.5 tabular-nums @4xl:hidden">
           Match {matchId}
           <CopyButton text={String(matchId)} iconOnly title="Copy match ID" className="size-6" />
         </span>
         <Link
           to="/team-builder"
           search={{ match: matchId }}
-          className="inline-flex items-center gap-1 transition-colors hover:text-foreground"
+          className="inline-flex items-center gap-1 transition-colors hover:text-foreground @4xl:hidden"
         >
           <UsersRound className="size-3.5" />
           Team Builder
         </Link>
+        <CopyButton
+          text={() => {
+            const url = new URL(window.location.href);
+            url.searchParams.set("tab", "matches");
+            url.searchParams.set("match", String(matchId));
+            return url.toString();
+          }}
+          variant="ghost"
+          size="sm"
+          className="ml-auto h-6 gap-1 px-2 text-xs text-muted-foreground"
+          title="Copy a link that opens this match"
+        >
+          <Link2 className="size-3.5" />
+          Copy link
+        </CopyButton>
       </div>
       {soulLead && <SoulLeadChart lead={soulLead} events={objectiveEvents} />}
       {contribution && <PerformanceStrip entry={entry} contribution={contribution} heroSummary={heroSummary} />}

@@ -5,7 +5,8 @@ import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
 type CopyButtonProps = Omit<ComponentProps<typeof Button>, "onClick"> & {
-  text: string;
+  /** A function defers the value to click time, for text that only exists in the browser like the page URL. */
+  text: string | (() => string);
   iconOnly?: boolean;
 };
 
@@ -16,7 +17,7 @@ export function CopyButton({ text, iconOnly, children = "Copy", className, varia
     (event: React.MouseEvent) => {
       // Copying must not also activate a clickable ancestor, like an expandable table row.
       event.stopPropagation();
-      navigator.clipboard.writeText(text);
+      navigator.clipboard.writeText(typeof text === "function" ? text() : text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     },
