@@ -275,6 +275,7 @@ export default function AbilityOrderNode({
       {hasChildren && !isWithinDefaultDepth && siblingCount !== 1 && (
         <button
           type="button"
+          aria-expanded={isExpanded}
           className={cn(
             "mt-1.5 flex items-center justify-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors",
             isExpanded
