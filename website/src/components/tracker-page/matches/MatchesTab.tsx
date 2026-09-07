@@ -115,7 +115,7 @@ function AverageRow({ summary }: { summary: TrackerSummary }) {
       </TableCell>
       <TableCell>
         <span className="@xl:hidden">Avg</span>
-        <span className="hidden @xl:inline">Average</span>
+        <span className="hidden @xl:inline">Average · {summary.matches.toLocaleString("en-US")} matches</span>
       </TableCell>
       <TableCell className="hidden @3xl:table-cell" />
       <TableCell className="text-right tabular-nums">
