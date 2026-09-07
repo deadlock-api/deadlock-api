@@ -8,9 +8,11 @@ import { ItemImage } from "~/components/ItemImage";
 import { ItemEffectCard } from "~/components/items-page/ItemEffectCard";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
+import { StatCard } from "~/components/StatCard";
 import { useSeasons } from "~/hooks/useSeasons";
 import { findItemBySlug } from "~/lib/item-slug";
 import { prefetchSafe } from "~/lib/prefetch-safe";
+import { rankOf } from "~/lib/rank-of";
 import { defaultDateRange, type SeasonInfo } from "~/lib/seasons";
 import { SITE_URL, seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
@@ -61,11 +63,6 @@ function currentHeroStatsParams(seasons: readonly SeasonInfo[]) {
     matchMode: DEFAULT_MATCH_MODE,
     ...currentTimestamps(seasons),
   };
-}
-
-/** 1-based position of `value` among `values` when sorted from highest to lowest. */
-function rankOf(value: number, values: number[]): number {
-  return 1 + values.filter((other) => other > value).length;
 }
 
 function summarizeItemStats(
@@ -165,16 +162,6 @@ function pct(x: number): string {
 function clock(seconds: number): string {
   const whole = Math.round(seconds);
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
-}
-
-function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="rounded-lg border border-border bg-card px-4 py-3">
-      <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</div>
-      <div className="mt-1 text-2xl font-bold tabular-nums">{value}</div>
-      {sub && <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div>}
-    </div>
-  );
 }
 
 function ItemDetailPage() {
