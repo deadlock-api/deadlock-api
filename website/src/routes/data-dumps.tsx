@@ -29,10 +29,11 @@ import {
   tableNameFromKey,
 } from "~/components/data-dumps/utils";
 import { HighlightedCode, type HighlightLanguage } from "~/components/HighlightedCode";
+import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { prewarmDuckDb } from "~/lib/duckdb-client";
 import { seo } from "~/lib/seo";
 import { cn } from "~/lib/utils";
@@ -434,7 +435,7 @@ function DataDumps() {
       <div className="mx-auto max-w-5xl space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <Breadcrumbs crumbs={breadcrumbs} onNavigate={goTo} isLoading={listing.isFetching && !listing.isPending} />
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
             <SearchInput value={search} onChange={(v) => setSearch(v || null)} />
             <TypeToggle value={typeFilter} onChange={(v) => setType(v === "all" ? null : v)} />
           </div>
@@ -450,8 +451,8 @@ function DataDumps() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead className="w-32 text-right">Size</TableHead>
-                  <TableHead className="w-44">Last Modified</TableHead>
+                  <TableHead className="hidden w-32 text-right sm:table-cell">Size</TableHead>
+                  <TableHead className="hidden w-44 md:table-cell">Last Modified</TableHead>
                   <TableHead className="w-20 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -514,14 +515,14 @@ function DataDumps() {
 
 function SearchInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <div className="relative">
+    <div className="relative min-w-0 flex-1 sm:flex-none">
       <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
       <Input
         type="search"
         placeholder="Search files & columns…"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-8 w-56 pl-8 text-xs"
+        className="h-8 w-full pl-8 text-xs sm:w-56"
       />
       {value && (
         <button
@@ -618,8 +619,8 @@ function FolderRow({
           {name}/{matchedColumns.length > 0 && <ColumnMatchBadge cols={matchedColumns} />}
         </span>
       </TableCell>
-      <TableCell className="text-right text-muted-foreground">—</TableCell>
-      <TableCell className="text-muted-foreground">—</TableCell>
+      <TableCell className="hidden text-right text-muted-foreground sm:table-cell">—</TableCell>
+      <TableCell className="hidden text-muted-foreground md:table-cell">—</TableCell>
       <TableCell className="text-right">
         <Button
           variant="ghost"
@@ -839,18 +840,14 @@ const STATIC_TABS = [
   { id: "python", label: "Python", language: "python", code: PYTHON_EXAMPLE },
   { id: "js", label: "JavaScript", language: "javascript", code: JS_EXAMPLE },
 ] as const;
+const USAGE_TAB_OPTIONS = STATIC_TABS.map((t) => ({ value: t.id, label: t.label }));
 
 function UsageInstructions() {
+  const [tab, setTab] = useState<string>(STATIC_TABS[0].id);
   return (
     <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
-      <Tabs defaultValue={STATIC_TABS[0].id}>
-        <TabsList variant="line" className="flex-wrap">
-          {STATIC_TABS.map((t) => (
-            <TabsTrigger key={t.id} value={t.id}>
-              {t.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      <Tabs value={tab} onValueChange={setTab}>
+        <ResponsiveTabsList value={tab} onValueChange={setTab} options={USAGE_TAB_OPTIONS} ariaLabel="Usage guides" />
         {STATIC_TABS.map((t) => (
           <TabsContent key={t.id} value={t.id} className="mt-2">
             {t.id === "mcp" ? (

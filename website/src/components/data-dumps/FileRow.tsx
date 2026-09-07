@@ -33,7 +33,7 @@ export function FileRow({
   return (
     <>
       <TableRow className="hover:bg-white/[0.03]">
-        <TableCell>
+        <TableCell className="[overflow-wrap:anywhere] whitespace-normal">
           <span className="inline-flex items-center gap-2">
             {expandable ? (
               <button
@@ -64,8 +64,12 @@ export function FileRow({
             {matchedColumns.length > 0 && <ColumnMatchBadge cols={matchedColumns} />}
           </span>
         </TableCell>
-        <TableCell className="text-right text-muted-foreground tabular-nums">{formatBytes(file.size)}</TableCell>
-        <TableCell className="text-muted-foreground tabular-nums">{formatS3Timestamp(file.lastModified)}</TableCell>
+        <TableCell className="hidden text-right text-muted-foreground tabular-nums sm:table-cell">
+          {formatBytes(file.size)}
+        </TableCell>
+        <TableCell className="hidden text-muted-foreground tabular-nums md:table-cell">
+          {formatS3Timestamp(file.lastModified)}
+        </TableCell>
         <TableCell className="text-right">
           <div className="flex justify-end gap-1">
             <CopyButton iconOnly text={url} title="Copy URL" />

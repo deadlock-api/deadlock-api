@@ -133,7 +133,7 @@ function RootComponent() {
             <TooltipProvider>
               <div className="flex min-h-screen">
                 <AppSidebar />
-                <main className="min-w-0 flex-1 md:ml-64">
+                <main className="min-w-0 flex-1 overflow-x-clip md:ml-64">
                   <MobileMenuButton />
                   <div className="relative flex min-h-full items-start justify-center">
                     <img

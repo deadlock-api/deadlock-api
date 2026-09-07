@@ -37,8 +37,12 @@ export function ShardGroupRow({
             {matchedColumns.length > 0 && <ColumnMatchBadge cols={matchedColumns} />}
           </span>
         </TableCell>
-        <TableCell className="text-right text-muted-foreground tabular-nums">{formatBytes(group.totalSize)}</TableCell>
-        <TableCell className="text-muted-foreground tabular-nums">{formatS3Timestamp(group.lastModified)}</TableCell>
+        <TableCell className="hidden text-right text-muted-foreground tabular-nums sm:table-cell">
+          {formatBytes(group.totalSize)}
+        </TableCell>
+        <TableCell className="hidden text-muted-foreground tabular-nums md:table-cell">
+          {formatS3Timestamp(group.lastModified)}
+        </TableCell>
         <TableCell className="text-right text-xs text-muted-foreground">{open ? "Hide" : "Preview"}</TableCell>
       </TableRow>
       {open && (
@@ -71,7 +75,7 @@ function ShardFileRow({ shard, parent }: { shard: S3File; parent: string }) {
   return (
     <>
       <TableRow className="bg-black/20 hover:bg-black/30">
-        <TableCell>
+        <TableCell className="[overflow-wrap:anywhere] whitespace-normal">
           <span className="inline-flex items-center gap-2 pl-7">
             <button
               type="button"
@@ -93,8 +97,12 @@ function ShardFileRow({ shard, parent }: { shard: S3File; parent: string }) {
             </a>
           </span>
         </TableCell>
-        <TableCell className="text-right text-muted-foreground tabular-nums">{formatBytes(shard.size)}</TableCell>
-        <TableCell className="text-muted-foreground tabular-nums">{formatS3Timestamp(shard.lastModified)}</TableCell>
+        <TableCell className="hidden text-right text-muted-foreground tabular-nums sm:table-cell">
+          {formatBytes(shard.size)}
+        </TableCell>
+        <TableCell className="hidden text-muted-foreground tabular-nums md:table-cell">
+          {formatS3Timestamp(shard.lastModified)}
+        </TableCell>
         <TableCell className="text-right">
           <div className="flex justify-end gap-1">
             <CopyButton iconOnly text={url} title="Copy URL" />

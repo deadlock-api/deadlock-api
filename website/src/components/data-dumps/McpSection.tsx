@@ -1,6 +1,9 @@
+import { useState } from "react";
+
 import { CopyButton } from "~/components/copy-button";
 import { HighlightedCode, type HighlightLanguage } from "~/components/HighlightedCode";
 import { Button } from "~/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 
 export const MCP_URL = "https://api.deadlock-api.com/v1/mcp";
@@ -94,6 +97,7 @@ const CLIENTS: Client[] = [
 ];
 
 export function McpInstructions() {
+  const [client, setClient] = useState(CLIENTS[0].id);
   return (
     <div className="space-y-4">
       <p className="text-sm leading-relaxed">
@@ -109,8 +113,20 @@ export function McpInstructions() {
 
       <div className="space-y-2">
         <p className="text-sm font-medium">Set it up in your assistant</p>
-        <Tabs defaultValue={CLIENTS[0].id} orientation="vertical" className="gap-6">
-          <TabsList variant="line" className="shrink-0">
+        <Tabs value={client} onValueChange={setClient} orientation="vertical" className="gap-6 max-sm:flex-col">
+          <Select value={client} onValueChange={setClient}>
+            <SelectTrigger className="w-full sm:hidden" aria-label="AI assistant">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CLIENTS.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <TabsList variant="line" className="hidden shrink-0 sm:flex">
             {CLIENTS.map((c) => (
               <TabsTrigger
                 key={c.id}
