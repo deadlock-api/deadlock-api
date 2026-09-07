@@ -70,11 +70,15 @@ export function MatchRowDetails({ matchId, accountId, ranks }: { matchId: number
   const maxima = useMemo(() => {
     let souls = 0;
     let damage = 0;
+    let bossDamage = 0;
+    let healing = 0;
     for (const player of match?.players ?? []) {
       souls = Math.max(souls, player.net_worth);
       damage = Math.max(damage, player.player_damage);
+      bossDamage = Math.max(bossDamage, player.boss_damage);
+      healing = Math.max(healing, player.player_healing);
     }
-    return { souls, damage };
+    return { souls, damage, bossDamage, healing };
   }, [match]);
 
   const soulLead = useMemo(() => {
@@ -139,6 +143,15 @@ export function MatchRowDetails({ matchId, accountId, ranks }: { matchId: number
                     >
                       Dmg
                     </th>
+                    <th
+                      className="hidden px-2 py-1 text-right font-normal @lg:table-cell"
+                      title="Damage dealt to objectives"
+                    >
+                      Obj
+                    </th>
+                    <th className="hidden px-2 py-1 text-right font-normal @lg:table-cell" title="Healing done">
+                      Heal
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -197,10 +210,22 @@ export function MatchRowDetails({ matchId, accountId, ranks }: { matchId: number
                             barClassName="bg-primary/15"
                             className="hidden @sm:table-cell"
                           />
+                          <StatCell
+                            value={player.boss_damage}
+                            max={maxima.bossDamage}
+                            barClassName="bg-violet-500/15"
+                            className="hidden @lg:table-cell"
+                          />
+                          <StatCell
+                            value={player.player_healing}
+                            max={maxima.healing}
+                            barClassName="bg-emerald-500/15"
+                            className="hidden @lg:table-cell"
+                          />
                         </tr>
                         {build.length > 0 && (
                           <tr className={cn(isTracked && "bg-accent")}>
-                            <td colSpan={5} className="px-2 pb-1.5 pl-10">
+                            <td colSpan={7} className="px-2 pb-1.5 pl-10">
                               <div className="flex flex-wrap items-center gap-1" title="Final build">
                                 {build.map((item) => (
                                   <ItemImageFromAsset key={item.id} item={item} className="size-5 rounded-sm" />

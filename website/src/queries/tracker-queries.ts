@@ -116,6 +116,8 @@ export interface TrackerMatchPlayer {
   denies: number;
   level: number;
   player_damage: number;
+  boss_damage: number;
+  player_healing: number;
   mvp_rank: number | null;
   items: TrackerMatchItem[];
   stats: TrackerMatchStat[];
@@ -148,9 +150,22 @@ interface RestMatchMetadata {
       level?: number;
       mvp_rank?: number | null;
       items?: { item_id?: number; game_time_s?: number; sold_time_s?: number }[];
-      stats?: { time_stamp_s?: number; net_worth?: number; player_damage?: number }[];
+      stats?: {
+        time_stamp_s?: number;
+        net_worth?: number;
+        player_damage?: number;
+        boss_damage?: number;
+        player_healing?: number;
+      }[];
     }[];
   };
+}
+
+/** Cumulative stats peak at the final sample, whichever order the timeline arrives in. */
+function maxStat(stats: { [key: string]: number | null | undefined }[] | undefined, key: string): number {
+  let max = 0;
+  for (const stat of stats ?? []) max = Math.max(max, stat[key] ?? 0);
+  return max;
 }
 
 /**
@@ -177,7 +192,9 @@ async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<Track
       last_hits: player.last_hits ?? 0,
       denies: player.denies ?? 0,
       level: player.level ?? 0,
-      player_damage: player.stats?.at(-1)?.player_damage ?? 0,
+      player_damage: maxStat(player.stats, "player_damage"),
+      boss_damage: maxStat(player.stats, "boss_damage"),
+      player_healing: maxStat(player.stats, "player_healing"),
       mvp_rank: player.mvp_rank ?? null,
       items: (player.items ?? []).map((item) => ({
         item_id: item.item_id ?? 0,
@@ -215,9 +232,10 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
             denies: true,
             player_level: true,
             max_player_damage: true,
+            max_boss_damage: true,
             mvp_rank: true,
             items: { item_id: true, game_time_s: true, sold_time_s: true },
-            stats: { time_stamp_s: true, net_worth: true },
+            stats: { time_stamp_s: true, net_worth: true, player_healing: true },
             steam: { personaname: true },
           },
         },
@@ -240,6 +258,8 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
           denies: player.denies ?? 0,
           level: player.player_level ?? 0,
           player_damage: player.max_player_damage ?? 0,
+          boss_damage: player.max_boss_damage ?? 0,
+          player_healing: maxStat(player.stats ?? undefined, "player_healing"),
           mvp_rank: player.mvp_rank ?? null,
           items: (player.items ?? []).map((item) => ({
             item_id: item.item_id ?? 0,
