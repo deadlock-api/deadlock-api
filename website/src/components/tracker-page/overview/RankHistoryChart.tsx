@@ -6,9 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/com
 import { day } from "~/dayjs";
 import { extractBadgeMap, type SubtierInfo } from "~/lib/leaderboard";
 import { linearToBadge, type RankHistoryPoint } from "~/lib/tracker/compute";
+import { cn } from "~/lib/utils";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
-import { RANK_LINE_COLOR } from "../shared/colors";
+import { LOSS_TEXT_CLASS, RANK_LINE_COLOR, WIN_TEXT_CLASS } from "../shared/colors";
 
 function badgeLabel(info: SubtierInfo | undefined, badge: number, withSubtier: boolean): string {
   if (!info) return String(badge);
@@ -73,13 +74,59 @@ export function RankHistoryChart({ points }: { points: RankHistoryPoint[] }) {
 
   const showSubtierTicks = ticks.length > 0 && ticks[0] % 6 !== 1;
 
+  const progress = useMemo(() => {
+    if (points.length < 2) return null;
+    const first = points[0];
+    const last = points[points.length - 1];
+    let netDelta: number | null = null;
+    for (const point of points) {
+      if (point.delta != null) netDelta = (netDelta ?? 0) + point.delta;
+    }
+    return { first, last, subtiers: last.linear - first.linear, netDelta };
+  }, [points]);
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Rank progression</CardTitle>
         <CardDescription>Badge after each ranked match</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-2">
+        {progress && (
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            <span className="text-sm font-medium text-foreground">
+              {badgeLabel(badgeMap.get(progress.first.badge), progress.first.badge, true)}
+              <span className="mx-1.5 text-muted-foreground">→</span>
+              {badgeLabel(badgeMap.get(progress.last.badge), progress.last.badge, true)}
+            </span>
+            <span className="tabular-nums">
+              <span
+                className={cn(
+                  "font-semibold",
+                  progress.subtiers > 0 ? WIN_TEXT_CLASS : progress.subtiers < 0 ? LOSS_TEXT_CLASS : "",
+                )}
+              >
+                {progress.subtiers > 0 ? "+" : ""}
+                {progress.subtiers}
+              </span>{" "}
+              {Math.abs(progress.subtiers) === 1 ? "subtier" : "subtiers"}
+            </span>
+            {progress.netDelta != null && (
+              <span className="tabular-nums">
+                <span
+                  className={cn(
+                    "font-semibold",
+                    progress.netDelta > 0 ? WIN_TEXT_CLASS : progress.netDelta < 0 ? LOSS_TEXT_CLASS : "",
+                  )}
+                >
+                  {progress.netDelta > 0 ? "+" : ""}
+                  {progress.netDelta.toLocaleString("en-US")}
+                </span>{" "}
+                progress
+              </span>
+            )}
+          </div>
+        )}
         {points.length < 2 ? (
           <div className="flex h-[220px] items-center justify-center text-sm text-muted-foreground">
             No ranked matches in the selected range.
