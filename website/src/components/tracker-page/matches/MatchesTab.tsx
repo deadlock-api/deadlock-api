@@ -304,6 +304,7 @@ export function MatchesTab({
                   ranks={ranks}
                   heroName={heroNames?.get(entry.hero_id) ?? "Unknown"}
                   records={heldRecords?.get(entry.match_id)}
+                  heroSummary={heroSummaries.get(entry.hero_id) as TrackerSummary}
                   heroFiltered={heroId != null}
                   onToggleHeroFilter={() => toggleHeroFilter(entry.hero_id)}
                   expanded={expanded}

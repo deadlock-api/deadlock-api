@@ -17,6 +17,7 @@ import {
   kdaRatio,
   MATCH_MODE_LABELS_BY_ID,
   soulsPerMinute,
+  type TrackerSummary,
   type UnscoredOutcome,
   unscoredOutcome,
 } from "~/lib/tracker/compute";
@@ -54,6 +55,7 @@ export function MatchRow({
   ranks,
   heroName,
   records,
+  heroSummary,
   heroFiltered,
   onToggleHeroFilter,
   expanded,
@@ -65,6 +67,8 @@ export function MatchRow({
   heroName: string;
   /** Personal bests this match holds over the filtered history. */
   records?: HeldRecord[];
+  /** The player's record on this hero over the filtered history. */
+  heroSummary: TrackerSummary;
   /** Whether the history is already narrowed to a hero. */
   heroFiltered: boolean;
   onToggleHeroFilter: () => void;
@@ -128,7 +132,18 @@ export function MatchRow({
                 <HeroImage heroId={entry.hero_id} className="size-7 rounded-full" />
               </button>
             </TooltipTrigger>
-            <TooltipContent>{heroFiltered ? "Show all heroes" : `Show only ${heroName} matches`}</TooltipContent>
+            <TooltipContent>
+              {heroFiltered ? (
+                "Show all heroes"
+              ) : (
+                <>
+                  Show only {heroName} matches
+                  <div className="text-muted-foreground tabular-nums">
+                    {heroSummary.wins}W – {heroSummary.losses}L · {Math.round(heroSummary.winrate * 100)}%
+                  </div>
+                </>
+              )}
+            </TooltipContent>
           </Tooltip>
           <span className="hidden max-w-[120px] truncate @xl:inline">{heroName}</span>
           {records && (
