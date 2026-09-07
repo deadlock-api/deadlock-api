@@ -1,7 +1,10 @@
+import type { Upgrade } from "deadlock_api_client";
+
 import { api } from "~/lib/api";
-import { filterPlayableHeroes } from "~/queries/asset-queries";
+import { filterPlayableHeroes, filterShopableItems } from "~/queries/asset-queries";
 
 import { heroSlug } from "./hero-slug";
+import { itemSlug } from "./item-slug";
 import { SITE_URL } from "./seo";
 
 export interface SitemapEntry {
@@ -118,6 +121,20 @@ async function loadHeroEntries(): Promise<SitemapEntry[]> {
   }
 }
 
+async function loadItemEntries(): Promise<SitemapEntry[]> {
+  try {
+    const response = await api.items_api.getItemsByType({ type: "upgrade" });
+    return filterShopableItems(response.data as Upgrade[]).map((item) => ({
+      path: `/items/${itemSlug(item.name)}`,
+      changefreq: "daily",
+      priority: 0.6,
+    }));
+  } catch (error) {
+    console.error("Failed to fetch items for sitemap", error);
+    return [];
+  }
+}
+
 export async function buildSitemapXml(): Promise<string> {
   const blogEntries: SitemapEntry[] = loadBlogEntries().map((post) => ({
     path: `/blog/${post.slug}`,
@@ -134,8 +151,8 @@ export async function buildSitemapXml(): Promise<string> {
     changefreq: "weekly",
     priority: 0.7,
   };
-  const heroEntries = await loadHeroEntries();
-  const all = [...STATIC_ENTRIES, blogIndex, ...blogEntries, ...heroEntries];
+  const [heroEntries, itemEntries] = await Promise.all([loadHeroEntries(), loadItemEntries()]);
+  const all = [...STATIC_ENTRIES, blogIndex, ...blogEntries, ...heroEntries, ...itemEntries];
   const body = all.map(renderUrl).join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
 }

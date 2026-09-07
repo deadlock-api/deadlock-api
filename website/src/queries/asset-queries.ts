@@ -71,6 +71,18 @@ export const itemUpgradesFullQueryOptions = queryOptions({
   staleTime: CACHE_DURATIONS.FOREVER,
 });
 
+/** One item with its description and tooltip sections, which the list queries strip. */
+export function itemQueryOptions(itemId: number) {
+  return queryOptions({
+    queryKey: queryKeys.assets.item(itemId),
+    queryFn: async () => {
+      const response = await api.items_api.getItem({ idOrClassName: String(itemId) });
+      return response.data as Upgrade;
+    },
+    staleTime: CACHE_DURATIONS.FOREVER,
+  });
+}
+
 export const abilitiesQueryOptions = queryOptions({
   queryKey: queryKeys.assets.abilities(),
   queryFn: async () => {

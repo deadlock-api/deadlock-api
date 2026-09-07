@@ -45,6 +45,8 @@ import { Route as FlashcardsItemUpgradesRouteImport } from './routes/flashcards/
 import { Route as FlashcardsItemsRouteImport } from './routes/flashcards/items'
 import { Route as HeroesIndexRouteImport } from './routes/heroes.index'
 import { Route as HeroesHeroNameRouteImport } from './routes/heroes.$heroName'
+import { Route as ItemsIndexRouteImport } from './routes/items.index'
+import { Route as ItemsItemNameRouteImport } from './routes/items.$itemName'
 import { Route as PlayersAccountIdRouteImport } from './routes/players_.$accountId'
 import { Route as StreamkitIndexRouteImport } from './routes/streamkit/index'
 import { Route as AuthPatreonCallbackRouteImport } from './routes/auth/patreon/callback'
@@ -230,6 +232,16 @@ const HeroesHeroNameRoute = HeroesHeroNameRouteImport.update({
   path: '/$heroName',
   getParentRoute: () => HeroesRoute,
 } as any)
+const ItemsIndexRoute = ItemsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ItemsRoute,
+} as any)
+const ItemsItemNameRoute = ItemsItemNameRouteImport.update({
+  id: '/$itemName',
+  path: '/$itemName',
+  getParentRoute: () => ItemsRoute,
+} as any)
 const PlayersAccountIdRoute = PlayersAccountIdRouteImport.update({
   id: '/players_/$accountId',
   path: '/players/$accountId',
@@ -265,7 +277,7 @@ export interface FileRoutesByFullPath {
   '/heatmap': typeof HeatmapRoute
   '/heroes': typeof HeroesRouteWithChildren
   '/ingest-cache': typeof IngestCacheRoute
-  '/items': typeof ItemsRoute
+  '/items': typeof ItemsRouteWithChildren
   '/leaderboard': typeof LeaderboardRoute
   '/patron': typeof PatronRoute
   '/players': typeof PlayersRoute
@@ -285,11 +297,13 @@ export interface FileRoutesByFullPath {
   '/flashcards/item-upgrades': typeof FlashcardsItemUpgradesRoute
   '/flashcards/items': typeof FlashcardsItemsRoute
   '/heroes/$heroName': typeof HeroesHeroNameRoute
+  '/items/$itemName': typeof ItemsItemNameRoute
   '/players/$accountId': typeof PlayersAccountIdRoute
   '/blog/': typeof BlogIndexRoute
   '/deadlockdle/': typeof DeadlockdleIndexRoute
   '/flashcards/': typeof FlashcardsIndexRoute
   '/heroes/': typeof HeroesIndexRoute
+  '/items/': typeof ItemsIndexRoute
   '/streamkit/': typeof StreamkitIndexRoute
   '/auth/patreon/callback': typeof AuthPatreonCallbackRoute
   '/streamkit/widgets/$region/$accountId/$widgetType': typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
@@ -304,7 +318,6 @@ export interface FileRoutesByTo {
   '/games': typeof GamesRoute
   '/heatmap': typeof HeatmapRoute
   '/ingest-cache': typeof IngestCacheRoute
-  '/items': typeof ItemsRoute
   '/leaderboard': typeof LeaderboardRoute
   '/patron': typeof PatronRoute
   '/players': typeof PlayersRoute
@@ -324,11 +337,13 @@ export interface FileRoutesByTo {
   '/flashcards/item-upgrades': typeof FlashcardsItemUpgradesRoute
   '/flashcards/items': typeof FlashcardsItemsRoute
   '/heroes/$heroName': typeof HeroesHeroNameRoute
+  '/items/$itemName': typeof ItemsItemNameRoute
   '/players/$accountId': typeof PlayersAccountIdRoute
   '/blog': typeof BlogIndexRoute
   '/deadlockdle': typeof DeadlockdleIndexRoute
   '/flashcards': typeof FlashcardsIndexRoute
   '/heroes': typeof HeroesIndexRoute
+  '/items': typeof ItemsIndexRoute
   '/streamkit': typeof StreamkitIndexRoute
   '/auth/patreon/callback': typeof AuthPatreonCallbackRoute
   '/streamkit/widgets/$region/$accountId/$widgetType': typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
@@ -347,7 +362,7 @@ export interface FileRoutesById {
   '/heatmap': typeof HeatmapRoute
   '/heroes': typeof HeroesRouteWithChildren
   '/ingest-cache': typeof IngestCacheRoute
-  '/items': typeof ItemsRoute
+  '/items': typeof ItemsRouteWithChildren
   '/leaderboard': typeof LeaderboardRoute
   '/patron': typeof PatronRoute
   '/players': typeof PlayersRoute
@@ -367,11 +382,13 @@ export interface FileRoutesById {
   '/flashcards/item-upgrades': typeof FlashcardsItemUpgradesRoute
   '/flashcards/items': typeof FlashcardsItemsRoute
   '/heroes/$heroName': typeof HeroesHeroNameRoute
+  '/items/$itemName': typeof ItemsItemNameRoute
   '/players_/$accountId': typeof PlayersAccountIdRoute
   '/blog/': typeof BlogIndexRoute
   '/deadlockdle/': typeof DeadlockdleIndexRoute
   '/flashcards/': typeof FlashcardsIndexRoute
   '/heroes/': typeof HeroesIndexRoute
+  '/items/': typeof ItemsIndexRoute
   '/streamkit/': typeof StreamkitIndexRoute
   '/auth/patreon/callback': typeof AuthPatreonCallbackRoute
   '/streamkit/widgets/$region/$accountId/$widgetType': typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
@@ -411,11 +428,13 @@ export interface FileRouteTypes {
     | '/flashcards/item-upgrades'
     | '/flashcards/items'
     | '/heroes/$heroName'
+    | '/items/$itemName'
     | '/players/$accountId'
     | '/blog/'
     | '/deadlockdle/'
     | '/flashcards/'
     | '/heroes/'
+    | '/items/'
     | '/streamkit/'
     | '/auth/patreon/callback'
     | '/streamkit/widgets/$region/$accountId/$widgetType'
@@ -430,7 +449,6 @@ export interface FileRouteTypes {
     | '/games'
     | '/heatmap'
     | '/ingest-cache'
-    | '/items'
     | '/leaderboard'
     | '/patron'
     | '/players'
@@ -450,11 +468,13 @@ export interface FileRouteTypes {
     | '/flashcards/item-upgrades'
     | '/flashcards/items'
     | '/heroes/$heroName'
+    | '/items/$itemName'
     | '/players/$accountId'
     | '/blog'
     | '/deadlockdle'
     | '/flashcards'
     | '/heroes'
+    | '/items'
     | '/streamkit'
     | '/auth/patreon/callback'
     | '/streamkit/widgets/$region/$accountId/$widgetType'
@@ -492,11 +512,13 @@ export interface FileRouteTypes {
     | '/flashcards/item-upgrades'
     | '/flashcards/items'
     | '/heroes/$heroName'
+    | '/items/$itemName'
     | '/players_/$accountId'
     | '/blog/'
     | '/deadlockdle/'
     | '/flashcards/'
     | '/heroes/'
+    | '/items/'
     | '/streamkit/'
     | '/auth/patreon/callback'
     | '/streamkit/widgets/$region/$accountId/$widgetType'
@@ -515,7 +537,7 @@ export interface RootRouteChildren {
   HeatmapRoute: typeof HeatmapRoute
   HeroesRoute: typeof HeroesRouteWithChildren
   IngestCacheRoute: typeof IngestCacheRoute
-  ItemsRoute: typeof ItemsRoute
+  ItemsRoute: typeof ItemsRouteWithChildren
   LeaderboardRoute: typeof LeaderboardRoute
   PatronRoute: typeof PatronRoute
   PlayersRoute: typeof PlayersRoute
@@ -785,6 +807,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HeroesHeroNameRouteImport
       parentRoute: typeof HeroesRoute
     }
+    '/items/': {
+      id: '/items/'
+      path: '/'
+      fullPath: '/items/'
+      preLoaderRoute: typeof ItemsIndexRouteImport
+      parentRoute: typeof ItemsRoute
+    }
+    '/items/$itemName': {
+      id: '/items/$itemName'
+      path: '/$itemName'
+      fullPath: '/items/$itemName'
+      preLoaderRoute: typeof ItemsItemNameRouteImport
+      parentRoute: typeof ItemsRoute
+    }
     '/players_/$accountId': {
       id: '/players_/$accountId'
       path: '/players/$accountId'
@@ -873,6 +909,18 @@ const HeroesRouteChildren: HeroesRouteChildren = {
 const HeroesRouteWithChildren =
   HeroesRoute._addFileChildren(HeroesRouteChildren)
 
+interface ItemsRouteChildren {
+  ItemsItemNameRoute: typeof ItemsItemNameRoute
+  ItemsIndexRoute: typeof ItemsIndexRoute
+}
+
+const ItemsRouteChildren: ItemsRouteChildren = {
+  ItemsItemNameRoute: ItemsItemNameRoute,
+  ItemsIndexRoute: ItemsIndexRoute,
+}
+
+const ItemsRouteWithChildren = ItemsRoute._addFileChildren(ItemsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AbilitiesRoute: AbilitiesRoute,
@@ -886,7 +934,7 @@ const rootRouteChildren: RootRouteChildren = {
   HeatmapRoute: HeatmapRoute,
   HeroesRoute: HeroesRouteWithChildren,
   IngestCacheRoute: IngestCacheRoute,
-  ItemsRoute: ItemsRoute,
+  ItemsRoute: ItemsRouteWithChildren,
   LeaderboardRoute: LeaderboardRoute,
   PatronRoute: PatronRoute,
   PlayersRoute: PlayersRoute,

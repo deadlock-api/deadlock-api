@@ -5,6 +5,7 @@ import { useMemo } from "react";
 
 import { ItemImageFromAsset } from "~/components/ItemImage";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { itemSlug } from "~/lib/item-slug";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
@@ -79,7 +80,14 @@ export function HeroTopItems({
           >
             <span className="text-xs font-medium text-muted-foreground tabular-nums">#{index + 1}</span>
             <ItemImageFromAsset item={item} className="size-12 rounded" />
-            <span className="text-sm leading-tight font-medium">{item.name}</span>
+            <Link
+              to="/items/$itemName"
+              params={{ itemName: itemSlug(item.name) }}
+              preload="intent"
+              className="text-sm leading-tight font-medium hover:underline"
+            >
+              {item.name}
+            </Link>
             <dl className="mt-auto w-full space-y-0.5 text-xs">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Win</dt>

@@ -1,0 +1,268 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
+import { lazy, Suspense } from "react";
+
+import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
+import { Filter } from "~/components/Filter";
+import { ItemCombFilters } from "~/components/items-page/ItemCombFilters";
+import { LoadingLogo } from "~/components/LoadingLogo";
+import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
+import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
+import { Tabs, TabsContent } from "~/components/ui/tabs";
+import { useDateRangeState } from "~/hooks/useDateRangeState";
+import { useModeState } from "~/hooks/useModeState";
+import { getEffectiveRankRange } from "~/lib/game-mode";
+import { prefetchSafe } from "~/lib/prefetch-safe";
+import { defaultDateRange, defaultPrevDateRange } from "~/lib/seasons";
+import { seo } from "~/lib/seo";
+import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
+import { wilsonScoreInterval } from "~/lib/wilson";
+import { itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
+import { itemStatsQueryOptions } from "~/queries/item-stats-query";
+
+const ItemPurchaseAnalysis = lazy(() =>
+  import("~/components/items-page/ItemPurchaseAnalysis").then((m) => ({ default: m.ItemPurchaseAnalysis })),
+);
+const ItemStatsExplorer = lazy(() =>
+  import("~/components/items-page/ItemStatsExplorer").then((m) => ({ default: m.ItemStatsExplorer })),
+);
+const ItemFlowGraph = lazy(() =>
+  import("~/components/items-page/ItemFlowGraph").then((m) => ({ default: m.ItemFlowGraph })),
+);
+const ItemCombStatsTable = lazy(() =>
+  import("~/components/items-page/ItemCombStatsTable").then((m) => ({ default: m.ItemCombStatsTable })),
+);
+
+/** The item whose win rate is most confidently high: the largest Wilson lower bound, as the table ranks confidence. */
+function findWinRateLeader(
+  stats: readonly { item_id: number; wins: number; matches: number }[] | undefined,
+  items: readonly { id: number; name?: string | null }[] | undefined,
+): { name: string; winRate: number } | null {
+  if (!stats || !items) return null;
+  const byItem = new Map<number, { wins: number; matches: number }>();
+  for (const row of stats) {
+    const acc = byItem.get(row.item_id) ?? { wins: 0, matches: 0 };
+    acc.wins += row.wins;
+    acc.matches += row.matches;
+    byItem.set(row.item_id, acc);
+  }
+  let best: { name: string; winRate: number; lowerBound: number } | null = null;
+  for (const [itemId, acc] of byItem) {
+    if (acc.matches < 10) continue;
+    const [lowerBound] = wilsonScoreInterval(acc.wins, acc.matches);
+    if (best && lowerBound <= best.lowerBound) continue;
+    const item = items.find((i) => i.id === itemId);
+    if (item?.name) best = { name: item.name, winRate: acc.wins / acc.matches, lowerBound };
+  }
+  return best;
+}
+
+export const Route = createFileRoute("/items/")({
+  component: ItemsPage,
+  loader: async ({ context: { queryClient } }) => {
+    const seasons = await loadSeasons(queryClient);
+    const [defaultStart, defaultEnd] = defaultDateRange(seasons);
+    const [prevStart, prevEnd] = defaultPrevDateRange(seasons);
+    const minUnixTimestamp = normalizeUnixFloor(defaultStart) ?? 0;
+    const maxUnixTimestamp = normalizeUnixCeil(defaultEnd);
+    const common = {
+      minMatches: 10,
+      heroId: null,
+      minAverageBadge: 91,
+      maxAverageBadge: 116,
+      minBoughtAtS: undefined,
+      maxBoughtAtS: undefined,
+      gameMode: "normal" as const,
+      matchMode: DEFAULT_MATCH_MODE,
+    };
+    const [stats, , items] = await Promise.all([
+      prefetchSafe(
+        queryClient.ensureQueryData(itemStatsQueryOptions({ ...common, minUnixTimestamp, maxUnixTimestamp })),
+      ),
+      prefetchSafe(
+        queryClient.ensureQueryData(
+          itemStatsQueryOptions({
+            ...common,
+            minUnixTimestamp: normalizeUnixFloor(prevStart) ?? 0,
+            maxUnixTimestamp: normalizeUnixCeil(prevEnd),
+          }),
+        ),
+      ),
+      prefetchSafe(queryClient.ensureQueryData(itemUpgradesQueryOptions)),
+    ]);
+    return { leader: findWinRateLeader(stats, items) };
+  },
+  head: ({ loaderData }) => {
+    const leader = loaderData?.leader;
+    const lead = leader
+      ? ` ${leader.name} is the most reliably strong item this patch at a ${(leader.winRate * 100).toFixed(1)}% win rate.`
+      : "";
+    return seo({
+      title: "Deadlock Item Stats: Build Win Rates, Buy Timings & Combos",
+      description: `Deadlock item win rates with statistical confidence intervals, optimal purchase timing, and item combo analytics.${lead} Filter by hero, rank, and patch.`,
+      path: "/items",
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        name: "Deadlock Item Stats: Build Win Rates, Buy Timings & Combos",
+        description:
+          "Item win rates, optimal purchase timing, and build statistics for Deadlock, calculated from tracked ranked matches. Filterable by hero, rank, and patch.",
+        url: "https://deadlock-api.com/items",
+        keywords: ["Deadlock", "item win rates", "build stats", "item combos"],
+        creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
+        isAccessibleForFree: true,
+      },
+    });
+  },
+});
+
+function ItemsPage() {
+  const { mode, setMode, gameMode, matchMode } = useModeState();
+  const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(91));
+  const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
+  const [minBoughtAtS, setMinBoughtAtS] = useQueryState("min_bought_at", parseAsInteger);
+  const [maxBoughtAtS, setMaxBoughtAtS] = useQueryState("max_bought_at", parseAsInteger);
+  const [hero, setHero] = useQueryState("hero", parseAsInteger);
+  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(10));
+  const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange } = useDateRangeState();
+  const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
+
+  const [tab, setTab] = useQueryState(
+    "tab",
+    parseAsStringLiteral(["item-stats", "item-purchase-analysis", "build-flow", "item-combos"] as const).withDefault(
+      "item-stats",
+    ),
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold tracking-tight">Deadlock Item Stats</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Win rates, purchase timing, and item combination analytics</p>
+        <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          Analyze item win rates with statistical confidence intervals, optimal purchase timing, and the best item
+          combinations for Deadlock. Filter by hero, rank, and patch to build smarter and climb the ladder. Statistics
+          use Wilson score intervals for reliable estimates even on less popular items.
+        </p>
+      </div>
+      <Filter.Root>
+        <Filter.Hero value={hero} onChange={setHero} allowNull />
+        <Filter.MinMatches value={minMatches} onChange={setMinMatches} />
+        <Filter.ModeWithRank
+          mode={mode}
+          onModeChange={setMode}
+          minRank={minRankId}
+          maxRank={maxRankId}
+          onRankChange={(min, max) => {
+            setMinRankId(min);
+            setMaxRankId(max);
+          }}
+        />
+        <Filter.TimeRange
+          minTime={minBoughtAtS ?? undefined}
+          maxTime={maxBoughtAtS ?? undefined}
+          onTimeChange={(min, max) => {
+            setMinBoughtAtS(min ?? null);
+            setMaxBoughtAtS(max ?? null);
+          }}
+          label="Time"
+          title="Purchase Time Window"
+        />
+        <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
+        {tab === "item-combos" && <ItemCombFilters />}
+      </Filter.Root>
+
+      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="tabs-nav w-full">
+        <ResponsiveTabsList
+          ariaLabel="Item stats sections"
+          value={tab ?? undefined}
+          onValueChange={(value) => setTab(value as typeof tab)}
+          options={[
+            { value: "item-stats", label: "Item Stats" },
+            { value: "item-purchase-analysis", label: "Purchase Analysis" },
+            { value: "build-flow", label: "Build Flow" },
+            { value: "item-combos", label: "Item Combos" },
+          ]}
+        />
+        <TabsContent value="item-stats">
+          <h2 className="sr-only">Item Stats</h2>
+          <ChunkErrorBoundary>
+            <Suspense fallback={<LoadingLogo />}>
+              <ItemStatsExplorer
+                sortBy="winrate"
+                minRankId={effectiveMinRankId}
+                maxRankId={effectiveMaxRankId}
+                minDate={startDate || undefined}
+                maxDate={endDate || undefined}
+                prevMinDate={prevStartDate}
+                prevMaxDate={prevEndDate}
+                hero={hero}
+                minMatches={minMatches}
+                minBoughtAtS={minBoughtAtS ?? undefined}
+                maxBoughtAtS={maxBoughtAtS ?? undefined}
+                gameMode={gameMode}
+                matchMode={matchMode}
+              />
+            </Suspense>
+          </ChunkErrorBoundary>
+        </TabsContent>
+        <TabsContent value="item-purchase-analysis">
+          <h2 className="sr-only">Item Purchase Analysis</h2>
+          <ChunkErrorBoundary>
+            <Suspense fallback={<LoadingLogo />}>
+              <ItemPurchaseAnalysis
+                minRankId={effectiveMinRankId}
+                maxRankId={effectiveMaxRankId}
+                minDate={startDate || undefined}
+                maxDate={endDate || undefined}
+                hero={hero}
+                minMatches={minMatches}
+                minBoughtAtS={minBoughtAtS ?? undefined}
+                maxBoughtAtS={maxBoughtAtS ?? undefined}
+                gameMode={gameMode}
+                matchMode={matchMode}
+              />
+            </Suspense>
+          </ChunkErrorBoundary>
+        </TabsContent>
+        <TabsContent value="build-flow">
+          <h2 className="sr-only">Item Build Flow</h2>
+          <ChunkErrorBoundary>
+            <Suspense fallback={<LoadingLogo />}>
+              <ItemFlowGraph
+                heroId={hero}
+                minRankId={effectiveMinRankId}
+                maxRankId={effectiveMaxRankId}
+                minDate={startDate || undefined}
+                maxDate={endDate || undefined}
+                minMatches={minMatches}
+                gameMode={gameMode}
+                matchMode={matchMode}
+              />
+            </Suspense>
+          </ChunkErrorBoundary>
+        </TabsContent>
+        <TabsContent value="item-combos">
+          <h2 className="sr-only">Item Combos</h2>
+          <ChunkErrorBoundary>
+            <Suspense fallback={<LoadingLogo />}>
+              <ItemCombStatsTable
+                columns={["winRate", "pickRate", "totalMatches"]}
+                hero={hero}
+                minRankId={effectiveMinRankId}
+                maxRankId={effectiveMaxRankId}
+                minMatches={minMatches}
+                minDate={startDate || undefined}
+                maxDate={endDate || undefined}
+                prevMinDate={prevStartDate}
+                prevMaxDate={prevEndDate}
+                gameMode={gameMode}
+                matchMode={matchMode}
+              />
+            </Suspense>
+          </ChunkErrorBoundary>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

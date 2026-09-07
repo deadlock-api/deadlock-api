@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import type { Upgrade } from "deadlock_api_client";
 import type { ItemStats } from "deadlock_api_client";
 import { parseAsArrayOf, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
@@ -11,6 +12,7 @@ import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import { ItemTierSelector } from "~/components/selectors/ItemTierSelector";
 import { Button } from "~/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { itemSlug } from "~/lib/item-slug";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { cn } from "~/lib/utils";
 import { wilsonScoreInterval } from "~/lib/wilson";
@@ -282,7 +284,19 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
         <TableCell>
           <div className="flex items-center gap-2">
             <ItemImageFromAsset item={row.item} />
-            <span className="truncate">{itemName}</span>
+            {row.item ? (
+              <Link
+                to="/items/$itemName"
+                params={{ itemName: itemSlug(row.item.name) }}
+                preload="intent"
+                onClick={(e) => e.stopPropagation()}
+                className="truncate hover:underline"
+              >
+                {itemName}
+              </Link>
+            ) : (
+              <span className="truncate">{itemName}</span>
+            )}
           </div>
         </TableCell>
         {columns.includes("itemsTier") && (
