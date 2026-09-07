@@ -107,13 +107,19 @@ function pct(x: number): string {
   return `${(x * 100).toFixed(1)}%`;
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
+function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="rounded-lg border border-border bg-card px-4 py-3">
       <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</div>
       <div className="mt-1 text-2xl font-bold tabular-nums">{value}</div>
+      {sub && <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div>}
     </div>
   );
+}
+
+/** 1-based position of `value` among `values` when sorted from highest to lowest. */
+function rankOf(value: number, values: number[]): number {
+  return 1 + values.filter((other) => other > value).length;
 }
 
 function HeroDetailPage() {
@@ -133,9 +139,24 @@ function HeroDetailPage() {
     for (const r of rows) sumMatches += r.matches;
     const winRate = row.wins / row.matches;
     const pickRate = sumMatches > 0 ? getPickrateMultiplier(GAME_MODE) * (row.matches / sumMatches) : 0;
-    const banRate = banQuery.data ? computeBanRates(banQuery.data).get(heroId) : undefined;
-    return { winRate, pickRate, matches: row.matches, banRate };
+    const banRates = banQuery.data ? computeBanRates(banQuery.data) : undefined;
+    const banRate = banRates?.get(heroId);
+    const played = rows.filter((r) => r.matches > 0);
+    const heroCount = played.length;
+    const winRateRank = rankOf(
+      winRate,
+      played.map((r) => r.wins / r.matches),
+    );
+    const pickRateRank = rankOf(
+      row.matches,
+      played.map((r) => r.matches),
+    );
+    const banRateRank = banRate !== undefined && banRates ? rankOf(banRate, [...banRates.values()]) : undefined;
+    return { winRate, pickRate, matches: row.matches, banRate, heroCount, winRateRank, pickRateRank, banRateRank };
   }, [statsQuery.data, banQuery.data, heroId]);
+
+  const rankLabel = (rank: number | undefined) =>
+    summary && rank !== undefined ? `#${rank} of ${summary.heroCount} heroes` : undefined;
 
   return (
     <div className="space-y-6">
@@ -168,10 +189,14 @@ function HeroDetailPage() {
 
       {summary && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <StatCard label="Win Rate" value={pct(summary.winRate)} />
-          <StatCard label="Pick Rate" value={pct(summary.pickRate)} />
+          <StatCard label="Win Rate" value={pct(summary.winRate)} sub={rankLabel(summary.winRateRank)} />
+          <StatCard label="Pick Rate" value={pct(summary.pickRate)} sub={rankLabel(summary.pickRateRank)} />
           <StatCard label="Matches" value={summary.matches.toLocaleString("en-US")} />
-          <StatCard label="Ban Rate" value={summary.banRate !== undefined ? pct(summary.banRate) : "—"} />
+          <StatCard
+            label="Ban Rate"
+            value={summary.banRate !== undefined ? pct(summary.banRate) : "—"}
+            sub={rankLabel(summary.banRateRank)}
+          />
         </div>
       )}
 
