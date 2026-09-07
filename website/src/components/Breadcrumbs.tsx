@@ -42,6 +42,8 @@ function buildBreadcrumbs(pathname: string, labelsByPath: Map<string, string>): 
 
 export function Breadcrumbs() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // Archive puzzles carry ?date=; the hub crumb keeps it so players land back on the day they were replaying.
+  const puzzleDate = useRouterState({ select: (s) => (s.location.search as { date?: string }).date });
   // Routes with dynamic segments return a `breadcrumb` label from their loader.
   const labelsByPath = useMatches({
     select: (matches) => {
@@ -91,7 +93,11 @@ export function Breadcrumbs() {
                     {item.label}
                   </span>
                 ) : (
-                  <Link to={item.path} className="transition-colors hover:text-foreground">
+                  <Link
+                    to={item.path}
+                    search={item.path === "/deadlockdle" && puzzleDate ? { date: puzzleDate } : undefined}
+                    className="transition-colors hover:text-foreground"
+                  >
                     {item.label}
                   </Link>
                 )}
