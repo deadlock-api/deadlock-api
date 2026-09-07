@@ -21,6 +21,7 @@ import {
 } from "~/queries/tracker-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
+import { BuildOrderStrip } from "./BuildOrderStrip";
 import { LaneMatchupCard } from "./LaneMatchupCard";
 import { SoulLeadChart } from "./SoulLeadChart";
 
@@ -109,11 +110,12 @@ export function MatchRowDetails({
     return { souls, damage, bossDamage, healing };
   }, [match]);
 
+  const tracked = match?.players.find((player) => player.account_id === accountId);
+
   const soulLead = useMemo(() => {
     if (!match) return null;
-    const ownTeam = match.players.find((player) => player.account_id === accountId)?.team ?? TEAMS[0].key;
-    return computeSoulLead(match.players, ownTeam);
-  }, [match, accountId]);
+    return computeSoulLead(match.players, tracked?.team ?? TEAMS[0].key);
+  }, [match, tracked]);
 
   const laneMatchup = useMemo(
     () => (laned && match ? computeLaneMatchup(match.players, accountId) : null),
@@ -285,6 +287,7 @@ export function MatchRowDetails({
           );
         })}
       </div>
+      {tracked && itemsById && <BuildOrderStrip items={tracked.items} itemsById={itemsById} />}
     </div>
   );
 }
