@@ -131,6 +131,7 @@ export function MatchesTab({
     setSort(sortKey === key ? { dir: sortDir === "desc" ? "asc" : "desc" } : { sort: key, dir: "desc" });
     setCurrentPage(0);
   };
+  const sortProps = { activeKey: sortKey, dir: sortDir, onSort: handleSort };
 
   const { data: heroNames } = useQuery({
     ...heroesQueryOptions,
@@ -173,64 +174,30 @@ export function MatchesTab({
             </TableHead>
             <TableHead>Hero</TableHead>
             <TableHead className="hidden @3xl:table-cell">Mode</TableHead>
-            <SortableHead
-              sortKey="kda"
-              activeKey={sortKey}
-              dir={sortDir}
-              onSort={handleSort}
-              className="text-right"
-              title="Sort by KDA ratio"
-            >
+            <SortableHead sortKey="kda" {...sortProps} className="text-right" title="Sort by KDA ratio">
               K / D / A
             </SortableHead>
-            <SortableHead
-              sortKey="souls"
-              activeKey={sortKey}
-              dir={sortDir}
-              onSort={handleSort}
-              className="hidden text-right @md:table-cell"
-            >
+            <SortableHead sortKey="souls" {...sortProps} className="hidden text-right @md:table-cell">
               Souls
             </SortableHead>
-            <SortableHead
-              sortKey="soulsPerMin"
-              activeKey={sortKey}
-              dir={sortDir}
-              onSort={handleSort}
-              className="hidden text-right @2xl:table-cell"
-            >
+            <SortableHead sortKey="soulsPerMin" {...sortProps} className="hidden text-right @2xl:table-cell">
               Souls/min
             </SortableHead>
             <SortableHead
               sortKey="lastHits"
-              activeKey={sortKey}
-              dir={sortDir}
-              onSort={handleSort}
+              {...sortProps}
               className="hidden text-right @4xl:table-cell"
               title="Last hits / Denies"
             >
               LH / DN
             </SortableHead>
-            <SortableHead
-              sortKey="duration"
-              activeKey={sortKey}
-              dir={sortDir}
-              onSort={handleSort}
-              className="hidden text-right @3xl:table-cell"
-            >
+            <SortableHead sortKey="duration" {...sortProps} className="hidden text-right @3xl:table-cell">
               Duration
             </SortableHead>
-            <SortableHead
-              sortKey="rankDelta"
-              activeKey={sortKey}
-              dir={sortDir}
-              onSort={handleSort}
-              className="text-right"
-              title="Sort by rank change"
-            >
+            <SortableHead sortKey="rankDelta" {...sortProps} className="text-right" title="Sort by rank change">
               Rank
             </SortableHead>
-            <SortableHead sortKey="played" activeKey={sortKey} dir={sortDir} onSort={handleSort} className="text-right">
+            <SortableHead sortKey="played" {...sortProps} className="text-right">
               Played
             </SortableHead>
             <TableHead className="hidden text-right @4xl:table-cell">Match ID</TableHead>
