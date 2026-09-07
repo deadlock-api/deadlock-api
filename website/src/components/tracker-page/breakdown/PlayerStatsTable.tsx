@@ -13,6 +13,8 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { day } from "~/dayjs";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { isWin } from "~/lib/tracker/compute";
 import { trackerEnemyStatsQueryOptions, trackerMateStatsQueryOptions } from "~/queries/tracker-queries";
@@ -23,6 +25,7 @@ interface CompanionRow {
   accountId: number;
   matches: number;
   wins: number;
+  lastPlayedUnix: number;
 }
 
 interface CompanionTableProps {
@@ -111,6 +114,7 @@ function CompanionTable({ rows, isPending, isError, matchesLabel, winrateLabel }
             <TableHead className="text-right">{matchesLabel}</TableHead>
             <TableHead className="hidden text-right @md:table-cell">Wins</TableHead>
             <TableHead className="text-right">{winrateLabel}</TableHead>
+            <TableHead className="hidden text-right @lg:table-cell">Last played</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -119,7 +123,7 @@ function CompanionTable({ rows, isPending, isError, matchesLabel, winrateLabel }
             const winrate = row.matches > 0 ? row.wins / row.matches : 0;
             return (
               <TableRow key={row.accountId}>
-                <TableCell>
+                <TableCell className="w-full max-w-0">
                   <div className="flex items-center gap-2">
                     {isLoadingProfiles && !profile ? (
                       <>
@@ -129,12 +133,12 @@ function CompanionTable({ rows, isPending, isError, matchesLabel, winrateLabel }
                     ) : (
                       <>
                         {profile?.avatar && (
-                          <img src={profile.avatar} alt="" className="size-6 rounded-full" loading="lazy" />
+                          <img src={profile.avatar} alt="" className="size-6 shrink-0 rounded-full" loading="lazy" />
                         )}
                         <Link
                           to="/players/$accountId"
                           params={{ accountId: String(row.accountId) }}
-                          className="max-w-[110px] truncate hover:text-primary hover:underline @md:max-w-[200px]"
+                          className="truncate hover:text-primary hover:underline"
                           title="Open player tracker"
                         >
                           {profile?.personaname ?? `Player ${row.accountId}`}
@@ -158,12 +162,20 @@ function CompanionTable({ rows, isPending, isError, matchesLabel, winrateLabel }
                     </div>
                   </div>
                 </TableCell>
+                <TableCell className="hidden text-right whitespace-nowrap text-muted-foreground @lg:table-cell">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>{day.unix(row.lastPlayedUnix).fromNow()}</span>
+                    </TooltipTrigger>
+                    <TooltipContent>{day.unix(row.lastPlayedUnix).format("MMM D, YYYY HH:mm")}</TooltipContent>
+                  </Tooltip>
+                </TableCell>
               </TableRow>
             );
           })}
           {paginatedRows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+              <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
                 No players found
               </TableCell>
             </TableRow>
@@ -191,13 +203,18 @@ function intersectRows(
   const entryByMatchId = new Map(entries.map((entry) => [entry.match_id, entry]));
   const rows: CompanionRow[] = [];
   for (const stat of stats) {
-    const shared = stat.matches.filter((matchId) => entryByMatchId.has(matchId));
-    if (shared.length === 0) continue;
-    const wins = shared.filter((matchId) => {
+    let matches = 0;
+    let wins = 0;
+    let lastPlayedUnix = 0;
+    for (const matchId of stat.matches) {
       const entry = entryByMatchId.get(matchId);
-      return entry !== undefined && isWin(entry);
-    }).length;
-    rows.push({ accountId: stat.id, matches: shared.length, wins });
+      if (!entry) continue;
+      matches++;
+      if (isWin(entry)) wins++;
+      lastPlayedUnix = Math.max(lastPlayedUnix, entry.start_time);
+    }
+    if (matches === 0) continue;
+    rows.push({ accountId: stat.id, matches, wins, lastPlayedUnix });
   }
   return rows;
 }
