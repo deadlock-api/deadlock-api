@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
 import { ArrowDown, ArrowUp, ChevronDown, LogOut, ShieldCheck, UsersRound } from "lucide-react";
-import { type ComponentProps, Fragment, useMemo, useState } from "react";
+import { parseAsInteger, useQueryState } from "nuqs";
+import { type ComponentProps, Fragment, useEffect, useMemo, useRef, useState } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
 import { CopyButton } from "~/components/copy-button";
@@ -105,11 +106,20 @@ export function MatchesTab({
   ranks: Rank[];
   accountId: number;
 }) {
-  const [currentPage, setCurrentPage] = useState(0);
+  const [expandedMatchId, setExpandedMatchId] = useQueryState("match", parseAsInteger);
   const [itemsPerPage, setItemsPerPage] = useState(25);
-  const [expandedMatchId, setExpandedMatchId] = useState<number | null>(null);
+  // A shared link opens on the page holding its match; entries arrive newest first, matching the default sort.
+  const [currentPage, setCurrentPage] = useState(() => {
+    const index = entries.findIndex((entry) => entry.match_id === expandedMatchId);
+    return index === -1 ? 0 : Math.floor(index / itemsPerPage);
+  });
   const [sortKey, setSortKey] = useState<MatchSortKey>("played");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const linkedRowRef = useRef<HTMLTableRowElement>(null);
+  useEffect(() => {
+    linkedRowRef.current?.scrollIntoView({ block: "center" });
+  }, []);
 
   const handleSort = (key: MatchSortKey) => {
     if (sortKey === key) {
@@ -225,6 +235,7 @@ export function MatchesTab({
               <Fragment key={entry.match_id}>
                 {startsSession && <SessionRow session={session} />}
                 <TableRow
+                  ref={expanded ? linkedRowRef : undefined}
                   className="cursor-pointer"
                   onClick={() => setExpandedMatchId(expanded ? null : entry.match_id)}
                 >
