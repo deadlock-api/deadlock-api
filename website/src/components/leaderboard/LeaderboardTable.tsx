@@ -103,7 +103,7 @@ function LeaderboardTableRow({ entry, shouldShowTopHeroesColumn, onHeroClick }: 
       <TableCell className="max-w-[200px] truncate">{entry.account_name}</TableCell>
       {shouldShowTopHeroesColumn && (
         <TableCell>
-          <div className="flex justify-end space-x-3">
+          <div className="flex min-h-8 justify-end space-x-3">
             {entry.top_hero_ids?.map((heroId) => (
               <button key={heroId} type="button" onClick={() => onHeroClick(heroId)} className="cursor-pointer">
                 <HeroImage heroId={heroId} className="h-8 w-8 rounded-full border border-border object-cover" />
