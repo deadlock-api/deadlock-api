@@ -68,7 +68,11 @@ export function MatchRow({
       ref={ref}
       tabIndex={0}
       aria-expanded={expanded}
-      className="cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none"
+      className={cn(
+        "cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none",
+        // Joins the row with its details panel below, which shares the tint.
+        expanded && "border-b-0 bg-muted/30",
+      )}
       onClick={onToggle}
       onKeyDown={(event) => {
         // Buttons and links inside the row handle their own keys.
