@@ -13,11 +13,9 @@ import { QueryRenderer } from "~/components/QueryRenderer";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
-import { CACHE_DURATIONS } from "~/constants/cache";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { api } from "~/lib/api";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultDateRange } from "~/lib/seasons";
@@ -25,7 +23,7 @@ import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { loadSeasons } from "~/queries/asset-queries";
 import { playerScoreboardQueryOptions } from "~/queries/player-scoreboard-query";
-import { queryKeys } from "~/queries/query-keys";
+import { steamProfileBatches, steamProfilesQueryOptions } from "~/queries/steam-queries";
 
 const PlayerStatsDistributionCharts = lazy(() =>
   import("~/components/players-page/PlayerStatsDistributionCharts").then((m) => ({
@@ -33,14 +31,7 @@ const PlayerStatsDistributionCharts = lazy(() =>
   })),
 );
 
-const STEAM_BATCH_SIZE = 500;
 const MAX_ENTRIES = 1000;
-
-function chunkIds(ids: number[], size: number): number[][] {
-  const chunks: number[][] = [];
-  for (let i = 0; i < ids.length; i += size) chunks.push(ids.slice(i, i + size));
-  return chunks;
-}
 
 export const Route = createFileRoute("/players")({
   component: PlayersPage,
@@ -65,25 +56,8 @@ export const Route = createFileRoute("/players")({
     );
     const accountIds = (scoreboard ?? []).map((e) => e.account_id).filter((id): id is number => id != null);
     await Promise.all(
-      chunkIds(accountIds, STEAM_BATCH_SIZE).map((batch) =>
-        prefetchSafe(
-          queryClient.ensureQueryData({
-            queryKey: queryKeys.steam.profiles(batch),
-            queryFn: async () => {
-              const response = await api.steam_api.steam({ accountIds: batch });
-              const map: Record<number, { personaname: string; avatar: string; profileurl: string }> = {};
-              for (const profile of response.data) {
-                map[profile.account_id] = {
-                  personaname: profile.personaname,
-                  avatar: profile.avatar,
-                  profileurl: profile.profileurl,
-                };
-              }
-              return map;
-            },
-            staleTime: CACHE_DURATIONS.ONE_DAY,
-          }),
-        ),
+      steamProfileBatches(accountIds).map((batch) =>
+        prefetchSafe(queryClient.ensureQueryData(steamProfilesQueryOptions(batch))),
       ),
     );
   },
