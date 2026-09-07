@@ -76,7 +76,11 @@ export function filterMatches(
     .sort((a, b) => b.start_time - a.start_time);
 }
 
-export type MatchSortKey = "kda" | "souls" | "lastHits" | "duration" | "rankDelta" | "played";
+export function soulsPerMinute(entry: PlayerMatchHistoryEntry): number {
+  return entry.match_duration_s > 0 ? entry.net_worth / (entry.match_duration_s / 60) : 0;
+}
+
+export type MatchSortKey = "kda" | "souls" | "soulsPerMin" | "lastHits" | "duration" | "rankDelta" | "played";
 export type SortDir = "asc" | "desc";
 
 const MATCH_SORT_VALUES: Record<MatchSortKey, (entry: PlayerMatchHistoryEntry) => number> = {
@@ -85,6 +89,7 @@ const MATCH_SORT_VALUES: Record<MatchSortKey, (entry: PlayerMatchHistoryEntry) =
       ? (entry.player_kills + entry.player_assists) / entry.player_deaths
       : entry.player_kills + entry.player_assists,
   souls: (entry) => entry.net_worth,
+  soulsPerMin: soulsPerMinute,
   lastHits: (entry) => entry.last_hits,
   duration: (entry) => entry.match_duration_s,
   rankDelta: (entry) => entry.ranked_delta ?? 0,

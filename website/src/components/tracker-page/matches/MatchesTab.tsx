@@ -22,6 +22,7 @@ import {
   type PlaySession,
   type SortDir,
   sortMatches,
+  soulsPerMinute,
 } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions } from "~/queries/asset-queries";
@@ -67,7 +68,7 @@ function SortableHead({
 function SessionRow({ session }: { session: PlaySession }) {
   return (
     <TableRow className="hover:bg-transparent">
-      <TableCell colSpan={12} className="bg-muted/40 py-1.5 text-xs">
+      <TableCell colSpan={13} className="bg-muted/40 py-1.5 text-xs">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
           <span className="font-semibold">{sessionDateLabel(session.startUnix)}</span>
           <span className="text-muted-foreground tabular-nums">
@@ -168,6 +169,15 @@ export function MatchesTab({
               Souls
             </SortableHead>
             <SortableHead
+              sortKey="soulsPerMin"
+              activeKey={sortKey}
+              dir={sortDir}
+              onSort={handleSort}
+              className="hidden text-right @2xl:table-cell"
+            >
+              Souls/min
+            </SortableHead>
+            <SortableHead
               sortKey="lastHits"
               activeKey={sortKey}
               dir={sortDir}
@@ -248,6 +258,9 @@ export function MatchesTab({
                   <TableCell className="hidden text-right tabular-nums @md:table-cell">
                     {entry.net_worth.toLocaleString("en-US")}
                   </TableCell>
+                  <TableCell className="hidden text-right text-muted-foreground tabular-nums @2xl:table-cell">
+                    {Math.round(soulsPerMinute(entry)).toLocaleString("en-US")}
+                  </TableCell>
                   <TableCell className="hidden text-right text-muted-foreground tabular-nums @4xl:table-cell">
                     {entry.last_hits} / {entry.denies}
                   </TableCell>
@@ -320,7 +333,7 @@ export function MatchesTab({
                 </TableRow>
                 {expanded && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={12} className="bg-muted/30 p-4">
+                    <TableCell colSpan={13} className="bg-muted/30 p-4">
                       <MatchRowDetails
                         matchId={entry.match_id}
                         accountId={accountId}
@@ -335,7 +348,7 @@ export function MatchesTab({
           })}
           {paginatedEntries.length === 0 && (
             <TableRow>
-              <TableCell colSpan={12} className="py-8 text-center text-muted-foreground">
+              <TableCell colSpan={13} className="py-8 text-center text-muted-foreground">
                 No matches found
               </TableCell>
             </TableRow>
