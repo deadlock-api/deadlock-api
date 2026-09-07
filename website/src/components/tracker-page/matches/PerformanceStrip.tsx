@@ -52,7 +52,7 @@ export function PerformanceStrip({
   const kdaDelta = Number((kda - heroSummary.kdaRatio).toFixed(2));
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-md border border-border px-3 py-2">
-      <span className="text-sm font-semibold">Your performance</span>
+      <span className="basis-full text-sm font-semibold @xl:basis-auto">Your performance</span>
       <Tile label="Kill participation" value={percent(contribution.killParticipation)} />
       <Tile label="Damage share" value={percent(contribution.damageShare)} />
       <Tile label="Souls share" value={percent(contribution.soulsShare)} />
