@@ -260,13 +260,22 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
       >
         {customDropdownContent && (
           <TableCell className="h-4 w-4 text-center font-semibold">
-            <span className="h-auto p-0">
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-label={`${open ? "Hide" : "Show"} purchase analysis for ${itemName}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(!open);
+              }}
+              className="cursor-pointer rounded-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            >
               {open ? (
                 <span className="icon-[material-symbols--expand-less] h-4 w-4 align-middle" />
               ) : (
                 <span className="icon-[material-symbols--expand-more] h-4 w-4 align-middle" />
               )}
-            </span>
+            </button>
           </TableCell>
         )}
         {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
