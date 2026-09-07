@@ -146,6 +146,7 @@ function StreamKit() {
         <div className="mt-5 space-y-2 border-t border-border pt-5">
           <Label>Region</Label>
           <ToggleGroup
+            aria-label="Region"
             type="single"
             variant="outline"
             value={region}

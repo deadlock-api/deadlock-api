@@ -143,6 +143,7 @@ function ItemsPage() {
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="tabs-nav w-full">
         <ResponsiveTabsList
+          ariaLabel="Item stats sections"
           value={tab ?? undefined}
           onValueChange={(value) => setTab(value as typeof tab)}
           options={[

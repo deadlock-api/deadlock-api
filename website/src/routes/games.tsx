@@ -180,6 +180,7 @@ function Games() {
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="tabs-nav w-full">
         <ResponsiveTabsList
+          ariaLabel="Game stats sections"
           value={tab ?? undefined}
           onValueChange={(value) => setTab(value as typeof tab)}
           options={[

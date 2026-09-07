@@ -59,7 +59,11 @@ export function ResponsiveTabsList({
           </SelectContent>
         </Select>
       ) : (
-        <TabsList variant={variant} className={cn("w-full scrollbar-none overflow-x-auto", className)}>
+        <TabsList
+          variant={variant}
+          aria-label={ariaLabel}
+          className={cn("w-full scrollbar-none overflow-x-auto", className)}
+        >
           {options.map((opt) => (
             <TabsTrigger key={opt.value} value={opt.value}>
               {opt.label}

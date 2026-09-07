@@ -126,7 +126,7 @@ export function McpInstructions() {
               ))}
             </SelectContent>
           </Select>
-          <TabsList variant="line" className="hidden shrink-0 sm:flex">
+          <TabsList variant="line" aria-label="AI assistant" className="hidden shrink-0 sm:flex">
             {CLIENTS.map((c) => (
               <TabsTrigger
                 key={c.id}

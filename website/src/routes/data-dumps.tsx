@@ -515,6 +515,7 @@ function SearchInput({ value, onChange }: { value: string; onChange: (v: string)
       <Input
         type="search"
         placeholder="Search files & columns…"
+        aria-label="Search files and columns"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="h-8 w-full pl-8 text-xs sm:w-56"

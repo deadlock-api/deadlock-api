@@ -57,7 +57,9 @@ export function PaginationControls({
       {onSearchChange && (
         <div className="flex items-center space-x-2">
           <Input
+            type="search"
             placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder.replace(/[.…]+$/, "")}
             value={searchQuery}
             onChange={handleSearchChange}
             className="h-8 w-40"

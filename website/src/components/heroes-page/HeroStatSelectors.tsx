@@ -5,15 +5,18 @@ export function HeroStatSelector<T extends readonly string[]>({
   value,
   onChange,
   options,
+  label,
 }: {
   value: T[number];
   onChange: (val: T[number]) => void;
   options?: T;
+  label: string;
 }) {
   const items = options ?? HERO_STATS;
   return (
     <ToggleGroup
       type="single"
+      aria-label={label}
       value={value}
       onValueChange={(val) => val && onChange(val)}
       variant="outline"
@@ -28,9 +31,23 @@ export function HeroStatSelector<T extends readonly string[]>({
   );
 }
 
-export function HeroTimeIntervalSelector({ value, onChange }: { value: string; onChange: (val: string) => void }) {
+export function HeroTimeIntervalSelector({
+  value,
+  onChange,
+  label,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  label: string;
+}) {
   return (
-    <ToggleGroup type="single" value={value} onValueChange={(val) => val && onChange(val)} variant="outline">
+    <ToggleGroup
+      type="single"
+      aria-label={label}
+      value={value}
+      onValueChange={(val) => val && onChange(val)}
+      variant="outline"
+    >
       {TIME_INTERVALS.map((key) => (
         <ToggleGroupItem key={key.label} value={key.query} className="text-xs capitalize">
           {key.label}

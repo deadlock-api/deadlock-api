@@ -204,6 +204,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
         className="tabs-nav w-full"
       >
         <ResponsiveTabsList
+          ariaLabel="Hero stats sections"
           value={filters.tab ?? undefined}
           onValueChange={(value) => filters.setTab(value as HeroTab)}
           options={[
@@ -252,6 +253,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Stat</span>
                 <HeroStatSelector
+                  label="Stat"
                   value={filters.heroStat}
                   onChange={(val) => filters.setHeroStat(val as typeof filters.heroStat)}
                   options={HERO_STATS_WITH_BAN_RATE}
@@ -260,6 +262,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Time Interval</span>
                 <HeroTimeIntervalSelector
+                  label="Time Interval"
                   value={filters.heroTimeInterval ?? undefined}
                   onChange={(val) => filters.setHeroTimeInterval(val as typeof filters.heroTimeInterval)}
                 />
@@ -291,6 +294,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Stat</span>
                 <HeroStatSelector
+                  label="Stat"
                   value={filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat}
                   onChange={(val) => filters.setHeroStat(val as typeof filters.heroStat)}
                   options={HERO_STATS}
@@ -322,6 +326,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">X Axis</span>
                 <HeroStatSelector
+                  label="X Axis"
                   value={filters.byRankX}
                   onChange={(val) => filters.setByRankX(val)}
                   options={BY_RANK_STATS}
@@ -330,6 +335,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Y Axis</span>
                 <HeroStatSelector
+                  label="Y Axis"
                   value={filters.byRankY}
                   onChange={(val) => filters.setByRankY(val)}
                   options={BY_RANK_STATS}
@@ -360,6 +366,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Stat</span>
                 <HeroStatSelector
+                  label="Stat"
                   value={filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat}
                   onChange={(val) => filters.setHeroStat(val as typeof filters.heroStat)}
                   options={HERO_STATS}

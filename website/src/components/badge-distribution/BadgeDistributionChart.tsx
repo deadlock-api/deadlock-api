@@ -190,6 +190,7 @@ export default function BadgeDistributionChart({
         </p>
         <ToggleGroup
           type="single"
+          aria-label="Metric"
           value={metric}
           onValueChange={(v) => v && onMetricChange(v as Metric)}
           variant="outline"

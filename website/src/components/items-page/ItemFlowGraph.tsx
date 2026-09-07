@@ -773,6 +773,7 @@ export function ItemFlowGraph({
         <div className="flex items-center gap-1">
           <span className="text-xs text-muted-foreground">Min confidence</span>
           <ToggleGroup
+            aria-label="Min confidence"
             type="single"
             value={minConfidence}
             onValueChange={(v) => v && setMinConfidence(v as ConfidenceFilter)}
@@ -788,6 +789,7 @@ export function ItemFlowGraph({
         <div className="flex items-center gap-1">
           <span className="text-xs text-muted-foreground">Sort</span>
           <ToggleGroup
+            aria-label="Sort"
             type="single"
             value={sortBy}
             onValueChange={(v) => v && setSortBy(v as typeof sortBy)}
@@ -810,6 +812,7 @@ export function ItemFlowGraph({
           <div className="flex items-center gap-1">
             <span className="text-xs text-muted-foreground">Bars</span>
             <ToggleGroup
+              aria-label="Bars"
               type="single"
               value={wrMode}
               onValueChange={(v) => v && setWrMode(v as typeof wrMode)}
@@ -825,6 +828,7 @@ export function ItemFlowGraph({
           </div>
         )}
         <ToggleGroup
+          aria-label="Items per stage"
           type="single"
           value={String(perColumn)}
           onValueChange={(v) => v && setPerColumn(Number(v))}
