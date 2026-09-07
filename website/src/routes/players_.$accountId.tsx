@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
+import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -87,6 +88,12 @@ function TrackerContent({ accountId }: { accountId: number }) {
     filters,
   } = useTrackerFilters();
 
+  const [, setExpandedMatchId] = useQueryState("match", parseAsInteger);
+  const openMatch = (matchId: number) => {
+    setExpandedMatchId(matchId);
+    setTab("matches");
+  };
+
   const historyQuery = useQuery(trackerMatchHistoryQueryOptions(accountId));
   const { data: ranks = [] } = useQuery(ranksQueryOptions);
 
@@ -139,7 +146,14 @@ function TrackerContent({ accountId }: { accountId: number }) {
 
         <TabsContent value="overview">
           <QueryRenderer query={historyQuery} loadingFallback={loadingFallback}>
-            {() => <OverviewTab entries={filteredEntries} ranks={ranks} onViewAllMatches={() => setTab("matches")} />}
+            {() => (
+              <OverviewTab
+                entries={filteredEntries}
+                ranks={ranks}
+                onViewAllMatches={() => setTab("matches")}
+                onOpenMatch={openMatch}
+              />
+            )}
           </QueryRenderer>
         </TabsContent>
 

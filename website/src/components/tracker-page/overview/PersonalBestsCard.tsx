@@ -8,13 +8,20 @@ function RecordTile({
   label,
   record,
   format,
+  onOpen,
 }: {
   label: string;
   record: RecordMatch;
   format: (value: number) => string;
+  onOpen: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2.5">
+    <button
+      type="button"
+      onClick={onOpen}
+      className="-mx-2 flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1 text-left transition-colors hover:bg-accent"
+      title="Open this match"
+    >
       <HeroImage heroId={record.entry.hero_id} className="size-8 rounded-full" />
       <div className="min-w-0 flex-1">
         <div className="text-xs text-muted-foreground">{label}</div>
@@ -25,11 +32,17 @@ function RecordTile({
           </span>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
-export function PersonalBestsCard({ records }: { records: PersonalRecords }) {
+export function PersonalBestsCard({
+  records,
+  onOpenMatch,
+}: {
+  records: PersonalRecords;
+  onOpenMatch: (matchId: number) => void;
+}) {
   const tiles = RECORD_KINDS.flatMap((config) => {
     const record = records[config.key];
     return record ? [{ ...config, record }] : [];
@@ -42,7 +55,13 @@ export function PersonalBestsCard({ records }: { records: PersonalRecords }) {
       <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
         {tiles.length === 0 && <div className="text-sm text-muted-foreground">No matches yet.</div>}
         {tiles.map((tile) => (
-          <RecordTile key={tile.key} label={tile.label} record={tile.record} format={tile.format} />
+          <RecordTile
+            key={tile.key}
+            label={tile.label}
+            record={tile.record}
+            format={tile.format}
+            onOpen={() => onOpenMatch(tile.record.entry.match_id)}
+          />
         ))}
       </CardContent>
     </Card>

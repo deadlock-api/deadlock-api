@@ -52,10 +52,13 @@ export function OverviewTab({
   entries,
   ranks,
   onViewAllMatches,
+  onOpenMatch,
 }: {
   entries: PlayerMatchHistoryEntry[];
   ranks: Rank[];
   onViewAllMatches: () => void;
+  /** Opens the matches tab with the given match expanded. */
+  onOpenMatch: (matchId: number) => void;
 }) {
   const summary = useMemo(() => summarize(entries), [entries]);
   const form = useMemo(() => recentForm(entries, 15), [entries]);
@@ -140,7 +143,13 @@ export function OverviewTab({
               {recentMatches.map((entry) => {
                 const win = isWin(entry);
                 return (
-                  <div key={entry.match_id} className="flex items-center gap-2.5 rounded-md py-1 text-sm">
+                  <button
+                    key={entry.match_id}
+                    type="button"
+                    onClick={() => onOpenMatch(entry.match_id)}
+                    className="-mx-2 flex w-[calc(100%+1rem)] cursor-pointer items-center gap-2.5 rounded-md px-2 py-1 text-left text-sm transition-colors hover:bg-accent"
+                    title="Open this match"
+                  >
                     <span className={cn("w-4 text-center font-bold", win ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS)}>
                       {win ? "W" : "L"}
                     </span>
@@ -165,13 +174,13 @@ export function OverviewTab({
                         {day.unix(entry.start_time).format("MMM D")}
                       </span>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </CardContent>
           </Card>
 
-          <PersonalBestsCard records={records} />
+          <PersonalBestsCard records={records} onOpenMatch={onOpenMatch} />
           <PlaytimeHeatmap habits={habits} />
         </div>
       </div>
