@@ -121,6 +121,8 @@ export interface TrackerMatchPlayer {
   boss_damage: number;
   player_healing: number;
   mvp_rank: number | null;
+  /** Ranked badge going into the match, or null when unknown or unranked. */
+  rank_badge: number | null;
   items: TrackerMatchItem[];
   stats: TrackerMatchStat[];
   personaname: string | undefined;
@@ -152,6 +154,7 @@ interface RestMatchMetadata {
       denies?: number;
       level?: number;
       mvp_rank?: number | null;
+      player_rank_data?: { initial_display_rank?: number | null } | null;
       items?: { item_id?: number; game_time_s?: number; sold_time_s?: number }[];
       stats?: {
         time_stamp_s?: number;
@@ -200,6 +203,7 @@ async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<Track
       boss_damage: maxStat(player.stats, "boss_damage"),
       player_healing: maxStat(player.stats, "player_healing"),
       mvp_rank: player.mvp_rank ?? null,
+      rank_badge: player.player_rank_data?.initial_display_rank || null,
       items: (player.items ?? []).map((item) => ({
         item_id: item.item_id ?? 0,
         game_time_s: item.game_time_s ?? 0,
@@ -239,6 +243,7 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
             max_player_damage: true,
             max_boss_damage: true,
             mvp_rank: true,
+            player_rank_initial_display_rank: true,
             items: { item_id: true, game_time_s: true, sold_time_s: true },
             stats: { time_stamp_s: true, net_worth: true, player_healing: true },
             steam: { personaname: true },
@@ -267,6 +272,7 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
           boss_damage: player.max_boss_damage ?? 0,
           player_healing: maxStat(player.stats ?? undefined, "player_healing"),
           mvp_rank: player.mvp_rank ?? null,
+          rank_badge: player.player_rank_initial_display_rank || null,
           items: (player.items ?? []).map((item) => ({
             item_id: item.item_id ?? 0,
             game_time_s: item.game_time_s ?? 0,

@@ -185,13 +185,13 @@ export function MatchRowDetails({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-xs text-muted-foreground">
-                    <th colSpan={2} className="px-2 py-1 text-left font-normal">
+                    <th colSpan={3} className="px-2 py-1 text-left font-normal">
                       Player
                     </th>
                     <th className="px-2 py-1 text-right font-normal">K / D / A</th>
                     <th className="px-2 py-1 text-right font-normal">Souls</th>
                     <th
-                      className="hidden px-2 py-1 text-right font-normal @sm:table-cell"
+                      className="hidden px-2 py-1 text-right font-normal @md:table-cell"
                       title="Damage dealt to players"
                     >
                       Dmg
@@ -233,6 +233,11 @@ export function MatchRowDetails({
                               )}
                             </div>
                           </td>
+                          <td className="w-6 py-1 pl-1.5">
+                            {player.rank_badge != null && (
+                              <BadgeImage badge={player.rank_badge} ranks={ranks} className="size-5 max-w-none" />
+                            )}
+                          </td>
                           <td className="w-full max-w-0 px-2 py-1">
                             <div className="flex items-center gap-1.5">
                               {isTracked || !IS_DEV ? (
@@ -265,7 +270,7 @@ export function MatchRowDetails({
                             value={player.player_damage}
                             max={maxima.damage}
                             barClassName="bg-primary/15"
-                            className="hidden @sm:table-cell"
+                            className="hidden @md:table-cell"
                           />
                           <StatCell
                             value={player.boss_damage}
@@ -282,7 +287,7 @@ export function MatchRowDetails({
                         </tr>
                         {build.length > 0 && (
                           <tr className={cn(isTracked && "bg-accent")}>
-                            <td colSpan={7} className="px-2 pb-1.5 pl-10">
+                            <td colSpan={8} className="px-2 pb-1.5 pl-10">
                               <div className="flex flex-wrap items-center gap-1" title="Final build">
                                 {build.map((item) => (
                                   <ItemImageFromAsset key={item.id} item={item} className="size-5 rounded-sm" />
