@@ -317,8 +317,12 @@ export function HeroMatchupDetailsStatsTable({
         <TableRow>
           <TableHead className="text-center">#</TableHead>
           <TableHead>Hero</TableHead>
-          {stat === HeroMatchupDetailsStatsTableStat.SYNERGY && <TableHead>Combination (Win Rate Change)</TableHead>}
-          {stat === HeroMatchupDetailsStatsTableStat.COUNTER && <TableHead>Against (Win Rate Change)</TableHead>}
+          {stat === HeroMatchupDetailsStatsTableStat.SYNERGY && (
+            <TableHead className="whitespace-normal">Combination (Win Rate Change)</TableHead>
+          )}
+          {stat === HeroMatchupDetailsStatsTableStat.COUNTER && (
+            <TableHead className="whitespace-normal">Against (Win Rate Change)</TableHead>
+          )}
         </TableRow>
       </TableHeader>
       <TableBody>
