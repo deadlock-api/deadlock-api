@@ -149,6 +149,10 @@ function TrackerContent({ accountId }: { accountId: number }) {
             heroId={heroId}
             minUnixTimestamp={minUnixTimestamp}
             maxUnixTimestamp={maxUnixTimestamp}
+            onSelectHero={(id) => {
+              setHeroId(id);
+              setTab("matches");
+            }}
           />
         </TabsContent>
 

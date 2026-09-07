@@ -12,6 +12,8 @@ import { day } from "~/dayjs";
 import { cn } from "~/lib/utils";
 import { trackerHeroStatsQueryOptions } from "~/queries/tracker-queries";
 
+import { WIN_COLOR } from "../shared/colors";
+
 interface HeroRow {
   heroId: number;
   matches: number;
@@ -89,6 +91,7 @@ export function HeroesTab({
   heroId,
   minUnixTimestamp,
   maxUnixTimestamp,
+  onSelectHero,
 }: {
   accountId: number;
   gameMode: string;
@@ -96,6 +99,7 @@ export function HeroesTab({
   heroId: number | null;
   minUnixTimestamp?: number | null;
   maxUnixTimestamp?: number | null;
+  onSelectHero: (heroId: number) => void;
 }) {
   const [sortKey, setSortKey] = useState<keyof Omit<HeroRow, "heroId">>("matches");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
@@ -159,7 +163,12 @@ export function HeroesTab({
               </TableHeader>
               <TableBody>
                 {rows.map((row) => (
-                  <TableRow key={row.heroId}>
+                  <TableRow
+                    key={row.heroId}
+                    className="cursor-pointer"
+                    onClick={() => onSelectHero(row.heroId)}
+                    title="Show matches on this hero"
+                  >
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <HeroImage heroId={row.heroId} className="size-7 rounded-full" />
@@ -168,7 +177,19 @@ export function HeroesTab({
                     </TableCell>
                     {COLUMNS.map((column) => (
                       <TableCell key={column.key} className={cn("text-right tabular-nums", column.className)}>
-                        {column.format(row)}
+                        {column.key === "winrate" ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <span>{column.format(row)}</span>
+                            <div className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-muted @md:block">
+                              <div
+                                className="h-full rounded-full"
+                                style={{ width: `${Math.round(row.winrate * 100)}%`, backgroundColor: WIN_COLOR }}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          column.format(row)
+                        )}
                       </TableCell>
                     ))}
                   </TableRow>
