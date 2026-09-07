@@ -50,6 +50,17 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
+  environments: {
+    ssr: {
+      build: {
+        rolldownOptions: {
+          // workerd refuses to start when the worker module has a named export that is not a handler. Without this,
+          // server-function internals shared between the entry and server-function chunks get re-exported from it.
+          preserveEntrySignatures: "strict",
+        },
+      },
+    },
+  },
   plugins: [
     esToolkitCompatEsm(),
     tanstackStart({

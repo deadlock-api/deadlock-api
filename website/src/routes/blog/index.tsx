@@ -1,7 +1,7 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { ArrowRight, Calendar, Tag } from "lucide-react";
 
-import { getRecentPosts } from "~/lib/blog";
+import { fetchBlogPosts } from "~/lib/blog-fns";
 import { seo } from "~/lib/seo";
 import { cn } from "~/lib/utils";
 
@@ -12,6 +12,7 @@ export const Route = createFileRoute("/blog/")({
       description: "Updates, patch analyses, meta insights, and development news from the Deadlock API team.",
       path: "/blog",
     }),
+  loader: () => fetchBlogPosts(),
   component: BlogIndex,
 });
 
@@ -35,7 +36,7 @@ const tagColors: Record<string, string> = {
 };
 
 function BlogIndex() {
-  const posts = getRecentPosts();
+  const posts = Route.useLoaderData();
 
   return (
     <div className="space-y-8">
