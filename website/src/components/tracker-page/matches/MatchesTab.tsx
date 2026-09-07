@@ -338,8 +338,15 @@ export function MatchesTab({
           })}
           {paginatedEntries.length === 0 && (
             <TableRow>
-              <TableCell colSpan={COLUMN_COUNT} className="py-8 text-center text-muted-foreground">
+              <TableCell colSpan={COLUMN_COUNT} className="py-8 text-center whitespace-normal text-muted-foreground">
                 No matches found
+                {heroId != null && (
+                  <div className="mt-3">
+                    <Button variant="outline" size="sm" onClick={() => onHeroChange(null)}>
+                      Show all heroes
+                    </Button>
+                  </div>
+                )}
               </TableCell>
             </TableRow>
           )}
