@@ -233,9 +233,9 @@ export function MatchRowDetails({
                               )}
                             </div>
                           </td>
-                          <td className="w-6 py-1 pl-1.5">
+                          <td className="w-9 py-0.5 pl-1">
                             {player.rank_badge != null && (
-                              <BadgeImage badge={player.rank_badge} ranks={ranks} className="size-5 max-w-none" />
+                              <BadgeImage badge={player.rank_badge} ranks={ranks} className="size-8 max-w-none" />
                             )}
                           </td>
                           <td className="w-full max-w-0 px-2 py-1">
