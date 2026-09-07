@@ -91,6 +91,14 @@ function TrackerContent({ accountId }: { accountId: number }) {
   const { data: ranks = [] } = useQuery(ranksQueryOptions);
 
   const filteredEntries = useMemo(() => filterMatches(historyQuery.data ?? [], filters), [historyQuery.data, filters]);
+  // The heroes tab shows recent form per hero, which must not be narrowed to wins or losses only.
+  const formEntries = useMemo(
+    () =>
+      filters.result === "all"
+        ? filteredEntries
+        : filterMatches(historyQuery.data ?? [], { ...filters, result: "all" }),
+    [historyQuery.data, filters, filteredEntries],
+  );
 
   const loadingFallback = (
     <div className="flex items-center justify-center py-24">
@@ -149,6 +157,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
             heroId={heroId}
             minUnixTimestamp={minUnixTimestamp}
             maxUnixTimestamp={maxUnixTimestamp}
+            entries={formEntries}
             onSelectHero={(id) => {
               setHeroId(id);
               setTab("matches");

@@ -169,9 +169,22 @@ export function perHeroRows(entries: PlayerMatchHistoryEntry[]): TrackerHeroRow[
   return rows.sort((a, b) => b.matches - a.matches);
 }
 
+export type FormResult = "win" | "loss";
+
 /** Win/loss sequence of the most recent scored matches, newest first. */
-export function recentForm(entries: PlayerMatchHistoryEntry[], count: number): ("win" | "loss")[] {
+export function recentForm(entries: PlayerMatchHistoryEntry[], count: number): FormResult[] {
   return entries.slice(0, count).map((entry) => (isWin(entry) ? "win" : "loss"));
+}
+
+/** Recent form per hero, newest first. Expects entries sorted newest first. */
+export function recentFormByHero(entries: PlayerMatchHistoryEntry[], count: number): Map<number, FormResult[]> {
+  const byHero = new Map<number, FormResult[]>();
+  for (const entry of entries) {
+    const form = byHero.get(entry.hero_id);
+    if (!form) byHero.set(entry.hero_id, [isWin(entry) ? "win" : "loss"]);
+    else if (form.length < count) form.push(isWin(entry) ? "win" : "loss");
+  }
+  return byHero;
 }
 
 export interface StreakInfo {

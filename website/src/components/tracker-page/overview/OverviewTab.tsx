@@ -27,6 +27,7 @@ import {
 import { cn } from "~/lib/utils";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
+import { FormDots } from "../shared/FormDots";
 import { ActivityChart } from "./ActivityChart";
 import { PerformanceTrendChart } from "./PerformanceTrendChart";
 import { PersonalBestsCard } from "./PersonalBestsCard";
@@ -44,21 +45,6 @@ function StatTile({ label, value, sub }: { label: string; value: string; sub?: R
         {sub && <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div>}
       </CardContent>
     </Card>
-  );
-}
-
-function FormDots({ form }: { form: ("win" | "loss")[] }) {
-  if (form.length === 0) return null;
-  return (
-    <div className="flex items-center gap-1" title="Recent form, newest first">
-      {form.map((result, i) => (
-        <span
-          // oxlint-disable-next-line react/no-array-index-key
-          key={i}
-          className={cn("h-3 w-1.5 rounded-full", result === "win" ? "bg-emerald-500" : "bg-primary")}
-        />
-      ))}
-    </div>
   );
 }
 

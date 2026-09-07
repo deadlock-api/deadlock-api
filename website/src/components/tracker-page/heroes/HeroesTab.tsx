@@ -1,5 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AnalyticsApiHeroStatsRequest, HeroStats, PlayersApiPlayerHeroStatsRequest } from "deadlock_api_client";
+import type {
+  AnalyticsApiHeroStatsRequest,
+  HeroStats,
+  PlayerMatchHistoryEntry,
+  PlayersApiPlayerHeroStatsRequest,
+} from "deadlock_api_client";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -10,12 +15,16 @@ import { QueryRenderer } from "~/components/QueryRenderer";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
 import { extractBadgeMap } from "~/lib/leaderboard";
+import { type FormResult, recentFormByHero } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 import { trackerHeroStatsQueryOptions, trackerRankQueryOptions } from "~/queries/tracker-queries";
 
 import { LOSS_TEXT_CLASS, WIN_COLOR, WIN_TEXT_CLASS } from "../shared/colors";
+import { FormDots } from "../shared/FormDots";
+
+const FORM_LENGTH = 10;
 
 interface HeroRow {
   heroId: number;
@@ -28,10 +37,12 @@ interface HeroRow {
   soulsPerMin: number;
   dmgPerMin: number;
   lastHitsPerMin: number;
+  /** Win rate over the last `FORM_LENGTH` matches on the hero; -1 sorts heroes without local history last. */
+  recentWinrate: number;
   lastPlayed: number;
 }
 
-function toRow(stats: HeroStats): HeroRow {
+function toRow(stats: HeroStats, form: FormResult[] | undefined): HeroRow {
   const matches = stats.matches_played;
   return {
     heroId: stats.hero_id,
@@ -44,6 +55,7 @@ function toRow(stats: HeroStats): HeroRow {
     soulsPerMin: stats.networth_per_min,
     dmgPerMin: stats.damage_per_min,
     lastHitsPerMin: stats.last_hits_per_min,
+    recentWinrate: form ? form.filter((result) => result === "win").length / form.length : -1,
     lastPlayed: stats.last_played,
   };
 }
@@ -108,6 +120,7 @@ const COLUMNS: {
     format: (row) => row.lastHitsPerMin.toFixed(1),
     className: "hidden @2xl:table-cell",
   },
+  { key: "recentWinrate", label: "Form", format: () => "", className: "hidden @lg:table-cell" },
   {
     key: "lastPlayed",
     label: "Last played",
@@ -123,6 +136,7 @@ export function HeroesTab({
   heroId,
   minUnixTimestamp,
   maxUnixTimestamp,
+  entries,
   onSelectHero,
 }: {
   accountId: number;
@@ -131,6 +145,8 @@ export function HeroesTab({
   heroId: number | null;
   minUnixTimestamp?: number | null;
   maxUnixTimestamp?: number | null;
+  /** Match history under the same filters, newest first; feeds the per-hero form column. */
+  entries: PlayerMatchHistoryEntry[];
   onSelectHero: (heroId: number) => void;
 }) {
   const [sortKey, setSortKey] = useState<keyof Omit<HeroRow, "heroId">>("matches");
@@ -149,6 +165,7 @@ export function HeroesTab({
   );
 
   const query = useQuery(trackerHeroStatsQueryOptions(params));
+  const formByHero = useMemo(() => recentFormByHero(entries, FORM_LENGTH), [entries]);
 
   const { data: rank } = useQuery(trackerRankQueryOptions(accountId));
   const { data: ranks = [] } = useQuery(ranksQueryOptions);
@@ -209,7 +226,7 @@ export function HeroesTab({
     >
       {(data) => {
         const rows = data
-          .map(toRow)
+          .map((stats) => toRow(stats, formByHero.get(stats.hero_id)))
           .sort((a, b) => (sortDir === "desc" ? b[sortKey] - a[sortKey] : a[sortKey] - b[sortKey]));
         return (
           <div className="@container">
@@ -268,6 +285,8 @@ export function HeroesTab({
                                 />
                               </div>
                             </div>
+                          ) : column.key === "recentWinrate" ? (
+                            <FormDots form={formByHero.get(row.heroId) ?? []} className="justify-end" />
                           ) : column.key === "kda" ? (
                             <div className="flex items-center justify-end gap-2">
                               {average && (

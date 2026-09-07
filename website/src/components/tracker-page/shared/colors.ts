@@ -11,3 +11,5 @@ export const RANK_LINE_COLOR = "#0284c7";
 export const WIN_TEXT_CLASS = "text-emerald-500";
 export const LOSS_TEXT_CLASS = "text-primary";
 export const TREND_LINE_COLOR = "#f59e0b";
+export const WIN_DOT_CLASS = "bg-emerald-500";
+export const LOSS_DOT_CLASS = "bg-primary";
