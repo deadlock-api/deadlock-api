@@ -99,6 +99,11 @@ export interface TrackerMatchItem {
   sold_time_s: number;
 }
 
+export interface TrackerMatchStat {
+  time_stamp_s: number;
+  net_worth: number;
+}
+
 export interface TrackerMatchPlayer {
   account_id: number;
   team: string;
@@ -113,6 +118,7 @@ export interface TrackerMatchPlayer {
   player_damage: number;
   mvp_rank: number | null;
   items: TrackerMatchItem[];
+  stats: TrackerMatchStat[];
   personaname: string | undefined;
 }
 
@@ -142,7 +148,7 @@ interface RestMatchMetadata {
       level?: number;
       mvp_rank?: number | null;
       items?: { item_id?: number; game_time_s?: number; sold_time_s?: number }[];
-      stats?: { player_damage?: number }[];
+      stats?: { time_stamp_s?: number; net_worth?: number; player_damage?: number }[];
     }[];
   };
 }
@@ -178,6 +184,10 @@ async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<Track
         game_time_s: item.game_time_s ?? 0,
         sold_time_s: item.sold_time_s ?? 0,
       })),
+      stats: (player.stats ?? []).map((stat) => ({
+        time_stamp_s: stat.time_stamp_s ?? 0,
+        net_worth: stat.net_worth ?? 0,
+      })),
       personaname: undefined,
     })),
   };
@@ -207,6 +217,7 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
             max_player_damage: true,
             mvp_rank: true,
             items: { item_id: true, game_time_s: true, sold_time_s: true },
+            stats: { time_stamp_s: true, net_worth: true },
             steam: { personaname: true },
           },
         },
@@ -234,6 +245,10 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
             item_id: item.item_id ?? 0,
             game_time_s: item.game_time_s ?? 0,
             sold_time_s: item.sold_time_s ?? 0,
+          })),
+          stats: (player.stats ?? []).map((stat) => ({
+            time_stamp_s: stat.time_stamp_s ?? 0,
+            net_worth: stat.net_worth ?? 0,
           })),
           personaname: player.steam?.personaname,
         })),

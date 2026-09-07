@@ -9,11 +9,13 @@ import { ItemImageFromAsset } from "~/components/ItemImage";
 import { Skeleton } from "~/components/ui/skeleton";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { IS_DEV } from "~/lib/constants";
+import { computeSoulLead } from "~/lib/tracker/soul-lead";
 import { cn } from "~/lib/utils";
 import { itemUpgradesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
 import { type TrackerMatchItem, trackerMatchMetadataQueryOptions } from "~/queries/tracker-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
+import { SoulLeadChart } from "./SoulLeadChart";
 
 const TEAMS = [
   { key: "Team0", name: "The Amber Hand" },
@@ -75,18 +77,27 @@ export function MatchRowDetails({ matchId, accountId, ranks }: { matchId: number
     return { souls, damage };
   }, [match]);
 
+  const soulLead = useMemo(() => {
+    if (!match) return null;
+    const ownTeam = match.players.find((player) => player.account_id === accountId)?.team ?? TEAMS[0].key;
+    return computeSoulLead(match.players, ownTeam);
+  }, [match, accountId]);
+
   if (isPending) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2">
-        {TEAMS.map((team) => (
-          <div key={team.key} className="space-y-2">
-            <Skeleton className="h-5 w-40" />
-            {Array.from({ length: 6 }, (_, i) => (
-              // oxlint-disable-next-line react/no-array-index-key
-              <Skeleton key={i} className="h-7 w-full" />
-            ))}
-          </div>
-        ))}
+      <div className="space-y-4">
+        <Skeleton className="h-[160px] w-full" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          {TEAMS.map((team) => (
+            <div key={team.key} className="space-y-2">
+              <Skeleton className="h-5 w-40" />
+              {Array.from({ length: 6 }, (_, i) => (
+                // oxlint-disable-next-line react/no-array-index-key
+                <Skeleton key={i} className="h-7 w-full" />
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -96,7 +107,8 @@ export function MatchRowDetails({ matchId, accountId, ranks }: { matchId: number
   }
 
   return (
-    <div className="@container">
+    <div className="@container space-y-4">
+      {soulLead && <SoulLeadChart lead={soulLead} />}
       <div className="grid gap-4 @2xl:grid-cols-2">
         {TEAMS.map((team, teamIndex) => {
           const players = match.players.filter((player) => player.team === team.key);
@@ -134,7 +146,7 @@ export function MatchRowDetails({ matchId, accountId, ranks }: { matchId: number
                     const isTracked = player.account_id === accountId;
                     const name =
                       player.personaname ?? profiles[player.account_id]?.personaname ?? `Player ${player.account_id}`;
-                    const build = isTracked && itemsById ? finalBuild(player.items, itemsById) : [];
+                    const build = itemsById ? finalBuild(player.items, itemsById) : [];
                     return (
                       <Fragment key={player.account_id}>
                         <tr className={cn(isTracked && "bg-accent font-medium")}>
@@ -187,12 +199,11 @@ export function MatchRowDetails({ matchId, accountId, ranks }: { matchId: number
                           />
                         </tr>
                         {build.length > 0 && (
-                          <tr className="bg-accent">
-                            <td colSpan={5} className="px-2 pb-1.5">
-                              <div className="flex flex-wrap items-center gap-1">
-                                <span className="mr-1 text-xs text-muted-foreground">Final build</span>
+                          <tr className={cn(isTracked && "bg-accent")}>
+                            <td colSpan={5} className="px-2 pb-1.5 pl-10">
+                              <div className="flex flex-wrap items-center gap-1" title="Final build">
                                 {build.map((item) => (
-                                  <ItemImageFromAsset key={item.id} item={item} className="size-6 rounded-sm" />
+                                  <ItemImageFromAsset key={item.id} item={item} className="size-5 rounded-sm" />
                                 ))}
                               </div>
                             </td>
