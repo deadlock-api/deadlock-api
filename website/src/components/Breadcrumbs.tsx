@@ -2,19 +2,19 @@ import { Link, useMatches, useRouterState } from "@tanstack/react-router";
 import { ChevronRight, Home } from "lucide-react";
 
 const ROUTE_LABELS: Record<string, string> = {
-  heroes: "Hero Stats",
-  items: "Item Stats",
-  abilities: "Ability Stats",
-  leaderboard: "Leaderboard",
-  "badge-distribution": "Rank Distribution",
-  games: "Games",
-  heatmap: "Kill Heatmap",
-  players: "Player Analytics",
-  streamkit: "Stream Kit",
-  "ingest-cache": "Data Ingest",
-  "data-privacy": "Data Privacy",
-  patron: "Prioritized Fetching",
-  blog: "Blog",
+  "/heroes": "Hero Stats",
+  "/items": "Item Stats",
+  "/abilities": "Ability Stats",
+  "/leaderboard": "Leaderboard",
+  "/badge-distribution": "Rank Distribution",
+  "/games": "Games",
+  "/heatmap": "Kill Heatmap",
+  "/players": "Player Analytics",
+  "/streamkit": "Stream Kit",
+  "/ingest-cache": "Data Ingest",
+  "/data-privacy": "Data Privacy",
+  "/patron": "Prioritized Fetching",
+  "/blog": "Blog",
 };
 
 interface BreadcrumbItem {
@@ -31,7 +31,7 @@ function buildBreadcrumbs(pathname: string, labelsByPath: Map<string, string>): 
     path += `/${segment}`;
     const label =
       labelsByPath.get(path) ??
-      ROUTE_LABELS[segment] ??
+      ROUTE_LABELS[path] ??
       segment.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
     items.push({ label, path });
   }
