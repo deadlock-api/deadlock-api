@@ -45,7 +45,7 @@ export const Route = createFileRoute("/players_/$accountId")({
       prefetchSafe(queryClient.ensureQueryData(heroesQueryOptions)),
       prefetchSafe(queryClient.ensureQueryData(ranksQueryOptions)),
     ]);
-    return { accountId, personaname: profile?.personaname };
+    return { accountId, personaname: profile?.personaname, breadcrumb: profile?.personaname ?? String(accountId) };
   },
   head: ({ loaderData }) => {
     const name = loaderData?.personaname ?? (loaderData ? `Player ${loaderData.accountId}` : undefined);
