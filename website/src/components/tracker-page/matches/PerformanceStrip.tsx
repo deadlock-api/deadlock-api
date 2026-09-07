@@ -3,14 +3,25 @@ import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { kdaRatio, soulsPerMinute, type TrackerSummary } from "~/lib/tracker/compute";
 import type { TeamContribution } from "~/lib/tracker/contribution";
 import { cn } from "~/lib/utils";
+import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 
 const percent = (value: number) => `${Math.round(value * 100)}%`;
 
-function Tile({ label, value, children }: { label: string; value: string; children?: React.ReactNode }) {
+function Tile({
+  label,
+  value,
+  title,
+  children,
+}: {
+  label: string;
+  value: string;
+  title?: string;
+  children?: React.ReactNode;
+}) {
   return (
-    <div className="leading-tight">
+    <div className="leading-tight" title={title}>
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="flex items-baseline gap-1.5">
         <span className="text-sm font-semibold tabular-nums">{value}</span>
@@ -35,10 +46,12 @@ function Delta({ value, format }: { value: number; format: (value: number) => st
 
 export function PerformanceStrip({
   entry,
+  player,
   contribution,
   heroSummary,
 }: {
   entry: PlayerMatchHistoryEntry;
+  player: TrackerMatchPlayer;
   contribution: TeamContribution;
   /** The player's summary on this hero over the filtered history, which includes this match. */
   heroSummary: TrackerSummary;
@@ -50,6 +63,7 @@ export function PerformanceStrip({
   // Deltas are taken on the displayed precision so a tiny difference never shows as "+0".
   const spmDelta = Math.round(spm) - Math.round(heroSummary.soulsPerMin);
   const kdaDelta = Number((kda - heroSummary.kdaRatio).toFixed(2));
+  const shots = player.shots_hit + player.shots_missed;
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-md border border-border px-3 py-2">
       <span className="basis-full text-sm font-semibold @xl:basis-auto">Your performance</span>
@@ -62,6 +76,10 @@ export function PerformanceStrip({
       <Tile label="KDA" value={kda.toFixed(2)}>
         {comparable && <Delta value={kdaDelta} format={(v) => v.toFixed(2)} />}
       </Tile>
+      {shots > 0 && (
+        <Tile label="Accuracy" value={percent(player.shots_hit / shots)} title="Shots hit, creeps included" />
+      )}
+      <Tile label="Damage taken" value={player.player_damage_taken.toLocaleString("en-US")} />
     </div>
   );
 }

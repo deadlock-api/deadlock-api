@@ -136,7 +136,9 @@ export function MatchRowDetails({
         </CopyButton>
       </div>
       {soulLead && <SoulLeadChart lead={soulLead} events={objectiveEvents} />}
-      {contribution && <PerformanceStrip entry={entry} contribution={contribution} heroSummary={heroSummary} />}
+      {contribution && tracked && (
+        <PerformanceStrip entry={entry} player={tracked} contribution={contribution} heroSummary={heroSummary} />
+      )}
       {laneMatchup && <LaneMatchupCard matchup={laneMatchup} trackedAccountId={accountId} nameOf={nameOf} />}
       {fights && <KillsDeathsStrip fights={fights} matchDurationS={entry.match_duration_s} nameOf={nameOf} />}
       <Scoreboard

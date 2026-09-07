@@ -135,6 +135,10 @@ export interface TrackerMatchPlayer {
   player_damage: number;
   boss_damage: number;
   player_healing: number;
+  player_damage_taken: number;
+  /** Every shot fired, creep and hero shots alike. */
+  shots_hit: number;
+  shots_missed: number;
   mvp_rank: number | null;
   /** Ranked badge going into the match, or null when unknown or unranked. */
   rank_badge: number | null;
@@ -199,6 +203,9 @@ interface RestMatchMetadata {
         player_damage?: number;
         boss_damage?: number;
         player_healing?: number;
+        player_damage_taken?: number;
+        shots_hit?: number;
+        shots_missed?: number;
       }[];
     }[];
   };
@@ -311,6 +318,9 @@ async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<Track
       player_damage: maxStat(player.stats, "player_damage"),
       boss_damage: maxStat(player.stats, "boss_damage"),
       player_healing: maxStat(player.stats, "player_healing"),
+      player_damage_taken: maxStat(player.stats, "player_damage_taken"),
+      shots_hit: maxStat(player.stats, "shots_hit"),
+      shots_missed: maxStat(player.stats, "shots_missed"),
       mvp_rank: player.mvp_rank ?? null,
       rank_badge: player.player_rank_data?.initial_display_rank || null,
       items: (player.items ?? []).map((item) => ({
@@ -365,6 +375,9 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
             player_level: true,
             max_player_damage: true,
             max_boss_damage: true,
+            max_player_damage_taken: true,
+            max_shots_hit: true,
+            max_shots_missed: true,
             mvp_rank: true,
             player_rank_initial_display_rank: true,
             items: { item_id: true, game_time_s: true, sold_time_s: true },
@@ -399,6 +412,9 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
           player_damage: player.max_player_damage ?? 0,
           boss_damage: player.max_boss_damage ?? 0,
           player_healing: maxStat(player.stats ?? undefined, "player_healing"),
+          player_damage_taken: player.max_player_damage_taken ?? 0,
+          shots_hit: player.max_shots_hit ?? 0,
+          shots_missed: player.max_shots_missed ?? 0,
           mvp_rank: player.mvp_rank ?? null,
           rank_badge: player.player_rank_initial_display_rank || null,
           items: (player.items ?? []).map((item) => ({
