@@ -10,6 +10,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { IS_DEV } from "~/lib/constants";
 import { LANES } from "~/lib/team-builder/lanes";
+import { computeLaneMatchup } from "~/lib/tracker/lane-matchup";
 import { computeSoulLead } from "~/lib/tracker/soul-lead";
 import { cn } from "~/lib/utils";
 import { itemUpgradesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
@@ -20,6 +21,7 @@ import {
 } from "~/queries/tracker-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
+import { LaneMatchupCard } from "./LaneMatchupCard";
 import { SoulLeadChart } from "./SoulLeadChart";
 
 const TEAMS = [
@@ -113,6 +115,14 @@ export function MatchRowDetails({
     return computeSoulLead(match.players, ownTeam);
   }, [match, accountId]);
 
+  const laneMatchup = useMemo(
+    () => (laned && match ? computeLaneMatchup(match.players, accountId) : null),
+    [laned, match, accountId],
+  );
+
+  const nameOf = (player: TrackerMatchPlayer) =>
+    player.personaname ?? profiles[player.account_id]?.personaname ?? `Player ${player.account_id}`;
+
   if (isPending) {
     return (
       <div className="space-y-4">
@@ -139,6 +149,7 @@ export function MatchRowDetails({
   return (
     <div className="@container space-y-4">
       {soulLead && <SoulLeadChart lead={soulLead} />}
+      {laneMatchup && <LaneMatchupCard matchup={laneMatchup} trackedAccountId={accountId} nameOf={nameOf} />}
       <div className="grid gap-4 @2xl:grid-cols-2">
         {TEAMS.map((team, teamIndex) => {
           const teamPlayers = match.players.filter((player) => player.team === team.key);
@@ -184,8 +195,7 @@ export function MatchRowDetails({
                 <tbody>
                   {players.map((player) => {
                     const isTracked = player.account_id === accountId;
-                    const name =
-                      player.personaname ?? profiles[player.account_id]?.personaname ?? `Player ${player.account_id}`;
+                    const name = nameOf(player);
                     const build = itemsById ? finalBuild(player.items, itemsById) : [];
                     const lane = laned ? LANES[laneIndex(player)] : undefined;
                     return (
