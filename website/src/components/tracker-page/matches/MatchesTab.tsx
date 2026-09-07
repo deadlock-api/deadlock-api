@@ -162,7 +162,14 @@ export function MatchesTab({
             </TableHead>
             <TableHead>Hero</TableHead>
             <TableHead className="hidden @3xl:table-cell">Mode</TableHead>
-            <SortableHead sortKey="kda" activeKey={sortKey} dir={sortDir} onSort={handleSort} className="text-right">
+            <SortableHead
+              sortKey="kda"
+              activeKey={sortKey}
+              dir={sortDir}
+              onSort={handleSort}
+              className="text-right"
+              title="Sort by KDA ratio"
+            >
               K / D / A
             </SortableHead>
             <SortableHead
