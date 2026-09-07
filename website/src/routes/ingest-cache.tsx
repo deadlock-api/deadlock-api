@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle2, ExternalLink, FolderOpen, Terminal, Upload } from "lucide-react";
 
+import { CopyButton } from "~/components/copy-button";
 import { HighlightedCode } from "~/components/HighlightedCode";
 import { DirectoryGuide } from "~/components/ingest-cache/DirectoryGuide";
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -12,6 +13,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useIngestUpload } from "~/hooks/useIngestUpload";
 import { seo } from "~/lib/seo";
 import { cn } from "~/lib/utils";
+
+const WINDOWS_INSTALL_COMMAND =
+  "irm https://raw.githubusercontent.com/deadlock-api/deadlock-api-ingest/master/install-windows.ps1 | iex";
+const LINUX_INSTALL_COMMAND =
+  "curl -fsSL https://raw.githubusercontent.com/deadlock-api/deadlock-api-ingest/master/install-linux.sh | bash";
+const DOCKER_INSTALL_COMMAND = `docker run -d --restart unless-stopped \\
+  -v ~/.steam/steam/appcache/httpcache:/root/.steam/steam/appcache/httpcache \\
+  ghcr.io/deadlock-api/deadlock-api-ingest:latest`;
+
+function InstallCommand({ code }: { code: string }) {
+  return (
+    <div className="flex items-start gap-2 rounded-lg border border-border bg-background p-3">
+      <HighlightedCode language="bash" code={code} className="min-w-0 flex-1" />
+      <CopyButton iconOnly text={code} aria-label="Copy command" />
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/ingest-cache")({
   component: IngestCache,
@@ -59,32 +77,15 @@ function IngestCache() {
             </TabsList>
             <TabsContent value="windows" className="mt-3">
               <p className="mb-2 text-sm text-muted-foreground">Run in PowerShell:</p>
-              <div className="rounded-lg border border-border bg-background p-3">
-                <HighlightedCode
-                  language="bash"
-                  code="irm https://raw.githubusercontent.com/deadlock-api/deadlock-api-ingest/master/install-windows.ps1 | iex"
-                />
-              </div>
+              <InstallCommand code={WINDOWS_INSTALL_COMMAND} />
             </TabsContent>
             <TabsContent value="linux" className="mt-3">
               <p className="mb-2 text-sm text-muted-foreground">Run in a terminal:</p>
-              <div className="rounded-lg border border-border bg-background p-3">
-                <HighlightedCode
-                  language="bash"
-                  code="curl -fsSL https://raw.githubusercontent.com/deadlock-api/deadlock-api-ingest/master/install-linux.sh | bash"
-                />
-              </div>
+              <InstallCommand code={LINUX_INSTALL_COMMAND} />
             </TabsContent>
             <TabsContent value="docker" className="mt-3">
               <p className="mb-2 text-sm text-muted-foreground">Run the pre-built image:</p>
-              <div className="rounded-lg border border-border bg-background p-3">
-                <HighlightedCode
-                  language="bash"
-                  code={`docker run -d --restart unless-stopped \\
-  -v ~/.steam/steam/appcache/httpcache:/root/.steam/steam/appcache/httpcache \\
-  ghcr.io/deadlock-api/deadlock-api-ingest:latest`}
-                />
-              </div>
+              <InstallCommand code={DOCKER_INSTALL_COMMAND} />
             </TabsContent>
           </Tabs>
           <div className="flex flex-wrap items-center gap-4 text-sm">
