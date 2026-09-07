@@ -555,3 +555,43 @@ export function computePlaytimeHabits(entries: PlayerMatchHistoryEntry[]): Playt
 
   return { cells, maxMatches, favoriteWeekday, bestWeekday, peakHourStart };
 }
+
+export interface OutcomeSplit {
+  label: string;
+  matches: number;
+  wins: number;
+}
+
+export interface OutcomeSplits {
+  /** Fixed game-length buckets, shortest first; empty buckets are kept so the rows line up. */
+  byDuration: OutcomeSplit[];
+  /** Index 0 = Amber Hand, 1 = Sapphire Flame. */
+  bySide: OutcomeSplit[];
+}
+
+const DURATION_BUCKETS: { label: string; maxMinutes: number }[] = [
+  { label: "Under 25 min", maxMinutes: 25 },
+  { label: "25–35 min", maxMinutes: 35 },
+  { label: "35–45 min", maxMinutes: 45 },
+  { label: "Over 45 min", maxMinutes: Number.POSITIVE_INFINITY },
+];
+
+export const SIDE_NAMES = ["Amber Hand", "Sapphire Flame"];
+
+export function computeOutcomeSplits(entries: PlayerMatchHistoryEntry[]): OutcomeSplits {
+  const byDuration = DURATION_BUCKETS.map((bucket) => ({ label: bucket.label, matches: 0, wins: 0 }));
+  const bySide = SIDE_NAMES.map((label) => ({ label, matches: 0, wins: 0 }));
+  for (const entry of entries) {
+    const win = isWin(entry) ? 1 : 0;
+    const minutes = entry.match_duration_s / 60;
+    const bucket = byDuration[DURATION_BUCKETS.findIndex((candidate) => minutes < candidate.maxMinutes)];
+    bucket.matches++;
+    bucket.wins += win;
+    const side = bySide[entry.player_team];
+    if (side) {
+      side.matches++;
+      side.wins += win;
+    }
+  }
+  return { byDuration, bySide };
+}

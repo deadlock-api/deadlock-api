@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { day } from "~/dayjs";
 import {
   computeActivity,
+  computeOutcomeSplits,
   computePerformanceTrend,
   computePlaytimeHabits,
   computeRecords,
@@ -30,6 +31,7 @@ import { PerformanceTrendChart } from "./PerformanceTrendChart";
 import { PersonalBestsCard } from "./PersonalBestsCard";
 import { PlaytimeHeatmap } from "./PlaytimeHeatmap";
 import { RankHistoryChart } from "./RankHistoryChart";
+import { WinRateBreakdownCard } from "./WinRateBreakdownCard";
 
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: React.ReactNode }) {
   return (
@@ -78,6 +80,7 @@ export function OverviewTab({
   const recentMatches = useMemo(() => entries.slice(0, 8), [entries]);
   const records = useMemo(() => computeRecords(entries), [entries]);
   const habits = useMemo(() => computePlaytimeHabits(entries), [entries]);
+  const splits = useMemo(() => computeOutcomeSplits(entries), [entries]);
 
   return (
     <div className="space-y-4">
@@ -106,6 +109,7 @@ export function OverviewTab({
           <RankHistoryChart points={rankPoints} />
           <PerformanceTrendChart points={trend} window={trendWindow} summary={summary} />
           <ActivityChart activity={activity} />
+          <WinRateBreakdownCard splits={splits} overallWinrate={summary.winrate} />
         </div>
         <div className="space-y-4">
           <Card>
