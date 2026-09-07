@@ -1,55 +1,124 @@
 ---
 title: Solo vs duo queue win rates in ranked
-description: Duo players win 50.9% of ranked games, solo players 49.8%. The gap is about a point for most of the ladder, six at Ascendant, and largest for brand-new duos.
-date: 2026-08-29
+description: Detected duos win 50.9% of ranked games after calibration, solos 50.0%. Updated through 6 September 2026, with rank splits and shared history.
+date: 2026-09-07
 author: Manuel - Deadlock API Team
 tags:
   - data
   - meta
 ---
 
-Since ranked launched on 30 July 2026, a player queued as a duo has won **50.9%** of their games and a solo player **49.8%**. Weighting each game by how sure we are it was a duo game, the gap is **1.0 percentage point**. That is the number we stand behind, and it is small. It stops being small at the top of the ladder, and in the first few games any two players spend together.
+Detected duo players won **50.9%** of their ranked games after calibration, compared with **50.0%** for solo players.
+The difference is **0.9 percentage points**, with a match-clustered 95% interval of 0.8 to 1.1 points. The gap is modest
+overall and larger in the top two ranks.
 
-Whiskers on the charts are 95% confidence intervals, computed so that the twelve players of one match do not count as twelve independent results. How we tell duos apart from random teammates is in the last section.
+Our sample runs from ranked's launch on **30 July through 6 September 2026**, using games that started before 00:00 UTC
+on 7 September. We retained 657,330 complete matches with unambiguous duo classifications. The main comparison uses
+**6,241,811 calibrated player-games** from 248,221 players. A player-game is one player's appearance in one match. A
+solo player can still have a duo elsewhere on their team.
 
-## Duo win rate by rank tier
+Calibration matters here.
+Valve's [Matchmaking Update](https://steamcommunity.com/games/1422450/announcements/detail/680756685198854911) requires
+players to calibrate alone. We exclude anyone with calibration games remaining, even if a rank badge is already visible.
+Throughout this post, a win means a **team victory**. Abandon rules can make the ranked result credited to an individual
+different from their team's result.
 
-![Solo and duo win rate by rank, and the win rate of the team with the only duo in the match](/blog/images/duo-queue-win-rate-by-rank.png "A: win rate of solo and duo player-games by rank at the start of the match; duo player-games per tier under the x-axis. B: matches with exactly one duo on one team and none on the other, by the average rank of the match (Eternus has one such match and is omitted). Whiskers are 95% confidence intervals clustered by match.")
+The latest complete week looks similar. From 31 August through 6 September, detected duos won 50.8% and solos 49.9%,
+again a 0.9-point gap.
 
-At Initiate duos win slightly less than solos (49.5% vs 50.1%); from Seeker to Oracle the duo advantage is 0.5 to 1.3 points. At Phantom it is **2.3 points** (51.5% vs 49.2%). At Ascendant it is **5.7 points** (54.9% vs 49.2%, plus or minus 1.3). Eternus duos win 65.6%, but Eternus only exists since the third week of the season (120 players, 2,800 player-games, 556 of them duo), so the interval is plus or minus 5.1 points.
+## The gap widens at the top
 
-Panel B is the cleaner test: one team has exactly one duo, the other none. In 167,435 such matches the duo side won **51.2%**. At Phantom it won 52.0%, and in the 420 one-sided Ascendant matches **57.4%** (interval 53% to 62%). Stacking helps more: two duos against none wins 53.0% (19,652 matches), three against none 56.5% (492 matches). Every match has one winner, so averaged over all players the win rate is 50% and a duo advantage is paid by someone. Phantom solo players have the lowest solo win rate of any tier, 49.2%.
+![Solo and detected duo team-victory rates by rank, with Ascendant and Eternus combined](/blog/images/duo-queue-win-rate-by-rank.png "A: player-games grouped by displayed rank at match start, excluding calibration. Intervals are 95% and clustered by match. B: matches with exactly one detected duo against none, with all twelve players calibrated. Rank is the match average on a six-subrank scale. Counts appear under the labels. These intervals use Wilson's method. Ascendant and Eternus are combined in both panels.")
 
-## Who duos, by rank
+At Initiate, detected duos win slightly less often than solos, 49.6% versus 50.1%. From Seeker through Oracle, the
+duo-minus-solo difference ranges from 0.5 to 1.2 points. At Phantom it reaches **2.0 points**, with duos at 51.4% and
+solos at 49.4%.
 
-![Duo participation by rank tier](/blog/images/duo-queue-participation-by-rank.png "Players with at least ten ranked games, grouped by median rank: the share who played at least one duo game, and the share of their games that were duo games. Player counts above the bars; Eternus (one player) omitted.")
+We combine Ascendant and Eternus into one group. Across **11,483 duo player-games**, their win rate is **54.2%**,
+compared with **50.0%** for solos. Using the unrounded rates, the difference is **4.3 points**, with an interval from
+3.1 to 5.5 points.
 
-Below Emissary, 37% to 47% of players have played a duo game and 10% to 15% of their games are duo games. At Oracle 61% of players duo, at Phantom 91%, and all 61 Ascendant players have queued with a partner (the [rank distribution](/badge-distribution) shows how small those top pools are). Even there only about a third of games are duo games: nearly everyone duos sometimes, almost nobody always.
+Panel B asks a simpler team-level question: how often does a team with exactly one duo beat a team without any? Across
+**66,149 fully calibrated matches**, the duo side won **51.3%**, with an interval from 51.0% to 51.7%. That rises to
+52.2% at Phantom and **55.6% in the combined Ascendant and Eternus group**, across 1,556 matches. The interval for that
+top group is 53.1% to 58.0%.
 
-If you are below Emissary, duos win about one point more than solos. If you are Phantom or above, most opponents will have one, and the ones who do win a few points more.
+Teams with two detected duos against none won 53.6% across 12,671 matches. Three against none won 53.7%, but there are
+only 449 matches in that group and its interval spans 49.1% to 58.2%. The data does not establish that adding a third
+duo improves the result.
 
-## New duos win more than veteran duos
+## Who queues with a partner
 
-For each detected duo we counted the games the two had played together before ranked existed, in any mode, back to 2023. 57,265 of the 70,419 pairs had a history (median 59 games, maximum 3,093); 13,154 had never shared a team.
+![Duo participation by median rank, with Ascendant and Eternus combined](/blog/images/duo-queue-participation-by-rank.png "Players with at least ten retained calibrated games, grouped by their median displayed rank during the sample. Ascendant and Eternus are combined. Red shows the share with any detected duo game. Blue shows the share of player-games classified as duo. Player counts are on the right.")
 
-![Ranked duo win rate by games played together before ranked, and by the pair's nth game together](/blog/images/duo-queue-new-vs-veteran-duos.png "A: ranked duo win rate by games the two had played together before ranked launched; squares repeat it for pairs below Phantom. B: every detected pair followed game by game, from their first ranked game together onward; pairs that stopped queuing together simply contribute fewer games.")
+Below Emissary, 39.4% to 48.4% of qualifying players have at least one detected duo game. That rises to **61.1% at
+Oracle** and **84.3% at Phantom**. Among players whose median rank is Ascendant or Eternus, **144 of 148 (97.3%)** have
+a detected duo game.
 
-Brand-new pairs win **55.3%** of their ranked games; pairs with over 500 games together win **49.7%**, and every bucket between falls in order. It does not look like smurfing: pairs with an account under 50 games before ranked win 52.6%, on 1,678 games. It is not rank: below Phantom the numbers are 55.9% and 49.7%. A rank gap inside the pair adds to it but does not explain it: new pairs a full tier apart win 58.3% against 54.8% for evenly matched new pairs, and only 15% of new pairs' games have such a gap. And it is not only the season's first weeks: new pairs won 58.0% in weeks one and two and 53.5% in three and four.
+Those are counts within this particular sample and median-rank grouping, not everyone who ever reached those ranks.
+The [rank distribution](/badge-distribution) provides a separate view of the ladder.
 
-Panel B explains it. Followed game by game, every duo's edge shrinks: across all detected pairs, the first five games together are won 51.4% of the time and games from the sixteenth on 50.4%; brand-new pairs start at **56.6%** and are at 52.3% from their sixteenth game. Part of that decline is the whole ranked population settling over its first month (the weekly split above shows about four points of it for new pairs), but the game-by-game drop is larger than that. Whatever a duo brings, the ratings absorb most of it within a dozen games, and a pair with a thousand games of history arrived already absorbed. When two duos meet, the one with the shorter shared history wins 51.9% of the time and the higher-rated one 51.6%.
+Even in these groups, most player-games are classified as solo. At Phantom, 84.3% of qualifying players have a detected
+duo game, yet duos account for only **25.5% of their player-games**. The corresponding game share is **19.8%** in the
+combined Ascendant and Eternus group.
 
-Two things that do not matter much: how many different partners a player rotates through (51.1% with one partner, 52.3% with three or more, and the latter also play twice as many games), and solo skill. The correlation between a player's solo and duo win rate is 0.13, and most of that is one month of luck not carrying over.
+## Pairs without recorded history win more
 
-## How we know who is in a duo
+For each retained duo, we counted captured matches in which the two accounts shared a team before ranked launched,
+across modes. Of **73,846 detected pairs**, **10,727** had no shared pre-ranked game in our records. Missing history
+does not prove that they had never played together.
 
-![Detection signals for confirmed parties versus random teammates](/blog/images/duo-detection-signals.png "Share of pair-games showing each signal, for pairs Valve's party id confirms were a party versus random teammates, in 680,471 February 2026 matches. Log scale.")
+![Duo team-victory rates by recorded pre-ranked shared history and by detected ranked game number](/blog/images/duo-queue-new-vs-veteran-duos.png "A: pair-games grouped by recorded shared team matches before ranked launched. Blue squares restrict both players to below Phantom. B: outcomes grouped by the pair's detected ranked game number. Different pairs contribute to later groups as others stop appearing. Both panels show 95% intervals clustered by match.")
 
-Valve stopped including party ids in match data on 15 March 2026, so duos have to be inferred, and in ranked's small top pools shared games alone are not enough: chance explains 435,944 of the 440,348 pairs seen together twice and never against each other. A party leaves better traces. It sits in adjacent lobby slots (61% of confirmed parties, 24% of random teammates); each player's previous match was the one the other had just played, started within a minute (47% against about 1%); and 81% of party pair-games are between Steam friends, against 0.1% for random teammates.
+Pairs with no recorded pre-ranked history won **54.2%** across 48,585 pair-games. Pairs with more than 500 recorded
+shared games won **49.4%** across 86,268 pair-games. Restricting both players to below Phantom leaves a similar
+difference, 54.6% versus 49.4%. This is a broad rank restriction, not a full adjustment for differences between the
+players.
 
-A classifier trained on those signals does the labelling: positives are 4.98 million party pair-games from February 2026, negatives 4.67 million ranked pair-games where the two landed on opposite teams. On pairs it never saw it finds 87.9% of party pair-games and mislabels 0.10% of random teammates. Of 1,923 ranked players Valve penalized for a partner's abandon, a penalty that requires a party, it had labelled 93.1% as duo. Nothing in it looks at who won.
+The game-number comparison also shows higher win rates early on. Across all detected pairs, games 1 to 5 were won 51.3%
+of the time and games 16 onward 50.4%. For pairs with no recorded pre-ranked history, those figures are **55.3% and
+52.7%**. Their intermediate groups do not decline steadily: games 6 to 10 are at 52.2%, followed by 53.5% for games 11
+to 15.
 
-## What this does not say
+The pairs in those groups change substantially. All 10,727 pairs without recorded history contribute to the first group,
+but only 609 reach the sixteenth detected game. As a check across all detected pairs, we followed the same **8,065 pairs
+with at least twenty detected games** across four equal five-game blocks. They won 53.3% in games 1 to 5 and 51.5% in
+games 16 to 20.
 
-A one-point residual edge is consistent with a matchmaker that treats a duo as two solo players and lets their first games together pay for the coordination; whether Valve already discounts parties we cannot tell from outside. The Ascendant numbers rest on 420 one-sided matches and 6,500 duo player-games, one month into the first season. And a gap between people who duo and people who do not is not the gain you would get from duoing, because they are not the same people.
+That fixed cohort still selects pairs that kept playing. Calendar time also changes as a pair accumulates games, and
+detection itself uses co-play history. These results cannot tell us whether the decline comes from matchmaking
+adjustments, changing opponents, or which pairs continue queuing together.
 
-Questions, or a cut of this data we did not show: [Discord](https://discord.gg/pqWQfTPQJu).
+## How we infer duos
+
+Explicit party labels are unavailable in the current ranked records, so we infer membership from friendship links, lobby
+positions and co-play patterns. The classifier was trained on 400,000 confirmed party pair-games from February 2026 and
+400,000 ranked opponent pair-games. Opponent examples use simulated slot and lane signals to approximate those of
+teammates.
+
+![Frequency of friendship, adjacent slots and shared previous observed matches among confirmed parties and nonparty teammates](/blog/images/duo-detection-signals.png "Signals in 680,471 complete February 2026 matches with party labels. Confirmed parties include groups larger than two. Friendship links come from the snapshot at extraction, not historical friend lists. Previous match means the previous observed match within the extracted cohort. The percentage axis is logarithmic.")
+
+Validation holds out account pairs from training. The detector recovered **96.9% of 44,828 held-out pair-games from
+confirmed two-person parties**. It also flagged 121 of 200,000 February pair-games whose teammates were confirmed not to
+share a party. In the ranked sample, it identified 2,472 of 2,618 player-games marked with Valve's party-abandon
+penalty, or **94.4%**. These checks do not establish the error rate among today's unlabelled ranked teammates.
+
+We use a score threshold of 0.5 and enforce calibration and party-rank restrictions before pooling the top two ranks for
+reporting. Matches with conflicting assignments are excluded in full. Changing the threshold to 0.3, 0.7 or 0.9 leaves
+the overall calibrated gap at about 0.9 points. Weighting observations by scores under three assumed party prevalences
+gives gaps of 0.8 to 0.9 points. Those weights are sensitivity checks, not verified probabilities of party membership.
+
+The labels are retrospective. Co-play features can include later games, and friend lists reflect their state at
+extraction. No game outcome is a model feature, but winning can still relate to friendships and continued co-play. The
+intervals account for dependence inside each match. They do not include detector error, incomplete capture or repeated
+players across matches.
+
+## What this means for ranked
+
+Detected duos win slightly more often overall, with a **0.9-point gap** that grows to **4.3 points in the combined
+Ascendant and Eternus group**. Most qualifying players at the top have queued with a partner, yet most of their games
+are still classified as solo. Pairs without recorded shared history also win more often than pairs with hundreds of
+shared games. Together, these findings show that the solo–duo gap varies with rank and shared history. They do not tell
+us how much a particular player would gain by inviting a partner.
+
+For another cut of the data, join us on [Discord](https://discord.gg/pqWQfTPQJu).
