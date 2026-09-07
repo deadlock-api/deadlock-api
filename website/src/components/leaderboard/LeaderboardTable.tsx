@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { useHeroById } from "~/hooks/useAssetById";
 
 import { LeaderboardControls } from "./LeaderboardControls";
 
@@ -24,7 +26,7 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
   const [searchQuery, setSearchQuery] = useState("");
 
   const sortedEntries = useMemo(
-    () => leaderboard.entries.sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0)),
+    () => [...leaderboard.entries].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0)),
     [leaderboard.entries],
   );
 
@@ -112,13 +114,26 @@ function LeaderboardTableRow({ entry, shouldShowTopHeroesColumn, onHeroClick }: 
         <TableCell>
           <div className="flex min-h-8 justify-end space-x-3">
             {entry.top_hero_ids?.map((heroId) => (
-              <button key={heroId} type="button" onClick={() => onHeroClick(heroId)} className="cursor-pointer">
-                <HeroImage heroId={heroId} className="h-8 w-8 rounded-full border border-border object-cover" />
-              </button>
+              <TopHeroButton key={heroId} heroId={heroId} onClick={() => onHeroClick(heroId)} />
             ))}
           </div>
         </TableCell>
       )}
     </TableRow>
+  );
+}
+
+function TopHeroButton({ heroId, onClick }: { heroId: number; onClick: () => void }) {
+  const { hero } = useHeroById(heroId);
+  const label = hero ? `Filter by ${hero.name}` : "Filter by hero";
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button type="button" onClick={onClick} className="cursor-pointer" aria-label={label}>
+          <HeroImage heroId={heroId} className="h-8 w-8 rounded-full border border-border object-cover" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }
