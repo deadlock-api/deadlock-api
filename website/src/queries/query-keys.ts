@@ -26,8 +26,10 @@ export const queryKeys = {
   assets: {
     ranks: () => ["assets-ranks"] as const,
     heroes: () => ["assets-heroes"] as const,
+    heroesFull: () => ["assets-heroes-full"] as const,
     abilities: () => ["assets-items-abilities"] as const,
     itemUpgrades: () => ["assets-items-upgrades"] as const,
+    itemUpgradesFull: () => ["assets-items-upgrades-full"] as const,
     hero: (heroId: number) => ["assets-hero", heroId] as const,
     rankedSeasons: () => ["assets-ranked-seasons"] as const,
   },

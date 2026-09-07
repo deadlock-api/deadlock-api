@@ -9,7 +9,7 @@ import { Label } from "~/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { seo } from "~/lib/seo";
 import { cn } from "~/lib/utils";
-import { filterShopableItems, itemUpgradesQueryOptions } from "~/queries/asset-queries";
+import { filterShopableItems, itemUpgradesFullQueryOptions } from "~/queries/asset-queries";
 
 type Direction = "effects-to-name" | "name-to-effects";
 
@@ -135,7 +135,7 @@ function ItemNameOption({ item }: { item: Upgrade }) {
 }
 
 function ItemEffectFlashcards() {
-  const { data: items, isLoading } = useQuery(itemUpgradesQueryOptions);
+  const { data: items, isLoading } = useQuery(itemUpgradesFullQueryOptions);
   const [direction, setDirection] = useState<Direction>("effects-to-name");
   const [excludeLegendary, setExcludeLegendary] = useState(false);
 

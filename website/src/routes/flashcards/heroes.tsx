@@ -1,11 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import type { Hero } from "deadlock_api_client";
 import { useMemo } from "react";
 
 import { FlashcardGame } from "~/components/flashcards/FlashcardGame";
 import { seo } from "~/lib/seo";
-import { filterPlayableHeroes, heroesQueryOptions } from "~/queries/asset-queries";
+import { filterPlayableHeroes, heroesQueryOptions, type SlimHero } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/flashcards/heroes")({
   component: HeroFlashcards,
@@ -17,7 +16,7 @@ export const Route = createFileRoute("/flashcards/heroes")({
     }),
 });
 
-function heroIconSrc(hero: Hero): string {
+function heroIconSrc(hero: SlimHero): string {
   return hero.images?.icon_image_small_webp ?? hero.images?.icon_image_small ?? "";
 }
 

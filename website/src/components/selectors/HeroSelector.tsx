@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import type { Hero } from "deadlock_api_client";
 import { SearchIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -8,7 +7,7 @@ import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
 import { FilteredSelectPopover } from "~/components/selectors/FilteredSelectPopover";
 import { Input } from "~/components/ui/input";
-import { heroesQueryOptions } from "~/queries/asset-queries";
+import { heroesQueryOptions, type SlimHero } from "~/queries/asset-queries";
 
 function useHeroes() {
   const { data: sortedHeroes = [], isLoading } = useQuery({
@@ -33,12 +32,12 @@ export function HeroSelector({
   const { sortedHeroes } = useHeroes();
   const [search, setSearch] = useState("");
 
-  const currentHero = selectedHero ? sortedHeroes.find((h: Hero) => h.id === selectedHero) : undefined;
+  const currentHero = selectedHero ? sortedHeroes.find((h: SlimHero) => h.id === selectedHero) : undefined;
 
   const filteredHeroes = useMemo(() => {
     if (!search) return sortedHeroes;
     const lower = search.toLowerCase();
-    return sortedHeroes.filter((h: Hero) => h.name.toLowerCase().includes(lower));
+    return sortedHeroes.filter((h: SlimHero) => h.name.toLowerCase().includes(lower));
   }, [sortedHeroes, search]);
 
   const isActive = selectedHero != null;
@@ -80,7 +79,7 @@ export function HeroSelector({
             <span className="text-muted-foreground">Any Hero</span>
           </button>
         )}
-        {filteredHeroes.map((hero: Hero) => (
+        {filteredHeroes.map((hero: SlimHero) => (
           <button
             key={hero.id}
             type="button"
@@ -119,7 +118,7 @@ export function HeroSelectorMultiple({
       items={sortedHeroes}
       selectedIds={selectedHeroes}
       onSelectedIdsChange={onHeroesSelected}
-      getId={(hero: Hero) => hero.id}
+      getId={(hero: SlimHero) => hero.id}
       emptyLabel={label ?? "Select Heroes..."}
       renderChip={(heroId) => (
         <>
@@ -127,7 +126,7 @@ export function HeroSelectorMultiple({
           <HeroName heroId={heroId} className="truncate text-xs" />
         </>
       )}
-      renderRow={(hero: Hero) => (
+      renderRow={(hero: SlimHero) => (
         <>
           <HeroImage heroId={hero.id} className="size-5 shrink-0 object-contain" />
           <HeroName heroId={hero.id} className="truncate text-sm" />

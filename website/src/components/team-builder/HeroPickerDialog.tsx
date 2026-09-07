@@ -1,4 +1,3 @@
-import type { Hero } from "deadlock_api_client";
 import { SearchIcon } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 
@@ -10,6 +9,7 @@ import { recommendPicks } from "~/lib/team-builder/analysis";
 import { deltaClass, formatPoints, formatRate } from "~/lib/team-builder/format";
 import { slotLane, TEAM_NAMES } from "~/lib/team-builder/lanes";
 import { cn } from "~/lib/utils";
+import type { SlimHero } from "~/queries/asset-queries";
 
 import { DetailDialog } from "./DetailDialog";
 import { HeroPortrait } from "./HeroPortrait";
@@ -57,7 +57,7 @@ interface HeroPickerDialogProps {
   draft: Draft;
   index: StatsIndex;
   /** The playable roster, already filtered by the page so both rankings share one candidate list. */
-  heroes: Hero[];
+  heroes: SlimHero[];
   onSelect: (heroId: number) => void;
   onClose: () => void;
 }

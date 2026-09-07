@@ -8,6 +8,6 @@ export function heroSlug(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-export function findHeroBySlug(heroes: Hero[], slug: string): Hero | undefined {
+export function findHeroBySlug<T extends Pick<Hero, "name">>(heroes: T[], slug: string): T | undefined {
   return heroes.find((h) => heroSlug(h.name) === slug);
 }

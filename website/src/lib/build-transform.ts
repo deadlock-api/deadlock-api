@@ -1,7 +1,8 @@
-import type { Ability, Hero } from "deadlock_api_client";
+import type { Ability } from "deadlock_api_client";
 
 import type { FullBuildItem } from "~/components/MatchHistoryCard";
 import { day } from "~/dayjs";
+import type { SlimHero } from "~/queries/asset-queries";
 
 /** Shape of a match returned by the bulk metadata endpoint with player items + kda + info. */
 export interface BulkMatchMetadata {
@@ -38,7 +39,7 @@ export interface HeroAbilityMetadata {
   abilityIdToMaxLevel: Map<number, number>;
 }
 
-export function getHeroAbilityMetadata(heroData?: Hero, abilityItems?: Ability[]): HeroAbilityMetadata | null {
+export function getHeroAbilityMetadata(heroData?: SlimHero, abilityItems?: Ability[]): HeroAbilityMetadata | null {
   if (!heroData || !abilityItems) return null;
 
   const abilityEntries = HERO_ABILITY_SLOTS.map((slot, index) => {

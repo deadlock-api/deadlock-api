@@ -1,8 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import type { UseQueryOptions } from "@tanstack/react-query";
-import type { Ability, Hero, Upgrade } from "deadlock_api_client";
+import type { Ability, Upgrade } from "deadlock_api_client";
 
-import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
+import {
+  abilitiesQueryOptions,
+  heroesQueryOptions,
+  itemUpgradesQueryOptions,
+  type SlimHero,
+} from "~/queries/asset-queries";
 
 function useAssetById<T extends { id: number }, TKey extends readonly unknown[]>(
   queryOpts: UseQueryOptions<T[], Error, T[], TKey>,
@@ -15,7 +20,7 @@ function useAssetById<T extends { id: number }, TKey extends readonly unknown[]>
   return { data, isLoading };
 }
 
-export function useHeroById(heroId: number): { hero: Hero | undefined; isLoading: boolean } {
+export function useHeroById(heroId: number): { hero: SlimHero | undefined; isLoading: boolean } {
   const { data: hero, isLoading } = useAssetById(heroesQueryOptions, heroId);
   return { hero, isLoading };
 }

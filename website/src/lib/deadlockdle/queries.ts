@@ -1,30 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import type { Upgrade } from "deadlock_api_client";
 
 import { api } from "~/lib/api";
+import { heroesFullQueryOptions, itemUpgradesFullQueryOptions } from "~/queries/asset-queries";
 
 export function useHeroes() {
-  return useQuery({
-    queryKey: ["assets-heroes"],
-    queryFn: async () => {
-      const res = await api.heroes_api.listHeroes({ onlyActive: true });
-      return res.data;
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  return useQuery(heroesFullQueryOptions);
 }
 
 export function useItems() {
-  return useQuery({
-    queryKey: ["assets-items-upgrades"],
-    queryFn: async () => {
-      const res = await api.items_api.getItemsByType({
-        type: "upgrade",
-      });
-      return res.data as Upgrade[];
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  return useQuery(itemUpgradesFullQueryOptions);
 }
 
 export function useAbilities() {
