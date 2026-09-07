@@ -26,13 +26,13 @@ export function ProgressBar({
       <div className="h-2.5 w-full bg-muted">
         <div
           className="flex h-2.5 transition-all duration-300 ease-in-out"
-          style={{ width: `${Math.max(0, Math.min(100, totalWidth))}%` }}
+          style={{ width: `${Math.max(0, Math.min(100, totalWidth)).toFixed(2)}%` }}
         >
           {segments.map((seg) => (
             <div
               key={seg.color}
               className="h-2.5"
-              style={{ backgroundColor: seg.color, width: `${(seg.value / total) * 100}%` }}
+              style={{ backgroundColor: seg.color, width: `${((seg.value / total) * 100).toFixed(2)}%` }}
             />
           ))}
         </div>
@@ -47,7 +47,7 @@ export function ProgressBar({
         className="h-2.5 transition-all duration-300 ease-in-out"
         style={{
           backgroundColor: color || "#fa4454",
-          width: `${((clamped - minVal) / (maxVal - minVal)) * 100}%`,
+          width: `${(((clamped - minVal) / (maxVal - minVal)) * 100).toFixed(2)}%`,
         }}
       />
     </div>
