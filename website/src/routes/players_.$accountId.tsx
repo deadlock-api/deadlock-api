@@ -21,7 +21,7 @@ import { parseSteamIdToId3 } from "~/lib/steam";
 import { filterMatches } from "~/lib/tracker/compute";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
-import { trackerMatchHistoryQueryOptions } from "~/queries/tracker-queries";
+import { steamProfileQueryOptions, trackerMatchHistoryQueryOptions } from "~/queries/tracker-queries";
 
 const TAB_OPTIONS: { value: TrackerTab; label: string }[] = [
   { value: "overview", label: "Overview" },
@@ -39,19 +39,23 @@ export const Route = createFileRoute("/players_/$accountId")({
     if (String(accountId) !== params.accountId) {
       throw redirect({ to: "/players/$accountId", params: { accountId: String(accountId) } });
     }
-    await Promise.all([
+    const [profile] = await Promise.all([
+      prefetchSafe(queryClient.ensureQueryData(steamProfileQueryOptions(accountId))),
       prefetchSafe(queryClient.ensureQueryData(heroesQueryOptions)),
       prefetchSafe(queryClient.ensureQueryData(ranksQueryOptions)),
     ]);
-    return { accountId };
+    return { accountId, personaname: profile?.personaname };
   },
-  head: ({ loaderData }) =>
-    seo({
-      title: "Player Tracker | Deadlock",
-      description:
-        "Full Deadlock match history, rank progression, hero breakdowns, and mate & opponent analytics for prioritized players.",
+  head: ({ loaderData }) => {
+    const name = loaderData?.personaname ?? (loaderData ? `Player ${loaderData.accountId}` : undefined);
+    return seo({
+      title: name ? `${name} | Player Tracker | Deadlock` : "Player Tracker | Deadlock",
+      description: name
+        ? `Full Deadlock match history, rank progression, hero breakdowns, and mate & opponent analytics for ${name}.`
+        : "Full Deadlock match history, rank progression, hero breakdowns, and mate & opponent analytics for prioritized players.",
       path: loaderData ? `/players/${loaderData.accountId}` : "/players",
-    }),
+    });
+  },
 });
 
 function TrackerRoute() {

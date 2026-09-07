@@ -14,6 +14,17 @@ import { graphql } from "~/lib/graphql";
 
 import { queryKeys } from "./query-keys";
 
+export function steamProfileQueryOptions(accountId: number) {
+  return queryOptions({
+    queryKey: queryKeys.steam.profile(accountId),
+    queryFn: async () => {
+      const response = await api.steam_api.steam({ accountIds: [accountId] });
+      return response.data[0] ?? null;
+    },
+    staleTime: CACHE_DURATIONS.ONE_DAY,
+  });
+}
+
 export function trackerMatchHistoryQueryOptions(accountId: number) {
   return queryOptions({
     queryKey: queryKeys.players.matchHistory(accountId),

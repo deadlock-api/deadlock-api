@@ -5,13 +5,10 @@ import { useMemo } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
 import { Skeleton } from "~/components/ui/skeleton";
-import { CACHE_DURATIONS } from "~/constants/cache";
 import { day } from "~/dayjs";
-import { api } from "~/lib/api";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { summarize } from "~/lib/tracker/compute";
-import { queryKeys } from "~/queries/query-keys";
-import { trackerRankQueryOptions } from "~/queries/tracker-queries";
+import { steamProfileQueryOptions, trackerRankQueryOptions } from "~/queries/tracker-queries";
 
 export function PlayerHeader({
   accountId,
@@ -22,14 +19,7 @@ export function PlayerHeader({
   entries: PlayerMatchHistoryEntry[] | undefined;
   ranks: Rank[];
 }) {
-  const { data: profile, isLoading: isLoadingProfile } = useQuery({
-    queryKey: queryKeys.steam.profile(accountId),
-    queryFn: async () => {
-      const response = await api.steam_api.steam({ accountIds: [accountId] });
-      return response.data[0] ?? null;
-    },
-    staleTime: CACHE_DURATIONS.ONE_DAY,
-  });
+  const { data: profile, isLoading: isLoadingProfile } = useQuery(steamProfileQueryOptions(accountId));
 
   const { data: rank } = useQuery(trackerRankQueryOptions(accountId));
 
