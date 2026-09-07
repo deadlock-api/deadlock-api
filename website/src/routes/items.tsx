@@ -16,7 +16,7 @@ import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultDateRange, defaultPrevDateRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
-import { loadSeasons } from "~/queries/asset-queries";
+import { itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
 const ItemPurchaseAnalysis = lazy(() =>
@@ -31,6 +31,33 @@ const ItemFlowGraph = lazy(() =>
 const ItemCombStatsTable = lazy(() =>
   import("~/components/items-page/ItemCombStatsTable").then((m) => ({ default: m.ItemCombStatsTable })),
 );
+
+/** Highest win rate among items with enough matches for the number to mean something. */
+function findWinRateLeader(
+  stats: readonly { item_id: number; wins: number; matches: number }[] | undefined,
+  items: readonly { id: number; name?: string | null }[] | undefined,
+): { name: string; winRate: number } | null {
+  if (!stats || !items) return null;
+  const byItem = new Map<number, { wins: number; matches: number }>();
+  for (const row of stats) {
+    const acc = byItem.get(row.item_id) ?? { wins: 0, matches: 0 };
+    acc.wins += row.wins;
+    acc.matches += row.matches;
+    byItem.set(row.item_id, acc);
+  }
+  let total = 0;
+  for (const acc of byItem.values()) total += acc.matches;
+  const minMatches = Math.max(100, total * 0.005);
+  let best: { name: string; winRate: number } | null = null;
+  for (const [itemId, acc] of byItem) {
+    if (acc.matches < minMatches) continue;
+    const winRate = acc.wins / acc.matches;
+    if (best && winRate <= best.winRate) continue;
+    const item = items.find((i) => i.id === itemId);
+    if (item?.name) best = { name: item.name, winRate };
+  }
+  return best;
+}
 
 export const Route = createFileRoute("/items")({
   component: ItemsPage,
@@ -50,7 +77,7 @@ export const Route = createFileRoute("/items")({
       gameMode: "normal" as const,
       matchMode: DEFAULT_MATCH_MODE,
     };
-    await Promise.all([
+    const [stats, , items] = await Promise.all([
       prefetchSafe(
         queryClient.ensureQueryData(itemStatsQueryOptions({ ...common, minUnixTimestamp, maxUnixTimestamp })),
       ),
@@ -63,13 +90,18 @@ export const Route = createFileRoute("/items")({
           }),
         ),
       ),
+      prefetchSafe(queryClient.ensureQueryData(itemUpgradesQueryOptions)),
     ]);
+    return { leader: findWinRateLeader(stats, items) };
   },
-  head: () =>
-    seo({
+  head: ({ loaderData }) => {
+    const leader = loaderData?.leader;
+    const lead = leader
+      ? ` ${leader.name} leads the current patch at a ${(leader.winRate * 100).toFixed(1)}% win rate.`
+      : "";
+    return seo({
       title: "Deadlock Item Stats: Build Win Rates, Buy Timings & Combos",
-      description:
-        "Deadlock item win rates with statistical confidence intervals, optimal purchase timing, and item combo analytics. Filter by hero, rank, and patch.",
+      description: `Deadlock item win rates with statistical confidence intervals, optimal purchase timing, and item combo analytics.${lead} Filter by hero, rank, and patch.`,
       path: "/items",
       jsonLd: {
         "@context": "https://schema.org",
@@ -82,7 +114,8 @@ export const Route = createFileRoute("/items")({
         creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
         isAccessibleForFree: true,
       },
-    }),
+    });
+  },
 });
 
 function ItemsPage() {
