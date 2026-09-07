@@ -8,10 +8,12 @@ export const HEAT_BASE = "#151b23";
 /** What every Team Builder number prints when it has nothing to report. */
 export const NO_DATA = "n/a";
 
-/** A signed number of win-rate points, e.g. `+2.6`. */
+/** A signed number of win-rate points, e.g. `+2.6`. The sign follows the rounded value, so `-0.04` prints `+0.0`. */
 export function formatPoints(value: number | undefined, decimals = 1): string {
   if (value === undefined || !Number.isFinite(value)) return NO_DATA;
-  return `${value >= 0 ? "+" : ""}${value.toFixed(decimals)}`;
+  const factor = 10 ** decimals;
+  const rounded = Math.round(value * factor) / factor;
+  return `${rounded >= 0 ? "+" : ""}${rounded.toFixed(decimals)}`;
 }
 
 /** A magnitude a few characters wide, e.g. `1.2k`. Whole thousands drop the tenth. */
