@@ -16,9 +16,15 @@ import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultDateRange, defaultPrevDateRange, type SeasonInfo } from "~/lib/seasons";
 import { SITE_URL, seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
-import { filterPlayableHeroes, heroesQueryOptions, loadSeasons } from "~/queries/asset-queries";
+import {
+  filterPlayableHeroes,
+  heroesQueryOptions,
+  itemUpgradesQueryOptions,
+  loadSeasons,
+} from "~/queries/asset-queries";
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
+import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
 const HeroMatchupDetailsStatsTable = lazy(() =>
   import("~/components/heroes-page/HeroMatchupDetailsStatsTable").then((m) => ({
@@ -114,6 +120,10 @@ export const Route = createFileRoute("/heroes/$heroName")({
     const [stats] = await Promise.all([
       prefetchSafe(queryClient.ensureQueryData(heroStatsQueryOptions(currentStatsParams(seasons)))),
       prefetchSafe(queryClient.ensureQueryData(heroBanStatsQueryOptions(currentBanParams(seasons)))),
+      prefetchSafe(
+        queryClient.ensureQueryData(itemStatsQueryOptions({ ...currentItemStatsParams(seasons), heroId: hero.id })),
+      ),
+      prefetchSafe(queryClient.ensureQueryData(itemUpgradesQueryOptions)),
     ]);
     const cardImage = hero.images.hero_card_critical_webp ?? hero.images.icon_hero_card_webp ?? null;
     const summary = summarizeHeroStats(stats, hero.id);
