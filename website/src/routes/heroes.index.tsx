@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import type { AnalyticsHeroStats } from "deadlock_api_client";
 import type { HeroScoreboardSortByEnum } from "deadlock_api_client";
 import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense, useId } from "react";
@@ -23,7 +24,7 @@ import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultDateRange, defaultPrevDateRange, type SeasonInfo } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
-import { loadSeasons } from "~/queries/asset-queries";
+import { heroesQueryOptions, loadSeasons, type SlimHero } from "~/queries/asset-queries";
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
 import { heroScoreboardQueryOptions } from "~/queries/hero-scoreboard-query";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
@@ -79,6 +80,25 @@ function defaultHeroStatsRanges(seasons: readonly SeasonInfo[]) {
   };
 }
 
+/** Highest win rate among heroes with enough matches for the number to mean something. */
+function findWinRateLeader(
+  stats: readonly AnalyticsHeroStats[] | undefined,
+  heroes: readonly SlimHero[] | undefined,
+): { name: string; winRate: number } | null {
+  if (!stats || !heroes) return null;
+  const total = stats.reduce((sum, row) => sum + row.matches, 0);
+  const minMatches = Math.max(100, total * 0.005);
+  let best: { name: string; winRate: number } | null = null;
+  for (const row of stats) {
+    if (row.matches < minMatches) continue;
+    const winRate = row.wins / row.matches;
+    if (best && winRate <= best.winRate) continue;
+    const hero = heroes.find((h) => h.id === row.hero_id);
+    if (hero?.name) best = { name: hero.name, winRate };
+  }
+  return best;
+}
+
 export const Route = createFileRoute("/heroes/")({
   component: HeroesPage,
   loader: async ({ context: { queryClient } }) => {
@@ -91,7 +111,7 @@ export const Route = createFileRoute("/heroes/")({
       gameMode: "normal" as const,
       matchMode: DEFAULT_MATCH_MODE,
     };
-    await Promise.all([
+    const [stats, heroes] = await Promise.all([
       prefetchSafe(
         queryClient.ensureQueryData(
           heroStatsQueryOptions({
@@ -101,6 +121,7 @@ export const Route = createFileRoute("/heroes/")({
           }),
         ),
       ),
+      prefetchSafe(queryClient.ensureQueryData(heroesQueryOptions)),
       prefetchSafe(
         queryClient.ensureQueryData(
           heroStatsQueryOptions({
@@ -133,12 +154,14 @@ export const Route = createFileRoute("/heroes/")({
         ),
       ),
     ]);
+    return { leader: findWinRateLeader(stats, heroes) };
   },
-  head: () =>
-    seo({
+  head: ({ loaderData }) => {
+    const leader = loaderData?.leader;
+    const lead = leader ? ` ${leader.name} leads the current patch at ${(leader.winRate * 100).toFixed(1)}%.` : "";
+    return seo({
       title: "Deadlock Hero Win Rates & Pick Rates: Live Match Data",
-      description:
-        "Deadlock hero win rates, pick rates, matchups, and synergies for every hero. Filter by rank and patch. Updated daily from live match data.",
+      description: `Deadlock hero win rates, pick rates, matchups, and synergies for every hero.${lead} Filter by rank and patch. Updated daily from live match data.`,
       path: "/heroes",
       jsonLd: {
         "@context": "https://schema.org",
@@ -152,7 +175,8 @@ export const Route = createFileRoute("/heroes/")({
         isAccessibleForFree: true,
         license: "https://github.com/deadlock-api/",
       },
-    }),
+    });
+  },
 });
 
 function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
