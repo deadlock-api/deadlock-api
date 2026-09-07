@@ -3,6 +3,7 @@ import { createRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 
 import { NotFound } from "./components/NotFound";
+import { RouteError } from "./components/RouteError";
 import { isChunkLoadError, reloadOnceForStaleChunk } from "./lib/chunk-reload";
 import { routeTree } from "./routeTree.gen";
 
@@ -22,11 +23,11 @@ export function getRouter() {
   const router = createRouter({
     routeTree,
     defaultPreload: false,
-    defaultErrorComponent: (err) => {
-      if (isChunkLoadError(err.error) && reloadOnceForStaleChunk()) {
+    defaultErrorComponent: ({ error, reset }) => {
+      if (isChunkLoadError(error) && reloadOnceForStaleChunk()) {
         return null;
       }
-      return <p>{err.error.stack}</p>;
+      return <RouteError error={error} reset={reset} />;
     },
     defaultOnCatch: (error) => {
       if (isChunkLoadError(error)) {
