@@ -52,6 +52,11 @@ export default defineConfig({
   },
   environments: {
     ssr: {
+      resolve: {
+        // The generated genql client uses extensionless relative imports (`./runtime`, `./types`), which Node's
+        // native ESM loader rejects. Bundling it lets Vite resolve them in dev SSR and during prerendering.
+        noExternal: ["deadlock_api_graphql_client"],
+      },
       build: {
         rolldownOptions: {
           // workerd refuses to start when the worker module has a named export that is not a handler. Without this,
