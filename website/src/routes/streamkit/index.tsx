@@ -150,10 +150,11 @@ function StreamKit() {
             variant="outline"
             value={region}
             onValueChange={(v) => v && setRegion(v)}
+            spacing={2}
             className="w-full flex-wrap"
           >
             {regions.map((r) => (
-              <ToggleGroupItem key={r} value={r} className="flex-1">
+              <ToggleGroupItem key={r} value={r} className="min-w-fit flex-1">
                 {r}
               </ToggleGroupItem>
             ))}
