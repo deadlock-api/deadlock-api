@@ -32,6 +32,8 @@ import { heroesQueryOptions } from "~/queries/asset-queries";
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { MatchRowDetails } from "./MatchRowDetails";
 
+const COLUMN_COUNT = 13;
+
 function sessionDateLabel(unix: number): string {
   const date = day.unix(unix);
   const today = day().startOf("day");
@@ -70,7 +72,7 @@ function SortableHead({
 function SessionRow({ session }: { session: PlaySession }) {
   return (
     <TableRow className="hover:bg-transparent">
-      <TableCell colSpan={13} className="bg-muted/40 py-1.5 text-xs">
+      <TableCell colSpan={COLUMN_COUNT} className="bg-muted/40 py-1.5 text-xs">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
           <span className="font-semibold">{sessionDateLabel(session.startUnix)}</span>
           <span className="text-muted-foreground tabular-nums">
@@ -355,7 +357,7 @@ export function MatchesTab({
                 </TableRow>
                 {expanded && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={13} className="bg-muted/30 p-4">
+                    <TableCell colSpan={COLUMN_COUNT} className="bg-muted/30 p-4">
                       <MatchRowDetails
                         entry={entry}
                         accountId={accountId}
@@ -370,7 +372,7 @@ export function MatchesTab({
           })}
           {paginatedEntries.length === 0 && (
             <TableRow>
-              <TableCell colSpan={13} className="py-8 text-center text-muted-foreground">
+              <TableCell colSpan={COLUMN_COUNT} className="py-8 text-center text-muted-foreground">
                 No matches found
               </TableCell>
             </TableRow>
