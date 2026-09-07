@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AnalyticsHeroStats, HeroCounterStats, HeroSynergyStats } from "deadlock_api_client";
+import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { useMemo } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
@@ -19,6 +19,19 @@ import { queryKeys } from "~/queries/query-keys";
 export enum HeroMatchupDetailsStatsTableStat {
   SYNERGY = 0,
   COUNTER = 1,
+}
+
+interface MatchupRow {
+  heroId: number;
+  matches: number;
+  wins: number;
+  relWinrate: number;
+  prevRelWinrate: number | undefined;
+}
+
+function formatSignedPercent(value: number) {
+  const percent = Math.round(value * 1000) / 10;
+  return `${percent > 0 ? "+" : ""}${percent.toFixed(1)}%`;
 }
 
 function buildHeroStatsMap(data: AnalyticsHeroStats[] | undefined): Record<number, AnalyticsHeroStats> {
@@ -221,87 +234,48 @@ export function HeroMatchupDetailsStatsTable({
     return map;
   }, [prevCounterData, prevHeroStatsMap]);
 
-  const heroSynergies = useMemo(() => {
-    const synergies: (Pick<HeroSynergyStats, "hero_id1" | "hero_id2" | "wins" | "matches_played"> & {
-      rel_winrate: number;
-      prev_rel_winrate: number | undefined;
-    })[] = [];
+  const synergyRows = useMemo(() => {
+    const rows: MatchupRow[] = [];
     for (const synergy of synergyData || []) {
-      if (synergy.hero_id1 === heroId) {
-        synergies.push({
-          ...synergy,
-          rel_winrate:
-            synergy?.wins / synergy.matches_played -
-            (heroStatsMap[synergy.hero_id1]?.wins / heroStatsMap[synergy.hero_id1]?.matches +
-              heroStatsMap[synergy.hero_id2]?.wins / heroStatsMap[synergy.hero_id2]?.matches) /
-              2,
-          prev_rel_winrate: prevSynergyRelWinrateMap[synergy.hero_id1]?.[synergy.hero_id2],
-        });
-      }
-      if (synergy.hero_id2 === heroId) {
-        synergies.push({
-          hero_id1: synergy.hero_id2,
-          hero_id2: synergy.hero_id1,
-          wins: synergy?.wins,
-          matches_played: synergy.matches_played,
-          rel_winrate:
-            synergy?.wins / synergy.matches_played -
-            (heroStatsMap[synergy.hero_id1]?.wins / heroStatsMap[synergy.hero_id1]?.matches +
-              heroStatsMap[synergy.hero_id2]?.wins / heroStatsMap[synergy.hero_id2]?.matches) /
-              2,
-          prev_rel_winrate: prevSynergyRelWinrateMap[synergy.hero_id2]?.[synergy.hero_id1],
-        });
-      }
+      if (synergy.hero_id1 !== heroId && synergy.hero_id2 !== heroId) continue;
+      const otherHeroId = synergy.hero_id1 === heroId ? synergy.hero_id2 : synergy.hero_id1;
+      rows.push({
+        heroId: otherHeroId,
+        matches: synergy.matches_played,
+        wins: synergy.wins,
+        relWinrate:
+          synergy.wins / synergy.matches_played -
+          (heroStatsMap[heroId]?.wins / heroStatsMap[heroId]?.matches +
+            heroStatsMap[otherHeroId]?.wins / heroStatsMap[otherHeroId]?.matches) /
+            2,
+        prevRelWinrate: prevSynergyRelWinrateMap[heroId]?.[otherHeroId],
+      });
     }
-    synergies.sort((a, b) => b.rel_winrate - a.rel_winrate);
-    return synergies;
+    rows.sort((a, b) => b.relWinrate - a.relWinrate);
+    return rows;
   }, [heroId, synergyData, heroStatsMap, prevSynergyRelWinrateMap]);
 
-  const minSynergyWinrate = useMemo(() => {
-    if (heroSynergies.length === 0) return 0;
-    return Math.min(...heroSynergies.map((synergy) => synergy.rel_winrate));
-  }, [heroSynergies]);
-
-  const maxSynergyWinrate = useMemo(() => {
-    if (heroSynergies.length === 0) return 0;
-    return Math.max(...heroSynergies.map((synergy) => synergy.rel_winrate));
-  }, [heroSynergies]);
-
-  const heroCounters = useMemo(() => {
-    const counters: (HeroCounterStats & { rel_winrate: number; prev_rel_winrate: number | undefined })[] = [];
+  const counterRows = useMemo(() => {
+    const rows: MatchupRow[] = [];
     for (const counter of counterData || []) {
-      if (counter.hero_id === heroId) {
-        counters.push({
-          ...counter,
-          rel_winrate:
-            counter?.wins / counter?.matches_played -
-            heroStatsMap[counter.hero_id]?.wins / heroStatsMap[counter.hero_id]?.matches,
-          prev_rel_winrate: prevCounterRelWinrateMap[counter.hero_id]?.[counter.enemy_hero_id],
-        });
-      }
+      if (counter.hero_id !== heroId) continue;
+      rows.push({
+        heroId: counter.enemy_hero_id,
+        matches: counter.matches_played,
+        wins: counter.wins,
+        relWinrate: counter.wins / counter.matches_played - heroStatsMap[heroId]?.wins / heroStatsMap[heroId]?.matches,
+        prevRelWinrate: prevCounterRelWinrateMap[heroId]?.[counter.enemy_hero_id],
+      });
     }
-    counters.sort((a, b) => b.wins / b.matches_played - a.wins / a.matches_played);
-    return counters;
+    rows.sort((a, b) => b.relWinrate - a.relWinrate);
+    return rows;
   }, [heroId, counterData, heroStatsMap, prevCounterRelWinrateMap]);
 
-  const minCounterWinrate = useMemo(() => {
-    if (heroCounters.length === 0) return 0;
-    return Math.min(...heroCounters.map((counter) => counter.rel_winrate));
-  }, [heroCounters]);
-
-  const maxCounterWinrate = useMemo(() => {
-    if (heroCounters.length === 0) return 0;
-    return Math.max(...heroCounters.map((counter) => counter.rel_winrate));
-  }, [heroCounters]);
-
-  function zip<T, U>(a: T[], b: U[]): [T, U][] {
-    const length = Math.min(a.length, b.length);
-    const result: [T, U][] = [];
-    for (let i = 0; i < length; i++) {
-      result.push([a[i], b[i]]);
-    }
-    return result;
-  }
+  const isSynergy = stat === HeroMatchupDetailsStatsTableStat.SYNERGY;
+  const rows = isSynergy ? synergyRows : counterRows;
+  const relWinrates = rows.map((row) => row.relWinrate);
+  const minRelWinrate = rows.length ? Math.min(...relWinrates) : 0;
+  const maxRelWinrate = rows.length ? Math.max(...relWinrates) : 0;
 
   if (isLoading) {
     return (
@@ -317,126 +291,63 @@ export function HeroMatchupDetailsStatsTable({
         <TableRow>
           <TableHead className="text-center">#</TableHead>
           <TableHead>Hero</TableHead>
-          {stat === HeroMatchupDetailsStatsTableStat.SYNERGY && (
-            <TableHead className="whitespace-normal">Combination (Win Rate Change)</TableHead>
-          )}
-          {stat === HeroMatchupDetailsStatsTableStat.COUNTER && (
-            <TableHead className="whitespace-normal">Against (Win Rate Change)</TableHead>
-          )}
+          <TableHead className="whitespace-normal">
+            {isSynergy ? "Combination (Win Rate Change)" : "Against (Win Rate Change)"}
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {zip(heroSynergies, heroCounters).map(([synergy, counter], index) => (
+        {rows.map((row, index) => (
           <TableRow
-            key={stat === HeroMatchupDetailsStatsTableStat.SYNERGY ? synergy.hero_id2 : counter.enemy_hero_id}
+            key={row.heroId}
             className={cn(onHeroSelected && "cursor-pointer")}
-            onClick={() =>
-              onHeroSelected?.(
-                stat === HeroMatchupDetailsStatsTableStat.SYNERGY ? synergy.hero_id2 : counter.enemy_hero_id,
-              )
-            }
+            onClick={() => onHeroSelected?.(row.heroId)}
           >
             <TableCell>{index + 1}</TableCell>
             <TableCell>
               <div className="flex items-center gap-2">
-                {stat === HeroMatchupDetailsStatsTableStat.SYNERGY && (
-                  <>
-                    <HeroImage heroId={synergy.hero_id2} />
-                    <HeroName heroId={synergy.hero_id2} />
-                  </>
-                )}
-                {stat === HeroMatchupDetailsStatsTableStat.COUNTER && (
-                  <>
-                    <HeroImage heroId={counter.enemy_hero_id} />
-                    <HeroName heroId={counter.enemy_hero_id} />
-                  </>
-                )}
+                <HeroImage heroId={row.heroId} />
+                <HeroName heroId={row.heroId} />
               </div>
             </TableCell>
-            {stat === HeroMatchupDetailsStatsTableStat.SYNERGY && (
-              <TableCell>
-                <ProgressBarWithLabel
-                  min={minSynergyWinrate}
-                  max={maxSynergyWinrate}
-                  value={synergy.rel_winrate}
-                  color={"#fa4454"}
-                  label={`${synergy?.rel_winrate > 0 ? "+" : ""}${Math.round(synergy?.rel_winrate * 100).toFixed(0)}% `}
-                  delta={
-                    synergy.prev_rel_winrate !== undefined ? synergy.rel_winrate - synergy.prev_rel_winrate : undefined
-                  }
-                  tooltip={
-                    <div className="flex flex-col gap-1 text-xs">
-                      <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Matches</span>
-                        <span className="font-medium">{synergy.matches_played.toLocaleString("en-US")}</span>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Wins</span>
-                        <span className="font-medium">{synergy?.wins.toLocaleString("en-US")}</span>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Win rate change</span>
+            <TableCell>
+              <ProgressBarWithLabel
+                min={minRelWinrate}
+                max={maxRelWinrate}
+                value={row.relWinrate}
+                color={isSynergy ? "#fa4454" : "#22d3ee"}
+                label={formatSignedPercent(row.relWinrate)}
+                delta={row.prevRelWinrate !== undefined ? row.relWinrate - row.prevRelWinrate : undefined}
+                tooltip={
+                  <div className="flex flex-col gap-1 text-xs">
+                    <div className="flex justify-between gap-4">
+                      <span className="text-muted-foreground">Matches</span>
+                      <span className="font-medium">{row.matches.toLocaleString("en-US")}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-muted-foreground">Wins</span>
+                      <span className="font-medium">{row.wins.toLocaleString("en-US")}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-muted-foreground">Win rate change</span>
+                      <span className="font-medium">
+                        {row.relWinrate > 0 ? "+" : ""}
+                        {(row.relWinrate * 100).toFixed(2)}%
+                      </span>
+                    </div>
+                    {row.prevRelWinrate !== undefined && (
+                      <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
+                        <span className="text-muted-foreground">Previous</span>
                         <span className="font-medium">
-                          {synergy?.rel_winrate > 0 ? "+" : ""}
-                          {(synergy?.rel_winrate * 100).toFixed(2)}%
+                          {row.prevRelWinrate > 0 ? "+" : ""}
+                          {(row.prevRelWinrate * 100).toFixed(2)}%
                         </span>
                       </div>
-                      {synergy.prev_rel_winrate !== undefined && (
-                        <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
-                          <span className="text-muted-foreground">Previous</span>
-                          <span className="font-medium">
-                            {synergy.prev_rel_winrate > 0 ? "+" : ""}
-                            {(synergy.prev_rel_winrate * 100).toFixed(2)}%
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  }
-                />
-              </TableCell>
-            )}
-            {stat === HeroMatchupDetailsStatsTableStat.COUNTER && (
-              <TableCell>
-                <ProgressBarWithLabel
-                  min={minCounterWinrate}
-                  max={maxCounterWinrate}
-                  value={counter.rel_winrate}
-                  color={"#22d3ee"}
-                  label={`${counter?.rel_winrate > 0 ? "+" : ""}${Math.round(counter?.rel_winrate * 100).toFixed(0)}% `}
-                  delta={
-                    counter.prev_rel_winrate !== undefined ? counter.rel_winrate - counter.prev_rel_winrate : undefined
-                  }
-                  tooltip={
-                    <div className="flex flex-col gap-1 text-xs">
-                      <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Matches</span>
-                        <span className="font-medium">{counter?.matches_played.toLocaleString("en-US")}</span>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Wins</span>
-                        <span className="font-medium">{counter?.wins.toLocaleString("en-US")}</span>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Win rate change</span>
-                        <span className="font-medium">
-                          {counter?.rel_winrate > 0 ? "+" : ""}
-                          {(counter?.rel_winrate * 100).toFixed(2)}%
-                        </span>
-                      </div>
-                      {counter.prev_rel_winrate !== undefined && (
-                        <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
-                          <span className="text-muted-foreground">Previous</span>
-                          <span className="font-medium">
-                            {counter.prev_rel_winrate > 0 ? "+" : ""}
-                            {(counter.prev_rel_winrate * 100).toFixed(2)}%
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  }
-                />
-              </TableCell>
-            )}
+                    )}
+                  </div>
+                }
+              />
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>
