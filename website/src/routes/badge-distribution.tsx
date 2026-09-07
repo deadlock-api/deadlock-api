@@ -1,5 +1,6 @@
 import { useQueries } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import type { BadgeDistribution, Rank } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Suspense, useMemo } from "react";
 
@@ -20,25 +21,49 @@ import { loadSeasons } from "~/queries/asset-queries";
 import { badgeDistributionQueryOptions } from "~/queries/badge-distribution-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
+/** The badge at which half of all players sit at or below, named like "Sentinel 4". */
+function findMedianRankName(
+  distribution: readonly BadgeDistribution[] | undefined,
+  ranks: readonly Rank[] | undefined,
+): string | null {
+  if (!distribution || !ranks) return null;
+  const rows = [...distribution].sort((a, b) => a.badge_level - b.badge_level);
+  const total = rows.reduce((sum, row) => sum + (row.unique_players ?? 0), 0);
+  if (total === 0) return null;
+  let running = 0;
+  for (const row of rows) {
+    running += row.unique_players ?? 0;
+    if (running >= total / 2) {
+      const rank = ranks.find((r) => r.tier === Math.floor(row.badge_level / 10));
+      return rank?.name ? `${rank.name} ${row.badge_level % 10}` : null;
+    }
+  }
+  return null;
+}
+
 export const Route = createFileRoute("/badge-distribution")({
   component: BadgeDistributionPage,
   loader: async ({ context: { queryClient } }) => {
     const [defaultStart, defaultEnd] = defaultDateRange(await loadSeasons(queryClient));
-    await prefetchSafe(
-      queryClient.ensureQueryData(
-        badgeDistributionQueryOptions({
-          minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
-          maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
-        }),
+    const [distribution, ranks] = await Promise.all([
+      prefetchSafe(
+        queryClient.ensureQueryData(
+          badgeDistributionQueryOptions({
+            minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
+            maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
+          }),
+        ),
       ),
-    );
+      prefetchSafe(queryClient.ensureQueryData(ranksQueryOptions)),
+    ]);
+    return { medianRank: findMedianRankName(distribution, ranks) };
   },
-  head: () => {
+  head: ({ loaderData }) => {
     const year = new Date().getFullYear();
+    const median = loaderData?.medianRank ? ` Half of all players sit at ${loaderData.medianRank} or below.` : "";
     return seo({
       title: `Deadlock Rank Distribution ${year}: Badge Stats & Percentiles`,
-      description:
-        "See the Deadlock rank distribution across all badges and subtiers. Find out what percentage of players are at each rank on the competitive ladder.",
+      description: `See the Deadlock rank distribution across all badges and subtiers.${median} Find out what percentage of players are at each rank on the competitive ladder.`,
       path: "/badge-distribution",
       jsonLd: {
         "@context": "https://schema.org",
