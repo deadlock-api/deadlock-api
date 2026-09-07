@@ -86,7 +86,8 @@ interface Segment {
 function buildSentence(parts: Map<string, string>): Segment[] | null {
   if (parts.size === 0) return null;
 
-  const segments: Segment[] = [{ key: "prefix", node: "Showing data from" }];
+  // "from" only reads correctly ahead of the "<mode> matches" segment; the other segments carry their own preposition.
+  const segments: Segment[] = [{ key: "prefix", node: parts.has("mode") ? "Showing data from" : "Showing data" }];
 
   for (const def of SEGMENT_DEFS) {
     if (def.dynamic) {
