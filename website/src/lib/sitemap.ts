@@ -26,7 +26,6 @@ const STATIC_ENTRIES: SitemapEntry[] = [
   { path: "/streamkit", lastmod: "2026-03-12", changefreq: "monthly", priority: 0.6 },
   { path: "/data-privacy", lastmod: "2026-03-22", changefreq: "monthly", priority: 0.5 },
   { path: "/ingest-cache", lastmod: "2026-03-10", changefreq: "monthly", priority: 0.6 },
-  { path: "/blog", lastmod: "2026-04-18", changefreq: "weekly", priority: 0.7 },
   { path: "/deadlockdle", changefreq: "daily", priority: 0.8 },
   { path: "/deadlockdle/guess-hero", changefreq: "weekly", priority: 0.6 },
   { path: "/deadlockdle/guess-item", changefreq: "weekly", priority: 0.6 },
@@ -126,8 +125,17 @@ export async function buildSitemapXml(): Promise<string> {
     changefreq: "monthly",
     priority: 0.7,
   }));
+  const blogIndex: SitemapEntry = {
+    path: "/blog",
+    lastmod: blogEntries
+      .map((post) => post.lastmod)
+      .sort()
+      .at(-1),
+    changefreq: "weekly",
+    priority: 0.7,
+  };
   const heroEntries = await loadHeroEntries();
-  const all = [...STATIC_ENTRIES, ...blogEntries, ...heroEntries];
+  const all = [...STATIC_ENTRIES, blogIndex, ...blogEntries, ...heroEntries];
   const body = all.map(renderUrl).join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
 }
