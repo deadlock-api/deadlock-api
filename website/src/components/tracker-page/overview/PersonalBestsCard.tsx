@@ -2,16 +2,7 @@ import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { day } from "~/dayjs";
-import type { PersonalRecords, RecordMatch } from "~/lib/tracker/compute";
-
-const RECORDS: { key: keyof PersonalRecords; label: string; format: (value: number) => string }[] = [
-  { key: "kills", label: "Most kills", format: (value) => value.toLocaleString("en-US") },
-  { key: "assists", label: "Most assists", format: (value) => value.toLocaleString("en-US") },
-  { key: "kda", label: "Best KDA", format: (value) => value.toFixed(2) },
-  { key: "netWorth", label: "Most souls", format: (value) => value.toLocaleString("en-US") },
-  { key: "soulsPerMin", label: "Best souls/min", format: (value) => Math.round(value).toLocaleString("en-US") },
-  { key: "rankGain", label: "Biggest rank gain", format: (value) => `+${value.toLocaleString("en-US")}` },
-];
+import { type PersonalRecords, RECORD_KINDS, type RecordMatch } from "~/lib/tracker/compute";
 
 function RecordTile({
   label,
@@ -39,7 +30,7 @@ function RecordTile({
 }
 
 export function PersonalBestsCard({ records }: { records: PersonalRecords }) {
-  const tiles = RECORDS.flatMap((config) => {
+  const tiles = RECORD_KINDS.flatMap((config) => {
     const record = records[config.key];
     return record ? [{ ...config, record }] : [];
   });

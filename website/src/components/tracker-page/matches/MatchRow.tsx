@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { ChevronDown, CircleDashed, Gavel, LogOut, ShieldCheck, UsersRound } from "lucide-react";
+import { ChevronDown, CircleDashed, Gavel, LogOut, ShieldCheck, Trophy, UsersRound } from "lucide-react";
 import type { Ref } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
@@ -12,6 +12,7 @@ import { day } from "~/dayjs";
 import {
   brawlRounds,
   formatMatchDuration,
+  type HeldRecord,
   isWin,
   MATCH_MODE_LABELS_BY_ID,
   soulsPerMinute,
@@ -45,6 +46,7 @@ export function MatchRow({
   entry,
   ranks,
   heroName,
+  records,
   expanded,
   onToggle,
 }: {
@@ -52,6 +54,8 @@ export function MatchRow({
   entry: PlayerMatchHistoryEntry;
   ranks: Rank[];
   heroName: string;
+  /** Personal bests this match holds over the filtered history. */
+  records?: HeldRecord[];
   expanded: boolean;
   onToggle: () => void;
 }) {
@@ -96,6 +100,20 @@ export function MatchRow({
         <div className="flex items-center gap-2">
           <HeroImage heroId={entry.hero_id} className="size-7 rounded-full" />
           <span className="hidden max-w-[120px] truncate @xl:inline">{heroName}</span>
+          {records && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Trophy className="size-3.5 shrink-0 text-amber-500" aria-label="Personal best" />
+              </TooltipTrigger>
+              <TooltipContent>
+                {records.map((record) => (
+                  <div key={record.label}>
+                    {record.label}: {record.value}
+                  </div>
+                ))}
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </TableCell>
       <TableCell className="hidden text-muted-foreground @3xl:table-cell">

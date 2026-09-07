@@ -560,6 +560,39 @@ export function computeRecords(entries: PlayerMatchHistoryEntry[]): PersonalReco
   };
 }
 
+export interface RecordKind {
+  key: keyof PersonalRecords;
+  label: string;
+  format: (value: number) => string;
+}
+
+export const RECORD_KINDS: RecordKind[] = [
+  { key: "kills", label: "Most kills", format: (value) => value.toLocaleString("en-US") },
+  { key: "assists", label: "Most assists", format: (value) => value.toLocaleString("en-US") },
+  { key: "kda", label: "Best KDA", format: (value) => value.toFixed(2) },
+  { key: "netWorth", label: "Most souls", format: (value) => value.toLocaleString("en-US") },
+  { key: "soulsPerMin", label: "Best souls/min", format: (value) => Math.round(value).toLocaleString("en-US") },
+  { key: "rankGain", label: "Biggest rank gain", format: (value) => `+${value.toLocaleString("en-US")}` },
+];
+
+export interface HeldRecord {
+  label: string;
+  value: string;
+}
+
+/** The personal bests each match holds, formatted for display; matches holding none are absent. */
+export function recordsByMatchId(records: PersonalRecords): Map<number, HeldRecord[]> {
+  const held = new Map<number, HeldRecord[]>();
+  for (const { key, label, format } of RECORD_KINDS) {
+    const record = records[key];
+    if (!record) continue;
+    const list = held.get(record.entry.match_id) ?? [];
+    list.push({ label, value: format(record.value) });
+    held.set(record.entry.match_id, list);
+  }
+  return held;
+}
+
 export interface PlaytimeCell {
   /** 0 = Monday … 6 = Sunday, in the viewer's local time zone. */
   weekday: number;

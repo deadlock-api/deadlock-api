@@ -8,11 +8,13 @@ import { PaginationControls } from "~/components/PaginationControls";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
 import {
+  computeRecords,
   computeSessions,
   formatPlaytime,
   MATCH_SORT_KEYS,
   type MatchSortKey,
   type PlaySession,
+  recordsByMatchId,
   SORT_DIRS,
   type SortDir,
   sortMatches,
@@ -27,6 +29,8 @@ import { MatchRow } from "./MatchRow";
 import { MatchRowDetails } from "./MatchRowDetails";
 
 const COLUMN_COUNT = 13;
+// A best among a handful of matches says little, so small sets get no record markers.
+const MIN_MATCHES_FOR_RECORDS = 10;
 
 function sessionDateLabel(unix: number): string {
   const date = day.unix(unix);
@@ -138,6 +142,10 @@ export function MatchesTab({
     [entries, sortKey],
   );
   const heroSummaries = useMemo(() => summarizeByHero(entries), [entries]);
+  const heldRecords = useMemo(
+    () => (entries.length >= MIN_MATCHES_FOR_RECORDS ? recordsByMatchId(computeRecords(entries)) : null),
+    [entries],
+  );
   const totalPages = Math.max(1, Math.ceil(entries.length / itemsPerPage));
   // Filters and the page size can shrink the list under a page that no longer exists.
   const page = Math.min(currentPage, totalPages - 1);
@@ -243,6 +251,7 @@ export function MatchesTab({
                   entry={entry}
                   ranks={ranks}
                   heroName={heroNames?.get(entry.hero_id) ?? "Unknown"}
+                  records={heldRecords?.get(entry.match_id)}
                   expanded={expanded}
                   onToggle={() => setExpandedMatchId(expanded ? null : entry.match_id)}
                 />
