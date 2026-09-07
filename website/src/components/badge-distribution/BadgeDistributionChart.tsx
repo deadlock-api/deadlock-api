@@ -1,7 +1,7 @@
 import type { Rank } from "deadlock_api_client";
 import type { BadgeDistribution } from "deadlock_api_client";
 import { useMemo } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, Customized, Label, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, Customized, Label, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartContainer } from "~/components/ui/chart";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
@@ -85,6 +85,17 @@ export default function BadgeDistributionChart({
     return { total, atOrAbove };
   }, [chartData]);
 
+  // The badge at which half of the selected metric sits at or below it.
+  const medianBadge = useMemo(() => {
+    let running = 0;
+    for (const entry of chartData) {
+      running += entry.value;
+      if (!entry.isSpacer && running >= shares.total / 2) return entry.badge;
+    }
+    return undefined;
+  }, [chartData, shares.total]);
+  const medianInfo = medianBadge === undefined ? undefined : badgeMap.get(medianBadge);
+
   const ticks = useMemo(() => {
     const badges = badgeDistributionData.map((item) => item.badge_level);
     if (badges.length === 0) return [];
@@ -166,7 +177,17 @@ export default function BadgeDistributionChart({
 
   return (
     <div className="flex h-full w-full flex-col">
-      <div className="flex shrink-0 justify-end">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">
+          {medianInfo ? (
+            <>
+              Median {metric === "players" ? "player" : "match"} rank:{" "}
+              <span className="font-medium text-foreground">
+                {medianInfo.name} {medianInfo.subtier}
+              </span>
+            </>
+          ) : null}
+        </p>
         <ToggleGroup
           type="single"
           value={metric}
@@ -243,6 +264,20 @@ export default function BadgeDistributionChart({
             <YAxis dataKey="value" tickCount={4} textAnchor="end">
               <Label value={METRIC_LABEL[metric]} position="middle" textAnchor="middle" />
             </YAxis>
+            {medianBadge !== undefined && (
+              <ReferenceLine
+                x={medianBadge}
+                stroke="var(--color-foreground)"
+                strokeDasharray="4 4"
+                strokeOpacity={0.6}
+                label={{
+                  value: "Median",
+                  position: "insideTopLeft",
+                  fill: "var(--color-muted-foreground)",
+                  fontSize: 12,
+                }}
+              />
+            )}
             <Customized component={RankIconsOverlay} />
           </BarChart>
         </ChartContainer>
