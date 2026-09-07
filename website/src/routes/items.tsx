@@ -16,6 +16,7 @@ import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultDateRange, defaultPrevDateRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
+import { wilsonScoreInterval } from "~/lib/wilson";
 import { itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
@@ -32,7 +33,7 @@ const ItemCombStatsTable = lazy(() =>
   import("~/components/items-page/ItemCombStatsTable").then((m) => ({ default: m.ItemCombStatsTable })),
 );
 
-/** Highest win rate among items with enough matches for the number to mean something. */
+/** The item whose win rate is most confidently high: the largest Wilson lower bound, as the table ranks confidence. */
 function findWinRateLeader(
   stats: readonly { item_id: number; wins: number; matches: number }[] | undefined,
   items: readonly { id: number; name?: string | null }[] | undefined,
@@ -45,16 +46,13 @@ function findWinRateLeader(
     acc.matches += row.matches;
     byItem.set(row.item_id, acc);
   }
-  let total = 0;
-  for (const acc of byItem.values()) total += acc.matches;
-  const minMatches = Math.max(100, total * 0.005);
-  let best: { name: string; winRate: number } | null = null;
+  let best: { name: string; winRate: number; lowerBound: number } | null = null;
   for (const [itemId, acc] of byItem) {
-    if (acc.matches < minMatches) continue;
-    const winRate = acc.wins / acc.matches;
-    if (best && winRate <= best.winRate) continue;
+    if (acc.matches < 10) continue;
+    const [lowerBound] = wilsonScoreInterval(acc.wins, acc.matches);
+    if (best && lowerBound <= best.lowerBound) continue;
     const item = items.find((i) => i.id === itemId);
-    if (item?.name) best = { name: item.name, winRate };
+    if (item?.name) best = { name: item.name, winRate: acc.wins / acc.matches, lowerBound };
   }
   return best;
 }
@@ -97,7 +95,7 @@ export const Route = createFileRoute("/items")({
   head: ({ loaderData }) => {
     const leader = loaderData?.leader;
     const lead = leader
-      ? ` ${leader.name} leads the current patch at a ${(leader.winRate * 100).toFixed(1)}% win rate.`
+      ? ` ${leader.name} is the most reliably strong item this patch at a ${(leader.winRate * 100).toFixed(1)}% win rate.`
       : "";
     return seo({
       title: "Deadlock Item Stats: Build Win Rates, Buy Timings & Combos",
