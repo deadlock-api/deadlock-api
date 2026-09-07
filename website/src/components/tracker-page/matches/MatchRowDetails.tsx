@@ -5,6 +5,7 @@ import { Link2, UsersRound } from "lucide-react";
 import { useMemo } from "react";
 
 import { CopyButton } from "~/components/copy-button";
+import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import {
@@ -49,7 +50,7 @@ export function MatchRowDetails({
   // Street Brawl reports lane ids too, but its map has no lanes to speak of.
   const laned = hasLanes(entry);
   const rounds = brawlRounds(entry);
-  const { data: match, isPending, isError } = useQuery(trackerMatchMetadataQueryOptions(matchId));
+  const { data: match, isPending, isError, refetch } = useQuery(trackerMatchMetadataQueryOptions(matchId));
   const { data: deathRows } = useQuery(trackerMatchDeathsQueryOptions(matchId));
   const { data: itemsById } = useQuery({
     ...itemUpgradesQueryOptions,
@@ -103,8 +104,21 @@ export function MatchRowDetails({
     );
   }
 
-  if (isError || !match) {
-    return <div className="py-4 text-center text-sm text-muted-foreground">Failed to load match details.</div>;
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-4 text-sm text-muted-foreground">
+        Failed to load match details.
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  if (!match) {
+    return (
+      <div className="py-4 text-center text-sm text-muted-foreground">No details are available for this match.</div>
+    );
   }
 
   return (
