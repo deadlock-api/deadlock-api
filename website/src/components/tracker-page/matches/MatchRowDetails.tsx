@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { Crown } from "lucide-react";
+import { Crown, UsersRound } from "lucide-react";
 import { Fragment, useMemo } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
+import { CopyButton } from "~/components/copy-button";
 import { HeroImage } from "~/components/HeroImage";
 import { ItemImageFromAsset } from "~/components/ItemImage";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -12,7 +13,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { IS_DEV } from "~/lib/constants";
 import { LANES } from "~/lib/team-builder/lanes";
-import { hasLanes, type TrackerSummary } from "~/lib/tracker/compute";
+import { formatMatchDuration, hasLanes, MATCH_MODE_LABELS_BY_ID, type TrackerSummary } from "~/lib/tracker/compute";
 import { computeTeamContribution } from "~/lib/tracker/contribution";
 import { computeLaneMatchup } from "~/lib/tracker/lane-matchup";
 import { computeObjectiveEvents } from "~/lib/tracker/objectives";
@@ -162,6 +163,24 @@ export function MatchRowDetails({
 
   return (
     <div className="@container space-y-4">
+      {/* Restates the match table columns that collapse on narrow layouts. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground @4xl:hidden">
+        <span className="@3xl:hidden">
+          {MATCH_MODE_LABELS_BY_ID[entry.match_mode] ?? "Unknown"} · {formatMatchDuration(entry.match_duration_s)}
+        </span>
+        <span className="inline-flex items-center gap-0.5 tabular-nums">
+          Match {matchId}
+          <CopyButton text={String(matchId)} iconOnly title="Copy match ID" className="size-6" />
+        </span>
+        <Link
+          to="/team-builder"
+          search={{ match: matchId }}
+          className="inline-flex items-center gap-1 transition-colors hover:text-foreground"
+        >
+          <UsersRound className="size-3.5" />
+          Team Builder
+        </Link>
+      </div>
       {soulLead && <SoulLeadChart lead={soulLead} events={objectiveEvents} />}
       {contribution && <PerformanceStrip entry={entry} contribution={contribution} heroSummary={heroSummary} />}
       {laneMatchup && <LaneMatchupCard matchup={laneMatchup} trackedAccountId={accountId} nameOf={nameOf} />}
