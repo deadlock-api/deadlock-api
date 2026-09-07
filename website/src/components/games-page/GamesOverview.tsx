@@ -124,7 +124,7 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                           )}
                           onClick={() => onStatClick?.(stat.key)}
                         >
-                          <span className="text-sm text-muted-foreground">{stat.label}</span>
+                          <span className="text-left text-sm text-muted-foreground">{stat.label}</span>
                           <div className="flex items-center gap-2.5">
                             <span className="text-sm font-semibold tabular-nums">
                               {formatStatValue(value, stat.format)}

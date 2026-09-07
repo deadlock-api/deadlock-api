@@ -48,7 +48,7 @@ export function LeaderboardControls({
           const rank = parseInt(e.target.value, 10);
           if (!Number.isNaN(rank)) onJumpToRank(rank);
         }}
-        className="h-8 w-32"
+        className="h-8 w-36"
       />
     </PaginationControls>
   );
