@@ -12,6 +12,7 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
+import { shrunkWinRate } from "~/lib/shrinkage";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
 
@@ -26,7 +27,7 @@ const ComboItems = memo(function ComboItems({ itemIds }: { itemIds: number[] }) 
             {i > 0 && <span className="text-2xl">+</span>}
             <div className="flex items-center gap-2">
               <ItemImage itemId={itemId} />
-              <ItemName itemId={itemId} />
+              <ItemName itemId={itemId} linkToDetail />
             </div>
           </Fragment>
         ))}
@@ -129,8 +130,14 @@ export function ItemCombStatsTable({
     [itemCombData, shopableItemIds],
   );
 
+  // A raw win-rate sort would put every 100% combination with a dozen matches above the ones
+  // proven over thousands.
   const sortedData = useMemo(
-    () => [...filteredData].sort((a, b) => b.wins / b.matches - a.wins / a.matches),
+    () =>
+      filteredData
+        .map((row) => ({ row, score: shrunkWinRate(row.wins, row.matches) }))
+        .sort((a, b) => b.score - a.score)
+        .map(({ row }) => row),
     [filteredData],
   );
   const limitedData = useMemo(() => sortedData.slice(0, combsToShow), [combsToShow, sortedData]);
@@ -149,10 +156,13 @@ export function ItemCombStatsTable({
     [limitedData],
   );
   const minWinrate = useMemo(
-    () => limitedData[limitedData.length - 1]?.wins / limitedData[limitedData.length - 1]?.matches || 0,
+    () => limitedData.reduce((min, row) => Math.min(min, row.wins / row.matches), 1),
     [limitedData],
   );
-  const maxWinrate = useMemo(() => limitedData[0]?.wins / limitedData[0]?.matches || 0, [limitedData]);
+  const maxWinrate = useMemo(
+    () => limitedData.reduce((max, row) => Math.max(max, row.wins / row.matches), 0),
+    [limitedData],
+  );
 
   // Keep raw counts so changing the display limit does not rebuild this full-data lookup.
   const prevStatsMap = useMemo(() => {
@@ -189,7 +199,13 @@ export function ItemCombStatsTable({
               <TableRow>
                 {!hideIndex && <TableHead className="text-center">#</TableHead>}
                 <TableHead>Item Combination</TableHead>
-                {columns.includes("winRate") && <TableHead className="text-center">Win Rate</TableHead>}
+                {columns.includes("winRate") && (
+                  <TableHead className="text-center">
+                    Win Rate
+                    <br />
+                    (Confidence Ranked)
+                  </TableHead>
+                )}
                 {columns.includes("pickRate") && (
                   <TableHead className="text-center">
                     Pick Rate
