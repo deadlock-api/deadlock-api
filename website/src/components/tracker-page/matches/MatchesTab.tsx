@@ -139,9 +139,11 @@ export function MatchesTab({
   );
   const heroSummaries = useMemo(() => summarizeByHero(entries), [entries]);
   const totalPages = Math.max(1, Math.ceil(entries.length / itemsPerPage));
+  // Filters and the page size can shrink the list under a page that no longer exists.
+  const page = Math.min(currentPage, totalPages - 1);
   const paginatedEntries = useMemo(
-    () => sortedEntries.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage),
-    [sortedEntries, currentPage, itemsPerPage],
+    () => sortedEntries.slice(page * itemsPerPage, (page + 1) * itemsPerPage),
+    [sortedEntries, page, itemsPerPage],
   );
 
   return (
@@ -149,7 +151,7 @@ export function MatchesTab({
       <PaginationControls
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={setItemsPerPage}
-        currentPage={currentPage}
+        currentPage={page}
         onPageChange={setCurrentPage}
         totalPages={totalPages}
       />
