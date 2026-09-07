@@ -93,19 +93,34 @@ export function trackerEnemyStatsQueryOptions(params: PlayersApiEnemyStatsReques
   });
 }
 
-interface TrackerMatchMetadata {
+export interface TrackerMatchItem {
+  item_id: number;
+  game_time_s: number;
+  sold_time_s: number;
+}
+
+export interface TrackerMatchPlayer {
+  account_id: number;
+  team: string;
+  hero_id: number;
+  kills: number;
+  deaths: number;
+  assists: number;
+  net_worth: number;
+  last_hits: number;
+  denies: number;
+  level: number;
+  player_damage: number;
+  mvp_rank: number | null;
+  items: TrackerMatchItem[];
+  personaname: string | undefined;
+}
+
+export interface TrackerMatchMetadata {
   winning_team: string | null | undefined;
   average_badge_team0: number | null | undefined;
   average_badge_team1: number | null | undefined;
-  players: {
-    account_id: number;
-    team: string;
-    hero_id: number;
-    kills: number;
-    deaths: number;
-    assists: number;
-    personaname: string | undefined;
-  }[];
+  players: TrackerMatchPlayer[];
 }
 
 /** Shape of the protobuf-JSON `/v1/matches/{id}/metadata` response. Teams are `ECitadelLobbyTeam` numbers (0/1). */
@@ -121,6 +136,13 @@ interface RestMatchMetadata {
       kills?: number;
       deaths?: number;
       assists?: number;
+      net_worth?: number;
+      last_hits?: number;
+      denies?: number;
+      level?: number;
+      mvp_rank?: number | null;
+      items?: { item_id?: number; game_time_s?: number; sold_time_s?: number }[];
+      stats?: { player_damage?: number }[];
     }[];
   };
 }
@@ -145,6 +167,17 @@ async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<Track
       kills: player.kills ?? 0,
       deaths: player.deaths ?? 0,
       assists: player.assists ?? 0,
+      net_worth: player.net_worth ?? 0,
+      last_hits: player.last_hits ?? 0,
+      denies: player.denies ?? 0,
+      level: player.level ?? 0,
+      player_damage: player.stats?.at(-1)?.player_damage ?? 0,
+      mvp_rank: player.mvp_rank ?? null,
+      items: (player.items ?? []).map((item) => ({
+        item_id: item.item_id ?? 0,
+        game_time_s: item.game_time_s ?? 0,
+        sold_time_s: item.sold_time_s ?? 0,
+      })),
       personaname: undefined,
     })),
   };
@@ -167,6 +200,13 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
             kills: true,
             deaths: true,
             assists: true,
+            net_worth: true,
+            last_hits: true,
+            denies: true,
+            player_level: true,
+            max_player_damage: true,
+            mvp_rank: true,
+            items: { item_id: true, game_time_s: true, sold_time_s: true },
             steam: { personaname: true },
           },
         },
@@ -184,6 +224,17 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
           kills: player.kills ?? 0,
           deaths: player.deaths ?? 0,
           assists: player.assists ?? 0,
+          net_worth: player.net_worth ?? 0,
+          last_hits: player.last_hits ?? 0,
+          denies: player.denies ?? 0,
+          level: player.player_level ?? 0,
+          player_damage: player.max_player_damage ?? 0,
+          mvp_rank: player.mvp_rank ?? null,
+          items: (player.items ?? []).map((item) => ({
+            item_id: item.item_id ?? 0,
+            game_time_s: item.game_time_s ?? 0,
+            sold_time_s: item.sold_time_s ?? 0,
+          })),
           personaname: player.steam?.personaname,
         })),
       };
