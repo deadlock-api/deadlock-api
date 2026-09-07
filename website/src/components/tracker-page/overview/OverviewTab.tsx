@@ -13,6 +13,7 @@ import {
   computePerformanceTrend,
   computePlaytimeHabits,
   computeRecords,
+  computeSessionMomentum,
   computeStreaks,
   formatMatchDuration,
   isWin,
@@ -31,6 +32,7 @@ import { PerformanceTrendChart } from "./PerformanceTrendChart";
 import { PersonalBestsCard } from "./PersonalBestsCard";
 import { PlaytimeHeatmap } from "./PlaytimeHeatmap";
 import { RankHistoryChart } from "./RankHistoryChart";
+import { SessionMomentumCard } from "./SessionMomentumCard";
 import { WinRateBreakdownCard } from "./WinRateBreakdownCard";
 
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: React.ReactNode }) {
@@ -81,6 +83,7 @@ export function OverviewTab({
   const records = useMemo(() => computeRecords(entries), [entries]);
   const habits = useMemo(() => computePlaytimeHabits(entries), [entries]);
   const splits = useMemo(() => computeOutcomeSplits(entries), [entries]);
+  const momentum = useMemo(() => computeSessionMomentum(entries), [entries]);
 
   return (
     <div className="space-y-4">
@@ -109,7 +112,10 @@ export function OverviewTab({
           <RankHistoryChart points={rankPoints} />
           <PerformanceTrendChart points={trend} window={trendWindow} summary={summary} />
           <ActivityChart activity={activity} />
-          <WinRateBreakdownCard splits={splits} overallWinrate={summary.winrate} />
+          <div className="grid gap-4 xl:grid-cols-2">
+            <WinRateBreakdownCard splits={splits} overallWinrate={summary.winrate} />
+            <SessionMomentumCard momentum={momentum} overallWinrate={summary.winrate} />
+          </div>
         </div>
         <div className="space-y-4">
           <Card>

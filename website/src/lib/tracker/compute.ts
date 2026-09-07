@@ -301,6 +301,12 @@ export function formatMatchDuration(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+export function formatPlaytime(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.round((seconds % 3600) / 60);
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+}
+
 /** Rolling window that grows with the history so long careers smooth into a readable line. */
 export function performanceWindow(matchCount: number): number {
   return Math.max(10, Math.ceil(matchCount / 100));
@@ -594,4 +600,67 @@ export function computeOutcomeSplits(entries: PlayerMatchHistoryEntry[]): Outcom
     }
   }
   return { byDuration, bySide };
+}
+
+export interface SessionMomentum {
+  /** Win rate by the match's position within its session; the last bucket collects every later match. */
+  byPosition: OutcomeSplit[];
+  /** Win rate given the result of the previous match in the same session. */
+  byPreviousResult: OutcomeSplit[];
+  sessions: number;
+  avgMatchesPerSession: number;
+  avgSessionTimeS: number;
+}
+
+const POSITION_LABELS = ["1st match", "2nd match", "3rd match", "4th+ match"];
+const TILT_LOSS_RUN = 2;
+
+/** Expects entries sorted newest first, like `computeSessions`. */
+export function computeSessionMomentum(entries: PlayerMatchHistoryEntry[]): SessionMomentum {
+  const byPosition = POSITION_LABELS.map((label) => ({ label, matches: 0, wins: 0 }));
+  const afterWin = { label: "After a win", matches: 0, wins: 0 };
+  const afterLoss = { label: "After a loss", matches: 0, wins: 0 };
+  const afterLossRun = { label: `After ${TILT_LOSS_RUN}+ losses`, matches: 0, wins: 0 };
+
+  const sessions = computeSessions(entries);
+  const sessionEntries = new Map<PlaySession, PlayerMatchHistoryEntry[]>();
+  for (const entry of entries) {
+    const session = sessions.get(entry.match_id) as PlaySession;
+    const list = sessionEntries.get(session);
+    if (list) list.push(entry);
+    else sessionEntries.set(session, [entry]);
+  }
+
+  let totalTimeS = 0;
+  for (const [session, newestFirst] of sessionEntries) {
+    totalTimeS += session.totalTimeS;
+    let previousWin: boolean | null = null;
+    let lossRun = 0;
+    for (let index = newestFirst.length - 1; index >= 0; index--) {
+      const win = isWin(newestFirst[index]) ? 1 : 0;
+      const position = byPosition[Math.min(newestFirst.length - 1 - index, POSITION_LABELS.length - 1)];
+      position.matches++;
+      position.wins += win;
+      if (previousWin !== null) {
+        const split = previousWin ? afterWin : afterLoss;
+        split.matches++;
+        split.wins += win;
+        if (lossRun >= TILT_LOSS_RUN) {
+          afterLossRun.matches++;
+          afterLossRun.wins += win;
+        }
+      }
+      previousWin = win === 1;
+      lossRun = win ? 0 : lossRun + 1;
+    }
+  }
+
+  const sessionCount = sessionEntries.size;
+  return {
+    byPosition,
+    byPreviousResult: [afterWin, afterLoss, afterLossRun],
+    sessions: sessionCount,
+    avgMatchesPerSession: sessionCount > 0 ? entries.length / sessionCount : 0,
+    avgSessionTimeS: sessionCount > 0 ? totalTimeS / sessionCount : 0,
+  };
 }

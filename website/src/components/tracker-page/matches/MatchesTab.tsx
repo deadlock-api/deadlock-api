@@ -14,6 +14,7 @@ import { day } from "~/dayjs";
 import {
   computeSessions,
   formatMatchDuration,
+  formatPlaytime,
   isWin,
   MATCH_MODE_LABELS_BY_ID,
   type PlaySession,
@@ -30,12 +31,6 @@ function sessionDateLabel(unix: number): string {
   if (date.isSame(today, "day")) return "Today";
   if (date.isSame(today.subtract(1, "day"), "day")) return "Yesterday";
   return date.format(date.isSame(today, "year") ? "ddd, MMM D" : "ddd, MMM D, YYYY");
-}
-
-function formatPlaytime(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.round((seconds % 3600) / 60);
-  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
 function SessionRow({ session }: { session: PlaySession }) {
