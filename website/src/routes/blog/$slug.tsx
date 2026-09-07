@@ -1,5 +1,5 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
-import { ArrowLeft, Calendar, Tag } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, Tag } from "lucide-react";
 
 import { fetchBlogPost } from "~/lib/blog-fns";
 import { SITE_URL, getBlogOGImage, seo } from "~/lib/seo";
@@ -115,6 +115,39 @@ function PostNotFound() {
   );
 }
 
+function NeighbourPostLink({
+  post,
+  direction,
+}: {
+  post: { slug: string; title: string };
+  direction: "older" | "newer";
+}) {
+  const newer = direction === "newer";
+  return (
+    <Link
+      to="/blog/$slug"
+      params={{ slug: post.slug }}
+      preload="intent"
+      className={cn(
+        "group flex min-w-0 items-center gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-muted/50",
+        newer && "text-right sm:flex-row-reverse",
+      )}
+    >
+      {newer ? (
+        <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
+      ) : (
+        <ArrowLeft className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="block text-xs text-muted-foreground">{newer ? "Newer post" : "Older post"}</span>
+        <span className="block truncate text-sm font-semibold text-foreground transition-colors group-hover:text-primary">
+          {post.title}
+        </span>
+      </span>
+    </Link>
+  );
+}
+
 function BlogPostPage() {
   const post = Route.useLoaderData();
 
@@ -156,6 +189,13 @@ function BlogPostPage() {
 
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: HTML is rendered on the server from our own markdown */}
       <article className={proseClasses} dangerouslySetInnerHTML={{ __html: post.html }} />
+
+      {(post.older || post.newer) && (
+        <nav aria-label="Older and newer posts" className="mt-12 grid gap-3 border-t border-border pt-8 sm:grid-cols-2">
+          {post.older ? <NeighbourPostLink post={post.older} direction="older" /> : <div />}
+          {post.newer && <NeighbourPostLink post={post.newer} direction="newer" />}
+        </nav>
+      )}
 
       {post.related.length > 0 && (
         <section className="mt-12 border-t border-border pt-8">

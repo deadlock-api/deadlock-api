@@ -16,10 +16,14 @@ export const fetchBlogPost = createServerFn({ method: "GET" })
   .handler(async ({ data: slug }) => {
     const post = getBlogPost(slug);
     if (!post) return null;
+    const posts = getRecentPosts();
+    const index = posts.findIndex((p) => p.slug === slug);
     return {
       ...toMeta(post),
       html: await renderBlogHtml(post.content),
-      related: getRecentPosts()
+      newer: index > 0 ? toMeta(posts[index - 1]) : null,
+      older: index < posts.length - 1 ? toMeta(posts[index + 1]) : null,
+      related: posts
         .filter((p) => p.slug !== slug)
         .slice(0, 3)
         .map(toMeta),
