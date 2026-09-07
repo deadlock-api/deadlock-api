@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { memo } from "react";
 
 import { Skeleton } from "~/components/ui/skeleton";
@@ -22,9 +23,14 @@ export const HeroName = memo(function HeroName({
 
   if (linkToDetail && hero) {
     return (
-      <a href={`/heroes/${heroSlug(hero.name)}`} className={cn("truncate hover:underline", className)}>
+      <Link
+        to="/heroes/$heroName"
+        params={{ heroName: heroSlug(hero.name) }}
+        preload="intent"
+        className={cn("truncate hover:underline", className)}
+      >
         {hero.name}
-      </a>
+      </Link>
     );
   }
 
