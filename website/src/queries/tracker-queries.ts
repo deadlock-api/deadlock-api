@@ -112,10 +112,15 @@ export interface TrackerMatchDeath {
   time_to_kill_s: number;
 }
 
-export interface TrackerMatchPlayer {
+export interface TrackerPlayerDeaths {
   account_id: number;
   /** 1-12; `TrackerMatchDeath.killer_player_slot` refers to it. */
   player_slot: number;
+  death_details: TrackerMatchDeath[];
+}
+
+export interface TrackerMatchPlayer {
+  account_id: number;
   team: string;
   hero_id: number;
   /** `LANES` id, or 0 when the game assigned none. */
@@ -223,6 +228,8 @@ function maxStat(stats: { [key: string]: number | null | undefined }[] | undefin
   return max;
 }
 
+const MAX_LOBBY_SIZE = 12;
+
 const restTeam = (team: number | null | undefined) => (team == null ? "" : `Team${team}`);
 
 /** `ECitadelTeamObjective`: 0 Core, 1-4 Tier1 lanes, 5-8 Tier2 lanes, 9 Titan, 10-11 shield generators, 12-15 barrack bosses. */
@@ -291,7 +298,6 @@ async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<Track
     mid_boss: claimedMidBosses(info.mid_boss, (boss) => restTeam(boss.team_claimed)),
     players: (info.players ?? []).map((player) => ({
       account_id: player.account_id ?? 0,
-      player_slot: player.player_slot ?? 0,
       team: restTeam(player.team),
       hero_id: player.hero_id ?? 0,
       assigned_lane: player.assigned_lane ?? 0,
@@ -347,7 +353,6 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
           mid_boss: true,
           players: {
             account_id: true,
-            player_slot: true,
             team: true,
             hero_id: true,
             assigned_lane: true,
@@ -381,7 +386,6 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
         mid_boss: claimedMidBosses(match.mid_boss as GraphqlMidBoss[] | null, (boss) => boss.team_claimed ?? ""),
         players: (match.players ?? []).map((player) => ({
           account_id: player.account_id ?? 0,
-          player_slot: player.player_slot ?? 0,
           team: player.team ?? "",
           hero_id: player.hero_id ?? 0,
           assigned_lane: player.assigned_lane ?? 0,
@@ -416,23 +420,26 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
 
 /**
  * Fetched apart from the match metadata: `death_details` is priced at 100 complexity per
- * player on the GraphQL side, which would push the full-lobby query over the server limit.
+ * player on the GraphQL side, which would push the full-lobby metadata query over the server limit.
  */
-export function trackerMatchDeathsQueryOptions(matchId: number, accountId: number) {
+export function trackerMatchDeathsQueryOptions(matchId: number) {
   return queryOptions({
-    queryKey: queryKeys.players.matchDeaths(matchId, accountId),
-    queryFn: async (): Promise<TrackerMatchDeath[]> => {
+    queryKey: queryKeys.players.matchDeaths(matchId),
+    queryFn: async (): Promise<TrackerPlayerDeaths[]> => {
       const { match_players } = await graphql.query({
         match_players: {
-          __args: { where: { match_id: { eq: matchId }, account_id: { eq: accountId } }, limit: 1 },
+          __args: { where: { match_id: { eq: matchId } }, limit: MAX_LOBBY_SIZE },
+          account_id: true,
+          player_slot: true,
           death_details: true,
         },
       });
-      const row = match_players[0];
-      if (row) return deathDetails(row.death_details as RawDeath[] | null);
-      const info = await fetchRestMatchInfo(matchId);
-      const player = info?.players?.find((candidate) => candidate.account_id === accountId);
-      return deathDetails(player?.death_details);
+      const rows = match_players.length > 0 ? match_players : ((await fetchRestMatchInfo(matchId))?.players ?? []);
+      return rows.map((row) => ({
+        account_id: row.account_id ?? 0,
+        player_slot: row.player_slot ?? 0,
+        death_details: deathDetails(row.death_details as RawDeath[] | null),
+      }));
     },
     staleTime: CACHE_DURATIONS.FOREVER,
   });

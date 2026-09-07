@@ -9,7 +9,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { formatMatchDuration, hasLanes, MATCH_MODE_LABELS_BY_ID, type TrackerSummary } from "~/lib/tracker/compute";
 import { computeTeamContribution } from "~/lib/tracker/contribution";
-import { computeDeaths } from "~/lib/tracker/deaths";
+import { computeFights } from "~/lib/tracker/fights";
 import { computeLaneMatchup } from "~/lib/tracker/lane-matchup";
 import { computeObjectiveEvents } from "~/lib/tracker/objectives";
 import { computeSoulLead } from "~/lib/tracker/soul-lead";
@@ -21,7 +21,7 @@ import {
 } from "~/queries/tracker-queries";
 
 import { BuildOrderStrip } from "./BuildOrderStrip";
-import { DeathsStrip } from "./DeathsStrip";
+import { KillsDeathsStrip } from "./KillsDeathsStrip";
 import { LaneMatchupCard } from "./LaneMatchupCard";
 import { PerformanceStrip } from "./PerformanceStrip";
 import { Scoreboard, TEAMS } from "./Scoreboard";
@@ -43,7 +43,7 @@ export function MatchRowDetails({
   // Street Brawl reports lane ids too, but its map has no lanes to speak of.
   const laned = hasLanes(entry);
   const { data: match, isPending, isError } = useQuery(trackerMatchMetadataQueryOptions(matchId));
-  const { data: deathDetails } = useQuery(trackerMatchDeathsQueryOptions(matchId, accountId));
+  const { data: deathRows } = useQuery(trackerMatchDeathsQueryOptions(matchId));
   const { data: itemsById } = useQuery({
     ...itemUpgradesQueryOptions,
     select: (items) => new Map(items.map((item) => [item.id, item])),
@@ -69,9 +69,9 @@ export function MatchRowDetails({
     () => (match ? computeTeamContribution(match.players, accountId) : null),
     [match, accountId],
   );
-  const deaths = useMemo(
-    () => (match && deathDetails ? computeDeaths(deathDetails, match.players) : null),
-    [match, deathDetails],
+  const fights = useMemo(
+    () => (match && deathRows ? computeFights(deathRows, match.players, accountId) : null),
+    [match, deathRows, accountId],
   );
 
   const nameOf = (player: TrackerMatchPlayer) =>
@@ -123,7 +123,7 @@ export function MatchRowDetails({
       {soulLead && <SoulLeadChart lead={soulLead} events={objectiveEvents} />}
       {contribution && <PerformanceStrip entry={entry} contribution={contribution} heroSummary={heroSummary} />}
       {laneMatchup && <LaneMatchupCard matchup={laneMatchup} trackedAccountId={accountId} nameOf={nameOf} />}
-      {deaths && <DeathsStrip summary={deaths} matchDurationS={entry.match_duration_s} nameOf={nameOf} />}
+      {fights && <KillsDeathsStrip fights={fights} matchDurationS={entry.match_duration_s} nameOf={nameOf} />}
       <Scoreboard
         match={match}
         accountId={accountId}
