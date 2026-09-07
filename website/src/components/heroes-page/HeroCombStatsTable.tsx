@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
@@ -174,13 +174,13 @@ export function HeroCombStatsTable({
                 <TableCell>
                   <div className="flex items-center gap-2">
                     {row.hero_ids.map((heroId, i) => (
-                      <>
+                      <Fragment key={heroId}>
                         {i > 0 && <span className="text-2xl">+</span>}
-                        <div key={heroId} className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">
                           <HeroImage heroId={heroId} />
                           <HeroName heroId={heroId} />
                         </div>
-                      </>
+                      </Fragment>
                     ))}
                   </div>
                 </TableCell>
