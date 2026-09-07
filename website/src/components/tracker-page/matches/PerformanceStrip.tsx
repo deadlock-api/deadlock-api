@@ -63,6 +63,8 @@ export function PerformanceStrip({
   // Deltas are taken on the displayed precision so a tiny difference never shows as "+0".
   const spmDelta = Math.round(spm) - Math.round(heroSummary.soulsPerMin);
   const kdaDelta = Number((kda - heroSummary.kdaRatio).toFixed(2));
+  const lastHitsDelta = entry.last_hits - Math.round(heroSummary.avgLastHits);
+  const deniesDelta = entry.denies - Math.round(heroSummary.avgDenies);
   const shots = player.shots_hit + player.shots_missed;
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-md border border-border px-3 py-2">
@@ -75,6 +77,12 @@ export function PerformanceStrip({
       </Tile>
       <Tile label="KDA" value={kda.toFixed(2)}>
         {comparable && <Delta value={kdaDelta} format={(v) => v.toFixed(2)} />}
+      </Tile>
+      <Tile label="Last hits" value={entry.last_hits.toLocaleString("en-US")}>
+        {comparable && <Delta value={lastHitsDelta} format={(v) => v.toLocaleString("en-US")} />}
+      </Tile>
+      <Tile label="Denies" value={entry.denies.toLocaleString("en-US")}>
+        {comparable && <Delta value={deniesDelta} format={(v) => v.toLocaleString("en-US")} />}
       </Tile>
       {shots > 0 && (
         <Tile label="Accuracy" value={percent(player.shots_hit / shots)} title="Shots hit, creeps included" />
