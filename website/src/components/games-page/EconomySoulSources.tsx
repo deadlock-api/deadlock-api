@@ -73,7 +73,7 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
   ];
 
   return (
-    <div className="flex h-full flex-col justify-between gap-5">
+    <div className="@container flex h-full flex-col justify-between gap-5">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {tiles.map((tile) => (
           <div
@@ -87,7 +87,7 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
         ))}
       </div>
 
-      <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
+      <div className="flex flex-col items-center gap-6 @md:flex-row">
         <div className="relative mx-auto aspect-square w-full max-w-[210px] shrink-0 [&_*]:outline-none">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -116,7 +116,7 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
           </div>
         </div>
 
-        <ul className="flex w-full flex-1 flex-col gap-3">
+        <ul className="flex w-full min-w-0 flex-1 flex-col gap-3">
           {breakdown.map((row) => (
             <li key={row.key} className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
