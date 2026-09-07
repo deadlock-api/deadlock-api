@@ -7,7 +7,13 @@ import { useMemo } from "react";
 import { CopyButton } from "~/components/copy-button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
-import { formatMatchDuration, hasLanes, MATCH_MODE_LABELS_BY_ID, type TrackerSummary } from "~/lib/tracker/compute";
+import {
+  brawlRounds,
+  formatMatchDuration,
+  hasLanes,
+  MATCH_MODE_LABELS_BY_ID,
+  type TrackerSummary,
+} from "~/lib/tracker/compute";
 import { computeTeamContribution } from "~/lib/tracker/contribution";
 import { computeFights } from "~/lib/tracker/fights";
 import { computeLaneMatchup } from "~/lib/tracker/lane-matchup";
@@ -42,6 +48,7 @@ export function MatchRowDetails({
   const matchId = entry.match_id;
   // Street Brawl reports lane ids too, but its map has no lanes to speak of.
   const laned = hasLanes(entry);
+  const rounds = brawlRounds(entry);
   const { data: match, isPending, isError } = useQuery(trackerMatchMetadataQueryOptions(matchId));
   const { data: deathRows } = useQuery(trackerMatchDeathsQueryOptions(matchId));
   const { data: itemsById } = useQuery({
@@ -107,6 +114,14 @@ export function MatchRowDetails({
         <span className="@3xl:hidden">
           {MATCH_MODE_LABELS_BY_ID[entry.match_mode] ?? "Unknown"} · {formatMatchDuration(entry.match_duration_s)}
         </span>
+        {rounds && (
+          <span className="tabular-nums">
+            Rounds {rounds.own}–{rounds.enemy}
+            {entry.brawl_avg_round_time_s != null &&
+              entry.brawl_avg_round_time_s > 0 &&
+              ` · ${formatMatchDuration(entry.brawl_avg_round_time_s)} avg round`}
+          </span>
+        )}
         <span className="inline-flex items-center gap-0.5 tabular-nums @4xl:hidden">
           Match {matchId}
           <CopyButton text={String(matchId)} iconOnly title="Copy match ID" className="size-6" />

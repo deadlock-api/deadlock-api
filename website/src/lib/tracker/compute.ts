@@ -45,6 +45,19 @@ export function hasLanes(entry: PlayerMatchHistoryEntry): boolean {
   return entry.game_mode === GAME_MODE_NORMAL;
 }
 
+export interface BrawlRounds {
+  own: number;
+  enemy: number;
+}
+
+/** Street Brawl round score from the player's side, or null for other modes. */
+export function brawlRounds(entry: PlayerMatchHistoryEntry): BrawlRounds | null {
+  if (entry.game_mode !== GAME_MODE_STREET_BRAWL) return null;
+  if (entry.brawl_score_team0 == null || entry.brawl_score_team1 == null) return null;
+  const scores = [entry.brawl_score_team0, entry.brawl_score_team1];
+  return { own: scores[entry.player_team], enemy: scores[1 - entry.player_team] };
+}
+
 export type ResultFilter = "all" | "win" | "loss";
 
 export interface TrackerFilterValues {

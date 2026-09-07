@@ -10,6 +10,7 @@ import { TableCell, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import {
+  brawlRounds,
   formatMatchDuration,
   isWin,
   MATCH_MODE_LABELS_BY_ID,
@@ -56,6 +57,7 @@ export function MatchRow({
 }) {
   const win = isWin(entry);
   const unscored = unscoredOutcome(entry);
+  const rounds = brawlRounds(entry);
   return (
     <TableRow
       ref={ref}
@@ -74,6 +76,11 @@ export function MatchRow({
       <TableCell>
         <div className="flex items-center gap-1">
           <span className={cn("font-bold", win ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS)}>{win ? "W" : "L"}</span>
+          {rounds && (
+            <span className="text-xs text-muted-foreground tabular-nums" title="Rounds won – lost">
+              {rounds.own}–{rounds.enemy}
+            </span>
+          )}
           {entry.abandoned_time_s != null && entry.abandoned_time_s > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
