@@ -12,6 +12,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/players": "Player Analytics",
   "/tracker": "Player Tracker",
   "/streamkit": "Stream Kit",
+  "/data-dumps": "MCP & Data Dumps",
   "/ingest-cache": "Data Ingest",
   "/data-privacy": "Data Privacy",
   "/patron": "Prioritized Fetching",

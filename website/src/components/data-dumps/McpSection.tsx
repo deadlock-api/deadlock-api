@@ -155,7 +155,7 @@ export function McpInstructions() {
                             <HighlightedCode
                               code={step.code.value}
                               language={step.code.language}
-                              className="text-sm break-all whitespace-pre-wrap"
+                              className="text-sm break-all whitespace-pre-wrap [&_code]:pr-9!"
                             />
                             <CopyButton
                               iconOnly
