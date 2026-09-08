@@ -19,6 +19,7 @@ import {
   Tv,
   Upload,
   Users,
+  UsersRound,
   Zap,
 } from "lucide-react";
 
@@ -152,6 +153,12 @@ const analyticsLinks = [
     description: "Ability upgrade paths, skill build popularity, and win rate by leveling order.",
     href: "/abilities",
     icon: ListOrdered,
+  },
+  {
+    title: "Team Builder",
+    description: "Draft a full 6v6, set the lanes, and read the predicted win rate from live matchup data.",
+    href: "/team-builder",
+    icon: UsersRound,
   },
   {
     title: "Leaderboard",
