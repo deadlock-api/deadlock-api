@@ -101,10 +101,10 @@ Ascendant and Eternus duo rate between 53.6% and 54.5%, and the no-history pair 
 The weakest spot is the top. The Ascendant and Eternus group is a few hundred players who mostly know each other and
 meet repeatedly, which is exactly what the detector keys on, so its error rate there is unknown. Friend lists are their
 state at extraction, not at match time, and co-play features also count later games, so pairs that keep queueing
-together are easier to detect, and those tend to be the pairs that win. Among players from no-history pairs, 669
-accounts never played a solo ranked game and won 56.5% with their partner, which looks like boosting, but they are under
-3% of those pairs' games. The intervals cover sampling noise, not detector error, matches we never captured, or who
-chooses to queue with whom.
+together are easier to detect, and those tend to be the pairs that win. We also looked for boosting accounts among the
+new pairs: 669 accounts never played a solo ranked game, only games with their partner, and won 56.5% of them. That is
+the pattern a boosting account would show, but those accounts played under 3% of the new pairs' games, so excluding them
+barely moves the 54%.
 
 </details>
 
