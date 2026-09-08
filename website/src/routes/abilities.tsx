@@ -12,16 +12,15 @@ import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
-import { defaultDateRange } from "~/lib/seasons";
+import { defaultUnixRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
-import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
 import { loadSeasons } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/abilities")({
   component: AbilitiesPage,
   loader: async ({ context: { queryClient } }) => {
-    const [defaultStart, defaultEnd] = defaultDateRange(await loadSeasons(queryClient));
+    const range = defaultUnixRange(await loadSeasons(queryClient));
     await prefetchSafe(
       queryClient.ensureQueryData(
         abilityOrderQueryOptions({
@@ -30,8 +29,7 @@ export const Route = createFileRoute("/abilities")({
           matchMode: DEFAULT_MATCH_MODE,
           minAverageBadge: 0,
           maxAverageBadge: 116,
-          minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
-          maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
+          ...range,
           minMatches: 20,
         }),
       ),

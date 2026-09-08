@@ -15,9 +15,8 @@ import { getPickrateMultiplier } from "~/lib/constants";
 import { findHeroBySlug } from "~/lib/hero-slug";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
-import { defaultDateRange, defaultPrevDateRange, type SeasonInfo } from "~/lib/seasons";
+import { defaultDateRange, defaultPrevDateRange, type SeasonInfo, defaultUnixRange } from "~/lib/seasons";
 import { SITE_URL, seo } from "~/lib/seo";
-import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import {
   filterPlayableHeroes,
   heroesQueryOptions,
@@ -50,7 +49,7 @@ function currentStatsParams(seasons: readonly SeasonInfo[]) {
     maxAverageBadge: DEFAULT_MAX_RANK,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
-    ...currentTimestamps(seasons),
+    ...defaultUnixRange(seasons),
   };
 }
 
@@ -61,7 +60,7 @@ function currentItemStatsParams(seasons: readonly SeasonInfo[]) {
     maxAverageBadge: DEFAULT_MAX_RANK,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
-    ...currentTimestamps(seasons),
+    ...defaultUnixRange(seasons),
   };
 }
 
@@ -70,15 +69,7 @@ function currentBanParams(seasons: readonly SeasonInfo[]) {
     matchMode: DEFAULT_MATCH_MODE,
     minAverageBadge: DEFAULT_MIN_RANK,
     maxAverageBadge: DEFAULT_MAX_RANK,
-    ...currentTimestamps(seasons),
-  };
-}
-
-function currentTimestamps(seasons: readonly SeasonInfo[]) {
-  const [defaultStart, defaultEnd] = defaultDateRange(seasons);
-  return {
-    minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
-    maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
+    ...defaultUnixRange(seasons),
   };
 }
 

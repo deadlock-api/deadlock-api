@@ -2,7 +2,7 @@ import type { RankedSeason } from "deadlock_api_client";
 
 import { type Dayjs, day } from "~/dayjs";
 import { PATCHES } from "~/lib/constants";
-import { registerExactBoundaries } from "~/lib/time-normalize";
+import { normalizeUnixCeil, normalizeUnixFloor, registerExactBoundaries } from "~/lib/time-normalize";
 
 export interface SeasonInfo {
   id: string;
@@ -72,4 +72,15 @@ export function defaultDateRange(seasons: readonly SeasonInfo[]): [Dayjs | undef
 export function defaultPrevDateRange(seasons: readonly SeasonInfo[]): [Dayjs | undefined, Dayjs | undefined] {
   if (!currentSeason(seasons)) return [PATCHES[1].startDate, PATCHES[0].startDate];
   return previousSeasonRange(seasons, 0);
+}
+
+/** `defaultDateRange` as normalized unix bounds, in the shape the analytics request params take. */
+export function defaultUnixRange(seasons: readonly SeasonInfo[]) {
+  const [start, end] = defaultDateRange(seasons);
+  return { minUnixTimestamp: normalizeUnixFloor(start) ?? 0, maxUnixTimestamp: normalizeUnixCeil(end) };
+}
+
+export function defaultPrevUnixRange(seasons: readonly SeasonInfo[]) {
+  const [start, end] = defaultPrevDateRange(seasons);
+  return { minUnixTimestamp: normalizeUnixFloor(start) ?? 0, maxUnixTimestamp: normalizeUnixCeil(end) };
 }

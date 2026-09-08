@@ -13,9 +13,8 @@ import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
-import { defaultDateRange, defaultPrevDateRange } from "~/lib/seasons";
+import { defaultUnixRange, defaultPrevUnixRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
-import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import { itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
@@ -61,10 +60,8 @@ export const Route = createFileRoute("/items/")({
   component: ItemsPage,
   loader: async ({ context: { queryClient } }) => {
     const seasons = await loadSeasons(queryClient);
-    const [defaultStart, defaultEnd] = defaultDateRange(seasons);
-    const [prevStart, prevEnd] = defaultPrevDateRange(seasons);
-    const minUnixTimestamp = normalizeUnixFloor(defaultStart) ?? 0;
-    const maxUnixTimestamp = normalizeUnixCeil(defaultEnd);
+    const range = defaultUnixRange(seasons);
+    const prevRange = defaultPrevUnixRange(seasons);
     const common = {
       minMatches: 10,
       heroId: null,
@@ -76,15 +73,12 @@ export const Route = createFileRoute("/items/")({
       matchMode: DEFAULT_MATCH_MODE,
     };
     const [stats, , items] = await Promise.all([
-      prefetchSafe(
-        queryClient.ensureQueryData(itemStatsQueryOptions({ ...common, minUnixTimestamp, maxUnixTimestamp })),
-      ),
+      prefetchSafe(queryClient.ensureQueryData(itemStatsQueryOptions({ ...common, ...range }))),
       prefetchSafe(
         queryClient.ensureQueryData(
           itemStatsQueryOptions({
             ...common,
-            minUnixTimestamp: normalizeUnixFloor(prevStart) ?? 0,
-            maxUnixTimestamp: normalizeUnixCeil(prevEnd),
+            ...prevRange,
           }),
         ),
       ),

@@ -21,9 +21,8 @@ import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { type HeroTab, useHeroFilters } from "~/hooks/useHeroFilters";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { prefetchSafe } from "~/lib/prefetch-safe";
-import { defaultDateRange, defaultPrevDateRange, type SeasonInfo } from "~/lib/seasons";
+import { type SeasonInfo, defaultUnixRange, defaultPrevUnixRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
-import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { heroesQueryOptions, loadSeasons, type SlimHero } from "~/queries/asset-queries";
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
 import { heroScoreboardQueryOptions } from "~/queries/hero-scoreboard-query";
@@ -70,13 +69,11 @@ const DEFAULT_MIN_RANK = 91;
 const DEFAULT_MAX_RANK = 116;
 
 function defaultHeroStatsRanges(seasons: readonly SeasonInfo[]) {
-  const [defaultStart, defaultEnd] = defaultDateRange(seasons);
-  const [prevStart, prevEnd] = defaultPrevDateRange(seasons);
+  const prev = defaultPrevUnixRange(seasons);
   return {
-    minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
-    maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
-    prevMinUnixTimestamp: normalizeUnixFloor(prevStart) ?? 0,
-    prevMaxUnixTimestamp: normalizeUnixCeil(prevEnd),
+    ...defaultUnixRange(seasons),
+    prevMinUnixTimestamp: prev.minUnixTimestamp,
+    prevMaxUnixTimestamp: prev.maxUnixTimestamp,
   };
 }
 

@@ -16,9 +16,8 @@ import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
-import { defaultDateRange, defaultPrevDateRange } from "~/lib/seasons";
+import { defaultUnixRange, defaultPrevUnixRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
-import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { loadSeasons } from "~/queries/asset-queries";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
@@ -32,13 +31,12 @@ export const Route = createFileRoute("/games")({
   component: Games,
   loader: async ({ context: { queryClient } }) => {
     const seasons = await loadSeasons(queryClient);
-    const [defaultStart, defaultEnd] = defaultDateRange(seasons);
-    const [prevStart, prevEnd] = defaultPrevDateRange(seasons);
+    const range = defaultUnixRange(seasons);
+    const prevRange = defaultPrevUnixRange(seasons);
     const baseParams: AnalyticsApiGameStatsRequest = {
       gameMode: "normal",
       matchMode: DEFAULT_MATCH_MODE,
-      minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
-      maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
+      ...range,
       minAverageBadge: 0,
       maxAverageBadge: 116,
     };
@@ -48,8 +46,7 @@ export const Route = createFileRoute("/games")({
         queryClient.ensureQueryData(
           gameStatsQueryOptions({
             ...baseParams,
-            minUnixTimestamp: normalizeUnixFloor(prevStart) ?? 0,
-            maxUnixTimestamp: normalizeUnixCeil(prevEnd),
+            ...prevRange,
             bucket: "no_bucket",
           }),
         ),

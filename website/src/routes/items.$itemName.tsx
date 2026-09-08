@@ -13,9 +13,8 @@ import { useSeasons } from "~/hooks/useSeasons";
 import { findItemBySlug } from "~/lib/item-slug";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
-import { defaultDateRange, type SeasonInfo } from "~/lib/seasons";
+import { type SeasonInfo, defaultUnixRange } from "~/lib/seasons";
 import { SITE_URL, seo } from "~/lib/seo";
-import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { filterShopableItems, itemQueryOptions, itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
@@ -30,14 +29,6 @@ const GAME_MODE = "normal" as const;
 
 const SLOT_LABEL = { weapon: "Weapon", spirit: "Spirit", vitality: "Vitality" } as const;
 
-function currentTimestamps(seasons: readonly SeasonInfo[]) {
-  const [defaultStart, defaultEnd] = defaultDateRange(seasons);
-  return {
-    minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
-    maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
-  };
-}
-
 // Mirrors the items page's default request so both pages share one cache entry.
 function currentItemStatsParams(seasons: readonly SeasonInfo[]) {
   return {
@@ -49,7 +40,7 @@ function currentItemStatsParams(seasons: readonly SeasonInfo[]) {
     maxBoughtAtS: undefined,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
-    ...currentTimestamps(seasons),
+    ...defaultUnixRange(seasons),
   };
 }
 
@@ -61,7 +52,7 @@ function currentHeroStatsParams(seasons: readonly SeasonInfo[]) {
     maxAverageBadge: DEFAULT_MAX_RANK,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
-    ...currentTimestamps(seasons),
+    ...defaultUnixRange(seasons),
   };
 }
 

@@ -18,9 +18,8 @@ import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
-import { defaultDateRange } from "~/lib/seasons";
+import { defaultUnixRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
-import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { loadSeasons } from "~/queries/asset-queries";
 import { playerScoreboardQueryOptions } from "~/queries/player-scoreboard-query";
 import { steamProfileBatches, steamProfilesQueryOptions } from "~/queries/steam-queries";
@@ -36,7 +35,7 @@ const MAX_ENTRIES = 1000;
 export const Route = createFileRoute("/players")({
   component: PlayersPage,
   loader: async ({ context: { queryClient } }) => {
-    const [defaultStart, defaultEnd] = defaultDateRange(await loadSeasons(queryClient));
+    const range = defaultUnixRange(await loadSeasons(queryClient));
     const scoreboard = await prefetchSafe(
       queryClient.ensureQueryData(
         playerScoreboardQueryOptions({
@@ -47,8 +46,7 @@ export const Route = createFileRoute("/players")({
           minMatches: 0,
           minAverageBadge: 0,
           maxAverageBadge: 116,
-          minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
-          maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
+          ...range,
           start: 0,
           limit: MAX_ENTRIES,
         }),

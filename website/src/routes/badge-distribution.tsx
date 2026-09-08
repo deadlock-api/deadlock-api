@@ -14,9 +14,8 @@ import { combineQueryStates } from "~/components/QueryRenderer";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { prefetchSafe } from "~/lib/prefetch-safe";
-import { defaultDateRange } from "~/lib/seasons";
+import { defaultUnixRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
-import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { loadSeasons } from "~/queries/asset-queries";
 import { badgeDistributionQueryOptions } from "~/queries/badge-distribution-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -44,13 +43,12 @@ function findMedianRankName(
 export const Route = createFileRoute("/badge-distribution")({
   component: BadgeDistributionPage,
   loader: async ({ context: { queryClient } }) => {
-    const [defaultStart, defaultEnd] = defaultDateRange(await loadSeasons(queryClient));
+    const range = defaultUnixRange(await loadSeasons(queryClient));
     const [distribution, ranks] = await Promise.all([
       prefetchSafe(
         queryClient.ensureQueryData(
           badgeDistributionQueryOptions({
-            minUnixTimestamp: normalizeUnixFloor(defaultStart) ?? 0,
-            maxUnixTimestamp: normalizeUnixCeil(defaultEnd),
+            ...range,
           }),
         ),
       ),
