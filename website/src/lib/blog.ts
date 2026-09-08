@@ -14,6 +14,8 @@ export interface BlogPost {
   date: string;
   author: string;
   tags: string[];
+  /** Estimated time to read the post, at a typical 220 words per minute. */
+  readingMinutes: number;
   content: string;
 }
 
@@ -83,6 +85,7 @@ function loadPosts(): BlogPost[] {
       date: meta.date ?? "1970-01-01",
       author: meta.author ?? "Deadlock API Team",
       tags: meta.tags ?? [],
+      readingMinutes: Math.max(1, Math.round(content.split(/\s+/).length / 220)),
       content,
     });
   }

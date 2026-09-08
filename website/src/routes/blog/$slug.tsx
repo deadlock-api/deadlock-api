@@ -1,5 +1,5 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRight, Calendar, Tag } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, Clock, Tag } from "lucide-react";
 
 import { fetchBlogPost } from "~/lib/blog-fns";
 import { SITE_URL, getBlogOGImage, seo } from "~/lib/seo";
@@ -170,6 +170,11 @@ function BlogPostPage() {
           </span>
           <span className="text-border">|</span>
           <span>{post.author}</span>
+          <span className="text-border">|</span>
+          <span className="flex items-center gap-1.5">
+            <Clock className="size-3.5" />
+            {post.readingMinutes} min read
+          </span>
         </div>
         <div className="flex flex-wrap gap-2">
           {post.tags.map((tag) => (

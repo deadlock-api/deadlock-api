@@ -4,8 +4,8 @@ import { type BlogPost, getBlogPost, getRecentPosts, renderBlogHtml } from "~/li
 
 export type BlogPostMeta = Omit<BlogPost, "content">;
 
-function toMeta({ slug, title, description, date, author, tags }: BlogPost): BlogPostMeta {
-  return { slug, title, description, date, author, tags };
+function toMeta({ slug, title, description, date, author, tags, readingMinutes }: BlogPost): BlogPostMeta {
+  return { slug, title, description, date, author, tags, readingMinutes };
 }
 
 // Markdown sources and the rendering pipeline stay on the server; the client only receives metadata and HTML.

@@ -1,5 +1,5 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { ArrowRight, Calendar, Tag } from "lucide-react";
+import { ArrowRight, Calendar, Clock, Tag } from "lucide-react";
 
 import { fetchBlogPosts } from "~/lib/blog-fns";
 import { seo } from "~/lib/seo";
@@ -63,6 +63,11 @@ function BlogIndex() {
                 </span>
                 <span className="text-border">|</span>
                 <span>{post.author}</span>
+                <span className="text-border">|</span>
+                <span className="flex items-center gap-1.5">
+                  <Clock className="size-3.5" />
+                  {post.readingMinutes} min read
+                </span>
               </div>
 
               <h2 className="mb-2 text-lg font-semibold text-foreground transition-colors group-hover:text-primary">
