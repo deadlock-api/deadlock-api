@@ -212,6 +212,8 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub stats_ability_kills: Vec<u32>,
     #[serde(rename = "stats.headshot_kills")]
     pub stats_headshot_kills: Vec<u32>,
+    #[serde(rename = "stats.custom_user_stats")]
+    pub stats_custom_user_stats: Vec<Vec<(String, u32)>>,
     #[serde(rename = "power_up_buffs.type")]
     pub power_up_buffs_type: Vec<String>,
     #[serde(rename = "power_up_buffs.value")]
@@ -602,6 +604,23 @@ impl From<(&MatchInfo, bool, Players)> for ClickhouseMatchPlayer {
                 .stats
                 .iter()
                 .map(PlayerStats::headshot_kills)
+                .collect(),
+            stats_custom_user_stats: value
+                .stats
+                .iter()
+                .map(|s| {
+                    s.custom_user_stats
+                        .iter()
+                        .map(|v| {
+                            let name = match_info
+                                .custom_user_stats
+                                .iter()
+                                .find(|n| n.id == v.id)
+                                .map_or_else(|| v.id().to_string(), |n| n.name().to_owned());
+                            (name, v.value())
+                        })
+                        .collect()
+                })
                 .collect(),
             power_up_buffs_type: value
                 .power_up_buffs
