@@ -6,6 +6,7 @@ import { HeroImage } from "~/components/HeroImage";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { useHeroById } from "~/hooks/useAssetById";
+import { usePaginationQueryState } from "~/hooks/usePaginationQueryState";
 import { cn } from "~/lib/utils";
 
 import { LeaderboardControls } from "./LeaderboardControls";
@@ -23,9 +24,14 @@ interface LeaderboardTableRowProps {
 }
 
 export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableProps) {
-  const [currentPage, setCurrentPage] = useState(0);
-  const [itemsPerPage, setItemsPerPage] = useState(25);
-  const [searchQuery, setSearchQuery] = useState("");
+  const {
+    searchQuery,
+    setSearchQuery,
+    currentPage: requestedPage,
+    setCurrentPage,
+    itemsPerPage,
+    setItemsPerPage,
+  } = usePaginationQueryState();
   const [highlightedRank, setHighlightedRank] = useState<number | null>(null);
 
   const sortedEntries = useMemo(
@@ -56,6 +62,8 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
     () => Math.ceil(filteredEntries.length / itemsPerPage),
     [filteredEntries.length, itemsPerPage],
   );
+  // A region or hero switch can leave the URL's page past the end of the new board.
+  const currentPage = Math.min(requestedPage, Math.max(0, totalPages - 1));
 
   const paginatedEntries = useMemo(() => {
     const startIndex = currentPage * itemsPerPage;
@@ -69,7 +77,7 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
       setCurrentPage(Math.floor(index / itemsPerPage));
       setHighlightedRank(rank);
     },
-    [filteredEntries, itemsPerPage],
+    [filteredEntries, itemsPerPage, setCurrentPage],
   );
 
   const controls = (

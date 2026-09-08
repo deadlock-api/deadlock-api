@@ -7,7 +7,7 @@ export interface LeaderboardControlsProps {
   itemsPerPage: number;
   setItemsPerPage: (items: number) => void;
   currentPage: number;
-  setCurrentPage: (page: number | ((prev: number) => number)) => void;
+  setCurrentPage: (page: number) => void;
   totalPages: number;
   onJumpToRank: (rank: number) => void;
 }

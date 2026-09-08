@@ -3,12 +3,13 @@ import { Link } from "@tanstack/react-router";
 import type { PlayerEntry } from "deadlock_api_client";
 import Fuse from "fuse.js";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
 import { PaginationControls } from "~/components/PaginationControls";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { usePaginationQueryState } from "~/hooks/usePaginationQueryState";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -36,9 +37,14 @@ export function ScoreboardTable({
   onSortByChange,
   onSortDirectionChange,
 }: ScoreboardTableProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(0);
-  const [itemsPerPage, setItemsPerPage] = useState(25);
+  const {
+    searchQuery,
+    setSearchQuery,
+    currentPage: requestedPage,
+    setCurrentPage,
+    itemsPerPage,
+    setItemsPerPage,
+  } = usePaginationQueryState();
 
   const steamAccountIds = useMemo(
     () => entries.map((e) => e.account_id).filter((id): id is number => id != null),
@@ -86,6 +92,10 @@ export function ScoreboardTable({
     [searchQuery, enrichedEntries, fuse],
   );
 
+  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / itemsPerPage));
+  // A filter change can leave the URL's page past the end of the new board.
+  const currentPage = Math.min(requestedPage, totalPages - 1);
+
   const paginatedEntries = useMemo(
     () => filteredEntries.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage),
     [filteredEntries, currentPage, itemsPerPage],
@@ -99,8 +109,6 @@ export function ScoreboardTable({
     setSearchQuery(query);
     setCurrentPage(0);
   };
-
-  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / itemsPerPage));
 
   const controls = (
     <PaginationControls
