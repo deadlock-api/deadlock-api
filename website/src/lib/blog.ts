@@ -70,6 +70,13 @@ const mdModules = import.meta.glob<string>("../../content/blog/*.md", {
   import: "default",
 });
 
+// Chart SVGs are inlined into the post HTML so they render as real vector markup rather than <img> elements.
+const svgModules = import.meta.glob<string>("../../public/blog/images/*.svg", {
+  eager: true,
+  query: "?raw",
+  import: "default",
+});
+
 let cache: BlogPost[] | null = null;
 
 function loadPosts(): BlogPost[] {
@@ -109,6 +116,21 @@ export function getAllSlugs(): string[] {
 // A paragraph holding only an image becomes a full-width figure; the image title is the visible caption, the alt
 // stays a short description. Chart images are generated at a 4:3 aspect ratio, which the img reserves so the page
 // does not shift while they load. The first image is usually above the fold, so it loads eagerly.
+function inlineSvg(src: string, alt: string): string | null {
+  const match = src.match(/^\/blog\/images\/([\w-]+\.svg)$/);
+  const raw = match ? svgModules[`../../public/blog/images/${match[1]}`] : undefined;
+  if (!raw) return null;
+  const escapedAlt = alt.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  return raw
+    .replace(/<\?xml[^>]*>\s*/, "")
+    .replace(/<!DOCTYPE[^>]*>\s*/, "")
+    .replace(/<metadata>[\s\S]*?<\/metadata>\s*/, "")
+    .replace(/<svg\b([^>]*)>/, (_, attrs: string) => {
+      const kept = attrs.replace(/\s(?:width|height)="[^"]*"/g, "");
+      return `<svg${kept} class="w-full h-auto rounded-lg border border-border" role="img" aria-label="${escapedAlt}">`;
+    });
+}
+
 function rehypeBlogFigures() {
   return (tree: Root) => {
     let first = true;
@@ -117,6 +139,7 @@ function rehypeBlogFigures() {
       const img = node.children.length === 1 ? node.children[0] : null;
       if (!img || img.type !== "element" || img.tagName !== "img") return;
       const { title, ...props } = img.properties;
+      const svg = inlineSvg(String(props.src ?? ""), String(props.alt ?? ""));
       img.properties = {
         ...props,
         loading: first ? "eager" : "lazy",
@@ -128,7 +151,7 @@ function rehypeBlogFigures() {
         type: "element",
         tagName: "figure",
         properties: { className: ["not-prose", "my-6"] },
-        children: [img],
+        children: [svg ? { type: "raw", value: svg } : img],
       };
       if (typeof title === "string" && title) {
         figure.children.push({
@@ -146,10 +169,10 @@ function rehypeBlogFigures() {
 const markdown = unified()
   .use(remarkParse)
   .use(remarkGfm)
-  .use(remarkRehype)
+  .use(remarkRehype, { allowDangerousHtml: true })
   .use(rehypeBlogFigures)
   .use(rehypeHighlight)
-  .use(rehypeStringify);
+  .use(rehypeStringify, { allowDangerousHtml: true });
 
 export async function renderBlogHtml(content: string): Promise<string> {
   return String(await markdown.process(content));
