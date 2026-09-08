@@ -1,99 +1,16 @@
 import { useLocation } from "@tanstack/react-router";
-import type { LucideIcon } from "lucide-react";
-import {
-  BarChart3,
-  BookOpen,
-  Database,
-  Gamepad2,
-  GraduationCap,
-  HardDrive,
-  Home,
-  ListOrdered,
-  Map,
-  Medal,
-  Menu,
-  Radio,
-  Shield,
-  ShoppingBag,
-  Swords,
-  Trophy,
-  Users,
-  UserSearch,
-  UsersRound,
-  Zap,
-} from "lucide-react";
+import { BarChart3, Menu, Radio, SearchIcon } from "lucide-react";
 import { VisuallyHidden } from "radix-ui";
 import { useState } from "react";
 
 import { PrefetchAnchor } from "~/components/PrefetchAnchor";
+import { QuickSearchButton, useQuickSearch } from "~/components/QuickSearch";
 import { SmartLink } from "~/components/SmartLink";
 import { Button } from "~/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "~/components/ui/sheet";
 import { API_ORIGIN } from "~/lib/constants";
+import { bottomNavLinks, type NavLink, navGroups, topLinks } from "~/lib/site-nav";
 import { cn } from "~/lib/utils";
-
-interface NavLink {
-  to: string;
-  label: string;
-  icon: LucideIcon;
-  special?: boolean;
-}
-
-interface NavGroup {
-  label: string;
-  links: NavLink[];
-}
-
-const topLinks: NavLink[] = [{ to: "/", label: "Home", icon: Home }];
-
-const navGroups: NavGroup[] = [
-  {
-    label: "Patron",
-    links: [
-      { to: "/patron", label: "Prioritized Fetching", icon: Zap, special: true },
-      { to: "/tracker", label: "Player Tracker", icon: UserSearch },
-    ],
-  },
-  {
-    label: "Analytics",
-    links: [
-      { to: "/games", label: "Games", icon: BarChart3 },
-      { to: "/heroes", label: "Heroes", icon: Swords },
-      { to: "/items", label: "Items", icon: ShoppingBag },
-      { to: "/abilities", label: "Abilities", icon: ListOrdered },
-      { to: "/players", label: "Players", icon: Users },
-      { to: "/team-builder", label: "Team Builder", icon: UsersRound },
-    ],
-  },
-  {
-    label: "Community",
-    links: [
-      { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
-      { to: "/badge-distribution", label: "Rank Distribution", icon: Medal },
-      { to: "/heatmap", label: "Kill Heatmap", icon: Map },
-    ],
-  },
-  {
-    label: "Tools",
-    links: [
-      { to: "/streamkit", label: "Stream Kit", icon: Radio },
-      { to: "/data-dumps", label: "MCP & Data Dumps", icon: HardDrive },
-      { to: "/blog", label: "Blog", icon: BookOpen },
-    ],
-  },
-  {
-    label: "Games",
-    links: [
-      { to: "/deadlockdle", label: "Deadlockdle", icon: Gamepad2 },
-      { to: "/flashcards", label: "Flashcards", icon: GraduationCap },
-    ],
-  },
-];
-
-const bottomNavLinks: NavLink[] = [
-  { to: "/ingest-cache", label: "Data Ingest", icon: Database },
-  { to: "/data-privacy", label: "Data Privacy", icon: Shield },
-];
 
 const socialLinks = [
   {
@@ -219,6 +136,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </PrefetchAnchor>
       </div>
 
+      <div className="px-3 pt-3">
+        <QuickSearchButton onOpen={onNavigate} />
+      </div>
+
       {/* Navigation */}
       <nav aria-label="Main" className="flex-1 overflow-y-auto px-3 pt-3 pb-1">
         {/* Top links (ungrouped) */}
@@ -319,6 +240,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export function MobileMenuButton() {
   const [open, setOpen] = useState(false);
+  const openSearch = useQuickSearch();
 
   return (
     <div className="md:hidden">
@@ -330,6 +252,15 @@ export function MobileMenuButton() {
         aria-label="Open menu"
       >
         <Menu className="h-5 w-5" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={openSearch}
+        className="glass fixed top-3 right-3 z-40 border border-sidebar-border"
+        aria-label="Search"
+      >
+        <SearchIcon className="h-5 w-5" />
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>
