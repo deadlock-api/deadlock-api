@@ -16,8 +16,8 @@ import type { TrackerMatchItem, TrackerMatchMetadata, TrackerMatchPlayer } from 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 
 export const TEAMS = [
-  { key: "Team0", name: "The Amber Hand" },
-  { key: "Team1", name: "The Sapphire Flame" },
+  { key: "Team0", name: "The Hidden King" },
+  { key: "Team1", name: "The Archmother" },
 ] as const;
 
 function StatCell({

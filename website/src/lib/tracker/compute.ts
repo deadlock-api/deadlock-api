@@ -694,7 +694,7 @@ export interface OutcomeSplit {
 export interface OutcomeSplits {
   /** Fixed game-length buckets, shortest first; empty buckets are kept so the rows line up. */
   byDuration: OutcomeSplit[];
-  /** Index 0 = Amber Hand, 1 = Sapphire Flame. */
+  /** Index 0 = The Hidden King, 1 = The Archmother. */
   bySide: OutcomeSplit[];
 }
 
@@ -705,7 +705,7 @@ const DURATION_BUCKETS: { label: string; maxMinutes: number }[] = [
   { label: "Over 45 min", maxMinutes: Number.POSITIVE_INFINITY },
 ];
 
-export const SIDE_NAMES = ["Amber Hand", "Sapphire Flame"];
+export const SIDE_NAMES = ["The Hidden King", "The Archmother"];
 
 export function computeOutcomeSplits(entries: PlayerMatchHistoryEntry[]): OutcomeSplits {
   const byDuration = DURATION_BUCKETS.map((bucket) => ({ label: bucket.label, matches: 0, wins: 0 }));
