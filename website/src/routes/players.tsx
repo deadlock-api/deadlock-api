@@ -34,7 +34,12 @@ const MAX_ENTRIES = 1000;
 
 export const Route = createFileRoute("/players")({
   component: PlayersPage,
-  loader: async ({ context: { queryClient } }) => {
+  // The hero filter lives in the URL under nuqs; read it here so the loader warms the board the page will show.
+  loaderDeps: ({ search }) => {
+    const hero = (search as { hero?: unknown }).hero;
+    return { heroId: typeof hero === "number" && Number.isInteger(hero) ? hero : undefined };
+  },
+  loader: async ({ context: { queryClient }, deps }) => {
     const range = defaultUnixRange(await loadSeasons(queryClient));
     const scoreboard = await prefetchSafe(
       queryClient.ensureQueryData(
@@ -43,6 +48,7 @@ export const Route = createFileRoute("/players")({
           sortDirection: "desc",
           gameMode: "normal",
           matchMode: DEFAULT_MATCH_MODE,
+          heroId: deps.heroId,
           minMatches: 0,
           minAverageBadge: 0,
           maxAverageBadge: 116,
