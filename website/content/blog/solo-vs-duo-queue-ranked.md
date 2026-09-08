@@ -7,7 +7,8 @@ tags:
   - data
   - meta
 ---
- Players queueing as a duo won **50.9%** of their ranked games. Solo players won **50.0%**. That 0.9-point gap hides two
+
+Players queueing as a duo won **50.9%** of their ranked games. Solo players won **50.0%**. That 0.9-point gap hides two
 very different groups: pairs with no game together in our records before ranked launched won 54% of their games, while
 pairs with more than 500 shared games won 49%.
 
@@ -40,8 +41,8 @@ at Phantom, and 148 of the 151 players whose usual rank is Ascendant or Eternus.
 ## New partners win more together, long-standing partners do not
 
 For each detected pair, we counted the matches in our records where the two shared a team before ranked launched, in any
-mode. "No history" means none in our records, which miss some matches. Of 74,391 pairs, 10,807 had none, and they won
-**54.1%** of their ranked games together. Pairs with more than 500 shared games won **49.4%**.
+mode. Of 74,391 pairs, 10,807 had no history, and they won **54.1%** of their ranked games together. Pairs with more
+than 500 shared games won **49.4%**.
 
 ![Win rate of the same players with their partner and alone, by how much the pair had played together before ranked](/blog/images/duo-queue-new-vs-veteran-duos.svg "The same players, in games with their most frequent partner and in their own solo games, grouped by how many games the pair had shared before ranked launched. Bars are 95% intervals.")
 
@@ -50,19 +51,16 @@ their solo games. Pairs where both accounts already had 200 or more games before
 pairs with a brand-new account won 50.7%.
 
 These are different pairs, not the same pair over time. Following only the 438 no-history pairs that reached twenty
-games together, the win rate fell from 62.4% in games 1 to 5 to 54.5% in games 16 to 20. Pairs that keep queueing are
-self-selected, and we cannot separate matchmaking, stronger opponents, who keeps queueing, or duoing at different hours
-and in a different mood than soloing.
+games together, the win rate fell from 62.4% in games 1 to 5 to 54.5% in games 16 to 20.
 
 ## How much rank a duo is worth
 
 ![Subranks climbed per 100 games for players who never duo and players who mostly duo, by starting rank](/blog/images/duo-queue-duo-rank.svg "Mean rank progress per 100 captured games for players with at least thirty calibrated games, grouped by their rank at their first game after calibration. Bars are 95% intervals across players.")
 
-A subrank is 1,000 rank points, six subranks make a tier, and across calibrated games a win gained 321 points on average
-while a loss cost 207. The whole ladder drifts upward: players who never queued as a duo still climbed **5.8 subranks
-per 100 games** overall, and players with three quarters or more of their games as a duo climbed 6.9. At the same
-starting rank the difference is one to one and a half subranks per 100 games. Nobody was placed above Oracle at
-calibration, so the chart has no group for Phantom and above.
+Across calibrated games a win gained 321 rank points on average while a loss cost 207, out of the 1,000 that make a
+subrank. The whole ladder drifts upward: players who never queued as a duo still climbed **5.8 subranks per 100 games**
+overall, and players with three quarters or more of their games as a duo climbed 6.9. At the same starting rank the
+difference is one to one and a half subranks per 100 games.
 
 That extra climb lasts only while a pair wins more than the players around it, because climbing brings stronger
 opponents. Across 194,054 matches with all twelve players calibrated, the team whose average rank was one subrank higher
