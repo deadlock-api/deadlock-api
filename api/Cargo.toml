@@ -21,14 +21,14 @@ redis = { version = "1.6.0", default-features = false, features = ["tokio-comp"]
 clickhouse = { version = "0.15.2", features = ["chrono", "uuid"] }
 sqlx = { version = "0.9.0", features = ["chrono", "derive", "postgres", "runtime-tokio", "uuid"] }
 uuid = { version = "1.26.0", features = ["serde", "v4"] }
-cached = { version = "3.1", features = ["async"] }
+cached = { version = "4.0", features = ["async"] }
 axum = "0.8.9"
 utoipa-axum = "0.2.0"
 utoipa = { version = "5.5.0", features = ["axum_extras", "chrono", "uuid"] }
 serde = { version = "1.0.229", features = ["derive"] }
 chrono = { version = "0.4.45", features = ["serde"] }
 serde_json = "1.0.151"
-object_store = { version = "0.13", features = ["aws"], default-features = false }
+object_store = { version = "0.14", features = ["aws"], default-features = false }
 tower = { version = "0.5.3", features = ["limit", "tokio"] }
 tower-layer = "0.3.3"
 tower-service = "0.3.3"
@@ -45,7 +45,7 @@ base64 = "0.23.1"
 tryhard = "0.5.2"
 async-compression = { version = "0.4.43", features = ["bzip2", "zstd", "tokio"] }
 bzip2 = "0.6"
-zstd = "0.13"
+zstd = "0.14"
 arrow = { version = "59", features = ["json"] }
 strum = { version = "0.28.0", features = ["derive"] }
 axum-extra = { version = "0.12.6", features = ["query"] }
