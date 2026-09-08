@@ -37,6 +37,10 @@ const HeroTopItems = lazy(() =>
   import("~/components/heroes-page/HeroTopItems").then((m) => ({ default: m.HeroTopItems })),
 );
 
+const HeroWinRateByRank = lazy(() =>
+  import("~/components/heroes-page/HeroWinRateByRank").then((m) => ({ default: m.HeroWinRateByRank })),
+);
+
 const DEFAULT_MIN_RANK = 91;
 const DEFAULT_MAX_RANK = 116;
 const GAME_MODE = "normal" as const;
@@ -47,6 +51,16 @@ function currentStatsParams(seasons: readonly SeasonInfo[]) {
     minHeroMatchesTotal: 0,
     minAverageBadge: DEFAULT_MIN_RANK,
     maxAverageBadge: DEFAULT_MAX_RANK,
+    gameMode: GAME_MODE,
+    matchMode: DEFAULT_MATCH_MODE,
+    ...defaultUnixRange(seasons),
+  };
+}
+
+function byRankStatsParams(seasons: readonly SeasonInfo[]) {
+  return {
+    minHeroMatches: 0,
+    minHeroMatchesTotal: 0,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
     ...defaultUnixRange(seasons),
@@ -266,6 +280,14 @@ function HeroDetailPage() {
               heroMatches={summary.matches}
               request={currentItemStatsParams(seasons)}
             />
+          </Suspense>
+        </ChunkErrorBoundary>
+      )}
+
+      {summary && (
+        <ChunkErrorBoundary>
+          <Suspense fallback={<LoadingLogo />}>
+            <HeroWinRateByRank heroId={heroId} heroName={heroName} request={byRankStatsParams(seasons)} />
           </Suspense>
         </ChunkErrorBoundary>
       )}
