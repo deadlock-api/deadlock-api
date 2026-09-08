@@ -17,14 +17,21 @@ import { seo } from "~/lib/seo";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
 import { loadSeasons } from "~/queries/asset-queries";
 
+const DEFAULT_HERO_ID = 2;
+
 export const Route = createFileRoute("/abilities")({
   component: AbilitiesPage,
-  loader: async ({ context: { queryClient } }) => {
+  // The hero filter lives in the URL under nuqs; read it here so the loader warms the hero the page will show.
+  loaderDeps: ({ search }) => {
+    const heroId = (search as { hero_id?: unknown }).hero_id;
+    return { heroId: typeof heroId === "number" && Number.isInteger(heroId) ? heroId : DEFAULT_HERO_ID };
+  },
+  loader: async ({ context: { queryClient }, deps }) => {
     const range = defaultUnixRange(await loadSeasons(queryClient));
     await prefetchSafe(
       queryClient.ensureQueryData(
         abilityOrderQueryOptions({
-          heroId: 2,
+          heroId: deps.heroId,
           gameMode: "normal",
           matchMode: DEFAULT_MATCH_MODE,
           minAverageBadge: 0,
@@ -45,7 +52,7 @@ export const Route = createFileRoute("/abilities")({
 });
 
 function AbilitiesPage() {
-  const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(2));
+  const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(DEFAULT_HERO_ID));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const { mode, setMode, gameMode, matchMode } = useModeState();
