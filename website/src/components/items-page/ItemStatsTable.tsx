@@ -12,6 +12,7 @@ import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import { ITEM_SLOTS, ItemSlotSelector } from "~/components/selectors/ItemSlotSelector";
 import { ItemTierSelector } from "~/components/selectors/ItemTierSelector";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { itemSlug } from "~/lib/item-slug";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
@@ -483,6 +484,7 @@ export function ItemStatsTable({
     parseAsSetOf(parseAsInteger).withDefault(new Set()),
   );
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [nameQuery, setNameQuery] = useState("");
 
   const handleApply = (nextInclude: Set<number>, nextExclude: Set<number>) => {
     setIncludeItems(nextInclude);
@@ -546,6 +548,8 @@ export function ItemStatsTable({
     });
   }, [data, sort]);
 
+  const nameTerm = nameQuery.trim().toLowerCase();
+
   const toggleSort = (field: SortField) => {
     let newSort: SortState;
     if (sort.field === field) {
@@ -604,6 +608,14 @@ export function ItemStatsTable({
         </div>
         {!hideItemTierFilter && (
           <>
+            <Input
+              type="search"
+              value={nameQuery}
+              onChange={(e) => setNameQuery(e.target.value)}
+              placeholder="Filter by name…"
+              aria-label="Filter items by name"
+              className="h-8 w-40 self-end"
+            />
             <ItemSlotSelector selectedSlots={itemSlots} onSlotsSelected={setItemSlots} />
             <ItemTierSelector onItemTiersSelected={setItemTiers} selectedItemTiers={itemTiers} />
           </>
@@ -677,7 +689,9 @@ export function ItemStatsTable({
                 {processedData
                   .filter(
                     (row) =>
-                      itemTiers.includes(row.itemTier) && (!row.item || itemSlots.includes(row.item.item_slot_type)),
+                      itemTiers.includes(row.itemTier) &&
+                      (!row.item || itemSlots.includes(row.item.item_slot_type)) &&
+                      (!nameTerm || (row.item?.name ?? "").toLowerCase().includes(nameTerm)),
                   )
                   .map((row, index) => (
                     <ItemStatsTableRow
