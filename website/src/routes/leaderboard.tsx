@@ -16,10 +16,15 @@ import { leaderboardQueryOptions } from "~/queries/leaderboard-queries";
 
 export const Route = createFileRoute("/leaderboard")({
   component: LeaderboardPage,
-  loader: async ({ context: { queryClient } }) => {
+  // The hero filter lives in the URL under nuqs; read it here so the loader warms the board the page will show.
+  loaderDeps: ({ search }) => {
+    const heroId = (search as { hero_id?: unknown }).hero_id;
+    return { heroId: typeof heroId === "number" && Number.isInteger(heroId) ? heroId : null };
+  },
+  loader: async ({ context: { queryClient }, deps }) => {
     // Resolve the default on the server so the client hydrates with the same region.
     const defaultRegion = typeof window === "undefined" ? await fetchDefaultRegion() : getDefaultRegion();
-    await prefetchSafe(queryClient.ensureQueryData(leaderboardQueryOptions(defaultRegion, null)));
+    await prefetchSafe(queryClient.ensureQueryData(leaderboardQueryOptions(defaultRegion, deps.heroId)));
     return { defaultRegion };
   },
   head: () =>

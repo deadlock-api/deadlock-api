@@ -58,13 +58,18 @@ function findWinRateLeader(
 
 export const Route = createFileRoute("/items/")({
   component: ItemsPage,
-  loader: async ({ context: { queryClient } }) => {
+  // The hero filter lives in the URL under nuqs; read it here so the loader warms the hero the page will show.
+  loaderDeps: ({ search }) => {
+    const hero = (search as { hero?: unknown }).hero;
+    return { heroId: typeof hero === "number" && Number.isInteger(hero) ? hero : null };
+  },
+  loader: async ({ context: { queryClient }, deps }) => {
     const seasons = await loadSeasons(queryClient);
     const range = defaultUnixRange(seasons);
     const prevRange = defaultPrevUnixRange(seasons);
     const common = {
       minMatches: 10,
-      heroId: null,
+      heroId: deps.heroId,
       minAverageBadge: 91,
       maxAverageBadge: 116,
       minBoughtAtS: undefined,
@@ -84,7 +89,8 @@ export const Route = createFileRoute("/items/")({
       ),
       prefetchSafe(queryClient.ensureQueryData(itemUpgradesQueryOptions)),
     ]);
-    return { leader: findWinRateLeader(stats, items) };
+    // The description names the patch-wide leader, which a hero-filtered table would misrepresent.
+    return { leader: deps.heroId === null ? findWinRateLeader(stats, items) : null };
   },
   head: ({ loaderData }) => {
     const leader = loaderData?.leader;
