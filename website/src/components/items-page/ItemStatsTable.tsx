@@ -9,6 +9,7 @@ import { ItemName } from "~/components/ItemName";
 import { ItemQuickSelectDialog } from "~/components/items-page/ItemQuickSelectDialog";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
+import { ITEM_SLOTS, ItemSlotSelector } from "~/components/selectors/ItemSlotSelector";
 import { ItemTierSelector } from "~/components/selectors/ItemTierSelector";
 import { Button } from "~/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -468,6 +469,11 @@ export function ItemStatsTable({
     parseAsArrayOf(parseAsInteger).withDefault([1, 2, 3, 4]),
   );
 
+  const [itemSlots, setItemSlots] = useQueryState(
+    "item_slots",
+    parseAsArrayOf(parseAsStringLiteral(ITEM_SLOTS)).withDefault([...ITEM_SLOTS]),
+  );
+
   const [includeItems, setIncludeItems] = useQueryState(
     "include_items",
     parseAsSetOf(parseAsInteger).withDefault(new Set()),
@@ -596,7 +602,12 @@ export function ItemStatsTable({
             </Button>
           </div>
         </div>
-        {!hideItemTierFilter && <ItemTierSelector onItemTiersSelected={setItemTiers} selectedItemTiers={itemTiers} />}
+        {!hideItemTierFilter && (
+          <>
+            <ItemSlotSelector selectedSlots={itemSlots} onSlotsSelected={setItemSlots} />
+            <ItemTierSelector onItemTiersSelected={setItemTiers} selectedItemTiers={itemTiers} />
+          </>
+        )}
         {/* NOTE: "Highlight overperforming items" toggle hidden for now — not very useful in its
             current form. May bring back later; if reviving, restore the Switch+Label toggle here
             plus the related `dim_low_confidence` useQueryState (see git history) and wire it
@@ -664,7 +675,10 @@ export function ItemStatsTable({
               )}
               <TableBody>
                 {processedData
-                  .filter((row) => itemTiers.includes(row.itemTier))
+                  .filter(
+                    (row) =>
+                      itemTiers.includes(row.itemTier) && (!row.item || itemSlots.includes(row.item.item_slot_type)),
+                  )
                   .map((row, index) => (
                     <ItemStatsTableRow
                       key={row.item_id}
