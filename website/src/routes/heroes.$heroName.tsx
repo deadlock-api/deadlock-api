@@ -12,6 +12,7 @@ import { StatCard } from "~/components/StatCard";
 import { useSeasons } from "~/hooks/useSeasons";
 import { computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
+import { formatPercent } from "~/lib/format";
 import { findHeroBySlug } from "~/lib/hero-slug";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
@@ -154,7 +155,7 @@ export const Route = createFileRoute("/heroes/$heroName")({
     const { heroName, slug, cardImage, summary } = loaderData;
     const url = `${SITE_URL}/heroes/${slug}`;
     const description = summary
-      ? `${heroName} holds a ${pct(summary.winRate)} win rate (#${summary.rank} of ${summary.heroCount} heroes) and a ${pct(summary.pickRate)} pick rate in Deadlock ranked matches. Live matchups, synergies, and counters, updated daily.`
+      ? `${heroName} holds a ${formatPercent(summary.winRate)} win rate (#${summary.rank} of ${summary.heroCount} heroes) and a ${formatPercent(summary.pickRate)} pick rate in Deadlock ranked matches. Live matchups, synergies, and counters, updated daily.`
       : `${heroName} win rate, pick rate, best items, and matchups in Deadlock. Live stats from tracked ranked matches, updated daily.`;
     return seo({
       title: `${heroName} Win Rate & Pick Rate | Deadlock`,
@@ -175,10 +176,6 @@ export const Route = createFileRoute("/heroes/$heroName")({
     });
   },
 });
-
-function pct(x: number): string {
-  return `${(x * 100).toFixed(1)}%`;
-}
 
 function HeroLinkCard({
   to,
@@ -239,14 +236,14 @@ function HeroDetailPage() {
       {summary ? (
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
           In the current patch, {heroName} holds a{" "}
-          <span className="font-semibold text-foreground">{pct(summary.winRate)}</span> win rate across{" "}
+          <span className="font-semibold text-foreground">{formatPercent(summary.winRate)}</span> win rate across{" "}
           <span className="font-semibold text-foreground">{summary.matches.toLocaleString("en-US")}</span> tracked
-          ranked matches, with a <span className="font-semibold text-foreground">{pct(summary.pickRate)}</span> pick
-          rate
+          ranked matches, with a{" "}
+          <span className="font-semibold text-foreground">{formatPercent(summary.pickRate)}</span> pick rate
           {summary.banRate !== undefined && (
             <>
               {" "}
-              and a <span className="font-semibold text-foreground">{pct(summary.banRate)}</span> ban rate
+              and a <span className="font-semibold text-foreground">{formatPercent(summary.banRate)}</span> ban rate
             </>
           )}
           . Numbers are drawn from live match data and refreshed daily.
@@ -260,12 +257,12 @@ function HeroDetailPage() {
 
       {summary && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <StatCard label="Win Rate" value={pct(summary.winRate)} sub={rankLabel(summary.winRateRank)} />
-          <StatCard label="Pick Rate" value={pct(summary.pickRate)} sub={rankLabel(summary.pickRateRank)} />
+          <StatCard label="Win Rate" value={formatPercent(summary.winRate)} sub={rankLabel(summary.winRateRank)} />
+          <StatCard label="Pick Rate" value={formatPercent(summary.pickRate)} sub={rankLabel(summary.pickRateRank)} />
           <StatCard label="Matches" value={summary.matches.toLocaleString("en-US")} />
           <StatCard
             label="Ban Rate"
-            value={summary.banRate !== undefined ? pct(summary.banRate) : "—"}
+            value={summary.banRate !== undefined ? formatPercent(summary.banRate) : "—"}
             sub={rankLabel(summary.banRateRank)}
           />
         </div>

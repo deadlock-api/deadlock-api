@@ -18,6 +18,7 @@ import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { getPickrateMultiplier } from "~/lib/constants";
+import { formatPercent } from "~/lib/format";
 import { queryKeys } from "~/queries/query-keys";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -31,10 +32,6 @@ interface TierEntry {
   winRate: number;
   pickRate: number;
   matches: number;
-}
-
-function pct(x: number): string {
-  return `${(100 * x).toFixed(1)}%`;
 }
 
 function RankTick({
@@ -128,9 +125,10 @@ export function HeroWinRateByRank({
     <section className="space-y-4">
       <h2 className="text-xl font-semibold tracking-tight">{heroName} Win Rate by Rank</h2>
       <p className="text-sm text-muted-foreground">
-        {heroName} wins most at <span className="font-semibold text-foreground">{best.name}</span> ({pct(best.winRate)})
-        and least at <span className="font-semibold text-foreground">{worst.name}</span> ({pct(worst.winRate)}). Each
-        bar is one rank tier in the current patch; hover for pick rate and match count.
+        {heroName} wins most at <span className="font-semibold text-foreground">{best.name}</span> (
+        {formatPercent(best.winRate)}) and least at <span className="font-semibold text-foreground">{worst.name}</span>{" "}
+        ({formatPercent(worst.winRate)}). Each bar is one rank tier in the current patch; hover for pick rate and match
+        count.
       </p>
       <figure aria-label={`${heroName} win rate by rank tier`}>
         <ResponsiveContainer width="100%" height={280} className="rounded-xl bg-muted p-2">
@@ -163,7 +161,7 @@ export function HeroWinRateByRank({
                     <div>
                       <div className="font-medium">{entry.name}</div>
                       <div className="text-muted-foreground">
-                        Win rate {pct(entry.winRate)} · Pick rate {pct(entry.pickRate)} ·{" "}
+                        Win rate {formatPercent(entry.winRate)} · Pick rate {formatPercent(entry.pickRate)} ·{" "}
                         {entry.matches.toLocaleString("en-US")} matches
                       </div>
                     </div>

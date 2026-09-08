@@ -10,6 +10,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
 import { StatCard } from "~/components/StatCard";
 import { useSeasons } from "~/hooks/useSeasons";
+import { formatPercent } from "~/lib/format";
 import { findItemBySlug } from "~/lib/item-slug";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
@@ -122,9 +123,9 @@ export const Route = createFileRoute("/items/$itemName")({
     }
     const { itemName, slug, image, tier, slot, summary } = loaderData;
     const url = `${SITE_URL}/items/${slug}`;
-    const usage = summary?.usage !== undefined ? ` and shows up in ${pct(summary.usage)} of builds` : "";
+    const usage = summary?.usage !== undefined ? ` and shows up in ${formatPercent(summary.usage)} of builds` : "";
     const description = summary
-      ? `${itemName} wins ${pct(summary.winRate)} of Deadlock ranked matches (#${summary.rank} of ${summary.itemCount} items)${usage}. Best heroes, common pairings, and buy timing, updated daily.`
+      ? `${itemName} wins ${formatPercent(summary.winRate)} of Deadlock ranked matches (#${summary.rank} of ${summary.itemCount} items)${usage}. Best heroes, common pairings, and buy timing, updated daily.`
       : `${itemName} win rate, best heroes, common pairings, and buy timing in Deadlock. Live stats from tracked ranked matches, updated daily.`;
     return seo({
       title: `${itemName} Win Rate & Best Heroes | Deadlock`,
@@ -145,10 +146,6 @@ export const Route = createFileRoute("/items/$itemName")({
     });
   },
 });
-
-function pct(x: number): string {
-  return `${(x * 100).toFixed(1)}%`;
-}
 
 function clock(seconds: number): string {
   const whole = Math.round(seconds);
@@ -184,13 +181,13 @@ function ItemDetailPage() {
       {summary ? (
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
           In the current patch, players who buy {itemName} win{" "}
-          <span className="font-semibold text-foreground">{pct(summary.winRate)}</span> of their{" "}
+          <span className="font-semibold text-foreground">{formatPercent(summary.winRate)}</span> of their{" "}
           <span className="font-semibold text-foreground">{summary.matches.toLocaleString("en-US")}</span> tracked
           ranked matches
           {summary.usage !== undefined && (
             <>
-              , and it shows up in <span className="font-semibold text-foreground">{pct(summary.usage)}</span> of all
-              builds
+              , and it shows up in <span className="font-semibold text-foreground">{formatPercent(summary.usage)}</span>{" "}
+              of all builds
             </>
           )}
           . Numbers are drawn from live match data and refreshed daily.
@@ -206,12 +203,12 @@ function ItemDetailPage() {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <StatCard
             label="Win Rate"
-            value={pct(summary.winRate)}
+            value={formatPercent(summary.winRate)}
             sub={`#${summary.winRateRank} of ${summary.itemCount} items`}
           />
           <StatCard
             label="Bought"
-            value={summary.usage !== undefined ? pct(summary.usage) : "—"}
+            value={summary.usage !== undefined ? formatPercent(summary.usage) : "—"}
             sub={`by ${summary.players.toLocaleString("en-US")} players`}
           />
           <StatCard label="Matches" value={summary.matches.toLocaleString("en-US")} />
