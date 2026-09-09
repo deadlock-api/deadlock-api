@@ -34,6 +34,10 @@ const HeroMatchupDetailsStatsTable = lazy(() =>
   })),
 );
 
+const HeroSkillOrder = lazy(() =>
+  import("~/components/heroes-page/HeroSkillOrder").then((m) => ({ default: m.HeroSkillOrder })),
+);
+
 const HeroTopItems = lazy(() =>
   import("~/components/heroes-page/HeroTopItems").then((m) => ({ default: m.HeroTopItems })),
 );
@@ -79,6 +83,17 @@ function byRankStatsParams(seasons: readonly SeasonInfo[]) {
 function currentItemStatsParams(seasons: readonly SeasonInfo[]) {
   return {
     minMatches: 10,
+    minAverageBadge: DEFAULT_MIN_RANK,
+    maxAverageBadge: DEFAULT_MAX_RANK,
+    gameMode: GAME_MODE,
+    matchMode: DEFAULT_MATCH_MODE,
+    ...defaultUnixRange(seasons),
+  };
+}
+
+function currentAbilityOrderParams(seasons: readonly SeasonInfo[]) {
+  return {
+    minMatches: 20,
     minAverageBadge: DEFAULT_MIN_RANK,
     maxAverageBadge: DEFAULT_MAX_RANK,
     gameMode: GAME_MODE,
@@ -285,6 +300,14 @@ function HeroDetailPage() {
               heroMatches={summary.matches}
               request={currentItemStatsParams(seasons)}
             />
+          </Suspense>
+        </ChunkErrorBoundary>
+      )}
+
+      {summary && (
+        <ChunkErrorBoundary>
+          <Suspense fallback={<LoadingLogo />}>
+            <HeroSkillOrder heroId={heroId} heroName={heroName} request={currentAbilityOrderParams(seasons)} />
           </Suspense>
         </ChunkErrorBoundary>
       )}
