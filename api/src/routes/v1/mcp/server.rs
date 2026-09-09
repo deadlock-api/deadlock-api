@@ -10,7 +10,7 @@ use rmcp::model::{
 use rmcp::service::{RequestContext, RoleServer};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use tracing::{debug, warn};
+use tracing::{Instrument, debug, info_span, warn};
 
 use super::catalog::{DATABASE, QueryError, SCHEMA, SnapshotCatalog};
 use super::format::format_query_output;
@@ -54,20 +54,28 @@ impl ServerHandler for McpServer {
         request: CallToolRequestParams,
         _context: RequestContext<RoleServer>,
     ) -> Result<CallToolResponse, ErrorData> {
-        let args = request.arguments.unwrap_or_default();
-        let result = match request.name.as_ref() {
-            "execute_query" => {
-                let ExecuteQueryArgs { sql } = parse_json_object(args)?;
-                self.execute_query(sql).await
-            }
-            "list_databases" => list_databases(),
-            "list_tables" => self.list_tables(parse_json_object(args)?),
-            "list_columns" => self.list_columns(parse_json_object(args)?),
-            other => {
-                CallToolResult::error(vec![ContentBlock::text(format!("Unknown tool: '{other}'"))])
-            }
-        };
-        Ok(result.into())
+        // Child span of the HTTP request span: the tool name is the only thing that
+        // distinguishes one `POST /v1/mcp` from another, since the JSON-RPC body never
+        // reaches the HTTP layer.
+        let span = info_span!("mcp.call_tool", mcp.tool.name = %request.name);
+        async move {
+            let args = request.arguments.unwrap_or_default();
+            let result = match request.name.as_ref() {
+                "execute_query" => {
+                    let ExecuteQueryArgs { sql } = parse_json_object(args)?;
+                    self.execute_query(sql).await
+                }
+                "list_databases" => list_databases(),
+                "list_tables" => self.list_tables(parse_json_object(args)?),
+                "list_columns" => self.list_columns(parse_json_object(args)?),
+                other => CallToolResult::error(vec![ContentBlock::text(format!(
+                    "Unknown tool: '{other}'"
+                ))]),
+            };
+            Ok(result.into())
+        }
+        .instrument(span)
+        .await
     }
 }
 
