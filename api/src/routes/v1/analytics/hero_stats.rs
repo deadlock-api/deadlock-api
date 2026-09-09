@@ -394,16 +394,17 @@ fn build_query(query: &HeroStatsQuery) -> String {
     } else {
         "match_player"
     };
-    // Deduplicating with `LIMIT 1 BY` instead of `FINAL` on the window-wide read: FINAL merges
-    // every part in the window (measured 2x CPU, 50x peak memory, 10x bytes read for the same
-    // rows). Without FINAL the planner would pick the hero_stats_by_hero projection, which cannot
-    // prune by start_time and reads the whole table, so projections are disabled on that path.
-    let disable_projections =
-        !has_account_filter && !has_player_hero_cte && !has_player_hero_total_cte;
-    let projection_setting = if disable_projections {
-        ", optimize_use_projections = 0"
+    // The window-wide read dedups with FINAL: it streams the ReplacingMergeTree merge in
+    // parallel where `LIMIT 1 BY` funnels every row through one hash set (measured 30-76% less
+    // wall time on 5-week to 7-month windows, same bytes read, peak memory within 1.4x). FINAL
+    // also keeps the planner off the hero_stats_by_hero projection, which cannot prune by
+    // start_time. Account- and hero-CTE-scoped reads are primary-key or join bound and keep
+    // `LIMIT 1 BY`.
+    let use_final = !has_account_filter && !has_player_hero_cte && !has_player_hero_total_cte;
+    let (final_clause, dedup_clause) = if use_final {
+        (" FINAL", "")
     } else {
-        ""
+        ("", "LIMIT 1 BY match_id, account_id")
     };
     let mut ctes: Vec<String> = vec![];
     if has_player_hero_cte {
@@ -446,13 +447,13 @@ fn build_query(query: &HeroStatsQuery) -> String {
             max_player_damage, max_player_damage_taken, max_boss_damage, max_creep_damage,
             max_neutral_damage, max_max_health, max_shots_hit, max_shots_missed,
             start_time, average_badge
-        FROM {source_table}
+        FROM {source_table}{final_clause}
         WHERE TRUE
             {player_filters}
             {match_filters}
             {hero_matches_join}
             {hero_total_join}
-        LIMIT 1 BY match_id, account_id
+        {dedup_clause}
     )"
     ));
     let with_clause = ctes.join(",\n    ");
@@ -489,7 +490,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
     FROM mp
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
-    SETTINGS log_comment = 'hero_stats', apply_patch_parts = 0{projection_setting}
+    SETTINGS log_comment = 'hero_stats', apply_patch_parts = 0
     "
     )
 }
@@ -556,6 +557,36 @@ pub(crate) async fn hero_stats(
     #[expect(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     get_hero_stats(&state.ch_client_ro, query).await.map(Json)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
+
+    #[test]
+    fn window_wide_read_dedups_with_final() {
+        let sql = build_query(&HeroStatsQuery {
+            min_unix_timestamp: Some(1_786_147_200),
+            ..Default::default()
+        });
+        assert_valid_sql(&sql);
+        assert!(sql.contains("FROM match_player FINAL"));
+        assert!(!sql.contains("LIMIT 1 BY"));
+        assert!(!sql.contains("optimize_use_projections"));
+    }
+
+    #[test]
+    fn account_scoped_read_keeps_limit_by_dedup() {
+        let sql = build_query(&HeroStatsQuery {
+            account_ids: Some(vec![1, 2]),
+            ..Default::default()
+        });
+        assert_valid_sql(&sql);
+        assert!(sql.contains("FROM player_match_stats\n"));
+        assert!(!sql.contains("FINAL"));
+        assert!(sql.contains("LIMIT 1 BY match_id, account_id"));
+    }
 }
 
 #[cfg(test)]
