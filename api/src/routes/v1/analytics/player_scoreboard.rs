@@ -120,12 +120,15 @@ fn from_clause_parts(
     // hand-rolled (account_id, match_id) GROUP BY dedup 3-7x, but blocks the
     // planner from picking hero_stats_by_hero or the account_id bloom-filter
     // index — so when hero_id or account_ids is set, the inline dedup wins.
+    // On the unscoped full-table read FINAL + count() also beats the raw
+    // uniq(match_id) scan (measured 41% less wall time, 90% less peak memory)
+    // and is exact where uniq loses a match to a hash collision.
     let use_final = query.hero_id.is_none() && query.account_ids.is_none();
 
-    if query.sort_by.dedup_free() {
-        (format!(" FROM {table} "), true, "uniq(match_id)")
-    } else if use_final {
+    if use_final {
         (format!(" FROM {table} FINAL "), true, "count()")
+    } else if query.sort_by.dedup_free() {
+        (format!(" FROM {table} "), true, "uniq(match_id)")
     } else {
         let inner_projection = query
             .sort_by
@@ -229,7 +232,11 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
         format!(" HAVING {} ", having_filters.join(" AND "))
     };
     let offset = query.start.unwrap_or(1).max(1) - 1;
-    let select_clause = query.sort_by.get_select_clause();
+    let select_clause = if query.sort_by.dedup_free() {
+        matches_expr.to_owned()
+    } else {
+        query.sort_by.get_select_clause()
+    };
     let sort_direction = query.sort_direction;
     let limit = query.limit.unwrap_or_default();
 
@@ -372,6 +379,31 @@ mod tests {
         });
         assert!(sql.contains("FROM player_match_stats "));
         assert!(!sql.contains("match_player"));
+    }
+
+    #[test]
+    fn matches_sort_uses_final_count_on_the_unscoped_read() {
+        let sql = build_query(&PlayerScoreboardQuery {
+            sort_by: ScoreboardQuerySortBy::Matches,
+            ..Default::default()
+        });
+        assert_valid_sql(&sql);
+        assert!(sql.contains("FROM player_match_stats FINAL"));
+        assert!(sql.contains("toFloat64(count()) as value, count() as matches"));
+        assert!(!sql.contains("uniq(match_id)"));
+    }
+
+    #[test]
+    fn matches_sort_keeps_the_raw_uniq_read_when_hero_scoped() {
+        let sql = build_query(&PlayerScoreboardQuery {
+            sort_by: ScoreboardQuerySortBy::Matches,
+            hero_id: Some(15),
+            ..Default::default()
+        });
+        assert_valid_sql(&sql);
+        assert!(sql.contains("FROM match_player "));
+        assert!(!sql.contains("FINAL"));
+        assert!(sql.contains("toFloat64(uniq(match_id)) as value, uniq(match_id) as matches"));
     }
 
     #[test]

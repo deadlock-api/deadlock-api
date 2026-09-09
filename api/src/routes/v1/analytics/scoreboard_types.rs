@@ -220,11 +220,12 @@ impl ScoreboardQuerySortBy {
     }
 
     /// Whether the sort's aggregate ignores duplicate `ReplacingMergeTree` rows, letting
-    /// `player_scoreboard` read the base table directly — skipping both `FINAL`'s merge and
-    /// the inline `GROUP BY` dedup (~63% less wall time, ~3x less peak memory). Only `Matches`
-    /// qualifies: its output is `uniq(match_id)`, and `match_id` is immutable across row
-    /// versions. `sum`/`avg`/`max` columns can be corrected downward by a newer version, so
-    /// reading raw rows would diverge from `FINAL` — those keep the dedup path.
+    /// `player_scoreboard` read the base table directly on hero- or account-scoped reads —
+    /// skipping the inline `GROUP BY` dedup (~63% less wall time, ~3x less peak memory). Only
+    /// `Matches` qualifies: its output is `uniq(match_id)`, and `match_id` is immutable across
+    /// row versions. `sum`/`avg`/`max` columns can be corrected downward by a newer version, so
+    /// reading raw rows would diverge from `FINAL` — those keep the dedup path. Unscoped reads
+    /// use `FINAL` + `count()` regardless, which is exact and cheaper than the raw scan.
     pub(super) fn dedup_free(self) -> bool {
         matches!(self, Self::Matches)
     }
