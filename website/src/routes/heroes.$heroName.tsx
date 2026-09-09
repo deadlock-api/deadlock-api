@@ -42,6 +42,10 @@ const HeroWinRateByDuration = lazy(() =>
   import("~/components/heroes-page/HeroWinRateByDuration").then((m) => ({ default: m.HeroWinRateByDuration })),
 );
 
+const HeroWinRateOverTime = lazy(() =>
+  import("~/components/heroes-page/HeroWinRateOverTime").then((m) => ({ default: m.HeroWinRateOverTime })),
+);
+
 const HeroWinRateByRank = lazy(() =>
   import("~/components/heroes-page/HeroWinRateByRank").then((m) => ({ default: m.HeroWinRateByRank })),
 );
@@ -281,6 +285,14 @@ function HeroDetailPage() {
               heroMatches={summary.matches}
               request={currentItemStatsParams(seasons)}
             />
+          </Suspense>
+        </ChunkErrorBoundary>
+      )}
+
+      {summary && (
+        <ChunkErrorBoundary>
+          <Suspense fallback={<LoadingLogo />}>
+            <HeroWinRateOverTime heroId={heroId} heroName={heroName} request={currentStatsParams(seasons)} />
           </Suspense>
         </ChunkErrorBoundary>
       )}
