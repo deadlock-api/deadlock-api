@@ -1,10 +1,9 @@
 import { useLocation } from "@tanstack/react-router";
-import { BarChart3, Menu, Radio, SearchIcon } from "lucide-react";
+import { BarChart3, Menu, Radio } from "lucide-react";
 import { VisuallyHidden } from "radix-ui";
 import { useState } from "react";
 
 import { PrefetchAnchor } from "~/components/PrefetchAnchor";
-import { QuickSearchButton, useQuickSearch } from "~/components/QuickSearch";
 import { SmartLink } from "~/components/SmartLink";
 import { Button } from "~/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "~/components/ui/sheet";
@@ -136,10 +135,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </PrefetchAnchor>
       </div>
 
-      <div className="px-3 pt-3">
-        <QuickSearchButton onOpen={onNavigate} />
-      </div>
-
       {/* Navigation */}
       <nav aria-label="Main" className="flex-1 overflow-y-auto px-3 pt-3 pb-1">
         {/* Top links (ungrouped) */}
@@ -240,7 +235,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export function MobileMenuButton() {
   const [open, setOpen] = useState(false);
-  const openSearch = useQuickSearch();
 
   return (
     <div className="md:hidden">
@@ -252,15 +246,6 @@ export function MobileMenuButton() {
         aria-label="Open menu"
       >
         <Menu className="h-5 w-5" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={openSearch}
-        className="glass fixed top-3 right-3 z-40 border border-sidebar-border"
-        aria-label="Search"
-      >
-        <SearchIcon className="h-5 w-5" />
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>

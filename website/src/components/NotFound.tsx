@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Home, SearchIcon } from "lucide-react";
+import { ArrowLeft, Home } from "lucide-react";
 
-import { useQuickSearch } from "~/components/QuickSearch";
 import { Button } from "~/components/ui/button";
 
 const suggestions = [
@@ -12,7 +11,6 @@ const suggestions = [
 ];
 
 export function NotFound() {
-  const openSearch = useQuickSearch();
   return (
     <>
       <title>Page Not Found | Deadlock API</title>
@@ -42,10 +40,6 @@ export function NotFound() {
           >
             <ArrowLeft className="size-4" />
             Go Back
-          </Button>
-          <Button variant="outline" className="gap-2" onClick={openSearch}>
-            <SearchIcon className="size-4" />
-            Search the site
           </Button>
         </div>
 
