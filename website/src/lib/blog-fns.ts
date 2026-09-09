@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequestHost, getRequestProtocol } from "@tanstack/react-start/server";
 
 import { type BlogPost, getBlogPost, getRecentPosts, renderBlogHtml } from "~/lib/blog";
 
@@ -21,8 +20,6 @@ export const fetchBlogPost = createServerFn({ method: "GET" })
     const index = posts.findIndex((p) => p.slug === slug);
     return {
       ...toMeta(post),
-      // Preview deployments serve their own OG image; production has not got a new post's image until it ships.
-      origin: `${getRequestProtocol()}://${getRequestHost()}`,
       html: await renderBlogHtml(post.content),
       newer: index > 0 ? toMeta(posts[index - 1]) : null,
       older: index < posts.length - 1 ? toMeta(posts[index + 1]) : null,

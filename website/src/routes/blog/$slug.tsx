@@ -23,7 +23,7 @@ export const Route = createFileRoute("/blog/$slug")({
       title: `${loaderData.title} - Deadlock API Blog`,
       description: loaderData.description,
       path: `/blog/${loaderData.slug}`,
-      ogImage: `${loaderData.origin}${getBlogOGImage(loaderData.slug)}`,
+      ogImage: `${SITE_URL}${getBlogOGImage(loaderData.slug)}`,
       ogType: "article",
       publishedTime: loaderData.date,
       jsonLd: [
