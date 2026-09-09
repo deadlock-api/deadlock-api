@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiHeroStatsRequest, Rank } from "deadlock_api_client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -39,15 +39,16 @@ function RankTick({
   y,
   payload,
   tiers,
+  size,
 }: {
   x?: number;
   y?: number;
   payload?: { value: number };
   tiers: TierEntry[];
+  size: number;
 }) {
   const entry = tiers.find((t) => t.tier === payload?.value);
   if (x === undefined || y === undefined || !entry) return null;
-  const size = 36;
   return entry.image ? (
     <image href={entry.image} x={x - size / 2} y={y + 4} width={size} height={size}>
       <title>{entry.name}</title>
@@ -75,6 +76,7 @@ export function HeroWinRateByRank({
     staleTime: CACHE_DURATIONS.ONE_DAY,
   });
   const { data: ranks } = useQuery(ranksQueryOptions);
+  const [chartWidth, setChartWidth] = useState(0);
 
   const tiers = useMemo(() => {
     if (!data || !ranks) return [];
@@ -118,6 +120,8 @@ export function HeroWinRateByRank({
   }
   if (tiers.length === 0) return null;
 
+  // Shrink the badge icons on narrow screens so eleven of them don't overlap; 60px covers the y axis and margins.
+  const iconSize = chartWidth > 0 ? Math.max(18, Math.min(36, Math.floor((chartWidth - 60) / tiers.length) - 4)) : 36;
   const best = tiers.reduce((a, b) => (b.winRate > a.winRate ? b : a));
   const worst = tiers.reduce((a, b) => (b.winRate < a.winRate ? b : a));
 
@@ -131,7 +135,12 @@ export function HeroWinRateByRank({
         count.
       </p>
       <figure aria-label={`${heroName} win rate by rank tier`}>
-        <ResponsiveContainer width="100%" height={280} className="rounded-xl bg-muted p-2">
+        <ResponsiveContainer
+          width="100%"
+          height={280}
+          className="rounded-xl bg-muted p-2"
+          onResize={(width) => setChartWidth(width)}
+        >
           <BarChart data={tiers} margin={{ top: 8, right: 8, bottom: 8, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
             <XAxis
@@ -140,7 +149,7 @@ export function HeroWinRateByRank({
               height={48}
               tickLine={false}
               axisLine={false}
-              tick={<RankTick tiers={tiers} />}
+              tick={<RankTick tiers={tiers} size={iconSize} />}
             />
             <YAxis
               domain={[(min: number) => Math.floor(min * 20) / 20, (max: number) => Math.ceil(max * 20) / 20]}
