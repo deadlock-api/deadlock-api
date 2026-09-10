@@ -38,37 +38,34 @@ function buildHeroStatsMap(data: AnalyticsHeroStats[] | undefined): Record<numbe
   return map;
 }
 
-export function HeroMatchupDetailsStatsTable({
-  heroId,
-  stat,
-  minRankId,
-  maxRankId,
-  minDate,
-  maxDate,
-  prevMinDate,
-  prevMaxDate,
-  onHeroSelected,
-  linkHeroes,
-  sameLaneFilter,
-  minHeroMatches,
-  gameMode,
-  matchMode,
-}: {
+export interface HeroMatchupParams {
   heroId: number;
-  stat: HeroMatchupDetailsStatsTableStat;
   minRankId?: number;
   maxRankId?: number;
   minDate?: Dayjs;
   maxDate?: Dayjs;
   prevMinDate?: Dayjs;
   prevMaxDate?: Dayjs;
-  onHeroSelected?: (heroId: number) => void;
-  linkHeroes?: boolean;
   sameLaneFilter?: boolean;
   minHeroMatches?: number;
   gameMode?: GameMode;
   matchMode?: MatchMode;
-}) {
+}
+
+/** Teammate and opponent rows for `heroId`, each sorted from the biggest win rate gain to the biggest loss. */
+export function useHeroMatchupRows({
+  heroId,
+  minRankId,
+  maxRankId,
+  minDate,
+  maxDate,
+  prevMinDate,
+  prevMaxDate,
+  sameLaneFilter,
+  minHeroMatches,
+  gameMode,
+  matchMode,
+}: HeroMatchupParams) {
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
   const { minUnixTimestamp: prevMinTimestamp, maxUnixTimestamp: prevMaxTimestamp } = useNormalizedTimeRange(
     prevMinDate,
@@ -269,6 +266,20 @@ export function HeroMatchupDetailsStatsTable({
     return rows;
   }, [heroId, counterData, heroStatsMap, prevCounterRelWinrateMap]);
 
+  return { synergyRows, counterRows, isLoading };
+}
+
+export function HeroMatchupDetailsStatsTable({
+  stat,
+  onHeroSelected,
+  linkHeroes,
+  ...params
+}: HeroMatchupParams & {
+  stat: HeroMatchupDetailsStatsTableStat;
+  onHeroSelected?: (heroId: number) => void;
+  linkHeroes?: boolean;
+}) {
+  const { synergyRows, counterRows, isLoading } = useHeroMatchupRows(params);
   const isSynergy = stat === HeroMatchupDetailsStatsTableStat.SYNERGY;
   const rows = isSynergy ? synergyRows : counterRows;
   const relWinrates = rows.map((row) => row.relWinrate);

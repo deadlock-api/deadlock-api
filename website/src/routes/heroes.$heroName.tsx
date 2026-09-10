@@ -34,6 +34,10 @@ const HeroMatchupDetailsStatsTable = lazy(() =>
   })),
 );
 
+const HeroMatchupSummary = lazy(() =>
+  import("~/components/heroes-page/HeroMatchupSummary").then((m) => ({ default: m.HeroMatchupSummary })),
+);
+
 const HeroSkillOrder = lazy(() =>
   import("~/components/heroes-page/HeroSkillOrder").then((m) => ({ default: m.HeroSkillOrder })),
 );
@@ -343,6 +347,16 @@ function HeroDetailPage() {
         </p>
         <ChunkErrorBoundary>
           <Suspense fallback={<LoadingLogo />}>
+            <HeroMatchupSummary
+              heroId={heroId}
+              heroName={heroName}
+              minRankId={DEFAULT_MIN_RANK}
+              maxRankId={DEFAULT_MAX_RANK}
+              minDate={defaultStart}
+              maxDate={defaultEnd}
+              gameMode={GAME_MODE}
+              matchMode={DEFAULT_MATCH_MODE}
+            />
             <div className="grid gap-4 lg:grid-cols-2">
               <HeroMatchupDetailsStatsTable
                 heroId={heroId}
