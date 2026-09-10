@@ -6,6 +6,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Customized, Label, ReferenceLine, T
 import { RankTierIcons } from "~/components/RankTierIcons";
 import { ChartContainer } from "~/components/ui/chart";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
+import { countTicks } from "~/lib/chart-axis";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { range } from "~/lib/utils";
 
@@ -24,6 +25,7 @@ type Metric = BadgeDistributionMetric;
 const METRIC_LABEL: Record<Metric, string> = { players: "Players", matches: "Matches" };
 
 const formatPercent = (ratio: number) => `${(ratio * 100).toFixed(1)}%`;
+const compactNumber = new Intl.NumberFormat("en-US", { notation: "compact" });
 
 interface ChartEntry {
   badge: number;
@@ -104,6 +106,8 @@ export default function BadgeDistributionChart({
     const maxTier = Math.floor(Math.max(...badges) / 10);
     return range(minTier, maxTier + 1).map((tier) => tier * 10 + 3);
   }, [badgeDistributionData]);
+
+  const valueTicks = useMemo(() => countTicks(Math.max(0, ...chartData.map((entry) => entry.value))), [chartData]);
 
   const xAxisTickFormatter = (badge: number) => tierData.get(Math.floor(badge / 10))?.name ?? "";
 
@@ -206,7 +210,13 @@ export default function BadgeDistributionChart({
               tickFormatter={xAxisTickFormatter}
               dx={7}
             />
-            <YAxis dataKey="value" tickCount={4} textAnchor="end">
+            <YAxis
+              dataKey="value"
+              ticks={valueTicks}
+              domain={[0, valueTicks[valueTicks.length - 1]]}
+              tickFormatter={(value: number) => compactNumber.format(value)}
+              textAnchor="end"
+            >
               <Label value={METRIC_LABEL[metric]} position="middle" textAnchor="middle" />
             </YAxis>
             {medianBadge !== undefined && (

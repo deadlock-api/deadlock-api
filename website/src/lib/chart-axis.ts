@@ -16,3 +16,16 @@ export function percentTicks([lo, hi]: [number, number]): number[] {
   const last = Math.floor(hi / step + EPSILON);
   return Array.from({ length: last - first + 1 }, (_, i) => Number(((first + i) * step).toFixed(4)));
 }
+
+const COUNT_STEP_FACTORS = [1, 2, 2.5, 5, 10];
+
+/**
+ * Ticks from zero on a 1/2/2.5/5 × 10ⁿ step, at most `maxIntervals` apart, ending at or above `max`. Recharts'
+ * own nice ticks round the step to 0.05 of its magnitude, which prints as 4,500 or 9,000 steps.
+ */
+export function countTicks(max: number, maxIntervals = 4): number[] {
+  if (!(max > 0)) return [0];
+  const magnitude = 10 ** Math.floor(Math.log10(max / maxIntervals));
+  const step = magnitude * (COUNT_STEP_FACTORS.find((f) => magnitude * f * maxIntervals >= max) ?? 10);
+  return Array.from({ length: Math.ceil(max / step - EPSILON) + 1 }, (_, i) => i * step);
+}
