@@ -285,6 +285,7 @@ export function MatchTimelineChart({
   objectives,
   events,
   deadWindows,
+  deadWindowColor,
   durationS,
 }: {
   lead: SoulLead | null;
@@ -292,6 +293,8 @@ export function MatchTimelineChart({
   /** Sorted by time. */
   events: TimelineEvent[];
   deadWindows: DeadWindow[];
+  /** A player's time dead is bad for the tracked team when they are an ally and good when an enemy. */
+  deadWindowColor: string;
   durationS: number;
 }) {
   const gradientId = useId();
@@ -397,7 +400,7 @@ export function MatchTimelineChart({
               key={window.start}
               x1={window.start}
               x2={Math.min(window.end, durationS)}
-              fill={LOSS_COLOR}
+              fill={deadWindowColor}
               fillOpacity={0.07}
               ifOverflow="hidden"
             />

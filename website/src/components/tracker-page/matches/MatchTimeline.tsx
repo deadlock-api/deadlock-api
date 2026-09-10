@@ -25,6 +25,7 @@ export function MatchTimeline({
   lead,
   objectives,
   fights,
+  viewedIsAlly,
   durationS,
   nameOf,
 }: {
@@ -34,6 +35,8 @@ export function MatchTimeline({
   objectives: ObjectiveEvent[];
   /** The viewed player's kills and deaths. */
   fights: FightSummary | null;
+  /** Whether the viewed player is on the tracked player's team, whose side the chart takes. */
+  viewedIsAlly: boolean;
   durationS: number;
   nameOf: (player: TrackerMatchPlayer) => string;
 }) {
@@ -41,13 +44,14 @@ export function MatchTimeline({
     ...(fights?.kills ?? []).map((kill) => ({
       time: kill.time,
       hero: kill.victim,
-      side: "gain" as const,
+      // An enemy's kill is a loss for the tracked team, so it sits below the line with the team's other losses.
+      side: viewedIsAlly ? ("gain" as const) : ("loss" as const),
       tooltip: `Killed ${nameOf(kill.victim)} at ${formatMatchDuration(kill.time)}`,
     })),
     ...(fights?.deaths ?? []).map((death) => ({
       time: death.time,
       hero: death.killer,
-      side: "loss" as const,
+      side: viewedIsAlly ? ("loss" as const) : ("gain" as const),
       tooltip: `${death.killer ? `Killed by ${nameOf(death.killer)}` : "Killed by a non-player"} at ${formatMatchDuration(death.time)} in ${Math.round(death.timeToKillS)}s · respawned after ${death.deadForS}s`,
     })),
   ].toSorted((a, b) => a.time - b.time);
@@ -55,6 +59,8 @@ export function MatchTimeline({
 
   if (durationS <= 0 || (!lead && events.length === 0)) return null;
   const taken = objectives.filter((event) => event.own).length;
+  const killColor = viewedIsAlly ? WIN_COLOR : LOSS_COLOR;
+  const deathColor = viewedIsAlly ? LOSS_COLOR : WIN_COLOR;
 
   return (
     <div ref={ref} className="scroll-mt-4 space-y-1 rounded-md border border-border px-3 pt-2 pb-1">
@@ -81,11 +87,11 @@ export function MatchTimeline({
         )}
         <span className="ml-auto flex items-center gap-3">
           <span className="flex items-center gap-3" aria-hidden>
-            <LegendSwatch color={WIN_COLOR} label="Kill" />
-            <LegendSwatch color={LOSS_COLOR} label="Death" />
+            <LegendSwatch color={killColor} label="Kill" />
+            <LegendSwatch color={deathColor} label="Death" />
             {deadWindows.length > 0 && (
               <span className="inline-flex items-center gap-1">
-                <span className="h-2.5 w-3 rounded-sm" style={{ backgroundColor: LOSS_COLOR, opacity: 0.2 }} />
+                <span className="h-2.5 w-3 rounded-sm" style={{ backgroundColor: deathColor, opacity: 0.2 }} />
                 Dead
               </span>
             )}
@@ -97,6 +103,7 @@ export function MatchTimeline({
         objectives={objectives}
         events={events}
         deadWindows={deadWindows}
+        deadWindowColor={deathColor}
         durationS={durationS}
       />
     </div>

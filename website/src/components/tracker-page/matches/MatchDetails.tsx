@@ -247,6 +247,7 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
         lead={soulLead}
         objectives={objectiveEvents}
         fights={fights}
+        viewedIsAlly={match.players.find((player) => player.account_id === viewedAccountId)?.team === ownTeam}
         durationS={entry.match_duration_s}
         nameOf={nameOf}
       />
