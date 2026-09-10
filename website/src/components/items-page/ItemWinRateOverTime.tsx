@@ -7,7 +7,7 @@ import { type WeekEntry, WeeklyTrendChart } from "~/components/WeeklyTrendChart"
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { day } from "~/dayjs";
 import { api } from "~/lib/api";
-import { formatPercent, formatSignedPercent, possessive } from "~/lib/format";
+import { formatPercent, possessive } from "~/lib/format";
 import { withoutOpenTimeBucket } from "~/lib/time-buckets";
 import { queryKeys } from "~/queries/query-keys";
 
@@ -77,17 +77,17 @@ export function ItemWinRateOverTime({
   const first = weeks[0];
   const last = weeks[weeks.length - 1];
   const delta = last.winRate - first.winRate;
-  const movement = Math.abs(delta) < 0.01 ? "has held steady" : delta > 0 ? "has climbed" : "has slipped";
+  // In percentage points: "-2.3%" from 64.6% to 62.3% reads as a relative change.
+  const points = `${(Math.abs(delta) * 100).toFixed(1)} points`;
+  const movement =
+    Math.abs(delta) < 0.01 ? "has held steady" : delta > 0 ? `has climbed ${points}` : `has slipped ${points}`;
 
   return (
     <section className="space-y-4">
       <h2 className="text-xl font-semibold tracking-tight">{itemName} Win Rate Over Time</h2>
       <p className="text-sm text-muted-foreground">
-        {possessive(itemName)} win rate{" "}
-        <span className="font-semibold text-foreground">
-          {movement} ({formatSignedPercent(delta)})
-        </span>{" "}
-        from {formatPercent(first.winRate)} in the week of {first.label} to {formatPercent(last.winRate)} in the week of{" "}
+        {possessive(itemName)} win rate <span className="font-semibold text-foreground">{movement}</span> from{" "}
+        {formatPercent(first.winRate)} in the week of {first.label} to {formatPercent(last.winRate)} in the week of{" "}
         {last.label}. The solid line is win rate, the dashed line how often it is bought; both cover the current season
         week by week.
       </p>
