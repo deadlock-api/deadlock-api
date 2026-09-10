@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { RankTierTick, rankTickSize } from "~/components/RankTierTick";
 import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -79,11 +80,8 @@ export default function EconomySourcesByRank({ params }: EconomySourcesByRankPro
       });
   }, [data, tierData]);
 
-  const tierName = useMemo(() => {
-    const map = new Map<number, string>();
-    chartData.forEach((r) => map.set(r.tier, r.name));
-    return map;
-  }, [chartData]);
+  const [chartWidth, setChartWidth] = useState(0);
+  const iconSize = rankTickSize(chartWidth, chartData.length);
 
   return (
     <div className="flex flex-col gap-4">
@@ -119,17 +117,20 @@ export default function EconomySourcesByRank({ params }: EconomySourcesByRankPro
           <div className="py-8 text-center text-sm text-muted-foreground">No data available.</div>
         ) : (
           <figure aria-label="Soul sources by rank chart">
-            <ResponsiveContainer width="100%" height={340} className="rounded-xl bg-muted p-2 [&_*]:outline-none">
+            <ResponsiveContainer
+              width="100%"
+              height={340}
+              className="rounded-xl bg-muted p-2 [&_*]:outline-none"
+              onResize={(width) => setChartWidth(width)}
+            >
               <BarChart data={chartData} margin={{ top: 16, right: 16, bottom: 24, left: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
                 <XAxis
                   dataKey="tier"
                   interval={0}
-                  height={44}
-                  angle={-30}
-                  textAnchor="end"
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={(tier: number) => tierName.get(tier) ?? String(tier)}
+                  height={iconSize + 8}
+                  tickLine={false}
+                  tick={<RankTierTick tiers={chartData} size={iconSize} />}
                   stroke="#525252"
                 />
                 <YAxis

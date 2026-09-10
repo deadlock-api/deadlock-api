@@ -14,6 +14,7 @@ import {
 } from "recharts";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { RankTierTick, rankTickSize } from "~/components/RankTierTick";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
@@ -33,32 +34,6 @@ interface TierEntry {
   winRate: number;
   pickRate: number;
   matches: number;
-}
-
-function RankTick({
-  x,
-  y,
-  payload,
-  tiers,
-  size,
-}: {
-  x?: number;
-  y?: number;
-  payload?: { value: number };
-  tiers: TierEntry[];
-  size: number;
-}) {
-  const entry = tiers.find((t) => t.tier === payload?.value);
-  if (x === undefined || y === undefined || !entry) return null;
-  return entry.image ? (
-    <image href={entry.image} x={x - size / 2} y={y + 4} width={size} height={size}>
-      <title>{entry.name}</title>
-    </image>
-  ) : (
-    <text x={x} y={y + 16} textAnchor="middle" fontSize={11} fill="currentColor">
-      {entry.name}
-    </text>
-  );
 }
 
 export function HeroWinRateByRank({
@@ -121,8 +96,7 @@ export function HeroWinRateByRank({
   }
   if (tiers.length === 0) return null;
 
-  // Shrink the badge icons on narrow screens so eleven of them don't overlap; 60px covers the y axis and margins.
-  const iconSize = chartWidth > 0 ? Math.max(18, Math.min(36, Math.floor((chartWidth - 60) / tiers.length) - 4)) : 36;
+  const iconSize = rankTickSize(chartWidth, tiers.length);
   const best = tiers.reduce((a, b) => (b.winRate > a.winRate ? b : a));
   const worst = tiers.reduce((a, b) => (b.winRate < a.winRate ? b : a));
   const winRateAxis = winRateDomain([0.5, ...tiers.map((tier) => tier.winRate)]);
@@ -151,7 +125,7 @@ export function HeroWinRateByRank({
               height={48}
               tickLine={false}
               axisLine={false}
-              tick={<RankTick tiers={tiers} size={iconSize} />}
+              tick={<RankTierTick tiers={tiers} size={iconSize} />}
             />
             <YAxis
               domain={winRateAxis}
