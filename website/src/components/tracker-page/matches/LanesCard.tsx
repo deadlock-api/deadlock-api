@@ -50,41 +50,6 @@ function Laner({
   );
 }
 
-const DUO_STATS: { label: string; value: (laner: LanePlayer) => number }[] = [
-  { label: "Kills", value: (laner) => laner.stat.kills },
-  { label: "Last hits", value: (laner) => laner.stat.creep_kills },
-  { label: "Denies", value: (laner) => laner.stat.denies },
-  { label: "Hero damage", value: (laner) => laner.stat.player_damage },
-];
-
-/** The two duos' totals side by side, the leading side brought forward. */
-function DuoComparison({ own, enemy }: { own: LanePlayer[]; enemy: LanePlayer[] }) {
-  return (
-    <div className="border-t border-border/60 pt-1 text-xs leading-5 tabular-nums">
-      {DUO_STATS.map(({ label, value }) => {
-        const ownTotal = own.reduce((sum, laner) => sum + value(laner), 0);
-        const enemyTotal = enemy.reduce((sum, laner) => sum + value(laner), 0);
-        return (
-          <div key={label} className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-            <span className={cn(ownTotal > enemyTotal ? "font-semibold text-foreground" : "text-muted-foreground")}>
-              {ownTotal.toLocaleString("en-US")}
-            </span>
-            <span className="text-[11px] text-muted-foreground">{label}</span>
-            <span
-              className={cn(
-                "text-right",
-                enemyTotal > ownTotal ? "font-semibold text-foreground" : "text-muted-foreground",
-              )}
-            >
-              {enemyTotal.toLocaleString("en-US")}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 /** Each lane's souls at the end of the laning phase, from the tracked player's side, their own lane tinted. */
 export function LanesCard({
   matchups,
@@ -147,7 +112,6 @@ export function LanesCard({
                   ))}
                 </div>
               </div>
-              <DuoComparison own={own} enemy={enemy} />
             </div>
           );
         })}
