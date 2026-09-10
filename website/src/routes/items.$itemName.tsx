@@ -6,6 +6,7 @@ import { lazy, Suspense, useMemo } from "react";
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { ItemImage } from "~/components/ItemImage";
 import { ItemEffectCard } from "~/components/items-page/ItemEffectCard";
+import { ItemUpgradePath } from "~/components/items-page/ItemUpgradePath";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { NotFound } from "~/components/NotFound";
 import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
@@ -234,6 +235,8 @@ function ItemDetailPage() {
           <ItemEffectCard item={itemQuery.data} className="max-w-3xl rounded-lg border border-border bg-card p-4" />
         </section>
       )}
+
+      <ItemUpgradePath itemId={itemId} itemName={itemName} request={itemRequest} />
 
       <ChunkErrorBoundary>
         <Suspense fallback={<LoadingLogo />}>
