@@ -13,13 +13,14 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { isWin } from "~/lib/tracker/compute";
 import { trackerEnemyStatsQueryOptions, trackerMateStatsQueryOptions } from "~/queries/tracker-queries";
 
 import { WIN_COLOR } from "../shared/colors";
+import { PanelTooltipContent } from "../shared/PanelTooltipContent";
 
 interface CompanionRow {
   accountId: number;
@@ -167,7 +168,9 @@ function CompanionTable({ rows, isPending, isError, matchesLabel, winrateLabel }
                     <TooltipTrigger asChild>
                       <span>{day.unix(row.lastPlayedUnix).fromNow()}</span>
                     </TooltipTrigger>
-                    <TooltipContent>{day.unix(row.lastPlayedUnix).format("MMM D, YYYY HH:mm")}</TooltipContent>
+                    <PanelTooltipContent>
+                      {day.unix(row.lastPlayedUnix).format("MMM D, YYYY HH:mm")}
+                    </PanelTooltipContent>
                   </Tooltip>
                 </TableCell>
               </TableRow>

@@ -15,10 +15,13 @@ export function ItemImageFromAsset({
   item,
   isLoading = false,
   className,
+  title,
 }: {
   item: Upgrade | undefined;
   isLoading?: boolean;
   className?: string;
+  /** Native hover title, the name by default; pass "" where a tooltip already names the image. */
+  title?: string;
 }) {
   return (
     <AssetImage
@@ -29,6 +32,7 @@ export function ItemImageFromAsset({
               png: item.shop_image,
               fallbackSrc: item.shop_image_small,
               alt: item.name ?? "Unknown Item",
+              title,
             }
           : undefined
       }

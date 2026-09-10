@@ -14,7 +14,7 @@ import {
 } from "recharts";
 
 import { HeroImage } from "~/components/HeroImage";
-import { Tooltip as HoverTooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { Tooltip as HoverTooltip, TooltipTrigger } from "~/components/ui/tooltip";
 import { niceTicks } from "~/lib/chart-axis";
 import { formatMatchDuration } from "~/lib/tracker/compute";
 import { OBJECTIVE_LABELS, type ObjectiveEvent, type ObjectiveEventKind } from "~/lib/tracker/objectives";
@@ -23,6 +23,7 @@ import { cn } from "~/lib/utils";
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
 import { LOSS_COLOR, LOSS_TEXT_CLASS, WIN_COLOR, WIN_TEXT_CLASS } from "../shared/colors";
+import { PanelTooltipContent } from "../shared/PanelTooltipContent";
 
 /** Marker length in pixels; bigger objectives get longer ticks. */
 const MARKER_HEIGHTS: Record<ObjectiveEventKind, number> = {
@@ -180,7 +181,7 @@ function ChipMarker({
           <TooltipTrigger asChild>
             <div className="m-0.5 size-5 rounded-full bg-card" style={{ boxShadow: `0 0 0 1.5px ${color}` }}>
               {event.hero ? (
-                <HeroImage heroId={event.hero.hero_id} className="size-5 rounded-full" />
+                <HeroImage heroId={event.hero.hero_id} className="size-5 rounded-full" title="" />
               ) : (
                 <span className="flex size-5 items-center justify-center rounded-full bg-muted">
                   <Skull className="size-3 text-muted-foreground" />
@@ -188,7 +189,7 @@ function ChipMarker({
               )}
             </div>
           </TooltipTrigger>
-          <TooltipContent>{event.tooltip}</TooltipContent>
+          <PanelTooltipContent>{event.tooltip}</PanelTooltipContent>
         </HoverTooltip>
       </foreignObject>
     </g>

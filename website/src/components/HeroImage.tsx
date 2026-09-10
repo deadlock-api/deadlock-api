@@ -2,7 +2,16 @@ import { AssetImage } from "~/components/AssetImage";
 import { useHeroById } from "~/hooks/useAssetById";
 import { cn } from "~/lib/utils";
 
-export function HeroImage({ heroId, className }: { heroId: number; className?: string }) {
+export function HeroImage({
+  heroId,
+  className,
+  title,
+}: {
+  heroId: number;
+  className?: string;
+  /** Native hover title, the name by default; pass "" where a tooltip already names the image. */
+  title?: string;
+}) {
   const { hero, isLoading } = useHeroById(heroId);
 
   return (
@@ -14,6 +23,7 @@ export function HeroImage({ heroId, className }: { heroId: number; className?: s
               png: hero.images?.minimap_image,
               fallbackSrc: hero.images?.minimap_image_webp ?? hero.images?.minimap_image,
               alt: hero.name ?? "Unknown Hero",
+              title,
             }
           : undefined
       }
