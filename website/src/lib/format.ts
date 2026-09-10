@@ -79,3 +79,8 @@ export function formatSignedPercent(ratio: number, digits = 1): string {
   const percent = Math.round(ratio * 100 * factor) / factor;
   return `${percent > 0 ? "+" : ""}${percent.toFixed(digits)}%`;
 }
+
+/** "Toxic Bullets'" rather than "Toxic Bullets's"; item names ending in s are mostly plurals. */
+export function possessive(name: string): string {
+  return name.endsWith("s") ? `${name}'` : `${name}'s`;
+}

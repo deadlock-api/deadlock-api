@@ -9,7 +9,7 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import { day } from "~/dayjs";
 import { api } from "~/lib/api";
 import { getPickrateMultiplier } from "~/lib/constants";
-import { formatPercent, formatSignedPercent } from "~/lib/format";
+import { formatPercent, formatSignedPercent, possessive } from "~/lib/format";
 import { withoutOpenTimeBucket } from "~/lib/time-buckets";
 import { queryKeys } from "~/queries/query-keys";
 
@@ -75,7 +75,7 @@ export function HeroWinRateOverTime({
     <section className="space-y-4">
       <h2 className="text-xl font-semibold tracking-tight">{heroName} Win Rate Over Time</h2>
       <p className="text-sm text-muted-foreground">
-        {heroName}&apos;s win rate{" "}
+        {possessive(heroName)} win rate{" "}
         <span className="font-semibold text-foreground">
           {movement} ({formatSignedPercent(delta)})
         </span>{" "}

@@ -7,7 +7,7 @@ import { type WeekEntry, WeeklyTrendChart } from "~/components/WeeklyTrendChart"
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { day } from "~/dayjs";
 import { api } from "~/lib/api";
-import { formatPercent, formatSignedPercent } from "~/lib/format";
+import { formatPercent, formatSignedPercent, possessive } from "~/lib/format";
 import { withoutOpenTimeBucket } from "~/lib/time-buckets";
 import { queryKeys } from "~/queries/query-keys";
 
@@ -83,7 +83,7 @@ export function ItemWinRateOverTime({
     <section className="space-y-4">
       <h2 className="text-xl font-semibold tracking-tight">{itemName} Win Rate Over Time</h2>
       <p className="text-sm text-muted-foreground">
-        {itemName}&apos;s win rate{" "}
+        {possessive(itemName)} win rate{" "}
         <span className="font-semibold text-foreground">
           {movement} ({formatSignedPercent(delta)})
         </span>{" "}

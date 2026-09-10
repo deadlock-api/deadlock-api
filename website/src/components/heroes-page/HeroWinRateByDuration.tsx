@@ -20,7 +20,7 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { percentTicks, winRateDomain } from "~/lib/chart-axis";
 import { DURATION_BUCKETS } from "~/lib/constants";
-import { formatPercent } from "~/lib/format";
+import { formatPercent, possessive } from "~/lib/format";
 import { queryKeys } from "~/queries/query-keys";
 
 const MIN_BUCKET_MATCHES = 100;
@@ -101,7 +101,7 @@ export function HeroWinRateByDuration({
       <p className="text-sm text-muted-foreground">
         <span className="font-semibold text-foreground">{verdict}</span>: {formatPercent(early.winRate)} in{" "}
         {early.label} games versus {formatPercent(late.winRate)} in {late.label} games. Each bar is one duration bracket
-        in the current patch; hover for how many of {heroName}&apos;s games end there.
+        in the current patch; hover for how many of {possessive(heroName)} games end there.
       </p>
       <figure aria-label={`${heroName} win rate by match duration`}>
         <ResponsiveContainer width="100%" height={280} className="rounded-xl bg-muted p-2">
