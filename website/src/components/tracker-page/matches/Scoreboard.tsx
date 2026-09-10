@@ -66,7 +66,7 @@ function AbilityChip({ entry }: { entry: BuildAbility }) {
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="flex flex-col items-center gap-0.5">
-          <AbilityImage abilityId={entry.ability.id} className="size-5" title="" />
+          <AbilityImage abilityId={entry.ability.id} className="size-5.5" title="" />
           <span className="flex gap-px" aria-label={`Level ${level} of ${MAX_ABILITY_LEVEL}`}>
             {Array.from({ length: MAX_ABILITY_LEVEL }, (_, index) => (
               <span
@@ -103,7 +103,7 @@ function ItemChip({ item }: { item: BuildItem }) {
         <span className="relative">
           <ItemImageFromAsset
             item={item.upgrade}
-            className={cn("size-5 rounded-sm", sold && "opacity-35 grayscale")}
+            className={cn("size-5.5 rounded-sm", sold && "opacity-35 grayscale")}
             title=""
           />
           {item.imbuedInto && (
