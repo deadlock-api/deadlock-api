@@ -27,8 +27,9 @@ function WinRate({ wins, games, className }: { wins: number; games: number; clas
 }
 
 function fmtTime(s: number): string {
-  const m = Math.floor(s / 60);
-  const sec = Math.round(s % 60);
+  const whole = Math.round(s);
+  const m = Math.floor(whole / 60);
+  const sec = whole % 60;
   return `${m}:${sec.toString().padStart(2, "0")}`;
 }
 

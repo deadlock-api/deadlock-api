@@ -165,8 +165,9 @@ export function formatStatValue(value: number | undefined | null, format: StatFo
     case "integer":
       return Math.round(value).toLocaleString("en-US");
     case "duration": {
-      const minutes = Math.floor(value / 60);
-      const seconds = Math.round(value % 60);
+      const whole = Math.round(value);
+      const minutes = Math.floor(whole / 60);
+      const seconds = whole % 60;
       return `${minutes}:${seconds.toString().padStart(2, "0")}`;
     }
     case "percent":
