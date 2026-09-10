@@ -17,6 +17,8 @@ const TIME_BUCKETS = [
   { value: "start_time_month", label: "Monthly" },
 ] as const;
 
+const BUCKET_UNIT = { start_time_day: "day", start_time_week: "week", start_time_month: "month" } as const;
+
 interface GamesOverTimeChartProps {
   params: AnalyticsApiGameStatsRequest;
   stat: string;
@@ -40,14 +42,18 @@ export default function GamesOverTimeChart({
 
   const chartData = useMemo(() => {
     if (!data) return [];
-    return [...data]
-      .sort((a, b) => a.bucket - b.bucket)
-      .map((entry) => ({
-        date: day.unix(entry.bucket).valueOf(),
-        value: entry[stat as keyof typeof entry] as number,
-        matches: entry.total_matches,
-      }));
-  }, [data, stat]);
+    const unit = BUCKET_UNIT[timeBucket as keyof typeof BUCKET_UNIT];
+    const now = day();
+    const sorted = [...data].sort((a, b) => a.bucket - b.bucket);
+    // A bucket that is still open only holds the matches that already ended, so it skews toward short games and
+    // undercounts totals. Keep it when it is one of only two points, e.g. monthly early in a season.
+    const closed = sorted.filter((entry) => !unit || day.unix(entry.bucket).add(1, unit).isBefore(now));
+    return (closed.length >= 2 ? closed : sorted).map((entry) => ({
+      date: day.unix(entry.bucket).valueOf(),
+      value: entry[stat as keyof typeof entry] as number,
+      matches: entry.total_matches,
+    }));
+  }, [data, stat, timeBucket]);
   const span = valueSpan(chartData);
 
   return (
