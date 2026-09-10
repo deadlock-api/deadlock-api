@@ -72,12 +72,17 @@ function ObjectiveMarker({
   cy = 0,
   event,
   level,
+  plotLeft,
+  plotRight,
 }: {
   cx?: number;
   cy?: number;
   event: ObjectiveEvent;
   /** How many marks this one stacks in from the edge, where marks close in time would overlap. */
   level: number;
+  /** The plot's horizontal extent; a mark at the match's start or end is kept whole inside it. */
+  plotLeft: number;
+  plotRight: number;
 }) {
   const { src, size } = objectiveIcon(event);
   const color = event.own ? WIN_COLOR : LOSS_COLOR;
@@ -87,7 +92,12 @@ function ObjectiveMarker({
     <HoverTooltip>
       <TooltipTrigger asChild>
         <g>
-          <foreignObject x={cx - size / 2 - 2} y={top - 2} width={size + 4} height={size + 4}>
+          <foreignObject
+            x={Math.min(Math.max(cx - size / 2, plotLeft), plotRight - size) - 2}
+            y={top - 2}
+            width={size + 4}
+            height={size + 4}
+          >
             <div
               className="m-0.5"
               style={{
@@ -403,7 +413,14 @@ export function MatchTimelineChart({
                 y={event.own ? hi : lo}
                 r={0}
                 shape={(props) => (
-                  <ObjectiveMarker cx={props.cx} cy={props.cy} event={event} level={objectiveLevels[index]} />
+                  <ObjectiveMarker
+                    cx={props.cx}
+                    cy={props.cy}
+                    event={event}
+                    level={objectiveLevels[index]}
+                    plotLeft={LEAD_AXIS_PX}
+                    plotRight={width - PLOT_END_PX}
+                  />
                 )}
               />
             ))}
