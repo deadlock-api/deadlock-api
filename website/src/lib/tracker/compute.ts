@@ -3,7 +3,7 @@ import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import type { Mode } from "~/components/selectors/ModeSelector";
 import { day } from "~/dayjs";
 
-export const MATCH_MODE_LABELS_BY_ID: Record<number, string> = {
+const MATCH_MODE_LABELS_BY_ID: Record<number, string> = {
   1: "Unranked",
   2: "Private Lobby",
   3: "Co-op Bot",
@@ -17,6 +17,12 @@ const GAME_MODE_NORMAL = 1;
 const GAME_MODE_STREET_BRAWL = 4;
 const MATCH_MODE_UNRANKED = 1;
 const MATCH_MODE_RANKED = 4;
+
+/** Street Brawl matches report the lobby type (unranked or private) as their match mode, so the game mode names them. */
+export function matchModeLabel(entry: PlayerMatchHistoryEntry): string {
+  if (entry.game_mode === GAME_MODE_STREET_BRAWL) return "Street Brawl";
+  return MATCH_MODE_LABELS_BY_ID[entry.match_mode] ?? "Unknown";
+}
 
 /** `match_result` carries the winning team, mirroring the API's own `won()`. */
 export function isWin(entry: PlayerMatchHistoryEntry): boolean {

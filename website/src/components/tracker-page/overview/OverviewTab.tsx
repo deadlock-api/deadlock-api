@@ -17,7 +17,7 @@ import {
   computeStreaks,
   formatMatchDuration,
   isWin,
-  MATCH_MODE_LABELS_BY_ID,
+  matchModeLabel,
   performanceWindow,
   perHeroRows,
   rankHistoryPoints,
@@ -161,8 +161,7 @@ export function OverviewTab({
                         {entry.player_kills} / {entry.player_deaths} / {entry.player_assists}
                       </div>
                       <div className="truncate text-xs text-muted-foreground">
-                        {MATCH_MODE_LABELS_BY_ID[entry.match_mode] ?? "Unknown"} ·{" "}
-                        {formatMatchDuration(entry.match_duration_s)}
+                        {matchModeLabel(entry)} · {formatMatchDuration(entry.match_duration_s)}
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5">

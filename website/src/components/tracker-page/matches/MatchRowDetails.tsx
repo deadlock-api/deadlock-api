@@ -8,13 +8,7 @@ import { CopyButton } from "~/components/copy-button";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
-import {
-  brawlRounds,
-  formatMatchDuration,
-  hasLanes,
-  MATCH_MODE_LABELS_BY_ID,
-  type TrackerSummary,
-} from "~/lib/tracker/compute";
+import { brawlRounds, formatMatchDuration, hasLanes, matchModeLabel, type TrackerSummary } from "~/lib/tracker/compute";
 import { computeTeamContribution } from "~/lib/tracker/contribution";
 import { computeFights } from "~/lib/tracker/fights";
 import { computeLaneMatchup } from "~/lib/tracker/lane-matchup";
@@ -126,7 +120,7 @@ export function MatchRowDetails({
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         {/* Restates the match table columns that collapse on narrow layouts, keyed to the table's container. */}
         <span className="@4xl/matches:hidden">
-          {MATCH_MODE_LABELS_BY_ID[entry.match_mode] ?? "Unknown"}
+          {matchModeLabel(entry)}
           <span className="@3xl/matches:hidden"> · {formatMatchDuration(entry.match_duration_s)}</span>
         </span>
         {rounds && (
