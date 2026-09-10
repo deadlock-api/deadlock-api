@@ -54,7 +54,8 @@ function parseFrontmatter(raw: string): { meta: RawFrontmatter; content: string 
       currentKey = kv[1];
       const value = kv[2].trim();
       if (value) {
-        meta[currentKey] = value;
+        // YAML needs quotes around a title with a colon in it; they aren't part of the value.
+        meta[currentKey] = /^(["']).*\1$/.test(value) ? value.slice(1, -1) : value;
       }
     }
   }
