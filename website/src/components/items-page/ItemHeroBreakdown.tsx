@@ -7,6 +7,7 @@ import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
 import { ItemImageFromAsset } from "~/components/ItemImage";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { formatPercent, formatShare } from "~/lib/format";
 import { itemSlug } from "~/lib/item-slug";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import { filterShopableItems, itemUpgradesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
@@ -84,10 +85,6 @@ function pickPairedItems(rows: readonly CohortRow[], item: SlimUpgrade, items: r
     .slice(0, TOP_COUNT);
 }
 
-function Percent({ value, digits = 1 }: { value: number; digits?: number }) {
-  return <>{(value * 100).toFixed(digits)}%</>;
-}
-
 export function ItemHeroBreakdown({
   itemId,
   itemName,
@@ -139,15 +136,11 @@ export function ItemHeroBreakdown({
                 <dl className="mt-auto w-full space-y-0.5 text-xs">
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Win</dt>
-                    <dd className="font-semibold tabular-nums">
-                      <Percent value={winRate} />
-                    </dd>
+                    <dd className="font-semibold tabular-nums">{formatPercent(winRate)}</dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Bought</dt>
-                    <dd className="tabular-nums">
-                      <Percent value={usage} digits={0} />
-                    </dd>
+                    <dd className="tabular-nums">{formatShare(usage)}</dd>
                   </div>
                 </dl>
               </li>
@@ -182,15 +175,11 @@ export function ItemHeroBreakdown({
                 <dl className="mt-auto w-full space-y-0.5 text-xs">
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Win</dt>
-                    <dd className="font-semibold tabular-nums">
-                      <Percent value={winRate} />
-                    </dd>
+                    <dd className="font-semibold tabular-nums">{formatPercent(winRate)}</dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Together</dt>
-                    <dd className="tabular-nums">
-                      <Percent value={pairRate} digits={0} />
-                    </dd>
+                    <dd className="tabular-nums">{formatShare(pairRate)}</dd>
                   </div>
                 </dl>
               </li>

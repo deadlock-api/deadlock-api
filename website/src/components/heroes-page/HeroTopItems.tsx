@@ -5,6 +5,7 @@ import { useMemo } from "react";
 
 import { ItemImageFromAsset } from "~/components/ItemImage";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { formatPercent, formatShare } from "~/lib/format";
 import { itemSlug } from "~/lib/item-slug";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
@@ -91,11 +92,11 @@ export function HeroTopItems({
             <dl className="mt-auto w-full space-y-0.5 text-xs">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Win</dt>
-                <dd className="font-semibold tabular-nums">{(winRate * 100).toFixed(1)}%</dd>
+                <dd className="font-semibold tabular-nums">{formatPercent(winRate)}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Bought</dt>
-                <dd className="tabular-nums">{(usage * 100).toFixed(0)}%</dd>
+                <dd className="tabular-nums">{formatShare(usage)}</dd>
               </div>
             </dl>
           </li>

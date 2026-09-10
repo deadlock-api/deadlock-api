@@ -68,6 +68,11 @@ export function formatPercent(ratio: number, digits = 1): string {
   return `${(ratio * 100).toFixed(digits)}%`;
 }
 
+/** Formats a share as a whole percentage, printing a nonzero share that would round to "0%" as "<1%". */
+export function formatShare(ratio: number): string {
+  return ratio > 0 && ratio < 0.005 ? "<1%" : formatPercent(ratio, 0);
+}
+
 /** Formats a ratio as a signed percentage, deciding the sign after rounding so a tiny change never prints as "-0.0%". */
 export function formatSignedPercent(ratio: number, digits = 1): string {
   const factor = 10 ** digits;
