@@ -222,9 +222,19 @@ export function Scoreboard({
                       {build.length > 0 && (
                         <tr className={cn(isTracked && "bg-accent")}>
                           <td colSpan={8} className="px-2 pb-1.5 pl-10">
-                            <div className="flex flex-wrap items-center gap-1" title="Final build">
+                            <div className="flex flex-wrap items-center gap-1">
                               {build.map((item) => (
-                                <ItemImageFromAsset key={item.id} item={item} className="size-5 rounded-sm" />
+                                <Tooltip key={item.id}>
+                                  <TooltipTrigger asChild>
+                                    <span>
+                                      <ItemImageFromAsset item={item} className="size-5 rounded-sm" />
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {item.name}
+                                    {item.cost != null && ` · ${item.cost.toLocaleString("en-US")} souls`}
+                                  </TooltipContent>
+                                </Tooltip>
                               ))}
                             </div>
                           </td>
