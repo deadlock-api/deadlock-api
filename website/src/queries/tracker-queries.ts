@@ -103,9 +103,17 @@ export interface TrackerMatchItem {
   imbued_ability_id: number;
 }
 
+/** One stats sample; every count is cumulative from the match start. */
 export interface TrackerMatchStat {
   time_stamp_s: number;
   net_worth: number;
+  kills: number;
+  deaths: number;
+  assists: number;
+  /** Lane creeps last hit. */
+  creep_kills: number;
+  denies: number;
+  player_damage: number;
 }
 
 export interface TrackerMatchDeath {
@@ -225,6 +233,11 @@ interface RestMatchMetadata {
       stats?: {
         time_stamp_s?: number;
         net_worth?: number;
+        kills?: number;
+        deaths?: number;
+        assists?: number;
+        creep_kills?: number;
+        denies?: number;
         player_damage?: number;
         boss_damage?: number;
         player_healing?: number;
@@ -261,6 +274,19 @@ function maxStat(stats: { [key: string]: number | null | undefined }[] | undefin
 }
 
 const MAX_LOBBY_SIZE = 12;
+
+function toTrackerStat(stat: { [key in keyof TrackerMatchStat]?: number | null }): TrackerMatchStat {
+  return {
+    time_stamp_s: stat.time_stamp_s ?? 0,
+    net_worth: stat.net_worth ?? 0,
+    kills: stat.kills ?? 0,
+    deaths: stat.deaths ?? 0,
+    assists: stat.assists ?? 0,
+    creep_kills: stat.creep_kills ?? 0,
+    denies: stat.denies ?? 0,
+    player_damage: stat.player_damage ?? 0,
+  };
+}
 
 /** The progress a match applied, which demotion protection can hold at zero against the change the result asked for. */
 function rankDelta(initial: number | null | undefined, final: number | null | undefined): number | null {
@@ -370,10 +396,7 @@ async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<Track
         upgrade_id: item.upgrade_id ?? 0,
         imbued_ability_id: item.imbued_ability_id ?? 0,
       })),
-      stats: (player.stats ?? []).map((stat) => ({
-        time_stamp_s: stat.time_stamp_s ?? 0,
-        net_worth: stat.net_worth ?? 0,
-      })),
+      stats: (player.stats ?? []).map(toTrackerStat),
       personaname: undefined,
     })),
   };
@@ -438,7 +461,17 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
               player_rank_consumed_demotion_protection: true,
               ability_stats: true,
               items: { item_id: true, game_time_s: true, sold_time_s: true, upgrade_id: true, imbued_ability_id: true },
-              stats: { time_stamp_s: true, net_worth: true, player_healing: true },
+              stats: {
+                time_stamp_s: true,
+                net_worth: true,
+                player_healing: true,
+                kills: true,
+                deaths: true,
+                assists: true,
+                creep_kills: true,
+                denies: true,
+                player_damage: true,
+              },
               steam: { personaname: true },
             },
           },
@@ -491,10 +524,7 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
             upgrade_id: item.upgrade_id ?? 0,
             imbued_ability_id: item.imbued_ability_id ?? 0,
           })),
-          stats: (player.stats ?? []).map((stat) => ({
-            time_stamp_s: stat.time_stamp_s ?? 0,
-            net_worth: stat.net_worth ?? 0,
-          })),
+          stats: (player.stats ?? []).map(toTrackerStat),
           personaname: player.steam?.personaname,
         })),
       };

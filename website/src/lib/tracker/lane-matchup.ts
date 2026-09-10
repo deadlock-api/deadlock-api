@@ -1,12 +1,13 @@
 import { type LaneInfo, LANES } from "~/lib/team-builder/lanes";
-import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
+import type { TrackerMatchPlayer, TrackerMatchStat } from "~/queries/tracker-queries";
 
 /** The laning phase has no fixed end in game; nine minutes is where this compares lanes. */
 export const LANE_PHASE_END_S = 540;
 
-export interface LanePlayerSouls {
+export interface LanePlayer {
   player: TrackerMatchPlayer;
-  souls: number;
+  /** The player's cumulative stats at the matchup's sample time. */
+  stat: TrackerMatchStat;
 }
 
 export interface LaneMatchup {
@@ -14,22 +15,29 @@ export interface LaneMatchup {
   /** Seconds into the match the souls were sampled at: the laning phase end, or the last sample if earlier. */
   time: number;
   /** The tracked player's team in the lane, the tracked player first when it is their lane. */
-  own: LanePlayerSouls[];
-  enemy: LanePlayerSouls[];
+  own: LanePlayer[];
+  enemy: LanePlayer[];
   /** Own lane souls minus enemy lane souls at `time`. */
   diff: number;
 }
 
-function netWorthAt(player: TrackerMatchPlayer, time: number): number {
-  let netWorth = 0;
-  let latest = -1;
+const EMPTY_STAT: Omit<TrackerMatchStat, "time_stamp_s"> = {
+  net_worth: 0,
+  kills: 0,
+  deaths: 0,
+  assists: 0,
+  creep_kills: 0,
+  denies: 0,
+  player_damage: 0,
+};
+
+/** The player's latest sample at or before `time`, zeroed before their first. */
+function statAt(player: TrackerMatchPlayer, time: number): TrackerMatchStat {
+  let latest: TrackerMatchStat | undefined;
   for (const stat of player.stats) {
-    if (stat.time_stamp_s <= time && stat.time_stamp_s > latest) {
-      latest = stat.time_stamp_s;
-      netWorth = stat.net_worth;
-    }
+    if (stat.time_stamp_s <= time && (!latest || stat.time_stamp_s > latest.time_stamp_s)) latest = stat;
   }
-  return netWorth;
+  return latest ?? { ...EMPTY_STAT, time_stamp_s: 0 };
 }
 
 /**
@@ -45,8 +53,8 @@ export function computeLaneMatchups(players: TrackerMatchPlayer[], accountId: nu
   if (lastSample === 0) return [];
   const time = Math.min(LANE_PHASE_END_S, lastSample);
 
-  const withSouls = (player: TrackerMatchPlayer): LanePlayerSouls => ({ player, souls: netWorthAt(player, time) });
-  const total = (list: LanePlayerSouls[]) => list.reduce((sum, entry) => sum + entry.souls, 0);
+  const withStat = (player: TrackerMatchPlayer): LanePlayer => ({ player, stat: statAt(player, time) });
+  const total = (list: LanePlayer[]) => list.reduce((sum, entry) => sum + entry.stat.net_worth, 0);
   const matchups: LaneMatchup[] = [];
   for (const lane of LANES) {
     const laners = players.filter((player) => player.assigned_lane === lane.id);
@@ -55,8 +63,8 @@ export function computeLaneMatchups(players: TrackerMatchPlayer[], accountId: nu
       .toSorted((a, b) => Number(b === tracked) - Number(a === tracked));
     const enemyPlayers = laners.filter((player) => player.team !== tracked.team);
     if (ownPlayers.length === 0 || enemyPlayers.length === 0) continue;
-    const own = ownPlayers.map(withSouls);
-    const enemy = enemyPlayers.map(withSouls);
+    const own = ownPlayers.map(withStat);
+    const enemy = enemyPlayers.map(withStat);
     matchups.push({ lane, time, own, enemy, diff: total(own) - total(enemy) });
   }
   return matchups;
