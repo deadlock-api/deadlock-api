@@ -34,32 +34,46 @@ const GUARDIAN_ICON = `${ASSETS}/images/shop/images/minimap/objective_icon_t1.sv
  * Guardian and Walker have minimap art, so a Base Guardian reuses the Guardian's at a larger size, a Shrine (the
  * Patron's shield generator) takes the defend ping's shield, and the Mid Boss the Rejuvenator it drops.
  */
-const OBJECTIVE_ICONS: Record<Exclude<ObjectiveEventKind, "patron">, { src: string; size: number }> = {
+const OBJECTIVE_ICONS: Record<Exclude<ObjectiveEventKind, "patron" | "patronCore">, { src: string; size: number }> = {
   guardian: { src: GUARDIAN_ICON, size: 12 },
   walker: { src: `${ASSETS}/images/shop/images/minimap/objective_icon_t2.svg`, size: 14 },
   baseGuardian: { src: GUARDIAN_ICON, size: 16 },
   shrine: { src: `${ASSETS}/images/shop/images/hud/ping/ping_icon_defend.svg`, size: 14 },
   midBoss: { src: `${ASSETS}/images/shop/images/hud/icons/rejuvenator.svg`, size: 14 },
 };
-/** A Patron is marked with the emblem of the team it belonged to. */
+/** A Patron is marked with the emblem of the team it belonged to, larger for the final phase that ends the match. */
 const PATRON_ICONS: Record<string, string> = {
   [TEAMS[0].key]: `${ASSETS}/icons/hud/core/team1_icon.svg`,
   [TEAMS[1].key]: `${ASSETS}/icons/hud/core/team2_icon.svg`,
 };
-const PATRON_ICON_SIZE = 18;
+const PATRON_ICON_SIZE = 16;
+const PATRON_CORE_ICON_SIZE = 20;
 
 function objectiveIcon(event: ObjectiveEvent): { src: string; size: number } {
-  if (event.kind !== "patron") return OBJECTIVE_ICONS[event.kind];
-  return { src: PATRON_ICONS[event.team] ?? PATRON_ICONS[TEAMS[0].key], size: PATRON_ICON_SIZE };
+  if (event.kind !== "patron" && event.kind !== "patronCore") return OBJECTIVE_ICONS[event.kind];
+  return {
+    src: PATRON_ICONS[event.team] ?? PATRON_ICONS[TEAMS[0].key],
+    size: event.kind === "patronCore" ? PATRON_CORE_ICON_SIZE : PATRON_ICON_SIZE,
+  };
 }
 
 /** Gap between an objective mark and the plot edge it sits on. */
 const OBJECTIVE_INSET_PX = 2;
-const OBJECTIVE_SLOT_PX = PATRON_ICON_SIZE + 2;
+const OBJECTIVE_SLOT_PX = PATRON_CORE_ICON_SIZE + 2;
 
 function describeOutcome(event: ObjectiveEvent): string {
-  if (event.kind === "midBoss") return event.own ? "Claimed by your team" : "Claimed by the enemy";
-  return event.own ? "Destroyed by your team" : "Lost to the enemy";
+  switch (event.kind) {
+    case "midBoss":
+      return event.own ? "Claimed by your team" : "Claimed by the enemy";
+    case "patron":
+      return event.own
+        ? "Your team broke it; it fights on in its final phase"
+        : "The enemy broke it; it fights on in its final phase";
+    case "patronCore":
+      return event.own ? "Destroyed by your team, ending the match" : "Destroyed by the enemy, ending the match";
+    default:
+      return event.own ? "Destroyed by your team" : "Lost to the enemy";
+  }
 }
 
 /** Own gains sit along the top edge of the plot, losses along the bottom edge. */

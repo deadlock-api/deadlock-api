@@ -17,7 +17,8 @@ export const OBJECTIVE_LABELS: Record<ObjectiveEventKind, string> = {
   walker: "Walker",
   baseGuardian: "Base Guardian",
   shrine: "Shrine",
-  patron: "Patron",
+  patron: "Patron, first phase",
+  patronCore: "Patron",
   midBoss: "Mid Boss",
 };
 

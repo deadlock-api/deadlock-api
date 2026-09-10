@@ -157,8 +157,11 @@ export interface TrackerMatchPlayer {
   personaname: string | undefined;
 }
 
-/** Objective tiers on the current map; the game's `Core` is the final Patron phase and ends the match. */
-export type TrackerObjectiveKind = "guardian" | "walker" | "baseGuardian" | "shrine" | "patron";
+/**
+ * Objective tiers on the current map. The Patron falls in two phases: the game's `Titan` is its first, after which
+ * it fights on, and its `Core` is the final one, whose destruction ends the match.
+ */
+export type TrackerObjectiveKind = "guardian" | "walker" | "baseGuardian" | "shrine" | "patron" | "patronCore";
 
 export interface TrackerObjective {
   /** The team that owned (and lost) the objective. */
@@ -269,7 +272,7 @@ const restTeam = (team: number | null | undefined) => (team == null ? "" : `Team
 
 /** `ECitadelTeamObjective`: 0 Core, 1-4 Tier1 lanes, 5-8 Tier2 lanes, 9 Titan, 10-11 shield generators, 12-15 barrack bosses. */
 const REST_OBJECTIVE_KINDS: (TrackerObjectiveKind | undefined)[] = [
-  undefined,
+  "patronCore",
   ...Array<TrackerObjectiveKind>(4).fill("guardian"),
   ...Array<TrackerObjectiveKind>(4).fill("walker"),
   "patron",
@@ -285,6 +288,7 @@ function graphqlObjectiveKind(name: string): TrackerObjectiveKind | undefined {
   if (name.startsWith("BarrackBoss")) return "baseGuardian";
   if (name.startsWith("TitanShieldGenerator")) return "shrine";
   if (name === "Titan") return "patron";
+  if (name === "Core") return "patronCore";
   return undefined;
 }
 
