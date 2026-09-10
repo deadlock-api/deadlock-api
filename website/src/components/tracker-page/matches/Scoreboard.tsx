@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { Rank } from "deadlock_api_client";
-import { Crown, ExternalLink } from "lucide-react";
+import { Crown, ExternalLink, ShieldCheck } from "lucide-react";
 import { useMemo } from "react";
 
 import { AbilityImage } from "~/components/AbilityImage";
@@ -19,6 +19,7 @@ import type { TrackerMatchMetadata, TrackerMatchPlayer } from "~/queries/tracker
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { PanelTooltipContent } from "../shared/PanelTooltipContent";
+import { RankDelta } from "../shared/RankDelta";
 
 export const TEAMS = [
   { key: "Team0", name: "The Hidden King" },
@@ -293,6 +294,17 @@ export function Scoreboard({
                               </TooltipTrigger>
                               <PanelTooltipContent>Match MVP</PanelTooltipContent>
                             </Tooltip>
+                          )}
+                          {(player.rank_delta || player.demotion_protected) && (
+                            <span className="ml-auto flex shrink-0 items-center gap-1 pl-1 text-xs font-normal">
+                              {player.demotion_protected && (
+                                <ShieldCheck
+                                  className="size-3.5 text-muted-foreground"
+                                  aria-label="Demotion protection prevented a rank drop"
+                                />
+                              )}
+                              <RankDelta value={player.rank_delta} />
+                            </span>
                           )}
                         </div>
                       </td>

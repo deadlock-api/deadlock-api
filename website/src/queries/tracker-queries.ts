@@ -146,6 +146,10 @@ export interface TrackerMatchPlayer {
   mvp_rank: number | null;
   /** Ranked badge going into the match, or null when unknown or unranked. */
   rank_badge: number | null;
+  /** Ranked progress the match actually moved, or null when it carried no rank progress. */
+  rank_delta: number | null;
+  /** Whether demotion protection absorbed this match's loss. */
+  demotion_protected: boolean;
   items: TrackerMatchItem[];
   stats: TrackerMatchStat[];
   personaname: string | undefined;
@@ -198,7 +202,12 @@ interface RestMatchMetadata {
       denies?: number;
       level?: number;
       mvp_rank?: number | null;
-      player_rank_data?: { initial_display_rank?: number | null } | null;
+      player_rank_data?: {
+        initial_display_rank?: number | null;
+        initial_flat_progress?: number | null;
+        final_flat_progress?: number | null;
+        consumed_demotion_protection?: boolean | null;
+      } | null;
       items?: {
         item_id?: number;
         game_time_s?: number;
@@ -246,6 +255,12 @@ function maxStat(stats: { [key: string]: number | null | undefined }[] | undefin
 }
 
 const MAX_LOBBY_SIZE = 12;
+
+/** The progress a match applied, which demotion protection can hold at zero against the change the result asked for. */
+function rankDelta(initial: number | null | undefined, final: number | null | undefined): number | null {
+  if (initial == null || final == null || (initial === 0 && final === 0)) return null;
+  return final - initial;
+}
 
 const restTeam = (team: number | null | undefined) => (team == null ? "" : `Team${team}`);
 
@@ -333,6 +348,11 @@ async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<Track
       shots_missed: maxStat(player.stats, "shots_missed"),
       mvp_rank: player.mvp_rank ?? null,
       rank_badge: player.player_rank_data?.initial_display_rank || null,
+      rank_delta: rankDelta(
+        player.player_rank_data?.initial_flat_progress,
+        player.player_rank_data?.final_flat_progress,
+      ),
+      demotion_protected: player.player_rank_data?.consumed_demotion_protection === true,
       items: (player.items ?? []).map((item) => ({
         item_id: item.item_id ?? 0,
         game_time_s: item.game_time_s ?? 0,
@@ -403,6 +423,9 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
               max_shots_missed: true,
               mvp_rank: true,
               player_rank_initial_display_rank: true,
+              player_rank_initial_flat_progress: true,
+              player_rank_final_flat_progress: true,
+              player_rank_consumed_demotion_protection: true,
               items: { item_id: true, game_time_s: true, sold_time_s: true, upgrade_id: true, imbued_ability_id: true },
               stats: { time_stamp_s: true, net_worth: true, player_healing: true },
               steam: { personaname: true },
@@ -441,6 +464,8 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
           shots_missed: player.max_shots_missed ?? 0,
           mvp_rank: player.mvp_rank ?? null,
           rank_badge: player.player_rank_initial_display_rank || null,
+          rank_delta: rankDelta(player.player_rank_initial_flat_progress, player.player_rank_final_flat_progress),
+          demotion_protected: player.player_rank_consumed_demotion_protection === true,
           items: (player.items ?? []).map((item) => ({
             item_id: item.item_id ?? 0,
             game_time_s: item.game_time_s ?? 0,
