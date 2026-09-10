@@ -8,6 +8,8 @@ export interface ObjectiveEvent {
   kind: ObjectiveEventKind;
   /** True when the tracked team came out ahead: it destroyed the enemy objective or claimed the boss. */
   own: boolean;
+  /** The team that owned and lost the objective, or claimed the mid boss. */
+  team: string;
 }
 
 export const OBJECTIVE_LABELS: Record<ObjectiveEventKind, string> = {
@@ -25,9 +27,15 @@ export function computeObjectiveEvents(match: TrackerMatchMetadata, ownTeam: str
     time: objective.destroyed_time_s,
     kind: objective.kind,
     own: objective.team !== ownTeam,
+    team: objective.team,
   }));
   for (const boss of match.mid_boss) {
-    events.push({ time: boss.destroyed_time_s, kind: "midBoss", own: boss.team_claimed === ownTeam });
+    events.push({
+      time: boss.destroyed_time_s,
+      kind: "midBoss",
+      own: boss.team_claimed === ownTeam,
+      team: boss.team_claimed,
+    });
   }
   return events.sort((a, b) => a.time - b.time);
 }

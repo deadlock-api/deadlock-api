@@ -24,37 +24,76 @@ import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
 import { LOSS_COLOR, LOSS_TEXT_CLASS, WIN_COLOR, WIN_TEXT_CLASS } from "../shared/colors";
 import { PanelTooltipContent } from "../shared/PanelTooltipContent";
+import { TEAMS } from "./Scoreboard";
 
-/** Marker length in pixels; bigger objectives get longer ticks. */
-const MARKER_HEIGHTS: Record<ObjectiveEventKind, number> = {
-  guardian: 6,
-  walker: 9,
-  baseGuardian: 12,
-  shrine: 12,
-  patron: 16,
-  midBoss: 10,
+const ASSETS = "https://assets-bucket.deadlock-api.com/assets-api-res";
+const GUARDIAN_ICON = `${ASSETS}/images/shop/images/minimap/objective_icon_t1.svg`;
+
+/**
+ * Flat game silhouettes per objective, tinted with the side's colour; bigger objectives get bigger marks. Only the
+ * Guardian and Walker have minimap art, so a Base Guardian reuses the Guardian's at a larger size, a Shrine (the
+ * Patron's shield generator) takes the defend ping's shield, and the Mid Boss the Rejuvenator it drops.
+ */
+const OBJECTIVE_ICONS: Record<Exclude<ObjectiveEventKind, "patron">, { src: string; size: number }> = {
+  guardian: { src: GUARDIAN_ICON, size: 12 },
+  walker: { src: `${ASSETS}/images/shop/images/minimap/objective_icon_t2.svg`, size: 14 },
+  baseGuardian: { src: GUARDIAN_ICON, size: 16 },
+  shrine: { src: `${ASSETS}/images/shop/images/hud/ping/ping_icon_defend.svg`, size: 14 },
+  midBoss: { src: `${ASSETS}/images/shop/images/hud/icons/rejuvenator.svg`, size: 14 },
 };
+/** A Patron is marked with the emblem of the team it belonged to. */
+const PATRON_ICONS: Record<string, string> = {
+  [TEAMS[0].key]: `${ASSETS}/icons/hud/core/team1_icon.svg`,
+  [TEAMS[1].key]: `${ASSETS}/icons/hud/core/team2_icon.svg`,
+};
+const PATRON_ICON_SIZE = 18;
+
+function objectiveIcon(event: ObjectiveEvent): { src: string; size: number } {
+  if (event.kind !== "patron") return OBJECTIVE_ICONS[event.kind];
+  return { src: PATRON_ICONS[event.team] ?? PATRON_ICONS[TEAMS[0].key], size: PATRON_ICON_SIZE };
+}
+
+/** Gap between an objective mark and the plot edge it sits on. */
+const OBJECTIVE_INSET_PX = 2;
+const OBJECTIVE_SLOT_PX = PATRON_ICON_SIZE + 2;
 
 function describeOutcome(event: ObjectiveEvent): string {
   if (event.kind === "midBoss") return event.own ? "Claimed by your team" : "Claimed by the enemy";
   return event.own ? "Destroyed by your team" : "Lost to the enemy";
 }
 
-/** Own gains hang from the top edge of the plot, losses rise from the bottom edge; mid bosses are diamonds. */
-function ObjectiveMarker({ cx = 0, cy = 0, event }: { cx?: number; cy?: number; event: ObjectiveEvent }) {
-  const height = MARKER_HEIGHTS[event.kind];
-  const direction = event.own ? 1 : -1;
+/** Own gains sit along the top edge of the plot, losses along the bottom edge. */
+function ObjectiveMarker({
+  cx = 0,
+  cy = 0,
+  event,
+  level,
+}: {
+  cx?: number;
+  cy?: number;
+  event: ObjectiveEvent;
+  /** How many marks this one stacks in from the edge, where marks close in time would overlap. */
+  level: number;
+}) {
+  const { src, size } = objectiveIcon(event);
+  const color = event.own ? WIN_COLOR : LOSS_COLOR;
+  const inset = OBJECTIVE_INSET_PX + level * OBJECTIVE_SLOT_PX;
+  const top = event.own ? cy + inset : cy - inset - size;
   return (
     <HoverTooltip>
       <TooltipTrigger asChild>
-        <g fill={event.own ? WIN_COLOR : LOSS_COLOR}>
-          {/* The marks are a few pixels wide, so a clear band around each takes the hover. */}
-          <rect x={cx - 5} y={event.own ? cy - 2 : cy - height - 4} width={10} height={height + 6} fill="transparent" />
-          {event.kind === "midBoss" ? (
-            <path d={`M${cx} ${cy}l4 ${4 * direction}l-4 ${4 * direction}l-4 ${-4 * direction}Z`} />
-          ) : (
-            <rect x={cx - 1} y={event.own ? cy : cy - height} width={2} height={height} rx={1} />
-          )}
+        <g>
+          <foreignObject x={cx - size / 2 - 2} y={top - 2} width={size + 4} height={size + 4}>
+            <div
+              className="m-0.5"
+              style={{
+                width: size,
+                height: size,
+                backgroundColor: color,
+                mask: `url("${src}") center / contain no-repeat`,
+              }}
+            />
+          </foreignObject>
         </g>
       </TooltipTrigger>
       <PanelTooltipContent>
@@ -142,15 +181,32 @@ function leadAt(points: SoulLeadPoint[], time: number): number {
 }
 
 /** Stack level per time-sorted event, so chips closer than a chip's width move further off the line. */
-function stackLevels(times: number[], pxPerSecond: number): number[] {
+function stackLevels(times: number[], pxPerSecond: number, footprintPx = CHIP_PX): number[] {
   const levelEnds: number[] = [];
   return times.map((time) => {
-    const left = time * pxPerSecond - CHIP_PX / 2;
+    const left = time * pxPerSecond - footprintPx / 2;
     let level = levelEnds.findIndex((end) => end <= left);
     if (level === -1) level = levelEnds.length;
-    levelEnds[level] = left + LEVEL_PX;
+    levelEnds[level] = left + footprintPx + CHIP_GAP_PX;
     return level;
   });
+}
+
+/** Stack levels for the objective marks, each edge stacked on its own; `objectives` arrive sorted by time. */
+function objectiveStackLevels(objectives: ObjectiveEvent[], pxPerSecond: number): number[] {
+  const levels = new Array<number>(objectives.length);
+  for (const own of [true, false]) {
+    const indices = objectives.flatMap((event, index) => (event.own === own ? [index] : []));
+    const sideLevels = stackLevels(
+      indices.map((index) => objectives[index].time),
+      pxPerSecond,
+      OBJECTIVE_SLOT_PX,
+    );
+    indices.forEach((index, i) => {
+      levels[index] = sideLevels[i];
+    });
+  }
+  return levels;
 }
 
 export interface TimelineEvent {
@@ -249,6 +305,7 @@ export function MatchTimelineChart({
   const plotPx = lead ? LEAD_PLOT_PX : LEADLESS_PLOT_PX;
 
   const pxPerSecond = width > LEAD_AXIS_PX + PLOT_END_PX ? (width - LEAD_AXIS_PX - PLOT_END_PX) / durationS : 0;
+  const objectiveLevels = objectiveStackLevels(objectives, pxPerSecond);
   const gains = events.filter((event) => event.side === "gain");
   const losses = events.filter((event) => event.side === "loss");
   const gainLevels = stackLevels(
@@ -341,7 +398,9 @@ export function MatchTimelineChart({
                 x={event.time}
                 y={event.own ? hi : lo}
                 r={0}
-                shape={(props) => <ObjectiveMarker cx={props.cx} cy={props.cy} event={event} />}
+                shape={(props) => (
+                  <ObjectiveMarker cx={props.cx} cy={props.cy} event={event} level={objectiveLevels[index]} />
+                )}
               />
             ))}
           {lead && (
