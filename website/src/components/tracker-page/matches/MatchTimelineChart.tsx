@@ -35,11 +35,9 @@ const MARKER_HEIGHTS: Record<ObjectiveEventKind, number> = {
   midBoss: 10,
 };
 
-function describeEvent(event: ObjectiveEvent): string {
-  const at = `at ${formatMatchDuration(event.time)}`;
-  if (event.kind === "midBoss") return `${event.own ? "Claimed" : "Enemy claimed"} the Mid Boss ${at}`;
-  const label = OBJECTIVE_LABELS[event.kind];
-  return event.own ? `Destroyed an enemy ${label} ${at}` : `Lost a ${label} ${at}`;
+function describeOutcome(event: ObjectiveEvent): string {
+  if (event.kind === "midBoss") return event.own ? "Claimed by your team" : "Claimed by the enemy";
+  return event.own ? "Destroyed by your team" : "Lost to the enemy";
 }
 
 /** Own gains hang from the top edge of the plot, losses rise from the bottom edge; mid bosses are diamonds. */
@@ -47,14 +45,25 @@ function ObjectiveMarker({ cx = 0, cy = 0, event }: { cx?: number; cy?: number; 
   const height = MARKER_HEIGHTS[event.kind];
   const direction = event.own ? 1 : -1;
   return (
-    <g fill={event.own ? WIN_COLOR : LOSS_COLOR}>
-      <title>{describeEvent(event)}</title>
-      {event.kind === "midBoss" ? (
-        <path d={`M${cx} ${cy}l4 ${4 * direction}l-4 ${4 * direction}l-4 ${-4 * direction}Z`} />
-      ) : (
-        <rect x={cx - 1} y={event.own ? cy : cy - height} width={2} height={height} rx={1} />
-      )}
-    </g>
+    <HoverTooltip>
+      <TooltipTrigger asChild>
+        <g fill={event.own ? WIN_COLOR : LOSS_COLOR}>
+          {/* The marks are a few pixels wide, so a clear band around each takes the hover. */}
+          <rect x={cx - 5} y={event.own ? cy - 2 : cy - height - 4} width={10} height={height + 6} fill="transparent" />
+          {event.kind === "midBoss" ? (
+            <path d={`M${cx} ${cy}l4 ${4 * direction}l-4 ${4 * direction}l-4 ${-4 * direction}Z`} />
+          ) : (
+            <rect x={cx - 1} y={event.own ? cy : cy - height} width={2} height={height} rx={1} />
+          )}
+        </g>
+      </TooltipTrigger>
+      <PanelTooltipContent>
+        <div className="font-medium">
+          {OBJECTIVE_LABELS[event.kind]} · {formatMatchDuration(event.time)}
+        </div>
+        <div className={event.own ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS}>{describeOutcome(event)}</div>
+      </PanelTooltipContent>
+    </HoverTooltip>
   );
 }
 
