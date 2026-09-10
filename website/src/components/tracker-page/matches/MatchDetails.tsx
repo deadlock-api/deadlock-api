@@ -24,7 +24,7 @@ import {
   unscoredOutcome,
 } from "~/lib/tracker/compute";
 import { computeFights } from "~/lib/tracker/fights";
-import { computeLaneMatchups } from "~/lib/tracker/lane-matchup";
+import { computeLaneLeads, computeLaneMatchups } from "~/lib/tracker/lane-matchup";
 import { computeObjectiveEvents } from "~/lib/tracker/objectives";
 import { computeSoulLead } from "~/lib/tracker/soul-lead";
 import { cn } from "~/lib/utils";
@@ -201,6 +201,10 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
   const soulLead = useMemo(() => (match ? computeSoulLead(match.players, ownTeam) : null), [match, ownTeam]);
   const objectiveEvents = useMemo(() => (match ? computeObjectiveEvents(match, ownTeam) : []), [match, ownTeam]);
 
+  const laneLeads = useMemo(
+    () => (laned && match ? computeLaneLeads(match.players, accountId) : []),
+    [laned, match, accountId],
+  );
   const laneMatchups = useMemo(
     () => (laned && match ? computeLaneMatchups(match.players, accountId) : []),
     [laned, match, accountId],
@@ -247,6 +251,7 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
         lead={soulLead}
         objectives={objectiveEvents}
         fights={fights}
+        laneLeads={laneLeads}
         durationS={entry.match_duration_s}
         nameOf={nameOf}
       />

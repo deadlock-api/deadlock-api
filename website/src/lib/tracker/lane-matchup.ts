@@ -1,8 +1,8 @@
 import { type LaneInfo, LANES } from "~/lib/team-builder/lanes";
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
-/** The laning phase has no fixed end in game; ten minutes is the usual point of comparison. */
-export const LANE_PHASE_END_S = 600;
+/** The laning phase has no fixed end in game; nine minutes is where this compares lanes. */
+export const LANE_PHASE_END_S = 540;
 
 export interface LanePlayerSouls {
   player: TrackerMatchPlayer;
@@ -60,4 +60,46 @@ export function computeLaneMatchups(players: TrackerMatchPlayer[], accountId: nu
     matchups.push({ lane, time, own, enemy, diff: total(own) - total(enemy) });
   }
   return matchups;
+}
+
+export interface LaneLeadPoint {
+  time: number;
+  /** Own lane souls minus enemy lane souls. */
+  diff: number;
+}
+
+export interface LaneLead {
+  lane: LaneInfo;
+  /** From the match start through the laning phase end, at each stats sample. */
+  points: LaneLeadPoint[];
+}
+
+/** Each lane's soul difference from the tracked player's team over the laning phase, in `LANES` order. */
+export function computeLaneLeads(players: TrackerMatchPlayer[], accountId: number): LaneLead[] {
+  const tracked = players.find((player) => player.account_id === accountId);
+  if (!tracked) return [];
+  const times = new Set<number>();
+  for (const player of players) {
+    for (const stat of player.stats) if (stat.time_stamp_s <= LANE_PHASE_END_S) times.add(stat.time_stamp_s);
+  }
+  const sampleTimes = [...times].sort((a, b) => a - b);
+  if (sampleTimes.length === 0) return [];
+
+  const leads: LaneLead[] = [];
+  for (const lane of LANES) {
+    const laners = players.filter((player) => player.assigned_lane === lane.id);
+    const own = laners.filter((player) => player.team === tracked.team);
+    const enemy = laners.filter((player) => player.team !== tracked.team);
+    if (own.length === 0 || enemy.length === 0) continue;
+    const total = (list: TrackerMatchPlayer[], time: number) =>
+      list.reduce((sum, player) => sum + netWorthAt(player, time), 0);
+    leads.push({
+      lane,
+      points: [
+        { time: 0, diff: 0 },
+        ...sampleTimes.map((time) => ({ time, diff: total(own, time) - total(enemy, time) })),
+      ],
+    });
+  }
+  return leads;
 }
