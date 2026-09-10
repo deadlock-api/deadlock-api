@@ -25,7 +25,9 @@ export function WeeklyTrendChart({
   ariaLabel: string;
 }) {
   const winRateAxis = winRateDomain(weeks.map((week) => week.winRate));
-  const shareAxis: [number, number] = [0, Math.ceil(Math.max(...weeks.map((week) => week.share)) * 10) / 10];
+  const maxShare = Math.max(...weeks.map((week) => week.share));
+  const shareStep = maxShare < 0.1 ? 0.01 : 0.1;
+  const shareAxis: [number, number] = [0, Math.ceil(maxShare / shareStep) * shareStep];
 
   return (
     <figure aria-label={ariaLabel}>
