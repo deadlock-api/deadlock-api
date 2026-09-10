@@ -986,7 +986,8 @@ export function ItemFlowGraph({
                   <span
                     className={cn(
                       "text-lg font-bold tabular-nums",
-                      pathStats.winRate >= 0.5 ? "text-green-400" : "text-red-400",
+                      // Compare the printed tenth of a percent, so 49.99% shows as a green 50.0%, not a red one.
+                      Math.round(pathStats.winRate * 1000) >= 500 ? "text-green-400" : "text-red-400",
                     )}
                   >
                     {(pathStats.winRate * 100).toFixed(1)}%
@@ -1015,9 +1016,9 @@ export function ItemFlowGraph({
                   <dt className="text-muted-foreground">Players</dt>
                   <dd className="font-semibold tabular-nums">{pathStats.players.toLocaleString("en-US")}</dd>
                 </div>
-                <div>
+                <div className="col-span-2">
                   <dt className="text-muted-foreground">W / L</dt>
-                  <dd className="font-semibold tabular-nums">
+                  <dd className="font-semibold whitespace-nowrap tabular-nums">
                     <span className="text-green-400">{pathStats.wins.toLocaleString("en-US")}</span>
                     {" / "}
                     <span className="text-red-400">{pathStats.losses.toLocaleString("en-US")}</span>
@@ -1057,8 +1058,8 @@ export function ItemFlowGraph({
                 <div>
                   <dt className="text-muted-foreground">Avg game length</dt>
                   <dd className="font-semibold tabular-nums">
-                    {Math.floor(pathStats.avgDurationS / 60)}:
-                    {String(Math.round(pathStats.avgDurationS % 60)).padStart(2, "0")}
+                    {Math.floor(Math.round(pathStats.avgDurationS) / 60)}:
+                    {String(Math.round(pathStats.avgDurationS) % 60).padStart(2, "0")}
                   </dd>
                 </div>
                 <div className="col-span-2">
