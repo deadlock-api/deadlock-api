@@ -35,7 +35,7 @@ export function HeroWinRateOverTime({
     if (!data) return [];
     const hero = new Map<number, { wins: number; matches: number }>();
     const all = new Map<number, number>();
-    for (const row of withoutOpenTimeBucket(data, weeklyRequest.bucket)) {
+    for (const row of withoutOpenTimeBucket(data, "start_time_week")) {
       all.set(row.bucket, (all.get(row.bucket) ?? 0) + row.matches);
       if (row.hero_id === heroId) hero.set(row.bucket, { wins: row.wins, matches: row.matches });
     }

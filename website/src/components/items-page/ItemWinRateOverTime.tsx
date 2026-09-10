@@ -45,7 +45,7 @@ export function ItemWinRateOverTime({
     // The API's daily rollups count the whole start day, so a week that begins before the range would mix in the
     // hours before a season or patch boundary.
     const firstWeek = itemRequest.minUnixTimestamp ?? 0;
-    return withoutOpenTimeBucket(itemQuery.data, weeklyItemRequest.bucket)
+    return withoutOpenTimeBucket(itemQuery.data, "start_time_week")
       .filter(
         (row) =>
           row.item_id === itemId &&
