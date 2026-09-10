@@ -1,7 +1,7 @@
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
 export interface TeamContribution {
-  /** Kills and assists over the team's kills. */
+  /** Kills and assists over the team's kills, at most 1. */
   killParticipation: number;
   /** Player damage over the team's player damage. */
   damageShare: number;
@@ -24,7 +24,8 @@ export function computeTeamContribution(players: TrackerMatchPlayer[], accountId
   }
   const share = (value: number, total: number) => (total > 0 ? value / total : 0);
   return {
-    killParticipation: share(tracked.kills + tracked.assists, kills),
+    // Deaths to non-players can still credit assists, which would otherwise push this past 100%.
+    killParticipation: Math.min(1, share(tracked.kills + tracked.assists, kills)),
     damageShare: share(tracked.player_damage, damage),
     soulsShare: share(tracked.net_worth, souls),
   };
