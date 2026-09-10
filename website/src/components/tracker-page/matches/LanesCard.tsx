@@ -10,19 +10,26 @@ function Laner({
   laner: { player, souls },
   tracked,
   name,
+  mirrored,
 }: {
   laner: LanePlayerSouls;
   tracked: boolean;
   name: string;
+  /** Enemy laners read from the right edge inward. */
+  mirrored?: boolean;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-2">
+    <div className={cn("flex min-w-0 items-center gap-1.5", mirrored && "flex-row-reverse text-right")}>
       <HeroImage
         heroId={player.hero_id}
         className={cn("size-6 shrink-0 rounded-full", tracked && "ring-2 ring-foreground")}
       />
-      <span className={cn("min-w-0 flex-1 truncate text-xs", tracked && "font-semibold")}>{name}</span>
-      <span className="text-xs text-muted-foreground tabular-nums">{souls.toLocaleString("en-US")}</span>
+      <div className="min-w-0 leading-tight">
+        <div className={cn("truncate text-xs", tracked && "font-semibold")} title={name}>
+          {name}
+        </div>
+        <div className="text-[11px] text-muted-foreground tabular-nums">{souls.toLocaleString("en-US")}</div>
+      </div>
     </div>
   );
 }
@@ -67,22 +74,30 @@ export function LanesCard({
                   {diff > 0 ? `+${diff.toLocaleString("en-US")}` : diff.toLocaleString("en-US")}
                 </span>
               </div>
-              {own.map((laner) => (
-                <Laner
-                  key={laner.player.account_id}
-                  laner={laner}
-                  tracked={laner.player.account_id === trackedAccountId}
-                  name={nameOf(laner.player)}
-                />
-              ))}
-              <div className="flex items-center gap-2 text-[10px] tracking-wide text-muted-foreground uppercase">
-                <span className="h-px flex-1 bg-border" />
-                vs
-                <span className="h-px flex-1 bg-border" />
+              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+                <div className="min-w-0 space-y-1.5">
+                  {own.map((laner) => (
+                    <Laner
+                      key={laner.player.account_id}
+                      laner={laner}
+                      tracked={laner.player.account_id === trackedAccountId}
+                      name={nameOf(laner.player)}
+                    />
+                  ))}
+                </div>
+                <span className="text-[10px] tracking-wide text-muted-foreground uppercase">vs</span>
+                <div className="min-w-0 space-y-1.5">
+                  {enemy.map((laner) => (
+                    <Laner
+                      key={laner.player.account_id}
+                      laner={laner}
+                      tracked={false}
+                      name={nameOf(laner.player)}
+                      mirrored
+                    />
+                  ))}
+                </div>
               </div>
-              {enemy.map((laner) => (
-                <Laner key={laner.player.account_id} laner={laner} tracked={false} name={nameOf(laner.player)} />
-              ))}
             </div>
           );
         })}
