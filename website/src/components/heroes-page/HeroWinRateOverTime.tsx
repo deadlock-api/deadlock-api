@@ -8,6 +8,7 @@ import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { day } from "~/dayjs";
 import { api } from "~/lib/api";
+import { percentTicks, winRateDomain } from "~/lib/chart-axis";
 import { getPickrateMultiplier } from "~/lib/constants";
 import { formatPercent, formatSignedPercent } from "~/lib/format";
 import { queryKeys } from "~/queries/query-keys";
@@ -76,6 +77,8 @@ export function HeroWinRateOverTime({
   const last = weeks[weeks.length - 1];
   const delta = last.winRate - first.winRate;
   const movement = Math.abs(delta) < 0.01 ? "has held steady" : delta > 0 ? "has climbed" : "has slipped";
+  const winRateAxis = winRateDomain(weeks.map((week) => week.winRate));
+  const pickRateAxis: [number, number] = [0, Math.ceil(Math.max(...weeks.map((week) => week.pickRate)) * 10) / 10];
 
   return (
     <section className="space-y-4">
@@ -95,7 +98,8 @@ export function HeroWinRateOverTime({
             <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
             <YAxis
               yAxisId="winRate"
-              domain={[(min: number) => Math.floor(min * 20) / 20, (max: number) => Math.ceil(max * 20) / 20]}
+              domain={winRateAxis}
+              ticks={percentTicks(winRateAxis)}
               tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
               width={44}
               stroke="#525252"
@@ -104,7 +108,8 @@ export function HeroWinRateOverTime({
             <YAxis
               yAxisId="pickRate"
               orientation="right"
-              domain={[0, (max: number) => Math.ceil(max * 10) / 10]}
+              domain={pickRateAxis}
+              ticks={percentTicks(pickRateAxis)}
               tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
               width={44}
               stroke="#525252"

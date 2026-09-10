@@ -17,6 +17,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
+import { percentTicks, winRateDomain } from "~/lib/chart-axis";
 import { getPickrateMultiplier } from "~/lib/constants";
 import { formatPercent } from "~/lib/format";
 import { queryKeys } from "~/queries/query-keys";
@@ -124,6 +125,7 @@ export function HeroWinRateByRank({
   const iconSize = chartWidth > 0 ? Math.max(18, Math.min(36, Math.floor((chartWidth - 60) / tiers.length) - 4)) : 36;
   const best = tiers.reduce((a, b) => (b.winRate > a.winRate ? b : a));
   const worst = tiers.reduce((a, b) => (b.winRate < a.winRate ? b : a));
+  const winRateAxis = winRateDomain(tiers.map((tier) => tier.winRate));
 
   return (
     <section className="space-y-4">
@@ -152,7 +154,8 @@ export function HeroWinRateByRank({
               tick={<RankTick tiers={tiers} size={iconSize} />}
             />
             <YAxis
-              domain={[(min: number) => Math.floor(min * 20) / 20, (max: number) => Math.ceil(max * 20) / 20]}
+              domain={winRateAxis}
+              ticks={percentTicks(winRateAxis)}
               tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
               width={44}
               stroke="#525252"

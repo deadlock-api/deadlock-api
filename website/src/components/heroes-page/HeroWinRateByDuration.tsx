@@ -18,6 +18,7 @@ import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { LOSS_COLOR, WIN_COLOR } from "~/components/tracker-page/shared/colors";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
+import { percentTicks, winRateDomain } from "~/lib/chart-axis";
 import { DURATION_BUCKETS } from "~/lib/constants";
 import { formatPercent } from "~/lib/format";
 import { queryKeys } from "~/queries/query-keys";
@@ -92,6 +93,7 @@ export function HeroWinRateByDuration({
       : delta > 0
         ? `${heroName} scales into the late game`
         : `${heroName} falls off in longer games`;
+  const winRateAxis = winRateDomain(entries.map((entry) => entry.winRate));
 
   return (
     <section className="space-y-4">
@@ -107,7 +109,8 @@ export function HeroWinRateByDuration({
             <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
             <XAxis dataKey="tick" interval={0} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
             <YAxis
-              domain={[(min: number) => Math.floor(min * 20) / 20, (max: number) => Math.ceil(max * 20) / 20]}
+              domain={winRateAxis}
+              ticks={percentTicks(winRateAxis)}
               tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
               width={44}
               stroke="#525252"
