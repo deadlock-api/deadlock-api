@@ -10,6 +10,7 @@ import type { Dayjs } from "~/dayjs";
 import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
+import { niceTicks } from "~/lib/chart-axis";
 import { DURATION_BUCKETS, MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
 import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
@@ -92,20 +93,15 @@ export function HeroStatsByDurationChart({
     });
   }, [allLoaded, bucketData, heroStat]);
 
-  const sortedStats = useMemo(() => {
-    const out: number[] = [];
-    for (const row of formattedData) {
-      for (const [key, value] of Object.entries(row)) {
-        if (key === "label") continue;
-        out.push(Number(value));
-      }
-    }
-    out.sort((a, b) => a - b);
-    return out;
-  }, [formattedData]);
-
-  const minStat = useMemo(() => sortedStats[Math.floor(sortedStats.length * 0.2)] ?? 0, [sortedStats]);
-  const maxStat = useMemo(() => sortedStats[Math.floor(sortedStats.length * 0.8)] ?? 100, [sortedStats]);
+  const yTicks = useMemo(() => {
+    const values = formattedData.flatMap((row) =>
+      allHeroIds.flatMap((heroId) => {
+        const value = row[heroId];
+        return effectiveVisibleSet.has(heroId) && typeof value === "number" ? [value] : [];
+      }),
+    );
+    return values.length > 0 ? niceTicks(Math.min(...values), Math.max(...values), 8) : [0, 1];
+  }, [formattedData, allHeroIds, effectiveVisibleSet]);
 
   return (
     <div aria-live="polite" aria-busy={isLoading}>
@@ -120,23 +116,23 @@ export function HeroStatsByDurationChart({
               <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
               <XAxis
                 dataKey="label"
+                padding={{ left: 16, right: 16 }}
                 label={{ value: "Match Duration", position: "insideBottom", offset: -10 }}
                 stroke="#525252"
               />
               <YAxis
-                domain={[minStat * 0.9, maxStat * 1.1]}
+                domain={[yTicks[0], yTicks[yTicks.length - 1]]}
+                ticks={yTicks}
                 label={{
                   value: heroStat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
                   angle: -90,
                   position: "insideLeft",
                 }}
-                tickFormatter={(value) =>
-                  heroStat === "winrate" ? `${Math.round(value)}%` : Math.round(value).toLocaleString("en-US")
-                }
-                minTickGap={2}
-                tickCount={10}
+                tickFormatter={(value: number) => {
+                  const text = value.toLocaleString("en-US", { maximumFractionDigits: 2 });
+                  return heroStat === "winrate" ? `${text}%` : text;
+                }}
                 stroke="#525252"
-                allowDecimals={false}
               />
               <Tooltip
                 contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}

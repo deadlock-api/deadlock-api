@@ -22,6 +22,7 @@ import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVis
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { BANS_PER_MATCH } from "~/lib/ban-rate";
+import { niceTicks } from "~/lib/chart-axis";
 import { getPickrateMultiplier } from "~/lib/constants";
 import { getRankImageUrl } from "~/lib/rank-utils";
 import { queryKeys } from "~/queries/query-keys";
@@ -69,10 +70,9 @@ function formatStatLabel(stat: ByRankStat): string {
 }
 
 function tickFormatter(stat: ByRankStat): (v: number) => string {
-  if (stat === "winrate" || stat === "pickrate" || stat === "ban_rate") return (v) => `${Number(v).toFixed(0)}%`;
-  if (stat === "net_worth_per_match") return (v) => Number(v).toLocaleString("en-US");
-  if (stat === "wins" || stat === "losses" || stat === "matches") return (v) => Number(v).toLocaleString("en-US");
-  return (v) => Number(v).toFixed(1);
+  const format = (v: number) => Number(v).toLocaleString("en-US", { maximumFractionDigits: 2 });
+  if (stat === "winrate" || stat === "pickrate" || stat === "ban_rate") return (v) => `${format(v)}%`;
+  return format;
 }
 
 function BadgePoint(props: ScatterProps) {
@@ -324,6 +324,18 @@ export function HeroStatsByRankChart({
     heroIdFilter: heroIdsWithData,
   });
 
+  const [xTicks, yTicks] = useMemo(() => {
+    const points = allHeroIds.filter((id) => effectiveVisibleSet.has(id)).flatMap((id) => heroDataByHero[id] ?? []);
+    const xs = points.map((point) => point.xValue);
+    const ys = points.map((point) => point.yValue);
+    return points.length > 0
+      ? [niceTicks(Math.min(...xs), Math.max(...xs), 6), niceTicks(Math.min(...ys), Math.max(...ys), 6)]
+      : [
+          [0, 1],
+          [0, 1],
+        ];
+  }, [allHeroIds, effectiveVisibleSet, heroDataByHero]);
+
   const isLoading = isLoadingHeroStats || isLoadingRanks || isLoadingHeroes || isLoadingBanStats;
 
   return (
@@ -341,7 +353,8 @@ export function HeroStatsByRankChart({
                 type="number"
                 dataKey="xValue"
                 name={formatStatLabel(xStat)}
-                domain={["auto", "auto"]}
+                domain={[xTicks[0], xTicks[xTicks.length - 1]]}
+                ticks={xTicks}
                 label={{ value: formatStatLabel(xStat), position: "insideBottom", offset: -10 }}
                 stroke="#525252"
                 tickFormatter={tickFormatter(xStat)}
@@ -352,7 +365,8 @@ export function HeroStatsByRankChart({
                 name={formatStatLabel(yStat)}
                 label={{ value: formatStatLabel(yStat), angle: -90, position: "insideLeft", offset: -10 }}
                 stroke="#525252"
-                domain={["auto", "auto"]}
+                domain={[yTicks[0], yTicks[yTicks.length - 1]]}
+                ticks={yTicks}
                 tickFormatter={tickFormatter(yStat)}
               />
               <Tooltip content={<CustomTooltip xStat={xStat} yStat={yStat} />} />
