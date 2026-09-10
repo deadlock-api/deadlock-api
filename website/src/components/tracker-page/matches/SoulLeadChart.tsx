@@ -52,7 +52,7 @@ function ObjectiveMarker({ cx = 0, cy = 0, event }: { cx?: number; cy?: number; 
   );
 }
 
-function formatLead(lead: number): string {
+export function formatLead(lead: number): string {
   if (Math.abs(lead) < 1000) return `${lead < 0 ? "−" : "+"}${Math.abs(lead)}`;
   const thousands = Math.abs(lead) / 1000;
   const magnitude = thousands >= 10 || Number.isInteger(thousands) ? Math.round(thousands) : thousands.toFixed(1);
@@ -94,102 +94,94 @@ function LeadTooltipContent({ active, payload }: { active?: boolean; payload?: {
   );
 }
 
-export function SoulLeadChart({ lead, events }: { lead: SoulLead; events: ObjectiveEvent[] }) {
+/** Width of the lead axis; the rest of the match timeline indents by it to share the chart's time axis. */
+export const TIMELINE_GUTTER_PX = 48;
+/** Right margin of the chart's plot area, matched by the rest of the match timeline. */
+export const TIMELINE_END_PX = 4;
+
+/** Round minute steps inside the match, zero left out as it is the plot's left edge. */
+export function timelineTicks(durationS: number): number[] {
+  return niceTicks(0, durationS / 60, 8)
+    .filter((minute) => minute > 0 && minute * 60 <= durationS)
+    .map((minute) => minute * 60);
+}
+
+/** The team soul lead over `[0, durationS]`, with gridlines on `timeTicks` and the time labels left to the caller. */
+export function SoulLeadChart({
+  lead,
+  events,
+  durationS,
+  timeTicks,
+}: {
+  lead: SoulLead;
+  events: ObjectiveEvent[];
+  durationS: number;
+  timeTicks: number[];
+}) {
   const gradientId = useId();
   const max = Math.max(0, lead.peak.lead);
   const min = Math.min(0, lead.trough.lead);
   const zeroOffset = max === min ? 0 : max / (max - min);
   const ticks = leadTicks(min, max);
-  const endS = lead.points[lead.points.length - 1].time;
-  const timeTicks = niceTicks(0, endS / 60, 8)
-    .filter((minute) => minute * 60 <= endS)
-    .map((minute) => minute * 60);
-  const taken = events.filter((event) => event.own).length;
 
   return (
-    <div className="space-y-1">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
-        <span className="font-semibold">Soul lead</span>
-        <span className="text-muted-foreground">Ahead for {Math.round(lead.aheadShare * 100)}% of the match</span>
-        {events.length > 0 && (
-          <span
-            className="text-muted-foreground tabular-nums"
-            title="Objectives destroyed and mid bosses claimed by your team, then by the enemy"
-          >
-            Objectives <span className={cn("font-semibold", WIN_TEXT_CLASS)}>{taken}</span> –{" "}
-            <span className={cn("font-semibold", LOSS_TEXT_CLASS)}>{events.length - taken}</span>
-          </span>
-        )}
-        {lead.peak.lead > 0 && (
-          <span className="text-muted-foreground tabular-nums">
-            Peak <span className={cn("font-semibold", WIN_TEXT_CLASS)}>{formatLead(lead.peak.lead)}</span> at{" "}
-            {formatMatchDuration(lead.peak.time)}
-          </span>
-        )}
-        {lead.trough.lead < 0 && (
-          <span className="text-muted-foreground tabular-nums">
-            Low <span className={cn("font-semibold", LOSS_TEXT_CLASS)}>{formatLead(lead.trough.lead)}</span> at{" "}
-            {formatMatchDuration(lead.trough.time)}
-          </span>
-        )}
-      </div>
-      <ResponsiveContainer width="100%" height={140}>
-        <AreaChart data={lead.points} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-          <defs>
-            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset={zeroOffset} stopColor={WIN_COLOR} />
-              <stop offset={zeroOffset} stopColor={LOSS_COLOR} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid vertical={false} stroke="var(--border)" strokeWidth={1} />
-          <XAxis
-            dataKey="time"
-            type="number"
-            domain={[0, "dataMax"]}
-            ticks={timeTicks}
-            tickFormatter={(value: number) => `${Math.round(value / 60)}m`}
-            tickLine={false}
-            axisLine={false}
-            tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-            minTickGap={32}
+    <ResponsiveContainer width="100%" height={140}>
+      <AreaChart data={lead.points} margin={{ top: 6, right: TIMELINE_END_PX, bottom: 6, left: 0 }}>
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset={zeroOffset} stopColor={WIN_COLOR} />
+            <stop offset={zeroOffset} stopColor={LOSS_COLOR} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid stroke="var(--border)" strokeWidth={1} />
+        <XAxis
+          dataKey="time"
+          type="number"
+          domain={[0, durationS]}
+          ticks={timeTicks}
+          tick={false}
+          tickLine={false}
+          axisLine={false}
+          height={0}
+        />
+        <YAxis
+          dataKey="lead"
+          type="number"
+          domain={[ticks[0], ticks[ticks.length - 1]]}
+          ticks={ticks}
+          // The default interval drops the bottom label, which overhangs the plot now the time axis sits below the timeline.
+          interval={0}
+          tickFormatter={(value: number) => (value === 0 ? "0" : formatLead(value))}
+          tickLine={false}
+          axisLine={false}
+          tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+          width={TIMELINE_GUTTER_PX}
+        />
+        <Tooltip cursor={{ stroke: "var(--border)", strokeWidth: 1 }} content={<LeadTooltipContent />} />
+        <ReferenceLine y={0} stroke="var(--muted-foreground)" strokeOpacity={0.6} />
+        {events.map((event, index) => (
+          <ReferenceDot
+            // oxlint-disable-next-line react/no-array-index-key
+            key={index}
+            x={event.time}
+            y={event.own ? ticks[ticks.length - 1] : ticks[0]}
+            r={0}
+            shape={(props) => <ObjectiveMarker cx={props.cx} cy={props.cy} event={event} />}
           />
-          <YAxis
-            dataKey="lead"
-            type="number"
-            domain={[ticks[0], ticks[ticks.length - 1]]}
-            ticks={ticks}
-            tickFormatter={(value: number) => (value === 0 ? "0" : formatLead(value))}
-            tickLine={false}
-            axisLine={false}
-            tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-            width={40}
-          />
-          <Tooltip cursor={{ stroke: "var(--border)", strokeWidth: 1 }} content={<LeadTooltipContent />} />
-          <ReferenceLine y={0} stroke="var(--muted-foreground)" strokeOpacity={0.6} />
-          {events.map((event, index) => (
-            <ReferenceDot
-              // oxlint-disable-next-line react/no-array-index-key
-              key={index}
-              x={event.time}
-              y={event.own ? ticks[ticks.length - 1] : ticks[0]}
-              r={0}
-              shape={(props) => <ObjectiveMarker cx={props.cx} cy={props.cy} event={event} />}
-            />
-          ))}
-          <Area
-            type="monotone"
-            dataKey="lead"
-            baseValue={0}
-            stroke={`url(#${gradientId})`}
-            strokeWidth={2}
-            fill={`url(#${gradientId})`}
-            fillOpacity={0.2}
-            dot={false}
-            activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--card)", fill: "var(--foreground)" }}
-            isAnimationActive={false}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
+        ))}
+        <Area
+          type="monotone"
+          dataKey="lead"
+          baseValue={0}
+          stroke={`url(#${gradientId})`}
+          strokeWidth={2}
+          fill={`url(#${gradientId})`}
+          fillOpacity={0.2}
+          dot={false}
+          activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--card)", fill: "var(--foreground)" }}
+          isAnimationActive={false}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
   );
 }

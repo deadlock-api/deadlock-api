@@ -39,10 +39,9 @@ import {
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { RankDelta } from "../shared/RankDelta";
 import { BuildOrderStrip } from "./BuildOrderStrip";
-import { KillsDeathsStrip } from "./KillsDeathsStrip";
 import { LanesCard } from "./LanesCard";
+import { MatchTimeline } from "./MatchTimeline";
 import { Scoreboard, TEAMS } from "./Scoreboard";
-import { SoulLeadChart } from "./SoulLeadChart";
 
 const UNSCORED_OUTCOME_NOTES: Record<UnscoredOutcome, { icon: typeof Gavel; text: string }> = {
   penalized: { icon: Gavel, text: "Penalized for this match" },
@@ -273,9 +272,14 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
 
   return (
     <div className="space-y-4">
-      {soulLead && <SoulLeadChart lead={soulLead} events={objectiveEvents} />}
+      <MatchTimeline
+        lead={soulLead}
+        events={objectiveEvents}
+        fights={fights}
+        durationS={entry.match_duration_s}
+        nameOf={nameOf}
+      />
       {laneMatchups.length > 0 && <LanesCard matchups={laneMatchups} trackedAccountId={accountId} nameOf={nameOf} />}
-      {fights && <KillsDeathsStrip fights={fights} matchDurationS={entry.match_duration_s} nameOf={nameOf} />}
       <Scoreboard
         match={match}
         accountId={accountId}
