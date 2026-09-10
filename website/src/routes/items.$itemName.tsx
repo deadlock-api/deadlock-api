@@ -31,6 +31,10 @@ const ItemWinRateOverTime = lazy(() =>
   import("~/components/items-page/ItemWinRateOverTime").then((m) => ({ default: m.ItemWinRateOverTime })),
 );
 
+const ItemWinRateByRank = lazy(() =>
+  import("~/components/items-page/ItemWinRateByRank").then((m) => ({ default: m.ItemWinRateByRank })),
+);
+
 const ItemWinRateByBuyTime = lazy(() =>
   import("~/components/items-page/ItemWinRateByBuyTime").then((m) => ({ default: m.ItemWinRateByBuyTime })),
 );
@@ -50,6 +54,15 @@ function currentItemStatsParams(seasons: readonly SeasonInfo[]) {
     maxAverageBadge: DEFAULT_MAX_RANK,
     minBoughtAtS: undefined,
     maxBoughtAtS: undefined,
+    gameMode: GAME_MODE,
+    matchMode: DEFAULT_MATCH_MODE,
+    ...defaultUnixRange(seasons),
+  };
+}
+
+function byRankItemStatsParams(seasons: readonly SeasonInfo[]) {
+  return {
+    minMatches: 10,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
     ...defaultUnixRange(seasons),
@@ -252,6 +265,12 @@ function ItemDetailPage() {
             itemRequest={itemRequest}
             heroRequest={heroRequest}
           />
+        </Suspense>
+      </ChunkErrorBoundary>
+
+      <ChunkErrorBoundary>
+        <Suspense fallback={<LoadingLogo />}>
+          <ItemWinRateByRank itemId={itemId} itemName={itemName} request={byRankItemStatsParams(seasons)} />
         </Suspense>
       </ChunkErrorBoundary>
 
