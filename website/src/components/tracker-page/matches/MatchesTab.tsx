@@ -229,7 +229,11 @@ export function MatchesTab({
                 value={sortKey}
                 onValueChange={(value) => changeSort({ sort: value as MatchSortKey, dir: "desc" })}
               >
-                <SelectTrigger size="sm" className="ml-auto h-7 gap-1 px-2 text-xs" aria-label="Sort matches by">
+                <SelectTrigger
+                  size="sm"
+                  className="ml-auto gap-1 px-2 text-xs data-[size=sm]:h-7"
+                  aria-label="Sort matches by"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
