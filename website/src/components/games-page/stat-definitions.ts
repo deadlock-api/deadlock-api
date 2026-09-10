@@ -46,7 +46,6 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
     label: "Damage",
     stats: [
       { key: "avg_player_damage", label: "Avg Player Damage", format: "integer" },
-      { key: "avg_player_damage_taken", label: "Avg Damage Taken", format: "integer" },
       { key: "avg_boss_damage", label: "Avg Objective Damage", format: "integer" },
       { key: "avg_creep_damage", label: "Avg Creep Damage", format: "integer" },
       { key: "avg_neutral_damage", label: "Avg Neutral Damage", format: "integer" },
