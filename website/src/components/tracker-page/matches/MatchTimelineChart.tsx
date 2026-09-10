@@ -101,16 +101,17 @@ function LeadTooltipContent({ active, payload }: { active?: boolean; payload?: {
 
 const LEAD_AXIS_PX = 48;
 const PLOT_END_PX = 8;
-const LEAD_PLOT_PX = 170;
-/** Without a lead line the plot only carries the zero line the events sit on. */
-const LEADLESS_PLOT_PX = 4;
-const X_AXIS_PX = 20;
+/** Fixed plot heights, so the chart keeps its size whichever player's chips it shows. */
+const LEAD_PLOT_PX = 190;
+const LEADLESS_PLOT_PX = 96;
+const MIN_SCALE_PX = 60;
+const X_AXIS_PX = 16;
 const CHIP_PX = 20;
 const CHIP_GAP_PX = 2;
 const LEVEL_PX = CHIP_PX + CHIP_GAP_PX;
 /** Gap between the lead line and the first chip stacked off it. */
-const STEM_PX = 6;
-const EDGE_PX = 8;
+const STEM_PX = 4;
+const EDGE_PX = 4;
 
 /** Round minute steps inside the match, zero left out as it is the plot's left edge. */
 function minuteTicks(durationS: number): number[] {
@@ -235,7 +236,7 @@ export function MatchTimelineChart({
   const min = Math.min(0, lead?.trough.lead ?? 0);
   const ticks = lead ? leadTicks(min, max) : [0];
   const [lo, hi] = lead ? [ticks[0], ticks[ticks.length - 1]] : [-1, 1];
-  const scalePx = lead ? LEAD_PLOT_PX : LEADLESS_PLOT_PX;
+  const plotPx = lead ? LEAD_PLOT_PX : LEADLESS_PLOT_PX;
 
   const pxPerSecond = width > LEAD_AXIS_PX + PLOT_END_PX ? (width - LEAD_AXIS_PX - PLOT_END_PX) / durationS : 0;
   const gains = events.filter((event) => event.side === "gain");
@@ -252,15 +253,27 @@ export function MatchTimelineChart({
     ...gains.map((event, index) => ({ event, level: gainLevels[index] })),
     ...losses.map((event, index) => ({ event, level: lossLevels[index] })),
   ];
-  // The stacks need room even off a line that runs along the scale's end, so the value range is padded by the
-  // stack height in value units, which keeps the chips inside the plot and clear of the time axis below it.
-  const stackRoomPx = (levels: number[]) => (levels.length > 0 ? STEM_PX + (Math.max(...levels) + 1) * LEVEL_PX : 0);
+  // The lead scale shrinks inside the fixed plot to leave room for as far as the stacks reach past its ends, which
+  // keeps the chips inside the plot and clear of the time axis. The room depends on the scale, so a few passes
+  // settle it.
+  const reach = (level: number) => STEM_PX + (level + 1) * LEVEL_PX;
+  let scalePx = plotPx;
+  let roomAbovePx = 0;
+  let roomBelowPx = 0;
+  for (let pass = 0; pass < 3; pass++) {
+    const lineY = (time: number) => ((hi - leadAt(points, time)) / (hi - lo)) * scalePx;
+    roomAbovePx = Math.max(
+      0,
+      ...placed.map(({ event, level }) => (event.side === "gain" ? reach(level) - lineY(event.time) : 0)),
+    );
+    roomBelowPx = Math.max(
+      0,
+      ...placed.map(({ event, level }) => (event.side === "loss" ? lineY(event.time) + reach(level) - scalePx : 0)),
+    );
+    scalePx = Math.max(MIN_SCALE_PX, plotPx - roomAbovePx - roomBelowPx);
+  }
   const valuePerPx = (hi - lo) / scalePx;
-  const domain: [number, number] = [
-    lo - stackRoomPx(lossLevels) * valuePerPx,
-    hi + stackRoomPx(gainLevels) * valuePerPx,
-  ];
-  const plotPx = scalePx + stackRoomPx(gainLevels) + stackRoomPx(lossLevels);
+  const domain: [number, number] = [lo - roomBelowPx * valuePerPx, hi + roomAbovePx * valuePerPx];
   // The gradient spans the area's own bounding box, which runs from the lowest to the highest lead with zero included.
   const zeroOffset = max === min ? 0 : max / (max - min);
 

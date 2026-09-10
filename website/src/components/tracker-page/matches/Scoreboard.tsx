@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { Rank } from "deadlock_api_client";
-import { Crown } from "lucide-react";
+import { Crown, ExternalLink } from "lucide-react";
 import { Fragment, useMemo } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
@@ -70,6 +70,8 @@ export function Scoreboard({
   laned,
   itemsById,
   nameOf,
+  viewedAccountId,
+  onViewPlayer,
 }: {
   match: TrackerMatchMetadata;
   accountId: number;
@@ -77,6 +79,9 @@ export function Scoreboard({
   laned: boolean;
   itemsById: Map<number, SlimUpgrade> | undefined;
   nameOf: (player: TrackerMatchPlayer) => string;
+  /** The player the match timeline shows, or null while it shows every kill. */
+  viewedAccountId: number | null;
+  onViewPlayer: (accountId: number) => void;
 }) {
   const maxima = useMemo(() => {
     let souls = 0;
@@ -144,12 +149,21 @@ export function Scoreboard({
               <tbody>
                 {players.map((player) => {
                   const isTracked = player.account_id === accountId;
+                  const viewed = player.account_id === viewedAccountId;
                   const name = nameOf(player);
                   const build = itemsById ? finalBuild(player.items, itemsById) : [];
                   const lane = laned ? LANES[laneIndex(player)] : undefined;
                   return (
                     <Fragment key={player.account_id}>
-                      <tr className={cn(isTracked && "bg-accent font-medium")}>
+                      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the name button is the keyboard path; the row widens the mouse target */}
+                      <tr
+                        onClick={() => onViewPlayer(player.account_id)}
+                        className={cn(
+                          "cursor-pointer hover:bg-muted/40",
+                          isTracked && "bg-accent font-medium hover:bg-accent",
+                          viewed && "bg-primary/15 hover:bg-primary/15",
+                        )}
+                      >
                         <td className="w-8 py-1 pl-2">
                           <div
                             className="relative size-6 rounded-full"
@@ -174,16 +188,26 @@ export function Scoreboard({
                         </td>
                         <td className="w-full max-w-0 px-2 py-1">
                           <div className="flex items-center gap-1.5">
-                            {isTracked || !IS_DEV ? (
-                              <span className="truncate">{name}</span>
-                            ) : (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onViewPlayer(player.account_id);
+                              }}
+                              aria-pressed={viewed}
+                              className="min-w-0 cursor-pointer truncate text-left transition-colors hover:text-primary"
+                              title={`Show ${name}'s kills and deaths on the match timeline`}
+                            >
+                              {name}
+                            </button>
+                            {!isTracked && IS_DEV && (
                               <Link
                                 to="/players/$accountId"
                                 params={{ accountId: String(player.account_id) }}
-                                className="truncate hover:text-primary hover:underline"
+                                className="shrink-0 text-muted-foreground hover:text-primary"
                                 title="Open player tracker"
                               >
-                                {name}
+                                <ExternalLink className="size-3" />
                               </Link>
                             )}
                             {player.mvp_rank === 1 && (
@@ -220,7 +244,11 @@ export function Scoreboard({
                         />
                       </tr>
                       {build.length > 0 && (
-                        <tr className={cn(isTracked && "bg-accent")}>
+                        // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- as the stats row above
+                        <tr
+                          onClick={() => onViewPlayer(player.account_id)}
+                          className={cn("cursor-pointer", isTracked && "bg-accent", viewed && "bg-primary/15")}
+                        >
                           <td colSpan={8} className="px-2 pb-1.5 pl-10">
                             <div className="flex flex-wrap items-center gap-1">
                               {build.map((item) => (

@@ -1,22 +1,16 @@
-import { useState } from "react";
+import { X } from "lucide-react";
+import type { Ref } from "react";
 
-import { Segmented } from "~/components/Segmented";
+import { Button } from "~/components/ui/button";
 import { formatMatchDuration } from "~/lib/tracker/compute";
-import type { FightSummary, MatchKill } from "~/lib/tracker/fights";
+import type { FightSummary } from "~/lib/tracker/fights";
 import type { ObjectiveEvent } from "~/lib/tracker/objectives";
 import type { SoulLead } from "~/lib/tracker/soul-lead";
 import { cn } from "~/lib/utils";
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
 import { LOSS_COLOR, LOSS_TEXT_CLASS, WIN_COLOR, WIN_TEXT_CLASS } from "../shared/colors";
-import { type DeadWindow, formatLead, MatchTimelineChart, type TimelineEvent } from "./MatchTimelineChart";
-
-type KillScope = "all" | "you";
-
-const KILL_SCOPES = [
-  { value: "all", label: "All kills" },
-  { value: "you", label: "Yours" },
-] as const;
+import { formatLead, MatchTimelineChart, type TimelineEvent } from "./MatchTimelineChart";
 
 function LegendSwatch({ color, label }: { color: string; label: string }) {
   return (
@@ -27,61 +21,50 @@ function LegendSwatch({ color, label }: { color: string; label: string }) {
   );
 }
 
-/** The team soul lead and the match's kills in one chart, narrowed to the tracked player's own on request. */
+/** The team soul lead and one player's kills and deaths in one chart over the match. */
 export function MatchTimeline({
+  ref,
   lead,
   objectives,
   fights,
-  matchKills,
-  ownTeam,
+  viewedName,
+  onViewTracked,
   durationS,
   nameOf,
 }: {
+  ref?: Ref<HTMLDivElement>;
   /** Null when neither team ever led, as in Street Brawl. */
   lead: SoulLead | null;
   objectives: ObjectiveEvent[];
-  /** The tracked player's kills and deaths. */
+  /** The viewed player's kills and deaths. */
   fights: FightSummary | null;
-  /** Every hero death in the match. */
-  matchKills: MatchKill[] | null;
-  ownTeam: string;
+  /** The viewed player's name, or null while the tracked player is viewed. */
+  viewedName: string | null;
+  onViewTracked: () => void;
   durationS: number;
   nameOf: (player: TrackerMatchPlayer) => string;
 }) {
-  const [scope, setScope] = useState<KillScope>("all");
-  const showAll = scope === "all" && matchKills != null;
+  const events: TimelineEvent[] = [
+    ...(fights?.kills ?? []).map((kill) => ({
+      time: kill.time,
+      hero: kill.victim,
+      side: "gain" as const,
+      tooltip: `Killed ${nameOf(kill.victim)} at ${formatMatchDuration(kill.time)}`,
+    })),
+    ...(fights?.deaths ?? []).map((death) => ({
+      time: death.time,
+      hero: death.killer,
+      side: "loss" as const,
+      tooltip: `${death.killer ? `Killed by ${nameOf(death.killer)}` : "Killed by a non-player"} at ${formatMatchDuration(death.time)} in ${Math.round(death.timeToKillS)}s · respawned after ${death.deadForS}s`,
+    })),
+  ].toSorted((a, b) => a.time - b.time);
+  const deadWindows = (fights?.deaths ?? []).map((death) => ({ start: death.time, end: death.time + death.deadForS }));
 
-  const events: TimelineEvent[] = showAll
-    ? matchKills.map((kill) => ({
-        time: kill.time,
-        hero: kill.victim,
-        side: kill.victim.team === ownTeam ? "loss" : "gain",
-        tooltip: `${kill.killer ? nameOf(kill.killer) : "A non-player"} killed ${nameOf(kill.victim)} at ${formatMatchDuration(kill.time)}`,
-      }))
-    : [
-        ...(fights?.kills ?? []).map((kill) => ({
-          time: kill.time,
-          hero: kill.victim,
-          side: "gain" as const,
-          tooltip: `Killed ${nameOf(kill.victim)} at ${formatMatchDuration(kill.time)}`,
-        })),
-        ...(fights?.deaths ?? []).map((death) => ({
-          time: death.time,
-          hero: death.killer,
-          side: "loss" as const,
-          tooltip: `${death.killer ? `Killed by ${nameOf(death.killer)}` : "Killed by a non-player"} at ${formatMatchDuration(death.time)} in ${Math.round(death.timeToKillS)}s · respawned after ${death.deadForS}s`,
-        })),
-      ].toSorted((a, b) => a.time - b.time);
-  const deadWindows: DeadWindow[] = (fights?.deaths ?? []).map((death) => ({
-    start: death.time,
-    end: death.time + death.deadForS,
-  }));
-
-  if (durationS <= 0 || (!lead && events.length === 0)) return null;
+  if (durationS <= 0 || (!lead && events.length === 0 && viewedName == null)) return null;
   const taken = objectives.filter((event) => event.own).length;
 
   return (
-    <div className="space-y-2 rounded-md border border-border px-3 py-2">
+    <div ref={ref} className="scroll-mt-4 space-y-1 rounded-md border border-border px-3 pt-2 pb-1">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground tabular-nums">
         <span className="text-sm font-semibold text-foreground">Match timeline</span>
         {lead && <span>Ahead for {Math.round(lead.aheadShare * 100)}% of the match</span>}
@@ -103,26 +86,29 @@ export function MatchTimeline({
             {formatMatchDuration(lead.trough.time)}
           </span>
         )}
-        {matchKills && (
-          <Segmented
-            value={scope}
-            onValueChange={setScope}
-            options={KILL_SCOPES}
-            aria-label="Kills shown"
-            className="ml-auto w-auto text-xs [&>*]:px-2 [&>*]:py-0.5"
-          />
-        )}
-      </div>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground tabular-nums">
-        <span className="ml-auto flex items-center gap-3" aria-hidden>
-          <LegendSwatch color={WIN_COLOR} label={showAll ? "Enemy died" : "Your kill"} />
-          <LegendSwatch color={LOSS_COLOR} label={showAll ? "Ally died" : "Your death"} />
-          {deadWindows.length > 0 && (
-            <span className="inline-flex items-center gap-1">
-              <span className="h-2.5 w-3 rounded-sm" style={{ backgroundColor: LOSS_COLOR, opacity: 0.2 }} />
-              You dead
-            </span>
+        <span className="ml-auto flex items-center gap-3">
+          {viewedName != null && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 max-w-48 gap-1 px-2 text-xs"
+              onClick={onViewTracked}
+              title="Back to your kills and deaths"
+            >
+              <span className="truncate">{viewedName}</span>
+              <X className="size-3 shrink-0" />
+            </Button>
           )}
+          <span className="flex items-center gap-3" aria-hidden>
+            <LegendSwatch color={WIN_COLOR} label="Kill" />
+            <LegendSwatch color={LOSS_COLOR} label="Death" />
+            {deadWindows.length > 0 && (
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2.5 w-3 rounded-sm" style={{ backgroundColor: LOSS_COLOR, opacity: 0.2 }} />
+                Dead
+              </span>
+            )}
+          </span>
         </span>
       </div>
       <MatchTimelineChart

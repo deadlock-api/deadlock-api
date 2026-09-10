@@ -2,13 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
 import { CircleDashed, Gavel, Link2, LogOut, ShieldCheck, Trophy, UsersRound } from "lucide-react";
-import { type ReactNode, useMemo } from "react";
+import { type ReactNode, useMemo, useRef, useState } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
 import { CopyButton } from "~/components/copy-button";
 import { HeroImage } from "~/components/HeroImage";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
-import { Skeleton } from "~/components/ui/skeleton";
 import { day } from "~/dayjs";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
@@ -23,7 +23,7 @@ import {
   type UnscoredOutcome,
   unscoredOutcome,
 } from "~/lib/tracker/compute";
-import { computeFights, computeMatchKills } from "~/lib/tracker/fights";
+import { computeFights } from "~/lib/tracker/fights";
 import { computeLaneMatchups } from "~/lib/tracker/lane-matchup";
 import { computeObjectiveEvents } from "~/lib/tracker/objectives";
 import { computeSoulLead } from "~/lib/tracker/soul-lead";
@@ -206,36 +206,24 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
     () => (laned && match ? computeLaneMatchups(match.players, accountId) : []),
     [laned, match, accountId],
   );
+  const [viewedAccountId, setViewedAccountId] = useState(accountId);
+  const viewedPlayer = match?.players.find((player) => player.account_id === viewedAccountId);
   const fights = useMemo(
-    () => (match && deathRows ? computeFights(deathRows, match.players, accountId) : null),
-    [match, deathRows, accountId],
+    () => (match && deathRows ? computeFights(deathRows, match.players, viewedAccountId) : null),
+    [match, deathRows, viewedAccountId],
   );
-  const matchKills = useMemo(
-    () => (match && deathRows ? computeMatchKills(deathRows, match.players) : null),
-    [match, deathRows],
-  );
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const viewPlayer = (playerAccountId: number) => {
+    setViewedAccountId(playerAccountId);
+    // The scoreboard sits below the timeline, which would otherwise change out of sight.
+    const timeline = timelineRef.current;
+    if (timeline && timeline.getBoundingClientRect().top < 0) timeline.scrollIntoView({ block: "start" });
+  };
 
   const nameOf = (player: TrackerMatchPlayer) =>
     player.personaname ?? profiles[player.account_id]?.personaname ?? `Player ${player.account_id}`;
 
-  if (isPending) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-[160px] w-full" />
-        <div className="grid gap-4 sm:grid-cols-2">
-          {TEAMS.map((team) => (
-            <div key={team.key} className="space-y-2">
-              <Skeleton className="h-5 w-40" />
-              {Array.from({ length: 6 }, (_, i) => (
-                // oxlint-disable-next-line react/no-array-index-key
-                <Skeleton key={i} className="h-7 w-full" />
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  if (isPending) return <LoadingLogo />;
 
   if (isError) {
     return (
@@ -257,11 +245,12 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
   return (
     <div className="space-y-4">
       <MatchTimeline
+        ref={timelineRef}
         lead={soulLead}
         objectives={objectiveEvents}
         fights={fights}
-        matchKills={matchKills}
-        ownTeam={ownTeam}
+        viewedName={viewedAccountId !== accountId && viewedPlayer ? nameOf(viewedPlayer) : null}
+        onViewTracked={() => setViewedAccountId(accountId)}
         durationS={entry.match_duration_s}
         nameOf={nameOf}
       />
@@ -272,6 +261,8 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
         laned={laned}
         itemsById={itemsById}
         nameOf={nameOf}
+        viewedAccountId={viewedAccountId}
+        onViewPlayer={viewPlayer}
       />
       {laneMatchups.length > 0 && <LanesCard matchups={laneMatchups} trackedAccountId={accountId} nameOf={nameOf} />}
       {tracked && itemsById && <BuildOrderStrip items={tracked.items} itemsById={itemsById} />}
