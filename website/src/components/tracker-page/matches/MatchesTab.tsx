@@ -19,7 +19,6 @@ import {
   type SortDir,
   sortMatches,
   summarize,
-  summarizeByHero,
 } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions } from "~/queries/asset-queries";
@@ -87,7 +86,7 @@ export function MatchesTab({
   entries: PlayerMatchHistoryEntry[];
   ranks: Rank[];
   accountId: number;
-  /** The active hero filter, which the details can toggle. */
+  /** The active hero filter, which an empty list offers to clear. */
   heroId: number | null;
   onHeroChange: (heroId: number | null) => void;
   /** The match the URL opens when the filters leave it out of `entries`. */
@@ -186,7 +185,6 @@ export function MatchesTab({
     () => (sortKey === "played" ? computeSessions(entries) : new Map<number, PlaySession>()),
     [entries, sortKey],
   );
-  const heroSummaries = useMemo(() => summarizeByHero(entries), [entries]);
   const summary = useMemo(() => summarize(entries), [entries]);
   const heldRecords = useMemo(
     () => (entries.length >= MIN_MATCHES_FOR_RECORDS ? recordsByMatchId(computeRecords(entries)) : null),
@@ -300,10 +298,7 @@ export function MatchesTab({
               accountId={accountId}
               ranks={ranks}
               heroName={heroNameOf(selected.hero_id)}
-              heroSummary={heroSummaries.get(selected.hero_id) ?? summarize([selected])}
               records={heldRecords?.get(selected.match_id)}
-              heroFiltered={heroId != null}
-              onToggleHeroFilter={() => onHeroChange(heroId == null ? selected.hero_id : null)}
             />
           )}
         </div>

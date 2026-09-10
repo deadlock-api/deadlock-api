@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { CircleDashed, Filter, FilterX, Gavel, Link2, LogOut, ShieldCheck, Trophy, UsersRound } from "lucide-react";
+import { CircleDashed, Gavel, Link2, LogOut, ShieldCheck, Trophy, UsersRound } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
@@ -20,7 +20,6 @@ import {
   type HeldRecord,
   isWin,
   matchModeLabel,
-  type TrackerSummary,
   type UnscoredOutcome,
   unscoredOutcome,
 } from "~/lib/tracker/compute";
@@ -72,18 +71,12 @@ function MatchHeader({
   entry,
   ranks,
   heroName,
-  heroSummary,
   records,
-  heroFiltered,
-  onToggleHeroFilter,
 }: {
   entry: PlayerMatchHistoryEntry;
   ranks: Rank[];
   heroName: string;
-  heroSummary: TrackerSummary;
   records: HeldRecord[] | undefined;
-  heroFiltered: boolean;
-  onToggleHeroFilter: () => void;
 }) {
   const matchId = entry.match_id;
   const win = isWin(entry);
@@ -98,7 +91,7 @@ function MatchHeader({
   return (
     <div className="space-y-2.5">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-[16rem] flex-1 items-center gap-3">
           <HeroImage heroId={entry.hero_id} className="size-12 shrink-0 rounded-full" />
           <div className="min-w-0 leading-tight">
             <div className="flex flex-wrap items-baseline gap-x-2">
@@ -112,12 +105,43 @@ function MatchHeader({
                 </span>
               )}
             </div>
-            <div className="mt-0.5 text-xs text-muted-foreground tabular-nums">
-              {matchModeLabel(entry)} · {formatMatchDuration(entry.match_duration_s)}
-              {entry.brawl_avg_round_time_s != null &&
-                entry.brawl_avg_round_time_s > 0 &&
-                ` (${formatMatchDuration(entry.brawl_avg_round_time_s)} a round)`}{" "}
-              · {day.unix(entry.start_time).format("ddd, MMM D, YYYY HH:mm")}
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground tabular-nums">
+              <span>
+                {matchModeLabel(entry)} · {formatMatchDuration(entry.match_duration_s)}
+                {entry.brawl_avg_round_time_s != null &&
+                  entry.brawl_avg_round_time_s > 0 &&
+                  ` (${formatMatchDuration(entry.brawl_avg_round_time_s)} a round)`}{" "}
+                · {day.unix(entry.start_time).format("ddd, MMM D, YYYY HH:mm")}
+              </span>
+              <span className="inline-flex items-center gap-0.5">
+                Match {matchId}
+                <CopyButton text={String(matchId)} iconOnly title="Copy match ID" className="size-6" />
+              </span>
+              <Link
+                to="/team-builder"
+                search={{ match: matchId }}
+                className="inline-flex items-center gap-1 transition-colors hover:text-foreground"
+              >
+                <UsersRound className="size-3.5" />
+                Team Builder
+              </Link>
+              <CopyButton
+                text={() => {
+                  const url = new URL(window.location.href);
+                  url.searchParams.set("tab", "matches");
+                  url.searchParams.set("match", String(matchId));
+                  // The default range follows the current season, which would drop the match once the next one starts.
+                  url.searchParams.set("date_range", parseAsDayjsRange.serialize([startDate, endDate]));
+                  return url.toString();
+                }}
+                variant="ghost"
+                size="sm"
+                className="h-6 gap-1 px-1.5 text-xs text-muted-foreground"
+                title="Copy a link that opens this match"
+              >
+                <Link2 className="size-3.5" />
+                Copy link
+              </CopyButton>
             </div>
           </div>
         </div>
@@ -151,50 +175,6 @@ function MatchHeader({
           {calibration && <Note icon={CircleDashed}>Calibration match</Note>}
         </div>
       )}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        <button
-          type="button"
-          onClick={onToggleHeroFilter}
-          className="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
-          title={
-            heroFiltered
-              ? undefined
-              : `${heroSummary.wins}W – ${heroSummary.losses}L · ${Math.round(heroSummary.winrate * 100)}% on ${heroName}`
-          }
-        >
-          {heroFiltered ? <FilterX className="size-3.5" /> : <Filter className="size-3.5" />}
-          {heroFiltered ? "Show all heroes" : `Only ${heroName} matches`}
-        </button>
-        <span className="inline-flex items-center gap-0.5 tabular-nums">
-          Match {matchId}
-          <CopyButton text={String(matchId)} iconOnly title="Copy match ID" className="size-6" />
-        </span>
-        <Link
-          to="/team-builder"
-          search={{ match: matchId }}
-          className="inline-flex items-center gap-1 transition-colors hover:text-foreground"
-        >
-          <UsersRound className="size-3.5" />
-          Team Builder
-        </Link>
-        <CopyButton
-          text={() => {
-            const url = new URL(window.location.href);
-            url.searchParams.set("tab", "matches");
-            url.searchParams.set("match", String(matchId));
-            // The default range follows the current season, which would drop the match once the next one starts.
-            url.searchParams.set("date_range", parseAsDayjsRange.serialize([startDate, endDate]));
-            return url.toString();
-          }}
-          variant="ghost"
-          size="sm"
-          className="ml-auto h-6 gap-1 px-2 text-xs text-muted-foreground"
-          title="Copy a link that opens this match"
-        >
-          <Link2 className="size-3.5" />
-          Copy link
-        </CopyButton>
-      </div>
     </div>
   );
 }
@@ -304,34 +284,18 @@ export function MatchDetails({
   accountId,
   ranks,
   heroName,
-  heroSummary,
   records,
-  heroFiltered,
-  onToggleHeroFilter,
 }: {
   entry: PlayerMatchHistoryEntry;
   accountId: number;
   ranks: Rank[];
   heroName: string;
-  /** The player's summary on this match's hero over the filtered history. */
-  heroSummary: TrackerSummary;
   /** Personal bests this match holds over the filtered history. */
   records: HeldRecord[] | undefined;
-  /** Whether the history is already narrowed to a hero. */
-  heroFiltered: boolean;
-  onToggleHeroFilter: () => void;
 }) {
   return (
     <div className="@container space-y-4">
-      <MatchHeader
-        entry={entry}
-        ranks={ranks}
-        heroName={heroName}
-        heroSummary={heroSummary}
-        records={records}
-        heroFiltered={heroFiltered}
-        onToggleHeroFilter={onToggleHeroFilter}
-      />
+      <MatchHeader entry={entry} ranks={ranks} heroName={heroName} records={records} />
       <MatchBody entry={entry} accountId={accountId} ranks={ranks} />
     </div>
   );
