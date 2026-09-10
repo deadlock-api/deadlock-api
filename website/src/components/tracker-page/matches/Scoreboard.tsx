@@ -56,21 +56,23 @@ function byLane(players: TrackerMatchPlayer[]): TrackerMatchPlayer[] {
   return [...players].sort((a, b) => laneIndex(a) - laneIndex(b));
 }
 
-const MAX_ABILITY_UPGRADES = 3;
+/** Unlocking an ability is its first level, and each of its three upgrades adds one. */
+const MAX_ABILITY_LEVEL = 4;
 
 function AbilityChip({ entry }: { entry: BuildAbility }) {
-  const upgrades = entry.upgradedAt.length;
+  // An ability only enters the history once unlocked, even when its unlock is not recorded.
+  const level = Math.min(MAX_ABILITY_LEVEL, entry.upgradedAt.length + 1);
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="flex flex-col items-center gap-0.5">
           <AbilityImage abilityId={entry.ability.id} className="size-5" title="" />
-          <span className="flex gap-px" aria-label={`${upgrades} of ${MAX_ABILITY_UPGRADES} upgrades`}>
-            {Array.from({ length: MAX_ABILITY_UPGRADES }, (_, index) => (
+          <span className="flex gap-px" aria-label={`Level ${level} of ${MAX_ABILITY_LEVEL}`}>
+            {Array.from({ length: MAX_ABILITY_LEVEL }, (_, index) => (
               <span
                 // oxlint-disable-next-line react/no-array-index-key
                 key={index}
-                className={cn("h-0.5 w-1.5 rounded-full", index < upgrades ? "bg-amber-400" : "bg-muted-foreground/30")}
+                className={cn("h-0.5 w-1 rounded-full", index < level ? "bg-amber-400" : "bg-muted-foreground/30")}
               />
             ))}
           </span>
@@ -78,12 +80,12 @@ function AbilityChip({ entry }: { entry: BuildAbility }) {
       </TooltipTrigger>
       <PanelTooltipContent>
         <div className="font-medium">
-          {entry.ability.name} · {upgrades}/{MAX_ABILITY_UPGRADES} upgrades
+          {entry.ability.name} · level {level}/{MAX_ABILITY_LEVEL}
         </div>
-        <div className="tabular-nums opacity-80">
+        <div className="text-muted-foreground tabular-nums">
           {[
             entry.unlockedAt != null && `Unlocked at ${formatMatchDuration(entry.unlockedAt)}`,
-            upgrades > 0 && `upgraded at ${entry.upgradedAt.map(formatMatchDuration).join(", ")}`,
+            entry.upgradedAt.length > 0 && `upgraded at ${entry.upgradedAt.map(formatMatchDuration).join(", ")}`,
           ]
             .filter(Boolean)
             .join(" · ")}
@@ -114,7 +116,7 @@ function ItemChip({ item }: { item: BuildItem }) {
           {item.upgrade.name}
           {item.upgrade.cost != null && ` · ${item.upgrade.cost.toLocaleString("en-US")} souls`}
         </div>
-        <div className="tabular-nums opacity-80">
+        <div className="text-muted-foreground tabular-nums">
           Bought at {formatMatchDuration(item.boughtAt)}
           {sold && ` · sold at ${formatMatchDuration(item.soldAt as number)}`}
         </div>
@@ -197,7 +199,7 @@ export function Scoreboard({
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-muted-foreground">
-                  <th colSpan={3} className="px-2 py-1 text-left font-normal">
+                  <th colSpan={2} className="px-2 py-1 text-left font-normal">
                     Player
                   </th>
                   <th className="px-2 py-1 text-right font-normal">K / D / A</th>
@@ -258,11 +260,6 @@ export function Scoreboard({
                           )}
                         </div>
                       </td>
-                      <td className="w-9 py-0.5 pl-1">
-                        {player.rank_badge != null && (
-                          <BadgeImage badge={player.rank_badge} ranks={ranks} className="size-8 max-w-none" />
-                        )}
-                      </td>
                       <td className="w-full max-w-0 px-2 py-1">
                         <div className="flex items-center gap-1.5">
                           <button
@@ -295,7 +292,7 @@ export function Scoreboard({
                               <PanelTooltipContent>Match MVP</PanelTooltipContent>
                             </Tooltip>
                           )}
-                          {(player.rank_delta || player.demotion_protected) && (
+                          {(player.rank_delta || player.demotion_protected || player.rank_badge != null) && (
                             <span className="ml-auto flex shrink-0 items-center gap-1 pl-1 text-xs font-normal">
                               {player.demotion_protected && (
                                 <ShieldCheck
@@ -304,6 +301,13 @@ export function Scoreboard({
                                 />
                               )}
                               <RankDelta value={player.rank_delta} />
+                              {player.rank_badge != null && (
+                                <BadgeImage
+                                  badge={player.rank_badge}
+                                  ranks={ranks}
+                                  className="-my-1 size-7 max-w-none"
+                                />
+                              )}
                             </span>
                           )}
                         </div>
@@ -333,7 +337,7 @@ export function Scoreboard({
                     </tr>
                     {build && (
                       <tr>
-                        <td colSpan={8} className="px-2 pb-1.5 pl-10">
+                        <td colSpan={7} className="px-2 pb-1.5 pl-10">
                           <div className="flex flex-wrap items-center gap-1">
                             {build.abilities.map((entry) => (
                               <AbilityChip key={entry.ability.id} entry={entry} />
