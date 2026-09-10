@@ -41,7 +41,7 @@ export function getRouter() {
         reloadOnceForStaleChunk();
       }
     },
-    defaultNotFoundComponent: NotFound,
+    defaultNotFoundComponent: () => <NotFound />,
     scrollRestoration: true,
     context: { queryClient } satisfies RouterContext,
   });

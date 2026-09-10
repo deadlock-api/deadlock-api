@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, createFileRoute, notFound } from "@tanstack/react-router";
+import { Link, type NotFoundRouteProps, createFileRoute, notFound } from "@tanstack/react-router";
 import type { AnalyticsHeroStats, ItemStats } from "deadlock_api_client";
 import { lazy, Suspense, useMemo } from "react";
 
@@ -7,15 +7,17 @@ import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { ItemImage } from "~/components/ItemImage";
 import { ItemEffectCard } from "~/components/items-page/ItemEffectCard";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { NotFound } from "~/components/NotFound";
 import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
 import { StatCard } from "~/components/StatCard";
 import { useSeasons } from "~/hooks/useSeasons";
 import { formatPercent } from "~/lib/format";
-import { findItemBySlug } from "~/lib/item-slug";
+import { findItemBySlug, itemSlug } from "~/lib/item-slug";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
 import { type SeasonInfo, defaultUnixRange } from "~/lib/seasons";
 import { SITE_URL, seo } from "~/lib/seo";
+import { closestNameBySlug } from "~/lib/slug";
 import { filterShopableItems, itemQueryOptions, itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
@@ -96,8 +98,9 @@ export const Route = createFileRoute("/items/$itemName")({
       queryClient.ensureQueryData(itemUpgradesQueryOptions),
       loadSeasons(queryClient),
     ]);
-    const item = findItemBySlug(filterShopableItems(items), params.itemName);
-    if (!item) throw notFound();
+    const shopable = filterShopableItems(items);
+    const item = findItemBySlug(shopable, params.itemName);
+    if (!item) throw notFound({ data: { suggestion: closestNameBySlug(shopable, params.itemName)?.name } });
     const [stats, heroStats] = await Promise.all([
       prefetchSafe(queryClient.ensureQueryData(itemStatsQueryOptions(currentItemStatsParams(seasons)))),
       prefetchSafe(queryClient.ensureQueryData(heroStatsQueryOptions(currentHeroStatsParams(seasons)))),
@@ -121,6 +124,7 @@ export const Route = createFileRoute("/items/$itemName")({
       },
     };
   },
+  notFoundComponent: ItemNotFound,
   head: ({ loaderData }) => {
     if (!loaderData) {
       return seo({
@@ -268,5 +272,20 @@ function ItemDetailPage() {
         </Link>
       </nav>
     </div>
+  );
+}
+
+function ItemNotFound({ data }: NotFoundRouteProps) {
+  const suggestion = (data as { suggestion?: string } | undefined)?.suggestion;
+  return (
+    <NotFound
+      didYouMean={
+        suggestion && (
+          <Link to="/items/$itemName" params={{ itemName: itemSlug(suggestion) }}>
+            {suggestion}
+          </Link>
+        )
+      }
+    />
   );
 }

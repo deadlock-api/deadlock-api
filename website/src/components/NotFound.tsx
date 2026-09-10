@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Home } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { Button } from "~/components/ui/button";
 
@@ -10,7 +11,8 @@ const suggestions = [
   { to: "/games", label: "Games" },
 ];
 
-export function NotFound() {
+/** `didYouMean` is a link to the page the visitor most likely meant, e.g. the hero a mistyped URL was closest to. */
+export function NotFound({ didYouMean }: { didYouMean?: ReactNode } = {}) {
   return (
     <>
       <title>Page Not Found | Deadlock API</title>
@@ -22,6 +24,12 @@ export function NotFound() {
           <p className="max-w-md text-muted-foreground">
             The page you're looking for doesn't exist or may have been moved.
           </p>
+          {didYouMean && (
+            <p className="pt-2 text-lg">
+              Did you mean{" "}
+              <span className="font-semibold text-primary underline-offset-4 [&_a]:hover:underline">{didYouMean}</span>?
+            </p>
+          )}
         </div>
 
         <div className="flex flex-wrap justify-center gap-3">

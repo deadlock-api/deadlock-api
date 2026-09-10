@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, createFileRoute, notFound } from "@tanstack/react-router";
+import { Link, type NotFoundRouteProps, createFileRoute, notFound } from "@tanstack/react-router";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { ListOrdered, type LucideIcon, Map, ShoppingBag, Trophy, Users } from "lucide-react";
 import { lazy, Suspense, useMemo } from "react";
@@ -7,17 +7,19 @@ import { lazy, Suspense, useMemo } from "react";
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { HeroImage } from "~/components/HeroImage";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { NotFound } from "~/components/NotFound";
 import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
 import { StatCard } from "~/components/StatCard";
 import { useSeasons } from "~/hooks/useSeasons";
 import { computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
 import { formatPercent } from "~/lib/format";
-import { findHeroBySlug } from "~/lib/hero-slug";
+import { findHeroBySlug, heroSlug } from "~/lib/hero-slug";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
 import { defaultDateRange, defaultPrevDateRange, type SeasonInfo, defaultUnixRange } from "~/lib/seasons";
 import { SITE_URL, seo } from "~/lib/seo";
+import { closestNameBySlug } from "~/lib/slug";
 import {
   filterPlayableHeroes,
   heroesQueryOptions,
@@ -145,8 +147,9 @@ export const Route = createFileRoute("/heroes/$heroName")({
       queryClient.ensureQueryData(heroesQueryOptions),
       loadSeasons(queryClient),
     ]);
-    const hero = findHeroBySlug(filterPlayableHeroes(heroes), params.heroName);
-    if (!hero) throw notFound();
+    const playable = filterPlayableHeroes(heroes);
+    const hero = findHeroBySlug(playable, params.heroName);
+    if (!hero) throw notFound({ data: { suggestion: closestNameBySlug(playable, params.heroName)?.name } });
     const [stats] = await Promise.all([
       prefetchSafe(queryClient.ensureQueryData(heroStatsQueryOptions(currentStatsParams(seasons)))),
       prefetchSafe(queryClient.ensureQueryData(heroBanStatsQueryOptions(currentBanParams(seasons)))),
@@ -171,6 +174,7 @@ export const Route = createFileRoute("/heroes/$heroName")({
       },
     };
   },
+  notFoundComponent: HeroNotFound,
   head: ({ loaderData }) => {
     if (!loaderData) {
       return seo({
@@ -436,5 +440,20 @@ function HeroDetailPage() {
         </Link>
       </nav>
     </div>
+  );
+}
+
+function HeroNotFound({ data }: NotFoundRouteProps) {
+  const suggestion = (data as { suggestion?: string } | undefined)?.suggestion;
+  return (
+    <NotFound
+      didYouMean={
+        suggestion && (
+          <Link to="/heroes/$heroName" params={{ heroName: heroSlug(suggestion) }}>
+            {suggestion}
+          </Link>
+        )
+      }
+    />
   );
 }
