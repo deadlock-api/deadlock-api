@@ -24,6 +24,10 @@ const ItemHeroBreakdown = lazy(() =>
   import("~/components/items-page/ItemHeroBreakdown").then((m) => ({ default: m.ItemHeroBreakdown })),
 );
 
+const ItemWinRateOverTime = lazy(() =>
+  import("~/components/items-page/ItemWinRateOverTime").then((m) => ({ default: m.ItemWinRateOverTime })),
+);
+
 const ItemWinRateByBuyTime = lazy(() =>
   import("~/components/items-page/ItemWinRateByBuyTime").then((m) => ({ default: m.ItemWinRateByBuyTime })),
 );
@@ -230,6 +234,17 @@ function ItemDetailPage() {
       <ChunkErrorBoundary>
         <Suspense fallback={<LoadingLogo />}>
           <ItemHeroBreakdown itemId={itemId} itemName={itemName} itemRequest={itemRequest} heroRequest={heroRequest} />
+        </Suspense>
+      </ChunkErrorBoundary>
+
+      <ChunkErrorBoundary>
+        <Suspense fallback={<LoadingLogo />}>
+          <ItemWinRateOverTime
+            itemId={itemId}
+            itemName={itemName}
+            itemRequest={itemRequest}
+            heroRequest={heroRequest}
+          />
         </Suspense>
       </ChunkErrorBoundary>
 
