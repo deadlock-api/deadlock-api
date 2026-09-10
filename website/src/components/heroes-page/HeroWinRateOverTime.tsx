@@ -10,6 +10,7 @@ import { day } from "~/dayjs";
 import { api } from "~/lib/api";
 import { getPickrateMultiplier } from "~/lib/constants";
 import { formatPercent, formatSignedPercent } from "~/lib/format";
+import { withoutOpenTimeBucket } from "~/lib/time-buckets";
 import { queryKeys } from "~/queries/query-keys";
 
 const MIN_WEEK_MATCHES = 300;
@@ -34,7 +35,7 @@ export function HeroWinRateOverTime({
     if (!data) return [];
     const hero = new Map<number, { wins: number; matches: number }>();
     const all = new Map<number, number>();
-    for (const row of data) {
+    for (const row of withoutOpenTimeBucket(data, weeklyRequest.bucket)) {
       all.set(row.bucket, (all.get(row.bucket) ?? 0) + row.matches);
       if (row.hero_id === heroId) hero.set(row.bucket, { wins: row.wins, matches: row.matches });
     }

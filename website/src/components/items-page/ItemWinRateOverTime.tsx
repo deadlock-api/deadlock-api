@@ -8,6 +8,7 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import { day } from "~/dayjs";
 import { api } from "~/lib/api";
 import { formatPercent, formatSignedPercent } from "~/lib/format";
+import { withoutOpenTimeBucket } from "~/lib/time-buckets";
 import { queryKeys } from "~/queries/query-keys";
 
 const MIN_WEEK_MATCHES = 200;
@@ -44,7 +45,7 @@ export function ItemWinRateOverTime({
     // The API's daily rollups count the whole start day, so a week that begins before the range would mix in the
     // hours before a season or patch boundary.
     const firstWeek = itemRequest.minUnixTimestamp ?? 0;
-    return itemQuery.data
+    return withoutOpenTimeBucket(itemQuery.data, weeklyItemRequest.bucket)
       .filter(
         (row) =>
           row.item_id === itemId &&
