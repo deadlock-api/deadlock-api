@@ -103,6 +103,21 @@ function MatchHeader({
                   {rounds.own}–{rounds.enemy} rounds
                 </span>
               )}
+              <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5 self-center text-xs text-muted-foreground">
+                {records && (
+                  <Note icon={Trophy} className="text-amber-500">
+                    Personal best: {records.map((record) => `${record.label} ${record.value}`).join(" · ")}
+                  </Note>
+                )}
+                {abandoned && (
+                  <Note icon={LogOut}>Abandoned at {formatMatchDuration(entry.abandoned_time_s as number)}</Note>
+                )}
+                {unscored && (
+                  <Note icon={UNSCORED_OUTCOME_NOTES[unscored].icon}>{UNSCORED_OUTCOME_NOTES[unscored].text}</Note>
+                )}
+                {demotionProtected && <Note icon={ShieldCheck}>Demotion protection prevented a rank drop</Note>}
+                {calibration && <Note icon={CircleDashed}>Calibration match</Note>}
+              </span>
             </div>
             <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground tabular-nums">
               <span>
@@ -159,21 +174,6 @@ function MatchHeader({
           )}
         </div>
       </div>
-      {(abandoned || unscored || records || demotionProtected || calibration) && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          {records && (
-            <Note icon={Trophy} className="text-amber-500">
-              Personal best: {records.map((record) => `${record.label} ${record.value}`).join(" · ")}
-            </Note>
-          )}
-          {abandoned && <Note icon={LogOut}>Abandoned at {formatMatchDuration(entry.abandoned_time_s as number)}</Note>}
-          {unscored && (
-            <Note icon={UNSCORED_OUTCOME_NOTES[unscored].icon}>{UNSCORED_OUTCOME_NOTES[unscored].text}</Note>
-          )}
-          {demotionProtected && <Note icon={ShieldCheck}>Demotion protection prevented a rank drop</Note>}
-          {calibration && <Note icon={CircleDashed}>Calibration match</Note>}
-        </div>
-      )}
     </div>
   );
 }
