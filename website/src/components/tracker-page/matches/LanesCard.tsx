@@ -111,10 +111,10 @@ export function LanesCard({
             >
               <div className="flex items-center gap-1.5">
                 <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: lane.color }} />
-                <span className="text-xs font-medium">{lane.name}</span>
+                <span className="text-sm font-medium">{lane.name}</span>
                 <span
                   className={cn(
-                    "ml-auto text-xs font-semibold tabular-nums",
+                    "ml-auto text-sm font-semibold tabular-nums",
                     diff > 0 && WIN_TEXT_CLASS,
                     diff < 0 && LOSS_TEXT_CLASS,
                   )}
