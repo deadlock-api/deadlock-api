@@ -126,11 +126,11 @@ export function getPickrateMultiplier(gameMode?: "normal" | "street_brawl"): num
 
 export const DURATION_BUCKETS = [
   { label: "< 25m", minS: 0, maxS: 1500 },
-  { label: "25-30m", minS: 1500, maxS: 1800 },
-  { label: "30-35m", minS: 1800, maxS: 2100 },
-  { label: "35-40m", minS: 2100, maxS: 2400 },
-  { label: "40-45m", minS: 2400, maxS: 2700 },
-  { label: "45-50m", minS: 2700, maxS: 3000 },
+  { label: "25–30m", minS: 1500, maxS: 1800 },
+  { label: "30–35m", minS: 1800, maxS: 2100 },
+  { label: "35–40m", minS: 2100, maxS: 2400 },
+  { label: "40–45m", minS: 2400, maxS: 2700 },
+  { label: "45–50m", minS: 2700, maxS: 3000 },
   { label: "50m+", minS: 3000, maxS: 7000 },
 ] as const;
 
