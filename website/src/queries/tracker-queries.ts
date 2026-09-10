@@ -533,6 +533,44 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
   });
 }
 
+export interface TrackerAbility {
+  id: number;
+  name: string;
+  class_name: string;
+  image: string | null;
+  image_webp: string | null;
+}
+
+/**
+ * Every hero ability with just what the scoreboard draws, from the GraphQL asset catalog; the REST ability list
+ * carries each ability's full description and properties.
+ */
+export const trackerAbilitiesQueryOptions = queryOptions({
+  queryKey: queryKeys.players.abilities(),
+  queryFn: async (): Promise<TrackerAbility[]> => {
+    const { items } = await graphql.query({
+      items: {
+        on_Ability: { id: true, name: true, class_name: true, image: true, image_webp: true },
+      },
+    });
+    // Only the ability variant is selected, so every other item comes back null, whatever the generated type says.
+    return items.flatMap((item: (typeof items)[number] | null) =>
+      item && "class_name" in item
+        ? [
+            {
+              id: item.id,
+              name: item.name,
+              class_name: item.class_name,
+              image: item.image,
+              image_webp: item.image_webp,
+            },
+          ]
+        : [],
+    );
+  },
+  staleTime: CACHE_DURATIONS.FOREVER,
+});
+
 /**
  * Fetched apart from the match metadata: `death_details` is priced at 100 complexity per
  * player on the GraphQL side, which would push the full-lobby metadata query over the server limit.

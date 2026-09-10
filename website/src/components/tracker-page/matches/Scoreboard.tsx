@@ -4,7 +4,7 @@ import type { Rank } from "deadlock_api_client";
 import { Crown, ExternalLink, ShieldCheck } from "lucide-react";
 import { useMemo } from "react";
 
-import { AbilityImage } from "~/components/AbilityImage";
+import { AssetImage } from "~/components/AssetImage";
 import { BadgeImage } from "~/components/BadgeImage";
 import { HeroImage } from "~/components/HeroImage";
 import { ItemImageFromAsset } from "~/components/ItemImage";
@@ -14,8 +14,12 @@ import { LANES } from "~/lib/team-builder/lanes";
 import { type BuildAbility, type BuildItem, playerBuild } from "~/lib/tracker/build";
 import { formatMatchDuration } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
-import { abilitiesQueryOptions, heroesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
-import type { TrackerMatchMetadata, TrackerMatchPlayer } from "~/queries/tracker-queries";
+import { heroesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
+import {
+  type TrackerMatchMetadata,
+  type TrackerMatchPlayer,
+  trackerAbilitiesQueryOptions,
+} from "~/queries/tracker-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { PanelTooltipContent } from "../shared/PanelTooltipContent";
@@ -67,7 +71,18 @@ function AbilityChip({ entry }: { entry: BuildAbility }) {
       <TooltipTrigger asChild>
         <span className="flex flex-col items-center gap-0.5">
           <span className="relative">
-            <AbilityImage abilityId={entry.ability.id} className="size-5.5" title="" />
+            <AssetImage
+              asset={{
+                webp: entry.ability.image_webp,
+                png: entry.ability.image,
+                fallbackSrc: entry.ability.image_webp ?? entry.ability.image,
+                alt: entry.ability.name,
+                title: "",
+              }}
+              isLoading={false}
+              emptyClassName="aspect-square size-5.5 rounded-full bg-muted"
+              imgClassName="aspect-square size-5.5 object-cover dark:brightness-0 dark:invert"
+            />
             {entry.stacks != null && <StackBadge stacks={entry.stacks} />}
           </span>
           <span className="flex gap-px" aria-label={`Level ${level} of ${MAX_ABILITY_LEVEL}`}>
@@ -164,7 +179,7 @@ export function Scoreboard({
   onViewPlayer: (accountId: number) => void;
 }) {
   const { data: abilitiesById } = useQuery({
-    ...abilitiesQueryOptions,
+    ...trackerAbilitiesQueryOptions,
     select: (abilities) => new Map(abilities.map((ability) => [ability.id, ability])),
   });
   const { data: heroesById } = useQuery({

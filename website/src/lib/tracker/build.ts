@@ -1,7 +1,5 @@
-import type { Ability } from "deadlock_api_client";
-
 import type { SlimHero, SlimUpgrade } from "~/queries/asset-queries";
-import type { TrackerMatchItem } from "~/queries/tracker-queries";
+import type { TrackerAbility, TrackerMatchItem } from "~/queries/tracker-queries";
 
 export interface BuildItem {
   upgrade: SlimUpgrade;
@@ -9,13 +7,13 @@ export interface BuildItem {
   boughtAt: number;
   /** Seconds into the match, or null when held to the end. */
   soldAt: number | null;
-  imbuedInto: Ability | undefined;
+  imbuedInto: TrackerAbility | undefined;
   /** Stacks the item built up, for items that stack. */
   stacks: number | undefined;
 }
 
 export interface BuildAbility {
-  ability: Ability;
+  ability: TrackerAbility;
   /** Seconds into the match, or null when the history holds no unlock for it. */
   unlockedAt: number | null;
   /** When each upgrade was bought, 0–3 of them, in order. */
@@ -40,7 +38,7 @@ const SIGNATURE_SLOTS = ["signature1", "signature2", "signature3", "signature4"]
 export function playerBuild(
   items: TrackerMatchItem[],
   itemsById: Map<number, SlimUpgrade>,
-  abilitiesById: Map<number, Ability>,
+  abilitiesById: Map<number, TrackerAbility>,
   hero: SlimHero | undefined,
   stacks: Record<number, number>,
 ): PlayerBuild {
