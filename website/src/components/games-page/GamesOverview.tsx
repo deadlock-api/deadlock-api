@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AnalyticsApiGameStatsRequest, GameStatsBucketEnum } from "deadlock_api_client";
+import type { AnalyticsApiGameStatsRequest, AnalyticsGameStats, GameStatsBucketEnum } from "deadlock_api_client";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { Fragment, lazy, Suspense, useState } from "react";
 
@@ -12,6 +12,21 @@ import { gameStatsQueryOptions } from "~/queries/games-query";
 import { CATEGORY_ICONS, formatStatValue, getFilteredCategories } from "./stat-definitions";
 
 const StatTrendChart = lazy(() => import("./StatTrendChart"));
+
+const TOTAL_STATS: ReadonlySet<keyof AnalyticsGameStats> = new Set(["total_matches", "total_players"]);
+
+function windowSeconds(params: AnalyticsApiGameStatsRequest): number {
+  return (params.maxUnixTimestamp ?? Date.now() / 1000) - (params.minUnixTimestamp ?? 0);
+}
+
+/**
+ * Averages compare across any two windows, totals only across windows of about the same length. The
+ * default compares the running season with the whole previous one, where the totals always read as a
+ * collapse; and players can't be rescaled per day, since one player shows up on many days.
+ */
+function totalsComparable(params: AnalyticsApiGameStatsRequest, prevParams: AnalyticsApiGameStatsRequest): boolean {
+  return Math.abs(windowSeconds(params) / windowSeconds(prevParams) - 1) < 0.1;
+}
 
 interface GamesOverviewProps {
   params: AnalyticsApiGameStatsRequest;
@@ -44,6 +59,7 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
   }
 
   const prev = prevData?.[0];
+  const compareTotals = prevParams != null && totalsComparable(params, prevParams);
   const teamWinTotal = current.team0_wins + current.team1_wins;
   const prevTeamWinTotal = prev ? prev.team0_wins + prev.team1_wins : 0;
   const teamWinRow =
@@ -92,7 +108,8 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
             <div className={cn(isWide && "@2xl:grid @2xl:grid-cols-2")}>
               {stats.map((stat, statIdx) => {
                 const value = current[stat.key] as number;
-                const prevValue = prev?.[stat.key] as number | undefined;
+                const prevValue =
+                  TOTAL_STATS.has(stat.key) && !compareTotals ? undefined : (prev?.[stat.key] as number | undefined);
                 // Rounded to the displayed tenth of a percent so the arrow and colour agree with the printed value.
                 const delta =
                   prevValue != null && prevValue !== 0
