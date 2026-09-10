@@ -1,19 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { ArrowDown, ArrowUp, ChevronUp } from "lucide-react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { parseAsInteger, parseAsStringLiteral, useQueryState, useQueryStates } from "nuqs";
-import { type ComponentProps, Fragment, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import { PaginationControls } from "~/components/PaginationControls";
 import { Button } from "~/components/ui/button";
-import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { day } from "~/dayjs";
 import {
   computeRecords,
   computeSessions,
-  formatMatchDuration,
   formatPlaytime,
-  isWin,
   MATCH_SORT_KEYS,
   type MatchSortKey,
   type PlaySession,
@@ -23,19 +20,32 @@ import {
   sortMatches,
   summarize,
   summarizeByHero,
-  type TrackerSummary,
 } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { RankDelta } from "../shared/RankDelta";
-import { COLUMN_VISIBILITY, MatchRow, ResultEdge } from "./MatchRow";
-import { MatchRowDetails } from "./MatchRowDetails";
+import { MatchDetails } from "./MatchDetails";
+import { MatchListItem } from "./MatchListItem";
 
-const COLUMN_COUNT = 13;
 // A best among a handful of matches says little, so small sets get no record markers.
 const MIN_MATCHES_FOR_RECORDS = 10;
+const LIST_CHUNK = 50;
+/** How far past the list's visible end the next chunk renders, so scrolling never catches up with it. */
+const PRELOAD_MARGIN_PX = 2400;
+/** Height of a sticky session header, which covers the top of the list viewport. */
+const SESSION_HEADER_PX = 26;
+
+const SORT_LABELS: Record<MatchSortKey, string> = {
+  played: "Date",
+  kda: "KDA",
+  souls: "Souls",
+  soulsPerMin: "Souls/min",
+  lastHits: "Last hits",
+  duration: "Duration",
+  rankDelta: "Rank change",
+};
 
 function sessionDateLabel(unix: number): string {
   const date = day.unix(unix);
@@ -45,104 +55,23 @@ function sessionDateLabel(unix: number): string {
   return date.format(date.isSame(today, "year") ? "ddd, MMM D" : "ddd, MMM D, YYYY");
 }
 
-function SortableHead({
-  sortKey,
-  activeKey,
-  dir,
-  onSort,
-  children,
-  ...props
-}: {
-  sortKey: MatchSortKey;
-  activeKey: MatchSortKey;
-  dir: SortDir;
-  onSort: (key: MatchSortKey) => void;
-} & Omit<ComponentProps<"th">, "onClick">) {
-  const active = activeKey === sortKey;
+function SessionHeader({ session }: { session: PlaySession }) {
   return (
-    <TableHead aria-sort={active ? (dir === "desc" ? "descending" : "ascending") : undefined} {...props}>
-      <button
-        type="button"
-        onClick={() => onSort(sortKey)}
-        className="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
+    <div className="sticky top-0 z-10 flex items-center gap-2 border-y border-border bg-muted px-3 py-1 text-xs first:border-t-0">
+      <span className="font-semibold">{sessionDateLabel(session.startUnix)}</span>
+      <span className="tabular-nums">
+        <span className={cn("font-semibold", WIN_TEXT_CLASS)}>{session.wins}W</span>
+        <span className="text-muted-foreground"> – </span>
+        <span className={cn("font-semibold", LOSS_TEXT_CLASS)}>{session.losses}L</span>
+      </span>
+      <RankDelta value={session.rankDelta} className="font-semibold" title="Net rank change over the session" />
+      <span
+        className="ml-auto text-muted-foreground tabular-nums"
+        title={`${day.unix(session.startUnix).format("HH:mm")} – ${day.unix(session.endUnix).format("HH:mm")}`}
       >
-        {children}
-        {active && (dir === "desc" ? <ArrowDown className="size-3" /> : <ArrowUp className="size-3" />)}
-      </button>
-    </TableHead>
-  );
-}
-
-function SessionRow({ session }: { session: PlaySession }) {
-  return (
-    <TableRow className="hover:bg-transparent">
-      <TableCell colSpan={COLUMN_COUNT} className="bg-muted/40 py-1.5 text-xs">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
-          <span className="font-semibold">{sessionDateLabel(session.startUnix)}</span>
-          <span className="text-muted-foreground tabular-nums">
-            {day.unix(session.startUnix).format("HH:mm")} – {day.unix(session.endUnix).format("HH:mm")}
-          </span>
-          <span className="tabular-nums">
-            <span className={cn("font-semibold", WIN_TEXT_CLASS)}>{session.wins}W</span>
-            <span className="text-muted-foreground"> – </span>
-            <span className={cn("font-semibold", LOSS_TEXT_CLASS)}>{session.losses}L</span>
-          </span>
-          <RankDelta value={session.rankDelta} className="font-semibold" title="Net rank change over the session" />
-          <span className="ml-auto text-muted-foreground tabular-nums">
-            {session.matches} {session.matches === 1 ? "match" : "matches"} · {formatPlaytime(session.totalTimeS)}
-          </span>
-        </div>
-      </TableCell>
-    </TableRow>
-  );
-}
-
-const round = (value: number) => Math.round(value).toLocaleString("en-US");
-
-/**
- * Averages over the filtered history, laid out under the matching table columns. On narrow layouts
- * the label and the K/D/A precision drop to the row content's width, since the footer would
- * otherwise widen the table past its container.
- */
-function AverageRow({ summary }: { summary: TrackerSummary }) {
-  return (
-    <TableRow
-      className="text-muted-foreground hover:bg-transparent"
-      title={`Average over ${summary.matches.toLocaleString("en-US")} matches`}
-    >
-      <TableCell title="Win rate" className="tabular-nums">
-        {Math.round(summary.winrate * 100)}%
-      </TableCell>
-      <TableCell>
-        <span className="@xl:hidden">Avg</span>
-        <span className="hidden @xl:inline">Average</span>
-      </TableCell>
-      <TableCell className={COLUMN_VISIBILITY.mode} />
-      <TableCell className="text-right tabular-nums">
-        <span className="@lg:hidden">
-          {round(summary.avgKills)} / {round(summary.avgDeaths)} / {round(summary.avgAssists)}
-        </span>
-        <span className="hidden @lg:inline">
-          {summary.avgKills.toFixed(1)} / {summary.avgDeaths.toFixed(1)} / {summary.avgAssists.toFixed(1)}
-        </span>
-      </TableCell>
-      <TableCell className={cn("text-right tabular-nums", COLUMN_VISIBILITY.souls)}>
-        {round(summary.avgSouls)}
-      </TableCell>
-      <TableCell className={cn("text-right tabular-nums", COLUMN_VISIBILITY.soulsPerMin)}>
-        {round(summary.soulsPerMin)}
-      </TableCell>
-      <TableCell className={cn("text-right tabular-nums", COLUMN_VISIBILITY.lastHits)}>
-        {round(summary.avgLastHits)} / {round(summary.avgDenies)}
-      </TableCell>
-      <TableCell className={cn("text-right tabular-nums", COLUMN_VISIBILITY.duration)}>
-        {formatMatchDuration(summary.avgDurationS)}
-      </TableCell>
-      <TableCell className="text-right" title="Net rank change">
-        <RankDelta value={summary.rankDelta} className="hidden text-xs @sm:inline" />
-      </TableCell>
-      <TableCell colSpan={COLUMN_COUNT - 9} />
-    </TableRow>
+        {session.matches} · {formatPlaytime(session.totalTimeS)}
+      </span>
+    </div>
   );
 }
 
@@ -158,7 +87,7 @@ export function MatchesTab({
   entries: PlayerMatchHistoryEntry[];
   ranks: Rank[];
   accountId: number;
-  /** The active hero filter, which the rows can toggle. */
+  /** The active hero filter, which the details can toggle. */
   heroId: number | null;
   onHeroChange: (heroId: number | null) => void;
   /** The match the URL opens when the filters leave it out of `entries`. */
@@ -166,69 +95,91 @@ export function MatchesTab({
   /** Widens the filters to show `hiddenLinkedMatch`; absent when no filter setting can. */
   onRevealLinkedMatch?: () => void;
 }) {
-  const [expandedMatchId, setExpandedMatchId] = useQueryState("match", parseAsInteger);
+  const [selectedMatchId, setSelectedMatchId] = useQueryState("match", parseAsInteger);
   const [{ sort: sortKey, dir: sortDir }, setSort] = useQueryStates({
     sort: parseAsStringLiteral(MATCH_SORT_KEYS).withDefault("played"),
     dir: parseAsStringLiteral(SORT_DIRS).withDefault("desc"),
   });
   const sortedEntries = useMemo(() => sortMatches(entries, sortKey, sortDir), [entries, sortKey, sortDir]);
-  const [itemsPerPage, setItemsPerPage] = useState(25);
-  // A shared link opens on the page holding its match.
-  const [currentPage, setCurrentPage] = useState(() => {
-    const index = sortedEntries.findIndex((entry) => entry.match_id === expandedMatchId);
-    return index === -1 ? 0 : Math.floor(index / itemsPerPage);
-  });
+  const selectedIndex = sortedEntries.findIndex((entry) => entry.match_id === selectedMatchId);
+  // `entries` arrive newest first, so without a selection in the list the latest match shows.
+  const selected = selectedIndex === -1 ? (hiddenLinkedMatch ?? entries[0]) : sortedEntries[selectedIndex];
+  const selectedId = selected?.match_id;
 
-  const linkedRowRef = useRef<HTMLTableRowElement>(null);
+  const [visibleCount, setVisibleCount] = useState(() => Math.max(LIST_CHUNK, selectedIndex + LIST_CHUNK));
+  const visibleEntries = useMemo(() => sortedEntries.slice(0, visibleCount), [sortedEntries, visibleCount]);
+  const hasMore = visibleCount < sortedEntries.length;
+
+  const listRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const detailsRef = useRef<HTMLDivElement>(null);
+  const focusSelectedItem = useRef(false);
+
+  // The observer is rebuilt after every chunk, and a new observer reports at once, so chunks keep coming
+  // until the list's end lies further past its visible end than the preload margin.
   useEffect(() => {
-    linkedRowRef.current?.scrollIntoView({ block: "center" });
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setVisibleCount((count) => count + LIST_CHUNK);
+      },
+      { root: listRef.current, rootMargin: `0px 0px ${PRELOAD_MARGIN_PX}px 0px` },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, visibleCount]);
+
+  // A shared link opens with its match centered in the list; `scrollIntoView` would scroll the page too.
+  useEffect(() => {
+    const list = listRef.current;
+    const item = list?.querySelector<HTMLElement>("[aria-current]");
+    if (list && item) list.scrollTop = item.offsetTop - (list.clientHeight - item.offsetHeight) / 2;
   }, []);
-  const tableTopRef = useRef<HTMLDivElement>(null);
-  // Turning the page from below the table would otherwise leave the reader at the end of the new page.
-  const turnPageFromBelow = (nextPage: number) => {
-    setCurrentPage(nextPage);
-    tableTopRef.current?.scrollIntoView({ block: "start" });
+
+  useEffect(() => {
+    if (!focusSelectedItem.current) return;
+    focusSelectedItem.current = false;
+    const list = listRef.current;
+    const item = list?.querySelector<HTMLElement>(`[data-match-id="${selectedId}"]`);
+    if (!list || !item) return;
+    item.focus({ preventScroll: true });
+    const top = item.offsetTop - SESSION_HEADER_PX;
+    const bottom = item.offsetTop + item.offsetHeight;
+    if (top < list.scrollTop) list.scrollTop = top;
+    else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
+  }, [selectedId]);
+
+  const selectMatch = (matchId: number) => {
+    setSelectedMatchId(matchId);
+    // Picking a match while scrolled down into the previous one's details starts the new one from its top.
+    const details = detailsRef.current;
+    if (details && details.getBoundingClientRect().top < 0) details.scrollIntoView({ block: "start" });
   };
 
-  const handleSort = (key: MatchSortKey) => {
-    setSort(sortKey === key ? { dir: sortDir === "desc" ? "asc" : "desc" } : { sort: key, dir: "desc" });
-    setCurrentPage(0);
-  };
-  const sortProps = { activeKey: sortKey, dir: sortDir, onSort: handleSort };
-  const toggleHeroFilter = (rowHeroId: number) => {
-    onHeroChange(heroId == null ? rowHeroId : null);
-    setCurrentPage(0);
-  };
-
-  const collapseExpanded = () => {
-    setExpandedMatchId(null);
-    // Brings the row back into view and keeps keyboard focus on it.
-    linkedRowRef.current?.focus();
-  };
-
-  // Arrow keys step between the focusable match rows, skipping session and details rows. Escape
-  // collapses the expanded match from its row or from anywhere inside its details.
-  const handleRowKeyDown = (event: KeyboardEvent<HTMLTableSectionElement>) => {
-    if (event.key === "Escape") {
-      const expandedRow = linkedRowRef.current;
-      const target = event.target as Node;
-      if (expandedRow?.contains(target) || expandedRow?.nextElementSibling?.contains(target)) collapseExpanded();
-      return;
-    }
+  const handleItemKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-    const rows = [...event.currentTarget.querySelectorAll<HTMLTableRowElement>("tr[tabindex]")];
-    const index = rows.indexOf(event.target as HTMLTableRowElement);
-    if (index === -1) return;
-    const next = rows[index + (event.key === "ArrowDown" ? 1 : -1)];
+    const index = sortedEntries.findIndex((entry) => entry.match_id === selectedId);
+    const nextIndex = index + (event.key === "ArrowDown" ? 1 : -1);
+    const next = sortedEntries[nextIndex];
     if (!next) return;
     event.preventDefault();
-    next.focus();
+    if (nextIndex >= visibleCount) setVisibleCount((count) => count + LIST_CHUNK);
+    focusSelectedItem.current = true;
+    setSelectedMatchId(next.match_id);
+  };
+
+  const changeSort = (next: { sort?: MatchSortKey; dir?: SortDir }) => {
+    setSort(next);
+    setVisibleCount(LIST_CHUNK);
+    if (listRef.current) listRef.current.scrollTop = 0;
   };
 
   const { data: heroNames } = useQuery({
     ...heroesQueryOptions,
     select: (heroes) => new Map(heroes.map((hero) => [hero.id, hero.name])),
   });
+  const heroNameOf = (id: number) => heroNames?.get(id) ?? "Unknown";
 
   // Sessions are contiguous only in play order, so they are hidden under any other sort.
   const sessions = useMemo(
@@ -241,141 +192,72 @@ export function MatchesTab({
     () => (entries.length >= MIN_MATCHES_FOR_RECORDS ? recordsByMatchId(computeRecords(entries)) : null),
     [entries],
   );
-  const totalPages = Math.max(1, Math.ceil(entries.length / itemsPerPage));
-  // Filters and the page size can shrink the list under a page that no longer exists.
-  const page = Math.min(currentPage, totalPages - 1);
-  const paginatedEntries = useMemo(
-    () => sortedEntries.slice(page * itemsPerPage, (page + 1) * itemsPerPage),
-    [sortedEntries, page, itemsPerPage],
-  );
 
   return (
-    <div ref={tableTopRef} className="@container/matches space-y-3">
-      {hiddenLinkedMatch && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-border bg-muted/40 px-4 py-3 text-sm">
-          <span className="text-muted-foreground">
-            The linked {heroNames?.get(hiddenLinkedMatch.hero_id) ?? ""} match from{" "}
-            {day.unix(hiddenLinkedMatch.start_time).format("MMM D, YYYY")} is hidden by the current filters.
-          </span>
-          <div className="ml-auto flex gap-2">
-            {onRevealLinkedMatch && (
-              <Button size="sm" onClick={onRevealLinkedMatch}>
-                Show it
-              </Button>
-            )}
-            <Button size="sm" variant="ghost" onClick={() => setExpandedMatchId(null)}>
-              Dismiss
+    <div className="@container/matches">
+      <div className="grid items-start gap-4 @3xl/matches:grid-cols-[19rem_minmax(0,1fr)] @5xl/matches:grid-cols-[21rem_minmax(0,1fr)]">
+        <aside className="flex max-h-[26rem] flex-col overflow-hidden rounded-md border border-border @3xl/matches:sticky @3xl/matches:top-4 @3xl/matches:max-h-[calc(100dvh-2rem)]">
+          <div className="flex items-center gap-2 border-b border-border px-3 py-1.5">
+            <div className="min-w-0 text-xs leading-tight text-muted-foreground tabular-nums">
+              <div className="font-semibold text-foreground">
+                {summary.matches.toLocaleString("en-US")} {summary.matches === 1 ? "match" : "matches"}
+              </div>
+              {summary.matches > 0 && (
+                <div>
+                  <span className={WIN_TEXT_CLASS}>{summary.wins}W</span> –{" "}
+                  <span className={LOSS_TEXT_CLASS}>{summary.losses}L</span> · {Math.round(summary.winrate * 100)}%
+                </div>
+              )}
+            </div>
+            <Select value={sortKey} onValueChange={(value) => changeSort({ sort: value as MatchSortKey, dir: "desc" })}>
+              <SelectTrigger size="sm" className="ml-auto h-7 gap-1 px-2 text-xs" aria-label="Sort matches by">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MATCH_SORT_KEYS.map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {SORT_LABELS[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-7 shrink-0"
+              onClick={() => changeSort({ dir: sortDir === "desc" ? "asc" : "desc" })}
+              aria-label={sortDir === "desc" ? "Sorted high to low" : "Sorted low to high"}
+              title={sortDir === "desc" ? "Sorted high to low" : "Sorted low to high"}
+            >
+              {sortDir === "desc" ? <ArrowDown className="size-3.5" /> : <ArrowUp className="size-3.5" />}
             </Button>
           </div>
-        </div>
-      )}
-      <PaginationControls
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        currentPage={page}
-        onPageChange={setCurrentPage}
-        totalPages={totalPages}
-      >
-        <span className="text-sm text-muted-foreground tabular-nums">
-          {entries.length.toLocaleString("en-US")} {entries.length === 1 ? "match" : "matches"}
-        </span>
-      </PaginationControls>
-      <Table>
-        <TableHeader className="bg-muted">
-          <TableRow>
-            <TableHead className="w-14">
-              <span className="@md:hidden">W/L</span>
-              <span className="hidden @md:inline">Result</span>
-            </TableHead>
-            <TableHead>Hero</TableHead>
-            <TableHead className={COLUMN_VISIBILITY.mode}>Mode</TableHead>
-            <SortableHead sortKey="kda" {...sortProps} className="text-right" title="Sort by KDA ratio">
-              K / D / A
-            </SortableHead>
-            <SortableHead sortKey="souls" {...sortProps} className={cn("text-right", COLUMN_VISIBILITY.souls)}>
-              Souls
-            </SortableHead>
-            <SortableHead
-              sortKey="soulsPerMin"
-              {...sortProps}
-              className={cn("text-right", COLUMN_VISIBILITY.soulsPerMin)}
-            >
-              Souls/min
-            </SortableHead>
-            <SortableHead
-              sortKey="lastHits"
-              {...sortProps}
-              className={cn("text-right", COLUMN_VISIBILITY.lastHits)}
-              title="Last hits / Denies"
-            >
-              LH / DN
-            </SortableHead>
-            <SortableHead sortKey="duration" {...sortProps} className={cn("text-right", COLUMN_VISIBILITY.duration)}>
-              Duration
-            </SortableHead>
-            <SortableHead sortKey="rankDelta" {...sortProps} className="text-right" title="Sort by rank change">
-              Rank
-            </SortableHead>
-            <SortableHead sortKey="played" {...sortProps} className="text-right">
-              <span className="@3xl:hidden">Date</span>
-              <span className="hidden @3xl:inline">Played</span>
-            </SortableHead>
-            <TableHead className={cn("text-right", COLUMN_VISIBILITY.matchId)}>Match ID</TableHead>
-            <TableHead className={cn("w-8", COLUMN_VISIBILITY.teamBuilder)} />
-            <TableHead className={cn("w-8", COLUMN_VISIBILITY.expand)} />
-          </TableRow>
-        </TableHeader>
-        <TableBody onKeyDown={handleRowKeyDown}>
-          {paginatedEntries.map((entry, index) => {
-            const expanded = expandedMatchId === entry.match_id;
-            const session = sessions.get(entry.match_id);
-            const startsSession =
-              session != null && (index === 0 || sessions.get(paginatedEntries[index - 1].match_id) !== session);
-            return (
-              <Fragment key={entry.match_id}>
-                {startsSession && <SessionRow session={session} />}
-                <MatchRow
-                  ref={expanded ? linkedRowRef : undefined}
-                  entry={entry}
-                  ranks={ranks}
-                  heroName={heroNames?.get(entry.hero_id) ?? "Unknown"}
-                  records={heldRecords?.get(entry.match_id)}
-                  heroSummary={heroSummaries.get(entry.hero_id) as TrackerSummary}
-                  heroFiltered={heroId != null}
-                  onToggleHeroFilter={() => toggleHeroFilter(entry.hero_id)}
-                  expanded={expanded}
-                  onToggle={() => setExpandedMatchId(expanded ? null : entry.match_id)}
-                />
-                {expanded && (
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={COLUMN_COUNT} className="relative bg-muted/30 p-4 whitespace-normal">
-                      <ResultEdge win={isWin(entry)} />
-                      <MatchRowDetails
-                        entry={entry}
-                        accountId={accountId}
-                        ranks={ranks}
-                        heroSummary={heroSummaries.get(entry.hero_id) as TrackerSummary}
-                      />
-                      <div className="mt-3 flex justify-end">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={collapseExpanded}
-                          className="h-6 gap-1 px-2 text-xs text-muted-foreground"
-                        >
-                          <ChevronUp className="size-3.5" />
-                          Collapse
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </Fragment>
-            );
-          })}
-          {paginatedEntries.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={COLUMN_COUNT} className="py-8 text-center whitespace-normal text-muted-foreground">
+          <div
+            ref={listRef}
+            className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain"
+            aria-label="Match history"
+          >
+            {visibleEntries.map((entry, index) => {
+              const session = sessions.get(entry.match_id);
+              const startsSession =
+                session != null && (index === 0 || sessions.get(visibleEntries[index - 1].match_id) !== session);
+              return (
+                <Fragment key={entry.match_id}>
+                  {startsSession && <SessionHeader session={session} />}
+                  <MatchListItem
+                    entry={entry}
+                    heroName={heroNameOf(entry.hero_id)}
+                    hasRecord={heldRecords?.has(entry.match_id) ?? false}
+                    selected={entry.match_id === selectedId}
+                    showTimeOfDay={session != null}
+                    onSelect={() => selectMatch(entry.match_id)}
+                    onKeyDown={handleItemKeyDown}
+                  />
+                </Fragment>
+              );
+            })}
+            {entries.length === 0 && (
+              <div className="px-3 py-8 text-center text-sm text-muted-foreground">
                 No matches found
                 {heroId != null && (
                   <div className="mt-3">
@@ -384,34 +266,42 @@ export function MatchesTab({
                     </Button>
                   </div>
                 )}
-              </TableCell>
-            </TableRow>
+              </div>
+            )}
+            {hasMore && <div ref={sentinelRef} aria-hidden className="h-px" />}
+          </div>
+        </aside>
+        <div ref={detailsRef} className="min-w-0 scroll-mt-4 space-y-4">
+          {hiddenLinkedMatch && selected === hiddenLinkedMatch && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-border bg-muted/40 px-4 py-3 text-sm">
+              <span className="text-muted-foreground">This match is hidden from the list by the current filters.</span>
+              <div className="ml-auto flex gap-2">
+                {onRevealLinkedMatch && (
+                  <Button size="sm" onClick={onRevealLinkedMatch}>
+                    Show it in the list
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" onClick={() => setSelectedMatchId(null)}>
+                  Dismiss
+                </Button>
+              </div>
+            </div>
           )}
-        </TableBody>
-        {entries.length > 1 && (
-          <TableFooter>
-            <AverageRow summary={summary} />
-          </TableFooter>
-        )}
-      </Table>
-      {totalPages > 1 && (
-        <div className="flex items-center justify-end gap-2 text-sm text-muted-foreground">
-          <span className="mr-2 tabular-nums">
-            Page {page + 1} of {totalPages}
-          </span>
-          <Button variant="outline" size="sm" onClick={() => turnPageFromBelow(page - 1)} disabled={page === 0}>
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => turnPageFromBelow(page + 1)}
-            disabled={page >= totalPages - 1}
-          >
-            Next
-          </Button>
+          {selected && (
+            <MatchDetails
+              key={selected.match_id}
+              entry={selected}
+              accountId={accountId}
+              ranks={ranks}
+              heroName={heroNameOf(selected.hero_id)}
+              heroSummary={heroSummaries.get(selected.hero_id) ?? summarize([selected])}
+              records={heldRecords?.get(selected.match_id)}
+              heroFiltered={heroId != null}
+              onToggleHeroFilter={() => onHeroChange(heroId == null ? selected.hero_id : null)}
+            />
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
