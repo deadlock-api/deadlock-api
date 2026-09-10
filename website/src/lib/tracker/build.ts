@@ -10,6 +10,8 @@ export interface BuildItem {
   /** Seconds into the match, or null when held to the end. */
   soldAt: number | null;
   imbuedInto: Ability | undefined;
+  /** Stacks the item built up, for items that stack. */
+  stacks: number | undefined;
 }
 
 export interface BuildAbility {
@@ -18,6 +20,8 @@ export interface BuildAbility {
   unlockedAt: number | null;
   /** When each upgrade was bought, 0–3 of them, in order. */
   upgradedAt: number[];
+  /** Stacks the ability built up, for abilities that stack. */
+  stacks: number | undefined;
 }
 
 export interface PlayerBuild {
@@ -38,6 +42,7 @@ export function playerBuild(
   itemsById: Map<number, SlimUpgrade>,
   abilitiesById: Map<number, Ability>,
   hero: SlimHero | undefined,
+  stacks: Record<number, number>,
 ): PlayerBuild {
   const ordered = items.toSorted((a, b) => a.game_time_s - b.game_time_s);
 
@@ -47,7 +52,12 @@ export function playerBuild(
   for (const item of ordered) {
     const ability = abilitiesById.get(item.item_id);
     if (ability) {
-      const entry = abilities.get(ability.id) ?? { ability, unlockedAt: null, upgradedAt: [] };
+      const entry = abilities.get(ability.id) ?? {
+        ability,
+        unlockedAt: null,
+        upgradedAt: [],
+        stacks: stacks[ability.id],
+      };
       if (item.upgrade_id === 0) entry.unlockedAt = item.game_time_s;
       else entry.upgradedAt.push(item.game_time_s);
       abilities.set(ability.id, entry);
@@ -60,12 +70,21 @@ export function playerBuild(
       boughtAt: item.game_time_s,
       soldAt: item.sold_time_s > 0 ? item.sold_time_s : null,
       imbuedInto: abilitiesById.get(item.imbued_ability_id),
+      stacks: undefined,
     };
     if (buildItem.soldAt == null) {
       if (heldIds.has(upgrade.id)) continue;
       heldIds.add(upgrade.id);
     }
     shopItems.push(buildItem);
+  }
+
+  // A stacking item bought more than once carries its stacks on the copy held last.
+  for (const [id, count] of Object.entries(stacks)) {
+    const owner =
+      shopItems.findLast((entry) => entry.upgrade.id === Number(id) && entry.soldAt == null) ??
+      shopItems.findLast((entry) => entry.upgrade.id === Number(id));
+    if (owner) owner.stacks = count;
   }
 
   const slotClassNames = SIGNATURE_SLOTS.map((slot) => hero?.items[slot]);

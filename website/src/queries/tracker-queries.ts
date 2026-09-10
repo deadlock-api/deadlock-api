@@ -150,6 +150,8 @@ export interface TrackerMatchPlayer {
   rank_delta: number | null;
   /** Whether demotion protection absorbed this match's loss. */
   demotion_protected: boolean;
+  /** Stacks built over the match by ability or item id, for those that stack, e.g. Sticky Bomb or Trophy Collector. */
+  ability_stacks: Record<number, number>;
   items: TrackerMatchItem[];
   stats: TrackerMatchStat[];
   personaname: string | undefined;
@@ -202,6 +204,7 @@ interface RestMatchMetadata {
       denies?: number;
       level?: number;
       mvp_rank?: number | null;
+      ability_stats?: { ability_id?: number; ability_value?: number }[] | null;
       player_rank_data?: {
         initial_display_rank?: number | null;
         initial_flat_progress?: number | null;
@@ -353,6 +356,9 @@ async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<Track
         player.player_rank_data?.final_flat_progress,
       ),
       demotion_protected: player.player_rank_data?.consumed_demotion_protection === true,
+      ability_stacks: Object.fromEntries(
+        (player.ability_stats ?? []).map((stat) => [stat.ability_id ?? 0, stat.ability_value ?? 0]),
+      ),
       items: (player.items ?? []).map((item) => ({
         item_id: item.item_id ?? 0,
         game_time_s: item.game_time_s ?? 0,
@@ -426,6 +432,7 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
               player_rank_initial_flat_progress: true,
               player_rank_final_flat_progress: true,
               player_rank_consumed_demotion_protection: true,
+              ability_stats: true,
               items: { item_id: true, game_time_s: true, sold_time_s: true, upgrade_id: true, imbued_ability_id: true },
               stats: { time_stamp_s: true, net_worth: true, player_healing: true },
               steam: { personaname: true },
@@ -466,6 +473,13 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
           rank_badge: player.player_rank_initial_display_rank || null,
           rank_delta: rankDelta(player.player_rank_initial_flat_progress, player.player_rank_final_flat_progress),
           demotion_protected: player.player_rank_consumed_demotion_protection === true,
+          // The GraphQL scalar maps ability ids to stacks, where the REST payload lists them as pairs.
+          ability_stacks: Object.fromEntries(
+            Object.entries((player.ability_stats as Record<string, number> | null) ?? {}).map(([id, value]) => [
+              Number(id),
+              value,
+            ]),
+          ),
           items: (player.items ?? []).map((item) => ({
             item_id: item.item_id ?? 0,
             game_time_s: item.game_time_s ?? 0,

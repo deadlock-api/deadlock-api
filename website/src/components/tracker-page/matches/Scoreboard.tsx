@@ -66,7 +66,10 @@ function AbilityChip({ entry }: { entry: BuildAbility }) {
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="flex flex-col items-center gap-0.5">
-          <AbilityImage abilityId={entry.ability.id} className="size-5.5" title="" />
+          <span className="relative">
+            <AbilityImage abilityId={entry.ability.id} className="size-5.5" title="" />
+            {entry.stacks != null && <StackBadge stacks={entry.stacks} />}
+          </span>
           <span className="flex gap-px" aria-label={`Level ${level} of ${MAX_ABILITY_LEVEL}`}>
             {Array.from({ length: MAX_ABILITY_LEVEL }, (_, index) => (
               <span
@@ -90,8 +93,17 @@ function AbilityChip({ entry }: { entry: BuildAbility }) {
             .filter(Boolean)
             .join(" · ")}
         </div>
+        {entry.stacks != null && <div className="text-muted-foreground tabular-nums">{entry.stacks} stacks</div>}
       </PanelTooltipContent>
     </Tooltip>
+  );
+}
+
+function StackBadge({ stacks }: { stacks: number }) {
+  return (
+    <span className="absolute -top-1.5 -right-1.5 rounded-sm bg-background px-0.5 text-[9px] leading-tight font-semibold tabular-nums">
+      {stacks}
+    </span>
   );
 }
 
@@ -109,6 +121,7 @@ function ItemChip({ item }: { item: BuildItem }) {
           {item.imbuedInto && (
             <span className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full bg-violet-400 ring-1 ring-background" />
           )}
+          {item.stacks != null && <StackBadge stacks={item.stacks} />}
         </span>
       </TooltipTrigger>
       <PanelTooltipContent>
@@ -121,6 +134,7 @@ function ItemChip({ item }: { item: BuildItem }) {
           {sold && ` · sold at ${formatMatchDuration(item.soldAt as number)}`}
         </div>
         {item.imbuedInto && <div className="text-muted-foreground">Imbued into {item.imbuedInto.name}</div>}
+        {item.stacks != null && <div className="text-muted-foreground tabular-nums">{item.stacks} stacks</div>}
       </PanelTooltipContent>
     </Tooltip>
   );
@@ -227,7 +241,13 @@ export function Scoreboard({
                 const name = nameOf(player);
                 const build =
                   itemsById && abilitiesById
-                    ? playerBuild(player.items, itemsById, abilitiesById, heroesById?.get(player.hero_id))
+                    ? playerBuild(
+                        player.items,
+                        itemsById,
+                        abilitiesById,
+                        heroesById?.get(player.hero_id),
+                        player.ability_stacks,
+                      )
                     : null;
                 const lane = laned ? LANES[laneIndex(player)] : undefined;
                 return (
