@@ -17,15 +17,23 @@ export function percentTicks([lo, hi]: [number, number]): number[] {
   return Array.from({ length: last - first + 1 }, (_, i) => Number(((first + i) * step).toFixed(4)));
 }
 
-const COUNT_STEP_FACTORS = [1, 2, 2.5, 5, 10];
+const NICE_STEP_FACTORS = [1, 2, 5, 10, 20];
 
 /**
- * Ticks from zero on a 1/2/2.5/5 × 10ⁿ step, at most `maxIntervals` apart, ending at or above `max`. Recharts'
- * own nice ticks round the step to 0.05 of its magnitude, which prints as 4,500 or 9,000 steps.
+ * Ticks on a 1/2/5 × 10ⁿ step covering `min`–`max`, at most `maxIntervals` apart. Recharts' own nice ticks round
+ * the step to 0.05 of its magnitude (4,500 or 9,000 steps), and with an explicit domain it spaces them from the raw
+ * minimum (2, 72, 142, ...).
  */
-export function countTicks(max: number, maxIntervals = 4): number[] {
-  if (!(max > 0)) return [0];
-  const magnitude = 10 ** Math.floor(Math.log10(max / maxIntervals));
-  const step = magnitude * (COUNT_STEP_FACTORS.find((f) => magnitude * f * maxIntervals >= max) ?? 10);
-  return Array.from({ length: Math.ceil(max / step - EPSILON) + 1 }, (_, i) => i * step);
+export function niceTicks(min: number, max: number, maxIntervals = 4): number[] {
+  if (!(max > min)) return [min];
+  const magnitude = 10 ** Math.floor(Math.log10((max - min) / maxIntervals));
+  let ticks: number[] = [];
+  for (const factor of NICE_STEP_FACTORS) {
+    const step = magnitude * factor;
+    const first = Math.floor(min / step + EPSILON);
+    const last = Math.ceil(max / step - EPSILON);
+    ticks = Array.from({ length: last - first + 1 }, (_, i) => Number(((first + i) * step).toPrecision(12)));
+    if (last - first <= maxIntervals) break;
+  }
+  return ticks;
 }

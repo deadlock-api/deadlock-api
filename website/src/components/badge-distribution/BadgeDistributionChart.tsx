@@ -6,7 +6,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Customized, Label, ReferenceLine, T
 import { RankTierIcons } from "~/components/RankTierIcons";
 import { ChartContainer } from "~/components/ui/chart";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
-import { countTicks } from "~/lib/chart-axis";
+import { niceTicks } from "~/lib/chart-axis";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { range } from "~/lib/utils";
 
@@ -107,7 +107,7 @@ export default function BadgeDistributionChart({
     return range(minTier, maxTier + 1).map((tier) => tier * 10 + 3);
   }, [badgeDistributionData]);
 
-  const valueTicks = useMemo(() => countTicks(Math.max(0, ...chartData.map((entry) => entry.value))), [chartData]);
+  const valueTicks = useMemo(() => niceTicks(0, Math.max(0, ...chartData.map((entry) => entry.value))), [chartData]);
 
   const xAxisTickFormatter = (badge: number) => tierData.get(Math.floor(badge / 10))?.name ?? "";
 

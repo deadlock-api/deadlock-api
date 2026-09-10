@@ -25,6 +25,7 @@ import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVis
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { computeBanRatesByBucket } from "~/lib/ban-rate";
+import { niceTicks } from "~/lib/chart-axis";
 import { MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
 import { withoutOpenTimeBucket } from "~/lib/time-buckets";
 import { queryKeys } from "~/queries/query-keys";
@@ -148,20 +149,6 @@ export function HeroStatsOverTimeChart({
     [allHeroIds, effectiveVisibleSet],
   );
 
-  const sortedStats = useMemo(() => {
-    const out: number[] = [];
-    for (const stats of Object.values(heroStatMap)) {
-      for (const [, stat] of stats) {
-        out.push(stat);
-      }
-    }
-    out.sort((a, b) => a - b);
-    return out;
-  }, [heroStatMap]);
-
-  const minStat = useMemo(() => sortedStats[Math.floor(sortedStats.length * 0.2)] ?? 0, [sortedStats]);
-  const maxStat = useMemo(() => sortedStats[Math.floor(sortedStats.length * 0.8)] ?? 100, [sortedStats]);
-
   const minDataDate = useMemo(
     () => Math.min(...Object.keys(heroStatMap).map((d) => Number.parseInt(d, 10))),
     [heroStatMap],
@@ -183,6 +170,21 @@ export function HeroStatsOverTimeChart({
       }),
     [heroStatMap],
   );
+
+  const yTicks = useMemo(() => {
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+    for (const point of formattedData) {
+      for (const heroId of visibleHeroIds) {
+        const value = point[heroId];
+        if (typeof value !== "number") continue;
+        min = Math.min(min, value);
+        max = Math.max(max, value);
+      }
+    }
+    return min <= max ? niceTicks(min, max, 8) : [0, 1];
+  }, [formattedData, visibleHeroIds]);
+  const isPercentStat = heroStat === "winrate" || heroStat === "ban_rate";
 
   const [hoveredHeroId, setHoveredHeroId] = useState<number | null>(null);
   const throttleRef = useRef<number>(0);
@@ -287,19 +289,18 @@ export function HeroStatsOverTimeChart({
                 stroke="#525252"
               />
               <YAxis
-                domain={[minStat * 0.9, maxStat * 1.1]}
+                domain={[yTicks[0], yTicks[yTicks.length - 1]]}
+                ticks={yTicks}
                 label={{
                   value: heroStat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
                   angle: -90,
                   position: "insideLeft",
                 }}
-                tickFormatter={(value) => {
-                  return heroStat === "winrate" ? `${Math.round(value)}%` : Math.round(value).toLocaleString("en-US");
+                tickFormatter={(value: number) => {
+                  const text = value.toLocaleString("en-US", { maximumFractionDigits: 2 });
+                  return isPercentStat ? `${text}%` : text;
                 }}
-                minTickGap={2}
-                tickCount={10}
                 stroke="#525252"
-                allowDecimals={false}
               />
               <Tooltip
                 labelFormatter={(label) => day(label).format("YYYY-MM-DD")}
