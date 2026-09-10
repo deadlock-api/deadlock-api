@@ -24,9 +24,8 @@ import {
   type UnscoredOutcome,
   unscoredOutcome,
 } from "~/lib/tracker/compute";
-import { computeTeamContribution } from "~/lib/tracker/contribution";
 import { computeFights } from "~/lib/tracker/fights";
-import { computeLaneMatchup } from "~/lib/tracker/lane-matchup";
+import { computeLaneMatchups } from "~/lib/tracker/lane-matchup";
 import { computeObjectiveEvents } from "~/lib/tracker/objectives";
 import { computeSoulLead } from "~/lib/tracker/soul-lead";
 import { cn } from "~/lib/utils";
@@ -41,8 +40,7 @@ import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { RankDelta } from "../shared/RankDelta";
 import { BuildOrderStrip } from "./BuildOrderStrip";
 import { KillsDeathsStrip } from "./KillsDeathsStrip";
-import { LaneMatchupCard } from "./LaneMatchupCard";
-import { PerformanceStrip } from "./PerformanceStrip";
+import { LanesCard } from "./LanesCard";
 import { Scoreboard, TEAMS } from "./Scoreboard";
 import { SoulLeadChart } from "./SoulLeadChart";
 
@@ -202,17 +200,7 @@ function MatchHeader({
   );
 }
 
-function MatchBody({
-  entry,
-  accountId,
-  ranks,
-  heroSummary,
-}: {
-  entry: PlayerMatchHistoryEntry;
-  accountId: number;
-  ranks: Rank[];
-  heroSummary: TrackerSummary;
-}) {
+function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry; accountId: number; ranks: Rank[] }) {
   const matchId = entry.match_id;
   // Street Brawl reports lane ids too, but its map has no lanes to speak of.
   const laned = hasLanes(entry);
@@ -235,13 +223,9 @@ function MatchBody({
   const soulLead = useMemo(() => (match ? computeSoulLead(match.players, ownTeam) : null), [match, ownTeam]);
   const objectiveEvents = useMemo(() => (match ? computeObjectiveEvents(match, ownTeam) : []), [match, ownTeam]);
 
-  const laneMatchup = useMemo(
-    () => (laned && match ? computeLaneMatchup(match.players, accountId) : null),
+  const laneMatchups = useMemo(
+    () => (laned && match ? computeLaneMatchups(match.players, accountId) : []),
     [laned, match, accountId],
-  );
-  const contribution = useMemo(
-    () => (match ? computeTeamContribution(match.players, accountId) : null),
-    [match, accountId],
   );
   const fights = useMemo(
     () => (match && deathRows ? computeFights(deathRows, match.players, accountId) : null),
@@ -290,10 +274,7 @@ function MatchBody({
   return (
     <div className="space-y-4">
       {soulLead && <SoulLeadChart lead={soulLead} events={objectiveEvents} />}
-      {contribution && tracked && (
-        <PerformanceStrip entry={entry} player={tracked} contribution={contribution} heroSummary={heroSummary} />
-      )}
-      {laneMatchup && <LaneMatchupCard matchup={laneMatchup} trackedAccountId={accountId} nameOf={nameOf} />}
+      {laneMatchups.length > 0 && <LanesCard matchups={laneMatchups} trackedAccountId={accountId} nameOf={nameOf} />}
       {fights && <KillsDeathsStrip fights={fights} matchDurationS={entry.match_duration_s} nameOf={nameOf} />}
       <Scoreboard
         match={match}
@@ -341,7 +322,7 @@ export function MatchDetails({
         heroFiltered={heroFiltered}
         onToggleHeroFilter={onToggleHeroFilter}
       />
-      <MatchBody entry={entry} accountId={accountId} ranks={ranks} heroSummary={heroSummary} />
+      <MatchBody entry={entry} accountId={accountId} ranks={ranks} />
     </div>
   );
 }
