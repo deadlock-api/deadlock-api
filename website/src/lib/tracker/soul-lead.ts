@@ -19,7 +19,8 @@ export interface SoulLead {
 
 /**
  * Team net worth lead over the match from the tracked team's point of view. Samples are aligned
- * across players in practice; a player missing a sample keeps their last known net worth.
+ * across players in practice; a player missing a sample keeps their last known net worth. Null
+ * without a timeline, or when neither team ever leads, as in Street Brawl, which pays both teams alike.
  */
 export function computeSoulLead(players: TrackerMatchPlayer[], ownTeam: string): SoulLead | null {
   const times = new Set<number>();
@@ -63,6 +64,7 @@ export function computeSoulLead(players: TrackerMatchPlayer[], ownTeam: string):
       aheadS += previous.lead > 0 ? crossing : span - crossing;
     }
   }
+  if (peak.lead === 0 && trough.lead === 0) return null;
   const totalS = points[points.length - 1].time;
   return { points, peak, trough, aheadShare: totalS > 0 ? aheadS / totalS : 0 };
 }
