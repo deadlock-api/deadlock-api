@@ -7,10 +7,7 @@ import { cn } from "~/lib/utils";
 export function PanelTooltipContent({ className, ...props }: ComponentProps<typeof TooltipContent>) {
   return (
     <TooltipContent
-      className={cn(
-        "border border-border bg-popover px-3 py-2 text-popover-foreground shadow-md [&_span>svg]:bg-popover [&_span>svg]:fill-popover",
-        className,
-      )}
+      className={cn("border border-border bg-popover px-3 py-2 text-popover-foreground shadow-md", className)}
       {...props}
     />
   );
