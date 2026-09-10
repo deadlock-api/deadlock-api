@@ -62,18 +62,8 @@ const OBJECTIVE_INSET_PX = 2;
 const OBJECTIVE_SLOT_PX = PATRON_CORE_ICON_SIZE + 2;
 
 function describeOutcome(event: ObjectiveEvent): string {
-  switch (event.kind) {
-    case "midBoss":
-      return event.own ? "Claimed by your team" : "Claimed by the enemy";
-    case "patron":
-      return event.own
-        ? "Your team broke it; it fights on in its final phase"
-        : "The enemy broke it; it fights on in its final phase";
-    case "patronCore":
-      return event.own ? "Destroyed by your team, ending the match" : "Destroyed by the enemy, ending the match";
-    default:
-      return event.own ? "Destroyed by your team" : "Lost to the enemy";
-  }
+  if (event.kind === "midBoss") return event.own ? "Claimed by your team" : "Claimed by the enemy";
+  return event.own ? "Destroyed by your team" : "Lost to the enemy";
 }
 
 /** Own gains sit along the top edge of the plot, losses along the bottom edge. */
