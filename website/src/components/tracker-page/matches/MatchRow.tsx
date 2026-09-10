@@ -32,6 +32,21 @@ const UNSCORED_OUTCOME_MARKERS: Record<UnscoredOutcome, { icon: typeof Gavel; la
   not_scored: { icon: CircleDashed, label: "Not scored", description: "This match did not count" },
 };
 
+/**
+ * Container breakpoints at which the match table's optional columns appear, shared by the header, rows, and
+ * footer. Each column should only step in once the table has room for it, or the table scrolls sideways.
+ */
+export const COLUMN_VISIBILITY = {
+  souls: "hidden @md:table-cell",
+  expand: "hidden @md:table-cell",
+  soulsPerMin: "hidden @2xl:table-cell",
+  duration: "hidden @3xl:table-cell",
+  mode: "hidden @4xl:table-cell",
+  lastHits: "hidden @5xl:table-cell",
+  matchId: "hidden @6xl:table-cell",
+  teamBuilder: "hidden @6xl:table-cell",
+} as const;
+
 /** A thin bar along the left edge of a `relative` cell, colored by the match result. */
 export function ResultEdge({ win }: { win: boolean }) {
   return <span aria-hidden className={cn("absolute inset-y-0 left-0 w-0.5", win ? WIN_DOT_CLASS : LOSS_DOT_CLASS)} />;
@@ -162,22 +177,22 @@ export function MatchRow({
           )}
         </div>
       </TableCell>
-      <TableCell className="hidden text-muted-foreground @4xl:table-cell">
+      <TableCell className={cn("text-muted-foreground", COLUMN_VISIBILITY.mode)}>
         {MATCH_MODE_LABELS_BY_ID[entry.match_mode] ?? "Unknown"}
       </TableCell>
       <TableCell className="text-right tabular-nums" title={`KDA ${kdaRatio(entry).toFixed(2)}`}>
         {entry.player_kills} / {entry.player_deaths} / {entry.player_assists}
       </TableCell>
-      <TableCell className="hidden text-right tabular-nums @md:table-cell">
+      <TableCell className={cn("text-right tabular-nums", COLUMN_VISIBILITY.souls)}>
         {entry.net_worth.toLocaleString("en-US")}
       </TableCell>
-      <TableCell className="hidden text-right text-muted-foreground tabular-nums @2xl:table-cell">
+      <TableCell className={cn("text-right text-muted-foreground tabular-nums", COLUMN_VISIBILITY.soulsPerMin)}>
         {Math.round(soulsPerMinute(entry)).toLocaleString("en-US")}
       </TableCell>
-      <TableCell className="hidden text-right text-muted-foreground tabular-nums @5xl:table-cell">
+      <TableCell className={cn("text-right text-muted-foreground tabular-nums", COLUMN_VISIBILITY.lastHits)}>
         {entry.last_hits} / {entry.denies}
       </TableCell>
-      <TableCell className="hidden text-right tabular-nums @3xl:table-cell">
+      <TableCell className={cn("text-right tabular-nums", COLUMN_VISIBILITY.duration)}>
         {formatMatchDuration(entry.match_duration_s)}
       </TableCell>
       <TableCell>
@@ -214,13 +229,13 @@ export function MatchRow({
           <TooltipContent>{day.unix(entry.start_time).format("MMM D, YYYY HH:mm")}</TooltipContent>
         </Tooltip>
       </TableCell>
-      <TableCell className="hidden @6xl:table-cell">
+      <TableCell className={COLUMN_VISIBILITY.matchId}>
         <div className="flex items-center justify-end gap-0.5 text-muted-foreground tabular-nums">
           {entry.match_id}
           <CopyButton text={String(entry.match_id)} iconOnly title="Copy match ID" className="size-6" />
         </div>
       </TableCell>
-      <TableCell className="hidden @6xl:table-cell">
+      <TableCell className={COLUMN_VISIBILITY.teamBuilder}>
         <Link
           to="/team-builder"
           search={{ match: entry.match_id }}
@@ -231,7 +246,7 @@ export function MatchRow({
           <UsersRound className="size-4" />
         </Link>
       </TableCell>
-      <TableCell className="hidden @md:table-cell">
+      <TableCell className={COLUMN_VISIBILITY.expand}>
         <ChevronDown className={cn("size-4 text-muted-foreground transition-transform", expanded && "rotate-180")} />
       </TableCell>
     </TableRow>

@@ -30,7 +30,7 @@ import { heroesQueryOptions } from "~/queries/asset-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { RankDelta } from "../shared/RankDelta";
-import { MatchRow, ResultEdge } from "./MatchRow";
+import { COLUMN_VISIBILITY, MatchRow, ResultEdge } from "./MatchRow";
 import { MatchRowDetails } from "./MatchRowDetails";
 
 const COLUMN_COUNT = 13;
@@ -117,7 +117,7 @@ function AverageRow({ summary }: { summary: TrackerSummary }) {
         <span className="@xl:hidden">Avg</span>
         <span className="hidden @xl:inline">Average</span>
       </TableCell>
-      <TableCell className="hidden @4xl:table-cell" />
+      <TableCell className={COLUMN_VISIBILITY.mode} />
       <TableCell className="text-right tabular-nums">
         <span className="@lg:hidden">
           {round(summary.avgKills)} / {round(summary.avgDeaths)} / {round(summary.avgAssists)}
@@ -126,12 +126,16 @@ function AverageRow({ summary }: { summary: TrackerSummary }) {
           {summary.avgKills.toFixed(1)} / {summary.avgDeaths.toFixed(1)} / {summary.avgAssists.toFixed(1)}
         </span>
       </TableCell>
-      <TableCell className="hidden text-right tabular-nums @md:table-cell">{round(summary.avgSouls)}</TableCell>
-      <TableCell className="hidden text-right tabular-nums @2xl:table-cell">{round(summary.soulsPerMin)}</TableCell>
-      <TableCell className="hidden text-right tabular-nums @5xl:table-cell">
+      <TableCell className={cn("text-right tabular-nums", COLUMN_VISIBILITY.souls)}>
+        {round(summary.avgSouls)}
+      </TableCell>
+      <TableCell className={cn("text-right tabular-nums", COLUMN_VISIBILITY.soulsPerMin)}>
+        {round(summary.soulsPerMin)}
+      </TableCell>
+      <TableCell className={cn("text-right tabular-nums", COLUMN_VISIBILITY.lastHits)}>
         {round(summary.avgLastHits)} / {round(summary.avgDenies)}
       </TableCell>
-      <TableCell className="hidden text-right tabular-nums @3xl:table-cell">
+      <TableCell className={cn("text-right tabular-nums", COLUMN_VISIBILITY.duration)}>
         {formatMatchDuration(summary.avgDurationS)}
       </TableCell>
       <TableCell className="text-right" title="Net rank change">
@@ -260,25 +264,29 @@ export function MatchesTab({
               <span className="hidden @md:inline">Result</span>
             </TableHead>
             <TableHead>Hero</TableHead>
-            <TableHead className="hidden @4xl:table-cell">Mode</TableHead>
+            <TableHead className={COLUMN_VISIBILITY.mode}>Mode</TableHead>
             <SortableHead sortKey="kda" {...sortProps} className="text-right" title="Sort by KDA ratio">
               K / D / A
             </SortableHead>
-            <SortableHead sortKey="souls" {...sortProps} className="hidden text-right @md:table-cell">
+            <SortableHead sortKey="souls" {...sortProps} className={cn("text-right", COLUMN_VISIBILITY.souls)}>
               Souls
             </SortableHead>
-            <SortableHead sortKey="soulsPerMin" {...sortProps} className="hidden text-right @2xl:table-cell">
+            <SortableHead
+              sortKey="soulsPerMin"
+              {...sortProps}
+              className={cn("text-right", COLUMN_VISIBILITY.soulsPerMin)}
+            >
               Souls/min
             </SortableHead>
             <SortableHead
               sortKey="lastHits"
               {...sortProps}
-              className="hidden text-right @5xl:table-cell"
+              className={cn("text-right", COLUMN_VISIBILITY.lastHits)}
               title="Last hits / Denies"
             >
               LH / DN
             </SortableHead>
-            <SortableHead sortKey="duration" {...sortProps} className="hidden text-right @3xl:table-cell">
+            <SortableHead sortKey="duration" {...sortProps} className={cn("text-right", COLUMN_VISIBILITY.duration)}>
               Duration
             </SortableHead>
             <SortableHead sortKey="rankDelta" {...sortProps} className="text-right" title="Sort by rank change">
@@ -288,9 +296,9 @@ export function MatchesTab({
               <span className="@3xl:hidden">Date</span>
               <span className="hidden @3xl:inline">Played</span>
             </SortableHead>
-            <TableHead className="hidden text-right @6xl:table-cell">Match ID</TableHead>
-            <TableHead className="hidden w-8 @6xl:table-cell" />
-            <TableHead className="hidden w-8 @md:table-cell" />
+            <TableHead className={cn("text-right", COLUMN_VISIBILITY.matchId)}>Match ID</TableHead>
+            <TableHead className={cn("w-8", COLUMN_VISIBILITY.teamBuilder)} />
+            <TableHead className={cn("w-8", COLUMN_VISIBILITY.expand)} />
           </TableRow>
         </TableHeader>
         <TableBody onKeyDown={handleRowKeyDown}>
