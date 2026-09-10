@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Customized, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { RankTierIcons } from "~/components/RankTierIcons";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -23,7 +24,8 @@ interface ChartEntry {
   badge: number;
   tier: number;
   label: string;
-  value: number;
+  /** `null` on the gaps between tiers, so they neither draw a bar nor pull the y axis down to zero. */
+  value: number | null;
   color: string;
   isSpacer?: boolean;
 }
@@ -62,7 +64,7 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
           badge: lastTier * 10 + 7,
           tier: lastTier,
           label: "",
-          value: 0,
+          value: null,
           color: "transparent",
           isSpacer: true,
         });
@@ -102,61 +104,6 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
     }));
   }, [chartData]);
 
-  const RankIconsOverlay = useMemo(() => {
-    return function RankIcons(props: Record<string, unknown>) {
-      const xAxisMap = props.xAxisMap as
-        | Record<string, { scale: (v: number) => number | undefined; bandSize?: number }>
-        | undefined;
-      const offset = props.offset as { top: number; height: number } | undefined;
-      if (!xAxisMap || !offset) return null;
-
-      const xAxis = Object.values(xAxisMap)[0];
-      const scale = xAxis?.scale;
-      const bandwidth = xAxis?.bandSize ?? 0;
-      if (!scale) return null;
-
-      const iconSize = 48;
-      const bottomMargin = 32;
-      const iconY = offset.top + offset.height - bottomMargin;
-
-      return (
-        <g>
-          <defs>
-            <filter id="rank-icon-shadow-stats" x="-30%" y="-30%" width="160%" height="160%">
-              <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.7" />
-            </filter>
-          </defs>
-          {tierCenters.map(({ tier, firstBadge, lastBadge }) => {
-            const x1 = scale(firstBadge);
-            const x6 = scale(lastBadge);
-            if (x1 == null || x6 == null) return null;
-
-            const centerX = (x1 + x6 + bandwidth) / 2;
-            const rank = tierData.get(tier);
-            const imageUrl = rank?.images?.large_webp ?? rank?.images?.large;
-            if (!imageUrl) return null;
-
-            const tierScale = tier === 8 || tier === 9 ? 1.6 : tier >= 10 ? 1.4 : 1;
-            const size = iconSize * tierScale;
-
-            return (
-              <image
-                key={`rank-icon-${tier}`}
-                href={imageUrl}
-                x={centerX - size / 2}
-                y={iconY - size / 2}
-                width={size}
-                height={size}
-                filter="url(#rank-icon-shadow-stats)"
-                style={{ pointerEvents: "none" }}
-              />
-            );
-          })}
-        </g>
-      );
-    };
-  }, [tierCenters, tierData]);
-
   return (
     <div className="flex flex-col gap-4">
       <StatSelector value={stat} onChange={onStatChange} isStreetBrawl={isStreetBrawl} />
@@ -173,20 +120,7 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
             <ResponsiveContainer width="100%" height={650} className="rounded-xl bg-muted p-2">
               <BarChart data={chartData} margin={{ top: 16, right: 20, bottom: 40, left: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
-                <XAxis
-                  dataKey="badge"
-                  angle={-45}
-                  textAnchor="end"
-                  interval={0}
-                  height={80}
-                  tick={{ fontSize: 11 }}
-                  stroke="#525252"
-                  tickFormatter={(badge: number) => {
-                    const entry = chartData.find((e) => e.badge === badge);
-                    if (!entry || entry.isSpacer) return "";
-                    return entry.label;
-                  }}
-                />
+                <XAxis dataKey="badge" tick={false} height={8} stroke="#525252" />
                 <YAxis
                   domain={["dataMin", "auto"]}
                   tickFormatter={(v) => (statDef ? formatAxisTick(v, statDef.format, span) : String(v))}
@@ -224,7 +158,7 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
                     <Cell key={entry.badge} fill={entry.isSpacer ? "transparent" : entry.color} />
                   ))}
                 </Bar>
-                <Customized component={RankIconsOverlay} />
+                <Customized component={<RankTierIcons tiers={tierCenters} ranks={tierData} />} />
               </BarChart>
             </ResponsiveContainer>
           </figure>

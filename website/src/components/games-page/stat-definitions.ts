@@ -140,8 +140,8 @@ const BASE_DECIMALS: Record<Exclude<StatFormat, "duration">, number> = {
   decimal2: 2,
 };
 
-export function valueSpan(data: { value: number }[]): number {
-  const values = data.map((d) => d.value).filter(Number.isFinite);
+export function valueSpan(data: { value: number | null }[]): number {
+  const values = data.map((d) => d.value).filter((v): v is number => Number.isFinite(v));
   return values.length > 0 ? Math.max(...values) - Math.min(...values) : 0;
 }
 
