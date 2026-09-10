@@ -35,9 +35,11 @@ export function formatCount(value: number | undefined): string {
   return value === undefined ? NO_DATA : value.toLocaleString("en-US");
 }
 
+/** Rounded like `formatPoints`, so a value that prints `+0.0` reads as neutral rather than a gain or a loss. */
 export function deltaClass(value: number | undefined): string {
-  if (value === undefined) return "text-muted-foreground";
-  return value >= 0 ? "text-green-400" : "text-red-400";
+  const rounded = value === undefined ? 0 : Math.round(value * 10) / 10;
+  if (rounded === 0) return "text-muted-foreground";
+  return rounded > 0 ? "text-green-400" : "text-red-400";
 }
 
 /** `deltaClass` as a paintable colour, for bars that cannot take a text class. */
