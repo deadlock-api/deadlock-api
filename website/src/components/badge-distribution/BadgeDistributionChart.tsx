@@ -3,6 +3,7 @@ import type { BadgeDistribution } from "deadlock_api_client";
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Customized, Label, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
+import { RankTierIcons } from "~/components/RankTierIcons";
 import { ChartContainer } from "~/components/ui/chart";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { extractBadgeMap } from "~/lib/leaderboard";
@@ -118,63 +119,6 @@ export default function BadgeDistributionChart({
     }));
   }, [badgeDistributionData]);
 
-  const RankIconsOverlay = useMemo(() => {
-    return function RankIcons(props: Record<string, unknown>) {
-      const xAxisMap = props.xAxisMap as
-        | Record<string, { scale: (v: number) => number | undefined; bandSize?: number }>
-        | undefined;
-      const offset = props.offset as { top: number; height: number } | undefined;
-      if (!xAxisMap || !offset) return null;
-
-      const xAxis = Object.values(xAxisMap)[0];
-      const scale = xAxis?.scale;
-      const bandwidth = xAxis?.bandSize ?? 0;
-      if (!scale) return null;
-
-      const iconSize = 48;
-      const bottomMargin = 32; // 2rem
-      const iconY = offset.top + offset.height - bottomMargin;
-
-      return (
-        <g>
-          <defs>
-            <filter id="rank-icon-shadow" x="-30%" y="-30%" width="160%" height="160%">
-              <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.7" />
-            </filter>
-          </defs>
-          {tierCenters.map(({ tier, firstBadge, lastBadge }) => {
-            const x1 = scale(firstBadge);
-            const x6 = scale(lastBadge);
-            if (x1 == null || x6 == null) return null;
-
-            const centerX = (x1 + x6 + bandwidth) / 2;
-            const rank = tierData.get(tier);
-            // General rank image (no division) from Rank.images.large_webp
-            const imageUrl = rank?.images?.large_webp ?? rank?.images?.large;
-            if (!imageUrl) return null;
-
-            // Higher-tier badges have more transparent padding in source images
-            const tierScale = tier === 8 || tier === 9 ? 1.6 : tier >= 10 ? 1.4 : 1;
-            const size = iconSize * tierScale;
-
-            return (
-              <image
-                key={`rank-icon-${tier}`}
-                href={imageUrl}
-                x={centerX - size / 2}
-                y={iconY - size / 2}
-                width={size}
-                height={size}
-                filter="url(#rank-icon-shadow)"
-                style={{ pointerEvents: "none" }}
-              />
-            );
-          })}
-        </g>
-      );
-    };
-  }, [tierCenters, tierData]);
-
   return (
     <div className="flex h-full w-full flex-col">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
@@ -279,7 +223,7 @@ export default function BadgeDistributionChart({
                 }}
               />
             )}
-            <Customized component={RankIconsOverlay} />
+            <Customized component={<RankTierIcons tiers={tierCenters} ranks={tierData} />} />
           </BarChart>
         </ChartContainer>
       </div>
