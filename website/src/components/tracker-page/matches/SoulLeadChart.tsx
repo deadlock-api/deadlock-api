@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { niceTicks } from "~/lib/chart-axis";
 import { formatMatchDuration } from "~/lib/tracker/compute";
 import { OBJECTIVE_LABELS, type ObjectiveEvent, type ObjectiveEventKind } from "~/lib/tracker/objectives";
 import type { SoulLead, SoulLeadPoint } from "~/lib/tracker/soul-lead";
@@ -99,6 +100,10 @@ export function SoulLeadChart({ lead, events }: { lead: SoulLead; events: Object
   const min = Math.min(0, lead.trough.lead);
   const zeroOffset = max === min ? 0 : max / (max - min);
   const ticks = leadTicks(min, max);
+  const endS = lead.points[lead.points.length - 1].time;
+  const timeTicks = niceTicks(0, endS / 60, 8)
+    .filter((minute) => minute * 60 <= endS)
+    .map((minute) => minute * 60);
   const taken = events.filter((event) => event.own).length;
 
   return (
@@ -141,6 +146,7 @@ export function SoulLeadChart({ lead, events }: { lead: SoulLead; events: Object
             dataKey="time"
             type="number"
             domain={[0, "dataMax"]}
+            ticks={timeTicks}
             tickFormatter={(value: number) => `${Math.round(value / 60)}m`}
             tickLine={false}
             axisLine={false}
