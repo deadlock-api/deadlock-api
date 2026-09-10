@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { CircleDashed, Gavel, Link2, LogOut, ShieldCheck, Trophy, UsersRound } from "lucide-react";
+import { CircleDashed, Gavel, LogOut, ShieldCheck, Trophy, UsersRound } from "lucide-react";
 import { type ReactNode, useMemo, useRef, useState } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
@@ -10,9 +10,7 @@ import { HeroImage } from "~/components/HeroImage";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
 import { day } from "~/dayjs";
-import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
-import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import {
   brawlRounds,
   formatMatchDuration,
@@ -85,7 +83,6 @@ function MatchHeader({
   const ranked = entry.ranked_display_badge != null && entry.ranked_display_badge > 0;
   const calibration = entry.ranked_calibration_match != null && entry.ranked_calibration_match !== 0;
   const demotionProtected = entry.ranked_used_demotion_protection === true;
-  const { startDate, endDate } = useDateRangeState();
 
   return (
     <div className="space-y-2.5">
@@ -139,23 +136,6 @@ function MatchHeader({
                 <UsersRound className="size-3.5" />
                 Team Builder
               </Link>
-              <CopyButton
-                text={() => {
-                  const url = new URL(window.location.href);
-                  url.searchParams.set("tab", "matches");
-                  url.searchParams.set("match", String(matchId));
-                  // The default range follows the current season, which would drop the match once the next one starts.
-                  url.searchParams.set("date_range", parseAsDayjsRange.serialize([startDate, endDate]));
-                  return url.toString();
-                }}
-                variant="ghost"
-                size="sm"
-                className="h-6 gap-1 px-1.5 text-xs text-muted-foreground"
-                title="Copy a link that opens this match"
-              >
-                <Link2 className="size-3.5" />
-                Copy link
-              </CopyButton>
             </div>
           </div>
         </div>
