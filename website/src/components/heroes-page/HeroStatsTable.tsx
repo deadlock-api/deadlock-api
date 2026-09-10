@@ -31,7 +31,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { BANS_PER_MATCH, computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
-import { formatSignedPercent } from "~/lib/format";
+import { formatPercent, formatSignedPercent } from "~/lib/format";
 import {
   Z_SCORE_BR_WEIGHT,
   Z_SCORE_PR_WEIGHT,
@@ -676,7 +676,7 @@ export function HeroStatsTable({
             max={maxWinrate}
             value={row.wins / row.matches}
             color={"#fa4454"}
-            label={`${Math.round((row.wins / row.matches) * 100).toFixed(0)}% `}
+            label={`${formatPercent(row.wins / row.matches)} `}
             delta={
               prevStatsMap?.get(row.hero_id) !== undefined
                 ? row.wins / row.matches - prevStatsMap.get(row.hero_id)!.winrate

@@ -14,6 +14,7 @@ import { ItemTierSelector } from "~/components/selectors/ItemTierSelector";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { formatPercent } from "~/lib/format";
 import { itemSlug } from "~/lib/item-slug";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { cn } from "~/lib/utils";
@@ -313,7 +314,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
               max={maxWinRate}
               value={row.wins / row.matches}
               color={"#fa4454"}
-              label={`${Math.round((row.wins / row.matches) * 100).toFixed(0)}% `}
+              label={`${formatPercent(row.wins / row.matches)} `}
               delta={
                 prevStatsMap?.get(row.item_id) !== undefined
                   ? row.wins / row.matches - prevStatsMap.get(row.item_id)!.winrate
