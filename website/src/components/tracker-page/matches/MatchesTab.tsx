@@ -152,6 +152,8 @@ export function MatchesTab({
   accountId,
   heroId,
   onHeroChange,
+  hiddenLinkedMatch,
+  onRevealLinkedMatch,
 }: {
   entries: PlayerMatchHistoryEntry[];
   ranks: Rank[];
@@ -159,6 +161,10 @@ export function MatchesTab({
   /** The active hero filter, which the rows can toggle. */
   heroId: number | null;
   onHeroChange: (heroId: number | null) => void;
+  /** The match the URL opens when the filters leave it out of `entries`. */
+  hiddenLinkedMatch: PlayerMatchHistoryEntry | null;
+  /** Widens the filters to show `hiddenLinkedMatch`; absent when no filter setting can. */
+  onRevealLinkedMatch?: () => void;
 }) {
   const [expandedMatchId, setExpandedMatchId] = useQueryState("match", parseAsInteger);
   const [{ sort: sortKey, dir: sortDir }, setSort] = useQueryStates({
@@ -245,6 +251,24 @@ export function MatchesTab({
 
   return (
     <div ref={tableTopRef} className="@container/matches space-y-3">
+      {hiddenLinkedMatch && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-border bg-muted/40 px-4 py-3 text-sm">
+          <span className="text-muted-foreground">
+            The linked {heroNames?.get(hiddenLinkedMatch.hero_id) ?? ""} match from{" "}
+            {day.unix(hiddenLinkedMatch.start_time).format("MMM D, YYYY")} is hidden by the current filters.
+          </span>
+          <div className="ml-auto flex gap-2">
+            {onRevealLinkedMatch && (
+              <Button size="sm" onClick={onRevealLinkedMatch}>
+                Show it
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => setExpandedMatchId(null)}>
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      )}
       <PaginationControls
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={setItemsPerPage}

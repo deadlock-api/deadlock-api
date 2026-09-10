@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { parseAsInteger, useQueryState } from "nuqs";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { QueryRenderer } from "~/components/QueryRenderer";
@@ -19,7 +19,7 @@ import { type TrackerTab, useTrackerFilters } from "~/hooks/useTrackerFilters";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { seo } from "~/lib/seo";
 import { parseSteamIdToId3 } from "~/lib/steam";
-import { filterMatches } from "~/lib/tracker/compute";
+import { filterMatches, filtersRevealing } from "~/lib/tracker/compute";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 import { steamProfileQueryOptions, trackerMatchHistoryQueryOptions } from "~/queries/tracker-queries";
@@ -88,7 +88,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
     filters,
   } = useTrackerFilters();
 
-  const [, setExpandedMatchId] = useQueryState("match", parseAsInteger);
+  const [expandedMatchId, setExpandedMatchId] = useQueryState("match", parseAsInteger);
   const openMatch = (matchId: number) => {
     setExpandedMatchId(matchId);
     setTab("matches");
@@ -106,6 +106,27 @@ function TrackerContent({ accountId }: { accountId: number }) {
         : filterMatches(historyQuery.data ?? [], { ...filters, result: "all" }),
     [historyQuery.data, filters, filteredEntries],
   );
+
+  const hiddenLinkedMatch = useMemo(() => {
+    if (expandedMatchId == null || filteredEntries.some((entry) => entry.match_id === expandedMatchId)) return null;
+    return historyQuery.data?.find((entry) => entry.match_id === expandedMatchId) ?? null;
+  }, [expandedMatchId, filteredEntries, historyQuery.data]);
+  const revealingFilters = hiddenLinkedMatch ? filtersRevealing(hiddenLinkedMatch, filters) : null;
+  // The matches tab opens on the page holding the linked match only when it mounts, so a reveal remounts it.
+  const [revealCount, setRevealCount] = useState(0);
+  const revealLinkedMatch = () => {
+    if (!revealingFilters) return;
+    setMode(revealingFilters.mode);
+    setHeroId(revealingFilters.heroId);
+    setResult(revealingFilters.result);
+    if (
+      revealingFilters.minUnixTimestamp !== minUnixTimestamp ||
+      revealingFilters.maxUnixTimestamp !== maxUnixTimestamp
+    ) {
+      handleDateChange(undefined, undefined);
+    }
+    setRevealCount((count) => count + 1);
+  };
 
   const loadingFallback = (
     <div className="flex items-center justify-center py-24">
@@ -161,11 +182,14 @@ function TrackerContent({ accountId }: { accountId: number }) {
           <QueryRenderer query={historyQuery} loadingFallback={loadingFallback}>
             {() => (
               <MatchesTab
+                key={revealCount}
                 entries={filteredEntries}
                 ranks={ranks}
                 accountId={accountId}
                 heroId={heroId}
                 onHeroChange={setHeroId}
+                hiddenLinkedMatch={hiddenLinkedMatch}
+                onRevealLinkedMatch={revealingFilters ? revealLinkedMatch : undefined}
               />
             )}
           </QueryRenderer>

@@ -102,6 +102,35 @@ export function filterMatches(
     .sort((a, b) => b.start_time - a.start_time);
 }
 
+/** Widest first, so a match hidden by the mode filter comes back under the broadest mode that shows it. */
+const REVEAL_MODES: Mode[] = ["normal_all", "street_brawl"];
+
+/**
+ * The filters widened just enough to show `entry`: each filter that excludes it falls back to its widest
+ * setting (a date range to all time) and the rest stay. Null when no mode shows the entry's game mode.
+ */
+export function filtersRevealing(
+  entry: PlayerMatchHistoryEntry,
+  filters: TrackerFilterValues,
+): TrackerFilterValues | null {
+  const mode = matchesMode(entry, filters.mode) ? filters.mode : REVEAL_MODES.find((m) => matchesMode(entry, m));
+  if (!mode) return null;
+  const inRange =
+    (filters.minUnixTimestamp == null || entry.start_time >= filters.minUnixTimestamp) &&
+    (filters.maxUnixTimestamp == null || entry.start_time <= filters.maxUnixTimestamp);
+  const resultMatches =
+    filters.result === "all" ||
+    (filters.result === "win" && isWin(entry)) ||
+    (filters.result === "loss" && isLoss(entry));
+  return {
+    mode,
+    heroId: filters.heroId == null || filters.heroId === entry.hero_id ? filters.heroId : null,
+    minUnixTimestamp: inRange ? filters.minUnixTimestamp : null,
+    maxUnixTimestamp: inRange ? filters.maxUnixTimestamp : null,
+    result: resultMatches ? filters.result : "all",
+  };
+}
+
 export function soulsPerMinute(entry: PlayerMatchHistoryEntry): number {
   return entry.match_duration_s > 0 ? entry.net_worth / (entry.match_duration_s / 60) : 0;
 }
