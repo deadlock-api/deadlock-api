@@ -7,7 +7,7 @@ import { HeroImage } from "~/components/HeroImage";
 import { day } from "~/dayjs";
 import { brawlRounds, formatMatchDuration, isWin, matchModeLabel, unscoredOutcome } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
-import { trackerMatchDeathsQueryOptions, trackerMatchMetadataQueryOptions } from "~/queries/tracker-queries";
+import { trackerMatchMetadataQueryOptions } from "~/queries/tracker-queries";
 
 import { LOSS_DOT_CLASS, LOSS_TEXT_CLASS, WIN_DOT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { RankDelta } from "../shared/RankDelta";
@@ -49,7 +49,6 @@ export function MatchListItem({
   const schedulePrefetch = () => {
     prefetchTimer.current = setTimeout(() => {
       void queryClient.prefetchQuery(trackerMatchMetadataQueryOptions(entry.match_id));
-      void queryClient.prefetchQuery(trackerMatchDeathsQueryOptions(entry.match_id));
     }, PREFETCH_HOVER_MS);
   };
 

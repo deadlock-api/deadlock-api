@@ -27,11 +27,7 @@ import { computeObjectiveEvents } from "~/lib/tracker/objectives";
 import { computeSoulLead } from "~/lib/tracker/soul-lead";
 import { cn } from "~/lib/utils";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
-import {
-  type TrackerMatchPlayer,
-  trackerMatchDeathsQueryOptions,
-  trackerMatchMetadataQueryOptions,
-} from "~/queries/tracker-queries";
+import { type TrackerMatchPlayer, trackerMatchMetadataQueryOptions } from "~/queries/tracker-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { RankDelta } from "../shared/RankDelta";
@@ -163,7 +159,6 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
   // Street Brawl reports lane ids too, but its map has no lanes to speak of.
   const laned = hasLanes(entry);
   const { data: match, isPending, isError, refetch } = useQuery(trackerMatchMetadataQueryOptions(matchId));
-  const { data: deathRows } = useQuery(trackerMatchDeathsQueryOptions(matchId));
   const { data: itemsById } = useQuery({
     ...itemUpgradesQueryOptions,
     select: (items) => new Map(items.map((item) => [item.id, item])),
@@ -187,8 +182,8 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
   );
   const [viewedAccountId, setViewedAccountId] = useState(accountId);
   const fights = useMemo(
-    () => (match && deathRows ? computeFights(deathRows, match.players, viewedAccountId) : null),
-    [match, deathRows, viewedAccountId],
+    () => (match ? computeFights(match.deaths, match.players, viewedAccountId) : null),
+    [match, viewedAccountId],
   );
   const timelineRef = useRef<HTMLDivElement>(null);
   const viewPlayer = (playerAccountId: number) => {

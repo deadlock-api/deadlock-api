@@ -141,16 +141,10 @@ export interface TrackerMatchPlayer {
   deaths: number;
   assists: number;
   net_worth: number;
-  last_hits: number;
-  denies: number;
   level: number;
   player_damage: number;
   boss_damage: number;
   player_healing: number;
-  player_damage_taken: number;
-  /** Every shot fired, creep and hero shots alike. */
-  shots_hit: number;
-  shots_missed: number;
   mvp_rank: number | null;
   /** Ranked badge going into the match, or null when unknown or unranked. */
   rank_badge: number | null;
@@ -191,6 +185,8 @@ export interface TrackerMatchMetadata {
   /** Destroyed objectives only. */
   objectives: TrackerObjective[];
   mid_boss: TrackerMidBoss[];
+  /** Every player's deaths, keyed by the player slots killers are credited by. */
+  deaths: TrackerPlayerDeaths[];
 }
 
 /** Shape of the protobuf-JSON `/v1/matches/{id}/metadata` response. Teams are `ECitadelLobbyTeam` numbers (0/1). */
@@ -211,8 +207,6 @@ interface RestMatchMetadata {
       deaths?: number;
       assists?: number;
       net_worth?: number;
-      last_hits?: number;
-      denies?: number;
       level?: number;
       mvp_rank?: number | null;
       ability_stats?: { ability_id?: number; ability_value?: number }[] | null;
@@ -241,9 +235,6 @@ interface RestMatchMetadata {
         player_damage?: number;
         boss_damage?: number;
         player_healing?: number;
-        player_damage_taken?: number;
-        shots_hit?: number;
-        shots_missed?: number;
       }[];
     }[];
   };
@@ -255,6 +246,18 @@ interface RawDeath {
   killer_player_slot?: number | null;
   death_duration_s?: number | null;
   time_to_kill_s?: number | null;
+}
+
+function playerDeaths(player: {
+  account_id?: number | null;
+  player_slot?: number | null;
+  death_details?: unknown;
+}): TrackerPlayerDeaths {
+  return {
+    account_id: player.account_id ?? 0,
+    player_slot: player.player_slot ?? 0,
+    death_details: deathDetails(player.death_details as RawDeath[] | null | undefined),
+  };
 }
 
 function deathDetails(raw: RawDeath[] | null | undefined): TrackerMatchDeath[] {
@@ -272,8 +275,6 @@ function maxStat(stats: { [key: string]: number | null | undefined }[] | undefin
   for (const stat of stats ?? []) max = Math.max(max, stat[key] ?? 0);
   return max;
 }
-
-const MAX_LOBBY_SIZE = 12;
 
 function toTrackerStat(stat: { [key in keyof TrackerMatchStat]?: number | null }): TrackerMatchStat {
   return {
@@ -361,6 +362,7 @@ async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<Track
       kind: REST_OBJECTIVE_KINDS[objective.team_objective_id ?? -1],
     })),
     mid_boss: claimedMidBosses(info.mid_boss, (boss) => restTeam(boss.team_claimed)),
+    deaths: (info.players ?? []).map(playerDeaths),
     players: (info.players ?? []).map((player) => ({
       account_id: player.account_id ?? 0,
       team: restTeam(player.team),
@@ -370,15 +372,10 @@ async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<Track
       deaths: player.deaths ?? 0,
       assists: player.assists ?? 0,
       net_worth: player.net_worth ?? 0,
-      last_hits: player.last_hits ?? 0,
-      denies: player.denies ?? 0,
       level: player.level ?? 0,
       player_damage: maxStat(player.stats, "player_damage"),
       boss_damage: maxStat(player.stats, "boss_damage"),
       player_healing: maxStat(player.stats, "player_healing"),
-      player_damage_taken: maxStat(player.stats, "player_damage_taken"),
-      shots_hit: maxStat(player.stats, "shots_hit"),
-      shots_missed: maxStat(player.stats, "shots_missed"),
       mvp_rank: player.mvp_rank ?? null,
       rank_badge: player.player_rank_data?.initial_display_rank || null,
       rank_delta: rankDelta(
@@ -446,14 +443,9 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
               deaths: true,
               assists: true,
               net_worth: true,
-              last_hits: true,
-              denies: true,
               player_level: true,
               max_player_damage: true,
               max_boss_damage: true,
-              max_player_damage_taken: true,
-              max_shots_hit: true,
-              max_shots_missed: true,
               mvp_rank: true,
               player_rank_initial_display_rank: true,
               player_rank_initial_flat_progress: true,
@@ -473,6 +465,8 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
                 player_damage: true,
               },
               steam: { personaname: true },
+              player_slot: true,
+              death_details: true,
             },
           },
         }),
@@ -488,6 +482,7 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
           kind: graphqlObjectiveKind(objective.team_objective ?? ""),
         })),
         mid_boss: claimedMidBosses(match.mid_boss as GraphqlMidBoss[] | null, (boss) => boss.team_claimed ?? ""),
+        deaths: (match.players ?? []).map(playerDeaths),
         players: (match.players ?? []).map((player) => ({
           account_id: player.account_id ?? 0,
           team: player.team ?? "",
@@ -497,15 +492,10 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
           deaths: player.deaths ?? 0,
           assists: player.assists ?? 0,
           net_worth: player.net_worth ?? 0,
-          last_hits: player.last_hits ?? 0,
-          denies: player.denies ?? 0,
           level: player.player_level ?? 0,
           player_damage: player.max_player_damage ?? 0,
           boss_damage: player.max_boss_damage ?? 0,
           player_healing: maxStat(player.stats ?? undefined, "player_healing"),
-          player_damage_taken: player.max_player_damage_taken ?? 0,
-          shots_hit: player.max_shots_hit ?? 0,
-          shots_missed: player.max_shots_missed ?? 0,
           mvp_rank: player.mvp_rank ?? null,
           rank_badge: player.player_rank_initial_display_rank || null,
           rank_delta: rankDelta(player.player_rank_initial_flat_progress, player.player_rank_final_flat_progress),
@@ -570,35 +560,3 @@ export const trackerAbilitiesQueryOptions = queryOptions({
   },
   staleTime: CACHE_DURATIONS.FOREVER,
 });
-
-/**
- * Fetched apart from the match metadata: `death_details` is priced at 100 complexity per
- * player on the GraphQL side, which would push the full-lobby metadata query over the server limit.
- */
-export function trackerMatchDeathsQueryOptions(matchId: number) {
-  return queryOptions({
-    queryKey: queryKeys.players.matchDeaths(matchId),
-    queryFn: async (): Promise<TrackerPlayerDeaths[]> => {
-      const result = await unlessRateLimited(
-        graphql.query({
-          match_players: {
-            __args: { where: { match_id: { eq: matchId } }, limit: MAX_LOBBY_SIZE },
-            account_id: true,
-            player_slot: true,
-            death_details: true,
-          },
-        }),
-      );
-      const rows =
-        result && result.match_players.length > 0
-          ? result.match_players
-          : ((await fetchRestMatchInfo(matchId))?.players ?? []);
-      return rows.map((row) => ({
-        account_id: row.account_id ?? 0,
-        player_slot: row.player_slot ?? 0,
-        death_details: deathDetails(row.death_details as RawDeath[] | null),
-      }));
-    },
-    staleTime: CACHE_DURATIONS.FOREVER,
-  });
-}
