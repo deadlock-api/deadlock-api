@@ -137,25 +137,25 @@ function TrackerContent({ accountId }: { accountId: number }) {
   return (
     <div className="space-y-6">
       <FeedbackNoticeDialog />
-      <PlayerHeader accountId={accountId} entries={historyQuery.data} ranks={ranks} />
+      <PlayerHeader accountId={accountId} entries={historyQuery.data} ranks={ranks}>
+        <TrackerFilterBar
+          mode={mode}
+          onModeChange={setMode}
+          heroId={heroId}
+          onHeroChange={setHeroId}
+          result={result}
+          onResultChange={setResult}
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={handleDateChange}
+        />
+      </PlayerHeader>
 
       {historyQuery.data?.length === 0 && (
         <p className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
           No match history found for this account yet. If it was prioritized recently, data may still be backfilling.
         </p>
       )}
-
-      <TrackerFilterBar
-        mode={mode}
-        onModeChange={setMode}
-        heroId={heroId}
-        onHeroChange={setHeroId}
-        result={result}
-        onResultChange={setResult}
-        startDate={startDate}
-        endDate={endDate}
-        onDateChange={handleDateChange}
-      />
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as TrackerTab)} className="tabs-nav w-full">
         <ResponsiveTabsList
