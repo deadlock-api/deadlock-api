@@ -48,9 +48,9 @@ Open this endpoint in a browser to access the playground. Send GraphQL queries v
 ### Rate Limits (POST):
 | Type | Limit |
 | ---- | ----- |
-| IP | 10req/min |
-| Key | 10req/10s |
-| Global | 100req/min |
+| IP | 60req/min |
+| Key | 100req/10s |
+| Global | 1000req/min |
     "
 )]
 async fn playground() -> impl IntoResponse {
@@ -68,9 +68,9 @@ async fn graphql_handler(
             &rate_limit_key,
             RATE_LIMIT_KEY,
             &[
-                Quota::ip_limit(10, Duration::from_mins(1)),
-                Quota::key_limit(10, Duration::from_secs(10)),
-                Quota::global_limit(100, Duration::from_mins(1)),
+                Quota::ip_limit(60, Duration::from_mins(1)),
+                Quota::key_limit(100, Duration::from_secs(10)),
+                Quota::global_limit(1000, Duration::from_mins(1)),
             ],
         )
         .await?;
