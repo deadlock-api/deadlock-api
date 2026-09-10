@@ -60,7 +60,7 @@ const DUO_STATS: { label: string; value: (laner: LanePlayer) => number }[] = [
 /** The two duos' totals side by side, the leading side brought forward. */
 function DuoComparison({ own, enemy }: { own: LanePlayer[]; enemy: LanePlayer[] }) {
   return (
-    <div className="border-t border-border/60 pt-1 text-[11px] leading-4 tabular-nums">
+    <div className="border-t border-border/60 pt-1 text-xs leading-5 tabular-nums">
       {DUO_STATS.map(({ label, value }) => {
         const ownTotal = own.reduce((sum, laner) => sum + value(laner), 0);
         const enemyTotal = enemy.reduce((sum, laner) => sum + value(laner), 0);
@@ -69,7 +69,7 @@ function DuoComparison({ own, enemy }: { own: LanePlayer[]; enemy: LanePlayer[] 
             <span className={cn(ownTotal > enemyTotal ? "font-semibold text-foreground" : "text-muted-foreground")}>
               {ownTotal.toLocaleString("en-US")}
             </span>
-            <span className="text-[10px] text-muted-foreground">{label}</span>
+            <span className="text-[11px] text-muted-foreground">{label}</span>
             <span
               className={cn(
                 "text-right",
