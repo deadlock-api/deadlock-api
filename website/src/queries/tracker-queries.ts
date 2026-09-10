@@ -10,7 +10,7 @@ import type {
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { API_ORIGIN } from "~/lib/constants";
-import { graphql } from "~/lib/graphql";
+import { graphql, isGraphqlRateLimited } from "~/lib/graphql";
 
 import { queryKeys } from "./query-keys";
 
@@ -349,44 +349,56 @@ interface GraphqlMidBoss {
   destroyed_time_s?: number | null;
 }
 
+/** Resolves to null instead of failing when GraphQL is rate limited, so the caller can fall back to REST. */
+async function unlessRateLimited<T>(query: Promise<T>): Promise<T | null> {
+  try {
+    return await query;
+  } catch (error) {
+    if (isGraphqlRateLimited(error)) return null;
+    throw error;
+  }
+}
+
 export function trackerMatchMetadataQueryOptions(matchId: number) {
   return queryOptions({
     queryKey: queryKeys.players.matchMetadata(matchId),
     queryFn: async (): Promise<TrackerMatchMetadata | null> => {
-      const { matches } = await graphql.query({
-        matches: {
-          __args: { where: { match_id: { eq: matchId } }, limit: 1 },
-          winning_team: true,
-          average_badge_team_0: true,
-          average_badge_team_1: true,
-          objectives: true,
-          mid_boss: true,
-          players: {
-            account_id: true,
-            team: true,
-            hero_id: true,
-            assigned_lane: true,
-            kills: true,
-            deaths: true,
-            assists: true,
-            net_worth: true,
-            last_hits: true,
-            denies: true,
-            player_level: true,
-            max_player_damage: true,
-            max_boss_damage: true,
-            max_player_damage_taken: true,
-            max_shots_hit: true,
-            max_shots_missed: true,
-            mvp_rank: true,
-            player_rank_initial_display_rank: true,
-            items: { item_id: true, game_time_s: true, sold_time_s: true },
-            stats: { time_stamp_s: true, net_worth: true, player_healing: true },
-            steam: { personaname: true },
+      const result = await unlessRateLimited(
+        graphql.query({
+          matches: {
+            __args: { where: { match_id: { eq: matchId } }, limit: 1 },
+            winning_team: true,
+            average_badge_team_0: true,
+            average_badge_team_1: true,
+            objectives: true,
+            mid_boss: true,
+            players: {
+              account_id: true,
+              team: true,
+              hero_id: true,
+              assigned_lane: true,
+              kills: true,
+              deaths: true,
+              assists: true,
+              net_worth: true,
+              last_hits: true,
+              denies: true,
+              player_level: true,
+              max_player_damage: true,
+              max_boss_damage: true,
+              max_player_damage_taken: true,
+              max_shots_hit: true,
+              max_shots_missed: true,
+              mvp_rank: true,
+              player_rank_initial_display_rank: true,
+              items: { item_id: true, game_time_s: true, sold_time_s: true },
+              stats: { time_stamp_s: true, net_worth: true, player_healing: true },
+              steam: { personaname: true },
+            },
           },
-        },
-      });
-      const match = matches[0];
+        }),
+      );
+      const match = result?.matches[0];
       if (!match) return fetchTrackerMatchMetadataFromRest(matchId);
       return {
         winning_team: match.winning_team,
@@ -442,15 +454,20 @@ export function trackerMatchDeathsQueryOptions(matchId: number) {
   return queryOptions({
     queryKey: queryKeys.players.matchDeaths(matchId),
     queryFn: async (): Promise<TrackerPlayerDeaths[]> => {
-      const { match_players } = await graphql.query({
-        match_players: {
-          __args: { where: { match_id: { eq: matchId } }, limit: MAX_LOBBY_SIZE },
-          account_id: true,
-          player_slot: true,
-          death_details: true,
-        },
-      });
-      const rows = match_players.length > 0 ? match_players : ((await fetchRestMatchInfo(matchId))?.players ?? []);
+      const result = await unlessRateLimited(
+        graphql.query({
+          match_players: {
+            __args: { where: { match_id: { eq: matchId } }, limit: MAX_LOBBY_SIZE },
+            account_id: true,
+            player_slot: true,
+            death_details: true,
+          },
+        }),
+      );
+      const rows =
+        result && result.match_players.length > 0
+          ? result.match_players
+          : ((await fetchRestMatchInfo(matchId))?.players ?? []);
       return rows.map((row) => ({
         account_id: row.account_id ?? 0,
         player_slot: row.player_slot ?? 0,
