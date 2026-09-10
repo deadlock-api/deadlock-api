@@ -1,7 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import type { HeroBanStatsBucketEnum, HeroStatsBucketEnum } from "deadlock_api_client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { type MouseEvent, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  CartesianGrid,
+  Customized,
+  Legend,
+  Line,
+  LineChart,
+  type MouseHandlerDataParam,
+  ResponsiveContainer,
+  type ScaleFunction,
+  Tooltip,
+  useYAxisScale,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
@@ -15,6 +28,15 @@ import { computeBanRatesByBucket } from "~/lib/ban-rate";
 import { MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
 import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS_WITH_BAN_RATE, hero_stats_transform } from "~/types/api_hero_stats";
+
+/** Hands the chart's y scale to the hover handler, which runs outside the chart context the scale hook needs. */
+function YScaleProbe({ scaleRef }: { scaleRef: RefObject<ScaleFunction | undefined> }) {
+  const scale = useYAxisScale();
+  useEffect(() => {
+    scaleRef.current = scale;
+  }, [scale, scaleRef]);
+  return null;
+}
 
 export function HeroStatsOverTimeChart({
   heroStat,
@@ -163,64 +185,40 @@ export function HeroStatsOverTimeChart({
 
   const [hoveredHeroId, setHoveredHeroId] = useState<number | null>(null);
   const throttleRef = useRef<number>(0);
-  const plotAreaRef = useRef<{ top: number; height: number } | null>(null);
+  const yScaleRef = useRef<ScaleFunction | undefined>(undefined);
 
-  // Invalidate cached plot area bounds when chart layout changes
-  useEffect(() => {
-    plotAreaRef.current = null;
-  }, [formattedData, visibleHeroIds]);
-
-  // biome-ignore lint/suspicious/noExplicitAny: Recharts CategoricalChartState type is too restrictive
   const handleChartMouseMove = useCallback(
-    (state: any) => {
+    (state: MouseHandlerDataParam, event: MouseEvent<SVGGraphicsElement>) => {
       const now = Date.now();
       if (now - throttleRef.current < 50) return;
       throttleRef.current = now;
 
-      if (!state?.activePayload?.length || !state.isTooltipActive || state.chartY == null) {
+      const point = state.isTooltipActive ? formattedData[Number(state.activeTooltipIndex)] : undefined;
+      // Legend icons are recharts surfaces too; the plot is the wrapper's own svg.
+      const surface = chartContainerRef.current?.querySelector(".recharts-wrapper > svg.recharts-surface");
+      const yScale = yScaleRef.current;
+      if (!point || !surface || !yScale) {
         setHoveredHeroId(null);
         return;
       }
 
-      const entries = state.activePayload.filter((p: any) => p.dataKey !== "date");
-      if (!entries.length) return;
-
-      // Read actual plot area bounds from the SVG clipPath rect (Recharts' offset
-      // is not included in the onMouseMove callback state).
-      if (!plotAreaRef.current) {
-        const clipRect = chartContainerRef.current?.querySelector("defs clipPath rect");
-        if (clipRect) {
-          plotAreaRef.current = {
-            top: Number(clipRect.getAttribute("y")),
-            height: Number(clipRect.getAttribute("height")),
-          };
-        }
-      }
-
-      const top = plotAreaRef.current?.top ?? 20;
-      const areaHeight = plotAreaRef.current?.height ?? 560;
-      const mouseY = state.chartY - top;
-
-      const yMin = minStat * 0.9;
-      const yMax = maxStat * 1.1;
-
+      const mouseY = event.clientY - surface.getBoundingClientRect().top;
       let closest: number | null = null;
       let closestDist = Number.POSITIVE_INFINITY;
-
-      for (const entry of entries) {
-        const val = entry.value as number;
-        const normalized = (val - yMin) / (yMax - yMin);
-        const pixelY = (1 - normalized) * areaHeight;
+      for (const heroId of visibleHeroIds) {
+        const value = point[heroId];
+        const pixelY = typeof value === "number" ? yScale(value) : undefined;
+        if (pixelY == null) continue;
         const dist = Math.abs(pixelY - mouseY);
         if (dist < closestDist) {
           closestDist = dist;
-          closest = Number(entry.dataKey);
+          closest = heroId;
         }
       }
 
       setHoveredHeroId(closest);
     },
-    [minStat, maxStat],
+    [formattedData, visibleHeroIds],
   );
 
   const handleChartMouseLeave = useCallback(() => {
@@ -233,13 +231,13 @@ export function HeroStatsOverTimeChart({
     const container = chartContainerRef.current;
     if (!container) return;
 
-    const lines = container.querySelectorAll<SVGGElement>(".recharts-line");
-    for (let idx = 0; idx < lines.length; idx++) {
-      const lineGroup = lines[idx];
-      const curve = lineGroup.querySelector<SVGPathElement>(".recharts-line-curve");
-      if (!curve) continue;
+    // Recharts mounts each line into its z-index layer when it first shows, so DOM order is not legend order.
+    for (const heroId of visibleHeroIds) {
+      const lineGroup = container.querySelector<SVGGElement>(`.hero-line-${heroId}`);
+      const curve = lineGroup?.querySelector<SVGPathElement>(".recharts-line-curve");
+      if (!lineGroup || !curve) continue;
 
-      const isHovered = visibleHeroIds[idx] === hoveredHeroId;
+      const isHovered = heroId === hoveredHeroId;
       const opacity = hoveredHeroId === null ? "1" : isHovered ? "1" : "0.15";
       const width = isHovered ? "3" : "2";
       curve.style.strokeOpacity = opacity;
@@ -313,6 +311,7 @@ export function HeroStatsOverTimeChart({
                 }}
                 itemSorter={() => 0}
               />
+              <Customized component={<YScaleProbe scaleRef={yScaleRef} />} />
               <Legend
                 layout="horizontal"
                 align="center"
@@ -325,6 +324,7 @@ export function HeroStatsOverTimeChart({
               {allHeroIds.map((heroId) => (
                 <Line
                   key={heroId}
+                  className={`hero-line-${heroId}`}
                   type="monotone"
                   dataKey={heroId}
                   stroke={heroIdMap[heroId]?.color || "#ffffff"}
