@@ -37,7 +37,6 @@ import {
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { RankDelta } from "../shared/RankDelta";
-import { BuildOrderStrip } from "./BuildOrderStrip";
 import { LanesCard } from "./LanesCard";
 import { MatchTimeline } from "./MatchTimeline";
 import { Scoreboard, TEAMS } from "./Scoreboard";
@@ -207,7 +206,6 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
     [laned, match, accountId],
   );
   const [viewedAccountId, setViewedAccountId] = useState(accountId);
-  const viewedPlayer = match?.players.find((player) => player.account_id === viewedAccountId);
   const fights = useMemo(
     () => (match && deathRows ? computeFights(deathRows, match.players, viewedAccountId) : null),
     [match, deathRows, viewedAccountId],
@@ -249,8 +247,6 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
         lead={soulLead}
         objectives={objectiveEvents}
         fights={fights}
-        viewedName={viewedAccountId !== accountId && viewedPlayer ? nameOf(viewedPlayer) : null}
-        onViewTracked={() => setViewedAccountId(accountId)}
         durationS={entry.match_duration_s}
         nameOf={nameOf}
       />
@@ -265,7 +261,6 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
         onViewPlayer={viewPlayer}
       />
       {laneMatchups.length > 0 && <LanesCard matchups={laneMatchups} trackedAccountId={accountId} nameOf={nameOf} />}
-      {tracked && itemsById && <BuildOrderStrip items={tracked.items} itemsById={itemsById} />}
     </div>
   );
 }

@@ -1,19 +1,24 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { Rank } from "deadlock_api_client";
 import { Crown, ExternalLink } from "lucide-react";
-import { Fragment, useMemo } from "react";
+import { useMemo } from "react";
 
+import { AbilityImage } from "~/components/AbilityImage";
 import { BadgeImage } from "~/components/BadgeImage";
 import { HeroImage } from "~/components/HeroImage";
 import { ItemImageFromAsset } from "~/components/ItemImage";
-import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
 import { IS_DEV } from "~/lib/constants";
 import { LANES } from "~/lib/team-builder/lanes";
+import { type BuildAbility, type BuildItem, playerBuild } from "~/lib/tracker/build";
+import { formatMatchDuration } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
-import type { SlimUpgrade } from "~/queries/asset-queries";
-import type { TrackerMatchItem, TrackerMatchMetadata, TrackerMatchPlayer } from "~/queries/tracker-queries";
+import { abilitiesQueryOptions, heroesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
+import type { TrackerMatchMetadata, TrackerMatchPlayer } from "~/queries/tracker-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
+import { PanelTooltipContent } from "../shared/PanelTooltipContent";
 
 export const TEAMS = [
   { key: "Team0", name: "The Hidden King" },
@@ -50,17 +55,75 @@ function byLane(players: TrackerMatchPlayer[]): TrackerMatchPlayer[] {
   return [...players].sort((a, b) => laneIndex(a) - laneIndex(b));
 }
 
-/** Shop items still held at the end of the match, in purchase order. Ability upgrades share the list and are dropped. */
-function finalBuild(items: TrackerMatchItem[], itemsById: Map<number, SlimUpgrade>): SlimUpgrade[] {
-  const seen = new Set<number>();
-  return [...items]
-    .sort((a, b) => a.game_time_s - b.game_time_s)
-    .filter((item) => item.sold_time_s === 0 && itemsById.has(item.item_id) && !seen.has(item.item_id))
-    .map((item) => {
-      seen.add(item.item_id);
-      return itemsById.get(item.item_id) as SlimUpgrade;
-    });
+const MAX_ABILITY_UPGRADES = 3;
+
+function AbilityChip({ entry }: { entry: BuildAbility }) {
+  const upgrades = entry.upgradedAt.length;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="flex flex-col items-center gap-0.5">
+          <AbilityImage abilityId={entry.ability.id} className="size-5" title="" />
+          <span className="flex gap-px" aria-label={`${upgrades} of ${MAX_ABILITY_UPGRADES} upgrades`}>
+            {Array.from({ length: MAX_ABILITY_UPGRADES }, (_, index) => (
+              <span
+                // oxlint-disable-next-line react/no-array-index-key
+                key={index}
+                className={cn("h-0.5 w-1.5 rounded-full", index < upgrades ? "bg-amber-400" : "bg-muted-foreground/30")}
+              />
+            ))}
+          </span>
+        </span>
+      </TooltipTrigger>
+      <PanelTooltipContent>
+        <div className="font-medium">
+          {entry.ability.name} · {upgrades}/{MAX_ABILITY_UPGRADES} upgrades
+        </div>
+        <div className="tabular-nums opacity-80">
+          {[
+            entry.unlockedAt != null && `Unlocked at ${formatMatchDuration(entry.unlockedAt)}`,
+            upgrades > 0 && `upgraded at ${entry.upgradedAt.map(formatMatchDuration).join(", ")}`,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </div>
+      </PanelTooltipContent>
+    </Tooltip>
+  );
 }
+
+function ItemChip({ item }: { item: BuildItem }) {
+  const sold = item.soldAt != null;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="relative">
+          <ItemImageFromAsset
+            item={item.upgrade}
+            className={cn("size-5 rounded-sm", sold && "opacity-35 grayscale")}
+            title=""
+          />
+          {item.imbuedInto && (
+            <span className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full bg-violet-400 ring-1 ring-background" />
+          )}
+        </span>
+      </TooltipTrigger>
+      <PanelTooltipContent>
+        <div className="font-medium">
+          {item.upgrade.name}
+          {item.upgrade.cost != null && ` · ${item.upgrade.cost.toLocaleString("en-US")} souls`}
+        </div>
+        <div className="tabular-nums opacity-80">
+          Bought at {formatMatchDuration(item.boughtAt)}
+          {sold && ` · sold at ${formatMatchDuration(item.soldAt as number)}`}
+        </div>
+        {item.imbuedInto && <div className="text-muted-foreground">Imbued into {item.imbuedInto.name}</div>}
+      </PanelTooltipContent>
+    </Tooltip>
+  );
+}
+
+const Divider = () => <span aria-hidden className="mx-0.5 h-4 w-px bg-border" />;
 
 /** Both teams' end-of-match stats side by side, with the stat bars scaled to the lobby maximum. */
 export function Scoreboard({
@@ -83,6 +146,15 @@ export function Scoreboard({
   viewedAccountId: number | null;
   onViewPlayer: (accountId: number) => void;
 }) {
+  const { data: abilitiesById } = useQuery({
+    ...abilitiesQueryOptions,
+    select: (abilities) => new Map(abilities.map((ability) => [ability.id, ability])),
+  });
+  const { data: heroesById } = useQuery({
+    ...heroesQueryOptions,
+    select: (heroes) => new Map(heroes.map((hero) => [hero.id, hero])),
+  });
+
   const maxima = useMemo(() => {
     let souls = 0;
     let damage = 0;
@@ -146,132 +218,125 @@ export function Scoreboard({
                   </th>
                 </tr>
               </thead>
-              <tbody>
-                {players.map((player) => {
-                  const isTracked = player.account_id === accountId;
-                  const viewed = player.account_id === viewedAccountId;
-                  const name = nameOf(player);
-                  const build = itemsById ? finalBuild(player.items, itemsById) : [];
-                  const lane = laned ? LANES[laneIndex(player)] : undefined;
-                  return (
-                    <Fragment key={player.account_id}>
-                      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the name button is the keyboard path; the row widens the mouse target */}
-                      <tr
-                        onClick={() => onViewPlayer(player.account_id)}
-                        className={cn(
-                          "cursor-pointer hover:bg-muted/40",
-                          isTracked && "bg-accent font-medium hover:bg-accent",
-                          viewed && "bg-primary/15 hover:bg-primary/15",
-                        )}
-                      >
-                        <td className="w-8 py-1 pl-2">
-                          <div
-                            className="relative size-6 rounded-full"
-                            style={lane && { boxShadow: `0 0 0 2px ${lane.color}` }}
-                            title={lane && `${lane.name} lane`}
-                          >
-                            <HeroImage heroId={player.hero_id} className="size-6 rounded-full" />
-                            {player.level > 0 && (
-                              <span
-                                className="absolute -right-1.5 -bottom-1 rounded-sm bg-background px-0.5 text-[9px] leading-tight font-semibold text-muted-foreground tabular-nums"
-                                title={`Level ${player.level}`}
-                              >
-                                {player.level}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="w-9 py-0.5 pl-1">
-                          {player.rank_badge != null && (
-                            <BadgeImage badge={player.rank_badge} ranks={ranks} className="size-8 max-w-none" />
-                          )}
-                        </td>
-                        <td className="w-full max-w-0 px-2 py-1">
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                onViewPlayer(player.account_id);
-                              }}
-                              aria-pressed={viewed}
-                              className="min-w-0 cursor-pointer truncate text-left transition-colors hover:text-primary"
-                              title={`Show ${name}'s kills and deaths on the match timeline`}
-                            >
-                              {name}
-                            </button>
-                            {!isTracked && IS_DEV && (
-                              <Link
-                                to="/players/$accountId"
-                                params={{ accountId: String(player.account_id) }}
-                                className="shrink-0 text-muted-foreground hover:text-primary"
-                                title="Open player tracker"
-                              >
-                                <ExternalLink className="size-3" />
-                              </Link>
-                            )}
-                            {player.mvp_rank === 1 && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Crown className="size-3.5 shrink-0 text-amber-500" aria-label="Match MVP" />
-                                </TooltipTrigger>
-                                <TooltipContent>Match MVP</TooltipContent>
-                              </Tooltip>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-2 py-1 text-right whitespace-nowrap text-muted-foreground tabular-nums">
-                          {player.kills} / {player.deaths} / {player.assists}
-                        </td>
-                        <StatCell value={player.net_worth} max={maxima.souls} barClassName="bg-amber-500/15" />
-                        <StatCell
-                          value={player.player_damage}
-                          max={maxima.damage}
-                          barClassName="bg-primary/15"
-                          className="hidden @md:table-cell"
-                        />
-                        <StatCell
-                          value={player.boss_damage}
-                          max={maxima.bossDamage}
-                          barClassName="bg-violet-500/15"
-                          className="hidden @lg:table-cell"
-                        />
-                        <StatCell
-                          value={player.player_healing}
-                          max={maxima.healing}
-                          barClassName="bg-emerald-500/15"
-                          className="hidden @lg:table-cell"
-                        />
-                      </tr>
-                      {build.length > 0 && (
-                        // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- as the stats row above
-                        <tr
-                          onClick={() => onViewPlayer(player.account_id)}
-                          className={cn("cursor-pointer", isTracked && "bg-accent", viewed && "bg-primary/15")}
+              {players.map((player) => {
+                const isTracked = player.account_id === accountId;
+                const viewed = player.account_id === viewedAccountId;
+                const name = nameOf(player);
+                const build =
+                  itemsById && abilitiesById
+                    ? playerBuild(player.items, itemsById, abilitiesById, heroesById?.get(player.hero_id))
+                    : null;
+                const lane = laned ? LANES[laneIndex(player)] : undefined;
+                return (
+                  // One body per player, so hover and clicks cover both of their rows.
+                  // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- the name button is the keyboard path; the body widens the mouse target
+                  <tbody
+                    key={player.account_id}
+                    onClick={() => onViewPlayer(player.account_id)}
+                    className={cn(
+                      "cursor-pointer hover:bg-muted/40",
+                      isTracked && "bg-accent font-medium hover:bg-accent",
+                      viewed && "bg-primary/15 hover:bg-primary/15",
+                    )}
+                  >
+                    <tr>
+                      <td className="w-8 py-1 pl-2">
+                        <div
+                          className="relative size-6 rounded-full"
+                          style={lane && { boxShadow: `0 0 0 2px ${lane.color}` }}
+                          title={lane && `${lane.name} lane`}
                         >
-                          <td colSpan={8} className="px-2 pb-1.5 pl-10">
-                            <div className="flex flex-wrap items-center gap-1">
-                              {build.map((item) => (
-                                <Tooltip key={item.id}>
-                                  <TooltipTrigger asChild>
-                                    <span>
-                                      <ItemImageFromAsset item={item} className="size-5 rounded-sm" />
-                                    </span>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {item.name}
-                                    {item.cost != null && ` · ${item.cost.toLocaleString("en-US")} souls`}
-                                  </TooltipContent>
-                                </Tooltip>
-                              ))}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
+                          <HeroImage heroId={player.hero_id} className="size-6 rounded-full" />
+                          {player.level > 0 && (
+                            <span
+                              className="absolute -right-1.5 -bottom-1 rounded-sm bg-background px-0.5 text-[9px] leading-tight font-semibold text-muted-foreground tabular-nums"
+                              title={`Level ${player.level}`}
+                            >
+                              {player.level}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="w-9 py-0.5 pl-1">
+                        {player.rank_badge != null && (
+                          <BadgeImage badge={player.rank_badge} ranks={ranks} className="size-8 max-w-none" />
+                        )}
+                      </td>
+                      <td className="w-full max-w-0 px-2 py-1">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onViewPlayer(player.account_id);
+                            }}
+                            aria-pressed={viewed}
+                            className="min-w-0 cursor-pointer truncate text-left transition-colors hover:text-primary"
+                            title={`Show ${name}'s kills and deaths on the match timeline`}
+                          >
+                            {name}
+                          </button>
+                          {!isTracked && IS_DEV && (
+                            <Link
+                              to="/players/$accountId"
+                              params={{ accountId: String(player.account_id) }}
+                              className="shrink-0 text-muted-foreground hover:text-primary"
+                              title="Open player tracker"
+                            >
+                              <ExternalLink className="size-3" />
+                            </Link>
+                          )}
+                          {player.mvp_rank === 1 && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Crown className="size-3.5 shrink-0 text-amber-500" aria-label="Match MVP" />
+                              </TooltipTrigger>
+                              <PanelTooltipContent>Match MVP</PanelTooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-2 py-1 text-right whitespace-nowrap text-muted-foreground tabular-nums">
+                        {player.kills} / {player.deaths} / {player.assists}
+                      </td>
+                      <StatCell value={player.net_worth} max={maxima.souls} barClassName="bg-amber-500/15" />
+                      <StatCell
+                        value={player.player_damage}
+                        max={maxima.damage}
+                        barClassName="bg-primary/15"
+                        className="hidden @md:table-cell"
+                      />
+                      <StatCell
+                        value={player.boss_damage}
+                        max={maxima.bossDamage}
+                        barClassName="bg-violet-500/15"
+                        className="hidden @lg:table-cell"
+                      />
+                      <StatCell
+                        value={player.player_healing}
+                        max={maxima.healing}
+                        barClassName="bg-emerald-500/15"
+                        className="hidden @lg:table-cell"
+                      />
+                    </tr>
+                    {build && (
+                      <tr>
+                        <td colSpan={8} className="px-2 pb-1.5 pl-10">
+                          <div className="flex flex-wrap items-center gap-1">
+                            {build.abilities.map((entry) => (
+                              <AbilityChip key={entry.ability.id} entry={entry} />
+                            ))}
+                            {build.abilities.length > 0 && build.items.length > 0 && <Divider />}
+                            {build.items.map((item) => (
+                              <ItemChip key={`${item.upgrade.id}-${item.boughtAt}`} item={item} />
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                );
+              })}
             </table>
           </div>
         );

@@ -1,7 +1,5 @@
-import { X } from "lucide-react";
 import type { Ref } from "react";
 
-import { Button } from "~/components/ui/button";
 import { formatMatchDuration } from "~/lib/tracker/compute";
 import type { FightSummary } from "~/lib/tracker/fights";
 import type { ObjectiveEvent } from "~/lib/tracker/objectives";
@@ -27,8 +25,6 @@ export function MatchTimeline({
   lead,
   objectives,
   fights,
-  viewedName,
-  onViewTracked,
   durationS,
   nameOf,
 }: {
@@ -38,9 +34,6 @@ export function MatchTimeline({
   objectives: ObjectiveEvent[];
   /** The viewed player's kills and deaths. */
   fights: FightSummary | null;
-  /** The viewed player's name, or null while the tracked player is viewed. */
-  viewedName: string | null;
-  onViewTracked: () => void;
   durationS: number;
   nameOf: (player: TrackerMatchPlayer) => string;
 }) {
@@ -60,7 +53,7 @@ export function MatchTimeline({
   ].toSorted((a, b) => a.time - b.time);
   const deadWindows = (fights?.deaths ?? []).map((death) => ({ start: death.time, end: death.time + death.deadForS }));
 
-  if (durationS <= 0 || (!lead && events.length === 0 && viewedName == null)) return null;
+  if (durationS <= 0 || (!lead && events.length === 0)) return null;
   const taken = objectives.filter((event) => event.own).length;
 
   return (
@@ -87,18 +80,6 @@ export function MatchTimeline({
           </span>
         )}
         <span className="ml-auto flex items-center gap-3">
-          {viewedName != null && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-6 max-w-48 gap-1 px-2 text-xs"
-              onClick={onViewTracked}
-              title="Back to your kills and deaths"
-            >
-              <span className="truncate">{viewedName}</span>
-              <X className="size-3 shrink-0" />
-            </Button>
-          )}
           <span className="flex items-center gap-3" aria-hidden>
             <LegendSwatch color={WIN_COLOR} label="Kill" />
             <LegendSwatch color={LOSS_COLOR} label="Death" />

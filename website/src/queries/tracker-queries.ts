@@ -97,6 +97,10 @@ export interface TrackerMatchItem {
   item_id: number;
   game_time_s: number;
   sold_time_s: number;
+  /** Non-zero on an ability's upgrades; zero on its unlock and on shop items. */
+  upgrade_id: number;
+  /** The ability a shop item was imbued into, or 0. */
+  imbued_ability_id: number;
 }
 
 export interface TrackerMatchStat {
@@ -195,7 +199,13 @@ interface RestMatchMetadata {
       level?: number;
       mvp_rank?: number | null;
       player_rank_data?: { initial_display_rank?: number | null } | null;
-      items?: { item_id?: number; game_time_s?: number; sold_time_s?: number }[];
+      items?: {
+        item_id?: number;
+        game_time_s?: number;
+        sold_time_s?: number;
+        upgrade_id?: number;
+        imbued_ability_id?: number;
+      }[];
       death_details?: RawDeath[] | null;
       stats?: {
         time_stamp_s?: number;
@@ -327,6 +337,8 @@ async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<Track
         item_id: item.item_id ?? 0,
         game_time_s: item.game_time_s ?? 0,
         sold_time_s: item.sold_time_s ?? 0,
+        upgrade_id: item.upgrade_id ?? 0,
+        imbued_ability_id: item.imbued_ability_id ?? 0,
       })),
       stats: (player.stats ?? []).map((stat) => ({
         time_stamp_s: stat.time_stamp_s ?? 0,
@@ -391,7 +403,7 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
               max_shots_missed: true,
               mvp_rank: true,
               player_rank_initial_display_rank: true,
-              items: { item_id: true, game_time_s: true, sold_time_s: true },
+              items: { item_id: true, game_time_s: true, sold_time_s: true, upgrade_id: true, imbued_ability_id: true },
               stats: { time_stamp_s: true, net_worth: true, player_healing: true },
               steam: { personaname: true },
             },
@@ -433,6 +445,8 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
             item_id: item.item_id ?? 0,
             game_time_s: item.game_time_s ?? 0,
             sold_time_s: item.sold_time_s ?? 0,
+            upgrade_id: item.upgrade_id ?? 0,
+            imbued_ability_id: item.imbued_ability_id ?? 0,
           })),
           stats: (player.stats ?? []).map((stat) => ({
             time_stamp_s: stat.time_stamp_s ?? 0,
