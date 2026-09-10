@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiGameStatsRequest, GameStatsBucketEnum } from "deadlock_api_client";
 import { ArrowDown, ArrowUp } from "lucide-react";
-import { lazy, Suspense, useState } from "react";
+import { Fragment, lazy, Suspense, useState } from "react";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/hover-card";
@@ -44,12 +44,37 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
   }
 
   const prev = prevData?.[0];
+  const teamWinTotal = current.team0_wins + current.team1_wins;
+  const prevTeamWinTotal = prev ? prev.team0_wins + prev.team1_wins : 0;
+  const teamWinRow =
+    teamWinTotal > 0 ? (
+      <div className="flex items-center justify-between gap-3 border-b border-white/4 px-4 py-2.5 @2xl:col-span-2">
+        <span className="text-sm text-muted-foreground @2xl:shrink-0">The Hidden King vs The Archmother</span>
+        <div className="flex flex-wrap items-center justify-end gap-x-2.5 gap-y-1">
+          <span className="text-sm font-semibold tabular-nums">
+            <span className="text-primary">{((current.team0_wins / teamWinTotal) * 100).toFixed(2)}%</span>
+            <span className="mx-1 text-muted-foreground">:</span>
+            <span className="text-blue-400">{((current.team1_wins / teamWinTotal) * 100).toFixed(2)}%</span>
+          </span>
+          {prev && prevTeamWinTotal > 0 && (
+            <span className="inline-flex items-center gap-0.5 rounded-md bg-white/[0.04] px-1.5 py-0.5 text-xs text-muted-foreground tabular-nums">
+              <span className="text-primary">{((prev.team0_wins / prevTeamWinTotal) * 100).toFixed(2)}%</span>
+              <span className="mx-0.5">:</span>
+              <span className="text-blue-400">{((prev.team1_wins / prevTeamWinTotal) * 100).toFixed(2)}%</span>
+            </span>
+          )}
+        </div>
+      </div>
+    ) : null;
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {getFilteredCategories(isStreetBrawl).map((category) => {
         const Icon = CATEGORY_ICONS[category.label];
-        const isWide = category.stats.length > 6;
+        // Fields the game stopped reporting still come back as an exact 0 average.
+        const stats = category.stats.filter((stat) => current[stat.key] !== 0);
+        if (stats.length === 0) return null;
+        const isWide = stats.length > 6;
 
         return (
           <div
@@ -65,7 +90,7 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
             </div>
 
             <div className={cn(isWide && "@2xl:grid @2xl:grid-cols-2")}>
-              {category.stats.map((stat, statIdx) => {
+              {stats.map((stat, statIdx) => {
                 const value = current[stat.key] as number;
                 const prevValue = prev?.[stat.key] as number | undefined;
                 // Rounded to the displayed tenth of a percent so the arrow and colour agree with the printed value.
@@ -73,43 +98,10 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                   prevValue != null && prevValue !== 0
                     ? Math.round(((value - prevValue) / Math.abs(prevValue)) * 1000) / 1000
                     : null;
-                const isLast = statIdx === category.stats.length - 1;
-
-                const teamWinRow =
-                  stat.key === "total_matches" && current.team0_wins + current.team1_wins > 0
-                    ? (() => {
-                        const total = current.team0_wins + current.team1_wins;
-                        const t0Pct = (current.team0_wins / total) * 100;
-                        const t1Pct = (current.team1_wins / total) * 100;
-                        const prevTotal = prev ? prev.team0_wins + prev.team1_wins : 0;
-                        const prevT0Pct = prevTotal > 0 && prev ? (prev.team0_wins / prevTotal) * 100 : null;
-                        const prevT1Pct = prevTotal > 0 && prev ? (prev.team1_wins / prevTotal) * 100 : null;
-                        return (
-                          <div className="flex items-center justify-between gap-3 border-b border-white/4 px-4 py-2.5">
-                            <span className="text-sm text-muted-foreground @2xl:shrink-0">
-                              The Hidden King vs The Archmother
-                            </span>
-                            <div className="flex flex-wrap items-center justify-end gap-x-2.5 gap-y-1">
-                              <span className="text-sm font-semibold tabular-nums">
-                                <span className="text-primary">{t0Pct.toFixed(2)}%</span>
-                                <span className="mx-1 text-muted-foreground">:</span>
-                                <span className="text-blue-400">{t1Pct.toFixed(2)}%</span>
-                              </span>
-                              {prevT0Pct != null && prevT1Pct != null && (
-                                <span className="inline-flex items-center gap-0.5 rounded-md bg-white/[0.04] px-1.5 py-0.5 text-xs text-muted-foreground tabular-nums">
-                                  <span className="text-primary">{prevT0Pct.toFixed(2)}%</span>
-                                  <span className="mx-0.5">:</span>
-                                  <span className="text-blue-400">{prevT1Pct.toFixed(2)}%</span>
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })()
-                    : null;
+                const isLast = statIdx === stats.length - 1;
 
                 return (
-                  <div key={stat.key}>
+                  <Fragment key={stat.key}>
                     <HoverCard openDelay={150} closeDelay={100}>
                       <HoverCardTrigger asChild>
                         <button
@@ -117,8 +109,8 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                           className={cn(
                             "flex w-full items-center justify-between px-4 py-2.5 transition-colors",
                             "border-b border-white/[0.04]",
-                            !isWide && isLast && !teamWinRow && "border-b-0",
-                            isWide && statIdx >= category.stats.length - 2 && "@2xl:border-b-0",
+                            !isWide && isLast && "border-b-0",
+                            isWide && statIdx >= stats.length - 2 && "@2xl:border-b-0",
                             isWide && isLast && "border-b-0",
                             onStatClick && "cursor-pointer hover:bg-white/[0.04]",
                           )}
@@ -168,8 +160,8 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                         </Suspense>
                       </HoverCardContent>
                     </HoverCard>
-                    {teamWinRow}
-                  </div>
+                    {stat.key === "total_players" && teamWinRow}
+                  </Fragment>
                 );
               })}
             </div>
