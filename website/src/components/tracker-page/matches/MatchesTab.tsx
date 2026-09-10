@@ -22,6 +22,7 @@ import {
 } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions } from "~/queries/asset-queries";
+import { trackerMatchMetadataQueryOptions } from "~/queries/tracker-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { RankDelta } from "../shared/RankDelta";
@@ -112,6 +113,21 @@ export function MatchesTab({
   const listRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const detailsRef = useRef<HTMLDivElement>(null);
+
+  // The list takes the height of the details beside it, so while a match loads into a short skeleton the details
+  // hold their last loaded height; otherwise the list would shrink and grow back with every pick.
+  const { isPending: detailsPending } = useQuery({
+    ...trackerMatchMetadataQueryOptions(selectedId ?? 0),
+    enabled: selectedId != null,
+  });
+  const [heldDetailsHeight, setHeldDetailsHeight] = useState<number>();
+  useEffect(() => {
+    const details = detailsRef.current;
+    if (!details || detailsPending) return;
+    const observer = new ResizeObserver(([entry]) => setHeldDetailsHeight(entry.borderBoxSize[0].blockSize));
+    observer.observe(details);
+    return () => observer.disconnect();
+  }, [detailsPending]);
   const focusSelectedItem = useRef(false);
 
   // The observer is rebuilt after every chunk, and a new observer reports at once, so chunks keep coming
@@ -275,7 +291,11 @@ export function MatchesTab({
             </div>
           </div>
         </aside>
-        <div ref={detailsRef} className="min-w-0 scroll-mt-4 space-y-4">
+        <div
+          ref={detailsRef}
+          className="min-w-0 scroll-mt-4 space-y-4"
+          style={{ minHeight: detailsPending ? heldDetailsHeight : undefined }}
+        >
           {hiddenLinkedMatch && selected === hiddenLinkedMatch && (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-border bg-muted/40 px-4 py-3 text-sm">
               <span className="text-muted-foreground">This match is hidden from the list by the current filters.</span>
