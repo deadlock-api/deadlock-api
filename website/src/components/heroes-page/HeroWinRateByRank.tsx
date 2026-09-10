@@ -125,7 +125,7 @@ export function HeroWinRateByRank({
   const iconSize = chartWidth > 0 ? Math.max(18, Math.min(36, Math.floor((chartWidth - 60) / tiers.length) - 4)) : 36;
   const best = tiers.reduce((a, b) => (b.winRate > a.winRate ? b : a));
   const worst = tiers.reduce((a, b) => (b.winRate < a.winRate ? b : a));
-  const winRateAxis = winRateDomain(tiers.map((tier) => tier.winRate));
+  const winRateAxis = winRateDomain([0.5, ...tiers.map((tier) => tier.winRate)]);
 
   return (
     <section className="space-y-4">
@@ -181,7 +181,7 @@ export function HeroWinRateByRank({
                 );
               }}
             />
-            <Bar dataKey="winRate" radius={4}>
+            <Bar dataKey={(tier: TierEntry) => [0.5, tier.winRate]} radius={4}>
               {tiers.map((entry) => (
                 <Cell key={entry.tier} fill={entry.color} />
               ))}

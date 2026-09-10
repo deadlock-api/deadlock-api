@@ -93,7 +93,7 @@ export function HeroWinRateByDuration({
       : delta > 0
         ? `${heroName} scales into the late game`
         : `${heroName} falls off in longer games`;
-  const winRateAxis = winRateDomain(entries.map((entry) => entry.winRate));
+  const winRateAxis = winRateDomain([0.5, ...entries.map((entry) => entry.winRate)]);
 
   return (
     <section className="space-y-4">
@@ -133,7 +133,7 @@ export function HeroWinRateByDuration({
                 );
               }}
             />
-            <Bar dataKey="winRate" radius={4}>
+            <Bar dataKey={(entry: DurationEntry) => [0.5, entry.winRate]} radius={4}>
               {entries.map((entry) => (
                 <Cell key={entry.tick} fill={entry.winRate >= 0.5 ? WIN_COLOR : LOSS_COLOR} />
               ))}

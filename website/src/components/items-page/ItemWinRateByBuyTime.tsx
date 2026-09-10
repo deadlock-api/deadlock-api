@@ -96,7 +96,7 @@ export function ItemWinRateByBuyTime({
   const early = entries[0];
   const late = entries[entries.length - 1];
   const peak = entries.reduce((a, b) => (b.share > a.share ? b : a));
-  const winRateAxis = winRateDomain(entries.map((entry) => entry.winRate));
+  const winRateAxis = winRateDomain([0.5, ...entries.map((entry) => entry.winRate)]);
 
   return (
     <section className="space-y-4">
@@ -137,7 +137,7 @@ export function ItemWinRateByBuyTime({
                 );
               }}
             />
-            <Bar dataKey="winRate" radius={4}>
+            <Bar dataKey={(entry: BinEntry) => [0.5, entry.winRate]} radius={4}>
               {entries.map((entry) => (
                 <Cell key={entry.tick} fill={entry.winRate >= 0.5 ? WIN_COLOR : LOSS_COLOR} />
               ))}

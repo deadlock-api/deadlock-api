@@ -131,7 +131,7 @@ export const DURATION_BUCKETS = [
   { label: "35-40m", minS: 2100, maxS: 2400 },
   { label: "40-45m", minS: 2400, maxS: 2700 },
   { label: "45-50m", minS: 2700, maxS: 3000 },
-  { label: "50+m", minS: 3000, maxS: 7000 },
+  { label: "50m+", minS: 3000, maxS: 7000 },
 ] as const;
 
 export const MIN_MATCHES_PER_BUCKET = 10;
