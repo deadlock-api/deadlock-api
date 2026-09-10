@@ -106,6 +106,11 @@ export const toPoints = (value: number | undefined) => (value === undefined ? un
  * individual same-lane matchups instead, which is a far denser population for the same question.
  */
 const MIN_LANE_DUO_MATCHES = 20;
+/**
+ * Pseudo-games of the four individual matchups blended into a duo sample that clears the floor above:
+ * 24 games weigh the duo at a fifth, 30,000 at nearly all of it.
+ */
+const LANE_DUO_PRIOR_MATCHES = 100;
 
 /**
  * The endpoint now follows a matchup to the end of its match. This page only ever asks about the
@@ -432,9 +437,9 @@ function pairRows(index: StatsIndex, heroes: number[]): PairRow[] {
 }
 
 /**
- * The lane's win rate: the duo-vs-duo sample when it is thick enough, otherwise the mean of the four
- * individual same-lane matchups. Scalar-only, so the two searches below can evaluate a lane without
- * building the display rows around it.
+ * The lane's win rate: the duo-vs-duo sample blended toward the mean of the four individual same-lane
+ * matchups once it clears the floor, otherwise that mean alone. Scalar-only, so the two searches below
+ * can evaluate a lane without building the display rows around it.
  */
 function laneEstimate(
   index: StatsIndex,
@@ -444,11 +449,6 @@ function laneEstimate(
 ): { winRate: number | undefined; matches: number } {
   if (ally.length !== 2 || enemy.length !== 2) return { winRate: undefined, matches: 0 };
 
-  const duo = index.laneSample(laneId, ally, enemy);
-  if (duo && duo.matches >= MIN_LANE_DUO_MATCHES) {
-    return { winRate: duo.wins / duo.matches, matches: duo.matches };
-  }
-
   const known: Sample[] = [];
   for (const hero of ally) {
     for (const enemyHero of enemy) {
@@ -456,9 +456,21 @@ function laneEstimate(
       if (sample && sample.matches > 0) known.push(sample);
     }
   }
-  if (known.length === 0) return { winRate: undefined, matches: 0 };
+  const individual =
+    known.length > 0 ? known.reduce((sum, s) => sum + s.wins / s.matches, 0) / known.length : undefined;
+
+  const duo = index.laneSample(laneId, ally, enemy);
+  if (duo && duo.matches >= MIN_LANE_DUO_MATCHES) {
+    const prior = individual ?? 0.5;
+    return {
+      winRate: (duo.wins + LANE_DUO_PRIOR_MATCHES * prior) / (duo.matches + LANE_DUO_PRIOR_MATCHES),
+      matches: duo.matches,
+    };
+  }
+
+  if (individual === undefined) return { winRate: undefined, matches: 0 };
   return {
-    winRate: known.reduce((sum, s) => sum + s.wins / s.matches, 0) / known.length,
+    winRate: individual,
     // The estimate is only as strong as its thinnest cell, so that is what gets reported.
     matches: Math.min(...known.map((s) => s.matches)),
   };
