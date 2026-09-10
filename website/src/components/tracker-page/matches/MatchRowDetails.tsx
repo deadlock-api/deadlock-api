@@ -7,7 +7,9 @@ import { useMemo } from "react";
 import { CopyButton } from "~/components/copy-button";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
+import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
+import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { brawlRounds, formatMatchDuration, hasLanes, matchModeLabel, type TrackerSummary } from "~/lib/tracker/compute";
 import { computeTeamContribution } from "~/lib/tracker/contribution";
 import { computeFights } from "~/lib/tracker/fights";
@@ -44,6 +46,7 @@ export function MatchRowDetails({
   // Street Brawl reports lane ids too, but its map has no lanes to speak of.
   const laned = hasLanes(entry);
   const rounds = brawlRounds(entry);
+  const { startDate, endDate } = useDateRangeState();
   const { data: match, isPending, isError, refetch } = useQuery(trackerMatchMetadataQueryOptions(matchId));
   const { data: deathRows } = useQuery(trackerMatchDeathsQueryOptions(matchId));
   const { data: itemsById } = useQuery({
@@ -148,6 +151,8 @@ export function MatchRowDetails({
             const url = new URL(window.location.href);
             url.searchParams.set("tab", "matches");
             url.searchParams.set("match", String(matchId));
+            // The default range follows the current season, which would drop the match once the next one starts.
+            url.searchParams.set("date_range", parseAsDayjsRange.serialize([startDate, endDate]));
             return url.toString();
           }}
           variant="ghost"
