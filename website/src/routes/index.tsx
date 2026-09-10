@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 
 import { ElectricBorder } from "~/components/ElectricBorder";
-import { TopHeroesThisSeason } from "~/components/heroes-page/TopHeroesThisSeason";
 import { SmartLink } from "~/components/SmartLink";
 import { Button } from "~/components/ui/button";
 import { API_ORIGIN } from "~/lib/constants";
@@ -401,8 +400,6 @@ function IndexRoute() {
           })}
         </div>
       </section>
-
-      <TopHeroesThisSeason />
 
       {/* Services */}
       <section>
