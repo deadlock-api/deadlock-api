@@ -2,7 +2,6 @@ import type { Ref } from "react";
 
 import { formatMatchDuration } from "~/lib/tracker/compute";
 import type { FightSummary } from "~/lib/tracker/fights";
-import { LANE_PHASE_END_S, type LaneLead } from "~/lib/tracker/lane-matchup";
 import type { ObjectiveEvent } from "~/lib/tracker/objectives";
 import type { SoulLead } from "~/lib/tracker/soul-lead";
 import { cn } from "~/lib/utils";
@@ -26,7 +25,6 @@ export function MatchTimeline({
   lead,
   objectives,
   fights,
-  laneLeads,
   durationS,
   nameOf,
 }: {
@@ -36,8 +34,6 @@ export function MatchTimeline({
   objectives: ObjectiveEvent[];
   /** The viewed player's kills and deaths. */
   fights: FightSummary | null;
-  /** Each lane's soul difference over the laning phase. */
-  laneLeads: LaneLead[];
   durationS: number;
   nameOf: (player: TrackerMatchPlayer) => string;
 }) {
@@ -85,16 +81,6 @@ export function MatchTimeline({
         )}
         <span className="ml-auto flex items-center gap-3">
           <span className="flex items-center gap-3" aria-hidden>
-            {lead && laneLeads.length > 0 && (
-              <span className="inline-flex items-center gap-1">
-                <span className="flex flex-col gap-px">
-                  {laneLeads.map(({ lane }) => (
-                    <span key={lane.id} className="h-0.5 w-3 rounded-full" style={{ backgroundColor: lane.color }} />
-                  ))}
-                </span>
-                Lanes to {Math.round(LANE_PHASE_END_S / 60)}m
-              </span>
-            )}
             <LegendSwatch color={WIN_COLOR} label="Kill" />
             <LegendSwatch color={LOSS_COLOR} label="Death" />
             {deadWindows.length > 0 && (
@@ -111,7 +97,6 @@ export function MatchTimeline({
         objectives={objectives}
         events={events}
         deadWindows={deadWindows}
-        laneLeads={laneLeads}
         durationS={durationS}
       />
     </div>

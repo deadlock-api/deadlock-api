@@ -2,8 +2,7 @@ import { Skull } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import {
   Area,
-  Line,
-  ComposedChart,
+  AreaChart,
   CartesianGrid,
   ReferenceArea,
   ReferenceDot,
@@ -18,7 +17,6 @@ import { HeroImage } from "~/components/HeroImage";
 import { Tooltip as HoverTooltip, TooltipTrigger } from "~/components/ui/tooltip";
 import { niceTicks } from "~/lib/chart-axis";
 import { formatMatchDuration } from "~/lib/tracker/compute";
-import type { LaneLead } from "~/lib/tracker/lane-matchup";
 import { OBJECTIVE_LABELS, type ObjectiveEvent, type ObjectiveEventKind } from "~/lib/tracker/objectives";
 import type { SoulLead, SoulLeadPoint } from "~/lib/tracker/soul-lead";
 import { cn } from "~/lib/utils";
@@ -127,20 +125,7 @@ function leadTicks(min: number, max: number): number[] {
   return ticks;
 }
 
-type TimelinePoint = SoulLeadPoint & {
-  /** Each lane's soul difference by lane id, through the laning phase only. */
-  laneDiffs?: Record<number, number>;
-};
-
-function LeadTooltipContent({
-  active,
-  payload,
-  laneLeads,
-}: {
-  active?: boolean;
-  payload?: { payload: TimelinePoint }[];
-  laneLeads: LaneLead[];
-}) {
+function LeadTooltipContent({ active, payload }: { active?: boolean; payload?: { payload: SoulLeadPoint }[] }) {
   if (!active || !payload?.length) return null;
   const point = payload[0].payload;
   return (
@@ -158,27 +143,7 @@ function LeadTooltipContent({
       <div className="mt-0.5 text-muted-foreground tabular-nums">
         {point.own.toLocaleString("en-US")} vs {point.enemy.toLocaleString("en-US")} souls
       </div>
-      {point.laneDiffs && (
-        <div className="mt-1 space-y-0.5 tabular-nums">
-          {laneLeads.map(({ lane }) => {
-            const diff = point.laneDiffs?.[lane.id];
-            if (diff == null) return null;
-            return (
-              <div key={lane.id} className="flex items-center gap-1.5">
-                <span className="size-2 rounded-full" style={{ backgroundColor: lane.color }} />
-                <span className="text-muted-foreground">{lane.name}</span>
-                <span
-                  className={cn("ml-auto pl-3 font-medium", diff > 0 && WIN_TEXT_CLASS, diff < 0 && LOSS_TEXT_CLASS)}
-                >
-                  {diff > 0 ? "+" : ""}
-                  {diff.toLocaleString("en-US")}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      <div className="mt-0.5 text-muted-foreground tabular-nums">{formatMatchDuration(point.time)}</div>
+      <div className="text-muted-foreground tabular-nums">{formatMatchDuration(point.time)}</div>
     </div>
   );
 }
@@ -306,7 +271,6 @@ export function MatchTimelineChart({
   objectives,
   events,
   deadWindows,
-  laneLeads,
   durationS,
 }: {
   lead: SoulLead | null;
@@ -314,8 +278,6 @@ export function MatchTimelineChart({
   /** Sorted by time. */
   events: TimelineEvent[];
   deadWindows: DeadWindow[];
-  /** Each lane's soul difference over the laning phase, drawn as a line in the lane's colour. */
-  laneLeads: LaneLead[];
   durationS: number;
 }) {
   const gradientId = useId();
@@ -330,20 +292,15 @@ export function MatchTimelineChart({
   }, []);
 
   const points = lead?.points ?? [];
-  const laneDiffsAt = new Map<number, Record<number, number>>();
-  for (const { lane, points: lanePoints } of laneLeads) {
-    for (const { time, diff } of lanePoints) laneDiffsAt.set(time, { ...laneDiffsAt.get(time), [lane.id]: diff });
-  }
-  const data: TimelinePoint[] = lead
-    ? points.map((point) => ({ ...point, laneDiffs: laneDiffsAt.get(point.time) }))
+  const data = lead
+    ? points
     : [
         { time: 0, own: 0, enemy: 0, lead: 0 },
         { time: durationS, own: 0, enemy: 0, lead: 0 },
       ];
   const max = Math.max(0, lead?.peak.lead ?? 0);
   const min = Math.min(0, lead?.trough.lead ?? 0);
-  const laneValues = laneLeads.flatMap(({ points: lanePoints }) => lanePoints.map((point) => point.diff));
-  const ticks = lead ? leadTicks(Math.min(min, ...laneValues), Math.max(max, ...laneValues)) : [0];
+  const ticks = lead ? leadTicks(min, max) : [0];
   const [lo, hi] = lead ? [ticks[0], ticks[ticks.length - 1]] : [-1, 1];
   const plotPx = lead ? LEAD_PLOT_PX : LEADLESS_PLOT_PX;
 
@@ -390,7 +347,7 @@ export function MatchTimelineChart({
   return (
     <div ref={wrapperRef}>
       <ResponsiveContainer width="100%" height={plotPx + 2 * EDGE_PX + X_AXIS_PX}>
-        <ComposedChart data={data} margin={{ top: EDGE_PX, right: PLOT_END_PX, bottom: EDGE_PX, left: 0 }}>
+        <AreaChart data={data} margin={{ top: EDGE_PX, right: PLOT_END_PX, bottom: EDGE_PX, left: 0 }}>
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset={zeroOffset} stopColor={WIN_COLOR} />
@@ -431,12 +388,7 @@ export function MatchTimelineChart({
               ifOverflow="hidden"
             />
           ))}
-          {lead && (
-            <Tooltip
-              cursor={{ stroke: "var(--border)", strokeWidth: 1 }}
-              content={<LeadTooltipContent laneLeads={laneLeads} />}
-            />
-          )}
+          {lead && <Tooltip cursor={{ stroke: "var(--border)", strokeWidth: 1 }} content={<LeadTooltipContent />} />}
           <ReferenceLine y={0} stroke="var(--muted-foreground)" strokeOpacity={0.6} />
           {lead &&
             objectives.map((event, index) => (
@@ -465,21 +417,6 @@ export function MatchTimelineChart({
               isAnimationActive={false}
             />
           )}
-          {lead &&
-            laneLeads.map(({ lane }) => (
-              <Line
-                key={lane.id}
-                type="linear"
-                dataKey={(point: TimelinePoint) => point.laneDiffs?.[lane.id]}
-                stroke={lane.color}
-                strokeWidth={1.5}
-                strokeOpacity={0.9}
-                dot={false}
-                activeDot={false}
-                connectNulls={false}
-                isAnimationActive={false}
-              />
-            ))}
           {pxPerSecond > 0 &&
             placed.map(({ event, level }, index) => (
               <ReferenceDot
@@ -492,7 +429,7 @@ export function MatchTimelineChart({
                 shape={(props) => <ChipMarker cx={props.cx} cy={props.cy} event={event} level={level} />}
               />
             ))}
-        </ComposedChart>
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );
