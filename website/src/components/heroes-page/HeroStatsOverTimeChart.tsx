@@ -12,6 +12,7 @@ import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVis
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { computeBanRatesByBucket } from "~/lib/ban-rate";
+import { MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
 import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS_WITH_BAN_RATE, hero_stats_transform } from "~/types/api_hero_stats";
 
@@ -97,13 +98,25 @@ export function HeroStatsOverTimeChart({
     }
     const map: Record<number, [number, number, number?][]> = {};
     if (heroData) {
+      // The first days after a rank reset hold a handful of matches per hero, whose 0% and 100% win rates stretched the
+      // y axis over the whole chart. Scale the floor with the typical point so hourly buckets keep their data; counts
+      // are exact at any sample size, so they keep every point.
+      const sampleSizes = heroData.map((hero) => hero.matches).sort((a, b) => a - b);
+      const isCount = heroStat === "matches" || heroStat === "wins" || heroStat === "losses";
+      const minMatches = isCount
+        ? 0
+        : Math.max(MIN_MATCHES_PER_BUCKET, 0.1 * (sampleSizes[Math.floor(sampleSizes.length / 2)] ?? 0));
+      // The API's daily rollups count the whole start day, so a bucket that begins before the range would mix in the
+      // hours before a season or patch boundary.
+      const firstBucket = minUnixTimestamp ?? 0;
       for (const hero of heroData) {
+        if (hero.matches < minMatches || hero.bucket < firstBucket) continue;
         if (!map[hero.bucket]) map[hero.bucket] = [];
         map[hero.bucket].push([hero.hero_id, hero_stats_transform(hero, heroStat), hero.matches]);
       }
     }
     return map;
-  }, [heroStat, heroData, isBanRate, banData]);
+  }, [heroStat, heroData, isBanRate, banData, minUnixTimestamp]);
 
   const { heroIdMap, isLoadingHeroes } = useHeroColorMap();
   const { allHeroIds, effectiveVisibleSet, handleLegendClick } = useChartHeroVisibility(heroIdMap);
