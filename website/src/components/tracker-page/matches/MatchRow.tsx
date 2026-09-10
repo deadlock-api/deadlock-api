@@ -162,7 +162,7 @@ export function MatchRow({
           )}
         </div>
       </TableCell>
-      <TableCell className="hidden text-muted-foreground @3xl:table-cell">
+      <TableCell className="hidden text-muted-foreground @4xl:table-cell">
         {MATCH_MODE_LABELS_BY_ID[entry.match_mode] ?? "Unknown"}
       </TableCell>
       <TableCell className="text-right tabular-nums" title={`KDA ${kdaRatio(entry).toFixed(2)}`}>
@@ -207,20 +207,20 @@ export function MatchRow({
         <Tooltip>
           <TooltipTrigger asChild>
             <span>
-              <span className="@xl:hidden">{day.unix(entry.start_time).format("MMM D")}</span>
-              <span className="hidden @xl:inline">{day.unix(entry.start_time).fromNow()}</span>
+              <span className="@3xl:hidden">{day.unix(entry.start_time).format("MMM D")}</span>
+              <span className="hidden @3xl:inline">{day.unix(entry.start_time).fromNow()}</span>
             </span>
           </TooltipTrigger>
           <TooltipContent>{day.unix(entry.start_time).format("MMM D, YYYY HH:mm")}</TooltipContent>
         </Tooltip>
       </TableCell>
-      <TableCell className="hidden @5xl:table-cell">
+      <TableCell className="hidden @6xl:table-cell">
         <div className="flex items-center justify-end gap-0.5 text-muted-foreground tabular-nums">
           {entry.match_id}
           <CopyButton text={String(entry.match_id)} iconOnly title="Copy match ID" className="size-6" />
         </div>
       </TableCell>
-      <TableCell className="hidden @5xl:table-cell">
+      <TableCell className="hidden @6xl:table-cell">
         <Link
           to="/team-builder"
           search={{ match: entry.match_id }}

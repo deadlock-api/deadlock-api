@@ -124,9 +124,10 @@ export function MatchRowDetails({
   return (
     <div className="@container space-y-4">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        {/* Restates the match table columns that collapse on narrow layouts. */}
-        <span className="@3xl:hidden">
-          {MATCH_MODE_LABELS_BY_ID[entry.match_mode] ?? "Unknown"} · {formatMatchDuration(entry.match_duration_s)}
+        {/* Restates the match table columns that collapse on narrow layouts, keyed to the table's container. */}
+        <span className="@4xl/matches:hidden">
+          {MATCH_MODE_LABELS_BY_ID[entry.match_mode] ?? "Unknown"}
+          <span className="@3xl/matches:hidden"> · {formatMatchDuration(entry.match_duration_s)}</span>
         </span>
         {rounds && (
           <span className="tabular-nums">
@@ -136,14 +137,14 @@ export function MatchRowDetails({
               ` · ${formatMatchDuration(entry.brawl_avg_round_time_s)} avg round`}
           </span>
         )}
-        <span className="inline-flex items-center gap-0.5 tabular-nums @5xl:hidden">
+        <span className="inline-flex items-center gap-0.5 tabular-nums @6xl/matches:hidden">
           Match {matchId}
           <CopyButton text={String(matchId)} iconOnly title="Copy match ID" className="size-6" />
         </span>
         <Link
           to="/team-builder"
           search={{ match: matchId }}
-          className="inline-flex items-center gap-1 transition-colors hover:text-foreground @5xl:hidden"
+          className="inline-flex items-center gap-1 transition-colors hover:text-foreground @6xl/matches:hidden"
         >
           <UsersRound className="size-3.5" />
           Team Builder

@@ -115,14 +115,14 @@ function AverageRow({ summary }: { summary: TrackerSummary }) {
       </TableCell>
       <TableCell>
         <span className="@xl:hidden">Avg</span>
-        <span className="hidden @xl:inline">Average · {summary.matches.toLocaleString("en-US")} matches</span>
+        <span className="hidden @xl:inline">Average</span>
       </TableCell>
-      <TableCell className="hidden @3xl:table-cell" />
+      <TableCell className="hidden @4xl:table-cell" />
       <TableCell className="text-right tabular-nums">
-        <span className="@md:hidden">
+        <span className="@lg:hidden">
           {round(summary.avgKills)} / {round(summary.avgDeaths)} / {round(summary.avgAssists)}
         </span>
-        <span className="hidden @md:inline">
+        <span className="hidden @lg:inline">
           {summary.avgKills.toFixed(1)} / {summary.avgDeaths.toFixed(1)} / {summary.avgAssists.toFixed(1)}
         </span>
       </TableCell>
@@ -240,14 +240,18 @@ export function MatchesTab({
   );
 
   return (
-    <div ref={tableTopRef} className="@container space-y-3">
+    <div ref={tableTopRef} className="@container/matches space-y-3">
       <PaginationControls
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={setItemsPerPage}
         currentPage={page}
         onPageChange={setCurrentPage}
         totalPages={totalPages}
-      />
+      >
+        <span className="text-sm text-muted-foreground tabular-nums">
+          {entries.length.toLocaleString("en-US")} {entries.length === 1 ? "match" : "matches"}
+        </span>
+      </PaginationControls>
       <Table>
         <TableHeader className="bg-muted">
           <TableRow>
@@ -256,7 +260,7 @@ export function MatchesTab({
               <span className="hidden @md:inline">Result</span>
             </TableHead>
             <TableHead>Hero</TableHead>
-            <TableHead className="hidden @3xl:table-cell">Mode</TableHead>
+            <TableHead className="hidden @4xl:table-cell">Mode</TableHead>
             <SortableHead sortKey="kda" {...sortProps} className="text-right" title="Sort by KDA ratio">
               K / D / A
             </SortableHead>
@@ -281,11 +285,11 @@ export function MatchesTab({
               Rank
             </SortableHead>
             <SortableHead sortKey="played" {...sortProps} className="text-right">
-              <span className="@xl:hidden">Date</span>
-              <span className="hidden @xl:inline">Played</span>
+              <span className="@3xl:hidden">Date</span>
+              <span className="hidden @3xl:inline">Played</span>
             </SortableHead>
-            <TableHead className="hidden text-right @5xl:table-cell">Match ID</TableHead>
-            <TableHead className="hidden w-8 @5xl:table-cell" />
+            <TableHead className="hidden text-right @6xl:table-cell">Match ID</TableHead>
+            <TableHead className="hidden w-8 @6xl:table-cell" />
             <TableHead className="hidden w-8 @md:table-cell" />
           </TableRow>
         </TableHeader>
