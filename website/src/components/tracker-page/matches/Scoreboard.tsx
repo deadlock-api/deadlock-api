@@ -99,9 +99,11 @@ export function Scoreboard({
         const players = laned ? byLane(teamPlayers) : teamPlayers;
         const won = match.winning_team === team.key;
         const averageBadge = teamIndex === 0 ? match.average_badge_team0 : match.average_badge_team1;
+        const teamKills = teamPlayers.reduce((sum, player) => sum + player.kills, 0);
+        const teamSouls = teamPlayers.reduce((sum, player) => sum + player.net_worth, 0);
         return (
           <div key={team.key} className="@container min-w-0 space-y-1.5">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
               <span className="text-sm font-semibold">{team.name}</span>
               <span className={cn("text-xs font-bold", won ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS)}>
                 {won ? "Victory" : "Defeat"}
@@ -109,6 +111,10 @@ export function Scoreboard({
               {averageBadge != null && averageBadge > 0 && (
                 <BadgeImage badge={averageBadge} ranks={ranks} className="size-5" />
               )}
+              <span className="ml-auto text-xs whitespace-nowrap text-muted-foreground tabular-nums">
+                <span className="font-semibold text-foreground">{teamKills}</span> kills ·{" "}
+                <span className="font-semibold text-foreground">{teamSouls.toLocaleString("en-US")}</span> souls
+              </span>
             </div>
             <table className="w-full text-sm">
               <thead>
