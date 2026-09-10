@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Customized, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
-import { RankTierIcons } from "~/components/RankTierIcons";
+import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/RankTierIcons";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -118,9 +118,9 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
         ) : (
           <figure aria-label={`${statDef?.label ?? stat} by rank chart`}>
             <ResponsiveContainer width="100%" height={650} className="rounded-xl bg-muted p-2">
-              <BarChart data={chartData} margin={{ top: 16, right: 20, bottom: 40, left: 40 }}>
+              <BarChart data={chartData} margin={{ top: 16, right: 20, bottom: 12, left: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
-                <XAxis dataKey="badge" tick={false} height={8} stroke="#525252" />
+                <XAxis dataKey="badge" tick={false} height={RANK_ICON_AXIS_HEIGHT} stroke="#525252" />
                 <YAxis
                   domain={["dataMin", "auto"]}
                   tickFormatter={(v) => (statDef ? formatAxisTick(v, statDef.format, span) : String(v))}

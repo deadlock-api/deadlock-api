@@ -3,7 +3,7 @@ import type { BadgeDistribution } from "deadlock_api_client";
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Customized, Label, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
-import { RankTierIcons } from "~/components/RankTierIcons";
+import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/RankTierIcons";
 import { ChartContainer } from "~/components/ui/chart";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { niceTicks } from "~/lib/chart-axis";
@@ -209,6 +209,8 @@ export default function BadgeDistributionChart({
               textAnchor="middle"
               tickFormatter={xAxisTickFormatter}
               dx={7}
+              height={RANK_ICON_AXIS_HEIGHT + 32}
+              tickMargin={RANK_ICON_AXIS_HEIGHT + 8}
             />
             <YAxis
               dataKey="value"
