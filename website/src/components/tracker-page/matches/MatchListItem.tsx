@@ -1,14 +1,22 @@
+import { useQueryClient } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { CircleDashed, Gavel, LogOut, Trophy } from "lucide-react";
-import type { KeyboardEventHandler } from "react";
+import { type KeyboardEventHandler, useRef } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
 import { day } from "~/dayjs";
 import { brawlRounds, formatMatchDuration, isWin, matchModeLabel, unscoredOutcome } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
+import { trackerMatchDeathsQueryOptions, trackerMatchMetadataQueryOptions } from "~/queries/tracker-queries";
 
 import { LOSS_DOT_CLASS, LOSS_TEXT_CLASS, WIN_DOT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { RankDelta } from "../shared/RankDelta";
+
+/**
+ * How long the pointer rests on a row before its details are prefetched. Sweeping across the list would
+ * otherwise fire a request per row, and a rate-limited one caches the match as having no details.
+ */
+const PREFETCH_HOVER_MS = 100;
 
 /** One compact, selectable match in the history column. */
 export function MatchListItem({
@@ -35,6 +43,16 @@ export function MatchListItem({
   const unscored = unscoredOutcome(entry);
   const abandoned = entry.abandoned_time_s != null && entry.abandoned_time_s > 0;
   const played = day.unix(entry.start_time);
+
+  const queryClient = useQueryClient();
+  const prefetchTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const schedulePrefetch = () => {
+    prefetchTimer.current = setTimeout(() => {
+      void queryClient.prefetchQuery(trackerMatchMetadataQueryOptions(entry.match_id));
+      void queryClient.prefetchQuery(trackerMatchDeathsQueryOptions(entry.match_id));
+    }, PREFETCH_HOVER_MS);
+  };
+
   return (
     <button
       type="button"
@@ -42,6 +60,8 @@ export function MatchListItem({
       aria-current={selected ? "true" : undefined}
       onClick={onSelect}
       onKeyDown={onKeyDown}
+      onMouseEnter={schedulePrefetch}
+      onMouseLeave={() => clearTimeout(prefetchTimer.current)}
       className={cn(
         "relative flex w-full cursor-pointer items-center gap-2.5 py-1 pr-3 pl-3.5 text-left transition-colors",
         "hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none",
