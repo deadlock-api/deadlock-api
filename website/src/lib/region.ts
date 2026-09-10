@@ -113,3 +113,11 @@ export function getDefaultRegion(): LeaderboardRegionEnum {
   if (typeof navigator === "undefined") return LeaderboardRegionEnum.Europe;
   return regionForLanguage(navigator.language ?? "");
 }
+
+export const REGION_LABELS: Record<LeaderboardRegionEnum, string> = {
+  Europe: "Europe",
+  Asia: "Asia",
+  NAmerica: "North America",
+  SAmerica: "South America",
+  Oceania: "Oceania",
+};

@@ -13,6 +13,7 @@ import { Label } from "~/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { useSteamAuthCallback } from "~/hooks/useSteamAuthCallback";
 import { API_ORIGIN } from "~/lib/constants";
+import { REGION_LABELS } from "~/lib/region";
 import { seo } from "~/lib/seo";
 import { parseSteamIdToId3, steamId64ToSteamId3 } from "~/lib/steam";
 import { generateSteamAuthUrl } from "~/lib/steam-auth";
@@ -156,7 +157,7 @@ function StreamKit() {
           >
             {regions.map((r) => (
               <ToggleGroupItem key={r} value={r} className="min-w-fit flex-1">
-                {r}
+                {REGION_LABELS[r]}
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
