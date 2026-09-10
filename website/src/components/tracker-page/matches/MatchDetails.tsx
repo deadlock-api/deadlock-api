@@ -24,7 +24,7 @@ import {
   type UnscoredOutcome,
   unscoredOutcome,
 } from "~/lib/tracker/compute";
-import { computeFights } from "~/lib/tracker/fights";
+import { computeFights, computeMatchKills } from "~/lib/tracker/fights";
 import { computeLaneMatchups } from "~/lib/tracker/lane-matchup";
 import { computeObjectiveEvents } from "~/lib/tracker/objectives";
 import { computeSoulLead } from "~/lib/tracker/soul-lead";
@@ -230,6 +230,10 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
     () => (match && deathRows ? computeFights(deathRows, match.players, accountId) : null),
     [match, deathRows, accountId],
   );
+  const matchKills = useMemo(
+    () => (match && deathRows ? computeMatchKills(deathRows, match.players) : null),
+    [match, deathRows],
+  );
 
   const nameOf = (player: TrackerMatchPlayer) =>
     player.personaname ?? profiles[player.account_id]?.personaname ?? `Player ${player.account_id}`;
@@ -274,12 +278,13 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
     <div className="space-y-4">
       <MatchTimeline
         lead={soulLead}
-        events={objectiveEvents}
+        objectives={objectiveEvents}
         fights={fights}
+        matchKills={matchKills}
+        ownTeam={ownTeam}
         durationS={entry.match_duration_s}
         nameOf={nameOf}
       />
-      {laneMatchups.length > 0 && <LanesCard matchups={laneMatchups} trackedAccountId={accountId} nameOf={nameOf} />}
       <Scoreboard
         match={match}
         accountId={accountId}
@@ -288,6 +293,7 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
         itemsById={itemsById}
         nameOf={nameOf}
       />
+      {laneMatchups.length > 0 && <LanesCard matchups={laneMatchups} trackedAccountId={accountId} nameOf={nameOf} />}
       {tracked && itemsById && <BuildOrderStrip items={tracked.items} itemsById={itemsById} />}
     </div>
   );

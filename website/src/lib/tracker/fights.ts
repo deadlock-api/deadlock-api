@@ -55,3 +55,27 @@ export function computeFights(
     deadForS: deaths.reduce((sum, death) => sum + death.deadForS, 0),
   };
 }
+
+export interface MatchKill {
+  /** Seconds since the match started. */
+  time: number;
+  victim: TrackerMatchPlayer;
+  /** Null when no player was credited, e.g. a guardian or creep kill. */
+  killer: TrackerMatchPlayer | null;
+}
+
+/** Every hero death in the match, in match order. */
+export function computeMatchKills(rows: TrackerPlayerDeaths[], players: TrackerMatchPlayer[]): MatchKill[] {
+  const playersById = new Map(players.map((player) => [player.account_id, player]));
+  const playersBySlot = new Map(rows.map((row) => [row.player_slot, playersById.get(row.account_id)]));
+  const kills: MatchKill[] = [];
+  for (const row of rows) {
+    const victim = playersById.get(row.account_id);
+    if (!victim) continue;
+    for (const death of row.death_details) {
+      const killer = (death.killer_player_slot != null && playersBySlot.get(death.killer_player_slot)) || null;
+      kills.push({ time: death.game_time_s, victim, killer });
+    }
+  }
+  return kills.sort((a, b) => a.time - b.time);
+}
