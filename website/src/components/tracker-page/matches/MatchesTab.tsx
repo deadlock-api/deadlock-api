@@ -195,80 +195,86 @@ export function MatchesTab({
 
   return (
     <div className="@container/matches">
-      <div className="grid items-start gap-4 @3xl/matches:grid-cols-[19rem_minmax(0,1fr)] @5xl/matches:grid-cols-[21rem_minmax(0,1fr)]">
-        <aside className="flex max-h-[26rem] flex-col overflow-hidden rounded-md border border-border @3xl/matches:sticky @3xl/matches:top-4 @3xl/matches:max-h-[calc(100dvh-2rem)]">
-          <div className="flex items-center gap-2 border-b border-border px-3 py-1.5">
-            <div className="min-w-0 text-xs leading-tight text-muted-foreground tabular-nums">
-              <div className="font-semibold text-foreground">
-                {summary.matches.toLocaleString("en-US")} {summary.matches === 1 ? "match" : "matches"}
-              </div>
-              {summary.matches > 0 && (
-                <div>
-                  <span className={WIN_TEXT_CLASS}>{summary.wins}W</span> –{" "}
-                  <span className={LOSS_TEXT_CLASS}>{summary.losses}L</span> · {Math.round(summary.winrate * 100)}%
+      <div className="grid gap-4 @3xl/matches:grid-cols-[19rem_minmax(0,1fr)] @5xl/matches:grid-cols-[21rem_minmax(0,1fr)]">
+        {/* Out of flow, so the list takes the height of the details beside it instead of setting it. */}
+        <aside className="relative h-[26rem] @3xl/matches:h-auto @3xl/matches:min-h-[24rem]">
+          <div className="absolute inset-0 flex flex-col overflow-hidden rounded-md border border-border">
+            <div className="flex items-center gap-2 border-b border-border px-3 py-1.5">
+              <div className="min-w-0 text-xs leading-tight text-muted-foreground tabular-nums">
+                <div className="font-semibold text-foreground">
+                  {summary.matches.toLocaleString("en-US")} {summary.matches === 1 ? "match" : "matches"}
                 </div>
-              )}
-            </div>
-            <Select value={sortKey} onValueChange={(value) => changeSort({ sort: value as MatchSortKey, dir: "desc" })}>
-              <SelectTrigger size="sm" className="ml-auto h-7 gap-1 px-2 text-xs" aria-label="Sort matches by">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {MATCH_SORT_KEYS.map((key) => (
-                  <SelectItem key={key} value={key}>
-                    {SORT_LABELS[key]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-7 shrink-0"
-              onClick={() => changeSort({ dir: sortDir === "desc" ? "asc" : "desc" })}
-              aria-label={sortDir === "desc" ? "Sorted high to low" : "Sorted low to high"}
-              title={sortDir === "desc" ? "Sorted high to low" : "Sorted low to high"}
-            >
-              {sortDir === "desc" ? <ArrowDown className="size-3.5" /> : <ArrowUp className="size-3.5" />}
-            </Button>
-          </div>
-          <div
-            ref={listRef}
-            className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain"
-            aria-label="Match history"
-          >
-            {visibleEntries.map((entry, index) => {
-              const session = sessions.get(entry.match_id);
-              const startsSession =
-                session != null && (index === 0 || sessions.get(visibleEntries[index - 1].match_id) !== session);
-              return (
-                <Fragment key={entry.match_id}>
-                  {startsSession && <SessionHeader session={session} />}
-                  <MatchListItem
-                    entry={entry}
-                    heroName={heroNameOf(entry.hero_id)}
-                    hasRecord={heldRecords?.has(entry.match_id) ?? false}
-                    selected={entry.match_id === selectedId}
-                    showTimeOfDay={session != null}
-                    onSelect={() => selectMatch(entry.match_id)}
-                    onKeyDown={handleItemKeyDown}
-                  />
-                </Fragment>
-              );
-            })}
-            {entries.length === 0 && (
-              <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-                No matches found
-                {heroId != null && (
-                  <div className="mt-3">
-                    <Button variant="outline" size="sm" onClick={() => onHeroChange(null)}>
-                      Show all heroes
-                    </Button>
+                {summary.matches > 0 && (
+                  <div>
+                    <span className={WIN_TEXT_CLASS}>{summary.wins}W</span> –{" "}
+                    <span className={LOSS_TEXT_CLASS}>{summary.losses}L</span> · {Math.round(summary.winrate * 100)}%
                   </div>
                 )}
               </div>
-            )}
-            {hasMore && <div ref={sentinelRef} aria-hidden className="h-px" />}
+              <Select
+                value={sortKey}
+                onValueChange={(value) => changeSort({ sort: value as MatchSortKey, dir: "desc" })}
+              >
+                <SelectTrigger size="sm" className="ml-auto h-7 gap-1 px-2 text-xs" aria-label="Sort matches by">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MATCH_SORT_KEYS.map((key) => (
+                    <SelectItem key={key} value={key}>
+                      {SORT_LABELS[key]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="icon"
+                className="size-7 shrink-0"
+                onClick={() => changeSort({ dir: sortDir === "desc" ? "asc" : "desc" })}
+                aria-label={sortDir === "desc" ? "Sorted high to low" : "Sorted low to high"}
+                title={sortDir === "desc" ? "Sorted high to low" : "Sorted low to high"}
+              >
+                {sortDir === "desc" ? <ArrowDown className="size-3.5" /> : <ArrowUp className="size-3.5" />}
+              </Button>
+            </div>
+            <div
+              ref={listRef}
+              className="relative min-h-0 flex-1 scrollbar-thin overflow-y-auto overscroll-contain"
+              aria-label="Match history"
+            >
+              {visibleEntries.map((entry, index) => {
+                const session = sessions.get(entry.match_id);
+                const startsSession =
+                  session != null && (index === 0 || sessions.get(visibleEntries[index - 1].match_id) !== session);
+                return (
+                  <Fragment key={entry.match_id}>
+                    {startsSession && <SessionHeader session={session} />}
+                    <MatchListItem
+                      entry={entry}
+                      heroName={heroNameOf(entry.hero_id)}
+                      hasRecord={heldRecords?.has(entry.match_id) ?? false}
+                      selected={entry.match_id === selectedId}
+                      showTimeOfDay={session != null}
+                      onSelect={() => selectMatch(entry.match_id)}
+                      onKeyDown={handleItemKeyDown}
+                    />
+                  </Fragment>
+                );
+              })}
+              {entries.length === 0 && (
+                <div className="px-3 py-8 text-center text-sm text-muted-foreground">
+                  No matches found
+                  {heroId != null && (
+                    <div className="mt-3">
+                      <Button variant="outline" size="sm" onClick={() => onHeroChange(null)}>
+                        Show all heroes
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {hasMore && <div ref={sentinelRef} aria-hidden className="h-px" />}
+            </div>
           </div>
         </aside>
         <div ref={detailsRef} className="min-w-0 scroll-mt-4 space-y-4">
