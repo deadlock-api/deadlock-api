@@ -39,8 +39,11 @@ export function HeroWinRateOverTime({
       if (row.hero_id === heroId) hero.set(row.bucket, { wins: row.wins, matches: row.matches });
     }
     const multiplier = getPickrateMultiplier(request.gameMode);
+    // The API's daily rollups count the whole start day, so a week that begins before the range would mix in the
+    // hours before a season or patch boundary; with a rank filter, those can outnumber the first days after a reset.
+    const firstWeek = request.minUnixTimestamp ?? 0;
     return [...hero.entries()]
-      .filter(([, agg]) => agg.matches >= MIN_WEEK_MATCHES)
+      .filter(([weekStart, agg]) => weekStart >= firstWeek && agg.matches >= MIN_WEEK_MATCHES)
       .sort(([a], [b]) => a - b)
       .map(
         ([weekStart, agg]): WeekEntry => ({
@@ -51,7 +54,7 @@ export function HeroWinRateOverTime({
           matches: agg.matches,
         }),
       );
-  }, [data, heroId, request.gameMode]);
+  }, [data, heroId, request.gameMode, request.minUnixTimestamp]);
 
   if (isPending) {
     return (

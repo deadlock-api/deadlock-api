@@ -41,8 +41,17 @@ export function ItemWinRateOverTime({
     if (!itemQuery.data || !heroQuery.data) return [];
     const playerMatches = new Map<number, number>();
     for (const row of heroQuery.data) playerMatches.set(row.bucket, (playerMatches.get(row.bucket) ?? 0) + row.matches);
+    // The API's daily rollups count the whole start day, so a week that begins before the range would mix in the
+    // hours before a season or patch boundary.
+    const firstWeek = itemRequest.minUnixTimestamp ?? 0;
     return itemQuery.data
-      .filter((row) => row.item_id === itemId && row.matches >= MIN_WEEK_MATCHES && playerMatches.has(row.bucket))
+      .filter(
+        (row) =>
+          row.item_id === itemId &&
+          row.bucket >= firstWeek &&
+          row.matches >= MIN_WEEK_MATCHES &&
+          playerMatches.has(row.bucket),
+      )
       .sort((a, b) => a.bucket - b.bucket)
       .map(
         (row): WeekEntry => ({
@@ -53,7 +62,7 @@ export function ItemWinRateOverTime({
           matches: row.matches,
         }),
       );
-  }, [itemQuery.data, heroQuery.data, itemId]);
+  }, [itemQuery.data, heroQuery.data, itemId, itemRequest.minUnixTimestamp]);
 
   if (itemQuery.isPending || heroQuery.isPending) {
     return (
