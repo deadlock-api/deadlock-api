@@ -18,8 +18,6 @@ const KILL_SCOPES = [
   { value: "you", label: "Yours" },
 ] as const;
 
-const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
-
 function LegendSwatch({ color, label }: { color: string; label: string }) {
   return (
     <span className="inline-flex items-center gap-1">
@@ -116,13 +114,6 @@ export function MatchTimeline({
         )}
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground tabular-nums">
-        {fights && (
-          <span>
-            You: {count(fights.kills.length, "kill")} · {count(fights.deaths.length, "death")}
-            {fights.deaths.length > 0 &&
-              ` · ${formatMatchDuration(fights.deadForS)} dead (${Math.round((fights.deadForS / durationS) * 100)}%)`}
-          </span>
-        )}
         <span className="ml-auto flex items-center gap-3" aria-hidden>
           <LegendSwatch color={WIN_COLOR} label={showAll ? "Enemy died" : "Your kill"} />
           <LegendSwatch color={LOSS_COLOR} label={showAll ? "Ally died" : "Your death"} />
