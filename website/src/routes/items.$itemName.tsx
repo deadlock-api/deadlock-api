@@ -24,6 +24,10 @@ const ItemHeroBreakdown = lazy(() =>
   import("~/components/items-page/ItemHeroBreakdown").then((m) => ({ default: m.ItemHeroBreakdown })),
 );
 
+const ItemWinRateByBuyTime = lazy(() =>
+  import("~/components/items-page/ItemWinRateByBuyTime").then((m) => ({ default: m.ItemWinRateByBuyTime })),
+);
+
 const DEFAULT_MIN_RANK = 91;
 const DEFAULT_MAX_RANK = 116;
 const GAME_MODE = "normal" as const;
@@ -226,6 +230,12 @@ function ItemDetailPage() {
       <ChunkErrorBoundary>
         <Suspense fallback={<LoadingLogo />}>
           <ItemHeroBreakdown itemId={itemId} itemName={itemName} itemRequest={itemRequest} heroRequest={heroRequest} />
+        </Suspense>
+      </ChunkErrorBoundary>
+
+      <ChunkErrorBoundary>
+        <Suspense fallback={<LoadingLogo />}>
+          <ItemWinRateByBuyTime itemId={itemId} itemName={itemName} request={itemRequest} />
         </Suspense>
       </ChunkErrorBoundary>
 
