@@ -26,6 +26,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { computeBanRatesByBucket } from "~/lib/ban-rate";
 import { MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
+import { withoutOpenTimeBucket } from "~/lib/time-buckets";
 import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS_WITH_BAN_RATE, hero_stats_transform } from "~/types/api_hero_stats";
 
@@ -108,7 +109,7 @@ export function HeroStatsOverTimeChart({
   const heroStatMap: { [key: number]: [number, number, number?][] } = useMemo(() => {
     if (isBanRate) {
       if (!banData) return {};
-      const ratesByBucket = computeBanRatesByBucket(banData);
+      const ratesByBucket = computeBanRatesByBucket(withoutOpenTimeBucket(banData, heroTimeInterval));
       const map: Record<number, [number, number, number?][]> = {};
       for (const [bucket, heroRates] of ratesByBucket) {
         map[bucket] = [];
@@ -131,14 +132,14 @@ export function HeroStatsOverTimeChart({
       // The API's daily rollups count the whole start day, so a bucket that begins before the range would mix in the
       // hours before a season or patch boundary.
       const firstBucket = minUnixTimestamp ?? 0;
-      for (const hero of heroData) {
+      for (const hero of withoutOpenTimeBucket(heroData, heroTimeInterval)) {
         if (hero.matches < minMatches || hero.bucket < firstBucket) continue;
         if (!map[hero.bucket]) map[hero.bucket] = [];
         map[hero.bucket].push([hero.hero_id, hero_stats_transform(hero, heroStat), hero.matches]);
       }
     }
     return map;
-  }, [heroStat, heroData, isBanRate, banData, minUnixTimestamp]);
+  }, [heroStat, heroData, isBanRate, banData, minUnixTimestamp, heroTimeInterval]);
 
   const { heroIdMap, isLoadingHeroes } = useHeroColorMap();
   const { allHeroIds, effectiveVisibleSet, handleLegendClick } = useChartHeroVisibility(heroIdMap);
