@@ -131,11 +131,12 @@ export function HeroStatsByDurationChart({
                   position: "insideLeft",
                 }}
                 tickFormatter={(value) =>
-                  heroStat === "winrate" ? `${Number(value).toFixed(1)}%` : Math.round(value).toLocaleString("en-US")
+                  heroStat === "winrate" ? `${Math.round(value)}%` : Math.round(value).toLocaleString("en-US")
                 }
                 minTickGap={2}
                 tickCount={10}
                 stroke="#525252"
+                allowDecimals={false}
               />
               <Tooltip
                 contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
