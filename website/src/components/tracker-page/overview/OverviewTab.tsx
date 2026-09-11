@@ -1,14 +1,6 @@
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
-import {
-  ArrowUpRight,
-  ChartNoAxesCombined,
-  Clock3,
-  Coins,
-  Crosshair,
-  Flame,
-  GitCompareArrows,
-  Trophy,
-} from "lucide-react";
+import { ArrowUpRight, ChartNoAxesCombined, Clock3, Coins, Crosshair, GitCompareArrows, Trophy } from "lucide-react";
+import { parseAsNumberLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
@@ -16,7 +8,6 @@ import { HeroName } from "~/components/HeroName";
 import { MODE_CONFIG } from "~/components/selectors/ModeSelector";
 import { Badge } from "~/components/ui/badge";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "~/components/ui/empty";
-import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import {
   computeActivity,
@@ -26,7 +17,6 @@ import {
   computeSessionMomentum,
   formatMatchDuration,
   formatPlaytime,
-  isWin,
   perHeroRows,
   rankHistoryPoints,
   RECORD_KINDS,
@@ -35,7 +25,7 @@ import {
   type TrackerFilterValues,
 } from "~/lib/tracker/compute";
 import { computeInsights } from "~/lib/tracker/insights";
-import { compareRecentMatches } from "~/lib/tracker/overview";
+import { compareRecentMatches, RECENT_MATCH_WINDOWS } from "~/lib/tracker/overview";
 import { cn } from "~/lib/utils";
 
 import { HeroesTab } from "../heroes/HeroesTab";
@@ -45,6 +35,7 @@ import { HeroStatsTable } from "./HeroStatsTable";
 import { PerformanceInsights } from "./PerformanceInsights";
 import { PlaytimeHeatmap } from "./PlaytimeHeatmap";
 import { RankBenchmarks } from "./RankBenchmarks";
+import { RecentFormPanel } from "./RecentFormPanel";
 import { TrendPanels } from "./TrendPanels";
 
 const integer = (n: number) => Math.round(n).toLocaleString("en-US");
@@ -86,7 +77,11 @@ export function OverviewTab({
     };
   }, [entries, sessionContext]);
   const { sorted, summary: s, sessions, habits } = data;
-  const recent = useMemo(() => compareRecentMatches(formEntries), [formEntries]);
+  const [recentWindow, setRecentWindow] = useQueryState(
+    "form_window",
+    parseAsNumberLiteral(RECENT_MATCH_WINDOWS).withDefault(20),
+  );
+  const recent = useMemo(() => compareRecentMatches(formEntries, recentWindow), [formEntries, recentWindow]);
   const { streaks } = recent;
   const insights = useMemo(
     () =>
@@ -228,70 +223,12 @@ export function OverviewTab({
             ]}
           />
         </DashboardPanel>
-        <DashboardPanel title="Recent form" icon={Flame} meta={`Last ${recent.recent.matches} matches`}>
-          {filters.result !== "all" && (
-            <p className="pb-2 text-[10px] text-muted-foreground">
-              Includes wins and losses. Hero, mode and date filters apply.
-            </p>
-          )}
-          <div className="flex flex-wrap items-baseline justify-between gap-2 pb-2">
-            <div className="flex items-baseline gap-2">
-              <span className="text-lg font-semibold text-victory tabular-nums">{percent(recent.recent.winrate)}</span>
-              <span className="text-[11px] text-muted-foreground tabular-nums">
-                {recent.recent.wins}W / {recent.recent.losses}L
-              </span>
-            </div>
-            <span className="text-[11px] text-muted-foreground">
-              Current streak{" "}
-              <strong className={streaks.current > 0 ? "text-victory" : "text-primary"}>
-                {Math.abs(streaks.current)}
-                {streaks.current > 0 ? "W" : "L"}
-              </strong>
-            </span>
-          </div>
-          <div className="grid grid-cols-10 gap-1" aria-label="Recent results, newest first">
-            {recent.entries.map((entry) => (
-              <Tooltip key={entry.match_id}>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => onOpenMatch(entry.match_id)}
-                    aria-label={`Open match ${entry.match_id}, ${isWin(entry) ? "win" : "loss"}`}
-                    className={cn(
-                      "flex h-6 items-center justify-center rounded-sm text-[9px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-ring",
-                      isWin(entry)
-                        ? "bg-victory/15 text-victory hover:bg-victory/30"
-                        : "bg-primary/15 text-primary hover:bg-primary/30",
-                    )}
-                  >
-                    {isWin(entry) ? "W" : "L"}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <HeroName heroId={entry.hero_id} /> · {entry.player_kills}/{entry.player_deaths}/
-                  {entry.player_assists} · {day.unix(entry.start_time).format("MMM D, HH:mm")}
-                </TooltipContent>
-              </Tooltip>
-            ))}
-          </div>
-          <div className="flex justify-between py-1 text-[9px] text-muted-foreground">
-            <span>Newest</span>
-            <span>Oldest</span>
-          </div>
-          <div className="flex flex-wrap justify-between gap-2 py-1 text-[11px] text-muted-foreground">
-            <span>
-              KDA <strong className="text-foreground tabular-nums">{recent.recent.kdaRatio.toFixed(2)}</strong>
-            </span>
-            <span>
-              Souls / min <strong className="text-foreground tabular-nums">{integer(recent.recent.soulsPerMin)}</strong>
-            </span>
-          </div>
-          <p className="pt-1 text-[10px] text-muted-foreground">
-            {recent.previous
-              ? `${signed((recent.recent.winrate - recent.previous.winrate) * 100)} pp win rate vs. previous ${recent.previous.matches} matches`
-              : "Win-rate comparison available after 25 matches"}
-          </p>
-        </DashboardPanel>
+        <RecentFormPanel
+          comparison={recent}
+          resultFiltered={filters.result !== "all"}
+          onWindowChange={setRecentWindow}
+          onOpenMatch={onOpenMatch}
+        />
       </div>
 
       <PerformanceInsights

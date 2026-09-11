@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
-import { compareRecentMatches } from "./overview";
+import { compareRecentMatches, MIN_COMPARISON_MATCHES, RECENT_MATCH_WINDOWS } from "./overview";
 
 function match(id: number, overrides: Partial<PlayerMatchHistoryEntry> = {}): PlayerMatchHistoryEntry {
   return {
@@ -87,4 +87,50 @@ test("uses match ID to break tied timestamps consistently for recent results and
     [3, 2, 1],
   );
   assert.deepEqual(streaks, { current: 2, longestWin: 2, longestLoss: 1 });
+});
+
+for (const window of RECENT_MATCH_WINDOWS) {
+  test(`${window}-match windows use disjoint samples and expose their exact match ranges`, () => {
+    const entries = Array.from({ length: 120 }, (_, i) => match(i + 1));
+    const result = compareRecentMatches(entries, window);
+    assert.equal(result.window, window);
+    assert.equal(result.recent.matches, window);
+    assert.equal(result.previous?.matches, window);
+    assert.equal(result.entries[0].match_id, 120);
+    assert.equal(result.entries.at(-1)?.match_id, 121 - window);
+    assert.equal(result.previousEntries[0].match_id, 120 - window);
+    assert.equal(result.previousEntries.at(-1)?.match_id, 121 - window * 2);
+    const recentIds = new Set(result.entries.map((entry) => entry.match_id));
+    assert.ok(result.previousEntries.every((entry) => !recentIds.has(entry.match_id)));
+  });
+
+  test(`${window}-match comparisons require a complete recent window and five earlier matches`, () => {
+    for (const count of [0, window - 1, window, window + MIN_COMPARISON_MATCHES - 1]) {
+      const result = compareRecentMatches(
+        Array.from({ length: count }, (_, i) => match(i)),
+        window,
+      );
+      assert.equal(result.previous, null);
+      assert.equal(result.recent.matches, Math.min(count, window));
+    }
+    const result = compareRecentMatches(
+      Array.from({ length: window + MIN_COMPARISON_MATCHES }, (_, i) => match(i)),
+      window,
+    );
+    assert.equal(result.previous?.matches, MIN_COMPARISON_MATCHES);
+  });
+}
+
+test("switching windows preserves the full-history streaks and recalculates the comparison", () => {
+  const entries = Array.from({ length: 30 }, (_, i) => match(i + 1, { match_result: i >= 20 ? 1 : 0 }));
+  const short = compareRecentMatches(entries, 10);
+  const medium = compareRecentMatches(entries, 20);
+  const long = compareRecentMatches(entries, 50);
+  assert.equal(short.recent.winrate, 0);
+  assert.equal(short.previous?.winrate, 1);
+  assert.equal(medium.recent.winrate, 0.5);
+  assert.equal(medium.previous?.matches, 10);
+  assert.equal(long.previous, null);
+  assert.deepEqual(short.streaks, medium.streaks);
+  assert.deepEqual(short.streaks, long.streaks);
 });
