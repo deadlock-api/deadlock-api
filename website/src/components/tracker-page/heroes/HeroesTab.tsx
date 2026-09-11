@@ -139,6 +139,8 @@ export function HeroesTab({
   entries,
   onSelectHero,
   minimumMatches = 0,
+  initialSortKey = "matches",
+  initialSortDir = "desc",
 }: {
   accountId: number;
   gameMode: string;
@@ -150,9 +152,12 @@ export function HeroesTab({
   entries: PlayerMatchHistoryEntry[];
   onSelectHero: (heroId: number) => void;
   minimumMatches?: number;
+  /** Start with the overview preview's ordering when opened in a dialog. */
+  initialSortKey?: keyof Omit<HeroRow, "heroId">;
+  initialSortDir?: "desc" | "asc";
 }) {
-  const [sortKey, setSortKey] = useState<keyof Omit<HeroRow, "heroId">>("matches");
-  const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
+  const [sortKey, setSortKey] = useState(initialSortKey);
+  const [sortDir, setSortDir] = useState(initialSortDir);
 
   const params = useMemo(
     (): PlayersApiPlayerHeroStatsRequest => ({
@@ -232,23 +237,37 @@ export function HeroesTab({
         const rows = data
           .filter((stats) => stats.matches_played >= minimumMatches)
           .map((stats) => toRow(stats, formByHero.get(stats.hero_id)))
-          .sort((a, b) => (sortDir === "desc" ? b[sortKey] - a[sortKey] : a[sortKey] - b[sortKey]));
+          .sort(
+            (a, b) =>
+              (sortDir === "desc" ? b[sortKey] - a[sortKey] : a[sortKey] - b[sortKey]) ||
+              b.matches - a.matches ||
+              a.heroId - b.heroId,
+          );
         return (
           <div className="@container">
-            <Table>
+            <Table aria-label="Detailed hero performance">
               <TableHeader className="bg-muted">
                 <TableRow>
                   <TableHead>Hero</TableHead>
                   {COLUMNS.map((column) => (
-                    <TableHead key={column.key} className={cn("text-right", column.className)}>
+                    <TableHead
+                      key={column.key}
+                      className={cn("text-right", column.className)}
+                      aria-sort={sortKey === column.key ? (sortDir === "desc" ? "descending" : "ascending") : "none"}
+                    >
                       <button
                         type="button"
+                        aria-label={`Sort by ${column.label.toLowerCase()}, ${sortKey === column.key && sortDir === "desc" ? "ascending" : "descending"}`}
                         onClick={() => handleSort(column.key)}
-                        className="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-sm transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
                       >
                         {column.label}
                         {sortKey === column.key &&
-                          (sortDir === "desc" ? <ArrowDown className="size-3" /> : <ArrowUp className="size-3" />)}
+                          (sortDir === "desc" ? (
+                            <ArrowDown aria-hidden="true" className="size-3" />
+                          ) : (
+                            <ArrowUp aria-hidden="true" className="size-3" />
+                          ))}
                       </button>
                     </TableHead>
                   ))}

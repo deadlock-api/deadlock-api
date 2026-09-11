@@ -28,7 +28,12 @@ export function HeroStatsTable({
 }: {
   rows: TrackerHeroRow[];
   onSelectHero: (heroId: number) => void;
-  details: (minimumMatches: number, close: () => void) => ReactNode;
+  details: (options: {
+    minimumMatches: number;
+    sort: Sort;
+    direction: "ascending" | "descending";
+    close: () => void;
+  }) => ReactNode;
 }) {
   const [sort, setSort] = useState<Sort>("matches");
   const [direction, setDirection] = useState<"ascending" | "descending">("descending");
@@ -45,7 +50,7 @@ export function HeroStatsTable({
   const SortIcon = direction === "descending" ? ArrowDown : ArrowUp;
   return (
     <OverviewDetailPanel
-      details={(close) => details(minimumMatches, close)}
+      details={(close) => details({ minimumMatches, sort, direction, close })}
       showMetaInDialog
       title="Hero pool"
       icon={Users}

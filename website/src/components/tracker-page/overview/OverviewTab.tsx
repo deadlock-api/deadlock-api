@@ -275,7 +275,7 @@ export function OverviewTab({
         <HeroStatsTable
           rows={data.heroes}
           onSelectHero={onSelectHero}
-          details={(minimumMatches, close) => (
+          details={({ minimumMatches, close, sort, direction }) => (
             <div className="flex flex-col gap-2">
               {filters.result !== "all" && (
                 <p className="text-xs text-muted-foreground">
@@ -284,6 +284,8 @@ export function OverviewTab({
               )}
               <HeroesTab
                 minimumMatches={minimumMatches}
+                initialSortKey={sort === "kdaRatio" ? "kda" : sort}
+                initialSortDir={direction === "descending" ? "desc" : "asc"}
                 accountId={accountId}
                 gameMode={MODE_CONFIG[filters.mode].gameMode}
                 matchMode={MODE_CONFIG[filters.mode].matchMode}
