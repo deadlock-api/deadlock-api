@@ -43,7 +43,7 @@ function CompanionTable({ rows, isPending, isError, label, matchesLabel, winrate
   const [minMatches, setMinMatches] = useState(2);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
-  const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<CompanionSort>("matches");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
@@ -119,7 +119,7 @@ function CompanionTable({ rows, isPending, isError, label, matchesLabel, winrate
             <TableHead>Player</TableHead>
             {(
               [
-                { key: "matches", label: matchesLabel },
+                { key: "matches", label: "Games" },
                 { key: "wins", label: "Wins", className: "hidden @md:table-cell" },
                 { key: "winrate", label: winrateLabel },
                 { key: "lastPlayedUnix", label: "Last played", className: "hidden @lg:table-cell" },
@@ -128,6 +128,7 @@ function CompanionTable({ rows, isPending, isError, label, matchesLabel, winrate
               <TableHead
                 key={column.key}
                 className={cn("text-right", column.className)}
+                title={column.key === "matches" ? matchesLabel : undefined}
                 aria-sort={sortKey === column.key ? (sortDir === "desc" ? "descending" : "ascending") : "none"}
               >
                 <button
