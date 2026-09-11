@@ -114,9 +114,6 @@ pub(super) struct BulkMatchMetadataQuery {
     /// Include player death details in the response.
     #[serde(default)]
     include_player_death_details: bool,
-    /// Include per-player `custom_user_stats` (a map of stat name to value) in the response.
-    #[serde(default)]
-    include_player_custom_user_stats: bool,
     // Parameters that influence what data is included in the response (WHERE)
     /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. Omit or pass empty string for no filter.
     #[serde(default, deserialize_with = "GameMode::deserialize_option")]
@@ -294,7 +291,6 @@ fn player_columns(query: &BulkMatchMetadataQuery) -> Vec<(String, String)> {
         || query.include_player_stats
         || query.include_player_final_stats
         || query.include_player_death_details
-        || query.include_player_custom_user_stats
         || !extra_player_columns.is_empty();
     if !has_player_fields {
         return vec![];
@@ -345,9 +341,6 @@ fn player_columns(query: &BulkMatchMetadataQuery) -> Vec<(String, String)> {
     }
     if query.include_player_death_details {
         names.push("death_details");
-    }
-    if query.include_player_custom_user_stats {
-        names.push("custom_user_stats");
     }
     names
         .into_iter()
