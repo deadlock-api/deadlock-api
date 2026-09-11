@@ -134,10 +134,8 @@ function ResultGrid({
 }) {
   return (
     <div className="@container/results">
-      <div
-        className="grid grid-cols-5 gap-0.5 @min-[16.125rem]/results:grid-cols-10"
-        aria-label="Recent results, newest first"
-      >
+      <fieldset className="grid min-w-0 grid-cols-5 gap-0.5 @min-[16.125rem]/results:grid-cols-10">
+        <legend className="sr-only">Recent results, newest first</legend>
         {entries.map((entry) => (
           <Tooltip key={entry.match_id}>
             <TooltipTrigger asChild>
@@ -162,7 +160,7 @@ function ResultGrid({
             </TooltipContent>
           </Tooltip>
         ))}
-      </div>
+      </fieldset>
     </div>
   );
 }

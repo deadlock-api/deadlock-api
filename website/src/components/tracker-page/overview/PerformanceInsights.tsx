@@ -52,10 +52,10 @@ export function PerformanceInsights({
                         "flex items-center gap-1 text-xs font-medium tabular-nums",
                         insight.tone === "good" ? "text-victory" : "text-primary",
                       )}
-                      aria-label={`${insight.delta} percentage points compared with overall win rate`}
                     >
                       <TrendIcon className="size-3.5" aria-hidden="true" />
-                      {insight.delta} pp
+                      <span aria-hidden="true">{insight.delta} pp</span>
+                      <span className="sr-only">{insight.delta} percentage points compared with overall win rate</span>
                     </span>
                   </div>
                   <p className="text-xs font-medium">{insight.headline}</p>

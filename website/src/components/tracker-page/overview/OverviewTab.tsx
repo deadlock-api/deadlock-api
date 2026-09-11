@@ -144,7 +144,8 @@ export function OverviewTab({
           <h2 className="text-sm font-semibold tracking-tight">Player overview</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
-          <span aria-label="Dates of selected matches">
+          <span>
+            <span className="sr-only">Dates of selected matches: </span>
             {day.unix(sorted[sorted.length - 1].start_time).format("MMM D, YYYY")} –{" "}
             {day.unix(sorted[0].start_time).format("MMM D, YYYY")}
           </span>

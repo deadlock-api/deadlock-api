@@ -85,7 +85,10 @@ export function PlayerHeader({
               <RefreshControl accountId={accountId} />
             </div>
             {summary && (
-              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs" aria-label="Across all loaded match history">
+              <section
+                className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs"
+                aria-label="Across all loaded match history"
+              >
                 <span>
                   <span className="font-semibold tabular-nums">{summary.matches.toLocaleString("en-US")}</span>{" "}
                   <span className="text-muted-foreground">recorded matches</span>
@@ -98,7 +101,7 @@ export function PlayerHeader({
                   <span className="font-semibold tabular-nums">{formatPlaytime(summary.totalTimeS)}</span>{" "}
                   <span className="text-muted-foreground">played</span>
                 </span>
-              </div>
+              </section>
             )}
           </div>
         </div>
