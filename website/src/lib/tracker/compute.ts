@@ -449,9 +449,11 @@ export function formatMatchDuration(seconds: number): string {
 }
 
 export function formatPlaytime(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.round((seconds % 3600) / 60);
-  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  const totalMinutes = Math.round(seconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes}m`;
+  return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
 }
 
 /** Rolling window that grows with the history so long careers smooth into a readable line. */
