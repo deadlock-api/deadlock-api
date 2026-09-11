@@ -124,7 +124,7 @@ export function OverviewTab({
     { label: "Souls / min", value: integer(s.soulsPerMin), detail: `${integer(s.avgSouls)} avg. souls` },
     {
       label: "Playtime",
-      value: `${integer(s.totalTimeS / 3600)}h`,
+      value: formatPlaytime(s.totalTimeS),
       detail: `${formatMatchDuration(s.avgDurationS)} avg. match`,
     },
     {

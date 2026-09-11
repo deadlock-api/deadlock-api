@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Skeleton } from "~/components/ui/skeleton";
 import { day } from "~/dayjs";
 import { extractBadgeMap } from "~/lib/leaderboard";
-import { peakRank, summarize } from "~/lib/tracker/compute";
+import { formatPlaytime, peakRank, summarize } from "~/lib/tracker/compute";
 import { steamProfileQueryOptions, trackerRankQueryOptions } from "~/queries/tracker-queries";
 
 import { RefreshControl } from "./RefreshControl";
@@ -95,9 +95,7 @@ export function PlayerHeader({
                   <span className="text-muted-foreground">win rate</span>
                 </span>
                 <span>
-                  <span className="font-semibold tabular-nums">
-                    {Math.round(summary.totalTimeS / 3600).toLocaleString("en-US")}h
-                  </span>{" "}
+                  <span className="font-semibold tabular-nums">{formatPlaytime(summary.totalTimeS)}</span>{" "}
                   <span className="text-muted-foreground">played</span>
                 </span>
               </div>
