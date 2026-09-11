@@ -75,8 +75,11 @@ export function performanceStats({
     { label: "KDA", value: kda.toFixed(2), ...compare(kda, baseline?.kdaRatio) },
     { label: "Souls/min", value: count(soulsPerMin), ...compare(soulsPerMin, baseline?.soulsPerMin) },
     { label: "Last hits", value: count(entry.last_hits), ...compare(entry.last_hits, baseline?.avgLastHits) },
-    { label: "Denies", value: count(entry.denies), ...compare(entry.denies, baseline?.avgDenies) },
   ];
+  // Street Brawl has no lane creeps to deny, so the stat there is a column of zeroes.
+  if (entry.denies > 0 || (baseline?.avgDenies ?? 0) > 0) {
+    stats.push({ label: "Denies", value: count(entry.denies), ...compare(entry.denies, baseline?.avgDenies) });
+  }
 
   if (player) {
     const teamKills = teammates.reduce((sum, mate) => sum + mate.kills, 0);
