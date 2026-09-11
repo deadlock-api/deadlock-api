@@ -226,7 +226,6 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub hero_equips: Vec<u64>,
     pub mvp_rank: Option<u32>,
     pub player_tracked_stats: Vec<(u32, i32)>,
-    pub custom_user_stats: Vec<(String, u32)>,
     #[serde(rename = "accolades.accolade_id")]
     pub accolades_accolade_id: Vec<u32>,
     #[serde(rename = "accolades.accolade_stat_value")]
@@ -689,23 +688,6 @@ impl From<(&MatchInfo, bool, Players)> for ClickhouseMatchPlayer {
                 .iter()
                 .map(|v| (v.tracked_stat_id(), v.tracked_stat_value()))
                 .collect(),
-            custom_user_stats: value
-                .stats
-                .last()
-                .map(|s| {
-                    s.custom_user_stats
-                        .iter()
-                        .map(|v| {
-                            let name = match_info
-                                .custom_user_stats
-                                .iter()
-                                .find(|n| n.id == v.id)
-                                .map_or_else(|| v.id().to_string(), |n| n.name().to_owned());
-                            (name, v.value())
-                        })
-                        .collect()
-                })
-                .unwrap_or_default(),
             accolades_accolade_id: value
                 .accolades
                 .iter()
