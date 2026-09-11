@@ -25,8 +25,7 @@ import { ranksQueryOptions } from "~/queries/ranks-query";
 import { steamProfileQueryOptions, trackerMatchHistoryQueryOptions } from "~/queries/tracker-queries";
 
 const TAB_OPTIONS: { value: TrackerTab; label: string }[] = [
-  { value: "overview", label: "Overview" },
-  { value: "matches", label: "Matches" },
+  { value: "matches", label: "Overview" },
   { value: "heroes", label: "Heroes" },
   { value: "mates", label: "Mates & Enemies" },
 ];
@@ -165,19 +164,6 @@ function TrackerContent({ accountId }: { accountId: number }) {
           ariaLabel="Player tracker sections"
         />
 
-        <TabsContent value="overview">
-          <QueryRenderer query={historyQuery} loadingFallback={loadingFallback}>
-            {() => (
-              <OverviewTab
-                entries={filteredEntries}
-                ranks={ranks}
-                onViewAllMatches={() => setTab("matches")}
-                onOpenMatch={openMatch}
-              />
-            )}
-          </QueryRenderer>
-        </TabsContent>
-
         <TabsContent value="matches">
           <QueryRenderer query={historyQuery} loadingFallback={loadingFallback}>
             {() => (
@@ -190,6 +176,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
                 onHeroChange={setHeroId}
                 hiddenLinkedMatch={hiddenLinkedMatch}
                 onRevealLinkedMatch={revealingFilters ? revealLinkedMatch : undefined}
+                overview={<OverviewTab entries={filteredEntries} onOpenMatch={openMatch} onSelectHero={setHeroId} />}
               />
             )}
           </QueryRenderer>

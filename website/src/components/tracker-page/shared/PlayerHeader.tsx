@@ -111,7 +111,7 @@ export function PlayerHeader({
                 <div className="text-sm font-semibold">
                   {badgeInfo.name} {badgeInfo.subtier}
                 </div>
-                {peak && peak.badge > rank.badge && (
+                {peak && (
                   <div
                     className="text-xs whitespace-nowrap text-muted-foreground"
                     title={`Peak reached ${day.unix(peak.time).format("MMM D, YYYY")}`}

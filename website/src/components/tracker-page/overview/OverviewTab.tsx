@@ -1,191 +1,107 @@
-import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
+import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
+import type { ReactNode } from "react";
 import { useMemo } from "react";
 
-import { BadgeImage } from "~/components/BadgeImage";
-import { HeroImage } from "~/components/HeroImage";
-import { HeroName } from "~/components/HeroName";
-import { Button } from "~/components/ui/button";
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { day } from "~/dayjs";
 import {
   computeActivity,
   computeOutcomeSplits,
   computePerformanceTrend,
   computePlaytimeHabits,
+  computeRecentTrend,
   computeRecords,
   computeSessionMomentum,
   computeStreaks,
-  formatMatchDuration,
-  isWin,
-  matchModeLabel,
-  performanceWindow,
   perHeroRows,
+  performanceWindow,
   rankHistoryPoints,
   recentForm,
+  recentFormByHero,
   summarize,
 } from "~/lib/tracker/compute";
-import { cn } from "~/lib/utils";
+import { computeInsights } from "~/lib/tracker/insights";
 
-import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
-import { FormDots } from "../shared/FormDots";
 import { ActivityChart } from "./ActivityChart";
+import { FormStrip } from "./FormStrip";
+import { InsightsCard } from "./InsightsCard";
 import { PerformanceTrendChart } from "./PerformanceTrendChart";
 import { PersonalBestsCard } from "./PersonalBestsCard";
 import { PlaytimeHeatmap } from "./PlaytimeHeatmap";
 import { RankHistoryChart } from "./RankHistoryChart";
-import { SessionMomentumCard } from "./SessionMomentumCard";
-import { WinRateBreakdownCard } from "./WinRateBreakdownCard";
+import { SplitsCard } from "./SplitsCard";
+import { TopHeroesCard } from "./TopHeroesCard";
 
-function StatTile({ label, value, sub }: { label: string; value: string; sub?: React.ReactNode }) {
+const TOP_HERO_COUNT = 8;
+const HERO_FORM_COUNT = 5;
+const FORM_COUNT = 15;
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    // The card's own vertical padding would otherwise stack on the content's, leaving a tile mostly empty.
-    <Card className="py-4">
-      <CardContent className="px-4">
-        <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="mt-1 text-2xl font-semibold tracking-tight">{value}</div>
-        {sub && <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div>}
-      </CardContent>
-    </Card>
+    <section className="space-y-3">
+      <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{title}</h2>
+      {children}
+    </section>
   );
 }
 
+/** The match list's home pane: how the player is doing, what is driving it, and which heroes carry it. */
 export function OverviewTab({
   entries,
-  ranks,
-  onViewAllMatches,
   onOpenMatch,
+  onSelectHero,
 }: {
   entries: PlayerMatchHistoryEntry[];
-  ranks: Rank[];
-  onViewAllMatches: () => void;
-  /** Opens the matches tab with the given match expanded. */
+  /** Opens a match in the pane beside the list. */
   onOpenMatch: (matchId: number) => void;
+  /** Narrows the filters to one hero. */
+  onSelectHero: (heroId: number) => void;
 }) {
   const summary = useMemo(() => summarize(entries), [entries]);
-  const form = useMemo(() => recentForm(entries, 15), [entries]);
+  const form = useMemo(() => recentForm(entries, FORM_COUNT), [entries]);
   const streaks = useMemo(() => computeStreaks(entries), [entries]);
-  const heroRows = useMemo(() => perHeroRows(entries).slice(0, 8), [entries]);
+  const trend = useMemo(() => computeRecentTrend(entries), [entries]);
+  const heroRows = useMemo(() => perHeroRows(entries), [entries]);
+  const heroForm = useMemo(() => recentFormByHero(entries, HERO_FORM_COUNT), [entries]);
   const rankPoints = useMemo(() => rankHistoryPoints(entries), [entries]);
   const activity = useMemo(() => computeActivity(entries), [entries]);
   const trendWindow = performanceWindow(entries.length);
-  const trend = useMemo(() => computePerformanceTrend(entries, trendWindow), [entries, trendWindow]);
-  const recentMatches = useMemo(() => entries.slice(0, 8), [entries]);
+  const performance = useMemo(() => computePerformanceTrend(entries, trendWindow), [entries, trendWindow]);
   const records = useMemo(() => computeRecords(entries), [entries]);
   const habits = useMemo(() => computePlaytimeHabits(entries), [entries]);
   const splits = useMemo(() => computeOutcomeSplits(entries), [entries]);
   const momentum = useMemo(() => computeSessionMomentum(entries), [entries]);
+  const insights = useMemo(
+    () => computeInsights({ summary, heroRows, splits, momentum, habits }),
+    [summary, heroRows, splits, momentum, habits],
+  );
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-        <StatTile
-          label="Matches"
-          value={summary.matches.toLocaleString("en-US")}
-          sub={`${summary.wins}W – ${summary.losses}L`}
-        />
-        <StatTile label="Win rate" value={`${(summary.winrate * 100).toFixed(1)}%`} sub={<FormDots form={form} />} />
-        <StatTile
-          label="KDA"
-          value={summary.kdaRatio.toFixed(2)}
-          sub={`${summary.avgKills.toFixed(1)} / ${summary.avgDeaths.toFixed(1)} / ${summary.avgAssists.toFixed(1)}`}
-        />
-        <StatTile label="Souls per min" value={Math.round(summary.soulsPerMin).toLocaleString("en-US")} />
-        <StatTile
-          label="Streak"
-          value={streaks.current === 0 ? "—" : `${Math.abs(streaks.current)}${streaks.current > 0 ? "W" : "L"}`}
-          sub={`best ${streaks.longestWin}W · worst ${streaks.longestLoss}L`}
-        />
-      </div>
+    <div className="@container/overview space-y-6">
+      <FormStrip summary={summary} form={form} streaks={streaks} trend={trend} momentum={momentum} />
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
+      <Section title="Progress">
+        <div className="space-y-4">
           <RankHistoryChart points={rankPoints} />
-          <PerformanceTrendChart points={trend} window={trendWindow} summary={summary} />
-          <ActivityChart activity={activity} />
-          <div className="grid gap-4 xl:grid-cols-2">
-            <WinRateBreakdownCard splits={splits} overallWinrate={summary.winrate} />
-            <SessionMomentumCard momentum={momentum} overallWinrate={summary.winrate} />
+          <div className="grid gap-4 @4xl/overview:grid-cols-2">
+            <PerformanceTrendChart points={performance} window={trendWindow} summary={summary} />
+            <ActivityChart activity={activity} />
           </div>
         </div>
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Top heroes</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2.5">
-              {heroRows.length === 0 && <div className="text-sm text-muted-foreground">No matches yet.</div>}
-              {heroRows.map((row) => (
-                <div key={row.heroId} className="flex items-center gap-2.5 text-sm">
-                  <HeroImage heroId={row.heroId} className="size-8 rounded-full" />
-                  <div className="min-w-0 flex-1">
-                    <HeroName heroId={row.heroId} className="block text-sm font-medium" />
-                    <span className="text-xs text-muted-foreground">
-                      {row.matches} {row.matches === 1 ? "match" : "matches"}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium tabular-nums">{(row.winrate * 100).toFixed(0)}%</div>
-                    <div className="text-xs text-muted-foreground tabular-nums">{row.kdaRatio.toFixed(2)} KDA</div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+      </Section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Recent matches</CardTitle>
-              <CardAction>
-                <Button variant="ghost" size="sm" onClick={onViewAllMatches} className="-my-1">
-                  View all
-                </Button>
-              </CardAction>
-            </CardHeader>
-            <CardContent className="space-y-1.5">
-              {recentMatches.length === 0 && <div className="text-sm text-muted-foreground">No matches yet.</div>}
-              {recentMatches.map((entry) => {
-                const win = isWin(entry);
-                return (
-                  <button
-                    key={entry.match_id}
-                    type="button"
-                    onClick={() => onOpenMatch(entry.match_id)}
-                    className="-mx-2 flex w-[calc(100%+1rem)] cursor-pointer items-center gap-2.5 rounded-md px-2 py-1 text-left text-sm transition-colors hover:bg-accent"
-                    title="Open this match"
-                  >
-                    <span className={cn("w-4 text-center font-bold", win ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS)}>
-                      {win ? "W" : "L"}
-                    </span>
-                    <HeroImage heroId={entry.hero_id} className="size-7 rounded-full" />
-                    <div className="min-w-0 flex-1">
-                      <div className="whitespace-nowrap tabular-nums">
-                        {entry.player_kills} / {entry.player_deaths} / {entry.player_assists}
-                      </div>
-                      <div className="truncate text-xs text-muted-foreground">
-                        {matchModeLabel(entry)} · {formatMatchDuration(entry.match_duration_s)}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {entry.ranked_display_badge != null && entry.ranked_display_badge > 0 && (
-                        <BadgeImage badge={entry.ranked_display_badge} ranks={ranks} className="size-6" />
-                      )}
-                      <span
-                        className="text-xs whitespace-nowrap text-muted-foreground"
-                        title={day.unix(entry.start_time).format("MMM D, YYYY HH:mm")}
-                      >
-                        {day.unix(entry.start_time).format("MMM D")}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </CardContent>
-          </Card>
-
-          <PersonalBestsCard records={records} onOpenMatch={onOpenMatch} />
+      <Section title="What stands out">
+        <div className="grid gap-4 @2xl/overview:grid-cols-2 @4xl/overview:grid-cols-3">
+          <InsightsCard insights={insights} />
+          <SplitsCard splits={splits} momentum={momentum} overallWinrate={summary.winrate} />
           <PlaytimeHeatmap habits={habits} />
         </div>
-      </div>
+      </Section>
+
+      <Section title="Highlights">
+        <div className="grid gap-4 @3xl/overview:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <TopHeroesCard rows={heroRows.slice(0, TOP_HERO_COUNT)} formByHero={heroForm} onSelectHero={onSelectHero} />
+          <PersonalBestsCard records={records} onOpenMatch={onOpenMatch} />
+        </div>
+      </Section>
     </div>
   );
 }

@@ -37,7 +37,7 @@ function HabitChip({ label, value, sub }: { label: string; value: string; sub?: 
 }
 
 export function PlaytimeHeatmap({ habits }: { habits: PlaytimeHabits }) {
-  const { cells, maxMatches, favoriteWeekday, bestWeekday, peakHourStart } = habits;
+  const { cells, maxMatches, favoriteWeekday, peakHourStart } = habits;
 
   return (
     <Card>
@@ -58,13 +58,6 @@ export function PlaytimeHeatmap({ habits }: { habits: PlaytimeHabits }) {
                   label="Favorite day"
                   value={WEEKDAY_NAMES[favoriteWeekday.weekday]}
                   sub={`${favoriteWeekday.matches.toLocaleString("en-US")} matches`}
-                />
-              )}
-              {bestWeekday && (
-                <HabitChip
-                  label="Best day"
-                  value={WEEKDAY_NAMES[bestWeekday.weekday]}
-                  sub={`${Math.round((bestWeekday.wins / bestWeekday.matches) * 100)}% over ${bestWeekday.matches} matches`}
                 />
               )}
               {peakHourStart != null && (

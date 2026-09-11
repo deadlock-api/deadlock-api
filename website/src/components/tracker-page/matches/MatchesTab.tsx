@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp, Home } from "lucide-react";
 import { parseAsInteger, parseAsStringLiteral, useQueryState, useQueryStates } from "nuqs";
-import { Fragment, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
@@ -83,6 +83,7 @@ export function MatchesTab({
   onHeroChange,
   hiddenLinkedMatch,
   onRevealLinkedMatch,
+  overview,
 }: {
   entries: PlayerMatchHistoryEntry[];
   ranks: Rank[];
@@ -94,6 +95,8 @@ export function MatchesTab({
   hiddenLinkedMatch: PlayerMatchHistoryEntry | null;
   /** Widens the filters to show `hiddenLinkedMatch`; absent when no filter setting can. */
   onRevealLinkedMatch?: () => void;
+  /** Fills the detail pane while no match is picked. */
+  overview: ReactNode;
 }) {
   const [selectedMatchId, setSelectedMatchId] = useQueryState("match", parseAsInteger);
   const [{ sort: sortKey, dir: sortDir }, setSort] = useQueryStates({
@@ -102,8 +105,9 @@ export function MatchesTab({
   });
   const sortedEntries = useMemo(() => sortMatches(entries, sortKey, sortDir), [entries, sortKey, sortDir]);
   const selectedIndex = sortedEntries.findIndex((entry) => entry.match_id === selectedMatchId);
-  // `entries` arrive newest first, so without a selection in the list the latest match shows.
-  const selected = selectedIndex === -1 ? (hiddenLinkedMatch ?? entries[0]) : sortedEntries[selectedIndex];
+  // No match in the URL means the pane belongs to the overview, the list's own first entry.
+  const selected =
+    selectedMatchId === null ? null : selectedIndex === -1 ? hiddenLinkedMatch : sortedEntries[selectedIndex];
   const selectedId = selected?.match_id;
 
   const [visibleCount, setVisibleCount] = useState(() => Math.max(LIST_CHUNK, selectedIndex + LIST_CHUNK));
@@ -148,7 +152,7 @@ export function MatchesTab({
   // A shared link opens with its match centered in the list; `scrollIntoView` would scroll the page too.
   useEffect(() => {
     const list = listRef.current;
-    const item = list?.querySelector<HTMLElement>("[aria-current]");
+    const item = list?.querySelector<HTMLElement>("[data-match-id][aria-current]");
     if (list && item) list.scrollTop = item.offsetTop - (list.clientHeight - item.offsetHeight) / 2;
   }, []);
 
@@ -211,8 +215,28 @@ export function MatchesTab({
     <div className="@container/matches">
       <div className="grid gap-4 @3xl/matches:grid-cols-[19rem_minmax(0,1fr)] @5xl/matches:grid-cols-[21rem_minmax(0,1fr)]">
         {/* Out of flow, so the list takes the height of the details beside it instead of setting it. */}
-        <aside className="relative h-[26rem] @3xl/matches:h-auto @3xl/matches:min-h-[24rem]">
+        <aside
+          className={cn(
+            "relative h-[26rem] @3xl/matches:h-auto @3xl/matches:min-h-[24rem]",
+            // The overview runs far longer than any match's details, so the list stops growing with it and rides along.
+            selected === null &&
+              "@3xl/matches:sticky @3xl/matches:top-4 @3xl/matches:h-[calc(100vh-5rem)] @3xl/matches:min-h-0 @3xl/matches:self-start",
+          )}
+        >
           <div className="absolute inset-0 flex flex-col overflow-hidden rounded-md border border-border">
+            <button
+              type="button"
+              onClick={() => setSelectedMatchId(null)}
+              aria-current={selected === null ? "true" : undefined}
+              className={cn(
+                "flex w-full cursor-pointer items-center gap-2 border-b border-border px-3 py-2 text-left text-sm transition-colors",
+                "hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none",
+                selected === null ? "bg-accent font-semibold hover:bg-accent focus-visible:bg-accent" : "font-medium",
+              )}
+            >
+              <Home className="size-4 shrink-0 text-muted-foreground" />
+              Overview
+            </button>
             <div className="flex items-center gap-2 border-b border-border px-3 py-1.5">
               <div className="min-w-0 text-xs leading-tight text-muted-foreground tabular-nums">
                 <div className="font-semibold text-foreground">
@@ -316,6 +340,7 @@ export function MatchesTab({
               </div>
             </div>
           )}
+          {selected === null && overview}
           {selected && (
             <MatchDetails
               key={selected.match_id}

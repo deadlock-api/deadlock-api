@@ -52,17 +52,19 @@ export function PersonalBestsCard({
       <CardHeader>
         <CardTitle className="text-base">Personal bests</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-        {tiles.length === 0 && <div className="text-sm text-muted-foreground">No matches yet.</div>}
-        {tiles.map((tile) => (
-          <RecordTile
-            key={tile.key}
-            label={tile.label}
-            record={tile.record}
-            format={tile.format}
-            onOpen={() => onOpenMatch(tile.record.entry.match_id)}
-          />
-        ))}
+      <CardContent className="@container">
+        <div className="grid gap-3 @md:grid-cols-2 @3xl:grid-cols-3">
+          {tiles.length === 0 && <div className="text-sm text-muted-foreground">No matches yet.</div>}
+          {tiles.map((tile) => (
+            <RecordTile
+              key={tile.key}
+              label={tile.label}
+              record={tile.record}
+              format={tile.format}
+              onOpen={() => onOpenMatch(tile.record.entry.match_id)}
+            />
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
