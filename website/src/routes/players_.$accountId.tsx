@@ -4,12 +4,12 @@ import { ArrowLeft } from "lucide-react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { LoadingLogo } from "~/components/LoadingLogo";
 import { QueryRenderer } from "~/components/QueryRenderer";
 import { EnemiesTab, MatesTab } from "~/components/tracker-page/breakdown/PlayerStatsTable";
 import { TrackerFilterBar } from "~/components/tracker-page/filters/TrackerFilterBar";
 import { HeroesTab } from "~/components/tracker-page/heroes/HeroesTab";
 import { MatchesTab } from "~/components/tracker-page/matches/MatchesTab";
+import { OverviewSkeleton } from "~/components/tracker-page/overview/OverviewSkeleton";
 import { OverviewTab } from "~/components/tracker-page/overview/OverviewTab";
 import { FeedbackNoticeDialog } from "~/components/tracker-page/shared/FeedbackNoticeDialog";
 import { PlayerHeader } from "~/components/tracker-page/shared/PlayerHeader";
@@ -150,12 +150,6 @@ function TrackerContent({ accountId }: { accountId: number }) {
     setRevealCount((count) => count + 1);
   };
 
-  const loadingFallback = (
-    <div className="flex items-center justify-center py-24">
-      <LoadingLogo />
-    </div>
-  );
-
   return (
     <div className="flex flex-col gap-3">
       <FeedbackNoticeDialog />
@@ -221,7 +215,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
         {tab === "matches" && (
           <QueryRenderer
             query={historyQuery}
-            loadingFallback={loadingFallback}
+            loadingFallback={<OverviewSkeleton />}
             errorFallback={() => null}
             keepDataOnError
           >
