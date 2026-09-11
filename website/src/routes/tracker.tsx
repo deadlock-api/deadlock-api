@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { useMemo } from "react";
 
+import { TrackerQueryError } from "~/components/tracker-page/shared/TrackerQueryError";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -60,19 +61,19 @@ function MyAccountsCard() {
         <CardTitle className="text-base">Your accounts</CardTitle>
         <CardDescription>Prioritized Steam accounts on your Patreon subscription</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="flex flex-col gap-2">
         {isLoading || (isAuthenticated && accountsQuery.isPending) ? (
-          <div className="space-y-2 px-3 py-1">
+          <div className="flex flex-col gap-2 px-3 py-1">
             <Skeleton className="h-8 w-full" />
             <Skeleton className="h-8 w-full" />
           </div>
         ) : !isAuthenticated ? (
-          <div className="space-y-3 px-3 py-2">
+          <div className="flex flex-col gap-3 px-3 py-2">
             <p className="text-sm text-muted-foreground">
               Sign in with Patreon to see your prioritized accounts here. The tracker is available for linked patron
               accounts only.
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button size="sm" onClick={login}>
                 Sign in with Patreon
               </Button>
@@ -81,8 +82,15 @@ function MyAccountsCard() {
               </Button>
             </div>
           </div>
+        ) : accountsQuery.isError && activeAccounts.length === 0 ? (
+          <TrackerQueryError
+            title="Could not load your accounts"
+            description="Your account list is temporarily unavailable. Try loading it again."
+            onRetry={() => accountsQuery.refetch()}
+            isRetrying={accountsQuery.isFetching}
+          />
         ) : activeAccounts.length === 0 ? (
-          <div className="space-y-3 px-3 py-2">
+          <div className="flex flex-col gap-3 px-3 py-2">
             <p className="text-sm text-muted-foreground">
               {isActive || totalSlots > 0
                 ? "You haven't added any Steam accounts yet. Add one on the Prioritized Fetching page."
@@ -93,14 +101,24 @@ function MyAccountsCard() {
             </Button>
           </div>
         ) : (
-          activeAccounts.map((account) => (
-            <AccountRow
-              key={account.id}
-              accountId={account.steam_id3}
-              avatar={profiles[account.steam_id3]?.avatar}
-              name={profiles[account.steam_id3]?.personaname ?? `Player ${account.steam_id3}`}
-            />
-          ))
+          <>
+            {accountsQuery.isError && (
+              <TrackerQueryError
+                title="Could not refresh your accounts"
+                description="Showing the last loaded account list. Recent changes may not appear yet."
+                onRetry={() => accountsQuery.refetch()}
+                isRetrying={accountsQuery.isFetching}
+              />
+            )}
+            {activeAccounts.map((account) => (
+              <AccountRow
+                key={account.id}
+                accountId={account.steam_id3}
+                avatar={profiles[account.steam_id3]?.avatar}
+                name={profiles[account.steam_id3]?.personaname ?? `Player ${account.steam_id3}`}
+              />
+            ))}
+          </>
         )}
       </CardContent>
     </Card>
@@ -109,7 +127,7 @@ function MyAccountsCard() {
 
 function TrackerLandingPage() {
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="mx-auto flex max-w-xl flex-col gap-6">
       <div className="text-center">
         <h1 className="text-3xl font-bold tracking-tight">Player Tracker</h1>
         <p className="mt-1 text-sm text-muted-foreground">

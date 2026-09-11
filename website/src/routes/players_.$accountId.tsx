@@ -14,6 +14,7 @@ import { OverviewTab } from "~/components/tracker-page/overview/OverviewTab";
 import { FeedbackNoticeDialog } from "~/components/tracker-page/shared/FeedbackNoticeDialog";
 import { PlayerHeader } from "~/components/tracker-page/shared/PlayerHeader";
 import { TrackerGate } from "~/components/tracker-page/shared/TrackerGate";
+import { TrackerQueryError } from "~/components/tracker-page/shared/TrackerQueryError";
 import { Button } from "~/components/ui/button";
 import { useTrackerFilters } from "~/hooks/useTrackerFilters";
 import { prefetchSafe } from "~/lib/prefetch-safe";
@@ -172,6 +173,19 @@ function TrackerContent({ accountId }: { accountId: number }) {
         />
       </PlayerHeader>
 
+      {historyQuery.isError && (
+        <TrackerQueryError
+          title={historyQuery.data ? "Could not refresh match history" : "Could not load match history"}
+          description={
+            historyQuery.data
+              ? "Showing your last loaded matches. New matches may be missing until the next successful refresh."
+              : "Your match history is temporarily unavailable. Try loading it again."
+          }
+          onRetry={() => historyQuery.refetch()}
+          isRetrying={historyQuery.isFetching}
+        />
+      )}
+
       {historyQuery.data?.length === 0 && (
         <p className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
           No match history found for this account yet. If it was prioritized recently, data may still be backfilling.
@@ -205,7 +219,12 @@ function TrackerContent({ accountId }: { accountId: number }) {
           </div>
         )}
         {tab === "matches" && (
-          <QueryRenderer query={historyQuery} loadingFallback={loadingFallback} keepDataOnError>
+          <QueryRenderer
+            query={historyQuery}
+            loadingFallback={loadingFallback}
+            errorFallback={() => null}
+            keepDataOnError
+          >
             {() => (
               <MatchesTab
                 key={revealCount}

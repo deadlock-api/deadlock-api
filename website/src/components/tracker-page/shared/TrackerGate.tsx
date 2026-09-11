@@ -9,6 +9,8 @@ import { usePatronAuth } from "~/hooks/usePatronAuth";
 import { IS_DEV } from "~/lib/constants";
 import { steamAccountsQueryOptions } from "~/queries/patron-queries";
 
+import { TrackerQueryError } from "./TrackerQueryError";
+
 function GateCard({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
     <div className="mx-auto max-w-xl py-16">
@@ -67,6 +69,19 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
   }
 
   const isOwnAccount = accountsQuery.data?.accounts.some((account) => account.steam_id3 === accountId) ?? false;
+  if (accountsQuery.isError && !isOwnAccount) {
+    return (
+      <div className="mx-auto max-w-xl py-16">
+        <TrackerQueryError
+          title="Could not check your accounts"
+          description="We could not load your prioritized accounts. Try again to open this player's tracker."
+          onRetry={() => accountsQuery.refetch()}
+          isRetrying={accountsQuery.isFetching}
+        />
+      </div>
+    );
+  }
+
   if (!isOwnAccount) {
     return (
       <GateCard icon={<ShieldX className="size-6 text-primary" />} title="Not one of your prioritized accounts">
