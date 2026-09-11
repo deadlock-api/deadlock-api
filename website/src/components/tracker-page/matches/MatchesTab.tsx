@@ -69,7 +69,7 @@ function SessionHeader({ session }: { session: PlaySession }) {
         className="ml-auto text-muted-foreground tabular-nums"
         title={`${day.unix(session.startUnix).format("HH:mm")} – ${day.unix(session.endUnix).format("HH:mm")}`}
       >
-        {session.matches} · {formatPlaytime(session.totalTimeS)}
+        {formatPlaytime(session.totalTimeS)}
       </span>
     </div>
   );
