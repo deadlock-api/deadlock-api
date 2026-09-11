@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { UsersRound } from "lucide-react";
 import { useMemo } from "react";
@@ -155,9 +156,14 @@ function CompanionPreview({
                       {isLoading && !profile ? (
                         <Skeleton className="h-4 w-24" />
                       ) : (
-                        <span className="truncate text-xs" title={profile?.personaname ?? `Player ${row.accountId}`}>
+                        <Link
+                          to="/players/$accountId"
+                          params={{ accountId: String(row.accountId) }}
+                          className="truncate rounded-sm text-xs hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+                          title={`Open ${profile?.personaname ?? `Player ${row.accountId}`} in the player tracker`}
+                        >
                           {profile?.personaname ?? `Player ${row.accountId}`}
-                        </span>
+                        </Link>
                       )}
                     </div>
                   </TableCell>
