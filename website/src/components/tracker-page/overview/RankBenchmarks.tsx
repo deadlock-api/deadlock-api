@@ -19,8 +19,8 @@ import { cn } from "~/lib/utils";
 import { playerStatsMetricsQueryOptions } from "~/queries/player-stats-metrics-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
-import { DashboardPanel } from "./DashboardPanel";
 import { MetricGaussian } from "./MetricGaussian";
+import { OverviewDetailPanel } from "./OverviewDetailPanel";
 
 const PRIMARY_METRICS = [
   "kills",
@@ -56,7 +56,6 @@ export function RankBenchmarks({
 }) {
   const { data: ranks = [] } = useQuery(ranksQueryOptions);
   const [selection, setSelection] = useState("auto");
-  const [expanded, setExpanded] = useState(false);
   const mode = MODE_CONFIG[filters.mode];
   const autoRange = benchmarkRankRange(latestBadge);
   const range =
@@ -92,14 +91,95 @@ export function RankBenchmarks({
   });
   const loading = enabled && (player.isPending || cohort.isPending);
   const failed = enabled && (player.isError || cohort.isError);
-  const metrics = expanded
-    ? PLAYER_METRICS
-    : PRIMARY_METRICS.flatMap((key) => PLAYER_METRICS.filter((m) => m.key === key));
-  const hasData = metrics.some((m) => compareBenchmark(player.data?.[m.key]?.avg, cohort.data?.[m.key]?.avg));
+  const renderContent = (expanded: boolean) => {
+    const metrics = expanded
+      ? PLAYER_METRICS
+      : PRIMARY_METRICS.flatMap((key) => PLAYER_METRICS.filter((m) => m.key === key));
+    const hasData = metrics.some((m) => compareBenchmark(player.data?.[m.key]?.avg, cohort.data?.[m.key]?.avg));
+
+    return (
+      <>
+        {filters.result !== "all" ? (
+          <p className="py-3 text-xs text-muted-foreground">
+            Choose “All” results to compare performance. Rank benchmarks cannot be filtered to wins or losses.
+          </p>
+        ) : needsRank ? (
+          <p className="py-3 text-xs text-muted-foreground">
+            No rank is recorded for this player. Choose a rank range above to compare against a lobby average.
+          </p>
+        ) : loading ? (
+          <output
+            aria-label="Loading rank benchmarks"
+            className="grid grid-cols-2 gap-2 @xl/overview:grid-cols-3 @3xl/overview:grid-cols-4 @5xl/overview:grid-cols-6"
+          >
+            {PRIMARY_METRICS.map((key) => (
+              <Skeleton key={key} className={cn("w-full", expanded ? "h-32" : "h-14")} />
+            ))}
+          </output>
+        ) : failed ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 py-2">
+            <output className="text-xs text-muted-foreground">Rank benchmarks couldn’t be loaded.</output>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={player.isFetching || cohort.isFetching}
+              onClick={() => {
+                void player.refetch();
+                void cohort.refetch();
+              }}
+            >
+              <RefreshCw data-icon="inline-start" />
+              Retry
+            </Button>
+          </div>
+        ) : !hasData ? (
+          <p className="py-3 text-xs text-muted-foreground">
+            No recorded match statistics are available for this comparison. Try another date or rank range.
+          </p>
+        ) : (
+          <>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-1 text-[10px] text-muted-foreground">
+              <span>Player averages vs. {cohortLabel} lobby averages</span>
+              <span className="flex items-center gap-3">
+                <span className="flex items-center gap-1">
+                  <span className="size-1.5 rounded-sm bg-chart-4" />
+                  Player
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="size-1.5 rounded-sm bg-muted-foreground" />
+                  Rank group
+                </span>
+              </span>
+            </div>
+            <div
+              className={cn(
+                "grid grid-cols-2 gap-2",
+                expanded
+                  ? "@xl/stats-dialog:grid-cols-3 @4xl/stats-dialog:grid-cols-4"
+                  : "@xl/overview:grid-cols-3 @3xl/overview:grid-cols-4 @5xl/overview:grid-cols-6",
+              )}
+            >
+              {metrics.map((def) => (
+                <BenchmarkMetric
+                  key={def.key}
+                  def={def}
+                  showDistribution={expanded}
+                  player={player.data?.[def.key]}
+                  cohort={cohort.data?.[def.key]}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </>
+    );
+  };
 
   return (
-    <DashboardPanel
+    <OverviewDetailPanel
       title="Rank benchmarks"
+      showMetaInDialog
+      details={() => renderContent(true)}
       icon={ChartNoAxesCombined}
       meta={
         mode.supportsRank ? (
@@ -130,79 +210,8 @@ export function RankBenchmarks({
         )
       }
     >
-      {filters.result !== "all" ? (
-        <p className="py-3 text-xs text-muted-foreground">
-          Choose “All” results to compare performance. Rank benchmarks cannot be filtered to wins or losses.
-        </p>
-      ) : needsRank ? (
-        <p className="py-3 text-xs text-muted-foreground">
-          No rank is recorded for this player. Choose a rank range above to compare against a lobby average.
-        </p>
-      ) : loading ? (
-        <output aria-label="Loading rank benchmarks" className="grid grid-cols-2 gap-2 @xl/overview:grid-cols-3">
-          {PRIMARY_METRICS.map((key) => (
-            <Skeleton key={key} className="h-32 w-full" />
-          ))}
-        </output>
-      ) : failed ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 py-2">
-          <output className="text-xs text-muted-foreground">Rank benchmarks couldn’t be loaded.</output>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={player.isFetching || cohort.isFetching}
-            onClick={() => {
-              void player.refetch();
-              void cohort.refetch();
-            }}
-          >
-            <RefreshCw data-icon="inline-start" />
-            Retry
-          </Button>
-        </div>
-      ) : !hasData ? (
-        <p className="py-3 text-xs text-muted-foreground">
-          No recorded match statistics are available for this comparison. Try another date or rank range.
-        </p>
-      ) : (
-        <>
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-1 text-[10px] text-muted-foreground">
-            <span>Player averages vs. {cohortLabel} lobby averages</span>
-            <span className="flex items-center gap-3">
-              <span className="flex items-center gap-1">
-                <span className="size-1.5 rounded-sm bg-chart-4" />
-                Player
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="size-1.5 rounded-sm bg-muted-foreground" />
-                Rank group
-              </span>
-            </span>
-          </div>
-          <div className="grid grid-cols-1 gap-x-4 gap-y-2 @sm/overview:grid-cols-2 @3xl/overview:grid-cols-3">
-            {metrics.map((def) => (
-              <BenchmarkMetric
-                key={def.key}
-                def={def}
-                player={player.data?.[def.key]}
-                cohort={cohort.data?.[def.key]}
-              />
-            ))}
-          </div>
-          <div className="mt-2 flex justify-end">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7"
-              aria-expanded={expanded}
-              onClick={() => setExpanded(!expanded)}
-            >
-              {expanded ? "Show key metrics" : `All ${PLAYER_METRICS.length} metrics`}
-            </Button>
-          </div>
-        </>
-      )}
-    </DashboardPanel>
+      {renderContent(false)}
+    </OverviewDetailPanel>
   );
 }
 
@@ -210,8 +219,10 @@ function BenchmarkMetric({
   def,
   player,
   cohort,
+  showDistribution,
 }: {
   def: PlayerMetricDefinition;
+  showDistribution: boolean;
   player: HashMapValue | undefined;
   cohort: HashMapValue | undefined;
 }) {
@@ -268,13 +279,15 @@ function BenchmarkMetric({
           </div>
         </TooltipContent>
       </Tooltip>
-      <MetricGaussian
-        player={player}
-        cohort={cohort}
-        label={def.label}
-        format={format}
-        bounded={def.format === "percent"}
-      />
+      {showDistribution && (
+        <MetricGaussian
+          player={player}
+          cohort={cohort}
+          label={def.label}
+          format={format}
+          bounded={def.format === "percent"}
+        />
+      )}
     </div>
   );
 }
