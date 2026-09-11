@@ -148,7 +148,7 @@ export function RankBenchmarks({
                   </span>
                   <span className="flex items-center gap-1">
                     <span className="size-1.5 rounded-sm bg-muted-foreground" />
-                    Rank group
+                    Lobby
                   </span>
                 </span>
               </div>
@@ -182,7 +182,7 @@ export function RankBenchmarks({
       title="Rank benchmarks"
       showMetaInDialog
       details={() => renderContent(true)}
-      footer="Player averages / rank group averages"
+      footer="Your average / lobby average"
       icon={ChartNoAxesCombined}
       meta={
         mode.supportsRank ? (

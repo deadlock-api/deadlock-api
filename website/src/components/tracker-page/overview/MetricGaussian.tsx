@@ -7,7 +7,7 @@ import { buildGaussianComparison } from "~/lib/tracker/gaussian";
 
 const config = {
   player: { label: "Player", color: "var(--chart-4)" },
-  cohort: { label: "Rank group", color: "var(--muted-foreground)" },
+  cohort: { label: "Lobby", color: "var(--muted-foreground)" },
 };
 
 export function MetricGaussian({
@@ -37,7 +37,7 @@ export function MetricGaussian({
   return (
     <figure
       className="relative"
-      aria-label={`${label}: Gaussian approximations. Player mean ${format(player?.avg ?? NaN)}, rank-group mean ${format(cohort?.avg ?? NaN)}. Vertical lines mark the means.`}
+      aria-label={`${label}: Gaussian approximations. Player mean ${format(player?.avg ?? NaN)}, lobby mean ${format(cohort?.avg ?? NaN)}. Vertical lines mark the means.`}
     >
       <ChartContainer config={config} className="aspect-auto h-20 w-full">
         <AreaChart data={curve.points} margin={{ top: 4, right: 12, bottom: 0, left: 12 }} accessibilityLayer={false}>
