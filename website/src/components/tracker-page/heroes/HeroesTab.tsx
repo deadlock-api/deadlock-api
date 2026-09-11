@@ -14,7 +14,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { QueryRenderer } from "~/components/QueryRenderer";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
-import { extractBadgeMap } from "~/lib/leaderboard";
+import { benchmarkRankRange } from "~/lib/tracker/benchmarks";
 import { type FormResult, recentFormByHero } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
@@ -76,7 +76,7 @@ function DeltaBadge({
   suffix?: string;
   averageLabel: string;
 }) {
-  if (Math.abs(value) < 0.5 * 10 ** -digits) return null;
+  if (!Number.isFinite(value) || Math.abs(value) < 0.5 * 10 ** -digits) return null;
   return (
     <span
       className={cn("hidden text-xs tabular-nums @lg:inline", value > 0 ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS)}
@@ -171,9 +171,11 @@ export function HeroesTab({
 
   const { data: rank } = useQuery(trackerRankQueryOptions(accountId));
   const { data: ranks = [] } = useQuery(ranksQueryOptions);
-  const badge = rank != null && rank.badge > 0 ? rank.badge : null;
-  const tier = badge != null ? Math.floor(badge / 10) : null;
-  const tierName = badge != null ? extractBadgeMap(ranks).get(badge)?.name : undefined;
+  const rankRange = useMemo(
+    () => (gameMode === "normal" ? benchmarkRankRange(rank?.badge) : null),
+    [gameMode, rank?.badge],
+  );
+  const tierName = ranks.find((rank) => rank.tier === rankRange?.tier)?.name;
 
   const averageParams = useMemo(
     (): AnalyticsApiHeroStatsRequest => ({
@@ -181,12 +183,12 @@ export function HeroesTab({
       matchMode,
       minUnixTimestamp: minUnixTimestamp ?? undefined,
       maxUnixTimestamp: maxUnixTimestamp ?? undefined,
-      minAverageBadge: tier != null ? tier * 10 + 1 : undefined,
-      maxAverageBadge: tier != null ? tier * 10 + 6 : undefined,
+      minAverageBadge: rankRange?.min,
+      maxAverageBadge: rankRange?.max,
       minHeroMatches: 0,
       minHeroMatchesTotal: 0,
     }),
-    [gameMode, matchMode, minUnixTimestamp, maxUnixTimestamp, tier],
+    [gameMode, matchMode, minUnixTimestamp, maxUnixTimestamp, rankRange],
   );
   const { data: averages } = useQuery({
     ...heroStatsQueryOptions(averageParams),
@@ -206,7 +208,7 @@ export function HeroesTab({
           ]),
       ),
   });
-  const bracketLabel = tierName ? `${tierName} players` : "all players";
+  const bracketLabel = rankRange ? `${tierName ?? `Tier ${rankRange.tier}`} players` : "all players";
 
   const handleSort = (key: keyof Omit<HeroRow, "heroId">) => {
     if (sortKey === key) {
@@ -285,7 +287,7 @@ export function HeroesTab({
                                 <DeltaBadge
                                   value={(row.winrate - average.winrate) * 100}
                                   digits={1}
-                                  suffix="%"
+                                  suffix=" pp"
                                   averageLabel={`${bracketLabel} average: ${(average.winrate * 100).toFixed(1)}%`}
                                 />
                               )}
@@ -331,7 +333,8 @@ export function HeroesTab({
             </Table>
             {averages && rows.length > 0 && (
               <p className="mt-2 hidden text-xs text-muted-foreground @lg:block">
-                Win rate and KDA deltas compare against {bracketLabel} on the same hero in the selected range.
+                Compared with {bracketLabel} on the same hero in the selected range. Win-rate differences are in
+                percentage points (pp).
               </p>
             )}
           </div>
