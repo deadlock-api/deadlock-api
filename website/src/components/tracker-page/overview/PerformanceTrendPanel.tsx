@@ -37,7 +37,13 @@ const windows = ["auto", "5", "10", "20", "50"] as const;
 type WindowChoice = (typeof windows)[number];
 const axis = { fontSize: 9, fill: "var(--muted-foreground)" };
 
-export function PerformanceTrendPanel({ entries }: { entries: PlayerMatchHistoryEntry[] }) {
+export function PerformanceTrendPanel({
+  entries,
+  className,
+}: {
+  entries: PlayerMatchHistoryEntry[];
+  className?: string;
+}) {
   const [metric, setMetric] = useState<Metric>("winrate");
   const [windowChoice, setWindowChoice] = useState<WindowChoice>("auto");
   const window = windowChoice === "auto" ? performanceWindow(entries.length) : Number(windowChoice);
@@ -46,7 +52,12 @@ export function PerformanceTrendPanel({ entries }: { entries: PlayerMatchHistory
   const latest = points.at(-1);
 
   return (
-    <DashboardPanel title="Performance trend" icon={ChartNoAxesCombined} meta={`Rolling ${window} matches`}>
+    <DashboardPanel
+      title="Performance trend"
+      icon={ChartNoAxesCombined}
+      meta={`Rolling ${window} matches`}
+      className={className}
+    >
       <div className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-center justify-between gap-1">
           <ToggleGroup

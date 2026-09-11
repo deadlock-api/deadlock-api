@@ -37,8 +37,8 @@ export function TrendPanels({
   };
   const latestRank = ranks.at(-1);
   return (
-    <div className="grid gap-2 @3xl/overview:grid-cols-3">
-      <PerformanceTrendPanel entries={entries} />
+    <div className="grid gap-2 @xl/overview:grid-cols-2 @3xl/overview:grid-cols-3">
+      <PerformanceTrendPanel entries={entries} className="@xl/overview:col-span-2 @3xl/overview:col-span-1" />
       <DashboardPanel title="Rank history" icon={Medal} meta={`${ranks.length} recorded`}>
         <div
           className="mb-1 truncate text-lg font-semibold"
