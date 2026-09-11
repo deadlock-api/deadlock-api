@@ -220,6 +220,14 @@ export function MatchesTab({
     setVisibleCount(LIST_CHUNK);
     if (listRef.current) listRef.current.scrollTop = 0;
   };
+  const reverseSortLabel =
+    sortKey === "played"
+      ? sortDir === "desc"
+        ? "Show oldest matches first"
+        : "Show newest matches first"
+      : sortDir === "desc"
+        ? "Sort low to high"
+        : "Sort high to low";
 
   const { data: heroNames } = useQuery({
     ...heroesQueryOptions,
@@ -355,8 +363,8 @@ export function MatchesTab({
                 size="icon"
                 className="size-7 shrink-0"
                 onClick={() => changeSort({ dir: sortDir === "desc" ? "asc" : "desc" })}
-                aria-label={sortDir === "desc" ? "Sorted high to low" : "Sorted low to high"}
-                title={sortDir === "desc" ? "Sorted high to low" : "Sorted low to high"}
+                aria-label={reverseSortLabel}
+                title={reverseSortLabel}
               >
                 {sortDir === "desc" ? <ArrowDown className="size-3.5" /> : <ArrowUp className="size-3.5" />}
               </Button>
