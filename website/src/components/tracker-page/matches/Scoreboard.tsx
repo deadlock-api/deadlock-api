@@ -157,6 +157,41 @@ function ItemChip({ item }: { item: BuildItem }) {
 
 const Divider = () => <span aria-hidden className="mx-0.5 h-4 w-px bg-border" />;
 
+/** The full stat line, which the table itself drops column by column as the panel narrows. */
+function PlayerStatLines({
+  player,
+  name,
+  lane,
+}: {
+  player: TrackerMatchPlayer;
+  name: string;
+  lane: (typeof LANES)[number] | undefined;
+}) {
+  const number = (value: number) => value.toLocaleString("en-US");
+  const plural = (value: number, one: string, many: string) => `${number(value)} ${value === 1 ? one : many}`;
+  return (
+    <>
+      <div className="font-medium">
+        {name}
+        {player.level > 0 && ` · level ${player.level}`}
+        {lane && ` · ${lane.name} lane`}
+      </div>
+      <div className="text-muted-foreground tabular-nums">
+        {player.kills}/{player.deaths}/{player.assists} K/D/A · {number(player.net_worth)} souls
+      </div>
+      <div className="text-muted-foreground tabular-nums">
+        {plural(player.last_hits, "last hit", "last hits")} · {plural(player.denies, "deny", "denies")}
+      </div>
+      <div className="text-muted-foreground tabular-nums">
+        {number(player.player_damage)} hero damage · {number(player.player_damage_taken)} taken
+      </div>
+      <div className="text-muted-foreground tabular-nums">
+        {number(player.boss_damage)} objective damage · {number(player.player_healing)} healing
+      </div>
+    </>
+  );
+}
+
 /** Both teams' end-of-match stats side by side, with the stat bars scaled to the lobby maximum. */
 export function Scoreboard({
   match,
@@ -278,22 +313,26 @@ export function Scoreboard({
                     )}
                   >
                     <tr>
-                      <td className="w-8 py-1 pl-2">
-                        <div
-                          className="relative size-6 rounded-full"
-                          style={lane && { boxShadow: `0 0 0 2px ${lane.color}` }}
-                          title={lane && `${lane.name} lane`}
-                        >
-                          <HeroImage heroId={player.hero_id} className="size-6 rounded-full" />
-                          {player.level > 0 && (
-                            <span
-                              className="absolute -right-1.5 -bottom-1 rounded-sm bg-background px-0.5 text-[9px] leading-tight font-semibold text-muted-foreground tabular-nums"
-                              title={`Level ${player.level}`}
+                      {/* The cell holds only the portrait and a level badge, so it carries the label itself. */}
+                      <td className="w-8 py-1 pl-2" aria-label={`${name}, level ${player.level}`}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div
+                              className="relative size-6 rounded-full"
+                              style={lane && { boxShadow: `0 0 0 2px ${lane.color}` }}
                             >
-                              {player.level}
-                            </span>
-                          )}
-                        </div>
+                              <HeroImage heroId={player.hero_id} className="size-6 rounded-full" />
+                              {player.level > 0 && (
+                                <span className="absolute -right-1.5 -bottom-1 rounded-sm bg-background px-0.5 text-[9px] leading-tight font-semibold text-muted-foreground tabular-nums">
+                                  {player.level}
+                                </span>
+                              )}
+                            </div>
+                          </TooltipTrigger>
+                          <PanelTooltipContent>
+                            <PlayerStatLines player={player} name={name} lane={lane} />
+                          </PanelTooltipContent>
+                        </Tooltip>
                       </td>
                       <td className="w-full max-w-0 px-2 py-1">
                         <div className="flex items-center gap-1.5">

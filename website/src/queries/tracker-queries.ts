@@ -142,7 +142,10 @@ export interface TrackerMatchPlayer {
   assists: number;
   net_worth: number;
   level: number;
+  last_hits: number;
+  denies: number;
   player_damage: number;
+  player_damage_taken: number;
   boss_damage: number;
   player_healing: number;
   mvp_rank: number | null;
@@ -208,6 +211,8 @@ interface RestMatchMetadata {
       assists?: number;
       net_worth?: number;
       level?: number;
+      last_hits?: number;
+      denies?: number;
       mvp_rank?: number | null;
       ability_stats?: { ability_id?: number; ability_value?: number }[] | null;
       player_rank_data?: {
@@ -233,6 +238,7 @@ interface RestMatchMetadata {
         creep_kills?: number;
         denies?: number;
         player_damage?: number;
+        player_damage_taken?: number;
         boss_damage?: number;
         player_healing?: number;
       }[];
@@ -373,7 +379,10 @@ async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<Track
       assists: player.assists ?? 0,
       net_worth: player.net_worth ?? 0,
       level: player.level ?? 0,
+      last_hits: player.last_hits ?? 0,
+      denies: player.denies ?? 0,
       player_damage: maxStat(player.stats, "player_damage"),
+      player_damage_taken: maxStat(player.stats, "player_damage_taken"),
       boss_damage: maxStat(player.stats, "boss_damage"),
       player_healing: maxStat(player.stats, "player_healing"),
       mvp_rank: player.mvp_rank ?? null,
@@ -444,7 +453,10 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
               assists: true,
               net_worth: true,
               player_level: true,
+              last_hits: true,
+              denies: true,
               max_player_damage: true,
+              max_player_damage_taken: true,
               max_boss_damage: true,
               mvp_rank: true,
               player_rank_initial_display_rank: true,
@@ -493,7 +505,10 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
           assists: player.assists ?? 0,
           net_worth: player.net_worth ?? 0,
           level: player.player_level ?? 0,
+          last_hits: player.last_hits ?? 0,
+          denies: player.denies ?? 0,
           player_damage: player.max_player_damage ?? 0,
+          player_damage_taken: player.max_player_damage_taken ?? 0,
           boss_damage: player.max_boss_damage ?? 0,
           player_healing: maxStat(player.stats ?? undefined, "player_healing"),
           mvp_rank: player.mvp_rank ?? null,
