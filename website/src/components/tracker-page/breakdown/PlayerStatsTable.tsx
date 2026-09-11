@@ -5,7 +5,7 @@ import type {
   PlayersApiEnemyStatsRequest,
   PlayersApiMateStatsRequest,
 } from "deadlock_api_client";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { PaginationControls } from "~/components/PaginationControls";
@@ -31,6 +31,7 @@ interface CompanionTableProps {
 }
 
 function CompanionTable({ rows, isPending, isError, matchesLabel, winrateLabel }: CompanionTableProps) {
+  const minimumMatchesId = useId();
   const [minMatches, setMinMatches] = useState(2);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
@@ -66,7 +67,8 @@ function CompanionTable({ rows, isPending, isError, matchesLabel, winrateLabel }
   }
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / itemsPerPage));
-  const paginatedRows = filteredRows.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
+  const visiblePage = Math.min(currentPage, totalPages - 1);
+  const paginatedRows = filteredRows.slice(visiblePage * itemsPerPage, (visiblePage + 1) * itemsPerPage);
 
   return (
     <div className="@container space-y-3">
@@ -77,18 +79,21 @@ function CompanionTable({ rows, isPending, isError, matchesLabel, winrateLabel }
           setCurrentPage(0);
         }}
         itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        currentPage={currentPage}
+        onItemsPerPageChange={(count) => {
+          setItemsPerPage(count);
+          setCurrentPage(0);
+        }}
+        currentPage={visiblePage}
         onPageChange={setCurrentPage}
         totalPages={totalPages}
         searchPlaceholder="Search player..."
       >
         <div className="flex items-center gap-2">
-          <Label htmlFor="min-matches" className="text-xs text-muted-foreground">
+          <Label htmlFor={minimumMatchesId} className="text-xs text-muted-foreground">
             Min matches
           </Label>
           <Input
-            id="min-matches"
+            id={minimumMatchesId}
             type="number"
             min={1}
             value={minMatches}
