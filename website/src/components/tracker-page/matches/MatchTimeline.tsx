@@ -1,5 +1,6 @@
 import type { Ref } from "react";
 
+import { HeroImage } from "~/components/HeroImage";
 import { formatMatchDuration } from "~/lib/tracker/compute";
 import type { FightSummary } from "~/lib/tracker/fights";
 import type { ObjectiveEvent } from "~/lib/tracker/objectives";
@@ -25,6 +26,7 @@ export function MatchTimeline({
   lead,
   objectives,
   fights,
+  viewed,
   viewedIsAlly,
   durationS,
   nameOf,
@@ -35,6 +37,8 @@ export function MatchTimeline({
   objectives: ObjectiveEvent[];
   /** The viewed player's kills and deaths. */
   fights: FightSummary | null;
+  /** The player whose kills and deaths the chart plots, which the scoreboard picks. */
+  viewed: TrackerMatchPlayer | undefined;
   /** Whether the viewed player is on the tracked player's team, whose side the chart takes. */
   viewedIsAlly: boolean;
   durationS: number;
@@ -86,6 +90,12 @@ export function MatchTimeline({
           </span>
         )}
         <span className="ml-auto flex items-center gap-3">
+          {viewed && (
+            <span className="flex items-center gap-1.5 text-foreground">
+              <HeroImage heroId={viewed.hero_id} className="size-4 rounded-full" title="" />
+              <span className="max-w-32 truncate">{nameOf(viewed)}</span>
+            </span>
+          )}
           <span className="flex items-center gap-3" aria-hidden>
             <LegendSwatch color={killColor} label="Kill" />
             <LegendSwatch color={deathColor} label="Death" />

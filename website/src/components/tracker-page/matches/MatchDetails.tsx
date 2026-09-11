@@ -210,6 +210,7 @@ function MatchBody({
       }),
     [entry, match, tracked, accountId, ownTeam, baseline],
   );
+  const viewedPlayer = match?.players.find((player) => player.account_id === viewedAccountId);
   const timelineRef = useRef<HTMLDivElement>(null);
   const viewPlayer = (playerAccountId: number) => {
     setViewedAccountId(playerAccountId);
@@ -248,7 +249,8 @@ function MatchBody({
         lead={soulLead}
         objectives={objectiveEvents}
         fights={fights}
-        viewedIsAlly={match.players.find((player) => player.account_id === viewedAccountId)?.team === ownTeam}
+        viewed={viewedPlayer}
+        viewedIsAlly={viewedPlayer?.team === ownTeam}
         durationS={entry.match_duration_s}
         nameOf={nameOf}
       />
