@@ -35,11 +35,11 @@ jobs:
       run:
         working-directory: tools
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install pinned Rust toolchain
         run: rustup component add rustfmt
       - name: Rustfmt Check
-        uses: actions-rust-lang/rustfmt@v1
+        uses: actions-rust-lang/rustfmt@4066006ec54a31931b9b1fddfd38f2fdf2d27143 # v1.1.2
         with:
           manifest-path: tools/Cargo.toml
 
@@ -50,7 +50,7 @@ jobs:
       run:
         working-directory: tools
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install pinned Rust toolchain
         run: rustup show active-toolchain
       - name: Machete
@@ -65,11 +65,11 @@ jobs:
       run:
         working-directory: tools
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install Protocol Buffers compiler
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
       - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: "tools-build-cache-${{ runner.os }}-${{ runner.arch }}"
           workspaces: "tools -> target"
@@ -82,18 +82,18 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup Docker Builder
-        uses: useblacksmith/setup-docker-builder@v1
+        uses: useblacksmith/setup-docker-builder@e4c1c000c95f9cc255f72940e9c56bcbd1239436 # v1.13.0
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build Base Image
         id: build-base
-        uses: useblacksmith/build-push-action@v2
+        uses: useblacksmith/build-push-action@9b0579bbec7a6cad2f171596c57e7ac1e7658850 # v2.3.0
         with:
           context: tools
           platforms: linux/amd64
@@ -119,10 +119,10 @@ jobs:
           - demo-analyzer
           - friends-rank-fetcher
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Filter changed paths
         id: changes
-        uses: dorny/paths-filter@v4
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
           filters: |
             change: [ 'tools/${{ matrix.component }}/**', 'tools/common/**', 'tools/Cargo.toml', 'tools/Cargo.lock', 'tools/Dockerfile' ]
@@ -136,10 +136,10 @@ jobs:
           fi
       - name: Set up Docker
         if: steps.should_deploy.outputs.deploy == 'true'
-        uses: docker/setup-docker-action@v5
+        uses: docker/setup-docker-action@77e84dbf09b47d1e29270283c22f16145aa85ca1 # v5.4.0
       - name: Login to GitHub Container Registry
         if: steps.should_deploy.outputs.deploy == 'true'
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}

@@ -38,7 +38,7 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: rustup component add rustfmt
       - name: Rustfmt Check
         run: cargo fmt --all -- --check
@@ -50,8 +50,8 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: taiki-e/cache-cargo-install-action@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
         with:
           tool: cargo-machete
       - name: Machete
@@ -64,8 +64,8 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: taiki-e/cache-cargo-install-action@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
         with:
           tool: typos-cli
       - name: Typos Check
@@ -78,7 +78,7 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev ${{ inputs.lint-extra-apt-packages }}
       - name: Install Rust toolchain
@@ -87,7 +87,7 @@ jobs:
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: "${{ inputs.rust-cache-shared-key }}-${{ runner.os }}-${{ runner.arch }}"
           workspaces: "${{ inputs.working-directory }} -> target"
