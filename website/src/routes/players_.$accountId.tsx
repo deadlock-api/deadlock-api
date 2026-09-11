@@ -13,6 +13,7 @@ import { OverviewSkeleton } from "~/components/tracker-page/overview/OverviewSke
 import { OverviewTab } from "~/components/tracker-page/overview/OverviewTab";
 import { FeedbackNoticeDialog } from "~/components/tracker-page/shared/FeedbackNoticeDialog";
 import { PlayerHeader } from "~/components/tracker-page/shared/PlayerHeader";
+import { TrackerEmptyState } from "~/components/tracker-page/shared/TrackerEmptyState";
 import { TrackerGate } from "~/components/tracker-page/shared/TrackerGate";
 import { TrackerQueryError } from "~/components/tracker-page/shared/TrackerQueryError";
 import { Button } from "~/components/ui/button";
@@ -20,7 +21,8 @@ import { useTrackerFilters } from "~/hooks/useTrackerFilters";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { seo } from "~/lib/seo";
 import { parseSteamIdToId3 } from "~/lib/steam";
-import { filterMatches, filtersRevealing } from "~/lib/tracker/compute";
+import { filterMatches, filtersRevealing, type TrackerFilterValues } from "~/lib/tracker/compute";
+import { filterRecoveryOptions } from "~/lib/tracker/filter-recovery";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 import { steamProfileQueryOptions, trackerMatchHistoryQueryOptions } from "~/queries/tracker-queries";
@@ -101,6 +103,10 @@ function TrackerContent({ accountId }: { accountId: number }) {
   const { data: ranks = [] } = useQuery(ranksQueryOptions);
 
   const filteredEntries = useMemo(() => filterMatches(historyQuery.data ?? [], filters), [historyQuery.data, filters]);
+  const recoveries = useMemo(
+    () => (filteredEntries.length === 0 ? filterRecoveryOptions(historyQuery.data ?? [], filters) : []),
+    [historyQuery.data, filters, filteredEntries.length],
+  );
   const latestBadge = useMemo(() => {
     let latestTime = -Infinity;
     let badge: number | null = null;
@@ -136,18 +142,21 @@ function TrackerContent({ accountId }: { accountId: number }) {
   const revealingFilters = hiddenLinkedMatch ? filtersRevealing(hiddenLinkedMatch, filters) : null;
   // The matches tab opens on the page holding the linked match only when it mounts, so a reveal remounts it.
   const [revealCount, setRevealCount] = useState(0);
-  const revealLinkedMatch = () => {
-    if (!revealingFilters) return;
-    setMode(revealingFilters.mode);
-    setHeroId(revealingFilters.heroId);
-    setResult(revealingFilters.result);
-    if (
-      revealingFilters.minUnixTimestamp !== minUnixTimestamp ||
-      revealingFilters.maxUnixTimestamp !== maxUnixTimestamp
-    ) {
+  useEffect(() => {
+    // Recovery removes the focused button along with the old empty state or hidden-match notice.
+    if (revealCount > 0) sectionRef.current?.focus({ preventScroll: true });
+  }, [revealCount]);
+  const widenFilters = (next: TrackerFilterValues) => {
+    setMode(next.mode);
+    setHeroId(next.heroId);
+    setResult(next.result);
+    if (next.minUnixTimestamp !== minUnixTimestamp || next.maxUnixTimestamp !== maxUnixTimestamp) {
       handleDateChange(undefined, undefined);
     }
     setRevealCount((count) => count + 1);
+  };
+  const revealLinkedMatch = () => {
+    if (revealingFilters) widenFilters(revealingFilters);
   };
 
   return (
@@ -178,12 +187,6 @@ function TrackerContent({ accountId }: { accountId: number }) {
           onRetry={() => historyQuery.refetch()}
           isRetrying={historyQuery.isFetching}
         />
-      )}
-
-      {historyQuery.data?.length === 0 && (
-        <p className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          No match history found for this account yet. If it was prioritized recently, data may still be backfilling.
-        </p>
       )}
 
       <section
@@ -219,31 +222,42 @@ function TrackerContent({ accountId }: { accountId: number }) {
             errorFallback={() => null}
             keepDataOnError
           >
-            {() => (
-              <MatchesTab
-                key={revealCount}
-                entries={filteredEntries}
-                sessionContext={sessionContext}
-                ranks={ranks}
-                accountId={accountId}
-                heroId={heroId}
-                onHeroChange={setHeroId}
-                hiddenLinkedMatch={hiddenLinkedMatch}
-                onRevealLinkedMatch={revealingFilters ? revealLinkedMatch : undefined}
-                overview={
-                  <OverviewTab
-                    entries={filteredEntries}
-                    accountId={accountId}
-                    filters={filters}
-                    latestBadge={latestBadge}
-                    onOpenMatch={openMatch}
-                    onSelectHero={setHeroId}
-                    formEntries={formEntries}
-                    sessionContext={sessionContext}
-                  />
-                }
-              />
-            )}
+            {(history) =>
+              filteredEntries.length === 0 && !hiddenLinkedMatch ? (
+                <TrackerEmptyState
+                  hasHistory={history.length > 0}
+                  recoveries={recoveries}
+                  onRecover={(next) => {
+                    widenFilters(next);
+                    setExpandedMatchId(null);
+                  }}
+                />
+              ) : (
+                <MatchesTab
+                  key={revealCount}
+                  entries={filteredEntries}
+                  sessionContext={sessionContext}
+                  ranks={ranks}
+                  accountId={accountId}
+                  heroId={heroId}
+                  onHeroChange={setHeroId}
+                  hiddenLinkedMatch={hiddenLinkedMatch}
+                  onRevealLinkedMatch={revealingFilters ? revealLinkedMatch : undefined}
+                  overview={
+                    <OverviewTab
+                      entries={filteredEntries}
+                      accountId={accountId}
+                      filters={filters}
+                      latestBadge={latestBadge}
+                      onOpenMatch={openMatch}
+                      onSelectHero={setHeroId}
+                      formEntries={formEntries}
+                      sessionContext={sessionContext}
+                    />
+                  }
+                />
+              )
+            }
           </QueryRenderer>
         )}
 
