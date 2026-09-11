@@ -58,6 +58,7 @@ export function OverviewTab({
   onOpenMatch,
   onSelectHero,
   formEntries,
+  sessionContext,
 }: {
   entries: PlayerMatchHistoryEntry[];
   accountId: number;
@@ -66,6 +67,7 @@ export function OverviewTab({
   onOpenMatch: (matchId: number) => void;
   onSelectHero: (heroId: number) => void;
   formEntries: PlayerMatchHistoryEntry[];
+  sessionContext: PlayerMatchHistoryEntry[];
 }) {
   const data = useMemo(() => {
     const sorted = [...entries].sort((a, b) => b.start_time - a.start_time || b.match_id - a.match_id);
@@ -75,12 +77,12 @@ export function OverviewTab({
       heroes: perHeroRows(sorted),
       records: computeRecords(sorted),
       splits: computeOutcomeSplits(sorted),
-      sessions: computeSessionMomentum(sorted),
+      sessions: computeSessionMomentum(sorted, sessionContext),
       habits: computePlaytimeHabits(sorted),
       ranks: rankHistoryPoints(sorted),
       activity: computeActivity(sorted),
     };
-  }, [entries]);
+  }, [entries, sessionContext]);
   const { sorted, summary: s, sessions, habits } = data;
   const recent = useMemo(() => compareRecentMatches(formEntries), [formEntries]);
   const { streaks } = recent;
@@ -317,13 +319,18 @@ export function OverviewTab({
             <SplitRows label="Session momentum" rows={sessions.byPreviousResult} />
             <SplitRows label="Match in session" rows={sessions.byPosition} />
           </div>
+          {(filters.result !== "all" || filters.heroId != null) && (
+            <p className="mt-2 text-[10px] text-muted-foreground">
+              Session context includes all heroes and results in this mode and date range.
+            </p>
+          )}
         </DashboardPanel>
         <DashboardPanel title="Play habits" icon={Clock3} meta="Your local time">
           <div className="grid grid-cols-3 gap-2 pb-2">
             {[
               { label: "Sessions", value: integer(sessions.sessions) },
               { label: "Games / session", value: decimal(sessions.avgMatchesPerSession) },
-              { label: "Avg. session", value: formatPlaytime(sessions.avgSessionTimeS) },
+              { label: "Playtime / session", value: formatPlaytime(sessions.avgSessionTimeS) },
             ].map(({ label, value }) => (
               <div key={label}>
                 <div className="text-base font-semibold tabular-nums">{value}</div>

@@ -545,15 +545,25 @@ export interface PlaySession {
 
 const SESSION_GAP_S = 3 * 3600;
 
+function orderedSessionHistory(entries: PlayerMatchHistoryEntry[], contextEntries: PlayerMatchHistoryEntry[]) {
+  return [...new Map([...contextEntries, ...entries].map((entry) => [entry.match_id, entry])).values()].sort(
+    (a, b) => b.start_time - a.start_time || b.match_id - a.match_id,
+  );
+}
+
 /**
- * Groups matches into play sessions, newest first. A new session begins once the time between the
- * end of one match and the start of the next exceeds the gap. Expects entries sorted newest first.
+ * Groups selected matches into play sessions using the surrounding history, newest first. A new session begins
+ * once the gap between consecutive matches exceeds three hours; totals include only selected matches.
  */
-export function computeSessions(entries: PlayerMatchHistoryEntry[]): Map<number, PlaySession> {
+export function computeSessions(
+  entries: PlayerMatchHistoryEntry[],
+  contextEntries: PlayerMatchHistoryEntry[] = entries,
+): Map<number, PlaySession> {
+  const selectedIds = new Set(entries.map((entry) => entry.match_id));
   const sessionByMatchId = new Map<number, PlaySession>();
   let session: PlaySession | null = null;
   let previous: PlayerMatchHistoryEntry | null = null;
-  for (const entry of entries) {
+  for (const entry of orderedSessionHistory(entries, contextEntries)) {
     const endUnix = entry.start_time + entry.match_duration_s;
     if (session === null || previous === null || previous.start_time - endUnix > SESSION_GAP_S) {
       session = {
@@ -568,12 +578,14 @@ export function computeSessions(entries: PlayerMatchHistoryEntry[]): Map<number,
       };
     }
     session.startUnix = entry.start_time;
-    session.matches++;
-    if (isWin(entry)) session.wins++;
-    else session.losses++;
-    session.totalTimeS += entry.match_duration_s;
-    if (entry.ranked_delta != null) session.rankDelta = (session.rankDelta ?? 0) + entry.ranked_delta;
-    sessionByMatchId.set(entry.match_id, session);
+    if (selectedIds.has(entry.match_id)) {
+      session.matches += 1;
+      if (isWin(entry)) session.wins += 1;
+      else session.losses += 1;
+      session.totalTimeS += entry.match_duration_s;
+      if (entry.ranked_delta != null) session.rankDelta = (session.rankDelta ?? 0) + entry.ranked_delta;
+      sessionByMatchId.set(entry.match_id, session);
+    }
     previous = entry;
   }
   return sessionByMatchId;
@@ -791,16 +803,21 @@ export interface SessionMomentum {
 const POSITION_LABELS = ["1st match", "2nd match", "3rd match", "4th+ match"];
 const TILT_LOSS_RUN = 2;
 
-/** Expects entries sorted newest first, like `computeSessions`. */
-export function computeSessionMomentum(entries: PlayerMatchHistoryEntry[]): SessionMomentum {
+/** Session positions use the surrounding history while totals count only selected matches. */
+export function computeSessionMomentum(
+  entries: PlayerMatchHistoryEntry[],
+  contextEntries: PlayerMatchHistoryEntry[] = entries,
+): SessionMomentum {
   const byPosition = POSITION_LABELS.map((label) => ({ label, matches: 0, wins: 0 }));
   const afterWin = { label: "After a win", matches: 0, wins: 0 };
   const afterLoss = { label: "After a loss", matches: 0, wins: 0 };
   const afterLossRun = { label: `After ${TILT_LOSS_RUN}+ losses`, matches: 0, wins: 0 };
 
-  const sessions = computeSessions(entries);
+  const selectedIds = new Set(entries.map((entry) => entry.match_id));
+  const context = orderedSessionHistory(entries, contextEntries);
+  const sessions = computeSessions(context);
   const sessionEntries = new Map<PlaySession, PlayerMatchHistoryEntry[]>();
-  for (const entry of entries) {
+  for (const entry of context) {
     const session = sessions.get(entry.match_id) as PlaySession;
     const list = sessionEntries.get(session);
     if (list) list.push(entry);
@@ -808,35 +825,43 @@ export function computeSessionMomentum(entries: PlayerMatchHistoryEntry[]): Sess
   }
 
   let totalTimeS = 0;
-  for (const [session, newestFirst] of sessionEntries) {
-    totalTimeS += session.totalTimeS;
+  let totalMatches = 0;
+  let sessionCount = 0;
+  for (const newestFirst of sessionEntries.values()) {
+    let selectedMatches = 0;
     let previousWin: boolean | null = null;
     let lossRun = 0;
     for (let index = newestFirst.length - 1; index >= 0; index--) {
-      const win = isWin(newestFirst[index]) ? 1 : 0;
-      const position = byPosition[Math.min(newestFirst.length - 1 - index, POSITION_LABELS.length - 1)];
-      position.matches++;
-      position.wins += win;
-      if (previousWin !== null) {
-        const split = previousWin ? afterWin : afterLoss;
-        split.matches++;
-        split.wins += win;
-        if (lossRun >= TILT_LOSS_RUN) {
-          afterLossRun.matches++;
-          afterLossRun.wins += win;
+      const entry = newestFirst[index];
+      const win = isWin(entry) ? 1 : 0;
+      if (selectedIds.has(entry.match_id)) {
+        selectedMatches += 1;
+        totalMatches += 1;
+        totalTimeS += entry.match_duration_s;
+        const position = byPosition[Math.min(newestFirst.length - 1 - index, POSITION_LABELS.length - 1)];
+        position.matches += 1;
+        position.wins += win;
+        if (previousWin !== null) {
+          const split = previousWin ? afterWin : afterLoss;
+          split.matches += 1;
+          split.wins += win;
+          if (lossRun >= TILT_LOSS_RUN) {
+            afterLossRun.matches += 1;
+            afterLossRun.wins += win;
+          }
         }
       }
       previousWin = win === 1;
       lossRun = win ? 0 : lossRun + 1;
     }
+    if (selectedMatches > 0) sessionCount += 1;
   }
 
-  const sessionCount = sessionEntries.size;
   return {
     byPosition,
     byPreviousResult: [afterWin, afterLoss, afterLossRun],
     sessions: sessionCount,
-    avgMatchesPerSession: sessionCount > 0 ? entries.length / sessionCount : 0,
+    avgMatchesPerSession: sessionCount > 0 ? totalMatches / sessionCount : 0,
     avgSessionTimeS: sessionCount > 0 ? totalTimeS / sessionCount : 0,
   };
 }

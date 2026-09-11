@@ -64,7 +64,11 @@ function SessionHeader({ session }: { session: PlaySession }) {
         <span className="text-muted-foreground"> – </span>
         <span className={cn("font-semibold", LOSS_TEXT_CLASS)}>{session.losses}L</span>
       </span>
-      <RankDelta value={session.rankDelta} className="font-semibold" title="Net rank change over the session" />
+      <RankDelta
+        value={session.rankDelta}
+        className="font-semibold"
+        title="Net rank change in selected session matches"
+      />
       <span
         className="ml-auto text-muted-foreground tabular-nums"
         title={`${day.unix(session.startUnix).format("HH:mm")} – ${day.unix(session.endUnix).format("HH:mm")}`}
@@ -77,6 +81,7 @@ function SessionHeader({ session }: { session: PlaySession }) {
 
 export function MatchesTab({
   entries,
+  sessionContext,
   ranks,
   accountId,
   heroId,
@@ -86,6 +91,7 @@ export function MatchesTab({
   overview,
 }: {
   entries: PlayerMatchHistoryEntry[];
+  sessionContext: PlayerMatchHistoryEntry[];
   ranks: Rank[];
   accountId: number;
   /** The active hero filter, which an empty list offers to clear. */
@@ -202,8 +208,8 @@ export function MatchesTab({
 
   // Sessions are contiguous only in play order, so they are hidden under any other sort.
   const sessions = useMemo(
-    () => (sortKey === "played" ? computeSessions(entries) : new Map<number, PlaySession>()),
-    [entries, sortKey],
+    () => (sortKey === "played" ? computeSessions(entries, sessionContext) : new Map<number, PlaySession>()),
+    [entries, sessionContext, sortKey],
   );
   const summary = useMemo(() => summarize(entries), [entries]);
   const heldRecords = useMemo(

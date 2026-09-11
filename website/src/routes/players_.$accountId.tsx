@@ -120,6 +120,14 @@ function TrackerContent({ accountId }: { accountId: number }) {
     [historyQuery.data, filters, filteredEntries],
   );
 
+  const sessionContext = useMemo(
+    () =>
+      filters.heroId == null
+        ? formEntries
+        : filterMatches(historyQuery.data ?? [], { ...filters, heroId: null, result: "all" }),
+    [historyQuery.data, filters, formEntries],
+  );
+
   const hiddenLinkedMatch = useMemo(() => {
     if (expandedMatchId == null || filteredEntries.some((entry) => entry.match_id === expandedMatchId)) return null;
     return historyQuery.data?.find((entry) => entry.match_id === expandedMatchId) ?? null;
@@ -202,6 +210,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
               <MatchesTab
                 key={revealCount}
                 entries={filteredEntries}
+                sessionContext={sessionContext}
                 ranks={ranks}
                 accountId={accountId}
                 heroId={heroId}
@@ -217,6 +226,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
                     onOpenMatch={openMatch}
                     onSelectHero={setHeroId}
                     formEntries={formEntries}
+                    sessionContext={sessionContext}
                   />
                 }
               />
