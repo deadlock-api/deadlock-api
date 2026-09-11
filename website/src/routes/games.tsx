@@ -148,11 +148,6 @@ function Games() {
         </p>
       </div>
 
-      <section className="mx-auto max-w-2xl text-center">
-        <h2 className="text-lg font-semibold tracking-tight">How long is a Deadlock match?</h2>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{MATCH_LENGTH_ANSWER}</p>
-      </section>
-
       <Filter.Root>
         <Filter.ModeWithRank
           mode={mode}
