@@ -140,7 +140,7 @@ export function OverviewTab({
         </div>
       </div>
 
-      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border @md/overview:grid-cols-3 @3xl/overview:grid-cols-6">
+      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border @xs/overview:grid-cols-3 @3xl/overview:grid-cols-6">
         {headline.map(({ label, value, detail, accent }) => (
           <div key={label} className="flex min-w-0 flex-col gap-1 bg-card px-3 py-2">
             <dt className="text-[10px] font-medium tracking-wider text-muted-foreground uppercase">{label}</dt>
@@ -303,8 +303,13 @@ export function OverviewTab({
       </div>
 
       <div className="grid gap-2 @2xl/overview:grid-cols-2 @5xl/overview:grid-cols-3">
-        <DashboardPanel title="Where you win" icon={GitCompareArrows} meta="Games / win rate">
-          <div className="grid gap-x-4 gap-y-2 @4xl/overview:grid-cols-2">
+        <DashboardPanel
+          title="Where you win"
+          icon={GitCompareArrows}
+          meta="Games / win rate"
+          className="@container/splits"
+        >
+          <div className="grid gap-x-4 gap-y-2 @xs/splits:grid-cols-2">
             <SplitRows label="Match duration" rows={data.splits.byDuration} />
             <SplitRows label="Starting side" rows={data.splits.bySide} />
             <SplitRows label="Session momentum" rows={sessions.byPreviousResult} />
@@ -326,8 +331,8 @@ export function OverviewTab({
           </div>
           <PlaytimeHeatmap habits={habits} />
         </DashboardPanel>
-        <DashboardPanel title="Personal bests" icon={Trophy} meta="In selected matches">
-          <div className="grid grid-cols-2 gap-1.5 @lg/overview:grid-cols-3">
+        <DashboardPanel title="Personal bests" icon={Trophy} meta="In selected matches" className="@container/records">
+          <div className="grid grid-cols-2 gap-1.5 @xs/records:grid-cols-3">
             {RECORD_KINDS.map(({ key, label, format }) => {
               const record = data.records[key];
               return (
@@ -384,11 +389,9 @@ function SplitRows({ label, rows }: { label: string; rows: OutcomeSplit[] }) {
             key={row.label}
             className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 gap-y-1 text-[11px]"
           >
-            <span className="min-w-0 truncate" title={row.label}>
-              {row.label}
-            </span>
-            <span className="w-7 text-right text-muted-foreground tabular-nums">{integer(row.matches)}</span>
-            <span className="w-9 text-right font-medium tabular-nums">
+            <span className="min-w-0">{row.label}</span>
+            <span className="min-w-6 text-right text-muted-foreground tabular-nums">{integer(row.matches)}</span>
+            <span className="min-w-7 text-right font-medium tabular-nums">
               {row.matches ? `${Math.round((row.wins / row.matches) * 100)}%` : "—"}
             </span>
           </div>
