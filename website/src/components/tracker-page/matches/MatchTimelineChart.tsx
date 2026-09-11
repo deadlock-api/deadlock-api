@@ -23,7 +23,7 @@ import { cn } from "~/lib/utils";
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
 import { LOSS_COLOR, LOSS_TEXT_CLASS, WIN_COLOR, WIN_TEXT_CLASS } from "../shared/colors";
-import { PanelTooltipContent } from "../shared/PanelTooltipContent";
+import { PanelTooltipContent, TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
 import { TEAMS } from "./Scoreboard";
 
 const ASSETS = "https://assets-bucket.deadlock-api.com/assets-api-res";
@@ -111,10 +111,13 @@ function ObjectiveMarker({
         </g>
       </TooltipTrigger>
       <PanelTooltipContent>
-        <div className="font-medium">
-          {OBJECTIVE_LABELS[event.kind]} · {formatMatchDuration(event.time)}
-        </div>
-        <div className={event.own ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS}>{describeOutcome(event)}</div>
+        <TooltipHeader
+          title={OBJECTIVE_LABELS[event.kind]}
+          subtitle={<span className={event.own ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS}>{describeOutcome(event)}</span>}
+        />
+        <TooltipStats>
+          <TooltipStat label="Match time" value={formatMatchDuration(event.time)} />
+        </TooltipStats>
       </PanelTooltipContent>
     </HoverTooltip>
   );
@@ -143,21 +146,25 @@ function LeadTooltipContent({ active, payload }: { active?: boolean; payload?: {
   if (!active || !payload?.length) return null;
   const point = payload[0].payload;
   return (
-    <div className="rounded-md border bg-popover px-3 py-2 text-xs shadow-md">
-      <div
-        className={cn(
-          "text-sm font-semibold",
-          point.lead > 0 ? WIN_TEXT_CLASS : point.lead < 0 ? LOSS_TEXT_CLASS : "text-popover-foreground",
-        )}
-      >
-        {point.lead === 0
-          ? "Even"
-          : `${point.lead > 0 ? "Ahead" : "Behind"} by ${Math.abs(point.lead).toLocaleString("en-US")}`}
-      </div>
-      <div className="mt-0.5 text-muted-foreground tabular-nums">
-        {point.own.toLocaleString("en-US")} vs {point.enemy.toLocaleString("en-US")} souls
-      </div>
-      <div className="text-muted-foreground tabular-nums">{formatMatchDuration(point.time)}</div>
+    <div className="max-w-72 space-y-2 rounded-md border border-border bg-popover px-3 py-2.5 shadow-md">
+      <TooltipHeader
+        title={
+          <span
+            className={cn(
+              point.lead > 0 ? WIN_TEXT_CLASS : point.lead < 0 ? LOSS_TEXT_CLASS : "text-popover-foreground",
+            )}
+          >
+            {point.lead === 0
+              ? "Even"
+              : `${point.lead > 0 ? "Ahead" : "Behind"} by ${Math.abs(point.lead).toLocaleString("en-US")}`}
+          </span>
+        }
+        subtitle={formatMatchDuration(point.time)}
+      />
+      <TooltipStats>
+        <TooltipStat label="Your team" value={point.own.toLocaleString("en-US")} />
+        <TooltipStat label="Enemy team" value={point.enemy.toLocaleString("en-US")} />
+      </TooltipStats>
     </div>
   );
 }

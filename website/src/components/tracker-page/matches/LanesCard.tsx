@@ -6,7 +6,7 @@ import { cn } from "~/lib/utils";
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
-import { PanelTooltipContent } from "../shared/PanelTooltipContent";
+import { PanelTooltipContent, TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
 
 function Laner({
   laner: { player, stat },
@@ -38,13 +38,18 @@ function Laner({
         </div>
       </TooltipTrigger>
       <PanelTooltipContent>
-        <div className="font-medium">{name}</div>
-        <div className="text-muted-foreground tabular-nums">
-          {stat.net_worth.toLocaleString("en-US")} souls · {stat.kills}/{stat.deaths}/{stat.assists} K/D/A
-        </div>
-        <div className="text-muted-foreground tabular-nums">
-          {stat.creep_kills} last hits · {stat.denies} denies · {stat.player_damage.toLocaleString("en-US")} hero damage
-        </div>
+        <TooltipHeader
+          lead={<HeroImage heroId={player.hero_id} className="size-8 shrink-0 rounded-full" title="" />}
+          title={name}
+          subtitle="At the end of the laning phase"
+        />
+        <TooltipStats>
+          <TooltipStat label="Souls" value={stat.net_worth.toLocaleString("en-US")} />
+          <TooltipStat label="Kills / deaths / assists" value={`${stat.kills} / ${stat.deaths} / ${stat.assists}`} />
+          <TooltipStat label="Last hits" value={stat.creep_kills.toLocaleString("en-US")} />
+          <TooltipStat label="Denies" value={stat.denies.toLocaleString("en-US")} />
+          <TooltipStat label="Hero damage" value={stat.player_damage.toLocaleString("en-US")} />
+        </TooltipStats>
       </PanelTooltipContent>
     </Tooltip>
   );

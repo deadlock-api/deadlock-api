@@ -1,3 +1,4 @@
+import { Skull } from "lucide-react";
 import type { Ref } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
@@ -9,6 +10,7 @@ import { cn } from "~/lib/utils";
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
 import { LOSS_COLOR, LOSS_TEXT_CLASS, WIN_COLOR, WIN_TEXT_CLASS } from "../shared/colors";
+import { TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
 import { formatLead, MatchTimelineChart, type TimelineEvent } from "./MatchTimelineChart";
 
 function LegendSwatch({ color, label }: { color: string; label: string }) {
@@ -44,19 +46,54 @@ export function MatchTimeline({
   durationS: number;
   nameOf: (player: TrackerMatchPlayer) => string;
 }) {
+  const killTextClass = viewedIsAlly ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS;
+  const deathTextClass = viewedIsAlly ? LOSS_TEXT_CLASS : WIN_TEXT_CLASS;
+  const viewedName = viewed ? nameOf(viewed) : "them";
   const events: TimelineEvent[] = [
     ...(fights?.kills ?? []).map((kill) => ({
       time: kill.time,
       hero: kill.victim,
       // An enemy's kill is a loss for the tracked team, so it sits below the line with the team's other losses.
       side: viewedIsAlly ? ("gain" as const) : ("loss" as const),
-      tooltip: `Killed ${nameOf(kill.victim)} at ${formatMatchDuration(kill.time)}`,
+      tooltip: (
+        <>
+          <TooltipHeader
+            lead={<HeroImage heroId={kill.victim.hero_id} className="size-8 shrink-0 rounded-full" title="" />}
+            title={nameOf(kill.victim)}
+            subtitle={<span className={killTextClass}>Killed by {viewedName}</span>}
+          />
+          <TooltipStats>
+            <TooltipStat label="Match time" value={formatMatchDuration(kill.time)} />
+          </TooltipStats>
+        </>
+      ),
     })),
     ...(fights?.deaths ?? []).map((death) => ({
       time: death.time,
       hero: death.killer,
       side: viewedIsAlly ? ("loss" as const) : ("gain" as const),
-      tooltip: `${death.killer ? `Killed by ${nameOf(death.killer)}` : "Killed by a non-player"} at ${formatMatchDuration(death.time)} in ${Math.round(death.timeToKillS)}s · respawned after ${death.deadForS}s`,
+      tooltip: (
+        <>
+          <TooltipHeader
+            lead={
+              death.killer ? (
+                <HeroImage heroId={death.killer.hero_id} className="size-8 shrink-0 rounded-full" title="" />
+              ) : (
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                  <Skull className="size-4 text-muted-foreground" />
+                </span>
+              )
+            }
+            title={death.killer ? nameOf(death.killer) : "No player credited"}
+            subtitle={<span className={deathTextClass}>Killed {viewedName}</span>}
+          />
+          <TooltipStats>
+            <TooltipStat label="Match time" value={formatMatchDuration(death.time)} />
+            <TooltipStat label="Time to kill" value={`${Math.round(death.timeToKillS)}s`} />
+            <TooltipStat label="Respawned after" value={`${death.deadForS}s`} />
+          </TooltipStats>
+        </>
+      ),
     })),
   ].toSorted((a, b) => a.time - b.time);
   const deadWindows = (fights?.deaths ?? []).map((death) => ({ start: death.time, end: death.time + death.deadForS }));

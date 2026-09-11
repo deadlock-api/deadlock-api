@@ -10,9 +10,11 @@ import { HeroImage } from "~/components/HeroImage";
 import { ItemImageFromAsset } from "~/components/ItemImage";
 import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
 import { IS_DEV } from "~/lib/constants";
+import { formatShare } from "~/lib/format";
 import { LANES } from "~/lib/team-builder/lanes";
 import { type BuildAbility, type BuildItem, playerBuild } from "~/lib/tracker/build";
 import { formatMatchDuration } from "~/lib/tracker/compute";
+import { type PlayerContext, playerContext, PLAYER_STAT_COLUMNS, REVEAL, statMaxima } from "~/lib/tracker/player-stats";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
 import {
@@ -22,7 +24,7 @@ import {
 } from "~/queries/tracker-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
-import { PanelTooltipContent } from "../shared/PanelTooltipContent";
+import { PanelTooltipContent, TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
 import { RankDelta } from "../shared/RankDelta";
 
 export const TEAMS = [
@@ -33,19 +35,21 @@ export const TEAMS = [
 function StatCell({
   value,
   max,
+  label,
   barClassName,
   className,
 }: {
   value: number;
   max: number;
+  label: string;
   barClassName: string;
   className?: string;
 }) {
   const width = max > 0 ? Math.round((value / max) * 100) : 0;
   return (
-    <td className={cn("relative px-2 py-1 text-right tabular-nums", className)}>
+    <td className={cn("relative px-1.5 py-1 text-right tabular-nums", className)}>
       <span className={cn("absolute inset-y-1.5 left-0 rounded-r-sm", barClassName)} style={{ width: `${width}%` }} />
-      <span className="relative">{value.toLocaleString("en-US")}</span>
+      <span className="relative">{label}</span>
     </td>
   );
 }
@@ -97,18 +101,14 @@ function AbilityChip({ entry }: { entry: BuildAbility }) {
         </span>
       </TooltipTrigger>
       <PanelTooltipContent>
-        <div className="font-medium">
-          {entry.ability.name} · level {level}/{MAX_ABILITY_LEVEL}
-        </div>
-        <div className="text-muted-foreground tabular-nums">
-          {[
-            entry.unlockedAt != null && `Unlocked at ${formatMatchDuration(entry.unlockedAt)}`,
-            entry.upgradedAt.length > 0 && `upgraded at ${entry.upgradedAt.map(formatMatchDuration).join(", ")}`,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </div>
-        {entry.stacks != null && <div className="text-muted-foreground tabular-nums">{entry.stacks} stacks</div>}
+        <TooltipHeader title={entry.ability.name} subtitle={`Level ${level} of ${MAX_ABILITY_LEVEL}`} />
+        <TooltipStats>
+          {entry.unlockedAt != null && <TooltipStat label="Unlocked" value={formatMatchDuration(entry.unlockedAt)} />}
+          {entry.upgradedAt.length > 0 && (
+            <TooltipStat label="Upgraded" value={entry.upgradedAt.map(formatMatchDuration).join(", ")} />
+          )}
+          {entry.stacks != null && <TooltipStat label="Stacks" value={entry.stacks.toLocaleString("en-US")} />}
+        </TooltipStats>
       </PanelTooltipContent>
     </Tooltip>
   );
@@ -140,16 +140,17 @@ function ItemChip({ item }: { item: BuildItem }) {
         </span>
       </TooltipTrigger>
       <PanelTooltipContent>
-        <div className="font-medium">
-          {item.upgrade.name}
-          {item.upgrade.cost != null && ` · ${item.upgrade.cost.toLocaleString("en-US")} souls`}
-        </div>
-        <div className="text-muted-foreground tabular-nums">
-          Bought at {formatMatchDuration(item.boughtAt)}
-          {sold && ` · sold at ${formatMatchDuration(item.soldAt as number)}`}
-        </div>
-        {item.imbuedInto && <div className="text-muted-foreground">Imbued into {item.imbuedInto.name}</div>}
-        {item.stacks != null && <div className="text-muted-foreground tabular-nums">{item.stacks} stacks</div>}
+        <TooltipHeader
+          lead={<ItemImageFromAsset item={item.upgrade} className="size-8 shrink-0 rounded-sm" title="" />}
+          title={item.upgrade.name}
+          subtitle={item.upgrade.cost != null && `${item.upgrade.cost.toLocaleString("en-US")} souls`}
+        />
+        <TooltipStats>
+          <TooltipStat label="Bought" value={formatMatchDuration(item.boughtAt)} />
+          {sold && <TooltipStat label="Sold" value={formatMatchDuration(item.soldAt as number)} />}
+          {item.imbuedInto && <TooltipStat label="Imbued into" value={item.imbuedInto.name} />}
+          {item.stacks != null && <TooltipStat label="Stacks" value={item.stacks.toLocaleString("en-US")} />}
+        </TooltipStats>
       </PanelTooltipContent>
     </Tooltip>
   );
@@ -157,37 +158,74 @@ function ItemChip({ item }: { item: BuildItem }) {
 
 const Divider = () => <span aria-hidden className="mx-0.5 h-4 w-px bg-border" />;
 
-/** The full stat line, which the table itself drops column by column as the panel narrows. */
-function PlayerStatLines({
+/** Player, portrait, K/D/A, and one cell per stat column. */
+const COLUMN_COUNT = 3 + PLAYER_STAT_COLUMNS.length;
+
+/**
+ * The stats the table dropped at this width, spelled out under the player. A phone shows the whole set here,
+ * since there is no pointer to open the hover card with, and a wide panel shows only what no column carries.
+ */
+function PlayerStatStrip({ player, context }: { player: TrackerMatchPlayer; context: PlayerContext }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 pb-1 text-[11px] text-muted-foreground tabular-nums">
+      {PLAYER_STAT_COLUMNS.map((column) => (
+        <span key={column.key} className={cn("whitespace-nowrap", REVEAL[column.reveal].strip)}>
+          <span className="text-foreground">{column.format(column.value(player))}</span> {column.label.toLowerCase()}
+        </span>
+      ))}
+      <span className="whitespace-nowrap">
+        <span className="text-foreground">{formatShare(context.killShare)}</span> kill share
+      </span>
+      {context.deadForS != null && (
+        <span className="whitespace-nowrap">
+          <span className="text-foreground">{formatMatchDuration(context.deadForS)}</span> dead
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** Everything known about one player in the match, whatever the table has room to show. */
+function PlayerHoverCard({
   player,
   name,
   lane,
+  context,
 }: {
   player: TrackerMatchPlayer;
   name: string;
   lane: (typeof LANES)[number] | undefined;
+  context: PlayerContext;
 }) {
-  const number = (value: number) => value.toLocaleString("en-US");
-  const plural = (value: number, one: string, many: string) => `${number(value)} ${value === 1 ? one : many}`;
+  const whole = (value: number) => value.toLocaleString("en-US");
   return (
     <>
-      <div className="font-medium">
-        {name}
-        {player.level > 0 && ` · level ${player.level}`}
-        {lane && ` · ${lane.name} lane`}
-      </div>
-      <div className="text-muted-foreground tabular-nums">
-        {player.kills}/{player.deaths}/{player.assists} K/D/A · {number(player.net_worth)} souls
-      </div>
-      <div className="text-muted-foreground tabular-nums">
-        {plural(player.last_hits, "last hit", "last hits")} · {plural(player.denies, "deny", "denies")}
-      </div>
-      <div className="text-muted-foreground tabular-nums">
-        {number(player.player_damage)} hero damage · {number(player.player_damage_taken)} taken
-      </div>
-      <div className="text-muted-foreground tabular-nums">
-        {number(player.boss_damage)} objective damage · {number(player.player_healing)} healing
-      </div>
+      <TooltipHeader
+        lead={<HeroImage heroId={player.hero_id} className="size-8 shrink-0 rounded-full" title="" />}
+        title={name}
+        subtitle={[player.level > 0 && `Level ${player.level}`, lane && `${lane.name} lane`]
+          .filter(Boolean)
+          .join(" · ")}
+      />
+      <TooltipStats>
+        <TooltipStat
+          label="Kills / deaths / assists"
+          value={`${player.kills} / ${player.deaths} / ${player.assists}`}
+        />
+        <TooltipStat label="Kill share" value={formatShare(context.killShare)} />
+        <TooltipStat label="Souls" value={whole(player.net_worth)} />
+        <TooltipStat label="Souls per minute" value={whole(Math.round(context.soulsPerMin))} />
+        <TooltipStat label="Last hits" value={whole(player.last_hits)} />
+        <TooltipStat label="Denies" value={whole(player.denies)} />
+        <TooltipStat
+          label="Hero damage"
+          value={`${whole(player.player_damage)} · ${formatShare(context.damageShare)}`}
+        />
+        <TooltipStat label="Damage taken" value={whole(player.player_damage_taken)} />
+        <TooltipStat label="Objective damage" value={whole(player.boss_damage)} />
+        <TooltipStat label="Healing" value={whole(player.player_healing)} />
+        {context.deadForS != null && <TooltipStat label="Time dead" value={formatMatchDuration(context.deadForS)} />}
+      </TooltipStats>
     </>
   );
 }
@@ -198,6 +236,7 @@ export function Scoreboard({
   accountId,
   ranks,
   laned,
+  durationS,
   itemsById,
   nameOf,
   viewedAccountId,
@@ -207,6 +246,7 @@ export function Scoreboard({
   accountId: number;
   ranks: Rank[];
   laned: boolean;
+  durationS: number;
   itemsById: Map<number, SlimUpgrade> | undefined;
   nameOf: (player: TrackerMatchPlayer) => string;
   /** The player the match timeline shows, or null while it shows every kill. */
@@ -222,22 +262,10 @@ export function Scoreboard({
     select: (heroes) => new Map(heroes.map((hero) => [hero.id, hero])),
   });
 
-  const maxima = useMemo(() => {
-    let souls = 0;
-    let damage = 0;
-    let bossDamage = 0;
-    let healing = 0;
-    for (const player of match.players) {
-      souls = Math.max(souls, player.net_worth);
-      damage = Math.max(damage, player.player_damage);
-      bossDamage = Math.max(bossDamage, player.boss_damage);
-      healing = Math.max(healing, player.player_healing);
-    }
-    return { souls, damage, bossDamage, healing };
-  }, [match]);
+  const maxima = useMemo(() => statMaxima(match.players), [match]);
 
   return (
-    <div className="grid gap-4 @2xl:grid-cols-2">
+    <div className="grid gap-4 @6xl:grid-cols-2">
       {TEAMS.map((team, teamIndex) => {
         const teamPlayers = match.players.filter((player) => player.team === team.key);
         const players = laned ? byLane(teamPlayers) : teamPlayers;
@@ -266,23 +294,16 @@ export function Scoreboard({
                   <th colSpan={2} className="px-2 py-1 text-left font-normal">
                     Player
                   </th>
-                  <th className="px-2 py-1 text-right font-normal">K / D / A</th>
-                  <th className="px-2 py-1 text-right font-normal">Souls</th>
-                  <th
-                    className="hidden px-2 py-1 text-right font-normal @md:table-cell"
-                    title="Damage dealt to players"
-                  >
-                    Dmg
-                  </th>
-                  <th
-                    className="hidden px-2 py-1 text-right font-normal @lg:table-cell"
-                    title="Damage dealt to objectives"
-                  >
-                    Obj
-                  </th>
-                  <th className="hidden px-2 py-1 text-right font-normal @lg:table-cell" title="Healing done">
-                    Heal
-                  </th>
+                  <th className="px-1.5 py-1 text-right font-normal">K / D / A</th>
+                  {PLAYER_STAT_COLUMNS.map((column) => (
+                    <th
+                      key={column.key}
+                      className={cn("px-1.5 py-1 text-right font-normal", REVEAL[column.reveal].cell)}
+                      title={column.label}
+                    >
+                      {column.short}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               {players.map((player) => {
@@ -300,6 +321,7 @@ export function Scoreboard({
                       )
                     : null;
                 const lane = laned ? LANES[laneIndex(player)] : undefined;
+                const context = playerContext(match, player, durationS);
                 return (
                   // One body per player, so hover and clicks cover both of their rows.
                   // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- the name button is the keyboard path; the body widens the mouse target
@@ -330,7 +352,7 @@ export function Scoreboard({
                             </div>
                           </TooltipTrigger>
                           <PanelTooltipContent>
-                            <PlayerStatLines player={player} name={name} lane={lane} />
+                            <PlayerHoverCard player={player} name={name} lane={lane} context={context} />
                           </PanelTooltipContent>
                         </Tooltip>
                       </td>
@@ -386,32 +408,28 @@ export function Scoreboard({
                           )}
                         </div>
                       </td>
-                      <td className="px-2 py-1 text-right whitespace-nowrap text-muted-foreground tabular-nums">
+                      <td className="px-1.5 py-1 text-right whitespace-nowrap text-muted-foreground tabular-nums">
                         {player.kills} / {player.deaths} / {player.assists}
                       </td>
-                      <StatCell value={player.net_worth} max={maxima.souls} barClassName="bg-amber-500/15" />
-                      <StatCell
-                        value={player.player_damage}
-                        max={maxima.damage}
-                        barClassName="bg-primary/15"
-                        className="hidden @md:table-cell"
-                      />
-                      <StatCell
-                        value={player.boss_damage}
-                        max={maxima.bossDamage}
-                        barClassName="bg-violet-500/15"
-                        className="hidden @lg:table-cell"
-                      />
-                      <StatCell
-                        value={player.player_healing}
-                        max={maxima.healing}
-                        barClassName="bg-emerald-500/15"
-                        className="hidden @lg:table-cell"
-                      />
+                      {PLAYER_STAT_COLUMNS.map((column) => (
+                        <StatCell
+                          key={column.key}
+                          value={column.value(player)}
+                          max={maxima[column.key]}
+                          label={column.format(column.value(player))}
+                          barClassName={column.barClassName}
+                          className={REVEAL[column.reveal].cell}
+                        />
+                      ))}
+                    </tr>
+                    <tr>
+                      <td colSpan={COLUMN_COUNT} className="px-2 pl-10">
+                        <PlayerStatStrip player={player} context={context} />
+                      </td>
                     </tr>
                     {build && (
                       <tr>
-                        <td colSpan={7} className="px-2 pb-1.5 pl-10">
+                        <td colSpan={COLUMN_COUNT} className="px-2 pb-1.5 pl-10">
                           <div className="flex flex-wrap items-center gap-1">
                             {build.abilities.map((entry) => (
                               <AbilityChip key={entry.ability.id} entry={entry} />

@@ -20,7 +20,6 @@ import {
   sortMatches,
   summarize,
 } from "~/lib/tracker/compute";
-import { performanceBaseline } from "~/lib/tracker/performance";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { trackerMatchMetadataQueryOptions } from "~/queries/tracker-queries";
@@ -203,7 +202,6 @@ export function MatchesTab({
     [entries, sortKey],
   );
   const summary = useMemo(() => summarize(entries), [entries]);
-  const baseline = useMemo(() => (selected ? performanceBaseline(entries, selected) : null), [entries, selected]);
   const heldRecords = useMemo(
     () => (entries.length >= MIN_MATCHES_FOR_RECORDS ? recordsByMatchId(computeRecords(entries)) : null),
     [entries],
@@ -326,7 +324,6 @@ export function MatchesTab({
               ranks={ranks}
               heroName={heroNameOf(selected.hero_id)}
               records={heldRecords?.get(selected.match_id)}
-              baseline={baseline}
             />
           )}
         </div>

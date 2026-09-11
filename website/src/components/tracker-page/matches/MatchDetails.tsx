@@ -24,7 +24,6 @@ import {
 import { computeFights } from "~/lib/tracker/fights";
 import { computeLaneMatchups } from "~/lib/tracker/lane-matchup";
 import { computeObjectiveEvents } from "~/lib/tracker/objectives";
-import { type PerformanceBaseline, performanceStats } from "~/lib/tracker/performance";
 import { computeSoulLead } from "~/lib/tracker/soul-lead";
 import { cn } from "~/lib/utils";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
@@ -34,7 +33,6 @@ import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { RankDelta } from "../shared/RankDelta";
 import { LanesCard } from "./LanesCard";
 import { MatchTimeline } from "./MatchTimeline";
-import { PerformanceCard } from "./PerformanceCard";
 import { Scoreboard, TEAMS } from "./Scoreboard";
 
 const UNSCORED_OUTCOME_NOTES: Record<UnscoredOutcome, { icon: typeof Gavel; text: string }> = {
@@ -156,19 +154,7 @@ function MatchHeader({
   );
 }
 
-function MatchBody({
-  entry,
-  accountId,
-  ranks,
-  heroName,
-  baseline,
-}: {
-  entry: PlayerMatchHistoryEntry;
-  accountId: number;
-  ranks: Rank[];
-  heroName: string;
-  baseline: PerformanceBaseline | null;
-}) {
+function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry; accountId: number; ranks: Rank[] }) {
   const matchId = entry.match_id;
   // Street Brawl reports lane ids too, but its map has no lanes to speak of.
   const laned = hasLanes(entry);
@@ -198,17 +184,6 @@ function MatchBody({
   const fights = useMemo(
     () => (match ? computeFights(match.deaths, match.players, viewedAccountId) : null),
     [match, viewedAccountId],
-  );
-  const performance = useMemo(
-    () =>
-      performanceStats({
-        entry,
-        player: tracked,
-        teammates: match?.players.filter((player) => player.team === ownTeam) ?? [],
-        deadForS: match ? (computeFights(match.deaths, match.players, accountId)?.deadForS ?? null) : null,
-        baseline: baseline?.summary ?? null,
-      }),
-    [entry, match, tracked, accountId, ownTeam, baseline],
   );
   const viewedPlayer = match?.players.find((player) => player.account_id === viewedAccountId);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -243,7 +218,6 @@ function MatchBody({
 
   return (
     <div className="space-y-4">
-      <PerformanceCard stats={performance} baseline={baseline} heroName={heroName} />
       <MatchTimeline
         ref={timelineRef}
         lead={soulLead}
@@ -259,6 +233,7 @@ function MatchBody({
         accountId={accountId}
         ranks={ranks}
         laned={laned}
+        durationS={entry.match_duration_s}
         itemsById={itemsById}
         nameOf={nameOf}
         viewedAccountId={viewedAccountId}
@@ -275,7 +250,6 @@ export function MatchDetails({
   ranks,
   heroName,
   records,
-  baseline,
 }: {
   entry: PlayerMatchHistoryEntry;
   accountId: number;
@@ -283,13 +257,11 @@ export function MatchDetails({
   heroName: string;
   /** Personal bests this match holds over the filtered history. */
   records: HeldRecord[] | undefined;
-  /** The player's own average the match's stats are measured against. */
-  baseline: PerformanceBaseline | null;
 }) {
   return (
     <div className="@container space-y-4">
       <MatchHeader entry={entry} ranks={ranks} heroName={heroName} records={records} />
-      <MatchBody entry={entry} accountId={accountId} ranks={ranks} heroName={heroName} baseline={baseline} />
+      <MatchBody entry={entry} accountId={accountId} ranks={ranks} />
     </div>
   );
 }
