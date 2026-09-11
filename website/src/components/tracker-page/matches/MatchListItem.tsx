@@ -5,7 +5,15 @@ import { type KeyboardEventHandler, useRef } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
 import { day } from "~/dayjs";
-import { brawlRounds, formatMatchDuration, isWin, matchModeLabel, unscoredOutcome } from "~/lib/tracker/compute";
+import {
+  brawlRounds,
+  formatMatchDuration,
+  isWin,
+  matchModeLabel,
+  type MatchSortKey,
+  sortValueLabel,
+  unscoredOutcome,
+} from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 import { trackerMatchMetadataQueryOptions } from "~/queries/tracker-queries";
 
@@ -25,6 +33,7 @@ export function MatchListItem({
   hasRecord,
   selected,
   showTimeOfDay,
+  sortKey,
   onSelect,
   onKeyDown,
 }: {
@@ -35,6 +44,8 @@ export function MatchListItem({
   selected: boolean;
   /** Under a session header the day is already given, so the row only needs the time. */
   showTimeOfDay: boolean;
+  /** The list's sort, whose metric takes the mode and duration's place when the row would not otherwise show it. */
+  sortKey: MatchSortKey;
   onSelect: () => void;
   onKeyDown: KeyboardEventHandler<HTMLButtonElement>;
 }) {
@@ -43,6 +54,7 @@ export function MatchListItem({
   const unscored = unscoredOutcome(entry);
   const abandoned = entry.abandoned_time_s != null && entry.abandoned_time_s > 0;
   const played = day.unix(entry.start_time);
+  const sortValue = sortValueLabel(entry, sortKey);
 
   const queryClient = useQueryClient();
   const prefetchTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -95,8 +107,11 @@ export function MatchListItem({
             {win ? "W" : "L"}
             {rounds && ` ${rounds.own}–${rounds.enemy}`}
           </span>
-          <span className="truncate">
-            · {matchModeLabel(entry)} · {formatMatchDuration(entry.match_duration_s)}
+          <span
+            className="truncate"
+            title={`${matchModeLabel(entry)} · ${formatMatchDuration(entry.match_duration_s)}`}
+          >
+            · {sortValue ?? `${matchModeLabel(entry)} · ${formatMatchDuration(entry.match_duration_s)}`}
           </span>
           <span className="ml-auto flex shrink-0 items-center gap-1.5 pl-2">
             <RankDelta value={entry.ranked_delta} />

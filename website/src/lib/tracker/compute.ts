@@ -162,6 +162,22 @@ const MATCH_SORT_VALUES: Record<MatchSortKey, (entry: PlayerMatchHistoryEntry) =
   played: (entry) => entry.start_time,
 };
 
+/** The sorted metric spelled out, or null for the keys a match row already shows. */
+export function sortValueLabel(entry: PlayerMatchHistoryEntry, key: MatchSortKey): string | null {
+  switch (key) {
+    case "kda":
+      return `${kdaRatio(entry).toFixed(2)} KDA`;
+    case "souls":
+      return `${entry.net_worth.toLocaleString("en-US")} souls`;
+    case "soulsPerMin":
+      return `${Math.round(soulsPerMinute(entry)).toLocaleString("en-US")} souls/min`;
+    case "lastHits":
+      return `${entry.last_hits.toLocaleString("en-US")} last hits`;
+    default:
+      return null;
+  }
+}
+
 /** Ties fall back to newest first so the order stays stable across sort keys. */
 export function sortMatches(
   entries: PlayerMatchHistoryEntry[],

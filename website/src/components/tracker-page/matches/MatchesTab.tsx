@@ -280,6 +280,7 @@ export function MatchesTab({
                       hasRecord={heldRecords?.has(entry.match_id) ?? false}
                       selected={entry.match_id === selectedId}
                       showTimeOfDay={session != null}
+                      sortKey={sortKey}
                       onSelect={() => selectMatch(entry.match_id)}
                       onKeyDown={handleItemKeyDown}
                     />
