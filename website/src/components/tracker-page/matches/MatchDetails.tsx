@@ -18,14 +18,13 @@ import {
   type HeldRecord,
   isWin,
   matchModeLabel,
-  type TrackerSummary,
   type UnscoredOutcome,
   unscoredOutcome,
 } from "~/lib/tracker/compute";
 import { computeFights } from "~/lib/tracker/fights";
 import { computeLaneMatchups } from "~/lib/tracker/lane-matchup";
 import { computeObjectiveEvents } from "~/lib/tracker/objectives";
-import { performanceStats } from "~/lib/tracker/performance";
+import { type PerformanceBaseline, performanceStats } from "~/lib/tracker/performance";
 import { computeSoulLead } from "~/lib/tracker/soul-lead";
 import { cn } from "~/lib/utils";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
@@ -161,12 +160,14 @@ function MatchBody({
   entry,
   accountId,
   ranks,
+  heroName,
   baseline,
 }: {
   entry: PlayerMatchHistoryEntry;
   accountId: number;
   ranks: Rank[];
-  baseline: TrackerSummary | null;
+  heroName: string;
+  baseline: PerformanceBaseline | null;
 }) {
   const matchId = entry.match_id;
   // Street Brawl reports lane ids too, but its map has no lanes to speak of.
@@ -205,7 +206,7 @@ function MatchBody({
         player: tracked,
         teammates: match?.players.filter((player) => player.team === ownTeam) ?? [],
         deadForS: match ? (computeFights(match.deaths, match.players, accountId)?.deadForS ?? null) : null,
-        baseline,
+        baseline: baseline?.summary ?? null,
       }),
     [entry, match, tracked, accountId, ownTeam, baseline],
   );
@@ -241,7 +242,7 @@ function MatchBody({
 
   return (
     <div className="space-y-4">
-      <PerformanceCard stats={performance} baselineMatches={baseline?.matches ?? 0} />
+      <PerformanceCard stats={performance} baseline={baseline} heroName={heroName} />
       <MatchTimeline
         ref={timelineRef}
         lead={soulLead}
@@ -280,13 +281,13 @@ export function MatchDetails({
   heroName: string;
   /** Personal bests this match holds over the filtered history. */
   records: HeldRecord[] | undefined;
-  /** Averages over the rest of the filtered history, which the match's own stats are measured against. */
-  baseline: TrackerSummary | null;
+  /** The player's own average the match's stats are measured against. */
+  baseline: PerformanceBaseline | null;
 }) {
   return (
     <div className="@container space-y-4">
       <MatchHeader entry={entry} ranks={ranks} heroName={heroName} records={records} />
-      <MatchBody entry={entry} accountId={accountId} ranks={ranks} baseline={baseline} />
+      <MatchBody entry={entry} accountId={accountId} ranks={ranks} heroName={heroName} baseline={baseline} />
     </div>
   );
 }

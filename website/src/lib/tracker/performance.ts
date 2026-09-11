@@ -2,7 +2,32 @@ import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
-import { formatMatchDuration, kdaRatio, soulsPerMinute, type TrackerSummary } from "./compute";
+import { formatMatchDuration, kdaRatio, soulsPerMinute, summarize, type TrackerSummary } from "./compute";
+
+/** An average over a handful of matches says more about those matches than about the player. */
+const MIN_BASELINE_MATCHES = 5;
+
+export interface PerformanceBaseline {
+  summary: TrackerSummary;
+  /** Whether the average covers only the match's hero. */
+  perHero: boolean;
+}
+
+/**
+ * What a match is measured against: the player's other games on the same hero where there are enough of
+ * them, since souls and kills mean different things on a farming carry and a support, and the rest of the
+ * filtered history otherwise. Null when neither pool is big enough to average.
+ */
+export function performanceBaseline(
+  entries: PlayerMatchHistoryEntry[],
+  entry: PlayerMatchHistoryEntry,
+): PerformanceBaseline | null {
+  const others = entries.filter((other) => other.match_id !== entry.match_id);
+  const sameHero = others.filter((other) => other.hero_id === entry.hero_id);
+  const pool = sameHero.length >= MIN_BASELINE_MATCHES ? sameHero : others;
+  if (pool.length < MIN_BASELINE_MATCHES) return null;
+  return { summary: summarize(pool), perHero: pool === sameHero };
+}
 
 export interface PerformanceStat {
   label: string;
@@ -41,7 +66,7 @@ export function performanceStats({
   teammates: TrackerMatchPlayer[];
   /** Seconds the tracked player spent waiting to respawn, or null when the match records no deaths. */
   deadForS: number | null;
-  /** Averages over the filtered history without this match, or null when too few matches to mean anything. */
+  /** The player's own average to measure against, or null when their history is too short for one. */
   baseline: TrackerSummary | null;
 }): PerformanceStat[] {
   const kda = kdaRatio(entry);

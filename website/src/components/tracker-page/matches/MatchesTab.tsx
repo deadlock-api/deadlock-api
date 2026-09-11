@@ -20,6 +20,7 @@ import {
   sortMatches,
   summarize,
 } from "~/lib/tracker/compute";
+import { performanceBaseline } from "~/lib/tracker/performance";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { trackerMatchMetadataQueryOptions } from "~/queries/tracker-queries";
@@ -31,8 +32,6 @@ import { MatchListItem } from "./MatchListItem";
 
 // A best among a handful of matches says little, so small sets get no record markers.
 const MIN_MATCHES_FOR_RECORDS = 10;
-// Likewise an average: a match measured against one or two others says more about those than about the player.
-const MIN_MATCHES_FOR_BASELINE = 5;
 const LIST_CHUNK = 50;
 /** How far past the list's visible end the next chunk renders, so scrolling never catches up with it. */
 const PRELOAD_MARGIN_PX = 2400;
@@ -204,11 +203,7 @@ export function MatchesTab({
     [entries, sortKey],
   );
   const summary = useMemo(() => summarize(entries), [entries]);
-  // The selected match is left out, so it is measured against the rest of the history rather than partly against itself.
-  const baseline = useMemo(() => {
-    const others = entries.filter((entry) => entry.match_id !== selectedId);
-    return others.length >= MIN_MATCHES_FOR_BASELINE ? summarize(others) : null;
-  }, [entries, selectedId]);
+  const baseline = useMemo(() => (selected ? performanceBaseline(entries, selected) : null), [entries, selected]);
   const heldRecords = useMemo(
     () => (entries.length >= MIN_MATCHES_FOR_RECORDS ? recordsByMatchId(computeRecords(entries)) : null),
     [entries],

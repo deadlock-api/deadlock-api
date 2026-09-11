@@ -1,11 +1,11 @@
 import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
-import type { PerformanceStat } from "~/lib/tracker/performance";
+import type { PerformanceBaseline, PerformanceStat } from "~/lib/tracker/performance";
 import { cn } from "~/lib/utils";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { PanelTooltipContent } from "../shared/PanelTooltipContent";
 
-function Delta({ stat, baselineMatches }: { stat: PerformanceStat; baselineMatches: number }) {
+function Delta({ stat, baselineLabel }: { stat: PerformanceStat; baselineLabel: string }) {
   const percent = Math.round(((stat.ratio as number) - 1) * 100);
   return (
     <Tooltip>
@@ -23,7 +23,7 @@ function Delta({ stat, baselineMatches }: { stat: PerformanceStat; baselineMatch
       </TooltipTrigger>
       <PanelTooltipContent>
         <div className="tabular-nums">
-          Your average is {stat.average} over {baselineMatches.toLocaleString("en-US")} other matches.
+          Your average is {stat.average} over {baselineLabel}.
         </div>
       </PanelTooltipContent>
     </Tooltip>
@@ -31,13 +31,24 @@ function Delta({ stat, baselineMatches }: { stat: PerformanceStat; baselineMatch
 }
 
 /** The tracked player's own stats for the match, each measured against their average where there is one. */
-export function PerformanceCard({ stats, baselineMatches }: { stats: PerformanceStat[]; baselineMatches: number }) {
+export function PerformanceCard({
+  stats,
+  baseline,
+  heroName,
+}: {
+  stats: PerformanceStat[];
+  baseline: PerformanceBaseline | null;
+  heroName: string;
+}) {
+  const baselineLabel =
+    baseline &&
+    `${baseline.summary.matches.toLocaleString("en-US")} other ${baseline.perHero ? `${heroName} ` : ""}matches`;
   return (
     <div className="rounded-md border border-border px-3 py-2">
       <div className="mb-2 flex items-baseline gap-2">
         <span className="text-sm font-semibold">Your match</span>
-        {baselineMatches > 0 && (
-          <span className="text-xs text-muted-foreground">against your average over the filtered history</span>
+        {baselineLabel && (
+          <span className="text-xs text-muted-foreground">against your average over {baselineLabel}</span>
         )}
       </div>
       <div className="grid grid-cols-2 gap-x-4 gap-y-2 @md:grid-cols-4 @3xl:grid-cols-7">
@@ -46,7 +57,7 @@ export function PerformanceCard({ stats, baselineMatches }: { stats: Performance
             <div className="truncate text-xs text-muted-foreground">{stat.label}</div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-base font-semibold tabular-nums">{stat.value}</span>
-              {stat.ratio != null && <Delta stat={stat} baselineMatches={baselineMatches} />}
+              {stat.ratio != null && baselineLabel && <Delta stat={stat} baselineLabel={baselineLabel} />}
             </div>
             {stat.note && <div className="truncate text-[11px] text-muted-foreground tabular-nums">{stat.note}</div>}
           </div>
