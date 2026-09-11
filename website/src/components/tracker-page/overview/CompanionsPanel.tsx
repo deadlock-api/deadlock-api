@@ -57,6 +57,7 @@ export function CompanionsPanel({
       title="Teammates & opponents"
       icon={UsersRound}
       meta="Frequent encounters"
+      footer="Your win rate · 2+ shared games in selected matches"
       details={() => (
         <div className="grid gap-4 @4xl/stats-dialog:grid-cols-2">
           <div className="min-w-0">
@@ -88,9 +89,6 @@ export function CompanionsPanel({
           />
         </div>
       </div>
-      <p className="mt-2 text-[10px] text-muted-foreground">
-        Your win rate with teammates or against opponents · 2+ shared games in selected matches.
-      </p>
     </OverviewDetailPanel>
   );
 }
@@ -149,7 +147,7 @@ function CompanionPreview({
               const profile = profiles[row.accountId];
               return (
                 <TableRow key={row.accountId}>
-                  <TableCell className="w-full max-w-0 py-2 pr-2 pl-0">
+                  <TableCell className="w-full max-w-0 py-1.5 pr-2 pl-0">
                     <div className="flex min-w-0 items-center gap-1.5">
                       {profile?.avatar && (
                         <img src={profile.avatar} alt="" className="size-5 shrink-0 rounded-full" loading="lazy" />
@@ -163,10 +161,10 @@ function CompanionPreview({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="px-1 py-2 text-right text-xs tabular-nums">
+                  <TableCell className="px-1 py-1.5 text-right text-xs tabular-nums">
                     {row.matches.toLocaleString("en-US")}
                   </TableCell>
-                  <TableCell className="py-2 pr-0 pl-1 text-right text-xs tabular-nums">
+                  <TableCell className="py-1.5 pr-0 pl-1 text-right text-xs tabular-nums">
                     {((row.wins / row.matches) * 100).toFixed(0)}%
                   </TableCell>
                 </TableRow>

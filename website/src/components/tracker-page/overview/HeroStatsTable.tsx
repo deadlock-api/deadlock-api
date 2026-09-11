@@ -49,6 +49,12 @@ export function HeroStatsTable({
       showMetaInDialog
       title="Hero pool"
       icon={Users}
+      footer={
+        <output>
+          {visible.length} of {sorted.length} {sorted.length === 1 ? "hero" : "heroes"}
+          {minimumMatches > 0 ? ` · ${minimumMatches}+ games` : " · selected matches"}
+        </output>
+      }
       meta={
         <div className="flex items-center gap-2">
           <span>Min. games</span>
@@ -77,10 +83,6 @@ export function HeroStatsTable({
         </div>
       }
     >
-      <output className="mb-2 block text-[10px] text-muted-foreground">
-        Showing {visible.length} of {sorted.length} {sorted.length === 1 ? "hero" : "heroes"}
-        {minimumMatches > 0 ? ` with ${minimumMatches}+ games in selected matches.` : " in selected matches."}
-      </output>
       {sorted.length === 0 ? (
         <Empty className="border px-3 py-6 md:p-6">
           <EmptyHeader>
@@ -127,7 +129,7 @@ export function HeroStatsTable({
                     title="Filter matches to this hero"
                   >
                     <span aria-hidden="true">
-                      <HeroImage heroId={row.heroId} className="size-7 rounded" />
+                      <HeroImage heroId={row.heroId} className="size-6 rounded" />
                     </span>
                     <HeroName heroId={row.heroId} className="max-w-24 text-xs font-medium group-hover:text-primary" />
                     <ArrowUpRight aria-hidden="true" className="size-3 text-muted-foreground" />

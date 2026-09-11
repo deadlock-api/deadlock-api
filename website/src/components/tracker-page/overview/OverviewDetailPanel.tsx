@@ -14,6 +14,7 @@ export function OverviewDetailPanel({
   showMetaInDialog = false,
   children,
   details,
+  footer,
 }: {
   title: string;
   icon: LucideIcon;
@@ -21,6 +22,7 @@ export function OverviewDetailPanel({
   showMetaInDialog?: boolean;
   children: ReactNode;
   details: (close: () => void) => ReactNode;
+  footer?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -28,9 +30,10 @@ export function OverviewDetailPanel({
     <Dialog open={open} onOpenChange={setOpen}>
       <DashboardPanel title={title} icon={icon} meta={meta}>
         {children}
-        <div className="mt-1 flex justify-end">
+        <div className="mt-1 flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
+          {footer && <div className="min-w-0 flex-1 text-[10px] text-muted-foreground">{footer}</div>}
           <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" aria-label={`Show more ${title.toLowerCase()}`}>
+            <Button variant="ghost" size="xs" aria-label={`Show more ${title.toLowerCase()}`}>
               Show more
               <Maximize2 data-icon="inline-end" />
             </Button>

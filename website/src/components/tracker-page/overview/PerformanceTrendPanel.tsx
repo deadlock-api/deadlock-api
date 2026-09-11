@@ -47,25 +47,25 @@ export function PerformanceTrendPanel({ entries }: { entries: PlayerMatchHistory
 
   return (
     <DashboardPanel title="Performance trend" icon={ChartNoAxesCombined} meta={`Rolling ${window} matches`}>
-      <div className="flex flex-col gap-2">
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          size="sm"
-          value={metric}
-          onValueChange={(value) => {
-            if (metricKeys.includes(value as Metric)) setMetric(value as Metric);
-          }}
-          aria-label="Performance metric"
-        >
-          {metricKeys.map((key) => (
-            <ToggleGroupItem key={key} value={key} className="px-2">
-              {metrics[key].label}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+      <div className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-center justify-between gap-1">
-          <span className="text-[10px] text-muted-foreground">Window</span>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            value={metric}
+            onValueChange={(value) => {
+              if (metricKeys.includes(value as Metric)) setMetric(value as Metric);
+            }}
+            aria-label="Performance metric"
+          >
+            {metricKeys.map((key) => (
+              <ToggleGroupItem key={key} value={key} className="h-7 px-2">
+                {metrics[key].label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+
           <ToggleGroup
             type="single"
             size="sm"
@@ -79,6 +79,7 @@ export function PerformanceTrendPanel({ entries }: { entries: PlayerMatchHistory
               <ToggleGroupItem
                 key={choice}
                 value={choice}
+                className="h-7 px-2"
                 aria-label={choice === "auto" ? "Automatic window size" : `${choice} matches`}
                 title={choice === "auto" ? "Window grows with your selected match history" : `${choice}-match window`}
               >

@@ -19,7 +19,7 @@ export function DashboardPanel({
 }) {
   return (
     <Card className={cn("min-w-0 gap-0 overflow-hidden rounded-lg py-0", className)}>
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 px-3 py-2.5">
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 px-3 py-2">
         <CardTitle>
           <h3 className="flex items-center gap-2 text-xs">
             <Icon aria-hidden="true" className="size-3.5 text-muted-foreground" />
@@ -28,7 +28,7 @@ export function DashboardPanel({
         </CardTitle>
         {meta && <div className="text-[10px] text-muted-foreground tabular-nums">{meta}</div>}
       </CardHeader>
-      <CardContent className="px-3 pb-3">{children}</CardContent>
+      <CardContent className="px-3 pb-2">{children}</CardContent>
     </Card>
   );
 }
@@ -37,7 +37,7 @@ export function MetricRows({ rows }: { rows: { label: string; value: ReactNode; 
   return (
     <dl className="flex flex-col divide-y divide-border/60">
       {rows.map(({ label, value, hint }) => (
-        <div key={label} className="flex items-center justify-between gap-2 py-1.5 text-xs" title={hint}>
+        <div key={label} className="flex items-center justify-between gap-2 py-1 text-xs" title={hint}>
           <dt className="text-muted-foreground">{label}</dt>
           <dd className="text-right font-medium tabular-nums">{value}</dd>
         </div>

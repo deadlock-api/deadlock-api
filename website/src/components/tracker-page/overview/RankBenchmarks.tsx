@@ -138,19 +138,21 @@ export function RankBenchmarks({
           </p>
         ) : (
           <>
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-1 text-[10px] text-muted-foreground">
-              <span>Player averages vs. {cohortLabel} lobby averages</span>
-              <span className="flex items-center gap-3">
-                <span className="flex items-center gap-1">
-                  <span className="size-1.5 rounded-sm bg-chart-4" />
-                  Player
+            {expanded && (
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-1 text-[10px] text-muted-foreground">
+                <span>Player averages vs. {cohortLabel} lobby averages</span>
+                <span className="flex items-center gap-3">
+                  <span className="flex items-center gap-1">
+                    <span className="size-1.5 rounded-sm bg-chart-4" />
+                    Player
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="size-1.5 rounded-sm bg-muted-foreground" />
+                    Rank group
+                  </span>
                 </span>
-                <span className="flex items-center gap-1">
-                  <span className="size-1.5 rounded-sm bg-muted-foreground" />
-                  Rank group
-                </span>
-              </span>
-            </div>
+              </div>
+            )}
             <div
               className={cn(
                 "grid grid-cols-2 gap-2",
@@ -180,6 +182,7 @@ export function RankBenchmarks({
       title="Rank benchmarks"
       showMetaInDialog
       details={() => renderContent(true)}
+      footer="Player averages / rank group averages"
       icon={ChartNoAxesCombined}
       meta={
         mode.supportsRank ? (

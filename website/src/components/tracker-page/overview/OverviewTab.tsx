@@ -39,7 +39,7 @@ import { cn } from "~/lib/utils";
 
 import { HeroesTab } from "../heroes/HeroesTab";
 import { CompanionsPanel } from "./CompanionsPanel";
-import { DashboardPanel, MetricRows, RateBar } from "./DashboardPanel";
+import { DashboardPanel, MetricRows } from "./DashboardPanel";
 import { HeroStatsTable } from "./HeroStatsTable";
 import { RankBenchmarks } from "./RankBenchmarks";
 import { TrendPanels } from "./TrendPanels";
@@ -142,11 +142,11 @@ export function OverviewTab({
 
       <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border @md/overview:grid-cols-3 @3xl/overview:grid-cols-6">
         {headline.map(({ label, value, detail, accent }) => (
-          <div key={label} className="flex min-w-0 flex-col gap-1 bg-card px-3 py-3">
+          <div key={label} className="flex min-w-0 flex-col gap-1 bg-card px-3 py-2">
             <dt className="text-[10px] font-medium tracking-wider text-muted-foreground uppercase">{label}</dt>
             <dd
               className={cn(
-                "text-2xl leading-tight font-semibold tracking-tight tabular-nums",
+                "text-xl leading-tight font-semibold tracking-tight tabular-nums",
                 accent && "text-victory",
               )}
             >
@@ -159,7 +159,7 @@ export function OverviewTab({
 
       <div className="grid gap-2 @xl/overview:grid-cols-3">
         <DashboardPanel title="Combat" icon={Crosshair} meta="Per match">
-          <div className="grid grid-cols-3 gap-2 rounded-md bg-muted/50 px-2 py-2">
+          <div className="grid grid-cols-3 gap-2 rounded-md bg-muted/50 px-2 py-1.5">
             {[
               { label: "Kills", value: s.avgKills, color: "text-foreground" },
               { label: "Deaths", value: s.avgDeaths, color: "text-primary" },
@@ -207,10 +207,19 @@ export function OverviewTab({
               Includes wins and losses. Hero, mode and date filters apply.
             </p>
           )}
-          <div className="flex items-baseline gap-2 pb-2">
-            <span className="text-xl font-semibold text-victory tabular-nums">{percent(recent.recent.winrate)}</span>
-            <span className="text-[11px] text-muted-foreground tabular-nums">
-              {recent.recent.wins}W / {recent.recent.losses}L
+          <div className="flex flex-wrap items-baseline justify-between gap-2 pb-2">
+            <div className="flex items-baseline gap-2">
+              <span className="text-lg font-semibold text-victory tabular-nums">{percent(recent.recent.winrate)}</span>
+              <span className="text-[11px] text-muted-foreground tabular-nums">
+                {recent.recent.wins}W / {recent.recent.losses}L
+              </span>
+            </div>
+            <span className="text-[11px] text-muted-foreground">
+              Current streak{" "}
+              <strong className={streaks.current > 0 ? "text-victory" : "text-primary"}>
+                {Math.abs(streaks.current)}
+                {streaks.current > 0 ? "W" : "L"}
+              </strong>
             </span>
           </div>
           <div className="grid grid-cols-10 gap-1" aria-label="Recent results, newest first">
@@ -242,23 +251,14 @@ export function OverviewTab({
             <span>Newest</span>
             <span>Oldest</span>
           </div>
-          <MetricRows
-            rows={[
-              {
-                label: "Current streak",
-                value: (
-                  <span className={streaks.current > 0 ? "text-victory" : "text-primary"}>
-                    {Math.abs(streaks.current)}
-                    {streaks.current > 0 ? " wins" : " losses"}
-                  </span>
-                ),
-              },
-              {
-                label: "Recent KDA / SPM",
-                value: `${recent.recent.kdaRatio.toFixed(2)} / ${integer(recent.recent.soulsPerMin)}`,
-              },
-            ]}
-          />
+          <div className="flex flex-wrap justify-between gap-2 py-1 text-[11px] text-muted-foreground">
+            <span>
+              KDA <strong className="text-foreground tabular-nums">{recent.recent.kdaRatio.toFixed(2)}</strong>
+            </span>
+            <span>
+              Souls / min <strong className="text-foreground tabular-nums">{integer(recent.recent.soulsPerMin)}</strong>
+            </span>
+          </div>
           <p className="pt-1 text-[10px] text-muted-foreground">
             {recent.previous
               ? `${signed((recent.recent.winrate - recent.previous.winrate) * 100)} pp win rate vs. previous ${recent.previous.matches} matches`
@@ -304,7 +304,7 @@ export function OverviewTab({
 
       <div className="grid gap-2 @2xl/overview:grid-cols-2 @5xl/overview:grid-cols-3">
         <DashboardPanel title="Where you win" icon={GitCompareArrows} meta="Games / win rate">
-          <div className="grid gap-x-5 gap-y-3 @4xl/overview:grid-cols-2">
+          <div className="grid gap-x-4 gap-y-2 @4xl/overview:grid-cols-2">
             <SplitRows label="Match duration" rows={data.splits.byDuration} />
             <SplitRows label="Starting side" rows={data.splits.bySide} />
             <SplitRows label="Session momentum" rows={sessions.byPreviousResult} />
@@ -312,7 +312,7 @@ export function OverviewTab({
           </div>
         </DashboardPanel>
         <DashboardPanel title="Play habits" icon={Clock3} meta="Your local time">
-          <div className="grid grid-cols-3 gap-2 pb-3">
+          <div className="grid grid-cols-3 gap-2 pb-2">
             {[
               { label: "Sessions", value: integer(sessions.sessions) },
               { label: "Games / session", value: decimal(sessions.avgMatchesPerSession) },
@@ -362,13 +362,13 @@ export function OverviewTab({
                   type="button"
                   disabled={!record}
                   onClick={() => record && onOpenMatch(record.entry.match_id)}
-                  className="group flex min-w-0 flex-col gap-1 rounded-md border border-border/70 px-2 py-2 text-left transition-colors focus-visible:outline-2 focus-visible:outline-ring enabled:hover:bg-accent disabled:cursor-default"
+                  className="group flex min-w-0 flex-col gap-0.5 rounded-md border border-border/70 px-2 py-1.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-ring enabled:hover:bg-accent disabled:cursor-default"
                 >
                   <span className="flex items-center justify-between gap-1 text-[10px] text-muted-foreground">
                     {label}
                     {record && <ArrowUpRight aria-hidden="true" className="size-3 shrink-0" />}
                   </span>
-                  <span className="text-lg font-semibold tabular-nums">{record ? format(record.value) : "—"}</span>
+                  <span className="text-base font-semibold tabular-nums">{record ? format(record.value) : "—"}</span>
                   {record ? (
                     <span className="flex min-w-0 items-center gap-1">
                       <span aria-hidden="true">
@@ -404,7 +404,7 @@ function SplitRows({ label, rows }: { label: string; rows: OutcomeSplit[] }) {
   return (
     <div className="min-w-0">
       <h4 className="pb-1 text-[9px] font-medium tracking-wider text-muted-foreground uppercase">{label}</h4>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1.5">
         {rows.map((row) => (
           <div
             key={row.label}
@@ -417,9 +417,6 @@ function SplitRows({ label, rows }: { label: string; rows: OutcomeSplit[] }) {
             <span className="w-9 text-right font-medium tabular-nums">
               {row.matches ? `${Math.round((row.wins / row.matches) * 100)}%` : "—"}
             </span>
-            <div className="col-span-3">
-              <RateBar wins={row.wins} matches={row.matches} />
-            </div>
           </div>
         ))}
       </div>
