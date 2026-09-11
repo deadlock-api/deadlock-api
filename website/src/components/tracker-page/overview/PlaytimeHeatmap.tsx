@@ -2,7 +2,12 @@ import { type KeyboardEvent, useId, useRef, useState } from "react";
 
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
-import { type PlaytimeCell, type PlaytimeHabits, PLAYTIME_BUCKET_HOURS } from "~/lib/tracker/compute";
+import {
+  type PlaytimeCell,
+  type PlaytimeHabits,
+  PEAK_HOURS_WINDOW,
+  PLAYTIME_BUCKET_HOURS,
+} from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -135,7 +140,7 @@ export function PlaytimeHeatmap({ habits }: { habits: PlaytimeHabits }) {
             <>
               {habits.favoriteWeekday ? `Most active: ${weekdays[habits.favoriteWeekday.weekday]}` : "No activity"}
               {habits.peakHourStart != null &&
-                ` · Peak: ${hourLabel(habits.peakHourStart)}–${hourLabel(habits.peakHourStart + 3)}`}
+                ` · Peak ${PEAK_HOURS_WINDOW}h: ${hourLabel(habits.peakHourStart)}–${hourLabel(habits.peakHourStart + PEAK_HOURS_WINDOW)}`}
             </>
           )}
         </span>
