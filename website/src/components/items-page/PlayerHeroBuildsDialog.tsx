@@ -211,7 +211,6 @@ function PlayerSearch({ onSelect }: { onSelect: (profile: SteamProfile) => void 
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 p-2">
         <Input
-          autoFocus
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by Steam name…"

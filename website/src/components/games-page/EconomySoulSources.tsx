@@ -30,10 +30,14 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
         color: group.color,
         value,
         orbShare: value > 0 ? orb / value : 0,
+        share: 0,
       };
     });
     const total = rows.reduce((sum, r) => sum + r.value, 0);
-    return rows.map((r) => ({ ...r, share: total > 0 ? r.value / total : 0 })).sort((a, b) => b.value - a.value);
+    for (const row of rows) {
+      row.share = total > 0 ? row.value / total : 0;
+    }
+    return rows.sort((a, b) => b.value - a.value);
   }, [stats]);
 
   if (isPending) {

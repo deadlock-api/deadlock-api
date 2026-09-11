@@ -63,21 +63,20 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
       .map((point): CurvePoint => {
         const lower = Math.max(0, point.net_worth_avg - point.net_worth_std);
         const upper = point.net_worth_avg + point.net_worth_std;
-        const sources: Record<string, number> = {};
-        for (const group of SOUL_SOURCE_GROUPS) {
-          const fields = CURVE_FIELDS[group.key];
-          const base = (point[fields.base] as number) ?? 0;
-          const orb = fields.orb ? ((point[fields.orb] as number) ?? 0) : 0;
-          sources[group.key] = base + orb;
-        }
-        return {
+        const curvePoint: CurvePoint = {
           t: point.game_time,
           avg: point.net_worth_avg,
           std: point.net_worth_std,
           lower,
           band: upper - lower,
-          ...sources,
         };
+        for (const group of SOUL_SOURCE_GROUPS) {
+          const fields = CURVE_FIELDS[group.key];
+          const base = (point[fields.base] as number) ?? 0;
+          const orb = fields.orb ? ((point[fields.orb] as number) ?? 0) : 0;
+          curvePoint[group.key] = base + orb;
+        }
+        return curvePoint;
       });
   }, [data]);
 

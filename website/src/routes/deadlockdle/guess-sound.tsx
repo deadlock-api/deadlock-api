@@ -232,6 +232,10 @@ function useAudioPlayer(url: string | null) {
     }
   }, []);
 
+  const stopProgressLoop = useCallback(() => {
+    cancelAnimationFrame(animRef.current);
+  }, []);
+
   const togglePlayPause = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -244,15 +248,15 @@ function useAudioPlayer(url: string | null) {
     } else {
       audio.pause();
       setIsPlaying(false);
-      cancelAnimationFrame(animRef.current);
+      stopProgressLoop();
     }
-  }, [volume]);
+  }, [volume, stopProgressLoop]);
 
   const handleEnded = useCallback(() => {
     setIsPlaying(false);
     setProgress(0);
-    cancelAnimationFrame(animRef.current);
-  }, []);
+    stopProgressLoop();
+  }, [stopProgressLoop]);
 
   const handleLoadedMetadata = useCallback(() => {
     if (audioRef.current) {
@@ -262,10 +266,8 @@ function useAudioPlayer(url: string | null) {
   }, [volume]);
 
   useEffect(() => {
-    return () => {
-      cancelAnimationFrame(animRef.current);
-    };
-  }, []);
+    return stopProgressLoop;
+  }, [stopProgressLoop]);
 
   return {
     audioRef,

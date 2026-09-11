@@ -149,7 +149,6 @@ function PickerBody({
           Search the roster; every row shows what the hero would add to the current draft.
         </DialogDescription>
         <Input
-          autoFocus
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={handleKeyDown}
