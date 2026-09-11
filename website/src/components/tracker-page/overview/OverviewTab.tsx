@@ -118,9 +118,9 @@ export function OverviewTab({
       detail: `${formatMatchDuration(s.avgDurationS)} avg. match`,
     },
     {
-      label: "Rank change",
+      label: "Rank progress",
       value: s.rankDelta == null ? "—" : signed(s.rankDelta),
-      detail: s.rankDelta == null ? "No recorded rank changes" : "Total recorded progress",
+      detail: s.rankDelta == null ? "No recorded rank changes" : "Recorded progress points",
     },
   ];
 
