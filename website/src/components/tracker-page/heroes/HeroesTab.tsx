@@ -137,6 +137,20 @@ const COLUMNS: {
   },
 ];
 
+/** Keep keyboard focus clear of the frozen hero column in the scrollable view. */
+function revealSortButton(button: HTMLButtonElement) {
+  const table = button.closest("table");
+  const scroller = table?.parentElement;
+  const heroHeader = table?.querySelector("th");
+  if (!scroller || !heroHeader) return;
+
+  const bounds = button.getBoundingClientRect();
+  const left = heroHeader.getBoundingClientRect().right + 4;
+  const right = scroller.getBoundingClientRect().right - 4;
+  if (bounds.left < left) scroller.scrollLeft -= left - bounds.left;
+  else if (bounds.right > right) scroller.scrollLeft += bounds.right - right;
+}
+
 export function HeroesTab({
   accountId,
   gameMode,
@@ -285,6 +299,9 @@ export function HeroesTab({
                         type="button"
                         aria-label={`Sort by ${column.label.toLowerCase()}, ${sortKey === column.key && sortDir === "desc" ? "ascending" : "descending"}`}
                         onClick={() => handleSort(column.key)}
+                        onFocus={(event) => {
+                          if (showAllStats) revealSortButton(event.currentTarget);
+                        }}
                         className="inline-flex cursor-pointer items-center gap-1 rounded-sm transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
                       >
                         {column.label}
