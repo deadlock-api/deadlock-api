@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { HashMapValue } from "deadlock_api_client";
 import { ChartNoAxesCombined, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 
 import {
   formatPlayerMetricValue,
@@ -36,6 +36,7 @@ const PRIMARY_METRICS = [
   "healing_per_min",
   "crit_shot_rate",
 ];
+const RANK_SELECTIONS = ["auto", "all", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"] as const;
 const labels: Record<string, string> = {
   kda: "KDA / match",
   net_worth_per_min: "Souls / min",
@@ -55,7 +56,10 @@ export function RankBenchmarks({
   latestBadge: number | null;
 }) {
   const { data: ranks = [] } = useQuery(ranksQueryOptions);
-  const [selection, setSelection] = useState("auto");
+  const [selection, setSelection] = useQueryState(
+    "benchmark_rank",
+    parseAsStringLiteral(RANK_SELECTIONS).withDefault("auto"),
+  );
   const mode = MODE_CONFIG[filters.mode];
   const autoRange = benchmarkRankRange(latestBadge);
   const range =
@@ -96,6 +100,12 @@ export function RankBenchmarks({
       ? PLAYER_METRICS
       : PRIMARY_METRICS.flatMap((key) => PLAYER_METRICS.filter((m) => m.key === key));
     const hasData = metrics.some((m) => compareBenchmark(player.data?.[m.key]?.avg, cohort.data?.[m.key]?.avg));
+    const gridClassName = cn(
+      "grid gap-2",
+      expanded
+        ? "grid-cols-1 @xs/stats-dialog:grid-cols-2 @xl/stats-dialog:grid-cols-3 @4xl/stats-dialog:grid-cols-4"
+        : "grid-cols-2 @xl/overview:grid-cols-3 @3xl/overview:grid-cols-4 @5xl/overview:grid-cols-6",
+    );
 
     return (
       <>
@@ -108,12 +118,9 @@ export function RankBenchmarks({
             No rank is recorded for this player. Choose a rank range above to compare against a lobby average.
           </p>
         ) : loading ? (
-          <output
-            aria-label="Loading rank benchmarks"
-            className="grid grid-cols-2 gap-2 @xl/overview:grid-cols-3 @3xl/overview:grid-cols-4 @5xl/overview:grid-cols-6"
-          >
-            {PRIMARY_METRICS.map((key) => (
-              <Skeleton key={key} className={cn("w-full", expanded ? "h-32" : "h-14")} />
+          <output aria-label="Loading rank benchmarks" className={gridClassName}>
+            {metrics.map(({ key }) => (
+              <Skeleton key={key} className={cn("w-full motion-reduce:animate-none", expanded ? "h-32" : "h-14")} />
             ))}
           </output>
         ) : failed ? (
@@ -139,28 +146,29 @@ export function RankBenchmarks({
         ) : (
           <>
             {expanded && (
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-1 text-[10px] text-muted-foreground">
-                <span>Player averages vs. {cohortLabel} lobby averages</span>
-                <span className="flex items-center gap-3">
-                  <span className="flex items-center gap-1">
-                    <span className="size-1.5 rounded-sm bg-chart-4" />
-                    Player
+              <div className="mb-3 flex flex-col gap-2 text-xs text-muted-foreground">
+                <p>
+                  Averages use the selected hero, mode and date range.
+                  {mode.supportsRank &&
+                    selection === "auto" &&
+                    " Auto chooses your latest recorded rank across all dates and heroes."}
+                </p>
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <span>Player averages vs. {cohortLabel} lobby averages</span>
+                  <span className="flex items-center gap-3">
+                    <span className="flex items-center gap-1">
+                      <span className="size-1.5 rounded-sm bg-chart-4" />
+                      Player
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="size-1.5 rounded-sm bg-muted-foreground" />
+                      Lobby
+                    </span>
                   </span>
-                  <span className="flex items-center gap-1">
-                    <span className="size-1.5 rounded-sm bg-muted-foreground" />
-                    Lobby
-                  </span>
-                </span>
+                </div>
               </div>
             )}
-            <div
-              className={cn(
-                "grid grid-cols-2 gap-2",
-                expanded
-                  ? "@xl/stats-dialog:grid-cols-3 @4xl/stats-dialog:grid-cols-4"
-                  : "@xl/overview:grid-cols-3 @3xl/overview:grid-cols-4 @5xl/overview:grid-cols-6",
-              )}
-            >
+            <div className={gridClassName}>
               {metrics.map((def) => (
                 <BenchmarkMetric
                   key={def.key}
@@ -182,11 +190,21 @@ export function RankBenchmarks({
       title="Rank benchmarks"
       showMetaInDialog
       details={() => renderContent(true)}
-      footer="Your average / lobby average"
+      footer={
+        mode.supportsRank && selection === "auto" && autoRange
+          ? "Your average / lobby average · Auto uses your latest recorded rank"
+          : "Your average / lobby average"
+      }
       icon={ChartNoAxesCombined}
       meta={
         mode.supportsRank ? (
-          <Select value={selection} onValueChange={setSelection}>
+          <Select
+            value={selection}
+            onValueChange={(value) => {
+              const next = RANK_SELECTIONS.find((option) => option === value);
+              if (next) setSelection(next);
+            }}
+          >
             <SelectTrigger size="sm" className="h-7 min-w-40 gap-2" aria-label="Benchmark rank range">
               <SelectValue />
             </SelectTrigger>
@@ -235,7 +253,7 @@ function BenchmarkMetric({
   const favorable = comparison && (def.key === "deaths" ? comparison.delta < 0 : comparison.delta > 0);
   // Damage taken is contextual: a higher value alone is neither better nor worse.
   const neutral = def.key === "player_damage_taken_per_min";
-  const difference = comparison?.relativeDelta;
+  const relativePercent = comparison?.relativeDelta == null ? null : Math.round(comparison.relativeDelta * 100);
   return (
     <div className="min-w-0 rounded-md border border-border/60 px-2 pt-1 pb-1">
       <Tooltip>
@@ -247,21 +265,25 @@ function BenchmarkMetric({
           >
             <div className="flex w-full items-center justify-between gap-2">
               <span className="truncate text-[11px] text-muted-foreground">{labels[def.key] ?? def.label}</span>
-              {difference != null && (
+              {relativePercent != null && (
                 <span
                   className={cn(
                     "text-[10px] tabular-nums",
-                    difference === 0 || neutral ? "text-muted-foreground" : favorable ? "text-victory" : "text-primary",
+                    relativePercent === 0 || neutral
+                      ? "text-muted-foreground"
+                      : favorable
+                        ? "text-victory"
+                        : "text-primary",
                   )}
                 >
-                  {difference > 0 ? "+" : ""}
-                  {(difference * 100).toFixed(0)}%
+                  {relativePercent > 0 ? "+" : ""}
+                  {relativePercent}%
                 </span>
               )}
             </div>
             <div className="flex w-full items-center justify-between gap-2">
-              <span className="w-14 shrink-0 text-xs font-semibold tabular-nums">{format(player?.avg)}</span>
-              <span className="w-14 shrink-0 text-right text-[11px] text-muted-foreground tabular-nums">
+              <span className="shrink-0 text-xs font-semibold tabular-nums">{format(player?.avg)}</span>
+              <span className="shrink-0 text-right text-[11px] text-muted-foreground tabular-nums">
                 {format(cohort?.avg)}
               </span>
             </div>
