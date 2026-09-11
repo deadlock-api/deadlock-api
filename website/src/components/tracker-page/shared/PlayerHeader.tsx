@@ -43,22 +43,22 @@ export function PlayerHeader({
   }, [entries, ranks]);
 
   return (
-    // Equal outer columns keep the filter bar at the exact center however wide the profile and rank run.
+    // Equal outer columns keep the filters centered independently of profile and rank widths.
     <div className="@container">
-      <div className="grid items-center gap-3 [grid-template-areas:'profile'_'rank'_'filters'] sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-4 sm:[grid-template-areas:'profile_rank'_'filters_filters'] @[90rem]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @[90rem]:[grid-template-areas:'profile_filters_rank']">
-        <div className="flex min-w-0 items-center gap-3 [grid-area:profile] sm:gap-4">
+      <div className="grid items-center gap-3 [grid-template-areas:'profile'_'rank'_'filters'] sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-3 sm:[grid-template-areas:'profile_rank'_'filters_filters'] @6xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @6xl:[grid-template-areas:'profile_filters_rank']">
+        <div className="flex min-w-0 items-center gap-3 [grid-area:profile] sm:gap-3">
           {isLoadingProfile ? (
-            <Skeleton className="size-14 shrink-0 rounded-xl sm:size-20" />
+            <Skeleton className="size-12 shrink-0 rounded-xl" />
           ) : (
             <img
               src={profile?.avatarfull ?? profile?.avatar}
               alt=""
-              className="size-14 shrink-0 rounded-xl border border-border bg-muted sm:size-20"
+              className="size-12 shrink-0 rounded-xl border border-border bg-muted"
             />
           )}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
+              <h1 className="truncate text-xl font-bold tracking-tight">
                 {profile?.personaname ?? `Player ${accountId}`}
               </h1>
               {profile?.profileurl && (
@@ -83,7 +83,7 @@ export function PlayerHeader({
               <RefreshControl accountId={accountId} />
             </div>
             {summary && (
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
                 <span>
                   <span className="font-semibold tabular-nums">{summary.matches.toLocaleString("en-US")}</span>{" "}
                   <span className="text-muted-foreground">matches</span>
@@ -104,8 +104,8 @@ export function PlayerHeader({
         </div>
         <div className="min-w-0 [grid-area:filters]">{children}</div>
         {rank && rank.badge > 0 && (
-          <div className="flex items-center gap-3 justify-self-start [grid-area:rank] sm:flex-col sm:gap-1 sm:justify-self-end">
-            <BadgeImage badge={rank.badge} ranks={ranks} className="size-12 sm:size-16" />
+          <div className="flex items-center gap-3 justify-self-start [grid-area:rank] sm:gap-2 sm:justify-self-end">
+            <BadgeImage badge={rank.badge} ranks={ranks} className="size-12" />
             {badgeInfo && (
               <div className="text-center">
                 <div className="text-sm font-semibold">

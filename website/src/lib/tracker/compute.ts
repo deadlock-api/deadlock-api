@@ -865,30 +865,3 @@ export function computeSessionMomentum(
     avgSessionTimeS: sessionCount > 0 ? totalTimeS / sessionCount : 0,
   };
 }
-
-export interface RecentTrend {
-  /** Number of newest matches compared against every match before them. */
-  window: number;
-  winrate: number;
-  /** Win-rate points against the earlier matches. */
-  deltaPoints: number;
-}
-
-const MAX_TREND_WINDOW = 30;
-const MIN_TREND_WINDOW = 10;
-
-/**
- * The newest matches measured against the rest of the history. Null until both halves hold enough
- * matches to mean anything. Expects entries sorted newest first.
- */
-export function computeRecentTrend(entries: PlayerMatchHistoryEntry[]): RecentTrend | null {
-  const window = Math.min(MAX_TREND_WINDOW, Math.floor(entries.length / 2));
-  if (window < MIN_TREND_WINDOW) return null;
-  let recentWins = 0;
-  for (let i = 0; i < window; i++) if (isWin(entries[i])) recentWins++;
-  let earlierWins = 0;
-  for (let i = window; i < entries.length; i++) if (isWin(entries[i])) earlierWins++;
-  const winrate = recentWins / window;
-  const earlierWinrate = earlierWins / (entries.length - window);
-  return { window, winrate, deltaPoints: Math.round(winrate * 100) - Math.round(earlierWinrate * 100) };
-}

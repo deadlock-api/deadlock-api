@@ -22,10 +22,10 @@ export interface Insight {
   score: number;
 }
 
-const MIN_SPLIT_MATCHES = 12;
-const MIN_HERO_MATCHES = 8;
+export const MIN_SPLIT_MATCHES = 12;
+export const MIN_HERO_MATCHES = 8;
 /** Below this the split is noise dressed up as a finding. */
-const MIN_DELTA_POINTS = 5;
+export const MIN_DELTA_POINTS = 5;
 const MAX_INSIGHTS = 5;
 
 const WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -40,18 +40,18 @@ function fromSplit(
   heroId?: number,
 ): Insight | null {
   if (split.matches < minMatches) return null;
-  const percent = Math.round((split.wins / split.matches) * 100);
-  const delta = percent - Math.round(baseline * 100);
+  const percent = (split.wins / split.matches) * 100;
+  const delta = percent - baseline * 100;
   if (Math.abs(delta) < MIN_DELTA_POINTS) return null;
   const tone = delta > 0 ? "good" : "bad";
   return {
     id,
     tone,
-    value: `${percent}%`,
+    value: `${percent.toFixed(1)}%`,
     headline: headline(tone, split.label),
     heroId,
-    detail: `${split.matches} matches`,
-    delta: `${delta > 0 ? "+" : "−"}${Math.abs(delta)}`,
+    detail: `${split.matches.toLocaleString("en-US")} matches`,
+    delta: `${delta > 0 ? "+" : "−"}${Math.abs(delta).toFixed(1)}`,
     score: Math.abs(delta) * Math.sqrt(split.matches),
   };
 }
@@ -72,7 +72,7 @@ function heroSplits(heroRows: TrackerHeroRow[], baseline: number): (Insight | nu
       { label: "", matches: row.matches, wins: row.wins },
       baseline,
       MIN_HERO_MATCHES,
-      (tone) => (tone === "good" ? "Your strongest hero" : "Your weakest hero"),
+      (tone) => (tone === "good" ? "Higher win rate on this hero" : "Lower win rate on this hero"),
       row.heroId,
     ),
   );
@@ -105,14 +105,14 @@ export function computeInsights({
     strongest(
       splits.byDuration.map((split) =>
         fromSplit(`duration-${split.label}`, split, baseline, MIN_SPLIT_MATCHES, (tone, label) =>
-          tone === "good" ? `${label} is your best game length` : `${label} is your weakest game length`,
+          tone === "good" ? `More wins in ${label.toLowerCase()} games` : `Fewer wins in ${label.toLowerCase()} games`,
         ),
       ),
     ),
     strongest(
       splits.bySide.map((split) =>
         fromSplit(`side-${split.label}`, split, baseline, MIN_SPLIT_MATCHES, (tone, label) =>
-          tone === "good" ? `${label} is your stronger side` : `${label} is your weaker side`,
+          tone === "good" ? `Higher win rate on ${label}` : `Lower win rate on ${label}`,
         ),
       ),
     ),
@@ -120,8 +120,8 @@ export function computeInsights({
       momentum.byPosition.map((split) =>
         fromSplit(`position-${split.label}`, split, baseline, MIN_SPLIT_MATCHES, (tone, label) =>
           tone === "good"
-            ? `The ${label.toLowerCase()} of a session is your best`
-            : `You dip on the ${label.toLowerCase()} of a session`,
+            ? `Higher win rate: ${label.toLowerCase()} in a session`
+            : `Lower win rate: ${label.toLowerCase()} in a session`,
         ),
       ),
     ),
@@ -138,7 +138,7 @@ export function computeInsights({
           { label: WEEKDAY_NAMES[habits.bestWeekday.weekday], ...habits.bestWeekday },
           baseline,
           MIN_SPLIT_MATCHES,
-          (tone, label) => (tone === "good" ? `${label} is your best day` : `${label} is your weakest day`),
+          (tone, label) => (tone === "good" ? `Higher win rate on ${label}` : `Lower win rate on ${label}`),
         )
       : null,
   ];

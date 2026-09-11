@@ -5,7 +5,7 @@ import { parseAsInteger, parseAsStringLiteral, useQueryState, useQueryStates } f
 import { Fragment, type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "~/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { day } from "~/dayjs";
 import {
   computeRecords,
@@ -175,11 +175,17 @@ export function MatchesTab({
     else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
   }, [selectedId]);
 
-  const selectMatch = (matchId: number) => {
-    setSelectedMatchId(matchId);
+  useEffect(() => {
+    if (selectedId == null) return;
     // Picking a match while scrolled down into the previous one's details starts the new one from its top.
     const details = detailsRef.current;
     if (details && details.getBoundingClientRect().top < 0) details.scrollIntoView({ block: "start" });
+  }, [selectedId]);
+
+  const selectMatch = (matchId: number) => setSelectedMatchId(matchId);
+  const showOverview = () => {
+    setSelectedMatchId(null);
+    detailsRef.current?.scrollIntoView({ block: "start" });
   };
 
   const handleItemKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
@@ -219,20 +225,71 @@ export function MatchesTab({
 
   return (
     <div className="@container/matches">
-      <div className="grid gap-4 @3xl/matches:grid-cols-[19rem_minmax(0,1fr)] @5xl/matches:grid-cols-[21rem_minmax(0,1fr)]">
+      <div className="grid gap-4 @5xl/matches:grid-cols-[17rem_minmax(0,1fr)] @7xl/matches:grid-cols-[19rem_minmax(0,1fr)]">
+        <div
+          ref={detailsRef}
+          className="flex min-w-0 scroll-mt-4 flex-col gap-3"
+          style={{ minHeight: detailsPending ? heldDetailsHeight : undefined }}
+        >
+          {hiddenLinkedMatch && selected === hiddenLinkedMatch && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-border bg-muted/40 px-4 py-3 text-sm">
+              <span className="text-muted-foreground">This match is hidden from the list by the current filters.</span>
+              <div className="ml-auto flex gap-2">
+                {onRevealLinkedMatch && (
+                  <Button size="sm" variant="outline" onClick={onRevealLinkedMatch}>
+                    Show it in the list
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" onClick={showOverview}>
+                  Dismiss
+                </Button>
+              </div>
+            </div>
+          )}
+          {selected === null && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="self-end @5xl/matches:hidden"
+                onClick={() => listRef.current?.scrollIntoView({ block: "start" })}
+              >
+                Match history
+                <ArrowDown data-icon="inline-end" />
+              </Button>
+              {overview}
+            </>
+          )}
+          {selected && (
+            <>
+              <Button variant="outline" size="sm" className="self-start" onClick={showOverview}>
+                <Home data-icon="inline-start" />
+                Back to overview
+              </Button>
+              <MatchDetails
+                key={selected.match_id}
+                entry={selected}
+                accountId={accountId}
+                ranks={ranks}
+                heroName={heroNameOf(selected.hero_id)}
+                records={heldRecords?.get(selected.match_id)}
+              />
+            </>
+          )}
+        </div>
         {/* Out of flow, so the list takes the height of the details beside it instead of setting it. */}
         <aside
           className={cn(
-            "relative h-[26rem] @3xl/matches:h-auto @3xl/matches:min-h-[24rem]",
-            // The overview runs far longer than any match's details, so the list stops growing with it and rides along.
+            "relative h-[26rem] @5xl/matches:order-first @5xl/matches:h-auto @5xl/matches:min-h-[24rem]",
+            // Keep match history available while scrolling through the overview.
             selected === null &&
-              "@3xl/matches:sticky @3xl/matches:top-4 @3xl/matches:h-[calc(100vh-5rem)] @3xl/matches:min-h-0 @3xl/matches:self-start",
+              "@5xl/matches:sticky @5xl/matches:top-4 @5xl/matches:h-[calc(100vh-5rem)] @5xl/matches:min-h-0 @5xl/matches:self-start",
           )}
         >
           <div className="absolute inset-0 flex flex-col overflow-hidden rounded-md border border-border">
             <button
               type="button"
-              onClick={() => setSelectedMatchId(null)}
+              onClick={showOverview}
               aria-current={selected === null ? "true" : undefined}
               className={cn(
                 "flex w-full cursor-pointer items-center gap-2 border-b border-border px-3 py-2 text-left text-sm transition-colors",
@@ -267,11 +324,13 @@ export function MatchesTab({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {MATCH_SORT_KEYS.map((key) => (
-                    <SelectItem key={key} value={key}>
-                      {SORT_LABELS[key]}
-                    </SelectItem>
-                  ))}
+                  <SelectGroup>
+                    {MATCH_SORT_KEYS.map((key) => (
+                      <SelectItem key={key} value={key}>
+                        {SORT_LABELS[key]}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
               <Button
@@ -326,38 +385,6 @@ export function MatchesTab({
             </div>
           </div>
         </aside>
-        <div
-          ref={detailsRef}
-          className="min-w-0 scroll-mt-4 space-y-4"
-          style={{ minHeight: detailsPending ? heldDetailsHeight : undefined }}
-        >
-          {hiddenLinkedMatch && selected === hiddenLinkedMatch && (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-border bg-muted/40 px-4 py-3 text-sm">
-              <span className="text-muted-foreground">This match is hidden from the list by the current filters.</span>
-              <div className="ml-auto flex gap-2">
-                {onRevealLinkedMatch && (
-                  <Button size="sm" variant="outline" onClick={onRevealLinkedMatch}>
-                    Show it in the list
-                  </Button>
-                )}
-                <Button size="sm" variant="ghost" onClick={() => setSelectedMatchId(null)}>
-                  Dismiss
-                </Button>
-              </div>
-            </div>
-          )}
-          {selected === null && overview}
-          {selected && (
-            <MatchDetails
-              key={selected.match_id}
-              entry={selected}
-              accountId={accountId}
-              ranks={ranks}
-              heroName={heroNameOf(selected.hero_id)}
-              records={heldRecords?.get(selected.match_id)}
-            />
-          )}
-        </div>
       </div>
     </div>
   );

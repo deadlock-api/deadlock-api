@@ -8,7 +8,7 @@ export function PanelTooltipContent({ className, ...props }: ComponentProps<type
   return (
     <TooltipContent
       className={cn(
-        "max-w-72 space-y-2 border border-border bg-popover px-3 py-2.5 text-left text-popover-foreground shadow-md",
+        "flex max-w-72 flex-col gap-2 border border-border bg-popover px-3 py-2.5 text-left text-popover-foreground shadow-md [&>span>svg]:bg-popover [&>span>svg]:fill-popover",
         className,
       )}
       {...props}

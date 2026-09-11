@@ -4,12 +4,12 @@
  * the win/loss pair stays distinguishable for red-green colorblind readers;
  * position (stack order), legends, and labels carry identity as well.
  */
-export const WIN_COLOR = "#0ea5a0";
-export const LOSS_COLOR = "#fa4454";
+export const WIN_COLOR = "var(--victory)";
+export const LOSS_COLOR = "var(--primary)";
 export const RANK_LINE_COLOR = "#0284c7";
 
-export const WIN_TEXT_CLASS = "text-emerald-500";
+export const WIN_TEXT_CLASS = "text-victory";
 export const LOSS_TEXT_CLASS = "text-primary";
 export const TREND_LINE_COLOR = "#f59e0b";
-export const WIN_DOT_CLASS = "bg-emerald-500";
+export const WIN_DOT_CLASS = "bg-victory";
 export const LOSS_DOT_CLASS = "bg-primary";

@@ -57,7 +57,8 @@ export function Breadcrumbs() {
   });
   // A not-found path has no page behind its segments, so a trail built from them would point nowhere.
   const isNotFound = useMatches({
-    select: (matches) => matches.some((match) => match.status === "notFound" || match.globalNotFound),
+    // oxlint-disable-next-line no-underscore-dangle -- TanStack Router exposes this state as _notFound.
+    select: (matches) => matches.some((match) => match.status === "notFound" || match._notFound),
   });
   const items = isNotFound ? [] : buildBreadcrumbs(pathname, labelsByPath);
 

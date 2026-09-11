@@ -34,6 +34,7 @@ import {
   type OutcomeSplit,
   type TrackerFilterValues,
 } from "~/lib/tracker/compute";
+import { computeInsights } from "~/lib/tracker/insights";
 import { compareRecentMatches } from "~/lib/tracker/overview";
 import { cn } from "~/lib/utils";
 
@@ -41,6 +42,7 @@ import { HeroesTab } from "../heroes/HeroesTab";
 import { CompanionsPanel } from "./CompanionsPanel";
 import { DashboardPanel, MetricRows } from "./DashboardPanel";
 import { HeroStatsTable } from "./HeroStatsTable";
+import { PerformanceInsights } from "./PerformanceInsights";
 import { PlaytimeHeatmap } from "./PlaytimeHeatmap";
 import { RankBenchmarks } from "./RankBenchmarks";
 import { TrendPanels } from "./TrendPanels";
@@ -86,6 +88,19 @@ export function OverviewTab({
   const { sorted, summary: s, sessions, habits } = data;
   const recent = useMemo(() => compareRecentMatches(formEntries), [formEntries]);
   const { streaks } = recent;
+  const insights = useMemo(
+    () =>
+      filters.result === "all"
+        ? computeInsights({
+            summary: data.summary,
+            heroRows: data.heroes,
+            splits: data.splits,
+            momentum: data.sessions,
+            habits: data.habits,
+          })
+        : [],
+    [data, filters.result],
+  );
 
   if (sorted.length === 0)
     return (
@@ -268,6 +283,13 @@ export function OverviewTab({
           </p>
         </DashboardPanel>
       </div>
+
+      <PerformanceInsights
+        insights={insights}
+        baseline={s.winrate}
+        resultFiltered={filters.result !== "all"}
+        onSelectHero={onSelectHero}
+      />
 
       <RankBenchmarks key={accountId} accountId={accountId} filters={filters} latestBadge={latestBadge} />
 
