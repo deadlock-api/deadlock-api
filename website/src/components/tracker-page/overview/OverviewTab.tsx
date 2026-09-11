@@ -149,11 +149,21 @@ export function OverviewTab({
           <h2 className="text-sm font-semibold tracking-tight">Player overview</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
-          <span>
+          <span aria-label="Dates of selected matches">
             {day.unix(sorted[sorted.length - 1].start_time).format("MMM D, YYYY")} –{" "}
             {day.unix(sorted[0].start_time).format("MMM D, YYYY")}
           </span>
-          <Badge variant="outline">Filtered matches</Badge>
+          <Badge variant="outline">
+            {filters.mode === "normal_all" ? "Ranked + unranked" : MODE_CONFIG[filters.mode].label}
+          </Badge>
+          {filters.heroId != null && (
+            <Badge variant="outline">
+              <HeroName heroId={filters.heroId} />
+            </Badge>
+          )}
+          {filters.result !== "all" && (
+            <Badge variant="outline">{filters.result === "win" ? "Wins only" : "Losses only"}</Badge>
+          )}
         </div>
       </div>
 

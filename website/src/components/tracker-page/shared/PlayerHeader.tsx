@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, UserRound } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
+import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Skeleton } from "~/components/ui/skeleton";
 import { day } from "~/dayjs";
 import { extractBadgeMap } from "~/lib/leaderboard";
@@ -45,16 +46,17 @@ export function PlayerHeader({
   return (
     // Equal outer columns keep the filters centered independently of profile and rank widths.
     <div className="@container">
-      <div className="grid items-center gap-3 [grid-template-areas:'profile'_'rank'_'filters'] sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-3 sm:[grid-template-areas:'profile_rank'_'filters_filters'] @6xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @6xl:[grid-template-areas:'profile_filters_rank']">
+      <div className="grid items-center gap-3 [grid-template-areas:'profile'_'rank'_'filters'] sm:grid-cols-[minmax(0,1fr)_auto] sm:[grid-template-areas:'profile_rank'_'filters_filters'] @7xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @7xl:[grid-template-areas:'profile_filters_rank']">
         <div className="flex min-w-0 items-center gap-3 [grid-area:profile] sm:gap-3">
           {isLoadingProfile ? (
             <Skeleton className="size-12 shrink-0 rounded-xl" />
           ) : (
-            <img
-              src={profile?.avatarfull ?? profile?.avatar}
-              alt=""
-              className="size-12 shrink-0 rounded-xl border border-border bg-muted"
-            />
+            <Avatar className="size-12 rounded-xl" aria-hidden="true">
+              <AvatarImage src={profile?.avatarfull ?? profile?.avatar} alt="" />
+              <AvatarFallback className="rounded-xl">
+                <UserRound className="size-5" />
+              </AvatarFallback>
+            </Avatar>
           )}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
@@ -83,10 +85,10 @@ export function PlayerHeader({
               <RefreshControl accountId={accountId} />
             </div>
             {summary && (
-              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs" aria-label="Across all loaded match history">
                 <span>
                   <span className="font-semibold tabular-nums">{summary.matches.toLocaleString("en-US")}</span>{" "}
-                  <span className="text-muted-foreground">matches</span>
+                  <span className="text-muted-foreground">recorded matches</span>
                 </span>
                 <span>
                   <span className="font-semibold tabular-nums">{(summary.winrate * 100).toFixed(1)}%</span>{" "}
