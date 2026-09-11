@@ -11,6 +11,7 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { API_ORIGIN } from "~/lib/constants";
 import { graphql, isGraphqlRateLimited } from "~/lib/graphql";
+import { combatStats, type CombatStats, resolveCustomStats } from "~/lib/tracker/combat-stats";
 
 import { queryKeys } from "./query-keys";
 
@@ -135,6 +136,8 @@ export interface TrackerMatchPlayer {
   account_id: number;
   team: string;
   hero_id: number;
+  pregame_hero_id: number | null;
+  combat_stats: CombatStats | null;
   /** `LANES` id, or 0 when the game assigned none. */
   assigned_lane: number;
   kills: number;
@@ -194,7 +197,9 @@ export interface TrackerMatchMetadata {
 
 /** Shape of the protobuf-JSON `/v1/matches/{id}/metadata` response. Teams are `ECitadelLobbyTeam` numbers (0/1). */
 interface RestMatchMetadata {
+  pregame_hero_ids?: Record<string, number>;
   match_info?: {
+    custom_user_stats?: { id?: number; name?: string }[];
     winning_team?: number | null;
     average_badge_team0?: number | null;
     average_badge_team1?: number | null;
@@ -230,6 +235,7 @@ interface RestMatchMetadata {
       }[];
       death_details?: RawDeath[] | null;
       stats?: {
+        custom_user_stats?: { id?: number; value?: number }[];
         time_stamp_s?: number;
         net_worth?: number;
         kills?: number;
@@ -276,7 +282,7 @@ function deathDetails(raw: RawDeath[] | null | undefined): TrackerMatchDeath[] {
 }
 
 /** Cumulative stats peak at the final sample, whichever order the timeline arrives in. */
-function maxStat(stats: { [key: string]: number | null | undefined }[] | undefined, key: string): number {
+function maxStat<K extends string>(stats: Partial<Record<K, number | null>>[] | undefined, key: K): number {
   let max = 0;
   for (const stat of stats ?? []) max = Math.max(max, stat[key] ?? 0);
   return max;
@@ -351,14 +357,20 @@ function claimedMidBosses<T extends { destroyed_time_s?: number | null }>(
  * single metadata endpoint fetches on demand from Valve's replay CDN. It has no
  * steam names; the component backfills those via the steam profile endpoint.
  */
-async function fetchRestMatchInfo(matchId: number): Promise<RestMatchMetadata["match_info"]> {
+async function fetchRestMatchMetadata(matchId: number): Promise<RestMatchMetadata> {
   const response = await api.matches_api.metadata({ matchId });
-  return (response.data as unknown as RestMatchMetadata).match_info;
+  return response.data as unknown as RestMatchMetadata;
 }
 
 async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<TrackerMatchMetadata | null> {
-  const info = await fetchRestMatchInfo(matchId);
+  const metadata = await fetchRestMatchMetadata(matchId);
+  const info = metadata.match_info;
   if (!info) return null;
+  const customStatNames = new Map(
+    (info.custom_user_stats ?? []).flatMap((stat) =>
+      stat.id != null && stat.name ? [[stat.id, stat.name] as const] : [],
+    ),
+  );
   return {
     winning_team: info.winning_team == null ? null : restTeam(info.winning_team),
     average_badge_team0: info.average_badge_team0,
@@ -373,6 +385,13 @@ async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<Track
       account_id: player.account_id ?? 0,
       team: restTeam(player.team),
       hero_id: player.hero_id ?? 0,
+      pregame_hero_id: metadata.pregame_hero_ids?.[String(player.account_id)] || null,
+      combat_stats: combatStats(
+        (player.stats ?? []).map((stat) => ({
+          time_stamp_s: stat.time_stamp_s,
+          custom_user_stats: resolveCustomStats(stat.custom_user_stats, customStatNames),
+        })),
+      ),
       assigned_lane: player.assigned_lane ?? 0,
       kills: player.kills ?? 0,
       deaths: player.deaths ?? 0,
@@ -447,6 +466,7 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
               account_id: true,
               team: true,
               hero_id: true,
+              pregame_hero_id: true,
               assigned_lane: true,
               kills: true,
               deaths: true,
@@ -466,6 +486,7 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
               ability_stats: true,
               items: { item_id: true, game_time_s: true, sold_time_s: true, upgrade_id: true, imbued_ability_id: true },
               stats: {
+                custom_user_stats: true,
                 time_stamp_s: true,
                 net_worth: true,
                 player_healing: true,
@@ -499,6 +520,8 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
           account_id: player.account_id ?? 0,
           team: player.team ?? "",
           hero_id: player.hero_id ?? 0,
+          pregame_hero_id: player.pregame_hero_id || null,
+          combat_stats: combatStats(player.stats),
           assigned_lane: player.assigned_lane ?? 0,
           kills: player.kills ?? 0,
           deaths: player.deaths ?? 0,

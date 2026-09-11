@@ -26,6 +26,7 @@ import {
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { PanelTooltipContent, TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
 import { RankDelta } from "../shared/RankDelta";
+import { PlayerCombatStats } from "./PlayerCombatStats";
 
 export const TEAMS = [
   { key: "Team0", name: "The Hidden King" },
@@ -169,10 +170,12 @@ function PlayerStatStrip({
   player,
   context,
   ranks,
+  pregameHeroName,
 }: {
   player: TrackerMatchPlayer;
   context: PlayerContext;
   ranks: Rank[];
+  pregameHeroName?: string;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 pb-1 text-[11px] text-muted-foreground tabular-nums">
@@ -201,6 +204,7 @@ function PlayerStatStrip({
           <span className="text-foreground">{formatMatchDuration(context.deadForS)}</span> dead
         </span>
       )}
+      <PlayerCombatStats player={player} pregameHeroName={pregameHeroName} />
     </div>
   );
 }
@@ -444,7 +448,12 @@ export function Scoreboard({
                     </tr>
                     <tr>
                       <td colSpan={COLUMN_COUNT} className="px-2 pl-10">
-                        <PlayerStatStrip player={player} context={context} ranks={ranks} />
+                        <PlayerStatStrip
+                          player={player}
+                          context={context}
+                          ranks={ranks}
+                          pregameHeroName={heroesById?.get(player.pregame_hero_id ?? 0)?.name}
+                        />
                       </td>
                     </tr>
                     {build && (
