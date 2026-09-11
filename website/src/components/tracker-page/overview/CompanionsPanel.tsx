@@ -79,6 +79,7 @@ export function CompanionsPanel({
             rows={mateRows}
             isPending={mates.isPending}
             isError={mates.isError}
+            isFetching={mates.isFetching}
             onRetry={() => mates.refetch()}
           />
           <CompanionPreview
@@ -86,6 +87,7 @@ export function CompanionsPanel({
             rows={enemyRows}
             isPending={enemies.isPending}
             isError={enemies.isError}
+            isFetching={enemies.isFetching}
             onRetry={() => enemies.refetch()}
           />
         </div>
@@ -99,12 +101,14 @@ function CompanionPreview({
   rows,
   isPending,
   isError,
+  isFetching,
   onRetry,
 }: {
   label: string;
   rows: CompanionRow[] | undefined;
   isPending: boolean;
   isError: boolean;
+  isFetching: boolean;
   onRetry: () => void;
 }) {
   const visible = (rows ?? []).filter((row) => row.matches >= 2).slice(0, 3);
@@ -114,17 +118,17 @@ function CompanionPreview({
     <div className="min-w-0">
       <h4 className="mb-1 text-[10px] font-medium tracking-wider text-muted-foreground uppercase">{label}</h4>
       {isPending ? (
-        <div className="flex flex-col gap-2 py-2" aria-label={`Loading ${label.toLowerCase()}`}>
+        <output className="flex flex-col gap-2 py-2" aria-label={`Loading ${label.toLowerCase()}`}>
           <Skeleton className="h-6 w-full" />
           <Skeleton className="h-6 w-full" />
           <Skeleton className="h-6 w-full" />
-        </div>
-      ) : isError ? (
+        </output>
+      ) : isError && rows === undefined ? (
         <Empty className="gap-2 px-2 py-3 md:p-3">
           <EmptyHeader>
             <EmptyDescription>Could not load {label.toLowerCase()}.</EmptyDescription>
           </EmptyHeader>
-          <Button variant="outline" size="xs" onClick={onRetry}>
+          <Button variant="outline" size="xs" disabled={isFetching} onClick={onRetry}>
             Retry {label.toLowerCase()}
           </Button>
         </Empty>
@@ -178,6 +182,14 @@ function CompanionPreview({
             })}
           </TableBody>
         </Table>
+      )}
+      {isError && rows !== undefined && (
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+          <output className="text-[10px] text-muted-foreground">Refresh failed. Showing saved results.</output>
+          <Button variant="ghost" size="xs" disabled={isFetching} onClick={onRetry}>
+            Retry {label.toLowerCase()}
+          </Button>
+        </div>
       )}
     </div>
   );

@@ -10,6 +10,8 @@ import { useId, useMemo, useState } from "react";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { PaginationControls } from "~/components/PaginationControls";
+import { Button } from "~/components/ui/button";
+import { Empty, EmptyDescription, EmptyHeader } from "~/components/ui/empty";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -33,12 +35,23 @@ interface CompanionTableProps {
   rows: CompanionRow[] | undefined;
   isPending: boolean;
   isError: boolean;
+  isFetching: boolean;
+  onRetry: () => void;
   label: string;
   matchesLabel: string;
   winrateLabel: string;
 }
 
-function CompanionTable({ rows, isPending, isError, label, matchesLabel, winrateLabel }: CompanionTableProps) {
+function CompanionTable({
+  rows,
+  isPending,
+  isError,
+  isFetching,
+  onRetry,
+  label,
+  matchesLabel,
+  winrateLabel,
+}: CompanionTableProps) {
   const minimumMatchesId = useId();
   const [minMatches, setMinMatches] = useState(2);
   const [searchQuery, setSearchQuery] = useState("");
@@ -70,8 +83,17 @@ function CompanionTable({ rows, isPending, isError, label, matchesLabel, winrate
     );
   }
 
-  if (isError) {
-    return <div className="py-8 text-center text-sm text-destructive">Failed to load stats.</div>;
+  if (isError && rows === undefined) {
+    return (
+      <Empty className="gap-3 border py-6 md:py-6">
+        <EmptyHeader>
+          <EmptyDescription>These stats couldn’t be loaded.</EmptyDescription>
+        </EmptyHeader>
+        <Button variant="outline" size="sm" disabled={isFetching} onClick={onRetry}>
+          {isFetching ? "Retrying…" : "Retry"}
+        </Button>
+      </Empty>
+    );
   }
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / itemsPerPage));
@@ -80,6 +102,14 @@ function CompanionTable({ rows, isPending, isError, label, matchesLabel, winrate
 
   return (
     <div className="@container flex flex-col gap-3">
+      {isError && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <output className="text-xs text-muted-foreground">Refresh failed. Showing saved results.</output>
+          <Button variant="outline" size="xs" disabled={isFetching} onClick={onRetry}>
+            {isFetching ? "Retrying…" : "Retry"}
+          </Button>
+        </div>
+      )}
       <PaginationControls
         searchQuery={searchQuery}
         onSearchChange={(query) => {
@@ -259,6 +289,8 @@ export function MatesTab({ accountId, gameMode, minUnixTimestamp, maxUnixTimesta
       rows={rows}
       isPending={query.isPending}
       isError={query.isError}
+      isFetching={query.isFetching}
+      onRetry={() => void query.refetch()}
       label="Detailed teammate stats"
       matchesLabel="Matches together"
       winrateLabel="Win rate"
@@ -290,6 +322,8 @@ export function EnemiesTab({ accountId, gameMode, minUnixTimestamp, maxUnixTimes
       rows={rows}
       isPending={query.isPending}
       isError={query.isError}
+      isFetching={query.isFetching}
+      onRetry={() => void query.refetch()}
       label="Detailed opponent stats"
       matchesLabel="Matches against"
       winrateLabel="Win rate"
