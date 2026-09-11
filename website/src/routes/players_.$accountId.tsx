@@ -97,6 +97,17 @@ function TrackerContent({ accountId }: { accountId: number }) {
   const { data: ranks = [] } = useQuery(ranksQueryOptions);
 
   const filteredEntries = useMemo(() => filterMatches(historyQuery.data ?? [], filters), [historyQuery.data, filters]);
+  const latestBadge = useMemo(() => {
+    let latestTime = -Infinity;
+    let badge: number | null = null;
+    for (const entry of historyQuery.data ?? []) {
+      if (entry.start_time > latestTime && entry.ranked_display_badge != null && entry.ranked_display_badge > 0) {
+        latestTime = entry.start_time;
+        badge = entry.ranked_display_badge;
+      }
+    }
+    return badge;
+  }, [historyQuery.data]);
   // The heroes tab shows recent form per hero, which must not be narrowed to wins or losses only.
   const formEntries = useMemo(
     () =>
@@ -134,7 +145,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-3">
       <FeedbackNoticeDialog />
       <PlayerHeader accountId={accountId} entries={historyQuery.data} ranks={ranks}>
         <TrackerFilterBar
@@ -176,7 +187,16 @@ function TrackerContent({ accountId }: { accountId: number }) {
                 onHeroChange={setHeroId}
                 hiddenLinkedMatch={hiddenLinkedMatch}
                 onRevealLinkedMatch={revealingFilters ? revealLinkedMatch : undefined}
-                overview={<OverviewTab entries={filteredEntries} onOpenMatch={openMatch} onSelectHero={setHeroId} />}
+                overview={
+                  <OverviewTab
+                    entries={filteredEntries}
+                    accountId={accountId}
+                    filters={filters}
+                    latestBadge={latestBadge}
+                    onOpenMatch={openMatch}
+                    onSelectHero={setHeroId}
+                  />
+                }
               />
             )}
           </QueryRenderer>

@@ -63,11 +63,11 @@ function AbilitiesPage() {
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
 
   const includeItemIds = useMemo(
-    () => [...itemSelections.entries()].filter(([_, s]) => s === "included").map(([id]) => id),
+    () => [...itemSelections.entries()].filter(([, s]) => s === "included").map(([id]) => id),
     [itemSelections],
   );
   const excludeItemIds = useMemo(
-    () => [...itemSelections.entries()].filter(([_, s]) => s === "excluded").map(([id]) => id),
+    () => [...itemSelections.entries()].filter(([, s]) => s === "excluded").map(([id]) => id),
     [itemSelections],
   );
 

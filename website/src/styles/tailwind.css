@@ -241,6 +241,7 @@ body[data-feedback-spotlight] [data-slot="dialog-overlay"] {
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-victory: var(--victory);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -300,6 +301,8 @@ body[data-feedback-spotlight] [data-slot="dialog-overlay"] {
 
 :root {
   --radius: 0.75rem;
+
+  --victory: #0ea5a0;
 
   /* Dark surface hierarchy */
   --background: #010409;

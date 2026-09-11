@@ -1,0 +1,69 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+
+import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
+
+import { compareRecentMatches } from "./overview";
+
+function match(id: number, overrides: Partial<PlayerMatchHistoryEntry> = {}): PlayerMatchHistoryEntry {
+  return {
+    account_id: 1,
+    match_id: id,
+    start_time: id * 3600,
+    hero_id: 1,
+    hero_level: 10,
+    game_mode: 1,
+    match_mode: 1,
+    player_team: 0,
+    match_result: 0,
+    player_match_outcome: 1,
+    player_kills: 5,
+    player_deaths: 2,
+    player_assists: 5,
+    net_worth: 10000,
+    match_duration_s: 1200,
+    last_hits: 50,
+    denies: 2,
+    objectives_mask_team0: 0,
+    objectives_mask_team1: 0,
+    ...overrides,
+  };
+}
+
+test("compares the latest 20 matches with the preceding 20, regardless of input order", () => {
+  const entries = Array.from({ length: 45 }, (_, i) => match(i + 1, { match_result: i >= 25 ? 0 : 1 }));
+  const original = [...entries];
+  const { recent, previous, entries: latest } = compareRecentMatches(entries);
+  assert.equal(latest[0].match_id, 45);
+  assert.equal(latest.at(-1)?.match_id, 26);
+  assert.equal(recent.matches, 20);
+  assert.equal(recent.winrate, 1);
+  assert.equal(previous?.matches, 20);
+  assert.equal(previous?.winrate, 0);
+  assert.deepEqual(entries, original, "does not mutate the cached match history");
+});
+
+test("withholds comparisons until there are at least five baseline matches", () => {
+  for (const count of [0, 1, 19, 20, 24]) {
+    const result = compareRecentMatches(Array.from({ length: count }, (_, i) => match(i)));
+    assert.equal(result.previous, null);
+    assert.equal(result.recent.matches, Math.min(count, 20));
+  }
+  assert.equal(compareRecentMatches(Array.from({ length: 25 }, (_, i) => match(i))).previous?.matches, 5);
+});
+
+test("uses duration-weighted economy and aggregate KDA instead of averaging match ratios", () => {
+  const { recent } = compareRecentMatches([
+    match(1, { player_kills: 10, player_assists: 0, player_deaths: 1, net_worth: 10000, match_duration_s: 600 }),
+    match(2, { player_kills: 0, player_assists: 10, player_deaths: 9, net_worth: 10000, match_duration_s: 1800 }),
+  ]);
+  assert.equal(recent.soulsPerMin, 500);
+  assert.equal(recent.kdaRatio, 2);
+  assert.equal(recent.avgDeaths, 5);
+});
+
+test("handles zero duration and deathless matches without nonfinite metrics", () => {
+  const { recent } = compareRecentMatches([match(1, { player_deaths: 0, match_duration_s: 0 })]);
+  assert.equal(recent.soulsPerMin, 0);
+  assert.equal(recent.kdaRatio, 10);
+});
