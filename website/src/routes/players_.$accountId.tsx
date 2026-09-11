@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { parseAsInteger, useQueryState } from "nuqs";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { QueryRenderer } from "~/components/QueryRenderer";
-import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { EnemiesTab, MatesTab } from "~/components/tracker-page/breakdown/PlayerStatsTable";
 import { TrackerFilterBar } from "~/components/tracker-page/filters/TrackerFilterBar";
 import { HeroesTab } from "~/components/tracker-page/heroes/HeroesTab";
@@ -14,8 +14,8 @@ import { OverviewTab } from "~/components/tracker-page/overview/OverviewTab";
 import { FeedbackNoticeDialog } from "~/components/tracker-page/shared/FeedbackNoticeDialog";
 import { PlayerHeader } from "~/components/tracker-page/shared/PlayerHeader";
 import { TrackerGate } from "~/components/tracker-page/shared/TrackerGate";
-import { Tabs, TabsContent } from "~/components/ui/tabs";
-import { type TrackerTab, useTrackerFilters } from "~/hooks/useTrackerFilters";
+import { Button } from "~/components/ui/button";
+import { useTrackerFilters } from "~/hooks/useTrackerFilters";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { seo } from "~/lib/seo";
 import { parseSteamIdToId3 } from "~/lib/steam";
@@ -23,12 +23,6 @@ import { filterMatches, filtersRevealing } from "~/lib/tracker/compute";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 import { steamProfileQueryOptions, trackerMatchHistoryQueryOptions } from "~/queries/tracker-queries";
-
-const TAB_OPTIONS: { value: TrackerTab; label: string }[] = [
-  { value: "matches", label: "Overview" },
-  { value: "heroes", label: "Heroes" },
-  { value: "mates", label: "Mates & Enemies" },
-];
 
 export const Route = createFileRoute("/players_/$accountId")({
   component: TrackerRoute,
@@ -86,6 +80,15 @@ function TrackerContent({ accountId }: { accountId: number }) {
     maxUnixTimestamp,
     filters,
   } = useTrackerFilters();
+
+  const sectionRef = useRef<HTMLElement>(null);
+  const previousSection = useRef(tab);
+  useEffect(() => {
+    if (previousSection.current === tab) return;
+    previousSection.current = tab;
+    sectionRef.current?.focus({ preventScroll: true });
+    sectionRef.current?.scrollIntoView({ block: "start" });
+  }, [tab]);
 
   const [expandedMatchId, setExpandedMatchId] = useQueryState("match", parseAsInteger);
   const openMatch = (matchId: number) => {
@@ -167,15 +170,33 @@ function TrackerContent({ accountId }: { accountId: number }) {
         </p>
       )}
 
-      <Tabs value={tab} onValueChange={(value) => setTab(value as TrackerTab)} className="tabs-nav w-full">
-        <ResponsiveTabsList
-          value={tab}
-          onValueChange={(value) => setTab(value as TrackerTab)}
-          options={TAB_OPTIONS}
-          ariaLabel="Player tracker sections"
-        />
-
-        <TabsContent value="matches">
+      <section
+        ref={sectionRef}
+        tabIndex={-1}
+        aria-label={
+          tab === "matches" ? "Player overview" : tab === "heroes" ? "All hero stats" : "Teammate and opponent stats"
+        }
+        className="flex min-w-0 scroll-mt-4 flex-col gap-3 outline-none"
+      >
+        {tab !== "matches" && (
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setExpandedMatchId(null);
+                setTab("matches", { history: "push" });
+              }}
+            >
+              <ArrowLeft data-icon="inline-start" />
+              Back to overview
+            </Button>
+            <h2 className="text-sm font-semibold">
+              {tab === "heroes" ? "All Hero Stats" : "Teammate & Opponent Stats"}
+            </h2>
+          </div>
+        )}
+        {tab === "matches" && (
           <QueryRenderer query={historyQuery} loadingFallback={loadingFallback}>
             {() => (
               <MatchesTab
@@ -195,14 +216,29 @@ function TrackerContent({ accountId }: { accountId: number }) {
                     latestBadge={latestBadge}
                     onOpenMatch={openMatch}
                     onSelectHero={setHeroId}
+                    onViewHeroStats={() => setTab("heroes", { history: "push" })}
+                    onViewPlayerStats={() => setTab("mates", { history: "push" })}
                   />
                 }
               />
             )}
           </QueryRenderer>
-        </TabsContent>
+        )}
 
-        <TabsContent value="heroes">
+        {tab === "matches" && (historyQuery.isPending || historyQuery.isError) && (
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setTab("heroes", { history: "push" })}>
+              All Hero Stats
+              <ArrowRight data-icon="inline-end" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setTab("mates", { history: "push" })}>
+              All Teammate &amp; Opponent Stats
+              <ArrowRight data-icon="inline-end" />
+            </Button>
+          </div>
+        )}
+
+        {tab === "heroes" && (
           <HeroesTab
             accountId={accountId}
             gameMode={gameMode}
@@ -213,12 +249,13 @@ function TrackerContent({ accountId }: { accountId: number }) {
             entries={formEntries}
             onSelectHero={(id) => {
               setHeroId(id);
-              setTab("matches");
+              setExpandedMatchId(null);
+              setTab("matches", { history: "push" });
             }}
           />
-        </TabsContent>
+        )}
 
-        <TabsContent value="mates">
+        {tab === "mates" && (
           <div className="grid gap-6 xl:grid-cols-2">
             <div className="min-w-0">
               <h3 className="mb-2 text-lg font-semibold">Mates</h3>
@@ -241,8 +278,8 @@ function TrackerContent({ accountId }: { accountId: number }) {
               />
             </div>
           </div>
-        </TabsContent>
-      </Tabs>
+        )}
+      </section>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import {
+  ArrowRight,
   ArrowUpRight,
   ChartNoAxesCombined,
   Clock3,
@@ -14,7 +15,8 @@ import { useMemo } from "react";
 import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
 import { Badge } from "~/components/ui/badge";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "~/components/ui/empty";
+import { Button } from "~/components/ui/button";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "~/components/ui/empty";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import {
@@ -55,6 +57,8 @@ export function OverviewTab({
   entries,
   onOpenMatch,
   onSelectHero,
+  onViewHeroStats,
+  onViewPlayerStats,
 }: {
   entries: PlayerMatchHistoryEntry[];
   accountId: number;
@@ -62,6 +66,8 @@ export function OverviewTab({
   latestBadge: number | null;
   onOpenMatch: (matchId: number) => void;
   onSelectHero: (heroId: number) => void;
+  onViewHeroStats: () => void;
+  onViewPlayerStats: () => void;
 }) {
   const data = useMemo(() => {
     const sorted = [...entries].sort((a, b) => b.start_time - a.start_time || b.match_id - a.match_id);
@@ -93,6 +99,16 @@ export function OverviewTab({
             Try a different date range, hero, mode or result filter to see your performance overview.
           </EmptyDescription>
         </EmptyHeader>
+        <EmptyContent>
+          <Button variant="outline" size="sm" onClick={onViewHeroStats}>
+            All Hero Stats
+            <ArrowRight data-icon="inline-end" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onViewPlayerStats}>
+            All Teammate &amp; Opponent Stats
+            <ArrowRight data-icon="inline-end" />
+          </Button>
+        </EmptyContent>
       </Empty>
     );
 
@@ -263,7 +279,7 @@ export function OverviewTab({
       <TrendPanels entries={sorted} ranks={data.ranks} activity={data.activity} />
 
       <div className="grid items-start gap-2 @2xl/overview:grid-cols-2">
-        <HeroStatsTable rows={data.heroes} onSelectHero={onSelectHero} />
+        <HeroStatsTable rows={data.heroes} onSelectHero={onSelectHero} onViewAllStats={onViewHeroStats} />
         <DashboardPanel title="Where you win" icon={GitCompareArrows} meta="Games / win rate">
           <div className="grid gap-x-5 gap-y-3 @4xl/overview:grid-cols-2">
             <SplitRows label="Match duration" rows={data.splits.byDuration} />
@@ -357,6 +373,10 @@ export function OverviewTab({
           </div>
         </DashboardPanel>
       </div>
+      <Button variant="ghost" size="sm" className="self-end" onClick={onViewPlayerStats}>
+        All Teammate &amp; Opponent Stats
+        <ArrowRight data-icon="inline-end" />
+      </Button>
     </div>
   );
 }

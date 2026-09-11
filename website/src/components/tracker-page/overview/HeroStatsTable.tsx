@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ArrowUpRight, Users } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, ArrowUpRight, Users } from "lucide-react";
 import { useState } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
@@ -23,9 +23,11 @@ const minimumOptions = [0, 5, 10] as const;
 export function HeroStatsTable({
   rows,
   onSelectHero,
+  onViewAllStats,
 }: {
   rows: TrackerHeroRow[];
   onSelectHero: (heroId: number) => void;
+  onViewAllStats: () => void;
 }) {
   const [sort, setSort] = useState<Sort>("matches");
   const [direction, setDirection] = useState<"ascending" | "descending">("descending");
@@ -161,6 +163,10 @@ export function HeroStatsTable({
           {expanded ? "Show fewer heroes" : `Show all ${sorted.length} heroes`}
         </Button>
       )}
+      <Button variant="ghost" size="sm" className="mt-1 w-full" onClick={onViewAllStats}>
+        All Hero Stats
+        <ArrowRight data-icon="inline-end" />
+      </Button>
     </DashboardPanel>
   );
 }
