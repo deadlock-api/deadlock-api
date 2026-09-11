@@ -6,12 +6,14 @@ import type {
   PlayersApiPlayerHeroStatsRequest,
 } from "deadlock_api_client";
 import { ArrowDown, ArrowUp } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { QueryRenderer } from "~/components/QueryRenderer";
+import { Label } from "~/components/ui/label";
+import { Switch } from "~/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
 import { benchmarkRankRange } from "~/lib/tracker/benchmarks";
@@ -70,16 +72,22 @@ function DeltaBadge({
   digits,
   suffix = "",
   averageLabel,
+  showAlways = false,
 }: {
   value: number;
   digits: number;
   suffix?: string;
   averageLabel: string;
+  showAlways?: boolean;
 }) {
   if (!Number.isFinite(value) || Math.abs(value) < 0.5 * 10 ** -digits) return null;
   return (
     <span
-      className={cn("hidden text-xs tabular-nums @lg:inline", value > 0 ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS)}
+      className={cn(
+        "text-xs tabular-nums",
+        !showAlways && "hidden @lg:inline",
+        value > 0 ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS,
+      )}
       title={averageLabel}
     >
       {value > 0 ? "+" : "−"}
@@ -158,6 +166,9 @@ export function HeroesTab({
 }) {
   const [sortKey, setSortKey] = useState(initialSortKey);
   const [sortDir, setSortDir] = useState(initialSortDir);
+  const [showAllStats, setShowAllStats] = useState(false);
+  const allStatsId = useId();
+  const sortColumn = COLUMNS.find((column) => column.key === sortKey);
 
   const params = useMemo(
     (): PlayersApiPlayerHeroStatsRequest => ({
@@ -245,14 +256,29 @@ export function HeroesTab({
           );
         return (
           <div className="@container">
-            <Table aria-label="Detailed hero performance">
+            {rows.length > 0 && (
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2 @3xl:hidden">
+                <div className="flex items-center gap-2">
+                  <Switch id={allStatsId} checked={showAllStats} onCheckedChange={setShowAllStats} />
+                  <Label htmlFor={allStatsId}>All stats</Label>
+                </div>
+                {showAllStats ? (
+                  <span className="text-xs text-muted-foreground">Scroll for more columns →</span>
+                ) : sortColumn?.className ? (
+                  <span className="text-xs text-muted-foreground">
+                    Sorted by {sortColumn.label} {sortDir === "desc" ? "↓" : "↑"}
+                  </span>
+                ) : null}
+              </div>
+            )}
+            <Table aria-label="Detailed hero performance" className={cn(showAllStats && "min-w-max")}>
               <TableHeader className="bg-muted">
                 <TableRow>
-                  <TableHead>Hero</TableHead>
+                  <TableHead className={cn(showAllStats && "sticky left-0 z-10 bg-muted")}>Hero</TableHead>
                   {COLUMNS.map((column) => (
                     <TableHead
                       key={column.key}
-                      className={cn("text-right", column.className)}
+                      className={cn("text-right", !showAllStats && column.className)}
                       aria-sort={sortKey === column.key ? (sortDir === "desc" ? "descending" : "ascending") : "none"}
                     >
                       <button
@@ -281,7 +307,7 @@ export function HeroesTab({
                     onClick={() => onSelectHero(row.heroId)}
                     title="Show matches on this hero"
                   >
-                    <TableCell>
+                    <TableCell className={cn(showAllStats && "sticky left-0 z-10 bg-card")}>
                       <div className="flex items-center gap-2">
                         <HeroImage heroId={row.heroId} className="size-7 rounded-full" />
                         <button
@@ -299,7 +325,10 @@ export function HeroesTab({
                     {COLUMNS.map((column) => {
                       const average = averages?.get(row.heroId);
                       return (
-                        <TableCell key={column.key} className={cn("text-right tabular-nums", column.className)}>
+                        <TableCell
+                          key={column.key}
+                          className={cn("text-right tabular-nums", !showAllStats && column.className)}
+                        >
                           {column.key === "winrate" ? (
                             <div className="flex items-center justify-end gap-2">
                               {average && (
@@ -307,6 +336,7 @@ export function HeroesTab({
                                   value={(row.winrate - average.winrate) * 100}
                                   digits={1}
                                   suffix=" pp"
+                                  showAlways={showAllStats}
                                   averageLabel={`${bracketLabel} average: ${(average.winrate * 100).toFixed(1)}%`}
                                 />
                               )}
@@ -326,6 +356,7 @@ export function HeroesTab({
                                 <DeltaBadge
                                   value={row.kda - average.kda}
                                   digits={2}
+                                  showAlways={showAllStats}
                                   averageLabel={`${bracketLabel} average: ${average.kda.toFixed(2)}`}
                                 />
                               )}
@@ -351,7 +382,7 @@ export function HeroesTab({
               </TableBody>
             </Table>
             {averages && rows.length > 0 && (
-              <p className="mt-2 hidden text-xs text-muted-foreground @lg:block">
+              <p className={cn("mt-2 text-xs text-muted-foreground", !showAllStats && "hidden @lg:block")}>
                 Compared with {bracketLabel} on the same hero in the selected range. Win-rate differences are in
                 percentage points (pp).
               </p>
