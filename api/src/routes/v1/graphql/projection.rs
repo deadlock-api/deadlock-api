@@ -241,6 +241,7 @@ pub(super) const STAT_SUBFIELDS: &[&str] = &[
     "player_barriering",
     "teammate_healing",
     "teammate_barriering",
+    "custom_user_stats",
 ];
 
 fn lookup<'a>(columns: &'a [Column], gql: &str) -> Option<&'a Column> {

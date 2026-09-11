@@ -416,6 +416,32 @@ mod tests {
     }
 
     #[test]
+    fn stats_custom_user_stats_is_projected() {
+        let projection = Projection {
+            player_columns: PLAYER_COLUMNS
+                .iter()
+                .filter(|c| matches!(c.gql, "match_id" | "account_id"))
+                .copied()
+                .collect(),
+            stats_subfields: vec!["time_stamp_s", "custom_user_stats"],
+            ..Default::default()
+        };
+        let sql = build_match_players_query(&BuildArgs {
+            projection: &projection,
+            filters: &[],
+            order_by: OrderKey::MatchId,
+            order_dir: OrderDir::Desc,
+            limit: 1,
+            offset: 0,
+        })
+        .unwrap();
+        assert!(sql.contains(
+            "arrayMap((time_stamp_s, custom_user_stats) -> tuple(time_stamp_s, custom_user_stats), stats.time_stamp_s, stats.custom_user_stats) AS stats"
+        ));
+        crate::utils::proptest_utils::assert_valid_sql(&sql);
+    }
+
+    #[test]
     fn banned_hero_ids_reads_from_match_player() {
         let mut projection = match_id_only();
         for col in MATCH_COLUMNS {
