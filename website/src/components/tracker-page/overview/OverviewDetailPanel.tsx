@@ -50,7 +50,15 @@ export function OverviewDetailPanel({
             {showMetaInDialog && <div className="text-xs text-muted-foreground">{meta}</div>}
           </div>
         </DialogHeader>
-        <div className="@container/stats-dialog min-h-0 overflow-y-auto">{details(() => setOpen(false))}</div>
+        {/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- Keyboard users need to focus and scroll the dialog body, even when it contains only a table. */}
+        <section
+          tabIndex={0}
+          aria-label={`${title} details`}
+          className="@container/stats-dialog min-h-0 overflow-y-auto rounded-sm focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+        >
+          {details(() => setOpen(false))}
+        </section>
+        {/* oxlint-enable jsx-a11y/no-noninteractive-tabindex */}
         <DialogFooter showCloseButton className="shrink-0" />
       </DialogContent>
     </Dialog>
