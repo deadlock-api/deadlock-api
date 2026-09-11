@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
-import { intersectCompanionRows } from "./companions";
+import { intersectCompanionRows, sortCompanionRows } from "./companions";
 
 function match(id: number, team: number, winner: number): PlayerMatchHistoryEntry {
   return { match_id: id, start_time: id * 1000, player_team: team, match_result: winner } as PlayerMatchHistoryEntry;
@@ -46,4 +46,35 @@ test("distinguishes unloaded stats from loaded stats without selected matches", 
   assert.equal(intersectCompanionRows(undefined, [match(1, 0, 0)]), undefined);
   assert.deepEqual(intersectCompanionRows([], [match(1, 0, 0)]), []);
   assert.deepEqual(intersectCompanionRows([{ id: 99, matches: [1] }], []), []);
+});
+
+test("win-rate sorting uses rates, favors larger tied samples, and never mutates rows", () => {
+  const rows = [
+    { accountId: 1, matches: 20, wins: 10, lastPlayedUnix: 100 },
+    { accountId: 2, matches: 4, wins: 3, lastPlayedUnix: 200 },
+    { accountId: 3, matches: 12, wins: 9, lastPlayedUnix: 300 },
+    { accountId: 4, matches: 10, wins: 0, lastPlayedUnix: 400 },
+  ];
+  const original = [...rows];
+  assert.deepEqual(
+    sortCompanionRows(rows, "winrate", "desc").map((row) => row.accountId),
+    [3, 2, 1, 4],
+  );
+  assert.deepEqual(
+    sortCompanionRows(rows, "winrate", "asc").map((row) => row.accountId),
+    [4, 1, 3, 2],
+  );
+  assert.deepEqual(
+    sortCompanionRows(rows, "wins", "desc").map((row) => row.accountId),
+    [1, 3, 2, 4],
+  );
+  assert.deepEqual(
+    sortCompanionRows(rows, "lastPlayedUnix", "desc").map((row) => row.accountId),
+    [4, 3, 2, 1],
+  );
+  assert.deepEqual(
+    sortCompanionRows(rows, "matches", "asc").map((row) => row.accountId),
+    [2, 4, 3, 1],
+  );
+  assert.deepEqual(rows, original);
 });

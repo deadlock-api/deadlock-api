@@ -5,6 +5,7 @@ import type {
   PlayersApiEnemyStatsRequest,
   PlayersApiMateStatsRequest,
 } from "deadlock_api_client";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -16,7 +17,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
-import { type CompanionRow, intersectCompanionRows } from "~/lib/tracker/companions";
+import {
+  type CompanionRow,
+  type CompanionSort,
+  intersectCompanionRows,
+  sortCompanionRows,
+} from "~/lib/tracker/companions";
+import { cn } from "~/lib/utils";
 import { trackerEnemyStatsQueryOptions, trackerMateStatsQueryOptions } from "~/queries/tracker-queries";
 
 import { WIN_COLOR } from "../shared/colors";
@@ -26,33 +33,34 @@ interface CompanionTableProps {
   rows: CompanionRow[] | undefined;
   isPending: boolean;
   isError: boolean;
+  label: string;
   matchesLabel: string;
   winrateLabel: string;
 }
 
-function CompanionTable({ rows, isPending, isError, matchesLabel, winrateLabel }: CompanionTableProps) {
+function CompanionTable({ rows, isPending, isError, label, matchesLabel, winrateLabel }: CompanionTableProps) {
   const minimumMatchesId = useId();
   const [minMatches, setMinMatches] = useState(2);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [sortKey, setSortKey] = useState<CompanionSort>("matches");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-  const eligibleRows = useMemo(
-    () => (rows ?? []).filter((row) => row.matches >= minMatches).sort((a, b) => b.matches - a.matches),
-    [rows, minMatches],
-  );
+  const eligibleRows = useMemo(() => (rows ?? []).filter((row) => row.matches >= minMatches), [rows, minMatches]);
 
   const accountIds = useMemo(() => eligibleRows.map((row) => row.accountId), [eligibleRows]);
   const { profiles, isLoading: isLoadingProfiles } = useSteamProfiles(accountIds);
 
   const filteredRows = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return eligibleRows;
-    return eligibleRows.filter((row) => {
+    const matches = eligibleRows.filter((row) => {
+      if (!query) return true;
       const name = profiles[row.accountId]?.personaname;
       return name?.toLowerCase().includes(query) || String(row.accountId).includes(query);
     });
-  }, [eligibleRows, searchQuery, profiles]);
+    return sortCompanionRows(matches, sortKey, sortDir);
+  }, [eligibleRows, searchQuery, profiles, sortKey, sortDir]);
 
   if (isPending) {
     return (
@@ -71,7 +79,7 @@ function CompanionTable({ rows, isPending, isError, matchesLabel, winrateLabel }
   const paginatedRows = filteredRows.slice(visiblePage * itemsPerPage, (visiblePage + 1) * itemsPerPage);
 
   return (
-    <div className="@container space-y-3">
+    <div className="@container flex flex-col gap-3">
       <PaginationControls
         searchQuery={searchQuery}
         onSearchChange={(query) => {
@@ -105,14 +113,43 @@ function CompanionTable({ rows, isPending, isError, matchesLabel, winrateLabel }
           />
         </div>
       </PaginationControls>
-      <Table>
+      <Table aria-label={label}>
         <TableHeader className="bg-muted">
           <TableRow>
             <TableHead>Player</TableHead>
-            <TableHead className="text-right">{matchesLabel}</TableHead>
-            <TableHead className="hidden text-right @md:table-cell">Wins</TableHead>
-            <TableHead className="text-right">{winrateLabel}</TableHead>
-            <TableHead className="hidden text-right @lg:table-cell">Last played</TableHead>
+            {(
+              [
+                { key: "matches", label: matchesLabel },
+                { key: "wins", label: "Wins", className: "hidden @md:table-cell" },
+                { key: "winrate", label: winrateLabel },
+                { key: "lastPlayedUnix", label: "Last played", className: "hidden @lg:table-cell" },
+              ] satisfies { key: CompanionSort; label: string; className?: string }[]
+            ).map((column) => (
+              <TableHead
+                key={column.key}
+                className={cn("text-right", column.className)}
+                aria-sort={sortKey === column.key ? (sortDir === "desc" ? "descending" : "ascending") : "none"}
+              >
+                <button
+                  type="button"
+                  aria-label={`Sort by ${column.label.toLowerCase()}, ${sortKey === column.key && sortDir === "desc" ? "ascending" : "descending"}`}
+                  className="inline-flex items-center gap-1 rounded-sm hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+                  onClick={() => {
+                    setSortDir(sortKey === column.key && sortDir === "desc" ? "asc" : "desc");
+                    setSortKey(column.key);
+                    setCurrentPage(0);
+                  }}
+                >
+                  {column.label}
+                  {sortKey === column.key &&
+                    (sortDir === "desc" ? (
+                      <ArrowDown aria-hidden="true" className="size-3" />
+                    ) : (
+                      <ArrowUp aria-hidden="true" className="size-3" />
+                    ))}
+                </button>
+              </TableHead>
+            ))}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -221,6 +258,7 @@ export function MatesTab({ accountId, gameMode, minUnixTimestamp, maxUnixTimesta
       rows={rows}
       isPending={query.isPending}
       isError={query.isError}
+      label="Detailed teammate stats"
       matchesLabel="Matches together"
       winrateLabel="Win rate"
     />
@@ -251,6 +289,7 @@ export function EnemiesTab({ accountId, gameMode, minUnixTimestamp, maxUnixTimes
       rows={rows}
       isPending={query.isPending}
       isError={query.isError}
+      label="Detailed opponent stats"
       matchesLabel="Matches against"
       winrateLabel="Win rate"
     />

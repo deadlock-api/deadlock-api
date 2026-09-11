@@ -9,6 +9,20 @@ export interface CompanionRow {
   lastPlayedUnix: number;
 }
 
+export type CompanionSort = "matches" | "wins" | "winrate" | "lastPlayedUnix";
+
+/** Keep the source order untouched and prefer larger samples when the chosen metric ties. */
+export function sortCompanionRows(rows: CompanionRow[], key: CompanionSort, direction: "asc" | "desc") {
+  const value = (row: CompanionRow) => (key === "winrate" ? (row.matches > 0 ? row.wins / row.matches : 0) : row[key]);
+  return [...rows].sort(
+    (a, b) =>
+      (direction === "desc" ? value(b) - value(a) : value(a) - value(b)) ||
+      b.matches - a.matches ||
+      b.lastPlayedUnix - a.lastPlayedUnix ||
+      a.accountId - b.accountId,
+  );
+}
+
 /** Count shared matches from the selected player's perspective, respecting every history filter. */
 export function intersectCompanionRows(
   stats: { id: number; matches: number[] }[] | undefined,
