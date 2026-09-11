@@ -53,16 +53,17 @@ export function PaginationControls({
   );
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 py-4">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
       {onSearchChange && (
-        <div className="flex items-center space-x-2">
+        // The search takes the rest of the row it wraps onto, rather than leaving a phone-wide gap beside it.
+        <div className="flex flex-1 items-center space-x-2 sm:flex-none">
           <Input
             type="search"
             placeholder={searchPlaceholder}
             aria-label={searchPlaceholder.replace(/[.…]+$/, "")}
             value={searchQuery}
             onChange={handleSearchChange}
-            className="h-8 w-40"
+            className="h-8 w-full sm:w-40"
           />
         </div>
       )}

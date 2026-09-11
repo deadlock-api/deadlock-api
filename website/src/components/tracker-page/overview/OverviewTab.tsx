@@ -38,8 +38,9 @@ import { WinRateBreakdownCard } from "./WinRateBreakdownCard";
 
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: React.ReactNode }) {
   return (
-    <Card>
-      <CardContent className="p-4">
+    // The card's own vertical padding would otherwise stack on the content's, leaving a tile mostly empty.
+    <Card className="py-4">
+      <CardContent className="px-4">
         <div className="text-xs text-muted-foreground">{label}</div>
         <div className="mt-1 text-2xl font-semibold tracking-tight">{value}</div>
         {sub && <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div>}

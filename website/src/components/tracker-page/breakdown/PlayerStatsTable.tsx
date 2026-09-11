@@ -77,7 +77,19 @@ function CompanionTable({ rows, isPending, isError, matchesLabel, winrateLabel }
 
   return (
     <div className="@container space-y-3">
-      <div className="flex flex-wrap items-center justify-end gap-3">
+      <PaginationControls
+        searchQuery={searchQuery}
+        onSearchChange={(query) => {
+          setSearchQuery(query);
+          setCurrentPage(0);
+        }}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={setItemsPerPage}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        totalPages={totalPages}
+        searchPlaceholder="Search player..."
+      >
         <div className="flex items-center gap-2">
           <Label htmlFor="min-matches" className="text-xs text-muted-foreground">
             Min matches
@@ -94,20 +106,7 @@ function CompanionTable({ rows, isPending, isError, matchesLabel, winrateLabel }
             className="h-8 w-20"
           />
         </div>
-      </div>
-      <PaginationControls
-        searchQuery={searchQuery}
-        onSearchChange={(query) => {
-          setSearchQuery(query);
-          setCurrentPage(0);
-        }}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        currentPage={currentPage}
-        onPageChange={setCurrentPage}
-        totalPages={totalPages}
-        searchPlaceholder="Search player..."
-      />
+      </PaginationControls>
       <Table>
         <TableHeader className="bg-muted">
           <TableRow>
