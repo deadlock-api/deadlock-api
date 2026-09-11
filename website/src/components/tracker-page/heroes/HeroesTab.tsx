@@ -138,6 +138,7 @@ export function HeroesTab({
   maxUnixTimestamp,
   entries,
   onSelectHero,
+  minimumMatches = 0,
 }: {
   accountId: number;
   gameMode: string;
@@ -148,6 +149,7 @@ export function HeroesTab({
   /** Match history under the same filters, newest first; feeds the per-hero form column. */
   entries: PlayerMatchHistoryEntry[];
   onSelectHero: (heroId: number) => void;
+  minimumMatches?: number;
 }) {
   const [sortKey, setSortKey] = useState<keyof Omit<HeroRow, "heroId">>("matches");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
@@ -226,6 +228,7 @@ export function HeroesTab({
     >
       {(data) => {
         const rows = data
+          .filter((stats) => stats.matches_played >= minimumMatches)
           .map((stats) => toRow(stats, formByHero.get(stats.hero_id)))
           .sort((a, b) => (sortDir === "desc" ? b[sortKey] - a[sortKey] : a[sortKey] - b[sortKey]));
         return (
@@ -318,7 +321,9 @@ export function HeroesTab({
                 {rows.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={COLUMNS.length + 1} className="py-8 text-center text-muted-foreground">
-                      No hero stats in the selected range
+                      {minimumMatches > 0
+                        ? `No heroes with ${minimumMatches}+ games in the selected range`
+                        : "No hero stats in the selected range"}
                     </TableCell>
                   </TableRow>
                 )}

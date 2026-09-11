@@ -16,18 +16,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
-import { isWin } from "~/lib/tracker/compute";
+import { type CompanionRow, intersectCompanionRows } from "~/lib/tracker/companions";
 import { trackerEnemyStatsQueryOptions, trackerMateStatsQueryOptions } from "~/queries/tracker-queries";
 
 import { WIN_COLOR } from "../shared/colors";
 import { PanelTooltipContent } from "../shared/PanelTooltipContent";
-
-interface CompanionRow {
-  accountId: number;
-  matches: number;
-  wins: number;
-  lastPlayedUnix: number;
-}
 
 interface CompanionTableProps {
   rows: CompanionRow[] | undefined;
@@ -197,30 +190,6 @@ interface BreakdownTabProps {
   entries: PlayerMatchHistoryEntry[];
 }
 
-function intersectRows(
-  stats: { id: number; matches: number[] }[] | undefined,
-  entries: PlayerMatchHistoryEntry[],
-): CompanionRow[] | undefined {
-  if (!stats) return undefined;
-  const entryByMatchId = new Map(entries.map((entry) => [entry.match_id, entry]));
-  const rows: CompanionRow[] = [];
-  for (const stat of stats) {
-    let matches = 0;
-    let wins = 0;
-    let lastPlayedUnix = 0;
-    for (const matchId of stat.matches) {
-      const entry = entryByMatchId.get(matchId);
-      if (!entry) continue;
-      matches++;
-      if (isWin(entry)) wins++;
-      lastPlayedUnix = Math.max(lastPlayedUnix, entry.start_time);
-    }
-    if (matches === 0) continue;
-    rows.push({ accountId: stat.id, matches, wins, lastPlayedUnix });
-  }
-  return rows;
-}
-
 export function MatesTab({ accountId, gameMode, minUnixTimestamp, maxUnixTimestamp, entries }: BreakdownTabProps) {
   const params = useMemo(
     (): PlayersApiMateStatsRequest => ({
@@ -234,7 +203,7 @@ export function MatesTab({ accountId, gameMode, minUnixTimestamp, maxUnixTimesta
   const query = useQuery(trackerMateStatsQueryOptions(params));
   const rows = useMemo(
     () =>
-      intersectRows(
+      intersectCompanionRows(
         query.data
           ?.filter((mate) => mate.mate_id !== accountId)
           .map((mate) => ({ id: mate.mate_id, matches: mate.matches })),
@@ -266,7 +235,7 @@ export function EnemiesTab({ accountId, gameMode, minUnixTimestamp, maxUnixTimes
   const query = useQuery(trackerEnemyStatsQueryOptions(params));
   const rows = useMemo(
     () =>
-      intersectRows(
+      intersectCompanionRows(
         query.data?.map((enemy) => ({ id: enemy.enemy_id, matches: enemy.matches })),
         entries,
       ),

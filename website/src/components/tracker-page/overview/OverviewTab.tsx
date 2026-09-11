@@ -1,6 +1,5 @@
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import {
-  ArrowRight,
   ArrowUpRight,
   ChartNoAxesCombined,
   Clock3,
@@ -14,9 +13,9 @@ import { useMemo } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
+import { MODE_CONFIG } from "~/components/selectors/ModeSelector";
 import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "~/components/ui/empty";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "~/components/ui/empty";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import {
@@ -39,6 +38,8 @@ import {
 import { compareRecentMatches } from "~/lib/tracker/overview";
 import { cn } from "~/lib/utils";
 
+import { HeroesTab } from "../heroes/HeroesTab";
+import { CompanionsPanel } from "./CompanionsPanel";
 import { DashboardPanel, MetricRows, RateBar } from "./DashboardPanel";
 import { HeroStatsTable } from "./HeroStatsTable";
 import { RankBenchmarks } from "./RankBenchmarks";
@@ -57,8 +58,7 @@ export function OverviewTab({
   entries,
   onOpenMatch,
   onSelectHero,
-  onViewHeroStats,
-  onViewPlayerStats,
+  formEntries,
 }: {
   entries: PlayerMatchHistoryEntry[];
   accountId: number;
@@ -66,8 +66,7 @@ export function OverviewTab({
   latestBadge: number | null;
   onOpenMatch: (matchId: number) => void;
   onSelectHero: (heroId: number) => void;
-  onViewHeroStats: () => void;
-  onViewPlayerStats: () => void;
+  formEntries: PlayerMatchHistoryEntry[];
 }) {
   const data = useMemo(() => {
     const sorted = [...entries].sort((a, b) => b.start_time - a.start_time || b.match_id - a.match_id);
@@ -99,16 +98,6 @@ export function OverviewTab({
             Try a different date range, hero, mode or result filter to see your performance overview.
           </EmptyDescription>
         </EmptyHeader>
-        <EmptyContent>
-          <Button variant="outline" size="sm" onClick={onViewHeroStats}>
-            All Hero Stats
-            <ArrowRight data-icon="inline-end" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onViewPlayerStats}>
-            All Teammate &amp; Opponent Stats
-            <ArrowRight data-icon="inline-end" />
-          </Button>
-        </EmptyContent>
       </Empty>
     );
 
@@ -279,7 +268,34 @@ export function OverviewTab({
       <TrendPanels entries={sorted} ranks={data.ranks} activity={data.activity} />
 
       <div className="grid items-start gap-2 @2xl/overview:grid-cols-2">
-        <HeroStatsTable rows={data.heroes} onSelectHero={onSelectHero} onViewAllStats={onViewHeroStats} />
+        <HeroStatsTable
+          rows={data.heroes}
+          onSelectHero={onSelectHero}
+          details={(minimumMatches) => (
+            <div className="flex flex-col gap-2">
+              {filters.result !== "all" && (
+                <p className="text-xs text-muted-foreground">
+                  Detailed hero stats include both wins and losses. Hero, mode and date filters still apply.
+                </p>
+              )}
+              <HeroesTab
+                minimumMatches={minimumMatches}
+                accountId={accountId}
+                gameMode={MODE_CONFIG[filters.mode].gameMode}
+                matchMode={MODE_CONFIG[filters.mode].matchMode}
+                heroId={filters.heroId}
+                minUnixTimestamp={filters.minUnixTimestamp}
+                maxUnixTimestamp={filters.maxUnixTimestamp}
+                entries={formEntries}
+                onSelectHero={onSelectHero}
+              />
+            </div>
+          )}
+        />
+        <CompanionsPanel accountId={accountId} filters={filters} entries={sorted} />
+      </div>
+
+      <div className="grid gap-2 @2xl/overview:grid-cols-2 @5xl/overview:grid-cols-3">
         <DashboardPanel title="Where you win" icon={GitCompareArrows} meta="Games / win rate">
           <div className="grid gap-x-5 gap-y-3 @4xl/overview:grid-cols-2">
             <SplitRows label="Match duration" rows={data.splits.byDuration} />
@@ -288,9 +304,6 @@ export function OverviewTab({
             <SplitRows label="Match in session" rows={sessions.byPosition} />
           </div>
         </DashboardPanel>
-      </div>
-
-      <div className="grid gap-2 @2xl/overview:grid-cols-2">
         <DashboardPanel title="Play habits" icon={Clock3} meta="Your local time">
           <div className="grid grid-cols-3 gap-2 pb-3">
             {[
@@ -373,10 +386,6 @@ export function OverviewTab({
           </div>
         </DashboardPanel>
       </div>
-      <Button variant="ghost" size="sm" className="self-end" onClick={onViewPlayerStats}>
-        All Teammate &amp; Opponent Stats
-        <ArrowRight data-icon="inline-end" />
-      </Button>
     </div>
   );
 }

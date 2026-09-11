@@ -1,5 +1,5 @@
-import { ArrowDown, ArrowRight, ArrowUp, ArrowUpRight, Users } from "lucide-react";
-import { useState } from "react";
+import { ArrowDown, ArrowUp, ArrowUpRight, Users } from "lucide-react";
+import { type ReactNode, useState } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
@@ -9,7 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import type { TrackerHeroRow } from "~/lib/tracker/compute";
 
-import { DashboardPanel, RateBar } from "./DashboardPanel";
+import { RateBar } from "./DashboardPanel";
+import { ExpandableDashboardPanel } from "./ExpandableDashboardPanel";
 
 type Sort = "matches" | "winrate" | "kdaRatio" | "soulsPerMin";
 const columns: { key: Sort; label: string; name: string }[] = [
@@ -23,16 +24,15 @@ const minimumOptions = [0, 5, 10] as const;
 export function HeroStatsTable({
   rows,
   onSelectHero,
-  onViewAllStats,
+  details,
 }: {
   rows: TrackerHeroRow[];
   onSelectHero: (heroId: number) => void;
-  onViewAllStats: () => void;
+  details: (minimumMatches: number) => ReactNode;
 }) {
   const [sort, setSort] = useState<Sort>("matches");
   const [direction, setDirection] = useState<"ascending" | "descending">("descending");
   const [minimumMatches, setMinimumMatches] = useState(0);
-  const [expanded, setExpanded] = useState(false);
   const sorted = rows
     .filter((row) => row.matches >= minimumMatches)
     .sort(
@@ -41,10 +41,12 @@ export function HeroStatsTable({
         b.matches - a.matches ||
         a.heroId - b.heroId,
     );
-  const visible = expanded ? sorted : sorted.slice(0, 6);
+  const visible = sorted.slice(0, 3);
   const SortIcon = direction === "descending" ? ArrowDown : ArrowUp;
   return (
-    <DashboardPanel
+    <ExpandableDashboardPanel
+      details={details(minimumMatches)}
+      keepMetaOnExpand
       title="Hero pool"
       icon={Users}
       meta={
@@ -58,7 +60,6 @@ export function HeroStatsTable({
             onValueChange={(value) => {
               if (!value) return;
               setMinimumMatches(Number(value));
-              setExpanded(false);
             }}
             aria-label="Minimum games per hero"
           >
@@ -87,7 +88,7 @@ export function HeroStatsTable({
             <EmptyDescription>Choose fewer minimum games or broaden the match filters above.</EmptyDescription>
           </EmptyHeader>
           <Button variant="outline" size="sm" onClick={() => setMinimumMatches(0)}>
-            Show all heroes
+            Reset minimum games
           </Button>
         </Empty>
       ) : (
@@ -152,21 +153,6 @@ export function HeroStatsTable({
           </TableBody>
         </Table>
       )}
-      {sorted.length > 6 && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mt-1 h-7 w-full"
-          aria-expanded={expanded}
-          onClick={() => setExpanded(!expanded)}
-        >
-          {expanded ? "Show fewer heroes" : `Show all ${sorted.length} heroes`}
-        </Button>
-      )}
-      <Button variant="ghost" size="sm" className="mt-1 w-full" onClick={onViewAllStats}>
-        All Hero Stats
-        <ArrowRight data-icon="inline-end" />
-      </Button>
-    </DashboardPanel>
+    </ExpandableDashboardPanel>
   );
 }

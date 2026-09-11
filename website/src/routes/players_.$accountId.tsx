@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -216,26 +216,12 @@ function TrackerContent({ accountId }: { accountId: number }) {
                     latestBadge={latestBadge}
                     onOpenMatch={openMatch}
                     onSelectHero={setHeroId}
-                    onViewHeroStats={() => setTab("heroes", { history: "push" })}
-                    onViewPlayerStats={() => setTab("mates", { history: "push" })}
+                    formEntries={formEntries}
                   />
                 }
               />
             )}
           </QueryRenderer>
-        )}
-
-        {tab === "matches" && (historyQuery.isPending || historyQuery.isError) && (
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setTab("heroes", { history: "push" })}>
-              All Hero Stats
-              <ArrowRight data-icon="inline-end" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setTab("mates", { history: "push" })}>
-              All Teammate &amp; Opponent Stats
-              <ArrowRight data-icon="inline-end" />
-            </Button>
-          </div>
         )}
 
         {tab === "heroes" && (
