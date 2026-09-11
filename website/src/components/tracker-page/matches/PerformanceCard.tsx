@@ -45,8 +45,8 @@ export function PerformanceCard({
     `${baseline.summary.matches.toLocaleString("en-US")} other ${baseline.perHero ? `${heroName} ` : ""}matches`;
   return (
     <div className="rounded-md border border-border px-3 py-2">
-      <div className="mb-2 flex items-baseline gap-2">
-        <span className="text-sm font-semibold">Your match</span>
+      <div className="mb-2 flex flex-wrap items-baseline gap-x-2">
+        <span className="shrink-0 text-sm font-semibold">Your match</span>
         {baselineLabel && (
           <span className="text-xs text-muted-foreground">against your average over {baselineLabel}</span>
         )}
