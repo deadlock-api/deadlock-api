@@ -14,7 +14,7 @@ import type { TrackerFilterValues } from "~/lib/tracker/compute";
 import { trackerEnemyStatsQueryOptions, trackerMateStatsQueryOptions } from "~/queries/tracker-queries";
 
 import { EnemiesTab, MatesTab } from "../breakdown/PlayerStatsTable";
-import { ExpandableDashboardPanel } from "./ExpandableDashboardPanel";
+import { OverviewDetailPanel } from "./OverviewDetailPanel";
 
 export function CompanionsPanel({
   accountId,
@@ -53,12 +53,12 @@ export function CompanionsPanel({
   );
 
   return (
-    <ExpandableDashboardPanel
+    <OverviewDetailPanel
       title="Teammates & opponents"
       icon={UsersRound}
       meta="Frequent encounters"
-      details={
-        <div className="grid gap-4 @4xl/overview:grid-cols-2">
+      details={() => (
+        <div className="grid gap-4 @4xl/stats-dialog:grid-cols-2">
           <div className="min-w-0">
             <h4 className="mb-2 text-xs font-semibold">Teammates</h4>
             <MatesTab {...params} entries={entries} />
@@ -68,7 +68,7 @@ export function CompanionsPanel({
             <EnemiesTab {...params} entries={entries} />
           </div>
         </div>
-      }
+      )}
     >
       <div className="@container/companions">
         <div className="grid gap-3 @xl/companions:grid-cols-2">
@@ -91,7 +91,7 @@ export function CompanionsPanel({
       <p className="mt-2 text-[10px] text-muted-foreground">
         Your win rate with teammates or against opponents · 2+ shared games in selected matches.
       </p>
-    </ExpandableDashboardPanel>
+    </OverviewDetailPanel>
   );
 }
 

@@ -10,7 +10,7 @@ import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import type { TrackerHeroRow } from "~/lib/tracker/compute";
 
 import { RateBar } from "./DashboardPanel";
-import { ExpandableDashboardPanel } from "./ExpandableDashboardPanel";
+import { OverviewDetailPanel } from "./OverviewDetailPanel";
 
 type Sort = "matches" | "winrate" | "kdaRatio" | "soulsPerMin";
 const columns: { key: Sort; label: string; name: string }[] = [
@@ -28,7 +28,7 @@ export function HeroStatsTable({
 }: {
   rows: TrackerHeroRow[];
   onSelectHero: (heroId: number) => void;
-  details: (minimumMatches: number) => ReactNode;
+  details: (minimumMatches: number, close: () => void) => ReactNode;
 }) {
   const [sort, setSort] = useState<Sort>("matches");
   const [direction, setDirection] = useState<"ascending" | "descending">("descending");
@@ -44,9 +44,9 @@ export function HeroStatsTable({
   const visible = sorted.slice(0, 3);
   const SortIcon = direction === "descending" ? ArrowDown : ArrowUp;
   return (
-    <ExpandableDashboardPanel
-      details={details(minimumMatches)}
-      keepMetaOnExpand
+    <OverviewDetailPanel
+      details={(close) => details(minimumMatches, close)}
+      showMetaInDialog
       title="Hero pool"
       icon={Users}
       meta={
@@ -153,6 +153,6 @@ export function HeroStatsTable({
           </TableBody>
         </Table>
       )}
-    </ExpandableDashboardPanel>
+    </OverviewDetailPanel>
   );
 }

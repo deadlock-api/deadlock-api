@@ -271,7 +271,7 @@ export function OverviewTab({
         <HeroStatsTable
           rows={data.heroes}
           onSelectHero={onSelectHero}
-          details={(minimumMatches) => (
+          details={(minimumMatches, close) => (
             <div className="flex flex-col gap-2">
               {filters.result !== "all" && (
                 <p className="text-xs text-muted-foreground">
@@ -287,7 +287,10 @@ export function OverviewTab({
                 minUnixTimestamp={filters.minUnixTimestamp}
                 maxUnixTimestamp={filters.maxUnixTimestamp}
                 entries={formEntries}
-                onSelectHero={onSelectHero}
+                onSelectHero={(heroId) => {
+                  onSelectHero(heroId);
+                  close();
+                }}
               />
             </div>
           )}
