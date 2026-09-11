@@ -41,6 +41,7 @@ import { HeroesTab } from "../heroes/HeroesTab";
 import { CompanionsPanel } from "./CompanionsPanel";
 import { DashboardPanel, MetricRows } from "./DashboardPanel";
 import { HeroStatsTable } from "./HeroStatsTable";
+import { PlaytimeHeatmap } from "./PlaytimeHeatmap";
 import { RankBenchmarks } from "./RankBenchmarks";
 import { TrendPanels } from "./TrendPanels";
 
@@ -48,7 +49,6 @@ const integer = (n: number) => Math.round(n).toLocaleString("en-US");
 const decimal = (n: number) => n.toFixed(1);
 const percent = (n: number) => `${(n * 100).toFixed(1)}%`;
 const signed = (n: number) => `${n > 0 ? "+" : ""}${integer(n)}`;
-const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export function OverviewTab({
   accountId,
@@ -324,33 +324,7 @@ export function OverviewTab({
               </div>
             ))}
           </div>
-          <div
-            className="grid grid-cols-[1.75rem_repeat(12,minmax(0,1fr))] gap-1"
-            aria-label="Matches by weekday and two-hour window"
-          >
-            <span />
-            {Array.from({ length: 12 }, (_, i) => (
-              <span key={i * 2} className="text-center text-[9px] text-muted-foreground">
-                {i * 2}
-              </span>
-            ))}
-            {weekdays.map((weekday, index) => (
-              <HeatmapRow
-                key={weekday}
-                weekday={weekday}
-                cells={habits.cells.filter((c) => c.weekday === index)}
-                max={habits.maxMatches}
-              />
-            ))}
-          </div>
-          <div className="mt-2 flex flex-wrap justify-between gap-1 text-[10px] text-muted-foreground">
-            <span>
-              {habits.favoriteWeekday ? `Most active: ${weekdays[habits.favoriteWeekday.weekday]}` : "No activity"}
-              {habits.peakHourStart != null &&
-                ` · Peak: ${habits.peakHourStart}:00–${(habits.peakHourStart + 3) % 24}:00`}
-            </span>
-            <span>Fainter → fewer games</span>
-          </div>
+          <PlaytimeHeatmap habits={habits} />
         </DashboardPanel>
         <DashboardPanel title="Personal bests" icon={Trophy} meta="In selected matches">
           <div className="grid grid-cols-2 gap-1.5 @lg/overview:grid-cols-3">
@@ -421,43 +395,5 @@ function SplitRows({ label, rows }: { label: string; rows: OutcomeSplit[] }) {
         ))}
       </div>
     </div>
-  );
-}
-
-function HeatmapRow({
-  weekday,
-  cells,
-  max,
-}: {
-  weekday: string;
-  cells: { hour: number; matches: number; wins: number }[];
-  max: number;
-}) {
-  return (
-    <>
-      <span className="text-[9px] text-muted-foreground">{weekday}</span>
-      {cells.map((cell) => (
-        <Tooltip key={cell.hour}>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label={`${weekday} ${cell.hour}:00–${cell.hour + 2}:00: ${cell.matches} matches, ${cell.wins} wins`}
-              className="h-3.5 rounded-xs bg-muted focus-visible:outline-2 focus-visible:outline-ring"
-              style={
-                cell.matches
-                  ? {
-                      backgroundColor: `color-mix(in srgb, var(--victory) ${20 + (cell.matches / max) * 80}%, var(--muted))`,
-                    }
-                  : undefined
-              }
-            />
-          </TooltipTrigger>
-          <TooltipContent>
-            {weekday} {cell.hour}:00–{cell.hour + 2}:00 · {cell.matches} matches
-            {cell.matches > 0 ? ` · ${percent(cell.wins / cell.matches)} wins` : ""}
-          </TooltipContent>
-        </Tooltip>
-      ))}
-    </>
   );
 }
