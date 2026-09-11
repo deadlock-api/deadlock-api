@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
 import { ArrowDown, ArrowUp, Home } from "lucide-react";
 import { parseAsInteger, parseAsStringLiteral, useQueryState, useQueryStates } from "nuqs";
-import { Fragment, type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, type KeyboardEvent, type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
@@ -34,8 +34,12 @@ const MIN_MATCHES_FOR_RECORDS = 10;
 const LIST_CHUNK = 50;
 /** How far past the list's visible end the next chunk renders, so scrolling never catches up with it. */
 const PRELOAD_MARGIN_PX = 2400;
-/** Height of a sticky session header, which covers the top of the list viewport. */
-const SESSION_HEADER_PX = 26;
+function focusMatchInList(list: HTMLElement | null, matchId: number | undefined) {
+  const item = list?.querySelector<HTMLButtonElement>(`[data-match-id="${matchId}"]`);
+  item?.focus({ preventScroll: true });
+  // The list can extend beyond the page viewport while match details are open.
+  item?.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
 
 const SORT_LABELS: Record<MatchSortKey, string> = {
   played: "Date",
@@ -120,9 +124,11 @@ export function MatchesTab({
   const visibleEntries = useMemo(() => sortedEntries.slice(0, visibleCount), [sortedEntries, visibleCount]);
   const hasMore = visibleCount < sortedEntries.length;
 
-  const listRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLElement>(null);
+  const keyboardHelpId = useId();
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const detailsRef = useRef<HTMLDivElement>(null);
+  const detailsRef = useRef<HTMLElement>(null);
+  const previousSelectedId = useRef(selectedId);
 
   // The list takes the height of the details beside it, so while a match loads into a short skeleton the details
   // hold their last loaded height; otherwise the list would shrink and grow back with every pick.
@@ -130,14 +136,15 @@ export function MatchesTab({
     ...trackerMatchMetadataQueryOptions(selectedId ?? 0),
     enabled: selectedId != null,
   });
+  const isLoadingDetails = selectedId != null && detailsPending;
   const [heldDetailsHeight, setHeldDetailsHeight] = useState<number>();
   useEffect(() => {
     const details = detailsRef.current;
-    if (!details || detailsPending) return;
+    if (!details || isLoadingDetails) return;
     const observer = new ResizeObserver(([entry]) => setHeldDetailsHeight(entry.borderBoxSize[0].blockSize));
     observer.observe(details);
     return () => observer.disconnect();
-  }, [detailsPending]);
+  }, [isLoadingDetails]);
   const focusSelectedItem = useRef(false);
 
   // The observer is rebuilt after every chunk, and a new observer reports at once, so chunks keep coming
@@ -147,7 +154,7 @@ export function MatchesTab({
     if (!sentinel || !hasMore) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) setVisibleCount((count) => count + LIST_CHUNK);
+        if (entry.isIntersecting) setVisibleCount((count) => Math.max(count, visibleCount + LIST_CHUNK));
       },
       { root: listRef.current, rootMargin: `0px 0px ${PRELOAD_MARGIN_PX}px 0px` },
     );
@@ -163,39 +170,47 @@ export function MatchesTab({
   }, []);
 
   useEffect(() => {
-    if (!focusSelectedItem.current) return;
-    focusSelectedItem.current = false;
-    const list = listRef.current;
-    const item = list?.querySelector<HTMLElement>(`[data-match-id="${selectedId}"]`);
-    if (!list || !item) return;
-    item.focus({ preventScroll: true });
-    const top = item.offsetTop - SESSION_HEADER_PX;
-    const bottom = item.offsetTop + item.offsetHeight;
-    if (top < list.scrollTop) list.scrollTop = top;
-    else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
-  }, [selectedId]);
-
-  useEffect(() => {
-    if (selectedId == null) return;
+    const changed = previousSelectedId.current !== selectedId;
+    previousSelectedId.current = selectedId;
+    if (focusSelectedItem.current) {
+      focusSelectedItem.current = false;
+      focusMatchInList(listRef.current, selectedId);
+      return;
+    }
+    if (!changed && selectedId == null) return;
     // Picking a match while scrolled down into the previous one's details starts the new one from its top.
     const details = detailsRef.current;
+    if (changed) details?.focus({ preventScroll: true });
     if (details && details.getBoundingClientRect().top < 0) details.scrollIntoView({ block: "start" });
   }, [selectedId]);
 
-  const selectMatch = (matchId: number) => setSelectedMatchId(matchId);
+  const selectMatch = (matchId: number) => {
+    setSelectedMatchId(matchId);
+    // Enter on an already selected row still opens its details after browsing the list with arrow keys.
+    if (matchId === selectedId) {
+      detailsRef.current?.focus({ preventScroll: true });
+      detailsRef.current?.scrollIntoView({ block: "start" });
+    }
+  };
   const showOverview = () => {
     setSelectedMatchId(null);
+    if (selectedId == null) detailsRef.current?.focus({ preventScroll: true });
     detailsRef.current?.scrollIntoView({ block: "start" });
   };
 
   const handleItemKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-    const index = sortedEntries.findIndex((entry) => entry.match_id === selectedId);
+    event.preventDefault();
+    const focusedId = Number(event.currentTarget.dataset.matchId);
+    const index = sortedEntries.findIndex((entry) => entry.match_id === focusedId);
     const nextIndex = index + (event.key === "ArrowDown" ? 1 : -1);
     const next = sortedEntries[nextIndex];
     if (!next) return;
-    event.preventDefault();
     if (nextIndex >= visibleCount) setVisibleCount((count) => count + LIST_CHUNK);
+    if (next.match_id === selectedId) {
+      focusMatchInList(listRef.current, selectedId);
+      return;
+    }
     focusSelectedItem.current = true;
     setSelectedMatchId(next.match_id);
   };
@@ -226,10 +241,12 @@ export function MatchesTab({
   return (
     <div className="@container/matches">
       <div className="grid gap-4 @5xl/matches:grid-cols-[17rem_minmax(0,1fr)] @7xl/matches:grid-cols-[19rem_minmax(0,1fr)]">
-        <div
+        <section
           ref={detailsRef}
-          className="flex min-w-0 scroll-mt-4 flex-col gap-3"
-          style={{ minHeight: detailsPending ? heldDetailsHeight : undefined }}
+          tabIndex={-1}
+          aria-label={selected ? `Match ${selected.match_id} details` : "Overview statistics"}
+          className="flex min-w-0 scroll-mt-4 flex-col gap-3 outline-none"
+          style={{ minHeight: isLoadingDetails ? heldDetailsHeight : undefined }}
         >
           {hiddenLinkedMatch && selected === hiddenLinkedMatch && (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-border bg-muted/40 px-4 py-3 text-sm">
@@ -276,7 +293,7 @@ export function MatchesTab({
               />
             </>
           )}
-        </div>
+        </section>
         {/* Out of flow, so the list takes the height of the details beside it instead of setting it. */}
         <aside
           className={cn(
@@ -344,11 +361,15 @@ export function MatchesTab({
                 {sortDir === "desc" ? <ArrowDown className="size-3.5" /> : <ArrowUp className="size-3.5" />}
               </Button>
             </div>
-            <div
+            <nav
               ref={listRef}
-              className="relative min-h-0 flex-1 scrollbar-thin overflow-y-auto overscroll-contain"
+              className="relative min-h-0 flex-1 scroll-pt-7 scrollbar-thin overflow-y-auto overscroll-contain"
               aria-label="Match history"
+              aria-describedby={keyboardHelpId}
             >
+              <p id={keyboardHelpId} className="sr-only">
+                Use the up and down arrow keys to browse matches. Press Enter to view the selected match's details.
+              </p>
               {visibleEntries.map((entry, index) => {
                 const session = sessions.get(entry.match_id);
                 const startsSession =
@@ -382,7 +403,7 @@ export function MatchesTab({
                 </div>
               )}
               {hasMore && <div ref={sentinelRef} aria-hidden className="h-px" />}
-            </div>
+            </nav>
           </div>
         </aside>
       </div>
