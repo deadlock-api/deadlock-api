@@ -1,18 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
-import { Activity, ChartNoAxesCombined, Medal } from "lucide-react";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts";
+import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
+import { Activity, Medal } from "lucide-react";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "~/components/ui/chart";
 import { day } from "~/dayjs";
 import { extractBadgeMap } from "~/lib/leaderboard";
-import type { Activity as MatchActivity, PerformancePoint, RankHistoryPoint } from "~/lib/tracker/compute";
+import type { Activity as MatchActivity, RankHistoryPoint } from "~/lib/tracker/compute";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
 import { DashboardPanel } from "./DashboardPanel";
+import { PerformanceTrendPanel } from "./PerformanceTrendPanel";
 
 const axis = { fontSize: 9, fill: "var(--muted-foreground)" };
 const dateLabel = (value: number) => day.unix(value).format("MMM D");
-const formConfig = { winrate: { label: "Win rate", color: "var(--victory)" } };
 const rankConfig = { linear: { label: "Rank", color: "var(--chart-4)" } };
 const activityConfig = {
   wins: { label: "Wins", color: "var(--victory)" },
@@ -20,13 +21,11 @@ const activityConfig = {
 };
 
 export function TrendPanels({
-  performance,
-  window,
+  entries,
   ranks,
   activity,
 }: {
-  performance: PerformancePoint[];
-  window: number;
+  entries: PlayerMatchHistoryEntry[];
   ranks: RankHistoryPoint[];
   activity: MatchActivity;
 }) {
@@ -37,65 +36,9 @@ export function TrendPanels({
     return info ? `${info.name} ${info.subtier}` : `Badge ${badge}`;
   };
   const latestRank = ranks.at(-1);
-  const latestForm = performance.at(-1);
-  const performanceData = performance.map((p) => ({ ...p, winrate: p.winrate * 100 }));
   return (
-    <div className="grid gap-2 @xl/overview:grid-cols-3">
-      <DashboardPanel title="Win-rate trend" icon={ChartNoAxesCombined} meta={`Rolling ${window}`}>
-        <div className="mb-1 flex items-baseline gap-2">
-          <span className="text-lg font-semibold tabular-nums">
-            {latestForm ? `${(latestForm.winrate * 100).toFixed(0)}%` : "—"}
-          </span>
-          <span className="text-[10px] text-muted-foreground">latest window</span>
-        </div>
-        {performance.length === 0 ? (
-          <ChartEmpty text={`Needs ${window} matches to show a trend`} />
-        ) : (
-          <ChartContainer
-            config={formConfig}
-            className="aspect-auto h-24 w-full"
-            aria-label={`Rolling ${window}-match win rate`}
-          >
-            <AreaChart data={performanceData} margin={{ top: 4, right: 2, left: 2, bottom: 0 }}>
-              <CartesianGrid vertical={false} stroke="var(--border)" />
-              <XAxis
-                dataKey="time"
-                tickFormatter={dateLabel}
-                tick={axis}
-                axisLine={false}
-                tickLine={false}
-                minTickGap={35}
-                height={18}
-              />
-              <YAxis domain={[0, 100]} hide />
-              <ReferenceLine y={50} stroke="var(--muted-foreground)" strokeDasharray="3 4" />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(value) => dateLabel(Number(value))}
-                    formatter={(value) => (
-                      <span>
-                        Win rate <strong>{Number(value).toFixed(1)}%</strong>
-                      </span>
-                    )}
-                  />
-                }
-              />
-              <Area
-                dataKey="winrate"
-                type="monotone"
-                stroke="var(--victory)"
-                fill="var(--victory)"
-                fillOpacity={0.12}
-                strokeWidth={1.5}
-                dot={performance.length === 1}
-                isAnimationActive={false}
-              />
-            </AreaChart>
-          </ChartContainer>
-        )}
-        <p className="mt-1 text-[10px] text-muted-foreground">Dashed line: 50% win rate</p>
-      </DashboardPanel>
+    <div className="grid gap-2 @3xl/overview:grid-cols-3">
+      <PerformanceTrendPanel entries={entries} />
       <DashboardPanel title="Rank history" icon={Medal} meta={`${ranks.length} recorded`}>
         <div
           className="mb-1 truncate text-lg font-semibold"
@@ -126,7 +69,7 @@ export function TrendPanels({
               <ChartTooltip
                 content={
                   <ChartTooltipContent
-                    labelFormatter={(value) => dateLabel(Number(value))}
+                    labelFormatter={(_label, payload) => day.unix(payload[0].payload.time).format("MMM D, YYYY")}
                     formatter={(_value, _name, item) => <strong>{rankName(item.payload.badge)}</strong>}
                   />
                 }
@@ -181,8 +124,8 @@ export function TrendPanels({
             <ChartTooltip
               content={
                 <ChartTooltipContent
-                  labelFormatter={(value) =>
-                    `${activity.granularity === "week" ? "Week of " : ""}${day.unix(Number(value)).format(activity.granularity === "week" ? "MMM D, YYYY" : "MMM YYYY")}`
+                  labelFormatter={(_label, payload) =>
+                    `${activity.granularity === "week" ? "Week of " : ""}${day.unix(payload[0].payload.bucketStartUnix).format(activity.granularity === "week" ? "MMM D, YYYY" : "MMM YYYY")}`
                   }
                 />
               }

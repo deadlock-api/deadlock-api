@@ -20,7 +20,6 @@ import { day } from "~/dayjs";
 import {
   computeActivity,
   computeOutcomeSplits,
-  computePerformanceTrend,
   computePlaytimeHabits,
   computeRecords,
   computeSessionMomentum,
@@ -29,7 +28,6 @@ import {
   formatPlaytime,
   isWin,
   perHeroRows,
-  performanceWindow,
   rankHistoryPoints,
   RECORD_KINDS,
   summarize,
@@ -67,10 +65,8 @@ export function OverviewTab({
 }) {
   const data = useMemo(() => {
     const sorted = [...entries].sort((a, b) => b.start_time - a.start_time || b.match_id - a.match_id);
-    const window = performanceWindow(sorted.length);
     return {
       sorted,
-      window,
       summary: summarize(sorted),
       heroes: perHeroRows(sorted),
       recent: compareRecentMatches(sorted),
@@ -79,7 +75,6 @@ export function OverviewTab({
       splits: computeOutcomeSplits(sorted),
       sessions: computeSessionMomentum(sorted),
       habits: computePlaytimeHabits(sorted),
-      performance: computePerformanceTrend(sorted, window),
       ranks: rankHistoryPoints(sorted),
       activity: computeActivity(sorted),
     };
@@ -265,7 +260,7 @@ export function OverviewTab({
 
       <RankBenchmarks key={accountId} accountId={accountId} filters={filters} latestBadge={latestBadge} />
 
-      <TrendPanels performance={data.performance} window={data.window} ranks={data.ranks} activity={data.activity} />
+      <TrendPanels entries={sorted} ranks={data.ranks} activity={data.activity} />
 
       <div className="grid items-start gap-2 @2xl/overview:grid-cols-2">
         <HeroStatsTable rows={data.heroes} onSelectHero={onSelectHero} />

@@ -473,7 +473,7 @@ export interface PerformancePoint {
  * match number `window`, so the early, half-filled windows never show up as noise.
  */
 export function computePerformanceTrend(entries: PlayerMatchHistoryEntry[], window: number): PerformancePoint[] {
-  const chronological = [...entries].sort((a, b) => a.start_time - b.start_time);
+  const chronological = [...entries].sort((a, b) => a.start_time - b.start_time || a.match_id - b.match_id);
   const points: PerformancePoint[] = [];
   let wins = 0;
   let kills = 0;
