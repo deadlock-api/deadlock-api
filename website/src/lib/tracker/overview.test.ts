@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
+import { rankHistoryPoints } from "./compute";
 import { compareRecentMatches, MIN_COMPARISON_MATCHES, RECENT_MATCH_WINDOWS } from "./overview";
 
 function match(id: number, overrides: Partial<PlayerMatchHistoryEntry> = {}): PlayerMatchHistoryEntry {
@@ -133,4 +134,26 @@ test("switching windows preserves the full-history streaks and recalculates the 
   assert.equal(long.previous, null);
   assert.deepEqual(short.streaks, medium.streaks);
   assert.deepEqual(short.streaks, long.streaks);
+});
+
+test("rank records retain match identity, sort tied timestamps consistently, and distinguish missing from zero progress", () => {
+  const entries = [
+    match(3, { start_time: 100, ranked_display_badge: 23, ranked_delta: 0 }),
+    match(1, { start_time: 100, ranked_display_badge: 21, ranked_delta: null }),
+    match(2, { start_time: 100, ranked_display_badge: 22, ranked_delta: -12 }),
+    match(4, { ranked_display_badge: 0 }),
+    match(5, { ranked_display_badge: null }),
+  ];
+  const original = structuredClone(entries);
+  const records = rankHistoryPoints(entries);
+  assert.deepEqual(
+    records.map(({ matchId, delta }) => [matchId, delta]),
+    [
+      [1, null],
+      [2, -12],
+      [3, 0],
+    ],
+  );
+  assert.deepEqual(records, rankHistoryPoints([...entries].reverse()));
+  assert.deepEqual(entries, original);
 });

@@ -370,6 +370,7 @@ export function linearToBadge(linear: number): number {
 }
 
 export interface RankHistoryPoint {
+  matchId: number;
   time: number;
   badge: number;
   linear: number;
@@ -381,12 +382,13 @@ export function rankHistoryPoints(entries: PlayerMatchHistoryEntry[]): RankHisto
   return entries
     .filter((entry) => entry.ranked_display_badge != null && entry.ranked_display_badge > 0)
     .map((entry) => ({
+      matchId: entry.match_id,
       time: entry.start_time,
       badge: entry.ranked_display_badge as number,
       linear: badgeToLinear(entry.ranked_display_badge as number),
       delta: entry.ranked_delta ?? null,
     }))
-    .sort((a, b) => a.time - b.time);
+    .sort((a, b) => a.time - b.time || a.matchId - b.matchId);
 }
 
 export type ActivityGranularity = "week" | "month";

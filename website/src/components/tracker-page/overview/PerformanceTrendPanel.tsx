@@ -1,13 +1,14 @@
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { ChartNoAxesCombined } from "lucide-react";
-import { useMemo, useState } from "react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
+import { useMemo } from "react";
 import { Area, AreaChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts";
 
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "~/components/ui/chart";
 import { Empty, EmptyDescription, EmptyHeader } from "~/components/ui/empty";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { day } from "~/dayjs";
-import { computePerformanceTrend, performanceWindow } from "~/lib/tracker/compute";
+import { computePerformanceTrend, performanceWindow, type ResultFilter } from "~/lib/tracker/compute";
 
 import { DashboardPanel } from "./DashboardPanel";
 
@@ -39,13 +40,18 @@ const axis = { fontSize: 9, fill: "var(--muted-foreground)" };
 
 export function PerformanceTrendPanel({
   entries,
+  result,
   className,
 }: {
   entries: PlayerMatchHistoryEntry[];
+  result: ResultFilter;
   className?: string;
 }) {
-  const [metric, setMetric] = useState<Metric>("winrate");
-  const [windowChoice, setWindowChoice] = useState<WindowChoice>("auto");
+  const [metric, setMetric] = useQueryState("trend_metric", parseAsStringLiteral(metricKeys).withDefault("winrate"));
+  const [windowChoice, setWindowChoice] = useQueryState(
+    "trend_window",
+    parseAsStringLiteral(windows).withDefault("auto"),
+  );
   const window = windowChoice === "auto" ? performanceWindow(entries.length) : Number(windowChoice);
   const points = useMemo(() => computePerformanceTrend(entries, window), [entries, window]);
   const selected = metrics[metric];
@@ -162,6 +168,14 @@ export function PerformanceTrendPanel({
           </ChartContainer>
         )}
         <p className="text-[10px] text-muted-foreground">{selected.description}</p>
+        {result !== "all" && (
+          <p className="text-[10px] text-muted-foreground">
+            {result === "win" ? "Wins only" : "Losses only"}.
+            {metric === "winrate"
+              ? ` The ${result === "win" ? "100%" : "0%"} win rate reflects your result filter. Select All results to see your overall trend.`
+              : " Statistics describe only these selected outcomes."}
+          </p>
+        )}
       </div>
     </DashboardPanel>
   );

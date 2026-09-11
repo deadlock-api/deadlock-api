@@ -4,13 +4,15 @@ import { Activity, Medal } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "~/components/ui/chart";
+import { Empty, EmptyDescription, EmptyHeader } from "~/components/ui/empty";
 import { day } from "~/dayjs";
 import { extractBadgeMap } from "~/lib/leaderboard";
-import type { Activity as MatchActivity, RankHistoryPoint } from "~/lib/tracker/compute";
+import type { Activity as MatchActivity, RankHistoryPoint, ResultFilter } from "~/lib/tracker/compute";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
-import { DashboardPanel } from "./DashboardPanel";
+import { OverviewDetailPanel } from "./OverviewDetailPanel";
 import { PerformanceTrendPanel } from "./PerformanceTrendPanel";
+import { ActivityTable, RankHistoryTable } from "./TrendDataTables";
 
 const axis = { fontSize: 9, fill: "var(--muted-foreground)" };
 const dateLabel = (value: number) => day.unix(value).format("MMM D");
@@ -24,10 +26,14 @@ export function TrendPanels({
   entries,
   ranks,
   activity,
+  result,
+  onOpenMatch,
 }: {
   entries: PlayerMatchHistoryEntry[];
   ranks: RankHistoryPoint[];
   activity: MatchActivity;
+  result: ResultFilter;
+  onOpenMatch: (matchId: number) => void;
 }) {
   const { data: rankAssets = [] } = useQuery(ranksQueryOptions);
   const badgeMap = extractBadgeMap(rankAssets);
@@ -38,13 +44,31 @@ export function TrendPanels({
   const latestRank = ranks.at(-1);
   return (
     <div className="grid gap-2 @xl/overview:grid-cols-2 @3xl/overview:grid-cols-3">
-      <PerformanceTrendPanel entries={entries} className="@xl/overview:col-span-2 @3xl/overview:col-span-1" />
-      <DashboardPanel title="Rank history" icon={Medal} meta={`${ranks.length} recorded`}>
+      <PerformanceTrendPanel
+        entries={entries}
+        result={result}
+        className="@xl/overview:col-span-2 @3xl/overview:col-span-1"
+      />
+      <OverviewDetailPanel
+        title="Rank history"
+        icon={Medal}
+        meta={`${ranks.length} recorded`}
+        details={(close) => (
+          <RankHistoryTable
+            ranks={ranks}
+            rankName={rankName}
+            onOpenMatch={(matchId) => {
+              close();
+              onOpenMatch(matchId);
+            }}
+          />
+        )}
+      >
         <div
           className="mb-1 truncate text-lg font-semibold"
           title={latestRank ? rankName(latestRank.badge) : undefined}
         >
-          {latestRank ? rankName(latestRank.badge) : "Unranked"}
+          {latestRank ? rankName(latestRank.badge) : "No recorded rank"}
         </div>
         {ranks.length < 2 ? (
           <ChartEmpty text="Needs 2 matches with rank badges" />
@@ -92,11 +116,20 @@ export function TrendPanels({
             ? `Peak: ${rankName(ranks.reduce((best, p) => (p.badge > best ? p.badge : best), 0))}`
             : "No rank badges in selected matches"}
         </p>
-      </DashboardPanel>
-      <DashboardPanel
+      </OverviewDetailPanel>
+      <OverviewDetailPanel
         title="Match activity"
         icon={Activity}
         meta={activity.granularity === "week" ? "Weekly" : "Monthly"}
+        details={() => (
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-muted-foreground">
+              {result === "all" ? "Wins and losses" : result === "win" ? "Wins only" : "Losses only"} in your selected
+              hero, mode and date range.
+            </p>
+            <ActivityTable activity={activity} />
+          </div>
+        )}
       >
         <div className="mb-1 flex items-baseline gap-2">
           <span className="text-lg font-semibold tabular-nums">
@@ -152,15 +185,17 @@ export function TrendPanels({
             Losses
           </span>
         </div>
-      </DashboardPanel>
+      </OverviewDetailPanel>
     </div>
   );
 }
 
 function ChartEmpty({ text }: { text: string }) {
   return (
-    <div className="flex h-24 items-center justify-center rounded border border-dashed px-4 text-center text-[11px] text-muted-foreground">
-      {text}
-    </div>
+    <Empty className="h-24 border p-3 md:p-3">
+      <EmptyHeader>
+        <EmptyDescription>{text}</EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }

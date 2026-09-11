@@ -240,7 +240,13 @@ export function OverviewTab({
 
       <RankBenchmarks key={accountId} accountId={accountId} filters={filters} latestBadge={latestBadge} />
 
-      <TrendPanels entries={sorted} ranks={data.ranks} activity={data.activity} />
+      <TrendPanels
+        entries={sorted}
+        ranks={data.ranks}
+        activity={data.activity}
+        result={filters.result}
+        onOpenMatch={onOpenMatch}
+      />
 
       <div className="grid items-start gap-2 @2xl/overview:grid-cols-2">
         <HeroStatsTable
