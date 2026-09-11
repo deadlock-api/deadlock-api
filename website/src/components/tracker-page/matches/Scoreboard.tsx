@@ -165,9 +165,29 @@ const COLUMN_COUNT = 3 + PLAYER_STAT_COLUMNS.length;
  * The stats the table dropped at this width, spelled out under the player. A phone shows the whole set here,
  * since there is no pointer to open the hover card with, and a wide panel shows only what no column carries.
  */
-function PlayerStatStrip({ player, context }: { player: TrackerMatchPlayer; context: PlayerContext }) {
+function PlayerStatStrip({
+  player,
+  context,
+  ranks,
+}: {
+  player: TrackerMatchPlayer;
+  context: PlayerContext;
+  ranks: Rank[];
+}) {
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 pb-1 text-[11px] text-muted-foreground tabular-nums">
+      {(player.rank_delta || player.demotion_protected || player.rank_badge != null) && (
+        // The name row hands the rank down here at phone width, where the name needs the room more.
+        <span className="flex items-center gap-1 @sm:hidden">
+          {player.demotion_protected && (
+            <ShieldCheck className="size-3" aria-label="Demotion protection prevented a rank drop" />
+          )}
+          <RankDelta value={player.rank_delta} />
+          {player.rank_badge != null && (
+            <BadgeImage badge={player.rank_badge} ranks={ranks} className="-my-1 size-6 max-w-none" />
+          )}
+        </span>
+      )}
       {PLAYER_STAT_COLUMNS.map((column) => (
         <span key={column.key} className={cn("whitespace-nowrap", REVEAL[column.reveal].strip)}>
           <span className="text-foreground">{column.format(column.value(player))}</span> {column.label.toLowerCase()}
@@ -389,7 +409,7 @@ export function Scoreboard({
                             </Tooltip>
                           )}
                           {(player.rank_delta || player.demotion_protected || player.rank_badge != null) && (
-                            <span className="ml-auto flex shrink-0 items-center gap-1 pl-1 text-xs font-normal">
+                            <span className="ml-auto hidden shrink-0 items-center gap-1 pl-1 text-xs font-normal @sm:flex">
                               {player.demotion_protected && (
                                 <ShieldCheck
                                   className="size-3.5 text-muted-foreground"
@@ -401,8 +421,7 @@ export function Scoreboard({
                                 <BadgeImage
                                   badge={player.rank_badge}
                                   ranks={ranks}
-                                  // A phone needs the width for the name; the rank change still stands.
-                                  className="-my-1 hidden size-7 max-w-none @sm:block"
+                                  className="-my-1 size-7 max-w-none"
                                 />
                               )}
                             </span>
@@ -425,7 +444,7 @@ export function Scoreboard({
                     </tr>
                     <tr>
                       <td colSpan={COLUMN_COUNT} className="px-2 pl-10">
-                        <PlayerStatStrip player={player} context={context} />
+                        <PlayerStatStrip player={player} context={context} ranks={ranks} />
                       </td>
                     </tr>
                     {build && (
