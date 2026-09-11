@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Info } from "lucide-react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -16,6 +16,7 @@ import { PlayerHeader } from "~/components/tracker-page/shared/PlayerHeader";
 import { TrackerEmptyState } from "~/components/tracker-page/shared/TrackerEmptyState";
 import { TrackerGate } from "~/components/tracker-page/shared/TrackerGate";
 import { TrackerQueryError } from "~/components/tracker-page/shared/TrackerQueryError";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { useTrackerFilters } from "~/hooks/useTrackerFilters";
 import { prefetchSafe } from "~/lib/prefetch-safe";
@@ -135,10 +136,12 @@ function TrackerContent({ accountId }: { accountId: number }) {
     [historyQuery.data, filters, formEntries],
   );
 
-  const hiddenLinkedMatch = useMemo(() => {
-    if (expandedMatchId == null || filteredEntries.some((entry) => entry.match_id === expandedMatchId)) return null;
+  const linkedMatch = useMemo(() => {
+    if (expandedMatchId == null) return null;
     return historyQuery.data?.find((entry) => entry.match_id === expandedMatchId) ?? null;
-  }, [expandedMatchId, filteredEntries, historyQuery.data]);
+  }, [expandedMatchId, historyQuery.data]);
+  const hiddenLinkedMatch =
+    linkedMatch && !filteredEntries.some((entry) => entry.match_id === linkedMatch.match_id) ? linkedMatch : null;
   const revealingFilters = hiddenLinkedMatch ? filtersRevealing(hiddenLinkedMatch, filters) : null;
   // The matches tab opens on the page holding the linked match only when it mounts, so a reveal remounts it.
   const [revealCount, setRevealCount] = useState(0);
@@ -187,6 +190,26 @@ function TrackerContent({ accountId }: { accountId: number }) {
           onRetry={() => historyQuery.refetch()}
           isRetrying={historyQuery.isFetching}
         />
+      )}
+
+      {tab === "matches" && expandedMatchId != null && historyQuery.isSuccess && !linkedMatch && (
+        <Alert>
+          <Info aria-hidden="true" />
+          <AlertTitle>Linked match not found</AlertTitle>
+          <AlertDescription className="gap-2">
+            <p>Match #{expandedMatchId} isn't in this player's loaded history.</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setExpandedMatchId(null);
+                sectionRef.current?.focus({ preventScroll: true });
+              }}
+            >
+              Return to overview
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
 
       <section
