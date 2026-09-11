@@ -90,11 +90,15 @@ function AbilityChip({ entry }: { entry: BuildAbility }) {
             />
             {entry.stacks != null && <StackBadge stacks={entry.stacks} />}
           </span>
-          <span className="flex gap-px" aria-label={`Level ${level} of ${MAX_ABILITY_LEVEL}`}>
+          <span className="flex gap-px">
+            <span className="sr-only">
+              Level {level} of {MAX_ABILITY_LEVEL}
+            </span>
             {Array.from({ length: MAX_ABILITY_LEVEL }, (_, index) => (
               <span
                 // oxlint-disable-next-line react/no-array-index-key
                 key={index}
+                aria-hidden="true"
                 className={cn("h-0.5 w-1 rounded-full", index < level ? "bg-amber-400" : "bg-muted-foreground/30")}
               />
             ))}

@@ -336,7 +336,7 @@ export function MatchesTab({
               <span className="text-muted-foreground">This match is hidden from the list by the current filters.</span>
               <div className="ml-auto flex gap-2">
                 {onRevealLinkedMatch && (
-                  <Button size="sm" onClick={onRevealLinkedMatch}>
+                  <Button size="sm" variant="outline" onClick={onRevealLinkedMatch}>
                     Show it in the list
                   </Button>
                 )}
