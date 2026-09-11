@@ -6,7 +6,8 @@ export const parseAsDayjs = createParser({
   parse: (value: string) => {
     if (!value) return null;
     try {
-      return day(value);
+      const parsed = day(value);
+      return parsed.isValid() ? parsed : null;
     } catch {
       return null;
     }
@@ -19,13 +20,11 @@ export const parseAsDayjsRange = createParser<[Dayjs | undefined, Dayjs | undefi
     if (!value) return null;
     const parts = value.split("_");
     if (parts.length !== 2) return null;
-    try {
-      const start = parts[0] ? day(parts[0]) : undefined;
-      const end = parts[1] ? day(parts[1]) : undefined;
-      return [start, end] as [Dayjs | undefined, Dayjs | undefined];
-    } catch {
-      return null;
-    }
+    const start = parts[0] ? parseAsDayjs.parse(parts[0]) : undefined;
+    const end = parts[1] ? parseAsDayjs.parse(parts[1]) : undefined;
+    if (start === null || end === null) return null;
+    if (start && end && start.isAfter(end)) return null;
+    return [start, end];
   },
   serialize: (value: [Dayjs | undefined, Dayjs | undefined]) => {
     const start = value[0]?.toISOString() ?? "";
