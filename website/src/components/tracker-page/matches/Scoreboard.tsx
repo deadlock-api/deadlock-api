@@ -401,7 +401,8 @@ export function Scoreboard({
                                 <BadgeImage
                                   badge={player.rank_badge}
                                   ranks={ranks}
-                                  className="-my-1 size-7 max-w-none"
+                                  // A phone needs the width for the name; the rank change still stands.
+                                  className="-my-1 hidden size-7 max-w-none @sm:block"
                                 />
                               )}
                             </span>

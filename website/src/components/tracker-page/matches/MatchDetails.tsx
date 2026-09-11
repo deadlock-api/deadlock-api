@@ -135,7 +135,7 @@ function MatchHeader({
             </div>
           </div>
         </div>
-        <div className="ml-auto flex items-end gap-6 text-right">
+        <div className="ml-auto flex items-end gap-4 text-right @sm:gap-6">
           <HeaderStat label="K / D / A">
             {entry.player_kills} / {entry.player_deaths} / {entry.player_assists}
           </HeaderStat>

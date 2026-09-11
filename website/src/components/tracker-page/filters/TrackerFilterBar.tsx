@@ -33,9 +33,10 @@ export function TrackerFilterBar({
 }) {
   return (
     <Filter.Root>
+      {/* The two popover cells sit together so a phone pairs them on one row, ahead of the full-width toggles. */}
       <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={onDateChange} />
-      <ModeSelector value={mode} onChange={onModeChange} />
       <Filter.Hero value={heroId} onChange={onHeroChange} allowNull label="Hero" />
+      <ModeSelector value={mode} onChange={onModeChange} />
       <FilterToggleCell
         label="Result"
         value={result}

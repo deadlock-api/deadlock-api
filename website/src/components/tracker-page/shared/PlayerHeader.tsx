@@ -45,20 +45,20 @@ export function PlayerHeader({
   return (
     // Equal outer columns keep the filter bar at the exact center however wide the profile and rank run.
     <div className="@container">
-      <div className="grid items-center gap-4 [grid-template-areas:'profile'_'rank'_'filters'] sm:grid-cols-[minmax(0,1fr)_auto] sm:[grid-template-areas:'profile_rank'_'filters_filters'] @[90rem]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @[90rem]:[grid-template-areas:'profile_filters_rank']">
-        <div className="flex min-w-0 flex-col gap-4 [grid-area:profile] sm:flex-row sm:items-center">
+      <div className="grid items-center gap-3 [grid-template-areas:'profile'_'rank'_'filters'] sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-4 sm:[grid-template-areas:'profile_rank'_'filters_filters'] @[90rem]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @[90rem]:[grid-template-areas:'profile_filters_rank']">
+        <div className="flex min-w-0 items-center gap-3 [grid-area:profile] sm:gap-4">
           {isLoadingProfile ? (
-            <Skeleton className="size-20 rounded-xl" />
+            <Skeleton className="size-14 shrink-0 rounded-xl sm:size-20" />
           ) : (
             <img
               src={profile?.avatarfull ?? profile?.avatar}
               alt=""
-              className="size-20 rounded-xl border border-border bg-muted"
+              className="size-14 shrink-0 rounded-xl border border-border bg-muted sm:size-20"
             />
           )}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="truncate text-2xl font-bold tracking-tight">
+              <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
                 {profile?.personaname ?? `Player ${accountId}`}
               </h1>
               {profile?.profileurl && (
@@ -105,7 +105,7 @@ export function PlayerHeader({
         <div className="min-w-0 [grid-area:filters]">{children}</div>
         {rank && rank.badge > 0 && (
           <div className="flex items-center gap-3 justify-self-start [grid-area:rank] sm:flex-col sm:gap-1 sm:justify-self-end">
-            <BadgeImage badge={rank.badge} ranks={ranks} className="size-16" />
+            <BadgeImage badge={rank.badge} ranks={ranks} className="size-12 sm:size-16" />
             {badgeInfo && (
               <div className="text-center">
                 <div className="text-sm font-semibold">
