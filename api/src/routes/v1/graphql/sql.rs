@@ -70,6 +70,10 @@ pub(super) struct BuildArgs<'a> {
     pub(super) order_dir: OrderDir,
     pub(super) limit: u32,
     pub(super) offset: u32,
+    /// Select rows on `player_match_stats`. Only valid for filters from
+    /// `MatchPlayerWhere::player_match_stats_accounts` without protected accounts:
+    /// that table has no GDPR row policy.
+    pub(super) via_player_match_stats: bool,
 }
 
 /// Columns the demo-analyzer writes via lightweight `UPDATE` (i.e. patch parts).
@@ -132,11 +136,16 @@ pub(super) fn build_matches_query(args: &BuildArgs<'_>) -> Result<String, core::
         OrderKey::MatchId | OrderKey::AccountId => ("match_id", "match_player.match_id"),
     };
     let dir = args.order_dir.as_sql();
+    let source = if args.via_player_match_stats {
+        "player_match_stats"
+    } else {
+        "match_player"
+    };
 
     let mut sql = String::new();
     write!(
         &mut sql,
-        "WITH t_matches AS (SELECT match_id FROM match_player{where_clause} GROUP BY match_id ORDER BY {cte_order} {dir} LIMIT {limit} OFFSET {offset}) ",
+        "WITH t_matches AS (SELECT match_id FROM {source}{where_clause} GROUP BY match_id ORDER BY {cte_order} {dir} LIMIT {limit} OFFSET {offset}) ",
         limit = args.limit,
         offset = args.offset,
     )?;
@@ -175,10 +184,10 @@ pub(super) fn build_matches_query(args: &BuildArgs<'_>) -> Result<String, core::
 pub(super) fn build_match_players_query(args: &BuildArgs<'_>) -> Result<String, core::fmt::Error> {
     let where_clause = where_clause(args.filters);
     let order_col = match args.order_by {
-        OrderKey::MatchId => "match_player.match_id",
-        OrderKey::StartTime => "match_player.start_time",
-        OrderKey::AverageBadge => "match_player.average_badge",
-        OrderKey::AccountId => "match_player.account_id",
+        OrderKey::MatchId => "match_id",
+        OrderKey::StartTime => "start_time",
+        OrderKey::AverageBadge => "average_badge",
+        OrderKey::AccountId => "account_id",
     };
     let dir = args.order_dir.as_sql();
 
@@ -196,16 +205,32 @@ pub(super) fn build_match_players_query(args: &BuildArgs<'_>) -> Result<String, 
     }
 
     let mut sql = String::new();
+    if args.via_player_match_stats {
+        write!(
+            &mut sql,
+            "WITH t_keys AS (SELECT match_id, account_id FROM player_match_stats{where_clause} ORDER BY {order_col} {dir} LIMIT {limit} OFFSET {offset}) ",
+            limit = args.limit,
+            offset = args.offset,
+        )?;
+    }
     sql.push_str("SELECT ");
     sql.push_str(&parts.join(", "));
     sql.push_str(" FROM match_player ");
-    sql.push_str(&where_clause);
-    write!(
-        &mut sql,
-        "ORDER BY {order_col} {dir} LIMIT {limit} OFFSET {offset} ",
-        limit = args.limit,
-        offset = args.offset,
-    )?;
+    if args.via_player_match_stats {
+        write!(
+            &mut sql,
+            "WHERE (match_player.match_id, match_player.account_id) IN t_keys ORDER BY match_player.{order_col} {dir} LIMIT {limit} ",
+            limit = args.limit,
+        )?;
+    } else {
+        sql.push_str(&where_clause);
+        write!(
+            &mut sql,
+            "ORDER BY match_player.{order_col} {dir} LIMIT {limit} OFFSET {offset} ",
+            limit = args.limit,
+            offset = args.offset,
+        )?;
+    }
     sql.push_str(&settings_clause(args));
     Ok(sql)
 }
@@ -261,6 +286,9 @@ fn match_history_column_expr(col: &Column) -> String {
 /// table column they aggregate, and without the setting `ClickHouse`
 /// substitutes the alias into WHERE fragments, turning e.g.
 /// `WHERE hero_id = 1` into an `ILLEGAL_AGGREGATION` error.
+///
+/// `use_statistics = 0`: loading column statistics for range predicates costs
+/// more than the primary-key lookup itself.
 pub(super) fn build_match_history_query(
     args: &MatchHistoryBuildArgs<'_>,
 ) -> Result<String, core::fmt::Error> {
@@ -293,7 +321,7 @@ pub(super) fn build_match_history_query(
     write!(
         &mut sql,
         " ORDER BY {order_expr} {dir} LIMIT {limit} OFFSET {offset} \
-         SETTINGS log_comment = '{key}', max_threads = 32, prefer_column_name_to_alias = 1",
+         SETTINGS log_comment = '{key}', max_threads = 32, prefer_column_name_to_alias = 1, use_statistics = 0",
         limit = args.limit,
         offset = args.offset,
         key = super::RATE_LIMIT_KEY,
@@ -346,6 +374,7 @@ mod tests {
             order_dir: OrderDir::Desc,
             limit: 10,
             offset: 0,
+            via_player_match_stats: false,
         })
         .unwrap();
         assert!(sql.contains("WITH t_matches"));
@@ -373,6 +402,7 @@ mod tests {
             order_dir: OrderDir::Asc,
             limit: 5,
             offset: 0,
+            via_player_match_stats: false,
         })
         .unwrap();
         assert!(sql.contains("FROM match_player"));
@@ -407,6 +437,7 @@ mod tests {
             order_dir: OrderDir::Desc,
             limit: 50,
             offset: 0,
+            via_player_match_stats: false,
         })
         .unwrap();
         assert!(sql.contains("groupArray(tuple("));
@@ -433,6 +464,7 @@ mod tests {
             order_dir: OrderDir::Desc,
             limit: 1,
             offset: 0,
+            via_player_match_stats: false,
         })
         .unwrap();
         assert!(sql.contains(
@@ -456,6 +488,7 @@ mod tests {
             order_dir: OrderDir::Asc,
             limit: 1,
             offset: 0,
+            via_player_match_stats: false,
         })
         .unwrap();
         assert!(!sql.contains("demo_player"));
@@ -474,6 +507,7 @@ mod tests {
             order_dir: OrderDir::Desc,
             limit: 10,
             offset: 0,
+            via_player_match_stats: false,
         })
         .unwrap();
         assert!(sql.contains("apply_patch_parts = 0"));
@@ -496,6 +530,7 @@ mod tests {
             order_dir: OrderDir::Asc,
             limit: 5,
             offset: 0,
+            via_player_match_stats: false,
         })
         .unwrap();
         assert!(sql.contains("hero_build_id"));
@@ -610,9 +645,58 @@ mod tests {
             order_dir: OrderDir::Asc,
             limit: 5,
             offset: 0,
+            via_player_match_stats: false,
         })
         .unwrap();
         assert!(sql.contains("apply_patch_parts = 0"));
+    }
+
+    #[test]
+    fn player_row_via_player_match_stats_refetches_selected_keys() {
+        let projection = Projection {
+            player_columns: PLAYER_COLUMNS
+                .iter()
+                .filter(|c| matches!(c.gql, "match_id" | "account_id" | "team"))
+                .copied()
+                .collect(),
+            ..Default::default()
+        };
+        let sql = build_match_players_query(&BuildArgs {
+            projection: &projection,
+            filters: &["account_id IN (1,2)".into(), "hero_id = 7".into()],
+            order_by: OrderKey::MatchId,
+            order_dir: OrderDir::Desc,
+            limit: 10,
+            offset: 20,
+            via_player_match_stats: true,
+        })
+        .unwrap();
+        assert!(sql.starts_with(
+            "WITH t_keys AS (SELECT match_id, account_id FROM player_match_stats WHERE account_id IN (1,2) AND hero_id = 7  ORDER BY match_id DESC LIMIT 10 OFFSET 20) "
+        ));
+        assert!(sql.contains(
+            "FROM match_player WHERE (match_player.match_id, match_player.account_id) IN t_keys ORDER BY match_player.match_id DESC LIMIT 10 SETTINGS"
+        ));
+        crate::utils::proptest_utils::assert_valid_sql(&sql);
+    }
+
+    #[test]
+    fn match_grouped_via_player_match_stats_selects_matches_there() {
+        let sql = build_matches_query(&BuildArgs {
+            projection: &match_id_only(),
+            filters: &["account_id = 1".into()],
+            order_by: OrderKey::StartTime,
+            order_dir: OrderDir::Desc,
+            limit: 5,
+            offset: 0,
+            via_player_match_stats: true,
+        })
+        .unwrap();
+        assert!(sql.contains(
+            "WITH t_matches AS (SELECT match_id FROM player_match_stats WHERE account_id = 1  GROUP BY match_id ORDER BY any(start_time) DESC"
+        ));
+        assert!(sql.contains("FROM match_player WHERE match_player.match_id IN t_matches"));
+        crate::utils::proptest_utils::assert_valid_sql(&sql);
     }
 }
 
@@ -698,6 +782,7 @@ mod proptests {
             order_dir in arb_order_dir(),
             limit in 1u32..=10_000u32,
             offset in 0u32..=100u32,
+            via_player_match_stats in any::<bool>(),
         ) {
             let mut projection = Projection {
                 match_columns: match_cols,
@@ -722,6 +807,7 @@ mod proptests {
                 order_dir,
                 limit,
                 offset,
+                via_player_match_stats,
             }).unwrap();
             assert_valid_sql(&sql);
         }
@@ -734,6 +820,7 @@ mod proptests {
             order_dir in arb_order_dir(),
             limit in 1u32..=10_000u32,
             offset in 0u32..=100u32,
+            via_player_match_stats in any::<bool>(),
         ) {
             // Need at least one column projected.
             if player_cols.is_empty()
@@ -752,6 +839,7 @@ mod proptests {
                 order_dir,
                 limit,
                 offset,
+                via_player_match_stats,
             }).unwrap();
             assert_valid_sql(&sql);
         }

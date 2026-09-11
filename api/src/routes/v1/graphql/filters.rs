@@ -212,6 +212,57 @@ impl MatchPlayerWhere {
         push!(assigned_lane, "assigned_lane");
         out
     }
+
+    /// Account ids pinned by `account_id` `eq` / `in`, if every set filter is on
+    /// a column `player_match_stats` also has.
+    pub(super) fn player_match_stats_accounts(&self) -> Option<Vec<u32>> {
+        let Self {
+            match_id: _,
+            account_id,
+            hero_id: _,
+            player_slot,
+            team,
+            start_time: _,
+            duration_s: _,
+            match_mode: _,
+            game_mode: _,
+            winning_team,
+            match_outcome,
+            average_badge_team_0,
+            average_badge_team_1,
+            average_badge: _,
+            is_high_skill_range_parties,
+            low_pri_pool,
+            new_player_pool,
+            not_scored,
+            rewards_eligible,
+            kills: _,
+            deaths: _,
+            assists: _,
+            net_worth: _,
+            player_level: _,
+            assigned_lane,
+        } = self;
+        let only_shared_columns = player_slot.is_none()
+            && team.is_none()
+            && winning_team.is_none()
+            && match_outcome.is_none()
+            && average_badge_team_0.is_none()
+            && average_badge_team_1.is_none()
+            && is_high_skill_range_parties.is_none()
+            && low_pri_pool.is_none()
+            && new_player_pool.is_none()
+            && not_scored.is_none()
+            && rewards_eligible.is_none()
+            && assigned_lane.is_none();
+        let account_id = account_id.as_ref().filter(|_| only_shared_columns)?;
+        let ids: Vec<u32> = account_id
+            .eq
+            .into_iter()
+            .chain(account_id.r#in.iter().flatten().copied())
+            .collect();
+        (!ids.is_empty()).then_some(ids)
+    }
 }
 
 /// Filter input for the `match_history` query. Operations across fields are AND-ed.
@@ -367,6 +418,40 @@ mod tests {
             f.having,
             vec!["argMaxIf(ranked_delta, created_at, ranked_delta IS NOT NULL) > 0".to_owned()]
         );
+    }
+
+    #[test]
+    fn player_match_stats_accounts_needs_pinned_accounts_and_shared_columns() {
+        let accounts = MatchPlayerWhere {
+            account_id: Some(U32Filter {
+                r#in: Some(vec![1, 2]),
+                ..Default::default()
+            }),
+            hero_id: Some(U32Filter {
+                eq: Some(7),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert_eq!(accounts.player_match_stats_accounts(), Some(vec![1, 2]));
+
+        let with_team = MatchPlayerWhere {
+            team: Some(StringFilter {
+                eq: Some("Team0".into()),
+                ..Default::default()
+            }),
+            ..accounts.clone()
+        };
+        assert_eq!(with_team.player_match_stats_accounts(), None);
+
+        let account_range = MatchPlayerWhere {
+            account_id: Some(U32Filter {
+                gt: Some(1),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert_eq!(account_range.player_match_stats_accounts(), None);
     }
 
     #[test]

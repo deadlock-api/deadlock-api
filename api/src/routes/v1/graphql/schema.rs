@@ -126,6 +126,7 @@ impl QueryRoot {
     ) -> GqlResult<Vec<Match>> {
         let state = app_state(ctx)?;
         let projection = project_matches(&ctx.look_ahead());
+        let via_player_match_stats = via_player_match_stats(state, where_.as_ref()).await?;
         let filters = where_.map(|w| w.to_sql_filters()).unwrap_or_default();
         let sql = build_matches_query(&BuildArgs {
             projection: &projection,
@@ -134,6 +135,7 @@ impl QueryRoot {
             order_dir: order_direction.unwrap_or_default().into(),
             limit: limit.clamp(1, MAX_LIMIT),
             offset,
+            via_player_match_stats,
         })
         .map_err(|e| async_graphql::Error::new(format!("SQL build error: {e}")))?;
         debug!(?sql, "graphql.matches built sql");
@@ -158,6 +160,7 @@ impl QueryRoot {
     ) -> GqlResult<Vec<MatchPlayer>> {
         let state = app_state(ctx)?;
         let projection = project_match_players(&ctx.look_ahead());
+        let via_player_match_stats = via_player_match_stats(state, where_.as_ref()).await?;
         let filters = where_.map(|w| w.to_sql_filters()).unwrap_or_default();
         let sql = build_match_players_query(&BuildArgs {
             projection: &projection,
@@ -166,6 +169,7 @@ impl QueryRoot {
             order_dir: order_direction.unwrap_or_default().into(),
             limit: limit.clamp(1, MAX_LIMIT),
             offset,
+            via_player_match_stats,
         })
         .map_err(|e| async_graphql::Error::new(format!("SQL build error: {e}")))?;
         debug!(?sql, "graphql.match_players built sql");
@@ -247,6 +251,21 @@ impl QueryRoot {
     ) -> GqlResult<Arc<Vec<Rank>>> {
         load_ranks(app_state(ctx)?, client_version, language).await
     }
+}
+
+async fn via_player_match_stats(
+    state: &AppState,
+    where_: Option<&MatchPlayerWhere>,
+) -> GqlResult<bool> {
+    let Some(account_ids) = where_.and_then(MatchPlayerWhere::player_match_stats_accounts) else {
+        return Ok(false);
+    };
+    let protected = state
+        .steam_client
+        .get_protected_users(&state.pg_client)
+        .await
+        .map_err(|e| async_graphql::Error::new(format!("Protected user lookup failed: {e}")))?;
+    Ok(!account_ids.iter().any(|id| protected.contains(id)))
 }
 
 async fn run_query<T>(ch_client: &clickhouse::Client, sql: &str) -> GqlResult<Vec<T>>
