@@ -6,6 +6,8 @@ interface QueryRendererProps<T> {
   query: UseQueryResult<T>;
   loadingFallback?: React.ReactNode;
   errorFallback?: (error: Error) => React.ReactNode;
+  /** Keep successful data visible after a failed refresh; the caller displays the refresh status. */
+  keepDataOnError?: boolean;
   children: (data: T) => React.ReactNode;
 }
 
@@ -18,10 +20,11 @@ export function QueryRenderer<T>({
   query,
   loadingFallback = DEFAULT_LOADING_FALLBACK,
   errorFallback = defaultErrorFallback,
+  keepDataOnError = false,
   children,
 }: QueryRendererProps<T>) {
   if (query.isPending) return loadingFallback;
-  if (query.isError) return errorFallback(query.error);
+  if (query.isError && !(keepDataOnError && query.data != null)) return errorFallback(query.error);
   if (query.data == null) return null;
   return children(query.data);
 }

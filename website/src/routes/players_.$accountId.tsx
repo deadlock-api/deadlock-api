@@ -197,7 +197,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
           </div>
         )}
         {tab === "matches" && (
-          <QueryRenderer query={historyQuery} loadingFallback={loadingFallback}>
+          <QueryRenderer query={historyQuery} loadingFallback={loadingFallback} keepDataOnError>
             {() => (
               <MatchesTab
                 key={revealCount}

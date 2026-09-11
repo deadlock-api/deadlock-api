@@ -25,13 +25,12 @@ function formatCountdown(ms: number): string {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-/** Refreshes the account's match history and rank on demand and every five minutes after the last successful load. */
+/** Keeps loaded match history and rank fresh, retrying failed refreshes every five minutes. */
 export function RefreshControl({ accountId }: { accountId: number }) {
   const queryClient = useQueryClient();
-  const { dataUpdatedAt, errorUpdatedAt, isFetching } = useQuery(trackerMatchHistoryQueryOptions(accountId));
-  // Scheduling from the last update keeps the countdown and the refetch on the same clock, and a
-  // manual refresh restarts both.
-  const dueAt = dataUpdatedAt + REFRESH_INTERVAL_MS;
+  const { dataUpdatedAt, errorUpdatedAt, isFetching, isError } = useQuery(trackerMatchHistoryQueryOptions(accountId));
+  // A failed attempt starts another interval too, so automatic refresh recovers without rapid retries.
+  const dueAt = Math.max(dataUpdatedAt, errorUpdatedAt) + REFRESH_INTERVAL_MS;
 
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -49,7 +48,7 @@ export function RefreshControl({ accountId }: { accountId: number }) {
   // Failed attempts count against the cooldown too, so a flaky endpoint cannot be hammered.
   const onCooldown = Math.max(dataUpdatedAt, errorUpdatedAt) + MANUAL_REFRESH_COOLDOWN_MS > now;
   return (
-    <span className="inline-flex items-center gap-1">
+    <span className="inline-flex flex-wrap items-center gap-x-1 gap-y-0.5">
       <Button
         variant="ghost"
         size="xs"
@@ -57,9 +56,14 @@ export function RefreshControl({ accountId }: { accountId: number }) {
         disabled={isFetching || onCooldown}
         title="Refresh now, at most once a minute. Match history also refreshes every 5 minutes."
       >
-        <RefreshCw className={cn(isFetching && "animate-spin")} />
+        <RefreshCw data-icon="inline-start" className={cn(isFetching && "animate-spin")} />
         Refresh
       </Button>
+      {isError && !isFetching && (
+        <output className="text-xs">
+          {dataUpdatedAt > 0 ? "Refresh failed · showing saved matches" : "Could not load matches"}
+        </output>
+      )}
       {isFetching ? (
         <span className="text-xs">Refreshing…</span>
       ) : (
