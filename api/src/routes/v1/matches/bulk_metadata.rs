@@ -173,6 +173,9 @@ pub(super) struct BulkMatchMetadataQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     account_ids: Option<Vec<u32>>,
+    /// Only include the players matching `account_ids` in the `players` array instead of all players of the match. Requires `account_ids`.
+    #[serde(default)]
+    only_filtered_players: bool,
     /// Filter matches based on the hero IDs. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
@@ -441,6 +444,12 @@ fn build_query(
             "item_filter_hero_id is required when using include_item_ids or exclude_item_ids",
         ));
     }
+    if query.only_filtered_players && query.account_ids.as_ref().is_none_or(Vec::is_empty) {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "account_ids is required when using only_filtered_players",
+        ));
+    }
 
     for (param_name, cols) in [
         ("extra_match_columns", query.extra_match_columns.as_deref()),
@@ -595,6 +604,7 @@ fn build_query(
     // Player filters - conditions that require subqueries on match_player
     let mut player_filters = vec![];
     let mut account_filter = None;
+    let mut players_filter = None;
     if let Some(account_ids) = query.account_ids
         && !account_ids.is_empty()
     {
@@ -602,6 +612,9 @@ fn build_query(
             "account_id IN ({})",
             account_ids.iter().map(ToString::to_string).join(",")
         );
+        if query.only_filtered_players {
+            players_filter = Some(format!("match_player.{filter}"));
+        }
         player_filters.push(filter.clone());
         account_filter = Some(filter);
     }
@@ -691,13 +704,14 @@ fn build_query(
         // Filters use qualify_match_player_filter so that table-qualified column
         // references prevent ClickHouse alias substitution (e.g. SELECT any(match_mode)
         // AS match_mode would otherwise shadow match_mode in WHERE).
-        let outer_where = if info_filters.is_empty() {
+        let qualified: Vec<String> = info_filters
+            .iter()
+            .map(|f| qualify_match_player_filter(f))
+            .chain(players_filter)
+            .collect();
+        let outer_where = if qualified.is_empty() {
             String::new()
         } else {
-            let qualified: Vec<String> = info_filters
-                .iter()
-                .map(|f| qualify_match_player_filter(f))
-                .collect();
             format!(" WHERE {} ", qualified.join(" AND "))
         };
         query.push_str("SELECT match_player.match_id as match_id");
@@ -745,6 +759,9 @@ fn build_query(
             " FROM match_player \
              WHERE match_player.match_id IN t_matches ",
         );
+        if let Some(players_filter) = &players_filter {
+            write!(&mut query, " AND {players_filter} ")?;
+        }
         query.push_str(" GROUP BY match_player.match_id ");
         query.push_str(&outer_order);
         query.push_str(&limit);
@@ -912,6 +929,55 @@ mod proptests {
         .expect("query should build");
         assert!(sql.contains("t_matches AS (SELECT match_id FROM match_player WHERE"));
         assert!(!sql.contains("FROM player_match_stats"));
+    }
+
+    #[test]
+    fn players_array_contains_all_players_by_default() {
+        let sql = build_query(
+            BulkMatchMetadataQuery {
+                include_player_info: true,
+                account_ids: Some(vec![848124002]),
+                limit: 50,
+                ..BulkMatchMetadataQuery::default()
+            },
+            None,
+        )
+        .expect("query should build");
+        assert!(!sql.contains("match_player.account_id IN"));
+    }
+
+    #[test]
+    fn only_filtered_players_restricts_players_array() {
+        for match_ids in [None, Some(vec![1, 2])] {
+            let sql = build_query(
+                BulkMatchMetadataQuery {
+                    include_player_info: true,
+                    account_ids: Some(vec![848124002]),
+                    only_filtered_players: true,
+                    match_ids,
+                    limit: 50,
+                    ..BulkMatchMetadataQuery::default()
+                },
+                None,
+            )
+            .expect("query should build");
+            assert_valid_sql(&sql);
+            assert!(sql.contains("AND match_player.account_id IN (848124002)  GROUP BY"));
+        }
+    }
+
+    #[test]
+    fn only_filtered_players_requires_account_ids() {
+        let result = build_query(
+            BulkMatchMetadataQuery {
+                include_player_info: true,
+                only_filtered_players: true,
+                limit: 50,
+                ..BulkMatchMetadataQuery::default()
+            },
+            None,
+        );
+        assert!(result.is_err());
     }
 
     #[test]
