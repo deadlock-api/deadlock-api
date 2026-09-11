@@ -67,3 +67,24 @@ test("handles zero duration and deathless matches without nonfinite metrics", ()
   assert.equal(recent.soulsPerMin, 0);
   assert.equal(recent.kdaRatio, 10);
 });
+
+test("streaks retain outcome interruptions and extend beyond the recent window", () => {
+  const entries = Array.from({ length: 30 }, (_, i) => match(i + 1, { match_result: i >= 27 ? 1 : 0 }));
+  const { streaks, recent } = compareRecentMatches(entries);
+  assert.equal(recent.matches, 20);
+  assert.equal(recent.wins, 17);
+  assert.deepEqual(streaks, { current: -3, longestWin: 27, longestLoss: 3 });
+});
+
+test("uses match ID to break tied timestamps consistently for recent results and streaks", () => {
+  const { streaks, entries } = compareRecentMatches([
+    match(1, { start_time: 100, match_result: 1 }),
+    match(3, { start_time: 100 }),
+    match(2, { start_time: 100 }),
+  ]);
+  assert.deepEqual(
+    entries.map((entry) => entry.match_id),
+    [3, 2, 1],
+  );
+  assert.deepEqual(streaks, { current: 2, longestWin: 2, longestLoss: 1 });
+});

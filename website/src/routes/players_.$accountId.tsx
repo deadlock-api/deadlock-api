@@ -111,7 +111,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
     }
     return badge;
   }, [historyQuery.data]);
-  // The heroes tab shows recent form per hero, which must not be narrowed to wins or losses only.
+  // Form and streaks need both outcomes, even when the match list is filtered to wins or losses.
   const formEntries = useMemo(
     () =>
       filters.result === "all"

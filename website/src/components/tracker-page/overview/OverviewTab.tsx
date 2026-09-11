@@ -24,7 +24,6 @@ import {
   computePlaytimeHabits,
   computeRecords,
   computeSessionMomentum,
-  computeStreaks,
   formatMatchDuration,
   formatPlaytime,
   isWin,
@@ -74,8 +73,6 @@ export function OverviewTab({
       sorted,
       summary: summarize(sorted),
       heroes: perHeroRows(sorted),
-      recent: compareRecentMatches(sorted),
-      streaks: computeStreaks(sorted),
       records: computeRecords(sorted),
       splits: computeOutcomeSplits(sorted),
       sessions: computeSessionMomentum(sorted),
@@ -84,7 +81,9 @@ export function OverviewTab({
       activity: computeActivity(sorted),
     };
   }, [entries]);
-  const { sorted, summary: s, recent, streaks, sessions, habits } = data;
+  const { sorted, summary: s, sessions, habits } = data;
+  const recent = useMemo(() => compareRecentMatches(formEntries), [formEntries]);
+  const { streaks } = recent;
 
   if (sorted.length === 0)
     return (
@@ -203,6 +202,11 @@ export function OverviewTab({
           />
         </DashboardPanel>
         <DashboardPanel title="Recent form" icon={Flame} meta={`Last ${recent.recent.matches} matches`}>
+          {filters.result !== "all" && (
+            <p className="pb-2 text-[10px] text-muted-foreground">
+              Includes wins and losses. Hero, mode and date filters apply.
+            </p>
+          )}
           <div className="flex items-baseline gap-2 pb-2">
             <span className="text-xl font-semibold text-victory tabular-nums">{percent(recent.recent.winrate)}</span>
             <span className="text-[11px] text-muted-foreground tabular-nums">
@@ -379,6 +383,9 @@ export function OverviewTab({
               );
             })}
           </div>
+          {filters.result !== "all" && (
+            <p className="mt-2 text-[10px] text-muted-foreground">Streaks include wins and losses.</p>
+          )}
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
             <span>
               Longest win streak <strong className="text-victory tabular-nums">{streaks.longestWin}</strong>

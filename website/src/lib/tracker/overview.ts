@@ -1,6 +1,6 @@
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
-import { summarize } from "./compute";
+import { computeStreaks, summarize } from "./compute";
 
 /** Compare non-overlapping windows; never present a tiny baseline as a trend. */
 export function compareRecentMatches(entries: PlayerMatchHistoryEntry[]) {
@@ -9,6 +9,7 @@ export function compareRecentMatches(entries: PlayerMatchHistoryEntry[]) {
   const previousEntries = sorted.slice(20, 40);
   return {
     entries: recentEntries,
+    streaks: computeStreaks(sorted),
     recent: summarize(recentEntries),
     previous: previousEntries.length >= 5 ? summarize(previousEntries) : null,
   };
