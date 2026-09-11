@@ -154,7 +154,7 @@ export function OverviewTab({
             >
               {value}
             </dd>
-            <span className="text-[10px] text-muted-foreground">{detail}</span>
+            <dd className="text-[10px] text-muted-foreground">{detail}</dd>
           </div>
         ))}
       </dl>

@@ -103,12 +103,13 @@ export function PerformanceTrendPanel({ entries }: { entries: PlayerMatchHistory
             </EmptyHeader>
           </Empty>
         ) : (
-          <ChartContainer
-            config={metrics}
-            className="aspect-auto h-24 w-full"
-            aria-label={`Rolling ${window}-match ${selected.label.toLowerCase()} over selected matches`}
-          >
-            <AreaChart data={points} margin={{ top: 4, right: 2, left: 2, bottom: 0 }} accessibilityLayer>
+          <ChartContainer config={metrics} className="aspect-auto h-24 w-full">
+            <AreaChart
+              data={points}
+              margin={{ top: 4, right: 2, left: 2, bottom: 0 }}
+              accessibilityLayer
+              aria-label={`Rolling ${window}-match ${selected.label.toLowerCase()} over selected matches`}
+            >
               <CartesianGrid vertical={false} stroke="var(--border)" />
               <XAxis
                 dataKey="time"

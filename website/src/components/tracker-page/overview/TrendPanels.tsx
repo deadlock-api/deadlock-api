@@ -49,12 +49,12 @@ export function TrendPanels({
         {ranks.length < 2 ? (
           <ChartEmpty text="Needs 2 matches with rank badges" />
         ) : (
-          <ChartContainer
-            config={rankConfig}
-            className="aspect-auto h-24 w-full"
-            aria-label="Rank progression over recorded matches"
-          >
-            <AreaChart data={ranks} margin={{ top: 4, right: 2, left: 2, bottom: 0 }}>
+          <ChartContainer config={rankConfig} className="aspect-auto h-24 w-full">
+            <AreaChart
+              data={ranks}
+              margin={{ top: 4, right: 2, left: 2, bottom: 0 }}
+              aria-label="Rank progression over recorded matches"
+            >
               <CartesianGrid vertical={false} stroke="var(--border)" />
               <XAxis
                 dataKey="time"
@@ -104,12 +104,13 @@ export function TrendPanels({
           </span>
           <span className="text-[10px] text-muted-foreground">matches played</span>
         </div>
-        <ChartContainer
-          config={activityConfig}
-          className="aspect-auto h-24 w-full"
-          aria-label="Wins and losses by activity period"
-        >
-          <BarChart data={activity.buckets} margin={{ top: 4, right: 2, left: 2, bottom: 0 }} barCategoryGap="25%">
+        <ChartContainer config={activityConfig} className="aspect-auto h-24 w-full">
+          <BarChart
+            data={activity.buckets}
+            margin={{ top: 4, right: 2, left: 2, bottom: 0 }}
+            barCategoryGap="25%"
+            aria-label="Wins and losses by activity period"
+          >
             <CartesianGrid vertical={false} stroke="var(--border)" />
             <XAxis
               dataKey="bucketStartUnix"
