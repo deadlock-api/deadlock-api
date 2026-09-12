@@ -40,6 +40,10 @@ pub(super) const OBJECTIVE_DAMAGE_HASH: u64 =
 pub(super) const ULTIMATE_COOLDOWN_END_HASH: u64 =
     fkey_from_path(&["m_PlayerDataGlobal", "m_flUltimateCooldownEnd"]);
 pub(super) const UPGRADES_HASH: u64 = fkey_from_path(&["m_PlayerDataGlobal", "m_vecUpgrades"]);
+pub(super) const ABILITY_UPGRADES_HASH: u64 =
+    fkey_from_path(&["m_PlayerDataGlobal", "m_vecAbilityUpgradeState"]);
+pub(super) const ABILITY_ID_HASH: u64 = fxhash::hash_bytes(b"m_ItemID");
+pub(super) const UPGRADE_INFO_HASH: u64 = fxhash::hash_bytes(b"m_nUpgradeInfo");
 pub(super) const QUICKBUY_AUTO_PURCHASE_HASH: u64 = fxhash::hash_bytes(b"m_bQuickbuyAutoPurchase");
 pub(super) const QUICKBUY_AUTO_QUUE_BUILD_HASH: u64 =
     fxhash::hash_bytes(b"m_bQuickbuyAutoQueueBuild");

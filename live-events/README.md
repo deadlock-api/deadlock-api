@@ -174,7 +174,15 @@ Additional event names:
   "deaths": 1,
   "assists": 7,
   "net_worth": 12350,
-  "hero_damage": 8420
+  "hero_damage": 8420,
+  "ability_upgrades": [
+    {
+      "ability_id": 3089858203,
+      "upgrade_info": 458753,
+      "unlocked": true,
+      "tier": 2
+    }
+  ]
 }
 ```
 

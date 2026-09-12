@@ -112,6 +112,41 @@ pub(super) struct PlayerControllerEvent {
     objective_damage: Option<i32>,
     ultimate_cooldown_end: Option<f32>,
     upgrades: Vec<u64>,
+    ability_upgrades: Option<Vec<AbilityUpgrade>>,
+}
+
+#[derive(Serialize, Debug, Clone)]
+struct AbilityUpgrade {
+    ability_id: u32,
+    upgrade_info: u32,
+    unlocked: bool,
+    tier: u32,
+}
+
+impl AbilityUpgrade {
+    fn new(ability_id: u32, upgrade_info: u32) -> Self {
+        // The upper 16 bits contain the unlock bit followed by upgrade-star bits.
+        // Preserve the packed value so consumers can inspect other flags as well.
+        Self {
+            ability_id,
+            upgrade_info,
+            unlocked: upgrade_info & (1 << 16) != 0,
+            tier: ((upgrade_info >> 17) & 0xf).count_ones(),
+        }
+    }
+
+    fn from_entity(entity: &Entity) -> Option<Vec<Self>> {
+        let count: u64 = entity.get_value(&ABILITY_UPGRADES_HASH)?;
+        (0..count)
+            .map(|i| {
+                let key = add_u64_to_hash(ABILITY_UPGRADES_HASH, add_u64_to_hash(0, i));
+                Some(Self::new(
+                    entity.get_value(&add_u64_to_hash(key, ABILITY_ID_HASH))?,
+                    entity.get_value(&add_u64_to_hash(key, UPGRADE_INFO_HASH))?,
+                ))
+            })
+            .collect()
+    }
 }
 
 impl EntityUpdateEvent for PlayerControllerEvent {
@@ -142,6 +177,7 @@ impl EntityUpdateEvent for PlayerControllerEvent {
             hero_damage: entity.get_value(&HERO_DAMAGE_HASH),
             objective_damage: entity.get_value(&OBJECTIVE_DAMAGE_HASH),
             ultimate_cooldown_end: entity.get_value(&ULTIMATE_COOLDOWN_END_HASH),
+            ability_upgrades: AbilityUpgrade::from_entity(entity),
             upgrades: (0..entity.get_value(&UPGRADES_HASH).unwrap_or_default())
                 .map(|i| add_u64_to_hash(UPGRADES_HASH, add_u64_to_hash(0, i)))
                 .filter_map(|h| entity.get_value(&h))
