@@ -16,7 +16,7 @@ import { ThemeProvider } from "~/components/ThemeProvider";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
-import { initAnalytics } from "~/lib/analytics";
+import { getAnalytics } from "~/lib/analytics";
 import { installChunkReloadHandlers, isChunkLoadError, reloadOnceForStaleChunk } from "~/lib/chunk-reload";
 import { seo } from "~/lib/seo";
 import { heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
@@ -119,7 +119,7 @@ function RootComponent() {
   const isWidgetEmbed = pathname.startsWith("/streamkit/widgets/");
 
   React.useEffect(() => {
-    if (!isWidgetEmbed) void initAnalytics();
+    if (!isWidgetEmbed) void getAnalytics();
   }, [isWidgetEmbed]);
 
   if (isWidgetEmbed) {
