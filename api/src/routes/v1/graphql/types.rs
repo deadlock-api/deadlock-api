@@ -307,5 +307,9 @@ pub(super) struct Stat {
     pub(super) player_barriering: Option<u32>,
     pub(super) teammate_healing: Option<u32>,
     pub(super) teammate_barriering: Option<u32>,
+    pub(super) bullet_kills: Option<u32>,
+    pub(super) melee_kills: Option<u32>,
+    pub(super) ability_kills: Option<u32>,
+    pub(super) headshot_kills: Option<u32>,
     pub(super) custom_user_stats: Option<JsonScalar>,
 }

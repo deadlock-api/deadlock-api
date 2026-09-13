@@ -241,6 +241,10 @@ pub(super) const STAT_SUBFIELDS: &[&str] = &[
     "player_barriering",
     "teammate_healing",
     "teammate_barriering",
+    "bullet_kills",
+    "melee_kills",
+    "ability_kills",
+    "headshot_kills",
     "custom_user_stats",
 ];
 
