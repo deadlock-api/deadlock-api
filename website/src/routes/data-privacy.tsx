@@ -228,6 +228,15 @@ function DataPrivacy() {
               broader Deadlock community through aggregated statistics and insights.
             </p>
           </div>
+
+          <div>
+            <h3 className="mb-2 text-lg font-semibold">Website Analytics</h3>
+            <p className="text-muted-foreground">
+              We use PostHog (EU-hosted) in cookieless mode to understand how the website is used. It sets no cookies
+              and stores nothing in your browser; visitors are counted with a short-lived, non-reversible hash and are
+              never linked to a Steam account.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
