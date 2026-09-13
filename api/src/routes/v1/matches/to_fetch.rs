@@ -72,6 +72,7 @@ async fn pending_pool(
 }
 
 #[cached(
+    max_size = 1_000,
     ttl_secs = 60,
     convert = "{ account_id }",
     key = "u32",

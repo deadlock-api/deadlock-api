@@ -186,6 +186,7 @@ fn not_found(match_id: u64) -> APIError {
 }
 
 #[cached(
+    max_size = 10_000,
     ttl_secs = 60,
     convert = "{ match_id }",
     sync_writes = "by_key",

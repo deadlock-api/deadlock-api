@@ -257,6 +257,7 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
 }
 
 #[cached(
+    max_size = 1_000,
     ttl_secs = 3600,
     convert = "{ query_str.to_string() }",
     sync_writes = "by_key",

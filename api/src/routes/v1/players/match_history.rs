@@ -132,6 +132,7 @@ impl BatchQueryMulti for MatchHistoryReadQuery {
 pub(crate) type MatchHistoryReadBatcher = ClickhouseBatcherMulti<MatchHistoryReadQuery>;
 
 #[cached(
+    max_size = 1_000,
     ttl_secs = 600,
     convert = "{ account_id }",
     sync_writes = "by_key",
@@ -396,6 +397,7 @@ async fn fetch_match_history_raw(
 }
 
 #[cached(
+    max_size = 1_000,
     ttl_secs = 480,
     convert = "{ (account_id, rank_interval) }",
     sync_writes = "by_key",

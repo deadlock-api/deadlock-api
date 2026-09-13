@@ -307,6 +307,7 @@ SETTINGS log_comment = 'lane_matchup_stats', apply_patch_parts = 0, max_threads 
 }
 
 #[cached(
+    max_size = 1_000,
     ttl_secs = 3600,
     convert = "{ query_str.to_string() }",
     sync_writes = "by_key",

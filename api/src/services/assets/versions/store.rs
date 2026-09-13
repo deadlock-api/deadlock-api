@@ -134,6 +134,7 @@ pub(crate) async fn fetch_decompressed(
 }
 
 #[cached(
+    max_size = 256,
     ttl_secs = 3600,
     convert = r#"{ (version, rel_path.clone()) }"#,
     key = "(u32, String)",

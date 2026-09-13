@@ -400,6 +400,7 @@ fn strip_low_cardinality(ch_type: &str) -> String {
 /// Resolves the `ClickHouse` `Tuple(...)` type of one `players` element, so it can be built natively
 /// instead of via a JSON text round trip. `None` when the lookup fails; only successes are cached.
 #[cached(
+    max_size = 1_000,
     ttl_secs = 3600,
     convert = r#"{ columns.iter().map(|(expr, _)| expr.as_str()).join(",") }"#,
     sync_writes = "by_key",

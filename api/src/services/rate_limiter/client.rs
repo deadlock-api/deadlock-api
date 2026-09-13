@@ -148,6 +148,7 @@ impl RateLimitClient {
     }
 
     #[cached(
+        max_size = 10_000,
         ttl_secs = 3600,
         convert = "{ api_key }",
         sync_writes = "by_key",
@@ -165,6 +166,7 @@ impl RateLimitClient {
     }
 
     #[cached(
+        max_size = 10_000,
         ttl_secs = 600,
         convert = r#"{ format!("{api_key}-{path}") }"#,
         sync_writes = "by_key",

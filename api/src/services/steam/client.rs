@@ -488,6 +488,7 @@ async fn get_client_version_from_github(http_client: &reqwest::Client) -> APIRes
 }
 
 #[cached(
+    max_size = 100_000,
     ttl_secs = 86400,
     convert = "{ steam_id }",
     sync_writes = "by_key",

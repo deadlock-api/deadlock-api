@@ -219,6 +219,7 @@ pub(crate) type PlayerRankBatcher = ClickhouseBatcher<PlayerRankQuery>;
 
 /// Returns `None` when none of the player's recent ranked matches carries a rank.
 #[cached(
+    max_size = 10_000,
     ttl_secs = 600,
     convert = "{ account_id }",
     sync_writes = "by_key",
