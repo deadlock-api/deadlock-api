@@ -10,3 +10,7 @@ dist
 
 # Blog plotting scripts are scratch tooling, never shipped
 public/blog/scripts/
+
+# local UX review and experiment records
+ux-reports/
+experiments/

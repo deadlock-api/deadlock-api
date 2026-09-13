@@ -27,6 +27,7 @@ import { ElectricBorder } from "~/components/ElectricBorder";
 import { SmartLink } from "~/components/SmartLink";
 import { Button } from "~/components/ui/button";
 import { API_ORIGIN } from "~/lib/constants";
+import { useExperiment } from "~/lib/experiments";
 import { seo } from "~/lib/seo";
 import { cn } from "~/lib/utils";
 
@@ -84,6 +85,13 @@ const valueProps = [
     title: "Based on Sponsoring",
     external: true,
   },
+];
+
+const quickLinks = [
+  { label: "Hero Win Rates", href: "/heroes", icon: Swords, primary: true },
+  { label: "Item Stats", href: "/items", icon: ShoppingBag, primary: false },
+  { label: "Leaderboard", href: "/leaderboard", icon: Trophy, primary: false },
+  { label: "API Docs", href: `${API_ORIGIN}/docs`, icon: Code, primary: false, external: true },
 ];
 
 const patronFeatures = [
@@ -241,6 +249,7 @@ const sponsors = [
 ];
 
 function IndexRoute() {
+  const variant = useExperiment("exp-landing-quick-links");
   return (
     <div className="space-y-16">
       {/* Hero */}
@@ -292,6 +301,19 @@ function IndexRoute() {
               updated live from Valve's servers. A comprehensive set of endpoints also gives developers access to
               Deadlock game data, match history, player statistics, hero analytics, and more.
             </p>
+
+            {variant === "test" && (
+              <div className="mt-6 flex flex-wrap justify-center gap-2">
+                {quickLinks.map((link) => (
+                  <SmartLink key={link.label} href={link.href} external={link.external}>
+                    <Button variant={link.primary ? "default" : "outline"} size="sm">
+                      <link.icon />
+                      {link.label}
+                    </Button>
+                  </SmartLink>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
