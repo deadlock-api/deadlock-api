@@ -24,7 +24,7 @@ permissions:
   id-token: write
 
 concurrency:
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
   group: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
