@@ -72,6 +72,7 @@ pub static SHUTDOWN_TOKEN: std::sync::LazyLock<tokio_util::sync::CancellationTok
 const ROBOTS_TXT: &str = r"
 User-agent: *
 Disallow: /
+Allow: /$
 Allow: /docs
 Allow: /openapi.json
 Allow: /cdn-cgi/
