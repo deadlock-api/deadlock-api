@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 import type { AnalyticsApiHeroBanStatsRequest } from "deadlock_api_client";
 import {
@@ -31,6 +32,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { BANS_PER_MATCH, computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
+import { useExperiment } from "~/lib/experiments";
 import { formatPercent, formatSignedPercent } from "~/lib/format";
 import {
   Z_SCORE_BR_WEIGHT,
@@ -39,6 +41,7 @@ import {
   computeResiduals,
   computeZScores,
 } from "~/lib/hero-scoring";
+import { heroSlug } from "~/lib/hero-slug";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
@@ -191,6 +194,7 @@ export function HeroStatsTable({
   const pickrateMultiplier = getPickrateMultiplier(gameMode);
 
   const { data: heroes, isLoading: isLoadingHeroes } = useQuery(heroesQueryOptions);
+  const heroRowLinkVariant = useExperiment("exp-hero-row-link");
   const heroNameMap = useMemo(() => {
     if (!heroes) return new Map<number, string>();
     const map = new Map<number, string>();
@@ -664,10 +668,24 @@ export function HeroStatsTable({
   const renderHeroCells = (row: AnalyticsHeroStats) => (
     <>
       <TableCell>
-        <div className="flex items-center gap-2">
-          <HeroImage heroId={row.hero_id} />
-          <HeroName heroId={row.hero_id} linkToDetail />
-        </div>
+        {heroRowLinkVariant === "test" && heroNameMap.has(row.hero_id) ? (
+          <Link
+            to="/heroes/$heroName"
+            params={{ heroName: heroSlug(heroNameMap.get(row.hero_id)!) }}
+            preload="intent"
+            className="group flex items-center gap-2"
+          >
+            <HeroImage heroId={row.hero_id} />
+            <span className="truncate underline decoration-muted-foreground decoration-dotted underline-offset-4 group-hover:decoration-foreground group-hover:decoration-solid">
+              {heroNameMap.get(row.hero_id)}
+            </span>
+          </Link>
+        ) : (
+          <div className="flex items-center gap-2">
+            <HeroImage heroId={row.hero_id} />
+            <HeroName heroId={row.hero_id} linkToDetail />
+          </div>
+        )}
       </TableCell>
       {columns.includes("winRate") && (
         <TableCell>
