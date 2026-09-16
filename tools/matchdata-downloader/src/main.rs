@@ -39,8 +39,8 @@ const BATCH_LIMIT: usize = 5_000;
 /// iteration would run the full 5 000 and stretch well past [`POLL_INTERVAL`],
 /// delaying the fresh salts that arrive in the meantime.
 const RETRY_BATCH_LIMIT: usize = 500;
-/// Each iteration opens with [`pending_salts_query`], which scans all of `match_salts` and
-/// probes `match_player` for ~10 CPU-seconds regardless of how little it finds. New
+/// Each iteration opens with [`pending_salts_query`], which scans all of `match_salts` for
+/// several CPU-seconds regardless of how little it finds. New
 /// candidates arrive at ~27/min against a [`BATCH_LIMIT`] of 5 000, so polling faster than
 /// this only re-pays that fixed cost to discover a few dozen matches.
 const POLL_INTERVAL: Duration = Duration::from_secs(120);
@@ -50,8 +50,8 @@ const ITERATION_BACKOFF: Duration = Duration::from_secs(5);
 const RETRY_INITIAL_INTERVAL: Duration = Duration::from_mins(5);
 const RETRY_MAX_INTERVAL: Duration = Duration::from_hours(24);
 /// A large share of matches can never be fetched — Valve answers 502 for them
-/// indefinitely — and they stay in the pending set forever because they never
-/// reach `match_player`. Retrying them without limit would burn most of the
+/// indefinitely — and a failure alone stamps no verdict, so they would stay in the
+/// pending set forever. Retrying them without limit would burn most of the
 /// download capacity on matches that will never arrive, so they are parked after
 /// this many attempts, which the backoff spreads over roughly four days. A
 /// restart re-examines them, a slow enough cadence to still catch late arrivals.
@@ -101,18 +101,20 @@ const SALT_COLUMNS: &str = "
 const SALT_GROUPING: &str = "
 GROUP BY match_id, cluster_id, metadata_salt";
 
-/// Every candidate of every match that has salts but no player rows yet, newest first. There
-/// is deliberately no recency cut-off: a match that could not be downloaded within a couple of
+/// Every candidate of every match whose salts have no verdict yet, newest first. There is
+/// deliberately no recency cut-off: a match that could not be downloaded within a couple of
 /// days must stay a candidate rather than silently disappear.
+///
+/// The verdict columns are the only "already fetched" signal. `match_player` must not be used
+/// for that: the HLTV scraper fills it too, and its metadata is exactly what a salt download
+/// is supposed to replace, so excluding matches with player rows would hide every HLTV match
+/// from the downloader forever.
 ///
 /// A candidate can only come from a match that still has a row without a verdict, and those
 /// are a fraction of a percent of `match_salts`. `open_matches` collects them with a plain
 /// filter so the grouping (and its hash table of one group per match) only runs over that
 /// slice instead of the whole table; the `HAVING` still hides a candidate whose verdict sits
-/// in an unmerged row. The same set bounds the `match_player` lookup, which makes the `NOT IN`
-/// a small set probed through the primary key rather than a materialisation of every match
-/// ever downloaded. Grouping the whole table and anti-joining all of `match_player` took
-/// ~1.8s and ~4 GiB per poll; this takes ~1.1s and ~55 MiB for the same rows.
+/// in an unmerged row.
 fn pending_salts_query() -> String {
     format!(
         "
@@ -120,18 +122,13 @@ WITH open_matches AS (
     SELECT match_id
     FROM match_salts
     WHERE {VALID_SALTS} AND verified_at IS NULL AND failed_at IS NULL
-),
-candidates AS (
-    SELECT {SALT_COLUMNS}
-    FROM match_salts
-    WHERE {VALID_SALTS} AND match_id IN open_matches
-    {SALT_GROUPING}
-    HAVING {UNRESOLVED}
 )
-SELECT c.match_id, c.cluster_id, c.metadata_salt, c.created_at
-FROM candidates c
-WHERE c.match_id NOT IN (SELECT match_id FROM match_player WHERE match_id IN open_matches)
-ORDER BY c.created_at DESC
+SELECT {SALT_COLUMNS}
+FROM match_salts
+WHERE {VALID_SALTS} AND match_id IN open_matches
+{SALT_GROUPING}
+HAVING {UNRESOLVED}
+ORDER BY created_at DESC
 SETTINGS log_comment = 'matchdata_downloader_fetch_pending_salts'
 "
     )
@@ -455,8 +452,8 @@ enum GaveUp {
 }
 
 struct State {
-    /// Uploaded but not yet visible in `match_player`; the SQL query keeps
-    /// returning these until the ingest worker catches up.
+    /// Uploaded (or found already uploaded) without a verdict being stamped, e.g. the
+    /// file was already in the ingest prefix; the SQL query keeps returning these.
     uploaded: Mutex<HashSet<u64>>,
     failed: Mutex<HashMap<u64, Attempt>>,
 }
@@ -828,7 +825,7 @@ mod tests {
     /// `buffer_unordered` completes fast failures before slow successes, so results
     /// arrive in an order unrelated to the requested batch. Attributing them by
     /// position marks failed matches as uploaded, which excludes them from every
-    /// later iteration because they never reach `match_player`.
+    /// later iteration because they never get a verdict.
     #[tokio::test]
     async fn results_are_attributed_by_match_id_not_by_position() {
         let state = State::new();
