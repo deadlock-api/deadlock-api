@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { Rank } from "deadlock_api_client";
-import { Crown, ExternalLink, ShieldCheck } from "lucide-react";
-import { useMemo } from "react";
+import { ArrowDown, ArrowUp, Crown, ExternalLink, ShieldCheck } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { AssetImage } from "~/components/AssetImage";
 import { BadgeImage } from "~/components/BadgeImage";
@@ -14,7 +14,14 @@ import { formatShare } from "~/lib/format";
 import { LANES } from "~/lib/team-builder/lanes";
 import { type BuildAbility, type BuildItem, playerBuild } from "~/lib/tracker/build";
 import { formatMatchDuration } from "~/lib/tracker/compute";
-import { type PlayerContext, playerContext, PLAYER_STAT_COLUMNS, REVEAL, statMaxima } from "~/lib/tracker/player-stats";
+import {
+  type PlayerContext,
+  playerContext,
+  PLAYER_STAT_COLUMNS,
+  REVEAL,
+  sortScoreboardPlayers,
+  statMaxima,
+} from "~/lib/tracker/player-stats";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
 import {
@@ -34,6 +41,38 @@ export const TEAMS = [
   { key: "Team0", name: "The Hidden King" },
   { key: "Team1", name: "The Archmother" },
 ] as const;
+
+function SortButton({
+  label,
+  short,
+  active,
+  direction,
+  onClick,
+}: {
+  label: string;
+  short: string;
+  active: boolean;
+  direction: "asc" | "desc";
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`Sort scoreboard by ${label.toLowerCase()}, ${active && direction === "desc" ? "lowest" : "highest"} first`}
+      title={label}
+      className="inline-flex cursor-pointer items-center justify-end gap-0.5 rounded-sm whitespace-nowrap hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+    >
+      {short}
+      {active &&
+        (direction === "desc" ? (
+          <ArrowDown aria-hidden="true" className="size-3" />
+        ) : (
+          <ArrowUp aria-hidden="true" className="size-3" />
+        ))}
+    </button>
+  );
+}
 
 function StatCell({
   value,
@@ -283,6 +322,13 @@ export function Scoreboard({
   viewedAccountId: number | null;
   onViewPlayer: (accountId: number) => void;
 }) {
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const sortLabel = sortKey === "kda" ? "KDA" : PLAYER_STAT_COLUMNS.find((column) => column.key === sortKey)?.short;
+  const changeSort = (key: string) => {
+    setSortDirection(sortKey === key && sortDirection === "desc" ? "asc" : "desc");
+    setSortKey(key);
+  };
   const { data: abilitiesById } = useQuery({
     ...trackerAbilitiesQueryOptions,
     select: (abilities) => new Map(abilities.map((ability) => [ability.id, ability])),
@@ -298,7 +344,7 @@ export function Scoreboard({
     <div className="grid gap-4 @6xl:grid-cols-2">
       {TEAMS.map((team, teamIndex) => {
         const teamPlayers = match.players.filter((player) => player.team === team.key);
-        const players = laned ? byLane(teamPlayers) : teamPlayers;
+        const players = sortScoreboardPlayers(laned ? byLane(teamPlayers) : teamPlayers, sortKey, sortDirection);
         const won = match.winning_team === team.key;
         const averageBadge = teamIndex === 0 ? match.average_badge_team0 : match.average_badge_team1;
         const teamKills = teamPlayers.reduce((sum, player) => sum + player.kills, 0);
@@ -319,19 +365,63 @@ export function Scoreboard({
               </span>
             </div>
             <table className="w-full text-sm">
+              <caption className="sr-only">{team.name} scoreboard</caption>
               <thead>
                 <tr className="text-xs text-muted-foreground">
                   <th colSpan={2} className="px-2 py-1 text-left font-normal">
-                    Player
+                    <button
+                      type="button"
+                      aria-disabled={sortKey == null}
+                      aria-label={
+                        sortKey == null
+                          ? `Players in ${laned ? "lane" : "team"} order`
+                          : `Restore ${laned ? "lane" : "team"} order`
+                      }
+                      title={
+                        sortKey == null
+                          ? `Players in ${laned ? "lane" : "team"} order`
+                          : `Restore ${laned ? "lane" : "team"} order`
+                      }
+                      onClick={sortKey ? () => setSortKey(null) : undefined}
+                      className="inline-flex cursor-pointer items-center gap-1 rounded-sm whitespace-nowrap focus-visible:outline-2 focus-visible:outline-ring aria-disabled:cursor-default"
+                    >
+                      Player
+                      {sortKey && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {sortLabel}
+                          {sortDirection === "desc" ? "↓" : "↑"}
+                        </span>
+                      )}
+                    </button>
                   </th>
-                  <th className="px-1.5 py-1 text-right font-normal">K / D / A</th>
+                  <th
+                    className="px-1.5 py-1 text-right font-normal"
+                    aria-sort={sortKey === "kda" ? (sortDirection === "desc" ? "descending" : "ascending") : "none"}
+                  >
+                    <SortButton
+                      label="KDA ratio"
+                      short="K / D / A"
+                      active={sortKey === "kda"}
+                      direction={sortDirection}
+                      onClick={() => changeSort("kda")}
+                    />
+                  </th>
                   {PLAYER_STAT_COLUMNS.map((column) => (
                     <th
                       key={column.key}
                       className={cn("px-1.5 py-1 text-right font-normal", REVEAL[column.reveal].cell)}
                       title={column.label}
+                      aria-sort={
+                        sortKey === column.key ? (sortDirection === "desc" ? "descending" : "ascending") : "none"
+                      }
                     >
-                      {column.short}
+                      <SortButton
+                        label={column.label}
+                        short={column.short}
+                        active={sortKey === column.key}
+                        direction={sortDirection}
+                        onClick={() => changeSort(column.key)}
+                      />
                     </th>
                   ))}
                 </tr>

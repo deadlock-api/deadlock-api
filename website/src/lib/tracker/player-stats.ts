@@ -102,6 +102,21 @@ export const PLAYER_STAT_COLUMNS: PlayerStatColumn[] = [
   },
 ];
 
+/** Sort one team's scoreboard without reordering cached match data. */
+export function sortScoreboardPlayers(
+  players: TrackerMatchPlayer[],
+  key: string | null,
+  direction: "asc" | "desc",
+): TrackerMatchPlayer[] {
+  const value =
+    key === "kda"
+      ? (player: TrackerMatchPlayer) => (player.kills + player.assists) / Math.max(1, player.deaths)
+      : PLAYER_STAT_COLUMNS.find((column) => column.key === key)?.value;
+  if (!value) return [...players];
+  const sign = direction === "asc" ? 1 : -1;
+  return [...players].sort((a, b) => sign * (value(a) - value(b)) || a.account_id - b.account_id);
+}
+
 /** The lobby's best in each column, which the row bars are drawn against. */
 export function statMaxima(players: TrackerMatchPlayer[]): Record<string, number> {
   const maxima: Record<string, number> = {};
