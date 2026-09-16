@@ -1,5 +1,6 @@
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { Flame } from "lucide-react";
+import { useRef, useState } from "react";
 
 import { HeroName } from "~/components/HeroName";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "~/components/ui/empty";
@@ -118,36 +119,69 @@ function ResultGrid({
   entries: PlayerMatchHistoryEntry[];
   onOpenMatch: (matchId: number) => void;
 }) {
+  const gridRef = useRef<HTMLFieldSetElement>(null);
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const tabIndex = Math.min(focusedIndex, entries.length - 1);
   return (
-    <div className="@container/results">
-      <fieldset className="grid min-w-0 grid-cols-5 gap-0.5 @min-[16.125rem]/results:grid-cols-10">
-        <legend className="sr-only">Recent results, newest first</legend>
-        {entries.map((entry) => (
-          <Tooltip key={entry.match_id}>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={() => onOpenMatch(entry.match_id)}
-                aria-label={`Open match ${entry.match_id}, ${isWin(entry) ? "win" : "loss"}, ${day.unix(entry.start_time).format("MMM D, YYYY")}`}
-                className={cn(
-                  "flex h-7 items-center justify-center rounded-sm text-[10px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-ring",
-                  isWin(entry)
-                    ? "bg-victory/15 text-victory hover:bg-victory/30"
-                    : "bg-primary/15 text-primary hover:bg-primary/30",
-                )}
-              >
-                {isWin(entry) ? "W" : "L"}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <HeroName heroId={entry.hero_id} /> · {entry.player_kills}/{entry.player_deaths}/{entry.player_assists}
-              <br />
-              {day.unix(entry.start_time).format("MMM D, YYYY, HH:mm")} · {formatMatchDuration(entry.match_duration_s)}
-            </TooltipContent>
-          </Tooltip>
-        ))}
-      </fieldset>
-    </div>
+    <fieldset ref={gridRef} className="grid min-w-0 grid-cols-[repeat(auto-fill,minmax(1.5rem,1fr))] gap-0.5">
+      <legend className="sr-only">Recent results, newest first. Use arrow keys to move between matches.</legend>
+      {entries.map((entry, index) => (
+        <Tooltip key={entry.match_id}>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => onOpenMatch(entry.match_id)}
+              tabIndex={index === tabIndex ? 0 : -1}
+              onFocus={() => setFocusedIndex(index)}
+              onKeyDown={(event) => {
+                if (event.altKey) return;
+                const grid = gridRef.current;
+                if (!grid) return;
+                const buttons = [...grid.querySelectorAll<HTMLButtonElement>("button")];
+                const firstRowTop = buttons[0].getBoundingClientRect().top;
+                const columns = buttons.filter(
+                  (button) => Math.abs(button.getBoundingClientRect().top - firstRowTop) < 1,
+                ).length;
+                const delta =
+                  event.key === "ArrowRight"
+                    ? 1
+                    : event.key === "ArrowLeft"
+                      ? -1
+                      : event.key === "ArrowDown"
+                        ? columns
+                        : event.key === "ArrowUp"
+                          ? -columns
+                          : null;
+                if (delta == null && event.key !== "Home" && event.key !== "End") return;
+                event.preventDefault();
+                const next = Math.max(
+                  0,
+                  Math.min(
+                    entries.length - 1,
+                    event.key === "Home" ? 0 : event.key === "End" ? entries.length - 1 : index + (delta ?? 0),
+                  ),
+                );
+                buttons[next]?.focus();
+              }}
+              aria-label={`Open match ${entry.match_id}, ${isWin(entry) ? "win" : "loss"}, ${day.unix(entry.start_time).format("MMM D, YYYY")}`}
+              className={cn(
+                "flex h-7 items-center justify-center rounded-sm text-[10px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-ring",
+                isWin(entry)
+                  ? "bg-victory/15 text-victory hover:bg-victory/30"
+                  : "bg-primary/15 text-primary hover:bg-primary/30",
+              )}
+            >
+              {isWin(entry) ? "W" : "L"}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <HeroName heroId={entry.hero_id} /> · {entry.player_kills}/{entry.player_deaths}/{entry.player_assists}
+            <br />
+            {day.unix(entry.start_time).format("MMM D, YYYY, HH:mm")} · {formatMatchDuration(entry.match_duration_s)}
+          </TooltipContent>
+        </Tooltip>
+      ))}
+    </fieldset>
   );
 }
 
