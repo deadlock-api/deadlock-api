@@ -22,6 +22,11 @@ export const OBJECTIVE_LABELS: Record<ObjectiveEventKind, string> = {
   midBoss: "Mid Boss",
 };
 
+export function describeObjectiveOutcome(event: ObjectiveEvent): string {
+  if (event.kind === "midBoss") return event.own ? "Claimed by your team" : "Claimed by the enemy";
+  return event.own ? "Destroyed by your team" : "Lost to the enemy";
+}
+
 /** Objective kills from the tracked team's point of view, in match order. */
 export function computeObjectiveEvents(match: TrackerMatchMetadata, ownTeam: string): ObjectiveEvent[] {
   const events: ObjectiveEvent[] = match.objectives.map((objective) => ({

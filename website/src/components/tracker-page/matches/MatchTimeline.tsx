@@ -11,6 +11,7 @@ import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
 import { LOSS_COLOR, LOSS_TEXT_CLASS, WIN_COLOR, WIN_TEXT_CLASS } from "../shared/colors";
 import { TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
+import { MatchEventList } from "./MatchEventList";
 import { formatLead, MatchTimelineChart, type TimelineEvent } from "./MatchTimelineChart";
 
 function LegendSwatch({ color, label }: { color: string; label: string }) {
@@ -52,6 +53,8 @@ export function MatchTimeline({
   const events: TimelineEvent[] = [
     ...(fights?.kills ?? []).map((kill) => ({
       time: kill.time,
+      kind: "kill" as const,
+      title: nameOf(kill.victim),
       hero: kill.victim,
       // An enemy's kill is a loss for the tracked team, so it sits below the line with the team's other losses.
       side: viewedIsAlly ? ("gain" as const) : ("loss" as const),
@@ -70,6 +73,9 @@ export function MatchTimeline({
     })),
     ...(fights?.deaths ?? []).map((death) => ({
       time: death.time,
+      kind: "death" as const,
+      title: death.killer ? `Killed by ${nameOf(death.killer)}` : "No player credited",
+      description: `Time to kill: ${Math.round(death.timeToKillS)}s · ${death.endedAtMatchEnd ? `Dead until match end (${death.deadForS}s)` : `Respawned after ${death.deadForS}s`}`,
       hero: death.killer,
       side: viewedIsAlly ? ("loss" as const) : ("gain" as const),
       tooltip: (
@@ -104,7 +110,7 @@ export function MatchTimeline({
     end: Math.max(0, death.time) + death.deadForS,
   }));
 
-  if (durationS <= 0 || (!lead && events.length === 0)) return null;
+  if (durationS <= 0 || (!lead && events.length === 0 && objectives.length === 0)) return null;
   const taken = objectives.filter((event) => event.own).length;
   const killColor = viewedIsAlly ? WIN_COLOR : LOSS_COLOR;
   const deathColor = viewedIsAlly ? LOSS_COLOR : WIN_COLOR;
@@ -114,7 +120,7 @@ export function MatchTimeline({
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground tabular-nums">
         <span className="text-sm font-semibold text-foreground">Match timeline</span>
         {lead && <span>Ahead for {Math.round(lead.aheadShare * 100)}% of the match</span>}
-        {lead && objectives.length > 0 && (
+        {objectives.length > 0 && (
           <span title="Objectives destroyed and mid bosses claimed by your team, then by the enemy">
             Objectives <span className={cn("font-semibold", WIN_TEXT_CLASS)}>{taken}</span> –{" "}
             <span className={cn("font-semibold", LOSS_TEXT_CLASS)}>{objectives.length - taken}</span>
@@ -159,6 +165,7 @@ export function MatchTimeline({
         deadWindowColor={deathColor}
         durationS={durationS}
       />
+      <MatchEventList combat={events} objectives={objectives} playerName={viewedName} />
     </div>
   );
 }

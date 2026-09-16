@@ -17,7 +17,12 @@ import { HeroImage } from "~/components/HeroImage";
 import { Tooltip as HoverTooltip, TooltipTrigger } from "~/components/ui/tooltip";
 import { niceTicks } from "~/lib/chart-axis";
 import { formatMatchDuration } from "~/lib/tracker/compute";
-import { OBJECTIVE_LABELS, type ObjectiveEvent, type ObjectiveEventKind } from "~/lib/tracker/objectives";
+import {
+  describeObjectiveOutcome,
+  OBJECTIVE_LABELS,
+  type ObjectiveEvent,
+  type ObjectiveEventKind,
+} from "~/lib/tracker/objectives";
 import type { SoulLead, SoulLeadPoint } from "~/lib/tracker/soul-lead";
 import { cn } from "~/lib/utils";
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
@@ -60,11 +65,6 @@ function objectiveIcon(event: ObjectiveEvent): { src: string; size: number } {
 /** Gap between an objective mark and the plot edge it sits on. */
 const OBJECTIVE_INSET_PX = 2;
 const OBJECTIVE_SLOT_PX = PATRON_CORE_ICON_SIZE + 2;
-
-function describeOutcome(event: ObjectiveEvent): string {
-  if (event.kind === "midBoss") return event.own ? "Claimed by your team" : "Claimed by the enemy";
-  return event.own ? "Destroyed by your team" : "Lost to the enemy";
-}
 
 /** Own gains sit along the top edge of the plot, losses along the bottom edge. */
 function ObjectiveMarker({
@@ -113,7 +113,9 @@ function ObjectiveMarker({
       <PanelTooltipContent>
         <TooltipHeader
           title={OBJECTIVE_LABELS[event.kind]}
-          subtitle={<span className={event.own ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS}>{describeOutcome(event)}</span>}
+          subtitle={
+            <span className={event.own ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS}>{describeObjectiveOutcome(event)}</span>
+          }
         />
         <TooltipStats>
           <TooltipStat label="Match time" value={formatMatchDuration(event.time)} />
@@ -183,11 +185,11 @@ const LEVEL_PX = CHIP_PX + CHIP_GAP_PX;
 const STEM_PX = 4;
 const EDGE_PX = 4;
 
-/** Round minute steps inside the match, zero left out as it is the plot's left edge. */
+/** Minute steps, down to whole seconds for short games; zero is already the plot's left edge. */
 function minuteTicks(durationS: number): number[] {
-  return niceTicks(0, durationS / 60, 8)
-    .filter((minute) => minute > 0 && minute * 60 <= durationS)
-    .map((minute) => minute * 60);
+  return [...new Set(niceTicks(0, durationS / 60, 8).map((minute) => Math.round(minute * 60)))].filter(
+    (second) => second > 0 && second <= durationS,
+  );
 }
 
 /** The lead at any time, straight between samples; zero without a lead line. */
@@ -232,6 +234,9 @@ function objectiveStackLevels(objectives: ObjectiveEvent[], pxPerSecond: number)
 
 export interface TimelineEvent {
   time: number;
+  kind: "kill" | "death";
+  title: string;
+  description?: string;
   /** The hero the chip shows; null for a death no player was credited with. */
   hero: TrackerMatchPlayer | null;
   /** Gains for the tracked player's side sit above the lead line, losses below it. */
@@ -371,7 +376,11 @@ export function MatchTimelineChart({
   return (
     <div ref={wrapperRef}>
       <ResponsiveContainer width="100%" height={plotPx + 2 * EDGE_PX + X_AXIS_PX}>
-        <AreaChart data={data} margin={{ top: EDGE_PX, right: PLOT_END_PX, bottom: EDGE_PX, left: 0 }}>
+        <AreaChart
+          aria-label={lead ? "Team soul lead and match events over time" : "Match events over time"}
+          data={data}
+          margin={{ top: EDGE_PX, right: PLOT_END_PX, bottom: EDGE_PX, left: 0 }}
+        >
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset={zeroOffset} stopColor={WIN_COLOR} />
@@ -384,7 +393,9 @@ export function MatchTimelineChart({
             type="number"
             domain={[0, durationS]}
             ticks={minuteTicks(durationS)}
-            tickFormatter={(value: number) => `${Math.round(value / 60)}m`}
+            tickFormatter={(value: number) =>
+              durationS < 300 ? formatMatchDuration(value) : `${Math.round(value / 60)}m`
+            }
             tickLine={false}
             axisLine={false}
             tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
@@ -414,7 +425,7 @@ export function MatchTimelineChart({
           ))}
           {lead && <Tooltip cursor={{ stroke: "var(--border)", strokeWidth: 1 }} content={<LeadTooltipContent />} />}
           <ReferenceLine y={0} stroke="var(--muted-foreground)" strokeOpacity={0.6} />
-          {lead &&
+          {width > LEAD_AXIS_PX + PLOT_END_PX &&
             objectives.map((event, index) => (
               <ReferenceDot
                 // oxlint-disable-next-line react/no-array-index-key
