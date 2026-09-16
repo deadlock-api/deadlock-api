@@ -412,6 +412,20 @@ export interface Activity {
   buckets: ActivityBucket[];
 }
 
+/** Narrow to a local calendar period without widening an existing date selection. */
+export function filtersForActivityPeriod(
+  filters: TrackerFilterValues,
+  bucketStartUnix: number,
+  granularity: ActivityGranularity,
+): TrackerFilterValues {
+  const periodEndUnix = day.unix(bucketStartUnix).add(1, granularity).unix() - 1;
+  return {
+    ...filters,
+    minUnixTimestamp: Math.max(bucketStartUnix, filters.minUnixTimestamp ?? -Infinity),
+    maxUnixTimestamp: Math.min(periodEndUnix, filters.maxUnixTimestamp ?? Infinity),
+  };
+}
+
 const MAX_WEEK_BUCKETS = 30;
 
 /**

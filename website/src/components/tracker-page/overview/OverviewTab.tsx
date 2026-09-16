@@ -15,6 +15,7 @@ import {
   computePlaytimeHabits,
   computeRecords,
   computeSessionMomentum,
+  filtersForActivityPeriod,
   formatMatchDuration,
   formatPlaytime,
   perHeroRows,
@@ -52,6 +53,7 @@ export function OverviewTab({
   onSelectHero,
   formEntries,
   sessionContext,
+  onFilterChange,
 }: {
   entries: PlayerMatchHistoryEntry[];
   accountId: number;
@@ -61,6 +63,7 @@ export function OverviewTab({
   onSelectHero: (heroId: number) => void;
   formEntries: PlayerMatchHistoryEntry[];
   sessionContext: PlayerMatchHistoryEntry[];
+  onFilterChange: (filters: TrackerFilterValues) => void;
 }) {
   const data = useMemo(() => {
     const sorted = [...entries].sort((a, b) => b.start_time - a.start_time || b.match_id - a.match_id);
@@ -247,6 +250,9 @@ export function OverviewTab({
         activity={data.activity}
         result={filters.result}
         onOpenMatch={onOpenMatch}
+        onSelectPeriod={(bucketStartUnix, granularity) =>
+          onFilterChange(filtersForActivityPeriod(filters, bucketStartUnix, granularity))
+        }
       />
 
       <div className="grid items-start gap-2 @2xl/overview:grid-cols-2">

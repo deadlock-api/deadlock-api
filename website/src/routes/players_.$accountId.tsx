@@ -294,6 +294,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
                       onSelectHero={setHeroId}
                       formEntries={formEntries}
                       sessionContext={sessionContext}
+                      onFilterChange={(next) => updateFilters(next, true)}
                     />
                   }
                 />

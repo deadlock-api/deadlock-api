@@ -28,12 +28,14 @@ export function TrendPanels({
   activity,
   result,
   onOpenMatch,
+  onSelectPeriod,
 }: {
   entries: PlayerMatchHistoryEntry[];
   ranks: RankHistoryPoint[];
   activity: MatchActivity;
   result: ResultFilter;
   onOpenMatch: (matchId: number) => void;
+  onSelectPeriod: (bucketStartUnix: number, granularity: MatchActivity["granularity"]) => void;
 }) {
   const { data: rankAssets = [] } = useQuery(ranksQueryOptions);
   const badgeMap = extractBadgeMap(rankAssets);
@@ -121,13 +123,19 @@ export function TrendPanels({
         title="Match activity"
         icon={Activity}
         meta={activity.granularity === "week" ? "Weekly" : "Monthly"}
-        details={() => (
+        details={(close) => (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">
               {result === "all" ? "Wins and losses" : result === "win" ? "Wins only" : "Losses only"} in your selected
               hero, mode and date range.
             </p>
-            <ActivityTable activity={activity} />
+            <ActivityTable
+              activity={activity}
+              onSelectPeriod={(bucketStartUnix) => {
+                close();
+                onSelectPeriod(bucketStartUnix, activity.granularity);
+              }}
+            />
           </div>
         )}
       >

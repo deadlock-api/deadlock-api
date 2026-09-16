@@ -143,12 +143,18 @@ export function RankHistoryTable({
   );
 }
 
-export function ActivityTable({ activity }: { activity: Activity }) {
+export function ActivityTable({
+  activity,
+  onSelectPeriod,
+}: {
+  activity: Activity;
+  onSelectPeriod: (bucketStartUnix: number) => void;
+}) {
   return (
     <Table>
       <TableCaption>
         Selected matches, newest period first. Empty periods are included to show breaks in activity. Dates use your
-        local time.
+        local time. Select a period to show its matches.
       </TableCaption>
       <TableHeader>
         <TableRow>
@@ -164,10 +170,24 @@ export function ActivityTable({ activity }: { activity: Activity }) {
           return (
             <TableRow key={bucket.bucketStartUnix}>
               <TableHead scope="row">
-                <span className="block">
-                  {day.unix(bucket.bucketStartUnix).format(activity.granularity === "week" ? "MMM D" : "MMM")}
-                </span>
-                <span className="text-xs text-muted-foreground">{day.unix(bucket.bucketStartUnix).format("YYYY")}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto justify-start px-0 py-1"
+                  disabled={matches === 0}
+                  onClick={() => onSelectPeriod(bucket.bucketStartUnix)}
+                  aria-label={`Show matches from ${activity.granularity === "week" ? "week of " : ""}${day.unix(bucket.bucketStartUnix).format(activity.granularity === "week" ? "MMM D, YYYY" : "MMMM YYYY")}`}
+                >
+                  <time dateTime={day.unix(bucket.bucketStartUnix).format("YYYY-MM-DD")} className="text-left">
+                    <span className="block">
+                      {day.unix(bucket.bucketStartUnix).format(activity.granularity === "week" ? "MMM D" : "MMM")}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {day.unix(bucket.bucketStartUnix).format("YYYY")}
+                    </span>
+                  </time>
+                  <ArrowUpRight data-icon="inline-end" className="hidden @xs/stats-dialog:block" />
+                </Button>
               </TableHead>
               <TableCell className="text-right tabular-nums">
                 {matches}
