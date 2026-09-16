@@ -192,6 +192,7 @@ export function SeasonPatchDatePicker({
       label="Date"
       value={dateRangeLabel(value, { seasons, patches: patchDates })}
       active={isActive}
+      onReset={() => emit()}
       icon={<CalendarIcon className="size-3.5 shrink-0" />}
       className="w-auto p-3 lg:min-w-[340px]"
     >

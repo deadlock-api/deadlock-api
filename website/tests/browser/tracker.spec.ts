@@ -11,6 +11,51 @@ test.beforeEach(async ({ page, context }) => {
   });
 });
 
+test("filter boxes reset independently and keep the selected match", async ({ page }) => {
+  await page.goto(`${TRACKER_URL}&hero=11&result=win&match_mode=ranked`);
+  await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
+  const hero = page.getByRole("button", { name: "Reset hero", exact: true });
+  const result = page.getByRole("button", { name: "Reset result", exact: true });
+  const mode = page.getByRole("button", { name: "Reset mode", exact: true });
+  const date = page.getByRole("button", { name: "Reset date", exact: true });
+  await expect(date).toBeDisabled();
+  await hero.click();
+  await expect(hero).toBeDisabled();
+  await expect(page).not.toHaveURL(/[?&]hero=/);
+  await expect(result).toBeEnabled();
+  await expect(mode).toBeEnabled();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await result.click();
+  await expect(result).toBeDisabled();
+  await expect(mode).toBeEnabled();
+  await mode.click();
+  await expect(mode).toBeDisabled();
+  await expect(page).toHaveURL(new RegExp(`match=${CURRENT_MATCH}`));
+
+  await page.setViewportSize({ width: 320, height: 568 });
+  const filters = page.getByRole("button", { name: /^Filters:/ });
+  if ((await filters.getAttribute("aria-expanded")) === "false") await filters.click();
+  await page.getByRole("button", { name: /^Date All Time$/i }).click();
+  const calendar = page.getByRole("dialog");
+  await expect(calendar).toBeVisible();
+  const bounds = await calendar.boundingBox();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
+  await page.keyboard.press("Escape");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+  // The default season is a date constraint; clearing it makes the open range explicit in the URL.
+  await page.goto(TRACKER_URL.replace("date_range=_&", ""));
+  await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
+  await page.getByRole("button", { name: /^Filters:/ }).click();
+  await expect(date).toBeEnabled();
+  await date.click();
+  await expect(date).toBeDisabled();
+  await expect(page).toHaveURL(/date_range=_/);
+  await expect(page).toHaveURL(new RegExp(`match=${CURRENT_MATCH}`));
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+});
+
 test("preloads only adjacent matches after current details load and reuses their cache", async ({ page }) => {
   const requested: number[] = [];
   let releaseCurrent!: () => void;

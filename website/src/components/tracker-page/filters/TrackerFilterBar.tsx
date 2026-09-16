@@ -85,6 +85,7 @@ export function TrackerFilterBar({
               onValueChange={onResultChange}
               options={RESULT_OPTIONS}
               active={result !== "all"}
+              onReset={() => onResultChange("all")}
             />
           </Filter.Root>
         </div>

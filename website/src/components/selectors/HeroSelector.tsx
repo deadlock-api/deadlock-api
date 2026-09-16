@@ -55,7 +55,14 @@ export function HeroSelector({
   };
 
   return (
-    <FilterCell label={label ?? "Hero"} value={displayValue} active={isActive} icon={icon} className="w-80 p-0">
+    <FilterCell
+      label={label ?? "Hero"}
+      value={displayValue}
+      active={isActive}
+      onReset={allowSelectNull ? () => select(null) : undefined}
+      icon={icon}
+      className="w-80 p-0"
+    >
       <div className="relative border-b p-2">
         <SearchIcon className="absolute top-1/2 left-4 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -126,7 +133,13 @@ export function HeroSelectorMultiple({
   const value = count === 0 ? emptyLabel : count === 1 ? "1 hero" : `${count} heroes`;
 
   return (
-    <FilterCell label={label} value={value} active={count > 0} className="max-h-[400px] w-56 overflow-y-auto p-2">
+    <FilterCell
+      label={label}
+      value={value}
+      active={count > 0}
+      onReset={() => onHeroesSelected([])}
+      className="max-h-[400px] w-56 overflow-y-auto p-2"
+    >
       <FilteredSelectList
         items={sortedHeroes}
         selectedIds={selectedHeroes}

@@ -48,6 +48,7 @@ export function ModeSelector({ value, onChange }: { value: Mode; onChange: (mode
       onValueChange={onChange}
       options={OPTIONS}
       active={value !== DEFAULT_MODE}
+      onReset={() => onChange(DEFAULT_MODE)}
     />
   );
 }
