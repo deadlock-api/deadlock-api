@@ -170,7 +170,8 @@ function RootComponent() {
                   </div>
                 </main>
               </div>
-              <Toaster />
+              {/* Keep notification actions clear of the fixed feedback launcher. */}
+              <Toaster offset={{ bottom: 80 }} mobileOffset={{ bottom: 80 }} />
               {import.meta.env.DEV ? <Agentation /> : <FeedbackWidget />}
             </TooltipProvider>
           </NuqsAdapter>
