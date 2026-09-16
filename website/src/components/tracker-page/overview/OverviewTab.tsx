@@ -72,13 +72,13 @@ export function OverviewTab({
       summary: summarize(sorted),
       heroes: perHeroRows(sorted),
       records: computeRecords(sorted),
-      splits: computeOutcomeSplits(sorted),
+      splits: computeOutcomeSplits(sorted, filters.mode),
       sessions: computeSessionMomentum(sorted, sessionContext),
       habits: computePlaytimeHabits(sorted),
       ranks: rankHistoryPoints(sorted),
       activity: computeActivity(sorted),
     };
-  }, [entries, sessionContext]);
+  }, [entries, sessionContext, filters.mode]);
   const { sorted, summary: s, sessions, habits } = data;
   const [recentWindow, setRecentWindow] = useQueryState(
     "form_window",
