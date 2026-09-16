@@ -32,6 +32,7 @@ import { type TrackerMatchPlayer, trackerMatchMetadataQueryOptions } from "~/que
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { RankDelta } from "../shared/RankDelta";
+import { SaveMatchButton } from "../shared/SaveMatchButton";
 import { TrackerQueryError } from "../shared/TrackerQueryError";
 import { LanesCard } from "./LanesCard";
 import { MatchTimeline } from "./MatchTimeline";
@@ -64,11 +65,13 @@ function HeaderStat({ label, children }: { label: string; children: ReactNode })
 /** What the match history row knows about the match, so it shows before the match details load. */
 function MatchHeader({
   entry,
+  accountId,
   ranks,
   heroName,
   records,
 }: {
   entry: PlayerMatchHistoryEntry;
+  accountId: number;
   ranks: Rank[];
   heroName: string;
   records: HeldRecord[] | undefined;
@@ -125,6 +128,7 @@ function MatchHeader({
               <span className="inline-flex items-center gap-0.5">
                 Match {matchId}
                 <CopyButton text={String(matchId)} iconOnly title="Copy match ID" className="size-6" />
+                <SaveMatchButton accountId={accountId} matchId={matchId} />
               </span>
               <CopyButton
                 variant="ghost"
@@ -296,7 +300,7 @@ export function MatchDetails({
 }) {
   return (
     <div className="@container space-y-4">
-      <MatchHeader entry={entry} ranks={ranks} heroName={heroName} records={records} />
+      <MatchHeader entry={entry} accountId={accountId} ranks={ranks} heroName={heroName} records={records} />
       <MatchBody entry={entry} accountId={accountId} ranks={ranks} />
     </div>
   );

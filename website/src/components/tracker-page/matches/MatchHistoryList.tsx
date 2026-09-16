@@ -68,6 +68,7 @@ export function MatchHistoryList({
   sortKey,
   heroNameOf,
   hasRecord,
+  savedMatchIds,
   onSelect,
   onItemKeyDown,
   heroId,
@@ -80,6 +81,7 @@ export function MatchHistoryList({
   sortKey: MatchSortKey;
   heroNameOf: (heroId: number) => string;
   hasRecord: (matchId: number) => boolean;
+  savedMatchIds: ReadonlySet<number>;
   onSelect: (matchId: number) => void;
   onItemKeyDown: KeyboardEventHandler<HTMLButtonElement>;
   heroId: number | null;
@@ -180,6 +182,7 @@ export function MatchHistoryList({
                   entry={row.entry}
                   heroName={heroNameOf(row.entry.hero_id)}
                   hasRecord={hasRecord(row.entry.match_id)}
+                  saved={savedMatchIds.has(row.entry.match_id)}
                   selected={row.entry.match_id === selectedId}
                   tabIndex={row.entry.match_id === selectedId || (selectedRow == null && row.matchIndex === 0) ? 0 : -1}
                   showTimeOfDay={sessions.has(row.entry.match_id)}

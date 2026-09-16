@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
-import { CircleDashed, Gavel, LogOut, Trophy } from "lucide-react";
+import { Bookmark, CircleDashed, Gavel, LogOut, Trophy } from "lucide-react";
 import { type KeyboardEventHandler, useEffect, useRef } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
@@ -31,6 +31,7 @@ export function MatchListItem({
   entry,
   heroName,
   hasRecord,
+  saved = false,
   selected,
   tabIndex,
   showTimeOfDay,
@@ -42,6 +43,7 @@ export function MatchListItem({
   heroName: string;
   /** Whether the match holds a personal best over the filtered history. */
   hasRecord: boolean;
+  saved?: boolean;
   selected: boolean;
   /** One tab stop for the list; arrow keys reach the other matches. */
   tabIndex: 0 | -1;
@@ -95,6 +97,9 @@ export function MatchListItem({
       <div className="min-w-0 flex-1 leading-tight">
         <div className="flex items-center gap-1.5">
           <span className={cn("truncate text-sm", selected ? "font-semibold" : "font-medium")}>{heroName}</span>
+          {saved && (
+            <Bookmark className="size-3 shrink-0 text-muted-foreground" fill="currentColor" aria-label="Saved match" />
+          )}
           {hasRecord && <Trophy className="size-3 shrink-0 text-amber-500" aria-label="Personal best" />}
           {abandoned && <LogOut className="size-3 shrink-0 text-muted-foreground" aria-label="Abandoned" />}
           {unscored && (

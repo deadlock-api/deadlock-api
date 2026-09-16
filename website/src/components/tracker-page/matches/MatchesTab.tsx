@@ -6,6 +6,7 @@ import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useStat
 
 import { Button } from "~/components/ui/button";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import { useSavedMatches } from "~/hooks/useSavedMatches";
 import {
   computeRecords,
   computeSessions,
@@ -69,6 +70,8 @@ export function MatchesTab({
     dir: parseAsStringLiteral(SORT_DIRS).withDefault("desc"),
   });
   const sortedEntries = useMemo(() => sortMatches(entries, sortKey, sortDir), [entries, sortKey, sortDir]);
+  const { savedIds } = useSavedMatches(accountId);
+  const savedMatchIds = useMemo(() => new Set(savedIds), [savedIds]);
   const selectedIndex = sortedEntries.findIndex((entry) => entry.match_id === selectedMatchId);
   // No match in the URL means the pane belongs to the overview, the list's own first entry.
   const selected =
@@ -375,6 +378,7 @@ export function MatchesTab({
               </Button>
             </div>
             <MatchHistoryList
+              savedMatchIds={savedMatchIds}
               ref={listRef}
               entries={sortedEntries}
               sessions={sessions}

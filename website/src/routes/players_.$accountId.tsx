@@ -67,6 +67,12 @@ function TrackerRoute() {
   );
 }
 
+function focusMatchDetails(section: HTMLElement | null, matchId: number) {
+  const details = section?.querySelector<HTMLElement>(`[data-match-details="${matchId}"]`);
+  details?.focus({ preventScroll: true });
+  details?.scrollIntoView({ block: "start" });
+}
+
 function TrackerContent({ accountId }: { accountId: number }) {
   const {
     tab,
@@ -100,9 +106,20 @@ function TrackerContent({ accountId }: { accountId: number }) {
   }, [tab]);
 
   const [expandedMatchId, setExpandedMatchId] = useQueryState("match", parseAsInteger);
+  const requestedMatchFocus = useRef<number | null>(null);
+  useEffect(() => {
+    if (tab !== "matches" || expandedMatchId == null || requestedMatchFocus.current !== expandedMatchId) return;
+    requestedMatchFocus.current = null;
+    focusMatchDetails(sectionRef.current, expandedMatchId);
+  }, [expandedMatchId, tab]);
   const openMatch = (matchId: number) => {
+    requestedMatchFocus.current = matchId;
     setExpandedMatchId(matchId);
     setTab("matches");
+    if (expandedMatchId === matchId && tab === "matches") {
+      requestedMatchFocus.current = null;
+      focusMatchDetails(sectionRef.current, matchId);
+    }
   };
 
   const historyQuery = useQuery(trackerMatchHistoryQueryOptions(accountId));
@@ -165,7 +182,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
   return (
     <div className="flex flex-col gap-3">
       <FeedbackNoticeDialog />
-      <PlayerHeader accountId={accountId} entries={historyQuery.data} ranks={ranks}>
+      <PlayerHeader accountId={accountId} entries={historyQuery.data} ranks={ranks} onOpenMatch={openMatch}>
         <TrackerFilterBar
           mode={mode}
           onModeChange={setMode}
