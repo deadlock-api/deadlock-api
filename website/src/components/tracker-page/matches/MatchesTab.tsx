@@ -143,6 +143,8 @@ export function MatchesTab({
   useEffect(() => {
     const changed = previousSelectedId.current !== selectedId;
     previousSelectedId.current = selectedId;
+    // Selection can come from navigation, saved matches or browser history while its row is offscreen.
+    if (changed) listRef.current?.scrollToMatch(selectedId, "auto");
     if (focusSelectedItem.current) {
       focusSelectedItem.current = false;
       listRef.current?.focusMatch(selectedId);

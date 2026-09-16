@@ -503,3 +503,24 @@ test("saved matches and undo remain scoped to their player after account navigat
   await expect(page.getByRole("button", { name: "Open saved match 2998", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open saved match 3000", exact: true })).toHaveCount(0);
 });
+
+test("match navigation keeps the selected history row visible without stealing button focus", async ({ page }) => {
+  await page.goto(TRACKER_URL);
+  const list = page.getByRole("navigation", { name: "Match history", exact: true });
+  await list.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  const next = page.getByRole("button", { name: "Next match in list", exact: true });
+  await next.click();
+  await expect(page).toHaveURL(/match=2997/);
+  await expect(next).toBeFocused();
+  await expect
+    .poll(() =>
+      page.locator('[data-match-id="2997"]').evaluate((row) => {
+        const viewport = row.closest("nav")!.getBoundingClientRect();
+        const item = row.getBoundingClientRect();
+        return item.top >= viewport.top && item.bottom <= viewport.bottom;
+      }),
+    )
+    .toBe(true);
+});

@@ -55,7 +55,7 @@ function SessionHeader({ session }: { session: PlaySession }) {
 
 export interface MatchHistoryHandle {
   focusMatch: (matchId: number | undefined) => void;
-  scrollToMatch: (matchId: number | undefined) => void;
+  scrollToMatch: (matchId: number | undefined, align?: "auto" | "center") => void;
   scrollToTop: () => void;
 }
 
@@ -133,9 +133,9 @@ export function MatchHistoryList({
       item?.focus({ preventScroll: true });
       item?.scrollIntoView({ block: "nearest", inline: "nearest" });
     },
-    scrollToMatch(matchId) {
+    scrollToMatch(matchId, align = "center") {
       const index = matchId == null ? undefined : matchRowIndexes.get(matchId);
-      if (index != null) virtualizer.scrollToIndex(index, { align: "center" });
+      if (index != null) virtualizer.scrollToIndex(index, { align });
     },
     scrollToTop() {
       virtualizer.scrollToOffset(0);
