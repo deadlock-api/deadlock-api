@@ -85,7 +85,7 @@ One quiet number is worth calling out. The standard deviation of hero win rates 
 
 The top-five most-picked heroes in January combined to fill 4.08 of the 12 slots in an average match. By mid-April that was down to 3.62. Pick diversity is up, win rates are closer together, and the games themselves are longer.
 
-Valve spent the first four months of 2026 steadily balancing Deadlock. The roster expanded. The map pressure changed. The build spreadsheet got redrawn. If you want to dig deeper into any specific hero or item, the [hero stats](/heroes) and [item stats](/items) pages let you slice the windows yourself. For the broad picture: Seven is still king, the map wants longer games than it did in January, and the item you skipped last year might be the one everyone is building this week.
+Valve spent the first four months of 2026 steadily balancing Deadlock. The roster expanded. The map pressure changed. The build spreadsheet got redrawn. If you want to dig deeper into any specific hero or item, the [hero stats](/analytics/heroes) and [item stats](/analytics/items) pages let you slice the windows yourself. For the broad picture: Seven is still king, the map wants longer games than it did in January, and the item you skipped last year might be the one everyone is building this week.
 
 ## The year in one figure
 

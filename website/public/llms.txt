@@ -2,10 +2,10 @@
 > Free, open-source game statistics, analytics, and REST API for Valve's Deadlock, tracking millions of matches with hero analytics, item statistics, ranked leaderboards, and more.
 
 ## Analytics Pages
-- [Hero Analytics](https://deadlock-api.com/heroes): Win rates, pick rates, matchups, and performance stats for all Deadlock heroes, filterable by rank and patch
-- [Item Statistics](https://deadlock-api.com/items): Item win rates with Wilson confidence intervals, purchase timing analysis, and item combo data
-- [Ranked Leaderboard](https://deadlock-api.com/leaderboard): Top-ranked players by region with hero filters and name search
-- [Badge Distribution](https://deadlock-api.com/badge-distribution): Match rank distribution chart over time
+- [Hero Analytics](https://deadlock-api.com/analytics/heroes): Win rates, pick rates, matchups, and performance stats for all Deadlock heroes, filterable by rank and patch
+- [Item Statistics](https://deadlock-api.com/analytics/items): Item win rates with Wilson confidence intervals, purchase timing analysis, and item combo data
+- [Ranked Leaderboard](https://deadlock-api.com/community/leaderboard): Top-ranked players by region with hero filters and name search
+- [Badge Distribution](https://deadlock-api.com/community/badge-distribution): Match rank distribution chart over time
 - [Stream Toolkit](https://deadlock-api.com/streamkit): Chatbot command builder and OBS overlay widget generator for streamers
 
 ## APIs

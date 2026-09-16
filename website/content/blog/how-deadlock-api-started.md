@@ -129,7 +129,7 @@ day**. A few highlights from that window:
 | Mar 14 | 25,762,323 | 130,911         |
 | Mar 15 | 25,977,623 | 129,747         |
 
-We're adding more analytics views to the [website](/heroes) and getting ready for bigger player numbers as Deadlock
+We're adding more analytics views to the [website](/analytics/heroes) and getting ready for bigger player numbers as Deadlock
 grows. This blog is part of that. We want to actually write about what we find in the data, not just expose it through
 endpoints and hope someone notices.
 
