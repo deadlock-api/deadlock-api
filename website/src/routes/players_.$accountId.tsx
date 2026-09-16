@@ -31,11 +31,13 @@ import { steamProfileQueryOptions, trackerMatchHistoryQueryOptions } from "~/que
 export const Route = createFileRoute("/players_/$accountId")({
   component: TrackerRoute,
   loader: async ({ context: { queryClient }, params }) => {
-    const accountId = Number(parseSteamIdToId3(params.accountId.trim()));
+    const normalizedId = parseSteamIdToId3(params.accountId.trim());
+    if (!/^\d+$/.test(normalizedId)) throw notFound();
+    const accountId = Number(normalizedId);
     if (!Number.isInteger(accountId) || accountId <= 0 || accountId > 4294967295) throw notFound();
-    // Canonicalize SteamID64 (or bracketed) URLs to the SteamID3 form.
+    // Canonicalize alternate Steam ID formats to the numeric account ID.
     if (String(accountId) !== params.accountId) {
-      throw redirect({ to: "/players/$accountId", params: { accountId: String(accountId) } });
+      throw redirect({ to: "/players/$accountId", params: { accountId: String(accountId) }, search: true });
     }
     const [profile] = await Promise.all([
       prefetchSafe(queryClient.ensureQueryData(steamProfileQueryOptions(accountId))),
