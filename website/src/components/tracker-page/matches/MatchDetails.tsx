@@ -246,12 +246,20 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
 
   if (isError && !match) {
     return (
-      <TrackerQueryError
-        title="Could not load match details"
-        description="The request failed. Try loading this match again."
-        onRetry={() => refetch()}
-        isRetrying={isFetching}
-      />
+      <Empty>
+        <EmptyHeader>
+          <EmptyTitle>Match details are still being processed</EmptyTitle>
+          <EmptyDescription>
+            We are collecting the data for this account. It can take up to 30 minutes for all matches to appear.
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw data-icon="inline-start" className={cn(isFetching && "animate-spin")} />
+            {isFetching ? "Checking…" : "Check again"}
+          </Button>
+        </EmptyContent>
+      </Empty>
     );
   }
 

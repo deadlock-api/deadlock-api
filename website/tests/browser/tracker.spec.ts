@@ -892,10 +892,12 @@ test("client HTTP errors allow a manual retry without repeating failed requests"
     return available ? route.continue() : route.fulfill({ status: 400, body: "Bad request" });
   });
   await page.goto(TRACKER_URL);
-  await expect(page.getByText("Could not load match details", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Match details are still being processed", { exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
   expect(requested).toEqual([CURRENT_MATCH]);
   available = true;
-  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await page.getByRole("button", { name: "Check again", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
   await expect.poll(() => [...requested].sort()).toEqual([2997, 2998, 2998, 2999]);
 });
