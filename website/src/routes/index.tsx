@@ -1,4 +1,4 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   ArrowRight,
   BarChart3,
@@ -10,26 +10,21 @@ import {
   ListOrdered,
   Map,
   Medal,
-  MessageCircle,
   Package,
   Radio,
   ShoppingBag,
   Swords,
   Trophy,
   Tv,
-  Upload,
   Users,
   UsersRound,
-  Zap,
 } from "lucide-react";
 
-import { ElectricBorder } from "~/components/ElectricBorder";
 import { SmartLink } from "~/components/SmartLink";
 import { Button } from "~/components/ui/button";
 import { API_ORIGIN } from "~/lib/constants";
 import { useExperiment } from "~/lib/experiments";
 import { seo } from "~/lib/seo";
-import { cn } from "~/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () =>
@@ -92,14 +87,6 @@ const quickLinks = [
   { label: "Item Stats", href: "/analytics/items", icon: ShoppingBag, primary: false },
   { label: "Leaderboard", href: "/community/leaderboard", icon: Trophy, primary: false },
   { label: "API Docs", href: `${API_ORIGIN}/docs`, icon: Code, primary: false, external: true },
-];
-
-const patronFeatures = [
-  "Priority queue updates",
-  "Up to 50 Steam accounts",
-  "Full match history from first to last game",
-  "100% funds infrastructure",
-  "Accurate rank data from Steam",
 ];
 
 const services = [
@@ -197,21 +184,6 @@ const analyticsLinks = [
     description: "Enhance your livestreams with real-time game data overlays and widgets.",
     href: "/streamkit",
     icon: Tv,
-  },
-  {
-    title: "Contribute Match Data",
-    description:
-      "Help grow the database by automatically submitting match data from your Steam cache with a one-line install.",
-    href: "/ingest-cache",
-    icon: Upload,
-  },
-  {
-    title: "Missing a Feature?",
-    description: "Have an idea or want to request something new? Let us know on Discord!",
-    href: "https://discord.gg/pqWQfTPQJu",
-    icon: MessageCircle,
-    external: true,
-    highlight: true,
   },
 ];
 
@@ -318,46 +290,6 @@ function IndexRoute() {
         </div>
       </section>
 
-      {/* Patron CTA */}
-      <section className="mx-1 sm:mx-2">
-        <ElectricBorder color="#fa4454" speed={0.5} chaos={0.1} borderRadius={12}>
-          <div className="rounded-xl bg-card/80 px-6 py-7 backdrop-blur-sm sm:px-8">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-              <div className="min-w-0 space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10">
-                    <Zap className="electric-bolt size-5 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-semibold">Prioritized Fetching</h2>
-                    <p className="text-sm text-muted-foreground">Starting at just $1.50/month</p>
-                  </div>
-                </div>
-                <p className="max-w-xl text-sm text-muted-foreground">
-                  We fetch match data for millions of players. With prioritized fetching, your Steam accounts jump to
-                  the front of the queue, so your matches and stats are updated more frequently and you always have the
-                  latest data for analysis.
-                </p>
-                <div className="flex flex-wrap gap-x-5 gap-y-2">
-                  {patronFeatures.map((feature) => (
-                    <div key={feature} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span className="size-1.5 shrink-0 rounded-full bg-primary" />
-                      {feature}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <Link to="/patron" preload="intent" className="shrink-0">
-                <Button className="h-11 w-full bg-gradient-to-r from-[#fa4454] to-[#ff6b7a] px-8 font-semibold text-white hover:from-[#e83d4c] hover:to-[#f05a68] lg:w-auto">
-                  Enable Prioritized Fetching
-                  <ArrowRight className="ml-2 size-4" />
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </ElectricBorder>
-      </section>
-
       {/* Analytics Links */}
       <section>
         <div className="mb-8 text-center">
@@ -367,56 +299,26 @@ function IndexRoute() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {analyticsLinks.map((item) => {
             const Icon = item.icon;
-            const isHighlight = "highlight" in item && item.highlight;
-            const isExternal = "external" in item && item.external;
-            const card = (
-              <div
-                className={cn(
-                  "group flex h-full flex-col rounded-xl border p-4 transition-colors",
-                  isHighlight
-                    ? "border-dashed border-primary/40 bg-primary/5 hover:border-primary/60 hover:bg-primary/10"
-                    : "border-border bg-card hover:border-primary/30 hover:bg-muted/30",
-                )}
-              >
-                <div className="mb-2 flex items-center gap-3">
-                  <div
-                    className={cn(
-                      "flex size-8 shrink-0 items-center justify-center rounded-lg border transition-colors",
-                      isHighlight
-                        ? "border-primary/20 bg-primary/10 group-hover:bg-primary/15"
-                        : "border-border bg-muted group-hover:border-primary/20 group-hover:bg-primary/5",
-                    )}
-                  >
-                    <Icon
-                      className={cn(
-                        "size-4 transition-colors",
-                        isHighlight ? "text-primary" : "text-muted-foreground group-hover:text-primary",
-                      )}
-                    />
-                  </div>
-                  <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                    {item.title}
-                    {isExternal && (
-                      <ExternalLink className="size-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                    )}
-                  </h3>
-                </div>
-                <p className="text-xs leading-relaxed text-muted-foreground">{item.description}</p>
-                <div className="mt-auto pt-2">
-                  <span className="flex items-center gap-1 text-xs font-medium text-primary transition-colors group-hover:text-primary">
-                    {isExternal ? "Join" : "View"}
-                    <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
-                  </span>
-                </div>
-              </div>
-            );
-
             return (
-              <SmartLink key={item.title} href={item.href} external={isExternal}>
-                {card}
+              <SmartLink key={item.title} href={item.href}>
+                <div className="group flex h-full flex-col rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/30 hover:bg-muted/30">
+                  <div className="mb-2 flex items-center gap-3">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted transition-colors group-hover:border-primary/20 group-hover:bg-primary/5">
+                      <Icon className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
+                    </div>
+                    <h3 className="text-sm font-semibold text-foreground">{item.title}</h3>
+                  </div>
+                  <p className="text-xs leading-relaxed text-muted-foreground">{item.description}</p>
+                  <div className="mt-auto pt-2">
+                    <span className="flex items-center gap-1 text-xs font-medium text-primary">
+                      View
+                      <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+                    </span>
+                  </div>
+                </div>
               </SmartLink>
             );
           })}
