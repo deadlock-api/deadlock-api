@@ -39,6 +39,7 @@ import { RankDelta } from "../shared/RankDelta";
 import { TrackerDetailPopover } from "../shared/TrackerDetailPopover";
 import { BuildTimelineDialog } from "./BuildTimelineDialog";
 import { PlayerCombatStats } from "./PlayerCombatStats";
+import { TeamStatsDetails } from "./TeamStatsDetails";
 
 function SortButton({
   label,
@@ -353,7 +354,14 @@ export function Scoreboard({
         return (
           <div key={team.key} className="@container min-w-0 space-y-1.5">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-              <span className="text-sm font-semibold">{team.name}</span>
+              <TrackerDetailPopover
+                label={`${team.name} team totals`}
+                size="sm"
+                className="-mx-1.5 h-6 px-1.5 text-sm font-semibold underline decoration-dotted underline-offset-4"
+                details={<TeamStatsDetails name={team.name} players={teamPlayers} lobbyPlayers={match.players} />}
+              >
+                {team.name}
+              </TrackerDetailPopover>
               <span
                 className={cn(
                   "text-xs font-bold",

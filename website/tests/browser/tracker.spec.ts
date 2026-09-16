@@ -430,3 +430,42 @@ test("undoing a saved-match removal preserves newer bookmarks from another tab",
   ).toEqual([2997, 3000, 2998, 2996]);
   await expect(secondTab.getByRole("button", { name: "Saved matches (4)", exact: true })).toBeVisible();
 });
+
+test("team totals aggregate every teammate and fit a narrow scoreboard", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.route(`${API_ORIGIN}/v1/graphql`, async (route) => {
+    if (!requestedMatchId(route.request().postDataJSON())) return route.continue();
+    const teammate = {
+      ...metadata.players[0],
+      account_id: 43,
+      player_slot: 3,
+      steam: { personaname: "Test Teammate" },
+      kills: 7,
+      deaths: 3,
+      assists: 9,
+      net_worth: 23000,
+      max_player_damage: 15000,
+      items: [],
+      stats: metadata.players[0].stats.map(({ time_stamp_s, net_worth }) => ({
+        time_stamp_s,
+        net_worth,
+        player_healing: 200,
+      })),
+    };
+    await route.fulfill({ json: { data: { matches: [{ ...metadata, players: [...metadata.players, teammate] }] } } });
+  });
+  await page.goto(TRACKER_URL);
+  const trigger = page.getByRole("button", { name: "The Hidden King team totals details", exact: true });
+  await trigger.click();
+  const details = page.getByRole("dialog", { name: "The Hidden King team totals details", exact: true });
+  await expect(details.getByText("2 players · % of match totals", { exact: true })).toBeVisible();
+  await expect(details.getByText("12 / 5 / 17", { exact: true })).toBeVisible();
+  await expect(details.getByText("41,000 · 71%", { exact: true })).toBeVisible();
+  await expect(details.getByText("25,000 · 71%", { exact: true })).toBeVisible();
+  await expect(details.getByText("300 · 75%", { exact: true })).toBeVisible();
+  expect(await details.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(details).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+});
