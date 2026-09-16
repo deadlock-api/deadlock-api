@@ -339,6 +339,7 @@ export function Scoreboard({
   });
 
   const maxima = useMemo(() => statMaxima(match.players), [match]);
+  const hasWinner = TEAMS.some((team) => team.key === match.winning_team);
 
   return (
     <div className="grid gap-4 @6xl:grid-cols-2">
@@ -353,8 +354,13 @@ export function Scoreboard({
           <div key={team.key} className="@container min-w-0 space-y-1.5">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
               <span className="text-sm font-semibold">{team.name}</span>
-              <span className={cn("text-xs font-bold", won ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS)}>
-                {won ? "Victory" : "Defeat"}
+              <span
+                className={cn(
+                  "text-xs font-bold",
+                  hasWinner ? (won ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS) : "text-muted-foreground",
+                )}
+              >
+                {hasWinner ? (won ? "Victory" : "Defeat") : "Result unavailable"}
               </span>
               {averageBadge != null && averageBadge > 0 && (
                 <BadgeImage badge={averageBadge} ranks={ranks} className="size-5" />
