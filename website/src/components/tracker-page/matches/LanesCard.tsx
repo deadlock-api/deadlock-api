@@ -1,61 +1,76 @@
 import { HeroImage } from "~/components/HeroImage";
-import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
 import { formatMatchDuration } from "~/lib/tracker/compute";
 import type { LaneMatchup, LanePlayer } from "~/lib/tracker/lane-matchup";
 import { cn } from "~/lib/utils";
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
-import { PanelTooltipContent, TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
+import { TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
+import { TrackerDetailPopover } from "../shared/TrackerDetailPopover";
 
 function Laner({
   laner: { player, stat },
   tracked,
   name,
+  time,
   mirrored,
 }: {
   laner: LanePlayer;
   tracked: boolean;
   name: string;
+  time: number;
   /** Enemy laners read from the right edge inward. */
   mirrored?: boolean;
 }) {
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div className={cn("flex min-w-0 items-center gap-1 text-xs", mirrored && "flex-row-reverse")}>
-          <HeroImage
-            heroId={player.hero_id}
-            className={cn("size-5 shrink-0 rounded-full", tracked && "ring-2 ring-foreground")}
-            title=""
+    <TrackerDetailPopover
+      label={`${name}'s lane stats`}
+      size="xs"
+      className="w-full min-w-0 justify-start px-0"
+      details={
+        <>
+          <TooltipHeader
+            lead={<HeroImage heroId={player.hero_id} className="size-8 shrink-0 rounded-full" title="" />}
+            title={name}
+            subtitle={
+              stat ? `Recorded at ${formatMatchDuration(stat.time_stamp_s)}` : `At ${formatMatchDuration(time)}`
+            }
           />
-          <span className={cn("min-w-0 flex-1 truncate", mirrored && "text-right", tracked && "font-semibold")}>
-            {name}
-          </span>
-          <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
-            {stat.net_worth.toLocaleString("en-US")}
-          </span>
-        </div>
-      </TooltipTrigger>
-      <PanelTooltipContent>
-        <TooltipHeader
-          lead={<HeroImage heroId={player.hero_id} className="size-8 shrink-0 rounded-full" title="" />}
-          title={name}
-          subtitle="At the end of the laning phase"
+          {stat ? (
+            <TooltipStats>
+              <TooltipStat label="Souls" value={stat.net_worth.toLocaleString("en-US")} />
+              <TooltipStat
+                label="Kills / deaths / assists"
+                value={`${stat.kills} / ${stat.deaths} / ${stat.assists}`}
+              />
+              <TooltipStat label="Last hits" value={stat.creep_kills.toLocaleString("en-US")} />
+              <TooltipStat label="Denies" value={stat.denies.toLocaleString("en-US")} />
+              <TooltipStat label="Hero damage" value={stat.player_damage.toLocaleString("en-US")} />
+            </TooltipStats>
+          ) : (
+            <p className="text-xs text-muted-foreground">No player stats were recorded at or before this time.</p>
+          )}
+        </>
+      }
+    >
+      <span className={cn("flex w-full min-w-0 items-center gap-1", mirrored && "flex-row-reverse")}>
+        <HeroImage
+          heroId={player.hero_id}
+          className={cn("size-5 shrink-0 rounded-full", tracked && "ring-2 ring-foreground")}
+          title=""
         />
-        <TooltipStats>
-          <TooltipStat label="Souls" value={stat.net_worth.toLocaleString("en-US")} />
-          <TooltipStat label="Kills / deaths / assists" value={`${stat.kills} / ${stat.deaths} / ${stat.assists}`} />
-          <TooltipStat label="Last hits" value={stat.creep_kills.toLocaleString("en-US")} />
-          <TooltipStat label="Denies" value={stat.denies.toLocaleString("en-US")} />
-          <TooltipStat label="Hero damage" value={stat.player_damage.toLocaleString("en-US")} />
-        </TooltipStats>
-      </PanelTooltipContent>
-    </Tooltip>
+        <span className={cn("min-w-0 flex-1 truncate", mirrored && "text-right", tracked && "font-semibold")}>
+          {name}
+        </span>
+        <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+          {stat?.net_worth.toLocaleString("en-US") ?? "—"}
+        </span>
+      </span>
+    </TrackerDetailPopover>
   );
 }
 
-/** Each lane's souls at the end of the laning phase, from the tracked player's side, their own lane tinted. */
+/** Each lane's recorded souls at the comparison time, from the tracked player's side. */
 export function LanesCard({
   matchups,
   trackedAccountId,
@@ -72,7 +87,7 @@ export function LanesCard({
         <span className="text-xs text-muted-foreground tabular-nums">At {formatMatchDuration(matchups[0].time)}</span>
       </div>
       <div className="grid gap-2 @xl:grid-cols-3">
-        {matchups.map(({ lane, own, enemy, diff }) => {
+        {matchups.map(({ lane, time, own, enemy, diff }) => {
           const ownLane = own.some(({ player }) => player.account_id === trackedAccountId);
           return (
             <div
@@ -85,12 +100,17 @@ export function LanesCard({
                 <span
                   className={cn(
                     "ml-auto text-sm font-semibold tabular-nums",
-                    diff > 0 && WIN_TEXT_CLASS,
-                    diff < 0 && LOSS_TEXT_CLASS,
+                    diff != null && diff > 0 && WIN_TEXT_CLASS,
+                    diff != null && diff < 0 && LOSS_TEXT_CLASS,
+                    diff == null && "text-muted-foreground",
                   )}
-                  title={diff > 0 ? "Won lane" : diff < 0 ? "Lost lane" : "Even lane"}
+                  title={
+                    diff == null
+                      ? "Lane soul comparison unavailable: missing player stats"
+                      : `Lane soul difference at ${formatMatchDuration(time)}`
+                  }
                 >
-                  {diff > 0 ? `+${diff.toLocaleString("en-US")}` : diff.toLocaleString("en-US")}
+                  {diff == null ? "—" : diff > 0 ? `+${diff.toLocaleString("en-US")}` : diff.toLocaleString("en-US")}
                 </span>
               </div>
               <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5">
@@ -101,6 +121,7 @@ export function LanesCard({
                       laner={laner}
                       tracked={laner.player.account_id === trackedAccountId}
                       name={nameOf(laner.player)}
+                      time={time}
                     />
                   ))}
                 </div>
@@ -112,6 +133,7 @@ export function LanesCard({
                       laner={laner}
                       tracked={false}
                       name={nameOf(laner.player)}
+                      time={time}
                       mirrored
                     />
                   ))}

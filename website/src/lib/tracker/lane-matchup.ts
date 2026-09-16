@@ -6,8 +6,8 @@ export const LANE_PHASE_END_S = 540;
 
 export interface LanePlayer {
   player: TrackerMatchPlayer;
-  /** The player's cumulative stats at the matchup's sample time. */
-  stat: TrackerMatchStat;
+  /** The latest recorded stats at or before the comparison time; null when unavailable. */
+  stat: TrackerMatchStat | null;
 }
 
 export interface LaneMatchup {
@@ -17,27 +17,17 @@ export interface LaneMatchup {
   /** The tracked player's team in the lane, the tracked player first when it is their lane. */
   own: LanePlayer[];
   enemy: LanePlayer[];
-  /** Own lane souls minus enemy lane souls at `time`. */
-  diff: number;
+  /** Own lane souls minus enemy lane souls at `time`, or null when any laner's sample is missing. */
+  diff: number | null;
 }
 
-const EMPTY_STAT: Omit<TrackerMatchStat, "time_stamp_s"> = {
-  net_worth: 0,
-  kills: 0,
-  deaths: 0,
-  assists: 0,
-  creep_kills: 0,
-  denies: 0,
-  player_damage: 0,
-};
-
-/** The player's latest sample at or before `time`, zeroed before their first. */
-function statAt(player: TrackerMatchPlayer, time: number): TrackerMatchStat {
+/** A missing sample says nothing about how many souls a player had. */
+function statAt(player: TrackerMatchPlayer, time: number): TrackerMatchStat | null {
   let latest: TrackerMatchStat | undefined;
   for (const stat of player.stats) {
     if (stat.time_stamp_s <= time && (!latest || stat.time_stamp_s > latest.time_stamp_s)) latest = stat;
   }
-  return latest ?? { ...EMPTY_STAT, time_stamp_s: 0 };
+  return latest ?? null;
 }
 
 /**
@@ -54,7 +44,14 @@ export function computeLaneMatchups(players: TrackerMatchPlayer[], accountId: nu
   const time = Math.min(LANE_PHASE_END_S, lastSample);
 
   const withStat = (player: TrackerMatchPlayer): LanePlayer => ({ player, stat: statAt(player, time) });
-  const total = (list: LanePlayer[]) => list.reduce((sum, entry) => sum + entry.stat.net_worth, 0);
+  const total = (list: LanePlayer[]) => {
+    let souls = 0;
+    for (const entry of list) {
+      if (!entry.stat) return null;
+      souls += entry.stat.net_worth;
+    }
+    return souls;
+  };
   const matchups: LaneMatchup[] = [];
   for (const lane of LANES) {
     const laners = players.filter((player) => player.assigned_lane === lane.id);
@@ -65,7 +62,15 @@ export function computeLaneMatchups(players: TrackerMatchPlayer[], accountId: nu
     if (ownPlayers.length === 0 || enemyPlayers.length === 0) continue;
     const own = ownPlayers.map(withStat);
     const enemy = enemyPlayers.map(withStat);
-    matchups.push({ lane, time, own, enemy, diff: total(own) - total(enemy) });
+    const ownTotal = total(own);
+    const enemyTotal = total(enemy);
+    matchups.push({
+      lane,
+      time,
+      own,
+      enemy,
+      diff: ownTotal == null || enemyTotal == null ? null : ownTotal - enemyTotal,
+    });
   }
   return matchups;
 }
