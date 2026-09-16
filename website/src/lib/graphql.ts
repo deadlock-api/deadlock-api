@@ -1,14 +1,12 @@
 import { createClient } from "deadlock_api_graphql_client";
 
 import { API_ORIGIN } from "~/lib/constants";
+import { ApiError } from "~/lib/http";
 
 /** A non-2xx GraphQL response. The generated client keeps only the status text, which HTTP/2 leaves empty. */
-export class GraphqlHttpError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-  ) {
-    super(message);
+export class GraphqlHttpError extends ApiError {
+  constructor(status: number, message: string) {
+    super(status, message);
     this.name = "GraphqlHttpError";
   }
 }
