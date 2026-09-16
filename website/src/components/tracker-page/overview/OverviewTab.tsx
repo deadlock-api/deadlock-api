@@ -339,7 +339,7 @@ export function OverviewTab({
                   {record ? (
                     <span className="flex min-w-0 items-center gap-1">
                       <span aria-hidden="true">
-                        <HeroImage heroId={record.entry.hero_id} className="size-4" />
+                        <HeroImage heroId={record.entry.hero_id} className="size-4" title="" />
                       </span>
                       <HeroName heroId={record.entry.hero_id} className="text-[10px] text-muted-foreground" />
                     </span>

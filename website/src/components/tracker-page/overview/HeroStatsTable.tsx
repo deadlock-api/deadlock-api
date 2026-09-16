@@ -135,7 +135,7 @@ export function HeroStatsTable({
                       className="group flex items-center gap-1.5 rounded text-left focus-visible:outline-2 focus-visible:outline-ring"
                     >
                       <span aria-hidden="true">
-                        <HeroImage heroId={row.heroId} className="size-6 rounded" />
+                        <HeroImage heroId={row.heroId} className="size-6 rounded" title="" />
                       </span>
                       <HeroName heroId={row.heroId} className="max-w-24 text-xs font-medium group-hover:text-primary" />
                       <ArrowUpRight aria-hidden="true" className="size-3 text-muted-foreground" />

@@ -65,7 +65,7 @@ export function PerformanceInsights({
                       <Button variant="ghost" size="xs" onClick={() => onSelectHero(heroId)}>
                         <span className="sr-only">Filter matches to </span>
                         <span aria-hidden="true">
-                          <HeroImage heroId={heroId} className="size-4" />
+                          <HeroImage heroId={heroId} className="size-4" title="" />
                         </span>
                         <HeroName heroId={heroId} className="max-w-28" />
                         <ArrowUpRight data-icon="inline-end" aria-hidden="true" />
