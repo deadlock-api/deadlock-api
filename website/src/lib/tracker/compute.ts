@@ -105,7 +105,7 @@ export function filterMatches(
       if (filters.result === "loss" && !isLoss(entry)) return false;
       return true;
     })
-    .sort((a, b) => b.start_time - a.start_time);
+    .sort((a, b) => b.start_time - a.start_time || b.match_id - a.match_id);
 }
 
 /** Widest first, so a match hidden by the mode filter comes back under the broadest mode that shows it. */
@@ -178,7 +178,7 @@ export function sortValueLabel(entry: PlayerMatchHistoryEntry, key: MatchSortKey
   }
 }
 
-/** Ties fall back to newest first so the order stays stable across sort keys. */
+/** Missing rank changes sort last in either direction. Ties use date, then ID, for a stable order after refresh. */
 export function sortMatches(
   entries: PlayerMatchHistoryEntry[],
   key: MatchSortKey,
@@ -186,7 +186,14 @@ export function sortMatches(
 ): PlayerMatchHistoryEntry[] {
   const value = MATCH_SORT_VALUES[key];
   const sign = dir === "desc" ? -1 : 1;
-  return [...entries].sort((a, b) => sign * (value(a) - value(b)) || b.start_time - a.start_time);
+  return [...entries].sort((a, b) => {
+    if (key === "rankDelta") {
+      const missingA = a.ranked_delta == null;
+      const missingB = b.ranked_delta == null;
+      if (missingA !== missingB) return missingA ? 1 : -1;
+    }
+    return sign * (value(a) - value(b)) || b.start_time - a.start_time || b.match_id - a.match_id;
+  });
 }
 
 export interface TrackerSummary {
