@@ -78,6 +78,7 @@ export function HeroStatsTable({
   prevMaxDate,
   gameMode,
   matchMode,
+  nameQuery,
 }: {
   columns: string[];
   limit?: number;
@@ -94,6 +95,7 @@ export function HeroStatsTable({
   prevMaxDate?: Dayjs;
   gameMode?: GameMode;
   matchMode?: MatchMode;
+  nameQuery?: string;
 }) {
   const [activeSortKey, setActiveSortKey] = useQueryState("hero_sort_key", parseAsSortKey.withDefault("winrate"));
   const [sortDir, setSortDir] = useQueryState("hero_sort_dir", parseAsSortDir.withDefault("desc"));
@@ -415,6 +417,9 @@ export function HeroStatsTable({
     showBanRate,
   ]);
   const limitedData = useMemo(() => (limit ? sortedData?.slice(0, limit) : sortedData), [sortedData, limit]);
+  const normalizedNameQuery = nameQuery?.trim().toLowerCase() ?? "";
+  const matchesNameQuery = (heroId: number) =>
+    normalizedNameQuery === "" || (heroNameMap.get(heroId) ?? "").toLowerCase().includes(normalizedNameQuery);
 
   const groupedData = useMemo(() => {
     if (!groupByType || !sortedData) return undefined;
@@ -1099,7 +1104,9 @@ export function HeroStatsTable({
               </div>
               <Table>
                 {renderTableHeader(true)}
-                <TableBody>{heroesInGroup.map((row, index) => renderHeroRow(row, index, true))}</TableBody>
+                <TableBody>
+                  {heroesInGroup.map((row, index) => matchesNameQuery(row.hero_id) && renderHeroRow(row, index, true))}
+                </TableBody>
               </Table>
             </div>
           );
@@ -1111,7 +1118,9 @@ export function HeroStatsTable({
   return (
     <Table>
       {!hideHeader && renderTableHeader(!hideIndex)}
-      <TableBody>{limitedData?.map((row, index) => renderHeroRow(row, index, !hideIndex))}</TableBody>
+      <TableBody>
+        {limitedData?.map((row, index) => matchesNameQuery(row.hero_id) && renderHeroRow(row, index, !hideIndex))}
+      </TableBody>
     </Table>
   );
 }

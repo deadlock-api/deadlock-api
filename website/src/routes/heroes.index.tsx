@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 import type { HeroScoreboardSortByEnum } from "deadlock_api_client";
 import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
-import { lazy, Suspense, useId } from "react";
+import { lazy, Suspense, useId, useState } from "react";
 
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { HeroFiltersSection } from "~/components/heroes-page/HeroFiltersSection";
@@ -15,6 +15,7 @@ import { ALL_SORT_BY_VALUES } from "~/components/player-scoreboard/sort-options"
 import { QueryRenderer } from "~/components/QueryRenderer";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
+import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
@@ -180,6 +181,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
   const filters = useHeroFilters(initialTab);
   const [groupByType, setGroupByType] = useQueryState("group_by_type", parseAsBoolean.withDefault(false));
   const groupByTypeId = useId();
+  const [heroNameQuery, setHeroNameQuery] = useState("");
 
   const [scoreboardSortBy, setScoreboardSortBy] = useQueryState(
     "scoreboard_sort_by",
@@ -244,15 +246,30 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
         <TabsContent value="stats">
           <div className="flex flex-col gap-4">
             <h2 className="sr-only">Overall Hero Stats</h2>
-            <div className="flex items-center justify-end gap-2">
-              <Label htmlFor={groupByTypeId} className="text-sm font-semibold text-nowrap text-foreground">
-                Group by Type
-              </Label>
-              <Switch id={groupByTypeId} checked={groupByType} onCheckedChange={(checked) => setGroupByType(checked)} />
+            <div className="flex items-center gap-2">
+              <Input
+                type="search"
+                value={heroNameQuery}
+                onChange={(e) => setHeroNameQuery(e.target.value)}
+                placeholder="Find a hero…"
+                aria-label="Filter heroes by name"
+                className="h-8 w-44"
+              />
+              <div className="ml-auto flex items-center gap-2">
+                <Label htmlFor={groupByTypeId} className="text-sm font-semibold text-nowrap text-foreground">
+                  Group by Type
+                </Label>
+                <Switch
+                  id={groupByTypeId}
+                  checked={groupByType}
+                  onCheckedChange={(checked) => setGroupByType(checked)}
+                />
+              </div>
             </div>
             <HeroStatsTable
               columns={["winRate", "pickRate", "zScore", "residual", "details"]}
               groupByType={groupByType}
+              nameQuery={heroNameQuery}
               minRankId={filters.effectiveMinRankId}
               maxRankId={filters.effectiveMaxRankId}
               minHeroMatches={filters.minHeroMatches}
