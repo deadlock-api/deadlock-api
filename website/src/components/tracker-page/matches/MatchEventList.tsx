@@ -1,4 +1,4 @@
-import { ChevronRight, Flag, Skull, Swords } from "lucide-react";
+import { ArrowDownUp, ChevronRight, Flag, Skull, Swords } from "lucide-react";
 import { useState } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
@@ -24,6 +24,7 @@ export function MatchEventList({
   playerName: string;
 }) {
   const [filter, setFilter] = useState("all");
+  const [latestFirst, setLatestFirst] = useState(false);
   const events = [
     ...combat,
     ...objectives.map((event) => ({
@@ -34,7 +35,7 @@ export function MatchEventList({
       side: event.own ? ("gain" as const) : ("loss" as const),
       hero: null,
     })),
-  ].toSorted((a, b) => a.time - b.time);
+  ].toSorted((a, b) => (a.time - b.time) * (latestFirst ? -1 : 1));
   if (events.length === 0) return null;
   const visible = events.filter(
     (event) => filter === "all" || (filter === "combat" ? event.kind !== "objective" : event.kind === filter),
@@ -55,23 +56,35 @@ export function MatchEventList({
             Combat events for <span className="font-medium text-foreground">{playerName}</span>. Objectives are shown
             from your team’s perspective.
           </p>
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger size="sm" aria-label="Filter timeline events" className="w-full sm:w-auto">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="all">All events</SelectItem>
-                <SelectItem value="combat">Combat</SelectItem>
-                <SelectItem value="kill">Kills</SelectItem>
-                <SelectItem value="death">Deaths</SelectItem>
-                <SelectItem value="objective">Objectives</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+          <div className="flex w-full items-center gap-1 sm:w-auto">
+            <Select value={filter} onValueChange={setFilter}>
+              <SelectTrigger size="sm" aria-label="Filter timeline events" className="min-w-0 flex-1 sm:w-auto">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">All events</SelectItem>
+                  <SelectItem value="combat">Combat</SelectItem>
+                  <SelectItem value="kill">Kills</SelectItem>
+                  <SelectItem value="death">Deaths</SelectItem>
+                  <SelectItem value="objective">Objectives</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <Button
+              variant={latestFirst ? "secondary" : "ghost"}
+              size="icon-sm"
+              aria-label="Latest timeline events first"
+              aria-pressed={latestFirst}
+              title={latestFirst ? "Show earliest events first" : "Show latest events first"}
+              onClick={() => setLatestFirst((value) => !value)}
+            >
+              <ArrowDownUp />
+            </Button>
+          </div>
         </div>
         <output className="text-xs text-muted-foreground tabular-nums">
-          {visible.length} {visible.length === 1 ? "event" : "events"} · earliest first
+          {visible.length} {visible.length === 1 ? "event" : "events"} · {latestFirst ? "latest" : "earliest"} first
         </output>
         {visible.length === 0 ? (
           <Empty className="py-4">
@@ -79,7 +92,7 @@ export function MatchEventList({
           </Empty>
         ) : (
           <section
-            key={`${filter}-${playerName}`}
+            key={`${filter}-${playerName}-${latestFirst}`}
             aria-label="Chronological match events"
             // Keyboard users need to focus the scroll region to read events beyond its visible height.
             // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex
