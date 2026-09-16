@@ -182,8 +182,8 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
   );
   const [viewedAccountId, setViewedAccountId] = useState(accountId);
   const fights = useMemo(
-    () => (match ? computeFights(match.deaths, match.players, viewedAccountId) : null),
-    [match, viewedAccountId],
+    () => (match ? computeFights(match.deaths, match.players, viewedAccountId, entry.match_duration_s) : null),
+    [match, viewedAccountId, entry.match_duration_s],
   );
   const viewedPlayer = match?.players.find((player) => player.account_id === viewedAccountId);
   const timelineRef = useRef<HTMLDivElement>(null);

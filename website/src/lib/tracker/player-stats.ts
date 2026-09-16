@@ -1,5 +1,7 @@
 import type { TrackerMatchMetadata, TrackerMatchPlayer } from "~/queries/tracker-queries";
 
+import { timeDeadInMatch } from "./fights";
+
 /** One scoreboard measure, told apart from the others by the width at which the table can afford it. */
 export interface PlayerStatColumn {
   key: string;
@@ -139,6 +141,6 @@ export function playerContext(
     killShare: teamKills > 0 ? (player.kills + player.assists) / teamKills : 0,
     damageShare: teamDamage > 0 ? player.player_damage / teamDamage : 0,
     soulsPerMin: durationS > 0 ? player.net_worth / (durationS / 60) : 0,
-    deadForS: deaths ? deaths.death_details.reduce((sum, death) => sum + death.death_duration_s, 0) : null,
+    deadForS: deaths ? deaths.death_details.reduce((sum, death) => sum + timeDeadInMatch(death, durationS), 0) : null,
   };
 }

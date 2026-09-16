@@ -1,4 +1,14 @@
-import type { TrackerMatchPlayer, TrackerPlayerDeaths } from "~/queries/tracker-queries";
+import type { TrackerMatchDeath, TrackerMatchPlayer, TrackerPlayerDeaths } from "~/queries/tracker-queries";
+
+/** Respawn timers can extend beyond the match; only count time inside it. */
+export function timeDeadInMatch(
+  death: Pick<TrackerMatchDeath, "game_time_s" | "death_duration_s">,
+  durationS: number,
+): number {
+  const start = Math.max(0, death.game_time_s);
+  const end = Math.min(durationS, death.game_time_s + Math.max(0, death.death_duration_s));
+  return Math.max(0, end - start);
+}
 
 export interface KillEvent {
   /** Seconds since the match started. */
@@ -10,8 +20,9 @@ export interface DeathEvent {
   time: number;
   /** Null when no player was credited, e.g. a guardian or creep kill. */
   killer: TrackerMatchPlayer | null;
-  /** Seconds until the respawn. */
+  /** Seconds spent dead before respawning or the match ending. */
   deadForS: number;
+  endedAtMatchEnd: boolean;
   timeToKillS: number;
 }
 
@@ -28,6 +39,7 @@ export function computeFights(
   rows: TrackerPlayerDeaths[],
   players: TrackerMatchPlayer[],
   accountId: number,
+  durationS: number,
 ): FightSummary | null {
   const tracked = rows.find((row) => row.account_id === accountId);
   if (!tracked) return null;
@@ -45,7 +57,8 @@ export function computeFights(
   const deaths = tracked.death_details.map((death) => ({
     time: death.game_time_s,
     killer: (death.killer_player_slot != null && playersBySlot.get(death.killer_player_slot)) || null,
-    deadForS: death.death_duration_s,
+    deadForS: timeDeadInMatch(death, durationS),
+    endedAtMatchEnd: death.game_time_s + death.death_duration_s >= durationS,
     timeToKillS: death.time_to_kill_s,
   }));
   const byTime = (a: { time: number }, b: { time: number }) => a.time - b.time;

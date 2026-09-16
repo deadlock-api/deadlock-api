@@ -90,13 +90,19 @@ export function MatchTimeline({
           <TooltipStats>
             <TooltipStat label="Match time" value={formatMatchDuration(death.time)} />
             <TooltipStat label="Time to kill" value={`${Math.round(death.timeToKillS)}s`} />
-            <TooltipStat label="Respawned after" value={`${death.deadForS}s`} />
+            <TooltipStat
+              label={death.endedAtMatchEnd ? "Dead until match end" : "Respawned after"}
+              value={`${death.deadForS}s`}
+            />
           </TooltipStats>
         </>
       ),
     })),
   ].toSorted((a, b) => a.time - b.time);
-  const deadWindows = (fights?.deaths ?? []).map((death) => ({ start: death.time, end: death.time + death.deadForS }));
+  const deadWindows = (fights?.deaths ?? []).map((death) => ({
+    start: Math.max(0, death.time),
+    end: Math.max(0, death.time) + death.deadForS,
+  }));
 
   if (durationS <= 0 || (!lead && events.length === 0)) return null;
   const taken = objectives.filter((event) => event.own).length;
