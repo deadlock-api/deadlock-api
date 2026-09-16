@@ -205,7 +205,15 @@ export function HeroesTab({
           Detailed hero stats include both wins and losses. Hero, mode and date filters still apply.
         </p>
       )}
-      {query.isError && (
+      {query.fetchStatus === "paused" ? (
+        <TrackerQueryPaused
+          description={
+            query.data
+              ? "Showing your last loaded hero stats. They will refresh when you're back online."
+              : "Hero stats will load automatically when you're back online."
+          }
+        />
+      ) : query.isError ? (
         <TrackerQueryError
           title={query.data ? "Could not refresh hero stats" : "Could not load hero stats"}
           description={
@@ -216,15 +224,17 @@ export function HeroesTab({
           onRetry={() => query.refetch()}
           isRetrying={query.isFetching}
         />
-      )}
+      ) : null}
       <QueryRenderer
         query={query}
         keepDataOnError
         errorFallback={() => null}
         loadingFallback={
-          <div className="flex items-center justify-center py-16">
-            <LoadingLogo />
-          </div>
+          query.fetchStatus === "paused" ? null : (
+            <div className="flex items-center justify-center py-16">
+              <LoadingLogo />
+            </div>
+          )
         }
       >
         {(data) => {

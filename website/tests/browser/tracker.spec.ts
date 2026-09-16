@@ -179,6 +179,26 @@ test("hero comparisons wait for a successful rank lookup and recover without hid
   expect(cohorts).toEqual(["111-116", "null-null"]);
 });
 
+test("hero details opened offline explain the pause and resume when reconnected", async ({ page, context }) => {
+  let heroRequests = 0;
+  await page.route(`${API_ORIGIN}/v1/players/hero-stats?**`, (route) => {
+    heroRequests += 1;
+    return route.fulfill({ json: [] });
+  });
+  await page.goto(`/players/${ACCOUNT_ID}?date_range=_`);
+  const openDetails = page.getByRole("button", { name: "Show more hero pool", exact: true });
+  await expect(openDetails).toBeVisible();
+  await context.setOffline(true);
+  await openDetails.click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText("Waiting for connection", { exact: true })).toBeVisible();
+  expect(heroRequests).toBe(0);
+  await context.setOffline(false);
+  await expect(dialog.getByText("Waiting for connection", { exact: true })).toHaveCount(0);
+  await expect(dialog.getByRole("table", { name: "Detailed hero performance", exact: true })).toBeVisible();
+  expect(heroRequests).toBe(1);
+});
+
 test("preloads only adjacent matches after current details load and reuses their cache", async ({ page }) => {
   const requested: number[] = [];
   let releaseCurrent!: () => void;
