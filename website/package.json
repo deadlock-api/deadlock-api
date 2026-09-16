@@ -30,6 +30,7 @@
     "@tanstack/react-router": "^1.170.34",
     "@tanstack/react-router-ssr-query": "^1.167.2",
     "@tanstack/react-start": "^1.168.51",
+    "@tanstack/react-virtual": "^3.14.13",
     "@uiw/react-codemirror": "^4.25.11",
     "axios": "^1.20.0",
     "class-variance-authority": "^0.7.1",
