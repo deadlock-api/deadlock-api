@@ -524,3 +524,41 @@ test("match navigation keeps the selected history row visible without stealing b
     )
     .toBe(true);
 });
+
+test("large histories open deep links and support keyboard jumps with bounded rendered rows", async ({ page }) => {
+  const entries = Array.from({ length: 5000 }, (_, index) => ({
+    ...history[index % history.length],
+    match_id: 10000 - index,
+    start_time: history[0].start_time - index * 7200,
+  }));
+  await page.route(`${API_ORIGIN}/v1/players/${ACCOUNT_ID}/match-history*`, (route) =>
+    route.fulfill({ json: entries }),
+  );
+  const requested: number[] = [];
+  await page.route(`${API_ORIGIN}/v1/graphql`, (route) => {
+    const id = requestedMatchId(route.request().postDataJSON());
+    if (id != null) requested.push(id);
+    return route.continue();
+  });
+  await page.goto(TRACKER_URL.replace(`match=${CURRENT_MATCH}`, "match=5001"));
+  await expect(page.getByRole("region", { name: "Match 5001 details", exact: true })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
+  const list = page.getByRole("navigation", { name: "Match history", exact: true });
+  await expect.poll(() => list.locator("[data-match-id]").count()).toBeLessThan(100);
+  await expect.poll(() => [...requested].sort()).toEqual([5001, 5002]);
+  const oldest = list.locator('[data-match-id="5001"]');
+  await oldest.focus();
+  await page.keyboard.press("Home");
+  await expect(page).toHaveURL(/match=10000/);
+  const newest = list.locator('[data-match-id="10000"]');
+  await expect(newest).toBeFocused();
+  await expect(newest).toHaveAttribute("aria-current", "true");
+  await expect.poll(() => requested.length).toBe(4);
+  expect([...requested].sort((a, b) => a - b)).toEqual([5001, 5002, 9999, 10000]);
+  await expect.poll(() => list.locator("[data-match-id]").count()).toBeLessThan(100);
+  await page.keyboard.press("End");
+  await expect(page).toHaveURL(/match=5001/);
+  await expect(oldest).toBeFocused();
+  await expect(oldest).toHaveAttribute("aria-current", "true");
+  expect(requested).toHaveLength(4);
+});
