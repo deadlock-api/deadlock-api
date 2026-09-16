@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { ACCOUNT_ID, API_ORIGIN, CURRENT_MATCH, history, requestedMatchId, TRACKER_URL } from "./fixtures";
+import { ACCOUNT_ID, API_ORIGIN, CURRENT_MATCH, history, metadata, requestedMatchId, TRACKER_URL } from "./fixtures";
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("tracker-feedback-notice-dismissed", "true"));
@@ -216,4 +216,51 @@ test("timeline player picker updates the scoreboard and works with keyboard navi
     "aria-pressed",
     "true",
   );
+});
+
+test("narrow scoreboards can sort statistics whose columns are hidden", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.route(`${API_ORIGIN}/v1/graphql`, async (route) => {
+    if (requestedMatchId(route.request().postDataJSON()) == null) return route.continue();
+    await route.fulfill({
+      json: {
+        data: {
+          matches: [
+            {
+              ...metadata,
+              players: [
+                ...metadata.players,
+                {
+                  ...metadata.players[0],
+                  account_id: 43,
+                  player_slot: 3,
+                  steam: { personaname: "Test Teammate" },
+                  max_player_damage: 50000,
+                  items: [],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+  });
+  await page.goto(TRACKER_URL);
+  const table = page.getByRole("table", { name: "The Hidden King scoreboard", exact: true });
+  const names = table.locator("tbody button[aria-pressed]");
+  const sort = page.getByRole("combobox", { name: "Sort The Hidden King scoreboard", exact: true });
+  await expect(names).toHaveText(["Tracker Tester", "Test Teammate"]);
+  await expect(
+    table.getByRole("button", { name: "Sort scoreboard by hero damage, highest first", exact: true }),
+  ).toBeHidden();
+  await sort.click();
+  await page.getByRole("option", { name: "Hero damage", exact: true }).click();
+  await expect(names).toHaveText(["Test Teammate", "Tracker Tester"]);
+  await page.getByRole("button", { name: "Sort The Hidden King scoreboard lowest first", exact: true }).click();
+  await expect(names).toHaveText(["Tracker Tester", "Test Teammate"]);
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBe(0);
+  await sort.click();
+  await page.getByRole("option", { name: "Lane order", exact: true }).click();
+  await expect(names).toHaveText(["Tracker Tester", "Test Teammate"]);
+  await expect(sort).toHaveText("Player");
 });

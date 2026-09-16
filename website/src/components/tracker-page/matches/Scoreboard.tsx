@@ -8,6 +8,8 @@ import { AssetImage } from "~/components/AssetImage";
 import { BadgeImage } from "~/components/BadgeImage";
 import { HeroImage } from "~/components/HeroImage";
 import { ItemImageFromAsset } from "~/components/ItemImage";
+import { Button } from "~/components/ui/button";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
 import { IS_DEV } from "~/lib/constants";
 import { formatShare } from "~/lib/format";
@@ -387,7 +389,7 @@ export function Scoreboard({
                           : `Restore ${laned ? "lane" : "team"} order`
                       }
                       onClick={sortKey ? () => setSortKey(null) : undefined}
-                      className="inline-flex cursor-pointer items-center gap-1 rounded-sm whitespace-nowrap focus-visible:outline-2 focus-visible:outline-ring aria-disabled:cursor-default"
+                      className="hidden cursor-pointer items-center gap-1 rounded-sm whitespace-nowrap focus-visible:outline-2 focus-visible:outline-ring aria-disabled:cursor-default @lg:inline-flex"
                     >
                       Player
                       {sortKey && (
@@ -397,6 +399,42 @@ export function Scoreboard({
                         </span>
                       )}
                     </button>
+                    <div className="flex items-center gap-0.5 @lg:hidden">
+                      <Select
+                        value={sortKey ?? "default"}
+                        onValueChange={(value) => (value === "default" ? setSortKey(null) : changeSort(value))}
+                      >
+                        <SelectTrigger
+                          size="sm"
+                          aria-label={`Sort ${team.name} scoreboard`}
+                          className="min-w-0 gap-1 px-1.5 py-0 data-[size=sm]:h-6"
+                        >
+                          <SelectValue>{sortLabel ?? "Player"}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent position="popper" align="start" collisionPadding={16}>
+                          <SelectGroup>
+                            <SelectItem value="default">{laned ? "Lane" : "Team"} order</SelectItem>
+                            <SelectItem value="kda">KDA ratio</SelectItem>
+                            {PLAYER_STAT_COLUMNS.map((column) => (
+                              <SelectItem key={column.key} value={column.key}>
+                                {column.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      {sortKey && (
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label={`Sort ${team.name} scoreboard ${sortDirection === "desc" ? "lowest" : "highest"} first`}
+                          title={sortDirection === "desc" ? "Sort lowest first" : "Sort highest first"}
+                          onClick={() => setSortDirection((direction) => (direction === "desc" ? "asc" : "desc"))}
+                        >
+                          {sortDirection === "desc" ? <ArrowDown /> : <ArrowUp />}
+                        </Button>
+                      )}
+                    </div>
                   </th>
                   <th
                     className="px-1.5 py-1 text-right font-normal"
