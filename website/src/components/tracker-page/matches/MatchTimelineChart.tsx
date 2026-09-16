@@ -374,7 +374,11 @@ export function MatchTimelineChart({
   const zeroOffset = max === min ? 0 : max / (max - min);
 
   return (
-    <div ref={wrapperRef}>
+    <div
+      ref={wrapperRef}
+      // A marker's exact event tooltip takes precedence over the nearest soul sample.
+      className="[&:has([data-state$=open])_.recharts-tooltip-wrapper]:invisible!"
+    >
       <ResponsiveContainer width="100%" height={plotPx + 2 * EDGE_PX + X_AXIS_PX}>
         <AreaChart
           aria-label={lead ? "Team soul lead and match events over time" : "Match events over time"}
