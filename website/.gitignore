@@ -14,3 +14,7 @@ public/blog/scripts/
 # local UX review and experiment records
 ux-reports/
 experiments/
+
+# Browser regression artifacts
+test-results/
+playwright-report/
