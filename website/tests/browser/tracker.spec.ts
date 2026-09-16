@@ -345,3 +345,27 @@ test("companion pagination resets for filter changes while preserving search and
   await page.goBack();
   await expect(matePage).toHaveValue("1");
 });
+
+test("shared-match history opens older matches and returns focus to their details", async ({ page }) => {
+  await page.route(`${API_ORIGIN}/v1/players/*/mate-stats**`, (route) =>
+    route.fulfill({ json: [{ mate_id: 1000, matches: history.map((match) => match.match_id) }] }),
+  );
+  await page.goto(`/players/${ACCOUNT_ID}?date_range=_`);
+  await page.getByRole("button", { name: "View 50 matches with Player 1000", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Matches with Player 1000", exact: true });
+  const shared = dialog.getByRole("navigation", { name: "Shared match history", exact: true });
+  await expect(shared.getByRole("button")).toHaveCount(20);
+  await shared.getByRole("button").first().focus();
+  await page.keyboard.press("End");
+  await expect(shared.locator('[data-match-id="2981"]')).toBeFocused();
+  await dialog.getByRole("button", { name: "Show 20 more matches", exact: true }).click();
+  await expect(shared.getByRole("button")).toHaveCount(40);
+  await expect(shared.locator('[data-match-id="2980"]')).toBeFocused();
+  await page.keyboard.press("End");
+  await expect(shared.locator('[data-match-id="2961"]')).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(dialog).toHaveCount(0);
+  await expect(page).toHaveURL(/match=2961/);
+  await expect(page.locator('[data-match-details="2961"]')).toBeFocused();
+  await expect(page.locator('[data-match-id="2961"]')).toHaveAttribute("aria-current", "true");
+});
