@@ -62,7 +62,13 @@ export function NumberSelector({
     .map((v) => ({ value: String(v), label: v === 0 ? "Any" : String(v) }));
 
   return (
-    <FilterCell label={label} value={isActive ? `≥ ${value}` : "Any"} active={isActive} className="w-auto min-w-56 p-3">
+    <FilterCell
+      label={label}
+      value={isActive ? `≥ ${value}` : "Any"}
+      active={isActive}
+      onReset={() => onChange(floor)}
+      className="w-auto min-w-56 p-3"
+    >
       <div className="flex flex-col gap-2">
         <NumberSelectorBare value={value} onChange={onChange} step={step} min={min} max={max} />
         <Segmented

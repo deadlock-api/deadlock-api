@@ -16,6 +16,7 @@ export function ItemCombFilters() {
         onValueChange={(v) => setCombSize(Number(v))}
         options={SIZE_OPTIONS}
         active={combSize !== 2}
+        onReset={() => setCombSize(2)}
       />
       <FilterToggleCell
         label="Show"
@@ -23,6 +24,7 @@ export function ItemCombFilters() {
         onValueChange={(v) => setCombsToShow(Number(v))}
         options={SHOW_OPTIONS}
         active={combsToShow !== ITEM_COMBS_TO_SHOW[0]}
+        onReset={() => setCombsToShow(ITEM_COMBS_TO_SHOW[0])}
       />
     </>
   );

@@ -90,6 +90,7 @@ export function HeroFiltersSection({
           onValueChange={(v) => setSameLaneFilter(v === "same")}
           options={LANE_OPTIONS}
           active={!sameLaneFilter}
+          onReset={() => setSameLaneFilter(true)}
         />
       )}
     </Filter.Root>

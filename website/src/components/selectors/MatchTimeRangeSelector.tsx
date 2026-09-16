@@ -73,6 +73,7 @@ export function MatchTimeRangeSelector({
       label={label}
       value={getLabel()}
       active={isActive}
+      onReset={() => onTimeChange(undefined, undefined)}
       icon={<ClockIcon className="size-3.5 shrink-0" />}
       className="w-80 p-4"
     >

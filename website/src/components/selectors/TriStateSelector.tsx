@@ -1,4 +1,4 @@
-import { CircleMinus, CirclePlus, X } from "lucide-react";
+import { CircleMinus, CirclePlus } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { FilterCell } from "~/components/Filter/FilterCell";
@@ -165,21 +165,10 @@ export function TriStateSelector({
       label={label || "Items"}
       value={buildPillValue(includedItems, excludedItems)}
       active={hasSelections}
+      onReset={() => onSelectionsChange(new Map())}
       icon={buildPillIcon(includedItems, excludedItems)}
       className={`max-h-[400px] overflow-auto p-0 ${columnLayout ? "w-fit xl:w-fit" : "w-[260px]"}`}
     >
-      {hasSelections && (
-        <div className="sticky top-0 z-10 flex items-center justify-end border-b bg-popover px-2 py-1.5">
-          <button
-            type="button"
-            className="flex cursor-pointer items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            onClick={() => onSelectionsChange(new Map())}
-          >
-            Clear all
-            <X className="size-3" />
-          </button>
-        </div>
-      )}
       {columnLayout ? (
         <TriStateColumnContent
           options={options}

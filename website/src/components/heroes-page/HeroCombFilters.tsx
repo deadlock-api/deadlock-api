@@ -26,6 +26,7 @@ export function HeroCombFilters() {
         onValueChange={(v) => setCombSize(Number(v))}
         options={SIZE_OPTIONS}
         active={combSize !== 2}
+        onReset={() => setCombSize(2)}
       />
       <FilterToggleCell
         label="Show"
@@ -33,6 +34,7 @@ export function HeroCombFilters() {
         onValueChange={(v) => setCombsToShow(Number(v))}
         options={SHOW_OPTIONS}
         active={combsToShow !== HERO_COMBS_TO_SHOW[0]}
+        onReset={() => setCombsToShow(HERO_COMBS_TO_SHOW[0])}
       />
       <HeroSelectorMultiple
         label="Include"

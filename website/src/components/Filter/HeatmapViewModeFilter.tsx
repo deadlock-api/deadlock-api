@@ -19,6 +19,7 @@ export function HeatmapViewModeFilter({ value, onChange }: { value: string; onCh
       onValueChange={onChange}
       options={OPTIONS}
       active={value !== "kills"}
+      onReset={() => onChange("kills")}
     />
   );
 }

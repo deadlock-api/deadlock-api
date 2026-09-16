@@ -142,7 +142,14 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange }: RankRangeS
     );
 
   return (
-    <FilterCell label="Rank" value={getTriggerLabel()} active={!isFullRange} icon={triggerIcon} className="w-80 p-4">
+    <FilterCell
+      label="Rank"
+      value={getTriggerLabel()}
+      active={!isFullRange}
+      onReset={() => handleValueCommit([0, options.length - 1])}
+      icon={triggerIcon}
+      className="w-80 p-4"
+    >
       <div className="grid gap-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

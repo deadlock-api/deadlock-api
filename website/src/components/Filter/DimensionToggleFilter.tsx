@@ -13,6 +13,7 @@ export function DimensionToggleFilter({ value, onChange }: { value: boolean; onC
       onValueChange={(next) => onChange(next === "3d")}
       options={OPTIONS}
       active={value}
+      onReset={() => onChange(false)}
     />
   );
 }
