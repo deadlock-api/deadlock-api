@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight } from "lucide-react";
 import { useMemo } from "react";
 
+import { TrackerAccountList } from "~/components/tracker-page/shared/TrackerAccountList";
 import { TrackerQueryError } from "~/components/tracker-page/shared/TrackerQueryError";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
@@ -22,27 +22,6 @@ export const Route = createFileRoute("/tracker")({
       path: "/tracker",
     }),
 });
-
-function AccountRow({ accountId, avatar, name }: { accountId: number; avatar?: string; name: string }) {
-  return (
-    <Link
-      to="/players/$accountId"
-      params={{ accountId: String(accountId) }}
-      className="flex items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-accent"
-    >
-      {avatar ? (
-        <img src={avatar} alt="" className="size-8 rounded-full" loading="lazy" />
-      ) : (
-        <div className="size-8 rounded-full bg-muted" />
-      )}
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{name}</div>
-        <div className="font-mono text-xs text-muted-foreground">{accountId}</div>
-      </div>
-      <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
-    </Link>
-  );
-}
 
 function MyAccountsCard() {
   const { isAuthenticated, isActive, isLoading, login, totalSlots } = usePatronAuth();
@@ -110,14 +89,13 @@ function MyAccountsCard() {
                 isRetrying={accountsQuery.isFetching}
               />
             )}
-            {activeAccounts.map((account) => (
-              <AccountRow
-                key={account.id}
-                accountId={account.steam_id3}
-                avatar={profiles[account.steam_id3]?.avatar}
-                name={profiles[account.steam_id3]?.personaname ?? `Player ${account.steam_id3}`}
-              />
-            ))}
+            <TrackerAccountList
+              accounts={activeAccounts.map((account) => ({
+                accountId: account.steam_id3,
+                avatar: profiles[account.steam_id3]?.avatar,
+                name: profiles[account.steam_id3]?.personaname ?? `Player ${account.steam_id3}`,
+              }))}
+            />
           </>
         )}
       </CardContent>
