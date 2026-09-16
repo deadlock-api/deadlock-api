@@ -26,6 +26,7 @@ export function PlaytimeHeatmap({ habits }: { habits: PlaytimeHabits }) {
   const inspected = inspectedCell == null ? null : habits.cells[inspectedCell];
 
   function navigate(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    if (event.altKey) return;
     const column = index % columns;
     let next = index;
     switch (event.key) {

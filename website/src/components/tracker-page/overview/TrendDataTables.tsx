@@ -1,5 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "~/components/ui/empty";
@@ -21,6 +21,8 @@ export function RankHistoryTable({
   onOpenMatch: (matchId: number) => void;
 }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [focusedMatchId, setFocusedMatchId] = useState<number | null>(null);
+  const keyboardHelpId = useId();
   const tableRef = useRef<HTMLDivElement>(null);
   const focusAfterLoad = useRef<number | null>(null);
   useEffect(() => {
@@ -29,6 +31,21 @@ export function RankHistoryTable({
     focusAfterLoad.current = null;
   }, [visibleCount]);
   const latestFirst = [...ranks].reverse();
+  const visible = latestFirst.slice(0, visibleCount);
+  const tabStop = visible.some((point) => point.matchId === focusedMatchId) ? focusedMatchId : visible[0]?.matchId;
+  const navigate = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.altKey || !["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const index = visible.findIndex((point) => point.matchId === Number(event.currentTarget.dataset.rankMatch));
+    const nextIndex =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? visible.length - 1
+          : index + (event.key === "ArrowDown" ? 1 : -1);
+    const next = visible[nextIndex];
+    if (next) tableRef.current?.querySelector<HTMLButtonElement>(`[data-rank-match="${next.matchId}"]`)?.focus();
+  };
   if (ranks.length === 0) {
     return (
       <Empty className="border">
@@ -46,6 +63,10 @@ export function RankHistoryTable({
       <p className="text-sm text-muted-foreground">
         Recorded badges and progress in the selected matches. Select a date to open its match.
       </p>
+      <p id={keyboardHelpId} className="sr-only">
+        Use the up and down arrow keys to browse recorded ranks, or Home and End for the first and last shown match.
+        Press Enter to open a match.
+      </p>
       <Table className="[&_td]:px-1 [&_th]:px-1">
         <TableCaption>
           Newest first. Rank progress is shown only when recorded; missing progress is marked with a dash.
@@ -58,7 +79,7 @@ export function RankHistoryTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {latestFirst.slice(0, visibleCount).map((point) => (
+          {visible.map((point) => (
             <TableRow key={point.matchId}>
               <TableHead scope="row">
                 <Button
@@ -66,6 +87,10 @@ export function RankHistoryTable({
                   variant="ghost"
                   className="h-auto justify-start px-0 py-1"
                   data-rank-match={point.matchId}
+                  tabIndex={point.matchId === tabStop ? 0 : -1}
+                  aria-describedby={keyboardHelpId}
+                  onFocus={() => setFocusedMatchId(point.matchId)}
+                  onKeyDown={navigate}
                   onClick={() => onOpenMatch(point.matchId)}
                   aria-label={`Open match ${point.matchId}, ${day.unix(point.time).format("MMM D, YYYY, HH:mm")}`}
                   title={`Match ${point.matchId}`}
