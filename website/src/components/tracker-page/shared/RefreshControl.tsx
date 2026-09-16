@@ -21,7 +21,8 @@ function formatCountdown(ms: number): string {
 /** Keeps account data fresh, retrying failed history refreshes every five minutes. */
 export function RefreshControl({ accountId }: { accountId: number }) {
   const queryClient = useQueryClient();
-  const { dataUpdatedAt, errorUpdatedAt, isError } = useQuery(trackerMatchHistoryQueryOptions(accountId));
+  const { dataUpdatedAt, errorUpdatedAt, isError, fetchStatus } = useQuery(trackerMatchHistoryQueryOptions(accountId));
+  const isPaused = fetchStatus === "paused";
   const isFetching = useIsFetching(trackerAccountQueries(accountId)) > 0;
   // A failed attempt starts another interval too, so automatic refresh recovers without rapid retries.
   const lastAttemptAt = Math.max(dataUpdatedAt, errorUpdatedAt);
@@ -48,18 +49,20 @@ export function RefreshControl({ accountId }: { accountId: number }) {
         variant="ghost"
         size="xs"
         onClick={() => refreshTrackerAccount(queryClient, accountId)}
-        disabled={isFetching || onCooldown}
+        disabled={isFetching || isPaused || onCooldown}
         title="Refresh this player's history, rank and breakdowns, at most once a minute. Also refreshes every 5 minutes."
       >
         <RefreshCw data-icon="inline-start" className={cn(isFetching && "animate-spin")} />
         Refresh
       </Button>
-      {isError && !isFetching && (
+      {isError && !isFetching && !isPaused && (
         <output className="text-xs">
           {dataUpdatedAt > 0 ? "Refresh failed · showing loaded history" : "Could not load matches"}
         </output>
       )}
-      {isFetching ? (
+      {isPaused ? (
+        <span className="text-xs">Waiting for connection…</span>
+      ) : isFetching ? (
         <span className="text-xs">Refreshing…</span>
       ) : (
         lastAttemptAt > 0 &&

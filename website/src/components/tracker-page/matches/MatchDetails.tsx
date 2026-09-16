@@ -35,6 +35,7 @@ import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { RankDelta } from "../shared/RankDelta";
 import { SaveMatchButton } from "../shared/SaveMatchButton";
 import { TrackerQueryError } from "../shared/TrackerQueryError";
+import { TrackerQueryPaused } from "../shared/TrackerQueryPaused";
 import { LanesCard } from "./LanesCard";
 import { MatchTimeline } from "./MatchTimeline";
 import { Scoreboard } from "./Scoreboard";
@@ -180,7 +181,14 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
   const matchId = entry.match_id;
   // Street Brawl reports lane ids too, but its map has no lanes to speak of.
   const laned = hasLanes(entry);
-  const { data: match, isPending, isError, isFetching, refetch } = useQuery(trackerMatchMetadataQueryOptions(matchId));
+  const {
+    data: match,
+    isPending,
+    isError,
+    isFetching,
+    fetchStatus,
+    refetch,
+  } = useQuery(trackerMatchMetadataQueryOptions(matchId));
   const { data: itemsById } = useQuery({
     ...itemUpgradesQueryOptions,
     select: (items) => new Map(items.map((item) => [item.id, item])),
@@ -222,6 +230,9 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
   const nameOf = (player: TrackerMatchPlayer) =>
     player.personaname ?? profiles[player.account_id]?.personaname ?? `Player ${player.account_id}`;
 
+  if (fetchStatus === "paused" && !match) {
+    return <TrackerQueryPaused description="Match details will load automatically when you're back online." />;
+  }
   if (isPending) return <LoadingLogo />;
 
   if (isError && !match) {
@@ -254,14 +265,16 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
 
   return (
     <div className="flex flex-col gap-4">
-      {isError && (
+      {fetchStatus === "paused" ? (
+        <TrackerQueryPaused description="Showing loaded match details. Refresh resumes when you're back online." />
+      ) : isError ? (
         <TrackerQueryError
           title="Could not refresh match details"
           description="Showing the last loaded details. Try again to refresh them."
           onRetry={() => refetch()}
           isRetrying={isFetching}
         />
-      )}
+      ) : null}
       <MatchTimeline
         ref={timelineRef}
         lead={soulLead}

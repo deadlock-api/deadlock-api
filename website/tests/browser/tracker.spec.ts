@@ -592,3 +592,61 @@ test("selecting a player from below the chart brings keyboard focus to the timel
   await expect(picker).toBeFocused();
   await expect(picker).toContainText("Test Opponent");
 });
+
+test("an offline match stays usable and loads automatically after reconnecting", async ({ page, context }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  const requested: number[] = [];
+  await page.route(`${API_ORIGIN}/v1/graphql`, (route) => {
+    const id = requestedMatchId(route.request().postDataJSON());
+    if (id != null) requested.push(id);
+    return route.continue();
+  });
+  await page.goto(TRACKER_URL);
+  await expect.poll(() => [...requested].sort()).toEqual([2997, 2998, 2999]);
+  await context.setOffline(true);
+  await page.locator('[data-match-id="2990"]').click();
+  await expect(page).toHaveURL(/match=2990/);
+  await expect(page.getByText("Waiting for connection", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Match details will load automatically when you're back online.", { exact: true }),
+  ).toBeVisible();
+  expect(await page.locator('[data-match-details="2990"]').evaluate((element) => element.clientHeight)).toBeLessThan(
+    400,
+  );
+  expect(requested).not.toContain(2990);
+  await page.getByRole("button", { name: "Save match for later", exact: true }).click();
+  await expect(page.locator('[data-match-id="2990"]').getByLabel("Saved match", { exact: true })).toBeVisible();
+  await context.setOffline(false);
+  await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
+  await expect(page.getByText("Waiting for connection", { exact: true })).toHaveCount(0);
+  await expect.poll(() => [...requested].sort()).toEqual([2989, 2990, 2991, 2997, 2998, 2999]);
+});
+
+test("a paused refresh retains loaded history and resumes when the connection returns", async ({ page, context }) => {
+  await page.clock.install();
+  let requests = 0;
+  await page.route(`${API_ORIGIN}/v1/players/${ACCOUNT_ID}/match-history*`, (route) => {
+    requests += 1;
+    const updated = [{ ...history[0], match_id: 3001, start_time: history[0].start_time + 7200 }, ...history];
+    return route.fulfill({ json: requests === 1 ? history : updated });
+  });
+  await page.goto(TRACKER_URL);
+  await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
+  await page.clock.fastForward(61_000);
+  const refresh = page.getByRole("button", { name: "Refresh", exact: true });
+  await expect(refresh).toBeEnabled();
+  await context.setOffline(true);
+  await refresh.click();
+  await expect(
+    page.getByText("Showing loaded match history. Refresh resumes when you're back online.", { exact: true }),
+  ).toBeVisible();
+  await expect(refresh).toBeDisabled();
+  const summary = page.getByRole("region", { name: "Across all loaded match history", exact: true });
+  await expect(summary).toContainText("50 recorded matches");
+  await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
+  expect(requests).toBe(1);
+  await context.setOffline(false);
+  await expect(summary).toContainText("51 recorded matches");
+  await expect(page.getByText("Waiting for connection", { exact: true })).toHaveCount(0);
+  expect(requests).toBe(2);
+});

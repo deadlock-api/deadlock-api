@@ -94,7 +94,7 @@ export function MatchesTab({
     ...trackerMatchMetadataQueryOptions(selectedId ?? 0),
     enabled: selectedId != null,
   });
-  const isLoadingDetails = selectedId != null && detailsPending;
+  const isLoadingDetails = selectedId != null && detailsPending && detailsFetching;
   const canPreload = detailsLoaded && details != null && !detailsFetching;
   const previousMatchId = selectedIndex > 0 ? sortedEntries[selectedIndex - 1]?.match_id : undefined;
   const nextMatchId = selectedIndex >= 0 ? sortedEntries[selectedIndex + 1]?.match_id : undefined;

@@ -16,6 +16,7 @@ import { PlayerHeader } from "~/components/tracker-page/shared/PlayerHeader";
 import { TrackerEmptyState } from "~/components/tracker-page/shared/TrackerEmptyState";
 import { TrackerGate } from "~/components/tracker-page/shared/TrackerGate";
 import { TrackerQueryError } from "~/components/tracker-page/shared/TrackerQueryError";
+import { TrackerQueryPaused } from "~/components/tracker-page/shared/TrackerQueryPaused";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { useTrackerFilters } from "~/hooks/useTrackerFilters";
@@ -194,7 +195,15 @@ function TrackerContent({ accountId }: { accountId: number }) {
         />
       </PlayerHeader>
 
-      {historyQuery.isError && (
+      {historyQuery.fetchStatus === "paused" ? (
+        <TrackerQueryPaused
+          description={
+            historyQuery.data
+              ? "Showing loaded match history. Refresh resumes when you're back online."
+              : "Match history will load automatically when you're back online."
+          }
+        />
+      ) : historyQuery.isError ? (
         <TrackerQueryError
           title={historyQuery.data ? "Could not refresh match history" : "Could not load match history"}
           description={
@@ -205,7 +214,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
           onRetry={() => historyQuery.refetch()}
           isRetrying={historyQuery.isFetching}
         />
-      )}
+      ) : null}
 
       {tab === "matches" && expandedMatchId != null && historyQuery.isSuccess && !linkedMatch && (
         <Alert>
@@ -256,7 +265,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
         {tab === "matches" && (
           <QueryRenderer
             query={historyQuery}
-            loadingFallback={<OverviewSkeleton />}
+            loadingFallback={historyQuery.fetchStatus === "paused" ? null : <OverviewSkeleton />}
             errorFallback={() => null}
             keepDataOnError
           >
