@@ -51,6 +51,21 @@ function seasonMatches(season: SeasonInfo, startDate: Dayjs, endDate?: Dayjs): b
   return endDate !== undefined && season.endDate.unix() === endDate.unix();
 }
 
+/** The same human-readable date label in the picker and compact filter summaries. */
+export function dateRangeLabel(
+  { startDate, endDate }: { startDate?: Dayjs; endDate?: Dayjs },
+  { seasons = [], patches = [] }: { seasons?: readonly SeasonInfo[]; patches?: readonly PatchInfo[] } = {},
+): string {
+  const season = startDate && seasons.find((candidate) => seasonMatches(candidate, startDate, endDate));
+  if (season) return season.name;
+  const patch = startDate && patches.find((candidate) => patchMatches(candidate, startDate, endDate));
+  if (patch) return patch.name;
+  if (!startDate && !endDate) return "All Time";
+  if (startDate && endDate) return `${startDate.format("MMM D")} - ${endDate.format("MMM D")}`;
+  if (startDate) return `since ${startDate.format("MMM D")}`;
+  return `until ${endDate!.format("MMM D")}`;
+}
+
 export function computePreviousPeriod(
   startDate?: Dayjs,
   endDate?: Dayjs,
@@ -170,24 +185,12 @@ export function SeasonPatchDatePicker({
     emit(range.startDate?.startOf("day"), range.endDate?.endOf("day"));
   };
 
-  const getDisplayValue = () => {
-    if (matchingSeason) return matchingSeason.name;
-    if (matchingPatch) return matchingPatch.name;
-    if (!value.startDate && !value.endDate) return "All Time";
-    if (value.startDate && value.endDate) {
-      return `${value.startDate.format("MMM D")} - ${value.endDate.format("MMM D")}`;
-    }
-    if (value.startDate) return `since ${value.startDate.format("MMM D")}`;
-    if (value.endDate) return `until ${value.endDate.format("MMM D")}`;
-    return "Custom";
-  };
-
   const isActive = value.startDate != null || value.endDate != null;
 
   return (
     <FilterCell
       label="Date"
-      value={getDisplayValue()}
+      value={dateRangeLabel(value, { seasons, patches: patchDates })}
       active={isActive}
       icon={<CalendarIcon className="size-3.5 shrink-0" />}
       className="w-auto p-3 lg:min-w-[340px]"
