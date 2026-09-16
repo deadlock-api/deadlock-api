@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { Bookmark, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
@@ -6,6 +7,7 @@ import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
 import { Button } from "~/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "~/components/ui/empty";
+import { Input } from "~/components/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -18,6 +20,7 @@ import { day } from "~/dayjs";
 import { useSavedMatches } from "~/hooks/useSavedMatches";
 import { formatMatchDuration, isWin, matchModeLabel } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
+import { heroesQueryOptions } from "~/queries/asset-queries";
 
 const PAGE_SIZE = 20;
 
@@ -32,11 +35,28 @@ export function SavedMatchesMenu({
 }) {
   const { savedIds, toggleSaved } = useSavedMatches(accountId);
   const byId = useMemo(() => new Map(entries?.map((entry) => [entry.match_id, entry])), [entries]);
+  const { data: heroNames } = useQuery({
+    ...heroesQueryOptions,
+    select: (heroes) => new Map(heroes.map((hero) => [hero.id, hero.name.toLowerCase()])),
+  });
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const query = search.trim().toLowerCase();
+  const filteredIds = useMemo(
+    () =>
+      query
+        ? savedIds.filter((id) => {
+            const entry = byId.get(id);
+            return String(id).includes(query) || (entry && heroNames?.get(entry.hero_id)?.includes(query));
+          })
+        : savedIds,
+    [savedIds, byId, heroNames, query],
+  );
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const titleId = useId();
   const descriptionId = useId();
   const contentRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const openingMatch = useRef(false);
   const focusAfterLoad = useRef<number | null>(null);
   useEffect(() => {
@@ -47,13 +67,13 @@ export function SavedMatchesMenu({
     focusAfterLoad.current = null;
   }, [visibleCount]);
   const remove = (id: number, index: number) => {
-    const next = savedIds[index + 1] ?? savedIds[index - 1];
+    const next = filteredIds[index + 1] ?? filteredIds[index - 1];
     if (!toggleSaved(id)) return;
     requestAnimationFrame(() => {
       const target = contentRef.current?.querySelector<HTMLButtonElement>(
         `[data-saved-row="${next}"] button:not(:disabled)`,
       );
-      (target ?? contentRef.current)?.focus();
+      (target ?? searchRef.current ?? contentRef.current)?.focus();
     });
   };
 
@@ -62,7 +82,10 @@ export function SavedMatchesMenu({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (next) setVisibleCount(PAGE_SIZE);
+        if (next) {
+          setVisibleCount(PAGE_SIZE);
+          setSearch("");
+        }
       }}
     >
       <PopoverTrigger asChild>
@@ -98,6 +121,25 @@ export function SavedMatchesMenu({
           <PopoverTitle id={titleId}>Saved matches</PopoverTitle>
           <PopoverDescription id={descriptionId}>Saved on this browser, newest saved first.</PopoverDescription>
         </PopoverHeader>
+        {savedIds.length > 0 && (
+          <Input
+            ref={searchRef}
+            type="search"
+            aria-label="Search saved matches by hero or match ID"
+            placeholder="Hero or match ID"
+            value={search}
+            className="h-8 shrink-0"
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setVisibleCount(PAGE_SIZE);
+              focusAfterLoad.current = null;
+            }}
+          />
+        )}
+        <output className="sr-only">
+          {filteredIds.length} saved {filteredIds.length === 1 ? "match" : "matches"}
+          {query && " found"}
+        </output>
         {savedIds.length === 0 ? (
           <Empty className="gap-2 p-2">
             <EmptyHeader>
@@ -105,9 +147,16 @@ export function SavedMatchesMenu({
               <EmptyDescription>Use the bookmark beside a match ID to save it for later.</EmptyDescription>
             </EmptyHeader>
           </Empty>
+        ) : filteredIds.length === 0 ? (
+          <Empty className="gap-2 p-2">
+            <EmptyHeader>
+              <EmptyTitle>No matches found</EmptyTitle>
+              <EmptyDescription>Try another hero name or match ID.</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
           <ul className="flex flex-col divide-y divide-border" aria-label="Saved matches for this player">
-            {savedIds.slice(0, visibleCount).map((id, index) => {
+            {filteredIds.slice(0, visibleCount).map((id, index) => {
               const entry = byId.get(id);
               return (
                 <li key={id} data-saved-row={id} className="flex min-w-0 items-center gap-1">
@@ -166,16 +215,16 @@ export function SavedMatchesMenu({
             })}
           </ul>
         )}
-        {savedIds.length > visibleCount && (
+        {filteredIds.length > visibleCount && (
           <Button
             variant="outline"
             size="sm"
             onClick={() => {
-              focusAfterLoad.current = savedIds[visibleCount];
+              focusAfterLoad.current = filteredIds[visibleCount];
               setVisibleCount((count) => count + PAGE_SIZE);
             }}
           >
-            Show {Math.min(PAGE_SIZE, savedIds.length - visibleCount)} more
+            Show {Math.min(PAGE_SIZE, filteredIds.length - visibleCount)} more
           </Button>
         )}
       </PopoverContent>
