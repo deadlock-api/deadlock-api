@@ -73,6 +73,8 @@ export default defineConfig({
         enabled: true,
         crawlLinks: true,
         filter: ({ path }) =>
+          // Query variants share one output file; crawling them overwrites the default page's HTML.
+          !path.includes("?") &&
           // Tracker pages are patron-gated and per-user; prerendering them would bake gate HTML.
           path !== "/auth" && path !== "/auth/patreon" && !/^\/players\/\d+$/.test(path),
       },
