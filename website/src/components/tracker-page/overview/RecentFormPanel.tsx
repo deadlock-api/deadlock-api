@@ -77,51 +77,37 @@ function ComparisonMetrics({ recent, previous }: { recent: TrackerSummary; previ
   }));
 
   return (
-    <>
-      <dl className="flex flex-col divide-y @sm/stats-dialog:hidden">
+    <Table className="table-fixed text-[11px] @sm/stats-dialog:text-sm [&_td]:px-1 [&_td]:py-1.5 @sm/stats-dialog:[&_td]:px-2 [&_th]:h-8 [&_th]:px-1 @sm/stats-dialog:[&_th]:px-2">
+      <caption className="sr-only">Recent performance compared with the previous match window</caption>
+      <TableHeader>
+        <TableRow>
+          <TableHead scope="col" className="w-[32%]">
+            Metric
+          </TableHead>
+          <TableHead scope="col" className="text-right">
+            Latest
+          </TableHead>
+          <TableHead scope="col" className="text-right">
+            Previous
+          </TableHead>
+          <TableHead scope="col" className="text-right">
+            Change
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
         {rows.map((row) => (
-          <div key={row.label} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
-            <dt className="text-sm font-medium">{row.label}</dt>
-            <dd className="grid grid-cols-3 gap-2 text-sm tabular-nums">
-              <div>
-                <span className="block text-xs text-muted-foreground">Latest</span>
-                {row.latest}
-              </div>
-              <div>
-                <span className="block text-xs text-muted-foreground">Previous</span>
-                {row.previous}
-              </div>
-              <div className="text-right">
-                <span className="block text-xs text-muted-foreground">Change</span>
-                {row.change}
-              </div>
-            </dd>
-          </div>
+          <TableRow key={row.label}>
+            <TableHead scope="row" className="whitespace-normal">
+              {row.label}
+            </TableHead>
+            <TableCell className="text-right tabular-nums">{row.latest}</TableCell>
+            <TableCell className="text-right tabular-nums">{row.previous}</TableCell>
+            <TableCell className="text-right whitespace-normal">{row.change}</TableCell>
+          </TableRow>
         ))}
-      </dl>
-      <div className="hidden @sm/stats-dialog:block">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Metric</TableHead>
-              <TableHead className="text-right">Latest</TableHead>
-              <TableHead className="text-right">Previous</TableHead>
-              <TableHead className="text-right">Change</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.label}>
-                <TableHead scope="row">{row.label}</TableHead>
-                <TableCell className="text-right tabular-nums">{row.latest}</TableCell>
-                <TableCell className="text-right tabular-nums">{row.previous}</TableCell>
-                <TableCell className="text-right">{row.change}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </>
+      </TableBody>
+    </Table>
   );
 }
 
@@ -186,12 +172,13 @@ export function RecentFormPanel({
   return (
     <OverviewDetailPanel
       title="Recent form"
+      dialogClassName="sm:max-w-2xl"
       icon={Flame}
       meta={meta}
       details={(close) => (
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">{scope}</p>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">{scope}</p>
             <ToggleGroup
               type="single"
               variant="outline"
@@ -215,18 +202,18 @@ export function RecentFormPanel({
           </div>
           {previous ? (
             <>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-md border p-3">
-                  <h3 className="text-sm font-semibold">Latest {recent.matches} matches</h3>
-                  <p className="text-xs text-muted-foreground">{dateRange(entries)}</p>
-                  <p className="mt-2 text-sm tabular-nums">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-md border p-2">
+                  <h3 className="text-xs font-semibold">Latest {recent.matches} matches</h3>
+                  <p className="text-[10px] text-muted-foreground">{dateRange(entries)}</p>
+                  <p className="mt-1 text-xs tabular-nums">
                     {recent.wins} wins / {recent.losses} losses
                   </p>
                 </div>
-                <div className="rounded-md border p-3">
-                  <h3 className="text-sm font-semibold">Previous {previous.matches} matches</h3>
-                  <p className="text-xs text-muted-foreground">{dateRange(previousEntries)}</p>
-                  <p className="mt-2 text-sm tabular-nums">
+                <div className="rounded-md border p-2">
+                  <h3 className="text-xs font-semibold">Previous {previous.matches} matches</h3>
+                  <p className="text-[10px] text-muted-foreground">{dateRange(previousEntries)}</p>
+                  <p className="mt-1 text-xs tabular-nums">
                     {previous.wins} wins / {previous.losses} losses
                   </p>
                 </div>
