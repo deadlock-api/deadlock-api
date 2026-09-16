@@ -1,15 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type {
-  PlayerMatchHistoryEntry,
-  PlayersApiEnemyStatsRequest,
-  PlayersApiMateStatsRequest,
-} from "deadlock_api_client";
+import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { PaginationControls } from "~/components/PaginationControls";
+import { MODE_CONFIG } from "~/components/selectors/ModeSelector";
 import { Button } from "~/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader } from "~/components/ui/empty";
 import { Input } from "~/components/ui/input";
@@ -25,6 +22,7 @@ import {
   intersectCompanionRows,
   sortCompanionRows,
 } from "~/lib/tracker/companions";
+import type { TrackerFilterValues } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 import { trackerEnemyStatsQueryOptions, trackerMateStatsQueryOptions } from "~/queries/tracker-queries";
 
@@ -33,6 +31,7 @@ import { PanelTooltipContent } from "../shared/PanelTooltipContent";
 import { CompanionMatchesDialog } from "./CompanionMatchesDialog";
 
 interface CompanionTableProps {
+  paginationKey: string;
   rows: CompanionRow[] | undefined;
   isPending: boolean;
   isError: boolean;
@@ -47,6 +46,7 @@ interface CompanionTableProps {
 }
 
 function CompanionTable({
+  paginationKey,
   rows,
   isPending,
   isError,
@@ -62,7 +62,11 @@ function CompanionTable({
   const minimumMatchesId = useId();
   const [minMatches, setMinMatches] = useState(2);
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(0);
+  const [pagination, setPagination] = useState({ key: paginationKey, page: 0 });
+  // A different filter scope starts at the top; refreshing the same scope preserves the page.
+  if (pagination.key !== paginationKey) setPagination({ key: paginationKey, page: 0 });
+  const currentPage = pagination.key === paginationKey ? pagination.page : 0;
+  const setCurrentPage = (page: number) => setPagination({ key: paginationKey, page });
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<CompanionSort>("matches");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
@@ -272,31 +276,19 @@ function CompanionTable({
 
 interface BreakdownTabProps {
   accountId: number;
-  gameMode: string;
-  minUnixTimestamp?: number | null;
-  maxUnixTimestamp?: number | null;
+  filters: TrackerFilterValues;
   /** The filter-bar-scoped match history; companion stats are intersected with it so every filter applies. */
   entries: PlayerMatchHistoryEntry[];
   onOpenMatch: (matchId: number) => void;
 }
 
-export function MatesTab({
-  accountId,
-  gameMode,
-  minUnixTimestamp,
-  maxUnixTimestamp,
-  entries,
-  onOpenMatch,
-}: BreakdownTabProps) {
-  const params = useMemo(
-    (): PlayersApiMateStatsRequest => ({
-      accountId,
-      gameMode: gameMode as PlayersApiMateStatsRequest["gameMode"],
-      minUnixTimestamp: minUnixTimestamp ?? undefined,
-      maxUnixTimestamp: maxUnixTimestamp ?? undefined,
-    }),
-    [accountId, gameMode, minUnixTimestamp, maxUnixTimestamp],
-  );
+export function MatesTab({ accountId, filters, entries, onOpenMatch }: BreakdownTabProps) {
+  const params = {
+    accountId,
+    gameMode: MODE_CONFIG[filters.mode].gameMode,
+    minUnixTimestamp: filters.minUnixTimestamp ?? undefined,
+    maxUnixTimestamp: filters.maxUnixTimestamp ?? undefined,
+  };
   const query = useQuery(trackerMateStatsQueryOptions(params));
   const rows = useMemo(
     () =>
@@ -310,6 +302,7 @@ export function MatesTab({
   );
   return (
     <CompanionTable
+      paginationKey={JSON.stringify([accountId, filters])}
       rows={rows}
       isPending={query.isPending}
       isError={query.isError}
@@ -325,23 +318,13 @@ export function MatesTab({
   );
 }
 
-export function EnemiesTab({
-  accountId,
-  gameMode,
-  minUnixTimestamp,
-  maxUnixTimestamp,
-  entries,
-  onOpenMatch,
-}: BreakdownTabProps) {
-  const params = useMemo(
-    (): PlayersApiEnemyStatsRequest => ({
-      accountId,
-      gameMode: gameMode as PlayersApiEnemyStatsRequest["gameMode"],
-      minUnixTimestamp: minUnixTimestamp ?? undefined,
-      maxUnixTimestamp: maxUnixTimestamp ?? undefined,
-    }),
-    [accountId, gameMode, minUnixTimestamp, maxUnixTimestamp],
-  );
+export function EnemiesTab({ accountId, filters, entries, onOpenMatch }: BreakdownTabProps) {
+  const params = {
+    accountId,
+    gameMode: MODE_CONFIG[filters.mode].gameMode,
+    minUnixTimestamp: filters.minUnixTimestamp ?? undefined,
+    maxUnixTimestamp: filters.maxUnixTimestamp ?? undefined,
+  };
   const query = useQuery(trackerEnemyStatsQueryOptions(params));
   const rows = useMemo(
     () =>
@@ -353,6 +336,7 @@ export function EnemiesTab({
   );
   return (
     <CompanionTable
+      paginationKey={JSON.stringify([accountId, filters])}
       rows={rows}
       isPending={query.isPending}
       isError={query.isError}

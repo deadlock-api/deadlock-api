@@ -325,25 +325,11 @@ function TrackerContent({ accountId }: { accountId: number }) {
           <div className="grid gap-6 xl:grid-cols-2">
             <div className="min-w-0">
               <h3 className="mb-2 text-lg font-semibold">Mates</h3>
-              <MatesTab
-                onOpenMatch={openMatch}
-                accountId={accountId}
-                gameMode={gameMode}
-                minUnixTimestamp={minUnixTimestamp}
-                maxUnixTimestamp={maxUnixTimestamp}
-                entries={filteredEntries}
-              />
+              <MatesTab onOpenMatch={openMatch} accountId={accountId} filters={filters} entries={filteredEntries} />
             </div>
             <div className="min-w-0">
               <h3 className="mb-2 text-lg font-semibold">Enemies</h3>
-              <EnemiesTab
-                onOpenMatch={openMatch}
-                accountId={accountId}
-                gameMode={gameMode}
-                minUnixTimestamp={minUnixTimestamp}
-                maxUnixTimestamp={maxUnixTimestamp}
-                entries={filteredEntries}
-              />
+              <EnemiesTab onOpenMatch={openMatch} accountId={accountId} filters={filters} entries={filteredEntries} />
             </div>
           </div>
         )}

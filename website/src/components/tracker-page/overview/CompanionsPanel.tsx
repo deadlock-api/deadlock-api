@@ -67,7 +67,8 @@ export function CompanionsPanel({
           <div className="min-w-0">
             <h4 className="mb-2 text-xs font-semibold">Teammates</h4>
             <MatesTab
-              {...params}
+              accountId={accountId}
+              filters={filters}
               entries={entries}
               onOpenMatch={(id) => {
                 close();
@@ -78,7 +79,8 @@ export function CompanionsPanel({
           <div className="min-w-0">
             <h4 className="mb-2 text-xs font-semibold">Opponents</h4>
             <EnemiesTab
-              {...params}
+              accountId={accountId}
+              filters={filters}
               entries={entries}
               onOpenMatch={(id) => {
                 close();

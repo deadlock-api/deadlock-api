@@ -300,3 +300,48 @@ test("narrow scoreboards can sort statistics whose columns are hidden", async ({
   await expect(names).toHaveText(["Tracker Tester", "Test Teammate"]);
   await expect(sort).toHaveText("Player");
 });
+
+test("companion pagination resets for filter changes while preserving search and sort", async ({ page }) => {
+  await page.clock.install();
+  const sharedMatches = history.map((match) => match.match_id);
+  await page.route(`${API_ORIGIN}/v1/players/*/mate-stats**`, (route) =>
+    route.fulfill({
+      json: Array.from({ length: 24 }, (_, index) => ({ mate_id: 1000 + index, matches: sharedMatches })),
+    }),
+  );
+  await page.route(`${API_ORIGIN}/v1/players/*/enemy-stats**`, (route) =>
+    route.fulfill({
+      json: Array.from({ length: 24 }, (_, index) => ({ enemy_id: 2000 + index, matches: sharedMatches })),
+    }),
+  );
+  await page.goto(`/players/${ACCOUNT_ID}?date_range=_&tab=mates`);
+  const mates = page.getByRole("table", { name: "Detailed teammate stats", exact: true });
+  const enemies = page.getByRole("table", { name: "Detailed opponent stats", exact: true });
+  await expect(mates.getByRole("row")).toHaveCount(11);
+  await expect(enemies.getByRole("row")).toHaveCount(11);
+  await page.getByRole("searchbox", { name: "Search player", exact: true }).first().fill("Player");
+  await mates.getByRole("button", { name: "Sort by win rate, descending", exact: true }).click();
+  const matePage = page.getByRole("spinbutton", { name: "Page number", exact: true }).first();
+  const enemyPage = page.getByRole("spinbutton", { name: "Page number", exact: true }).last();
+  await matePage.fill("3");
+  await enemyPage.fill("2");
+  await page.getByRole("radio", { name: "Wins", exact: true }).click();
+  await expect(matePage).toHaveValue("1");
+  await expect(enemyPage).toHaveValue("1");
+  await expect(page.getByRole("searchbox", { name: "Search player", exact: true }).first()).toHaveValue("Player");
+  await expect(mates.getByRole("columnheader", { name: "Sort by win rate, ascending", exact: true })).toHaveAttribute(
+    "aria-sort",
+    "descending",
+  );
+  await expect(mates.getByRole("button", { name: "View 25 matches with Player 1000", exact: true })).toBeVisible();
+  await matePage.fill("3");
+  await page.clock.fastForward(61_000);
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect(page.getByRole("button", { name: /Refreshing/ })).toHaveCount(0);
+  await expect(matePage).toHaveValue("3");
+  await page.getByRole("radio", { name: "Losses", exact: true }).click();
+  await expect(matePage).toHaveValue("1");
+  await matePage.fill("2");
+  await page.goBack();
+  await expect(matePage).toHaveValue("1");
+});
