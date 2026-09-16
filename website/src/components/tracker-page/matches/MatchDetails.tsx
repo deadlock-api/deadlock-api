@@ -148,7 +148,7 @@ function MatchHeader({
               <Link
                 to="/team-builder"
                 search={{ match: matchId }}
-                className="inline-flex items-center gap-1 transition-colors hover:text-foreground"
+                className="inline-flex min-h-6 items-center gap-1 transition-colors hover:text-foreground"
               >
                 <UsersRound className="size-3.5" />
                 Team Builder
