@@ -189,11 +189,13 @@ impl LaneDuoFilters<'_> {
             )
         });
 
-        // Dropping players before the GROUP BY is sound only with both lists set: every player of
-        // a surviving lane is then in their union, so the prefilter cannot truncate a duo we still
-        // want.
+        // Dropping players before the GROUP BY is sound only with both lists set as pools: every
+        // player of a surviving lane is then in their union, so the prefilter cannot truncate a duo
+        // we still want. A single hero leaves its partner unconstrained.
         let hero_scope = match (self.heroes, self.enemy_heroes) {
-            (Some(hero_ids), Some(enemy_hero_ids)) => {
+            (Some(hero_ids), Some(enemy_hero_ids))
+                if hero_ids.len() > 1 && enemy_hero_ids.len() > 1 =>
+            {
                 hero_ids.iter().chain(enemy_hero_ids).copied().collect_vec()
             }
             _ => vec![],
@@ -206,28 +208,27 @@ impl LaneDuoFilters<'_> {
             .build(),
         );
 
-        // With one side set nothing above narrows the scan, so the match-level prefilter is what
-        // keeps it from aggregating every match in the window. With both sides set the player
-        // prefilter already does that and the extra subquery costs more than it saves
-        // (measured +27% wall time).
-        let required_heroes = match (self.heroes, self.enemy_heroes) {
-            (Some(ids), None) | (None, Some(ids)) => ids.iter().copied().unique().collect_vec(),
-            _ => vec![],
+        // Without the player prefilter nothing above narrows the scan, so the match-level prefilter
+        // is what keeps it from aggregating every match in the window. With it the extra subquery
+        // costs more than it saves (measured +27% wall time). Only lists of at most two heroes
+        // pin down heroes a matchup must contain: a larger pool is satisfied by any two of them.
+        let required_heroes = if hero_scope.is_empty() {
+            [self.heroes, self.enemy_heroes]
+                .into_iter()
+                .flatten()
+                .filter(|ids| ids.len() <= 2)
+                .flatten()
+                .copied()
+                .unique()
+                .collect_vec()
+        } else {
+            vec![]
         };
 
-        let mut duo_filters = vec![];
-        if let Some(hero_ids) = self.heroes {
-            duo_filters.push(format!(
-                "hasAll([{}], arrayMap(h -> toUInt32(h), duo))",
-                id_list(hero_ids)
-            ));
-        }
-        if let Some(enemy_hero_ids) = self.enemy_heroes {
-            duo_filters.push(format!(
-                "hasAll([{}], arrayMap(h -> toUInt32(h), enemy_duo))",
-                id_list(enemy_hero_ids)
-            ));
-        }
+        let duo_filters = [(self.heroes, "duo"), (self.enemy_heroes, "enemy_duo")]
+            .into_iter()
+            .filter_map(|(hero_ids, duo)| hero_ids.map(|ids| duo_filter(ids, duo)))
+            .collect_vec();
 
         LaneDuoFilterSql {
             account_prefilter,
@@ -235,6 +236,15 @@ impl LaneDuoFilters<'_> {
             required_heroes,
             duo_filters: join_filters(&duo_filters),
         }
+    }
+}
+
+/// A single hero means the duo includes it; two or more are the pool both duo members come from.
+fn duo_filter(hero_ids: &[u32], duo: &str) -> String {
+    let duo = format!("arrayMap(h -> toUInt32(h), {duo})");
+    match hero_ids {
+        [hero_id] => format!("has({duo}, {hero_id})"),
+        _ => format!("hasAll([{}], {duo})", id_list(hero_ids)),
     }
 }
 

@@ -88,14 +88,14 @@ pub(super) struct LaneMatchupStatsQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     assigned_lanes: Option<Vec<u32>>,
-    /// Comma separated list of hero ids the *ally* duo has to be drawn from. Omit to return every duo. See more: <https://api.deadlock-api.com/v1/assets/heroes>
+    /// Comma separated list of hero ids the *ally* duo has to be drawn from, or a single hero id the *ally* duo has to include. Omit to return every duo. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
         test,
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     hero_ids: Option<Vec<u32>>,
-    /// Comma separated list of hero ids the *enemy* duo has to be drawn from. Omit to return every duo. See more: <https://api.deadlock-api.com/v1/assets/heroes>
+    /// Comma separated list of hero ids the *enemy* duo has to be drawn from, or a single hero id the *enemy* duo has to include. Omit to return every duo. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
         test,
@@ -438,15 +438,50 @@ mod tests {
         let both_sides = build_query(
             &LaneMatchupStatsQuery {
                 hero_ids: Some(vec![81, 80]),
-                enemy_hero_ids: Some(vec![6]),
+                enemy_hero_ids: Some(vec![6, 7]),
                 ..Default::default()
             },
             &stats,
         );
-        assert!(both_sides.contains("hero_id IN (81, 80, 6)"));
+        assert!(both_sides.contains("hero_id IN (81, 80, 6, 7)"));
         assert!(!both_sides.contains("uniqExact"));
 
         assert!(!build_query(&LaneMatchupStatsQuery::default(), &stats).contains("uniqExact"));
+    }
+
+    #[test]
+    fn single_hero_matches_any_duo_including_it() {
+        let stats = LaneStats::new(None).unwrap();
+        let query = build_query(
+            &LaneMatchupStatsQuery {
+                hero_ids: Some(vec![3]),
+                enemy_hero_ids: Some(vec![15, 31]),
+                ..Default::default()
+            },
+            &stats,
+        );
+        assert!(query.contains("has(arrayMap(h -> toUInt32(h), duo), 3)"));
+        assert!(query.contains("hasAll([15, 31], arrayMap(h -> toUInt32(h), enemy_duo))"));
+        // The partner of hero 3 is unconstrained, so only the match-level prefilter may apply.
+        assert_eq!(query.matches("hero_id IN").count(), 1);
+        assert!(
+            query.contains(
+                "hero_id IN (3, 15, 31) GROUP BY match_id HAVING uniqExact(hero_id) = 3)"
+            )
+        );
+    }
+
+    #[test]
+    fn one_sided_pool_does_not_require_every_pool_hero() {
+        let stats = LaneStats::new(None).unwrap();
+        let query = build_query(
+            &LaneMatchupStatsQuery {
+                hero_ids: Some(vec![2, 3, 63]),
+                ..Default::default()
+            },
+            &stats,
+        );
+        assert!(!query.contains("uniqExact"));
     }
 }
 

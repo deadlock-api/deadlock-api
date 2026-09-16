@@ -93,14 +93,14 @@ pub(super) struct LaneSoulCurveQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     assigned_lanes: Option<Vec<u32>>,
-    /// Comma separated list of hero ids the *ally* duo has to be drawn from. Omit to return every duo. See more: <https://api.deadlock-api.com/v1/assets/heroes>
+    /// Comma separated list of hero ids the *ally* duo has to be drawn from, or a single hero id the *ally* duo has to include. Omit to return every duo. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
         test,
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     hero_ids: Option<Vec<u32>>,
-    /// Comma separated list of hero ids the *enemy* duo has to be drawn from. Omit to return every duo. See more: <https://api.deadlock-api.com/v1/assets/heroes>
+    /// Comma separated list of hero ids the *enemy* duo has to be drawn from, or a single hero id the *enemy* duo has to include. Omit to return every duo. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
         test,
