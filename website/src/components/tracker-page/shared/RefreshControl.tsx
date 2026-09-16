@@ -56,7 +56,7 @@ export function RefreshControl({ accountId }: { accountId: number }) {
       </Button>
       {isError && !isFetching && (
         <output className="text-xs">
-          {dataUpdatedAt > 0 ? "Refresh failed · showing saved matches" : "Could not load matches"}
+          {dataUpdatedAt > 0 ? "Refresh failed · showing loaded history" : "Could not load matches"}
         </output>
       )}
       {isFetching ? (
