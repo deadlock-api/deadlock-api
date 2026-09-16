@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { CircleDashed, Gavel, LogOut, ShieldCheck, Trophy, UsersRound } from "lucide-react";
+import { CircleDashed, Gavel, LogOut, RefreshCw, ShieldCheck, Trophy, UsersRound } from "lucide-react";
 import { type ReactNode, useMemo, useRef, useState } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
@@ -9,6 +9,7 @@ import { CopyButton } from "~/components/copy-button";
 import { HeroImage } from "~/components/HeroImage";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "~/components/ui/empty";
 import { day } from "~/dayjs";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import {
@@ -31,6 +32,7 @@ import { type TrackerMatchPlayer, trackerMatchMetadataQueryOptions } from "~/que
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { RankDelta } from "../shared/RankDelta";
+import { TrackerQueryError } from "../shared/TrackerQueryError";
 import { LanesCard } from "./LanesCard";
 import { MatchTimeline } from "./MatchTimeline";
 import { Scoreboard, TEAMS } from "./Scoreboard";
@@ -158,7 +160,7 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
   const matchId = entry.match_id;
   // Street Brawl reports lane ids too, but its map has no lanes to speak of.
   const laned = hasLanes(entry);
-  const { data: match, isPending, isError, refetch } = useQuery(trackerMatchMetadataQueryOptions(matchId));
+  const { data: match, isPending, isError, isFetching, refetch } = useQuery(trackerMatchMetadataQueryOptions(matchId));
   const { data: itemsById } = useQuery({
     ...itemUpgradesQueryOptions,
     select: (items) => new Map(items.map((item) => [item.id, item])),
@@ -199,25 +201,44 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
 
   if (isPending) return <LoadingLogo />;
 
-  if (isError) {
+  if (isError && !match) {
     return (
-      <div className="flex flex-col items-center gap-2 py-4 text-sm text-muted-foreground">
-        Failed to load match details.
-        <Button variant="outline" size="sm" onClick={() => refetch()}>
-          Retry
-        </Button>
-      </div>
+      <TrackerQueryError
+        title="Could not load match details"
+        description="The request failed. Try loading this match again."
+        onRetry={() => refetch()}
+        isRetrying={isFetching}
+      />
     );
   }
 
   if (!match) {
     return (
-      <div className="py-4 text-center text-sm text-muted-foreground">No details are available for this match.</div>
+      <Empty>
+        <EmptyHeader>
+          <EmptyTitle>Match details unavailable</EmptyTitle>
+          <EmptyDescription>These details may not have been collected yet. You can check again.</EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw data-icon="inline-start" className={cn(isFetching && "animate-spin")} />
+            {isFetching ? "Checking…" : "Check again"}
+          </Button>
+        </EmptyContent>
+      </Empty>
     );
   }
 
   return (
     <div className="flex flex-col gap-4">
+      {isError && (
+        <TrackerQueryError
+          title="Could not refresh match details"
+          description="Showing the last loaded details. Try again to refresh them."
+          onRetry={() => refetch()}
+          isRetrying={isFetching}
+        />
+      )}
       <MatchTimeline
         ref={timelineRef}
         lead={soulLead}
