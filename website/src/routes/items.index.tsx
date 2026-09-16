@@ -147,12 +147,14 @@ function ItemsPage() {
       </div>
       <Filter.Root>
         <Filter.Hero value={hero} onChange={setHero} allowNull />
-        <Filter.MinMatches value={minMatches} onChange={setMinMatches} />
+        <Filter.MinMatches value={minMatches} onChange={setMinMatches} defaultValue={10} />
         <Filter.ModeWithRank
           mode={mode}
           onModeChange={setMode}
           minRank={minRankId}
           maxRank={maxRankId}
+          defaultMinRank={91}
+          defaultMaxRank={116}
           onRankChange={(min, max) => {
             setMinRankId(min);
             setMaxRankId(max);

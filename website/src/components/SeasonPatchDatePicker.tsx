@@ -6,7 +6,7 @@ import { OptionRow } from "~/components/Filter/OptionRow";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
 import { useSeasons } from "~/hooks/useSeasons";
-import { type SeasonInfo, previousSeasonRange, seasonContaining } from "~/lib/seasons";
+import { type SeasonInfo, defaultDateRange, previousSeasonRange, seasonContaining } from "~/lib/seasons";
 
 import { DateRangePicker } from "./primitives/DateRangePicker";
 
@@ -185,14 +185,19 @@ export function SeasonPatchDatePicker({
     emit(range.startDate?.startOf("day"), range.endDate?.endOf("day"));
   };
 
-  const isActive = value.startDate != null || value.endDate != null;
+  const [defaultStart, defaultEnd] = defaultDateRange(seasons);
+  const isActive =
+    value.startDate?.valueOf() !== defaultStart?.valueOf() || value.endDate?.valueOf() !== defaultEnd?.valueOf();
 
   return (
     <FilterCell
       label="Date"
       value={dateRangeLabel(value, { seasons, patches: patchDates })}
       active={isActive}
-      onReset={() => emit()}
+      onReset={() => {
+        emit(defaultStart, defaultEnd);
+        setQueryTab(null);
+      }}
       icon={<CalendarIcon className="size-3.5 shrink-0" />}
       className="w-auto p-3 lg:min-w-[340px]"
     >

@@ -67,7 +67,7 @@ export function HeroFiltersSection({
           />
         </>
       ) : (
-        <Filter.MinMatches value={minMatches} onChange={setMinMatches} label="Matches" step={10} />
+        <Filter.MinMatches value={minMatches} onChange={setMinMatches} label="Matches" step={10} defaultValue={10} />
       )}
       <Filter.ModeWithRank
         mode={mode}
@@ -75,6 +75,8 @@ export function HeroFiltersSection({
         hideRankRange={tab === "stats-by-rank"}
         minRank={minRankId}
         maxRank={maxRankId}
+        defaultMinRank={91}
+        defaultMaxRank={116}
         onRankChange={(min, max) => {
           setMinRankId(min);
           setMaxRankId(max);
@@ -82,7 +84,9 @@ export function HeroFiltersSection({
       />
       <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
       {tab === "hero-combs" && <HeroCombFilters />}
-      {tab === "hero-matchup-details" && <Filter.Hero value={heroId} onChange={(id) => id != null && setHeroId(id)} />}
+      {tab === "hero-matchup-details" && (
+        <Filter.Hero value={heroId} defaultValue={2} onChange={(id) => id != null && setHeroId(id)} />
+      )}
       {(tab === "matchups" || tab === "hero-matchup-details") && (
         <FilterToggleCell
           label="Lane"

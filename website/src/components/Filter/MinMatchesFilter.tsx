@@ -7,6 +7,7 @@ export function MinMatchesFilter({
   step = 10,
   min,
   max,
+  defaultValue,
 }: {
   value: number;
   onChange: (val: number) => void;
@@ -14,6 +15,17 @@ export function MinMatchesFilter({
   step?: number;
   min?: number;
   max?: number;
+  defaultValue?: number;
 }) {
-  return <NumberSelector value={value} onChange={onChange} label={label} step={step} min={min} max={max} />;
+  return (
+    <NumberSelector
+      value={value}
+      onChange={onChange}
+      label={label}
+      step={step}
+      min={min}
+      max={max}
+      defaultValue={defaultValue}
+    />
+  );
 }

@@ -34,7 +34,19 @@ function CellReset({
       aria-label={`Reset ${label.toLowerCase()}`}
       title={`Reset ${label.toLowerCase()}`}
       disabled={!active}
-      onClick={onReset}
+      onClick={(event) => {
+        const button = event.currentTarget;
+        const cell = button.parentElement;
+        onReset();
+        // Reset removes this button. Keep keyboard focus in the same filter box.
+        requestAnimationFrame(() => {
+          if (!cell?.isConnected || (document.activeElement !== button && document.activeElement !== document.body))
+            return;
+          cell
+            .querySelector<HTMLElement>('button[data-slot="popover-trigger"], [role="radio"][aria-checked="true"]')
+            ?.focus({ preventScroll: true });
+        });
+      }}
     >
       <RotateCcw />
     </Button>
@@ -129,7 +141,7 @@ export function FilterCell({
             )}
           </button>
         </PopoverTrigger>
-        {onReset && (
+        {onReset && active && (
           <CellReset
             label={label}
             active={active}
@@ -187,7 +199,9 @@ export function FilterToggleCell<T extends string>({
       <span className={cn("flex", onReset && "pr-5")}>
         <CellLabel active={active}>{label}</CellLabel>
       </span>
-      {onReset && <CellReset label={label} active={active} onReset={onReset} className="absolute top-0.5 right-0.5" />}
+      {onReset && active && (
+        <CellReset label={label} active={active} onReset={onReset} className="absolute top-0.5 right-0.5" />
+      )}
       <Segmented
         value={value}
         onValueChange={onValueChange}

@@ -56,9 +56,17 @@ interface RankRangeSelectorProps {
   minRank: number;
   maxRank: number;
   onRankChange: (min: number, max: number) => void;
+  defaultMinRank?: number;
+  defaultMaxRank?: number;
 }
 
-export function RankRangeSelector({ minRank, maxRank, onRankChange }: RankRangeSelectorProps) {
+export function RankRangeSelector({
+  minRank,
+  maxRank,
+  onRankChange,
+  defaultMinRank = 0,
+  defaultMaxRank = 116,
+}: RankRangeSelectorProps) {
   const { data: ranksData, isLoading } = useQuery(ranksQueryOptions);
 
   const sortedRanks = useMemo(() => [...(ranksData ?? [])].sort((a: Rank, b: Rank) => a.tier - b.tier), [ranksData]);
@@ -107,6 +115,8 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange }: RankRangeS
   const committedMaxOption = options[maxIndex];
 
   const isFullRange = minIndex === 0 && maxIndex === options.length - 1;
+  const resetMin = defaultMinRank;
+  const resetMax = defaultMaxRank;
   const isMinAtStart = minIndex === 0;
   const isMaxAtEnd = maxIndex === options.length - 1;
 
@@ -145,8 +155,8 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange }: RankRangeS
     <FilterCell
       label="Rank"
       value={getTriggerLabel()}
-      active={!isFullRange}
-      onReset={() => handleValueCommit([0, options.length - 1])}
+      active={minRank !== resetMin || maxRank !== resetMax}
+      onReset={() => onRankChange(resetMin, resetMax)}
       icon={triggerIcon}
       className="w-80 p-4"
     >

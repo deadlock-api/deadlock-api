@@ -46,6 +46,7 @@ export function NumberSelector({
   step,
   min,
   max,
+  defaultValue,
 }: {
   value: number;
   onChange: (val: number) => void;
@@ -53,9 +54,11 @@ export function NumberSelector({
   step: number;
   min?: number;
   max?: number;
+  defaultValue?: number;
 }) {
   const floor = min ?? 0;
-  const isActive = value > floor;
+  const resetValue = defaultValue ?? floor;
+  const isActive = value !== resetValue;
 
   const presets = [...new Set([floor, step, step * 5, step * 10, step * 50])]
     .filter((v) => v >= floor && v <= (max ?? Number.POSITIVE_INFINITY))
@@ -64,9 +67,9 @@ export function NumberSelector({
   return (
     <FilterCell
       label={label}
-      value={isActive ? `≥ ${value}` : "Any"}
+      value={value > floor ? `≥ ${value}` : "Any"}
       active={isActive}
-      onReset={() => onChange(floor)}
+      onReset={() => onChange(resetValue)}
       className="w-auto min-w-56 p-3"
     >
       <div className="flex flex-col gap-2">

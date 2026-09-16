@@ -137,7 +137,9 @@ function PlayersPage() {
         />
         <Filter.Hero value={heroId} onChange={setHeroId} allowNull label="Hero" />
         <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
-        {tab === "scoreboard" && <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={1} />}
+        {tab === "scoreboard" && (
+          <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={1} defaultValue={0} />
+        )}
       </Filter.Root>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="tabs-nav w-full">

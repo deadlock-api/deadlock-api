@@ -24,11 +24,13 @@ export function HeroSelector({
   selectedHero,
   allowSelectNull,
   label,
+  defaultValue,
 }: {
   onHeroSelected: (selectedHero: number | null) => void;
   selectedHero?: number | null;
   allowSelectNull?: boolean;
   label?: string;
+  defaultValue?: number | null;
 }) {
   const { sortedHeroes } = useHeroes();
   const [search, setSearch] = useState("");
@@ -41,7 +43,7 @@ export function HeroSelector({
     return sortedHeroes.filter((h: SlimHero) => h.name.toLowerCase().includes(lower));
   }, [sortedHeroes, search]);
 
-  const isActive = selectedHero != null;
+  const isActive = (selectedHero ?? null) !== (defaultValue ?? null);
 
   const icon = currentHero ? (
     <HeroImage heroId={currentHero.id} className="size-4 shrink-0 object-contain" />
@@ -59,7 +61,7 @@ export function HeroSelector({
       label={label ?? "Hero"}
       value={displayValue}
       active={isActive}
-      onReset={allowSelectNull ? () => select(null) : undefined}
+      onReset={allowSelectNull || defaultValue != null ? () => select(defaultValue ?? null) : undefined}
       icon={icon}
       className="w-80 p-0"
     >
@@ -78,7 +80,7 @@ export function HeroSelector({
             type="button"
             className={cn(
               "mb-1 w-full cursor-pointer rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent",
-              !isActive ? "font-medium text-foreground" : "text-muted-foreground",
+              selectedHero == null ? "font-medium text-foreground" : "text-muted-foreground",
             )}
             onClick={() => select(null)}
           >

@@ -87,6 +87,7 @@ function AbilitiesPage() {
       <Filter.Root>
         <Filter.Hero
           value={heroId}
+          defaultValue={DEFAULT_HERO_ID}
           onChange={(id) => {
             if (id != null) setHeroId(id);
           }}
@@ -101,7 +102,7 @@ function AbilitiesPage() {
             setMaxRankId(max);
           }}
         />
-        <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={0} />
+        <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={0} defaultValue={20} />
         <Filter.ItemsTriState selections={itemSelections} onSelectionsChange={setItemSelections} label="Items" />
         <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
       </Filter.Root>

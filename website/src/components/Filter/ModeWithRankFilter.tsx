@@ -8,6 +8,8 @@ export function ModeWithRankFilter({
   maxRank,
   onRankChange,
   hideRankRange,
+  defaultMinRank,
+  defaultMaxRank,
 }: {
   mode: Mode;
   onModeChange: (mode: Mode) => void;
@@ -15,12 +17,20 @@ export function ModeWithRankFilter({
   maxRank: number;
   onRankChange: (min: number, max: number) => void;
   hideRankRange?: boolean;
+  defaultMinRank?: number;
+  defaultMaxRank?: number;
 }) {
   return (
     <>
       <ModeSelector value={mode} onChange={onModeChange} />
       {!hideRankRange && MODE_CONFIG[mode].supportsRank && (
-        <RankRangeSelector minRank={minRank} maxRank={maxRank} onRankChange={onRankChange} />
+        <RankRangeSelector
+          minRank={minRank}
+          maxRank={maxRank}
+          onRankChange={onRankChange}
+          defaultMinRank={defaultMinRank}
+          defaultMaxRank={defaultMaxRank}
+        />
       )}
     </>
   );

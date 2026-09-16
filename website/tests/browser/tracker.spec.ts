@@ -12,24 +12,44 @@ test.beforeEach(async ({ page, context }) => {
 });
 
 test("filter boxes reset independently and keep the selected match", async ({ page }) => {
+  await page.route(`${API_ORIGIN}/v1/assets/ranked-seasons`, (route) =>
+    route.fulfill({
+      json: [
+        {
+          class_name: "test_beta_season_1",
+          name: "Beta Season 1",
+          intervals: [
+            {
+              start_timestamp: Date.parse("2026-07-30T20:00:00Z") / 1000,
+              end_timestamp: Date.parse("2027-01-01T00:00:00Z") / 1000,
+            },
+          ],
+        },
+      ],
+    }),
+  );
   await page.goto(`${TRACKER_URL}&hero=11&result=win&match_mode=ranked`);
   await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
   const hero = page.getByRole("button", { name: "Reset hero", exact: true });
   const result = page.getByRole("button", { name: "Reset result", exact: true });
   const mode = page.getByRole("button", { name: "Reset mode", exact: true });
   const date = page.getByRole("button", { name: "Reset date", exact: true });
-  await expect(date).toBeDisabled();
+  await expect(date).toBeVisible();
   await hero.click();
-  await expect(hero).toBeDisabled();
+  await expect(hero).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Hero Any$/i })).toBeFocused();
   await expect(page).not.toHaveURL(/[?&]hero=/);
   await expect(result).toBeEnabled();
   await expect(mode).toBeEnabled();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await result.click();
-  await expect(result).toBeDisabled();
+  await expect(result).toHaveCount(0);
+  await expect(
+    page.getByRole("radiogroup", { name: "Result", exact: true }).getByRole("radio", { name: "All", exact: true }),
+  ).toBeFocused();
   await expect(mode).toBeEnabled();
   await mode.click();
-  await expect(mode).toBeDisabled();
+  await expect(mode).toHaveCount(0);
   await expect(page).toHaveURL(new RegExp(`match=${CURRENT_MATCH}`));
 
   await page.setViewportSize({ width: 320, height: 568 });
@@ -44,16 +64,19 @@ test("filter boxes reset independently and keep the selected match", async ({ pa
   await page.keyboard.press("Escape");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
-  // The default season is a date constraint; clearing it makes the open range explicit in the URL.
-  await page.goto(TRACKER_URL.replace("date_range=_&", ""));
-  await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
-  await page.getByRole("button", { name: /^Filters:/ }).click();
+  // Reset restores the page's initial season and removes its own control.
   await expect(date).toBeEnabled();
   await date.click();
-  await expect(date).toBeDisabled();
-  await expect(page).toHaveURL(/date_range=_/);
+  await expect(date).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Date Beta Season 1$/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Date Beta Season 1$/i })).toBeFocused();
+  await expect(page).not.toHaveURL(/date_range=_/);
   await expect(page).toHaveURL(new RegExp(`match=${CURRENT_MATCH}`));
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
+  await page.getByRole("button", { name: /^Filters:/ }).click();
+  await expect(page.getByRole("button", { name: /^Reset / })).toHaveCount(0);
 });
 
 test("saved-only history preserves details and navigates between bookmarked matches", async ({ page }) => {
