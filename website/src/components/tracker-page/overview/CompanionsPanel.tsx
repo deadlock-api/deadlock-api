@@ -183,7 +183,7 @@ function CompanionPreview({
               const profile = profiles[row.accountId];
               return (
                 <TableRow key={row.accountId}>
-                  <TableCell className="w-full max-w-0 py-1.5 pr-2 pl-0">
+                  <TableCell className="w-full max-w-0 py-1 pr-2 pl-0">
                     <div className="flex min-w-0 items-center gap-1.5">
                       {profile?.avatar && (
                         <img src={profile.avatar} alt="" className="size-5 shrink-0 rounded-full" loading="lazy" />
@@ -194,7 +194,7 @@ function CompanionPreview({
                         <Link
                           to="/players/$accountId"
                           params={{ accountId: String(row.accountId) }}
-                          className="truncate rounded-sm text-xs hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+                          className="min-h-6 min-w-6 truncate rounded-sm text-xs leading-6 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring"
                           title={`Open ${profile?.personaname ?? `Player ${row.accountId}`} in the player tracker`}
                         >
                           {profile?.personaname ?? `Player ${row.accountId}`}
@@ -202,7 +202,7 @@ function CompanionPreview({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="px-1 py-1.5 text-right text-xs tabular-nums">
+                  <TableCell className="px-1 py-1 text-right text-xs tabular-nums">
                     <CompanionMatchesDialog
                       row={row}
                       name={profile?.personaname ?? `Player ${row.accountId}`}
@@ -211,7 +211,7 @@ function CompanionPreview({
                       onOpenMatch={onOpenMatch}
                     />
                   </TableCell>
-                  <TableCell className="py-1.5 pr-0 pl-1 text-right text-xs tabular-nums">
+                  <TableCell className="py-1 pr-0 pl-1 text-right text-xs tabular-nums">
                     {((row.wins / row.matches) * 100).toFixed(0)}%
                   </TableCell>
                 </TableRow>

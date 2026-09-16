@@ -146,7 +146,7 @@ export function CompanionMatchesDialog({
         <button
           type="button"
           className={cn(
-            "cursor-pointer rounded-sm text-primary underline decoration-dotted underline-offset-4 hover:decoration-solid focus-visible:outline-2 focus-visible:outline-ring",
+            "inline-flex min-h-6 min-w-6 cursor-pointer items-center justify-center rounded-sm text-primary underline decoration-dotted underline-offset-4 hover:decoration-solid focus-visible:outline-2 focus-visible:outline-ring",
             className,
           )}
           aria-label={`View ${row.matches} ${row.matches === 1 ? "match" : "matches"} ${relation} ${name}`}

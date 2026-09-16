@@ -176,7 +176,7 @@ function CompanionTable({
                 <button
                   type="button"
                   aria-label={`Sort by ${column.label.toLowerCase()}, ${sortKey === column.key && sortDir === "desc" ? "ascending" : "descending"}`}
-                  className="inline-flex items-center gap-1 rounded-sm hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+                  className="inline-flex min-h-6 min-w-6 items-center gap-1 rounded-sm hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
                   onClick={() => {
                     setSortDir(sortKey === column.key && sortDir === "desc" ? "asc" : "desc");
                     setSortKey(column.key);
@@ -200,7 +200,7 @@ function CompanionTable({
             const profile = profiles[row.accountId];
             const winrate = row.matches > 0 ? row.wins / row.matches : 0;
             return (
-              <TableRow key={row.accountId}>
+              <TableRow key={row.accountId} className="[&>td]:py-1.5">
                 <TableCell className="w-full max-w-0">
                   <div className="flex items-center gap-2">
                     {isLoadingProfiles && !profile ? (
@@ -216,8 +216,8 @@ function CompanionTable({
                         <Link
                           to="/players/$accountId"
                           params={{ accountId: String(row.accountId) }}
-                          className="truncate hover:text-primary hover:underline"
-                          title="Open player tracker"
+                          className="min-h-6 min-w-6 truncate rounded-sm leading-6 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+                          title={`Open ${profile?.personaname ?? `Player ${row.accountId}`} in the player tracker`}
                         >
                           {profile?.personaname ?? `Player ${row.accountId}`}
                         </Link>
