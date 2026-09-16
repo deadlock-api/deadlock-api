@@ -695,3 +695,22 @@ test("client HTTP errors allow a manual retry without repeating failed requests"
   await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
   await expect.poll(() => [...requested].sort()).toEqual([2997, 2998, 2998, 2999]);
 });
+
+test("failed build assets can be retried while scoreboard stats remain available", async ({ page }) => {
+  let available = false;
+  let requests = 0;
+  await page.route(`${API_ORIGIN}/v1/graphql`, (route) => {
+    if (requestedMatchId(route.request().postDataJSON()) != null) return route.continue();
+    requests += 1;
+    return available ? route.continue() : route.fulfill({ status: 400, body: "Invalid catalog response" });
+  });
+  await page.goto(TRACKER_URL);
+  await expect(page.getByRole("button", { name: "Tracker Tester", exact: true })).toBeVisible();
+  await expect(page.getByText("Could not load build details", { exact: true })).toBeVisible();
+  expect(requests).toBe(1);
+  available = true;
+  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Final Item 11 details", exact: true })).toBeVisible();
+  await expect(page.getByText("Could not load build details", { exact: true })).toHaveCount(0);
+  expect(requests).toBe(2);
+});

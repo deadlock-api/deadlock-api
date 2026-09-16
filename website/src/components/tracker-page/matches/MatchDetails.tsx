@@ -29,7 +29,11 @@ import { computeSoulLead } from "~/lib/tracker/soul-lead";
 import { TEAMS } from "~/lib/tracker/teams";
 import { cn } from "~/lib/utils";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
-import { type TrackerMatchPlayer, trackerMatchMetadataQueryOptions } from "~/queries/tracker-queries";
+import {
+  type TrackerMatchPlayer,
+  trackerAbilitiesQueryOptions,
+  trackerMatchMetadataQueryOptions,
+} from "~/queries/tracker-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { RankDelta } from "../shared/RankDelta";
@@ -189,9 +193,14 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
     fetchStatus,
     refetch,
   } = useQuery(trackerMatchMetadataQueryOptions(matchId));
-  const { data: itemsById } = useQuery({
+  const itemsQuery = useQuery({
     ...itemUpgradesQueryOptions,
     select: (items) => new Map(items.map((item) => [item.id, item])),
+  });
+  const abilitiesQuery = useQuery({
+    ...trackerAbilitiesQueryOptions,
+    enabled: match != null,
+    select: (abilities) => new Map(abilities.map((ability) => [ability.id, ability])),
   });
 
   const unnamedAccountIds = useMemo(
@@ -263,6 +272,7 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
     );
   }
 
+  const missingBuildAssets = [itemsQuery, abilitiesQuery].filter((query) => query.data == null);
   return (
     <div className="flex flex-col gap-4">
       {fetchStatus === "paused" ? (
@@ -287,13 +297,28 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
         durationS={entry.match_duration_s}
         nameOf={nameOf}
       />
+      {missingBuildAssets.some((query) => query.fetchStatus === "paused") ? (
+        <TrackerQueryPaused description="Build details will load automatically when you're back online." />
+      ) : missingBuildAssets.some((query) => query.isError) ? (
+        <TrackerQueryError
+          title="Could not load build details"
+          description="Match stats are available. Try again to load the complete build."
+          onRetry={() => {
+            for (const query of missingBuildAssets) {
+              if (query.isError) void query.refetch();
+            }
+          }}
+          isRetrying={missingBuildAssets.some((query) => query.isFetching)}
+        />
+      ) : null}
       <Scoreboard
         match={match}
         accountId={accountId}
         ranks={ranks}
         laned={laned}
         durationS={entry.match_duration_s}
-        itemsById={itemsById}
+        itemsById={itemsQuery.data}
+        abilitiesById={abilitiesQuery.data}
         nameOf={nameOf}
         viewedAccountId={viewedAccountId}
         onViewPlayer={viewPlayer}

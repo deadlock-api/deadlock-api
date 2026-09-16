@@ -27,11 +27,7 @@ import {
 import { TEAMS } from "~/lib/tracker/teams";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
-import {
-  type TrackerMatchMetadata,
-  type TrackerMatchPlayer,
-  trackerAbilitiesQueryOptions,
-} from "~/queries/tracker-queries";
+import type { TrackerAbility, TrackerMatchMetadata, TrackerMatchPlayer } from "~/queries/tracker-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { PanelTooltipContent, TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
@@ -308,6 +304,7 @@ export function Scoreboard({
   laned,
   durationS,
   itemsById,
+  abilitiesById,
   nameOf,
   viewedAccountId,
   onViewPlayer,
@@ -318,6 +315,7 @@ export function Scoreboard({
   laned: boolean;
   durationS: number;
   itemsById: Map<number, SlimUpgrade> | undefined;
+  abilitiesById: Map<number, TrackerAbility> | undefined;
   nameOf: (player: TrackerMatchPlayer) => string;
   /** The player the match timeline shows, or null while it shows every kill. */
   viewedAccountId: number | null;
@@ -330,10 +328,6 @@ export function Scoreboard({
     setSortDirection(sortKey === key && sortDirection === "desc" ? "asc" : "desc");
     setSortKey(key);
   };
-  const { data: abilitiesById } = useQuery({
-    ...trackerAbilitiesQueryOptions,
-    select: (abilities) => new Map(abilities.map((ability) => [ability.id, ability])),
-  });
   const { data: heroesById } = useQuery({
     ...heroesQueryOptions,
     select: (heroes) => new Map(heroes.map((hero) => [hero.id, hero])),
