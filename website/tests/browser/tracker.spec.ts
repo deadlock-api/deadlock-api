@@ -406,3 +406,27 @@ test("timeline legend toggles chart overlays without losing the readable event l
   await expect(page.getByRole("toolbar", { name: "Match timeline layers", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+test("undoing a saved-match removal preserves newer bookmarks from another tab", async ({ page, context }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.addInitScript(
+    (key) => localStorage.setItem(key, "[3000,2998,2996]"),
+    `tracker:saved-matches:${ACCOUNT_ID}`,
+  );
+  await page.goto(TRACKER_URL);
+  const secondTab = await context.newPage();
+  await secondTab.goto(TRACKER_URL.replace(`match=${CURRENT_MATCH}`, "match=2997"));
+  await expect(secondTab.getByRole("button", { name: "Save match for later", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Saved matches (3)", exact: true }).click();
+  await page.getByRole("button", { name: `Remove saved match ${CURRENT_MATCH}`, exact: true }).click();
+  await secondTab.getByRole("button", { name: "Save match for later", exact: true }).click();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Saved matches (4)", exact: true })).toBeVisible();
+  await expect(
+    page.locator(`[data-match-id="${CURRENT_MATCH}"]`).getByLabel("Saved match", { exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "[]"), `tracker:saved-matches:${ACCOUNT_ID}`),
+  ).toEqual([2997, 3000, 2998, 2996]);
+  await expect(secondTab.getByRole("button", { name: "Saved matches (4)", exact: true })).toBeVisible();
+});

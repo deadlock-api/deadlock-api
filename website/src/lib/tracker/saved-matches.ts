@@ -11,3 +11,13 @@ export function parseSavedMatches(raw: string | null): number[] {
     return [];
   }
 }
+
+/** Undo one removal while retaining bookmarks added or removed since that action. */
+export function restoreSavedMatch(current: number[], beforeRemoval: number[], matchId: number): number[] {
+  const previousIndex = beforeRemoval.indexOf(matchId);
+  const remaining = new Set(current);
+  if (previousIndex < 0 || remaining.has(matchId)) return current;
+  const nextId = beforeRemoval.slice(previousIndex + 1).find((id) => remaining.has(id));
+  const index = nextId === undefined ? current.length : current.indexOf(nextId);
+  return [...current.slice(0, index), matchId, ...current.slice(index)];
+}
