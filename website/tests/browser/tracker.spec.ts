@@ -650,3 +650,23 @@ test("a paused refresh retains loaded history and resumes when the connection re
   await expect(page.getByText("Waiting for connection", { exact: true })).toHaveCount(0);
   expect(requests).toBe(2);
 });
+
+test("a rate-limited ability catalog falls back without hiding final builds", async ({ page }) => {
+  let abilityRequests = 0;
+  let restRequests = 0;
+  await page.route(`${API_ORIGIN}/v1/graphql`, (route) => {
+    if (requestedMatchId(route.request().postDataJSON()) != null) return route.continue();
+    abilityRequests += 1;
+    return route.fulfill({ status: 429, body: "Rate limited" });
+  });
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === "/v1/assets/items/by-type/ability") restRequests += 1;
+  });
+  await page.goto(TRACKER_URL);
+  await expect(page.getByRole("button", { name: "Final Item 11 details", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "View Tracker Tester's build timeline", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Build timeline", exact: true })).toContainText("33 events");
+  expect(abilityRequests).toBe(1);
+  expect(restRequests).toBe(1);
+});

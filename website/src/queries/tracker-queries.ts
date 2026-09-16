@@ -13,6 +13,7 @@ import { API_ORIGIN } from "~/lib/constants";
 import { graphql, isGraphqlRateLimited } from "~/lib/graphql";
 import { combatStats, type CombatStats, resolveCustomStats } from "~/lib/tracker/combat-stats";
 
+import { abilitiesQueryOptions } from "./asset-queries";
 import { queryKeys } from "./query-keys";
 
 export function steamProfileQueryOptions(accountId: number) {
@@ -572,16 +573,19 @@ export interface TrackerAbility {
 
 /**
  * Every hero ability with just what the scoreboard draws, from the GraphQL asset catalog; the REST ability list
- * carries each ability's full description and properties.
+ * carries each ability's full description and properties, and serves as a fallback when GraphQL is rate limited.
  */
 export const trackerAbilitiesQueryOptions = queryOptions({
   queryKey: queryKeys.players.abilities(),
-  queryFn: async (): Promise<TrackerAbility[]> => {
-    const { items } = await graphql.query({
-      items: {
-        on_Ability: { id: true, name: true, class_name: true, image: true, image_webp: true },
-      },
-    });
+  queryFn: async ({ client }): Promise<TrackerAbility[]> => {
+    const result = await unlessRateLimited(
+      graphql.query({
+        items: {
+          on_Ability: { id: true, name: true, class_name: true, image: true, image_webp: true },
+        },
+      }),
+    );
+    const items = result?.items ?? (await client.ensureQueryData(abilitiesQueryOptions));
     // Only the ability variant is selected, so every other item comes back null, whatever the generated type says.
     return items.flatMap((item: (typeof items)[number] | null) =>
       item && "class_name" in item
@@ -590,8 +594,8 @@ export const trackerAbilitiesQueryOptions = queryOptions({
               id: item.id,
               name: item.name,
               class_name: item.class_name,
-              image: item.image,
-              image_webp: item.image_webp,
+              image: item.image ?? null,
+              image_webp: item.image_webp ?? null,
             },
           ]
         : [],

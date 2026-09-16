@@ -120,7 +120,7 @@ export function fixtureResponse(url: URL, body?: GraphqlRequest): unknown {
   if (url.pathname === "/v1/assets/heroes") return heroes;
   if (url.pathname === "/v1/assets/ranks" || url.pathname === "/v1/assets/ranked-seasons") return [];
   if (url.pathname.startsWith("/v1/assets/items"))
-    return url.searchParams.get("type") === "ability" ? abilities : upgrades;
+    return url.pathname.endsWith("/by-type/ability") ? abilities : upgrades;
   if (url.pathname === "/v1/players/steam")
     return [{ account_id: ACCOUNT_ID, personaname: "Tracker Tester", avatarfull: image }];
   if (url.pathname.endsWith("/match-history")) return history;
