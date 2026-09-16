@@ -469,3 +469,37 @@ test("team totals aggregate every teammate and fit a narrow scoreboard", async (
   await expect(details).toHaveCount(0);
   await expect(trigger).toBeFocused();
 });
+
+test("saved matches and undo remain scoped to their player after account navigation", async ({ page }) => {
+  await page.addInitScript((accountId) => {
+    localStorage.setItem(`tracker:saved-matches:${accountId}`, "[2998]");
+    localStorage.setItem("tracker:saved-matches:42", "[3000]");
+  }, ACCOUNT_ID);
+  await page.goto(TRACKER_URL);
+  await page.getByRole("button", { name: "Remove match from saved matches", exact: true }).click();
+  await page.getByRole("link", { name: "Open player tracker", exact: true }).click();
+  await expect(page).toHaveURL(/\/players\/42(?:\?|$)/);
+  await expect(page.getByRole("button", { name: "Saved matches (1)", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  expect(
+    await page.evaluate(
+      (accountId) => ({
+        original: JSON.parse(localStorage.getItem(`tracker:saved-matches:${accountId}`) ?? "[]"),
+        current: JSON.parse(localStorage.getItem("tracker:saved-matches:42") ?? "[]"),
+      }),
+      ACCOUNT_ID,
+    ),
+  ).toEqual({ original: [2998], current: [3000] });
+
+  await page.getByRole("button", { name: "Saved matches (1)", exact: true }).click();
+  const search = page.getByRole("searchbox", { name: "Search saved matches by hero or match ID" });
+  await search.fill("not a saved match");
+  await expect(page.getByText("No matches found", { exact: true })).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(new RegExp(`/players/${ACCOUNT_ID}\\?`));
+  await expect(search).toHaveCount(0);
+  await page.getByRole("button", { name: "Saved matches (1)", exact: true }).click();
+  await expect(search).toHaveValue("");
+  await expect(page.getByRole("button", { name: "Open saved match 2998", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open saved match 3000", exact: true })).toHaveCount(0);
+});
