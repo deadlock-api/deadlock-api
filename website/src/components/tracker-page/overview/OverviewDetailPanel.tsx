@@ -3,6 +3,7 @@ import { type ReactNode, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "~/components/ui/dialog";
+import { cn } from "~/lib/utils";
 
 import { DashboardPanel } from "./DashboardPanel";
 
@@ -15,6 +16,7 @@ export function OverviewDetailPanel({
   children,
   details,
   footer,
+  dialogClassName,
 }: {
   title: string;
   icon: LucideIcon;
@@ -23,6 +25,7 @@ export function OverviewDetailPanel({
   children: ReactNode;
   details: (close: () => void) => ReactNode;
   footer?: ReactNode;
+  dialogClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -42,7 +45,10 @@ export function OverviewDetailPanel({
       </DashboardPanel>
       <DialogContent
         aria-describedby={undefined}
-        className="flex max-h-[calc(100dvh-2rem)] flex-col gap-3 overflow-hidden p-4 sm:max-w-7xl"
+        className={cn(
+          "flex max-h-[calc(100dvh-2rem)] flex-col gap-3 overflow-hidden p-4 sm:max-w-7xl",
+          dialogClassName,
+        )}
       >
         <DialogHeader className="shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-3 pr-8">
