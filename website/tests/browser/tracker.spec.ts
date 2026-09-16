@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { API_ORIGIN, CURRENT_MATCH, requestedMatchId, TRACKER_URL } from "./fixtures";
+import { ACCOUNT_ID, API_ORIGIN, CURRENT_MATCH, history, requestedMatchId, TRACKER_URL } from "./fixtures";
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("tracker-feedback-notice-dismissed", "true"));
@@ -109,4 +109,44 @@ test("the first match preloads only its available neighbor", async ({ page }) =>
   await page.goto(TRACKER_URL.replace(`match=${CURRENT_MATCH}`, "match=3000"));
   await expect(page.getByRole("button", { name: "Previous match in list", exact: true })).toBeDisabled();
   await expect.poll(() => [...requested].sort()).toEqual([2999, 3000]);
+});
+
+test("saved markers persist across reload and clear when a saved match is removed", async ({ page }) => {
+  await page.goto(TRACKER_URL);
+  await page.getByRole("button", { name: "Save match for later", exact: true }).click();
+  const historyRow = page.locator(`[data-match-id="${CURRENT_MATCH}"]`);
+  await expect(historyRow.getByLabel("Saved match", { exact: true })).toBeVisible();
+  await expect(historyRow.getByLabel("Saved match", { exact: true })).toHaveAttribute("fill", "currentColor");
+
+  await page.reload();
+  await expect(historyRow.getByLabel("Saved match", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Saved matches (1)", exact: true }).click();
+  await page.getByRole("button", { name: `Remove saved match ${CURRENT_MATCH}`, exact: true }).click();
+  await expect(page.getByText("No saved matches yet", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(historyRow.getByLabel("Saved match", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Save match for later", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+});
+
+test("saved search includes matches beyond the first page and preserves removal focus", async ({ page }) => {
+  await page.addInitScript(({ key, ids }) => localStorage.setItem(key, JSON.stringify(ids)), {
+    key: `tracker:saved-matches:${ACCOUNT_ID}`,
+    ids: history.map((entry) => entry.match_id),
+  });
+  await page.goto(TRACKER_URL);
+  await page.getByRole("button", { name: "Saved matches (50)", exact: true }).click();
+  const search = page.getByRole("searchbox", { name: "Search saved matches by hero or match ID" });
+  await search.fill("  DyNaMo  ");
+  await expect(page.locator("[data-saved-row]")).toHaveCount(20);
+  await page.getByRole("button", { name: "Show 5 more", exact: true }).click();
+  await expect(page.locator("[data-saved-row]")).toHaveCount(25);
+  await expect(page.getByRole("button", { name: "Open saved match 2960", exact: true })).toBeFocused();
+  await search.fill("2952");
+  await expect(page.locator("[data-saved-row]")).toHaveCount(1);
+  await page.getByRole("button", { name: "Remove saved match 2952", exact: true }).click();
+  await expect(page.getByText("No matches found", { exact: true })).toBeVisible();
+  await expect(search).toBeFocused();
 });
