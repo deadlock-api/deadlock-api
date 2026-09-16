@@ -26,6 +26,8 @@ import {
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
 import { PanelTooltipContent, TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
 import { RankDelta } from "../shared/RankDelta";
+import { TrackerDetailPopover } from "../shared/TrackerDetailPopover";
+import { BuildTimelineDialog } from "./BuildTimelineDialog";
 import { PlayerCombatStats } from "./PlayerCombatStats";
 
 export const TEAMS = [
@@ -72,50 +74,53 @@ function AbilityChip({ entry }: { entry: BuildAbility }) {
   // An ability only enters the history once unlocked, even when its unlock is not recorded.
   const level = Math.min(MAX_ABILITY_LEVEL, entry.upgradedAt.length + 1);
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="flex flex-col items-center gap-0.5">
-          <span className="relative">
-            <AssetImage
-              asset={{
-                webp: entry.ability.image_webp,
-                png: entry.ability.image,
-                fallbackSrc: entry.ability.image_webp ?? entry.ability.image,
-                alt: entry.ability.name,
-                title: "",
-              }}
-              isLoading={false}
-              emptyClassName="aspect-square size-5.5 rounded-full bg-muted"
-              imgClassName="aspect-square size-5.5 object-cover dark:brightness-0 dark:invert"
-            />
-            {entry.stacks != null && <StackBadge stacks={entry.stacks} />}
-          </span>
-          <span className="flex gap-px">
-            <span className="sr-only">
-              Level {level} of {MAX_ABILITY_LEVEL}
-            </span>
-            {Array.from({ length: MAX_ABILITY_LEVEL }, (_, index) => (
-              <span
-                // oxlint-disable-next-line react/no-array-index-key
-                key={index}
-                aria-hidden="true"
-                className={cn("h-0.5 w-1 rounded-full", index < level ? "bg-amber-400" : "bg-muted-foreground/30")}
-              />
-            ))}
-          </span>
+    <TrackerDetailPopover
+      label={entry.ability.name}
+      size="icon-xs"
+      details={
+        <>
+          <TooltipHeader title={entry.ability.name} subtitle={`Level ${level} of ${MAX_ABILITY_LEVEL}`} />
+          <TooltipStats>
+            {entry.unlockedAt != null && <TooltipStat label="Unlocked" value={formatMatchDuration(entry.unlockedAt)} />}
+            {entry.upgradedAt.length > 0 && (
+              <TooltipStat label="Upgraded" value={entry.upgradedAt.map(formatMatchDuration).join(", ")} />
+            )}
+            {entry.stacks != null && <TooltipStat label="Stacks" value={entry.stacks.toLocaleString("en-US")} />}
+          </TooltipStats>
+        </>
+      }
+    >
+      <span className="flex flex-col items-center gap-0.5">
+        <span className="relative">
+          <AssetImage
+            asset={{
+              webp: entry.ability.image_webp,
+              png: entry.ability.image,
+              fallbackSrc: entry.ability.image_webp ?? entry.ability.image,
+              alt: entry.ability.name,
+              title: "",
+            }}
+            isLoading={false}
+            emptyClassName="aspect-square size-5 rounded-full bg-muted"
+            imgClassName="aspect-square size-5 object-cover dark:brightness-0 dark:invert"
+          />
+          {entry.stacks != null && <StackBadge stacks={entry.stacks} />}
         </span>
-      </TooltipTrigger>
-      <PanelTooltipContent>
-        <TooltipHeader title={entry.ability.name} subtitle={`Level ${level} of ${MAX_ABILITY_LEVEL}`} />
-        <TooltipStats>
-          {entry.unlockedAt != null && <TooltipStat label="Unlocked" value={formatMatchDuration(entry.unlockedAt)} />}
-          {entry.upgradedAt.length > 0 && (
-            <TooltipStat label="Upgraded" value={entry.upgradedAt.map(formatMatchDuration).join(", ")} />
-          )}
-          {entry.stacks != null && <TooltipStat label="Stacks" value={entry.stacks.toLocaleString("en-US")} />}
-        </TooltipStats>
-      </PanelTooltipContent>
-    </Tooltip>
+        <span className="flex gap-px">
+          <span className="sr-only">
+            Level {level} of {MAX_ABILITY_LEVEL}
+          </span>
+          {Array.from({ length: MAX_ABILITY_LEVEL }, (_, index) => (
+            <span
+              // oxlint-disable-next-line react/no-array-index-key
+              key={index}
+              aria-hidden="true"
+              className={cn("h-0.5 w-1 rounded-full", index < level ? "bg-amber-400" : "bg-muted-foreground/30")}
+            />
+          ))}
+        </span>
+      </span>
+    </TrackerDetailPopover>
   );
 }
 
@@ -128,36 +133,33 @@ function StackBadge({ stacks }: { stacks: number }) {
 }
 
 function ItemChip({ item }: { item: BuildItem }) {
-  const sold = item.soldAt != null;
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="relative">
-          <ItemImageFromAsset
-            item={item.upgrade}
-            className={cn("size-5.5 rounded-sm", sold && "opacity-35 grayscale")}
-            title=""
+    <TrackerDetailPopover
+      label={item.upgrade.name}
+      size="icon-xs"
+      details={
+        <>
+          <TooltipHeader
+            lead={<ItemImageFromAsset item={item.upgrade} className="size-8 shrink-0 rounded-sm" title="" />}
+            title={item.upgrade.name}
+            subtitle={item.upgrade.cost != null && `${item.upgrade.cost.toLocaleString("en-US")} souls`}
           />
-          {item.imbuedInto && (
-            <span className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full bg-violet-400 ring-1 ring-background" />
-          )}
-          {item.stacks != null && <StackBadge stacks={item.stacks} />}
-        </span>
-      </TooltipTrigger>
-      <PanelTooltipContent>
-        <TooltipHeader
-          lead={<ItemImageFromAsset item={item.upgrade} className="size-8 shrink-0 rounded-sm" title="" />}
-          title={item.upgrade.name}
-          subtitle={item.upgrade.cost != null && `${item.upgrade.cost.toLocaleString("en-US")} souls`}
-        />
-        <TooltipStats>
-          <TooltipStat label="Bought" value={formatMatchDuration(item.boughtAt)} />
-          {sold && <TooltipStat label="Sold" value={formatMatchDuration(item.soldAt as number)} />}
-          {item.imbuedInto && <TooltipStat label="Imbued into" value={item.imbuedInto.name} />}
-          {item.stacks != null && <TooltipStat label="Stacks" value={item.stacks.toLocaleString("en-US")} />}
-        </TooltipStats>
-      </PanelTooltipContent>
-    </Tooltip>
+          <TooltipStats>
+            <TooltipStat label="Bought" value={formatMatchDuration(item.boughtAt)} />
+            {item.imbuedInto && <TooltipStat label="Imbued into" value={item.imbuedInto.name} />}
+            {item.stacks != null && <TooltipStat label="Stacks" value={item.stacks.toLocaleString("en-US")} />}
+          </TooltipStats>
+        </>
+      }
+    >
+      <span className="relative">
+        <ItemImageFromAsset item={item.upgrade} className="size-5 rounded-sm" title="" />
+        {item.imbuedInto && (
+          <span className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full bg-violet-400 ring-1 ring-background" />
+        )}
+        {item.stacks != null && <StackBadge stacks={item.stacks} />}
+      </span>
+    </TrackerDetailPopover>
   );
 }
 
@@ -214,7 +216,7 @@ function PlayerStatStrip({
 }
 
 /** Everything known about one player in the match, whatever the table has room to show. */
-function PlayerHoverCard({
+function PlayerStatsDetails({
   player,
   name,
   lane,
@@ -348,6 +350,7 @@ export function Scoreboard({
                         player.ability_stacks,
                       )
                     : null;
+                const finalItems = build?.items.filter((item) => item.soldAt == null) ?? [];
                 const lane = laned ? LANES[laneIndex(player)] : undefined;
                 const context = playerContext(match, player, durationS);
                 return (
@@ -365,24 +368,24 @@ export function Scoreboard({
                     <tr>
                       {/* The cell holds only the portrait and a level badge, so it carries the label itself. */}
                       <td className="w-8 py-1 pl-2" aria-label={`${name}, level ${player.level}`}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div
-                              className="relative size-6 rounded-full"
-                              style={lane && { boxShadow: `0 0 0 2px ${lane.color}` }}
-                            >
-                              <HeroImage heroId={player.hero_id} className="size-6 rounded-full" />
-                              {player.level > 0 && (
-                                <span className="absolute -right-1.5 -bottom-1 rounded-sm bg-background px-0.5 text-[9px] leading-tight font-semibold text-muted-foreground tabular-nums">
-                                  {player.level}
-                                </span>
-                              )}
-                            </div>
-                          </TooltipTrigger>
-                          <PanelTooltipContent>
-                            <PlayerHoverCard player={player} name={name} lane={lane} context={context} />
-                          </PanelTooltipContent>
-                        </Tooltip>
+                        <TrackerDetailPopover
+                          label={`${name}'s match stats`}
+                          size="icon-xs"
+                          details={<PlayerStatsDetails player={player} name={name} lane={lane} context={context} />}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className="relative block size-6 rounded-full"
+                            style={lane && { boxShadow: `0 0 0 2px ${lane.color}` }}
+                          >
+                            <HeroImage heroId={player.hero_id} className="size-6 rounded-full" title="" />
+                            {player.level > 0 && (
+                              <span className="absolute -right-1.5 -bottom-1 rounded-sm bg-background px-0.5 text-[9px] leading-tight font-semibold text-muted-foreground tabular-nums">
+                                {player.level}
+                              </span>
+                            )}
+                          </span>
+                        </TrackerDetailPopover>
                       </td>
                       <td className="w-full max-w-0 px-2 py-1">
                         <div className="flex items-center gap-1.5">
@@ -467,10 +470,11 @@ export function Scoreboard({
                             {build.abilities.map((entry) => (
                               <AbilityChip key={entry.ability.id} entry={entry} />
                             ))}
-                            {build.abilities.length > 0 && build.items.length > 0 && <Divider />}
-                            {build.items.map((item) => (
+                            {build.abilities.length > 0 && finalItems.length > 0 && <Divider />}
+                            {finalItems.map((item) => (
                               <ItemChip key={`${item.upgrade.id}-${item.boughtAt}`} item={item} />
                             ))}
+                            <BuildTimelineDialog build={build} playerName={name} />
                           </div>
                         </td>
                       </tr>
