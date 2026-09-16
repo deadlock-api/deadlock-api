@@ -1,10 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Home } from "lucide-react";
+import { ArrowDown, ArrowUp, Bookmark, ChevronLeft, ChevronRight, Home } from "lucide-react";
 import { parseAsInteger, parseAsStringLiteral, useQueryState, useQueryStates } from "nuqs";
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "~/components/ui/button";
+import { Empty, EmptyDescription } from "~/components/ui/empty";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { useSavedMatches } from "~/hooks/useSavedMatches";
 import {
@@ -69,18 +70,28 @@ export function MatchesTab({
     sort: parseAsStringLiteral(MATCH_SORT_KEYS).withDefault("played"),
     dir: parseAsStringLiteral(SORT_DIRS).withDefault("desc"),
   });
-  const sortedEntries = useMemo(() => sortMatches(entries, sortKey, sortDir), [entries, sortKey, sortDir]);
   const { savedIds } = useSavedMatches(accountId);
   const savedMatchIds = useMemo(() => new Set(savedIds), [savedIds]);
+  const [savedOnly, setSavedOnly] = useState(false);
+  const savedFilterRef = useRef<HTMLButtonElement>(null);
+  const listedEntries = useMemo(
+    () => (savedOnly ? entries.filter((entry) => savedMatchIds.has(entry.match_id)) : entries),
+    [entries, savedMatchIds, savedOnly],
+  );
+  const sortedEntries = useMemo(() => sortMatches(listedEntries, sortKey, sortDir), [listedEntries, sortKey, sortDir]);
   const selectedIndex = sortedEntries.findIndex((entry) => entry.match_id === selectedMatchId);
   // No match in the URL means the pane belongs to the overview, the list's own first entry.
   const selected =
-    selectedMatchId === null ? null : selectedIndex === -1 ? hiddenLinkedMatch : sortedEntries[selectedIndex];
+    selectedMatchId === null
+      ? null
+      : selectedIndex === -1
+        ? (entries.find((entry) => entry.match_id === selectedMatchId) ?? hiddenLinkedMatch)
+        : sortedEntries[selectedIndex];
   const selectedId = selected?.match_id;
 
   const listRef = useRef<MatchHistoryHandle>(null);
   const initialSelectedId = useRef(selectedId);
-  const previousSort = useRef({ sortKey, sortDir });
+  const previousSort = useRef({ sortKey, sortDir, savedOnly });
   const detailsRef = useRef<HTMLElement>(null);
   const previousSelectedId = useRef(selectedId);
 
@@ -134,11 +145,15 @@ export function MatchesTab({
   }, []);
 
   useEffect(() => {
-    if (previousSort.current.sortKey !== sortKey || previousSort.current.sortDir !== sortDir) {
+    if (
+      previousSort.current.sortKey !== sortKey ||
+      previousSort.current.sortDir !== sortDir ||
+      previousSort.current.savedOnly !== savedOnly
+    ) {
       listRef.current?.scrollToTop();
-      previousSort.current = { sortKey, sortDir };
+      previousSort.current = { sortKey, sortDir, savedOnly };
     }
-  }, [sortKey, sortDir]);
+  }, [sortKey, sortDir, savedOnly]);
 
   useEffect(() => {
     const changed = previousSelectedId.current !== selectedId;
@@ -231,10 +246,10 @@ export function MatchesTab({
 
   // Sessions are contiguous only in play order, so they are hidden under any other sort.
   const sessions = useMemo(
-    () => (sortKey === "played" ? computeSessions(entries, sessionContext) : new Map<number, PlaySession>()),
-    [entries, sessionContext, sortKey],
+    () => (sortKey === "played" ? computeSessions(listedEntries, sessionContext) : new Map<number, PlaySession>()),
+    [listedEntries, sessionContext, sortKey],
   );
-  const summary = useMemo(() => summarize(entries), [entries]);
+  const summary = useMemo(() => summarize(listedEntries), [listedEntries]);
   const heldRecords = useMemo(
     () => (entries.length >= MIN_MATCHES_FOR_RECORDS ? recordsByMatchId(computeRecords(entries)) : null),
     [entries],
@@ -353,11 +368,24 @@ export function MatchesTab({
                 <Home className="size-4 shrink-0 text-muted-foreground" />
                 Overview
               </button>
+              <Button
+                ref={savedFilterRef}
+                variant={savedOnly ? "secondary" : "ghost"}
+                size="icon-sm"
+                className="mr-1"
+                aria-label="Show only saved matches"
+                aria-pressed={savedOnly}
+                title={savedOnly ? "Show all matches" : "Show only saved matches"}
+                onClick={() => setSavedOnly((value) => !value)}
+              >
+                <Bookmark className={cn(savedOnly && "text-yellow-400")} fill={savedOnly ? "currentColor" : "none"} />
+              </Button>
             </div>
             <div className="flex items-center gap-2 border-b border-border px-3 py-1.5">
               <div className="min-w-0 text-xs leading-tight text-muted-foreground tabular-nums">
                 <div className="font-semibold text-foreground">
-                  {summary.matches.toLocaleString("en-US")} {summary.matches === 1 ? "match" : "matches"}
+                  {summary.matches.toLocaleString("en-US")}{" "}
+                  {savedOnly ? "saved" : summary.matches === 1 ? "match" : "matches"}
                 </div>
                 {summary.matches > 0 && (
                   <div>
@@ -411,6 +439,23 @@ export function MatchesTab({
               onItemKeyDown={handleItemKeyDown}
               heroId={heroId}
               onHeroChange={onHeroChange}
+              emptyState={
+                savedOnly ? (
+                  <Empty className="gap-3 px-3 py-8 md:p-3">
+                    <EmptyDescription>No saved matches match these filters.</EmptyDescription>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSavedOnly(false);
+                        savedFilterRef.current?.focus({ preventScroll: true });
+                      }}
+                    >
+                      Show all matches
+                    </Button>
+                  </Empty>
+                ) : undefined
+              }
             />
           </div>
         </aside>

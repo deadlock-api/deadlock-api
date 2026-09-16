@@ -56,6 +56,51 @@ test("filter boxes reset independently and keep the selected match", async ({ pa
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
+test("saved-only history preserves details and navigates between bookmarked matches", async ({ page }) => {
+  await page.addInitScript(
+    (key) => localStorage.setItem(key, "[3000,2998,2996]"),
+    `tracker:saved-matches:${ACCOUNT_ID}`,
+  );
+  await page.goto(TRACKER_URL);
+  await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
+  const filter = page.getByRole("button", { name: "Show only saved matches", exact: true });
+  const historyList = page.getByRole("navigation", { name: "Match history", exact: true });
+  await filter.click();
+  await expect(filter).toHaveAttribute("aria-pressed", "true");
+  await expect(historyList.locator("[data-match-id]")).toHaveCount(3);
+  await expect(page.getByRole("navigation", { name: "Match navigation", exact: true })).toContainText("2 of 3");
+  await page.getByRole("button", { name: "Next match in list", exact: true }).click();
+  await expect(page).toHaveURL(/match=2996/);
+  await expect(historyList.locator('[data-match-id="2996"]')).toHaveAttribute("aria-current", "true");
+
+  await page.getByRole("button", { name: "Remove match from saved matches", exact: true }).click();
+  await expect(historyList.locator("[data-match-id]")).toHaveCount(2);
+  await expect(page.getByRole("region", { name: "Match 2996 details", exact: true })).toBeVisible();
+
+  // Removing bookmarks in another tab updates the list without dismissing the open match.
+  await page.evaluate((key) => {
+    localStorage.setItem(key, "[]");
+    window.dispatchEvent(new StorageEvent("storage", { key, newValue: "[]", storageArea: localStorage }));
+  }, `tracker:saved-matches:${ACCOUNT_ID}`);
+  await expect(historyList.locator("[data-match-id]")).toHaveCount(0);
+  await expect(historyList).toContainText("No saved matches match these filters.");
+  await expect(page.getByRole("region", { name: "Match 2996 details", exact: true })).toBeVisible();
+  await historyList.getByRole("button", { name: "Show all matches", exact: true }).click();
+  await expect(filter).toHaveAttribute("aria-pressed", "false");
+  await expect(filter).toBeFocused();
+  await expect(historyList.locator('[data-match-id="2996"]')).toHaveAttribute("aria-current", "true");
+  await expect(page).toHaveURL(/match=2996/);
+
+  await page.setViewportSize({ width: 320, height: 568 });
+  await filter.click();
+  await page.getByRole("button", { name: "Back to overview", exact: true }).click();
+  await page.getByRole("button", { name: "Match history", exact: true }).click();
+  await expect(historyList).toBeFocused();
+  const bounds = await historyList.boundingBox();
+  expect(bounds!.y).toBeGreaterThanOrEqual(0);
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(568);
+});
+
 test("preloads only adjacent matches after current details load and reuses their cache", async ({ page }) => {
   const requested: number[] = [];
   let releaseCurrent!: () => void;

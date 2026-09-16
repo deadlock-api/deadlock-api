@@ -3,6 +3,7 @@ import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import {
   type KeyboardEventHandler,
   type Ref,
+  type ReactNode,
   useCallback,
   useId,
   useImperativeHandle,
@@ -73,6 +74,7 @@ export function MatchHistoryList({
   onItemKeyDown,
   heroId,
   onHeroChange,
+  emptyState,
 }: {
   ref?: Ref<MatchHistoryHandle>;
   entries: PlayerMatchHistoryEntry[];
@@ -86,6 +88,7 @@ export function MatchHistoryList({
   onItemKeyDown: KeyboardEventHandler<HTMLButtonElement>;
   heroId: number | null;
   onHeroChange: (heroId: number | null) => void;
+  emptyState?: ReactNode;
 }) {
   "use no memo";
   // The virtualizer is mutable; its measurements must be read on every scroll render.
@@ -127,7 +130,11 @@ export function MatchHistoryList({
   });
   useImperativeHandle(ref, () => ({
     focusMatch(matchId) {
-      if (matchId == null) return;
+      if (matchId == null) {
+        listRef.current?.focus({ preventScroll: true });
+        listRef.current?.scrollIntoView({ block: "nearest" });
+        return;
+      }
       const index = matchRowIndexes.get(matchId);
       if (index == null) return;
       virtualizer.scrollToIndex(index, { align: "auto" });
@@ -147,7 +154,8 @@ export function MatchHistoryList({
   return (
     <nav
       ref={listRef}
-      className="relative min-h-0 flex-1 scroll-pt-7 scrollbar-thin overflow-y-auto overscroll-contain"
+      tabIndex={-1}
+      className="relative min-h-0 flex-1 scroll-pt-7 scrollbar-thin overflow-y-auto overscroll-contain outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       aria-label="Match history"
       aria-describedby={keyboardHelpId}
       onFocusCapture={(event) => {
@@ -196,18 +204,19 @@ export function MatchHistoryList({
           );
         })}
       </ol>
-      {entries.length === 0 && (
-        <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-          No matches found
-          {heroId != null && (
-            <div className="mt-3">
-              <Button variant="outline" size="sm" onClick={() => onHeroChange(null)}>
-                Show all heroes
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
+      {entries.length === 0 &&
+        (emptyState ?? (
+          <div className="px-3 py-8 text-center text-sm text-muted-foreground">
+            No matches found
+            {heroId != null && (
+              <div className="mt-3">
+                <Button variant="outline" size="sm" onClick={() => onHeroChange(null)}>
+                  Show all heroes
+                </Button>
+              </div>
+            )}
+          </div>
+        ))}
     </nav>
   );
 }
