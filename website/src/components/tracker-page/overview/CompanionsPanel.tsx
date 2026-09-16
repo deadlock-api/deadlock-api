@@ -14,6 +14,7 @@ import { type CompanionRow, intersectCompanionRows } from "~/lib/tracker/compani
 import type { TrackerFilterValues } from "~/lib/tracker/compute";
 import { trackerEnemyStatsQueryOptions, trackerMateStatsQueryOptions } from "~/queries/tracker-queries";
 
+import { CompanionMatchesDialog } from "../breakdown/CompanionMatchesDialog";
 import { EnemiesTab, MatesTab } from "../breakdown/PlayerStatsTable";
 import { OverviewDetailPanel } from "./OverviewDetailPanel";
 
@@ -21,10 +22,12 @@ export function CompanionsPanel({
   accountId,
   filters,
   entries,
+  onOpenMatch,
 }: {
   accountId: number;
   filters: TrackerFilterValues;
   entries: PlayerMatchHistoryEntry[];
+  onOpenMatch: (matchId: number) => void;
 }) {
   const params = {
     accountId,
@@ -59,15 +62,29 @@ export function CompanionsPanel({
       icon={UsersRound}
       meta="Frequent encounters"
       footer="Your win rate · 2+ shared games in selected matches"
-      details={() => (
+      details={(close) => (
         <div className="grid gap-4 @4xl/stats-dialog:grid-cols-2">
           <div className="min-w-0">
             <h4 className="mb-2 text-xs font-semibold">Teammates</h4>
-            <MatesTab {...params} entries={entries} />
+            <MatesTab
+              {...params}
+              entries={entries}
+              onOpenMatch={(id) => {
+                close();
+                onOpenMatch(id);
+              }}
+            />
           </div>
           <div className="min-w-0">
             <h4 className="mb-2 text-xs font-semibold">Opponents</h4>
-            <EnemiesTab {...params} entries={entries} />
+            <EnemiesTab
+              {...params}
+              entries={entries}
+              onOpenMatch={(id) => {
+                close();
+                onOpenMatch(id);
+              }}
+            />
           </div>
         </div>
       )}
@@ -76,6 +93,9 @@ export function CompanionsPanel({
         <div className="grid gap-3 @xl/companions:grid-cols-2">
           <CompanionPreview
             label="Teammates"
+            relation="with"
+            entries={entries}
+            onOpenMatch={onOpenMatch}
             rows={mateRows}
             isPending={mates.isPending}
             isError={mates.isError}
@@ -84,6 +104,9 @@ export function CompanionsPanel({
           />
           <CompanionPreview
             label="Opponents"
+            relation="against"
+            entries={entries}
+            onOpenMatch={onOpenMatch}
             rows={enemyRows}
             isPending={enemies.isPending}
             isError={enemies.isError}
@@ -103,6 +126,9 @@ function CompanionPreview({
   isError,
   isFetching,
   onRetry,
+  relation,
+  entries,
+  onOpenMatch,
 }: {
   label: string;
   rows: CompanionRow[] | undefined;
@@ -110,6 +136,9 @@ function CompanionPreview({
   isError: boolean;
   isFetching: boolean;
   onRetry: () => void;
+  relation: "with" | "against";
+  entries: PlayerMatchHistoryEntry[];
+  onOpenMatch: (matchId: number) => void;
 }) {
   const visible = (rows ?? []).filter((row) => row.matches >= 2).slice(0, 3);
   const { profiles, isLoading } = useSteamProfiles(visible.map((row) => row.accountId));
@@ -172,7 +201,13 @@ function CompanionPreview({
                     </div>
                   </TableCell>
                   <TableCell className="px-1 py-1.5 text-right text-xs tabular-nums">
-                    {row.matches.toLocaleString("en-US")}
+                    <CompanionMatchesDialog
+                      row={row}
+                      name={profile?.personaname ?? `Player ${row.accountId}`}
+                      relation={relation}
+                      entries={entries}
+                      onOpenMatch={onOpenMatch}
+                    />
                   </TableCell>
                   <TableCell className="py-1.5 pr-0 pl-1 text-right text-xs tabular-nums">
                     {((row.wins / row.matches) * 100).toFixed(0)}%

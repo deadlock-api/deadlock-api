@@ -30,6 +30,7 @@ import { trackerEnemyStatsQueryOptions, trackerMateStatsQueryOptions } from "~/q
 
 import { WIN_COLOR } from "../shared/colors";
 import { PanelTooltipContent } from "../shared/PanelTooltipContent";
+import { CompanionMatchesDialog } from "./CompanionMatchesDialog";
 
 interface CompanionTableProps {
   rows: CompanionRow[] | undefined;
@@ -40,6 +41,9 @@ interface CompanionTableProps {
   label: string;
   matchesLabel: string;
   winrateLabel: string;
+  relation: "with" | "against";
+  entries: PlayerMatchHistoryEntry[];
+  onOpenMatch: (matchId: number) => void;
 }
 
 function CompanionTable({
@@ -51,6 +55,9 @@ function CompanionTable({
   label,
   matchesLabel,
   winrateLabel,
+  relation,
+  entries,
+  onOpenMatch,
 }: CompanionTableProps) {
   const minimumMatchesId = useId();
   const [minMatches, setMinMatches] = useState(2);
@@ -69,8 +76,8 @@ function CompanionTable({
     const query = searchQuery.trim().toLowerCase();
     const matches = eligibleRows.filter((row) => {
       if (!query) return true;
-      const name = profiles[row.accountId]?.personaname;
-      return name?.toLowerCase().includes(query) || String(row.accountId).includes(query);
+      const name = profiles[row.accountId]?.personaname ?? `Player ${row.accountId}`;
+      return name.toLowerCase().includes(query) || String(row.accountId).includes(query);
     });
     return sortCompanionRows(matches, sortKey, sortDir);
   }, [eligibleRows, searchQuery, profiles, sortKey, sortDir]);
@@ -111,6 +118,7 @@ function CompanionTable({
         </div>
       )}
       <PaginationControls
+        compact
         searchQuery={searchQuery}
         onSearchChange={(query) => {
           setSearchQuery(query);
@@ -213,7 +221,15 @@ function CompanionTable({
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="text-right tabular-nums">{row.matches.toLocaleString("en-US")}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  <CompanionMatchesDialog
+                    row={row}
+                    name={profile?.personaname ?? `Player ${row.accountId}`}
+                    relation={relation}
+                    entries={entries}
+                    onOpenMatch={onOpenMatch}
+                  />
+                </TableCell>
                 <TableCell className="hidden text-right tabular-nums @md:table-cell">
                   {row.wins.toLocaleString("en-US")}
                 </TableCell>
@@ -261,9 +277,17 @@ interface BreakdownTabProps {
   maxUnixTimestamp?: number | null;
   /** The filter-bar-scoped match history; companion stats are intersected with it so every filter applies. */
   entries: PlayerMatchHistoryEntry[];
+  onOpenMatch: (matchId: number) => void;
 }
 
-export function MatesTab({ accountId, gameMode, minUnixTimestamp, maxUnixTimestamp, entries }: BreakdownTabProps) {
+export function MatesTab({
+  accountId,
+  gameMode,
+  minUnixTimestamp,
+  maxUnixTimestamp,
+  entries,
+  onOpenMatch,
+}: BreakdownTabProps) {
   const params = useMemo(
     (): PlayersApiMateStatsRequest => ({
       accountId,
@@ -294,11 +318,21 @@ export function MatesTab({ accountId, gameMode, minUnixTimestamp, maxUnixTimesta
       label="Detailed teammate stats"
       matchesLabel="Matches together"
       winrateLabel="Win rate"
+      relation="with"
+      entries={entries}
+      onOpenMatch={onOpenMatch}
     />
   );
 }
 
-export function EnemiesTab({ accountId, gameMode, minUnixTimestamp, maxUnixTimestamp, entries }: BreakdownTabProps) {
+export function EnemiesTab({
+  accountId,
+  gameMode,
+  minUnixTimestamp,
+  maxUnixTimestamp,
+  entries,
+  onOpenMatch,
+}: BreakdownTabProps) {
   const params = useMemo(
     (): PlayersApiEnemyStatsRequest => ({
       accountId,
@@ -327,6 +361,9 @@ export function EnemiesTab({ accountId, gameMode, minUnixTimestamp, maxUnixTimes
       label="Detailed opponent stats"
       matchesLabel="Matches against"
       winrateLabel="Win rate"
+      relation="against"
+      entries={entries}
+      onOpenMatch={onOpenMatch}
     />
   );
 }

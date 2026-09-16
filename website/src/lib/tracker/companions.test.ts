@@ -17,12 +17,12 @@ test("shared stats count only selected matches and wins from the tracked player'
     ],
     [match(1, 1, 1), match(2, 1, 0), match(4, 0, 0)],
   );
-  assert.deepEqual(rows, [{ accountId: 99, matches: 3, wins: 2, lastPlayedUnix: 4000 }]);
+  assert.deepEqual(rows, [{ accountId: 99, matches: 3, wins: 2, lastPlayedUnix: 4000, matchIds: [1, 2, 4] }]);
 });
 
 test("duplicate match IDs do not inflate games or wins", () => {
   assert.deepEqual(intersectCompanionRows([{ id: 99, matches: [1, 1, 1] }], [match(1, 0, 0)]), [
-    { accountId: 99, matches: 1, wins: 1, lastPlayedUnix: 1000 },
+    { accountId: 99, matches: 1, wins: 1, lastPlayedUnix: 1000, matchIds: [1] },
   ]);
 });
 
@@ -50,10 +50,10 @@ test("distinguishes unloaded stats from loaded stats without selected matches", 
 
 test("win-rate sorting uses rates, favors larger tied samples, and never mutates rows", () => {
   const rows = [
-    { accountId: 1, matches: 20, wins: 10, lastPlayedUnix: 100 },
-    { accountId: 2, matches: 4, wins: 3, lastPlayedUnix: 200 },
-    { accountId: 3, matches: 12, wins: 9, lastPlayedUnix: 300 },
-    { accountId: 4, matches: 10, wins: 0, lastPlayedUnix: 400 },
+    { accountId: 1, matches: 20, wins: 10, lastPlayedUnix: 100, matchIds: [] },
+    { accountId: 2, matches: 4, wins: 3, lastPlayedUnix: 200, matchIds: [] },
+    { accountId: 3, matches: 12, wins: 9, lastPlayedUnix: 300, matchIds: [] },
+    { accountId: 4, matches: 10, wins: 0, lastPlayedUnix: 400, matchIds: [] },
   ];
   const original = [...rows];
   assert.deepEqual(

@@ -307,6 +307,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
             <div className="min-w-0">
               <h3 className="mb-2 text-lg font-semibold">Mates</h3>
               <MatesTab
+                onOpenMatch={openMatch}
                 accountId={accountId}
                 gameMode={gameMode}
                 minUnixTimestamp={minUnixTimestamp}
@@ -317,6 +318,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
             <div className="min-w-0">
               <h3 className="mb-2 text-lg font-semibold">Enemies</h3>
               <EnemiesTab
+                onOpenMatch={openMatch}
                 accountId={accountId}
                 gameMode={gameMode}
                 minUnixTimestamp={minUnixTimestamp}

@@ -279,7 +279,7 @@ export function OverviewTab({
             </div>
           )}
         />
-        <CompanionsPanel accountId={accountId} filters={filters} entries={sorted} />
+        <CompanionsPanel accountId={accountId} filters={filters} entries={sorted} onOpenMatch={onOpenMatch} />
       </div>
 
       <div className="grid gap-2 @2xl/overview:grid-cols-2 @5xl/overview:grid-cols-3">

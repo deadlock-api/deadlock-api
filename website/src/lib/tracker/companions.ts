@@ -7,6 +7,8 @@ export interface CompanionRow {
   matches: number;
   wins: number;
   lastPlayedUnix: number;
+  /** Shared match IDs after intersecting the active history filters, without duplicates. */
+  matchIds: number[];
 }
 
 export type CompanionSort = "matches" | "wins" | "winrate" | "lastPlayedUnix";
@@ -35,15 +37,17 @@ export function intersectCompanionRows(
     let matches = 0;
     let wins = 0;
     let lastPlayedUnix = 0;
+    const matchIds: number[] = [];
     for (const matchId of new Set(stat.matches)) {
       const entry = entryByMatchId.get(matchId);
       if (!entry) continue;
       matches += 1;
+      matchIds.push(matchId);
       if (isWin(entry)) wins += 1;
       lastPlayedUnix = Math.max(lastPlayedUnix, entry.start_time);
     }
     if (matches === 0) continue;
-    rows.push({ accountId: stat.id, matches, wins, lastPlayedUnix });
+    rows.push({ accountId: stat.id, matches, wins, lastPlayedUnix, matchIds });
   }
   return rows.sort((a, b) => b.matches - a.matches || b.lastPlayedUnix - a.lastPlayedUnix || a.accountId - b.accountId);
 }
