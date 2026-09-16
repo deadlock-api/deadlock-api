@@ -83,26 +83,33 @@ test("changing matches cancels adjacent requests that have not started", async (
   await expect.poll(() => [...requested].sort()).toEqual([2996, 2997, 2998]);
 });
 
-test("an unavailable match waits for a successful retry before preloading neighbors", async ({ page }) => {
-  const requested: number[] = [];
-  let available = false;
-  await page.route(`${API_ORIGIN}/v1/graphql`, async (route) => {
-    const id = requestedMatchId(route.request().postDataJSON());
-    if (id == null) return route.continue();
-    requested.push(id);
-    await route.fulfill({ json: { data: { matches: available ? [metadata] : [] } } });
+for (const missing of ["no record", "no players"]) {
+  test(`an unavailable match with ${missing} waits for a successful retry before preloading neighbors`, async ({
+    page,
+  }) => {
+    const requested: number[] = [];
+    let available = false;
+    await page.route(`${API_ORIGIN}/v1/graphql`, async (route) => {
+      const id = requestedMatchId(route.request().postDataJSON());
+      if (id == null) return route.continue();
+      requested.push(id);
+      const unavailable = missing === "no players" ? [{ ...metadata, players: [] }] : [];
+      await route.fulfill({ json: { data: { matches: available ? [metadata] : unavailable } } });
+    });
+    await page.route(`${API_ORIGIN}/v1/matches/*/metadata`, (route) =>
+      route.fulfill({ json: missing === "no players" ? { match_info: { players: [] } } : {} }),
+    );
+    await page.goto(TRACKER_URL);
+    await expect(page.getByText("Match details unavailable", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Show oldest matches first", exact: true }).click();
+    await expect(page).toHaveURL(/dir=asc/);
+    expect(requested).toEqual([CURRENT_MATCH]);
+    available = true;
+    await page.getByRole("button", { name: "Check again", exact: true }).click();
+    await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
+    await expect.poll(() => [...requested].sort()).toEqual([2997, 2998, 2998, 2999]);
   });
-  await page.route(`${API_ORIGIN}/v1/matches/*/metadata`, (route) => route.fulfill({ json: {} }));
-  await page.goto(TRACKER_URL);
-  await expect(page.getByText("Match details unavailable", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Show oldest matches first", exact: true }).click();
-  await expect(page).toHaveURL(/dir=asc/);
-  expect(requested).toEqual([CURRENT_MATCH]);
-  available = true;
-  await page.getByRole("button", { name: "Check again", exact: true }).click();
-  await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
-  await expect.poll(() => [...requested].sort()).toEqual([2997, 2998, 2998, 2999]);
-});
+}
 
 test("the first match preloads only its available neighbor", async ({ page }) => {
   const requested: number[] = [];

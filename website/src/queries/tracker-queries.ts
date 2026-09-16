@@ -366,7 +366,7 @@ async function fetchRestMatchMetadata(matchId: number): Promise<RestMatchMetadat
 async function fetchTrackerMatchMetadataFromRest(matchId: number): Promise<TrackerMatchMetadata | null> {
   const metadata = await fetchRestMatchMetadata(matchId);
   const info = metadata.match_info;
-  if (!info) return null;
+  if (!info?.players?.length) return null;
   const customStatNames = new Map(
     (info.custom_user_stats ?? []).flatMap((stat) =>
       stat.id != null && stat.name ? [[stat.id, stat.name] as const] : [],
@@ -506,7 +506,8 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
         }),
       );
       const match = result?.matches[0];
-      if (!match) return fetchTrackerMatchMetadataFromRest(matchId);
+      // A match row may exist before its players arrive; keep that incomplete response retryable.
+      if (!match?.players?.length) return fetchTrackerMatchMetadataFromRest(matchId);
       return {
         winning_team: match.winning_team,
         average_badge_team0: match.average_badge_team_0,
