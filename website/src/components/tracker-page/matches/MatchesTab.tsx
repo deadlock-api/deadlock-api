@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Home } from "lucide-react";
 import { parseAsInteger, parseAsStringLiteral, useQueryState, useQueryStates } from "nuqs";
@@ -84,13 +84,38 @@ export function MatchesTab({
   const detailsRef = useRef<HTMLElement>(null);
   const previousSelectedId = useRef(selectedId);
 
-  // The list takes the height of the details beside it, so while a match loads into a short skeleton the details
-  // hold their last loaded height; otherwise the list would shrink and grow back with every pick.
-  const { isPending: detailsPending } = useQuery({
+  const queryClient = useQueryClient();
+  const {
+    data: details,
+    isPending: detailsPending,
+    isSuccess: detailsLoaded,
+    isFetching: detailsFetching,
+  } = useQuery({
     ...trackerMatchMetadataQueryOptions(selectedId ?? 0),
     enabled: selectedId != null,
   });
   const isLoadingDetails = selectedId != null && detailsPending;
+  const canPreload = detailsLoaded && details != null && !detailsFetching;
+  const previousMatchId = selectedIndex > 0 ? sortedEntries[selectedIndex - 1]?.match_id : undefined;
+  const nextMatchId = selectedIndex >= 0 ? sortedEntries[selectedIndex + 1]?.match_id : undefined;
+  useEffect(() => {
+    if (selectedId == null || !canPreload || (previousMatchId == null && nextMatchId == null)) return;
+    const preload = () => {
+      for (const matchId of [previousMatchId, nextMatchId]) {
+        if (matchId != null) void queryClient.prefetchQuery(trackerMatchMetadataQueryOptions(matchId));
+      }
+    };
+    // Give the loaded match time to render; changing selection cancels work that has not started yet.
+    if (typeof window.requestIdleCallback === "function") {
+      const idle = window.requestIdleCallback(preload, { timeout: 1000 });
+      return () => window.cancelIdleCallback(idle);
+    }
+    const timer = window.setTimeout(preload, 0);
+    return () => window.clearTimeout(timer);
+  }, [queryClient, selectedId, canPreload, previousMatchId, nextMatchId]);
+
+  // The list takes the height of the details beside it, so while a match loads into a short skeleton the details
+  // hold their last loaded height; otherwise the list would shrink and grow back with every pick.
   const [heldDetailsHeight, setHeldDetailsHeight] = useState<number>();
   useEffect(() => {
     const details = detailsRef.current;
