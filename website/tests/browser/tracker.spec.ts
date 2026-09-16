@@ -918,3 +918,53 @@ test("failed build assets can be retried while scoreboard stats remain available
   await expect(page.getByText("Could not load build details", { exact: true })).toHaveCount(0);
   expect(requests).toBe(2);
 });
+
+const patronStatus = {
+  tier_id: "tier",
+  pledge_amount_cents: 500,
+  total_slots: 2,
+  is_active: true,
+  last_verified_at: "2026-09-16T00:00:00Z",
+  steam_accounts_summary: { active_count: 1, cooldown_count: 0, available_slots: 1 },
+};
+const steamAccount = (steam_id3: number, deleted_at: string | null = null) => ({
+  id: String(steam_id3),
+  steam_id3,
+  created_at: "2026-09-16T00:00:00Z",
+  deleted_at,
+  is_in_cooldown: false,
+});
+
+test("the tracker landing page opens the profile of a patron's only account", async ({ page }) => {
+  await page.route(`${API_ORIGIN}/v1/patron/status`, (route) => route.fulfill({ json: patronStatus }));
+  await page.route(`${API_ORIGIN}/v1/patron/steam-accounts`, (route) =>
+    route.fulfill({
+      json: {
+        accounts: [steamAccount(ACCOUNT_ID), steamAccount(ACCOUNT_ID + 1, "2026-09-15T00:00:00Z")],
+        summary: { total_slots: 2, used_slots: 1, available_slots: 1, slots_in_cooldown: 0 },
+      },
+    }),
+  );
+  await page.goto("/tracker");
+  await expect(page).toHaveURL(new RegExp(`/tracker/players/${ACCOUNT_ID}(\\?|$)`));
+  await expect(page.getByRole("heading", { level: 1, name: "Tracker Tester" })).toBeVisible();
+  await page.goBack();
+  await expect(page).not.toHaveURL(/\/tracker$/);
+});
+
+test("the tracker landing page lists accounts when a patron has more than one", async ({ page }) => {
+  await page.route(`${API_ORIGIN}/v1/patron/status`, (route) => route.fulfill({ json: patronStatus }));
+  await page.route(`${API_ORIGIN}/v1/patron/steam-accounts`, (route) =>
+    route.fulfill({
+      json: {
+        accounts: [steamAccount(ACCOUNT_ID), steamAccount(ACCOUNT_ID + 1)],
+        summary: { total_slots: 2, used_slots: 2, available_slots: 0, slots_in_cooldown: 0 },
+      },
+    }),
+  );
+  await page.goto("/tracker");
+  const accounts = page.getByRole("list", { name: "Linked tracker accounts" });
+  await expect(accounts.getByRole("link", { name: "Tracker Tester" })).toBeVisible();
+  await expect(accounts.getByRole("link", { name: `Player ${ACCOUNT_ID + 1}` })).toBeVisible();
+  await expect(page).toHaveURL(/\/tracker$/);
+});

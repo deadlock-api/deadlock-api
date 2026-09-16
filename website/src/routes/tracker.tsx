@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo } from "react";
 
 import { TrackerAccountList } from "~/components/tracker-page/shared/TrackerAccountList";
 import { TrackerQueryError } from "~/components/tracker-page/shared/TrackerQueryError";
@@ -34,6 +34,13 @@ function MyAccountsCard() {
   const accountIds = useMemo(() => activeAccounts.map((account) => account.steam_id3), [activeAccounts]);
   const { profiles } = useSteamProfiles(accountIds);
 
+  const navigate = useNavigate();
+  const soleAccountId = activeAccounts.length === 1 ? activeAccounts[0].steam_id3 : undefined;
+  useEffect(() => {
+    if (soleAccountId === undefined) return;
+    navigate({ to: "/tracker/players/$accountId", params: { accountId: String(soleAccountId) }, replace: true });
+  }, [navigate, soleAccountId]);
+
   return (
     <Card>
       <CardHeader>
@@ -41,7 +48,7 @@ function MyAccountsCard() {
         <CardDescription>Prioritized Steam accounts on your Patreon subscription</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
-        {isLoading || (isAuthenticated && accountsQuery.isPending) ? (
+        {isLoading || (isAuthenticated && accountsQuery.isPending) || soleAccountId !== undefined ? (
           <div className="flex flex-col gap-2 px-3 py-1">
             <Skeleton className="h-8 w-full" />
             <Skeleton className="h-8 w-full" />
