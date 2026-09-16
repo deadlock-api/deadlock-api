@@ -2,10 +2,10 @@ import { expect, test } from "@playwright/test";
 
 import { ACCOUNT_ID, API_ORIGIN, CURRENT_MATCH, history, metadata, requestedMatchId, TRACKER_URL } from "./fixtures";
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, context }) => {
   await page.addInitScript(() => localStorage.setItem("tracker-feedback-notice-dismissed", "true"));
   // Keep analytics, avatars and other optional integrations outside the regression suite.
-  await page.route("**/*", (route) => {
+  await context.route("**/*", (route) => {
     const url = new URL(route.request().url());
     return url.hostname === "127.0.0.1" || url.hostname === "localhost" ? route.continue() : route.abort();
   });
@@ -149,6 +149,42 @@ test("saved search includes matches beyond the first page and preserves removal 
   await page.getByRole("button", { name: "Remove saved match 2952", exact: true }).click();
   await expect(page.getByText("No matches found", { exact: true })).toBeVisible();
   await expect(search).toBeFocused();
+});
+
+test("saved markers synchronize when another tab removes the bookmark", async ({ page, context }) => {
+  await page.goto(TRACKER_URL);
+  await page.getByRole("button", { name: "Save match for later", exact: true }).click();
+  const secondTab = await context.newPage();
+  await secondTab.goto(TRACKER_URL);
+  await secondTab.getByRole("button", { name: "Remove match from saved matches", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Save match for later", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await expect(
+    page.locator(`[data-match-id="${CURRENT_MATCH}"]`).getByLabel("Saved match", { exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Saved matches (0)", exact: true })).toBeVisible();
+});
+
+test("a failed browser-storage write does not show a match as saved", async ({ page }) => {
+  await page.addInitScript((key) => {
+    const setItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (name, value) {
+      if (name === key) throw new DOMException("Storage is full", "QuotaExceededError");
+      return setItem.call(this, name, value);
+    };
+  }, `tracker:saved-matches:${ACCOUNT_ID}`);
+  await page.goto(TRACKER_URL);
+  const save = page.getByRole("button", { name: "Save match for later", exact: true });
+  await save.click();
+  await expect(
+    page.getByText("Could not update saved matches. Browser storage is unavailable or full.", { exact: true }),
+  ).toBeVisible();
+  await expect(save).toHaveAttribute("aria-pressed", "false");
+  await expect(
+    page.locator(`[data-match-id="${CURRENT_MATCH}"]`).getByLabel("Saved match", { exact: true }),
+  ).toHaveCount(0);
 });
 
 test("scoreboard shows the final build and the compact timeline fits wide and small screens", async ({ page }) => {
