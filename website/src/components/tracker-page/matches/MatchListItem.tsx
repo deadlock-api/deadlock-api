@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { CircleDashed, Gavel, LogOut, Trophy } from "lucide-react";
-import { type KeyboardEventHandler, useRef } from "react";
+import { type KeyboardEventHandler, useEffect, useRef } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
 import { day } from "~/dayjs";
@@ -22,7 +22,7 @@ import { RankDelta } from "../shared/RankDelta";
 
 /**
  * How long the pointer rests on a row before its details are prefetched. Sweeping across the list would
- * otherwise fire a request per row, and a rate-limited one caches the match as having no details.
+ * otherwise fire a request per row.
  */
 const PREFETCH_HOVER_MS = 100;
 
@@ -32,6 +32,7 @@ export function MatchListItem({
   heroName,
   hasRecord,
   selected,
+  tabIndex,
   showTimeOfDay,
   sortKey,
   onSelect,
@@ -42,12 +43,14 @@ export function MatchListItem({
   /** Whether the match holds a personal best over the filtered history. */
   hasRecord: boolean;
   selected: boolean;
+  /** One tab stop for the list; arrow keys reach the other matches. */
+  tabIndex: 0 | -1;
   /** Under a session header the day is already given, so the row only needs the time. */
   showTimeOfDay: boolean;
   /** The list's sort, whose metric takes the mode and duration's place when the row would not otherwise show it. */
   sortKey: MatchSortKey;
   onSelect: () => void;
-  onKeyDown: KeyboardEventHandler<HTMLButtonElement>;
+  onKeyDown?: KeyboardEventHandler<HTMLButtonElement>;
 }) {
   const win = isWin(entry);
   const rounds = brawlRounds(entry);
@@ -58,7 +61,9 @@ export function MatchListItem({
 
   const queryClient = useQueryClient();
   const prefetchTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(prefetchTimer.current), []);
   const schedulePrefetch = () => {
+    clearTimeout(prefetchTimer.current);
     prefetchTimer.current = setTimeout(() => {
       void queryClient.prefetchQuery(trackerMatchMetadataQueryOptions(entry.match_id));
     }, PREFETCH_HOVER_MS);
@@ -69,6 +74,7 @@ export function MatchListItem({
       type="button"
       data-match-id={entry.match_id}
       aria-current={selected ? "true" : undefined}
+      tabIndex={tabIndex}
       onClick={onSelect}
       onKeyDown={onKeyDown}
       onMouseEnter={schedulePrefetch}
@@ -83,7 +89,9 @@ export function MatchListItem({
         aria-hidden
         className={cn("absolute inset-y-0 left-0", selected ? "w-1" : "w-0.5", win ? WIN_DOT_CLASS : LOSS_DOT_CLASS)}
       />
-      <HeroImage heroId={entry.hero_id} className="size-7 shrink-0 rounded-full" />
+      <span aria-hidden="true" className="shrink-0">
+        <HeroImage heroId={entry.hero_id} className="size-7 rounded-full" />
+      </span>
       <div className="min-w-0 flex-1 leading-tight">
         <div className="flex items-center gap-1.5">
           <span className={cn("truncate text-sm", selected ? "font-semibold" : "font-medium")}>{heroName}</span>

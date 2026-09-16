@@ -1,16 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { ArrowDown, ArrowUp, Home } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Home, List } from "lucide-react";
 import { parseAsInteger, parseAsStringLiteral, useQueryState, useQueryStates } from "nuqs";
-import { Fragment, type KeyboardEvent, type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
-import { day } from "~/dayjs";
 import {
   computeRecords,
   computeSessions,
-  formatPlaytime,
   MATCH_SORT_KEYS,
   type MatchSortKey,
   type PlaySession,
@@ -25,22 +23,11 @@ import { heroesQueryOptions } from "~/queries/asset-queries";
 import { trackerMatchMetadataQueryOptions } from "~/queries/tracker-queries";
 
 import { LOSS_TEXT_CLASS, WIN_TEXT_CLASS } from "../shared/colors";
-import { RankDelta } from "../shared/RankDelta";
 import { MatchDetails } from "./MatchDetails";
-import { MatchListItem } from "./MatchListItem";
+import { MatchHistoryList, type MatchHistoryHandle } from "./MatchHistoryList";
 
 // A best among a handful of matches says little, so small sets get no record markers.
 const MIN_MATCHES_FOR_RECORDS = 10;
-const LIST_CHUNK = 50;
-/** How far past the list's visible end the next chunk renders, so scrolling never catches up with it. */
-const PRELOAD_MARGIN_PX = 2400;
-function focusMatchInList(list: HTMLElement | null, matchId: number | undefined) {
-  const item = list?.querySelector<HTMLButtonElement>(`[data-match-id="${matchId}"]`);
-  item?.focus({ preventScroll: true });
-  // The list can extend beyond the page viewport while match details are open.
-  item?.scrollIntoView({ block: "nearest", inline: "nearest" });
-}
-
 const SORT_LABELS: Record<MatchSortKey, string> = {
   played: "Date",
   kda: "KDA",
@@ -50,38 +37,6 @@ const SORT_LABELS: Record<MatchSortKey, string> = {
   duration: "Duration",
   rankDelta: "Rank change",
 };
-
-function sessionDateLabel(unix: number): string {
-  const date = day.unix(unix);
-  const today = day().startOf("day");
-  if (date.isSame(today, "day")) return "Today";
-  if (date.isSame(today.subtract(1, "day"), "day")) return "Yesterday";
-  return date.format(date.isSame(today, "year") ? "ddd, MMM D" : "ddd, MMM D, YYYY");
-}
-
-function SessionHeader({ session }: { session: PlaySession }) {
-  return (
-    <div className="sticky top-0 z-10 flex items-center gap-2 border-y border-border bg-muted px-3 py-1 text-xs first:border-t-0">
-      <span className="font-semibold">{sessionDateLabel(session.startUnix)}</span>
-      <span className="tabular-nums">
-        <span className={cn("font-semibold", WIN_TEXT_CLASS)}>{session.wins}W</span>
-        <span className="text-muted-foreground"> – </span>
-        <span className={cn("font-semibold", LOSS_TEXT_CLASS)}>{session.losses}L</span>
-      </span>
-      <RankDelta
-        value={session.rankDelta}
-        className="font-semibold"
-        title="Net rank change in selected session matches"
-      />
-      <span
-        className="ml-auto text-muted-foreground tabular-nums"
-        title={`${day.unix(session.startUnix).format("HH:mm")} – ${day.unix(session.endUnix).format("HH:mm")}`}
-      >
-        {formatPlaytime(session.totalTimeS)}
-      </span>
-    </div>
-  );
-}
 
 export function MatchesTab({
   entries,
@@ -120,13 +75,9 @@ export function MatchesTab({
     selectedMatchId === null ? null : selectedIndex === -1 ? hiddenLinkedMatch : sortedEntries[selectedIndex];
   const selectedId = selected?.match_id;
 
-  const [visibleCount, setVisibleCount] = useState(() => Math.max(LIST_CHUNK, selectedIndex + LIST_CHUNK));
-  const visibleEntries = useMemo(() => sortedEntries.slice(0, visibleCount), [sortedEntries, visibleCount]);
-  const hasMore = visibleCount < sortedEntries.length;
-
-  const listRef = useRef<HTMLElement>(null);
-  const keyboardHelpId = useId();
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<MatchHistoryHandle>(null);
+  const initialSelectedId = useRef(selectedId);
+  const previousSort = useRef({ sortKey, sortDir });
   const detailsRef = useRef<HTMLElement>(null);
   const previousSelectedId = useRef(selectedId);
 
@@ -146,41 +97,44 @@ export function MatchesTab({
     return () => observer.disconnect();
   }, [isLoadingDetails]);
   const focusSelectedItem = useRef(false);
+  const navigationRef = useRef<HTMLElement>(null);
+  const navigationDirection = useRef<-1 | 1 | null>(null);
 
-  // The observer is rebuilt after every chunk, and a new observer reports at once, so chunks keep coming
-  // until the list's end lies further past its visible end than the preload margin.
+  // The virtual history can jump to a deep link without mounting all earlier rows.
   useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel || !hasMore) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setVisibleCount((count) => Math.max(count, visibleCount + LIST_CHUNK));
-      },
-      { root: listRef.current, rootMargin: `0px 0px ${PRELOAD_MARGIN_PX}px 0px` },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [hasMore, visibleCount]);
-
-  // A shared link opens with its match centered in the list; `scrollIntoView` would scroll the page too.
-  useEffect(() => {
-    const list = listRef.current;
-    const item = list?.querySelector<HTMLElement>("[data-match-id][aria-current]");
-    if (list && item) list.scrollTop = item.offsetTop - (list.clientHeight - item.offsetHeight) / 2;
+    listRef.current?.scrollToMatch(initialSelectedId.current);
   }, []);
+
+  useEffect(() => {
+    if (previousSort.current.sortKey !== sortKey || previousSort.current.sortDir !== sortDir) {
+      listRef.current?.scrollToTop();
+      previousSort.current = { sortKey, sortDir };
+    }
+  }, [sortKey, sortDir]);
 
   useEffect(() => {
     const changed = previousSelectedId.current !== selectedId;
     previousSelectedId.current = selectedId;
     if (focusSelectedItem.current) {
       focusSelectedItem.current = false;
-      focusMatchInList(listRef.current, selectedId);
+      listRef.current?.focusMatch(selectedId);
       return;
     }
     if (!changed && selectedId == null) return;
     // Picking a match while scrolled down into the previous one's details starts the new one from its top.
     const details = detailsRef.current;
-    if (changed) details?.focus({ preventScroll: true });
+    if (changed && navigationDirection.current != null) {
+      const direction = navigationDirection.current;
+      const button = navigationRef.current?.querySelector<HTMLButtonElement>(`[data-direction="${direction}"]`);
+      // Reaching either end disables the activated button; keep keyboard focus on the way back.
+      const target = button?.disabled
+        ? navigationRef.current?.querySelector<HTMLButtonElement>(`[data-direction="${-direction}"]`)
+        : button;
+      target?.focus({ preventScroll: true });
+    } else if (changed) {
+      details?.focus({ preventScroll: true });
+    }
+    navigationDirection.current = null;
     if (details && details.getBoundingClientRect().top < 0) details.scrollIntoView({ block: "start" });
   }, [selectedId]);
 
@@ -197,18 +151,30 @@ export function MatchesTab({
     if (selectedId == null) detailsRef.current?.focus({ preventScroll: true });
     detailsRef.current?.scrollIntoView({ block: "start" });
   };
+  const navigateMatch = (offset: -1 | 1) => {
+    if (selectedIndex < 0) return;
+    const next = sortedEntries[selectedIndex + offset];
+    if (!next) return;
+    navigationDirection.current = offset;
+    setSelectedMatchId(next.match_id);
+  };
 
   const handleItemKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    if (event.altKey) return;
     event.preventDefault();
     const focusedId = Number(event.currentTarget.dataset.matchId);
     const index = sortedEntries.findIndex((entry) => entry.match_id === focusedId);
-    const nextIndex = index + (event.key === "ArrowDown" ? 1 : -1);
+    const nextIndex =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? sortedEntries.length - 1
+          : index + (event.key === "ArrowDown" ? 1 : -1);
     const next = sortedEntries[nextIndex];
     if (!next) return;
-    if (nextIndex >= visibleCount) setVisibleCount((count) => count + LIST_CHUNK);
     if (next.match_id === selectedId) {
-      focusMatchInList(listRef.current, selectedId);
+      listRef.current?.focusMatch(selectedId);
       return;
     }
     focusSelectedItem.current = true;
@@ -217,8 +183,6 @@ export function MatchesTab({
 
   const changeSort = (next: { sort?: MatchSortKey; dir?: SortDir }) => {
     setSort(next);
-    setVisibleCount(LIST_CHUNK);
-    if (listRef.current) listRef.current.scrollTop = 0;
   };
   const reverseSortLabel =
     sortKey === "played"
@@ -251,6 +215,7 @@ export function MatchesTab({
       <div className="grid gap-4 @5xl/matches:grid-cols-[17rem_minmax(0,1fr)] @7xl/matches:grid-cols-[19rem_minmax(0,1fr)]">
         <section
           ref={detailsRef}
+          data-match-details={selectedId}
           tabIndex={-1}
           aria-label={selected ? `Match ${selected.match_id} details` : "Overview statistics"}
           className="flex min-w-0 scroll-mt-4 flex-col gap-3 outline-none"
@@ -277,7 +242,7 @@ export function MatchesTab({
                 variant="ghost"
                 size="sm"
                 className="self-end @5xl/matches:hidden"
-                onClick={() => listRef.current?.scrollIntoView({ block: "start" })}
+                onClick={() => listRef.current?.focusMatch(sortedEntries[0]?.match_id)}
               >
                 Match history
                 <ArrowDown data-icon="inline-end" />
@@ -287,10 +252,48 @@ export function MatchesTab({
           )}
           {selected && (
             <>
-              <Button variant="outline" size="sm" className="self-start" onClick={showOverview}>
-                <Home data-icon="inline-start" />
-                Back to overview
-              </Button>
+              <nav ref={navigationRef} aria-label="Match navigation" className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" onClick={showOverview}>
+                  <Home data-icon="inline-start" />
+                  Back to overview
+                </Button>
+                {selectedIndex >= 0 && (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={() => listRef.current?.focusMatch(selectedId)}>
+                      <List data-icon="inline-start" />
+                      Show in history
+                    </Button>
+                    <div className="ml-auto flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        aria-label="Previous match in list"
+                        data-direction={-1}
+                        title="Previous match in current sort order"
+                        disabled={selectedIndex === 0}
+                        onClick={() => navigateMatch(-1)}
+                      >
+                        <ChevronLeft />
+                      </Button>
+                      <output className="text-xs whitespace-nowrap text-muted-foreground tabular-nums">
+                        <span className="sr-only">Match </span>
+                        {(selectedIndex + 1).toLocaleString("en-US")} of {sortedEntries.length.toLocaleString("en-US")}
+                      </output>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        aria-label="Next match in list"
+                        data-direction={1}
+                        title="Next match in current sort order"
+                        disabled={selectedIndex === sortedEntries.length - 1}
+                        onClick={() => navigateMatch(1)}
+                      >
+                        <ChevronRight />
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </nav>
               <MatchDetails
                 key={selected.match_id}
                 entry={selected}
@@ -312,19 +315,21 @@ export function MatchesTab({
           )}
         >
           <div className="absolute inset-0 flex flex-col overflow-hidden rounded-md border border-border">
-            <button
-              type="button"
-              onClick={showOverview}
-              aria-current={selected === null ? "true" : undefined}
-              className={cn(
-                "flex w-full cursor-pointer items-center gap-2 border-b border-border px-3 py-2 text-left text-sm transition-colors",
-                "hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none",
-                selected === null ? "bg-accent font-semibold hover:bg-accent focus-visible:bg-accent" : "font-medium",
-              )}
-            >
-              <Home className="size-4 shrink-0 text-muted-foreground" />
-              Overview
-            </button>
+            <div className="flex items-center border-b border-border">
+              <button
+                type="button"
+                onClick={showOverview}
+                aria-current={selected === null ? "true" : undefined}
+                className={cn(
+                  "flex min-w-0 flex-1 cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm transition-colors",
+                  "hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none",
+                  selected === null ? "bg-accent font-semibold hover:bg-accent focus-visible:bg-accent" : "font-medium",
+                )}
+              >
+                <Home className="size-4 shrink-0 text-muted-foreground" />
+                Overview
+              </button>
+            </div>
             <div className="flex items-center gap-2 border-b border-border px-3 py-1.5">
               <div className="min-w-0 text-xs leading-tight text-muted-foreground tabular-nums">
                 <div className="font-semibold text-foreground">
@@ -369,49 +374,19 @@ export function MatchesTab({
                 {sortDir === "desc" ? <ArrowDown className="size-3.5" /> : <ArrowUp className="size-3.5" />}
               </Button>
             </div>
-            <nav
+            <MatchHistoryList
               ref={listRef}
-              className="relative min-h-0 flex-1 scroll-pt-7 scrollbar-thin overflow-y-auto overscroll-contain"
-              aria-label="Match history"
-              aria-describedby={keyboardHelpId}
-            >
-              <p id={keyboardHelpId} className="sr-only">
-                Use the up and down arrow keys to browse matches. Press Enter to view the selected match's details.
-              </p>
-              {visibleEntries.map((entry, index) => {
-                const session = sessions.get(entry.match_id);
-                const startsSession =
-                  session != null && (index === 0 || sessions.get(visibleEntries[index - 1].match_id) !== session);
-                return (
-                  <Fragment key={entry.match_id}>
-                    {startsSession && <SessionHeader session={session} />}
-                    <MatchListItem
-                      entry={entry}
-                      heroName={heroNameOf(entry.hero_id)}
-                      hasRecord={heldRecords?.has(entry.match_id) ?? false}
-                      selected={entry.match_id === selectedId}
-                      showTimeOfDay={session != null}
-                      sortKey={sortKey}
-                      onSelect={() => selectMatch(entry.match_id)}
-                      onKeyDown={handleItemKeyDown}
-                    />
-                  </Fragment>
-                );
-              })}
-              {entries.length === 0 && (
-                <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-                  No matches found
-                  {heroId != null && (
-                    <div className="mt-3">
-                      <Button variant="outline" size="sm" onClick={() => onHeroChange(null)}>
-                        Show all heroes
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-              {hasMore && <div ref={sentinelRef} aria-hidden className="h-px" />}
-            </nav>
+              entries={sortedEntries}
+              sessions={sessions}
+              selectedId={selectedId}
+              sortKey={sortKey}
+              heroNameOf={heroNameOf}
+              hasRecord={(matchId) => heldRecords?.has(matchId) ?? false}
+              onSelect={selectMatch}
+              onItemKeyDown={handleItemKeyDown}
+              heroId={heroId}
+              onHeroChange={onHeroChange}
+            />
           </div>
         </aside>
       </div>
