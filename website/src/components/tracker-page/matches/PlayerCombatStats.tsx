@@ -1,10 +1,9 @@
 import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
 import { formatMatchDuration } from "~/lib/tracker/compute";
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
-import { PanelTooltipContent, TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
+import { TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
+import { TrackerDetailPopover } from "../shared/TrackerDetailPopover";
 
 const SHORT_LABELS: Record<string, string> = {
   "Hero accuracy": "Accuracy",
@@ -27,27 +26,24 @@ export function PlayerCombatStats({
   return (
     <>
       {stats?.metrics.map((metric) => (
-        <Tooltip key={metric.label}>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="xs"
-              className="-mx-2 -my-0.5"
-              onClick={(event) => event.stopPropagation()}
-              aria-label={`${metric.label}: ${(metric.share * 100).toFixed(1)}%. ${metric.detail}`}
-            >
-              <span className="font-semibold tabular-nums">{(metric.share * 100).toFixed(1)}%</span>
-              <span className="text-muted-foreground">{SHORT_LABELS[metric.label] ?? metric.label}</span>
-            </Button>
-          </TooltipTrigger>
-          <PanelTooltipContent>
-            <TooltipHeader title={metric.label} subtitle={metric.detail} />
-            <TooltipStats>
-              <TooltipStat label="Rate" value={`${(metric.share * 100).toFixed(1)}%`} />
-              <TooltipStat label="Through" value={formatMatchDuration(stats.sampledAt)} />
-            </TooltipStats>
-          </PanelTooltipContent>
-        </Tooltip>
+        <TrackerDetailPopover
+          key={metric.label}
+          label={`${metric.label}: ${(metric.share * 100).toFixed(1)}%`}
+          size="xs"
+          className="-mx-2 -my-0.5"
+          details={
+            <>
+              <TooltipHeader title={metric.label} subtitle={metric.detail} />
+              <TooltipStats>
+                <TooltipStat label="Rate" value={`${(metric.share * 100).toFixed(1)}%`} />
+                <TooltipStat label="Through" value={formatMatchDuration(stats.sampledAt)} />
+              </TooltipStats>
+            </>
+          }
+        >
+          <span className="font-semibold tabular-nums">{(metric.share * 100).toFixed(1)}%</span>
+          <span className="text-muted-foreground">{SHORT_LABELS[metric.label] ?? metric.label}</span>
+        </TrackerDetailPopover>
       ))}
       {swapped && <Badge variant="outline">Swapped from {pregameHeroName ?? `Hero ${player.pregame_hero_id}`}</Badge>}
     </>
