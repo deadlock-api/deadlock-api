@@ -1,4 +1,4 @@
-import { ChevronDown, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 
 import { Filter } from "~/components/Filter";
@@ -29,8 +29,6 @@ export function TrackerFilterBar({
   startDate,
   endDate,
   onDateChange,
-  hasCustomFilters,
-  onReset,
 }: {
   mode: Mode;
   onModeChange: (mode: Mode) => void;
@@ -41,8 +39,6 @@ export function TrackerFilterBar({
   startDate?: Dayjs;
   endDate?: Dayjs;
   onDateChange: (startDate?: Dayjs, endDate?: Dayjs, prevStartDate?: Dayjs, prevEndDate?: Dayjs) => void;
-  hasCustomFilters: boolean;
-  onReset: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const { hero } = useHeroById(heroId ?? 0);
@@ -52,11 +48,6 @@ export function TrackerFilterBar({
   const modeLabel = mode === "normal_all" ? "All normal" : MODE_CONFIG[mode].label;
   const resultLabel = result === "all" ? "All results" : result === "win" ? "Wins" : "Losses";
   const summary = `${heroLabel} · ${modeLabel} · ${resultLabel}`;
-  const resetProps = {
-    "aria-disabled": !hasCustomFilters,
-    onClick: hasCustomFilters ? onReset : undefined,
-    title: "Restore the default date range, all heroes, normal mode and all results",
-  };
   return (
     <Collapsible open={expanded} onOpenChange={setExpanded} className="mx-auto flex w-full flex-col gap-1 lg:w-fit">
       <div className="flex items-center gap-1 lg:hidden">
@@ -75,15 +66,6 @@ export function TrackerFilterBar({
             <ChevronDown data-icon="inline-end" className="transition-transform group-data-[state=open]:rotate-180" />
           </Button>
         </CollapsibleTrigger>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="aria-disabled:opacity-50"
-          aria-label="Reset filters"
-          {...resetProps}
-        >
-          <RotateCcw aria-hidden="true" />
-        </Button>
       </div>
       <CollapsibleContent
         forceMount
@@ -105,15 +87,6 @@ export function TrackerFilterBar({
               active={result !== "all"}
             />
           </Filter.Root>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="hidden self-end aria-disabled:opacity-50 lg:inline-flex"
-            {...resetProps}
-          >
-            <RotateCcw data-icon="inline-start" />
-            Reset filters
-          </Button>
         </div>
       </CollapsibleContent>
     </Collapsible>

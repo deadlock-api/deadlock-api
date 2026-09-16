@@ -3,7 +3,7 @@ import { useMemo } from "react";
 
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { parseAsMatchMode } from "~/components/selectors/MatchModeSelector";
-import { DEFAULT_MODE, MODE_CONFIG } from "~/components/selectors/ModeSelector";
+import { MODE_CONFIG } from "~/components/selectors/ModeSelector";
 import { day } from "~/dayjs";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
@@ -29,16 +29,8 @@ export function useTrackerFilters() {
   const { mode, setMode, gameMode, matchMode } = useModeState();
   const [heroId, setHeroId] = useQueryState("hero", parseAsInteger);
   const [result, setResult] = useQueryState("result", parseAsStringLiteral(RESULT_FILTERS).withDefault("all"));
-  const { startDate, endDate, handleDateChange, isDefaultRange } = useDateRangeState();
+  const { startDate, endDate, handleDateChange } = useDateRangeState();
   const [, setFilterQuery] = useQueryStates(TRACKER_SELECTION_PARSERS);
-  const hasCustomFilters = mode !== DEFAULT_MODE || heroId !== null || result !== "all" || !isDefaultRange;
-  const resetFilters = () => {
-    // Override the app's per-key debounce so all cleared filters share one browser-history entry.
-    setFilterQuery(
-      { hero: null, result: null, game_mode: null, match_mode: null, date_range: null, "pd-picker-tab": null },
-      { history: "push", limitUrlUpdates: throttle(50) },
-    );
-  };
   // The picker already supplies day, season or patch boundaries. Rounding them to UTC days can
   // add matches outside a local calendar-day selection, so every tracker view uses the exact instants.
   const minUnixTimestamp = startDate?.unix();
@@ -96,8 +88,6 @@ export function useTrackerFilters() {
     minUnixTimestamp,
     maxUnixTimestamp,
     filters,
-    hasCustomFilters,
-    resetFilters,
     applyFilters,
   };
 }

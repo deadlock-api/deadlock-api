@@ -91,8 +91,6 @@ function TrackerContent({ accountId }: { accountId: number }) {
     minUnixTimestamp,
     maxUnixTimestamp,
     filters,
-    hasCustomFilters,
-    resetFilters,
     applyFilters,
   } = useTrackerFilters();
 
@@ -193,8 +191,6 @@ function TrackerContent({ accountId }: { accountId: number }) {
           startDate={startDate}
           endDate={endDate}
           onDateChange={handleDateChange}
-          hasCustomFilters={hasCustomFilters}
-          onReset={resetFilters}
         />
       </PlayerHeader>
 
