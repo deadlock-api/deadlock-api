@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Home, List } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Home } from "lucide-react";
 import { parseAsInteger, parseAsStringLiteral, useQueryState, useQueryStates } from "nuqs";
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
@@ -261,40 +261,34 @@ export function MatchesTab({
                   Back to overview
                 </Button>
                 {selectedIndex >= 0 && (
-                  <>
-                    <Button variant="ghost" size="sm" onClick={() => listRef.current?.focusMatch(selectedId)}>
-                      <List data-icon="inline-start" />
-                      Show in history
+                  <div className="ml-auto flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label="Previous match in list"
+                      data-direction={-1}
+                      title="Previous match in current sort order"
+                      disabled={selectedIndex === 0}
+                      onClick={() => navigateMatch(-1)}
+                    >
+                      <ChevronLeft />
                     </Button>
-                    <div className="ml-auto flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon-sm"
-                        aria-label="Previous match in list"
-                        data-direction={-1}
-                        title="Previous match in current sort order"
-                        disabled={selectedIndex === 0}
-                        onClick={() => navigateMatch(-1)}
-                      >
-                        <ChevronLeft />
-                      </Button>
-                      <output className="text-xs whitespace-nowrap text-muted-foreground tabular-nums">
-                        <span className="sr-only">Match </span>
-                        {(selectedIndex + 1).toLocaleString("en-US")} of {sortedEntries.length.toLocaleString("en-US")}
-                      </output>
-                      <Button
-                        variant="outline"
-                        size="icon-sm"
-                        aria-label="Next match in list"
-                        data-direction={1}
-                        title="Next match in current sort order"
-                        disabled={selectedIndex === sortedEntries.length - 1}
-                        onClick={() => navigateMatch(1)}
-                      >
-                        <ChevronRight />
-                      </Button>
-                    </div>
-                  </>
+                    <output className="text-xs whitespace-nowrap text-muted-foreground tabular-nums">
+                      <span className="sr-only">Match </span>
+                      {(selectedIndex + 1).toLocaleString("en-US")} of {sortedEntries.length.toLocaleString("en-US")}
+                    </output>
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label="Next match in list"
+                      data-direction={1}
+                      title="Next match in current sort order"
+                      disabled={selectedIndex === sortedEntries.length - 1}
+                      onClick={() => navigateMatch(1)}
+                    >
+                      <ChevronRight />
+                    </Button>
+                  </div>
                 )}
               </nav>
               <MatchDetails
