@@ -59,7 +59,7 @@ export function HeroScoreboardTable({
           )}
           <TableHead className="text-right">
             <div className="flex items-center justify-end gap-1">
-              <SortBySelector value={sortBy} onChange={onSortByChange} />
+              <SortBySelector value={sortBy} defaultValue="winrate" onChange={onSortByChange} />
               <button
                 type="button"
                 onClick={() => onSortDirectionChange(sortDirection === "desc" ? "asc" : "desc")}

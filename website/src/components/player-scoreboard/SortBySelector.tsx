@@ -9,6 +9,7 @@ import { buildSortByValue, parseSortByValue, SORT_CATEGORIES, type SortVariant }
 
 interface SortBySelectorProps {
   value: string;
+  defaultValue: string;
   onChange: (value: string) => void;
 }
 
@@ -18,7 +19,7 @@ const VARIANT_OPTIONS: { value: SortVariant; label: string }[] = [
   { value: "total", label: "TOTAL" },
 ];
 
-export function SortBySelector({ value, onChange }: SortBySelectorProps) {
+export function SortBySelector({ value, defaultValue, onChange }: SortBySelectorProps) {
   const { key, variant } = useMemo(() => parseSortByValue(value), [value]);
 
   const currentCategory = useMemo(() => SORT_CATEGORIES.find((c) => c.key === key), [key]);
@@ -37,7 +38,13 @@ export function SortBySelector({ value, onChange }: SortBySelectorProps) {
   const displayValue = currentCategory?.label ?? key;
 
   return (
-    <FilterCell label="Sort by" value={displayValue} className="w-52 p-2">
+    <FilterCell
+      label="Sort by"
+      value={displayValue}
+      active={value !== defaultValue}
+      onReset={() => onChange(defaultValue)}
+      className="w-52 p-2"
+    >
       {hasVariants && (
         <Segmented
           value={variant ?? ""}
