@@ -14,6 +14,7 @@ import {
 } from "~/lib/annotation-source";
 import { type FeedbackSubmission, submitFeedback } from "~/lib/feedback-api";
 import { ApiError } from "~/lib/http";
+import { readLocalStorage, writeLocalStorage } from "~/lib/local-storage";
 
 const MAX_COMMENT_LENGTH = 2000;
 const MAX_ELEMENT_TEXT_LENGTH = 300;
@@ -112,7 +113,7 @@ export function FeedbackWidget() {
 
   // Deferred to the open handler: `localStorage` does not exist during SSR.
   const openPanel = useCallback(() => {
-    setNickname((current) => current || (localStorage.getItem(NICKNAME_STORAGE_KEY) ?? ""));
+    setNickname((current) => current || (readLocalStorage(NICKNAME_STORAGE_KEY) ?? ""));
     setOpen(true);
   }, []);
 
@@ -161,7 +162,7 @@ export function FeedbackWidget() {
         },
       };
       await submitFeedback(submission);
-      localStorage.setItem(NICKNAME_STORAGE_KEY, nickname.trim());
+      writeLocalStorage(NICKNAME_STORAGE_KEY, nickname.trim());
       toast.success("Thanks! Your feedback was sent.");
       setComment("");
       setTargets([]);

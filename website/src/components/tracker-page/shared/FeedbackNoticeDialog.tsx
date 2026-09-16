@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Label } from "~/components/ui/label";
+import { readLocalStorage, writeLocalStorage } from "~/lib/local-storage";
 
 const STORAGE_KEY = "tracker-feedback-notice-dismissed";
 
@@ -18,7 +19,7 @@ export function FeedbackNoticeDialog() {
   const [open, setOpen] = useState(() => {
     // `localStorage` does not exist during SSR; the dialog opens on hydration.
     if (typeof window === "undefined") return false;
-    return localStorage.getItem(STORAGE_KEY) !== "true";
+    return readLocalStorage(STORAGE_KEY) !== "true";
   });
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
@@ -32,7 +33,7 @@ export function FeedbackNoticeDialog() {
   }, [open]);
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen && dontShowAgain) localStorage.setItem(STORAGE_KEY, "true");
+    if (!nextOpen && dontShowAgain) writeLocalStorage(STORAGE_KEY, "true");
     setOpen(nextOpen);
   };
 
