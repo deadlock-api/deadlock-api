@@ -557,7 +557,8 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
         })),
       };
     },
-    staleTime: CACHE_DURATIONS.FOREVER,
+    // Collected metadata is immutable, but an empty response can become available after ingestion.
+    staleTime: (query) => (query.state.data === null ? CACHE_DURATIONS.FIVE_MINUTES : CACHE_DURATIONS.FOREVER),
   });
 }
 
