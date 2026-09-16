@@ -30,7 +30,7 @@ export function PlayerCombatStats({
           key={metric.label}
           label={`${metric.label}: ${(metric.share * 100).toFixed(1)}%`}
           size="xs"
-          className="-mx-2 -my-0.5"
+          className="-mx-1 px-1"
           details={
             <>
               <TooltipHeader title={metric.label} subtitle={metric.detail} />
