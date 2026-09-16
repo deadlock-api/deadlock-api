@@ -4,12 +4,19 @@ import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { Area, AreaChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts";
 
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "~/components/ui/chart";
+import { ChartContainer, ChartTooltip } from "~/components/ui/chart";
 import { Empty, EmptyDescription, EmptyHeader } from "~/components/ui/empty";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { day } from "~/dayjs";
 import { computePerformanceTrend, performanceWindow, type ResultFilter } from "~/lib/tracker/compute";
 
+import {
+  PanelTooltip,
+  PanelTooltipCard,
+  TooltipHeader,
+  TooltipStat,
+  TooltipStats,
+} from "../shared/PanelTooltipContent";
 import { DashboardPanel } from "./DashboardPanel";
 
 const metrics = {
@@ -93,15 +100,18 @@ export function PerformanceTrendPanel({
             aria-label="Rolling window size"
           >
             {windows.map((choice) => (
-              <ToggleGroupItem
+              <PanelTooltip
                 key={choice}
-                value={choice}
-                className="h-7 px-2"
-                aria-label={choice === "auto" ? "Automatic window size" : `${choice} matches`}
-                title={choice === "auto" ? "Window grows with your selected match history" : `${choice}-match window`}
+                content={choice === "auto" ? "Window grows with your selected match history" : `${choice}-match window`}
               >
-                {choice === "auto" ? "Auto" : choice}
-              </ToggleGroupItem>
+                <ToggleGroupItem
+                  value={choice}
+                  className="h-7 px-2"
+                  aria-label={choice === "auto" ? "Automatic window size" : `${choice} matches`}
+                >
+                  {choice === "auto" ? "Auto" : choice}
+                </ToggleGroupItem>
+              </PanelTooltip>
             ))}
           </ToggleGroup>
         </div>
@@ -139,20 +149,7 @@ export function PerformanceTrendPanel({
               />
               <YAxis domain={metric === "winrate" ? [0, 1] : [0, "auto"]} hide />
               {metric === "winrate" && <ReferenceLine y={0.5} stroke="var(--muted-foreground)" strokeDasharray="3 4" />}
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(_label, payload) =>
-                      day.unix(payload[0].payload.time).format("MMM D, YYYY · HH:mm")
-                    }
-                    formatter={(value) => (
-                      <span>
-                        {selected.label} <strong>{selected.format(Number(value))}</strong> · {window} matches
-                      </span>
-                    )}
-                  />
-                }
-              />
+              <ChartTooltip content={<PerformanceTooltip metric={metric} window={window} />} />
               <Area
                 key={metric}
                 dataKey={metric}
@@ -178,5 +175,30 @@ export function PerformanceTrendPanel({
         )}
       </div>
     </DashboardPanel>
+  );
+}
+
+function PerformanceTooltip({
+  active,
+  payload,
+  metric,
+  window,
+}: {
+  active?: boolean;
+  payload?: { payload: ReturnType<typeof computePerformanceTrend>[number] }[];
+  metric: Metric;
+  window: number;
+}) {
+  if (!active || !payload?.length) return null;
+  const point = payload[0].payload;
+  const selected = metrics[metric];
+  return (
+    <PanelTooltipCard>
+      <TooltipHeader title={selected.label} subtitle={day.unix(point.time).format("MMM D, YYYY · HH:mm")} />
+      <TooltipStats>
+        <TooltipStat label={selected.label} value={selected.format(point[metric])} />
+        <TooltipStat label="Rolling window" value={`${window} matches`} />
+      </TooltipStats>
+    </PanelTooltipCard>
   );
 }

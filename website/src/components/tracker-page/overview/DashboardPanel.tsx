@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { cn } from "~/lib/utils";
 
+import { PanelTooltip, TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
+
 export function DashboardPanel({
   title,
   icon: Icon,
@@ -36,12 +38,31 @@ export function DashboardPanel({
 export function MetricRows({ rows }: { rows: { label: string; value: ReactNode; hint?: string }[] }) {
   return (
     <dl className="flex flex-col divide-y divide-border/60">
-      {rows.map(({ label, value, hint }) => (
-        <div key={label} className="flex items-center justify-between gap-2 py-1 text-xs" title={hint}>
-          <dt className="text-muted-foreground">{label}</dt>
-          <dd className="text-right font-medium tabular-nums">{value}</dd>
-        </div>
-      ))}
+      {rows.map(({ label, value, hint }) => {
+        const row = (
+          <div key={label} className="flex items-center justify-between gap-2 py-1 text-xs">
+            <dt className="text-muted-foreground">{label}</dt>
+            <dd className="text-right font-medium tabular-nums">{value}</dd>
+          </div>
+        );
+        return hint ? (
+          <PanelTooltip
+            key={label}
+            content={
+              <>
+                <TooltipHeader title={label} subtitle={hint} />
+                <TooltipStats>
+                  <TooltipStat label="Value" value={value} />
+                </TooltipStats>
+              </>
+            }
+          >
+            {row}
+          </PanelTooltip>
+        ) : (
+          row
+        );
+      })}
     </dl>
   );
 }

@@ -7,6 +7,7 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { day } from "~/dayjs";
 import type { Activity, RankHistoryPoint } from "~/lib/tracker/compute";
 
+import { PanelTooltip } from "../shared/PanelTooltipContent";
 import { RankDelta } from "../shared/RankDelta";
 
 const PAGE_SIZE = 50;
@@ -82,31 +83,32 @@ export function RankHistoryTable({
           {visible.map((point) => (
             <TableRow key={point.matchId}>
               <TableHead scope="row">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-auto justify-start px-0 py-1"
-                  data-rank-match={point.matchId}
-                  tabIndex={point.matchId === tabStop ? 0 : -1}
-                  aria-describedby={keyboardHelpId}
-                  onFocus={() => setFocusedMatchId(point.matchId)}
-                  onKeyDown={navigate}
-                  onClick={() => onOpenMatch(point.matchId)}
-                  aria-label={`Open match ${point.matchId}, ${day.unix(point.time).format("MMM D, YYYY, HH:mm")}`}
-                  title={`Match ${point.matchId}`}
-                >
-                  <time dateTime={day.unix(point.time).toISOString()} className="text-left">
-                    <span className="block">
-                      {day.unix(point.time).format("MMM D")}
-                      <span className="hidden @xs/stats-dialog:inline">, {day.unix(point.time).format("YYYY")}</span>
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      <span className="@xs/stats-dialog:hidden">{day.unix(point.time).format("YYYY")} · </span>
-                      {day.unix(point.time).format("HH:mm")}
-                    </span>
-                  </time>
-                  <ArrowUpRight data-icon="inline-end" className="hidden @xs/stats-dialog:block" />
-                </Button>
+                <PanelTooltip content={`Open match ${point.matchId}`}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-auto justify-start px-0 py-1"
+                    data-rank-match={point.matchId}
+                    tabIndex={point.matchId === tabStop ? 0 : -1}
+                    aria-describedby={keyboardHelpId}
+                    onFocus={() => setFocusedMatchId(point.matchId)}
+                    onKeyDown={navigate}
+                    onClick={() => onOpenMatch(point.matchId)}
+                    aria-label={`Open match ${point.matchId}, ${day.unix(point.time).format("MMM D, YYYY, HH:mm")}`}
+                  >
+                    <time dateTime={day.unix(point.time).toISOString()} className="text-left">
+                      <span className="block">
+                        {day.unix(point.time).format("MMM D")}
+                        <span className="hidden @xs/stats-dialog:inline">, {day.unix(point.time).format("YYYY")}</span>
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        <span className="@xs/stats-dialog:hidden">{day.unix(point.time).format("YYYY")} · </span>
+                        {day.unix(point.time).format("HH:mm")}
+                      </span>
+                    </time>
+                    <ArrowUpRight data-icon="inline-end" className="hidden @xs/stats-dialog:block" />
+                  </Button>
+                </PanelTooltip>
               </TableHead>
               <TableCell className="whitespace-normal">{rankName(point.badge)}</TableCell>
               <TableCell className="text-right tabular-nums">

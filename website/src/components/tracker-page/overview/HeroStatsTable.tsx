@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import type { TrackerHeroRow } from "~/lib/tracker/compute";
 
+import { PanelTooltip } from "../shared/PanelTooltipContent";
 import { RateBar } from "./DashboardPanel";
 import { OverviewDetailPanel } from "./OverviewDetailPanel";
 
@@ -127,18 +128,19 @@ export function HeroStatsTable({
             {visible.map((row) => (
               <TableRow key={row.heroId}>
                 <TableCell className="py-1.5 pr-1 pl-0">
-                  <button
-                    type="button"
-                    onClick={() => onSelectHero(row.heroId)}
-                    className="group flex items-center gap-1.5 rounded text-left focus-visible:outline-2 focus-visible:outline-ring"
-                    title="Filter matches to this hero"
-                  >
-                    <span aria-hidden="true">
-                      <HeroImage heroId={row.heroId} className="size-6 rounded" />
-                    </span>
-                    <HeroName heroId={row.heroId} className="max-w-24 text-xs font-medium group-hover:text-primary" />
-                    <ArrowUpRight aria-hidden="true" className="size-3 text-muted-foreground" />
-                  </button>
+                  <PanelTooltip content="Filter matches to this hero">
+                    <button
+                      type="button"
+                      onClick={() => onSelectHero(row.heroId)}
+                      className="group flex items-center gap-1.5 rounded text-left focus-visible:outline-2 focus-visible:outline-ring"
+                    >
+                      <span aria-hidden="true">
+                        <HeroImage heroId={row.heroId} className="size-6 rounded" />
+                      </span>
+                      <HeroName heroId={row.heroId} className="max-w-24 text-xs font-medium group-hover:text-primary" />
+                      <ArrowUpRight aria-hidden="true" className="size-3 text-muted-foreground" />
+                    </button>
+                  </PanelTooltip>
                 </TableCell>
                 <TableCell className="px-1 py-1.5 text-right">
                   <span className="text-xs tabular-nums">{row.matches.toLocaleString("en-US")}</span>

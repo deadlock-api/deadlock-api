@@ -3,13 +3,21 @@ import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { Activity, Medal } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "~/components/ui/chart";
+import { ChartContainer, ChartTooltip } from "~/components/ui/chart";
 import { Empty, EmptyDescription, EmptyHeader } from "~/components/ui/empty";
 import { day } from "~/dayjs";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import type { Activity as MatchActivity, RankHistoryPoint, ResultFilter } from "~/lib/tracker/compute";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
+import {
+  PanelTooltip,
+  PanelTooltipCard,
+  TooltipHeader,
+  TooltipStat,
+  TooltipStats,
+} from "../shared/PanelTooltipContent";
+import { RankDelta } from "../shared/RankDelta";
 import { OverviewDetailPanel } from "./OverviewDetailPanel";
 import { PerformanceTrendPanel } from "./PerformanceTrendPanel";
 import { ActivityTable, RankHistoryTable } from "./TrendDataTables";
@@ -66,12 +74,18 @@ export function TrendPanels({
           />
         )}
       >
-        <div
-          className="mb-1 truncate text-lg font-semibold"
-          title={latestRank ? rankName(latestRank.badge) : undefined}
+        <PanelTooltip
+          content={
+            <TooltipHeader
+              title={latestRank ? rankName(latestRank.badge) : "No recorded rank"}
+              subtitle="Latest recorded rank"
+            />
+          }
         >
-          {latestRank ? rankName(latestRank.badge) : "No recorded rank"}
-        </div>
+          <div className="mb-1 truncate text-lg font-semibold">
+            {latestRank ? rankName(latestRank.badge) : "No recorded rank"}
+          </div>
+        </PanelTooltip>
         {ranks.length < 2 ? (
           <ChartEmpty text="Needs 2 matches with rank badges" />
         ) : (
@@ -92,14 +106,7 @@ export function TrendPanels({
                 height={18}
               />
               <YAxis domain={["dataMin - 1", "dataMax + 1"]} hide />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(_label, payload) => day.unix(payload[0].payload.time).format("MMM D, YYYY")}
-                    formatter={(_value, _name, item) => <strong>{rankName(item.payload.badge)}</strong>}
-                  />
-                }
-              />
+              <ChartTooltip content={<RankTooltip rankName={rankName} />} />
               <Area
                 dataKey="linear"
                 type="stepAfter"
@@ -163,15 +170,7 @@ export function TrendPanels({
               height={18}
             />
             <YAxis hide />
-            <ChartTooltip
-              content={
-                <ChartTooltipContent
-                  labelFormatter={(_label, payload) =>
-                    `${activity.granularity === "week" ? "Week of " : ""}${day.unix(payload[0].payload.bucketStartUnix).format(activity.granularity === "week" ? "MMM D, YYYY" : "MMM YYYY")}`
-                  }
-                />
-              }
-            />
+            <ChartTooltip content={<ActivityTooltip granularity={activity.granularity} />} />
             <Bar dataKey="wins" stackId="activity" fill="var(--victory)" maxBarSize={20} isAnimationActive={false} />
             <Bar
               dataKey="losses"
@@ -205,5 +204,57 @@ function ChartEmpty({ text }: { text: string }) {
         <EmptyDescription>{text}</EmptyDescription>
       </EmptyHeader>
     </Empty>
+  );
+}
+
+function RankTooltip({
+  active,
+  payload,
+  rankName,
+}: {
+  active?: boolean;
+  payload?: { payload: RankHistoryPoint }[];
+  rankName: (badge: number) => string;
+}) {
+  if (!active || !payload?.length) return null;
+  const point = payload[0].payload;
+  return (
+    <PanelTooltipCard>
+      <TooltipHeader title={rankName(point.badge)} subtitle={day.unix(point.time).format("MMM D, YYYY · HH:mm")} />
+      <TooltipStats>
+        <TooltipStat label="Match" value={point.matchId} />
+        <TooltipStat
+          label="Rank progress"
+          value={point.delta == null ? "—" : point.delta === 0 ? "0" : <RankDelta value={point.delta} />}
+        />
+      </TooltipStats>
+    </PanelTooltipCard>
+  );
+}
+
+function ActivityTooltip({
+  active,
+  payload,
+  granularity,
+}: {
+  active?: boolean;
+  payload?: { payload: MatchActivity["buckets"][number] }[];
+  granularity: MatchActivity["granularity"];
+}) {
+  if (!active || !payload?.length) return null;
+  const point = payload[0].payload;
+  const total = point.wins + point.losses;
+  return (
+    <PanelTooltipCard>
+      <TooltipHeader
+        title={`${granularity === "week" ? "Week of " : ""}${day.unix(point.bucketStartUnix).format(granularity === "week" ? "MMM D, YYYY" : "MMM YYYY")}`}
+        subtitle="Match activity"
+      />
+      <TooltipStats>
+        <TooltipStat label="Wins" value={point.wins} className="text-victory" />
+        <TooltipStat label="Losses" value={point.losses} className="text-primary" />
+        <TooltipStat label="Win rate" value={total > 0 ? `${Math.round((point.wins / total) * 100)}%` : "—"} />
+      </TooltipStats>
+    </PanelTooltipCard>
   );
 }

@@ -1,7 +1,7 @@
 import { type KeyboardEvent, useId, useRef, useState } from "react";
 
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
 import {
   type PlaytimeCell,
   type PlaytimeHabits,
@@ -9,6 +9,8 @@ import {
   PLAYTIME_BUCKET_HOURS,
 } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
+
+import { PanelTooltipContent, TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
 
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const columns = 24 / PLAYTIME_BUCKET_HOURS;
@@ -124,7 +126,20 @@ export function PlaytimeHeatmap({ habits }: { habits: PlaytimeHabits }) {
                           }
                         />
                       </TooltipTrigger>
-                      <TooltipContent>{description}</TooltipContent>
+                      <PanelTooltipContent>
+                        <TooltipHeader
+                          title={`${weekday} ${hourLabel(cell.hour)}–${hourLabel(cell.hour + PLAYTIME_BUCKET_HOURS)}`}
+                          subtitle="Your local time"
+                        />
+                        <TooltipStats>
+                          <TooltipStat label="Matches" value={cell.matches} />
+                          <TooltipStat label="Wins / losses" value={`${cell.wins} / ${cell.matches - cell.wins}`} />
+                          <TooltipStat
+                            label="Win rate"
+                            value={cell.matches > 0 ? `${Math.round((cell.wins / cell.matches) * 100)}%` : "—"}
+                          />
+                        </TooltipStats>
+                      </PanelTooltipContent>
                     </Tooltip>
                   </TableCell>
                 );

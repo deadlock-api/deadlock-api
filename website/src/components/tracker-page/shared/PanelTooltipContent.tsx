@@ -1,16 +1,31 @@
 import type { ComponentProps, ReactNode } from "react";
 
-import { TooltipContent } from "~/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
+
+const panelTooltipClassName =
+  "flex max-w-72 flex-col gap-2 rounded-md border border-border bg-popover px-3 py-2.5 text-left text-popover-foreground shadow-md";
+
+/** The same surface for chart tooltips, which are positioned by Recharts. */
+export function PanelTooltipCard({ className, ...props }: ComponentProps<"div">) {
+  return <div className={cn(panelTooltipClassName, className)} {...props} />;
+}
+
+/** A styled hint for an existing action or a truncated label. */
+export function PanelTooltip({ children, content }: { children: ReactNode; content: ReactNode }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <PanelTooltipContent>{content}</PanelTooltipContent>
+    </Tooltip>
+  );
+}
 
 /** The popover-styled hover card the other pages' tables use, in place of the primitive's inverted default. */
 export function PanelTooltipContent({ className, ...props }: ComponentProps<typeof TooltipContent>) {
   return (
     <TooltipContent
-      className={cn(
-        "flex max-w-72 flex-col gap-2 border border-border bg-popover px-3 py-2.5 text-left text-popover-foreground shadow-md [&>span>svg]:bg-popover [&>span>svg]:fill-popover",
-        className,
-      )}
+      className={cn(panelTooltipClassName, "[&>span>svg]:bg-popover [&>span>svg]:fill-popover", className)}
       {...props}
     />
   );

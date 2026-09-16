@@ -29,7 +29,13 @@ import { cn } from "~/lib/utils";
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
 import { LOSS_COLOR, LOSS_TEXT_CLASS, WIN_COLOR, WIN_TEXT_CLASS } from "../shared/colors";
-import { PanelTooltipContent, TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
+import {
+  PanelTooltipCard,
+  PanelTooltipContent,
+  TooltipHeader,
+  TooltipStat,
+  TooltipStats,
+} from "../shared/PanelTooltipContent";
 
 const ASSETS = "https://assets-bucket.deadlock-api.com/assets-api-res";
 const GUARDIAN_ICON = `${ASSETS}/images/shop/images/minimap/objective_icon_t1.svg`;
@@ -148,7 +154,7 @@ function LeadTooltipContent({ active, payload }: { active?: boolean; payload?: {
   if (!active || !payload?.length) return null;
   const point = payload[0].payload;
   return (
-    <div className="max-w-72 space-y-2 rounded-md border border-border bg-popover px-3 py-2.5 shadow-md">
+    <PanelTooltipCard>
       <TooltipHeader
         title={
           <span
@@ -167,7 +173,7 @@ function LeadTooltipContent({ active, payload }: { active?: boolean; payload?: {
         <TooltipStat label="Your team" value={point.own.toLocaleString("en-US")} />
         <TooltipStat label="Enemy team" value={point.enemy.toLocaleString("en-US")} />
       </TooltipStats>
-    </div>
+    </PanelTooltipCard>
   );
 }
 

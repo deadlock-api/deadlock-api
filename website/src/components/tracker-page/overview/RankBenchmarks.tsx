@@ -12,13 +12,14 @@ import { MODE_CONFIG } from "~/components/selectors/ModeSelector";
 import { Button } from "~/components/ui/button";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { benchmarkRankRange, compareBenchmark } from "~/lib/tracker/benchmarks";
 import type { TrackerFilterValues } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 import { playerStatsMetricsQueryOptions } from "~/queries/player-stats-metrics-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
+import { TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
+import { TrackerDetailPopover } from "../shared/TrackerDetailPopover";
 import { MetricGaussian } from "./MetricGaussian";
 import { OverviewDetailPanel } from "./OverviewDetailPanel";
 
@@ -256,54 +257,56 @@ function BenchmarkMetric({
   const relativePercent = comparison?.relativeDelta == null ? null : Math.round(comparison.relativeDelta * 100);
   return (
     <div className="min-w-0 rounded-md border border-border/60 px-2 pt-1 pb-1">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            className="flex w-full min-w-0 flex-col gap-1 rounded-sm py-1 text-left hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-ring"
-            aria-label={`${labels[def.key] ?? def.label}: player ${format(player?.avg)}, lobby average ${format(cohort?.avg)}`}
-          >
-            <div className="flex w-full items-center justify-between gap-2">
-              <span className="truncate text-[11px] text-muted-foreground">{labels[def.key] ?? def.label}</span>
-              {relativePercent != null && (
-                <span
-                  className={cn(
-                    "text-[10px] tabular-nums",
-                    relativePercent === 0 || neutral
-                      ? "text-muted-foreground"
-                      : favorable
-                        ? "text-victory"
-                        : "text-primary",
-                  )}
-                >
-                  {relativePercent > 0 ? "+" : ""}
-                  {relativePercent}%
-                </span>
+      <TrackerDetailPopover
+        label={`${labels[def.key] ?? def.label} benchmark`}
+        size="sm"
+        className="h-auto w-full min-w-0 flex-col items-stretch gap-1 rounded-sm px-0 py-1 text-left whitespace-normal"
+        details={
+          <>
+            <TooltipHeader title={def.label} subtitle="Per-match averages" />
+            <TooltipStats>
+              <TooltipStat label="Your average" value={format(player?.avg)} />
+              <TooltipStat label="Lobby average" value={format(cohort?.avg)} />
+              <TooltipStat label="Lobby median" value={format(cohort?.percentile50)} />
+              <TooltipStat
+                label="Lobby middle 50%"
+                value={`${format(cohort?.percentile25)}–${format(cohort?.percentile75)}`}
+              />
+            </TooltipStats>
+            {def.key === "deaths" && <p className="text-xs text-muted-foreground">Fewer deaths is better.</p>}
+            {def.key === "kda" && (
+              <p className="text-xs text-muted-foreground">
+                Mean of each match’s KDA; differs from the overall KDA ratio above.
+              </p>
+            )}
+          </>
+        }
+      >
+        <div className="flex w-full items-center justify-between gap-2">
+          <span className="truncate text-[11px] text-muted-foreground">{labels[def.key] ?? def.label}</span>
+          {relativePercent != null && (
+            <span
+              className={cn(
+                "text-[10px] tabular-nums",
+                relativePercent === 0 || neutral
+                  ? "text-muted-foreground"
+                  : favorable
+                    ? "text-victory"
+                    : "text-primary",
               )}
-            </div>
-            <div className="flex w-full items-center justify-between gap-2">
-              <span className="shrink-0 text-xs font-semibold tabular-nums">{format(player?.avg)}</span>
-              <span className="shrink-0 text-right text-[11px] text-muted-foreground tabular-nums">
-                {format(cohort?.avg)}
-              </span>
-            </div>
-          </button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <div className="flex flex-col gap-1">
-            <strong>{def.label} · per-match averages</strong>
-            <span>
-              Player: {format(player?.avg)} · Lobby: {format(cohort?.avg)}
+            >
+              {relativePercent > 0 ? "+" : ""}
+              {relativePercent}%
             </span>
-            <span>Lobby median: {format(cohort?.percentile50)}</span>
-            <span>
-              Middle 50% of lobby match performances: {format(cohort?.percentile25)}–{format(cohort?.percentile75)}
-            </span>
-            {def.key === "deaths" && <span>Fewer deaths is better.</span>}
-            {def.key === "kda" && <span>Mean of each match’s KDA; differs from the overall KDA ratio above.</span>}
-          </div>
-        </TooltipContent>
-      </Tooltip>
+          )}
+        </div>
+        <div className="flex w-full items-center justify-between gap-2">
+          <span className="shrink-0 text-xs font-semibold tabular-nums">{format(player?.avg)}</span>
+          <span className="shrink-0 text-right text-[11px] text-muted-foreground tabular-nums">
+            {format(cohort?.avg)}
+          </span>
+        </div>
+      </TrackerDetailPopover>
       {showDistribution && (
         <MetricGaussian
           player={player}

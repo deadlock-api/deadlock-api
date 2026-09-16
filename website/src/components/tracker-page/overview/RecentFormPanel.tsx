@@ -2,11 +2,12 @@ import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { Flame } from "lucide-react";
 import { useRef, useState } from "react";
 
+import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "~/components/ui/empty";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
-import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import { formatMatchDuration, isWin, type TrackerSummary } from "~/lib/tracker/compute";
 import {
@@ -17,6 +18,7 @@ import {
 } from "~/lib/tracker/overview";
 import { cn } from "~/lib/utils";
 
+import { PanelTooltipContent, TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
 import { OverviewDetailPanel } from "./OverviewDetailPanel";
 
 const integer = (value: number) => Math.round(value).toLocaleString("en-US");
@@ -174,11 +176,25 @@ function ResultGrid({
               {isWin(entry) ? "W" : "L"}
             </button>
           </TooltipTrigger>
-          <TooltipContent>
-            <HeroName heroId={entry.hero_id} /> · {entry.player_kills}/{entry.player_deaths}/{entry.player_assists}
-            <br />
-            {day.unix(entry.start_time).format("MMM D, YYYY, HH:mm")} · {formatMatchDuration(entry.match_duration_s)}
-          </TooltipContent>
+          <PanelTooltipContent>
+            <TooltipHeader
+              lead={<HeroImage heroId={entry.hero_id} className="size-8 rounded-full" title="" />}
+              title={<HeroName heroId={entry.hero_id} />}
+              subtitle={day.unix(entry.start_time).format("MMM D, YYYY · HH:mm")}
+            />
+            <TooltipStats>
+              <TooltipStat
+                label="Result"
+                value={isWin(entry) ? "Victory" : "Defeat"}
+                className={isWin(entry) ? "text-victory" : "text-primary"}
+              />
+              <TooltipStat
+                label="K / D / A"
+                value={`${entry.player_kills} / ${entry.player_deaths} / ${entry.player_assists}`}
+              />
+              <TooltipStat label="Duration" value={formatMatchDuration(entry.match_duration_s)} />
+            </TooltipStats>
+          </PanelTooltipContent>
         </Tooltip>
       ))}
     </fieldset>

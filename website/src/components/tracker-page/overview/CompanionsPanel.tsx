@@ -16,6 +16,7 @@ import { trackerEnemyStatsQueryOptions, trackerMateStatsQueryOptions } from "~/q
 
 import { CompanionMatchesDialog } from "../breakdown/CompanionMatchesDialog";
 import { EnemiesTab, MatesTab } from "../breakdown/PlayerStatsTable";
+import { PanelTooltip } from "../shared/PanelTooltipContent";
 import { OverviewDetailPanel } from "./OverviewDetailPanel";
 
 export function CompanionsPanel({
@@ -191,14 +192,17 @@ function CompanionPreview({
                       {isLoading && !profile ? (
                         <Skeleton className="h-4 w-24" />
                       ) : (
-                        <Link
-                          to="/players/$accountId"
-                          params={{ accountId: String(row.accountId) }}
-                          className="min-h-6 min-w-6 truncate rounded-sm text-xs leading-6 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring"
-                          title={`Open ${profile?.personaname ?? `Player ${row.accountId}`} in the player tracker`}
+                        <PanelTooltip
+                          content={`Open ${profile?.personaname ?? `Player ${row.accountId}`} in the player tracker`}
                         >
-                          {profile?.personaname ?? `Player ${row.accountId}`}
-                        </Link>
+                          <Link
+                            to="/players/$accountId"
+                            params={{ accountId: String(row.accountId) }}
+                            className="min-h-6 min-w-6 truncate rounded-sm text-xs leading-6 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+                          >
+                            {profile?.personaname ?? `Player ${row.accountId}`}
+                          </Link>
+                        </PanelTooltip>
                       )}
                     </div>
                   </TableCell>
