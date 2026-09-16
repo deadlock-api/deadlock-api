@@ -259,7 +259,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
                 />
               ) : (
                 <MatchesTab
-                  key={revealCount}
+                  key={`${accountId}-${revealCount}`}
                   entries={filteredEntries}
                   sessionContext={sessionContext}
                   ranks={ranks}
