@@ -37,7 +37,7 @@ export function MatchEventList({
   ].toSorted((a, b) => a.time - b.time);
   if (events.length === 0) return null;
   const visible = events.filter(
-    (event) => filter === "all" || (filter === "combat" ? event.kind !== "objective" : event.kind === "objective"),
+    (event) => filter === "all" || (filter === "combat" ? event.kind !== "objective" : event.kind === filter),
   );
 
   return (
@@ -63,7 +63,9 @@ export function MatchEventList({
               <SelectGroup>
                 <SelectItem value="all">All events</SelectItem>
                 <SelectItem value="combat">Combat</SelectItem>
-                <SelectItem value="objectives">Objectives</SelectItem>
+                <SelectItem value="kill">Kills</SelectItem>
+                <SelectItem value="death">Deaths</SelectItem>
+                <SelectItem value="objective">Objectives</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
