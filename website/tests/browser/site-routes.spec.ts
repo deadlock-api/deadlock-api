@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-test.beforeEach(async ({ context }) => {
+import { ACCOUNT_ID, CURRENT_MATCH } from "./fixtures";
+
+test.beforeEach(async ({ page, context }) => {
+  await page.addInitScript(() => localStorage.setItem("tracker-feedback-notice-dismissed", "true"));
   await context.route("**/*", (route) => {
     const url = new URL(route.request().url());
     return url.hostname === "127.0.0.1" || url.hostname === "localhost" ? route.continue() : route.abort();
@@ -18,22 +21,31 @@ test("old category URLs permanently redirect and preserve filters", async ({ req
     leaderboard: "community/leaderboard",
     "badge-distribution": "community/badge-distribution",
     heatmap: "community/heatmap",
+    deadlockdle: "games/deadlockdle",
+    flashcards: "games/flashcards",
   };
-  for (const [old, destination] of Object.entries(destinations)) {
-    const response = await request.get(`/${old}?hero=11&date_range=_`, { maxRedirects: 0 });
-    expect(response.status()).toBe(301);
-    expect(response.headers().location).toBe(`/${destination}?hero=11&date_range=_`);
-  }
-  for (const [old, destination] of [
-    ["/heroes/dynamo", "/analytics/heroes/dynamo"],
-    ["/items/extra-health", "/analytics/items/extra-health"],
-    ["/heroes?tab=stats-by-duration&min_rank=61", "/analytics/heroes/by-duration?min_rank=61"],
-    ["/analytics/items?tab=item-purchase-analysis&hero=11", "/analytics/items/item-purchase-analysis?hero=11"],
-  ]) {
-    const response = await request.get(old, { maxRedirects: 0 });
-    expect(response.status()).toBe(301);
-    expect(response.headers().location).toBe(destination);
-  }
+  await Promise.all(
+    Object.entries(destinations).map(async ([old, destination]) => {
+      const response = await request.get(`/${old}?hero=11&date_range=_`, { maxRedirects: 0 });
+      expect(response.status()).toBe(301);
+      expect(response.headers().location).toBe(`/${destination}?hero=11&date_range=_`);
+    }),
+  );
+  await Promise.all(
+    [
+      ["/heroes/dynamo", "/analytics/heroes/dynamo"],
+      ["/items/extra-health", "/analytics/items/extra-health"],
+      ["/heroes?tab=stats-by-duration&min_rank=61", "/analytics/heroes/by-duration?min_rank=61"],
+      ["/analytics/items?tab=item-purchase-analysis&hero=11", "/analytics/items/item-purchase-analysis?hero=11"],
+      ["/deadlockdle/guess-hero?date=2026-09-01", "/games/deadlockdle/guess-hero?date=2026-09-01"],
+      ["/flashcards/item-upgrades", "/games/flashcards/item-upgrades"],
+      ["/players/400239835?match=105968442", "/tracker/players/400239835?match=105968442"],
+    ].map(async ([old, destination]) => {
+      const response = await request.get(old, { maxRedirects: 0 });
+      expect(response.status()).toBe(301);
+      expect(response.headers().location).toBe(destination);
+    }),
+  );
 });
 
 test("hero view paths preserve filters across navigation, history and reload", async ({ page }) => {
@@ -74,18 +86,42 @@ test("navigation groups move while tracker and other categories keep their paths
   await page.goto("/analytics/players?date_range=_");
   await page.waitForLoadState("networkidle");
   const nav = page.getByRole("navigation", { name: "Main", exact: true });
-  for (const [name, href] of [
-    ["Players", "/analytics/players"],
-    ["Heroes", "/analytics/heroes"],
-    ["Leaderboard", "/community/leaderboard"],
-    ["Rank Distribution", "/community/badge-distribution"],
-    ["Kill Heatmap", "/community/heatmap"],
-    ["Player Tracker", "/tracker"],
-    ["Blog", "/blog"],
-    ["Deadlockdle", "/deadlockdle"],
-    ["Stream Kit", "/streamkit"],
-  ])
-    await expect(nav.getByRole("link", { name, exact: true })).toHaveAttribute("href", href);
+  await Promise.all(
+    [
+      ["Players", "/analytics/players"],
+      ["Heroes", "/analytics/heroes"],
+      ["Leaderboard", "/community/leaderboard"],
+      ["Rank Distribution", "/community/badge-distribution"],
+      ["Kill Heatmap", "/community/heatmap"],
+      ["Player Tracker", "/tracker"],
+      ["Blog", "/blog"],
+      ["Deadlockdle", "/games/deadlockdle"],
+      ["Flashcards", "/games/flashcards"],
+      ["Stream Kit", "/streamkit"],
+    ].map(([name, href]) => expect(nav.getByRole("link", { name, exact: true })).toHaveAttribute("href", href)),
+  );
   await page.getByRole("tab", { name: "Stats Metrics", exact: true }).click();
   await expect(page).toHaveURL(/\/analytics\/players\/stats-metrics\?date_range=_$/);
+});
+
+test("old player profiles retain their selected match on the tracker path", async ({ page }) => {
+  await page.goto(`/players/${ACCOUNT_ID}?date_range=_&match=${CURRENT_MATCH}`);
+  await expect(page).toHaveURL(new RegExp(`/tracker/players/${ACCOUNT_ID}\\?date_range=_&match=${CURRENT_MATCH}$`));
+  await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Player Tracker", exact: true }),
+  ).toHaveAttribute("href", "/tracker");
+});
+
+test("game hubs keep archive dates and use their new paths", async ({ page }) => {
+  await page.goto("/deadlockdle?date=2026-09-01");
+  await expect(page).toHaveURL(/\/games\/deadlockdle\?date=2026-09-01$/);
+  await expect(page.locator('a[href="/games/deadlockdle/guess-hero?date=2026-09-01"]')).toBeVisible();
+  await page.goto("/flashcards");
+  await expect(page).toHaveURL(/\/games\/flashcards$/);
+  await expect(page.locator('a[href="/games/flashcards/items"]')).toBeVisible();
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    "https://deadlock-api.com/games/flashcards",
+  );
 });

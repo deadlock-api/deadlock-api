@@ -39,7 +39,7 @@ export function GameShell({
     >
       <div className="mb-6">
         <Link
-          to="/deadlockdle"
+          to="/games/deadlockdle"
           search={isArchive ? { date } : {}}
           className="cursor-target mb-4 inline-flex items-center gap-1.5 font-mono text-xs tracking-wider text-muted-foreground/50 uppercase transition-colors hover:text-primary"
         >

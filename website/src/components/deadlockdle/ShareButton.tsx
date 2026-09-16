@@ -27,7 +27,7 @@ export function generateShareText(
   const grid = guesses
     .map((_, i) => (i === guesses.length - 1 && status === "won" ? "\u{1f7e9}" : "\u{1f7e5}"))
     .join("");
-  return `Deadlockdle #${dayNum} - ${label} ${score}\n${grid}\nhttps://deadlock-api.com/deadlockdle`;
+  return `Deadlockdle #${dayNum} - ${label} ${score}\n${grid}\nhttps://deadlock-api.com/games/deadlockdle`;
 }
 
 interface ShareButtonProps {

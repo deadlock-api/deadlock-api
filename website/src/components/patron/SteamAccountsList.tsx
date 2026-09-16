@@ -203,7 +203,7 @@ function AccountRow({
     <TableRow>
       <TableCell className="font-mono">
         <Link
-          to="/players/$accountId"
+          to="/tracker/players/$accountId"
           params={{ accountId: String(account.steam_id3) }}
           className="hover:text-primary hover:underline"
           title="Open player tracker"

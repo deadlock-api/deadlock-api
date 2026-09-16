@@ -15,18 +15,35 @@ test("legacy category pages redirect with filters and fragments intact", () => {
   assert.equal(migrateLegacyHref("/items/extra-health"), "/analytics/items/extra-health");
 });
 
-test("tracker profiles and other navigation categories keep their URLs", () => {
+test("canonical destinations and unchanged categories do not redirect again", () => {
   for (const href of [
-    "/players/400239835?match=105968442",
+    "/tracker/players/400239835?match=105968442",
     "/tracker",
     "/blog/example",
-    "/deadlockdle",
+    "/games/deadlockdle",
+    "/games/flashcards/items",
     "/streamkit",
     "/patron",
     "/analytics/heroes",
   ]) {
     assert.equal(migrateLegacyHref(href), null);
   }
+});
+
+test("game archives and tracker deep links retain their context", () => {
+  assert.equal(
+    migrateLegacyHref("/deadlockdle/guess-hero?date=2026-09-01"),
+    "/games/deadlockdle/guess-hero?date=2026-09-01",
+  );
+  assert.equal(migrateLegacyHref("/flashcards/item-upgrades"), "/games/flashcards/item-upgrades");
+  assert.equal(
+    migrateLegacyHref("/players/400239835?match=105968442&hero=11#scoreboard"),
+    "/tracker/players/400239835?match=105968442&hero=11#scoreboard",
+  );
+  assert.equal(
+    migrateLegacyHref("/players/76561198035228949?match=103841923"),
+    "/tracker/players/76561198035228949?match=103841923",
+  );
 });
 
 test("legacy tab links redirect directly to the requested analytics view", () => {

@@ -196,7 +196,7 @@ function CompanionPreview({
                           content={`Open ${profile?.personaname ?? `Player ${row.accountId}`} in the player tracker`}
                         >
                           <Link
-                            to="/players/$accountId"
+                            to="/tracker/players/$accountId"
                             params={{ accountId: String(row.accountId) }}
                             className="min-h-6 min-w-6 truncate rounded-sm text-xs leading-6 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring"
                           >

@@ -35,6 +35,8 @@ function buildBreadcrumbs(pathname: string, labelsByPath: Map<string, string>): 
   let path = "";
   for (const segment of segments) {
     path += `/${segment}`;
+    // /games is the legacy analytics URL; game hubs provide their own useful parent link.
+    if (path === "/games" || path === "/tracker/players") continue;
     const label =
       labelsByPath.get(path) ??
       ROUTE_LABELS[path] ??
@@ -104,7 +106,7 @@ export function Breadcrumbs() {
                 ) : (
                   <Link
                     to={item.path}
-                    search={item.path === "/deadlockdle" && puzzleDate ? { date: puzzleDate } : undefined}
+                    search={item.path === "/games/deadlockdle" && puzzleDate ? { date: puzzleDate } : undefined}
                     className="transition-colors hover:text-foreground"
                   >
                     {item.label}

@@ -38,7 +38,7 @@ const OG_IMAGES: Record<string, string> = {
   "/data-dumps": "/og/default.png",
   "/ingest-cache": "/og/ingest-cache.png",
   "/blog": "/og/blog.png",
-  "/deadlockdle": "/og/default.png",
+  "/games/deadlockdle": "/og/default.png",
 };
 
 export function seo({ title, description, path, ogImage, ogType, publishedTime, jsonLd }: SeoOptions): SeoResult {

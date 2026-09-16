@@ -183,7 +183,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
     >
       <div className="mb-6">
         <Link
-          to="/flashcards"
+          to="/games/flashcards"
           className="mb-4 inline-flex items-center gap-1.5 font-mono text-xs tracking-wider text-muted-foreground/50 uppercase transition-colors hover:text-primary"
         >
           <ArrowLeft className="h-3 w-3" />

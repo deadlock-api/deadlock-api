@@ -9,12 +9,12 @@ import type { GameMode } from "~/lib/deadlockdle/types";
 import { getDailyStatus } from "./GameCard";
 
 const GAMES: { mode: GameMode; title: string; path: string }[] = [
-  { mode: "guess-hero", title: "Guess the Hero", path: "/deadlockdle/guess-hero" },
-  { mode: "guess-item", title: "Guess the Item", path: "/deadlockdle/guess-item" },
-  { mode: "guess-sound", title: "Guess the Sound", path: "/deadlockdle/guess-sound" },
-  { mode: "guess-ability", title: "Guess the Ability", path: "/deadlockdle/guess-ability" },
-  { mode: "item-stats", title: "Item Stats Quiz", path: "/deadlockdle/item-stats" },
-  { mode: "trivia", title: "Deadlock Trivia", path: "/deadlockdle/trivia" },
+  { mode: "guess-hero", title: "Guess the Hero", path: "/games/deadlockdle/guess-hero" },
+  { mode: "guess-item", title: "Guess the Item", path: "/games/deadlockdle/guess-item" },
+  { mode: "guess-sound", title: "Guess the Sound", path: "/games/deadlockdle/guess-sound" },
+  { mode: "guess-ability", title: "Guess the Ability", path: "/games/deadlockdle/guess-ability" },
+  { mode: "item-stats", title: "Item Stats Quiz", path: "/games/deadlockdle/item-stats" },
+  { mode: "trivia", title: "Deadlock Trivia", path: "/games/deadlockdle/trivia" },
 ];
 
 export function NextGameButton({ currentMode, date = getTodayDate() }: { currentMode: GameMode; date?: string }) {
@@ -37,7 +37,7 @@ export function NextGameButton({ currentMode, date = getTodayDate() }: { current
         variant="outline"
         className="cursor-target font-mono text-xs tracking-wider uppercase hover:border-primary/60 hover:bg-primary/10"
       >
-        <Link to="/deadlockdle" search={search} preload="intent">
+        <Link to="/games/deadlockdle" search={search} preload="intent">
           <Home className="mr-1.5 h-3.5 w-3.5" />
           All Complete
         </Link>

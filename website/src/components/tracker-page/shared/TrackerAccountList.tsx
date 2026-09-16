@@ -76,7 +76,7 @@ export function TrackerAccountList({ accounts }: { accounts: TrackerAccountOptio
           {results.map(({ accountId, avatar, name }) => (
             <li key={accountId}>
               <Link
-                to="/players/$accountId"
+                to="/tracker/players/$accountId"
                 params={{ accountId: String(accountId) }}
                 className="flex items-center gap-3 rounded-md px-3 py-2 transition-colors outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
               >

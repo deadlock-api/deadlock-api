@@ -159,7 +159,7 @@ test("hero comparisons wait for a successful rank lookup and recover without hid
       json: [{ hero_id: 11, matches: 100, wins: 50, total_kills: 300, total_deaths: 200, total_assists: 300 }],
     });
   });
-  await page.goto(`/players/${ACCOUNT_ID}?date_range=_&tab=heroes`);
+  await page.goto(`/tracker/players/${ACCOUNT_ID}?date_range=_&tab=heroes`);
   const table = page.getByRole("table", { name: "Detailed hero performance", exact: true });
   await expect(table).toContainText("60.0%");
   await expect(page.getByText("Could not load comparison rank", { exact: true })).toBeVisible();
@@ -185,7 +185,7 @@ test("hero details opened offline explain the pause and resume when reconnected"
     heroRequests += 1;
     return route.fulfill({ json: [] });
   });
-  await page.goto(`/players/${ACCOUNT_ID}?date_range=_`);
+  await page.goto(`/tracker/players/${ACCOUNT_ID}?date_range=_`);
   const openDetails = page.getByRole("button", { name: "Show more hero pool", exact: true });
   await expect(openDetails).toBeVisible();
   await context.setOffline(true);
@@ -514,7 +514,7 @@ test("companion pagination resets for filter changes while preserving search and
       json: Array.from({ length: 24 }, (_, index) => ({ enemy_id: 2000 + index, matches: sharedMatches })),
     }),
   );
-  await page.goto(`/players/${ACCOUNT_ID}?date_range=_&tab=mates`);
+  await page.goto(`/tracker/players/${ACCOUNT_ID}?date_range=_&tab=mates`);
   const mates = page.getByRole("table", { name: "Detailed teammate stats", exact: true });
   const enemies = page.getByRole("table", { name: "Detailed opponent stats", exact: true });
   await expect(mates.getByRole("row")).toHaveCount(11);
@@ -550,7 +550,7 @@ test("shared-match history opens older matches and returns focus to their detail
   await page.route(`${API_ORIGIN}/v1/players/*/mate-stats**`, (route) =>
     route.fulfill({ json: [{ mate_id: 1000, matches: history.map((match) => match.match_id) }] }),
   );
-  await page.goto(`/players/${ACCOUNT_ID}?date_range=_`);
+  await page.goto(`/tracker/players/${ACCOUNT_ID}?date_range=_`);
   await page.getByRole("button", { name: "View 50 matches with Player 1000", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Matches with Player 1000", exact: true });
   const shared = dialog.getByRole("navigation", { name: "Shared match history", exact: true });
@@ -707,7 +707,7 @@ test("saved matches and undo remain scoped to their player after account navigat
   await search.fill("not a saved match");
   await expect(page.getByText("No matches found", { exact: true })).toBeVisible();
   await page.goBack();
-  await expect(page).toHaveURL(new RegExp(`/players/${ACCOUNT_ID}\\?`));
+  await expect(page).toHaveURL(new RegExp(`/tracker/players/${ACCOUNT_ID}\\?`));
   await expect(search).toHaveCount(0);
   await page.getByRole("button", { name: "Saved matches (1)", exact: true }).click();
   await expect(search).toHaveValue("");

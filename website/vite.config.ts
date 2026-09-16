@@ -75,11 +75,16 @@ export default defineConfig({
         filter: ({ path }) =>
           // Query variants share one output file; crawling them overwrites the default page's HTML.
           !path.includes("?") &&
+          !/^\/(deadlockdle|flashcards)(\/|$)/.test(path) &&
           // Filtered pages and their legacy redirects need request-specific server rendering.
-          !/^\/(analytics|community)(\/|$)/.test(path) &&
-          !/^\/(games|heroes|items|abilities|players|team-builder|leaderboard|badge-distribution|heatmap)(\/|$)/.test(path) &&
+          !/^\/(analytics|community|tracker)(\/|$)/.test(path) &&
+          !/^\/(games|heroes|items|abilities|players|team-builder|leaderboard|badge-distribution|heatmap)(\/|$)/.test(
+            path,
+          ) &&
           // Tracker pages are patron-gated and per-user; prerendering them would bake gate HTML.
-          path !== "/auth" && path !== "/auth/patreon" && !/^\/players\/\d+$/.test(path),
+          path !== "/auth" &&
+          path !== "/auth/patreon" &&
+          !/^\/players\/\d+$/.test(path),
       },
       pages: [{ path: "/" }, { path: "/blog" }, { path: "/sitemap.xml" }, { path: "/sitemap_index.xml" }],
     }),

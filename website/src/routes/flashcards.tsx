@@ -1,8 +1,5 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
-import { NEW_ROCKER_PRELOAD } from "~/lib/fonts";
+import { redirectLegacyPage } from "~/lib/site-route-migration";
 
-export const Route = createFileRoute("/flashcards")({
-  component: Outlet,
-  head: () => ({ links: [NEW_ROCKER_PRELOAD] }),
-});
+export const Route = createFileRoute("/flashcards")({ beforeLoad: redirectLegacyPage });

@@ -75,8 +75,8 @@ const socialLinks = [
 
 function isActive(pathname: string, to: string) {
   if (to === "/") return pathname === "/";
-  // Tracker pages live under /players/:accountId but belong to the /tracker nav entry.
-  if (/^\/players\/\d+/.test(pathname)) return to === "/tracker";
+  // Tracker profiles belong to the tracker hub's navigation entry.
+  if (/^\/tracker\/players\/\d+/.test(pathname)) return to === "/tracker";
   return pathname.startsWith(to);
 }
 

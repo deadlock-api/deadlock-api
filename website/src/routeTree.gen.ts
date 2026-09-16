@@ -54,6 +54,8 @@ import { Route as FlashcardsHeroesRouteImport } from './routes/flashcards/heroes
 import { Route as FlashcardsItemEffectsRouteImport } from './routes/flashcards/item-effects'
 import { Route as FlashcardsItemUpgradesRouteImport } from './routes/flashcards/item-upgrades'
 import { Route as FlashcardsItemsRouteImport } from './routes/flashcards/items'
+import { Route as GamesDeadlockdleRouteImport } from './routes/games_.deadlockdle'
+import { Route as GamesFlashcardsRouteImport } from './routes/games_.flashcards'
 import { Route as HeroesIndexRouteImport } from './routes/heroes.index'
 import { Route as HeroesHeroNameRouteImport } from './routes/heroes.$heroName'
 import { Route as ItemsIndexRouteImport } from './routes/items.index'
@@ -82,6 +84,20 @@ import { Route as AnalyticsItemsItemPurchaseAnalysisRouteImport } from './routes
 import { Route as AnalyticsPlayersIndexRouteImport } from './routes/analytics.players.index'
 import { Route as AnalyticsPlayersStatsMetricsRouteImport } from './routes/analytics.players.stats-metrics'
 import { Route as AuthPatreonCallbackRouteImport } from './routes/auth/patreon/callback'
+import { Route as GamesDeadlockdleIndexRouteImport } from './routes/games_.deadlockdle/index'
+import { Route as GamesDeadlockdleGuessAbilityRouteImport } from './routes/games_.deadlockdle/guess-ability'
+import { Route as GamesDeadlockdleGuessHeroRouteImport } from './routes/games_.deadlockdle/guess-hero'
+import { Route as GamesDeadlockdleGuessItemRouteImport } from './routes/games_.deadlockdle/guess-item'
+import { Route as GamesDeadlockdleGuessSoundRouteImport } from './routes/games_.deadlockdle/guess-sound'
+import { Route as GamesDeadlockdleItemStatsRouteImport } from './routes/games_.deadlockdle/item-stats'
+import { Route as GamesDeadlockdleTriviaRouteImport } from './routes/games_.deadlockdle/trivia'
+import { Route as GamesFlashcardsIndexRouteImport } from './routes/games_.flashcards/index'
+import { Route as GamesFlashcardsHeroesRouteImport } from './routes/games_.flashcards/heroes'
+import { Route as GamesFlashcardsItemEffectsRouteImport } from './routes/games_.flashcards/item-effects'
+import { Route as GamesFlashcardsItemUpgradesRouteImport } from './routes/games_.flashcards/item-upgrades'
+import { Route as GamesFlashcardsItemsRouteImport } from './routes/games_.flashcards/items'
+import { Route as TrackerPlayersIndexRouteImport } from './routes/tracker_.players.index'
+import { Route as TrackerPlayersAccountIdRouteImport } from './routes/tracker_.players.$accountId'
 import { Route as StreamkitWidgetsRegionAccountIdWidgetTypeRouteImport } from './routes/streamkit/widgets/$region/$accountId/$widgetType'
 
 const IndexRoute = IndexRouteImport.update({
@@ -310,6 +326,16 @@ const FlashcardsItemsRoute = FlashcardsItemsRouteImport.update({
   path: '/items',
   getParentRoute: () => FlashcardsRoute,
 } as any)
+const GamesDeadlockdleRoute = GamesDeadlockdleRouteImport.update({
+  id: '/games_/deadlockdle',
+  path: '/games/deadlockdle',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GamesFlashcardsRoute = GamesFlashcardsRouteImport.update({
+  id: '/games_/flashcards',
+  path: '/games/flashcards',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HeroesIndexRoute = HeroesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -456,6 +482,83 @@ const AuthPatreonCallbackRoute = AuthPatreonCallbackRouteImport.update({
   path: '/auth/patreon/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GamesDeadlockdleIndexRoute = GamesDeadlockdleIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => GamesDeadlockdleRoute,
+} as any)
+const GamesDeadlockdleGuessAbilityRoute =
+  GamesDeadlockdleGuessAbilityRouteImport.update({
+    id: '/guess-ability',
+    path: '/guess-ability',
+    getParentRoute: () => GamesDeadlockdleRoute,
+  } as any)
+const GamesDeadlockdleGuessHeroRoute =
+  GamesDeadlockdleGuessHeroRouteImport.update({
+    id: '/guess-hero',
+    path: '/guess-hero',
+    getParentRoute: () => GamesDeadlockdleRoute,
+  } as any)
+const GamesDeadlockdleGuessItemRoute =
+  GamesDeadlockdleGuessItemRouteImport.update({
+    id: '/guess-item',
+    path: '/guess-item',
+    getParentRoute: () => GamesDeadlockdleRoute,
+  } as any)
+const GamesDeadlockdleGuessSoundRoute =
+  GamesDeadlockdleGuessSoundRouteImport.update({
+    id: '/guess-sound',
+    path: '/guess-sound',
+    getParentRoute: () => GamesDeadlockdleRoute,
+  } as any)
+const GamesDeadlockdleItemStatsRoute =
+  GamesDeadlockdleItemStatsRouteImport.update({
+    id: '/item-stats',
+    path: '/item-stats',
+    getParentRoute: () => GamesDeadlockdleRoute,
+  } as any)
+const GamesDeadlockdleTriviaRoute = GamesDeadlockdleTriviaRouteImport.update({
+  id: '/trivia',
+  path: '/trivia',
+  getParentRoute: () => GamesDeadlockdleRoute,
+} as any)
+const GamesFlashcardsIndexRoute = GamesFlashcardsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => GamesFlashcardsRoute,
+} as any)
+const GamesFlashcardsHeroesRoute = GamesFlashcardsHeroesRouteImport.update({
+  id: '/heroes',
+  path: '/heroes',
+  getParentRoute: () => GamesFlashcardsRoute,
+} as any)
+const GamesFlashcardsItemEffectsRoute =
+  GamesFlashcardsItemEffectsRouteImport.update({
+    id: '/item-effects',
+    path: '/item-effects',
+    getParentRoute: () => GamesFlashcardsRoute,
+  } as any)
+const GamesFlashcardsItemUpgradesRoute =
+  GamesFlashcardsItemUpgradesRouteImport.update({
+    id: '/item-upgrades',
+    path: '/item-upgrades',
+    getParentRoute: () => GamesFlashcardsRoute,
+  } as any)
+const GamesFlashcardsItemsRoute = GamesFlashcardsItemsRouteImport.update({
+  id: '/items',
+  path: '/items',
+  getParentRoute: () => GamesFlashcardsRoute,
+} as any)
+const TrackerPlayersIndexRoute = TrackerPlayersIndexRouteImport.update({
+  id: '/tracker_/players/',
+  path: '/tracker/players/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrackerPlayersAccountIdRoute = TrackerPlayersAccountIdRouteImport.update({
+  id: '/tracker_/players/$accountId',
+  path: '/tracker/players/$accountId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StreamkitWidgetsRegionAccountIdWidgetTypeRoute =
   StreamkitWidgetsRegionAccountIdWidgetTypeRouteImport.update({
     id: '/streamkit/widgets/$region/$accountId/$widgetType',
@@ -504,6 +607,8 @@ export interface FileRoutesByFullPath {
   '/flashcards/item-effects': typeof FlashcardsItemEffectsRoute
   '/flashcards/item-upgrades': typeof FlashcardsItemUpgradesRoute
   '/flashcards/items': typeof FlashcardsItemsRoute
+  '/games/deadlockdle': typeof GamesDeadlockdleRouteWithChildren
+  '/games/flashcards': typeof GamesFlashcardsRouteWithChildren
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
   '/players/$accountId': typeof PlayersAccountIdRoute
@@ -533,10 +638,24 @@ export interface FileRoutesByFullPath {
   '/analytics/items/item-purchase-analysis': typeof AnalyticsItemsItemPurchaseAnalysisRoute
   '/analytics/players/stats-metrics': typeof AnalyticsPlayersStatsMetricsRoute
   '/auth/patreon/callback': typeof AuthPatreonCallbackRoute
+  '/games/deadlockdle/guess-ability': typeof GamesDeadlockdleGuessAbilityRoute
+  '/games/deadlockdle/guess-hero': typeof GamesDeadlockdleGuessHeroRoute
+  '/games/deadlockdle/guess-item': typeof GamesDeadlockdleGuessItemRoute
+  '/games/deadlockdle/guess-sound': typeof GamesDeadlockdleGuessSoundRoute
+  '/games/deadlockdle/item-stats': typeof GamesDeadlockdleItemStatsRoute
+  '/games/deadlockdle/trivia': typeof GamesDeadlockdleTriviaRoute
+  '/games/flashcards/heroes': typeof GamesFlashcardsHeroesRoute
+  '/games/flashcards/item-effects': typeof GamesFlashcardsItemEffectsRoute
+  '/games/flashcards/item-upgrades': typeof GamesFlashcardsItemUpgradesRoute
+  '/games/flashcards/items': typeof GamesFlashcardsItemsRoute
+  '/tracker/players/$accountId': typeof TrackerPlayersAccountIdRoute
   '/analytics/games/': typeof AnalyticsGamesIndexRoute
   '/analytics/heroes/': typeof AnalyticsHeroesIndexRoute
   '/analytics/items/': typeof AnalyticsItemsIndexRoute
   '/analytics/players/': typeof AnalyticsPlayersIndexRoute
+  '/games/deadlockdle/': typeof GamesDeadlockdleIndexRoute
+  '/games/flashcards/': typeof GamesFlashcardsIndexRoute
+  '/tracker/players/': typeof TrackerPlayersIndexRoute
   '/streamkit/widgets/$region/$accountId/$widgetType': typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
 }
 export interface FileRoutesByTo {
@@ -601,10 +720,24 @@ export interface FileRoutesByTo {
   '/analytics/items/item-purchase-analysis': typeof AnalyticsItemsItemPurchaseAnalysisRoute
   '/analytics/players/stats-metrics': typeof AnalyticsPlayersStatsMetricsRoute
   '/auth/patreon/callback': typeof AuthPatreonCallbackRoute
+  '/games/deadlockdle/guess-ability': typeof GamesDeadlockdleGuessAbilityRoute
+  '/games/deadlockdle/guess-hero': typeof GamesDeadlockdleGuessHeroRoute
+  '/games/deadlockdle/guess-item': typeof GamesDeadlockdleGuessItemRoute
+  '/games/deadlockdle/guess-sound': typeof GamesDeadlockdleGuessSoundRoute
+  '/games/deadlockdle/item-stats': typeof GamesDeadlockdleItemStatsRoute
+  '/games/deadlockdle/trivia': typeof GamesDeadlockdleTriviaRoute
+  '/games/flashcards/heroes': typeof GamesFlashcardsHeroesRoute
+  '/games/flashcards/item-effects': typeof GamesFlashcardsItemEffectsRoute
+  '/games/flashcards/item-upgrades': typeof GamesFlashcardsItemUpgradesRoute
+  '/games/flashcards/items': typeof GamesFlashcardsItemsRoute
+  '/tracker/players/$accountId': typeof TrackerPlayersAccountIdRoute
   '/analytics/games': typeof AnalyticsGamesIndexRoute
   '/analytics/heroes': typeof AnalyticsHeroesIndexRoute
   '/analytics/items': typeof AnalyticsItemsIndexRoute
   '/analytics/players': typeof AnalyticsPlayersIndexRoute
+  '/games/deadlockdle': typeof GamesDeadlockdleIndexRoute
+  '/games/flashcards': typeof GamesFlashcardsIndexRoute
+  '/tracker/players': typeof TrackerPlayersIndexRoute
   '/streamkit/widgets/$region/$accountId/$widgetType': typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
 }
 export interface FileRoutesById {
@@ -649,6 +782,8 @@ export interface FileRoutesById {
   '/flashcards/item-effects': typeof FlashcardsItemEffectsRoute
   '/flashcards/item-upgrades': typeof FlashcardsItemUpgradesRoute
   '/flashcards/items': typeof FlashcardsItemsRoute
+  '/games_/deadlockdle': typeof GamesDeadlockdleRouteWithChildren
+  '/games_/flashcards': typeof GamesFlashcardsRouteWithChildren
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
   '/players_/$accountId': typeof PlayersAccountIdRoute
@@ -678,10 +813,24 @@ export interface FileRoutesById {
   '/analytics/items/item-purchase-analysis': typeof AnalyticsItemsItemPurchaseAnalysisRoute
   '/analytics/players/stats-metrics': typeof AnalyticsPlayersStatsMetricsRoute
   '/auth/patreon/callback': typeof AuthPatreonCallbackRoute
+  '/games_/deadlockdle/guess-ability': typeof GamesDeadlockdleGuessAbilityRoute
+  '/games_/deadlockdle/guess-hero': typeof GamesDeadlockdleGuessHeroRoute
+  '/games_/deadlockdle/guess-item': typeof GamesDeadlockdleGuessItemRoute
+  '/games_/deadlockdle/guess-sound': typeof GamesDeadlockdleGuessSoundRoute
+  '/games_/deadlockdle/item-stats': typeof GamesDeadlockdleItemStatsRoute
+  '/games_/deadlockdle/trivia': typeof GamesDeadlockdleTriviaRoute
+  '/games_/flashcards/heroes': typeof GamesFlashcardsHeroesRoute
+  '/games_/flashcards/item-effects': typeof GamesFlashcardsItemEffectsRoute
+  '/games_/flashcards/item-upgrades': typeof GamesFlashcardsItemUpgradesRoute
+  '/games_/flashcards/items': typeof GamesFlashcardsItemsRoute
+  '/tracker_/players/$accountId': typeof TrackerPlayersAccountIdRoute
   '/analytics/games/': typeof AnalyticsGamesIndexRoute
   '/analytics/heroes/': typeof AnalyticsHeroesIndexRoute
   '/analytics/items/': typeof AnalyticsItemsIndexRoute
   '/analytics/players/': typeof AnalyticsPlayersIndexRoute
+  '/games_/deadlockdle/': typeof GamesDeadlockdleIndexRoute
+  '/games_/flashcards/': typeof GamesFlashcardsIndexRoute
+  '/tracker_/players/': typeof TrackerPlayersIndexRoute
   '/streamkit/widgets/$region/$accountId/$widgetType': typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
 }
 export interface FileRouteTypes {
@@ -727,6 +876,8 @@ export interface FileRouteTypes {
     | '/flashcards/item-effects'
     | '/flashcards/item-upgrades'
     | '/flashcards/items'
+    | '/games/deadlockdle'
+    | '/games/flashcards'
     | '/heroes/$heroName'
     | '/items/$itemName'
     | '/players/$accountId'
@@ -756,10 +907,24 @@ export interface FileRouteTypes {
     | '/analytics/items/item-purchase-analysis'
     | '/analytics/players/stats-metrics'
     | '/auth/patreon/callback'
+    | '/games/deadlockdle/guess-ability'
+    | '/games/deadlockdle/guess-hero'
+    | '/games/deadlockdle/guess-item'
+    | '/games/deadlockdle/guess-sound'
+    | '/games/deadlockdle/item-stats'
+    | '/games/deadlockdle/trivia'
+    | '/games/flashcards/heroes'
+    | '/games/flashcards/item-effects'
+    | '/games/flashcards/item-upgrades'
+    | '/games/flashcards/items'
+    | '/tracker/players/$accountId'
     | '/analytics/games/'
     | '/analytics/heroes/'
     | '/analytics/items/'
     | '/analytics/players/'
+    | '/games/deadlockdle/'
+    | '/games/flashcards/'
+    | '/tracker/players/'
     | '/streamkit/widgets/$region/$accountId/$widgetType'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -824,10 +989,24 @@ export interface FileRouteTypes {
     | '/analytics/items/item-purchase-analysis'
     | '/analytics/players/stats-metrics'
     | '/auth/patreon/callback'
+    | '/games/deadlockdle/guess-ability'
+    | '/games/deadlockdle/guess-hero'
+    | '/games/deadlockdle/guess-item'
+    | '/games/deadlockdle/guess-sound'
+    | '/games/deadlockdle/item-stats'
+    | '/games/deadlockdle/trivia'
+    | '/games/flashcards/heroes'
+    | '/games/flashcards/item-effects'
+    | '/games/flashcards/item-upgrades'
+    | '/games/flashcards/items'
+    | '/tracker/players/$accountId'
     | '/analytics/games'
     | '/analytics/heroes'
     | '/analytics/items'
     | '/analytics/players'
+    | '/games/deadlockdle'
+    | '/games/flashcards'
+    | '/tracker/players'
     | '/streamkit/widgets/$region/$accountId/$widgetType'
   id:
     | '__root__'
@@ -871,6 +1050,8 @@ export interface FileRouteTypes {
     | '/flashcards/item-effects'
     | '/flashcards/item-upgrades'
     | '/flashcards/items'
+    | '/games_/deadlockdle'
+    | '/games_/flashcards'
     | '/heroes/$heroName'
     | '/items/$itemName'
     | '/players_/$accountId'
@@ -900,10 +1081,24 @@ export interface FileRouteTypes {
     | '/analytics/items/item-purchase-analysis'
     | '/analytics/players/stats-metrics'
     | '/auth/patreon/callback'
+    | '/games_/deadlockdle/guess-ability'
+    | '/games_/deadlockdle/guess-hero'
+    | '/games_/deadlockdle/guess-item'
+    | '/games_/deadlockdle/guess-sound'
+    | '/games_/deadlockdle/item-stats'
+    | '/games_/deadlockdle/trivia'
+    | '/games_/flashcards/heroes'
+    | '/games_/flashcards/item-effects'
+    | '/games_/flashcards/item-upgrades'
+    | '/games_/flashcards/items'
+    | '/tracker_/players/$accountId'
     | '/analytics/games/'
     | '/analytics/heroes/'
     | '/analytics/items/'
     | '/analytics/players/'
+    | '/games_/deadlockdle/'
+    | '/games_/flashcards/'
+    | '/tracker_/players/'
     | '/streamkit/widgets/$region/$accountId/$widgetType'
   fileRoutesById: FileRoutesById
 }
@@ -938,12 +1133,16 @@ export interface RootRouteChildren {
   CommunityBadgeDistributionRoute: typeof CommunityBadgeDistributionRoute
   CommunityHeatmapRoute: typeof CommunityHeatmapRoute
   CommunityLeaderboardRoute: typeof CommunityLeaderboardRoute
+  GamesDeadlockdleRoute: typeof GamesDeadlockdleRouteWithChildren
+  GamesFlashcardsRoute: typeof GamesFlashcardsRouteWithChildren
   PlayersAccountIdRoute: typeof PlayersAccountIdRoute
   AnalyticsIndexRoute: typeof AnalyticsIndexRoute
   BlogIndexRoute: typeof BlogIndexRoute
   CommunityIndexRoute: typeof CommunityIndexRoute
   StreamkitIndexRoute: typeof StreamkitIndexRoute
   AuthPatreonCallbackRoute: typeof AuthPatreonCallbackRoute
+  TrackerPlayersAccountIdRoute: typeof TrackerPlayersAccountIdRoute
+  TrackerPlayersIndexRoute: typeof TrackerPlayersIndexRoute
   StreamkitWidgetsRegionAccountIdWidgetTypeRoute: typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
 }
 
@@ -1264,6 +1463,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FlashcardsItemsRouteImport
       parentRoute: typeof FlashcardsRoute
     }
+    '/games_/deadlockdle': {
+      id: '/games_/deadlockdle'
+      path: '/games/deadlockdle'
+      fullPath: '/games/deadlockdle'
+      preLoaderRoute: typeof GamesDeadlockdleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/games_/flashcards': {
+      id: '/games_/flashcards'
+      path: '/games/flashcards'
+      fullPath: '/games/flashcards'
+      preLoaderRoute: typeof GamesFlashcardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/heroes/': {
       id: '/heroes/'
       path: '/'
@@ -1460,6 +1673,104 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthPatreonCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/games_/deadlockdle/': {
+      id: '/games_/deadlockdle/'
+      path: '/'
+      fullPath: '/games/deadlockdle/'
+      preLoaderRoute: typeof GamesDeadlockdleIndexRouteImport
+      parentRoute: typeof GamesDeadlockdleRoute
+    }
+    '/games_/deadlockdle/guess-ability': {
+      id: '/games_/deadlockdle/guess-ability'
+      path: '/guess-ability'
+      fullPath: '/games/deadlockdle/guess-ability'
+      preLoaderRoute: typeof GamesDeadlockdleGuessAbilityRouteImport
+      parentRoute: typeof GamesDeadlockdleRoute
+    }
+    '/games_/deadlockdle/guess-hero': {
+      id: '/games_/deadlockdle/guess-hero'
+      path: '/guess-hero'
+      fullPath: '/games/deadlockdle/guess-hero'
+      preLoaderRoute: typeof GamesDeadlockdleGuessHeroRouteImport
+      parentRoute: typeof GamesDeadlockdleRoute
+    }
+    '/games_/deadlockdle/guess-item': {
+      id: '/games_/deadlockdle/guess-item'
+      path: '/guess-item'
+      fullPath: '/games/deadlockdle/guess-item'
+      preLoaderRoute: typeof GamesDeadlockdleGuessItemRouteImport
+      parentRoute: typeof GamesDeadlockdleRoute
+    }
+    '/games_/deadlockdle/guess-sound': {
+      id: '/games_/deadlockdle/guess-sound'
+      path: '/guess-sound'
+      fullPath: '/games/deadlockdle/guess-sound'
+      preLoaderRoute: typeof GamesDeadlockdleGuessSoundRouteImport
+      parentRoute: typeof GamesDeadlockdleRoute
+    }
+    '/games_/deadlockdle/item-stats': {
+      id: '/games_/deadlockdle/item-stats'
+      path: '/item-stats'
+      fullPath: '/games/deadlockdle/item-stats'
+      preLoaderRoute: typeof GamesDeadlockdleItemStatsRouteImport
+      parentRoute: typeof GamesDeadlockdleRoute
+    }
+    '/games_/deadlockdle/trivia': {
+      id: '/games_/deadlockdle/trivia'
+      path: '/trivia'
+      fullPath: '/games/deadlockdle/trivia'
+      preLoaderRoute: typeof GamesDeadlockdleTriviaRouteImport
+      parentRoute: typeof GamesDeadlockdleRoute
+    }
+    '/games_/flashcards/': {
+      id: '/games_/flashcards/'
+      path: '/'
+      fullPath: '/games/flashcards/'
+      preLoaderRoute: typeof GamesFlashcardsIndexRouteImport
+      parentRoute: typeof GamesFlashcardsRoute
+    }
+    '/games_/flashcards/heroes': {
+      id: '/games_/flashcards/heroes'
+      path: '/heroes'
+      fullPath: '/games/flashcards/heroes'
+      preLoaderRoute: typeof GamesFlashcardsHeroesRouteImport
+      parentRoute: typeof GamesFlashcardsRoute
+    }
+    '/games_/flashcards/item-effects': {
+      id: '/games_/flashcards/item-effects'
+      path: '/item-effects'
+      fullPath: '/games/flashcards/item-effects'
+      preLoaderRoute: typeof GamesFlashcardsItemEffectsRouteImport
+      parentRoute: typeof GamesFlashcardsRoute
+    }
+    '/games_/flashcards/item-upgrades': {
+      id: '/games_/flashcards/item-upgrades'
+      path: '/item-upgrades'
+      fullPath: '/games/flashcards/item-upgrades'
+      preLoaderRoute: typeof GamesFlashcardsItemUpgradesRouteImport
+      parentRoute: typeof GamesFlashcardsRoute
+    }
+    '/games_/flashcards/items': {
+      id: '/games_/flashcards/items'
+      path: '/items'
+      fullPath: '/games/flashcards/items'
+      preLoaderRoute: typeof GamesFlashcardsItemsRouteImport
+      parentRoute: typeof GamesFlashcardsRoute
+    }
+    '/tracker_/players/': {
+      id: '/tracker_/players/'
+      path: '/tracker/players'
+      fullPath: '/tracker/players/'
+      preLoaderRoute: typeof TrackerPlayersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tracker_/players/$accountId': {
+      id: '/tracker_/players/$accountId'
+      path: '/tracker/players/$accountId'
+      fullPath: '/tracker/players/$accountId'
+      preLoaderRoute: typeof TrackerPlayersAccountIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/streamkit/widgets/$region/$accountId/$widgetType': {
       id: '/streamkit/widgets/$region/$accountId/$widgetType'
       path: '/streamkit/widgets/$region/$accountId/$widgetType'
@@ -1621,6 +1932,49 @@ const AnalyticsPlayersRouteChildren: AnalyticsPlayersRouteChildren = {
 const AnalyticsPlayersRouteWithChildren =
   AnalyticsPlayersRoute._addFileChildren(AnalyticsPlayersRouteChildren)
 
+interface GamesDeadlockdleRouteChildren {
+  GamesDeadlockdleGuessAbilityRoute: typeof GamesDeadlockdleGuessAbilityRoute
+  GamesDeadlockdleGuessHeroRoute: typeof GamesDeadlockdleGuessHeroRoute
+  GamesDeadlockdleGuessItemRoute: typeof GamesDeadlockdleGuessItemRoute
+  GamesDeadlockdleGuessSoundRoute: typeof GamesDeadlockdleGuessSoundRoute
+  GamesDeadlockdleItemStatsRoute: typeof GamesDeadlockdleItemStatsRoute
+  GamesDeadlockdleTriviaRoute: typeof GamesDeadlockdleTriviaRoute
+  GamesDeadlockdleIndexRoute: typeof GamesDeadlockdleIndexRoute
+}
+
+const GamesDeadlockdleRouteChildren: GamesDeadlockdleRouteChildren = {
+  GamesDeadlockdleGuessAbilityRoute: GamesDeadlockdleGuessAbilityRoute,
+  GamesDeadlockdleGuessHeroRoute: GamesDeadlockdleGuessHeroRoute,
+  GamesDeadlockdleGuessItemRoute: GamesDeadlockdleGuessItemRoute,
+  GamesDeadlockdleGuessSoundRoute: GamesDeadlockdleGuessSoundRoute,
+  GamesDeadlockdleItemStatsRoute: GamesDeadlockdleItemStatsRoute,
+  GamesDeadlockdleTriviaRoute: GamesDeadlockdleTriviaRoute,
+  GamesDeadlockdleIndexRoute: GamesDeadlockdleIndexRoute,
+}
+
+const GamesDeadlockdleRouteWithChildren =
+  GamesDeadlockdleRoute._addFileChildren(GamesDeadlockdleRouteChildren)
+
+interface GamesFlashcardsRouteChildren {
+  GamesFlashcardsHeroesRoute: typeof GamesFlashcardsHeroesRoute
+  GamesFlashcardsItemEffectsRoute: typeof GamesFlashcardsItemEffectsRoute
+  GamesFlashcardsItemUpgradesRoute: typeof GamesFlashcardsItemUpgradesRoute
+  GamesFlashcardsItemsRoute: typeof GamesFlashcardsItemsRoute
+  GamesFlashcardsIndexRoute: typeof GamesFlashcardsIndexRoute
+}
+
+const GamesFlashcardsRouteChildren: GamesFlashcardsRouteChildren = {
+  GamesFlashcardsHeroesRoute: GamesFlashcardsHeroesRoute,
+  GamesFlashcardsItemEffectsRoute: GamesFlashcardsItemEffectsRoute,
+  GamesFlashcardsItemUpgradesRoute: GamesFlashcardsItemUpgradesRoute,
+  GamesFlashcardsItemsRoute: GamesFlashcardsItemsRoute,
+  GamesFlashcardsIndexRoute: GamesFlashcardsIndexRoute,
+}
+
+const GamesFlashcardsRouteWithChildren = GamesFlashcardsRoute._addFileChildren(
+  GamesFlashcardsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AbilitiesRoute: AbilitiesRoute,
@@ -1652,12 +2006,16 @@ const rootRouteChildren: RootRouteChildren = {
   CommunityBadgeDistributionRoute: CommunityBadgeDistributionRoute,
   CommunityHeatmapRoute: CommunityHeatmapRoute,
   CommunityLeaderboardRoute: CommunityLeaderboardRoute,
+  GamesDeadlockdleRoute: GamesDeadlockdleRouteWithChildren,
+  GamesFlashcardsRoute: GamesFlashcardsRouteWithChildren,
   PlayersAccountIdRoute: PlayersAccountIdRoute,
   AnalyticsIndexRoute: AnalyticsIndexRoute,
   BlogIndexRoute: BlogIndexRoute,
   CommunityIndexRoute: CommunityIndexRoute,
   StreamkitIndexRoute: StreamkitIndexRoute,
   AuthPatreonCallbackRoute: AuthPatreonCallbackRoute,
+  TrackerPlayersAccountIdRoute: TrackerPlayersAccountIdRoute,
+  TrackerPlayersIndexRoute: TrackerPlayersIndexRoute,
   StreamkitWidgetsRegionAccountIdWidgetTypeRoute:
     StreamkitWidgetsRegionAccountIdWidgetTypeRoute,
 }

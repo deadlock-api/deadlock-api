@@ -214,7 +214,7 @@ function CompanionTable({
                           <img src={profile.avatar} alt="" className="size-6 shrink-0 rounded-full" loading="lazy" />
                         )}
                         <Link
-                          to="/players/$accountId"
+                          to="/tracker/players/$accountId"
                           params={{ accountId: String(row.accountId) }}
                           className="min-h-6 min-w-6 truncate rounded-sm leading-6 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring"
                           title={`Open ${profile?.personaname ?? `Player ${row.accountId}`} in the player tracker`}

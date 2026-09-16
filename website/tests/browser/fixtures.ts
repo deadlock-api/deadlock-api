@@ -3,7 +3,7 @@ import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 export const ACCOUNT_ID = 74963221;
 export const CURRENT_MATCH = 2998;
 export const API_ORIGIN = "http://127.0.0.1:4319";
-export const TRACKER_URL = `/players/${ACCOUNT_ID}?date_range=_&match=${CURRENT_MATCH}`;
+export const TRACKER_URL = `/tracker/players/${ACCOUNT_ID}?date_range=_&match=${CURRENT_MATCH}`;
 
 // Deliberately synthetic, small assets keep browser checks independent of live data and image CDNs.
 const image =

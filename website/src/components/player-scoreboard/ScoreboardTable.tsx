@@ -187,7 +187,7 @@ export function ScoreboardTable({
                         )}
                         {accountId != null ? (
                           <Link
-                            to="/players/$accountId"
+                            to="/tracker/players/$accountId"
                             params={{ accountId: String(accountId) }}
                             className="max-w-[200px] truncate hover:text-primary hover:underline"
                             title="Open player tracker"
