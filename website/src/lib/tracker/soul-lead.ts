@@ -58,7 +58,7 @@ export function computeSoulLead(players: TrackerMatchPlayer[], ownTeam: string):
     if (point.lead < trough.lead) trough = point;
     const previous = points[i - 1];
     const span = point.time - previous.time;
-    if (previous.lead >= 0 && point.lead >= 0) aheadS += span;
+    if (previous.lead >= 0 && point.lead >= 0 && (previous.lead > 0 || point.lead > 0)) aheadS += span;
     else if (previous.lead > 0 || point.lead > 0) {
       const crossing = span * (Math.abs(previous.lead) / (Math.abs(previous.lead) + Math.abs(point.lead)));
       aheadS += previous.lead > 0 ? crossing : span - crossing;
