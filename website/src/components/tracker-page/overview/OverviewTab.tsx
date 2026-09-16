@@ -30,6 +30,7 @@ import { compareRecentMatches, RECENT_MATCH_WINDOWS } from "~/lib/tracker/overvi
 import { cn } from "~/lib/utils";
 
 import { HeroesTab } from "../heroes/HeroesTab";
+import { WinRateBar } from "../shared/WinRateBar";
 import { CompanionsPanel } from "./CompanionsPanel";
 import { DashboardPanel, MetricRows } from "./DashboardPanel";
 import { HeroStatsTable } from "./HeroStatsTable";
@@ -370,17 +371,15 @@ function SplitRows({ label, rows }: { label: string; rows: OutcomeSplit[] }) {
   return (
     <div className="min-w-0">
       <h4 className="pb-1 text-[9px] font-medium tracking-wider text-muted-foreground uppercase">{label}</h4>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col">
         {rows.map((row) => (
-          <div
-            key={row.label}
-            className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 gap-y-1 text-[11px]"
-          >
+          <div key={row.label} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 text-[11px]">
             <span className="min-w-0">{row.label}</span>
             <span className="min-w-6 text-right text-muted-foreground tabular-nums">{integer(row.matches)}</span>
             <span className="min-w-7 text-right font-medium tabular-nums">
               {row.matches ? `${Math.round((row.wins / row.matches) * 100)}%` : "—"}
             </span>
+            <WinRateBar rate={row.matches ? row.wins / row.matches : null} className="col-span-3 mb-1 h-0.5" />
           </div>
         ))}
       </div>
