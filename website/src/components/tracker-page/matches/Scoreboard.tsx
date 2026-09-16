@@ -258,11 +258,13 @@ function PlayerStatStrip({
 function PlayerStatsDetails({
   player,
   name,
+  heroName,
   lane,
   context,
 }: {
   player: TrackerMatchPlayer;
   name: string;
+  heroName?: string;
   lane: (typeof LANES)[number] | undefined;
   context: PlayerContext;
 }) {
@@ -272,7 +274,7 @@ function PlayerStatsDetails({
       <TooltipHeader
         lead={<HeroImage heroId={player.hero_id} className="size-8 shrink-0 rounded-full" title="" />}
         title={name}
-        subtitle={[player.level > 0 && `Level ${player.level}`, lane && `${lane.name} lane`]
+        subtitle={[heroName, player.level > 0 && `Level ${player.level}`, lane && `${lane.name} lane`]
           .filter(Boolean)
           .join(" · ")}
       />
@@ -467,7 +469,15 @@ export function Scoreboard({
                         <TrackerDetailPopover
                           label={`${name}'s match stats`}
                           size="icon-xs"
-                          details={<PlayerStatsDetails player={player} name={name} lane={lane} context={context} />}
+                          details={
+                            <PlayerStatsDetails
+                              player={player}
+                              name={name}
+                              heroName={heroesById?.get(player.hero_id)?.name}
+                              lane={lane}
+                              context={context}
+                            />
+                          }
                         >
                           <span
                             aria-hidden="true"
