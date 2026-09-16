@@ -169,9 +169,8 @@ export function MatchHistoryList({
               key={item.key}
               data-index={item.index}
               ref={virtualizer.measureElement}
-              role={row.kind === "session" ? "presentation" : undefined}
-              aria-posinset={row.kind === "match" ? row.matchIndex + 1 : undefined}
-              aria-setsize={row.kind === "match" ? entries.length : undefined}
+              aria-posinset={item.index + 1}
+              aria-setsize={rows.length}
               className={cn("top-0 left-0 w-full", sticky ? "sticky z-10" : "absolute")}
               style={sticky ? undefined : { transform: `translateY(${item.start}px)` }}
             >
