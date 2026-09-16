@@ -1,4 +1,4 @@
-import { type Options, useQueryState } from "nuqs";
+import { type Options, throttle, useQueryStates } from "nuqs";
 
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { type MatchMode, parseAsMatchMode } from "~/components/selectors/MatchModeSelector";
@@ -16,14 +16,19 @@ const NORMAL_MODE_BY_MATCH_MODE: Record<MatchMode, Mode> = {
  * selected mode, which normalizes combinations a hand-edited URL could otherwise ask for.
  */
 export function useModeState() {
-  const [gameModeParam, setGameMode] = useQueryState("game_mode", parseAsGameMode);
-  const [matchModeParam, setMatchMode] = useQueryState("match_mode", parseAsMatchMode);
+  const [{ game_mode: gameModeParam, match_mode: matchModeParam }, setModeParams] = useQueryStates({
+    game_mode: parseAsGameMode,
+    match_mode: parseAsMatchMode,
+  });
 
   const mode: Mode = gameModeParam === "street_brawl" ? "street_brawl" : NORMAL_MODE_BY_MATCH_MODE[matchModeParam];
 
   const setMode = (next: Mode, options?: Options) => {
-    setGameMode(MODE_CONFIG[next].gameMode, options);
-    setMatchMode(MODE_CONFIG[next].matchMode, options);
+    // One choice updates both parameters together, without the app's per-key debounce splitting browser history.
+    setModeParams(
+      { game_mode: MODE_CONFIG[next].gameMode, match_mode: MODE_CONFIG[next].matchMode },
+      { ...options, limitUrlUpdates: options?.limitUrlUpdates ?? throttle(50) },
+    );
   };
 
   const { gameMode, matchMode } = MODE_CONFIG[mode];

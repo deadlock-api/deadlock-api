@@ -85,6 +85,9 @@ function TrackerContent({ accountId }: { accountId: number }) {
     minUnixTimestamp,
     maxUnixTimestamp,
     filters,
+    hasCustomFilters,
+    resetFilters,
+    applyFilters,
   } = useTrackerFilters();
 
   const sectionRef = useRef<HTMLElement>(null);
@@ -148,20 +151,15 @@ function TrackerContent({ accountId }: { accountId: number }) {
   // The matches tab opens on the page holding the linked match only when it mounts, so a reveal remounts it.
   const [revealCount, setRevealCount] = useState(0);
   useEffect(() => {
-    // Recovery removes the focused button along with the old empty state or hidden-match notice.
+    // Filter actions can remove their focused trigger, including recovery buttons and activity dialogs.
     if (revealCount > 0) sectionRef.current?.focus({ preventScroll: true });
   }, [revealCount]);
-  const widenFilters = (next: TrackerFilterValues) => {
-    setMode(next.mode);
-    setHeroId(next.heroId);
-    setResult(next.result);
-    if (next.minUnixTimestamp !== minUnixTimestamp || next.maxUnixTimestamp !== maxUnixTimestamp) {
-      handleDateChange(undefined, undefined);
-    }
+  const updateFilters = (next: TrackerFilterValues, clearMatch = false) => {
+    applyFilters(next, { clearMatch });
     setRevealCount((count) => count + 1);
   };
   const revealLinkedMatch = () => {
-    if (revealingFilters) widenFilters(revealingFilters);
+    if (revealingFilters) updateFilters(revealingFilters);
   };
 
   return (
@@ -178,6 +176,8 @@ function TrackerContent({ accountId }: { accountId: number }) {
           startDate={startDate}
           endDate={endDate}
           onDateChange={handleDateChange}
+          hasCustomFilters={hasCustomFilters}
+          onReset={resetFilters}
         />
       </PlayerHeader>
 
@@ -253,8 +253,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
                   hasHistory={history.length > 0}
                   recoveries={recoveries}
                   onRecover={(next) => {
-                    widenFilters(next);
-                    setExpandedMatchId(null);
+                    updateFilters(next, true);
                   }}
                 />
               ) : (

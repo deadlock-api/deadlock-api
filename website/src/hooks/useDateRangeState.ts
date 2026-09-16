@@ -21,6 +21,8 @@ export function useDateRangeState() {
   const defaultRange = useMemo(() => defaultDateRange(seasons), [seasons]);
   const parser = useMemo(() => parseAsDayjsRange.withDefault(defaultRange), [defaultRange]);
   const [[startDate, endDate], setDateRange] = useQueryState("date_range", parser);
+  const isDefaultRange =
+    startDate?.valueOf() === defaultRange[0]?.valueOf() && endDate?.valueOf() === defaultRange[1]?.valueOf();
 
   const { prevStartDate, prevEndDate } = useMemo(
     () => computePreviousPeriod(startDate, endDate, { seasons, patches: PATCHES }),
@@ -31,5 +33,5 @@ export function useDateRangeState() {
     setDateRange([newStartDate, newEndDate]);
   };
 
-  return { startDate, endDate, prevStartDate, prevEndDate, setDateRange, handleDateChange };
+  return { startDate, endDate, prevStartDate, prevEndDate, setDateRange, handleDateChange, isDefaultRange };
 }
