@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { CircleDashed, Gavel, LogOut, RefreshCw, ShieldCheck, Trophy, UsersRound } from "lucide-react";
+import { CircleDashed, Gavel, Link2, LogOut, RefreshCw, ShieldCheck, Trophy, UsersRound } from "lucide-react";
 import { type ReactNode, useMemo, useRef, useState } from "react";
 
 import { BadgeImage } from "~/components/BadgeImage";
@@ -126,6 +126,21 @@ function MatchHeader({
                 Match {matchId}
                 <CopyButton text={String(matchId)} iconOnly title="Copy match ID" className="size-6" />
               </span>
+              <CopyButton
+                variant="ghost"
+                size="xs"
+                text={() => {
+                  const url = new URL(window.location.href);
+                  // nuqs batches URL writes; use the displayed match even if its URL is still catching up.
+                  url.searchParams.set("match", String(matchId));
+                  url.searchParams.delete("tab");
+                  return url.toString();
+                }}
+                title="Copy link to this match with your current filters"
+              >
+                <Link2 data-icon="inline-start" />
+                Copy match link
+              </CopyButton>
               <Link
                 to="/team-builder"
                 search={{ match: matchId }}
