@@ -553,6 +553,7 @@ export function Scoreboard({
                             <Link
                               to="/players/$accountId"
                               params={{ accountId: String(player.account_id) }}
+                              onClick={(event) => event.stopPropagation()}
                               className="-my-0.5 inline-flex size-6 shrink-0 items-center justify-center text-muted-foreground hover:text-primary"
                               title="Open player tracker"
                             >

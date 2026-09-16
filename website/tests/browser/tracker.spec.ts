@@ -562,3 +562,16 @@ test("large histories open deep links and support keyboard jumps with bounded re
   await expect(oldest).toHaveAttribute("aria-current", "true");
   expect(requested).toHaveLength(4);
 });
+
+test("opening a scoreboard profile in another tab preserves the current timeline player", async ({ page, context }) => {
+  await page.goto(TRACKER_URL);
+  const trackedPlayer = page.getByRole("button", { name: "Tracker Tester", exact: true });
+  await expect(trackedPlayer).toHaveAttribute("aria-pressed", "true");
+  const opened = context.waitForEvent("page");
+  await page.getByRole("link", { name: "Open player tracker", exact: true }).click({ modifiers: ["ControlOrMeta"] });
+  const newTab = await opened;
+  await expect(newTab).toHaveURL(/\/players\/42(?:\?|$)/);
+  await expect(page).toHaveURL(new RegExp(`match=${CURRENT_MATCH}`));
+  await expect(trackedPlayer).toHaveAttribute("aria-pressed", "true");
+  await newTab.close();
+});
