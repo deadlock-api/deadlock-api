@@ -26,7 +26,7 @@ function UpgradeTile({ item, winRate, current }: { item: SlimUpgrade; winRate?: 
           <span className="block text-sm leading-tight font-medium">{item.name}</span>
         ) : (
           <Link
-            to="/items/$itemName"
+            to="/analytics/items/$itemName"
             params={{ itemName: itemSlug(item.name) }}
             preload="intent"
             className="block text-sm leading-tight font-medium hover:underline"

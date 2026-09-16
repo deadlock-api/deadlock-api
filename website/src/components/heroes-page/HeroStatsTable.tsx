@@ -675,7 +675,7 @@ export function HeroStatsTable({
       <TableCell>
         {heroRowLinkVariant === "test" && heroNameMap.has(row.hero_id) ? (
           <Link
-            to="/heroes/$heroName"
+            to="/analytics/heroes/$heroName"
             params={{ heroName: heroSlug(heroNameMap.get(row.hero_id)!) }}
             preload="intent"
             className="group flex items-center gap-2"

@@ -152,7 +152,7 @@ function MatchHeader({
                 Copy match link
               </CopyButton>
               <Link
-                to="/team-builder"
+                to="/analytics/team-builder"
                 search={{ match: matchId }}
                 className="inline-flex min-h-6 items-center gap-1 transition-colors hover:text-foreground"
               >

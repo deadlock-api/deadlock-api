@@ -46,20 +46,20 @@ export const navGroups: NavGroup[] = [
   {
     label: "Analytics",
     links: [
-      { to: "/games", label: "Games", icon: BarChart3 },
-      { to: "/heroes", label: "Heroes", icon: Swords },
-      { to: "/items", label: "Items", icon: ShoppingBag },
-      { to: "/abilities", label: "Abilities", icon: ListOrdered },
-      { to: "/players", label: "Players", icon: Users },
-      { to: "/team-builder", label: "Team Builder", icon: UsersRound },
+      { to: "/analytics/games", label: "Games", icon: BarChart3 },
+      { to: "/analytics/heroes", label: "Heroes", icon: Swords },
+      { to: "/analytics/items", label: "Items", icon: ShoppingBag },
+      { to: "/analytics/abilities", label: "Abilities", icon: ListOrdered },
+      { to: "/analytics/players", label: "Players", icon: Users },
+      { to: "/analytics/team-builder", label: "Team Builder", icon: UsersRound },
     ],
   },
   {
     label: "Community",
     links: [
-      { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
-      { to: "/badge-distribution", label: "Rank Distribution", icon: Medal },
-      { to: "/heatmap", label: "Kill Heatmap", icon: Map },
+      { to: "/community/leaderboard", label: "Leaderboard", icon: Trophy },
+      { to: "/community/badge-distribution", label: "Rank Distribution", icon: Medal },
+      { to: "/community/heatmap", label: "Kill Heatmap", icon: Map },
     ],
   },
   {

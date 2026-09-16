@@ -289,7 +289,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
             <ItemImageFromAsset item={row.item} />
             {row.item ? (
               <Link
-                to="/items/$itemName"
+                to="/analytics/items/$itemName"
                 params={{ itemName: itemSlug(row.item.name) }}
                 preload="intent"
                 onClick={(e) => e.stopPropagation()}

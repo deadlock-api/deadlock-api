@@ -5,10 +5,10 @@ import type { ReactNode } from "react";
 import { Button } from "~/components/ui/button";
 
 const suggestions = [
-  { to: "/heroes", label: "Hero Stats" },
-  { to: "/items", label: "Item Stats" },
-  { to: "/leaderboard", label: "Leaderboard" },
-  { to: "/games", label: "Games" },
+  { to: "/analytics/heroes", label: "Hero Stats" },
+  { to: "/analytics/items", label: "Item Stats" },
+  { to: "/community/leaderboard", label: "Leaderboard" },
+  { to: "/analytics/games", label: "Games" },
 ];
 
 /** `didYouMean` is a link to the page the visitor most likely meant, e.g. the hero a mistyped URL was closest to. */

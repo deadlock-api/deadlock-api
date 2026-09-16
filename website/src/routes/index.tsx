@@ -88,9 +88,9 @@ const valueProps = [
 ];
 
 const quickLinks = [
-  { label: "Hero Win Rates", href: "/heroes", icon: Swords, primary: true },
-  { label: "Item Stats", href: "/items", icon: ShoppingBag, primary: false },
-  { label: "Leaderboard", href: "/leaderboard", icon: Trophy, primary: false },
+  { label: "Hero Win Rates", href: "/analytics/heroes", icon: Swords, primary: true },
+  { label: "Item Stats", href: "/analytics/items", icon: ShoppingBag, primary: false },
+  { label: "Leaderboard", href: "/community/leaderboard", icon: Trophy, primary: false },
   { label: "API Docs", href: `${API_ORIGIN}/docs`, icon: Code, primary: false, external: true },
 ];
 
@@ -141,55 +141,55 @@ const analyticsLinks = [
   {
     title: "Hero Analytics",
     description: "Win rates, matchups, synergies, and performance trends across patches for every hero.",
-    href: "/heroes",
+    href: "/analytics/heroes",
     icon: Swords,
   },
   {
     title: "Item Analytics",
     description: "Item win rates with confidence intervals, purchase timing analysis, and item combos.",
-    href: "/items",
+    href: "/analytics/items",
     icon: ShoppingBag,
   },
   {
     title: "Game Analytics",
     description: "Match duration, game mode stats, and overall gameplay trends over time.",
-    href: "/games",
+    href: "/analytics/games",
     icon: BarChart3,
   },
   {
     title: "Ability Analytics",
     description: "Ability upgrade paths, skill build popularity, and win rate by leveling order.",
-    href: "/abilities",
+    href: "/analytics/abilities",
     icon: ListOrdered,
   },
   {
     title: "Team Builder",
     description: "Draft a full 6v6, set the lanes, and read the predicted win rate from live matchup data.",
-    href: "/team-builder",
+    href: "/analytics/team-builder",
     icon: UsersRound,
   },
   {
     title: "Leaderboard",
     description: "Top ranked players across all regions with hero filters and rank search.",
-    href: "/leaderboard",
+    href: "/community/leaderboard",
     icon: Trophy,
   },
   {
     title: "Player Analytics",
     description: "Compare player performance across matches and view stat distributions.",
-    href: "/players",
+    href: "/analytics/players",
     icon: Users,
   },
   {
     title: "Rank Distribution",
     description: "See how the player base is distributed across ranks over time.",
-    href: "/badge-distribution",
+    href: "/community/badge-distribution",
     icon: Medal,
   },
   {
     title: "Kill Heatmap",
     description: "Visualize where kills happen on the map to understand positioning and hotspots.",
-    href: "/heatmap",
+    href: "/community/heatmap",
     icon: Map,
   },
   {

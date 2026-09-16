@@ -54,7 +54,7 @@ export const Route = createFileRoute("/players_/$accountId")({
       description: name
         ? `Full Deadlock match history, rank progression, hero breakdowns, and mate & opponent analytics for ${name}.`
         : "Full Deadlock match history, rank progression, hero breakdowns, and mate & opponent analytics for prioritized players.",
-      path: loaderData ? `/players/${loaderData.accountId}` : "/players",
+      path: loaderData ? `/players/${loaderData.accountId}` : "/tracker",
     });
   },
 });

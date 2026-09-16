@@ -29,8 +29,19 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as Sitemap_indexDotxmlRouteImport } from './routes/sitemap_index[.]xml'
 import { Route as TeamBuilderRouteImport } from './routes/team-builder'
 import { Route as TrackerRouteImport } from './routes/tracker'
+import { Route as AnalyticsIndexRouteImport } from './routes/analytics.index'
+import { Route as AnalyticsAbilitiesRouteImport } from './routes/analytics.abilities'
+import { Route as AnalyticsGamesRouteImport } from './routes/analytics.games'
+import { Route as AnalyticsHeroesRouteImport } from './routes/analytics.heroes'
+import { Route as AnalyticsItemsRouteImport } from './routes/analytics.items'
+import { Route as AnalyticsPlayersRouteImport } from './routes/analytics.players'
+import { Route as AnalyticsTeamBuilderRouteImport } from './routes/analytics.team-builder'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
+import { Route as CommunityIndexRouteImport } from './routes/community.index'
+import { Route as CommunityBadgeDistributionRouteImport } from './routes/community.badge-distribution'
+import { Route as CommunityHeatmapRouteImport } from './routes/community.heatmap'
+import { Route as CommunityLeaderboardRouteImport } from './routes/community.leaderboard'
 import { Route as DeadlockdleIndexRouteImport } from './routes/deadlockdle/index'
 import { Route as DeadlockdleGuessAbilityRouteImport } from './routes/deadlockdle/guess-ability'
 import { Route as DeadlockdleGuessHeroRouteImport } from './routes/deadlockdle/guess-hero'
@@ -49,6 +60,10 @@ import { Route as ItemsIndexRouteImport } from './routes/items.index'
 import { Route as ItemsItemNameRouteImport } from './routes/items.$itemName'
 import { Route as PlayersAccountIdRouteImport } from './routes/players_.$accountId'
 import { Route as StreamkitIndexRouteImport } from './routes/streamkit/index'
+import { Route as AnalyticsHeroesIndexRouteImport } from './routes/analytics.heroes.index'
+import { Route as AnalyticsHeroesHeroNameRouteImport } from './routes/analytics.heroes.$heroName'
+import { Route as AnalyticsItemsIndexRouteImport } from './routes/analytics.items.index'
+import { Route as AnalyticsItemsItemNameRouteImport } from './routes/analytics.items.$itemName'
 import { Route as AuthPatreonCallbackRouteImport } from './routes/auth/patreon/callback'
 import { Route as StreamkitWidgetsRegionAccountIdWidgetTypeRouteImport } from './routes/streamkit/widgets/$region/$accountId/$widgetType'
 
@@ -152,6 +167,41 @@ const TrackerRoute = TrackerRouteImport.update({
   path: '/tracker',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AnalyticsIndexRoute = AnalyticsIndexRouteImport.update({
+  id: '/analytics/',
+  path: '/analytics/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsAbilitiesRoute = AnalyticsAbilitiesRouteImport.update({
+  id: '/analytics/abilities',
+  path: '/analytics/abilities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsGamesRoute = AnalyticsGamesRouteImport.update({
+  id: '/analytics/games',
+  path: '/analytics/games',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsHeroesRoute = AnalyticsHeroesRouteImport.update({
+  id: '/analytics/heroes',
+  path: '/analytics/heroes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsItemsRoute = AnalyticsItemsRouteImport.update({
+  id: '/analytics/items',
+  path: '/analytics/items',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsPlayersRoute = AnalyticsPlayersRouteImport.update({
+  id: '/analytics/players',
+  path: '/analytics/players',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsTeamBuilderRoute = AnalyticsTeamBuilderRouteImport.update({
+  id: '/analytics/team-builder',
+  path: '/analytics/team-builder',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
   id: '/blog/',
   path: '/blog/',
@@ -160,6 +210,27 @@ const BlogIndexRoute = BlogIndexRouteImport.update({
 const BlogSlugRoute = BlogSlugRouteImport.update({
   id: '/blog/$slug',
   path: '/blog/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommunityIndexRoute = CommunityIndexRouteImport.update({
+  id: '/community/',
+  path: '/community/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommunityBadgeDistributionRoute =
+  CommunityBadgeDistributionRouteImport.update({
+    id: '/community/badge-distribution',
+    path: '/community/badge-distribution',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const CommunityHeatmapRoute = CommunityHeatmapRouteImport.update({
+  id: '/community/heatmap',
+  path: '/community/heatmap',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommunityLeaderboardRoute = CommunityLeaderboardRouteImport.update({
+  id: '/community/leaderboard',
+  path: '/community/leaderboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DeadlockdleIndexRoute = DeadlockdleIndexRouteImport.update({
@@ -252,6 +323,26 @@ const StreamkitIndexRoute = StreamkitIndexRouteImport.update({
   path: '/streamkit/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AnalyticsHeroesIndexRoute = AnalyticsHeroesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AnalyticsHeroesRoute,
+} as any)
+const AnalyticsHeroesHeroNameRoute = AnalyticsHeroesHeroNameRouteImport.update({
+  id: '/$heroName',
+  path: '/$heroName',
+  getParentRoute: () => AnalyticsHeroesRoute,
+} as any)
+const AnalyticsItemsIndexRoute = AnalyticsItemsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AnalyticsItemsRoute,
+} as any)
+const AnalyticsItemsItemNameRoute = AnalyticsItemsItemNameRouteImport.update({
+  id: '/$itemName',
+  path: '/$itemName',
+  getParentRoute: () => AnalyticsItemsRoute,
+} as any)
 const AuthPatreonCallbackRoute = AuthPatreonCallbackRouteImport.update({
   id: '/auth/patreon/callback',
   path: '/auth/patreon/callback',
@@ -285,7 +376,16 @@ export interface FileRoutesByFullPath {
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
   '/team-builder': typeof TeamBuilderRoute
   '/tracker': typeof TrackerRoute
+  '/analytics/abilities': typeof AnalyticsAbilitiesRoute
+  '/analytics/games': typeof AnalyticsGamesRoute
+  '/analytics/heroes': typeof AnalyticsHeroesRouteWithChildren
+  '/analytics/items': typeof AnalyticsItemsRouteWithChildren
+  '/analytics/players': typeof AnalyticsPlayersRoute
+  '/analytics/team-builder': typeof AnalyticsTeamBuilderRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/community/badge-distribution': typeof CommunityBadgeDistributionRoute
+  '/community/heatmap': typeof CommunityHeatmapRoute
+  '/community/leaderboard': typeof CommunityLeaderboardRoute
   '/deadlockdle/guess-ability': typeof DeadlockdleGuessAbilityRoute
   '/deadlockdle/guess-hero': typeof DeadlockdleGuessHeroRoute
   '/deadlockdle/guess-item': typeof DeadlockdleGuessItemRoute
@@ -299,13 +399,19 @@ export interface FileRoutesByFullPath {
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
   '/players/$accountId': typeof PlayersAccountIdRoute
+  '/analytics/': typeof AnalyticsIndexRoute
   '/blog/': typeof BlogIndexRoute
+  '/community/': typeof CommunityIndexRoute
   '/deadlockdle/': typeof DeadlockdleIndexRoute
   '/flashcards/': typeof FlashcardsIndexRoute
   '/heroes/': typeof HeroesIndexRoute
   '/items/': typeof ItemsIndexRoute
   '/streamkit/': typeof StreamkitIndexRoute
+  '/analytics/heroes/$heroName': typeof AnalyticsHeroesHeroNameRoute
+  '/analytics/items/$itemName': typeof AnalyticsItemsItemNameRoute
   '/auth/patreon/callback': typeof AuthPatreonCallbackRoute
+  '/analytics/heroes/': typeof AnalyticsHeroesIndexRoute
+  '/analytics/items/': typeof AnalyticsItemsIndexRoute
   '/streamkit/widgets/$region/$accountId/$widgetType': typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
 }
 export interface FileRoutesByTo {
@@ -325,7 +431,14 @@ export interface FileRoutesByTo {
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
   '/team-builder': typeof TeamBuilderRoute
   '/tracker': typeof TrackerRoute
+  '/analytics/abilities': typeof AnalyticsAbilitiesRoute
+  '/analytics/games': typeof AnalyticsGamesRoute
+  '/analytics/players': typeof AnalyticsPlayersRoute
+  '/analytics/team-builder': typeof AnalyticsTeamBuilderRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/community/badge-distribution': typeof CommunityBadgeDistributionRoute
+  '/community/heatmap': typeof CommunityHeatmapRoute
+  '/community/leaderboard': typeof CommunityLeaderboardRoute
   '/deadlockdle/guess-ability': typeof DeadlockdleGuessAbilityRoute
   '/deadlockdle/guess-hero': typeof DeadlockdleGuessHeroRoute
   '/deadlockdle/guess-item': typeof DeadlockdleGuessItemRoute
@@ -339,13 +452,19 @@ export interface FileRoutesByTo {
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
   '/players/$accountId': typeof PlayersAccountIdRoute
+  '/analytics': typeof AnalyticsIndexRoute
   '/blog': typeof BlogIndexRoute
+  '/community': typeof CommunityIndexRoute
   '/deadlockdle': typeof DeadlockdleIndexRoute
   '/flashcards': typeof FlashcardsIndexRoute
   '/heroes': typeof HeroesIndexRoute
   '/items': typeof ItemsIndexRoute
   '/streamkit': typeof StreamkitIndexRoute
+  '/analytics/heroes/$heroName': typeof AnalyticsHeroesHeroNameRoute
+  '/analytics/items/$itemName': typeof AnalyticsItemsItemNameRoute
   '/auth/patreon/callback': typeof AuthPatreonCallbackRoute
+  '/analytics/heroes': typeof AnalyticsHeroesIndexRoute
+  '/analytics/items': typeof AnalyticsItemsIndexRoute
   '/streamkit/widgets/$region/$accountId/$widgetType': typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
 }
 export interface FileRoutesById {
@@ -370,7 +489,16 @@ export interface FileRoutesById {
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
   '/team-builder': typeof TeamBuilderRoute
   '/tracker': typeof TrackerRoute
+  '/analytics/abilities': typeof AnalyticsAbilitiesRoute
+  '/analytics/games': typeof AnalyticsGamesRoute
+  '/analytics/heroes': typeof AnalyticsHeroesRouteWithChildren
+  '/analytics/items': typeof AnalyticsItemsRouteWithChildren
+  '/analytics/players': typeof AnalyticsPlayersRoute
+  '/analytics/team-builder': typeof AnalyticsTeamBuilderRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/community/badge-distribution': typeof CommunityBadgeDistributionRoute
+  '/community/heatmap': typeof CommunityHeatmapRoute
+  '/community/leaderboard': typeof CommunityLeaderboardRoute
   '/deadlockdle/guess-ability': typeof DeadlockdleGuessAbilityRoute
   '/deadlockdle/guess-hero': typeof DeadlockdleGuessHeroRoute
   '/deadlockdle/guess-item': typeof DeadlockdleGuessItemRoute
@@ -384,13 +512,19 @@ export interface FileRoutesById {
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
   '/players_/$accountId': typeof PlayersAccountIdRoute
+  '/analytics/': typeof AnalyticsIndexRoute
   '/blog/': typeof BlogIndexRoute
+  '/community/': typeof CommunityIndexRoute
   '/deadlockdle/': typeof DeadlockdleIndexRoute
   '/flashcards/': typeof FlashcardsIndexRoute
   '/heroes/': typeof HeroesIndexRoute
   '/items/': typeof ItemsIndexRoute
   '/streamkit/': typeof StreamkitIndexRoute
+  '/analytics/heroes/$heroName': typeof AnalyticsHeroesHeroNameRoute
+  '/analytics/items/$itemName': typeof AnalyticsItemsItemNameRoute
   '/auth/patreon/callback': typeof AuthPatreonCallbackRoute
+  '/analytics/heroes/': typeof AnalyticsHeroesIndexRoute
+  '/analytics/items/': typeof AnalyticsItemsIndexRoute
   '/streamkit/widgets/$region/$accountId/$widgetType': typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
 }
 export interface FileRouteTypes {
@@ -416,7 +550,16 @@ export interface FileRouteTypes {
     | '/sitemap_index.xml'
     | '/team-builder'
     | '/tracker'
+    | '/analytics/abilities'
+    | '/analytics/games'
+    | '/analytics/heroes'
+    | '/analytics/items'
+    | '/analytics/players'
+    | '/analytics/team-builder'
     | '/blog/$slug'
+    | '/community/badge-distribution'
+    | '/community/heatmap'
+    | '/community/leaderboard'
     | '/deadlockdle/guess-ability'
     | '/deadlockdle/guess-hero'
     | '/deadlockdle/guess-item'
@@ -430,13 +573,19 @@ export interface FileRouteTypes {
     | '/heroes/$heroName'
     | '/items/$itemName'
     | '/players/$accountId'
+    | '/analytics/'
     | '/blog/'
+    | '/community/'
     | '/deadlockdle/'
     | '/flashcards/'
     | '/heroes/'
     | '/items/'
     | '/streamkit/'
+    | '/analytics/heroes/$heroName'
+    | '/analytics/items/$itemName'
     | '/auth/patreon/callback'
+    | '/analytics/heroes/'
+    | '/analytics/items/'
     | '/streamkit/widgets/$region/$accountId/$widgetType'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -456,7 +605,14 @@ export interface FileRouteTypes {
     | '/sitemap_index.xml'
     | '/team-builder'
     | '/tracker'
+    | '/analytics/abilities'
+    | '/analytics/games'
+    | '/analytics/players'
+    | '/analytics/team-builder'
     | '/blog/$slug'
+    | '/community/badge-distribution'
+    | '/community/heatmap'
+    | '/community/leaderboard'
     | '/deadlockdle/guess-ability'
     | '/deadlockdle/guess-hero'
     | '/deadlockdle/guess-item'
@@ -470,13 +626,19 @@ export interface FileRouteTypes {
     | '/heroes/$heroName'
     | '/items/$itemName'
     | '/players/$accountId'
+    | '/analytics'
     | '/blog'
+    | '/community'
     | '/deadlockdle'
     | '/flashcards'
     | '/heroes'
     | '/items'
     | '/streamkit'
+    | '/analytics/heroes/$heroName'
+    | '/analytics/items/$itemName'
     | '/auth/patreon/callback'
+    | '/analytics/heroes'
+    | '/analytics/items'
     | '/streamkit/widgets/$region/$accountId/$widgetType'
   id:
     | '__root__'
@@ -500,7 +662,16 @@ export interface FileRouteTypes {
     | '/sitemap_index.xml'
     | '/team-builder'
     | '/tracker'
+    | '/analytics/abilities'
+    | '/analytics/games'
+    | '/analytics/heroes'
+    | '/analytics/items'
+    | '/analytics/players'
+    | '/analytics/team-builder'
     | '/blog/$slug'
+    | '/community/badge-distribution'
+    | '/community/heatmap'
+    | '/community/leaderboard'
     | '/deadlockdle/guess-ability'
     | '/deadlockdle/guess-hero'
     | '/deadlockdle/guess-item'
@@ -514,13 +685,19 @@ export interface FileRouteTypes {
     | '/heroes/$heroName'
     | '/items/$itemName'
     | '/players_/$accountId'
+    | '/analytics/'
     | '/blog/'
+    | '/community/'
     | '/deadlockdle/'
     | '/flashcards/'
     | '/heroes/'
     | '/items/'
     | '/streamkit/'
+    | '/analytics/heroes/$heroName'
+    | '/analytics/items/$itemName'
     | '/auth/patreon/callback'
+    | '/analytics/heroes/'
+    | '/analytics/items/'
     | '/streamkit/widgets/$region/$accountId/$widgetType'
   fileRoutesById: FileRoutesById
 }
@@ -545,9 +722,20 @@ export interface RootRouteChildren {
   Sitemap_indexDotxmlRoute: typeof Sitemap_indexDotxmlRoute
   TeamBuilderRoute: typeof TeamBuilderRoute
   TrackerRoute: typeof TrackerRoute
+  AnalyticsAbilitiesRoute: typeof AnalyticsAbilitiesRoute
+  AnalyticsGamesRoute: typeof AnalyticsGamesRoute
+  AnalyticsHeroesRoute: typeof AnalyticsHeroesRouteWithChildren
+  AnalyticsItemsRoute: typeof AnalyticsItemsRouteWithChildren
+  AnalyticsPlayersRoute: typeof AnalyticsPlayersRoute
+  AnalyticsTeamBuilderRoute: typeof AnalyticsTeamBuilderRoute
   BlogSlugRoute: typeof BlogSlugRoute
+  CommunityBadgeDistributionRoute: typeof CommunityBadgeDistributionRoute
+  CommunityHeatmapRoute: typeof CommunityHeatmapRoute
+  CommunityLeaderboardRoute: typeof CommunityLeaderboardRoute
   PlayersAccountIdRoute: typeof PlayersAccountIdRoute
+  AnalyticsIndexRoute: typeof AnalyticsIndexRoute
   BlogIndexRoute: typeof BlogIndexRoute
+  CommunityIndexRoute: typeof CommunityIndexRoute
   StreamkitIndexRoute: typeof StreamkitIndexRoute
   AuthPatreonCallbackRoute: typeof AuthPatreonCallbackRoute
   StreamkitWidgetsRegionAccountIdWidgetTypeRoute: typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
@@ -695,6 +883,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrackerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/analytics/': {
+      id: '/analytics/'
+      path: '/analytics'
+      fullPath: '/analytics/'
+      preLoaderRoute: typeof AnalyticsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics/abilities': {
+      id: '/analytics/abilities'
+      path: '/analytics/abilities'
+      fullPath: '/analytics/abilities'
+      preLoaderRoute: typeof AnalyticsAbilitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics/games': {
+      id: '/analytics/games'
+      path: '/analytics/games'
+      fullPath: '/analytics/games'
+      preLoaderRoute: typeof AnalyticsGamesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics/heroes': {
+      id: '/analytics/heroes'
+      path: '/analytics/heroes'
+      fullPath: '/analytics/heroes'
+      preLoaderRoute: typeof AnalyticsHeroesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics/items': {
+      id: '/analytics/items'
+      path: '/analytics/items'
+      fullPath: '/analytics/items'
+      preLoaderRoute: typeof AnalyticsItemsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics/players': {
+      id: '/analytics/players'
+      path: '/analytics/players'
+      fullPath: '/analytics/players'
+      preLoaderRoute: typeof AnalyticsPlayersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics/team-builder': {
+      id: '/analytics/team-builder'
+      path: '/analytics/team-builder'
+      fullPath: '/analytics/team-builder'
+      preLoaderRoute: typeof AnalyticsTeamBuilderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/blog/': {
       id: '/blog/'
       path: '/blog'
@@ -707,6 +944,34 @@ declare module '@tanstack/react-router' {
       path: '/blog/$slug'
       fullPath: '/blog/$slug'
       preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/community/': {
+      id: '/community/'
+      path: '/community'
+      fullPath: '/community/'
+      preLoaderRoute: typeof CommunityIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/community/badge-distribution': {
+      id: '/community/badge-distribution'
+      path: '/community/badge-distribution'
+      fullPath: '/community/badge-distribution'
+      preLoaderRoute: typeof CommunityBadgeDistributionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/community/heatmap': {
+      id: '/community/heatmap'
+      path: '/community/heatmap'
+      fullPath: '/community/heatmap'
+      preLoaderRoute: typeof CommunityHeatmapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/community/leaderboard': {
+      id: '/community/leaderboard'
+      path: '/community/leaderboard'
+      fullPath: '/community/leaderboard'
+      preLoaderRoute: typeof CommunityLeaderboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/deadlockdle/': {
@@ -835,6 +1100,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StreamkitIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/analytics/heroes/': {
+      id: '/analytics/heroes/'
+      path: '/'
+      fullPath: '/analytics/heroes/'
+      preLoaderRoute: typeof AnalyticsHeroesIndexRouteImport
+      parentRoute: typeof AnalyticsHeroesRoute
+    }
+    '/analytics/heroes/$heroName': {
+      id: '/analytics/heroes/$heroName'
+      path: '/$heroName'
+      fullPath: '/analytics/heroes/$heroName'
+      preLoaderRoute: typeof AnalyticsHeroesHeroNameRouteImport
+      parentRoute: typeof AnalyticsHeroesRoute
+    }
+    '/analytics/items/': {
+      id: '/analytics/items/'
+      path: '/'
+      fullPath: '/analytics/items/'
+      preLoaderRoute: typeof AnalyticsItemsIndexRouteImport
+      parentRoute: typeof AnalyticsItemsRoute
+    }
+    '/analytics/items/$itemName': {
+      id: '/analytics/items/$itemName'
+      path: '/$itemName'
+      fullPath: '/analytics/items/$itemName'
+      preLoaderRoute: typeof AnalyticsItemsItemNameRouteImport
+      parentRoute: typeof AnalyticsItemsRoute
+    }
     '/auth/patreon/callback': {
       id: '/auth/patreon/callback'
       path: '/auth/patreon/callback'
@@ -921,6 +1214,34 @@ const ItemsRouteChildren: ItemsRouteChildren = {
 
 const ItemsRouteWithChildren = ItemsRoute._addFileChildren(ItemsRouteChildren)
 
+interface AnalyticsHeroesRouteChildren {
+  AnalyticsHeroesHeroNameRoute: typeof AnalyticsHeroesHeroNameRoute
+  AnalyticsHeroesIndexRoute: typeof AnalyticsHeroesIndexRoute
+}
+
+const AnalyticsHeroesRouteChildren: AnalyticsHeroesRouteChildren = {
+  AnalyticsHeroesHeroNameRoute: AnalyticsHeroesHeroNameRoute,
+  AnalyticsHeroesIndexRoute: AnalyticsHeroesIndexRoute,
+}
+
+const AnalyticsHeroesRouteWithChildren = AnalyticsHeroesRoute._addFileChildren(
+  AnalyticsHeroesRouteChildren,
+)
+
+interface AnalyticsItemsRouteChildren {
+  AnalyticsItemsItemNameRoute: typeof AnalyticsItemsItemNameRoute
+  AnalyticsItemsIndexRoute: typeof AnalyticsItemsIndexRoute
+}
+
+const AnalyticsItemsRouteChildren: AnalyticsItemsRouteChildren = {
+  AnalyticsItemsItemNameRoute: AnalyticsItemsItemNameRoute,
+  AnalyticsItemsIndexRoute: AnalyticsItemsIndexRoute,
+}
+
+const AnalyticsItemsRouteWithChildren = AnalyticsItemsRoute._addFileChildren(
+  AnalyticsItemsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AbilitiesRoute: AbilitiesRoute,
@@ -942,9 +1263,20 @@ const rootRouteChildren: RootRouteChildren = {
   Sitemap_indexDotxmlRoute: Sitemap_indexDotxmlRoute,
   TeamBuilderRoute: TeamBuilderRoute,
   TrackerRoute: TrackerRoute,
+  AnalyticsAbilitiesRoute: AnalyticsAbilitiesRoute,
+  AnalyticsGamesRoute: AnalyticsGamesRoute,
+  AnalyticsHeroesRoute: AnalyticsHeroesRouteWithChildren,
+  AnalyticsItemsRoute: AnalyticsItemsRouteWithChildren,
+  AnalyticsPlayersRoute: AnalyticsPlayersRoute,
+  AnalyticsTeamBuilderRoute: AnalyticsTeamBuilderRoute,
   BlogSlugRoute: BlogSlugRoute,
+  CommunityBadgeDistributionRoute: CommunityBadgeDistributionRoute,
+  CommunityHeatmapRoute: CommunityHeatmapRoute,
+  CommunityLeaderboardRoute: CommunityLeaderboardRoute,
   PlayersAccountIdRoute: PlayersAccountIdRoute,
+  AnalyticsIndexRoute: AnalyticsIndexRoute,
   BlogIndexRoute: BlogIndexRoute,
+  CommunityIndexRoute: CommunityIndexRoute,
   StreamkitIndexRoute: StreamkitIndexRoute,
   AuthPatreonCallbackRoute: AuthPatreonCallbackRoute,
   StreamkitWidgetsRegionAccountIdWidgetTypeRoute:

@@ -75,8 +75,9 @@ export default defineConfig({
         filter: ({ path }) =>
           // Query variants share one output file; crawling them overwrites the default page's HTML.
           !path.includes("?") &&
-          // Player analytics must render the requested URL filters, including direct filtered links.
-          path !== "/players" &&
+          // Filtered pages and their legacy redirects need request-specific server rendering.
+          !/^\/(analytics|community)(\/|$)/.test(path) &&
+          !/^\/(games|heroes|items|abilities|players|team-builder|leaderboard|badge-distribution|heatmap)(\/|$)/.test(path) &&
           // Tracker pages are patron-gated and per-user; prerendering them would bake gate HTML.
           path !== "/auth" && path !== "/auth/patreon" && !/^\/players\/\d+$/.test(path),
       },

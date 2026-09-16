@@ -124,7 +124,7 @@ export function HeroSkillOrder({
         })}
       </ol>
       <Link
-        to="/abilities"
+        to="/analytics/abilities"
         search={{ hero_id: heroId }}
         preload="intent"
         className="inline-block text-sm font-medium text-primary underline underline-offset-4"

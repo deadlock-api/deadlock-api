@@ -24,7 +24,7 @@ export const ItemName = memo(function ItemName({
   if (linkToDetail && item) {
     return (
       <Link
-        to="/items/$itemName"
+        to="/analytics/items/$itemName"
         params={{ itemName: itemSlug(item.name) }}
         preload="intent"
         className={cn("truncate hover:underline", className)}

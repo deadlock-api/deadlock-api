@@ -82,7 +82,7 @@ export function HeroTopItems({
             <span className="text-xs font-medium text-muted-foreground tabular-nums">#{index + 1}</span>
             <ItemImageFromAsset item={item} className="size-12 rounded" />
             <Link
-              to="/items/$itemName"
+              to="/analytics/items/$itemName"
               params={{ itemName: itemSlug(item.name) }}
               preload="intent"
               className="text-sm leading-tight font-medium hover:underline"
@@ -103,7 +103,7 @@ export function HeroTopItems({
         ))}
       </ol>
       <Link
-        to="/items"
+        to="/analytics/items"
         search={{ hero: heroId }}
         preload="intent"
         className="inline-block text-sm font-medium text-primary underline underline-offset-4"

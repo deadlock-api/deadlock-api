@@ -16,16 +16,16 @@ export interface SitemapEntry {
 
 const STATIC_ENTRIES: SitemapEntry[] = [
   { path: "/", lastmod: "2026-05-06", changefreq: "weekly", priority: 1.0 },
-  { path: "/heroes", changefreq: "daily", priority: 0.9 },
-  { path: "/items", changefreq: "daily", priority: 0.9 },
-  { path: "/abilities", changefreq: "daily", priority: 0.8 },
-  { path: "/leaderboard", changefreq: "daily", priority: 0.8 },
-  { path: "/badge-distribution", changefreq: "weekly", priority: 0.7 },
-  { path: "/games", changefreq: "daily", priority: 0.7 },
-  { path: "/heatmap", changefreq: "weekly", priority: 0.7 },
-  { path: "/players", changefreq: "daily", priority: 0.7 },
+  { path: "/analytics/heroes", changefreq: "daily", priority: 0.9 },
+  { path: "/analytics/items", changefreq: "daily", priority: 0.9 },
+  { path: "/analytics/abilities", changefreq: "daily", priority: 0.8 },
+  { path: "/community/leaderboard", changefreq: "daily", priority: 0.8 },
+  { path: "/community/badge-distribution", changefreq: "weekly", priority: 0.7 },
+  { path: "/analytics/games", changefreq: "daily", priority: 0.7 },
+  { path: "/community/heatmap", changefreq: "weekly", priority: 0.7 },
+  { path: "/analytics/players", changefreq: "daily", priority: 0.7 },
   { path: "/tracker", changefreq: "weekly", priority: 0.7 },
-  { path: "/team-builder", changefreq: "weekly", priority: 0.7 },
+  { path: "/analytics/team-builder", changefreq: "weekly", priority: 0.7 },
   { path: "/streamkit", lastmod: "2026-03-12", changefreq: "monthly", priority: 0.6 },
   { path: "/data-privacy", lastmod: "2026-03-22", changefreq: "monthly", priority: 0.5 },
   { path: "/ingest-cache", lastmod: "2026-03-10", changefreq: "monthly", priority: 0.6 },
@@ -111,7 +111,7 @@ async function loadHeroEntries(): Promise<SitemapEntry[]> {
   try {
     const response = await api.heroes_api.listHeroes({ onlyActive: true });
     return filterPlayableHeroes(response.data).map((hero) => ({
-      path: `/heroes/${heroSlug(hero.name)}`,
+      path: `/analytics/heroes/${heroSlug(hero.name)}`,
       changefreq: "daily",
       priority: 0.6,
     }));
@@ -125,7 +125,7 @@ async function loadItemEntries(): Promise<SitemapEntry[]> {
   try {
     const response = await api.items_api.getItemsByType({ type: "upgrade" });
     return filterShopableItems(response.data as Upgrade[]).map((item) => ({
-      path: `/items/${itemSlug(item.name)}`,
+      path: `/analytics/items/${itemSlug(item.name)}`,
       changefreq: "daily",
       priority: 0.6,
     }));

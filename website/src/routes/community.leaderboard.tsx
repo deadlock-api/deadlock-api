@@ -1,0 +1,106 @@
+import { useQueries } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { LeaderboardRegionEnum } from "deadlock_api_client";
+import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
+import { useCallback } from "react";
+
+import { Filter } from "~/components/Filter";
+import { LeaderboardTable } from "~/components/leaderboard/LeaderboardTable";
+import { LoadingLogo } from "~/components/LoadingLogo";
+import { combineQueryStates } from "~/components/QueryRenderer";
+import { prefetchSafe } from "~/lib/prefetch-safe";
+import { getDefaultRegion } from "~/lib/region";
+import { fetchDefaultRegion } from "~/lib/region-fns";
+import { seo } from "~/lib/seo";
+import { leaderboardQueryOptions } from "~/queries/leaderboard-queries";
+
+export const Route = createFileRoute("/community/leaderboard")({
+  component: LeaderboardPage,
+  // The hero filter lives in the URL under nuqs; read it here so the loader warms the board the page will show.
+  loaderDeps: ({ search }) => {
+    const heroId = (search as { hero_id?: unknown }).hero_id;
+    return { heroId: typeof heroId === "number" && Number.isInteger(heroId) ? heroId : null };
+  },
+  loader: async ({ context: { queryClient }, deps }) => {
+    // Resolve the default on the server so the client hydrates with the same region.
+    const defaultRegion = typeof window === "undefined" ? await fetchDefaultRegion() : getDefaultRegion();
+    await prefetchSafe(queryClient.ensureQueryData(leaderboardQueryOptions(defaultRegion, deps.heroId)));
+    return { defaultRegion };
+  },
+  head: () =>
+    seo({
+      title: "Deadlock Leaderboard: Top Ranked Players by Region",
+      description:
+        "Browse the Deadlock ranked leaderboard across all regions. Filter by hero, rank badge, and search for any player.",
+      path: "/community/leaderboard",
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        name: "Deadlock Leaderboard: Top Ranked Players by Region",
+        description:
+          "Ranked player standings for Deadlock across all regions, sortable by matchmaking rating and filterable by hero.",
+        url: "https://deadlock-api.com/community/leaderboard",
+        keywords: ["Deadlock", "leaderboard", "leaderboards", "top players", "ranked ladder"],
+        creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
+        isAccessibleForFree: true,
+      },
+    }),
+});
+
+const REGION_VALUES = Object.values(LeaderboardRegionEnum) as [LeaderboardRegionEnum, ...LeaderboardRegionEnum[]];
+
+function LeaderboardPage() {
+  const { defaultRegion } = Route.useLoaderData();
+  const [region, setRegion] = useQueryState("region", parseAsStringLiteral(REGION_VALUES).withDefault(defaultRegion));
+  const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger);
+
+  const [leaderboardQuery] = useQueries({
+    queries: [leaderboardQueryOptions(region, heroId)],
+  });
+
+  const { isPending, isError, error } = combineQueryStates(leaderboardQuery);
+
+  const handleHeroClick = useCallback(
+    (id: number) => {
+      setHeroId(id);
+    },
+    [setHeroId],
+  );
+
+  return (
+    <div className="space-y-8">
+      <section className="space-y-4">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold tracking-tight">Deadlock Leaderboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Ranked player standings across all regions</p>
+          <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            Browse the top-ranked Deadlock players by region. Filter by hero to see who dominates with specific
+            characters, search for any player, and jump to any rank to see where you stand on the competitive ladder.
+            Rankings are based on matchmaking rating earned through ranked play.
+          </p>
+        </div>
+        <Filter.Root>
+          <Filter.Hero value={heroId} onChange={setHeroId} allowNull />
+          <Filter.Region
+            value={region}
+            defaultValue={defaultRegion}
+            onChange={(r) => setRegion(r as LeaderboardRegionEnum)}
+          />
+        </Filter.Root>
+        <div className="min-h-200">
+          {isPending ? (
+            <div className="flex items-center justify-center py-24">
+              <LoadingLogo />
+            </div>
+          ) : isError ? (
+            <div className="py-8 text-center text-sm text-destructive">
+              Failed to load leaderboard: {error?.message}
+            </div>
+          ) : leaderboardQuery.data ? (
+            <LeaderboardTable leaderboard={leaderboardQuery.data} onHeroClick={handleHeroClick} />
+          ) : null}
+        </div>
+      </section>
+    </div>
+  );
+}

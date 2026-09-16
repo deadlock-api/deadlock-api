@@ -11,7 +11,12 @@
     "binding": "ASSETS",
     "not_found_handling": "404-page",
     "html_handling": "drop-trailing-slash",
-    "run_worker_first": ["/_serverFn/*", "/streamkit/widgets/*", "/players", "/players/*"]
+    "run_worker_first": [
+      "/_serverFn/*", "/streamkit/widgets/*", "/players", "/players/*",
+      "/analytics", "/analytics/*", "/community", "/community/*",
+      "/games", "/heroes", "/heroes/*", "/items", "/items/*", "/abilities",
+      "/team-builder", "/leaderboard", "/badge-distribution", "/heatmap"
+    ]
   },
   "routes": [
     { "pattern": "deadlock-api.com", "custom_domain": true },
