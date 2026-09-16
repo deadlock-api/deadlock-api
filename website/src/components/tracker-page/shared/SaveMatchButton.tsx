@@ -2,6 +2,7 @@ import { Bookmark } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
 import { useSavedMatches } from "~/hooks/useSavedMatches";
+import { cn } from "~/lib/utils";
 
 export function SaveMatchButton({ accountId, matchId }: { accountId: number; matchId: number }) {
   const { savedIds, toggleSaved } = useSavedMatches(accountId);
@@ -15,7 +16,7 @@ export function SaveMatchButton({ accountId, matchId }: { accountId: number; mat
       title={saved ? "Saved on this browser · click to remove" : "Save match on this browser"}
       onClick={() => toggleSaved(matchId)}
     >
-      <Bookmark fill={saved ? "currentColor" : "none"} />
+      <Bookmark className={cn(saved && "text-yellow-400")} fill={saved ? "currentColor" : "none"} />
     </Button>
   );
 }

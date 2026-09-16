@@ -73,7 +73,11 @@ export function SavedMatchesMenu({
           aria-label={`Saved matches (${savedIds.length})`}
           title="Saved matches"
         >
-          <Bookmark data-icon="inline-start" fill={savedIds.length > 0 ? "currentColor" : "none"} />
+          <Bookmark
+            data-icon="inline-start"
+            className={cn(savedIds.length > 0 && "text-yellow-400")}
+            fill={savedIds.length > 0 ? "currentColor" : "none"}
+          />
           <span className="hidden sm:inline">Saved</span>
           {savedIds.length > 0 && <span className="tabular-nums">{savedIds.length}</span>}
         </Button>
