@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type {
   AnalyticsApiHeroStatsRequest,
-  HeroStats,
   PlayerMatchHistoryEntry,
   PlayersApiPlayerHeroStatsRequest,
 } from "deadlock_api_client";
@@ -17,89 +16,28 @@ import { Switch } from "~/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
 import { benchmarkRankRange } from "~/lib/tracker/benchmarks";
-import { type FormResult, recentFormByHero } from "~/lib/tracker/compute";
+import { recentFormByHero, type ResultFilter } from "~/lib/tracker/compute";
+import { type HeroRow, type HeroSortKey, sortHeroRows, toHeroRow } from "~/lib/tracker/hero-performance";
 import { cn } from "~/lib/utils";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 import { trackerHeroStatsQueryOptions, trackerRankQueryOptions } from "~/queries/tracker-queries";
 
-import { LOSS_TEXT_CLASS, WIN_COLOR, WIN_TEXT_CLASS } from "../shared/colors";
+import { WIN_COLOR } from "../shared/colors";
 import { FormDots } from "../shared/FormDots";
+import { TrackerQueryError } from "../shared/TrackerQueryError";
+import { HeroComparison } from "./HeroComparison";
 
 const FORM_LENGTH = 10;
-
-interface HeroRow {
-  heroId: number;
-  matches: number;
-  winrate: number;
-  kda: number;
-  kills: number;
-  deaths: number;
-  assists: number;
-  soulsPerMin: number;
-  dmgPerMin: number;
-  lastHitsPerMin: number;
-  /** Win rate over the last `FORM_LENGTH` matches on the hero; -1 sorts heroes without local history last. */
-  recentWinrate: number;
-  lastPlayed: number;
-}
-
-function toRow(stats: HeroStats, form: FormResult[] | undefined): HeroRow {
-  const matches = stats.matches_played;
-  return {
-    heroId: stats.hero_id,
-    matches,
-    winrate: matches > 0 ? stats.wins / matches : 0,
-    kda: stats.deaths > 0 ? (stats.kills + stats.assists) / stats.deaths : stats.kills + stats.assists,
-    kills: matches > 0 ? stats.kills / matches : 0,
-    deaths: matches > 0 ? stats.deaths / matches : 0,
-    assists: matches > 0 ? stats.assists / matches : 0,
-    soulsPerMin: stats.networth_per_min,
-    dmgPerMin: stats.damage_per_min,
-    lastHitsPerMin: stats.last_hits_per_min,
-    recentWinrate: form ? form.filter((result) => result === "win").length / form.length : -1,
-    lastPlayed: stats.last_played,
-  };
-}
 
 interface HeroAverage {
   winrate: number;
   kda: number;
 }
 
-function DeltaBadge({
-  value,
-  digits,
-  suffix = "",
-  averageLabel,
-  showAlways = false,
-}: {
-  value: number;
-  digits: number;
-  suffix?: string;
-  averageLabel: string;
-  showAlways?: boolean;
-}) {
-  if (!Number.isFinite(value) || Math.abs(value) < 0.5 * 10 ** -digits) return null;
-  return (
-    <span
-      className={cn(
-        "text-xs tabular-nums",
-        !showAlways && "hidden @lg:inline",
-        value > 0 ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS,
-      )}
-      title={averageLabel}
-    >
-      {value > 0 ? "+" : "−"}
-      {Math.abs(value).toFixed(digits)}
-      {suffix}
-    </span>
-  );
-}
-
 /** `className` hides a column until the table's container is wide enough for it. */
 const COLUMNS: {
-  key: keyof Omit<HeroRow, "heroId">;
+  key: HeroSortKey;
   label: string;
   format: (row: HeroRow) => string;
   className?: string;
@@ -138,11 +76,12 @@ const COLUMNS: {
 ];
 
 /** Keep keyboard focus clear of the frozen hero column in the scrollable view. */
-function revealSortButton(button: HTMLButtonElement) {
+function revealTableButton(button: HTMLButtonElement) {
   const table = button.closest("table");
   const scroller = table?.parentElement;
   const heroHeader = table?.querySelector("th");
   if (!scroller || !heroHeader) return;
+  if (button.closest("tr")?.firstElementChild?.contains(button)) return;
 
   const bounds = button.getBoundingClientRect();
   const left = heroHeader.getBoundingClientRect().right + 4;
@@ -159,6 +98,7 @@ export function HeroesTab({
   minUnixTimestamp,
   maxUnixTimestamp,
   entries,
+  result = "all",
   onSelectHero,
   minimumMatches = 0,
   initialSortKey = "matches",
@@ -172,10 +112,12 @@ export function HeroesTab({
   maxUnixTimestamp?: number | null;
   /** Match history under the same filters, newest first; feeds the per-hero form column. */
   entries: PlayerMatchHistoryEntry[];
+  /** Detailed API aggregates include both outcomes; disclose this when the match list is filtered. */
+  result?: ResultFilter;
   onSelectHero: (heroId: number) => void;
   minimumMatches?: number;
   /** Start with the overview preview's ordering when opened in a dialog. */
-  initialSortKey?: keyof Omit<HeroRow, "heroId">;
+  initialSortKey?: HeroSortKey;
   initialSortDir?: "desc" | "asc";
 }) {
   const [sortKey, setSortKey] = useState(initialSortKey);
@@ -220,7 +162,7 @@ export function HeroesTab({
     }),
     [gameMode, matchMode, minUnixTimestamp, maxUnixTimestamp, rankRange],
   );
-  const { data: averages } = useQuery({
+  const averagesQuery = useQuery({
     ...heroStatsQueryOptions(averageParams),
     select: (stats) =>
       new Map<number, HeroAverage>(
@@ -238,9 +180,10 @@ export function HeroesTab({
           ]),
       ),
   });
+  const averages = averagesQuery.data;
   const bracketLabel = rankRange ? `${tierName ?? `Tier ${rankRange.tier}`} players` : "all players";
 
-  const handleSort = (key: keyof Omit<HeroRow, "heroId">) => {
+  const handleSort = (key: HeroSortKey) => {
     if (sortKey === key) {
       setSortDir(sortDir === "desc" ? "asc" : "desc");
     } else {
@@ -250,163 +193,202 @@ export function HeroesTab({
   };
 
   return (
-    <QueryRenderer
-      query={query}
-      loadingFallback={
-        <div className="flex items-center justify-center py-16">
-          <LoadingLogo />
-        </div>
-      }
-    >
-      {(data) => {
-        const rows = data
-          .filter((stats) => stats.matches_played >= minimumMatches)
-          .map((stats) => toRow(stats, formByHero.get(stats.hero_id)))
-          .sort(
-            (a, b) =>
-              (sortDir === "desc" ? b[sortKey] - a[sortKey] : a[sortKey] - b[sortKey]) ||
-              b.matches - a.matches ||
-              a.heroId - b.heroId,
+    <div className="flex flex-col gap-2">
+      {result !== "all" && (
+        <p className="text-xs text-muted-foreground">
+          Detailed hero stats include both wins and losses. Hero, mode and date filters still apply.
+        </p>
+      )}
+      {query.isError && (
+        <TrackerQueryError
+          title={query.data ? "Could not refresh hero stats" : "Could not load hero stats"}
+          description={
+            query.data
+              ? "Showing your last loaded hero stats. Try again to refresh them."
+              : "Your hero stats are temporarily unavailable. Try loading them again."
+          }
+          onRetry={() => query.refetch()}
+          isRetrying={query.isFetching}
+        />
+      )}
+      <QueryRenderer
+        query={query}
+        keepDataOnError
+        errorFallback={() => null}
+        loadingFallback={
+          <div className="flex items-center justify-center py-16">
+            <LoadingLogo />
+          </div>
+        }
+      >
+        {(data) => {
+          const rows = sortHeroRows(
+            data
+              .filter((stats) => stats.matches_played >= minimumMatches)
+              .map((stats) => toHeroRow(stats, formByHero.get(stats.hero_id))),
+            sortKey,
+            sortDir,
           );
-        return (
-          <div className="@container">
-            {rows.length > 0 && (
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2 @3xl:hidden">
-                <div className="flex items-center gap-2">
-                  <Switch id={allStatsId} checked={showAllStats} onCheckedChange={setShowAllStats} />
-                  <Label htmlFor={allStatsId}>All stats</Label>
+          return (
+            <div className="@container">
+              {rows.length > 0 && (
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2 @3xl:hidden">
+                  <div className="flex items-center gap-2">
+                    <Switch id={allStatsId} checked={showAllStats} onCheckedChange={setShowAllStats} />
+                    <Label htmlFor={allStatsId}>All stats</Label>
+                  </div>
+                  {showAllStats ? (
+                    <span className="text-xs text-muted-foreground">Scroll for more columns →</span>
+                  ) : sortColumn?.className ? (
+                    <span className="text-xs text-muted-foreground">
+                      Sorted by {sortColumn.label} {sortDir === "desc" ? "↓" : "↑"}
+                    </span>
+                  ) : null}
                 </div>
-                {showAllStats ? (
-                  <span className="text-xs text-muted-foreground">Scroll for more columns →</span>
-                ) : sortColumn?.className ? (
-                  <span className="text-xs text-muted-foreground">
-                    Sorted by {sortColumn.label} {sortDir === "desc" ? "↓" : "↑"}
-                  </span>
-                ) : null}
-              </div>
-            )}
-            <Table aria-label="Detailed hero performance" className={cn(showAllStats && "min-w-max")}>
-              <TableHeader className="bg-muted">
-                <TableRow>
-                  <TableHead className={cn(showAllStats && "sticky left-0 z-10 bg-muted")}>Hero</TableHead>
-                  {COLUMNS.map((column) => (
-                    <TableHead
-                      key={column.key}
-                      className={cn("text-right", !showAllStats && column.className)}
-                      aria-sort={sortKey === column.key ? (sortDir === "desc" ? "descending" : "ascending") : "none"}
-                    >
-                      <button
-                        type="button"
-                        aria-label={`Sort by ${column.label.toLowerCase()}, ${sortKey === column.key && sortDir === "desc" ? "ascending" : "descending"}`}
-                        onClick={() => handleSort(column.key)}
-                        onFocus={(event) => {
-                          if (showAllStats) revealSortButton(event.currentTarget);
-                        }}
-                        className="inline-flex cursor-pointer items-center gap-1 rounded-sm transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+              )}
+              <Table
+                aria-label="Detailed hero performance"
+                className={cn(showAllStats && "min-w-max")}
+                onFocusCapture={(event) => {
+                  if (showAllStats && event.target instanceof HTMLButtonElement) revealTableButton(event.target);
+                }}
+              >
+                <TableHeader className="bg-muted">
+                  <TableRow>
+                    <TableHead className={cn(showAllStats && "sticky left-0 z-10 bg-muted")}>Hero</TableHead>
+                    {COLUMNS.map((column) => (
+                      <TableHead
+                        key={column.key}
+                        className={cn("text-right", !showAllStats && column.className)}
+                        aria-sort={sortKey === column.key ? (sortDir === "desc" ? "descending" : "ascending") : "none"}
                       >
-                        {column.label}
-                        {sortKey === column.key &&
-                          (sortDir === "desc" ? (
-                            <ArrowDown aria-hidden="true" className="size-3" />
-                          ) : (
-                            <ArrowUp aria-hidden="true" className="size-3" />
-                          ))}
-                      </button>
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => (
-                  <TableRow
-                    key={row.heroId}
-                    className="cursor-pointer"
-                    onClick={() => onSelectHero(row.heroId)}
-                    title="Show matches on this hero"
-                  >
-                    <TableCell className={cn(showAllStats && "sticky left-0 z-10 bg-card")}>
-                      <div className="flex items-center gap-2">
-                        <HeroImage heroId={row.heroId} className="size-7 rounded-full" />
                         <button
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectHero(row.heroId);
-                          }}
-                          className="flex cursor-pointer rounded-sm text-left outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                          aria-label={`Sort by ${column.label.toLowerCase()}, ${sortKey === column.key && sortDir === "desc" ? "ascending" : "descending"}`}
+                          onClick={() => handleSort(column.key)}
+                          className="inline-flex cursor-pointer items-center gap-1 rounded-sm transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
                         >
-                          <HeroName heroId={row.heroId} className="max-w-[80px] @md:max-w-[120px]" />
+                          {column.label}
+                          {sortKey === column.key &&
+                            (sortDir === "desc" ? (
+                              <ArrowDown aria-hidden="true" className="size-3" />
+                            ) : (
+                              <ArrowUp aria-hidden="true" className="size-3" />
+                            ))}
                         </button>
-                      </div>
-                    </TableCell>
-                    {COLUMNS.map((column) => {
-                      const average = averages?.get(row.heroId);
-                      return (
-                        <TableCell
-                          key={column.key}
-                          className={cn("text-right tabular-nums", !showAllStats && column.className)}
-                        >
-                          {column.key === "winrate" ? (
-                            <div className="flex items-center justify-end gap-2">
-                              {average && (
-                                <DeltaBadge
-                                  value={(row.winrate - average.winrate) * 100}
-                                  digits={1}
-                                  suffix=" pp"
-                                  showAlways={showAllStats}
-                                  averageLabel={`${bracketLabel} average: ${(average.winrate * 100).toFixed(1)}%`}
-                                />
-                              )}
-                              <span>{column.format(row)}</span>
-                              <div className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-muted @md:block">
-                                <div
-                                  className="h-full rounded-full"
-                                  style={{ width: `${Math.round(row.winrate * 100)}%`, backgroundColor: WIN_COLOR }}
-                                />
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((row) => (
+                    <TableRow
+                      key={row.heroId}
+                      className="cursor-pointer"
+                      onClick={() => onSelectHero(row.heroId)}
+                      title="Show matches on this hero"
+                    >
+                      <TableCell className={cn(showAllStats && "sticky left-0 z-10 bg-card")}>
+                        <div className="flex items-center gap-2">
+                          <HeroImage heroId={row.heroId} className="size-7 rounded-full" />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectHero(row.heroId);
+                            }}
+                            className="flex cursor-pointer rounded-sm text-left outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                          >
+                            <HeroName heroId={row.heroId} className="max-w-[80px] @md:max-w-[120px]" />
+                          </button>
+                        </div>
+                      </TableCell>
+                      {COLUMNS.map((column) => {
+                        const average = averages?.get(row.heroId);
+                        return (
+                          <TableCell
+                            key={column.key}
+                            className={cn("text-right tabular-nums", !showAllStats && column.className)}
+                          >
+                            {column.key === "winrate" ? (
+                              <div className="flex items-center justify-end gap-2">
+                                {average && (
+                                  <HeroComparison
+                                    heroId={row.heroId}
+                                    metric="winrate"
+                                    playerValue={row.winrate}
+                                    averageValue={average.winrate}
+                                    bracketLabel={bracketLabel}
+                                    showAlways={showAllStats}
+                                  />
+                                )}
+                                <span>{column.format(row)}</span>
+                                <div className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-muted @md:block">
+                                  <div
+                                    className="h-full rounded-full"
+                                    style={{ width: `${Math.round(row.winrate * 100)}%`, backgroundColor: WIN_COLOR }}
+                                  />
+                                </div>
                               </div>
-                            </div>
-                          ) : column.key === "recentWinrate" ? (
-                            <FormDots form={formByHero.get(row.heroId) ?? []} className="justify-end" />
-                          ) : column.key === "kda" ? (
-                            <div className="flex items-center justify-end gap-2">
-                              {average && (
-                                <DeltaBadge
-                                  value={row.kda - average.kda}
-                                  digits={2}
-                                  showAlways={showAllStats}
-                                  averageLabel={`${bracketLabel} average: ${average.kda.toFixed(2)}`}
-                                />
-                              )}
-                              <span>{column.format(row)}</span>
-                            </div>
-                          ) : (
-                            column.format(row)
-                          )}
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                ))}
-                {rows.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={COLUMNS.length + 1} className="py-8 text-center text-muted-foreground">
-                      {minimumMatches > 0
-                        ? `No heroes with ${minimumMatches}+ games in the selected range`
-                        : "No hero stats in the selected range"}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-            {averages && rows.length > 0 && (
-              <p className={cn("mt-2 text-xs text-muted-foreground", !showAllStats && "hidden @lg:block")}>
-                Compared with {bracketLabel} on the same hero in the selected range. Win-rate differences are in
-                percentage points (pp).
-              </p>
-            )}
-          </div>
-        );
-      }}
-    </QueryRenderer>
+                            ) : column.key === "recentWinrate" ? (
+                              <FormDots form={formByHero.get(row.heroId) ?? []} className="justify-end" />
+                            ) : column.key === "kda" ? (
+                              <div className="flex items-center justify-end gap-2">
+                                {average && (
+                                  <HeroComparison
+                                    heroId={row.heroId}
+                                    metric="kda"
+                                    playerValue={row.kda}
+                                    averageValue={average.kda}
+                                    bracketLabel={bracketLabel}
+                                    showAlways={showAllStats}
+                                  />
+                                )}
+                                <span>{column.format(row)}</span>
+                              </div>
+                            ) : (
+                              column.format(row)
+                            )}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                  {rows.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={COLUMNS.length + 1} className="py-8 text-center text-muted-foreground">
+                        {minimumMatches > 0
+                          ? `No heroes with ${minimumMatches}+ games in the selected range`
+                          : "No hero stats in the selected range"}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+              {averagesQuery.isError && rows.length > 0 && (
+                <div className="mt-2">
+                  <TrackerQueryError
+                    title={averages ? "Could not refresh hero comparisons" : "Could not load hero comparisons"}
+                    description={
+                      averages
+                        ? "Showing the last loaded comparison averages. Your hero stats are still available."
+                        : "Comparison averages are temporarily unavailable. Your hero stats are still available."
+                    }
+                    onRetry={() => averagesQuery.refetch()}
+                    isRetrying={averagesQuery.isFetching}
+                  />
+                </div>
+              )}
+              {averages && rows.length > 0 && (
+                <p className={cn("mt-2 text-xs text-muted-foreground", !showAllStats && "hidden @lg:block")}>
+                  Compared with {bracketLabel} on the same hero in the selected range. Win-rate differences are in
+                  percentage points (pp).
+                </p>
+              )}
+            </div>
+          );
+        }}
+      </QueryRenderer>
+    </div>
   );
 }

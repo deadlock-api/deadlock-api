@@ -294,6 +294,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
             minUnixTimestamp={minUnixTimestamp}
             maxUnixTimestamp={maxUnixTimestamp}
             entries={formEntries}
+            result={result}
             onSelectHero={(id) => {
               setHeroId(id);
               setExpandedMatchId(null);

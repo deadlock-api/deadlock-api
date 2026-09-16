@@ -255,12 +255,8 @@ export function OverviewTab({
           onSelectHero={onSelectHero}
           details={({ minimumMatches, close, sort, direction }) => (
             <div className="flex flex-col gap-2">
-              {filters.result !== "all" && (
-                <p className="text-xs text-muted-foreground">
-                  Detailed hero stats include both wins and losses. Hero, mode and date filters still apply.
-                </p>
-              )}
               <HeroesTab
+                result={filters.result}
                 minimumMatches={minimumMatches}
                 initialSortKey={sort === "kdaRatio" ? "kda" : sort}
                 initialSortDir={direction === "descending" ? "desc" : "asc"}
