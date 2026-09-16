@@ -208,12 +208,15 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
     [match, viewedAccountId, entry.match_duration_s],
   );
   const viewedPlayer = match?.players.find((player) => player.account_id === viewedAccountId);
-  const timelineRef = useRef<HTMLDivElement>(null);
+  const timelineRef = useRef<HTMLElement>(null);
   const viewPlayer = (playerAccountId: number) => {
     setViewedAccountId(playerAccountId);
     // The scoreboard sits below the timeline, which would otherwise change out of sight.
     const timeline = timelineRef.current;
-    if (timeline && timeline.getBoundingClientRect().top < 0) timeline.scrollIntoView({ block: "start" });
+    if (timeline && timeline.getBoundingClientRect().top < 0) {
+      timeline.scrollIntoView({ block: "start" });
+      timeline.focus({ preventScroll: true });
+    }
   };
 
   const nameOf = (player: TrackerMatchPlayer) =>

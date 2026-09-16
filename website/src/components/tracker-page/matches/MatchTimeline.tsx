@@ -47,7 +47,7 @@ export function MatchTimeline({
   durationS,
   nameOf,
 }: {
-  ref?: Ref<HTMLDivElement>;
+  ref?: Ref<HTMLElement>;
   /** Null when neither team ever led, as in Street Brawl. */
   lead: SoulLead | null;
   objectives: ObjectiveEvent[];
@@ -132,7 +132,12 @@ export function MatchTimeline({
   const deathColor = viewedIsAlly ? LOSS_COLOR : WIN_COLOR;
 
   return (
-    <div ref={ref} className="scroll-mt-4 space-y-1 rounded-md border border-border px-3 pt-2 pb-1">
+    <section
+      ref={ref}
+      aria-label="Match timeline"
+      tabIndex={-1}
+      className="scroll-mt-4 space-y-1 rounded-md border border-border px-3 pt-2 pb-1 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground tabular-nums">
         <span className="text-sm font-semibold text-foreground">Match timeline</span>
         {lead && <span>Ahead for {Math.round(lead.aheadShare * 100)}% of the match</span>}
@@ -235,6 +240,6 @@ export function MatchTimeline({
         durationS={durationS}
       />
       <MatchEventList combat={events} objectives={objectives} playerName={viewedName} />
-    </div>
+    </section>
   );
 }

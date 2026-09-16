@@ -575,3 +575,20 @@ test("opening a scoreboard profile in another tab preserves the current timeline
   await expect(trackedPlayer).toHaveAttribute("aria-pressed", "true");
   await newTab.close();
 });
+
+test("selecting a player from below the chart brings keyboard focus to the timeline", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.goto(TRACKER_URL);
+  const opponent = page.getByRole("button", { name: "Test Opponent", exact: true });
+  await opponent.scrollIntoViewIfNeeded();
+  await opponent.focus();
+  const timeline = page.getByRole("region", { name: "Match timeline", exact: true });
+  expect(await timeline.evaluate((element) => element.getBoundingClientRect().top)).toBeLessThan(0);
+  await page.keyboard.press("Enter");
+  await expect(timeline).toBeFocused();
+  expect(await timeline.evaluate((element) => element.getBoundingClientRect().top)).toBeGreaterThanOrEqual(0);
+  await page.keyboard.press("Tab");
+  const picker = page.getByRole("combobox", { name: "Player shown on match timeline" });
+  await expect(picker).toBeFocused();
+  await expect(picker).toContainText("Test Opponent");
+});
