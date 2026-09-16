@@ -11,7 +11,7 @@
     "lint": "oxlint",
     "fmt": "oxfmt --write .",
     "typecheck": "tsc --noEmit",
-    "test:tracker": "tsx --test src/lib/steam.test.ts src/lib/tracker/*.test.ts src/lib/local-storage.test.ts",
+    "test:tracker": "tsx --test src/lib/steam.test.ts src/lib/steam-profile-batches.test.ts src/lib/tracker/*.test.ts src/lib/local-storage.test.ts",
     "test:tracker:browser": "playwright test",
     "bench:avg": "tsx scripts/playground/bench-average-build.ts"
   },

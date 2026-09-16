@@ -13,15 +13,7 @@ export interface SteamProfile {
 
 export type SteamProfileMap = Record<number, SteamProfile>;
 
-const STEAM_BATCH_SIZE = 500;
-
-export function steamProfileBatches(accountIds: number[]): number[][] {
-  const batches: number[][] = [];
-  for (let i = 0; i < accountIds.length; i += STEAM_BATCH_SIZE) {
-    batches.push(accountIds.slice(i, i + STEAM_BATCH_SIZE));
-  }
-  return batches;
-}
+export { steamProfileBatches } from "~/lib/steam-profile-batches";
 
 export function steamProfilesQueryOptions(batch: number[]) {
   return queryOptions({
