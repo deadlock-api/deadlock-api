@@ -81,7 +81,7 @@ impl RateLimitClient {
 
         let prefix = rate_limit_key
             .api_key
-            .map_or_else(|| rate_limit_key.ip.to_string(), |k| k.to_string());
+            .map_or_else(|| rate_limit_key.client.to_string(), |k| k.to_string());
         let prefixed_key = format!("{prefix}:{key}");
         // If incrementing the per-user key fails, we don't apply any limits
         if let Err(e) = self.increment_key(&prefixed_key).await {
