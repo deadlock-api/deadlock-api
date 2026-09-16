@@ -101,6 +101,61 @@ test("saved-only history preserves details and navigates between bookmarked matc
   expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(568);
 });
 
+test("hero comparisons wait for a successful rank lookup and recover without hiding player stats", async ({ page }) => {
+  let rankAvailable = false;
+  let rankBadge = 115;
+  const cohorts: string[] = [];
+  await page.route(`${API_ORIGIN}/v1/players/${ACCOUNT_ID}/rank`, (route) =>
+    route.fulfill({
+      status: rankAvailable ? 200 : 400,
+      json: rankAvailable ? { badge: rankBadge } : { error: "Rank unavailable" },
+    }),
+  );
+  await page.route(`${API_ORIGIN}/v1/players/hero-stats?**`, (route) =>
+    route.fulfill({
+      json: [
+        {
+          hero_id: 11,
+          matches_played: 20,
+          wins: 12,
+          kills: 100,
+          deaths: 50,
+          assists: 100,
+          networth_per_min: 1000,
+          damage_per_min: 400,
+          last_hits_per_min: 3,
+          last_played: history[0].start_time,
+        },
+      ],
+    }),
+  );
+  await page.route(`${API_ORIGIN}/v1/analytics/hero-stats?**`, (route) => {
+    const params = new URL(route.request().url()).searchParams;
+    cohorts.push(`${params.get("min_average_badge")}-${params.get("max_average_badge")}`);
+    return route.fulfill({
+      json: [{ hero_id: 11, matches: 100, wins: 50, total_kills: 300, total_deaths: 200, total_assists: 300 }],
+    });
+  });
+  await page.goto(`/players/${ACCOUNT_ID}?date_range=_&tab=heroes`);
+  const table = page.getByRole("table", { name: "Detailed hero performance", exact: true });
+  await expect(table).toContainText("60.0%");
+  await expect(page.getByText("Could not load comparison rank", { exact: true })).toBeVisible();
+  expect(cohorts).toEqual([]);
+  await expect(page.getByRole("button", { name: "Dynamo win rate comparison details", exact: true })).toHaveCount(0);
+  rankAvailable = true;
+  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(page.getByText("Could not load comparison rank", { exact: true })).toHaveCount(0);
+  await expect.poll(() => cohorts).toEqual(["111-116"]);
+  await expect(table).toContainText("60.0%");
+  await expect(page.getByText(/Compared with Tier 11 players/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Dynamo win rate comparison details", exact: true })).toBeVisible();
+  // A confirmed unranked player still gets the intentional all-player comparison.
+  rankBadge = 0;
+  await page.reload();
+  await expect(page.getByText(/Compared with all players/)).toBeVisible();
+  expect(cohorts).toEqual(["111-116", "null-null"]);
+});
+
 test("preloads only adjacent matches after current details load and reuses their cache", async ({ page }) => {
   const requested: number[] = [];
   let releaseCurrent!: () => void;

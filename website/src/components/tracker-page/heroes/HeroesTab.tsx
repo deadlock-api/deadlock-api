@@ -26,6 +26,7 @@ import { trackerHeroStatsQueryOptions, trackerRankQueryOptions } from "~/queries
 import { WIN_COLOR } from "../shared/colors";
 import { FormDots } from "../shared/FormDots";
 import { TrackerQueryError } from "../shared/TrackerQueryError";
+import { TrackerQueryPaused } from "../shared/TrackerQueryPaused";
 import { HeroComparison } from "./HeroComparison";
 
 const FORM_LENGTH = 10;
@@ -141,7 +142,11 @@ export function HeroesTab({
   const query = useQuery(trackerHeroStatsQueryOptions(params));
   const formByHero = useMemo(() => recentFormByHero(entries, FORM_LENGTH), [entries]);
 
-  const { data: rank } = useQuery(trackerRankQueryOptions(accountId));
+  const rankQuery = useQuery(trackerRankQueryOptions(accountId));
+  const rank = rankQuery.data;
+  // A successful unranked lookup can compare all players; an unavailable rank cannot choose a cohort.
+  const needsRank = gameMode === "normal";
+  const rankReady = !needsRank || rank !== undefined;
   const { data: ranks = [] } = useQuery(ranksQueryOptions);
   const rankRange = useMemo(
     () => (gameMode === "normal" ? benchmarkRankRange(rank?.badge) : null),
@@ -164,6 +169,7 @@ export function HeroesTab({
   );
   const averagesQuery = useQuery({
     ...heroStatsQueryOptions(averageParams),
+    enabled: rankReady,
     select: (stats) =>
       new Map<number, HeroAverage>(
         stats
@@ -180,7 +186,7 @@ export function HeroesTab({
           ]),
       ),
   });
-  const averages = averagesQuery.data;
+  const averages = rankReady ? averagesQuery.data : undefined;
   const bracketLabel = rankRange ? `${tierName ?? `Tier ${rankRange.tier}`} players` : "all players";
 
   const handleSort = (key: HeroSortKey) => {
@@ -365,7 +371,24 @@ export function HeroesTab({
                   )}
                 </TableBody>
               </Table>
-              {averagesQuery.isError && rows.length > 0 && (
+              {needsRank && rankQuery.fetchStatus === "paused" && rows.length > 0 ? (
+                <div className="mt-2">
+                  <TrackerQueryPaused description="Hero stats are available. Rank comparisons will update when you're back online." />
+                </div>
+              ) : needsRank && rankQuery.isError && rows.length > 0 ? (
+                <div className="mt-2">
+                  <TrackerQueryError
+                    title={rankReady ? "Could not refresh comparison rank" : "Could not load comparison rank"}
+                    description={
+                      rankReady
+                        ? "Comparisons use the last loaded rank. Your hero stats are still available."
+                        : "Your hero stats are available. Retry the rank lookup to load comparisons for your rank."
+                    }
+                    onRetry={() => rankQuery.refetch()}
+                    isRetrying={rankQuery.isFetching}
+                  />
+                </div>
+              ) : rankReady && averagesQuery.isError && rows.length > 0 ? (
                 <div className="mt-2">
                   <TrackerQueryError
                     title={averages ? "Could not refresh hero comparisons" : "Could not load hero comparisons"}
@@ -378,7 +401,7 @@ export function HeroesTab({
                     isRetrying={averagesQuery.isFetching}
                   />
                 </div>
-              )}
+              ) : null}
               {averages && rows.length > 0 && (
                 <p className={cn("mt-2 text-xs text-muted-foreground", !showAllStats && "hidden @lg:block")}>
                   Compared with {bracketLabel} on the same hero in the selected range. Win-rate differences are in
