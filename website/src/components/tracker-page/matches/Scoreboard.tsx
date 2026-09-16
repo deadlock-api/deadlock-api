@@ -492,7 +492,7 @@ export function Scoreboard({
                               onViewPlayer(player.account_id);
                             }}
                             aria-pressed={viewed}
-                            className="min-w-0 cursor-pointer truncate text-left transition-colors hover:text-primary"
+                            className="-my-0.5 min-h-6 min-w-6 cursor-pointer truncate text-left transition-colors hover:text-primary"
                             title={`Show ${name}'s kills and deaths on the match timeline`}
                           >
                             {name}
@@ -501,7 +501,7 @@ export function Scoreboard({
                             <Link
                               to="/players/$accountId"
                               params={{ accountId: String(player.account_id) }}
-                              className="shrink-0 text-muted-foreground hover:text-primary"
+                              className="-my-0.5 inline-flex size-6 shrink-0 items-center justify-center text-muted-foreground hover:text-primary"
                               title="Open player tracker"
                             >
                               <ExternalLink className="size-3" />
