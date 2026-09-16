@@ -222,7 +222,7 @@ function CompanionPreview({
       )}
       {isError && rows !== undefined && (
         <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-          <output className="text-[10px] text-muted-foreground">Refresh failed. Showing saved results.</output>
+          <output className="text-[10px] text-muted-foreground">Refresh failed. Showing loaded results.</output>
           <Button variant="ghost" size="xs" disabled={isFetching} onClick={onRetry}>
             Retry {label.toLowerCase()}
           </Button>

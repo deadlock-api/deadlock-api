@@ -115,7 +115,7 @@ function CompanionTable({
     <div className="@container flex flex-col gap-3">
       {isError && (
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <output className="text-xs text-muted-foreground">Refresh failed. Showing saved results.</output>
+          <output className="text-xs text-muted-foreground">Refresh failed. Showing loaded results.</output>
           <Button variant="outline" size="xs" disabled={isFetching} onClick={onRetry}>
             {isFetching ? "Retrying…" : "Retry"}
           </Button>
