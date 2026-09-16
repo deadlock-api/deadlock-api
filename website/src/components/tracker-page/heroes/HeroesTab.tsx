@@ -254,7 +254,10 @@ export function HeroesTab({
               )}
               <Table
                 aria-label="Detailed hero performance"
-                className={cn(showAllStats && "min-w-max")}
+                className={cn(
+                  "text-xs @sm:text-sm [&_td]:px-1 @sm:[&_td]:px-2 [&_th]:px-1 @sm:[&_th]:px-2",
+                  showAllStats && "min-w-max",
+                )}
                 onFocusCapture={(event) => {
                   if (showAllStats && event.target instanceof HTMLButtonElement) revealTableButton(event.target);
                 }}
@@ -295,8 +298,8 @@ export function HeroesTab({
                       title="Show matches on this hero"
                     >
                       <TableCell className={cn(showAllStats && "sticky left-0 z-10 bg-card")}>
-                        <div className="flex items-center gap-2">
-                          <HeroImage heroId={row.heroId} className="size-7 rounded-full" />
+                        <div className="flex items-center gap-1 @sm:gap-2">
+                          <HeroImage heroId={row.heroId} className="size-6 rounded-full @sm:size-7" />
                           <button
                             type="button"
                             onClick={(e) => {
@@ -305,7 +308,7 @@ export function HeroesTab({
                             }}
                             className="flex cursor-pointer rounded-sm text-left outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
                           >
-                            <HeroName heroId={row.heroId} className="max-w-[80px] @md:max-w-[120px]" />
+                            <HeroName heroId={row.heroId} className="max-w-[72px] @sm:max-w-[80px] @md:max-w-[120px]" />
                           </button>
                         </div>
                       </TableCell>
