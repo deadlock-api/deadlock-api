@@ -29,6 +29,24 @@ export interface PlayerBuild {
   items: BuildItem[];
 }
 
+export type BuildEvent =
+  | { kind: "unlock" | "upgrade"; time: number; ability: TrackerAbility }
+  | { kind: "purchase" | "sale"; time: number; item: BuildItem };
+
+/** Merge the recorded ability and shop histories without inventing missing unlocks or sales. */
+export function buildTimeline(build: PlayerBuild): BuildEvent[] {
+  const events: BuildEvent[] = [];
+  for (const entry of build.abilities) {
+    if (entry.unlockedAt != null) events.push({ kind: "unlock", time: entry.unlockedAt, ability: entry.ability });
+    for (const time of entry.upgradedAt) events.push({ kind: "upgrade", time, ability: entry.ability });
+  }
+  for (const item of build.items) {
+    events.push({ kind: "purchase", time: item.boughtAt, item });
+    if (item.soldAt != null) events.push({ kind: "sale", time: item.soldAt, item });
+  }
+  return events.sort((a, b) => a.time - b.time);
+}
+
 const SIGNATURE_SLOTS = ["signature1", "signature2", "signature3", "signature4"];
 
 /**
