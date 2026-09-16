@@ -264,6 +264,8 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
         objectives={objectiveEvents}
         fights={fights}
         viewed={viewedPlayer}
+        players={match.players}
+        onViewPlayer={viewPlayer}
         viewedIsAlly={viewedPlayer?.team === ownTeam}
         durationS={entry.match_duration_s}
         nameOf={nameOf}

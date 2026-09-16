@@ -2,6 +2,15 @@ import { Skull } from "lucide-react";
 import type { Ref } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import { formatMatchDuration } from "~/lib/tracker/compute";
 import type { FightSummary } from "~/lib/tracker/fights";
 import type { ObjectiveEvent } from "~/lib/tracker/objectives";
@@ -13,6 +22,7 @@ import { LOSS_COLOR, LOSS_TEXT_CLASS, WIN_COLOR, WIN_TEXT_CLASS } from "../share
 import { TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
 import { MatchEventList } from "./MatchEventList";
 import { formatLead, MatchTimelineChart, type TimelineEvent } from "./MatchTimelineChart";
+import { TEAMS } from "./Scoreboard";
 
 function LegendSwatch({ color, label }: { color: string; label: string }) {
   return (
@@ -30,6 +40,8 @@ export function MatchTimeline({
   objectives,
   fights,
   viewed,
+  players,
+  onViewPlayer,
   viewedIsAlly,
   durationS,
   nameOf,
@@ -42,6 +54,8 @@ export function MatchTimeline({
   fights: FightSummary | null;
   /** The player whose kills and deaths the chart plots, which the scoreboard picks. */
   viewed: TrackerMatchPlayer | undefined;
+  players: TrackerMatchPlayer[];
+  onViewPlayer: (accountId: number) => void;
   /** Whether the viewed player is on the tracked player's team, whose side the chart takes. */
   viewedIsAlly: boolean;
   durationS: number;
@@ -138,12 +152,39 @@ export function MatchTimeline({
             {formatMatchDuration(lead.trough.time)}
           </span>
         )}
-        <span className="ml-auto flex items-center gap-3">
+        <span className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
           {viewed && (
-            <span className="flex items-center gap-1.5 text-foreground">
-              <HeroImage heroId={viewed.hero_id} className="size-4 rounded-full" title="" />
-              <span className="max-w-32 truncate">{nameOf(viewed)}</span>
-            </span>
+            <Select value={String(viewed.account_id)} onValueChange={(value) => onViewPlayer(Number(value))}>
+              <SelectTrigger
+                size="sm"
+                aria-label="Player shown on match timeline"
+                className="max-w-48 min-w-0 gap-1 px-1.5 py-0 data-[size=sm]:h-6"
+              >
+                <SelectValue>
+                  <HeroImage heroId={viewed.hero_id} className="size-4 shrink-0 rounded-full" title="" />
+                  <span className="max-w-32 truncate">{nameOf(viewed)}</span>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent position="popper" align="end" collisionPadding={16} className="max-w-[calc(100vw-2rem)]">
+                {TEAMS.map((team) => (
+                  <SelectGroup key={team.key}>
+                    <SelectLabel>{team.name}</SelectLabel>
+                    {players
+                      .filter((player) => player.team === team.key)
+                      .map((player) => (
+                        <SelectItem
+                          key={player.account_id}
+                          value={String(player.account_id)}
+                          textValue={nameOf(player)}
+                        >
+                          <HeroImage heroId={player.hero_id} className="size-5 shrink-0 rounded-full" title="" />
+                          <span className="max-w-48 truncate">{nameOf(player)}</span>
+                        </SelectItem>
+                      ))}
+                  </SelectGroup>
+                ))}
+              </SelectContent>
+            </Select>
           )}
           <span className="flex items-center gap-3" aria-hidden>
             <LegendSwatch color={killColor} label="Kill" />
