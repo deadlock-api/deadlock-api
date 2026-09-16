@@ -150,3 +150,70 @@ test("saved search includes matches beyond the first page and preserves removal 
   await expect(page.getByText("No matches found", { exact: true })).toBeVisible();
   await expect(search).toBeFocused();
 });
+
+test("scoreboard shows the final build and the compact timeline fits wide and small screens", async ({ page }) => {
+  await page.setViewportSize({ width: 2560, height: 1319 });
+  await page.goto(TRACKER_URL);
+  await expect(page.getByRole("button", { name: "Final Item 11 details", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sold Item 1 details", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "View Tracker Tester's build timeline", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Build timeline" });
+  await expect(dialog.locator("[data-build-event]")).toHaveCount(33);
+  await expect
+    .poll(() =>
+      dialog.evaluate((element) => {
+        const first = element.querySelector('[data-build-event="0"]')!.getBoundingClientRect();
+        const second = element.querySelector('[data-build-event="1"]')!.getBoundingClientRect();
+        return second.x > first.x && Math.abs(second.y - first.y) < 1;
+      }),
+    )
+    .toBe(true);
+
+  /* oxlint-disable eslint/no-await-in-loop -- Each resize must settle before measuring the same page. */
+  for (const viewport of [
+    { width: 2560, height: 1319 },
+    { width: 320, height: 568 },
+    { width: 844, height: 390 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect(dialog.locator("[data-build-event]")).toHaveCount(33);
+    await expect
+      .poll(() =>
+        dialog.evaluate((element) => ({
+          fits: element.getBoundingClientRect().height <= window.innerHeight - 24,
+          scrolls: element.scrollHeight > element.clientHeight + 1 || element.scrollWidth > element.clientWidth + 1,
+        })),
+      )
+      .toEqual({ fits: true, scrolls: false });
+  }
+  /* oxlint-enable eslint/no-await-in-loop */
+  await dialog.locator('[data-build-event="0"]').focus();
+  await page.keyboard.press("End");
+  await expect(dialog.locator('[data-build-event="32"]')).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /CSV|JSON/ })).toHaveCount(0);
+});
+
+test("timeline player picker updates the scoreboard and works with keyboard navigation", async ({ page }) => {
+  await page.goto(TRACKER_URL);
+  const picker = page.getByRole("combobox", { name: "Player shown on match timeline" });
+  await picker.click();
+  await page.getByRole("option", { name: /Test Opponent$/ }).click();
+  await expect(picker).toHaveText("Test Opponent");
+  await expect(page.getByRole("button", { name: "Test Opponent", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(picker).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("listbox")).toBeVisible();
+  await page.keyboard.press("Home");
+  await expect(page.getByRole("option", { name: /Tracker Tester$/ })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(picker).toHaveText("Tracker Tester");
+  await expect(page.getByRole("button", { name: "Tracker Tester", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});
