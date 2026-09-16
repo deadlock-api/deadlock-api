@@ -26,6 +26,7 @@ import { computeFights } from "~/lib/tracker/fights";
 import { computeLaneMatchups } from "~/lib/tracker/lane-matchup";
 import { computeObjectiveEvents } from "~/lib/tracker/objectives";
 import { computeSoulLead } from "~/lib/tracker/soul-lead";
+import { TEAMS } from "~/lib/tracker/teams";
 import { cn } from "~/lib/utils";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { type TrackerMatchPlayer, trackerMatchMetadataQueryOptions } from "~/queries/tracker-queries";
@@ -36,7 +37,7 @@ import { SaveMatchButton } from "../shared/SaveMatchButton";
 import { TrackerQueryError } from "../shared/TrackerQueryError";
 import { LanesCard } from "./LanesCard";
 import { MatchTimeline } from "./MatchTimeline";
-import { Scoreboard, TEAMS } from "./Scoreboard";
+import { Scoreboard } from "./Scoreboard";
 
 const UNSCORED_OUTCOME_NOTES: Record<UnscoredOutcome, { icon: typeof Gavel; text: string }> = {
   penalized: { icon: Gavel, text: "Penalized for this match" },

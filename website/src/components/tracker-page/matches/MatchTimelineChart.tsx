@@ -24,12 +24,12 @@ import {
   type ObjectiveEventKind,
 } from "~/lib/tracker/objectives";
 import type { SoulLead, SoulLeadPoint } from "~/lib/tracker/soul-lead";
+import { TEAMS } from "~/lib/tracker/teams";
 import { cn } from "~/lib/utils";
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
 import { LOSS_COLOR, LOSS_TEXT_CLASS, WIN_COLOR, WIN_TEXT_CLASS } from "../shared/colors";
 import { PanelTooltipContent, TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
-import { TEAMS } from "./Scoreboard";
 
 const ASSETS = "https://assets-bucket.deadlock-api.com/assets-api-res";
 const GUARDIAN_ICON = `${ASSETS}/images/shop/images/minimap/objective_icon_t1.svg`;

@@ -3,6 +3,8 @@ import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import type { Mode } from "~/components/selectors/ModeSelector";
 import { day } from "~/dayjs";
 
+import { TEAMS } from "./teams";
+
 const MATCH_MODE_LABELS_BY_ID: Record<number, string> = {
   1: "Unranked",
   2: "Private Lobby",
@@ -799,12 +801,10 @@ const BRAWL_DURATION_BUCKETS = [
   { label: "20+ min", maxMinutes: Number.POSITIVE_INFINITY },
 ];
 
-export const SIDE_NAMES = ["The Hidden King", "The Archmother"];
-
 export function computeOutcomeSplits(entries: PlayerMatchHistoryEntry[], mode: Mode = "normal_all"): OutcomeSplits {
   const durationBuckets = mode === "street_brawl" ? BRAWL_DURATION_BUCKETS : NORMAL_DURATION_BUCKETS;
   const byDuration = durationBuckets.map((bucket) => ({ label: bucket.label, matches: 0, wins: 0 }));
-  const bySide = SIDE_NAMES.map((label) => ({ label, matches: 0, wins: 0 }));
+  const bySide = TEAMS.map(({ name: label }) => ({ label, matches: 0, wins: 0 }));
   for (const entry of entries) {
     const win = isWin(entry) ? 1 : 0;
     const minutes = entry.match_duration_s / 60;

@@ -22,6 +22,7 @@ import {
   sortScoreboardPlayers,
   statMaxima,
 } from "~/lib/tracker/player-stats";
+import { TEAMS } from "~/lib/tracker/teams";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
 import {
@@ -36,11 +37,6 @@ import { RankDelta } from "../shared/RankDelta";
 import { TrackerDetailPopover } from "../shared/TrackerDetailPopover";
 import { BuildTimelineDialog } from "./BuildTimelineDialog";
 import { PlayerCombatStats } from "./PlayerCombatStats";
-
-export const TEAMS = [
-  { key: "Team0", name: "The Hidden King" },
-  { key: "Team1", name: "The Archmother" },
-] as const;
 
 function SortButton({
   label,

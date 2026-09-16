@@ -15,6 +15,7 @@ import { formatMatchDuration } from "~/lib/tracker/compute";
 import type { FightSummary } from "~/lib/tracker/fights";
 import type { ObjectiveEvent } from "~/lib/tracker/objectives";
 import type { SoulLead } from "~/lib/tracker/soul-lead";
+import { TEAMS } from "~/lib/tracker/teams";
 import { cn } from "~/lib/utils";
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
@@ -22,7 +23,6 @@ import { LOSS_COLOR, LOSS_TEXT_CLASS, WIN_COLOR, WIN_TEXT_CLASS } from "../share
 import { TooltipHeader, TooltipStat, TooltipStats } from "../shared/PanelTooltipContent";
 import { MatchEventList } from "./MatchEventList";
 import { formatLead, MatchTimelineChart, type TimelineEvent } from "./MatchTimelineChart";
-import { TEAMS } from "./Scoreboard";
 
 function LegendSwatch({ color, label }: { color: string; label: string }) {
   return (
