@@ -1,5 +1,5 @@
 import { Skull } from "lucide-react";
-import type { Ref } from "react";
+import { type Ref, useState } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
 import {
@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { formatMatchDuration } from "~/lib/tracker/compute";
 import type { FightSummary } from "~/lib/tracker/fights";
 import type { ObjectiveEvent } from "~/lib/tracker/objectives";
@@ -61,6 +62,7 @@ export function MatchTimeline({
   durationS: number;
   nameOf: (player: TrackerMatchPlayer) => string;
 }) {
+  const [visibleLayers, setVisibleLayers] = useState(["kill", "death", "dead"]);
   const killTextClass = viewedIsAlly ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS;
   const deathTextClass = viewedIsAlly ? LOSS_TEXT_CLASS : WIN_TEXT_CLASS;
   const viewedName = viewed ? nameOf(viewed) : "them";
@@ -152,7 +154,7 @@ export function MatchTimeline({
             {formatMatchDuration(lead.trough.time)}
           </span>
         )}
-        <span className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
           {viewed && (
             <Select value={String(viewed.account_id)} onValueChange={(value) => onViewPlayer(Number(value))}>
               <SelectTrigger
@@ -186,23 +188,49 @@ export function MatchTimeline({
               </SelectContent>
             </Select>
           )}
-          <span className="flex items-center gap-3" aria-hidden>
-            <LegendSwatch color={killColor} label="Kill" />
-            <LegendSwatch color={deathColor} label="Death" />
+          <ToggleGroup
+            type="multiple"
+            value={visibleLayers}
+            onValueChange={setVisibleLayers}
+            aria-label="Match timeline layers"
+            size="sm"
+            spacing={1}
+          >
+            <ToggleGroupItem
+              value="kill"
+              aria-label="Show kills on timeline"
+              title="Show or hide kills"
+              className="h-6 gap-1 px-1.5 text-xs data-[state=off]:line-through"
+            >
+              <LegendSwatch color={killColor} label="Kill" />
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="death"
+              aria-label="Show deaths on timeline"
+              title="Show or hide deaths"
+              className="h-6 gap-1 px-1.5 text-xs data-[state=off]:line-through"
+            >
+              <LegendSwatch color={deathColor} label="Death" />
+            </ToggleGroupItem>
             {deadWindows.length > 0 && (
-              <span className="inline-flex items-center gap-1">
+              <ToggleGroupItem
+                value="dead"
+                aria-label="Show time dead on timeline"
+                title="Show or hide time dead"
+                className="h-6 gap-1 px-1.5 text-xs data-[state=off]:line-through"
+              >
                 <span className="h-2.5 w-3 rounded-sm" style={{ backgroundColor: deathColor, opacity: 0.2 }} />
                 Dead
-              </span>
+              </ToggleGroupItem>
             )}
-          </span>
-        </span>
+          </ToggleGroup>
+        </div>
       </div>
       <MatchTimelineChart
         lead={lead}
         objectives={objectives}
-        events={events}
-        deadWindows={deadWindows}
+        events={events.filter((event) => visibleLayers.includes(event.kind))}
+        deadWindows={visibleLayers.includes("dead") ? deadWindows : []}
         deadWindowColor={deathColor}
         durationS={durationS}
       />

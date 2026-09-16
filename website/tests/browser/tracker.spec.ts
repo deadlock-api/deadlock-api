@@ -369,3 +369,35 @@ test("shared-match history opens older matches and returns focus to their detail
   await expect(page.locator('[data-match-details="2961"]')).toBeFocused();
   await expect(page.locator('[data-match-id="2961"]')).toHaveAttribute("aria-current", "true");
 });
+
+test("timeline legend toggles chart overlays without losing the readable event list", async ({ page }) => {
+  await page.goto(TRACKER_URL);
+  const chart = page.locator('svg[aria-label="Team soul lead and match events over time"]');
+  const chips = chart.locator("foreignObject img");
+  const deadWindows = chart.locator(".recharts-reference-area");
+  await expect(chips).toHaveCount(2);
+  await expect(deadWindows).toHaveCount(1);
+  const kills = page.getByRole("button", { name: "Show kills on timeline", exact: true });
+  const deaths = page.getByRole("button", { name: "Show deaths on timeline", exact: true });
+  const dead = page.getByRole("button", { name: "Show time dead on timeline", exact: true });
+  await kills.click();
+  await expect(kills).toHaveAttribute("aria-pressed", "false");
+  await expect(chips).toHaveCount(1);
+  await deaths.click();
+  await expect(chips).toHaveCount(0);
+  await dead.click();
+  await expect(deadWindows).toHaveCount(0);
+  await page.getByRole("button", { name: "Event list 2", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Chronological match events", exact: true }).getByRole("listitem"),
+  ).toHaveCount(2);
+  await kills.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(deaths).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(deaths).toHaveAttribute("aria-pressed", "true");
+  await expect(chips).toHaveCount(1);
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect(page.getByRole("toolbar", { name: "Match timeline layers", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
