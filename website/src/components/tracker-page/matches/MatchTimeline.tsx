@@ -1,4 +1,4 @@
-import { Skull } from "lucide-react";
+import { Flag, Skull } from "lucide-react";
 import { type Ref, useState } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
@@ -62,7 +62,7 @@ export function MatchTimeline({
   durationS: number;
   nameOf: (player: TrackerMatchPlayer) => string;
 }) {
-  const [visibleLayers, setVisibleLayers] = useState(["kill", "death", "dead"]);
+  const [visibleLayers, setVisibleLayers] = useState(["kill", "death", "dead", "objective"]);
   const killTextClass = viewedIsAlly ? WIN_TEXT_CLASS : LOSS_TEXT_CLASS;
   const deathTextClass = viewedIsAlly ? LOSS_TEXT_CLASS : WIN_TEXT_CLASS;
   const viewedName = viewed ? nameOf(viewed) : "them";
@@ -228,12 +228,23 @@ export function MatchTimeline({
                 Dead
               </ToggleGroupItem>
             )}
+            {objectives.length > 0 && (
+              <ToggleGroupItem
+                value="objective"
+                aria-label="Show objectives on timeline"
+                title="Show or hide objectives"
+                className="h-6 gap-1 px-1.5 text-xs data-[state=off]:line-through"
+              >
+                <Flag className="size-3" />
+                Obj
+              </ToggleGroupItem>
+            )}
           </ToggleGroup>
         </div>
       </div>
       <MatchTimelineChart
         lead={lead}
-        objectives={objectives}
+        objectives={visibleLayers.includes("objective") ? objectives : []}
         events={events.filter((event) => visibleLayers.includes(event.kind))}
         deadWindows={visibleLayers.includes("dead") ? deadWindows : []}
         deadWindowColor={deathColor}
