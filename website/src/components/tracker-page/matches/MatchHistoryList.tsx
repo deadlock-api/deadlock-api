@@ -107,6 +107,8 @@ export function MatchHistoryList({
     estimateSize: useCallback((index) => (rows[index].kind === "session" ? 28 : 44), [rows]),
     getItemKey: useCallback((index) => rows[index].key, [rows]),
     overscan: 12,
+    // Detail-pane changes resize this list; measure on the next frame instead of during observer delivery.
+    useAnimationFrameWithResizeObserver: true,
     initialRect: { width: 0, height: 400 },
     scrollPaddingStart: 28,
     rangeExtractor: useCallback(
