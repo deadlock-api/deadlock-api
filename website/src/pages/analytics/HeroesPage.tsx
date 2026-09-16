@@ -1,0 +1,564 @@
+import { useQuery } from "@tanstack/react-query";
+import type { AnalyticsHeroStats } from "deadlock_api_client";
+import type { HeroScoreboardSortByEnum } from "deadlock_api_client";
+import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
+import { lazy, Suspense, useId, useState } from "react";
+
+import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
+import { HeroFiltersSection } from "~/components/heroes-page/HeroFiltersSection";
+import { HeroScoreboardTable } from "~/components/heroes-page/HeroScoreboardTable";
+import { BY_RANK_STATS, HeroStatSelector, HeroTimeIntervalSelector } from "~/components/heroes-page/HeroStatSelectors";
+import { HeroStatsTable } from "~/components/heroes-page/HeroStatsTable";
+import { LoadingLogo } from "~/components/LoadingLogo";
+import { ALL_SORT_BY_VALUES } from "~/components/player-scoreboard/sort-options";
+import { QueryRenderer } from "~/components/QueryRenderer";
+import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
+import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { Switch } from "~/components/ui/switch";
+import { Tabs, TabsContent } from "~/components/ui/tabs";
+import { type HeroTab, useHeroFilters } from "~/hooks/useHeroFilters";
+import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import { analyticsPageTitle, redirectAnalyticsTab } from "~/lib/analytics-tabs";
+import { prefetchSafe } from "~/lib/prefetch-safe";
+import { type SeasonInfo, defaultUnixRange, defaultPrevUnixRange } from "~/lib/seasons";
+import { seo } from "~/lib/seo";
+import { heroesQueryOptions, loadSeasons, type SlimHero } from "~/queries/asset-queries";
+import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
+import { heroScoreboardQueryOptions } from "~/queries/hero-scoreboard-query";
+import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
+import type { RouterContext } from "~/router";
+import { HERO_STATS, HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
+
+const HeroStatsOverTimeChart = lazy(() =>
+  import("~/components/heroes-page/HeroStatsOverTimeChart").then((m) => ({
+    default: m.HeroStatsOverTimeChart,
+  })),
+);
+const HeroStatsByDurationChart = lazy(() =>
+  import("~/components/heroes-page/HeroStatsByDurationChart").then((m) => ({
+    default: m.HeroStatsByDurationChart,
+  })),
+);
+const HeroStatsByRankChart = lazy(() =>
+  import("~/components/heroes-page/HeroStatsByRankChart").then((m) => ({
+    default: m.HeroStatsByRankChart,
+  })),
+);
+const HeroStatsByExperienceTable = lazy(() =>
+  import("~/components/heroes-page/HeroStatsByExperienceTable").then((m) => ({
+    default: m.HeroStatsByExperienceTable,
+  })),
+);
+const HeroMatchupStatsTable = lazy(() =>
+  import("~/components/heroes-page/HeroMatchupStatsTable").then((m) => ({
+    default: m.HeroMatchupStatsTable,
+  })),
+);
+const HeroCombStatsTable = lazy(() =>
+  import("~/components/heroes-page/HeroCombStatsTable").then((m) => ({
+    default: m.HeroCombStatsTable,
+  })),
+);
+const HeroMatchupDetailsStatsTable = lazy(() =>
+  import("~/components/heroes-page/HeroMatchupDetailsStatsTable").then((m) => ({
+    default: m.HeroMatchupDetailsStatsTable,
+  })),
+);
+
+const DEFAULT_MIN_RANK = 91;
+const DEFAULT_MAX_RANK = 116;
+
+function defaultHeroStatsRanges(seasons: readonly SeasonInfo[]) {
+  const prev = defaultPrevUnixRange(seasons);
+  return {
+    ...defaultUnixRange(seasons),
+    prevMinUnixTimestamp: prev.minUnixTimestamp,
+    prevMaxUnixTimestamp: prev.maxUnixTimestamp,
+  };
+}
+
+/** Highest win rate among heroes with enough matches for the number to mean something. */
+function findWinRateLeader(
+  stats: readonly AnalyticsHeroStats[] | undefined,
+  heroes: readonly SlimHero[] | undefined,
+): { name: string; winRate: number } | null {
+  if (!stats || !heroes) return null;
+  const total = stats.reduce((sum, row) => sum + row.matches, 0);
+  const minMatches = Math.max(100, total * 0.005);
+  let best: { name: string; winRate: number } | null = null;
+  for (const row of stats) {
+    if (row.matches < minMatches) continue;
+    const winRate = row.wins / row.matches;
+    if (best && winRate <= best.winRate) continue;
+    const hero = heroes.find((h) => h.id === row.hero_id);
+    if (hero?.name) best = { name: hero.name, winRate };
+  }
+  return best;
+}
+
+export const heroesPageOptions = {
+  beforeLoad: redirectAnalyticsTab,
+  component: HeroesPage,
+  loader: async ({ context: { queryClient } }: { context: RouterContext }) => {
+    const r = defaultHeroStatsRanges(await loadSeasons(queryClient));
+    const common = {
+      minHeroMatches: 0,
+      minHeroMatchesTotal: 0,
+      minAverageBadge: DEFAULT_MIN_RANK,
+      maxAverageBadge: DEFAULT_MAX_RANK,
+      gameMode: "normal" as const,
+      matchMode: DEFAULT_MATCH_MODE,
+    };
+    const [stats, heroes] = await Promise.all([
+      prefetchSafe(
+        queryClient.ensureQueryData(
+          heroStatsQueryOptions({
+            ...common,
+            minUnixTimestamp: r.minUnixTimestamp,
+            maxUnixTimestamp: r.maxUnixTimestamp,
+          }),
+        ),
+      ),
+      prefetchSafe(queryClient.ensureQueryData(heroesQueryOptions)),
+      prefetchSafe(
+        queryClient.ensureQueryData(
+          heroStatsQueryOptions({
+            ...common,
+            minUnixTimestamp: r.prevMinUnixTimestamp,
+            maxUnixTimestamp: r.prevMaxUnixTimestamp,
+          }),
+        ),
+      ),
+      prefetchSafe(
+        queryClient.ensureQueryData(
+          heroBanStatsQueryOptions({
+            matchMode: DEFAULT_MATCH_MODE,
+            minAverageBadge: DEFAULT_MIN_RANK,
+            maxAverageBadge: DEFAULT_MAX_RANK,
+            minUnixTimestamp: r.minUnixTimestamp,
+            maxUnixTimestamp: r.maxUnixTimestamp,
+          }),
+        ),
+      ),
+      prefetchSafe(
+        queryClient.ensureQueryData(
+          heroBanStatsQueryOptions({
+            matchMode: DEFAULT_MATCH_MODE,
+            minAverageBadge: DEFAULT_MIN_RANK,
+            maxAverageBadge: DEFAULT_MAX_RANK,
+            minUnixTimestamp: r.prevMinUnixTimestamp,
+            maxUnixTimestamp: r.prevMaxUnixTimestamp,
+          }),
+        ),
+      ),
+    ]);
+    return { leader: findWinRateLeader(stats, heroes) };
+  },
+  head: ({
+    loaderData,
+    match,
+  }: {
+    loaderData?: { leader: { name: string; winRate: number } | null };
+    match: { pathname: string };
+  }) => {
+    const leader = loaderData?.leader;
+    const lead = leader ? ` ${leader.name} leads the current patch at ${(leader.winRate * 100).toFixed(1)}%.` : "";
+    return seo({
+      title: analyticsPageTitle(match.pathname, "Deadlock Hero Win Rates & Pick Rates: Live Match Data"),
+      description: `Deadlock hero win rates, pick rates, matchups, and synergies for every hero.${lead} Filter by rank and patch. Updated daily from live match data.`,
+      path: match.pathname.replace(/\/$/, ""),
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        name: "Deadlock Hero Win Rates & Pick Rates",
+        description:
+          "Win rates, pick rates, ban rates, and matchup data for every Deadlock hero, calculated from tracked ranked matches and updated daily. Filterable by rank, patch, and game mode.",
+        url: `https://deadlock-api.com${match.pathname.replace(/\/$/, "")}`,
+        keywords: ["Deadlock", "hero win rates", "pick rates", "ban rates", "matchups", "hero meta"],
+        creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
+        isAccessibleForFree: true,
+        license: "https://github.com/deadlock-api/",
+      },
+    });
+  },
+};
+
+function HeroesPage() {
+  const filters = useHeroFilters();
+  const [groupByType, setGroupByType] = useQueryState("group_by_type", parseAsBoolean.withDefault(false));
+  const groupByTypeId = useId();
+  const [heroNameQuery, setHeroNameQuery] = useState("");
+
+  const [scoreboardSortBy, setScoreboardSortBy] = useQueryState(
+    "scoreboard_sort_by",
+    parseAsStringLiteral(ALL_SORT_BY_VALUES as [string, ...string[]]).withDefault("winrate"),
+  );
+  const [scoreboardSortDirection, setScoreboardSortDirection] = useQueryState(
+    "scoreboard_sort_dir",
+    parseAsStringLiteral(["desc", "asc"] as const).withDefault("desc"),
+  );
+  const { minUnixTimestamp: scoreboardMinUnixTimestamp, maxUnixTimestamp: scoreboardMaxUnixTimestamp } =
+    useNormalizedTimeRange(filters.startDate, filters.endDate);
+  const heroScoreboardQuery = useQuery(
+    heroScoreboardQueryOptions({
+      sortBy: scoreboardSortBy as HeroScoreboardSortByEnum,
+      sortDirection: scoreboardSortDirection as "desc" | "asc",
+      gameMode: filters.gameMode,
+      matchMode: filters.matchMode,
+      minMatches: filters.minMatches,
+      minAverageBadge: filters.effectiveMinRankId,
+      maxAverageBadge: filters.effectiveMaxRankId,
+      minUnixTimestamp: scoreboardMinUnixTimestamp ?? 0,
+      maxUnixTimestamp: scoreboardMaxUnixTimestamp,
+    }),
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold tracking-tight">Deadlock Hero Win Rates</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Detailed analytics and matchup data for Deadlock heroes</p>
+        <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          Explore win rates, pick rates, and matchup data for every Deadlock hero. Filter by rank, patch, and game mode
+          to find the strongest heroes in the current meta or analyze how hero performance changes over time. Statistics
+          are calculated from tracked ranked matches and updated in real time.
+        </p>
+      </div>
+
+      <HeroFiltersSection {...filters} />
+
+      <Tabs
+        value={filters.tab ?? undefined}
+        onValueChange={(value) => filters.setTab(value as HeroTab)}
+        className="tabs-nav w-full"
+      >
+        <ResponsiveTabsList
+          ariaLabel="Hero stats sections"
+          value={filters.tab ?? undefined}
+          onValueChange={(value) => filters.setTab(value as HeroTab)}
+          options={[
+            { value: "stats", label: "Overall Stats" },
+            { value: "stats-over-time", label: "Over Time" },
+            { value: "stats-by-duration", label: "By Duration" },
+            { value: "stats-by-rank", label: "By Rank" },
+            { value: "stats-by-experience", label: "By Experience" },
+            { value: "hero-combs", label: "Combos" },
+            { value: "matchups", label: "Matchups" },
+            { value: "hero-matchup-details", label: "Matchup Details" },
+            { value: "hero-scoreboard", label: "Scoreboard" },
+          ]}
+        />
+
+        <TabsContent value="stats">
+          <div className="flex flex-col gap-4">
+            <h2 className="sr-only">Overall Hero Stats</h2>
+            <div className="flex items-center gap-2">
+              <Input
+                type="search"
+                value={heroNameQuery}
+                onChange={(e) => setHeroNameQuery(e.target.value)}
+                placeholder="Find a hero…"
+                aria-label="Filter heroes by name"
+                className="h-8 w-44"
+              />
+              <div className="ml-auto flex items-center gap-2">
+                <Label htmlFor={groupByTypeId} className="text-sm font-semibold text-nowrap text-foreground">
+                  Group by Type
+                </Label>
+                <Switch
+                  id={groupByTypeId}
+                  checked={groupByType}
+                  onCheckedChange={(checked) => setGroupByType(checked)}
+                />
+              </div>
+            </div>
+            <HeroStatsTable
+              columns={["winRate", "pickRate", "zScore", "residual", "details"]}
+              groupByType={groupByType}
+              nameQuery={heroNameQuery}
+              minRankId={filters.effectiveMinRankId}
+              maxRankId={filters.effectiveMaxRankId}
+              minHeroMatches={filters.minHeroMatches}
+              minHeroMatchesTotal={filters.minHeroMatchesTotal}
+              minDate={filters.startDate || undefined}
+              maxDate={filters.endDate || undefined}
+              prevMinDate={filters.prevStartDate}
+              prevMaxDate={filters.prevEndDate}
+              gameMode={filters.gameMode}
+              matchMode={filters.matchMode}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="stats-over-time">
+          <div className="flex flex-col gap-4">
+            <h2 className="sr-only">Hero Stats Over Time</h2>
+            <div className="flex flex-wrap items-start justify-center gap-2 sm:flex-nowrap">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm text-muted-foreground">Stat</span>
+                <HeroStatSelector
+                  label="Stat"
+                  value={filters.heroStat}
+                  onChange={(val) => filters.setHeroStat(val as typeof filters.heroStat)}
+                  options={HERO_STATS_WITH_BAN_RATE}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm text-muted-foreground">Time Interval</span>
+                <HeroTimeIntervalSelector
+                  label="Time Interval"
+                  value={filters.heroTimeInterval ?? undefined}
+                  onChange={(val) => filters.setHeroTimeInterval(val as typeof filters.heroTimeInterval)}
+                />
+              </div>
+            </div>
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingLogo />}>
+                <HeroStatsOverTimeChart
+                  heroStat={filters.heroStat}
+                  heroTimeInterval={filters.heroTimeInterval}
+                  minRankId={filters.effectiveMinRankId}
+                  maxRankId={filters.effectiveMaxRankId}
+                  minHeroMatches={filters.minHeroMatches}
+                  minHeroMatchesTotal={filters.minHeroMatchesTotal}
+                  minDate={filters.startDate}
+                  maxDate={filters.endDate}
+                  gameMode={filters.gameMode}
+                  matchMode={filters.matchMode}
+                />
+              </Suspense>
+            </ChunkErrorBoundary>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="stats-by-duration">
+          <div className="flex flex-col gap-4">
+            <h2 className="sr-only">Hero Stats by Game Duration</h2>
+            <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm text-muted-foreground">Stat</span>
+                <HeroStatSelector
+                  label="Stat"
+                  value={filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat}
+                  onChange={(val) => filters.setHeroStat(val as typeof filters.heroStat)}
+                  options={HERO_STATS}
+                />
+              </div>
+            </div>
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingLogo />}>
+                <HeroStatsByDurationChart
+                  heroStat={filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat}
+                  minRankId={filters.effectiveMinRankId}
+                  maxRankId={filters.effectiveMaxRankId}
+                  minHeroMatches={filters.minHeroMatches}
+                  minHeroMatchesTotal={filters.minHeroMatchesTotal}
+                  minDate={filters.startDate}
+                  maxDate={filters.endDate}
+                  gameMode={filters.gameMode}
+                  matchMode={filters.matchMode}
+                />
+              </Suspense>
+            </ChunkErrorBoundary>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="stats-by-rank">
+          <div className="flex flex-col gap-4">
+            <h2 className="sr-only">Hero Stats by Rank</h2>
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm text-muted-foreground">X Axis</span>
+                <HeroStatSelector
+                  label="X Axis"
+                  value={filters.byRankX}
+                  onChange={(val) => filters.setByRankX(val)}
+                  options={BY_RANK_STATS}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm text-muted-foreground">Y Axis</span>
+                <HeroStatSelector
+                  label="Y Axis"
+                  value={filters.byRankY}
+                  onChange={(val) => filters.setByRankY(val)}
+                  options={BY_RANK_STATS}
+                />
+              </div>
+            </div>
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingLogo />}>
+                <HeroStatsByRankChart
+                  minHeroMatches={filters.minHeroMatches}
+                  minHeroMatchesTotal={filters.minHeroMatchesTotal}
+                  minDate={filters.startDate}
+                  maxDate={filters.endDate}
+                  gameMode={"normal"}
+                  matchMode={filters.matchMode}
+                  xStat={filters.byRankX}
+                  yStat={filters.byRankY}
+                />
+              </Suspense>
+            </ChunkErrorBoundary>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="stats-by-experience">
+          <div className="flex flex-col gap-4">
+            <h2 className="sr-only">Hero Stats by Experience</h2>
+            <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm text-muted-foreground">Stat</span>
+                <HeroStatSelector
+                  label="Stat"
+                  value={filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat}
+                  onChange={(val) => filters.setHeroStat(val as typeof filters.heroStat)}
+                  options={HERO_STATS}
+                />
+              </div>
+            </div>
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingLogo />}>
+                <HeroStatsByExperienceTable
+                  heroStat={filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat}
+                  minRankId={filters.effectiveMinRankId}
+                  maxRankId={filters.effectiveMaxRankId}
+                  minHeroMatches={filters.minHeroMatches}
+                  minDate={filters.startDate}
+                  maxDate={filters.endDate}
+                  gameMode={filters.gameMode}
+                  matchMode={filters.matchMode}
+                />
+              </Suspense>
+            </ChunkErrorBoundary>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="matchups">
+          <div className="mt-4 flex flex-col gap-4">
+            <h2 className="sr-only">Hero Matchups</h2>
+            <div className="flex flex-col gap-4">
+              <ChunkErrorBoundary>
+                <Suspense fallback={<LoadingLogo />}>
+                  <HeroMatchupStatsTable
+                    minRankId={filters.effectiveMinRankId}
+                    maxRankId={filters.effectiveMaxRankId}
+                    minDate={filters.startDate || undefined}
+                    maxDate={filters.endDate || undefined}
+                    prevMinDate={filters.prevStartDate}
+                    prevMaxDate={filters.prevEndDate}
+                    minMatches={filters.minMatches}
+                    sameLaneFilter={filters.sameLaneFilter}
+                    gameMode={filters.gameMode}
+                    matchMode={filters.matchMode}
+                  />
+                </Suspense>
+              </ChunkErrorBoundary>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="hero-combs">
+          <div className="flex flex-col gap-4">
+            <h2 className="sr-only">Hero Combos</h2>
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingLogo />}>
+                <HeroCombStatsTable
+                  columns={["winRate", "pickRate", "totalMatches"]}
+                  minRankId={filters.effectiveMinRankId}
+                  maxRankId={filters.effectiveMaxRankId}
+                  minDate={filters.startDate || undefined}
+                  maxDate={filters.endDate || undefined}
+                  prevMinDate={filters.prevStartDate}
+                  prevMaxDate={filters.prevEndDate}
+                  minMatches={filters.minMatches}
+                  gameMode={filters.gameMode}
+                  matchMode={filters.matchMode}
+                />
+              </Suspense>
+            </ChunkErrorBoundary>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="hero-matchup-details">
+          <div className="flex flex-col gap-4">
+            <h2 className="sr-only">Hero Matchup Details</h2>
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingLogo />}>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <HeroMatchupDetailsStatsTable
+                    heroId={filters.heroId}
+                    stat={0}
+                    minRankId={filters.effectiveMinRankId}
+                    maxRankId={filters.effectiveMaxRankId}
+                    minDate={filters.startDate || undefined}
+                    maxDate={filters.endDate || undefined}
+                    prevMinDate={filters.prevStartDate}
+                    prevMaxDate={filters.prevEndDate}
+                    onHeroSelected={(selectedHeroId) => {
+                      if (!selectedHeroId) return;
+                      filters.setHeroId(selectedHeroId);
+                    }}
+                    sameLaneFilter={filters.sameLaneFilter}
+                    minHeroMatches={filters.minMatches}
+                    gameMode={filters.gameMode}
+                    matchMode={filters.matchMode}
+                  />
+                  <HeroMatchupDetailsStatsTable
+                    heroId={filters.heroId}
+                    stat={1}
+                    minRankId={filters.effectiveMinRankId}
+                    maxRankId={filters.effectiveMaxRankId}
+                    minDate={filters.startDate || undefined}
+                    maxDate={filters.endDate || undefined}
+                    prevMinDate={filters.prevStartDate}
+                    prevMaxDate={filters.prevEndDate}
+                    onHeroSelected={(selectedHeroId) => {
+                      if (!selectedHeroId) return;
+                      filters.setHeroId(selectedHeroId);
+                    }}
+                    sameLaneFilter={filters.sameLaneFilter}
+                    minHeroMatches={filters.minMatches}
+                    gameMode={filters.gameMode}
+                    matchMode={filters.matchMode}
+                  />
+                </div>
+              </Suspense>
+            </ChunkErrorBoundary>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="hero-scoreboard">
+          <div className="flex flex-col gap-4">
+            <h2 className="sr-only">Hero Scoreboard</h2>
+            <QueryRenderer
+              query={heroScoreboardQuery}
+              loadingFallback={
+                <div className="flex items-center justify-center py-24">
+                  <LoadingLogo />
+                </div>
+              }
+              errorFallback={(error) => (
+                <div className="py-8 text-center text-sm text-destructive">
+                  Failed to load scoreboard: {error.message}
+                </div>
+              )}
+            >
+              {(data) => (
+                <HeroScoreboardTable
+                  entries={data}
+                  sortBy={scoreboardSortBy}
+                  sortDirection={scoreboardSortDirection}
+                  onSortByChange={setScoreboardSortBy}
+                  onSortDirectionChange={setScoreboardSortDirection}
+                />
+              )}
+            </QueryRenderer>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

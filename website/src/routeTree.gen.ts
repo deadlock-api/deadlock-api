@@ -60,10 +60,27 @@ import { Route as ItemsIndexRouteImport } from './routes/items.index'
 import { Route as ItemsItemNameRouteImport } from './routes/items.$itemName'
 import { Route as PlayersAccountIdRouteImport } from './routes/players_.$accountId'
 import { Route as StreamkitIndexRouteImport } from './routes/streamkit/index'
+import { Route as AnalyticsGamesIndexRouteImport } from './routes/analytics.games.index'
+import { Route as AnalyticsGamesByRankRouteImport } from './routes/analytics.games.by-rank'
+import { Route as AnalyticsGamesEconomyRouteImport } from './routes/analytics.games.economy'
+import { Route as AnalyticsGamesOverTimeRouteImport } from './routes/analytics.games.over-time'
 import { Route as AnalyticsHeroesIndexRouteImport } from './routes/analytics.heroes.index'
 import { Route as AnalyticsHeroesHeroNameRouteImport } from './routes/analytics.heroes.$heroName'
+import { Route as AnalyticsHeroesByDurationRouteImport } from './routes/analytics.heroes.by-duration'
+import { Route as AnalyticsHeroesByExperienceRouteImport } from './routes/analytics.heroes.by-experience'
+import { Route as AnalyticsHeroesByRankRouteImport } from './routes/analytics.heroes.by-rank'
+import { Route as AnalyticsHeroesCombosRouteImport } from './routes/analytics.heroes.combos'
+import { Route as AnalyticsHeroesMatchupDetailsRouteImport } from './routes/analytics.heroes.matchup-details'
+import { Route as AnalyticsHeroesMatchupsRouteImport } from './routes/analytics.heroes.matchups'
+import { Route as AnalyticsHeroesOverTimeRouteImport } from './routes/analytics.heroes.over-time'
+import { Route as AnalyticsHeroesScoreboardRouteImport } from './routes/analytics.heroes.scoreboard'
 import { Route as AnalyticsItemsIndexRouteImport } from './routes/analytics.items.index'
 import { Route as AnalyticsItemsItemNameRouteImport } from './routes/analytics.items.$itemName'
+import { Route as AnalyticsItemsBuildFlowRouteImport } from './routes/analytics.items.build-flow'
+import { Route as AnalyticsItemsCombosRouteImport } from './routes/analytics.items.combos'
+import { Route as AnalyticsItemsItemPurchaseAnalysisRouteImport } from './routes/analytics.items.item-purchase-analysis'
+import { Route as AnalyticsPlayersIndexRouteImport } from './routes/analytics.players.index'
+import { Route as AnalyticsPlayersStatsMetricsRouteImport } from './routes/analytics.players.stats-metrics'
 import { Route as AuthPatreonCallbackRouteImport } from './routes/auth/patreon/callback'
 import { Route as StreamkitWidgetsRegionAccountIdWidgetTypeRouteImport } from './routes/streamkit/widgets/$region/$accountId/$widgetType'
 
@@ -323,6 +340,26 @@ const StreamkitIndexRoute = StreamkitIndexRouteImport.update({
   path: '/streamkit/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AnalyticsGamesIndexRoute = AnalyticsGamesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AnalyticsGamesRoute,
+} as any)
+const AnalyticsGamesByRankRoute = AnalyticsGamesByRankRouteImport.update({
+  id: '/by-rank',
+  path: '/by-rank',
+  getParentRoute: () => AnalyticsGamesRoute,
+} as any)
+const AnalyticsGamesEconomyRoute = AnalyticsGamesEconomyRouteImport.update({
+  id: '/economy',
+  path: '/economy',
+  getParentRoute: () => AnalyticsGamesRoute,
+} as any)
+const AnalyticsGamesOverTimeRoute = AnalyticsGamesOverTimeRouteImport.update({
+  id: '/over-time',
+  path: '/over-time',
+  getParentRoute: () => AnalyticsGamesRoute,
+} as any)
 const AnalyticsHeroesIndexRoute = AnalyticsHeroesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -333,6 +370,50 @@ const AnalyticsHeroesHeroNameRoute = AnalyticsHeroesHeroNameRouteImport.update({
   path: '/$heroName',
   getParentRoute: () => AnalyticsHeroesRoute,
 } as any)
+const AnalyticsHeroesByDurationRoute =
+  AnalyticsHeroesByDurationRouteImport.update({
+    id: '/by-duration',
+    path: '/by-duration',
+    getParentRoute: () => AnalyticsHeroesRoute,
+  } as any)
+const AnalyticsHeroesByExperienceRoute =
+  AnalyticsHeroesByExperienceRouteImport.update({
+    id: '/by-experience',
+    path: '/by-experience',
+    getParentRoute: () => AnalyticsHeroesRoute,
+  } as any)
+const AnalyticsHeroesByRankRoute = AnalyticsHeroesByRankRouteImport.update({
+  id: '/by-rank',
+  path: '/by-rank',
+  getParentRoute: () => AnalyticsHeroesRoute,
+} as any)
+const AnalyticsHeroesCombosRoute = AnalyticsHeroesCombosRouteImport.update({
+  id: '/combos',
+  path: '/combos',
+  getParentRoute: () => AnalyticsHeroesRoute,
+} as any)
+const AnalyticsHeroesMatchupDetailsRoute =
+  AnalyticsHeroesMatchupDetailsRouteImport.update({
+    id: '/matchup-details',
+    path: '/matchup-details',
+    getParentRoute: () => AnalyticsHeroesRoute,
+  } as any)
+const AnalyticsHeroesMatchupsRoute = AnalyticsHeroesMatchupsRouteImport.update({
+  id: '/matchups',
+  path: '/matchups',
+  getParentRoute: () => AnalyticsHeroesRoute,
+} as any)
+const AnalyticsHeroesOverTimeRoute = AnalyticsHeroesOverTimeRouteImport.update({
+  id: '/over-time',
+  path: '/over-time',
+  getParentRoute: () => AnalyticsHeroesRoute,
+} as any)
+const AnalyticsHeroesScoreboardRoute =
+  AnalyticsHeroesScoreboardRouteImport.update({
+    id: '/scoreboard',
+    path: '/scoreboard',
+    getParentRoute: () => AnalyticsHeroesRoute,
+  } as any)
 const AnalyticsItemsIndexRoute = AnalyticsItemsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -343,6 +424,33 @@ const AnalyticsItemsItemNameRoute = AnalyticsItemsItemNameRouteImport.update({
   path: '/$itemName',
   getParentRoute: () => AnalyticsItemsRoute,
 } as any)
+const AnalyticsItemsBuildFlowRoute = AnalyticsItemsBuildFlowRouteImport.update({
+  id: '/build-flow',
+  path: '/build-flow',
+  getParentRoute: () => AnalyticsItemsRoute,
+} as any)
+const AnalyticsItemsCombosRoute = AnalyticsItemsCombosRouteImport.update({
+  id: '/combos',
+  path: '/combos',
+  getParentRoute: () => AnalyticsItemsRoute,
+} as any)
+const AnalyticsItemsItemPurchaseAnalysisRoute =
+  AnalyticsItemsItemPurchaseAnalysisRouteImport.update({
+    id: '/item-purchase-analysis',
+    path: '/item-purchase-analysis',
+    getParentRoute: () => AnalyticsItemsRoute,
+  } as any)
+const AnalyticsPlayersIndexRoute = AnalyticsPlayersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AnalyticsPlayersRoute,
+} as any)
+const AnalyticsPlayersStatsMetricsRoute =
+  AnalyticsPlayersStatsMetricsRouteImport.update({
+    id: '/stats-metrics',
+    path: '/stats-metrics',
+    getParentRoute: () => AnalyticsPlayersRoute,
+  } as any)
 const AuthPatreonCallbackRoute = AuthPatreonCallbackRouteImport.update({
   id: '/auth/patreon/callback',
   path: '/auth/patreon/callback',
@@ -377,10 +485,10 @@ export interface FileRoutesByFullPath {
   '/team-builder': typeof TeamBuilderRoute
   '/tracker': typeof TrackerRoute
   '/analytics/abilities': typeof AnalyticsAbilitiesRoute
-  '/analytics/games': typeof AnalyticsGamesRoute
+  '/analytics/games': typeof AnalyticsGamesRouteWithChildren
   '/analytics/heroes': typeof AnalyticsHeroesRouteWithChildren
   '/analytics/items': typeof AnalyticsItemsRouteWithChildren
-  '/analytics/players': typeof AnalyticsPlayersRoute
+  '/analytics/players': typeof AnalyticsPlayersRouteWithChildren
   '/analytics/team-builder': typeof AnalyticsTeamBuilderRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/community/badge-distribution': typeof CommunityBadgeDistributionRoute
@@ -407,11 +515,28 @@ export interface FileRoutesByFullPath {
   '/heroes/': typeof HeroesIndexRoute
   '/items/': typeof ItemsIndexRoute
   '/streamkit/': typeof StreamkitIndexRoute
+  '/analytics/games/by-rank': typeof AnalyticsGamesByRankRoute
+  '/analytics/games/economy': typeof AnalyticsGamesEconomyRoute
+  '/analytics/games/over-time': typeof AnalyticsGamesOverTimeRoute
   '/analytics/heroes/$heroName': typeof AnalyticsHeroesHeroNameRoute
+  '/analytics/heroes/by-duration': typeof AnalyticsHeroesByDurationRoute
+  '/analytics/heroes/by-experience': typeof AnalyticsHeroesByExperienceRoute
+  '/analytics/heroes/by-rank': typeof AnalyticsHeroesByRankRoute
+  '/analytics/heroes/combos': typeof AnalyticsHeroesCombosRoute
+  '/analytics/heroes/matchup-details': typeof AnalyticsHeroesMatchupDetailsRoute
+  '/analytics/heroes/matchups': typeof AnalyticsHeroesMatchupsRoute
+  '/analytics/heroes/over-time': typeof AnalyticsHeroesOverTimeRoute
+  '/analytics/heroes/scoreboard': typeof AnalyticsHeroesScoreboardRoute
   '/analytics/items/$itemName': typeof AnalyticsItemsItemNameRoute
+  '/analytics/items/build-flow': typeof AnalyticsItemsBuildFlowRoute
+  '/analytics/items/combos': typeof AnalyticsItemsCombosRoute
+  '/analytics/items/item-purchase-analysis': typeof AnalyticsItemsItemPurchaseAnalysisRoute
+  '/analytics/players/stats-metrics': typeof AnalyticsPlayersStatsMetricsRoute
   '/auth/patreon/callback': typeof AuthPatreonCallbackRoute
+  '/analytics/games/': typeof AnalyticsGamesIndexRoute
   '/analytics/heroes/': typeof AnalyticsHeroesIndexRoute
   '/analytics/items/': typeof AnalyticsItemsIndexRoute
+  '/analytics/players/': typeof AnalyticsPlayersIndexRoute
   '/streamkit/widgets/$region/$accountId/$widgetType': typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
 }
 export interface FileRoutesByTo {
@@ -432,8 +557,6 @@ export interface FileRoutesByTo {
   '/team-builder': typeof TeamBuilderRoute
   '/tracker': typeof TrackerRoute
   '/analytics/abilities': typeof AnalyticsAbilitiesRoute
-  '/analytics/games': typeof AnalyticsGamesRoute
-  '/analytics/players': typeof AnalyticsPlayersRoute
   '/analytics/team-builder': typeof AnalyticsTeamBuilderRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/community/badge-distribution': typeof CommunityBadgeDistributionRoute
@@ -460,11 +583,28 @@ export interface FileRoutesByTo {
   '/heroes': typeof HeroesIndexRoute
   '/items': typeof ItemsIndexRoute
   '/streamkit': typeof StreamkitIndexRoute
+  '/analytics/games/by-rank': typeof AnalyticsGamesByRankRoute
+  '/analytics/games/economy': typeof AnalyticsGamesEconomyRoute
+  '/analytics/games/over-time': typeof AnalyticsGamesOverTimeRoute
   '/analytics/heroes/$heroName': typeof AnalyticsHeroesHeroNameRoute
+  '/analytics/heroes/by-duration': typeof AnalyticsHeroesByDurationRoute
+  '/analytics/heroes/by-experience': typeof AnalyticsHeroesByExperienceRoute
+  '/analytics/heroes/by-rank': typeof AnalyticsHeroesByRankRoute
+  '/analytics/heroes/combos': typeof AnalyticsHeroesCombosRoute
+  '/analytics/heroes/matchup-details': typeof AnalyticsHeroesMatchupDetailsRoute
+  '/analytics/heroes/matchups': typeof AnalyticsHeroesMatchupsRoute
+  '/analytics/heroes/over-time': typeof AnalyticsHeroesOverTimeRoute
+  '/analytics/heroes/scoreboard': typeof AnalyticsHeroesScoreboardRoute
   '/analytics/items/$itemName': typeof AnalyticsItemsItemNameRoute
+  '/analytics/items/build-flow': typeof AnalyticsItemsBuildFlowRoute
+  '/analytics/items/combos': typeof AnalyticsItemsCombosRoute
+  '/analytics/items/item-purchase-analysis': typeof AnalyticsItemsItemPurchaseAnalysisRoute
+  '/analytics/players/stats-metrics': typeof AnalyticsPlayersStatsMetricsRoute
   '/auth/patreon/callback': typeof AuthPatreonCallbackRoute
+  '/analytics/games': typeof AnalyticsGamesIndexRoute
   '/analytics/heroes': typeof AnalyticsHeroesIndexRoute
   '/analytics/items': typeof AnalyticsItemsIndexRoute
+  '/analytics/players': typeof AnalyticsPlayersIndexRoute
   '/streamkit/widgets/$region/$accountId/$widgetType': typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
 }
 export interface FileRoutesById {
@@ -490,10 +630,10 @@ export interface FileRoutesById {
   '/team-builder': typeof TeamBuilderRoute
   '/tracker': typeof TrackerRoute
   '/analytics/abilities': typeof AnalyticsAbilitiesRoute
-  '/analytics/games': typeof AnalyticsGamesRoute
+  '/analytics/games': typeof AnalyticsGamesRouteWithChildren
   '/analytics/heroes': typeof AnalyticsHeroesRouteWithChildren
   '/analytics/items': typeof AnalyticsItemsRouteWithChildren
-  '/analytics/players': typeof AnalyticsPlayersRoute
+  '/analytics/players': typeof AnalyticsPlayersRouteWithChildren
   '/analytics/team-builder': typeof AnalyticsTeamBuilderRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/community/badge-distribution': typeof CommunityBadgeDistributionRoute
@@ -520,11 +660,28 @@ export interface FileRoutesById {
   '/heroes/': typeof HeroesIndexRoute
   '/items/': typeof ItemsIndexRoute
   '/streamkit/': typeof StreamkitIndexRoute
+  '/analytics/games/by-rank': typeof AnalyticsGamesByRankRoute
+  '/analytics/games/economy': typeof AnalyticsGamesEconomyRoute
+  '/analytics/games/over-time': typeof AnalyticsGamesOverTimeRoute
   '/analytics/heroes/$heroName': typeof AnalyticsHeroesHeroNameRoute
+  '/analytics/heroes/by-duration': typeof AnalyticsHeroesByDurationRoute
+  '/analytics/heroes/by-experience': typeof AnalyticsHeroesByExperienceRoute
+  '/analytics/heroes/by-rank': typeof AnalyticsHeroesByRankRoute
+  '/analytics/heroes/combos': typeof AnalyticsHeroesCombosRoute
+  '/analytics/heroes/matchup-details': typeof AnalyticsHeroesMatchupDetailsRoute
+  '/analytics/heroes/matchups': typeof AnalyticsHeroesMatchupsRoute
+  '/analytics/heroes/over-time': typeof AnalyticsHeroesOverTimeRoute
+  '/analytics/heroes/scoreboard': typeof AnalyticsHeroesScoreboardRoute
   '/analytics/items/$itemName': typeof AnalyticsItemsItemNameRoute
+  '/analytics/items/build-flow': typeof AnalyticsItemsBuildFlowRoute
+  '/analytics/items/combos': typeof AnalyticsItemsCombosRoute
+  '/analytics/items/item-purchase-analysis': typeof AnalyticsItemsItemPurchaseAnalysisRoute
+  '/analytics/players/stats-metrics': typeof AnalyticsPlayersStatsMetricsRoute
   '/auth/patreon/callback': typeof AuthPatreonCallbackRoute
+  '/analytics/games/': typeof AnalyticsGamesIndexRoute
   '/analytics/heroes/': typeof AnalyticsHeroesIndexRoute
   '/analytics/items/': typeof AnalyticsItemsIndexRoute
+  '/analytics/players/': typeof AnalyticsPlayersIndexRoute
   '/streamkit/widgets/$region/$accountId/$widgetType': typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
 }
 export interface FileRouteTypes {
@@ -581,11 +738,28 @@ export interface FileRouteTypes {
     | '/heroes/'
     | '/items/'
     | '/streamkit/'
+    | '/analytics/games/by-rank'
+    | '/analytics/games/economy'
+    | '/analytics/games/over-time'
     | '/analytics/heroes/$heroName'
+    | '/analytics/heroes/by-duration'
+    | '/analytics/heroes/by-experience'
+    | '/analytics/heroes/by-rank'
+    | '/analytics/heroes/combos'
+    | '/analytics/heroes/matchup-details'
+    | '/analytics/heroes/matchups'
+    | '/analytics/heroes/over-time'
+    | '/analytics/heroes/scoreboard'
     | '/analytics/items/$itemName'
+    | '/analytics/items/build-flow'
+    | '/analytics/items/combos'
+    | '/analytics/items/item-purchase-analysis'
+    | '/analytics/players/stats-metrics'
     | '/auth/patreon/callback'
+    | '/analytics/games/'
     | '/analytics/heroes/'
     | '/analytics/items/'
+    | '/analytics/players/'
     | '/streamkit/widgets/$region/$accountId/$widgetType'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -606,8 +780,6 @@ export interface FileRouteTypes {
     | '/team-builder'
     | '/tracker'
     | '/analytics/abilities'
-    | '/analytics/games'
-    | '/analytics/players'
     | '/analytics/team-builder'
     | '/blog/$slug'
     | '/community/badge-distribution'
@@ -634,11 +806,28 @@ export interface FileRouteTypes {
     | '/heroes'
     | '/items'
     | '/streamkit'
+    | '/analytics/games/by-rank'
+    | '/analytics/games/economy'
+    | '/analytics/games/over-time'
     | '/analytics/heroes/$heroName'
+    | '/analytics/heroes/by-duration'
+    | '/analytics/heroes/by-experience'
+    | '/analytics/heroes/by-rank'
+    | '/analytics/heroes/combos'
+    | '/analytics/heroes/matchup-details'
+    | '/analytics/heroes/matchups'
+    | '/analytics/heroes/over-time'
+    | '/analytics/heroes/scoreboard'
     | '/analytics/items/$itemName'
+    | '/analytics/items/build-flow'
+    | '/analytics/items/combos'
+    | '/analytics/items/item-purchase-analysis'
+    | '/analytics/players/stats-metrics'
     | '/auth/patreon/callback'
+    | '/analytics/games'
     | '/analytics/heroes'
     | '/analytics/items'
+    | '/analytics/players'
     | '/streamkit/widgets/$region/$accountId/$widgetType'
   id:
     | '__root__'
@@ -693,11 +882,28 @@ export interface FileRouteTypes {
     | '/heroes/'
     | '/items/'
     | '/streamkit/'
+    | '/analytics/games/by-rank'
+    | '/analytics/games/economy'
+    | '/analytics/games/over-time'
     | '/analytics/heroes/$heroName'
+    | '/analytics/heroes/by-duration'
+    | '/analytics/heroes/by-experience'
+    | '/analytics/heroes/by-rank'
+    | '/analytics/heroes/combos'
+    | '/analytics/heroes/matchup-details'
+    | '/analytics/heroes/matchups'
+    | '/analytics/heroes/over-time'
+    | '/analytics/heroes/scoreboard'
     | '/analytics/items/$itemName'
+    | '/analytics/items/build-flow'
+    | '/analytics/items/combos'
+    | '/analytics/items/item-purchase-analysis'
+    | '/analytics/players/stats-metrics'
     | '/auth/patreon/callback'
+    | '/analytics/games/'
     | '/analytics/heroes/'
     | '/analytics/items/'
+    | '/analytics/players/'
     | '/streamkit/widgets/$region/$accountId/$widgetType'
   fileRoutesById: FileRoutesById
 }
@@ -723,10 +929,10 @@ export interface RootRouteChildren {
   TeamBuilderRoute: typeof TeamBuilderRoute
   TrackerRoute: typeof TrackerRoute
   AnalyticsAbilitiesRoute: typeof AnalyticsAbilitiesRoute
-  AnalyticsGamesRoute: typeof AnalyticsGamesRoute
+  AnalyticsGamesRoute: typeof AnalyticsGamesRouteWithChildren
   AnalyticsHeroesRoute: typeof AnalyticsHeroesRouteWithChildren
   AnalyticsItemsRoute: typeof AnalyticsItemsRouteWithChildren
-  AnalyticsPlayersRoute: typeof AnalyticsPlayersRoute
+  AnalyticsPlayersRoute: typeof AnalyticsPlayersRouteWithChildren
   AnalyticsTeamBuilderRoute: typeof AnalyticsTeamBuilderRoute
   BlogSlugRoute: typeof BlogSlugRoute
   CommunityBadgeDistributionRoute: typeof CommunityBadgeDistributionRoute
@@ -1100,6 +1306,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StreamkitIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/analytics/games/': {
+      id: '/analytics/games/'
+      path: '/'
+      fullPath: '/analytics/games/'
+      preLoaderRoute: typeof AnalyticsGamesIndexRouteImport
+      parentRoute: typeof AnalyticsGamesRoute
+    }
+    '/analytics/games/by-rank': {
+      id: '/analytics/games/by-rank'
+      path: '/by-rank'
+      fullPath: '/analytics/games/by-rank'
+      preLoaderRoute: typeof AnalyticsGamesByRankRouteImport
+      parentRoute: typeof AnalyticsGamesRoute
+    }
+    '/analytics/games/economy': {
+      id: '/analytics/games/economy'
+      path: '/economy'
+      fullPath: '/analytics/games/economy'
+      preLoaderRoute: typeof AnalyticsGamesEconomyRouteImport
+      parentRoute: typeof AnalyticsGamesRoute
+    }
+    '/analytics/games/over-time': {
+      id: '/analytics/games/over-time'
+      path: '/over-time'
+      fullPath: '/analytics/games/over-time'
+      preLoaderRoute: typeof AnalyticsGamesOverTimeRouteImport
+      parentRoute: typeof AnalyticsGamesRoute
+    }
     '/analytics/heroes/': {
       id: '/analytics/heroes/'
       path: '/'
@@ -1112,6 +1346,62 @@ declare module '@tanstack/react-router' {
       path: '/$heroName'
       fullPath: '/analytics/heroes/$heroName'
       preLoaderRoute: typeof AnalyticsHeroesHeroNameRouteImport
+      parentRoute: typeof AnalyticsHeroesRoute
+    }
+    '/analytics/heroes/by-duration': {
+      id: '/analytics/heroes/by-duration'
+      path: '/by-duration'
+      fullPath: '/analytics/heroes/by-duration'
+      preLoaderRoute: typeof AnalyticsHeroesByDurationRouteImport
+      parentRoute: typeof AnalyticsHeroesRoute
+    }
+    '/analytics/heroes/by-experience': {
+      id: '/analytics/heroes/by-experience'
+      path: '/by-experience'
+      fullPath: '/analytics/heroes/by-experience'
+      preLoaderRoute: typeof AnalyticsHeroesByExperienceRouteImport
+      parentRoute: typeof AnalyticsHeroesRoute
+    }
+    '/analytics/heroes/by-rank': {
+      id: '/analytics/heroes/by-rank'
+      path: '/by-rank'
+      fullPath: '/analytics/heroes/by-rank'
+      preLoaderRoute: typeof AnalyticsHeroesByRankRouteImport
+      parentRoute: typeof AnalyticsHeroesRoute
+    }
+    '/analytics/heroes/combos': {
+      id: '/analytics/heroes/combos'
+      path: '/combos'
+      fullPath: '/analytics/heroes/combos'
+      preLoaderRoute: typeof AnalyticsHeroesCombosRouteImport
+      parentRoute: typeof AnalyticsHeroesRoute
+    }
+    '/analytics/heroes/matchup-details': {
+      id: '/analytics/heroes/matchup-details'
+      path: '/matchup-details'
+      fullPath: '/analytics/heroes/matchup-details'
+      preLoaderRoute: typeof AnalyticsHeroesMatchupDetailsRouteImport
+      parentRoute: typeof AnalyticsHeroesRoute
+    }
+    '/analytics/heroes/matchups': {
+      id: '/analytics/heroes/matchups'
+      path: '/matchups'
+      fullPath: '/analytics/heroes/matchups'
+      preLoaderRoute: typeof AnalyticsHeroesMatchupsRouteImport
+      parentRoute: typeof AnalyticsHeroesRoute
+    }
+    '/analytics/heroes/over-time': {
+      id: '/analytics/heroes/over-time'
+      path: '/over-time'
+      fullPath: '/analytics/heroes/over-time'
+      preLoaderRoute: typeof AnalyticsHeroesOverTimeRouteImport
+      parentRoute: typeof AnalyticsHeroesRoute
+    }
+    '/analytics/heroes/scoreboard': {
+      id: '/analytics/heroes/scoreboard'
+      path: '/scoreboard'
+      fullPath: '/analytics/heroes/scoreboard'
+      preLoaderRoute: typeof AnalyticsHeroesScoreboardRouteImport
       parentRoute: typeof AnalyticsHeroesRoute
     }
     '/analytics/items/': {
@@ -1127,6 +1417,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/analytics/items/$itemName'
       preLoaderRoute: typeof AnalyticsItemsItemNameRouteImport
       parentRoute: typeof AnalyticsItemsRoute
+    }
+    '/analytics/items/build-flow': {
+      id: '/analytics/items/build-flow'
+      path: '/build-flow'
+      fullPath: '/analytics/items/build-flow'
+      preLoaderRoute: typeof AnalyticsItemsBuildFlowRouteImport
+      parentRoute: typeof AnalyticsItemsRoute
+    }
+    '/analytics/items/combos': {
+      id: '/analytics/items/combos'
+      path: '/combos'
+      fullPath: '/analytics/items/combos'
+      preLoaderRoute: typeof AnalyticsItemsCombosRouteImport
+      parentRoute: typeof AnalyticsItemsRoute
+    }
+    '/analytics/items/item-purchase-analysis': {
+      id: '/analytics/items/item-purchase-analysis'
+      path: '/item-purchase-analysis'
+      fullPath: '/analytics/items/item-purchase-analysis'
+      preLoaderRoute: typeof AnalyticsItemsItemPurchaseAnalysisRouteImport
+      parentRoute: typeof AnalyticsItemsRoute
+    }
+    '/analytics/players/': {
+      id: '/analytics/players/'
+      path: '/'
+      fullPath: '/analytics/players/'
+      preLoaderRoute: typeof AnalyticsPlayersIndexRouteImport
+      parentRoute: typeof AnalyticsPlayersRoute
+    }
+    '/analytics/players/stats-metrics': {
+      id: '/analytics/players/stats-metrics'
+      path: '/stats-metrics'
+      fullPath: '/analytics/players/stats-metrics'
+      preLoaderRoute: typeof AnalyticsPlayersStatsMetricsRouteImport
+      parentRoute: typeof AnalyticsPlayersRoute
     }
     '/auth/patreon/callback': {
       id: '/auth/patreon/callback'
@@ -1214,13 +1539,47 @@ const ItemsRouteChildren: ItemsRouteChildren = {
 
 const ItemsRouteWithChildren = ItemsRoute._addFileChildren(ItemsRouteChildren)
 
+interface AnalyticsGamesRouteChildren {
+  AnalyticsGamesByRankRoute: typeof AnalyticsGamesByRankRoute
+  AnalyticsGamesEconomyRoute: typeof AnalyticsGamesEconomyRoute
+  AnalyticsGamesOverTimeRoute: typeof AnalyticsGamesOverTimeRoute
+  AnalyticsGamesIndexRoute: typeof AnalyticsGamesIndexRoute
+}
+
+const AnalyticsGamesRouteChildren: AnalyticsGamesRouteChildren = {
+  AnalyticsGamesByRankRoute: AnalyticsGamesByRankRoute,
+  AnalyticsGamesEconomyRoute: AnalyticsGamesEconomyRoute,
+  AnalyticsGamesOverTimeRoute: AnalyticsGamesOverTimeRoute,
+  AnalyticsGamesIndexRoute: AnalyticsGamesIndexRoute,
+}
+
+const AnalyticsGamesRouteWithChildren = AnalyticsGamesRoute._addFileChildren(
+  AnalyticsGamesRouteChildren,
+)
+
 interface AnalyticsHeroesRouteChildren {
   AnalyticsHeroesHeroNameRoute: typeof AnalyticsHeroesHeroNameRoute
+  AnalyticsHeroesByDurationRoute: typeof AnalyticsHeroesByDurationRoute
+  AnalyticsHeroesByExperienceRoute: typeof AnalyticsHeroesByExperienceRoute
+  AnalyticsHeroesByRankRoute: typeof AnalyticsHeroesByRankRoute
+  AnalyticsHeroesCombosRoute: typeof AnalyticsHeroesCombosRoute
+  AnalyticsHeroesMatchupDetailsRoute: typeof AnalyticsHeroesMatchupDetailsRoute
+  AnalyticsHeroesMatchupsRoute: typeof AnalyticsHeroesMatchupsRoute
+  AnalyticsHeroesOverTimeRoute: typeof AnalyticsHeroesOverTimeRoute
+  AnalyticsHeroesScoreboardRoute: typeof AnalyticsHeroesScoreboardRoute
   AnalyticsHeroesIndexRoute: typeof AnalyticsHeroesIndexRoute
 }
 
 const AnalyticsHeroesRouteChildren: AnalyticsHeroesRouteChildren = {
   AnalyticsHeroesHeroNameRoute: AnalyticsHeroesHeroNameRoute,
+  AnalyticsHeroesByDurationRoute: AnalyticsHeroesByDurationRoute,
+  AnalyticsHeroesByExperienceRoute: AnalyticsHeroesByExperienceRoute,
+  AnalyticsHeroesByRankRoute: AnalyticsHeroesByRankRoute,
+  AnalyticsHeroesCombosRoute: AnalyticsHeroesCombosRoute,
+  AnalyticsHeroesMatchupDetailsRoute: AnalyticsHeroesMatchupDetailsRoute,
+  AnalyticsHeroesMatchupsRoute: AnalyticsHeroesMatchupsRoute,
+  AnalyticsHeroesOverTimeRoute: AnalyticsHeroesOverTimeRoute,
+  AnalyticsHeroesScoreboardRoute: AnalyticsHeroesScoreboardRoute,
   AnalyticsHeroesIndexRoute: AnalyticsHeroesIndexRoute,
 }
 
@@ -1230,17 +1589,37 @@ const AnalyticsHeroesRouteWithChildren = AnalyticsHeroesRoute._addFileChildren(
 
 interface AnalyticsItemsRouteChildren {
   AnalyticsItemsItemNameRoute: typeof AnalyticsItemsItemNameRoute
+  AnalyticsItemsBuildFlowRoute: typeof AnalyticsItemsBuildFlowRoute
+  AnalyticsItemsCombosRoute: typeof AnalyticsItemsCombosRoute
+  AnalyticsItemsItemPurchaseAnalysisRoute: typeof AnalyticsItemsItemPurchaseAnalysisRoute
   AnalyticsItemsIndexRoute: typeof AnalyticsItemsIndexRoute
 }
 
 const AnalyticsItemsRouteChildren: AnalyticsItemsRouteChildren = {
   AnalyticsItemsItemNameRoute: AnalyticsItemsItemNameRoute,
+  AnalyticsItemsBuildFlowRoute: AnalyticsItemsBuildFlowRoute,
+  AnalyticsItemsCombosRoute: AnalyticsItemsCombosRoute,
+  AnalyticsItemsItemPurchaseAnalysisRoute:
+    AnalyticsItemsItemPurchaseAnalysisRoute,
   AnalyticsItemsIndexRoute: AnalyticsItemsIndexRoute,
 }
 
 const AnalyticsItemsRouteWithChildren = AnalyticsItemsRoute._addFileChildren(
   AnalyticsItemsRouteChildren,
 )
+
+interface AnalyticsPlayersRouteChildren {
+  AnalyticsPlayersStatsMetricsRoute: typeof AnalyticsPlayersStatsMetricsRoute
+  AnalyticsPlayersIndexRoute: typeof AnalyticsPlayersIndexRoute
+}
+
+const AnalyticsPlayersRouteChildren: AnalyticsPlayersRouteChildren = {
+  AnalyticsPlayersStatsMetricsRoute: AnalyticsPlayersStatsMetricsRoute,
+  AnalyticsPlayersIndexRoute: AnalyticsPlayersIndexRoute,
+}
+
+const AnalyticsPlayersRouteWithChildren =
+  AnalyticsPlayersRoute._addFileChildren(AnalyticsPlayersRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -1264,10 +1643,10 @@ const rootRouteChildren: RootRouteChildren = {
   TeamBuilderRoute: TeamBuilderRoute,
   TrackerRoute: TrackerRoute,
   AnalyticsAbilitiesRoute: AnalyticsAbilitiesRoute,
-  AnalyticsGamesRoute: AnalyticsGamesRoute,
+  AnalyticsGamesRoute: AnalyticsGamesRouteWithChildren,
   AnalyticsHeroesRoute: AnalyticsHeroesRouteWithChildren,
   AnalyticsItemsRoute: AnalyticsItemsRouteWithChildren,
-  AnalyticsPlayersRoute: AnalyticsPlayersRoute,
+  AnalyticsPlayersRoute: AnalyticsPlayersRouteWithChildren,
   AnalyticsTeamBuilderRoute: AnalyticsTeamBuilderRoute,
   BlogSlugRoute: BlogSlugRoute,
   CommunityBadgeDistributionRoute: CommunityBadgeDistributionRoute,

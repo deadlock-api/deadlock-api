@@ -1,5 +1,7 @@
 import { redirect } from "@tanstack/react-router";
 
+import { canonicalAnalyticsHref } from "./analytics-tabs";
+
 export const LEGACY_PAGE_PATHS = {
   "/games": "/analytics/games",
   "/heroes": "/analytics/heroes",
@@ -18,7 +20,8 @@ export function migrateLegacyHref(href: string): string | null {
   const root = `/${url.pathname.split("/")[1]}`;
   const destination = LEGACY_PAGE_PATHS[root as keyof typeof LEGACY_PAGE_PATHS];
   if (!destination || (root === "/players" && url.pathname.replace(/\/$/, "") !== root)) return null;
-  return destination + url.pathname.slice(root.length) + url.search + url.hash;
+  const migrated = destination + url.pathname.slice(root.length) + url.search + url.hash;
+  return canonicalAnalyticsHref(migrated) ?? migrated;
 }
 
 export function redirectLegacyPage({ location }: { location: { href: string } }) {

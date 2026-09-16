@@ -1,5 +1,6 @@
 import type { Upgrade } from "deadlock_api_client";
 
+import { ANALYTICS_TABS } from "~/lib/analytics-tabs";
 import { api } from "~/lib/api";
 import { filterPlayableHeroes, filterShopableItems } from "~/queries/asset-queries";
 
@@ -43,6 +44,16 @@ const STATIC_ENTRIES: SitemapEntry[] = [
   { path: "/flashcards/item-upgrades", changefreq: "weekly", priority: 0.6 },
   { path: "/data-dumps", changefreq: "weekly", priority: 0.6 },
 ];
+
+const ANALYTICS_VIEW_ENTRIES: SitemapEntry[] = Object.entries(ANALYTICS_TABS).flatMap(([section, tabs]) =>
+  Object.values(tabs)
+    .filter(Boolean)
+    .map((view) => ({
+      path: `/analytics/${section}/${view}`,
+      changefreq: "daily" as const,
+      priority: 0.7,
+    })),
+);
 
 // Load blog markdown files from content/blog/ at build time via Vite glob.
 const blogModules = import.meta.glob<string>("../../content/blog/*.md", {
@@ -152,7 +163,7 @@ export async function buildSitemapXml(): Promise<string> {
     priority: 0.7,
   };
   const [heroEntries, itemEntries] = await Promise.all([loadHeroEntries(), loadItemEntries()]);
-  const all = [...STATIC_ENTRIES, blogIndex, ...blogEntries, ...heroEntries, ...itemEntries];
+  const all = [...STATIC_ENTRIES, ...ANALYTICS_VIEW_ENTRIES, blogIndex, ...blogEntries, ...heroEntries, ...itemEntries];
   const body = all.map(renderUrl).join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
 }

@@ -43,7 +43,8 @@ const OG_IMAGES: Record<string, string> = {
 
 export function seo({ title, description, path, ogImage, ogType, publishedTime, jsonLd }: SeoOptions): SeoResult {
   const url = `${SITE_URL}${path}`;
-  const image = ogImage ?? `${SITE_URL}${OG_IMAGES[path] ?? "/og/default.png"}`;
+  const sectionImage = Object.entries(OG_IMAGES).find(([route]) => path.startsWith(`${route}/`))?.[1];
+  const image = ogImage ?? `${SITE_URL}${OG_IMAGES[path] ?? sectionImage ?? "/og/default.png"}`;
 
   const meta: MetaEntry[] = [
     { title },

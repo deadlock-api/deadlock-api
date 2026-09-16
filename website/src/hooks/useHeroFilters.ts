@@ -1,22 +1,12 @@
 import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 
 import { BY_RANK_STATS } from "~/components/heroes-page/HeroStatSelectors";
+import { useAnalyticsTab } from "~/hooks/useAnalyticsTab";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
+import type { AnalyticsTab } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
-
-const TAB_VALUES = [
-  "stats",
-  "stats-over-time",
-  "stats-by-duration",
-  "stats-by-rank",
-  "stats-by-experience",
-  "matchups",
-  "hero-combs",
-  "hero-matchup-details",
-  "hero-scoreboard",
-] as const;
 
 export const STATS_TABS: readonly HeroTab[] = [
   "stats",
@@ -26,9 +16,9 @@ export const STATS_TABS: readonly HeroTab[] = [
   "stats-by-experience",
 ];
 
-export type HeroTab = (typeof TAB_VALUES)[number];
+export type HeroTab = AnalyticsTab<"heroes">;
 
-export function useHeroFilters(initialTab: HeroTab = "stats") {
+export function useHeroFilters() {
   const { mode, setMode, gameMode, matchMode } = useModeState();
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(10));
   const [minHeroMatches, setMinHeroMatches] = useQueryState("min_hero_matches", parseAsInteger.withDefault(0));
@@ -40,7 +30,7 @@ export function useHeroFilters(initialTab: HeroTab = "stats") {
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const [sameLaneFilter, setSameLaneFilter] = useQueryState("same_lane", parseAsBoolean.withDefault(true));
   const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange } = useDateRangeState();
-  const [tab, setTab] = useQueryState("tab", parseAsStringLiteral(TAB_VALUES).withDefault(initialTab));
+  const [tab, setTab] = useAnalyticsTab("heroes");
   const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(2));
   const [heroStat, setHeroStat] = useQueryState(
     "hero_stat",
