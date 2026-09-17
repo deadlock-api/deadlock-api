@@ -3,6 +3,7 @@
 
 use core::fmt::Write;
 use core::time::Duration;
+use std::collections::HashSet;
 
 use axum::extract::State;
 use axum::http::{StatusCode, header};
@@ -395,6 +396,27 @@ fn strip_low_cardinality(ch_type: &str) -> String {
         out.replace_range(start..open, "");
     }
     out
+}
+
+/// Column names of `match_player`, so unknown `extra_*_columns` entries are rejected with a
+/// 400 instead of surfacing as a `ClickHouse` error. Nested columns are listed in their dotted
+/// form (`items.item_id`), which is exactly what callers pass.
+#[cached(
+    ttl_secs = 3600,
+    convert = "{ 0_u8 }",
+    key = "u8",
+    result_fallback = true
+)]
+async fn match_player_columns(
+    ch_client: &clickhouse::Client,
+) -> clickhouse::error::Result<HashSet<String>> {
+    ch_client
+        .query(
+            "SELECT name FROM system.columns WHERE database = currentDatabase() AND table = 'match_player'",
+        )
+        .fetch_all::<String>()
+        .await
+        .map(|names| names.into_iter().collect())
 }
 
 /// Resolves the `ClickHouse` `Tuple(...)` type of one `players` element, so it can be built natively
@@ -854,6 +876,25 @@ pub(super) async fn bulk_metadata(
             StatusCode::BAD_REQUEST,
             "limit must be between 1 and 10000".to_owned(),
         ));
+    }
+    if query.extra_match_columns.is_some() || query.extra_player_columns.is_some() {
+        let known_columns = match_player_columns(&state.ch_client_ro).await?;
+        for (param_name, cols) in [
+            ("extra_match_columns", &query.extra_match_columns),
+            ("extra_player_columns", &query.extra_player_columns),
+        ] {
+            // Malformed entries are left to build_query, which reports the syntax problem.
+            if let Some(col) = cols
+                .iter()
+                .flatten()
+                .find(|col| is_valid_extra_column(col) && !known_columns.contains(col.as_str()))
+            {
+                return Err(APIError::status_msg(
+                    StatusCode::BAD_REQUEST,
+                    format!("Unknown {param_name} entry '{col}': match_player has no such column"),
+                ));
+            }
+        }
     }
     debug!(?query);
     let format = query.format;
