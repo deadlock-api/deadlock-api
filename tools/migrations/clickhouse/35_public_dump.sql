@@ -185,9 +185,7 @@ SELECT
     `cluster_id`,
     `metadata_salt`,
     `replay_salt`,
-    `created_at`,
-    `verified_at`,
-    `failed_at`
+    `created_at`
 FROM default.match_salts;
 
 CREATE OR REPLACE VIEW dump.leaderboard SQL SECURITY INVOKER AS
