@@ -25,8 +25,8 @@ Migrate to:
 
 | Deprecated | Replacement |
 | ---------- | ----------- |
-| `/v1/players/mmr`, `/v1/players/mmr/{hero_id}` | `/v1/players/{account_id}/rank` |
-| `/v1/players/mmr/distribution`, `/v1/players/mmr/distribution/{hero_id}` | `/v1/analytics/badge-distribution` |
+| `/v1/players/mmr`, `/v1/players/mmr/{hero_id}` | `/v1/players/rank?account_ids=...` or `/v1/players/{account_id}/rank` |
+| `/v1/players/mmr/distribution`, `/v1/players/mmr/distribution/{hero_id}` | `/v1/players/rank/distribution` |
 | `/v1/players/{account_id}/mmr-history`, `/v1/players/{account_id}/mmr-history/{hero_id}` | `ranked_display_badge` / `ranked_delta` in `/v1/players/{account_id}/match-history` |
 
 Since ranks only exist on ranked matches, players without one are missing from the responses, and the

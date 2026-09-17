@@ -1,7 +1,8 @@
 use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
+use cached::macros::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
@@ -10,14 +11,13 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::players::mmr::apply_mmr_distribution_rate_limits;
-use crate::routes::v1::players::mmr::batch::HeroMMRPath;
 use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::default_last_month_timestamp;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
-pub(crate) struct MMRDistributionQuery {
+pub(crate) struct RankDistributionQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -43,12 +43,18 @@ pub(crate) struct MMRDistributionQuery {
 }
 
 #[derive(Debug, Clone, Copy, Row, Serialize, Deserialize, ToSchema)]
-pub(super) struct DistributionEntry {
-    rank: u8,
+pub(crate) struct RankDistributionEntry {
+    /// Rank badge, `tier * 10 + subrank`. See more: <https://api.deadlock-api.com/v1/assets/ranks>
+    badge: u32,
+    /// Rank tier.
+    rank: u32,
+    /// Sub-rank within the tier.
+    subrank: u32,
+    /// Number of players whose rank at the end of their latest ranked match in the filtered range is this badge.
     players: u64,
 }
 
-fn build_filters(query: &MMRDistributionQuery) -> Vec<String> {
+fn build_query(query: &RankDistributionQuery) -> String {
     let mut filters = vec![
         "game_mode = 'Normal'".to_owned(),
         "match_mode = 'Ranked'".to_owned(),
@@ -67,6 +73,9 @@ fn build_filters(query: &MMRDistributionQuery) -> Vec<String> {
     if let Some(max_match_id) = query.max_match_id {
         filters.push(format!("match_id <= {max_match_id}"));
     }
+    if let Some(min_duration_s) = query.min_duration_s {
+        filters.push(format!("duration_s >= {min_duration_s}"));
+    }
     if let Some(max_duration_s) = query.max_duration_s {
         filters.push(format!("duration_s <= {max_duration_s}"));
     }
@@ -81,21 +90,7 @@ fn build_filters(query: &MMRDistributionQuery) -> Vec<String> {
     if let Some(is_new_player_pool) = query.is_new_player_pool {
         filters.push(format!("new_player_pool = {is_new_player_pool}"));
     }
-    filters
-}
-
-fn build_mmr_distribution_query(hero_id: Option<u8>, query: &MMRDistributionQuery) -> String {
-    let mut filters = build_filters(query);
-    if let Some(id) = hero_id {
-        filters.push(format!("hero_id = {id}"));
-    }
     let where_clause = filters.join(" AND ");
-
-    let log_comment = if hero_id.is_some() {
-        "mmr_distribution_hero"
-    } else {
-        "mmr_distribution"
-    };
 
     let badge = badge_from_flat_progress_sql(
         "assumeNotNull(argMax(player_rank_final_flat_progress, match_id))",
@@ -104,89 +99,75 @@ fn build_mmr_distribution_query(hero_id: Option<u8>, query: &MMRDistributionQuer
 
     format!(
         "
-    SELECT rank, count() AS players
+    SELECT
+        badge,
+        intDiv(badge, 10) AS rank,
+        badge % 10 AS subrank,
+        count() AS players
     FROM (
-        SELECT toUInt8({badge}) AS rank
+        SELECT {badge} AS badge
         FROM match_player
         WHERE {where_clause}
         GROUP BY account_id
     )
-    GROUP BY rank
-    ORDER BY rank
-    SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0, max_threads = 32
+    GROUP BY badge
+    ORDER BY badge
+    SETTINGS log_comment = 'rank_distribution', apply_patch_parts = 0, max_threads = 32
     "
     )
 }
 
-#[utoipa::path(
-    get,
-    path = "/mmr/distribution",
-    params(MMRDistributionQuery),
-    responses(
-        (status = OK, description = "MMR", body = [DistributionEntry]),
-        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
-        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch mmr")
-    ),
-    tags = ["MMR"],
-    summary = "MMR Distribution (Deprecated)",
-    description = "
-Deprecated. The MMR estimate is gone, this now counts players by the rank Valve reported at the end
-of their latest ranked match within the filtered range.
-
-Use `/v1/players/rank/distribution` instead.
-",
+#[cached(
+    max_size = 1_000,
+    ttl_secs = 600,
+    convert = "{ query_str.to_string() }",
+    sync_writes = "by_key",
+    key = "String"
 )]
-#[deprecated(note = "use `/v1/players/rank/distribution`")]
-pub(super) async fn mmr_distribution(
-    State(state): State<AppState>,
-    rate_limit_key: RateLimitKey,
-    Query(query): Query<MMRDistributionQuery>,
-) -> APIResult<impl IntoResponse> {
-    apply_mmr_distribution_rate_limits(&state, &rate_limit_key).await?;
-    let query = build_mmr_distribution_query(None, &query);
-    debug!(?query);
-    Ok(state
-        .ch_client_ro
-        .query(&query)
-        .fetch_all::<DistributionEntry>()
-        .await
-        .map(Json)?)
+async fn run_query(
+    ch_client: &clickhouse::Client,
+    query_str: &str,
+) -> clickhouse::error::Result<Vec<RankDistributionEntry>> {
+    ch_client.query(query_str).fetch_all().await
 }
 
 #[utoipa::path(
     get,
-    path = "/mmr/distribution/{hero_id}",
-    params(MMRDistributionQuery, HeroMMRPath),
+    path = "/rank/distribution",
+    params(RankDistributionQuery),
     responses(
-        (status = OK, description = "Hero MMR", body = [DistributionEntry]),
+        (status = OK, body = [RankDistributionEntry]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
-        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch hero mmr")
+        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch rank distribution")
     ),
-    tags = ["MMR"],
-    summary = "Hero MMR Distribution (Deprecated)",
+    tags = ["Players"],
+    summary = "Rank Distribution",
     description = "
-Deprecated. Valve reports a single account-wide rank, not a per-hero one, so this counts players by
-the rank they had on their latest ranked match played on that hero.
+Counts players by the rank Valve reported at the end of their latest ranked match within the
+filtered range, i.e. the rank `/v1/players/{account_id}/rank` would return for them. Only ranked
+matches carry a rank, so the filters only ever select ranked matches, and players still in
+placement games are not counted.
 
-Use `/v1/players/rank/distribution` instead.
-",
+`/v1/analytics/badge-distribution` reports the same player counts as `unique_players` next to the
+match counts by average badge; use this endpoint when you only need the players.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 5req/min |
+| Key | 25req/min |
+| Global | 50req/min |
+"
 )]
-#[deprecated(note = "use `/v1/players/rank/distribution`")]
-pub(super) async fn hero_mmr_distribution(
-    Path(HeroMMRPath { hero_id }): Path<HeroMMRPath>,
-    Query(query): Query<MMRDistributionQuery>,
+pub(super) async fn rank_distribution(
+    Query(query): Query<RankDistributionQuery>,
     State(state): State<AppState>,
     rate_limit_key: RateLimitKey,
 ) -> APIResult<impl IntoResponse> {
     apply_mmr_distribution_rate_limits(&state, &rate_limit_key).await?;
-    let query = build_mmr_distribution_query(Some(hero_id), &query);
-    debug!(?query);
-    Ok(state
-        .ch_client_ro
-        .query(&query)
-        .fetch_all::<DistributionEntry>()
-        .await
-        .map(Json)?)
+    let query_str = build_query(&query);
+    debug!(?query_str);
+    Ok(run_query(&state.ch_client_ro, &query_str).await.map(Json)?)
 }
 
 #[cfg(test)]
@@ -200,11 +181,8 @@ mod proptests {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
         #[test]
-        fn mmr_distribution_build_query_is_valid_sql(
-            hero_id in any::<Option<u8>>(),
-            query: MMRDistributionQuery,
-        ) {
-            assert_valid_sql(&build_mmr_distribution_query(hero_id, &query));
+        fn rank_distribution_build_query_is_valid_sql(query: RankDistributionQuery) {
+            assert_valid_sql(&build_query(&query));
         }
     }
 }

@@ -6,6 +6,7 @@ pub(crate) mod match_history;
 pub mod mate_stats;
 pub mod mmr;
 pub(crate) mod rank;
+mod rank_distribution;
 pub mod steam;
 
 use core::time::Duration;
@@ -189,8 +190,10 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(enemy_stats::enemy_stats))
         .routes(routes!(hero_stats::player_hero_stats))
         .routes(routes!(rank::rank))
+        .routes(routes!(rank::rank_batch))
         .routes(routes!(rank::rank_image))
         .routes(routes!(rank::rank_avg_image))
+        .routes(routes!(rank_distribution::rank_distribution))
         .routes(routes!(rank::rank_predict))
         .routes(routes!(rank::rank_predict_image))
         .routes(routes!(rank::rank_predict_avg_image))
@@ -217,7 +220,9 @@ mod tests {
         for path in [
             "/{account_id}/rank",
             "/{account_id}/rank/image",
+            "/rank",
             "/rank/image",
+            "/rank/distribution",
         ] {
             assert!(api.paths.paths.contains_key(path), "missing path {path}");
         }

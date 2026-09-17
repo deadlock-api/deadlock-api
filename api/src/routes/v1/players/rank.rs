@@ -10,8 +10,11 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::players::mmr::apply_mmr_rate_limits;
 use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
 use crate::services::rank_image::{self, RankImageFormat, RankImageQuery};
+use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::utils::parse::comma_separated_deserialize;
 use crate::utils::types::AccountIdQuery;
 
 /// Convert a raw badge value (11–116) to a 1-based contiguous index (1–66).
@@ -86,6 +89,27 @@ pub(crate) struct RankResponse {
     /// Rank metadata of the ranked match the badge was read from. `null` when none of the player's
     /// recent ranked matches reports a rank.
     pub(crate) last_match: Option<LastRankedMatch>,
+}
+
+impl RankResponse {
+    fn from_last_match(last_match: Option<LastRankedMatch>) -> Self {
+        let badge = last_match.as_ref().map_or(0, LastRankedMatch::badge);
+        Self {
+            badge,
+            rank: badge / 10,
+            subrank: badge % 10,
+            last_match,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct AccountRank {
+    /// The players `SteamID3`
+    pub(crate) account_id: u32,
+    #[serde(flatten)]
+    #[schema(inline)]
+    pub(crate) rank: RankResponse,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -275,14 +299,86 @@ pub(super) async fn rank(
     }
 
     let last_match = fetch_last_ranked_match(&state.batchers.player_rank, account_id).await?;
-    let badge = last_match.as_ref().map_or(0, LastRankedMatch::badge);
+    Ok(Json(RankResponse::from_last_match(last_match)))
+}
 
-    Ok(Json(RankResponse {
-        badge,
-        rank: badge / 10,
-        subrank: badge % 10,
-        last_match,
+const MAX_BATCH_ACCOUNT_IDS: usize = 1_000;
+
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+pub(crate) struct RankBatchQuery {
+    /// Comma separated list of account ids, Account IDs are in `SteamID3` format.
+    #[param(inline, min_items = 1, max_items = 1_000)]
+    #[serde(deserialize_with = "comma_separated_deserialize")]
+    account_ids: Vec<u32>,
+}
+
+#[utoipa::path(
+    get,
+    path = "/rank",
+    params(RankBatchQuery),
+    responses(
+        (status = OK, body = [AccountRank]),
+        (status = BAD_REQUEST, description = "Invalid or missing account IDs"),
+        (status = INTERNAL_SERVER_ERROR, description = "Rank lookup failed"),
+    ),
+    tags = ["Players"],
+    summary = "Batch Rank",
+    description = "
+Returns the rank of each player at the end of their latest ranked match, the batch form of
+`/v1/players/{account_id}/rank`. See that endpoint for how the badge is derived.
+
+Every requested account is returned once, in no particular order. Players none of whose recent
+ranked matches reports a rank get `badge`, `rank` and `subrank` of `0` and a `null` `last_match`.
+Protected accounts are left out.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 20req/min |
+| Key | 100req/min & 2000req/h |
+| Global | 200req/min |
+"
+)]
+pub(super) async fn rank_batch(
+    Query(RankBatchQuery { account_ids }): Query<RankBatchQuery>,
+    State(state): State<AppState>,
+    rate_limit_key: RateLimitKey,
+) -> APIResult<Json<Vec<AccountRank>>> {
+    if account_ids.is_empty() {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "At least one account ID is required.",
+        ));
+    }
+    if account_ids.len() > MAX_BATCH_ACCOUNT_IDS {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            format!("Too many account IDs (max {MAX_BATCH_ACCOUNT_IDS})."),
+        ));
+    }
+    apply_mmr_rate_limits(&state, &rate_limit_key).await?;
+
+    let protected_users = state
+        .steam_client
+        .get_protected_users(&state.pg_client)
+        .await?;
+    let account_ids: Vec<u32> = account_ids
+        .into_iter()
+        .unique()
+        .filter(|id| !protected_users.contains(id))
+        .collect();
+
+    let batcher = &state.batchers.player_rank;
+    let ranks = futures::future::try_join_all(account_ids.iter().map(|&account_id| async move {
+        fetch_last_ranked_match(batcher, account_id)
+            .await
+            .map(|last_match| AccountRank {
+                account_id,
+                rank: RankResponse::from_last_match(last_match),
+            })
     }))
+    .await?;
+    Ok(Json(ranks))
 }
 
 #[utoipa::path(

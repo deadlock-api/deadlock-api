@@ -123,10 +123,10 @@ async fn get_mmr(
 Deprecated. The MMR estimate is gone, this now returns the rank Valve reported for each player at
 the end of their latest ranked match. Players without a ranked match carrying a rank are left out.
 
-Use `/v1/players/{account_id}/rank` instead.
+Use `/v1/players/rank?account_ids=...` instead.
 ",
 )]
-#[deprecated(note = "use `/v1/players/{account_id}/rank`")]
+#[deprecated(note = "use `/v1/players/rank?account_ids=...`")]
 pub(super) async fn mmr(
     Query(MMRBatchQuery {
         account_ids,
@@ -170,10 +170,10 @@ pub(super) async fn mmr(
 Deprecated. Valve reports a single account-wide rank, not a per-hero one, so this returns each
 player's rank on their latest ranked match played on that hero.
 
-Use `/v1/players/{account_id}/rank` instead.
+Use `/v1/players/rank?account_ids=...` instead.
 ",
 )]
-#[deprecated(note = "use `/v1/players/{account_id}/rank`")]
+#[deprecated(note = "use `/v1/players/rank?account_ids=...`")]
 pub(super) async fn hero_mmr(
     Path(HeroMMRPath { hero_id }): Path<HeroMMRPath>,
     Query(MMRBatchQuery {
