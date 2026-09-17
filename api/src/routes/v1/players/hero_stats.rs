@@ -108,8 +108,18 @@ pub struct HeroStats {
     obj_damage_per_soul: f64,
     accuracy: f64,
     crit_shot_rate: f64,
+    /// Matches by the MVP rank Valve awarded the player: index 0 is rank 1 (MVP), index 1 is
+    /// rank 2, index 2 is rank 3. Only the top three players of a match get a rank.
+    mvp_rank_counts: Vec<u64>,
+    /// Matches played since Valve started reporting MVP ranks (2026-01-06). Divide
+    /// `mvp_rank_counts` by this, not by `matches_played`, when the time range reaches
+    /// further back.
+    mvp_rated_matches: u64,
     matches: Vec<u64>,
 }
+
+/// First match with MVP ranks. Every match from this id on carries them.
+const MVP_RANK_SINCE_MATCH_ID: u64 = 50_367_982;
 
 #[expect(clippy::too_many_lines)]
 fn build_query(query: &HeroStatsQuery) -> String {
@@ -180,7 +190,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
                max_damage_mitigated, max_creep_kills, max_boss_damage, max_creep_damage,
                max_neutral_damage, max_shots_hit, max_shots_missed,
                max_hero_bullets_hit, max_hero_bullets_hit_crit,
-               duration_s, start_time, average_badge
+               duration_s, start_time, average_badge, mvp_rank
         FROM player_match_stats
         WHERE {mp_where}
         LIMIT 1 BY match_id, account_id
@@ -223,6 +233,8 @@ fn build_query(query: &HeroStatsQuery) -> String {
          max_hero_bullets_hit_crit + max_hero_bullets_hit > 0)
             / greatest(1, countIf(max_hero_bullets_hit_crit + max_hero_bullets_hit > 0)) AS \
          crit_shot_rate,
+        [countIf(mvp_rank = 1), countIf(mvp_rank = 2), countIf(mvp_rank = 3)] AS mvp_rank_counts,
+        countIf(match_id >= {MVP_RANK_SINCE_MATCH_ID}) AS mvp_rated_matches,
         groupUniqArray(match_id) as matches
     FROM mp
     {outer_where}
