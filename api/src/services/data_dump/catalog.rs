@@ -89,10 +89,12 @@ pub(crate) fn build(dir: &Path, manifest: &Manifest) -> Result<BuiltCatalog, Dum
             && files.iter().any(|f| f.kind != FileKind::Base)
         {
             // Delta files can carry a newer version of a row already in a base file; this view
-            // resolves them the way ClickHouse's FINAL does.
+            // resolves them the way ClickHouse's FINAL does. `start_time` is constant per
+            // (match_id, account_id); listing it in the partition key lets DuckDB push
+            // filters on it through the window instead of scanning the whole table.
             let view = format!(
                 "CREATE VIEW lake.{} AS SELECT * FROM lake.{ident} \
-                 QUALIFY row_number() OVER (PARTITION BY match_id, account_id ORDER BY {} DESC) = 1;",
+                 QUALIFY row_number() OVER (PARTITION BY match_id, account_id, start_time ORDER BY {} DESC) = 1;",
                 sql_ident(&format!("{name}_latest")),
                 sql_ident(watermark)
             );
