@@ -1,4 +1,5 @@
-//! GraphQL schema entry point: `QueryRoot.matches` and `QueryRoot.match_players`.
+//! GraphQL schema entry point: `QueryRoot.matches`, `QueryRoot.match_players`
+//! and friends.
 
 #![expect(clippy::doc_markdown)]
 
@@ -12,7 +13,10 @@ use tracing::{Instrument as _, debug, info_span};
 
 use crate::context::AppState;
 use crate::routes::v1::assets::common::Language;
+use crate::routes::v1::builds::query::BuildsSearchQuerySortBy;
+use crate::routes::v1::builds::structs::Build;
 use crate::routes::v1::graphql::assets::{load_heroes, load_items, load_ranks};
+use crate::routes::v1::graphql::builds::{HeroBuildWhere, HeroBuildsArgs, load_hero_builds};
 use crate::routes::v1::graphql::cost::{COMPLEXITY_LIMIT, DEPTH_LIMIT, MAX_LIMIT};
 use crate::routes::v1::graphql::filters::{MatchHistoryWhere, MatchPlayerWhere};
 use crate::routes::v1::graphql::metrics_ext::MetricsExtension;
@@ -215,6 +219,32 @@ impl QueryRoot {
         Ok(rows)
     }
 
+    /// Hero builds from the stored `hero_builds` table — the same data as the
+    /// REST `/v1/builds` search. Every version of a build is returned unless
+    /// `where.only_latest` is set.
+    #[graphql(complexity = "50 + 5 * child_complexity")]
+    async fn hero_builds(
+        &self,
+        ctx: &Context<'_>,
+        #[graphql(name = "where")] where_: Option<HeroBuildWhere>,
+        order_by: Option<BuildsSearchQuerySortBy>,
+        order_direction: Option<OrderDirection>,
+        #[graphql(default = 100)] limit: u32,
+        #[graphql(default = 0)] offset: u32,
+    ) -> GqlResult<Vec<Build>> {
+        load_hero_builds(
+            app_state(ctx)?,
+            HeroBuildsArgs {
+                where_,
+                order_by,
+                order_direction,
+                limit,
+                offset,
+            },
+        )
+        .await
+    }
+
     /// All heroes for the given client version (defaults to latest), localized
     /// to `language` (defaults to English). Sourced from the versioned assets,
     /// not ClickHouse.
@@ -308,5 +338,9 @@ mod tests {
         assert!(sdl.contains("match_history("));
         assert!(sdl.contains("type SteamProfile"));
         assert!(sdl.contains("steam:")); // MatchPlayer.steam enrichment
+        assert!(sdl.contains("type Build"));
+        assert!(sdl.contains("hero_builds("));
+        assert!(sdl.contains("hero_build:")); // MatchPlayer.hero_build enrichment
+        assert!(sdl.contains("author:")); // BuildHero.author enrichment
     }
 }

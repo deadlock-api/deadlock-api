@@ -1,6 +1,6 @@
 //! GraphQL enrichment resolvers: top-level `heroes`/`items`/`ranks` queries,
 //! nested `MatchPlayer.hero` / `Item.asset` asset enrichment, and the
-//! `MatchPlayer.steam` profile enrichment.
+//! `MatchPlayer.steam` profile / `MatchPlayer.hero_build` enrichment.
 
 use std::sync::Arc;
 
@@ -11,6 +11,8 @@ use object_store::aws::AmazonS3;
 use crate::context::AppState;
 use crate::error::APIError;
 use crate::routes::v1::assets::common::{AssetsQuery, Language, load_localized};
+use crate::routes::v1::builds::structs::Build;
+use crate::routes::v1::graphql::builds::load_hero_build;
 use crate::routes::v1::graphql::schema::app_state;
 use crate::routes::v1::graphql::types::{
     Item as GameplayItem, MatchHistoryEntry, MatchPlayer, SteamProfile,
@@ -80,23 +82,41 @@ impl MatchPlayer {
         let Some(account_id) = self.account_id else {
             return Ok(None);
         };
-        let state = app_state(ctx)?;
-        if state
-            .steam_client
-            .is_user_protected(&state.pg_client, account_id)
-            .await
-            .map_err(|e| async_graphql::Error::new(format!("Protected user lookup failed: {e}")))?
-        {
+        load_steam_profile(app_state(ctx)?, account_id).await
+    }
+
+    /// Latest stored version of the build this player used, matched on
+    /// (`hero_id`, `hero_build_id`). `null` when the build is not in the
+    /// database.
+    async fn hero_build(&self, ctx: &Context<'_>) -> GqlResult<Option<Build>> {
+        let (Some(hero_id), Some(build_id)) = (self.hero_id, self.hero_build_id) else {
             return Ok(None);
-        }
-        match state.batchers.steam_profile_graphql.load(account_id).await {
-            Ok(row) => Ok(Some(row.into())),
-            Err(APIError::StatusMsg {
-                status: StatusCode::NOT_FOUND,
-                ..
-            }) => Ok(None),
-            Err(e) => Err(async_graphql::Error::new(e.to_string())),
-        }
+        };
+        load_hero_build(ctx, hero_id, build_id).await
+    }
+}
+
+/// Stored Steam profile lookup shared by the nested `steam` / `author`
+/// resolvers: `None` for protected users and missing profiles.
+pub(super) async fn load_steam_profile(
+    state: &AppState,
+    account_id: u32,
+) -> GqlResult<Option<SteamProfile>> {
+    if state
+        .steam_client
+        .is_user_protected(&state.pg_client, account_id)
+        .await
+        .map_err(|e| async_graphql::Error::new(format!("Protected user lookup failed: {e}")))?
+    {
+        return Ok(None);
+    }
+    match state.batchers.steam_profile_graphql.load(account_id).await {
+        Ok(row) => Ok(Some(row.into())),
+        Err(APIError::StatusMsg {
+            status: StatusCode::NOT_FOUND,
+            ..
+        }) => Ok(None),
+        Err(e) => Err(async_graphql::Error::new(e.to_string())),
     }
 }
 

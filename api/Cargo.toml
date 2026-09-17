@@ -49,7 +49,7 @@ zstd = "0.13"
 arrow = { version = "59", features = ["json"] }
 strum = { version = "0.28.0", features = ["derive"] }
 axum-extra = { version = "0.12.6", features = ["query"] }
-async-graphql = { version = "7", features = ["chrono", "uuid"] }
+async-graphql = { version = "7", features = ["chrono", "dataloader", "uuid"] }
 async-graphql-axum = "7"
 metrics = "0.24.6"
 bytes = { version = "1.12.1", features = ["serde"] }

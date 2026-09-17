@@ -10,9 +10,12 @@ fn default_limit() -> Option<u32> {
     100.into()
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display)]
+#[derive(
+    Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, async_graphql::Enum,
+)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
+#[graphql(name = "OrderByHeroBuild")]
 pub enum BuildsSearchQuerySortBy {
     /// Sort by the number of weekly favorites.
     WeeklyFavorites,
@@ -31,7 +34,9 @@ pub enum BuildsSearchQuerySortBy {
     Version,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq)]
+#[derive(
+    Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, async_graphql::Enum,
+)]
 pub enum BuildLanguage {
     #[default]
     English = 0,
@@ -57,55 +62,55 @@ pub enum BuildLanguage {
 #[derive(Debug, Clone, Deserialize, IntoParams)]
 #[into_params(style = Form, parameter_in = Query)]
 #[serde(rename_all = "snake_case")]
-pub(super) struct BuildsSearchQuery {
+pub(crate) struct BuildsSearchQuery {
     /// Filter builds based on their `last_updated` time (Unix timestamp).
-    min_unix_timestamp: Option<i64>,
+    pub(crate) min_unix_timestamp: Option<i64>,
     /// Filter builds based on their `last_updated` time (Unix timestamp).
-    max_unix_timestamp: Option<i64>,
+    pub(crate) max_unix_timestamp: Option<i64>,
     /// Filter builds based on their published time (Unix timestamp).
-    min_published_unix_timestamp: Option<i64>,
+    pub(crate) min_published_unix_timestamp: Option<i64>,
     /// Filter builds based on their published time (Unix timestamp).
-    max_published_unix_timestamp: Option<i64>,
+    pub(crate) max_published_unix_timestamp: Option<i64>,
     /// The field to sort the builds by.
     #[serde(default)]
     #[param(inline)]
-    sort_by: BuildsSearchQuerySortBy,
+    pub(crate) sort_by: BuildsSearchQuerySortBy,
     /// The index of the first build to return.
-    start: Option<u32>,
+    pub(crate) start: Option<u32>,
     /// The maximum number of builds to return.
     #[serde(default = "default_limit")]
     #[param(inline, default = "100")]
-    limit: Option<u32>,
+    pub(crate) limit: Option<u32>,
     /// The direction to sort the builds in.
     #[serde(default)]
     #[param(inline)]
-    sort_direction: SortDirectionDesc,
+    pub(crate) sort_direction: SortDirectionDesc,
     /// Search for builds with a name containing this string.
-    search_name: Option<String>,
+    pub(crate) search_name: Option<String>,
     /// Search for builds with a description containing this string.
-    search_description: Option<String>,
+    pub(crate) search_description: Option<String>,
     /// Only return the latest version of each build.
-    only_latest: Option<bool>,
+    pub(crate) only_latest: Option<bool>,
     /// Filter builds by language.
     #[deprecated]
-    language: Option<u32>,
+    pub(crate) language: Option<u32>,
     /// Filter builds by language.
     #[serde(default)]
     #[param(inline)]
-    build_language: Option<BuildLanguage>,
+    pub(crate) build_language: Option<BuildLanguage>,
     /// Filter builds by ID.
-    build_id: Option<u32>,
+    pub(crate) build_id: Option<u32>,
     /// Filter builds by version.
-    version: Option<u32>,
+    pub(crate) version: Option<u32>,
     /// Filter builds by hero ID. See more: <https://api.deadlock-api.com/v1/assets/heroes>
-    hero_id: Option<u32>,
+    pub(crate) hero_id: Option<u32>,
     /// Filter builds by tag.
-    tag: Option<u32>,
+    pub(crate) tag: Option<u32>,
     /// Filter builds by rollup category.
-    rollup_category: Option<u32>,
+    pub(crate) rollup_category: Option<u32>,
     /// The author's `SteamID3`
     #[serde(default, deserialize_with = "parse_steam_id_option")]
-    author_id: Option<u32>,
+    pub(crate) author_id: Option<u32>,
 }
 
 impl Default for BuildsSearchQuery {
@@ -135,7 +140,7 @@ impl Default for BuildsSearchQuery {
     }
 }
 
-pub(super) fn sql_query(params: &BuildsSearchQuery) -> String {
+pub(crate) fn sql_query(params: &BuildsSearchQuery) -> String {
     let mut query_builder: QueryBuilder<sqlx::Postgres> = QueryBuilder::default();
     query_builder.push(
         " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \

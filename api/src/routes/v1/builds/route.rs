@@ -11,7 +11,7 @@ use crate::routes::v1::builds::query;
 use crate::routes::v1::builds::query::BuildsSearchQuery;
 use crate::routes::v1::builds::structs::Build;
 
-async fn fetch_builds(
+pub(crate) async fn fetch_builds(
     pg_client: &sqlx::Pool<sqlx::Postgres>,
     query: &BuildsSearchQuery,
 ) -> sqlx::Result<Vec<Build>> {

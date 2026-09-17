@@ -1,18 +1,21 @@
+use async_graphql::SimpleObject;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, SimpleObject)]
 #[serde(rename_all = "snake_case")]
-struct BuildHeroDetailsCategoryAbility {
-    ability_id: u32,
+#[graphql(complex, rename_fields = "snake_case")]
+pub(crate) struct BuildHeroDetailsCategoryAbility {
+    pub(crate) ability_id: u32,
     annotation: Option<String>,
     required_flex_slots: Option<u32>,
     sell_priority: Option<u32>,
     imbue_target_ability_id: Option<u32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, SimpleObject)]
 #[serde(rename_all = "snake_case")]
+#[graphql(rename_fields = "snake_case")]
 struct BuildHeroDetailsCategory {
     name: String,
     width: Option<f32>,
@@ -22,30 +25,34 @@ struct BuildHeroDetailsCategory {
     optional: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, SimpleObject)]
 #[serde(rename_all = "snake_case")]
-struct BuildHeroDetailsAbilityOrderCurrencyChange {
-    ability_id: u32,
+#[graphql(complex, rename_fields = "snake_case")]
+pub(crate) struct BuildHeroDetailsAbilityOrderCurrencyChange {
+    pub(crate) ability_id: u32,
     currency_type: i32,
     delta: i32,
     annotation: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, SimpleObject)]
 #[serde(rename_all = "snake_case")]
+#[graphql(rename_fields = "snake_case")]
 struct BuildHeroDetailsAbilityOrder {
     currency_changes: Option<Vec<BuildHeroDetailsAbilityOrderCurrencyChange>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, SimpleObject)]
 #[serde(rename_all = "snake_case")]
+#[graphql(rename_fields = "snake_case")]
 struct BuildHeroDetails {
     mod_categories: Vec<BuildHeroDetailsCategory>,
     ability_order: Option<BuildHeroDetailsAbilityOrder>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, SimpleObject)]
 #[serde(rename_all = "snake_case")]
+#[graphql(complex, rename_fields = "snake_case")]
 pub struct BuildHero {
     /// See more: <https://api.deadlock-api.com/v1/assets/heroes>
     pub hero_id: u32,
@@ -64,8 +71,9 @@ pub struct BuildHero {
     details: BuildHeroDetails,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, SimpleObject)]
 #[serde(rename_all = "snake_case")]
+#[graphql(rename_fields = "snake_case")]
 pub struct Build {
     pub hero_build: BuildHero,
     pub num_favorites: Option<u32>,

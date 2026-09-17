@@ -1,6 +1,6 @@
 mod live;
 pub mod query;
-mod route;
+pub(crate) mod route;
 pub mod structs;
 
 use core::time::Duration;

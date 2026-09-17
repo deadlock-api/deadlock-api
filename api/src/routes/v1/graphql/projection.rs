@@ -281,6 +281,7 @@ pub(super) fn project_matches(look: &Lookahead<'_>) -> Projection {
             }
         }
         ensure_player_identity(&mut projection.player_columns);
+        ensure_hero_build_keys(&players_field, &mut projection.player_columns);
         collect_subfields(
             &players_field,
             "items",
@@ -305,6 +306,7 @@ pub(super) fn project_match_players(look: &Lookahead<'_>) -> Projection {
         }
     }
     ensure_player_identity(&mut projection.player_columns);
+    ensure_hero_build_keys(look, &mut projection.player_columns);
     collect_subfields(
         look,
         "items",
@@ -350,6 +352,14 @@ fn collect_subfields(
         if f.field(name).exists() {
             out.push(name);
         }
+    }
+}
+
+/// The nested `hero_build` resolver reads `hero_id` + `hero_build_id` from the row.
+fn ensure_hero_build_keys(look: &Lookahead<'_>, cols: &mut Vec<Column>) {
+    if look.field("hero_build").exists() {
+        ensure_present(cols, PLAYER_COLUMNS, "hero_id");
+        ensure_present(cols, PLAYER_COLUMNS, "hero_build_id");
     }
 }
 

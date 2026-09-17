@@ -1,4 +1,5 @@
 mod assets;
+mod builds;
 mod cost;
 mod filters;
 mod metrics_ext;
@@ -10,6 +11,7 @@ mod types;
 use core::time::Duration;
 use std::sync::OnceLock;
 
+use async_graphql::dataloader::DataLoader;
 use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::extract::State;
@@ -23,6 +25,7 @@ use crate::error::APIError;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
+use builds::HeroBuildLoader;
 use schema::{GraphQLSchema, build_schema};
 
 pub(super) const RATE_LIMIT_KEY: &str = "graphql_match_player";
@@ -75,7 +78,13 @@ async fn graphql_handler(
         )
         .await?;
 
-    let request = req.into_inner().data(state).data(rate_limit_key);
+    let hero_build_loader =
+        DataLoader::new(HeroBuildLoader::new(state.pg_client.clone()), tokio::spawn);
+    let request = req
+        .into_inner()
+        .data(state)
+        .data(rate_limit_key)
+        .data(hero_build_loader);
     Ok(shared_schema().execute(request).await.into())
 }
 
