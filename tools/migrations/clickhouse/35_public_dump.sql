@@ -5,7 +5,8 @@
 -- Views are SQL SECURITY INVOKER so the GDPR row policies (maintained by the API in
 -- routes/v1/data_privacy) filter protected accounts for the dump user as well.
 --
--- Materialized columns are intentionally not published (parity with the previous dump).
+-- Materialized columns are intentionally not published (parity with the previous dump), and
+-- stats.custom_user_stats is left out: it is ~40% of every match_player file and barely compresses.
 --
 -- The named collection holding the R2 credentials is created by hand, not here:
 --   CREATE NAMED COLLECTION r2_dump AS
@@ -175,8 +176,7 @@ SELECT
     `hero_xp_rewards.hero_id`,
     `hero_xp_rewards.xp_grant`,
     `hero_xp_rewards.reason`,
-    `average_badge`,
-    `stats.custom_user_stats`
+    `average_badge`
 FROM default.match_player;
 
 CREATE OR REPLACE VIEW dump.match_salts SQL SECURITY INVOKER AS
