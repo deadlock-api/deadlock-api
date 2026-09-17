@@ -1,27 +1,15 @@
 import { day } from "~/dayjs";
 
-export const BUCKET_URL = "https://s3-cache.deadlock-api.com/db-snapshot";
-export const BUCKET_BASE = "https://s3-cache.deadlock-api.com";
-export const BUCKET_NAME = "db-snapshot";
-export const ROOT_PREFIX = "public/";
+export const LAKE_URL = "https://data.deadlock-api.com";
+export const MANIFEST_URL = `${LAKE_URL}/v1/manifest.json`;
+export const CATALOG_URL = `${LAKE_URL}/v1/catalog.ducklake`;
 
-const SHARD_RE = /^(.+)_(\d+)\.parquet$/;
-
-export function parseShardName(filename: string): { base: string; index: number } | null {
-  const m = filename.match(SHARD_RE);
-  return m ? { base: m[1], index: Number(m[2]) } : null;
-}
-
-export type FileExt = "parquet" | "sql" | "other";
-
-export function getExt(key: string): FileExt {
-  if (key.endsWith(".parquet")) return "parquet";
-  if (key.endsWith(".sql")) return "sql";
-  return "other";
-}
-
-export function formatS3Timestamp(s: string | null | undefined): string {
+export function formatTimestamp(s: string | null | undefined): string {
   return s ? day.utc(s).local().format("YYYY-MM-DD HH:mm") : "—";
+}
+
+export function formatUnix(seconds: number | null | undefined): string {
+  return seconds ? day.unix(seconds).local().format("YYYY-MM-DD HH:mm") : "—";
 }
 
 export function formatBytes(n: number): string {
@@ -37,14 +25,8 @@ export function formatBytes(n: number): string {
   return `${val.toFixed(decimals)} ${units[i]}`;
 }
 
-export function naturalCompare(a: string, b: string): number {
-  return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
-}
-
-export function tableNameFromKey(key: string): string {
-  const filename = key.replace(/\/$/, "").split("/").pop() ?? "";
-  const base = filename.replace(/\.(sql|parquet)$/i, "");
-  return base.replace(/_\d+$/, "");
+export function formatRows(n: number): string {
+  return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(n);
 }
 
 export function formatCell(v: unknown, nullDisplay = "—"): string {

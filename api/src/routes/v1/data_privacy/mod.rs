@@ -65,7 +65,7 @@ async fn unprotect_account(pg_client: &sqlx::Pool<sqlx::Postgres>, steam_id: u32
     Ok(())
 }
 
-async fn update_row_policy(
+pub(crate) async fn update_row_policy(
     pg_client: &sqlx::Pool<sqlx::Postgres>,
     ch_client: &clickhouse::Client,
 ) -> APIResult<()> {
@@ -94,10 +94,10 @@ async fn update_row_policy(
         .join(", ");
     let policy_queries = [
         format!(
-            "CREATE ROW POLICY OR REPLACE gdpr_protection_mp ON match_player AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user"
+            "CREATE ROW POLICY OR REPLACE gdpr_protection_mp ON match_player AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user, dump_user"
         ),
         format!(
-            "CREATE ROW POLICY OR REPLACE gdpr_protection_sp ON steam_profiles AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user"
+            "CREATE ROW POLICY OR REPLACE gdpr_protection_sp ON steam_profiles AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user, dump_user"
         ),
     ];
     for policy_query in &policy_queries {
@@ -127,6 +127,11 @@ pub(crate) async fn request_deletion(
     }
     protect_account(&state.pg_client, steam_id).await?;
     update_row_policy(&state.pg_client, &state.ch_client).await?;
+    tokio::spawn(crate::services::data_dump::queue_account_scrub(
+        state.redis_client.clone(),
+        state.ch_client.clone(),
+        steam_id,
+    ));
     Ok(())
 }
 

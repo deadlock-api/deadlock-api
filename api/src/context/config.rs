@@ -146,22 +146,70 @@ pub(super) struct PostgresConfig {
     pub(super) pool_size: u32,
 }
 
-/// Public parquet dumps the MCP server queries. The bucket is world-readable, so
-/// requests are sent unsigned.
+/// Public data lake the MCP server queries: the `manifest.json` written by
+/// `services::data_dump` lists every parquet file per table.
 #[derive(Deserialize, Debug, Clone)]
 #[serde(default)]
 pub(crate) struct McpSnapshotConfig {
-    pub(crate) endpoint: String,
-    pub(crate) bucket: String,
-    pub(crate) prefix: String,
+    pub(crate) manifest_url: String,
 }
 
 impl Default for McpSnapshotConfig {
     fn default() -> Self {
         Self {
-            endpoint: "https://s3-cache.deadlock-api.com".to_owned(),
-            bucket: "db-snapshot".to_owned(),
-            prefix: "public/".to_owned(),
+            manifest_url: "https://data.deadlock-api.com/v1/manifest.json".to_owned(),
+        }
+    }
+}
+
+/// Hourly dump of the public tables to the R2 data lake (`services::data_dump`).
+/// Env prefix `DATA_DUMP_`; disabled unless `DATA_DUMP_ENABLED=true`.
+#[derive(Deserialize, Debug, Clone)]
+#[serde(default)]
+pub(crate) struct DataDumpConfig {
+    pub(crate) enabled: bool,
+    /// R2 bucket the lake lives in and the R2 token that may write to it (the `R2_*` token
+    /// is scoped to other buckets).
+    pub(crate) bucket: String,
+    pub(crate) access_key_id: String,
+    pub(crate) secret_access_key: String,
+    /// Public base URL of the bucket (custom domain), no trailing slash.
+    pub(crate) public_url: String,
+    /// Key prefix inside the bucket; bump it for an incompatible layout change.
+    pub(crate) prefix: String,
+    /// `ClickHouse` named collection holding the same R2 credentials for `INSERT INTO FUNCTION s3`.
+    pub(crate) named_collection: String,
+    /// `ClickHouse` user that reads the `dump.*` views.
+    pub(crate) username: String,
+    pub(crate) password: String,
+    /// Rows younger than this are left for the next tick (inserts still in flight).
+    pub(crate) lag_secs: u64,
+    /// Partition rebuilds per hourly tick (~5.5 GiB each for `match_player`).
+    pub(crate) rebuild_per_tick: usize,
+    /// Hourly deltas older than this are folded into one residual per day.
+    pub(crate) fold_after_secs: i64,
+    /// Every partition is rebuilt at least this often (self-healing rolling refresh).
+    pub(crate) max_base_age_secs: i64,
+    pub(crate) lease_ttl_secs: u64,
+}
+
+impl Default for DataDumpConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            bucket: "deadlock-data-lake".to_owned(),
+            access_key_id: String::new(),
+            secret_access_key: String::new(),
+            public_url: "https://data.deadlock-api.com".to_owned(),
+            prefix: "v1".to_owned(),
+            named_collection: "r2_dump".to_owned(),
+            username: "dump_user".to_owned(),
+            password: String::new(),
+            lag_secs: 600,
+            rebuild_per_tick: 2,
+            fold_after_secs: 24 * 3600,
+            max_base_age_secs: 30 * 24 * 3600,
+            lease_ttl_secs: 15 * 60,
         }
     }
 }
@@ -193,6 +241,8 @@ pub(crate) struct Config {
     pub(crate) game_server_secret: String,
     #[serde(default)]
     pub(crate) mcp_snapshot: McpSnapshotConfig,
+    #[serde(default)]
+    pub(crate) data_dump: DataDumpConfig,
 }
 
 impl Config {

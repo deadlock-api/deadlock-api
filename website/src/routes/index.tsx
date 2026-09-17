@@ -70,7 +70,7 @@ const valueProps = [
     label: "Open Data",
     href: "/data-dumps",
     icon: Database,
-    title: "Daily Data Dumps provided",
+    title: "Hourly-updated public data lake",
     external: false,
   },
   {
@@ -115,8 +115,8 @@ const services = [
     cta: "View Live Events API",
   },
   {
-    title: "Database Dumps",
-    description: "Download up-to-date database snapshots for offline analysis or research.",
+    title: "Data Lake",
+    description: "Query or download the hourly-updated public data lake for offline analysis or research.",
     href: "/data-dumps",
     icon: HardDrive,
     external: false,

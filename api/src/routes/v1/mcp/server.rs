@@ -21,8 +21,8 @@ Read-only SQL access to hourly parquet snapshots of the Deadlock API database (h
 - Database `deadlock`, schema `main`; unqualified table names resolve there.
 - Engine: DuckDB (DuckDB SQL dialect). The database is attached read-only: CREATE, INSERT, UPDATE, DELETE, DROP, SET and extension loading fail.
 - Results are capped at 1,024 rows and 50 KB per query; queries time out after 300 seconds.
-- Table comments carry the ClickHouse engine, partition and ordering keys; column comments carry the original ClickHouse type.
-- `match_player` and the `player_match_*` tables hold hundreds of gigabytes: always filter on their ordering columns (`match_id`, `account_id`, `start_time`), select only needed columns and use LIMIT.
+- Column comments carry the original ClickHouse type. Table comments say how the table is exported.
+- `match_player` holds hundreds of gigabytes: always filter on `match_id` / `account_id` / `start_time`, select only needed columns and use LIMIT. It is exported incrementally, so up to ~2% of rows can appear twice with different `created_at`; when it matters keep the newest `created_at` per (`match_id`, `account_id`).
 - Schema exploration: `SHOW TABLES`, `DESCRIBE match_player`, `SUMMARIZE heroes`, `duckdb_columns()`.
 - DuckDB extras: `SELECT * EXCLUDE (col)`, `GROUP BY ALL`, `QUALIFY`, `arg_max(x, y)`, list/struct literals, `strftime`/`date_trunc`.";
 

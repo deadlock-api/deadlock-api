@@ -17,6 +17,7 @@ use crate::context::config::Config;
 use crate::routes::v1::mcp::{CatalogError, SnapshotCatalog};
 use crate::services::assets::client::AssetsClient;
 use crate::services::assets::versions::store::VersionStore;
+use crate::services::data_dump::DataDump;
 use crate::services::rate_limiter::RateLimitClient;
 use crate::services::request_logger::RequestLogger;
 use crate::services::steam::client::SteamClient;
@@ -361,6 +362,49 @@ impl AppState {
         debug!("Creating MCP snapshot catalog");
         let mcp_catalog = Arc::new(SnapshotCatalog::new(&config.mcp_snapshot)?);
         mcp_catalog.clone().spawn_refresh_loop();
+
+        // Hourly public data-lake dump. Only one replica works at a time (redis lease).
+        if config.data_dump.enabled {
+            debug!("Starting data dump");
+            let lake_store = AmazonS3Builder::new()
+                .with_region("auto")
+                .with_bucket_name(&config.data_dump.bucket)
+                .with_access_key_id(&config.data_dump.access_key_id)
+                .with_secret_access_key(&config.data_dump.secret_access_key)
+                .with_endpoint(config.r2.endpoint())
+                .with_retry(RetryConfig {
+                    backoff: BackoffConfig {
+                        init_backoff: Duration::from_millis(200),
+                        max_backoff: Duration::from_secs(3),
+                        base: 2.,
+                    },
+                    max_retries: 3,
+                    retry_timeout: Duration::from_mins(3),
+                })
+                .build()?;
+            let ch_client_dump = clickhouse::Client::default()
+                .with_url(format!(
+                    "http://{}:{}",
+                    config.clickhouse.host, config.clickhouse.http_port
+                ))
+                .with_user(&config.data_dump.username)
+                .with_password(&config.data_dump.password)
+                .with_database("dump")
+                // Exports run for up to two hours; keep the HTTP connection busy meanwhile.
+                .with_setting("send_progress_in_http_headers", "1")
+                .with_setting("http_headers_progress_interval_ms", "10000")
+                .with_setting("wait_end_of_query", "1");
+            DataDump {
+                config: config.data_dump.clone(),
+                ch_dump: ch_client_dump,
+                ch_admin: ch_client.clone(),
+                pg: pg_client.clone(),
+                redis: redis_client.clone(),
+                store: Arc::new(lake_store),
+                work_dir: std::env::temp_dir().join("deadlock-data-dump"),
+            }
+            .spawn();
+        }
 
         Ok(Self {
             config,

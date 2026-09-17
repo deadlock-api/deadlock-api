@@ -16,7 +16,6 @@ use crate::SHUTDOWN_TOKEN;
 use crate::context::AppState;
 
 mod catalog;
-mod ddl;
 mod format;
 mod server;
 
