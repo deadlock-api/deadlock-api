@@ -81,6 +81,16 @@ pub(crate) struct Column {
     pub(crate) name: String,
     #[serde(rename = "type")]
     pub(crate) ch_type: String,
+    /// Comment of the base table column, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) comment: Option<String>,
+}
+
+impl Column {
+    /// What readers depend on: a comment change is not a schema change.
+    pub(crate) fn shape(&self) -> (&str, &str) {
+        (&self.name, &self.ch_type)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -274,6 +284,7 @@ mod tests {
             vec![Column {
                 name: "match_id".to_owned(),
                 ch_type: "UInt64".to_owned(),
+                comment: None,
             }],
         );
         table.files.push(FileEntry {

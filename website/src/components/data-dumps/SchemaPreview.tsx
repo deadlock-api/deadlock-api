@@ -1,6 +1,7 @@
 import type { ColumnInfo } from "./types";
 
 export function SchemaPreview({ columns }: { columns: ColumnInfo[] }) {
+  const hasComments = columns.some((c) => c.comment);
   return (
     <div className="max-h-72 overflow-auto rounded-md border border-white/[0.06] bg-black/40">
       <table className="w-full text-[11px]">
@@ -8,6 +9,7 @@ export function SchemaPreview({ columns }: { columns: ColumnInfo[] }) {
           <tr>
             <th className="px-3 py-1.5 font-medium">Column</th>
             <th className="px-3 py-1.5 font-medium">ClickHouse type</th>
+            {hasComments && <th className="px-3 py-1.5 font-medium">Comment</th>}
           </tr>
         </thead>
         <tbody>
@@ -15,6 +17,7 @@ export function SchemaPreview({ columns }: { columns: ColumnInfo[] }) {
             <tr key={c.name} className="border-t border-white/[0.04]">
               <td className="px-3 py-1 font-mono whitespace-nowrap text-foreground">{c.name}</td>
               <td className="px-3 py-1 font-mono break-all text-muted-foreground">{c.type}</td>
+              {hasComments && <td className="px-3 py-1 text-muted-foreground">{c.comment ?? ""}</td>}
             </tr>
           ))}
         </tbody>

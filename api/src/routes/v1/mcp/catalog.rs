@@ -214,7 +214,14 @@ impl SnapshotCatalog {
                     column_types: t
                         .columns
                         .iter()
-                        .map(|c| (c.name.clone(), c.ch_type.clone()))
+                        .map(|c| {
+                            let mut text = format!("ClickHouse type: {}", c.ch_type);
+                            if let Some(comment) = &c.comment {
+                                text.push_str(". ");
+                                text.push_str(comment);
+                            }
+                            (c.name.clone(), text)
+                        })
                         .collect(),
                 };
                 (name.clone(), table)
@@ -358,7 +365,7 @@ fn build_database(
                 conn.execute_batch(&format!(
                     "COMMENT ON COLUMN {view}.{} IS {}",
                     sql_ident(column),
-                    sql_str(&format!("ClickHouse type: {ch_type}"))
+                    sql_str(ch_type)
                 ))?;
             }
         }

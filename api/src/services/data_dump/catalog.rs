@@ -71,6 +71,19 @@ pub(crate) fn build(dir: &Path, manifest: &Manifest) -> Result<BuiltCatalog, Dum
                 sql_str(&manifest.url(&file.key))
             ))?;
         }
+        for column in table.columns.iter().filter(|c| c.comment.is_some()) {
+            let sql = format!(
+                "COMMENT ON COLUMN lake.{ident}.{} IS {};",
+                sql_ident(&column.name),
+                sql_str(column.comment.as_deref().unwrap_or_default())
+            );
+            if let Err(e) = conn.execute_batch(&sql) {
+                warn!(
+                    "data dump: could not comment column {name}.{}: {e}",
+                    column.name
+                );
+            }
+        }
         if table.policy == PolicyKind::Incremental
             && let Some(watermark) = &table.watermark
             && files.iter().any(|f| f.kind != FileKind::Base)

@@ -3,6 +3,7 @@ export const SQL_PLAYGROUND_DEFAULT_QUERY = "SELECT region, count(*) AS entries 
 export interface ColumnInfo {
   name: string;
   type: string;
+  comment?: string;
 }
 
 export interface PlaygroundTable {

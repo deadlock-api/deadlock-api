@@ -27,9 +27,14 @@ fn target(named_collection: &str, key: &str) -> String {
     format!("s3({named_collection}, filename = {})", quote(key))
 }
 
+/// Columns of the `dump` view with the comment of the same-named base table column (views
+/// do not carry column comments).
 pub(crate) fn columns(table: &str) -> String {
     format!(
-        "SELECT name, type FROM system.columns WHERE database = 'dump' AND table = {} ORDER BY position",
+        "SELECT v.name AS name, v.type AS type, b.comment AS comment \
+         FROM system.columns AS v \
+         LEFT JOIN system.columns AS b ON b.database = 'default' AND b.table = v.table AND b.name = v.name \
+         WHERE v.database = 'dump' AND v.table = {} ORDER BY v.position",
         quote(table)
     )
 }
@@ -199,6 +204,6 @@ mod tests {
     #[test]
     fn quoting_escapes_single_quotes() {
         assert_eq!(quote("a'b"), "'a\\'b'");
-        assert!(columns("t").contains("table = 't'"));
+        assert!(columns("t").contains("v.table = 't'"));
     }
 }

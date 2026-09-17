@@ -301,6 +301,7 @@ impl DataDump {
             name: String,
             #[serde(rename = "type")]
             ch_type: String,
+            comment: String,
         }
         Ok(exporter
             .ch
@@ -311,6 +312,7 @@ impl DataDump {
             .map(|c| Column {
                 name: c.name,
                 ch_type: c.ch_type,
+                comment: (!c.comment.is_empty()).then_some(c.comment),
             })
             .collect())
     }
@@ -390,8 +392,10 @@ impl DataDump {
         if state.generation == 0 && state.building.is_none() {
             state.building = Some(1);
         }
-        if columns != state.columns {
-            let additive = state.columns.iter().all(|c| columns.contains(c));
+        let old_shape: Vec<_> = state.columns.iter().map(Column::shape).collect();
+        let new_shape: Vec<_> = columns.iter().map(Column::shape).collect();
+        if new_shape != old_shape {
+            let additive = old_shape.iter().all(|c| new_shape.contains(c));
             if additive {
                 info!(
                     "data dump: {name} gained columns; keeping generation {}",
@@ -407,8 +411,8 @@ impl DataDump {
                     state.building
                 );
             }
-            state.columns = columns;
         }
+        state.columns = columns;
         let generations: Vec<u32> = (state.generation > 0)
             .then_some(state.generation)
             .into_iter()
