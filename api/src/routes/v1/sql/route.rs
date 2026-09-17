@@ -119,6 +119,10 @@ enum SQLQueryError {
     tags = ["SQL"],
     summary = "Query",
     description = "
+**Deprecated.** Direct SQL access will be removed. Use the public data lake at
+https://data.deadlock-api.com (DuckDB / DuckLake, or the MCP server at `/v1/mcp`) instead;
+see https://deadlock-api.com/data-dumps.
+
 Executes a SQL query on the database.
 
 ### Rate Limits:
@@ -128,6 +132,9 @@ Executes a SQL query on the database.
 | Key | 10req/min |
 | Global | 30req/min |
     "
+)]
+#[deprecated(
+    note = "use the public data lake at https://data.deadlock-api.com (DuckDB, MCP at /v1/mcp) instead"
 )]
 pub(super) async fn sql(
     rate_limit_key: RateLimitKey,
@@ -202,6 +209,10 @@ async fn run_sql(
     tags = ["SQL"],
     summary = "List Tables",
     description = "
+**Deprecated.** Direct SQL access will be removed. Use the public data lake at
+https://data.deadlock-api.com (DuckDB / DuckLake, or the MCP server at `/v1/mcp`) instead;
+see https://deadlock-api.com/data-dumps.
+
 Lists all tables in the database.
 
 ### Rate Limits:
@@ -211,6 +222,9 @@ Lists all tables in the database.
 | Key | - |
 | Global | 60req/min |
     "
+)]
+#[deprecated(
+    note = "use the public data lake at https://data.deadlock-api.com (DuckDB, MCP at /v1/mcp) instead"
 )]
 pub(super) async fn list_tables(
     rate_limit_key: RateLimitKey,
@@ -272,6 +286,10 @@ async fn fetch_list_tables(
     tags = ["SQL"],
     summary = "Table Schema",
     description = "
+**Deprecated.** Direct SQL access will be removed. Use the public data lake at
+https://data.deadlock-api.com (DuckDB / DuckLake, or the MCP server at `/v1/mcp`) instead;
+see https://deadlock-api.com/data-dumps.
+
 Returns the schema of a table.
 
 ### Rate Limits:
@@ -281,6 +299,9 @@ Returns the schema of a table.
 | Key | - |
 | Global | 60req/min |
     "
+)]
+#[deprecated(
+    note = "use the public data lake at https://data.deadlock-api.com (DuckDB, MCP at /v1/mcp) instead"
 )]
 pub(super) async fn table_schema(
     rate_limit_key: RateLimitKey,

@@ -8,11 +8,12 @@ use crate::context::AppState;
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "SQL", description = "
-Database exploration endpoints for direct SQL access.
-Provides functionality to execute custom SQL queries with rate limiting protection, list available tables, and inspect table schemas.
+**Deprecated.** Direct SQL access will be removed. Query the public data lake instead:
+https://data.deadlock-api.com (DuckDB / DuckLake) or the MCP server at `/v1/mcp`, see https://deadlock-api.com/data-dumps.
 ")))]
 struct ApiDoc;
 
+#[expect(deprecated)]
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(route::sql))
