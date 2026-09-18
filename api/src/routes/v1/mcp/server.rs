@@ -5,7 +5,7 @@ use rmcp::handler::server::tool::parse_json_object;
 use rmcp::model::{
     CallToolRequestParams, CallToolResponse, CallToolResult, ContentBlock, ErrorData,
     Implementation, JsonObject, ListToolsResult, PaginatedRequestParams, ServerCapabilities,
-    ServerInfo, Tool, ToolAnnotations, object,
+    ServerConfig, Tool, ToolAnnotations, object,
 };
 use rmcp::service::{RequestContext, RoleServer};
 use serde::{Deserialize, Serialize};
@@ -31,8 +31,8 @@ pub(super) struct McpServer {
 }
 
 impl ServerHandler for McpServer {
-    fn get_info(&self) -> ServerInfo {
-        ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
+    fn get_info(&self) -> ServerConfig {
+        ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
             .with_server_info(
                 Implementation::new("deadlock-api", env!("CARGO_PKG_VERSION"))
                     .with_title("Deadlock API")
