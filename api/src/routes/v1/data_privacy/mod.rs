@@ -80,6 +80,7 @@ pub(crate) async fn update_row_policy(
         let drop_queries = [
             "DROP ROW POLICY IF EXISTS gdpr_protection_mp ON match_player",
             "DROP ROW POLICY IF EXISTS gdpr_protection_sp ON steam_profiles",
+            "DROP ROW POLICY IF EXISTS gdpr_protection_spon ON steam_profile_observed_names",
         ];
         for query in drop_queries {
             ch_client.query(query).execute().await?;
@@ -98,6 +99,9 @@ pub(crate) async fn update_row_policy(
         ),
         format!(
             "CREATE ROW POLICY OR REPLACE gdpr_protection_sp ON steam_profiles AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user, dump_user"
+        ),
+        format!(
+            "CREATE ROW POLICY OR REPLACE gdpr_protection_spon ON steam_profile_observed_names AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user, dump_user"
         ),
     ];
     for policy_query in &policy_queries {

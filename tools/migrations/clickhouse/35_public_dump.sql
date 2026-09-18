@@ -5,8 +5,9 @@
 -- Views are SQL SECURITY INVOKER so the GDPR row policies (maintained by the API in
 -- routes/v1/data_privacy) filter protected accounts for the dump user as well.
 --
--- Materialized columns are intentionally not published (parity with the previous dump), and
--- stats.custom_user_stats is left out: it is ~40% of every match_player file and barely compresses.
+-- Materialized columns are intentionally not published (parity with the previous dump).
+-- New columns go at the END of a view: appending is an additive change the dump handles
+-- without a rebuild (older files read as NULL), anything else opens a new generation.
 --
 -- The named collection holding the R2 credentials is created by hand, not here:
 --   CREATE NAMED COLLECTION r2_dump AS
@@ -176,7 +177,8 @@ SELECT
     `hero_xp_rewards.hero_id`,
     `hero_xp_rewards.xp_grant`,
     `hero_xp_rewards.reason`,
-    `average_badge`
+    `average_badge`,
+    `stats.custom_user_stats`
 FROM default.match_player;
 
 CREATE OR REPLACE VIEW dump.match_salts SQL SECURITY INVOKER AS
@@ -225,12 +227,21 @@ SELECT
     `friends.friend_since`
 FROM default.steam_profiles;
 
+CREATE OR REPLACE VIEW dump.steam_profile_observed_names SQL SECURITY INVOKER AS
+SELECT
+    `account_id`,
+    `observed_name`,
+    `match_id`,
+    `observed_at`
+FROM default.steam_profile_observed_names;
+
 GRANT SELECT ON dump.* TO dump_user;
 GRANT SELECT ON default.match_player TO dump_user;
 GRANT SELECT ON default.match_salts TO dump_user;
 GRANT SELECT ON default.leaderboard TO dump_user;
 GRANT SELECT ON default.hero_leaderboard TO dump_user;
 GRANT SELECT ON default.steam_profiles TO dump_user;
+GRANT SELECT ON default.steam_profile_observed_names TO dump_user;
 GRANT S3 ON *.* TO dump_user;
 -- Table functions materialize through a temporary table.
 GRANT CREATE TEMPORARY TABLE ON *.* TO dump_user;

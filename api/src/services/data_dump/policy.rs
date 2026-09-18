@@ -44,4 +44,8 @@ pub(crate) const TABLES: &[TablePolicy] = &[
         name: "steam_profiles",
         policy: Policy::Snapshot,
     },
+    TablePolicy {
+        name: "steam_profile_observed_names",
+        policy: Policy::Snapshot,
+    },
 ];
