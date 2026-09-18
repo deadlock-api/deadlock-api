@@ -23,6 +23,8 @@ export interface ManifestFile {
   hi?: number;
   rows: number;
   bytes: number;
+  /** Table schema_version the file was exported with. */
+  schema_version?: number;
   built_at: string;
 }
 
@@ -35,6 +37,8 @@ export interface ManifestTable {
   generation?: number;
   building?: number;
   watermark_hi?: number;
+  /** Bumped on every column change; files behind it lack the newest columns. */
+  schema_version?: number;
   files: ManifestFile[];
 }
 

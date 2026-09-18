@@ -44,4 +44,10 @@ pub(crate) const TABLES: &[TablePolicy] = &[
         name: "steam_profiles",
         policy: Policy::Snapshot,
     },
+    // `observed_at` is the start time of the match the name was seen in, not the insert time,
+    // so it cannot serve as a watermark; the table is small enough for hourly snapshots.
+    TablePolicy {
+        name: "steam_profile_observed_names",
+        policy: Policy::Snapshot,
+    },
 ];

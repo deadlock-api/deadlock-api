@@ -346,7 +346,7 @@ impl DataDump {
             .tables
             .entry(table.name.to_owned())
             .or_insert_with(|| TableState::new(PolicyKind::Snapshot, Vec::new()));
-        state.columns = columns;
+        state.set_columns(columns);
         state.status = TableStatus::Ready;
         state.watermark_hi = Some(now_hi);
         state.files = vec![FileEntry {
@@ -359,6 +359,7 @@ impl DataDump {
             rows: written.rows,
             bytes: written.bytes,
             rows_by_partition: BTreeMap::new(),
+            schema_version: state.schema_version,
             built_at: Utc::now(),
         }];
         Ok(())
@@ -397,8 +398,10 @@ impl DataDump {
         if new_shape != old_shape {
             let additive = old_shape.iter().all(|c| new_shape.contains(c));
             if additive {
+                // Old files stay readable (the new columns read as NULL); the bases are
+                // rebuilt one by one (`Reason::Schema`) until every partition carries them.
                 info!(
-                    "data dump: {name} gained columns; keeping generation {}",
+                    "data dump: {name} gained columns; keeping generation {} and rebuilding its bases",
                     state.generation
                 );
             } else if state.building.is_none() {
@@ -412,7 +415,7 @@ impl DataDump {
                 );
             }
         }
-        state.columns = columns;
+        state.set_columns(columns);
         let generations: Vec<u32> = (state.generation > 0)
             .then_some(state.generation)
             .into_iter()
@@ -454,6 +457,7 @@ impl DataDump {
                                 rows: written.rows,
                                 bytes: written.bytes,
                                 rows_by_partition,
+                                schema_version: state.schema_version,
                                 built_at: Utc::now(),
                             });
                         }
@@ -522,6 +526,7 @@ impl DataDump {
                         rows: written.rows,
                         bytes: written.bytes,
                         rows_by_partition,
+                        schema_version: state.schema_version,
                         built_at: Utc::now(),
                     });
                 }
@@ -577,6 +582,7 @@ impl DataDump {
                     rows: written.rows,
                     bytes: written.bytes,
                     rows_by_partition: BTreeMap::new(),
+                    schema_version: state.schema_version,
                     built_at: Utc::now(),
                 });
             }

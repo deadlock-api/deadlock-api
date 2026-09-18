@@ -115,6 +115,11 @@ pub(crate) struct TableState {
     /// `watermark <= watermark_hi` are covered by the published files.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) watermark_hi: Option<i64>,
+    /// Bumped whenever the shape of `columns` (names and types) changes. Every file records
+    /// the version it was exported with; bases behind it are rebuilt until every published
+    /// partition carries the current columns.
+    #[serde(default)]
+    pub(crate) schema_version: u32,
     #[serde(default)]
     pub(crate) files: Vec<FileEntry>,
 }
@@ -130,8 +135,24 @@ impl TableState {
             generation: 0,
             building: None,
             watermark_hi: None,
+            schema_version: 0,
             files: Vec::new(),
         }
+    }
+
+    /// Records the view's current columns. `schema_version` is bumped when their shape
+    /// differs from the recorded one, and once for tables written before files carried a
+    /// schema version: nothing is known about the shape of those, so every base is rebuilt.
+    pub(crate) fn set_columns(&mut self, columns: Vec<Column>) {
+        let changed = self
+            .columns
+            .iter()
+            .map(Column::shape)
+            .ne(columns.iter().map(Column::shape));
+        if changed || self.schema_version == 0 {
+            self.schema_version += 1;
+        }
+        self.columns = columns;
     }
 
     pub(crate) fn base(&self, generation: u32, partition: u64) -> Option<&FileEntry> {
@@ -201,6 +222,9 @@ pub(crate) struct FileEntry {
     /// a rebuild and when the file is fully covered.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(crate) rows_by_partition: BTreeMap<u64, u64>,
+    /// [`TableState::schema_version`] the file was exported with.
+    #[serde(default)]
+    pub(crate) schema_version: u32,
     pub(crate) built_at: DateTime<Utc>,
 }
 
@@ -297,6 +321,7 @@ mod tests {
             rows: 3,
             bytes: 100,
             rows_by_partition: BTreeMap::from([(5, 3)]),
+            schema_version: 1,
             built_at: Utc::now(),
         });
         manifest.tables.insert("match_player".to_owned(), table);
@@ -312,5 +337,37 @@ mod tests {
             manifest.url("v1/x.parquet"),
             "https://data.example.com/v1/x.parquet"
         );
+    }
+
+    #[test]
+    fn schema_version_bumps_on_shape_changes_only() {
+        let column = |name: &str, ch_type: &str, comment: Option<&str>| Column {
+            name: name.to_owned(),
+            ch_type: ch_type.to_owned(),
+            comment: comment.map(str::to_owned),
+        };
+        // A table from a manifest written before schema versions existed.
+        let mut table = TableState::new(PolicyKind::Incremental, vec![column("a", "UInt8", None)]);
+        assert_eq!(table.schema_version, 0);
+        table.set_columns(vec![column("a", "UInt8", None)]);
+        assert_eq!(table.schema_version, 1);
+        // Same shape, new comment: no change.
+        table.set_columns(vec![column("a", "UInt8", Some("doc"))]);
+        assert_eq!(table.schema_version, 1);
+        // Gained a column.
+        table.set_columns(vec![
+            column("a", "UInt8", None),
+            column("b", "String", None),
+        ]);
+        assert_eq!(table.schema_version, 2);
+        // Changed a type.
+        table.set_columns(vec![
+            column("a", "UInt16", None),
+            column("b", "String", None),
+        ]);
+        assert_eq!(table.schema_version, 3);
+        let json = serde_json::to_string(&table).unwrap();
+        let back: TableState = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.schema_version, 3);
     }
 }

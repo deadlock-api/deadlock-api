@@ -23,6 +23,8 @@ pub(crate) struct Params {
 pub(crate) enum Reason {
     Forced,
     Missing,
+    /// The base predates the table's current column set (see `TableState::schema_version`).
+    Schema,
     Pending,
     Drift,
     Rolling,
@@ -73,6 +75,18 @@ pub(crate) fn plan_rebuilds(
         if table.base(generation, p).is_none() {
             push(p, Reason::Missing);
         }
+    }
+    // Bases exported before the last column change lack the new columns; oldest first.
+    let mut by_schema: Vec<(Option<i64>, u64)> = actual
+        .keys()
+        .filter_map(|&p| {
+            let base = table.base(generation, p)?;
+            (base.schema_version < table.schema_version).then_some((base.hi, p))
+        })
+        .collect();
+    by_schema.sort_unstable();
+    for (_, p) in by_schema {
+        push(p, Reason::Schema);
     }
     // Largest backlog first so hot partitions never starve behind cold ones.
     let mut by_pending: Vec<(u64, u64, u64)> = actual
@@ -197,6 +211,7 @@ mod tests {
             } else {
                 BTreeMap::from([(partition.unwrap_or(0), rows)])
             },
+            schema_version: 1,
             built_at: Utc::now(),
         }
     }
@@ -204,8 +219,73 @@ mod tests {
     fn table(files: Vec<FileEntry>) -> TableState {
         let mut t = TableState::new(PolicyKind::Incremental, vec![]);
         t.generation = 1;
+        t.schema_version = 1;
         t.files = files;
         t
+    }
+
+    #[test]
+    fn bases_behind_the_schema_version_are_rebuilt_after_missing_ones() {
+        let mut t = table(vec![
+            file(FileKind::Base, Some(1), 0, 300, 10),
+            file(FileKind::Base, Some(2), 0, 100, 10),
+            file(FileKind::Base, Some(3), 0, 200, 10),
+        ]);
+        let actual = BTreeMap::from([(1, 10), (2, 10), (3, 10), (4, 10)]);
+        let plan = plan_rebuilds(&t, 1, &actual, &BTreeSet::new(), 300, &params());
+        assert_eq!(
+            plan,
+            vec![Rebuild {
+                partition: 4,
+                reason: Reason::Missing
+            }]
+        );
+
+        // The view gained a column: every base is behind, oldest first, after the missing one.
+        t.schema_version = 2;
+        let plan = plan_rebuilds(
+            &t,
+            1,
+            &actual,
+            &BTreeSet::new(),
+            300,
+            &Params {
+                budget: 10,
+                ..params()
+            },
+        );
+        assert_eq!(
+            plan,
+            vec![
+                Rebuild {
+                    partition: 4,
+                    reason: Reason::Missing
+                },
+                Rebuild {
+                    partition: 2,
+                    reason: Reason::Schema
+                },
+                Rebuild {
+                    partition: 3,
+                    reason: Reason::Schema
+                },
+                Rebuild {
+                    partition: 1,
+                    reason: Reason::Schema
+                },
+            ]
+        );
+        // Rebuilt bases carry the new version and drop out of the plan.
+        for f in &mut t.files {
+            if f.partition == Some(2) {
+                f.schema_version = 2;
+            }
+        }
+        let plan = plan_rebuilds(&t, 1, &actual, &BTreeSet::new(), 300, &params());
+        assert_eq!(
+            plan.iter().map(|r| r.partition).collect::<Vec<_>>(),
+            vec![4, 3]
+        );
     }
 
     #[test]
