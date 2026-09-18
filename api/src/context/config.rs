@@ -206,7 +206,7 @@ impl Default for DataDumpConfig {
             username: "dump_user".to_owned(),
             password: String::new(),
             lag_secs: 600,
-            rebuild_per_tick: 2,
+            rebuild_per_tick: 10,
             fold_after_secs: 24 * 3600,
             max_base_age_secs: 30 * 24 * 3600,
             lease_ttl_secs: 15 * 60,
