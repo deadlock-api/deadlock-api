@@ -346,10 +346,13 @@ fn player_columns(query: &BulkMatchMetadataQuery) -> Vec<(String, String)> {
     if query.include_player_death_details {
         names.push("death_details");
     }
+    // A tuple rejects repeated element names, so an extra column the flags already select
+    // (or one listed twice) is dropped rather than failing the whole query.
     names
         .into_iter()
         .map(|name| (name.to_owned(), name.to_owned()))
         .chain(extra_player_columns)
+        .unique_by(|(_, alias)| alias.clone())
         .collect()
 }
 
@@ -536,8 +539,17 @@ fn build_query(
         select_fields.push("any(objectives) as objectives".to_owned());
     }
     if let Some(extra_match_columns) = &query.extra_match_columns {
+        // `match_id` and `players` are always reserved; the rest are whatever the flags selected.
+        let mut selected_names: HashSet<String> = select_fields
+            .iter()
+            .filter_map(|field| field.rsplit_once(" as ").map(|(_, alias)| alias.to_owned()))
+            .chain(["match_id".to_owned(), "players".to_owned()])
+            .collect();
         for col in extra_match_columns {
             let alias = col.replace('.', "_");
+            if !selected_names.insert(alias.clone()) {
+                continue;
+            }
             let quoted = quote_extra_column(col);
             select_fields.push(format!("any({quoted}) as `{alias}`"));
         }
@@ -971,6 +983,58 @@ mod proptests {
         .expect("query should build");
         assert!(sql.contains("t_matches AS (SELECT match_id FROM match_player WHERE"));
         assert!(!sql.contains("FROM player_match_stats"));
+    }
+
+    #[test]
+    fn extra_player_columns_already_selected_are_dropped() {
+        let query = BulkMatchMetadataQuery {
+            include_player_info: true,
+            extra_player_columns: Some(vec![
+                "hero_id".to_owned(),
+                "player_rank_initial_display_rank".to_owned(),
+                "stats.player_damage".to_owned(),
+                "stats.player_damage".to_owned(),
+            ]),
+            limit: 50,
+            ..BulkMatchMetadataQuery::default()
+        };
+        let aliases = player_columns(&query)
+            .into_iter()
+            .map(|(_, alias)| alias)
+            .collect_vec();
+        assert_eq!(aliases.iter().unique().count(), aliases.len());
+        assert_eq!(
+            aliases.last().map(String::as_str),
+            Some("stats_player_damage")
+        );
+
+        let sql = build_query(query, None).expect("query should build");
+        assert_valid_sql(&sql);
+        assert_eq!(sql.matches("player_rank_initial_display_rank").count(), 1);
+        assert_eq!(sql.matches("`stats`.`player_damage`").count(), 1);
+    }
+
+    #[test]
+    fn extra_match_columns_already_selected_are_dropped() {
+        let sql = build_query(
+            BulkMatchMetadataQuery {
+                include_info: true,
+                extra_match_columns: Some(vec![
+                    "match_id".to_owned(),
+                    "average_badge".to_owned(),
+                    "team_score".to_owned(),
+                    "team_score".to_owned(),
+                ]),
+                limit: 50,
+                ..BulkMatchMetadataQuery::default()
+            },
+            None,
+        )
+        .expect("query should build");
+        assert_valid_sql(&sql);
+        assert!(!sql.contains("any(`match_id`)"));
+        assert!(!sql.contains("any(`average_badge`)"));
+        assert_eq!(sql.matches("any(`team_score`) as `team_score`").count(), 1);
     }
 
     #[test]
