@@ -23,7 +23,7 @@ pub(super) struct JsonScalar(pub serde_json::Value);
 async_graphql::scalar!(JsonScalar);
 
 #[derive(Clone, Debug, Default, Deserialize, SimpleObject)]
-#[graphql(rename_fields = "snake_case")]
+#[graphql(complex, rename_fields = "snake_case")]
 pub(super) struct Match {
     // Identity / schedule
     pub(super) match_id: Option<u64>,
@@ -115,6 +115,13 @@ pub(super) struct MatchPlayer {
     pub(super) player_level: Option<u32>,
     pub(super) abandon_match_time_s: Option<u32>,
     pub(super) mvp_rank: Option<u32>,
+    pub(super) won: Option<bool>,
+    pub(super) hero_xp: Option<u32>,
+    pub(super) hero_equips: Option<Vec<u64>>,
+    /// The `items.item_id` entries that are abilities.
+    pub(super) abilities: Option<Vec<u32>>,
+    /// When the row was ingested, as a unix timestamp.
+    pub(super) created_at: Option<i64>,
 
     // Materialized maxima
     pub(super) max_level: Option<u32>,
@@ -130,6 +137,30 @@ pub(super) struct MatchPlayer {
     pub(super) max_hero_bullets_hit_crit: Option<u32>,
     pub(super) max_shots_hit: Option<u32>,
     pub(super) max_shots_missed: Option<u32>,
+    pub(super) max_self_healing: Option<u32>,
+    pub(super) max_player_healing: Option<u32>,
+    pub(super) max_gold_player: Option<u32>,
+    pub(super) max_gold_player_orbs: Option<u32>,
+    pub(super) max_gold_lane_creep: Option<u32>,
+    pub(super) max_gold_lane_creep_orbs: Option<u32>,
+    pub(super) max_gold_neutral_creep: Option<u32>,
+    pub(super) max_gold_neutral_creep_orbs: Option<u32>,
+    pub(super) max_gold_boss: Option<u32>,
+    pub(super) max_gold_boss_orb: Option<u32>,
+    pub(super) max_gold_treasure: Option<u32>,
+    pub(super) max_gold_denied: Option<u32>,
+    pub(super) max_gold_death_loss: Option<u32>,
+    pub(super) max_damage_mitigated: Option<u32>,
+    pub(super) max_absorption_provided: Option<u32>,
+    pub(super) max_heal_prevented: Option<u32>,
+    pub(super) max_possible_creeps: Option<u32>,
+    pub(super) max_weapon_power: Option<u32>,
+    pub(super) max_tech_power: Option<u32>,
+    pub(super) max_teammate_healing: Option<u32>,
+    pub(super) max_teammate_barriering: Option<u32>,
+    /// The last `stats` snapshot of the match.
+    #[graphql(complexity = 50)]
+    pub(super) final_stats: Option<Stat>,
 
     // Player-level flags
     pub(super) rewards_eligible: Option<bool>,
@@ -153,6 +184,10 @@ pub(super) struct MatchPlayer {
 
     #[graphql(complexity = "20 + 5 * child_complexity")]
     pub(super) items: Option<Vec<Item>>,
+    /// The `items` entries that are purchased upgrade items (no abilities, no
+    /// starting items).
+    #[graphql(complexity = "20 + 5 * child_complexity")]
+    pub(super) upgrades: Option<Vec<UpgradePurchase>>,
     #[graphql(complexity = "20 + 5 * child_complexity")]
     pub(super) stats: Option<Vec<Stat>>,
     #[graphql(complexity = 100)]
@@ -258,6 +293,18 @@ pub(super) struct Item {
     pub(super) sold_time_s: Option<u32>,
     pub(super) flags: Option<u32>,
     pub(super) imbued_ability_id: Option<u32>,
+    pub(super) upgrade_info: Option<u32>,
+    /// The player's net worth in the last `stats` snapshot before the purchase.
+    pub(super) net_worth_at_buy: Option<u32>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, SimpleObject)]
+#[graphql(rename_fields = "snake_case")]
+pub(super) struct UpgradePurchase {
+    pub(super) item_id: Option<u32>,
+    pub(super) game_time_s: Option<u32>,
+    pub(super) sold_time_s: Option<u32>,
+    pub(super) net_worth_at_buy: Option<u32>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, SimpleObject)]
@@ -307,6 +354,7 @@ pub(super) struct Stat {
     pub(super) player_barriering: Option<u32>,
     pub(super) teammate_healing: Option<u32>,
     pub(super) teammate_barriering: Option<u32>,
+    pub(super) self_damage: Option<u32>,
     pub(super) bullet_kills: Option<u32>,
     pub(super) melee_kills: Option<u32>,
     pub(super) ability_kills: Option<u32>,

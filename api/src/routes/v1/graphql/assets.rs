@@ -1,6 +1,6 @@
 //! GraphQL enrichment resolvers: top-level `heroes`/`items`/`ranks` queries,
 //! nested `MatchPlayer.hero` / `Item.asset` asset enrichment, and the
-//! `MatchPlayer.steam` profile / `MatchPlayer.hero_build` enrichment.
+//! `MatchPlayer.steam` profile / `MatchPlayer.hero_build` / `salts` enrichment.
 
 use std::sync::Arc;
 
@@ -13,9 +13,10 @@ use crate::error::APIError;
 use crate::routes::v1::assets::common::{AssetsQuery, Language, load_localized};
 use crate::routes::v1::builds::structs::Build;
 use crate::routes::v1::graphql::builds::load_hero_build;
+use crate::routes::v1::graphql::salts::{MatchSalts, load_match_salts};
 use crate::routes::v1::graphql::schema::app_state;
 use crate::routes::v1::graphql::types::{
-    Item as GameplayItem, MatchHistoryEntry, MatchPlayer, SteamProfile,
+    Item as GameplayItem, Match, MatchHistoryEntry, MatchPlayer, SteamProfile,
 };
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::heroes::{Hero, fetch_heroes};
@@ -65,6 +66,18 @@ pub(super) async fn load_ranks(
 }
 
 #[ComplexObject(rename_fields = "snake_case")]
+impl Match {
+    /// Stored salts of this match (no on-demand Steam fetch). `null` when none
+    /// are stored.
+    async fn salts(&self, ctx: &Context<'_>) -> GqlResult<Option<MatchSalts>> {
+        let Some(match_id) = self.match_id else {
+            return Ok(None);
+        };
+        load_match_salts(app_state(ctx)?, match_id).await
+    }
+}
+
+#[ComplexObject(rename_fields = "snake_case")]
 impl MatchPlayer {
     /// Hero asset metadata for this player's `hero_id` (latest version, English).
     async fn hero(&self, ctx: &Context<'_>) -> GqlResult<Option<Hero>> {
@@ -93,6 +106,15 @@ impl MatchPlayer {
             return Ok(None);
         };
         load_hero_build(ctx, hero_id, build_id).await
+    }
+
+    /// Stored salts of this player's match (no on-demand Steam fetch). `null`
+    /// when none are stored.
+    async fn salts(&self, ctx: &Context<'_>) -> GqlResult<Option<MatchSalts>> {
+        let Some(match_id) = self.match_id else {
+            return Ok(None);
+        };
+        load_match_salts(app_state(ctx)?, match_id).await
     }
 }
 

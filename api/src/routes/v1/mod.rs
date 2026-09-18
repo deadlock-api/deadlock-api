@@ -10,7 +10,7 @@ pub mod builds;
 mod commands;
 pub(crate) mod data_privacy;
 mod feedback;
-mod graphql;
+pub(crate) mod graphql;
 pub mod info;
 mod leaderboard;
 pub mod matches;

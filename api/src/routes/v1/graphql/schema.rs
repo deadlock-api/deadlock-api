@@ -20,9 +20,11 @@ use crate::routes::v1::graphql::builds::{HeroBuildWhere, HeroBuildsArgs, load_he
 use crate::routes::v1::graphql::cost::{COMPLEXITY_LIMIT, DEPTH_LIMIT, MAX_LIMIT};
 use crate::routes::v1::graphql::filters::{MatchHistoryWhere, MatchPlayerWhere};
 use crate::routes::v1::graphql::metrics_ext::MetricsExtension;
+use crate::routes::v1::graphql::patches::{Patch, PatchWhere, load_patches};
 use crate::routes::v1::graphql::projection::{
     project_match_history, project_match_players, project_matches,
 };
+use crate::routes::v1::graphql::salts::{MatchSalts, MatchSaltsWhere, load_match_salts_page};
 use crate::routes::v1::graphql::sql::{
     BuildArgs, MatchHistoryBuildArgs, OrderDir, OrderKey, build_match_history_query,
     build_match_players_query, build_matches_query,
@@ -69,6 +71,17 @@ pub(super) enum OrderByMatchPlayer {
     MatchId,
     AccountId,
     StartTime,
+    LastHits,
+    Denies,
+    MvpRank,
+    PlayerRankInitialDisplayRank,
+    PlayerRankInitialFlatProgress,
+    PlayerRankFinalFlatProgress,
+    PlayerRankDesiredProgressChange,
+    PlayerRankInitialCalibrationGames,
+    PlayerRankInitialDemotionProtectionGames,
+    PlayerRankConsumedDemotionProtection,
+    PlayerRankInitialWinStreak,
 }
 
 impl From<OrderByMatchPlayer> for OrderKey {
@@ -77,6 +90,33 @@ impl From<OrderByMatchPlayer> for OrderKey {
             OrderByMatchPlayer::MatchId => Self::MatchId,
             OrderByMatchPlayer::AccountId => Self::AccountId,
             OrderByMatchPlayer::StartTime => Self::StartTime,
+            OrderByMatchPlayer::LastHits => Self::PlayerColumn("last_hits"),
+            OrderByMatchPlayer::Denies => Self::PlayerColumn("denies"),
+            OrderByMatchPlayer::MvpRank => Self::PlayerColumn("mvp_rank"),
+            OrderByMatchPlayer::PlayerRankInitialDisplayRank => {
+                Self::PlayerColumn("player_rank_initial_display_rank")
+            }
+            OrderByMatchPlayer::PlayerRankInitialFlatProgress => {
+                Self::PlayerColumn("player_rank_initial_flat_progress")
+            }
+            OrderByMatchPlayer::PlayerRankFinalFlatProgress => {
+                Self::PlayerColumn("player_rank_final_flat_progress")
+            }
+            OrderByMatchPlayer::PlayerRankDesiredProgressChange => {
+                Self::PlayerColumn("player_rank_desired_progress_change")
+            }
+            OrderByMatchPlayer::PlayerRankInitialCalibrationGames => {
+                Self::PlayerColumn("player_rank_initial_calibration_games")
+            }
+            OrderByMatchPlayer::PlayerRankInitialDemotionProtectionGames => {
+                Self::PlayerColumn("player_rank_initial_demotion_protection_games")
+            }
+            OrderByMatchPlayer::PlayerRankConsumedDemotionProtection => {
+                Self::PlayerColumn("player_rank_consumed_demotion_protection")
+            }
+            OrderByMatchPlayer::PlayerRankInitialWinStreak => {
+                Self::PlayerColumn("player_rank_initial_win_streak")
+            }
         }
     }
 }
@@ -114,6 +154,108 @@ impl From<OrderDirection> for OrderDir {
     }
 }
 
+/// Ordering / paging arguments of a list query.
+pub(super) struct Page<O> {
+    pub(super) order_by: Option<O>,
+    pub(super) order_direction: Option<OrderDirection>,
+    pub(super) limit: u32,
+    pub(super) offset: u32,
+}
+
+/// `scope` is an extra SQL predicate AND-ed to the `where_` filters.
+pub(super) async fn load_matches(
+    ctx: &Context<'_>,
+    where_: Option<MatchPlayerWhere>,
+    page: Page<OrderByMatch>,
+    scope: Option<String>,
+) -> GqlResult<Vec<Match>> {
+    let state = app_state(ctx)?;
+    let projection = project_matches(&ctx.look_ahead());
+    let via_player_match_stats = via_player_match_stats(state, where_.as_ref()).await?;
+    let mut filters = where_.map(|w| w.to_sql_filters()).unwrap_or_default();
+    filters.extend(scope);
+    let sql = build_matches_query(&BuildArgs {
+        projection: &projection,
+        filters: &filters,
+        order_by: page.order_by.unwrap_or(OrderByMatch::MatchId).into(),
+        order_dir: page.order_direction.unwrap_or_default().into(),
+        limit: page.limit.clamp(1, MAX_LIMIT),
+        offset: page.offset,
+        via_player_match_stats,
+    })
+    .map_err(|e| async_graphql::Error::new(format!("SQL build error: {e}")))?;
+    debug!(?sql, "graphql.matches built sql");
+    let rows = run_query::<Match>(&state.ch_client_ro, &sql)
+        .instrument(info_span!("graphql.clickhouse", operation = "matches", sql = %sql))
+        .await?;
+    #[expect(clippy::cast_precision_loss)]
+    metrics::histogram!("graphql_rows_returned", "operation" => "matches")
+        .record(rows.len() as f64);
+    Ok(rows)
+}
+
+/// `scope` is an extra SQL predicate AND-ed to the `where_` filters.
+pub(super) async fn load_match_players(
+    ctx: &Context<'_>,
+    where_: Option<MatchPlayerWhere>,
+    page: Page<OrderByMatchPlayer>,
+    scope: Option<String>,
+) -> GqlResult<Vec<MatchPlayer>> {
+    let state = app_state(ctx)?;
+    let projection = project_match_players(&ctx.look_ahead());
+    let via_player_match_stats = via_player_match_stats(state, where_.as_ref()).await?;
+    let mut filters = where_.map(|w| w.to_sql_filters()).unwrap_or_default();
+    filters.extend(scope);
+    let sql = build_match_players_query(&BuildArgs {
+        projection: &projection,
+        filters: &filters,
+        order_by: page.order_by.unwrap_or(OrderByMatchPlayer::MatchId).into(),
+        order_dir: page.order_direction.unwrap_or_default().into(),
+        limit: page.limit.clamp(1, MAX_LIMIT),
+        offset: page.offset,
+        via_player_match_stats,
+    })
+    .map_err(|e| async_graphql::Error::new(format!("SQL build error: {e}")))?;
+    debug!(?sql, "graphql.match_players built sql");
+    let rows = run_query::<MatchPlayer>(&state.ch_client_ro, &sql)
+        .instrument(info_span!("graphql.clickhouse", operation = "match_players", sql = %sql))
+        .await?;
+    #[expect(clippy::cast_precision_loss)]
+    metrics::histogram!("graphql_rows_returned", "operation" => "match_players")
+        .record(rows.len() as f64);
+    Ok(rows)
+}
+
+/// `scope` is an extra SQL predicate AND-ed to the `where_` filters.
+pub(super) async fn load_match_history(
+    ctx: &Context<'_>,
+    where_: Option<MatchHistoryWhere>,
+    page: Page<OrderByMatchHistory>,
+    scope: Option<String>,
+) -> GqlResult<Vec<MatchHistoryEntry>> {
+    let state = app_state(ctx)?;
+    let columns = project_match_history(&ctx.look_ahead());
+    let mut filters = where_.map(|w| w.to_sql_filters()).unwrap_or_default();
+    filters.where_.extend(scope);
+    let sql = build_match_history_query(&MatchHistoryBuildArgs {
+        columns: &columns,
+        filters: &filters,
+        order_by: page.order_by.unwrap_or(OrderByMatchHistory::MatchId).into(),
+        order_dir: page.order_direction.unwrap_or_default().into(),
+        limit: page.limit.clamp(1, MAX_LIMIT),
+        offset: page.offset,
+    })
+    .map_err(|e| async_graphql::Error::new(format!("SQL build error: {e}")))?;
+    debug!(?sql, "graphql.match_history built sql");
+    let rows = run_query::<MatchHistoryEntry>(&state.ch_client_ro, &sql)
+        .instrument(info_span!("graphql.clickhouse", operation = "match_history", sql = %sql))
+        .await?;
+    #[expect(clippy::cast_precision_loss)]
+    metrics::histogram!("graphql_rows_returned", "operation" => "match_history")
+        .record(rows.len() as f64);
+    Ok(rows)
+}
+
 pub(crate) struct QueryRoot;
 
 #[Object(rename_fields = "snake_case", rename_args = "snake_case")]
@@ -128,28 +270,13 @@ impl QueryRoot {
         #[graphql(default = 100)] limit: u32,
         #[graphql(default = 0)] offset: u32,
     ) -> GqlResult<Vec<Match>> {
-        let state = app_state(ctx)?;
-        let projection = project_matches(&ctx.look_ahead());
-        let via_player_match_stats = via_player_match_stats(state, where_.as_ref()).await?;
-        let filters = where_.map(|w| w.to_sql_filters()).unwrap_or_default();
-        let sql = build_matches_query(&BuildArgs {
-            projection: &projection,
-            filters: &filters,
-            order_by: order_by.unwrap_or(OrderByMatch::MatchId).into(),
-            order_dir: order_direction.unwrap_or_default().into(),
-            limit: limit.clamp(1, MAX_LIMIT),
+        let page = Page {
+            order_by,
+            order_direction,
+            limit,
             offset,
-            via_player_match_stats,
-        })
-        .map_err(|e| async_graphql::Error::new(format!("SQL build error: {e}")))?;
-        debug!(?sql, "graphql.matches built sql");
-        let rows = run_query::<Match>(&state.ch_client_ro, &sql)
-            .instrument(info_span!("graphql.clickhouse", operation = "matches", sql = %sql))
-            .await?;
-        #[expect(clippy::cast_precision_loss)]
-        metrics::histogram!("graphql_rows_returned", "operation" => "matches")
-            .record(rows.len() as f64);
-        Ok(rows)
+        };
+        load_matches(ctx, where_, page, None).await
     }
 
     /// Player-row query — one node per (match_id, account_id).
@@ -162,28 +289,13 @@ impl QueryRoot {
         #[graphql(default = 100)] limit: u32,
         #[graphql(default = 0)] offset: u32,
     ) -> GqlResult<Vec<MatchPlayer>> {
-        let state = app_state(ctx)?;
-        let projection = project_match_players(&ctx.look_ahead());
-        let via_player_match_stats = via_player_match_stats(state, where_.as_ref()).await?;
-        let filters = where_.map(|w| w.to_sql_filters()).unwrap_or_default();
-        let sql = build_match_players_query(&BuildArgs {
-            projection: &projection,
-            filters: &filters,
-            order_by: order_by.unwrap_or(OrderByMatchPlayer::MatchId).into(),
-            order_dir: order_direction.unwrap_or_default().into(),
-            limit: limit.clamp(1, MAX_LIMIT),
+        let page = Page {
+            order_by,
+            order_direction,
+            limit,
             offset,
-            via_player_match_stats,
-        })
-        .map_err(|e| async_graphql::Error::new(format!("SQL build error: {e}")))?;
-        debug!(?sql, "graphql.match_players built sql");
-        let rows = run_query::<MatchPlayer>(&state.ch_client_ro, &sql)
-            .instrument(info_span!("graphql.clickhouse", operation = "match_players", sql = %sql))
-            .await?;
-        #[expect(clippy::cast_precision_loss)]
-        metrics::histogram!("graphql_rows_returned", "operation" => "match_players")
-            .record(rows.len() as f64);
-        Ok(rows)
+        };
+        load_match_players(ctx, where_, page, None).await
     }
 
     /// Player match history — one node per (account_id, match_id), from the
@@ -197,26 +309,58 @@ impl QueryRoot {
         #[graphql(default = 100)] limit: u32,
         #[graphql(default = 0)] offset: u32,
     ) -> GqlResult<Vec<MatchHistoryEntry>> {
-        let state = app_state(ctx)?;
-        let columns = project_match_history(&ctx.look_ahead());
-        let filters = where_.map(|w| w.to_sql_filters()).unwrap_or_default();
-        let sql = build_match_history_query(&MatchHistoryBuildArgs {
-            columns: &columns,
-            filters: &filters,
-            order_by: order_by.unwrap_or(OrderByMatchHistory::MatchId).into(),
-            order_dir: order_direction.unwrap_or_default().into(),
-            limit: limit.clamp(1, MAX_LIMIT),
+        let page = Page {
+            order_by,
+            order_direction,
+            limit,
             offset,
-        })
-        .map_err(|e| async_graphql::Error::new(format!("SQL build error: {e}")))?;
-        debug!(?sql, "graphql.match_history built sql");
-        let rows = run_query::<MatchHistoryEntry>(&state.ch_client_ro, &sql)
-            .instrument(info_span!("graphql.clickhouse", operation = "match_history", sql = %sql))
-            .await?;
-        #[expect(clippy::cast_precision_loss)]
-        metrics::histogram!("graphql_rows_returned", "operation" => "match_history")
-            .record(rows.len() as f64);
-        Ok(rows)
+        };
+        load_match_history(ctx, where_, page, None).await
+    }
+
+    /// Stored match salts — one node per match_id, the same data as the REST
+    /// `/v1/matches/{match_id}/salts` endpoint minus the on-demand Steam fetch.
+    /// Ordered by match_id. Salts that failed verification are dropped after
+    /// paging, so a page can hold slightly fewer than `limit` nodes.
+    async fn match_salts(
+        &self,
+        ctx: &Context<'_>,
+        #[graphql(name = "where")] where_: Option<MatchSaltsWhere>,
+        order_direction: Option<OrderDirection>,
+        #[graphql(default = 100)] limit: u32,
+        #[graphql(default = 0)] offset: u32,
+    ) -> GqlResult<Vec<MatchSalts>> {
+        load_match_salts_page(
+            app_state(ctx)?,
+            where_,
+            order_direction.unwrap_or_default().into(),
+            limit.clamp(1, MAX_LIMIT),
+            offset,
+        )
+        .await
+    }
+
+    /// Patch notes from the official forum changelog and the Steam news feed —
+    /// the same data as the REST `/v2/patches` feed, so only as far back as
+    /// those RSS feeds reach. Ordered by `pub_date`. Every patch can scope the
+    /// match queries to the time it was live.
+    #[graphql(complexity = "5 + limit as usize * child_complexity")]
+    async fn patches(
+        &self,
+        ctx: &Context<'_>,
+        #[graphql(name = "where")] where_: Option<PatchWhere>,
+        order_direction: Option<OrderDirection>,
+        #[graphql(default = 10)] limit: u32,
+        #[graphql(default = 0)] offset: u32,
+    ) -> GqlResult<Vec<Patch>> {
+        load_patches(
+            app_state(ctx)?,
+            where_.as_ref(),
+            order_direction.unwrap_or_default(),
+            limit,
+            offset,
+        )
+        .await
     }
 
     /// Hero builds from the stored `hero_builds` table — the same data as the
@@ -298,7 +442,7 @@ async fn via_player_match_stats(
     Ok(!account_ids.iter().any(|id| protected.contains(id)))
 }
 
-async fn run_query<T>(ch_client: &clickhouse::Client, sql: &str) -> GqlResult<Vec<T>>
+pub(super) async fn run_query<T>(ch_client: &clickhouse::Client, sql: &str) -> GqlResult<Vec<T>>
 where
     T: serde::de::DeserializeOwned,
 {
@@ -342,5 +486,10 @@ mod tests {
         assert!(sdl.contains("hero_builds("));
         assert!(sdl.contains("hero_build:")); // MatchPlayer.hero_build enrichment
         assert!(sdl.contains("author:")); // BuildHero.author enrichment
+        assert!(sdl.contains("type MatchSalts"));
+        assert!(sdl.contains("match_salts("));
+        assert!(sdl.contains("salts:")); // Match / MatchPlayer.salts enrichment
+        assert!(sdl.contains("type Patch"));
+        assert!(sdl.contains("patches("));
     }
 }

@@ -101,6 +101,33 @@ pub(super) const PLAYER_COLUMNS: &[Column] = &[
     mp("max_hero_bullets_hit_crit", "max_hero_bullets_hit_crit"),
     mp("max_shots_hit", "max_shots_hit"),
     mp("max_shots_missed", "max_shots_missed"),
+    mp("max_self_healing", "max_self_healing"),
+    mp("max_player_healing", "max_player_healing"),
+    mp("max_gold_player", "max_gold_player"),
+    mp("max_gold_player_orbs", "max_gold_player_orbs"),
+    mp("max_gold_lane_creep", "max_gold_lane_creep"),
+    mp("max_gold_lane_creep_orbs", "max_gold_lane_creep_orbs"),
+    mp("max_gold_neutral_creep", "max_gold_neutral_creep"),
+    mp("max_gold_neutral_creep_orbs", "max_gold_neutral_creep_orbs"),
+    mp("max_gold_boss", "max_gold_boss"),
+    mp("max_gold_boss_orb", "max_gold_boss_orb"),
+    mp("max_gold_treasure", "max_gold_treasure"),
+    mp("max_gold_denied", "max_gold_denied"),
+    mp("max_gold_death_loss", "max_gold_death_loss"),
+    mp("max_damage_mitigated", "max_damage_mitigated"),
+    mp("max_absorption_provided", "max_absorption_provided"),
+    mp("max_heal_prevented", "max_heal_prevented"),
+    mp("max_possible_creeps", "max_possible_creeps"),
+    mp("max_weapon_power", "max_weapon_power"),
+    mp("max_tech_power", "max_tech_power"),
+    mp("max_teammate_healing", "max_teammate_healing"),
+    mp("max_teammate_barriering", "max_teammate_barriering"),
+    mp("final_stats", "final_stats"),
+    mp("won", "won"),
+    mp("hero_xp", "hero_xp"),
+    mp("hero_equips", "hero_equips"),
+    mp("abilities", "abilities"),
+    mp("created_at", "toUnixTimestamp(created_at)"),
     mp("rewards_eligible", "rewards_eligible"),
     mp("earned_holiday_award_2025", "earned_holiday_award_2025"),
     mp("death_details", "death_details"),
@@ -193,7 +220,14 @@ pub(super) const ITEM_SUBFIELDS: &[&str] = &[
     "sold_time_s",
     "flags",
     "imbued_ability_id",
+    "upgrade_info",
+    "net_worth_at_buy",
 ];
+
+/// Sub-fields of the materialized `upgrades.*` arrays: the `items` entries that
+/// are purchased upgrade items. All `UInt32`.
+pub(super) const UPGRADE_SUBFIELDS: &[&str] =
+    &["item_id", "game_time_s", "sold_time_s", "net_worth_at_buy"];
 
 /// Sub-fields of the `stats` Nested column. All `UInt32`.
 pub(super) const STAT_SUBFIELDS: &[&str] = &[
@@ -241,6 +275,7 @@ pub(super) const STAT_SUBFIELDS: &[&str] = &[
     "player_barriering",
     "teammate_healing",
     "teammate_barriering",
+    "self_damage",
     "bullet_kills",
     "melee_kills",
     "ability_kills",
@@ -257,6 +292,7 @@ pub(super) struct Projection {
     pub(super) match_columns: Vec<Column>,
     pub(super) player_columns: Vec<Column>,
     pub(super) items_subfields: Vec<&'static str>,
+    pub(super) upgrades_subfields: Vec<&'static str>,
     pub(super) stats_subfields: Vec<&'static str>,
 }
 
@@ -290,6 +326,12 @@ pub(super) fn project_matches(look: &Lookahead<'_>) -> Projection {
         );
         collect_subfields(
             &players_field,
+            "upgrades",
+            UPGRADE_SUBFIELDS,
+            &mut projection.upgrades_subfields,
+        );
+        collect_subfields(
+            &players_field,
             "stats",
             STAT_SUBFIELDS,
             &mut projection.stats_subfields,
@@ -312,6 +354,12 @@ pub(super) fn project_match_players(look: &Lookahead<'_>) -> Projection {
         "items",
         ITEM_SUBFIELDS,
         &mut projection.items_subfields,
+    );
+    collect_subfields(
+        look,
+        "upgrades",
+        UPGRADE_SUBFIELDS,
+        &mut projection.upgrades_subfields,
     );
     collect_subfields(
         look,

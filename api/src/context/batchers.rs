@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::routes::v1::graphql::salts::MatchSaltsGraphQlBatcher;
 use crate::routes::v1::matches::metadata::DemoPlayerBatcher;
 use crate::routes::v1::matches::salts::{
     MatchInfoExistsBatcher, MatchSaltsExistsBatcher, MatchSaltsInsertBatcher, MatchSaltsReadBatcher,
@@ -17,6 +18,7 @@ pub(crate) struct Batchers {
     pub(crate) match_history_read: MatchHistoryReadBatcher,
     pub(crate) match_history_insert: Arc<MatchHistoryInsertBatcher>,
     pub(crate) match_salts_read: MatchSaltsReadBatcher,
+    pub(crate) match_salts_graphql: MatchSaltsGraphQlBatcher,
     pub(crate) match_salts_exists: MatchSaltsExistsBatcher,
     pub(crate) match_salts_insert: Arc<MatchSaltsInsertBatcher>,
     pub(crate) match_info_exists: MatchInfoExistsBatcher,
@@ -34,6 +36,7 @@ impl Batchers {
             match_history_read: MatchHistoryReadBatcher::new(ch_client_ro.clone()),
             match_history_insert: Arc::new(MatchHistoryInsertBatcher::new(ch_client.clone())),
             match_salts_read: MatchSaltsReadBatcher::new(ch_client_ro.clone()),
+            match_salts_graphql: MatchSaltsGraphQlBatcher::new(ch_client_ro.clone()),
             match_salts_exists: MatchSaltsExistsBatcher::new(ch_client_ro.clone()),
             match_salts_insert: Arc::new(MatchSaltsInsertBatcher::new(ch_client.clone())),
             match_info_exists: MatchInfoExistsBatcher::new(ch_client_ro.clone()),

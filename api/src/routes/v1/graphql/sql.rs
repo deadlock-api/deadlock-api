@@ -13,6 +13,9 @@ pub(super) enum OrderKey {
     StartTime,
     AverageBadge,
     AccountId,
+    /// A plain column of both `match_player` and `player_match_stats`. Only the
+    /// player-row query orders by it; the other shapes fall back to `match_id`.
+    PlayerColumn(&'static str),
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -23,7 +26,7 @@ pub(super) enum OrderDir {
 }
 
 impl OrderDir {
-    fn as_sql(self) -> &'static str {
+    pub(super) fn as_sql(self) -> &'static str {
         match self {
             Self::Asc => "ASC",
             Self::Desc => "DESC",
@@ -133,7 +136,9 @@ pub(super) fn build_matches_query(args: &BuildArgs<'_>) -> Result<String, core::
             "coalesce(any(average_badge), 0)",
             "coalesce(any(match_player.average_badge), 0)",
         ),
-        OrderKey::MatchId | OrderKey::AccountId => ("match_id", "match_player.match_id"),
+        OrderKey::MatchId | OrderKey::AccountId | OrderKey::PlayerColumn(_) => {
+            ("match_id", "match_player.match_id")
+        }
     };
     let dir = args.order_dir.as_sql();
     let source = if args.via_player_match_stats {
@@ -161,11 +166,7 @@ pub(super) fn build_matches_query(args: &BuildArgs<'_>) -> Result<String, core::
 
     if args.projection.include_players() {
         sql.push_str(", ");
-        sql.push_str(&build_players_aggregate(
-            &args.projection.player_columns,
-            &args.projection.items_subfields,
-            &args.projection.stats_subfields,
-        ));
+        sql.push_str(&build_players_aggregate(args.projection));
     }
 
     sql.push_str(" FROM match_player ");
@@ -188,6 +189,7 @@ pub(super) fn build_match_players_query(args: &BuildArgs<'_>) -> Result<String, 
         OrderKey::StartTime => "start_time",
         OrderKey::AverageBadge => "average_badge",
         OrderKey::AccountId => "account_id",
+        OrderKey::PlayerColumn(col) => col,
     };
     let dir = args.order_dir.as_sql();
 
@@ -199,6 +201,12 @@ pub(super) fn build_match_players_query(args: &BuildArgs<'_>) -> Result<String, 
         .collect();
     if !args.projection.items_subfields.is_empty() {
         parts.push(nested_array_expr("items", &args.projection.items_subfields));
+    }
+    if !args.projection.upgrades_subfields.is_empty() {
+        parts.push(nested_array_expr(
+            "upgrades",
+            &args.projection.upgrades_subfields,
+        ));
     }
     if !args.projection.stats_subfields.is_empty() {
         parts.push(nested_array_expr("stats", &args.projection.stats_subfields));
@@ -305,7 +313,9 @@ pub(super) fn build_match_history_query(
             .map_or_else(|| "match_id".to_owned(), match_history_merge_expr),
         OrderKey::AccountId => "account_id".to_owned(),
         // AverageBadge is unreachable (OrderByMatchHistory doesn't expose it).
-        OrderKey::MatchId | OrderKey::AverageBadge => "match_id".to_owned(),
+        OrderKey::MatchId | OrderKey::AverageBadge | OrderKey::PlayerColumn(_) => {
+            "match_id".to_owned()
+        }
     };
     let dir = args.order_dir.as_sql();
 
@@ -329,20 +339,23 @@ pub(super) fn build_match_history_query(
     Ok(sql)
 }
 
-fn build_players_aggregate(
-    player_columns: &[Column],
-    items_subfields: &[&str],
-    stats_subfields: &[&str],
-) -> String {
-    let mut parts: Vec<String> = player_columns
+fn build_players_aggregate(projection: &Projection) -> String {
+    let mut parts: Vec<String> = projection
+        .player_columns
         .iter()
         .map(|c| column_expr(c, false))
         .collect();
-    if !items_subfields.is_empty() {
-        parts.push(nested_array_expr("items", items_subfields));
+    if !projection.items_subfields.is_empty() {
+        parts.push(nested_array_expr("items", &projection.items_subfields));
     }
-    if !stats_subfields.is_empty() {
-        parts.push(nested_array_expr("stats", stats_subfields));
+    if !projection.upgrades_subfields.is_empty() {
+        parts.push(nested_array_expr(
+            "upgrades",
+            &projection.upgrades_subfields,
+        ));
+    }
+    if !projection.stats_subfields.is_empty() {
+        parts.push(nested_array_expr("stats", &projection.stats_subfields));
     }
     let inner = parts.join(", ");
     format!("groupArray(tuple({inner})::JSON) AS players")
@@ -750,6 +763,7 @@ mod proptests {
             Just(OrderKey::StartTime),
             Just(OrderKey::AverageBadge),
             Just(OrderKey::AccountId),
+            Just(OrderKey::PlayerColumn("mvp_rank")),
         ]
     }
 

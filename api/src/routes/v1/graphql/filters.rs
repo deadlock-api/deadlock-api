@@ -169,6 +169,17 @@ pub(super) struct MatchPlayerWhere {
     pub(super) net_worth: Option<U32Filter>,
     pub(super) player_level: Option<U32Filter>,
     pub(super) assigned_lane: Option<U32Filter>,
+    pub(super) last_hits: Option<U32Filter>,
+    pub(super) denies: Option<U32Filter>,
+    pub(super) mvp_rank: Option<U32Filter>,
+    pub(super) player_rank_initial_display_rank: Option<U32Filter>,
+    pub(super) player_rank_initial_flat_progress: Option<U32Filter>,
+    pub(super) player_rank_final_flat_progress: Option<U32Filter>,
+    pub(super) player_rank_desired_progress_change: Option<I32Filter>,
+    pub(super) player_rank_initial_calibration_games: Option<U32Filter>,
+    pub(super) player_rank_initial_demotion_protection_games: Option<U32Filter>,
+    pub(super) player_rank_consumed_demotion_protection: Option<BoolFilter>,
+    pub(super) player_rank_initial_win_streak: Option<U32Filter>,
 }
 
 impl MatchPlayerWhere {
@@ -210,6 +221,41 @@ impl MatchPlayerWhere {
         push!(net_worth, "net_worth");
         push!(player_level, "player_level");
         push!(assigned_lane, "assigned_lane");
+        push!(last_hits, "last_hits");
+        push!(denies, "denies");
+        push!(mvp_rank, "mvp_rank");
+        push!(
+            player_rank_initial_display_rank,
+            "player_rank_initial_display_rank"
+        );
+        push!(
+            player_rank_initial_flat_progress,
+            "player_rank_initial_flat_progress"
+        );
+        push!(
+            player_rank_final_flat_progress,
+            "player_rank_final_flat_progress"
+        );
+        push!(
+            player_rank_desired_progress_change,
+            "player_rank_desired_progress_change"
+        );
+        push!(
+            player_rank_initial_calibration_games,
+            "player_rank_initial_calibration_games"
+        );
+        push!(
+            player_rank_initial_demotion_protection_games,
+            "player_rank_initial_demotion_protection_games"
+        );
+        push!(
+            player_rank_consumed_demotion_protection,
+            "player_rank_consumed_demotion_protection"
+        );
+        push!(
+            player_rank_initial_win_streak,
+            "player_rank_initial_win_streak"
+        );
         out
     }
 
@@ -242,6 +288,17 @@ impl MatchPlayerWhere {
             net_worth: _,
             player_level: _,
             assigned_lane,
+            last_hits: _,
+            denies: _,
+            mvp_rank: _,
+            player_rank_initial_display_rank: _,
+            player_rank_initial_flat_progress: _,
+            player_rank_final_flat_progress: _,
+            player_rank_desired_progress_change: _,
+            player_rank_initial_calibration_games: _,
+            player_rank_initial_demotion_protection_games: _,
+            player_rank_consumed_demotion_protection: _,
+            player_rank_initial_win_streak: _,
         } = self;
         let only_shared_columns = player_slot.is_none()
             && team.is_none()
