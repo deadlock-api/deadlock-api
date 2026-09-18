@@ -221,6 +221,10 @@ impl DataDump {
             .is_none_or(|t| Utc::now() - t > FOLD_EVERY);
 
         let mut first_error: Option<DumpError> = None;
+        // Forced partitions rebuilt in this tick. They leave the redis queue only after the
+        // manifest referencing their new files is published; a tick that dies before that
+        // must rebuild them again, or a privacy scrub would be lost.
+        let mut forced_done: Vec<(&'static str, u64)> = Vec::new();
         for table in TABLES {
             shutdown_check()?;
             let result = match table.policy {
@@ -229,8 +233,15 @@ impl DataDump {
                         .await
                 }
                 Policy::Incremental { .. } => {
-                    self.export_incremental(&exporter, &mut manifest, table, now_hi, fold_due)
-                        .await
+                    self.export_incremental(
+                        &exporter,
+                        &mut manifest,
+                        table,
+                        now_hi,
+                        fold_due,
+                        &mut forced_done,
+                    )
+                    .await
                 }
             };
             if let Err(e) = result {
@@ -276,6 +287,7 @@ impl DataDump {
                 .collect::<Vec<_>>(),
             "data dump manifest published"
         );
+        self.clear_forced(forced_done).await;
 
         let referenced: HashSet<String> = manifest.referenced_keys().map(str::to_owned).collect();
         sweep::sweep(&self.store, &self.key("tables/"), &referenced, SWEEP_GRACE).await?;
@@ -289,6 +301,15 @@ impl DataDump {
         .await?;
 
         first_error.map_or(Ok(()), Err)
+    }
+
+    async fn clear_forced(&self, done: Vec<(&'static str, u64)>) {
+        let mut redis = self.redis.clone();
+        for (table, partition) in done {
+            if let Err(e) = redis.srem::<_, _, ()>(forced_key(table), partition).await {
+                warn!("data dump: could not clear forced partition {table}/{partition}: {e}");
+            }
+        }
     }
 
     async fn fetch_columns(
@@ -372,6 +393,7 @@ impl DataDump {
         table: &TablePolicy,
         now_hi: i64,
         fold_due: bool,
+        forced_done: &mut Vec<(&'static str, u64)>,
     ) -> Result<(), DumpError> {
         let Policy::Incremental {
             watermark,
@@ -584,14 +606,8 @@ impl DataDump {
                 "data dump: {name} g{target_gen} rebuilt partition {p} ({:?})",
                 rebuild.reason
             );
-            if rebuild.reason == Reason::Forced
-                && let Err(e) = self
-                    .redis
-                    .clone()
-                    .srem::<_, _, ()>(forced_key(name), p)
-                    .await
-            {
-                warn!("data dump: could not clear forced partition {p}: {e}");
+            if rebuild.reason == Reason::Forced {
+                forced_done.push((name, p));
             }
         }
 
