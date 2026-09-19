@@ -303,7 +303,7 @@ export function HeroStatsOverTimeChart({
                 stroke="#525252"
               />
               <Tooltip
-                labelFormatter={(label) => day(label).format("YYYY-MM-DD")}
+                labelFormatter={(label) => day(label as number).format("YYYY-MM-DD")}
                 contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
                 itemStyle={{ color: "#e5e5e5" }}
                 formatter={(value, _name, item) => {

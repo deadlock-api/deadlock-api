@@ -247,7 +247,11 @@ export function annotateSource() {
         babelrc: false,
         configFile: false,
         sourceMaps: true,
-        presets: [[presetTypescript, { isTSX: true, allExtensions: true }]],
+        // Babel 8 keeps imports that are only used as types unless they are
+        // marked `type`; left in, they become side-effect imports that drag
+        // type-only modules into the chunk.
+        presets: [[presetTypescript, { onlyRemoveTypeImports: false }]],
+        parserOpts: { plugins: ["jsx"] },
         plugins: [[babelPlugin, { resolveLocation: locationResolver(this, id) }]],
       });
       if (!result?.code) return null;

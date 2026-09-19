@@ -67,4 +67,4 @@ Requires `wrangler login` (or `CLOUDFLARE_API_TOKEN`) and a Cloudflare account c
 - Constructs it cannot lower (`try`/`finally`, `throw` inside `try`, `++`/`--` on a captured variable) leave that component unoptimized and print a `react-compiler(Todo)` warning. Same components the Babel plugin skipped silently — a to-do list, not a build failure.
 - shadcn primitives live in `src/components/ui/`. Add new ones with `pnpm dlx shadcn@latest add <component>` against the existing `components.json`.
 - Tailwind v4: `@plugin` directives in `tailwind.css` for typography/iconify/animations (no JS plugin array).
-- TypeScript override `^6.0.3` is enforced via `package.json > pnpm.overrides`.
+- TypeScript 7 is the native compiler: `tsc` only, no JS compiler API (`require("typescript")` exposes just the version). A tool that needs the old API has to alias `@typescript/typescript6`.

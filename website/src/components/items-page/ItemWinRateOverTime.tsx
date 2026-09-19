@@ -54,15 +54,13 @@ export function ItemWinRateOverTime({
           playerMatches.has(row.bucket),
       )
       .sort((a, b) => a.bucket - b.bucket)
-      .map(
-        (row): WeekEntry => ({
-          weekStart: row.bucket,
-          label: day.unix(row.bucket).format("MMM D"),
-          winRate: row.wins / row.matches,
-          share: row.matches / (playerMatches.get(row.bucket) ?? row.matches),
-          matches: row.matches,
-        }),
-      );
+      .map((row): WeekEntry => ({
+        weekStart: row.bucket,
+        label: day.unix(row.bucket).format("MMM D"),
+        winRate: row.wins / row.matches,
+        share: row.matches / (playerMatches.get(row.bucket) ?? row.matches),
+        matches: row.matches,
+      }));
   }, [itemQuery.data, heroQuery.data, itemId, itemRequest.minUnixTimestamp]);
 
   if (itemQuery.isPending || heroQuery.isPending) {

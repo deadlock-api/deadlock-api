@@ -46,15 +46,13 @@ export function HeroWinRateOverTime({
     return [...hero.entries()]
       .filter(([weekStart, agg]) => weekStart >= firstWeek && agg.matches >= MIN_WEEK_MATCHES)
       .sort(([a], [b]) => a - b)
-      .map(
-        ([weekStart, agg]): WeekEntry => ({
-          weekStart,
-          label: day.unix(weekStart).format("MMM D"),
-          winRate: agg.wins / agg.matches,
-          share: (multiplier * agg.matches) / (all.get(weekStart) ?? agg.matches),
-          matches: agg.matches,
-        }),
-      );
+      .map(([weekStart, agg]): WeekEntry => ({
+        weekStart,
+        label: day.unix(weekStart).format("MMM D"),
+        winRate: agg.wins / agg.matches,
+        share: (multiplier * agg.matches) / (all.get(weekStart) ?? agg.matches),
+        matches: agg.matches,
+      }));
   }, [data, heroId, request.gameMode, request.minUnixTimestamp]);
 
   if (isPending) {

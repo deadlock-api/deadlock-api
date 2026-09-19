@@ -51,15 +51,13 @@ function binByBuyMinute(rows: readonly { bucket: number; wins: number; matches: 
     const entries = [...bins.entries()]
       .filter(([, bin]) => bin.matches >= MIN_BIN_MATCHES && bin.matches / total >= MIN_BIN_SHARE)
       .sort(([a], [b]) => a - b)
-      .map(
-        ([start, bin]): BinEntry => ({
-          label: `${start}–${start + width}m`,
-          tick: `${start}m`,
-          winRate: bin.wins / bin.matches,
-          matches: bin.matches,
-          share: bin.matches / total,
-        }),
-      );
+      .map(([start, bin]): BinEntry => ({
+        label: `${start}–${start + width}m`,
+        tick: `${start}m`,
+        winRate: bin.wins / bin.matches,
+        matches: bin.matches,
+        share: bin.matches / total,
+      }));
     if (entries.length > best.length) best = entries;
     if (entries.length >= MIN_BINS) break;
   }

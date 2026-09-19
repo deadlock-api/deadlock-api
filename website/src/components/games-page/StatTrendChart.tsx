@@ -108,7 +108,7 @@ export default function StatTrendChart({ params, stat, bucket, onBucketChange }:
                 width={56}
               />
               <Tooltip
-                labelFormatter={(label) => day(label).format(bucketDef.tooltipFormat)}
+                labelFormatter={(label) => day(label as number).format(bucketDef.tooltipFormat)}
                 formatter={(value, _name, item) => {
                   const formatted = formatStatValue(value as number, stat.format);
                   const matches = item.payload?.matches;

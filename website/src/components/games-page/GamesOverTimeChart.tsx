@@ -106,7 +106,7 @@ export default function GamesOverTimeChart({
                   }}
                 />
                 <Tooltip
-                  labelFormatter={(label) => day(label).format("YYYY-MM-DD")}
+                  labelFormatter={(label) => day(label as number).format("YYYY-MM-DD")}
                   formatter={(value, _name, item) => {
                     const formatted = statDef ? formatStatValue(value as number, statDef.format) : value;
                     const matches = item.payload?.matches;
