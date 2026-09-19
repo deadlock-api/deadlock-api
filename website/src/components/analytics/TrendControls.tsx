@@ -1,14 +1,6 @@
 import { ChartNoAxesCombined } from "lucide-react";
 
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
+import { MetricSelect } from "~/components/analytics/MetricSelect";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { useHydrated } from "~/hooks/useHydrated";
 
@@ -33,8 +25,6 @@ export function TrendControls({
   onIntervalChange: (value: string) => void;
 }) {
   const hydrated = useHydrated();
-  const metricLabel =
-    metricGroups.flatMap((group) => group.options).find((option) => option.value === metric)?.label ?? metric;
 
   return (
     <section
@@ -47,28 +37,7 @@ export function TrendControls({
       </div>
       <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
         <span className="text-xs text-muted-foreground">Metric</span>
-        <Select disabled={!hydrated} value={metric} onValueChange={onMetricChange}>
-          <SelectTrigger
-            size="sm"
-            aria-label="Trend metric"
-            title={metricLabel}
-            className="w-full min-w-0 sm:w-auto sm:max-w-72 sm:min-w-52"
-          >
-            <SelectValue>{metricLabel}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {metricGroups.map((group) => (
-              <SelectGroup key={group.label}>
-                <SelectLabel>{group.label}</SelectLabel>
-                {group.options.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            ))}
-          </SelectContent>
-        </Select>
+        <MetricSelect value={metric} groups={metricGroups} onChange={onMetricChange} />
       </div>
       <div className="flex items-center gap-2">
         <span className="text-xs text-muted-foreground">Group by</span>

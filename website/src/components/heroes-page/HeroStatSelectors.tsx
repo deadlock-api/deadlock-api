@@ -1,4 +1,6 @@
+import { MetricSelect } from "~/components/analytics/MetricSelect";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
+import { HERO_TREND_LABELS } from "~/lib/hero-trends";
 import { HERO_STATS, HERO_STATS_WITH_BAN_RATE, TIME_INTERVALS } from "~/types/api_hero_stats";
 
 export function HeroStatSelector<T extends readonly string[]>({
@@ -13,6 +15,26 @@ export function HeroStatSelector<T extends readonly string[]>({
   label: string;
 }) {
   const items = options ?? HERO_STATS;
+  if (items.length > 7) {
+    return (
+      <MetricSelect
+        value={value}
+        onChange={onChange}
+        label={label}
+        groups={[
+          {
+            label: "Hero metrics",
+            options: items.map((key) => ({
+              value: key,
+              label:
+                HERO_TREND_LABELS[key as keyof typeof HERO_TREND_LABELS] ??
+                key.replace(/_/g, " ").replace(/^./, (letter) => letter.toUpperCase()),
+            })),
+          },
+        ]}
+      />
+    );
+  }
   return (
     <ToggleGroup
       type="single"
