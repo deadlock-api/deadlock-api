@@ -1,12 +1,10 @@
 import { useLocation } from "@tanstack/react-router";
-import { BarChart3, Menu, Radio } from "lucide-react";
-import { VisuallyHidden } from "radix-ui";
-import { useState } from "react";
+import { BarChart3, Menu, Radio, X } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { PrefetchAnchor } from "~/components/PrefetchAnchor";
 import { SmartLink } from "~/components/SmartLink";
 import { Button } from "~/components/ui/button";
-import { Sheet, SheetContent, SheetTitle } from "~/components/ui/sheet";
 import { API_ORIGIN } from "~/lib/constants";
 import { bottomNavLinks, type NavLink, navGroups, topLinks } from "~/lib/site-nav";
 import { cn } from "~/lib/utils";
@@ -122,8 +120,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col text-sidebar-foreground">
       {/* Logo */}
-      <div className="border-b border-sidebar-border px-4 py-3">
-        <PrefetchAnchor to="/" onClick={onNavigate} className="flex items-center gap-3">
+      <div className="flex items-center gap-2 border-b border-sidebar-border px-4 py-3">
+        <PrefetchAnchor to="/" onClick={onNavigate} className="flex min-w-0 flex-1 items-center gap-3">
           <img
             src="https://deadlock-api.com/favicon.webp"
             alt="Deadlock API Logo"
@@ -131,8 +129,23 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             height={32}
             className="aspect-square object-contain"
           />
-          <span className="text-lg font-semibold">Deadlock API</span>
+          <span className="truncate text-lg font-semibold">Deadlock API</span>
         </PrefetchAnchor>
+        {/* Native dialog autofocus runs on showModal(), not on page load. */}
+        {/* oxlint-disable jsx-a11y/no-autofocus */}
+        {onNavigate && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 shrink-0"
+            aria-label="Close menu"
+            autoFocus
+            onClick={onNavigate}
+          >
+            <X />
+          </Button>
+        )}
+        {/* oxlint-enable jsx-a11y/no-autofocus */}
       </div>
 
       {/* Navigation */}
@@ -235,27 +248,63 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export function MobileMenuButton() {
   const [open, setOpen] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+
+  const close = () => dialogRef.current?.close();
+
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 768px)");
+    const onResize = () => {
+      if (desktop.matches) dialogRef.current?.close();
+    };
+    desktop.addEventListener("change", onResize);
+    return () => desktop.removeEventListener("change", onResize);
+  }, []);
 
   return (
     <div className="md:hidden">
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          dialogRef.current?.showModal();
+          setOpen(true);
+        }}
         className="glass fixed top-3 left-3 z-40 border border-sidebar-border"
         aria-label="Open menu"
+        aria-haspopup="dialog"
+        aria-expanded={open}
       >
         <Menu className="h-5 w-5" />
       </Button>
 
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="left" className="w-64 p-0" showCloseButton={false}>
-          <VisuallyHidden.Root>
-            <SheetTitle>Navigation</SheetTitle>
-          </VisuallyHidden.Root>
-          <SidebarContent onNavigate={() => setOpen(false)} />
-        </SheetContent>
-      </Sheet>
+      {/* Keep the navigation mounted so opening it does not build a second React
+          tree during the tap. The native modal handles inertness, focus and Escape. */}
+      {/* The backdrop is pointer-dismissable; the native dialog supplies Escape handling. */}
+      {/* oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
+      <dialog
+        ref={dialogRef}
+        aria-labelledby={titleId}
+        className="mobile-navigation fixed inset-y-0 left-0 m-0 h-dvh max-h-none w-64 max-w-full border-r border-sidebar-border bg-background p-0 text-foreground shadow-lg backdrop:bg-black/50"
+        onClose={() => setOpen(false)}
+        onClick={(event) => {
+          if (event.target !== event.currentTarget) return;
+          const bounds = event.currentTarget.getBoundingClientRect();
+          if (
+            event.clientX < bounds.left ||
+            event.clientX > bounds.right ||
+            event.clientY < bounds.top ||
+            event.clientY > bounds.bottom
+          )
+            close();
+        }}
+      >
+        <h2 id={titleId} className="sr-only">
+          Navigation
+        </h2>
+        <SidebarContent onNavigate={close} />
+      </dialog>
     </div>
   );
 }

@@ -32,7 +32,19 @@ const defaultSeo = seo({
 });
 
 export const Route = createRootRouteWithContext<RouterContext>()({
-  loader: async ({ context: { queryClient } }) => {
+  loader: async ({ context: { queryClient }, location }) => {
+    // Content pages do not consume game assets. Fetching them here delays SSR
+    // and serializes the entire catalog into HTML that these pages never use.
+    const pathname = location.pathname.replace(/\/$/, "") || "/";
+    if (
+      pathname === "/" ||
+      pathname === "/blog" ||
+      pathname.startsWith("/blog/") ||
+      pathname === "/data-dumps" ||
+      pathname === "/data-privacy"
+    )
+      return;
+
     await Promise.all([
       queryClient.ensureQueryData(heroesQueryOptions),
       queryClient.ensureQueryData(ranksQueryOptions),

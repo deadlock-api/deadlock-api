@@ -468,6 +468,24 @@ body[data-feedback-spotlight] [data-slot="dialog-overlay"] {
   background-color: var(--muted-foreground);
 }
 
+/* Native dialogs make the page inert, but scroll locking is separate. */
+html:has(.mobile-navigation[open]) {
+  overflow: hidden;
+}
+
+.mobile-navigation[open] {
+  animation: mobile-navigation-in 180ms ease-out;
+}
+
+@keyframes mobile-navigation-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
 /* Page-level tab nav: line variant with red glow indicator */
 .tabs-nav [data-slot="tabs-list"] {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);

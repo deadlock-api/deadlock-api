@@ -8,7 +8,7 @@ import { type SeasonInfo, toSeasons } from "~/lib/seasons";
 
 import { queryKeys } from "./query-keys";
 
-// The root loader dehydrates heroes and item upgrades into every page's HTML.
+// Game-data routes preload heroes and item upgrades into their HTML.
 // The keys below carry ~2.7 MB of balance tables, tooltips and lore that only
 // the Deadlockdle and flashcard pages read, so the shared queries drop them and
 // those pages fetch the *Full variants on demand.

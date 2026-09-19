@@ -25,6 +25,7 @@ import { Button } from "~/components/ui/button";
 import { API_ORIGIN } from "~/lib/constants";
 import { useExperiment } from "~/lib/experiments";
 import { seo } from "~/lib/seo";
+import { cn } from "~/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () =>
@@ -190,8 +191,8 @@ const analyticsLinks = [
 const mainSponsor = {
   href: "https://www.deadchaps.gg/?ref=deadlock-api.com",
   title: "DeadChaps",
-  logo: "/logo/deadchaps.png",
-  logo2x: "/logo/deadchaps@2x.png",
+  logo: "/logo/deadchaps.webp",
+  logo2x: "/logo/deadchaps@2x.webp",
   width: 600,
   height: 127,
 };
@@ -244,7 +245,8 @@ function IndexRoute() {
               >
                 <img
                   src={mainSponsor.logo}
-                  srcSet={`${mainSponsor.logo} 1x, ${mainSponsor.logo2x} 2x`}
+                  srcSet={`${mainSponsor.logo} 600w, ${mainSponsor.logo2x} 1200w`}
+                  sizes="(min-width: 1024px) 227px, 189px"
                   alt={`${mainSponsor.title} Logo`}
                   width={600}
                   height={127}
@@ -274,18 +276,22 @@ function IndexRoute() {
               Deadlock game data, match history, player statistics, hero analytics, and more.
             </p>
 
-            {variant === "test" && (
-              <div className="mt-6 flex flex-wrap justify-center gap-2">
-                {quickLinks.map((link) => (
-                  <SmartLink key={link.label} href={link.href} external={link.external}>
-                    <Button variant={link.primary ? "default" : "outline"} size="sm">
-                      <link.icon />
-                      {link.label}
-                    </Button>
-                  </SmartLink>
-                ))}
-              </div>
-            )}
+            {/* Reserve the experiment's layout before flags arrive so activation
+                never pushes the content below the hero down. */}
+            <div
+              className={cn("mt-6 flex flex-wrap justify-center gap-2", variant !== "test" && "invisible")}
+              inert={variant !== "test"}
+              aria-hidden={variant !== "test"}
+            >
+              {quickLinks.map((link) => (
+                <SmartLink key={link.label} href={link.href} external={link.external}>
+                  <Button variant={link.primary ? "default" : "outline"} size="sm">
+                    <link.icon />
+                    {link.label}
+                  </Button>
+                </SmartLink>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -383,7 +389,8 @@ function IndexRoute() {
           >
             <img
               src={mainSponsor.logo}
-              srcSet={`${mainSponsor.logo} 1x, ${mainSponsor.logo2x} 2x`}
+              srcSet={`${mainSponsor.logo} 600w, ${mainSponsor.logo2x} 1200w`}
+              sizes="140px"
               alt={`${mainSponsor.title} Logo`}
               width={mainSponsor.width}
               height={mainSponsor.height}
