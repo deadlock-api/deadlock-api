@@ -126,12 +126,7 @@ export function HeroesPage() {
 
         <TabsContent value="stats">
           <div className="flex flex-col gap-4">
-            <div>
-              <h2 className="text-lg font-semibold">Overall Hero Stats</h2>
-              <p className="text-sm text-muted-foreground">
-                Compare win rates alongside sample sizes. Small samples can produce extreme results.
-              </p>
-            </div>
+            <h2 className="sr-only">Overall Hero Stats</h2>
             <div className="flex flex-wrap items-center gap-3">
               <Input
                 type="search"
