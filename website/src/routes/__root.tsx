@@ -20,8 +20,7 @@ import { installChunkReloadHandlers, isChunkLoadError, reloadOnceForStaleChunk }
 import { seo } from "~/lib/seo";
 import type { RouterContext } from "~/router";
 
-// Let Start collect the stylesheet so production SSR can inline it.
-import "~/styles/tailwind.css";
+import appCss from "~/styles/tailwind.css?url";
 
 const defaultSeo = seo({
   title: "Deadlock API",
@@ -87,6 +86,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       ...defaultSeo.meta,
     ],
     links: [
+      { rel: "stylesheet", href: appCss, fetchPriority: "high" },
       { rel: "icon", type: "image/ico", href: "/favicon.ico" },
       { rel: "icon", type: "image/webp", href: "https://deadlock-api.com/favicon.webp" },
       { rel: "icon", type: "image/png", href: "https://deadlock-api.com/favicon.png" },

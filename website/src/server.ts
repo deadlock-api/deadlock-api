@@ -23,7 +23,15 @@ export default {
     }
     if (changed) return Response.redirect(url.toString(), 301);
 
-    const res = await handler(...args);
+    const res = await handler(args[0], {
+      ...args[1],
+      // Cloudflare creates 103 responses from Link headers. Keep hints limited
+      // to public CSS/fonts; never replay route data or private resources.
+      responseLinkHeader: {
+        filter: ({ hint }) =>
+          hint.rel === "preload" && (hint.as === "style" || hint.as === "font") && hint.href.startsWith("/assets/"),
+      },
+    });
     if (isHtmlResponse(res) && !res.headers.has("cache-control")) {
       const headers = new Headers(res.headers);
       headers.set("Cache-Control", "public, max-age=0, must-revalidate");

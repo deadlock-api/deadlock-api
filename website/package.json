@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build && node scripts/preserve-old-assets.mjs",
+    "build": "vite build && node scripts/generate-preload-headers.mjs && node scripts/preserve-old-assets.mjs",
     "preview": "vite preview",
     "wrangler:dev": "wrangler dev",
     "deploy": "pnpm build && wrangler deploy",

@@ -124,6 +124,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <PrefetchAnchor to="/" onClick={onNavigate} className="flex min-w-0 flex-1 items-center gap-3">
           <img
             src="https://deadlock-api.com/favicon.webp"
+            loading="lazy"
+            fetchPriority="low"
             alt="Deadlock API Logo"
             width={32}
             height={32}

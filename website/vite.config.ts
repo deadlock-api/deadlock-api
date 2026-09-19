@@ -76,9 +76,6 @@ export default defineConfig({
           defaultBehavior: [["loader"], ["component"], ["pendingComponent"], ["errorComponent"], ["notFoundComponent"]],
         },
       },
-      // Deliver route CSS with the HTML instead of blocking first paint on
-      // a second request. Start keeps stylesheet assets for client navigation.
-      server: { build: { inlineCss: true } },
       prerender: {
         enabled: true,
         crawlLinks: true,

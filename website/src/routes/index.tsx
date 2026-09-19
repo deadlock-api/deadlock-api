@@ -395,6 +395,7 @@ function IndexRoute() {
               width={mainSponsor.width}
               height={mainSponsor.height}
               loading="lazy"
+              fetchPriority="low"
               className="max-h-10 max-w-[140px] object-contain"
             />
           </a>
@@ -415,6 +416,7 @@ function IndexRoute() {
                 width={sponsor.width}
                 height={sponsor.height}
                 loading="lazy"
+                fetchPriority="low"
                 className="max-h-10 max-w-[140px] object-contain"
               />
             </a>
