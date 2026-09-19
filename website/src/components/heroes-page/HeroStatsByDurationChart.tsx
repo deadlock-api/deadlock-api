@@ -4,9 +4,8 @@ import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts"
 
 import { ChartReadings } from "~/components/analytics/ChartReadings";
 import { ChartSidebarLayout } from "~/components/analytics/ChartSidebarLayout";
-import { ChartError } from "~/components/analytics/ChartStates";
+import { ChartError, ChartLoading } from "~/components/analytics/ChartStates";
 import { ChartSurface } from "~/components/analytics/ChartSurface";
-import { LoadingLogo } from "~/components/LoadingLogo";
 import { ChartHeroSelector } from "~/components/selectors/ChartHeroSelector";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import type { MatchMode } from "~/components/selectors/MatchModeSelector";
@@ -141,9 +140,7 @@ export function HeroStatsByDurationChart({
   return (
     <div aria-live="polite" aria-busy={isLoading}>
       {isLoading ? (
-        <div className="flex h-full w-full items-center justify-center py-16">
-          <LoadingLogo />
-        </div>
+        <ChartLoading label="hero duration data" />
       ) : isErrorBuckets || isErrorHeroes ? (
         <ChartError
           label="hero duration data"

@@ -4,8 +4,8 @@ import { useMemo } from "react";
 import { CartesianGrid, Scatter, ScatterChart, type ScatterProps, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartSidebarLayout } from "~/components/analytics/ChartSidebarLayout";
+import { ChartError, ChartLoading } from "~/components/analytics/ChartStates";
 import { ChartSurface } from "~/components/analytics/ChartSurface";
-import { LoadingLogo } from "~/components/LoadingLogo";
 import { ChartHeroSelector } from "~/components/selectors/ChartHeroSelector";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import type { MatchMode } from "~/components/selectors/MatchModeSelector";
@@ -210,7 +210,13 @@ export function HeroStatsByRankChart({
     gameMode: gameMode,
     matchMode,
   };
-  const { data: heroData, isLoading: isLoadingHeroStats } = useQuery({
+  const {
+    data: heroData,
+    isLoading: isLoadingHeroStats,
+    isError: isErrorHeroStats,
+    isFetching: isFetchingHeroStats,
+    refetch: refetchHeroStats,
+  } = useQuery({
     queryKey: queryKeys.analytics.heroStatsByRank(heroStatsByRankQuery),
     queryFn: async () => {
       const response = await api.analytics_api.heroStats(heroStatsByRankQuery);
@@ -227,7 +233,13 @@ export function HeroStatsByRankChart({
     maxUnixTimestamp,
     matchMode,
   };
-  const { data: banData, isLoading: isLoadingBanStats } = useQuery({
+  const {
+    data: banData,
+    isLoading: isLoadingBanStats,
+    isError: isErrorBanStats,
+    isFetching: isFetchingBanStats,
+    refetch: refetchBanStats,
+  } = useQuery({
     queryKey: queryKeys.analytics.heroBanStats(banStatsByRankQuery),
     queryFn: async () => {
       const response = await api.analytics_api.heroBanStats(banStatsByRankQuery);
@@ -261,9 +273,15 @@ export function HeroStatsByRankChart({
     return result;
   }, [banData]);
 
-  const { data: ranksData, isLoading: isLoadingRanks } = useQuery(ranksQueryOptions);
+  const {
+    data: ranksData,
+    isLoading: isLoadingRanks,
+    isError: isErrorRanks,
+    isFetching: isFetchingRanks,
+    refetch: refetchRanks,
+  } = useQuery(ranksQueryOptions);
 
-  const { heroIdMap, isLoadingHeroes } = useHeroColorMap();
+  const { heroIdMap, isLoadingHeroes, isErrorHeroes, refetchHeroes, isFetchingHeroes } = useHeroColorMap();
 
   // Aggregate subtiers into tiers per hero (only depends on raw data)
   const tierAggByHero = useMemo(() => {
@@ -340,9 +358,18 @@ export function HeroStatsByRankChart({
   return (
     <div aria-live="polite" aria-busy={isLoading}>
       {isLoading ? (
-        <div className="flex h-full w-full items-center justify-center py-16">
-          <LoadingLogo />
-        </div>
+        <ChartLoading label="hero rank data" />
+      ) : isErrorHeroStats || isErrorRanks || isErrorHeroes || (needsBanData && isErrorBanStats) ? (
+        <ChartError
+          label="hero rank data"
+          retrying={isFetchingHeroStats || isFetchingRanks || isFetchingHeroes || (needsBanData && isFetchingBanStats)}
+          onRetry={() => {
+            if (isErrorHeroStats) void refetchHeroStats();
+            if (isErrorRanks) void refetchRanks();
+            if (isErrorHeroes) void refetchHeroes();
+            if (needsBanData && isErrorBanStats) void refetchBanStats();
+          }}
+        />
       ) : (
         <ChartSidebarLayout
           sidebar={
@@ -385,6 +412,7 @@ export function HeroStatsByRankChart({
                     label={{ value: formatStatLabel(xStat), position: "insideBottom", offset: -10 }}
                     stroke="var(--muted-foreground)"
                     tickFormatter={tickFormatter(xStat)}
+                    tick={{ fontSize: 11 }}
                   />
                   <YAxis
                     type="number"
@@ -395,6 +423,7 @@ export function HeroStatsByRankChart({
                     domain={[yTicks[0], yTicks[yTicks.length - 1]]}
                     ticks={yTicks}
                     tickFormatter={tickFormatter(yStat)}
+                    tick={{ fontSize: 11 }}
                   />
                   <Tooltip isAnimationActive={false} content={<CustomTooltip xStat={xStat} yStat={yStat} />} />
                   {selectedIds.map((heroId) => (
