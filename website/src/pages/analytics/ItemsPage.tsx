@@ -1,6 +1,7 @@
 import { parseAsInteger, useQueryState } from "nuqs";
 import { lazy, Suspense } from "react";
 
+import { DataPageHeader } from "~/components/analytics/DataPageHeader";
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
 import { ItemCombFilters } from "~/components/items-page/ItemCombFilters";
@@ -39,16 +40,17 @@ export function ItemsPage() {
   const [tab, setTab] = useAnalyticsTab("items");
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Deadlock Item Stats</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Win rates, purchase timing, and item combination analytics</p>
-        <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+    <div className="flex flex-col gap-3">
+      <DataPageHeader
+        title="Deadlock Item Stats"
+        description="Win rates, purchase timing, and item combination analytics"
+      >
+        <p>
           Analyze item win rates with statistical confidence intervals, optimal purchase timing, and the best item
           combinations for Deadlock. Filter by hero, rank, and patch to build smarter and climb the ladder. Statistics
           use Wilson score intervals for reliable estimates even on less popular items.
         </p>
-      </div>
+      </DataPageHeader>
       <Filter.Root>
         <Filter.Hero value={hero} onChange={setHero} allowNull />
         <Filter.MinMatches value={minMatches} onChange={setMinMatches} defaultValue={10} />

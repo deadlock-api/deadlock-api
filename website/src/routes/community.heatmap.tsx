@@ -4,6 +4,7 @@ import type { AnalyticsApiKillDeathStatsRequest } from "deadlock_api_client";
 import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense } from "react";
 
+import { DataPageHeader } from "~/components/analytics/DataPageHeader";
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
 import HeatmapCanvas from "~/components/heatmap/HeatmapCanvas";
@@ -79,11 +80,8 @@ function HeatmapPage() {
   };
 
   return (
-    <div className="flex h-[calc(100dvh-2rem)] flex-col gap-4">
-      <div className="shrink-0 text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Kill/Death Heatmap</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Visualize kill and death hotspots across the map</p>
-      </div>
+    <div className="flex h-[calc(100dvh-2rem)] flex-col gap-3">
+      <DataPageHeader title="Kill/Death Heatmap" description="Visualize kill and death hotspots across the map" />
 
       <Filter.Root>
         <Filter.Team value={team} onChange={setTeam} />

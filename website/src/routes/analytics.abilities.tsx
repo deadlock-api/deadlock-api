@@ -3,6 +3,7 @@ import { parseAsInteger, useQueryState } from "nuqs";
 import { Suspense, useMemo, useState } from "react";
 
 import AbilityOrderTree from "~/components/abilities/AbilityOrderTree";
+import { DataPageHeader } from "~/components/analytics/DataPageHeader";
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -72,17 +73,16 @@ function AbilitiesPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Ability Stats</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Explore the most common ability upgrade paths and their win rates
-        </p>
-        <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+    <div className="flex flex-col gap-3">
+      <DataPageHeader
+        title="Ability Stats"
+        description="Explore the most common ability upgrade paths and their win rates"
+      >
+        <p>
           Analyze the most popular and highest win rate ability upgrade paths for every Deadlock hero. See which skill
           orders are favored at different rank brackets, and how item choices affect optimal ability leveling.
         </p>
-      </div>
+      </DataPageHeader>
 
       <Filter.Root>
         <Filter.Hero

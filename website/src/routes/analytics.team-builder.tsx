@@ -5,6 +5,7 @@ import { DicesIcon, RotateCwIcon, SearchIcon, TriangleAlertIcon, UsersRoundIcon 
 import { type Options, parseAsBoolean, parseAsInteger, useQueryState } from "nuqs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { DataPageHeader } from "~/components/analytics/DataPageHeader";
 import { Filter } from "~/components/Filter";
 import { formatDateRange } from "~/components/Filter/utils";
 import { combineQueryStates } from "~/components/QueryRenderer";
@@ -341,15 +342,15 @@ function TeamBuilderPage() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Team Builder</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {hasLanes
-            ? "Draft a full 6v6, set the three lanes, and read the win rate that comes out of it"
-            : "Draft a full Street Brawl 4v4 and read the win rate that comes out of it"}
-        </p>
-      </div>
+    <div className="flex flex-col gap-3">
+      <DataPageHeader
+        title="Team Builder"
+        description={
+          hasLanes
+            ? "Draft a full 6v6, set the three lanes, and read the predicted win rate."
+            : "Draft a full Street Brawl 4v4 and read the predicted win rate."
+        }
+      />
 
       <Filter.Root>
         <Filter.ModeWithRank

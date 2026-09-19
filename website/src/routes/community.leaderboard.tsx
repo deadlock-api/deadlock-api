@@ -4,6 +4,7 @@ import { LeaderboardRegionEnum } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useCallback } from "react";
 
+import { DataPageHeader } from "~/components/analytics/DataPageHeader";
 import { Filter } from "~/components/Filter";
 import { LeaderboardTable } from "~/components/leaderboard/LeaderboardTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -69,17 +70,15 @@ function LeaderboardPage() {
   );
 
   return (
-    <div className="space-y-8">
-      <section className="space-y-4">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Deadlock Leaderboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Ranked player standings across all regions</p>
-          <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+    <div className="flex flex-col gap-3">
+      <section className="flex flex-col gap-3">
+        <DataPageHeader title="Deadlock Leaderboard" description="Ranked player standings across all regions">
+          <p>
             Browse the top-ranked Deadlock players by region. Filter by hero to see who dominates with specific
             characters, search for any player, and jump to any rank to see where you stand on the competitive ladder.
             Rankings are based on matchmaking rating earned through ranked play.
           </p>
-        </div>
+        </DataPageHeader>
         <Filter.Root>
           <Filter.Hero value={heroId} onChange={setHeroId} allowNull />
           <Filter.Region

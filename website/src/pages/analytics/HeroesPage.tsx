@@ -3,6 +3,7 @@ import type { HeroScoreboardSortByEnum } from "deadlock_api_client";
 import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense, useId, useState } from "react";
 
+import { DataPageHeader } from "~/components/analytics/DataPageHeader";
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { HeroFiltersSection } from "~/components/heroes-page/HeroFiltersSection";
 import { HeroScoreboardTable } from "~/components/heroes-page/HeroScoreboardTable";
@@ -22,7 +23,6 @@ import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { type HeroTab, useHeroFilters } from "~/hooks/useHeroFilters";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { cn } from "~/lib/utils";
 import { heroScoreboardQueryOptions } from "~/queries/hero-scoreboard-query";
 import { HERO_STATS } from "~/types/api_hero_stats";
 
@@ -94,17 +94,15 @@ export function HeroesPage() {
   });
 
   return (
-    <div className={cn("flex flex-col gap-6", filters.tab === "stats-over-time" && "gap-3")}>
-      <div className="text-center">
-        <h1 className={cn("text-3xl font-bold tracking-tight", filters.tab === "stats-over-time" && "text-2xl")}>
-          {filters.tab === "stats-over-time" ? "Hero performance over time" : "Deadlock Hero Win Rates"}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {filters.tab === "stats-over-time"
+    <div className="flex flex-col gap-3">
+      <DataPageHeader
+        title={filters.tab === "stats-over-time" ? "Hero performance over time" : "Deadlock Hero Win Rates"}
+        description={
+          filters.tab === "stats-over-time"
             ? "Compare hero trends across ranks, patches, and game modes."
-            : "Compare hero performance across ranks, patches, and game modes."}
-        </p>
-      </div>
+            : "Compare hero performance across ranks, patches, and game modes."
+        }
+      />
 
       <HeroFiltersSection {...filters} />
 

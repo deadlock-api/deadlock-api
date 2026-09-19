@@ -2,6 +2,7 @@ import type { AnalyticsApiGameStatsRequest, GameStatsBucketEnum } from "deadlock
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense } from "react";
 
+import { DataPageHeader } from "~/components/analytics/DataPageHeader";
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
 import GamesOverview from "~/components/games-page/GamesOverview";
@@ -67,15 +68,13 @@ export function Games() {
       : null;
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Deadlock Game Stats</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Aggregate match statistics and trends</p>
-        <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+    <div className="flex flex-col gap-3">
+      <DataPageHeader title="Deadlock Game Stats" description="Aggregate match statistics and trends">
+        <p>
           Track Deadlock match trends including average kills, deaths, game duration, and more. View stats over time,
           compare across ranks, and spot meta shifts as patches roll out.
         </p>
-      </div>
+      </DataPageHeader>
 
       <Filter.Root>
         <Filter.ModeWithRank

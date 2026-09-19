@@ -4,6 +4,7 @@ import type { BadgeDistribution, Rank } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Suspense, useMemo } from "react";
 
+import { DataPageHeader } from "~/components/analytics/DataPageHeader";
 import BadgeDistributionChart, {
   BADGE_DISTRIBUTION_METRICS,
 } from "~/components/badge-distribution/BadgeDistributionChart";
@@ -118,17 +119,18 @@ function BadgeDistributionPage() {
   );
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="shrink-0 text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Deadlock Rank Distribution</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Average match rank distribution across all badges</p>
+    <div className="flex flex-col gap-3">
+      <DataPageHeader
+        title="Deadlock Rank Distribution"
+        description="Average match rank distribution across all badges"
+      >
         {rankNames.length > 1 && (
-          <p className="mx-auto mt-2 max-w-3xl text-sm text-muted-foreground">
+          <p>
             Deadlock ranks climb from {rankNames.slice(0, -1).join(", ")} to {rankNames.at(-1)}, with every rank except{" "}
             {rankNames[0]} split into 6 subrank badges.
           </p>
         )}
-      </div>
+      </DataPageHeader>
       <Filter.Root>
         <Filter.MatchDuration
           minTime={minDurationS ?? undefined}
