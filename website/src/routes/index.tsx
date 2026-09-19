@@ -21,11 +21,8 @@ import {
 
 import { OptimizedImage } from "~/components/OptimizedImage";
 import { SmartLink } from "~/components/SmartLink";
-import { Button } from "~/components/ui/button";
 import { API_ORIGIN } from "~/lib/constants";
-import { useExperiment } from "~/lib/experiments";
 import { seo } from "~/lib/seo";
-import { cn } from "~/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () =>
@@ -81,13 +78,6 @@ const valueProps = [
     title: "Based on Sponsoring",
     external: true,
   },
-];
-
-const quickLinks = [
-  { label: "Hero Win Rates", href: "/analytics/heroes", icon: Swords, primary: true },
-  { label: "Item Stats", href: "/analytics/items", icon: ShoppingBag, primary: false },
-  { label: "Leaderboard", href: "/community/leaderboard", icon: Trophy, primary: false },
-  { label: "API Docs", href: `${API_ORIGIN}/docs`, icon: Code, primary: false, external: true },
 ];
 
 const services = [
@@ -213,11 +203,10 @@ const sponsors = [
 ];
 
 function IndexRoute() {
-  const variant = useExperiment("exp-landing-quick-links");
   return (
     <div className="space-y-16">
       {/* Hero */}
-      <section className="relative pt-8 pb-2 md:pt-4">
+      <section className="relative mb-10 pt-8 md:pt-4">
         <div className="pointer-events-none absolute top-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/8 blur-[100px]" />
 
         <div className="relative flex flex-col gap-8">
@@ -266,23 +255,6 @@ function IndexRoute() {
               updated live from Valve's servers. A comprehensive set of endpoints also gives developers access to
               Deadlock game data, match history, player statistics, hero analytics, and more.
             </p>
-
-            {/* Reserve the experiment's layout before flags arrive so activation
-                never pushes the content below the hero down. */}
-            <div
-              className={cn("mt-6 flex flex-wrap justify-center gap-2", variant !== "test" && "invisible")}
-              inert={variant !== "test"}
-              aria-hidden={variant !== "test"}
-            >
-              {quickLinks.map((link) => (
-                <SmartLink key={link.label} href={link.href} external={link.external}>
-                  <Button variant={link.primary ? "default" : "outline"} size="sm">
-                    <link.icon />
-                    {link.label}
-                  </Button>
-                </SmartLink>
-              ))}
-            </div>
           </div>
         </div>
       </section>
