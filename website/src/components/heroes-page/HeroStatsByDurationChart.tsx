@@ -1,10 +1,15 @@
 import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
+import { ChartReadings } from "~/components/analytics/ChartReadings";
+import { ChartSidebarLayout } from "~/components/analytics/ChartSidebarLayout";
+import { ChartSurface } from "~/components/analytics/ChartSurface";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { ChartHeroSelector } from "~/components/selectors/ChartHeroSelector";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import type { MatchMode } from "~/components/selectors/MatchModeSelector";
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "~/components/ui/empty";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
@@ -12,6 +17,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { niceTicks } from "~/lib/chart-axis";
 import { DURATION_BUCKETS, MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
+import { formatTrendValue, HERO_TREND_LABELS } from "~/lib/hero-trends";
 import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
 
@@ -71,7 +77,6 @@ export function HeroStatsByDurationChart({
   });
 
   const { heroIdMap, isLoadingHeroes } = useHeroColorMap();
-  const { allHeroIds, effectiveVisibleSet, handleLegendClick } = useChartHeroVisibility(heroIdMap);
 
   const isLoading = isLoadingBuckets || isLoadingHeroes;
   const allLoaded = bucketData.every((data) => data != null);
@@ -93,6 +98,26 @@ export function HeroStatsByDurationChart({
     });
   }, [allLoaded, bucketData, heroStat]);
 
+  const heroIdsWithData = useMemo(
+    () => [
+      ...new Set(
+        formattedData.flatMap((row) =>
+          Object.keys(row)
+            .filter((key) => key !== "label")
+            .map(Number),
+        ),
+      ),
+    ],
+    [formattedData],
+  );
+  const { allHeroIds, effectiveVisibleSet, setVisibleHeroes } = useChartHeroVisibility(heroIdMap, {
+    heroIdFilter: heroIdsWithData,
+  });
+  const selectedIds = allHeroIds.filter((id) => effectiveVisibleSet.has(id));
+  const pickerHeroes = Object.entries(heroIdMap)
+    .map(([id, hero]) => ({ id: Number(id), name: hero.name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   const yTicks = useMemo(() => {
     const values = formattedData.flatMap((row) =>
       allHeroIds.flatMap((heroId) => {
@@ -110,64 +135,100 @@ export function HeroStatsByDurationChart({
           <LoadingLogo />
         </div>
       ) : (
-        <figure aria-label={`Hero ${heroStat.replace(/_/g, " ")} by match duration chart`}>
-          <ResponsiveContainer width="100%" height={800} className="bg-muted p-4">
-            <LineChart data={formattedData} margin={{ top: 20, bottom: 60 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-              <XAxis
-                dataKey="label"
-                padding={{ left: 16, right: 16 }}
-                label={{ value: "Match Duration", position: "insideBottom", offset: -10 }}
-                stroke="#525252"
-              />
-              <YAxis
-                domain={[yTicks[0], yTicks[yTicks.length - 1]]}
-                ticks={yTicks}
-                label={{
-                  value: heroStat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-                  angle: -90,
-                  position: "insideLeft",
-                }}
-                tickFormatter={(value: number) => {
-                  const text = value.toLocaleString("en-US", { maximumFractionDigits: 2 });
-                  return heroStat === "winrate" ? `${text}%` : text;
-                }}
-                stroke="#525252"
-              />
-              <Tooltip
-                contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
-                itemStyle={{ color: "#e5e5e5" }}
-                formatter={(value) => {
-                  const v = value as number;
-                  return heroStat === "winrate" ? `${v.toFixed(2)}%` : v.toLocaleString("en-US");
-                }}
-              />
-              <Legend
-                layout="horizontal"
-                align="center"
-                verticalAlign="bottom"
-                iconType="line"
-                inactiveColor="#666666"
-                onClick={handleLegendClick}
-                wrapperStyle={{ cursor: "pointer", paddingTop: 30 }}
-              />
-              {allHeroIds.map((heroId) => (
-                <Line
-                  key={heroId}
-                  type="monotone"
-                  dataKey={heroId}
-                  stroke={heroIdMap[heroId]?.color || "#ffffff"}
-                  dot={{ r: 4, className: "fill-primary" }}
-                  activeDot={{ r: 6 }}
-                  strokeWidth={2}
-                  name={heroIdMap[heroId]?.name}
-                  hide={!effectiveVisibleSet.has(heroId)}
-                  connectNulls
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </figure>
+        <ChartSidebarLayout
+          sidebar={
+            <ChartHeroSelector
+              heroes={pickerHeroes}
+              availableHeroIds={allHeroIds}
+              selectedHeroIds={selectedIds}
+              onSelectionChange={setVisibleHeroes}
+            />
+          }
+        >
+          <section className="overflow-hidden rounded-xl border bg-card" aria-label="Duration chart">
+            <h3 className="px-3 pt-3 text-sm font-semibold">{HERO_TREND_LABELS[heroStat]} by match duration</h3>
+            {selectedIds.length === 0 ? (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyTitle>
+                    {allHeroIds.length ? "Choose heroes to compare" : "No duration data for these filters"}
+                  </EmptyTitle>
+                  <EmptyDescription>
+                    {allHeroIds.length
+                      ? "Select heroes in the picker or use Show all."
+                      : "Try a wider date range or fewer filters."}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <ChartSurface
+                label={`Hero ${heroStat.replace(/_/g, " ")} by match duration chart`}
+                className="rounded-none border-0"
+              >
+                <LineChart data={formattedData} margin={{ top: 16, right: 12, bottom: 20, left: 0 }}>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="var(--border)"
+                    vertical={false}
+                    verticalCoordinatesGenerator={() => []}
+                  />
+                  <XAxis
+                    dataKey="label"
+                    padding={{ left: 16, right: 16 }}
+                    label={{ value: "Match Duration", position: "insideBottom", offset: -10 }}
+                    stroke="var(--muted-foreground)"
+                  />
+                  <YAxis
+                    domain={[yTicks[0], yTicks[yTicks.length - 1]]}
+                    ticks={yTicks}
+                    width={64}
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value: number) => {
+                      const text = value.toLocaleString("en-US", { maximumFractionDigits: 2 });
+                      return heroStat === "winrate" ? `${text}%` : text;
+                    }}
+                    stroke="var(--muted-foreground)"
+                  />
+                  <Tooltip
+                    wrapperStyle={{ pointerEvents: "auto" }}
+                    isAnimationActive={false}
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload?.length) return null;
+                      return (
+                        <ChartReadings
+                          title={`${label} minutes`}
+                          rows={payload.map((entry) => ({
+                            label: String(entry.name),
+                            value: formatTrendValue(Number(entry.value), heroStat),
+                          }))}
+                        />
+                      );
+                    }}
+                  />
+                  {selectedIds.map((heroId) => (
+                    <Line
+                      key={heroId}
+                      type="linear"
+                      dataKey={heroId}
+                      stroke={heroIdMap[heroId]?.color || "#ffffff"}
+                      dot={{ r: 4, className: "fill-primary" }}
+                      activeDot={{ r: 6 }}
+                      strokeWidth={2}
+                      name={heroIdMap[heroId]?.name}
+                      isAnimationActive={false}
+                      connectNulls={false}
+                    />
+                  ))}
+                </LineChart>
+              </ChartSurface>
+            )}
+            <p className="border-t px-3 py-2 text-xs text-muted-foreground">
+              Gaps indicate missing data or fewer than {MIN_MATCHES_PER_BUCKET} matches in a duration bucket.
+            </p>
+          </section>
+        </ChartSidebarLayout>
       )}
     </div>
   );

@@ -29,6 +29,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { ChartSidebarLayout } from "~/components/analytics/ChartSidebarLayout";
 import { HeroTrendSummary } from "~/components/heroes-page/HeroTrendSummary";
 import { HeroTrendTooltip } from "~/components/heroes-page/HeroTrendTooltip";
 import { ChartHeroSelector } from "~/components/selectors/ChartHeroSelector";
@@ -480,7 +481,17 @@ export function HeroStatsOverTimeChart({
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <ChartSidebarLayout
+            sidebar={
+              <ChartHeroSelector
+                heroes={pickerHeroes}
+                availableHeroIds={allHeroIds}
+                selectedHeroIds={pickerSelectedIds}
+                onSelectionChange={setVisibleHeroes}
+                onHeroHighlight={setHoveredHeroId}
+              />
+            }
+          >
             <section aria-label="Trend chart" className="min-w-0 overflow-hidden rounded-xl border bg-card">
               <div className="flex flex-wrap items-start justify-between gap-2 px-3 pt-3">
                 <div className="flex flex-col gap-1">
@@ -566,17 +577,7 @@ export function HeroStatsOverTimeChart({
                 The ongoing interval is omitted when at least two completed intervals are available.
               </p>
             </section>
-            <div className="relative min-h-0 min-w-0">
-              <ChartHeroSelector
-                className="lg:absolute lg:inset-0"
-                heroes={pickerHeroes}
-                availableHeroIds={allHeroIds}
-                selectedHeroIds={pickerSelectedIds}
-                onSelectionChange={setVisibleHeroes}
-                onHeroHighlight={setHoveredHeroId}
-              />
-            </div>
-          </div>
+          </ChartSidebarLayout>
           {selectedHeroes.length > 0 && (
             <HeroTrendSummary
               points={formattedData}

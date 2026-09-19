@@ -441,3 +441,27 @@ test("small-sample empty states explain the cutoff and match counts still show t
   await expect(page.getByRole("figure")).toBeVisible();
   await expect(page.getByRole("table").getByRole("row").filter({ hasText: "Dynamo" })).toContainText("2 buckets");
 });
+
+for (const view of ["by-duration", "by-rank"]) {
+  test(`${view} reuses the compact hero sidebar with equal height and clear recovery`, async ({ page }) => {
+    await page.goto(`/analytics/heroes/${view}?date_range=_&min_rank=0`);
+    const picker = page.getByRole("region", { name: "Chart heroes", exact: true });
+    await expect(page.getByRole("figure")).toBeVisible();
+    const panel = page.getByRole("region", {
+      name: view === "by-duration" ? "Duration chart" : "Rank comparison chart",
+      exact: true,
+    });
+    const plotBox = await panel.boundingBox();
+    const pickerBox = await picker.boundingBox();
+    expect(Math.abs(plotBox!.height - pickerBox!.height)).toBeLessThan(2);
+    expect(pickerBox!.width).toBe(288);
+    expect(pickerBox!.x).toBeGreaterThan(plotBox!.x);
+    await picker.getByRole("button", { name: "Clear selection", exact: true }).click();
+    await expect(page.getByText("Choose heroes to compare", { exact: true })).toBeVisible();
+    await picker.getByRole("button", { name: "Show all", exact: true }).click();
+    await expect(page.getByRole("figure")).toBeVisible();
+    await page.setViewportSize({ width: 320, height: 740 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await expect(picker.getByRole("button", { name: "Infernus", exact: true })).toHaveAttribute("aria-pressed", "true");
+  });
+}

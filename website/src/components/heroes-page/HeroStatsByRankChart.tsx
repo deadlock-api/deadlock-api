@@ -1,21 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { useMemo } from "react";
-import {
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Scatter,
-  ScatterChart,
-  type ScatterProps,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { CartesianGrid, Scatter, ScatterChart, type ScatterProps, Tooltip, XAxis, YAxis } from "recharts";
 
+import { ChartSidebarLayout } from "~/components/analytics/ChartSidebarLayout";
+import { ChartSurface } from "~/components/analytics/ChartSurface";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { ChartHeroSelector } from "~/components/selectors/ChartHeroSelector";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import type { MatchMode } from "~/components/selectors/MatchModeSelector";
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "~/components/ui/empty";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
@@ -320,9 +314,14 @@ export function HeroStatsByRankChart({
     [heroDataByHero],
   );
 
-  const { allHeroIds, effectiveVisibleSet, handleLegendClick } = useChartHeroVisibility(heroIdMap, {
+  const { allHeroIds, effectiveVisibleSet, setVisibleHeroes } = useChartHeroVisibility(heroIdMap, {
     heroIdFilter: heroIdsWithData,
   });
+
+  const selectedIds = allHeroIds.filter((id) => effectiveVisibleSet.has(id));
+  const pickerHeroes = Object.entries(heroIdMap)
+    .map(([id, hero]) => ({ id: Number(id), name: hero.name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const [xTicks, yTicks] = useMemo(() => {
     const points = allHeroIds.filter((id) => effectiveVisibleSet.has(id)).flatMap((id) => heroDataByHero[id] ?? []);
@@ -345,55 +344,79 @@ export function HeroStatsByRankChart({
           <LoadingLogo />
         </div>
       ) : (
-        <figure aria-label={`Hero ${formatStatLabel(xStat)} vs ${formatStatLabel(yStat)} by rank chart`}>
-          <ResponsiveContainer width="100%" height={700} className="bg-muted p-4">
-            <ScatterChart margin={{ top: 20, right: 30, bottom: 60, left: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-              <XAxis
-                type="number"
-                dataKey="xValue"
-                name={formatStatLabel(xStat)}
-                domain={[xTicks[0], xTicks[xTicks.length - 1]]}
-                ticks={xTicks}
-                label={{ value: formatStatLabel(xStat), position: "insideBottom", offset: -10 }}
-                stroke="#525252"
-                tickFormatter={tickFormatter(xStat)}
-              />
-              <YAxis
-                type="number"
-                dataKey="yValue"
-                name={formatStatLabel(yStat)}
-                label={{ value: formatStatLabel(yStat), angle: -90, position: "insideLeft", offset: -10 }}
-                stroke="#525252"
-                domain={[yTicks[0], yTicks[yTicks.length - 1]]}
-                ticks={yTicks}
-                tickFormatter={tickFormatter(yStat)}
-              />
-              <Tooltip content={<CustomTooltip xStat={xStat} yStat={yStat} />} />
-              <Legend
-                layout="horizontal"
-                align="center"
-                verticalAlign="bottom"
-                iconType="circle"
-                inactiveColor="#666666"
-                onClick={handleLegendClick}
-                wrapperStyle={{ cursor: "pointer", paddingTop: 30 }}
-              />
-              {allHeroIds.map((heroId) => (
-                <Scatter
-                  key={heroId}
-                  name={heroIdMap[heroId]?.name ?? `Hero ${heroId}`}
-                  dataKey={heroId}
-                  data={heroDataByHero[heroId]}
-                  fill={heroIdMap[heroId]?.color ?? "#ffffff"}
-                  line={{ stroke: heroIdMap[heroId]?.color ?? "#ffffff", strokeWidth: 2 }}
-                  shape={<BadgePoint />}
-                  hide={!effectiveVisibleSet.has(heroId)}
-                />
-              ))}
-            </ScatterChart>
-          </ResponsiveContainer>
-        </figure>
+        <ChartSidebarLayout
+          sidebar={
+            <ChartHeroSelector
+              heroes={pickerHeroes}
+              availableHeroIds={allHeroIds}
+              selectedHeroIds={selectedIds}
+              onSelectionChange={setVisibleHeroes}
+            />
+          }
+        >
+          <section className="overflow-hidden rounded-xl border bg-card" aria-label="Rank comparison chart">
+            <h3 className="px-3 pt-3 text-sm font-semibold">Hero performance by rank</h3>
+            {selectedIds.length === 0 ? (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyTitle>
+                    {allHeroIds.length ? "Choose heroes to compare" : "No rank data for these filters"}
+                  </EmptyTitle>
+                  <EmptyDescription>
+                    {allHeroIds.length
+                      ? "Select heroes in the picker or use Show all."
+                      : "Try a wider date range or fewer filters."}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <ChartSurface
+                label={`Hero ${formatStatLabel(xStat)} vs ${formatStatLabel(yStat)} by rank chart`}
+                className="h-[360px] rounded-none border-0 sm:h-[420px]"
+              >
+                <ScatterChart margin={{ top: 20, right: 30, bottom: 30, left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis
+                    type="number"
+                    dataKey="xValue"
+                    name={formatStatLabel(xStat)}
+                    domain={[xTicks[0], xTicks[xTicks.length - 1]]}
+                    ticks={xTicks}
+                    label={{ value: formatStatLabel(xStat), position: "insideBottom", offset: -10 }}
+                    stroke="var(--muted-foreground)"
+                    tickFormatter={tickFormatter(xStat)}
+                  />
+                  <YAxis
+                    type="number"
+                    dataKey="yValue"
+                    name={formatStatLabel(yStat)}
+                    label={{ value: formatStatLabel(yStat), angle: -90, position: "insideLeft", offset: -10 }}
+                    stroke="var(--muted-foreground)"
+                    domain={[yTicks[0], yTicks[yTicks.length - 1]]}
+                    ticks={yTicks}
+                    tickFormatter={tickFormatter(yStat)}
+                  />
+                  <Tooltip isAnimationActive={false} content={<CustomTooltip xStat={xStat} yStat={yStat} />} />
+                  {selectedIds.map((heroId) => (
+                    <Scatter
+                      key={heroId}
+                      name={heroIdMap[heroId]?.name ?? `Hero ${heroId}`}
+                      dataKey={heroId}
+                      data={heroDataByHero[heroId]}
+                      fill={heroIdMap[heroId]?.color ?? "#ffffff"}
+                      line={{ stroke: heroIdMap[heroId]?.color ?? "#ffffff", strokeWidth: 2 }}
+                      shape={<BadgePoint />}
+                      isAnimationActive={false}
+                    />
+                  ))}
+                </ScatterChart>
+              </ChartSurface>
+            )}
+            <p className="border-t px-3 py-2 text-xs text-muted-foreground">
+              Each badge shows a rank tier. Lines connect ranks for the same hero.
+            </p>
+          </section>
+        </ChartSidebarLayout>
       )}
     </div>
   );
