@@ -3,14 +3,19 @@ import type { AnalyticsApiGameStatsRequest, GameStatsBucketEnum } from "deadlock
 import { useMemo } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
+import { TrendControls } from "~/components/analytics/TrendControls";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { day } from "~/dayjs";
 import { withoutOpenTimeBucket } from "~/lib/time-buckets";
-import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
-import { formatAxisTick, formatStatValue, getStatDefinition, valueSpan } from "./stat-definitions";
-import { StatSelector } from "./StatSelector";
+import {
+  formatAxisTick,
+  formatStatValue,
+  getFilteredCategories,
+  getStatDefinition,
+  valueSpan,
+} from "./stat-definitions";
 
 const TIME_BUCKETS = [
   { value: "start_time_day", label: "Daily" },
@@ -38,6 +43,14 @@ export default function GamesOverTimeChart({
   const { data, isPending } = useQuery(gameStatsQueryOptions({ ...params, bucket: timeBucket }));
 
   const statDef = getStatDefinition(stat);
+  const metricGroups = useMemo(
+    () =>
+      getFilteredCategories(isStreetBrawl).map((category) => ({
+        label: category.label,
+        options: category.stats.map((option) => ({ value: option.key, label: option.label })),
+      })),
+    [isStreetBrawl],
+  );
 
   const chartData = useMemo(() => {
     if (!data) return [];
@@ -53,25 +66,15 @@ export default function GamesOverTimeChart({
 
   return (
     <div className="flex flex-col gap-4">
-      <StatSelector value={stat} onChange={onStatChange} isStreetBrawl={isStreetBrawl}>
-        <div className="flex items-center gap-1 rounded-lg border border-white/[0.06] bg-white/[0.02] p-0.5">
-          {TIME_BUCKETS.map((b) => (
-            <button
-              key={b.value}
-              type="button"
-              onClick={() => onTimeBucketChange(b.value as GameStatsBucketEnum)}
-              className={cn(
-                "cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                timeBucket === b.value
-                  ? "bg-white/[0.1] text-foreground"
-                  : "text-muted-foreground hover:bg-white/[0.05] hover:text-foreground",
-              )}
-            >
-              {b.label}
-            </button>
-          ))}
-        </div>
-      </StatSelector>
+      <TrendControls
+        title="Game trends"
+        metric={stat}
+        metricGroups={metricGroups}
+        onMetricChange={onStatChange}
+        interval={timeBucket}
+        intervals={TIME_BUCKETS}
+        onIntervalChange={(value) => onTimeBucketChange(value as GameStatsBucketEnum)}
+      />
 
       <div aria-live="polite" aria-busy={isPending}>
         {isPending ? (
