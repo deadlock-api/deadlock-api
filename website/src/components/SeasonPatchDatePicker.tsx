@@ -6,7 +6,7 @@ import { OptionRow } from "~/components/Filter/OptionRow";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
 import { useSeasons } from "~/hooks/useSeasons";
-import type { DateFilterAction, DateRange } from "~/lib/date-filter-memory";
+import type { DateFilterAction, DateRange } from "~/lib/date-filter-preference";
 import { type SeasonInfo, defaultDateRange, previousSeasonRange, seasonContaining } from "~/lib/seasons";
 
 import { DateRangePicker } from "./primitives/DateRangePicker";

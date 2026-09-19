@@ -7,10 +7,12 @@ import { NotFound } from "./components/NotFound";
 import { RouteError } from "./components/RouteError";
 import { isChunkLoadError, reloadOnceForStaleChunk } from "./lib/chunk-reload";
 import { ApiError } from "./lib/http";
+import type { Preferences } from "./lib/preferences";
 import { routeTree } from "./routeTree.gen";
 
 export interface RouterContext {
   queryClient: QueryClient;
+  preferences: Preferences;
 }
 
 function isClientError(error: unknown): boolean {
@@ -51,7 +53,7 @@ export function getRouter() {
     },
     defaultNotFoundComponent: () => <NotFound />,
     scrollRestoration: true,
-    context: { queryClient } satisfies RouterContext,
+    context: { queryClient, preferences: {} } satisfies RouterContext,
   });
 
   setupRouterSsrQueryIntegration({ router, queryClient });

@@ -43,8 +43,8 @@ function findMedianRankName(
 
 export const Route = createFileRoute("/community/badge-distribution")({
   component: BadgeDistributionPage,
-  loader: async ({ context: { queryClient } }) => {
-    const range = defaultUnixRange(await loadSeasons(queryClient));
+  loader: async ({ context: { queryClient, preferences } }) => {
+    const range = defaultUnixRange(await loadSeasons(queryClient), preferences.dateFilter);
     const [distribution, ranks] = await Promise.all([
       prefetchSafe(
         queryClient.ensureQueryData(

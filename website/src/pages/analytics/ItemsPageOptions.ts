@@ -40,14 +40,20 @@ export const itemsPageOptions = {
     const hero = (search as { hero?: unknown }).hero;
     return { heroId: typeof hero === "number" && Number.isInteger(hero) ? hero : null };
   },
-  loader: async ({ context: { queryClient }, deps }: { context: RouterContext; deps: { heroId: number | null } }) => {
+  loader: async ({
+    context: { queryClient, preferences },
+    deps,
+  }: {
+    context: RouterContext;
+    deps: { heroId: number | null };
+  }) => {
     const [{ itemUpgradesQueryOptions, loadSeasons }, { itemStatsQueryOptions }] = await Promise.all([
       import("~/queries/asset-queries"),
       import("~/queries/item-stats-query"),
     ]);
     const seasons = await loadSeasons(queryClient);
-    const range = defaultUnixRange(seasons);
-    const prevRange = defaultPrevUnixRange(seasons);
+    const range = defaultUnixRange(seasons, preferences.dateFilter);
+    const prevRange = defaultPrevUnixRange(seasons, preferences.dateFilter);
     const common = {
       minMatches: 10,
       heroId: deps.heroId,

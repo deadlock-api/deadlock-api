@@ -1,7 +1,7 @@
 import { SeasonPatchDatePicker } from "~/components/SeasonPatchDatePicker";
 import type { Dayjs } from "~/dayjs";
 import { PATCHES } from "~/lib/constants";
-import type { DateFilterAction, DateRange } from "~/lib/date-filter-memory";
+import type { DateFilterAction, DateRange } from "~/lib/date-filter-preference";
 
 export function SeasonPatchDateFilter({
   startDate,

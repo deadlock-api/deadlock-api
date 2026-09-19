@@ -11,7 +11,7 @@ import type { Dayjs } from "~/dayjs";
 import { useHeroById } from "~/hooks/useAssetById";
 import { useSeasons } from "~/hooks/useSeasons";
 import { PATCHES } from "~/lib/constants";
-import type { DateFilterAction, DateRange } from "~/lib/date-filter-memory";
+import type { DateFilterAction, DateRange } from "~/lib/date-filter-preference";
 import type { ResultFilter } from "~/lib/tracker/compute";
 
 const RESULT_OPTIONS: { value: ResultFilter; label: string }[] = [

@@ -19,7 +19,7 @@ export const playersPageOptions = {
     return { heroId: typeof hero === "number" && Number.isInteger(hero) ? hero : undefined };
   },
   loader: async ({
-    context: { queryClient },
+    context: { queryClient, preferences },
     deps,
   }: {
     context: RouterContext;
@@ -31,7 +31,7 @@ export const playersPageOptions = {
         import("~/queries/player-scoreboard-query"),
         import("~/queries/steam-queries"),
       ]);
-    const range = defaultUnixRange(await loadSeasons(queryClient));
+    const range = defaultUnixRange(await loadSeasons(queryClient), preferences.dateFilter);
     const scoreboard = await prefetchSafe(
       queryClient.ensureQueryData(
         playerScoreboardQueryOptions({

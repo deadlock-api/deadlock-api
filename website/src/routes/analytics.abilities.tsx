@@ -27,8 +27,8 @@ export const Route = createFileRoute("/analytics/abilities")({
     const heroId = (search as { hero_id?: unknown }).hero_id;
     return { heroId: typeof heroId === "number" && Number.isInteger(heroId) ? heroId : DEFAULT_HERO_ID };
   },
-  loader: async ({ context: { queryClient }, deps }) => {
-    const range = defaultUnixRange(await loadSeasons(queryClient));
+  loader: async ({ context: { queryClient, preferences }, deps }) => {
+    const range = defaultUnixRange(await loadSeasons(queryClient), preferences.dateFilter);
     await prefetchSafe(
       queryClient.ensureQueryData(
         abilityOrderQueryOptions({

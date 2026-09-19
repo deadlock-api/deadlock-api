@@ -3,6 +3,7 @@ import type { AnalyticsHeroStats } from "deadlock_api_client";
 
 import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
 import { analyticsPageTitle, redirectAnalyticsTab } from "~/lib/analytics-tabs";
+import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultPrevUnixRange, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
@@ -12,10 +13,10 @@ import type { RouterContext } from "~/router";
 const DEFAULT_MIN_RANK = 91;
 const DEFAULT_MAX_RANK = 116;
 
-function defaultHeroStatsRanges(seasons: readonly SeasonInfo[]) {
-  const prev = defaultPrevUnixRange(seasons);
+function defaultHeroStatsRanges(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
+  const prev = defaultPrevUnixRange(seasons, preference);
   return {
-    ...defaultUnixRange(seasons),
+    ...defaultUnixRange(seasons, preference),
     prevMinUnixTimestamp: prev.minUnixTimestamp,
     prevMaxUnixTimestamp: prev.maxUnixTimestamp,
   };
@@ -43,7 +44,7 @@ function findWinRateLeader(
 export const heroesPageOptions = {
   beforeLoad: redirectAnalyticsTab,
   component: lazyRouteComponent(() => import("./HeroesPage"), "HeroesPage"),
-  loader: async ({ context: { queryClient } }: { context: RouterContext }) => {
+  loader: async ({ context: { queryClient, preferences } }: { context: RouterContext }) => {
     // Shared route options are not automatically split by the router plugin.
     // Import query code only when this loader runs, rather than on every page.
     const [{ heroesQueryOptions, loadSeasons }, { heroBanStatsQueryOptions }, { heroStatsQueryOptions }] =
@@ -52,7 +53,7 @@ export const heroesPageOptions = {
         import("~/queries/hero-ban-stats-query"),
         import("~/queries/hero-stats-query"),
       ]);
-    const r = defaultHeroStatsRanges(await loadSeasons(queryClient));
+    const r = defaultHeroStatsRanges(await loadSeasons(queryClient), preferences.dateFilter);
     const common = {
       minHeroMatches: 0,
       minHeroMatchesTotal: 0,

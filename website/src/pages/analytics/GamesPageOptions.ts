@@ -13,14 +13,14 @@ const MATCH_LENGTH_ANSWER = "A typical Deadlock match lasts around 30-40 minutes
 export const gamesPageOptions = {
   beforeLoad: redirectAnalyticsTab,
   component: lazyRouteComponent(() => import("./GamesPage"), "Games"),
-  loader: async ({ context: { queryClient } }: { context: RouterContext }) => {
+  loader: async ({ context: { queryClient, preferences } }: { context: RouterContext }) => {
     const [{ loadSeasons }, { gameStatsQueryOptions }] = await Promise.all([
       import("~/queries/asset-queries"),
       import("~/queries/games-query"),
     ]);
     const seasons = await loadSeasons(queryClient);
-    const range = defaultUnixRange(seasons);
-    const prevRange = defaultPrevUnixRange(seasons);
+    const range = defaultUnixRange(seasons, preferences.dateFilter);
+    const prevRange = defaultPrevUnixRange(seasons, preferences.dateFilter);
     const baseParams: AnalyticsApiGameStatsRequest = {
       gameMode: "normal",
       matchMode: DEFAULT_MATCH_MODE,

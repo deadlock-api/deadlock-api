@@ -17,6 +17,7 @@ import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import { getAnalytics } from "~/lib/analytics";
 import { installChunkReloadHandlers, isChunkLoadError, reloadOnceForStaleChunk } from "~/lib/chunk-reload";
+import { readPreferences } from "~/lib/preferences.isomorphic";
 import { seo } from "~/lib/seo";
 import type { RouterContext } from "~/router";
 
@@ -29,6 +30,7 @@ const defaultSeo = seo({
 });
 
 export const Route = createRootRouteWithContext<RouterContext>()({
+  beforeLoad: () => ({ preferences: readPreferences() }),
   loader: async ({ context: { queryClient }, location }) => {
     // Only serialize catalogs used by the current page. In particular, game
     // hubs need none and Deadlockdle uses separate, full-detail queries.

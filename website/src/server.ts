@@ -34,7 +34,8 @@ export default {
     });
     if (isHtmlResponse(res) && !res.headers.has("cache-control")) {
       const headers = new Headers(res.headers);
-      headers.set("Cache-Control", "public, max-age=0, must-revalidate");
+      headers.set("Cache-Control", "private, max-age=0, must-revalidate");
+      headers.append("Vary", "Cookie");
       return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
     }
     return res;

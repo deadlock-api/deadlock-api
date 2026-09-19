@@ -13,6 +13,7 @@ import { StatCard } from "~/components/StatCard";
 import { useSeasons } from "~/hooks/useSeasons";
 import { computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
+import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { formatPercent } from "~/lib/format";
 import { findHeroBySlug, heroSlug } from "~/lib/hero-slug";
 import { prefetchSafe } from "~/lib/prefetch-safe";
@@ -64,7 +65,7 @@ const DEFAULT_MIN_RANK = 91;
 const DEFAULT_MAX_RANK = 116;
 const GAME_MODE = "normal" as const;
 
-function currentStatsParams(seasons: readonly SeasonInfo[]) {
+function currentStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
     minHeroMatches: 0,
     minHeroMatchesTotal: 0,
@@ -72,48 +73,48 @@ function currentStatsParams(seasons: readonly SeasonInfo[]) {
     maxAverageBadge: DEFAULT_MAX_RANK,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
-    ...defaultUnixRange(seasons),
+    ...defaultUnixRange(seasons, preference),
   };
 }
 
-function byRankStatsParams(seasons: readonly SeasonInfo[]) {
+function byRankStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
     minHeroMatches: 0,
     minHeroMatchesTotal: 0,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
-    ...defaultUnixRange(seasons),
+    ...defaultUnixRange(seasons, preference),
   };
 }
 
-function currentItemStatsParams(seasons: readonly SeasonInfo[]) {
+function currentItemStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
     minMatches: 10,
     minAverageBadge: DEFAULT_MIN_RANK,
     maxAverageBadge: DEFAULT_MAX_RANK,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
-    ...defaultUnixRange(seasons),
+    ...defaultUnixRange(seasons, preference),
   };
 }
 
-function currentAbilityOrderParams(seasons: readonly SeasonInfo[]) {
+function currentAbilityOrderParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
     minMatches: 20,
     minAverageBadge: DEFAULT_MIN_RANK,
     maxAverageBadge: DEFAULT_MAX_RANK,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
-    ...defaultUnixRange(seasons),
+    ...defaultUnixRange(seasons, preference),
   };
 }
 
-function currentBanParams(seasons: readonly SeasonInfo[]) {
+function currentBanParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
     matchMode: DEFAULT_MATCH_MODE,
     minAverageBadge: DEFAULT_MIN_RANK,
     maxAverageBadge: DEFAULT_MAX_RANK,
-    ...defaultUnixRange(seasons),
+    ...defaultUnixRange(seasons, preference),
   };
 }
 
@@ -142,7 +143,7 @@ function summarizeHeroStats(rows: readonly AnalyticsHeroStats[] | undefined, her
 
 export const Route = createFileRoute("/analytics/heroes/$heroName")({
   component: HeroDetailPage,
-  loader: async ({ context: { queryClient }, params }) => {
+  loader: async ({ context: { queryClient, preferences }, params }) => {
     const [heroes, seasons] = await Promise.all([
       queryClient.ensureQueryData(heroesQueryOptions),
       loadSeasons(queryClient),
@@ -151,10 +152,16 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
     const hero = findHeroBySlug(playable, params.heroName);
     if (!hero) throw notFound({ data: { suggestion: closestNameBySlug(playable, params.heroName)?.name } });
     const [stats] = await Promise.all([
-      prefetchSafe(queryClient.ensureQueryData(heroStatsQueryOptions(currentStatsParams(seasons)))),
-      prefetchSafe(queryClient.ensureQueryData(heroBanStatsQueryOptions(currentBanParams(seasons)))),
       prefetchSafe(
-        queryClient.ensureQueryData(itemStatsQueryOptions({ ...currentItemStatsParams(seasons), heroId: hero.id })),
+        queryClient.ensureQueryData(heroStatsQueryOptions(currentStatsParams(seasons, preferences.dateFilter))),
+      ),
+      prefetchSafe(
+        queryClient.ensureQueryData(heroBanStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter))),
+      ),
+      prefetchSafe(
+        queryClient.ensureQueryData(
+          itemStatsQueryOptions({ ...currentItemStatsParams(seasons, preferences.dateFilter), heroId: hero.id }),
+        ),
       ),
       prefetchSafe(queryClient.ensureQueryData(itemUpgradesQueryOptions)),
     ]);
@@ -243,12 +250,13 @@ function HeroLinkCard({
 }
 
 function HeroDetailPage() {
+  const { preferences } = Route.useRouteContext();
   const { heroId, heroName } = Route.useLoaderData();
   const { seasons } = useSeasons();
-  const [defaultStart, defaultEnd] = defaultDateRange(seasons);
-  const [prevStart, prevEnd] = defaultPrevDateRange(seasons);
-  const statsQuery = useQuery(heroStatsQueryOptions(currentStatsParams(seasons)));
-  const banQuery = useQuery(heroBanStatsQueryOptions(currentBanParams(seasons)));
+  const [defaultStart, defaultEnd] = defaultDateRange(seasons, preferences.dateFilter);
+  const [prevStart, prevEnd] = defaultPrevDateRange(seasons, preferences.dateFilter);
+  const statsQuery = useQuery(heroStatsQueryOptions(currentStatsParams(seasons, preferences.dateFilter)));
+  const banQuery = useQuery(heroBanStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter)));
 
   const summary = useMemo(() => {
     const base = summarizeHeroStats(statsQuery.data, heroId);
@@ -311,7 +319,7 @@ function HeroDetailPage() {
               heroId={heroId}
               heroName={heroName}
               heroMatches={summary.matches}
-              request={currentItemStatsParams(seasons)}
+              request={currentItemStatsParams(seasons, preferences.dateFilter)}
             />
           </Suspense>
         </ChunkErrorBoundary>
@@ -320,7 +328,11 @@ function HeroDetailPage() {
       {summary && (
         <ChunkErrorBoundary>
           <Suspense fallback={<LoadingLogo />}>
-            <HeroSkillOrder heroId={heroId} heroName={heroName} request={currentAbilityOrderParams(seasons)} />
+            <HeroSkillOrder
+              heroId={heroId}
+              heroName={heroName}
+              request={currentAbilityOrderParams(seasons, preferences.dateFilter)}
+            />
           </Suspense>
         </ChunkErrorBoundary>
       )}
@@ -328,7 +340,11 @@ function HeroDetailPage() {
       {summary && (
         <ChunkErrorBoundary>
           <Suspense fallback={<LoadingLogo />}>
-            <HeroWinRateOverTime heroId={heroId} heroName={heroName} request={currentStatsParams(seasons)} />
+            <HeroWinRateOverTime
+              heroId={heroId}
+              heroName={heroName}
+              request={currentStatsParams(seasons, preferences.dateFilter)}
+            />
           </Suspense>
         </ChunkErrorBoundary>
       )}
@@ -336,7 +352,11 @@ function HeroDetailPage() {
       {summary && (
         <ChunkErrorBoundary>
           <Suspense fallback={<LoadingLogo />}>
-            <HeroWinRateByRank heroId={heroId} heroName={heroName} request={byRankStatsParams(seasons)} />
+            <HeroWinRateByRank
+              heroId={heroId}
+              heroName={heroName}
+              request={byRankStatsParams(seasons, preferences.dateFilter)}
+            />
           </Suspense>
         </ChunkErrorBoundary>
       )}
@@ -344,7 +364,11 @@ function HeroDetailPage() {
       {summary && (
         <ChunkErrorBoundary>
           <Suspense fallback={<LoadingLogo />}>
-            <HeroWinRateByDuration heroId={heroId} heroName={heroName} request={currentStatsParams(seasons)} />
+            <HeroWinRateByDuration
+              heroId={heroId}
+              heroName={heroName}
+              request={currentStatsParams(seasons, preferences.dateFilter)}
+            />
           </Suspense>
         </ChunkErrorBoundary>
       )}

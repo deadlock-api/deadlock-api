@@ -12,6 +12,7 @@ import { NotFound } from "~/components/NotFound";
 import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
 import { StatCard } from "~/components/StatCard";
 import { useSeasons } from "~/hooks/useSeasons";
+import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { formatPercent } from "~/lib/format";
 import { findItemBySlug, itemSlug } from "~/lib/item-slug";
 import { prefetchSafe } from "~/lib/prefetch-safe";
@@ -46,7 +47,7 @@ const GAME_MODE = "normal" as const;
 const SLOT_LABEL = { weapon: "Weapon", spirit: "Spirit", vitality: "Vitality" } as const;
 
 // Mirrors the items page's default request so both pages share one cache entry.
-function currentItemStatsParams(seasons: readonly SeasonInfo[]) {
+function currentItemStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
     minMatches: 10,
     heroId: null,
@@ -56,20 +57,20 @@ function currentItemStatsParams(seasons: readonly SeasonInfo[]) {
     maxBoughtAtS: undefined,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
-    ...defaultUnixRange(seasons),
+    ...defaultUnixRange(seasons, preference),
   };
 }
 
-function byRankItemStatsParams(seasons: readonly SeasonInfo[]) {
+function byRankItemStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
     minMatches: 10,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
-    ...defaultUnixRange(seasons),
+    ...defaultUnixRange(seasons, preference),
   };
 }
 
-function currentHeroStatsParams(seasons: readonly SeasonInfo[]) {
+function currentHeroStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
     minHeroMatches: 0,
     minHeroMatchesTotal: 0,
@@ -77,7 +78,7 @@ function currentHeroStatsParams(seasons: readonly SeasonInfo[]) {
     maxAverageBadge: DEFAULT_MAX_RANK,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
-    ...defaultUnixRange(seasons),
+    ...defaultUnixRange(seasons, preference),
   };
 }
 
@@ -107,7 +108,7 @@ function summarizeItemStats(
 
 export const Route = createFileRoute("/analytics/items/$itemName")({
   component: ItemDetailPage,
-  loader: async ({ context: { queryClient }, params }) => {
+  loader: async ({ context: { queryClient, preferences }, params }) => {
     const [items, seasons] = await Promise.all([
       queryClient.ensureQueryData(itemUpgradesQueryOptions),
       loadSeasons(queryClient),
@@ -116,8 +117,12 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
     const item = findItemBySlug(shopable, params.itemName);
     if (!item) throw notFound({ data: { suggestion: closestNameBySlug(shopable, params.itemName)?.name } });
     const [stats, heroStats] = await Promise.all([
-      prefetchSafe(queryClient.ensureQueryData(itemStatsQueryOptions(currentItemStatsParams(seasons)))),
-      prefetchSafe(queryClient.ensureQueryData(heroStatsQueryOptions(currentHeroStatsParams(seasons)))),
+      prefetchSafe(
+        queryClient.ensureQueryData(itemStatsQueryOptions(currentItemStatsParams(seasons, preferences.dateFilter))),
+      ),
+      prefetchSafe(
+        queryClient.ensureQueryData(heroStatsQueryOptions(currentHeroStatsParams(seasons, preferences.dateFilter))),
+      ),
       prefetchSafe(queryClient.ensureQueryData(itemQueryOptions(item.id))),
     ]);
     const summary = summarizeItemStats(stats, heroStats, item.id);
@@ -179,10 +184,11 @@ function clock(seconds: number): string {
 }
 
 function ItemDetailPage() {
+  const { preferences } = Route.useRouteContext();
   const { itemId, itemName, tier, slot, cost } = Route.useLoaderData();
   const { seasons } = useSeasons();
-  const itemRequest = currentItemStatsParams(seasons);
-  const heroRequest = currentHeroStatsParams(seasons);
+  const itemRequest = currentItemStatsParams(seasons, preferences.dateFilter);
+  const heroRequest = currentHeroStatsParams(seasons, preferences.dateFilter);
   const statsQuery = useQuery(itemStatsQueryOptions(itemRequest));
   const heroStatsQuery = useQuery(heroStatsQueryOptions(heroRequest));
   const itemQuery = useQuery(itemQueryOptions(itemId));
@@ -270,7 +276,11 @@ function ItemDetailPage() {
 
       <ChunkErrorBoundary>
         <Suspense fallback={<LoadingLogo />}>
-          <ItemWinRateByRank itemId={itemId} itemName={itemName} request={byRankItemStatsParams(seasons)} />
+          <ItemWinRateByRank
+            itemId={itemId}
+            itemName={itemName}
+            request={byRankItemStatsParams(seasons, preferences.dateFilter)}
+          />
         </Suspense>
       </ChunkErrorBoundary>
 
