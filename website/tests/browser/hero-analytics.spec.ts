@@ -480,3 +480,16 @@ for (const breakdown of ["duration", "rank"]) {
     await expect(page).toHaveURL(/min_rank=0/);
   });
 }
+
+test("duration counts retain small samples while rate metrics omit them", async ({ page }) => {
+  await page.route("**/v1/analytics/hero-stats?**", (route) =>
+    route.fulfill({ json: stats.map((row) => Object.assign({}, row, { matches: 5, wins: 3, losses: 2 })) }),
+  );
+  await page.goto("/analytics/heroes/by-duration?date_range=_&min_rank=0");
+  await expect(page.getByText("No duration data for these filters", { exact: true })).toBeVisible();
+  await page.getByRole("combobox", { name: "Stat", exact: true }).click();
+  await page.getByRole("option", { name: "Matches", exact: true }).click();
+  await expect(page.getByRole("figure")).toBeVisible();
+  await expect(page.locator(".recharts-line-curve")).toHaveCount(1);
+  await expect(page.getByText("Buckets below 10 matches are omitted.", { exact: false })).toHaveCount(0);
+});

@@ -15,7 +15,7 @@ import type { Dayjs } from "~/dayjs";
 import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
-import { niceTicks } from "~/lib/chart-axis";
+import { formatCompactAxisTick, niceTicks } from "~/lib/chart-axis";
 import { DURATION_BUCKETS, MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
 import { formatTrendValue, HERO_TREND_LABELS } from "~/lib/hero-trends";
 import { queryKeys } from "~/queries/query-keys";
@@ -90,6 +90,8 @@ export function HeroStatsByDurationChart({
   const isLoading = isLoadingBuckets || isLoadingHeroes;
   const allLoaded = bucketData.every((data) => data != null);
 
+  const requiresSampleFloor = !["matches", "wins", "losses"].includes(heroStat);
+
   const formattedData = useMemo(() => {
     if (!allLoaded) return [];
 
@@ -99,13 +101,13 @@ export function HeroStatsByDurationChart({
 
       const row: Record<string, string | number> = { label: bucket.label };
       for (const entry of queryData) {
-        if (entry.matches < MIN_MATCHES_PER_BUCKET) continue;
+        if (requiresSampleFloor && entry.matches < MIN_MATCHES_PER_BUCKET) continue;
         const statValue = hero_stats_transform(entry, heroStat);
-        row[entry.hero_id] = statValue > 100 ? Math.round(statValue) : Math.round(statValue * 100) / 100;
+        if (Number.isFinite(statValue)) row[entry.hero_id] = statValue;
       }
       return row;
     });
-  }, [allLoaded, bucketData, heroStat]);
+  }, [allLoaded, bucketData, heroStat, requiresSampleFloor]);
 
   const heroIdsWithData = useMemo(
     () => [
@@ -202,7 +204,7 @@ export function HeroStatsByDurationChart({
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(value: number) => {
-                      const text = value.toLocaleString("en-US", { maximumFractionDigits: 2 });
+                      const text = formatCompactAxisTick(value, yTicks.length > 1 ? yTicks[1] - yTicks[0] : 0);
                       return heroStat === "winrate" ? `${text}%` : text;
                     }}
                     stroke="var(--muted-foreground)"
@@ -214,7 +216,7 @@ export function HeroStatsByDurationChart({
                       if (!active || !payload?.length) return null;
                       return (
                         <ChartReadings
-                          title={`${label} minutes`}
+                          title={String(label)}
                           rows={payload.map((entry) => ({
                             label: String(entry.name),
                             value: formatTrendValue(Number(entry.value), heroStat),
@@ -241,7 +243,8 @@ export function HeroStatsByDurationChart({
               </ChartSurface>
             )}
             <p className="border-t px-3 py-2 text-xs text-muted-foreground">
-              Gaps indicate missing data or fewer than {MIN_MATCHES_PER_BUCKET} matches in a duration bucket.
+              Gaps indicate missing data.
+              {requiresSampleFloor && ` Buckets below ${MIN_MATCHES_PER_BUCKET} matches are omitted.`}
             </p>
           </section>
         </ChartSidebarLayout>
