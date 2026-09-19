@@ -27,8 +27,6 @@ type HeroFiltersProps = Pick<
   | "endDate"
   | "handleDateChange"
   | "defaultRange"
-  | "heroId"
-  | "setHeroId"
   | "sameLaneFilter"
   | "setSameLaneFilter"
 >;
@@ -51,8 +49,6 @@ export function HeroFiltersSection({
   endDate,
   handleDateChange,
   defaultRange,
-  heroId,
-  setHeroId,
   sameLaneFilter,
   setSameLaneFilter,
 }: HeroFiltersProps) {
@@ -91,9 +87,6 @@ export function HeroFiltersSection({
         resetRange={defaultRange}
       />
       {tab === "hero-combs" && <HeroCombFilters />}
-      {tab === "hero-matchup-details" && (
-        <Filter.Hero value={heroId} defaultValue={2} onChange={(id) => id != null && setHeroId(id)} />
-      )}
       {(tab === "matchups" || tab === "hero-matchup-details") && (
         <FilterToggleCell
           label="Lane"

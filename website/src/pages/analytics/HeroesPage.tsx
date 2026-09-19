@@ -57,9 +57,9 @@ const HeroCombStatsTable = lazy(() =>
     default: m.HeroCombStatsTable,
   })),
 );
-const HeroMatchupDetailsStatsTable = lazy(() =>
-  import("~/components/heroes-page/HeroMatchupDetailsStatsTable").then((m) => ({
-    default: m.HeroMatchupDetailsStatsTable,
+const HeroMatchupExplorer = lazy(() =>
+  import("~/components/heroes-page/HeroMatchupExplorer").then((m) => ({
+    default: m.HeroMatchupExplorer,
   })),
 );
 
@@ -97,11 +97,19 @@ export function HeroesPage() {
   return (
     <div className="flex flex-col gap-3">
       <DataPageHeader
-        title={filters.tab === "stats-over-time" ? "Hero performance over time" : "Deadlock Hero Win Rates"}
+        title={
+          filters.tab === "hero-matchup-details"
+            ? "Hero matchup explorer"
+            : filters.tab === "stats-over-time"
+              ? "Hero performance over time"
+              : "Deadlock Hero Win Rates"
+        }
         description={
-          filters.tab === "stats-over-time"
-            ? "Compare hero trends across ranks, patches, and game modes."
-            : "Compare hero performance across ranks, patches, and game modes."
+          filters.tab === "hero-matchup-details"
+            ? "Discover the allies and opponents that change your game."
+            : filters.tab === "stats-over-time"
+              ? "Compare hero trends across ranks, patches, and game modes."
+              : "Compare hero performance across ranks, patches, and game modes."
         }
       />
 
@@ -378,44 +386,22 @@ export function HeroesPage() {
             <h2 className="sr-only">Hero Matchup Details</h2>
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingLogo />}>
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <HeroMatchupDetailsStatsTable
-                    heroId={filters.heroId}
-                    stat={0}
-                    minRankId={filters.effectiveMinRankId}
-                    maxRankId={filters.effectiveMaxRankId}
-                    minDate={filters.startDate || undefined}
-                    maxDate={filters.endDate || undefined}
-                    prevMinDate={filters.prevStartDate}
-                    prevMaxDate={filters.prevEndDate}
-                    onHeroSelected={(selectedHeroId) => {
-                      if (!selectedHeroId) return;
-                      filters.setHeroId(selectedHeroId);
-                    }}
-                    sameLaneFilter={filters.sameLaneFilter}
-                    minHeroMatches={filters.minMatches}
-                    gameMode={filters.gameMode}
-                    matchMode={filters.matchMode}
-                  />
-                  <HeroMatchupDetailsStatsTable
-                    heroId={filters.heroId}
-                    stat={1}
-                    minRankId={filters.effectiveMinRankId}
-                    maxRankId={filters.effectiveMaxRankId}
-                    minDate={filters.startDate || undefined}
-                    maxDate={filters.endDate || undefined}
-                    prevMinDate={filters.prevStartDate}
-                    prevMaxDate={filters.prevEndDate}
-                    onHeroSelected={(selectedHeroId) => {
-                      if (!selectedHeroId) return;
-                      filters.setHeroId(selectedHeroId);
-                    }}
-                    sameLaneFilter={filters.sameLaneFilter}
-                    minHeroMatches={filters.minMatches}
-                    gameMode={filters.gameMode}
-                    matchMode={filters.matchMode}
-                  />
-                </div>
+                <HeroMatchupExplorer
+                  heroId={filters.heroId}
+                  minRankId={filters.effectiveMinRankId}
+                  maxRankId={filters.effectiveMaxRankId}
+                  minDate={filters.startDate || undefined}
+                  maxDate={filters.endDate || undefined}
+                  prevMinDate={filters.prevStartDate}
+                  prevMaxDate={filters.prevEndDate}
+                  onHeroSelected={(heroId) => {
+                    void filters.setHeroId(heroId);
+                  }}
+                  sameLaneFilter={filters.sameLaneFilter}
+                  minHeroMatches={filters.minMatches}
+                  gameMode={filters.gameMode}
+                  matchMode={filters.matchMode}
+                />
               </Suspense>
             </ChunkErrorBoundary>
           </div>

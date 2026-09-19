@@ -14,6 +14,7 @@ import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { formatSignedPercent } from "~/lib/format";
+import { matchupWinRateChange } from "~/lib/matchup-stats";
 import { cn } from "~/lib/utils";
 import { queryKeys } from "~/queries/query-keys";
 
@@ -22,7 +23,7 @@ export enum HeroMatchupDetailsStatsTableStat {
   COUNTER = 1,
 }
 
-interface MatchupRow {
+export interface MatchupRow {
   heroId: number;
   matches: number;
   wins: number;
@@ -81,7 +82,12 @@ export function useHeroMatchupRows({
     gameMode: gameMode,
     matchMode,
   };
-  const { data: heroData, isLoading: isLoadingHero } = useQuery({
+  const {
+    data: heroData,
+    isLoading: isLoadingHero,
+    isError: isHeroError,
+    refetch: refetchHero,
+  } = useQuery({
     queryKey: queryKeys.analytics.heroStats(heroStatsQuery),
     queryFn: async () => {
       const response = await api.analytics_api.heroStats(heroStatsQuery);
@@ -100,7 +106,12 @@ export function useHeroMatchupRows({
     gameMode: gameMode,
     matchMode,
   };
-  const { data: synergyData, isLoading: isLoadingSynergy } = useQuery({
+  const {
+    data: synergyData,
+    isLoading: isLoadingSynergy,
+    isError: isSynergyError,
+    refetch: refetchSynergy,
+  } = useQuery({
     queryKey: queryKeys.analytics.heroSynergyStats(synergyStatsQuery),
     queryFn: async () => {
       const response = await api.analytics_api.heroSynergiesStats(synergyStatsQuery);
@@ -119,7 +130,12 @@ export function useHeroMatchupRows({
     gameMode: gameMode,
     matchMode,
   };
-  const { data: counterData, isLoading: isLoadingCounter } = useQuery({
+  const {
+    data: counterData,
+    isLoading: isLoadingCounter,
+    isError: isCounterError,
+    refetch: refetchCounter,
+  } = useQuery({
     queryKey: queryKeys.analytics.heroCounterStats(counterStatsQuery),
     queryFn: async () => {
       const response = await api.analytics_api.heroCountersStats(counterStatsQuery);
@@ -199,50 +215,48 @@ export function useHeroMatchupRows({
 
   const prevSynergyRelWinrateMap = useMemo(() => {
     const map: Record<number, Record<number, number>> = {};
-    for (const synergy of prevSynergyData || []) {
-      if (!synergy?.matches_played || !synergy?.wins) continue;
-      if (!prevHeroStatsMap[synergy.hero_id1]?.matches || !prevHeroStatsMap[synergy.hero_id2]?.matches) continue;
-      const relWinrate =
-        synergy.wins / synergy.matches_played -
-        (prevHeroStatsMap[synergy.hero_id1].wins / prevHeroStatsMap[synergy.hero_id1].matches +
-          prevHeroStatsMap[synergy.hero_id2].wins / prevHeroStatsMap[synergy.hero_id2].matches) /
-          2;
+    for (const synergy of (hasPreviousInterval ? prevSynergyData : undefined) || []) {
+      const relWinrate = matchupWinRateChange(synergy.wins, synergy.matches_played, [
+        prevHeroStatsMap[synergy.hero_id1],
+        prevHeroStatsMap[synergy.hero_id2],
+      ]);
+      if (relWinrate === undefined) continue;
       if (!map[synergy.hero_id1]) map[synergy.hero_id1] = {};
       if (!map[synergy.hero_id2]) map[synergy.hero_id2] = {};
       map[synergy.hero_id1][synergy.hero_id2] = relWinrate;
       map[synergy.hero_id2][synergy.hero_id1] = relWinrate;
     }
     return map;
-  }, [prevSynergyData, prevHeroStatsMap]);
+  }, [prevSynergyData, prevHeroStatsMap, hasPreviousInterval]);
 
   const prevCounterRelWinrateMap = useMemo(() => {
     const map: Record<number, Record<number, number>> = {};
-    for (const counter of prevCounterData || []) {
-      if (!counter?.matches_played || !counter?.wins) continue;
-      if (!prevHeroStatsMap[counter.hero_id]?.matches) continue;
-      const relWinrate =
-        counter.wins / counter.matches_played -
-        prevHeroStatsMap[counter.hero_id].wins / prevHeroStatsMap[counter.hero_id].matches;
+    for (const counter of (hasPreviousInterval ? prevCounterData : undefined) || []) {
+      const relWinrate = matchupWinRateChange(counter.wins, counter.matches_played, [
+        prevHeroStatsMap[counter.hero_id],
+      ]);
+      if (relWinrate === undefined) continue;
       if (!map[counter.hero_id]) map[counter.hero_id] = {};
       map[counter.hero_id][counter.enemy_hero_id] = relWinrate;
     }
     return map;
-  }, [prevCounterData, prevHeroStatsMap]);
+  }, [prevCounterData, prevHeroStatsMap, hasPreviousInterval]);
 
   const synergyRows = useMemo(() => {
     const rows: MatchupRow[] = [];
     for (const synergy of synergyData || []) {
       if (synergy.hero_id1 !== heroId && synergy.hero_id2 !== heroId) continue;
       const otherHeroId = synergy.hero_id1 === heroId ? synergy.hero_id2 : synergy.hero_id1;
+      const relWinrate = matchupWinRateChange(synergy.wins, synergy.matches_played, [
+        heroStatsMap[heroId],
+        heroStatsMap[otherHeroId],
+      ]);
+      if (relWinrate === undefined) continue;
       rows.push({
         heroId: otherHeroId,
         matches: synergy.matches_played,
         wins: synergy.wins,
-        relWinrate:
-          synergy.wins / synergy.matches_played -
-          (heroStatsMap[heroId]?.wins / heroStatsMap[heroId]?.matches +
-            heroStatsMap[otherHeroId]?.wins / heroStatsMap[otherHeroId]?.matches) /
-            2,
+        relWinrate,
         prevRelWinrate: prevSynergyRelWinrateMap[heroId]?.[otherHeroId],
       });
     }
@@ -254,11 +268,13 @@ export function useHeroMatchupRows({
     const rows: MatchupRow[] = [];
     for (const counter of counterData || []) {
       if (counter.hero_id !== heroId) continue;
+      const relWinrate = matchupWinRateChange(counter.wins, counter.matches_played, [heroStatsMap[heroId]]);
+      if (relWinrate === undefined) continue;
       rows.push({
         heroId: counter.enemy_hero_id,
         matches: counter.matches_played,
         wins: counter.wins,
-        relWinrate: counter.wins / counter.matches_played - heroStatsMap[heroId]?.wins / heroStatsMap[heroId]?.matches,
+        relWinrate,
         prevRelWinrate: prevCounterRelWinrateMap[heroId]?.[counter.enemy_hero_id],
       });
     }
@@ -266,7 +282,14 @@ export function useHeroMatchupRows({
     return rows;
   }, [heroId, counterData, heroStatsMap, prevCounterRelWinrateMap]);
 
-  return { synergyRows, counterRows, isLoading };
+  return {
+    synergyRows,
+    counterRows,
+    isLoading,
+    heroStats: heroStatsMap[heroId],
+    isError: isHeroError || isSynergyError || isCounterError,
+    retry: () => Promise.all([refetchHero(), refetchSynergy(), refetchCounter()]),
+  };
 }
 
 export function HeroMatchupDetailsStatsTable({
