@@ -119,8 +119,7 @@ pub(crate) struct RankImageQuery {
 #[cached(
     ttl_secs = 86400,
     convert = "{ (badge, format) }",
-    key = "(u32, RankImageFormat)",
-    sync_writes = "by_key"
+    key = "(u32, RankImageFormat)"
 )]
 pub(crate) async fn render(
     state: &AppState,

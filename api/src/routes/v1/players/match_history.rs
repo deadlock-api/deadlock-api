@@ -135,7 +135,6 @@ pub(crate) type MatchHistoryReadBatcher = ClickhouseBatcherMulti<MatchHistoryRea
     max_size = 1_000,
     ttl_secs = 600,
     convert = "{ account_id }",
-    sync_writes = "by_key",
     key = "u32"
 )]
 async fn fetch_ch_match_history(
@@ -400,7 +399,6 @@ async fn fetch_match_history_raw(
     max_size = 1_000,
     ttl_secs = 480,
     convert = "{ (account_id, rank_interval) }",
-    sync_writes = "by_key",
     key = "(u32, Option<u32>)",
     force_refresh = "{ force_refetch }"
 )]

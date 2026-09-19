@@ -62,7 +62,6 @@ impl From<CMsgAccountStats> for PlayerAccountStats {
     max_size = 1_000,
     ttl_secs = 60,
     convert = "{ account_id }",
-    sync_writes = "by_key",
     key = "u32"
 )]
 pub(crate) async fn fetch_player_account_stats_raw(
@@ -93,7 +92,6 @@ pub(crate) async fn fetch_player_account_stats_raw(
     max_size = 1_000,
     ttl_secs = 300,
     convert = "{ account_id }",
-    sync_writes = "by_key",
     key = "u32"
 )]
 pub(crate) async fn get_player_account_stats(

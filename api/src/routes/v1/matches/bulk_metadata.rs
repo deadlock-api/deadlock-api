@@ -428,7 +428,6 @@ async fn match_player_columns(
     max_size = 1_000,
     ttl_secs = 3600,
     convert = r#"{ columns.iter().map(|(expr, _)| expr.as_str()).join(",") }"#,
-    sync_writes = "by_key",
     key = "String"
 )]
 async fn players_tuple_type(

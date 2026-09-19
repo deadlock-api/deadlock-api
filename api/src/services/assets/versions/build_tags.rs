@@ -44,8 +44,7 @@ pub(crate) fn build_build_tags(loc: &HashMap<String, String>) -> Vec<BuildTag> {
     max_size = 64,
     ttl_secs = 86400,
     convert = r#"{ (version, language.to_owned()) }"#,
-    key = "(u32, String)",
-    sync_writes = "by_key"
+    key = "(u32, String)"
 )]
 pub(crate) async fn fetch_build_tags(
     r2: &AmazonS3,

@@ -978,7 +978,6 @@ SETTINGS {settings_clause}
     max_size = 1_000,
     ttl_secs = 21600,
     convert = "{ query_str.to_string() }",
-    sync_writes = "by_key",
     key = "String"
 )]
 async fn run_query(

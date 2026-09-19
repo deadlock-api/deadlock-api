@@ -62,7 +62,6 @@ pub(super) struct IngestLiveUrl {
     max_size = 10_000,
     ttl_secs = 3600,
     convert = "{ api_key }",
-    sync_writes = "by_key",
     key = "Uuid"
 )]
 async fn uses_live_events_pool(
@@ -78,13 +77,7 @@ async fn uses_live_events_pool(
     Ok(row.is_some_and(|r| r.live_events_pool))
 }
 
-#[cached(
-    max_size = 1_000,
-    ttl_secs = 60,
-    convert = "{ match_id }",
-    sync_writes = "by_key",
-    key = "u64"
-)]
+#[cached(max_size = 1_000, ttl_secs = 60, convert = "{ match_id }", key = "u64")]
 pub(super) async fn spectate_match(
     steam_client: &SteamClient,
     match_id: u64,

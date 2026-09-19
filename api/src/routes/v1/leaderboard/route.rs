@@ -51,7 +51,6 @@ pub(super) struct LeaderboardHeroQuery {
 #[cached(
     ttl_secs = 600,
     convert = "{ (region, hero_id) }",
-    sync_writes = "by_key",
     key = "(LeaderboardRegion, Option<u32>)"
 )]
 pub(crate) async fn fetch_leaderboard_raw(

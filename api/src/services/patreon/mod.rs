@@ -15,7 +15,6 @@ use sqlx::{Pool, Postgres};
     max_size = 100_000,
     ttl_secs = 3600,
     convert = "{ steam_id3 }",
-    sync_writes = "by_key",
     key = "i64"
 )]
 pub(crate) async fn is_account_prioritized(

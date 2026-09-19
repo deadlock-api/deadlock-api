@@ -246,7 +246,6 @@ pub(crate) type PlayerRankBatcher = ClickhouseBatcher<PlayerRankQuery>;
     max_size = 10_000,
     ttl_secs = 600,
     convert = "{ account_id }",
-    sync_writes = "by_key",
     key = "u32"
 )]
 pub(crate) async fn fetch_last_ranked_match(

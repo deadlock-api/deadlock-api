@@ -189,7 +189,6 @@ fn not_found(match_id: u64) -> APIError {
     max_size = 10_000,
     ttl_secs = 60,
     convert = "{ match_id }",
-    sync_writes = "by_key",
     key = "u64"
 )]
 pub(super) async fn fetch_match_salts(

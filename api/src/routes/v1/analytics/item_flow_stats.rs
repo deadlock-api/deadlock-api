@@ -535,7 +535,6 @@ fn build_edges_query(query: &ItemFlowStatsQuery) -> String {
     max_size = 1_000,
     ttl_secs = 3600,
     convert = "{ query_str.to_string() }",
-    sync_writes = "by_key",
     key = "String"
 )]
 async fn run_nodes_query(
@@ -549,7 +548,6 @@ async fn run_nodes_query(
     max_size = 1_000,
     ttl_secs = 3600,
     convert = "{ query_str.to_string() }",
-    sync_writes = "by_key",
     key = "String"
 )]
 async fn run_edges_query(
@@ -587,7 +585,6 @@ struct ItemFlowTotalsRow {
     max_size = 1_000,
     ttl_secs = 3600,
     convert = "{ query_str.to_string() }",
-    sync_writes = "by_key",
     key = "String"
 )]
 async fn run_totals_query(

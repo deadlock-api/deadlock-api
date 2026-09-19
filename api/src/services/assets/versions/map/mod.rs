@@ -203,8 +203,7 @@ pub(crate) fn build_map(css: &str) -> Result<MapData, AssetsError> {
     max_size = 64,
     ttl_secs = 86400,
     convert = r#"{ version }"#,
-    key = "u32",
-    sync_writes = "by_key"
+    key = "u32"
 )]
 pub(crate) async fn fetch_map(r2: &AmazonS3, version: u32) -> Result<Arc<MapData>, AssetsError> {
     let css_src = store::fetch_text(r2, version, CSS_PATH).await?;

@@ -53,8 +53,7 @@ pub(crate) fn build_loot_tables(vdata: &str) -> Result<LootTables, AssetsError> 
     max_size = 64,
     ttl_secs = 86400,
     convert = r#"{ version }"#,
-    key = "u32",
-    sync_writes = "by_key"
+    key = "u32"
 )]
 pub(crate) async fn fetch_loot_tables(
     r2: &AmazonS3,

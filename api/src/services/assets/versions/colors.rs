@@ -21,8 +21,7 @@ pub(crate) fn build_colors(css_src: &str) -> BTreeMap<String, Color> {
     max_size = 64,
     ttl_secs = 86400,
     convert = r#"{ version }"#,
-    key = "u32",
-    sync_writes = "by_key"
+    key = "u32"
 )]
 pub(crate) async fn fetch_colors(
     r2: &AmazonS3,

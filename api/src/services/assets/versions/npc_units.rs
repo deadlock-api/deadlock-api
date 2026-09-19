@@ -1084,13 +1084,7 @@ fn normalize_spread_penalty(p: SpreadPenalty) -> Option<SpreadPenalty> {
 
 // ===================================================== Cached fetch
 
-#[cached(
-    max_size = 64,
-    ttl_secs = 86400,
-    convert = "{ version }",
-    key = "u32",
-    sync_writes = "by_key"
-)]
+#[cached(max_size = 64, ttl_secs = 86400, convert = "{ version }", key = "u32")]
 pub(crate) async fn fetch_npc_units(
     r2: &AmazonS3,
     version: u32,

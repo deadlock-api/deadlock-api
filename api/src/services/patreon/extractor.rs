@@ -93,7 +93,6 @@ fn extract_token_from_auth_header(headers: &axum::http::HeaderMap) -> Option<Str
     max_size = 10_000,
     ttl_secs = 600,
     convert = "{ api_key }",
-    sync_writes = "by_key",
     key = "Uuid",
     cache_none = true
 )]

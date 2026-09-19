@@ -75,8 +75,7 @@ async fn pending_pool(
     max_size = 1_000,
     ttl_secs = 60,
     convert = "{ account_id }",
-    key = "u32",
-    sync_writes = "by_key"
+    key = "u32"
 )]
 async fn pending_pool_for_account(
     ch_client: &clickhouse::Client,

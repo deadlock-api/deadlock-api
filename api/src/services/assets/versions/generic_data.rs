@@ -806,13 +806,7 @@ fn street_brawl_out(r: RawStreetBrawl) -> StreetBrawl {
     }
 }
 
-#[cached(
-    max_size = 64,
-    ttl_secs = 86400,
-    convert = "{ version }",
-    key = "u32",
-    sync_writes = "by_key"
-)]
+#[cached(max_size = 64, ttl_secs = 86400, convert = "{ version }", key = "u32")]
 pub(crate) async fn fetch_generic_data(
     r2: &AmazonS3,
     version: u32,

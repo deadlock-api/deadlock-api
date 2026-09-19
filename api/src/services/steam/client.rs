@@ -491,7 +491,6 @@ async fn get_client_version_from_github(http_client: &reqwest::Client) -> APIRes
     max_size = 100_000,
     ttl_secs = 86400,
     convert = "{ steam_id }",
-    sync_writes = "by_key",
     key = "u32"
 )]
 async fn fetch_steam_account_name_cached(

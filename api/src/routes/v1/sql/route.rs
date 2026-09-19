@@ -340,12 +340,7 @@ pub(super) async fn table_schema(
     ))
 }
 
-#[cached(
-    ttl_secs = 3600,
-    convert = r#"{ table.to_string() }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
+#[cached(ttl_secs = 3600, convert = r#"{ table.to_string() }"#, key = "String")]
 async fn fetch_table_schema(
     ch_client: &clickhouse::Client,
     table: &str,

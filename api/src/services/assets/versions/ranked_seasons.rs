@@ -132,8 +132,7 @@ pub(crate) fn interval_at(seasons: &[RankedSeason], now: i64) -> Option<u32> {
     max_size = 64,
     ttl_secs = 86400,
     convert = r#"{ (version, language.to_owned()) }"#,
-    key = "(u32, String)",
-    sync_writes = "by_key"
+    key = "(u32, String)"
 )]
 pub(crate) async fn fetch_ranked_seasons(
     r2: &AmazonS3,

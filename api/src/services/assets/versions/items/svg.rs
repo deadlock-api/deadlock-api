@@ -19,8 +19,7 @@ fn http() -> &'static reqwest::Client {
     max_size = 256,
     ttl_secs = 86400,
     convert = r#"{ name.to_owned() }"#,
-    key = "String",
-    sync_writes = "by_key"
+    key = "String"
 )]
 pub(super) async fn fetch_svg(name: &str) -> Arc<Option<String>> {
     let url = format!("{ICONS_BASE_URL}/{name}");

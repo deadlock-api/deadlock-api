@@ -36,8 +36,7 @@ pub(crate) use types::Item;
     max_size = 32,
     ttl_secs = 86400,
     convert = r#"{ (version, language.to_owned()) }"#,
-    key = "(u32, String)",
-    sync_writes = "by_key"
+    key = "(u32, String)"
 )]
 pub(crate) async fn fetch_items(
     r2: &AmazonS3,

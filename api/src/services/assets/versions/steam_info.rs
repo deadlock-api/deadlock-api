@@ -87,13 +87,7 @@ pub(crate) fn build_steam_info(text: &str) -> Result<SteamInfo, AssetsError> {
     })
 }
 
-#[cached(
-    max_size = 64,
-    ttl_secs = 86400,
-    convert = "{ version }",
-    key = "u32",
-    sync_writes = "by_key"
-)]
+#[cached(max_size = 64, ttl_secs = 86400, convert = "{ version }", key = "u32")]
 pub(crate) async fn fetch_steam_info(
     r2: &AmazonS3,
     version: u32,

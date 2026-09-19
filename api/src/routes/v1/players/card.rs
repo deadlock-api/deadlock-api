@@ -151,7 +151,6 @@ impl From<&PlayerCard> for PlayerCardClickhouse {
     max_size = 1_000,
     ttl_secs = 300,
     convert = "{ account_id }",
-    sync_writes = "by_key",
     key = "u32"
 )]
 pub(crate) async fn fetch_player_card_raw(

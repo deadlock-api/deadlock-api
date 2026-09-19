@@ -1082,13 +1082,7 @@ struct ParsedSources {
     backgrounds: Arc<HashMap<String, String>>,
 }
 
-#[cached(
-    max_size = 8,
-    ttl_secs = 86400,
-    convert = "{ version }",
-    key = "u32",
-    sync_writes = "by_key"
-)]
+#[cached(max_size = 8, ttl_secs = 86400, convert = "{ version }", key = "u32")]
 async fn parsed_version_sources(r2: &AmazonS3, version: u32) -> Result<ParsedSources, AssetsError> {
     // CSS files are optional: a NotFound leaves the lookup empty so the
     // per-hero `background_image*` / `colors.style*` fields serialize as null.
@@ -1134,8 +1128,7 @@ async fn fetch_optional_text(
     max_size = 64,
     ttl_secs = 86400,
     convert = r#"{ (version, language.to_owned()) }"#,
-    key = "(u32, String)",
-    sync_writes = "by_key"
+    key = "(u32, String)"
 )]
 pub(crate) async fn fetch_heroes(
     r2: &AmazonS3,
