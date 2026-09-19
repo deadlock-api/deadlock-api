@@ -9,11 +9,10 @@ import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { defaultDateRange } from "~/lib/seasons";
 
 /**
- * `date_range` URL state defaulting to the current ranked season, plus the
+ * `date_range` URL state defaulting to the latest balance patch, plus the
  * comparison range that goes with it. The previous period is derived from the
  * URL range on every render, the same way the picker derives it, so a shared or
- * reloaded link compares against the same baseline as a fresh pick, and the
- * default keeps up when the season list only arrives after the first render.
+ * reloaded link compares against the same baseline as a fresh pick.
  */
 export function useDateRangeState() {
   const { seasons } = useSeasons();

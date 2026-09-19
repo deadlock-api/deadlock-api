@@ -62,16 +62,13 @@ export function previousSeasonRange(seasons: readonly SeasonInfo[], index: numbe
   return [season.startDate.subtract(lengthSeconds, "second"), season.startDate];
 }
 
-/** Default filter range: the current ranked season, falling back to the current patch. */
-export function defaultDateRange(seasons: readonly SeasonInfo[]): [Dayjs | undefined, Dayjs | undefined] {
-  const season = currentSeason(seasons);
-  if (!season) return [PATCHES[0].startDate, PATCHES[0].endDate];
-  return [season.startDate, season.endDate];
+/** Default filter range: the latest balance patch, independent of ranked seasons. */
+export function defaultDateRange(_seasons: readonly SeasonInfo[]): [Dayjs | undefined, Dayjs | undefined] {
+  return [PATCHES[0].startDate, PATCHES[0].endDate];
 }
 
-export function defaultPrevDateRange(seasons: readonly SeasonInfo[]): [Dayjs | undefined, Dayjs | undefined] {
-  if (!currentSeason(seasons)) return [PATCHES[1].startDate, PATCHES[0].startDate];
-  return previousSeasonRange(seasons, 0);
+export function defaultPrevDateRange(_seasons: readonly SeasonInfo[]): [Dayjs | undefined, Dayjs | undefined] {
+  return [PATCHES[1].startDate, PATCHES[0].startDate];
 }
 
 /** `defaultDateRange` as normalized unix bounds, in the shape the analytics request params take. */

@@ -146,7 +146,7 @@ export function SeasonPatchDatePicker({
   patchDates,
   value,
   onValueChange,
-  defaultTab = "season",
+  defaultTab = "patch",
 }: SeasonPatchDatePickerProps) {
   const { seasons, isPending: seasonsPending } = useSeasons();
 
