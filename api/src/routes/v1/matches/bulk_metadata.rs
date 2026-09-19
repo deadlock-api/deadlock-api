@@ -419,7 +419,19 @@ async fn match_player_columns(
         )
         .fetch_all::<String>()
         .await
-        .map(|names| names.into_iter().collect())
+        .map(with_nested_parents)
+}
+
+/// `system.columns` lists a `Nested` column only by its flattened subcolumns (`mid_boss.team_killed`),
+/// but it can also be read whole by its parent name (`mid_boss`).
+fn with_nested_parents(names: Vec<String>) -> HashSet<String> {
+    names
+        .into_iter()
+        .flat_map(|name| {
+            let parent = name.split_once('.').map(|(parent, _)| parent.to_owned());
+            parent.into_iter().chain([name])
+        })
+        .collect()
 }
 
 /// Resolves the `ClickHouse` `Tuple(...)` type of one `players` element, so it can be built natively
@@ -1034,6 +1046,19 @@ mod proptests {
         assert!(!sql.contains("any(`match_id`)"));
         assert!(!sql.contains("any(`average_badge`)"));
         assert_eq!(sql.matches("any(`team_score`) as `team_score`").count(), 1);
+    }
+
+    #[test]
+    fn nested_columns_are_known_by_parent_name() {
+        let known = with_nested_parents(vec![
+            "team_score".to_owned(),
+            "street_brawl_rounds.round_duration_s".to_owned(),
+            "street_brawl_rounds.winning_team".to_owned(),
+        ]);
+        assert!(known.contains("street_brawl_rounds"));
+        assert!(known.contains("street_brawl_rounds.winning_team"));
+        assert!(known.contains("team_score"));
+        assert!(!known.contains("street_brawl"));
     }
 
     #[test]
