@@ -106,19 +106,19 @@ export function ItemWinRateByBuyTime({
         read this as when the item tends to pay off rather than proof that rushing it wins.
       </p>
       <figure aria-label={`${itemName} win rate by purchase time`}>
-        <ResponsiveContainer width="100%" height={280} className="rounded-xl bg-muted p-2">
+        <ResponsiveContainer width="100%" height={280} className="rounded-xl border bg-card p-2">
           <BarChart data={entries} margin={{ top: 8, right: 8, bottom: 8, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
             <XAxis dataKey="tick" interval={0} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
             <YAxis
               domain={winRateAxis}
               ticks={percentTicks(winRateAxis)}
               tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
               width={44}
-              stroke="#525252"
+              stroke="var(--muted-foreground)"
               tick={{ fontSize: 11 }}
             />
-            <ReferenceLine y={0.5} stroke="#525252" strokeDasharray="4 4" />
+            <ReferenceLine y={0.5} stroke="var(--muted-foreground)" strokeDasharray="4 4" />
             <Tooltip
               cursor={{ fill: "rgba(255,255,255,0.04)" }}
               content={({ active, payload }) => {

@@ -38,11 +38,8 @@ export function buildDistributionCurve(values: HashMapValue): CurvePoint[] {
 function DistributionTooltip({ payload, fmt }: { payload?: { payload: CurvePoint }[]; fmt: (v: number) => string }) {
   if (!payload?.length) return null;
   return (
-    <div
-      className="rounded border border-[#1a1a1a] px-2.5 py-1.5 text-xs"
-      style={{ backgroundColor: "#0a0a0a", opacity: 1 }}
-    >
-      <span className="text-[#e5e5e5]">{fmt(payload[0].payload.x)}</span>
+    <div className="rounded-md border bg-popover px-2.5 py-1.5 text-xs text-popover-foreground shadow-md">
+      <span className="tabular-nums">{fmt(payload[0].payload.x)}</span>
     </div>
   );
 }

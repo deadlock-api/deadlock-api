@@ -114,7 +114,7 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
           <div className="py-8 text-center text-sm text-muted-foreground">No data available.</div>
         ) : mode === "total" ? (
           <figure aria-label="Net worth growth over the match">
-            <ResponsiveContainer width="100%" height={460} className="rounded-xl bg-muted p-4 [&_*]:outline-none">
+            <ResponsiveContainer width="100%" height={320} className="rounded-xl border bg-card p-2 [&_*]:outline-none">
               <ComposedChart data={chartData} margin={{ top: 24, right: 24, bottom: 36, left: 12 }}>
                 {PHASES.map((phase) => (
                   <ReferenceArea
@@ -126,19 +126,19 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
                     label={{ value: phase.label, position: "insideTop", fill: "#737373", fontSize: 11 }}
                   />
                 ))}
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis
                   dataKey="t"
                   type="number"
                   domain={[0, 100]}
                   ticks={[0, 33, 66, 100]}
                   tickFormatter={(v: number) => `${v}%`}
-                  stroke="#525252"
+                  stroke="var(--muted-foreground)"
                   height={40}
                   label={{ value: "Game Progress", position: "insideBottom", offset: -6 }}
                 />
                 <YAxis
-                  stroke="#525252"
+                  stroke="var(--muted-foreground)"
                   tickFormatter={(v: number) => formatSoulsCompact(v)}
                   label={{ value: "Avg Net Worth", angle: -90, position: "insideLeft", offset: -2 }}
                 />
@@ -190,7 +190,7 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
           </figure>
         ) : (
           <figure aria-label="Net worth by source over the match">
-            <ResponsiveContainer width="100%" height={460} className="rounded-xl bg-muted p-4 [&_*]:outline-none">
+            <ResponsiveContainer width="100%" height={320} className="rounded-xl border bg-card p-2 [&_*]:outline-none">
               <LineChart data={chartData} margin={{ top: 24, right: 24, bottom: 36, left: 12 }}>
                 {PHASES.map((phase) => (
                   <ReferenceArea
@@ -202,19 +202,19 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
                     label={{ value: phase.label, position: "insideTop", fill: "#737373", fontSize: 11 }}
                   />
                 ))}
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis
                   dataKey="t"
                   type="number"
                   domain={[0, 100]}
                   ticks={[0, 33, 66, 100]}
                   tickFormatter={(v: number) => `${v}%`}
-                  stroke="#525252"
+                  stroke="var(--muted-foreground)"
                   height={40}
                   label={{ value: "Game Progress", position: "insideBottom", offset: -6 }}
                 />
                 <YAxis
-                  stroke="#525252"
+                  stroke="var(--muted-foreground)"
                   tickFormatter={(v: number) => formatSoulsCompact(v)}
                   label={{ value: "Avg Souls", angle: -90, position: "insideLeft", offset: -2 }}
                 />

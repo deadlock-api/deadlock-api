@@ -120,21 +120,21 @@ export default function EconomySourcesByRank({ params }: EconomySourcesByRankPro
             <ResponsiveContainer
               width="100%"
               height={340}
-              className="rounded-xl bg-muted p-2 [&_*]:outline-none"
+              className="rounded-xl border bg-card p-2 [&_*]:outline-none"
               onResize={(width) => setChartWidth(width)}
             >
               <BarChart data={chartData} margin={{ top: 16, right: 16, bottom: 24, left: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis
                   dataKey="tier"
                   interval={0}
                   height={iconSize + 8}
                   tickLine={false}
                   tick={<RankTierTick tiers={chartData} size={iconSize} />}
-                  stroke="#525252"
+                  stroke="var(--muted-foreground)"
                 />
                 <YAxis
-                  stroke="#525252"
+                  stroke="var(--muted-foreground)"
                   allowDecimals={mode !== "share"}
                   domain={mode === "share" ? [0, 100] : [0, "auto"]}
                   ticks={mode === "share" ? [0, 25, 50, 75, 100] : undefined}

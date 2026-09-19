@@ -195,11 +195,11 @@ function ItemDetailPage() {
   const facts = [`Tier ${tier}`, slot, cost !== null && `${cost.toLocaleString("en-US")} souls`].filter(Boolean);
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-3">
       <div className="flex items-center gap-4">
         <ItemImage itemId={itemId} className="size-16 rounded-lg" />
         <div className="min-w-0">
-          <h1 className="text-3xl font-bold tracking-tight">{itemName}: Deadlock Win Rate &amp; Best Heroes</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{itemName}: Deadlock Win Rate &amp; Best Heroes</h1>
           <p className="mt-1 text-sm text-muted-foreground">{facts.join(" · ")}</p>
         </div>
       </div>
