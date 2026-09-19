@@ -29,7 +29,12 @@ export const Route = createFileRoute("/games_/flashcards/item-effects")({
 function ItemNameOption({ item }: { item: Upgrade }) {
   return (
     <span className="flex min-w-0 items-center gap-3">
-      <img src={item.shop_image_webp ?? ""} alt="" className="size-8 shrink-0 object-contain" draggable={false} />
+      <img
+        src={item.shop_image_webp ?? ""}
+        alt=""
+        className="size-8 shrink-0 rounded-sm object-contain"
+        draggable={false}
+      />
       <span className="truncate tracking-wide uppercase">{item.name}</span>
     </span>
   );
@@ -68,7 +73,7 @@ function ItemEffectFlashcards() {
             <img
               src={item.shop_image_webp ?? ""}
               alt={item.name}
-              className="size-16 shrink-0 object-contain"
+              className="size-16 shrink-0 rounded-sm object-contain"
               draggable={false}
             />
             <span className="font-game text-2xl tracking-tight uppercase">{item.name}</span>

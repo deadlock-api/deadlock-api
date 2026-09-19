@@ -80,7 +80,7 @@ export function HeroTopItems({
             title={`${item.name}: ${matches.toLocaleString("en-US")} matches`}
           >
             <span className="text-xs font-medium text-muted-foreground tabular-nums">#{index + 1}</span>
-            <ItemImageFromAsset item={item} className="size-12 rounded" />
+            <ItemImageFromAsset item={item} className="size-12 rounded-sm" />
             <Link
               to="/analytics/items/$itemName"
               params={{ itemName: itemSlug(item.name) }}

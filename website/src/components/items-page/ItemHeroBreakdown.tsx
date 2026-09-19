@@ -163,7 +163,7 @@ export function ItemHeroBreakdown({
                 className="flex flex-col items-center gap-2 rounded-lg border border-border bg-card px-3 py-3 text-center"
               >
                 <span className="text-xs font-medium text-muted-foreground tabular-nums">#{index + 1}</span>
-                <ItemImageFromAsset item={item} className="size-12 rounded" />
+                <ItemImageFromAsset item={item} className="size-12 rounded-sm" />
                 <Link
                   to="/analytics/items/$itemName"
                   params={{ itemName: itemSlug(item.name) }}

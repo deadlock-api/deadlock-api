@@ -215,7 +215,7 @@ const StageLockPicker = memo(function StageLockPicker({
               }}
               className="flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-accent"
             >
-              <ItemImage itemId={c.id} className="size-5 shrink-0 rounded" />
+              <ItemImage itemId={c.id} className="size-5 shrink-0 rounded-sm" />
               <ItemName itemId={c.id} className="min-w-0 flex-1 truncate text-xs" />
               <span
                 className={cn(
@@ -290,7 +290,7 @@ const ItemFlowCard = memo(function ItemFlowCard({
             />
           </div>
           <div className="flex items-center gap-2 pr-9">
-            <ItemImage itemId={node.itemId} className="size-9 shrink-0 rounded-lg" />
+            <ItemImage itemId={node.itemId} className="size-9 shrink-0 rounded-sm" />
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <ItemName itemId={node.itemId} className="truncate text-xs leading-tight font-semibold" />
               <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">

@@ -37,9 +37,9 @@ export function ItemImageFromAsset({
           : undefined
       }
       isLoading={isLoading}
-      skeletonClassName={cn("size-8", className)}
-      emptyClassName={cn("aspect-square size-8 rounded bg-muted", className)}
-      imgClassName={cn("aspect-square size-8", className)}
+      skeletonClassName={cn("size-8 rounded-sm", className)}
+      emptyClassName={cn("aspect-square size-8 rounded-sm bg-muted", className)}
+      imgClassName={cn("aspect-square size-8 rounded-sm", className)}
     />
   );
 }

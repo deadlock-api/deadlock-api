@@ -20,7 +20,7 @@ function UpgradeTile({ item, winRate, current }: { item: SlimUpgrade; winRate?: 
         current ? "border-primary/60 bg-primary/5" : "border-border",
       )}
     >
-      <ItemImageFromAsset item={item} className="size-10 shrink-0 rounded" />
+      <ItemImageFromAsset item={item} className="size-10 shrink-0 rounded-sm" />
       <div className="min-w-0 flex-1">
         {current ? (
           <span className="block text-sm leading-tight font-medium">{item.name}</span>

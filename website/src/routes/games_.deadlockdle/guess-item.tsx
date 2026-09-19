@@ -151,7 +151,7 @@ function GuessItem() {
             <img
               src={itemImgSrc}
               alt="Mystery item"
-              className="h-28 w-28 object-contain transition-all duration-500 sm:h-[160px] sm:w-[160px]"
+              className="h-28 w-28 rounded-sm object-contain transition-all duration-500 sm:h-[160px] sm:w-[160px]"
               style={{
                 filter: getBlurFilter(gameState.hintsRevealed, isFinished),
               }}

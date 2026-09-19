@@ -263,7 +263,12 @@ function ItemStatsQuiz() {
                   <picture>
                     {item.shop_image_webp && <source srcSet={item.shop_image_webp} type="image/webp" />}
                     {item.shop_image && <source srcSet={item.shop_image} type="image/png" />}
-                    <img src={imgSrc} alt={item.name} className="h-12 w-12 object-contain" draggable={false} />
+                    <img
+                      src={imgSrc}
+                      alt={item.name}
+                      className="h-12 w-12 rounded-sm object-contain"
+                      draggable={false}
+                    />
                   </picture>
                 </div>
                 <div>

@@ -203,7 +203,7 @@ function ItemDetailPage() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-4">
-        <ItemImage itemId={itemId} className="size-16 rounded-lg" />
+        <ItemImage itemId={itemId} className="size-16 rounded-sm" />
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">{itemName}: Deadlock Win Rate &amp; Best Heroes</h1>
           <p className="mt-1 text-sm text-muted-foreground">{facts.join(" · ")}</p>
