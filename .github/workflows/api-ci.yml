@@ -75,6 +75,9 @@ jobs:
           # job's, so they must not share a (immutable) cache key.
           shared-key: "api-test-cache-${{ runner.os }}-${{ runner.arch }}"
           workspaces: "api -> target"
+          # PR runs restore master's cache but don't save their own copy, so
+          # ref-scoped duplicates don't evict master's entries from the quota.
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Tests
         run: cargo test --locked
         env:
@@ -88,27 +91,16 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
 
   ###############################
-  ##     Stage 3: Deploy       ##
+  ##  Stage 2b: Build Image    ##
   ###############################
 
-  deploy:
-    name: Deploy
+  # Runs in parallel with checks/test. The image is pushed under a per-commit
+  # staging tag only; nothing consumes it until deploy promotes it.
+  build:
+    name: Build Image
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    needs: [checks, test]
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
-    defaults:
-      run:
-        working-directory: api
     steps:
-      - name: Determine Docker Tag
-        working-directory: .
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            DOCKER_TAG="${{ inputs.tag }}"
-          elif [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
-            DOCKER_TAG="latest"
-          fi
-          echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
       - uses: useblacksmith/checkout@0647fdbab2614a5eb86d2971070e325060d91056 # v1.7.0
         with:
           lfs: true
@@ -125,9 +117,40 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Setup Docker Builder
         uses: useblacksmith/setup-docker-builder@19215110ab936351210feebdfa5b440b4493e184 # v2.2.0
+        with:
+          cache-key: deadlock-api/api
       - name: Build and push Docker image
         uses: useblacksmith/build-push-action@9b0579bbec7a6cad2f171596c57e7ac1e7658850 # v2.3.0
         with:
           context: api
-          tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
+          tags: ${{ env.IMAGE_NAME }}:build-${{ github.sha }}
           push: true
+
+  ###############################
+  ##     Stage 3: Deploy       ##
+  ###############################
+
+  deploy:
+    name: Deploy
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    needs: [checks, test, build]
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Determine Docker Tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            DOCKER_TAG="${{ inputs.tag }}"
+          elif [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
+            DOCKER_TAG="latest"
+          fi
+          echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Promote staged image
+        run: |
+          docker buildx imagetools create -t "${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}" \
+            "${{ env.IMAGE_NAME }}:build-${{ github.sha }}"

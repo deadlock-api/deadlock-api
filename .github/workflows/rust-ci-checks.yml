@@ -91,6 +91,9 @@ jobs:
         with:
           shared-key: "${{ inputs.rust-cache-shared-key }}-${{ runner.os }}-${{ runner.arch }}"
           workspaces: "${{ inputs.working-directory }} -> target"
+          # PR runs restore master's cache but don't save their own copy, so
+          # ref-scoped duplicates don't evict master's entries from the quota.
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - run: rustup component add clippy
       - name: Cargo Clippy
         run: cargo clippy --all-targets --locked -- -D warnings

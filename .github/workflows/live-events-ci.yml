@@ -66,6 +66,8 @@ jobs:
 
       - name: Setup Docker Builder
         uses: useblacksmith/setup-docker-builder@19215110ab936351210feebdfa5b440b4493e184 # v2.2.0
+        with:
+          cache-key: deadlock-api/live-events-${{ matrix.platform }}
 
       - name: Determine Docker Tag
         run: |
