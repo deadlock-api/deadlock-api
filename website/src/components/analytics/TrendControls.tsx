@@ -40,7 +40,7 @@ export function TrendControls({
         <MetricSelect value={metric} groups={metricGroups} onChange={onMetricChange} />
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground">Group by</span>
+        <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground">Group by</span>
         <ToggleGroup
           disabled={!hydrated}
           type="single"

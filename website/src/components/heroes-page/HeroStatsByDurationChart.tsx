@@ -4,6 +4,7 @@ import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts"
 
 import { ChartReadings } from "~/components/analytics/ChartReadings";
 import { ChartSidebarLayout } from "~/components/analytics/ChartSidebarLayout";
+import { ChartError } from "~/components/analytics/ChartStates";
 import { ChartSurface } from "~/components/analytics/ChartSurface";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ChartHeroSelector } from "~/components/selectors/ChartHeroSelector";
@@ -46,10 +47,19 @@ export function HeroStatsByDurationChart({
 }: HeroStatsByDurationChartProps) {
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
 
-  const { data: bucketData, isLoading: isLoadingBuckets } = useQueries({
+  const {
+    data: bucketData,
+    isLoading: isLoadingBuckets,
+    isError: isErrorBuckets,
+    isFetching,
+    refetch,
+  } = useQueries({
     combine: (queries) => ({
       data: queries.map((query) => query.data),
       isLoading: queries.some((query) => query.isLoading),
+      isError: queries.some((query) => query.isError),
+      isFetching: queries.some((query) => query.isFetching),
+      refetch: () => Promise.all(queries.map((query) => query.refetch())),
     }),
     queries: DURATION_BUCKETS.map((bucket) => {
       const heroStatsByDurationQuery = {
@@ -76,7 +86,7 @@ export function HeroStatsByDurationChart({
     }),
   });
 
-  const { heroIdMap, isLoadingHeroes } = useHeroColorMap();
+  const { heroIdMap, isLoadingHeroes, isErrorHeroes, refetchHeroes, isFetchingHeroes } = useHeroColorMap();
 
   const isLoading = isLoadingBuckets || isLoadingHeroes;
   const allLoaded = bucketData.every((data) => data != null);
@@ -134,6 +144,15 @@ export function HeroStatsByDurationChart({
         <div className="flex h-full w-full items-center justify-center py-16">
           <LoadingLogo />
         </div>
+      ) : isErrorBuckets || isErrorHeroes ? (
+        <ChartError
+          label="hero duration data"
+          retrying={isFetching || isFetchingHeroes}
+          onRetry={() => {
+            if (isErrorBuckets) void refetch();
+            if (isErrorHeroes) void refetchHeroes();
+          }}
+        />
       ) : (
         <ChartSidebarLayout
           sidebar={

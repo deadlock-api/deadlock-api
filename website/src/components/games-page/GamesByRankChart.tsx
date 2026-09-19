@@ -4,8 +4,8 @@ import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Customized, Tooltip, XAxis, YAxis } from "recharts";
 
+import { ChartLoading, ChartError, ChartEmpty } from "~/components/analytics/ChartStates";
 import { ChartSurface } from "~/components/analytics/ChartSurface";
-import { LoadingLogo } from "~/components/LoadingLogo";
 import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/RankTierIcons";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { gameStatsQueryOptions } from "~/queries/games-query";
@@ -32,7 +32,9 @@ interface ChartEntry {
 }
 
 export default function GamesByRankChart({ params, stat, onStatChange, isStreetBrawl = false }: GamesByRankChartProps) {
-  const { data, isPending } = useQuery(gameStatsQueryOptions({ ...params, bucket: "avg_badge" }));
+  const { data, isPending, isError, isFetching, refetch } = useQuery(
+    gameStatsQueryOptions({ ...params, bucket: "avg_badge" }),
+  );
 
   const { data: ranksData } = useQuery(ranksQueryOptions);
 
@@ -111,11 +113,11 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
 
       <div aria-live="polite" aria-busy={isPending}>
         {isPending ? (
-          <div className="flex items-center justify-center py-16">
-            <LoadingLogo />
-          </div>
+          <ChartLoading label="game rank data" />
+        ) : isError ? (
+          <ChartError label="game rank data" retrying={isFetching} onRetry={() => void refetch()} />
         ) : chartData.length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">No data available.</div>
+          <ChartEmpty label="game rank data" />
         ) : (
           <ChartSurface label={`${statDef?.label ?? stat} by rank chart`}>
             <BarChart data={chartData} margin={{ top: 16, right: 20, bottom: 12, left: 40 }}>

@@ -465,3 +465,16 @@ for (const view of ["by-duration", "by-rank"]) {
     await expect(picker.getByRole("button", { name: "Infernus", exact: true })).toHaveAttribute("aria-pressed", "true");
   });
 }
+
+test("duration request failures show a retry instead of claiming the filters have no data", async ({ page }) => {
+  let fail = true;
+  await page.route("**/v1/analytics/hero-stats?**", (route) =>
+    fail ? route.fulfill({ status: 503, json: { error: "Unavailable" } }) : route.fulfill({ json: stats }),
+  );
+  await page.goto("/analytics/heroes/by-duration?date_range=_&min_rank=0");
+  await expect(page.getByText("Unable to load hero duration data", { exact: true })).toBeVisible();
+  fail = false;
+  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(page.getByRole("figure")).toBeVisible();
+  await expect(page).toHaveURL(/min_rank=0/);
+});

@@ -27,14 +27,14 @@ test("shared game trend controls preserve metrics and intervals in the URL", asy
   await expect(metric).toHaveText("Avg Kills");
   await metric.click();
   await page.getByRole("option", { name: "Avg Deaths", exact: true }).click();
-  await page.getByRole("radio", { name: "Weekly", exact: true }).click();
+  await page.getByRole("radio", { name: "Week", exact: true }).click();
   await expect(page).toHaveURL(/stat=avg_deaths/);
   await expect(page).toHaveURL(/time_bucket=start_time_week/);
   await expect(page.getByRole("figure", { name: "Avg Deaths over time chart" })).toBeVisible();
   expect(requests.some((url) => new URL(url).searchParams.get("bucket") === "start_time_week")).toBe(true);
   await page.reload();
   await expect(metric).toHaveText("Avg Deaths");
-  await expect(page.getByRole("radio", { name: "Weekly", exact: true })).toBeChecked();
+  await expect(page.getByRole("radio", { name: "Week", exact: true })).toBeChecked();
 });
 
 test("shared controls retain Brawl metric restrictions and fit mobile", async ({ page }) => {
@@ -63,4 +63,17 @@ test("game rank metrics reuse the grouped selector and compact plot", async ({ p
   );
   await page.setViewportSize({ width: 320, height: 740 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("game trend failures can be retried without losing the selected metric", async ({ page }) => {
+  let fail = true;
+  await page.route("**/v1/analytics/game-stats?**", (route) =>
+    fail ? route.fulfill({ status: 503, json: { error: "Unavailable" } }) : route.fulfill({ json: [] }),
+  );
+  await page.goto("/analytics/games/over-time?date_range=_&stat=avg_deaths");
+  await expect(page.getByText("Unable to load game trends", { exact: true })).toBeVisible();
+  fail = false;
+  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(page.getByText("No game trends for these filters", { exact: true })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Trend metric" })).toHaveText("Avg Deaths");
 });
