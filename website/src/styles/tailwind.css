@@ -544,3 +544,9 @@ html:has(.mobile-navigation[open]) {
     scroll-behavior: auto !important;
   }
 }
+
+/* Chart interaction should never accidentally select axis labels, legends, or readings. */
+.recharts-wrapper {
+  -webkit-user-select: none;
+  user-select: none;
+}

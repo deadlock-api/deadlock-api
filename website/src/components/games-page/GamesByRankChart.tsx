@@ -2,8 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import type { Rank } from "deadlock_api_client";
 import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, Customized, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, Customized, Tooltip, XAxis, YAxis } from "recharts";
 
+import { ChartSurface } from "~/components/analytics/ChartSurface";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/RankTierIcons";
 import { extractBadgeMap } from "~/lib/leaderboard";
@@ -116,52 +117,50 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
         ) : chartData.length === 0 ? (
           <div className="py-8 text-center text-sm text-muted-foreground">No data available.</div>
         ) : (
-          <figure aria-label={`${statDef?.label ?? stat} by rank chart`}>
-            <ResponsiveContainer width="100%" height={650} className="rounded-xl bg-muted p-2">
-              <BarChart data={chartData} margin={{ top: 16, right: 20, bottom: 12, left: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
-                <XAxis dataKey="badge" tick={false} height={RANK_ICON_AXIS_HEIGHT} stroke="#525252" />
-                <YAxis
-                  domain={["dataMin", "auto"]}
-                  tickFormatter={(v) => (statDef ? formatAxisTick(v, statDef.format, span) : String(v))}
-                  stroke="#525252"
-                  label={{
-                    value: statDef?.label ?? stat,
-                    angle: -90,
-                    position: "insideLeft",
-                    offset: -25,
-                  }}
-                />
-                <Tooltip
-                  cursor={false}
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null;
-                    const entry = payload[0].payload as ChartEntry;
-                    if (entry.isSpacer) return null;
-                    const info = badgeMap.get(entry.badge);
-                    const imageUrl = info?.large_webp ?? info?.large;
-                    return (
-                      <div className="flex items-center gap-2 rounded-md bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
-                        {imageUrl && <img src={imageUrl} alt={entry.label} className="size-5" />}
-                        <div>
-                          <div className="font-medium">{entry.label}</div>
-                          <div className="text-muted-foreground">
-                            {statDef?.label}: {statDef ? formatStatValue(entry.value, statDef.format) : entry.value}
-                          </div>
+          <ChartSurface label={`${statDef?.label ?? stat} by rank chart`}>
+            <BarChart data={chartData} margin={{ top: 16, right: 20, bottom: 12, left: 40 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+              <XAxis dataKey="badge" tick={false} height={RANK_ICON_AXIS_HEIGHT} stroke="var(--muted-foreground)" />
+              <YAxis
+                domain={["dataMin", "auto"]}
+                tickFormatter={(v) => (statDef ? formatAxisTick(v, statDef.format, span) : String(v))}
+                stroke="var(--muted-foreground)"
+                label={{
+                  value: statDef?.label ?? stat,
+                  angle: -90,
+                  position: "insideLeft",
+                  offset: -25,
+                }}
+              />
+              <Tooltip
+                cursor={false}
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const entry = payload[0].payload as ChartEntry;
+                  if (entry.isSpacer) return null;
+                  const info = badgeMap.get(entry.badge);
+                  const imageUrl = info?.large_webp ?? info?.large;
+                  return (
+                    <div className="flex items-center gap-2 rounded-md bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
+                      {imageUrl && <img src={imageUrl} alt={entry.label} className="size-5" />}
+                      <div>
+                        <div className="font-medium">{entry.label}</div>
+                        <div className="text-muted-foreground">
+                          {statDef?.label}: {statDef ? formatStatValue(entry.value, statDef.format) : entry.value}
                         </div>
                       </div>
-                    );
-                  }}
-                />
-                <Bar dataKey="value" radius={4}>
-                  {chartData.map((entry) => (
-                    <Cell key={entry.badge} fill={entry.isSpacer ? "transparent" : entry.color} />
-                  ))}
-                </Bar>
-                <Customized component={<RankTierIcons tiers={tierCenters} ranks={tierData} />} />
-              </BarChart>
-            </ResponsiveContainer>
-          </figure>
+                    </div>
+                  );
+                }}
+              />
+              <Bar dataKey="value" radius={4} isAnimationActive={false}>
+                {chartData.map((entry) => (
+                  <Cell key={entry.badge} fill={entry.isSpacer ? "transparent" : entry.color} />
+                ))}
+              </Bar>
+              <Customized component={<RankTierIcons tiers={tierCenters} ranks={tierData} />} />
+            </BarChart>
+          </ChartSurface>
         )}
       </div>
     </div>

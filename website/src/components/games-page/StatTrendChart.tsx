@@ -3,9 +3,10 @@ import type { AnalyticsApiGameStatsRequest, GameStatsBucketEnum } from "deadlock
 import { useMemo } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
+import { ChartReadings } from "~/components/analytics/ChartReadings";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { day } from "~/dayjs";
-import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
 import { formatAxisTick, formatStatValue, type StatDefinition, valueSpan } from "./stat-definitions";
@@ -48,25 +49,22 @@ export default function StatTrendChart({ params, stat, bucket, onBucketChange }:
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs font-semibold text-foreground">{stat.label}</span>
-        <div className="flex items-center gap-0.5 rounded-md border border-white/[0.06] bg-white/[0.02] p-0.5">
-          {STAT_TREND_BUCKETS.map((b) => (
-            <button
-              key={b.value}
-              type="button"
-              onClick={() => onBucketChange(b.value)}
-              className={cn(
-                "cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors",
-                bucket === b.value
-                  ? "bg-white/[0.1] text-foreground"
-                  : "text-muted-foreground hover:bg-white/[0.05] hover:text-foreground",
-              )}
-            >
-              {b.label}
-            </button>
+        <ToggleGroup
+          type="single"
+          size="sm"
+          variant="outline"
+          aria-label={`${stat.label} time interval`}
+          value={bucket}
+          onValueChange={(value) => value && onBucketChange(value as GameStatsBucketEnum)}
+        >
+          {STAT_TREND_BUCKETS.map((option) => (
+            <ToggleGroupItem key={option.value} value={option.value}>
+              {option.label}
+            </ToggleGroupItem>
           ))}
-        </div>
+        </ToggleGroup>
       </div>
 
       <div aria-live="polite" aria-busy={isPending}>
@@ -87,46 +85,48 @@ export default function StatTrendChart({ params, stat, bucket, onBucketChange }:
                   <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis
                 dataKey="date"
                 type="number"
                 scale="time"
                 domain={["dataMin", "dataMax"]}
-                tickFormatter={(ts) => day(ts).format(bucketDef.tickFormat)}
-                stroke="#3f3f46"
-                tick={{ fontSize: 11, fill: "#a1a1aa" }}
+                tickFormatter={(ts) => day.utc(ts).format(bucketDef.tickFormat)}
+                stroke="var(--muted-foreground)"
+                tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                 tickMargin={8}
                 minTickGap={28}
               />
               <YAxis
                 domain={["dataMin", "auto"]}
                 tickFormatter={(v) => formatAxisTick(v, stat.format, span)}
-                stroke="#3f3f46"
-                tick={{ fontSize: 11, fill: "#a1a1aa" }}
+                stroke="var(--muted-foreground)"
+                tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                 tickMargin={6}
                 width={56}
               />
               <Tooltip
-                labelFormatter={(label) => day(label as number).format(bucketDef.tooltipFormat)}
-                formatter={(value, _name, item) => {
-                  const formatted = formatStatValue(value as number, stat.format);
-                  const matches = item.payload?.matches;
-                  if (matches == null || stat.key === "total_matches") return [formatted, stat.label];
-                  return [`${formatted} (${matches.toLocaleString("en-US")} matches)`, stat.label];
+                wrapperStyle={{ pointerEvents: "auto" }}
+                isAnimationActive={false}
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  const entry = payload[0].payload;
+                  return (
+                    <ChartReadings
+                      title={day.utc(Number(label)).format(`${bucketDef.tooltipFormat} [UTC]`)}
+                      rows={[
+                        { label: stat.label, value: formatStatValue(entry.value, stat.format) },
+                        ...(stat.key === "total_matches"
+                          ? []
+                          : [{ label: "Matches", value: entry.matches.toLocaleString("en-US") }]),
+                      ]}
+                    />
+                  );
                 }}
-                contentStyle={{
-                  backgroundColor: "#0a0a0a",
-                  borderColor: "#27272a",
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-                labelStyle={{ color: "#a1a1aa" }}
-                itemStyle={{ color: "var(--color-primary)" }}
-                cursor={{ stroke: "#52525b", strokeDasharray: "3 3" }}
               />
               <Area
-                type="monotone"
+                type="linear"
+                isAnimationActive={false}
                 dataKey="value"
                 stroke="var(--color-primary)"
                 fill="url(#stat-trend-fill)"

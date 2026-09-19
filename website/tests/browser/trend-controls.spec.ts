@@ -48,3 +48,19 @@ test("shared controls retain Brawl metric restrictions and fit mobile", async ({
   await expect(page.getByRole("figure", { name: "Avg Deaths over time chart" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+test("game rank metrics reuse the grouped selector and compact plot", async ({ page }) => {
+  await page.goto("/analytics/games/by-rank?date_range=_");
+  const metric = page.getByRole("combobox", { name: "Game metric" });
+  await metric.click();
+  await page.getByRole("option", { name: "Avg Deaths", exact: true }).click();
+  await expect(page).toHaveURL(/stat=avg_deaths/);
+  const chart = page.getByRole("figure", { name: "Avg Deaths by rank chart" });
+  await expect(chart).toBeVisible();
+  expect((await chart.boundingBox())!.height).toBe(320);
+  expect(await chart.locator(".recharts-wrapper").evaluate((element) => getComputedStyle(element).userSelect)).toBe(
+    "none",
+  );
+  await page.setViewportSize({ width: 320, height: 740 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

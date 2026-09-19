@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiGameStatsRequest, GameStatsBucketEnum } from "deadlock_api_client";
 import { useMemo } from "react";
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
+import { ChartReadings } from "~/components/analytics/ChartReadings";
+import { ChartSurface } from "~/components/analytics/ChartSurface";
 import { TrendControls } from "~/components/analytics/TrendControls";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { day } from "~/dayjs";
@@ -65,7 +67,7 @@ export default function GamesOverTimeChart({
   const span = valueSpan(chartData);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <TrendControls
         title="Game trends"
         metric={stat}
@@ -84,53 +86,69 @@ export default function GamesOverTimeChart({
         ) : chartData.length === 0 ? (
           <div className="py-8 text-center text-sm text-muted-foreground">No data available.</div>
         ) : (
-          <figure aria-label={`${statDef?.label ?? stat} over time chart`}>
-            <ResponsiveContainer width="100%" height={500} className="rounded-xl bg-muted p-4">
-              <LineChart data={chartData} margin={{ top: 20, right: 30, bottom: 60, left: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-                <XAxis
-                  dataKey="date"
-                  type="number"
-                  scale="time"
-                  domain={["dataMin", "dataMax"]}
-                  tickFormatter={(ts) => day(ts).format("MM/DD/YY")}
-                  label={{ value: "Date", position: "insideBottom", offset: -10 }}
-                  stroke="#525252"
-                />
-                <YAxis
-                  domain={["dataMin", "auto"]}
-                  tickFormatter={(v) => (statDef ? formatAxisTick(v, statDef.format, span) : String(v))}
-                  stroke="#525252"
-                  label={{
-                    value: statDef?.label ?? stat,
-                    angle: -90,
-                    position: "insideLeft",
-                    offset: -25,
-                  }}
-                />
-                <Tooltip
-                  labelFormatter={(label) => day(label as number).format("YYYY-MM-DD")}
-                  formatter={(value, _name, item) => {
-                    const formatted = statDef ? formatStatValue(value as number, statDef.format) : value;
-                    const matches = item.payload?.matches;
-                    if (matches == null || stat === "total_matches") return [formatted, statDef?.label ?? stat];
-                    return [`${formatted} (${matches.toLocaleString("en-US")} matches)`, statDef?.label ?? stat];
-                  }}
-                  contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
-                  itemStyle={{ color: "#e5e5e5" }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="var(--color-primary)"
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                  strokeWidth={2}
-                  name={statDef?.label}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </figure>
+          <ChartSurface label={`${statDef?.label ?? stat} over time chart`}>
+            <LineChart data={chartData} margin={{ top: 16, right: 12, bottom: 8, left: 0 }}>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--border)"
+                vertical={false}
+                verticalCoordinatesGenerator={() => []}
+              />
+              <XAxis
+                dataKey="date"
+                type="number"
+                scale="time"
+                domain={["dataMin", "dataMax"]}
+                tickFormatter={(ts) => day.utc(ts).format("MMM D")}
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 11 }}
+                minTickGap={28}
+                stroke="var(--muted-foreground)"
+              />
+              <YAxis
+                domain={["dataMin", "auto"]}
+                tickFormatter={(v) => (statDef ? formatAxisTick(v, statDef.format, span) : String(v))}
+                stroke="var(--muted-foreground)"
+                width={64}
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 11 }}
+              />
+              <Tooltip
+                wrapperStyle={{ pointerEvents: "auto" }}
+                isAnimationActive={false}
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  const entry = payload[0].payload;
+                  return (
+                    <ChartReadings
+                      title={day.utc(Number(label)).format("MMM D, YYYY [UTC]")}
+                      rows={[
+                        {
+                          label: statDef?.label ?? stat,
+                          value: statDef ? formatStatValue(entry.value, statDef.format) : entry.value,
+                        },
+                        ...(stat === "total_matches"
+                          ? []
+                          : [{ label: "Matches", value: entry.matches.toLocaleString("en-US") }]),
+                      ]}
+                    />
+                  );
+                }}
+              />
+              <Line
+                type="linear"
+                dataKey="value"
+                stroke="var(--color-primary)"
+                dot={chartData.length <= 100 ? { r: 2.5 } : false}
+                isAnimationActive={false}
+                activeDot={{ r: 5 }}
+                strokeWidth={2}
+                name={statDef?.label}
+              />
+            </LineChart>
+          </ChartSurface>
         )}
       </div>
     </div>
