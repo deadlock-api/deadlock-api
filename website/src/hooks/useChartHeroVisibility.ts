@@ -9,7 +9,7 @@ import { heroesQueryOptions } from "~/queries/asset-queries";
  * Shared across all hero chart components.
  */
 export function useHeroColorMap() {
-  const { data: assetsHeroes, isLoading } = useQuery(heroesQueryOptions);
+  const { data: assetsHeroes, isLoading, isError, refetch, isFetching } = useQuery(heroesQueryOptions);
 
   const heroIdMap = useMemo(() => {
     const map: Record<number, { name: string; color: string }> = {};
@@ -20,7 +20,13 @@ export function useHeroColorMap() {
     return map;
   }, [assetsHeroes]);
 
-  return { heroIdMap, isLoadingHeroes: isLoading };
+  return {
+    heroIdMap,
+    isLoadingHeroes: isLoading,
+    isErrorHeroes: isError,
+    refetchHeroes: refetch,
+    isFetchingHeroes: isFetching,
+  };
 }
 
 /**
@@ -36,30 +42,60 @@ export function useChartHeroVisibility(
   heroIdMap: Record<number, { name: string; color: string }>,
   options: {
     heroIdFilter?: number[];
+    visibleHeroIds?: number[] | null;
+    onVisibleHeroesChange?: (ids: number[]) => void;
   } = {},
 ) {
-  const { heroIdFilter } = options;
+  const { heroIdFilter, visibleHeroIds, onVisibleHeroesChange } = options;
   const allHeroIds = useMemo(() => {
-    const ids = heroIdFilter ?? Object.keys(heroIdMap).map(Number);
+    const ids = heroIdFilter ? [...heroIdFilter] : Object.keys(heroIdMap).map(Number);
     return ids.sort((a, b) => (heroIdMap[a]?.name ?? "").localeCompare(heroIdMap[b]?.name ?? ""));
   }, [heroIdMap, heroIdFilter]);
 
-  const [visibleHeroSet, setVisibleHeroSet] = useState<Set<number>>(() => new Set([2]));
+  // Resolve the default after assets/data arrive. A roster without hero 2 still needs a visible line.
+  const defaultHeroSet = useMemo(() => new Set(allHeroIds.includes(2) ? [2] : allHeroIds.slice(0, 1)), [allHeroIds]);
+  const [visibleHeroSet, setVisibleHeroSet] = useState<Set<number> | null>(null);
+  const effectiveVisibleSet = useMemo(
+    () =>
+      onVisibleHeroesChange
+        ? visibleHeroIds == null
+          ? defaultHeroSet
+          : new Set(visibleHeroIds)
+        : (visibleHeroSet ?? defaultHeroSet),
+    [onVisibleHeroesChange, visibleHeroIds, visibleHeroSet, defaultHeroSet],
+  );
+  const setVisibleHeroes = useCallback(
+    (ids: number[]) => {
+      if (onVisibleHeroesChange) onVisibleHeroesChange(ids);
+      else setVisibleHeroSet(new Set(ids));
+    },
+    [onVisibleHeroesChange],
+  );
 
-  const handleLegendClick = useCallback((entry: LegendPayload) => {
-    if (entry.dataKey == null || typeof entry.dataKey === "function") return;
-    const heroId = Number(entry.dataKey);
-    if (Number.isNaN(heroId)) return;
-    setVisibleHeroSet((prev) => {
-      const next = new Set(prev);
-      if (next.has(heroId)) {
-        next.delete(heroId);
-      } else {
-        next.add(heroId);
+  const handleLegendClick = useCallback(
+    (entry: LegendPayload) => {
+      if (entry.dataKey == null || typeof entry.dataKey === "function") return;
+      const heroId = Number(entry.dataKey);
+      if (Number.isNaN(heroId)) return;
+      if (onVisibleHeroesChange) {
+        const next = new Set(effectiveVisibleSet);
+        if (next.has(heroId)) next.delete(heroId);
+        else next.add(heroId);
+        onVisibleHeroesChange([...next]);
+        return;
       }
-      return next;
-    });
-  }, []);
+      setVisibleHeroSet((prev) => {
+        const next = new Set(prev ?? defaultHeroSet);
+        if (next.has(heroId)) {
+          next.delete(heroId);
+        } else {
+          next.add(heroId);
+        }
+        return next;
+      });
+    },
+    [defaultHeroSet, effectiveVisibleSet, onVisibleHeroesChange],
+  );
 
-  return { allHeroIds, effectiveVisibleSet: visibleHeroSet, handleLegendClick };
+  return { allHeroIds, effectiveVisibleSet, handleLegendClick, setVisibleHeroes };
 }

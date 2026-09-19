@@ -87,25 +87,11 @@ export function HeroSelector({
             Any Hero
           </button>
         )}
-        <div className="grid grid-cols-5 gap-1">
-          {filteredHeroes.map((hero: SlimHero) => (
-            <button
-              key={hero.id}
-              type="button"
-              title={hero.name}
-              className={cn(
-                "flex cursor-pointer flex-col items-center gap-1 rounded-md p-1.5 hover:bg-accent",
-                hero.id === selectedHero && "bg-primary/15 ring-1 ring-primary/40 ring-inset",
-              )}
-              onClick={() => select(hero.id)}
-            >
-              <HeroImage heroId={hero.id} className="size-9 shrink-0 object-contain" />
-              <span className="w-full truncate text-center text-[10px] leading-tight text-muted-foreground">
-                {hero.name}
-              </span>
-            </button>
-          ))}
-        </div>
+        <HeroSelectionGrid
+          heroes={filteredHeroes}
+          selectedHeroes={selectedHero == null ? [] : [selectedHero]}
+          onHeroSelected={select}
+        />
         {filteredHeroes.length === 0 && (
           <p className="px-2 py-4 text-center text-xs text-muted-foreground">No hero matches.</p>
         )}
@@ -155,5 +141,59 @@ export function HeroSelectorMultiple({
         )}
       />
     </FilterCell>
+  );
+}
+
+/** Shared portrait grid for single-hero filters and multi-hero chart selection. */
+export function HeroSelectionGrid({
+  heroes,
+  selectedHeroes,
+  onHeroSelected,
+  disabledHeroIds,
+  onHeroHighlight,
+  compact = false,
+  className,
+}: {
+  heroes: readonly { id: number; name: string }[];
+  selectedHeroes: readonly number[];
+  onHeroSelected: (id: number) => void;
+  disabledHeroIds?: ReadonlySet<number>;
+  onHeroHighlight?: (id: number | null) => void;
+  compact?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={cn("grid grid-cols-5 gap-1", className)}>
+      {heroes.map((hero) => (
+        <button
+          key={hero.id}
+          type="button"
+          title={disabledHeroIds?.has(hero.id) ? `${hero.name}: no data for these filters` : hero.name}
+          aria-label={hero.name}
+          aria-pressed={selectedHeroes.includes(hero.id)}
+          disabled={disabledHeroIds?.has(hero.id)}
+          className={cn(
+            "flex cursor-pointer flex-col items-center gap-1 rounded-md p-1.5 hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-default disabled:opacity-40",
+            compact && "gap-0.5 p-1",
+            selectedHeroes.includes(hero.id) && "bg-primary/15 ring-1 ring-primary/40 ring-inset",
+          )}
+          onClick={() => onHeroSelected(hero.id)}
+          onMouseEnter={onHeroHighlight ? () => onHeroHighlight(hero.id) : undefined}
+          onMouseLeave={onHeroHighlight ? () => onHeroHighlight(null) : undefined}
+          onFocus={onHeroHighlight ? () => onHeroHighlight(hero.id) : undefined}
+          onBlur={onHeroHighlight ? () => onHeroHighlight(null) : undefined}
+        >
+          <HeroImage heroId={hero.id} className={cn("size-9 shrink-0 object-contain", compact && "size-8")} />
+          <span
+            className={cn(
+              "w-full truncate text-center text-[10px] leading-tight text-muted-foreground",
+              compact && "text-[10px]",
+            )}
+          >
+            {hero.name}
+          </span>
+        </button>
+      ))}
+    </div>
   );
 }
