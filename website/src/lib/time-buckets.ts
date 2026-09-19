@@ -16,6 +16,13 @@ export function withoutOpenTimeBucket<T extends { bucket: number }>(rows: T[], i
   const unit = BUCKET_UNIT[interval as keyof typeof BUCKET_UNIT];
   if (!unit) return rows;
   const now = day();
-  const closed = rows.filter((row) => day.unix(row.bucket).add(1, unit).isBefore(now));
-  return new Set(closed.map((row) => row.bucket)).size >= 2 ? closed : rows;
+  const seenBuckets = new Set<number>();
+  const closedBuckets = new Set<number>();
+  // Hero statistics repeat each timestamp across the roster. Calculate each boundary only once.
+  for (const { bucket } of rows) {
+    if (seenBuckets.has(bucket)) continue;
+    seenBuckets.add(bucket);
+    if (day.unix(bucket).add(1, unit).isBefore(now)) closedBuckets.add(bucket);
+  }
+  return closedBuckets.size >= 2 ? rows.filter((row) => closedBuckets.has(row.bucket)) : rows;
 }

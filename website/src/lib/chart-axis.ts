@@ -1,6 +1,16 @@
 const TICK_STEPS = [0.01, 0.05, 0.1, 0.2];
 const EPSILON = 1e-9;
 
+/** Compact labels retain enough decimals to distinguish neighboring axis ticks. */
+export function formatCompactAxisTick(value: number, step: number) {
+  const magnitude = Math.abs(value);
+  const divisor =
+    magnitude >= 1e12 ? 1e12 : magnitude >= 1e9 ? 1e9 : magnitude >= 1e6 ? 1e6 : magnitude >= 1e3 ? 1e3 : 1;
+  const digits =
+    step > 0 && Number.isFinite(step) ? Math.min(6, Math.max(0, Math.ceil(-Math.log10(step / divisor)))) : 2;
+  return value.toLocaleString("en-US", { notation: "compact", maximumFractionDigits: digits });
+}
+
 /** Snaps a range of win-rate ratios outward to whole 5% steps. */
 export function winRateDomain(values: number[]): [number, number] {
   return [Math.floor(Math.min(...values) * 20) / 20, Math.ceil(Math.max(...values) * 20) / 20];
