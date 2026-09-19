@@ -69,6 +69,16 @@ export default defineConfig({
   plugins: [
     esToolkitCompatEsm(),
     tanstackStart({
+      router: {
+        // Data loaders bring catalog/API clients with them. Load those only
+        // for the selected route, just like its component.
+        codeSplittingOptions: {
+          defaultBehavior: [["loader"], ["component"], ["pendingComponent"], ["errorComponent"], ["notFoundComponent"]],
+        },
+      },
+      // Deliver route CSS with the HTML instead of blocking first paint on
+      // a second request. Start keeps stylesheet assets for client navigation.
+      server: { build: { inlineCss: true } },
       prerender: {
         enabled: true,
         crawlLinks: true,

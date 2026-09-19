@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { AuthenticatedDashboard, PatronPageSkeleton } from "~/components/patron/AuthenticatedDashboard";
 import { UnauthenticatedState } from "~/components/patron/UnauthenticatedState";
+import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 import { usePatronAuth } from "~/hooks/usePatronAuth";
 import { seo } from "~/lib/seo";
 
@@ -12,8 +13,16 @@ export const Route = createFileRoute("/patron")({
       description: "Get priority data fetching for your Steam accounts. Your matches and stats updated faster.",
       path: "/patron",
     }),
-  component: PatronPage,
+  component: PatronRoute,
 });
+
+function PatronRoute() {
+  return (
+    <PatronAuthProvider>
+      <PatronPage />
+    </PatronAuthProvider>
+  );
+}
 
 function PatronPage() {
   const { isAuthenticated, isLoading, login } = usePatronAuth();

@@ -19,6 +19,7 @@ import { TrackerQueryError } from "~/components/tracker-page/shared/TrackerQuery
 import { TrackerQueryPaused } from "~/components/tracker-page/shared/TrackerQueryPaused";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
+import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 import { useTrackerFilters } from "~/hooks/useTrackerFilters";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { seo } from "~/lib/seo";
@@ -62,9 +63,11 @@ export const Route = createFileRoute("/tracker_/players/$accountId")({
 function TrackerRoute() {
   const { accountId } = Route.useLoaderData();
   return (
-    <TrackerGate accountId={accountId}>
-      <TrackerContent accountId={accountId} />
-    </TrackerGate>
+    <PatronAuthProvider>
+      <TrackerGate accountId={accountId}>
+        <TrackerContent accountId={accountId} />
+      </TrackerGate>
+    </PatronAuthProvider>
   );
 }
 

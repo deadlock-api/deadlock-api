@@ -7,13 +7,14 @@ import { TrackerQueryError } from "~/components/tracker-page/shared/TrackerQuery
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
+import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 import { usePatronAuth } from "~/hooks/usePatronAuth";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { seo } from "~/lib/seo";
 import { steamAccountsQueryOptions } from "~/queries/patron-queries";
 
 export const Route = createFileRoute("/tracker")({
-  component: TrackerLandingPage,
+  component: TrackerRoute,
   head: () =>
     seo({
       title: "Player Tracker | Deadlock",
@@ -22,6 +23,14 @@ export const Route = createFileRoute("/tracker")({
       path: "/tracker",
     }),
 });
+
+function TrackerRoute() {
+  return (
+    <PatronAuthProvider>
+      <TrackerLandingPage />
+    </PatronAuthProvider>
+  );
+}
 
 function MyAccountsCard() {
   const { isAuthenticated, isActive, isLoading, login, totalSlots } = usePatronAuth();

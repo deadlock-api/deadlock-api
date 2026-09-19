@@ -20,6 +20,7 @@ import {
   UsersRound,
 } from "lucide-react";
 
+import { OptimizedImage } from "~/components/OptimizedImage";
 import { SmartLink } from "~/components/SmartLink";
 import { Button } from "~/components/ui/button";
 import { API_ORIGIN } from "~/lib/constants";
@@ -191,8 +192,7 @@ const analyticsLinks = [
 const mainSponsor = {
   href: "https://www.deadchaps.gg/?ref=deadlock-api.com",
   title: "DeadChaps",
-  logo: "/logo/deadchaps.webp",
-  logo2x: "/logo/deadchaps@2x.webp",
+  logo: "/logo/deadchaps@2x.png" as const,
   width: 600,
   height: 127,
 };
@@ -201,21 +201,21 @@ const sponsors = [
   {
     href: "https://statlocker.gg/?ref=deadlock-api.com",
     title: "Statlocker.GG",
-    logo: "/logo/statlocker.png",
+    logo: "/logo/statlocker.png" as const,
     width: 414,
     height: 114,
   },
   {
     href: "https://blast.tv/?ref=deadlock-api.com",
     title: "Blast.TV",
-    logo: "/logo/blast.svg",
+    logo: "/logo/blast.svg" as const,
     width: 996,
     height: 188,
   },
   {
     href: "https://edl.gg",
     title: "EDL",
-    logo: "/logo/edl.webp",
+    logo: "/logo/edl.webp" as const,
     width: 578,
     height: 177,
   },
@@ -243,14 +243,14 @@ function IndexRoute() {
                 rel="noreferrer"
                 className="group rounded-xl border border-primary/30 bg-primary/5 px-4 py-2 shadow-md shadow-primary/5 transition-all hover:border-primary/60 hover:bg-primary/10"
               >
-                <img
+                <OptimizedImage
                   src={mainSponsor.logo}
-                  srcSet={`${mainSponsor.logo} 600w, ${mainSponsor.logo2x} 1200w`}
+                  widths={[192, 240, 384, 480, 576, 720]}
                   sizes="(min-width: 1024px) 227px, 189px"
                   alt={`${mainSponsor.title} Logo`}
                   width={600}
                   height={127}
-                  className="max-h-10 w-auto object-contain transition-transform group-hover:scale-105 lg:max-h-12"
+                  className="h-auto w-[189px] object-contain transition-transform group-hover:scale-105 lg:w-[227px]"
                 />
               </a>
             </div>
@@ -387,9 +387,9 @@ function IndexRoute() {
             rel="noreferrer"
             className="opacity-70 transition-opacity hover:opacity-100"
           >
-            <img
+            <OptimizedImage
               src={mainSponsor.logo}
-              srcSet={`${mainSponsor.logo} 600w, ${mainSponsor.logo2x} 1200w`}
+              widths={[140, 280, 420]}
               sizes="140px"
               alt={`${mainSponsor.title} Logo`}
               width={mainSponsor.width}
@@ -407,8 +407,10 @@ function IndexRoute() {
               rel="noreferrer"
               className="opacity-70 transition-opacity hover:opacity-100"
             >
-              <img
+              <OptimizedImage
                 src={sponsor.logo}
+                widths={[140, 280, 420]}
+                sizes="140px"
                 alt={`${sponsor.title} Logo`}
                 width={sponsor.width}
                 height={sponsor.height}

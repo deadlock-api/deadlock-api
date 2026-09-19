@@ -15,15 +15,13 @@ import { Breadcrumbs } from "~/components/Breadcrumbs";
 import { ThemeProvider } from "~/components/ThemeProvider";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
-import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 import { getAnalytics } from "~/lib/analytics";
 import { installChunkReloadHandlers, isChunkLoadError, reloadOnceForStaleChunk } from "~/lib/chunk-reload";
 import { seo } from "~/lib/seo";
-import { heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
-import { ranksQueryOptions } from "~/queries/ranks-query";
 import type { RouterContext } from "~/router";
 
-import appCss from "~/styles/tailwind.css?url";
+// Let Start collect the stylesheet so production SSR can inline it.
+import "~/styles/tailwind.css";
 
 const defaultSeo = seo({
   title: "Deadlock API",
@@ -49,17 +47,27 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       pathname === "/games/flashcards/heroes" ||
       pathname.startsWith("/streamkit/widgets/")
     ) {
-      preloads.push(queryClient.ensureQueryData(heroesQueryOptions));
+      preloads.push(
+        import("~/queries/asset-queries").then(({ heroesQueryOptions }) =>
+          queryClient.ensureQueryData(heroesQueryOptions),
+        ),
+      );
     }
     if (isAnalytics || isPlayerTracker || pathname === "/community/badge-distribution") {
-      preloads.push(queryClient.ensureQueryData(ranksQueryOptions));
+      preloads.push(
+        import("~/queries/ranks-query").then(({ ranksQueryOptions }) => queryClient.ensureQueryData(ranksQueryOptions)),
+      );
     }
     if (
       /^\/analytics\/(heroes|items|abilities)(?:\/|$)/.test(pathname) ||
       pathname === "/games/flashcards/items" ||
       pathname === "/games/flashcards/item-upgrades"
     ) {
-      preloads.push(queryClient.ensureQueryData(itemUpgradesQueryOptions));
+      preloads.push(
+        import("~/queries/asset-queries").then(({ itemUpgradesQueryOptions }) =>
+          queryClient.ensureQueryData(itemUpgradesQueryOptions),
+        ),
+      );
     }
     await Promise.all(preloads);
   },
@@ -79,7 +87,6 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       ...defaultSeo.meta,
     ],
     links: [
-      { rel: "stylesheet", href: appCss },
       { rel: "icon", type: "image/ico", href: "/favicon.ico" },
       { rel: "icon", type: "image/webp", href: "https://deadlock-api.com/favicon.webp" },
       { rel: "icon", type: "image/png", href: "https://deadlock-api.com/favicon.png" },
@@ -157,49 +164,48 @@ function RootComponent() {
   return (
     <RootDocument>
       <ThemeProvider>
-        <PatronAuthProvider>
-          <NuqsAdapter defaultOptions={{ history: "push", limitUrlUpdates: debounce(300) }}>
-            <TooltipProvider>
-              <div className="flex min-h-screen">
-                <AppSidebar />
-                <main className="min-w-0 flex-1 overflow-x-clip md:ml-64">
-                  <MobileMenuButton />
-                  <div className="relative flex min-h-full items-start justify-center">
-                    <img
-                      src="/logo/hexe.svg"
-                      alt=""
-                      aria-hidden="true"
-                      className="pointer-events-none fixed right-0 bottom-0 h-[36rem] w-[36rem] opacity-[0.10] select-none"
-                      style={{
-                        transform: "perspective(900px) rotateX(12deg) rotateY(-8deg) rotateZ(-14deg)",
-                        maskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
-                        WebkitMaskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
-                      }}
-                    />
-                    <div className="relative m-2 min-h-[calc(100dvh-1rem)] w-full min-w-0 rounded-xl border border-white/10 bg-background/60 p-4 shadow-xl backdrop-blur-md sm:p-6 xl:w-[92%]">
-                      <Breadcrumbs />
-                      <QueryErrorResetBoundary>
-                        {({ reset }) => (
-                          <QueryErrorBoundary
-                            onReset={reset}
-                            fallbackRender={({ resetErrorBoundary }) => (
-                              <ApiErrorFallback resetErrorBoundary={resetErrorBoundary} />
-                            )}
-                          >
-                            <Outlet />
-                          </QueryErrorBoundary>
-                        )}
-                      </QueryErrorResetBoundary>
-                    </div>
+        <NuqsAdapter defaultOptions={{ history: "push", limitUrlUpdates: debounce(300) }}>
+          <TooltipProvider>
+            <div className="flex min-h-screen">
+              <AppSidebar />
+              <main className="min-w-0 flex-1 overflow-x-clip md:ml-64">
+                <MobileMenuButton />
+                <div className="relative flex min-h-full items-start justify-center">
+                  <img
+                    src="/logo/hexe.svg"
+                    fetchPriority="high"
+                    alt=""
+                    aria-hidden="true"
+                    className="pointer-events-none fixed right-0 bottom-0 h-[36rem] w-[36rem] opacity-[0.10] select-none"
+                    style={{
+                      transform: "perspective(900px) rotateX(12deg) rotateY(-8deg) rotateZ(-14deg)",
+                      maskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
+                      WebkitMaskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
+                    }}
+                  />
+                  <div className="relative m-2 min-h-[calc(100dvh-1rem)] w-full min-w-0 rounded-xl border border-white/10 bg-background/60 p-4 shadow-xl backdrop-blur-md sm:p-6 xl:w-[92%]">
+                    <Breadcrumbs />
+                    <QueryErrorResetBoundary>
+                      {({ reset }) => (
+                        <QueryErrorBoundary
+                          onReset={reset}
+                          fallbackRender={({ resetErrorBoundary }) => (
+                            <ApiErrorFallback resetErrorBoundary={resetErrorBoundary} />
+                          )}
+                        >
+                          <Outlet />
+                        </QueryErrorBoundary>
+                      )}
+                    </QueryErrorResetBoundary>
                   </div>
-                </main>
-              </div>
-              {/* Keep notification actions clear of the fixed feedback launcher. */}
-              <Toaster offset={{ bottom: 80 }} mobileOffset={{ bottom: 80 }} />
-              {import.meta.env.DEV ? <Agentation /> : <FeedbackWidget />}
-            </TooltipProvider>
-          </NuqsAdapter>
-        </PatronAuthProvider>
+                </div>
+              </main>
+            </div>
+            {/* Keep notification actions clear of the fixed feedback launcher. */}
+            <Toaster offset={{ bottom: 80 }} mobileOffset={{ bottom: 80 }} />
+            {import.meta.env.DEV ? <Agentation /> : <FeedbackWidget />}
+          </TooltipProvider>
+        </NuqsAdapter>
       </ThemeProvider>
     </RootDocument>
   );
