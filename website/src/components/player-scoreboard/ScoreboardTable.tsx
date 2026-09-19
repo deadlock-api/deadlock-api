@@ -125,7 +125,7 @@ export function ScoreboardTable({
   return (
     <div>
       {controls}
-      <Table>
+      <Table className="tabular-nums">
         <TableHeader className="bg-muted">
           <TableRow>
             <TableHead className="w-[5ch] text-right">#</TableHead>
@@ -142,7 +142,7 @@ export function ScoreboardTable({
                       onSortDirectionChange("desc");
                     }
                   }}
-                  className="inline-flex cursor-pointer items-center justify-end gap-1 transition-colors hover:text-foreground"
+                  className="inline-flex cursor-pointer items-center justify-end gap-1 rounded-sm transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
                 >
                   <span>Matches</span>
                   <DirectionIcon active={false} sortDirection={sortDirection} />
@@ -170,7 +170,7 @@ export function ScoreboardTable({
             const profile = accountId != null ? profiles[accountId] : undefined;
             return (
               // oxlint-disable-next-line react/no-array-index-key
-              <TableRow key={`${accountId ?? i}-${entry.rank}`}>
+              <TableRow key={`${accountId ?? i}-${entry.rank}`} className="[&>td]:py-1.5">
                 <TableCell className="text-right">{entry.rank + 1}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">

@@ -98,7 +98,7 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
   return (
     <div>
       {controls}
-      <Table>
+      <Table className="tabular-nums">
         <TableHeader className="bg-muted">
           <TableRow>
             <TableHead className="w-[5ch] text-right">#</TableHead>
@@ -142,12 +142,14 @@ function LeaderboardTableRow({
   }, [isHighlighted]);
 
   return (
-    <TableRow ref={rowRef} className={cn(isHighlighted && "bg-primary/10 hover:bg-primary/15")}>
+    <TableRow ref={rowRef} className={cn("[&>td]:py-1.5", isHighlighted && "bg-primary/10 hover:bg-primary/15")}>
       <TableCell className="text-right">{entry.rank}</TableCell>
-      <TableCell className="max-w-[200px] truncate">{entry.account_name}</TableCell>
+      <TableCell className="max-w-[200px] truncate" title={entry.account_name ?? undefined}>
+        {entry.account_name}
+      </TableCell>
       {shouldShowTopHeroesColumn && (
         <TableCell>
-          <div className="flex min-h-8 justify-end space-x-3">
+          <div className="flex min-h-7 justify-end gap-2">
             {entry.top_hero_ids?.map((heroId) => (
               <TopHeroButton key={heroId} heroId={heroId} onClick={() => onHeroClick(heroId)} />
             ))}
@@ -168,7 +170,7 @@ function TopHeroButton({ heroId, onClick }: { heroId: number; onClick: () => voi
           <HeroImageFromAsset
             hero={hero}
             isLoading={isLoading}
-            className="size-8 rounded-full border border-border object-cover"
+            className="size-7 rounded-full border border-border object-cover"
           />
         </button>
       </TooltipTrigger>
