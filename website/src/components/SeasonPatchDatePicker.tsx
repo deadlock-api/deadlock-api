@@ -6,6 +6,7 @@ import { OptionRow } from "~/components/Filter/OptionRow";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
 import { useSeasons } from "~/hooks/useSeasons";
+import type { DateFilterAction, DateRange } from "~/lib/date-filter-memory";
 import { type SeasonInfo, defaultDateRange, previousSeasonRange, seasonContaining } from "~/lib/seasons";
 
 import { DateRangePicker } from "./primitives/DateRangePicker";
@@ -19,6 +20,7 @@ export interface PatchInfo {
 }
 
 export interface SeasonPatchDatePickerValue {
+  action: DateFilterAction;
   startDate?: Dayjs;
   endDate?: Dayjs;
   prevStartDate?: Dayjs;
@@ -34,6 +36,7 @@ export interface SeasonPatchDatePickerProps {
   onValueChange: (value: SeasonPatchDatePickerValue) => void;
   className?: string;
   defaultTab?: PickerTab;
+  resetRange?: DateRange;
 }
 
 function patchMatches(patch: PatchInfo, startDate: Dayjs, endDate?: Dayjs): boolean {
@@ -146,7 +149,8 @@ export function SeasonPatchDatePicker({
   patchDates,
   value,
   onValueChange,
-  defaultTab = "patch",
+  defaultTab = "season",
+  resetRange,
 }: SeasonPatchDatePickerProps) {
   const { seasons, isPending: seasonsPending } = useSeasons();
 
@@ -166,26 +170,26 @@ export function SeasonPatchDatePicker({
       defaultTab,
     });
 
-  const emit = (startDate?: Dayjs, endDate?: Dayjs) => {
+  const emit = (startDate: Dayjs | undefined, endDate: Dayjs | undefined, action: DateFilterAction) => {
     const prev = computePreviousPeriod(startDate, endDate, { seasons, patches: patchDates });
-    onValueChange({ startDate, endDate, ...prev });
+    onValueChange({ startDate, endDate, ...prev, action });
   };
 
   const handleSeasonSelect = (seasonId: string) => {
     const season = seasons.find((s) => s.id === seasonId);
-    emit(season?.startDate, season?.endDate);
+    emit(season?.startDate, season?.endDate, "season");
   };
 
   const handlePatchSelect = (patchId: string) => {
     const patch = patchDates.find((p) => p.id === patchId);
-    emit(patch?.startDate, patch?.endDate);
+    emit(patch?.startDate, patch?.endDate, "patch");
   };
 
   const handleDateRangePickerChange = (range: { startDate?: Dayjs; endDate?: Dayjs }) => {
-    emit(range.startDate?.startOf("day"), range.endDate?.endOf("day"));
+    emit(range.startDate?.startOf("day"), range.endDate?.endOf("day"), "custom");
   };
 
-  const [defaultStart, defaultEnd] = defaultDateRange(seasons);
+  const [defaultStart, defaultEnd] = resetRange ?? defaultDateRange(seasons);
   const isActive =
     value.startDate?.valueOf() !== defaultStart?.valueOf() || value.endDate?.valueOf() !== defaultEnd?.valueOf();
 
@@ -195,7 +199,7 @@ export function SeasonPatchDatePicker({
       value={dateRangeLabel(value, { seasons, patches: patchDates })}
       active={isActive}
       onReset={() => {
-        emit(defaultStart, defaultEnd);
+        emit(defaultStart, defaultEnd, "reset");
         setQueryTab(null);
       }}
       icon={<CalendarIcon className="size-3.5 shrink-0" />}

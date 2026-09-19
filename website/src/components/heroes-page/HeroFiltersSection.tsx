@@ -26,6 +26,7 @@ type HeroFiltersProps = Pick<
   | "startDate"
   | "endDate"
   | "handleDateChange"
+  | "defaultRange"
   | "heroId"
   | "setHeroId"
   | "sameLaneFilter"
@@ -49,6 +50,7 @@ export function HeroFiltersSection({
   startDate,
   endDate,
   handleDateChange,
+  defaultRange,
   heroId,
   setHeroId,
   sameLaneFilter,
@@ -82,7 +84,12 @@ export function HeroFiltersSection({
           setMaxRankId(max);
         }}
       />
-      <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
+      <Filter.SeasonPatchDate
+        startDate={startDate}
+        endDate={endDate}
+        onDateChange={handleDateChange}
+        resetRange={defaultRange}
+      />
       {tab === "hero-combs" && <HeroCombFilters />}
       {tab === "hero-matchup-details" && (
         <Filter.Hero value={heroId} defaultValue={2} onChange={(id) => id != null && setHeroId(id)} />

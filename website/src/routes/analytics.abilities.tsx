@@ -56,7 +56,7 @@ function AbilitiesPage() {
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const { mode, setMode, gameMode, matchMode } = useModeState();
-  const { startDate, endDate, handleDateChange } = useDateRangeState();
+  const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(20));
   const [itemSelections, setItemSelections] = useState<Map<number, TriState>>(new Map());
 
@@ -104,7 +104,12 @@ function AbilitiesPage() {
         />
         <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={0} defaultValue={20} />
         <Filter.ItemsTriState selections={itemSelections} onSelectionsChange={setItemSelections} label="Items" />
-        <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
+        <Filter.SeasonPatchDate
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={handleDateChange}
+          resetRange={defaultRange}
+        />
       </Filter.Root>
 
       <ChunkErrorBoundary>

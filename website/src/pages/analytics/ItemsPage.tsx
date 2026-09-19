@@ -33,7 +33,7 @@ export function ItemsPage() {
   const [maxBoughtAtS, setMaxBoughtAtS] = useQueryState("max_bought_at", parseAsInteger);
   const [hero, setHero] = useQueryState("hero", parseAsInteger);
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(10));
-  const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange } = useDateRangeState();
+  const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange, defaultRange } = useDateRangeState();
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
 
   const [tab, setTab] = useAnalyticsTab("items");
@@ -74,7 +74,12 @@ export function ItemsPage() {
           label="Time"
           title="Purchase Time Window"
         />
-        <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
+        <Filter.SeasonPatchDate
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={handleDateChange}
+          resetRange={defaultRange}
+        />
         {tab === "item-combos" && <ItemCombFilters />}
       </Filter.Root>
 

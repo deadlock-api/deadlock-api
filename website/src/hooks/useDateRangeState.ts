@@ -3,23 +3,24 @@ import { useMemo } from "react";
 
 import { computePreviousPeriod } from "~/components/SeasonPatchDatePicker";
 import type { Dayjs } from "~/dayjs";
+import { useDateFilterMemory } from "~/hooks/useDateFilterMemory";
 import { useSeasons } from "~/hooks/useSeasons";
 import { PATCHES } from "~/lib/constants";
+import type { DateFilterAction } from "~/lib/date-filter-memory";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
-import { defaultDateRange } from "~/lib/seasons";
+import { preferredDateRange } from "~/lib/seasons";
 
-/**
- * `date_range` URL state defaulting to the latest balance patch, plus the
- * comparison range that goes with it. The previous period is derived from the
- * URL range on every render, the same way the picker derives it, so a shared or
- * reloaded link compares against the same baseline as a fresh pick.
- */
+/** URL > remembered exact selection (24h) > current preferred season or patch. */
 export function useDateRangeState() {
   const { seasons } = useSeasons();
-
-  const defaultRange = useMemo(() => defaultDateRange(seasons), [seasons]);
-  const parser = useMemo(() => parseAsDayjsRange.withDefault(defaultRange), [defaultRange]);
-  const [[startDate, endDate], setDateRange] = useQueryState("date_range", parser);
+  const { memory, remember } = useDateFilterMemory();
+  const [urlRange, setUrlRange] = useQueryState("date_range", parseAsDayjsRange);
+  const defaultRange = useMemo(() => preferredDateRange(seasons, memory.preference), [seasons, memory.preference]);
+  const savedRange = useMemo(
+    () => (memory.recent ? parseAsDayjsRange.parse(memory.recent.range) : null),
+    [memory.recent],
+  );
+  const [startDate, endDate] = urlRange ?? savedRange ?? defaultRange;
   const isDefaultRange =
     startDate?.valueOf() === defaultRange[0]?.valueOf() && endDate?.valueOf() === defaultRange[1]?.valueOf();
 
@@ -28,9 +29,12 @@ export function useDateRangeState() {
     [startDate, endDate, seasons],
   );
 
-  const handleDateChange = (newStartDate?: Dayjs, newEndDate?: Dayjs) => {
-    setDateRange([newStartDate, newEndDate]);
+  const handleDateChange = (newStartDate?: Dayjs, newEndDate?: Dayjs, action: DateFilterAction = "custom") => {
+    const range: [Dayjs | undefined, Dayjs | undefined] = [newStartDate, newEndDate];
+    remember(range, action);
+    // Explicit picks stay in shared URLs, even when they match today's default.
+    void setUrlRange(action === "reset" ? null : range);
   };
 
-  return { startDate, endDate, prevStartDate, prevEndDate, setDateRange, handleDateChange, isDefaultRange };
+  return { startDate, endDate, prevStartDate, prevEndDate, handleDateChange, isDefaultRange, defaultRange };
 }

@@ -259,6 +259,9 @@ importers:
       unist-util-visit:
         specifier: ^5.1.0
         version: 5.1.0
+      zod:
+        specifier: ^4.6.1
+        version: 4.6.1
     devDependencies:
       '@babel/core':
         specifier: ^8.0.6

@@ -29,7 +29,7 @@ export function useTrackerFilters() {
   const { mode, setMode, gameMode, matchMode } = useModeState();
   const [heroId, setHeroId] = useQueryState("hero", parseAsInteger);
   const [result, setResult] = useQueryState("result", parseAsStringLiteral(RESULT_FILTERS).withDefault("all"));
-  const { startDate, endDate, handleDateChange } = useDateRangeState();
+  const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
   const [, setFilterQuery] = useQueryStates(TRACKER_SELECTION_PARSERS);
   // The picker already supplies day, season or patch boundaries. Rounding them to UTC days can
   // add matches outside a local calendar-day selection, so every tracker view uses the exact instants.
@@ -85,6 +85,7 @@ export function useTrackerFilters() {
     startDate,
     endDate,
     handleDateChange,
+    defaultRange,
     minUnixTimestamp,
     maxUnixTimestamp,
     filters,

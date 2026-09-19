@@ -49,7 +49,7 @@ function HeatmapPage() {
   const [minGameTime, setMinGameTime] = useQueryState("min_game_time", parseAsInteger.withDefault(0));
   const [maxGameTime, setMaxGameTime] = useQueryState("max_game_time", parseAsInteger.withDefault(3600));
   const [sensitivity, setOutlierSensitivity] = useQueryState("outlier", parseAsInteger.withDefault(9900));
-  const { startDate, endDate, handleDateChange } = useDateRangeState();
+  const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
 
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
@@ -97,7 +97,12 @@ function HeatmapPage() {
           maxRank={maxRankId}
           onRankChange={handleRankChange}
         />
-        <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
+        <Filter.SeasonPatchDate
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={handleDateChange}
+          resetRange={defaultRange}
+        />
         <Filter.TimeRange
           minTime={minGameTime || undefined}
           maxTime={maxGameTime < 3600 ? maxGameTime : undefined}

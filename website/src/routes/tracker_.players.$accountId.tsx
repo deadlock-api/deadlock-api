@@ -92,6 +92,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
     startDate,
     endDate,
     handleDateChange,
+    defaultRange,
     minUnixTimestamp,
     maxUnixTimestamp,
     filters,
@@ -195,6 +196,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
           startDate={startDate}
           endDate={endDate}
           onDateChange={handleDateChange}
+          resetRange={defaultRange}
         />
       </PlayerHeader>
 

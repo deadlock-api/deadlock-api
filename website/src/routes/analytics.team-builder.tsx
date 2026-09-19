@@ -92,7 +92,7 @@ function TeamBuilderPage() {
   };
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(DEFAULT_MIN_RANK));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(DEFAULT_MAX_RANK));
-  const { startDate, endDate, handleDateChange } = useDateRangeState();
+  const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
 
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null);
@@ -362,7 +362,12 @@ function TeamBuilderPage() {
             setMaxRankId(max);
           }}
         />
-        <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
+        <Filter.SeasonPatchDate
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={handleDateChange}
+          resetRange={defaultRange}
+        />
         <MatchImportControl
           matchId={importedMatchId}
           isLoading={importQuery.isFetching || importing}

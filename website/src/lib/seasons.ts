@@ -2,6 +2,7 @@ import type { RankedSeason } from "deadlock_api_client";
 
 import { type Dayjs, day } from "~/dayjs";
 import { PATCHES } from "~/lib/constants";
+import type { DateFilterPreference, DateRange } from "~/lib/date-filter-memory";
 import { normalizeUnixCeil, normalizeUnixFloor, registerExactBoundaries } from "~/lib/time-normalize";
 
 export interface SeasonInfo {
@@ -62,13 +63,19 @@ export function previousSeasonRange(seasons: readonly SeasonInfo[], index: numbe
   return [season.startDate.subtract(lengthSeconds, "second"), season.startDate];
 }
 
-/** Default filter range: the latest balance patch, independent of ranked seasons. */
-export function defaultDateRange(_seasons: readonly SeasonInfo[]): [Dayjs | undefined, Dayjs | undefined] {
-  return [PATCHES[0].startDate, PATCHES[0].endDate];
+/** Public default: the current ranked season, falling back to the latest patch. */
+export function defaultDateRange(seasons: readonly SeasonInfo[]): [Dayjs | undefined, Dayjs | undefined] {
+  const season = currentSeason(seasons);
+  return season ? [season.startDate, season.endDate] : [PATCHES[0].startDate, PATCHES[0].endDate];
 }
 
-export function defaultPrevDateRange(_seasons: readonly SeasonInfo[]): [Dayjs | undefined, Dayjs | undefined] {
-  return [PATCHES[1].startDate, PATCHES[0].startDate];
+/** A preference tracks the current period, rather than pinning an old season or patch. */
+export function preferredDateRange(seasons: readonly SeasonInfo[], preference: DateFilterPreference): DateRange {
+  return preference === "patch" ? [PATCHES[0].startDate, PATCHES[0].endDate] : defaultDateRange(seasons);
+}
+
+export function defaultPrevDateRange(seasons: readonly SeasonInfo[]): [Dayjs | undefined, Dayjs | undefined] {
+  return currentSeason(seasons) ? previousSeasonRange(seasons, 0) : [PATCHES[1].startDate, PATCHES[0].startDate];
 }
 
 /** `defaultDateRange` as normalized unix bounds, in the shape the analytics request params take. */

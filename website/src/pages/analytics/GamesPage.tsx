@@ -25,7 +25,7 @@ export function Games() {
   const isStreetBrawl = mode === "street_brawl";
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
-  const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange } = useDateRangeState();
+  const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange, defaultRange } = useDateRangeState();
   const [minDurationS, setMinDurationS] = useQueryState("min_duration_s", parseAsInteger);
   const [maxDurationS, setMaxDurationS] = useQueryState("max_duration_s", parseAsInteger);
   const [stat, setStat] = useQueryState(
@@ -88,7 +88,12 @@ export function Games() {
             setMaxRankId(max);
           }}
         />
-        <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
+        <Filter.SeasonPatchDate
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={handleDateChange}
+          resetRange={defaultRange}
+        />
         <Filter.MatchDuration
           minTime={minDurationS ?? undefined}
           maxTime={maxDurationS ?? undefined}

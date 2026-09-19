@@ -11,6 +11,7 @@ import type { Dayjs } from "~/dayjs";
 import { useHeroById } from "~/hooks/useAssetById";
 import { useSeasons } from "~/hooks/useSeasons";
 import { PATCHES } from "~/lib/constants";
+import type { DateFilterAction, DateRange } from "~/lib/date-filter-memory";
 import type { ResultFilter } from "~/lib/tracker/compute";
 
 const RESULT_OPTIONS: { value: ResultFilter; label: string }[] = [
@@ -29,6 +30,7 @@ export function TrackerFilterBar({
   startDate,
   endDate,
   onDateChange,
+  resetRange,
 }: {
   mode: Mode;
   onModeChange: (mode: Mode) => void;
@@ -38,7 +40,8 @@ export function TrackerFilterBar({
   onResultChange: (result: ResultFilter) => void;
   startDate?: Dayjs;
   endDate?: Dayjs;
-  onDateChange: (startDate?: Dayjs, endDate?: Dayjs, prevStartDate?: Dayjs, prevEndDate?: Dayjs) => void;
+  resetRange: DateRange;
+  onDateChange: (startDate?: Dayjs, endDate?: Dayjs, action?: DateFilterAction) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const { hero } = useHeroById(heroId ?? 0);
@@ -76,7 +79,12 @@ export function TrackerFilterBar({
         <div className="flex flex-col gap-1">
           <Filter.Root>
             {/* The two popover cells sit together so a phone pairs them on one row, ahead of the full-width toggles. */}
-            <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={onDateChange} />
+            <Filter.SeasonPatchDate
+              startDate={startDate}
+              endDate={endDate}
+              onDateChange={onDateChange}
+              resetRange={resetRange}
+            />
             <Filter.Hero value={heroId} onChange={onHeroChange} allowNull label="Hero" />
             <ModeSelector value={mode} onChange={onModeChange} />
             <FilterToggleCell

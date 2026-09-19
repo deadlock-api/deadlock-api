@@ -41,7 +41,7 @@ export function PlayersPage() {
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(0));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
-  const { startDate, endDate, handleDateChange } = useDateRangeState();
+  const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
 
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
@@ -86,7 +86,12 @@ export function PlayersPage() {
           }}
         />
         <Filter.Hero value={heroId} onChange={setHeroId} allowNull label="Hero" />
-        <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
+        <Filter.SeasonPatchDate
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={handleDateChange}
+          resetRange={defaultRange}
+        />
         {tab === "scoreboard" && (
           <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={1} defaultValue={0} />
         )}

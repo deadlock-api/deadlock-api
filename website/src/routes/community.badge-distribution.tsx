@@ -80,7 +80,7 @@ export const Route = createFileRoute("/community/badge-distribution")({
 });
 
 function BadgeDistributionPage() {
-  const { startDate, endDate, handleDateChange } = useDateRangeState();
+  const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
   const [minDurationS, setMinDurationS] = useQueryState("min_duration_s", parseAsInteger);
   const [maxDurationS, setMaxDurationS] = useQueryState("max_duration_s", parseAsInteger);
   const [metric, setMetric] = useQueryState(
@@ -135,7 +135,12 @@ function BadgeDistributionPage() {
           maxTime={maxDurationS ?? undefined}
           onTimeChange={handleDurationChange}
         />
-        <Filter.SeasonPatchDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
+        <Filter.SeasonPatchDate
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={handleDateChange}
+          resetRange={defaultRange}
+        />
       </Filter.Root>
       <div className="flex h-[60dvh] items-center justify-center">
         {isPending ? (
