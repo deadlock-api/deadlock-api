@@ -12,6 +12,9 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { ALL_SORT_BY_VALUES } from "~/components/player-scoreboard/sort-options";
 import { QueryRenderer } from "~/components/QueryRenderer";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
+import { MODE_CONFIG } from "~/components/selectors/ModeSelector";
+import { Button } from "~/components/ui/button";
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyContent } from "~/components/ui/empty";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
@@ -73,8 +76,8 @@ export function HeroesPage() {
   );
   const { minUnixTimestamp: scoreboardMinUnixTimestamp, maxUnixTimestamp: scoreboardMaxUnixTimestamp } =
     useNormalizedTimeRange(filters.startDate, filters.endDate);
-  const heroScoreboardQuery = useQuery(
-    heroScoreboardQueryOptions({
+  const heroScoreboardQuery = useQuery({
+    ...heroScoreboardQueryOptions({
       sortBy: scoreboardSortBy as HeroScoreboardSortByEnum,
       sortDirection: scoreboardSortDirection as "desc" | "asc",
       gameMode: filters.gameMode,
@@ -85,17 +88,15 @@ export function HeroesPage() {
       minUnixTimestamp: scoreboardMinUnixTimestamp ?? 0,
       maxUnixTimestamp: scoreboardMaxUnixTimestamp,
     }),
-  );
+    enabled: filters.tab === "hero-scoreboard",
+  });
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="text-center">
         <h1 className="text-3xl font-bold tracking-tight">Deadlock Hero Win Rates</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Detailed analytics and matchup data for Deadlock heroes</p>
-        <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Explore win rates, pick rates, and matchup data for every Deadlock hero. Filter by rank, patch, and game mode
-          to find the strongest heroes in the current meta or analyze how hero performance changes over time. Statistics
-          are calculated from tracked ranked matches and updated in real time.
+        <p className="mt-1 text-sm text-muted-foreground">
+          Compare hero performance across ranks, patches, and game modes.
         </p>
       </div>
 
@@ -125,17 +126,27 @@ export function HeroesPage() {
 
         <TabsContent value="stats">
           <div className="flex flex-col gap-4">
-            <h2 className="sr-only">Overall Hero Stats</h2>
-            <div className="flex items-center gap-2">
+            <div>
+              <h2 className="text-lg font-semibold">Overall Hero Stats</h2>
+              <p className="text-sm text-muted-foreground">
+                Compare win rates alongside sample sizes. Small samples can produce extreme results.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
               <Input
                 type="search"
                 value={heroNameQuery}
                 onChange={(e) => setHeroNameQuery(e.target.value)}
                 placeholder="Find a hero…"
                 aria-label="Filter heroes by name"
-                className="h-8 w-44"
+                className="h-9 w-full sm:w-60"
               />
-              <div className="ml-auto flex items-center gap-2">
+              {heroNameQuery && (
+                <Button variant="ghost" size="sm" onClick={() => setHeroNameQuery("")}>
+                  Clear search
+                </Button>
+              )}
+              <div className="flex items-center gap-2 sm:ml-auto">
                 <Label htmlFor={groupByTypeId} className="text-sm font-semibold text-nowrap text-foreground">
                   Group by Type
                 </Label>
@@ -150,6 +161,8 @@ export function HeroesPage() {
               columns={["winRate", "pickRate", "zScore", "residual", "details"]}
               groupByType={groupByType}
               nameQuery={heroNameQuery}
+              onClearNameQuery={() => setHeroNameQuery("")}
+              showMatchCounts
               minRankId={filters.effectiveMinRankId}
               maxRankId={filters.effectiveMaxRankId}
               minHeroMatches={filters.minHeroMatches}
@@ -240,40 +253,60 @@ export function HeroesPage() {
         <TabsContent value="stats-by-rank">
           <div className="flex flex-col gap-4">
             <h2 className="sr-only">Hero Stats by Rank</h2>
-            <div className="flex flex-col items-center gap-3">
-              <div className="flex flex-col gap-1.5">
-                <span className="text-sm text-muted-foreground">X Axis</span>
-                <HeroStatSelector
-                  label="X Axis"
-                  value={filters.byRankX}
-                  onChange={(val) => filters.setByRankX(val)}
-                  options={BY_RANK_STATS}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-sm text-muted-foreground">Y Axis</span>
-                <HeroStatSelector
-                  label="Y Axis"
-                  value={filters.byRankY}
-                  onChange={(val) => filters.setByRankY(val)}
-                  options={BY_RANK_STATS}
-                />
-              </div>
-            </div>
-            <ChunkErrorBoundary>
-              <Suspense fallback={<LoadingLogo />}>
-                <HeroStatsByRankChart
-                  minHeroMatches={filters.minHeroMatches}
-                  minHeroMatchesTotal={filters.minHeroMatchesTotal}
-                  minDate={filters.startDate}
-                  maxDate={filters.endDate}
-                  gameMode={"normal"}
-                  matchMode={filters.matchMode}
-                  xStat={filters.byRankX}
-                  yStat={filters.byRankY}
-                />
-              </Suspense>
-            </ChunkErrorBoundary>
+            {MODE_CONFIG[filters.mode].supportsRank ? (
+              <>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-sm text-muted-foreground">X Axis</span>
+                    <HeroStatSelector
+                      label="X Axis"
+                      value={filters.byRankX}
+                      onChange={(val) => filters.setByRankX(val)}
+                      options={BY_RANK_STATS}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-sm text-muted-foreground">Y Axis</span>
+                    <HeroStatSelector
+                      label="Y Axis"
+                      value={filters.byRankY}
+                      onChange={(val) => filters.setByRankY(val)}
+                      options={BY_RANK_STATS}
+                    />
+                  </div>
+                </div>
+                <ChunkErrorBoundary>
+                  <Suspense fallback={<LoadingLogo />}>
+                    <HeroStatsByRankChart
+                      minHeroMatches={filters.minHeroMatches}
+                      minHeroMatchesTotal={filters.minHeroMatchesTotal}
+                      minDate={filters.startDate}
+                      maxDate={filters.endDate}
+                      gameMode={filters.gameMode}
+                      matchMode={filters.matchMode}
+                      xStat={filters.byRankX}
+                      yStat={filters.byRankY}
+                    />
+                  </Suspense>
+                </ChunkErrorBoundary>
+              </>
+            ) : (
+              <Empty className="border">
+                <EmptyHeader>
+                  <EmptyTitle>Rank breakdown is unavailable for Brawl</EmptyTitle>
+                  <EmptyDescription>
+                    Brawl does not use ranks. Explore its overall stats or switch to a normal game mode to compare
+                    ranks.
+                  </EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent>
+                  <Button onClick={() => filters.setTab("stats")}>View Brawl stats</Button>
+                  <Button variant="outline" onClick={() => filters.setMode("normal_all")}>
+                    Switch to normal mode
+                  </Button>
+                </EmptyContent>
+              </Empty>
+            )}
           </div>
         </TabsContent>
 

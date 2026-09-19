@@ -15,6 +15,7 @@ export const heroes = [
   id,
   name,
   class_name,
+  hero_type: id === 11 ? "mystic" : "brawler",
   player_selectable: true,
   disabled: false,
   in_development: false,

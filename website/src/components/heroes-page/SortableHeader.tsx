@@ -25,7 +25,10 @@ export function SortableHeader({
 }) {
   const isActive = activeSortKey === sortKey;
   return (
-    <TableHead className={cn("text-center", className)}>
+    <TableHead
+      className={cn("text-center", className)}
+      aria-sort={isActive ? (sortDir === "desc" ? "descending" : "ascending") : undefined}
+    >
       <button
         type="button"
         className="inline-flex cursor-pointer items-center justify-center gap-1 transition-colors hover:text-foreground"

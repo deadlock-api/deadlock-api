@@ -24,6 +24,9 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import type { MatchMode } from "~/components/selectors/MatchModeSelector";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Button } from "~/components/ui/button";
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyContent } from "~/components/ui/empty";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -79,6 +82,8 @@ export function HeroStatsTable({
   gameMode,
   matchMode,
   nameQuery,
+  onClearNameQuery,
+  showMatchCounts,
 }: {
   columns: string[];
   limit?: number;
@@ -96,6 +101,8 @@ export function HeroStatsTable({
   gameMode?: GameMode;
   matchMode?: MatchMode;
   nameQuery?: string;
+  onClearNameQuery?: () => void;
+  showMatchCounts?: boolean;
 }) {
   const [activeSortKey, setActiveSortKey] = useQueryState("hero_sort_key", parseAsSortKey.withDefault("winrate"));
   const [sortDir, setSortDir] = useQueryState("hero_sort_dir", parseAsSortDir.withDefault("desc"));
@@ -129,7 +136,13 @@ export function HeroStatsTable({
     gameMode: gameMode,
     matchMode,
   };
-  const { data: heroData, isLoading } = useQuery({
+  const {
+    data: heroData,
+    isLoading,
+    isError,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: queryKeys.analytics.heroStats(heroStatsQuery),
     queryFn: async () => {
       const response = await api.analytics_api.heroStats(heroStatsQuery);
@@ -167,13 +180,15 @@ export function HeroStatsTable({
     maxUnixTimestamp,
     matchMode,
   };
-  const { data: banData } = useQuery({
+  const supportsBans = gameMode !== "street_brawl";
+  const { data: normalBanData } = useQuery({
     queryKey: queryKeys.analytics.heroBanStats(banStatsQuery),
     queryFn: async () => {
       const response = await api.analytics_api.heroBanStats(banStatsQuery);
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_DAY,
+    enabled: supportsBans,
   });
 
   const prevBanStatsQuery: AnalyticsApiHeroBanStatsRequest = {
@@ -183,19 +198,29 @@ export function HeroStatsTable({
     maxUnixTimestamp: prevMaxTimestamp,
     matchMode,
   };
-  const { data: prevBanData } = useQuery({
+  const { data: normalPrevBanData } = useQuery({
     queryKey: queryKeys.analytics.heroBanStats(prevBanStatsQuery),
     queryFn: async () => {
       const response = await api.analytics_api.heroBanStats(prevBanStatsQuery);
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_DAY,
-    enabled: hasPreviousInterval,
+    enabled: hasPreviousInterval && supportsBans,
   });
+
+  // Ignore cached normal-mode bans when switching to Brawl.
+  const banData = supportsBans ? normalBanData : undefined;
+  const prevBanData = supportsBans ? normalPrevBanData : undefined;
 
   const pickrateMultiplier = getPickrateMultiplier(gameMode);
 
-  const { data: heroes, isLoading: isLoadingHeroes } = useQuery(heroesQueryOptions);
+  const {
+    data: heroes,
+    isLoading: isLoadingHeroes,
+    isError: isHeroesError,
+    refetch: refetchHeroes,
+    isFetching: isFetchingHeroes,
+  } = useQuery(heroesQueryOptions);
   const heroRowLinkVariant = useExperiment("exp-hero-row-link");
   const heroNameMap = useMemo(() => {
     if (!heroes) return new Map<number, string>();
@@ -514,13 +539,68 @@ export function HeroStatsTable({
     }).filter((g) => g.totalMatches > 0);
   }, [groupByType, groupedData, heroData, prevHeroData, heroTypeMap, sumMatches, banData, prevBanData, sumBans]);
 
-  if (isLoading || (groupByType && isLoadingHeroes)) {
+  if (isLoading || isLoadingHeroes) {
     return (
       <div className="flex h-full w-full items-center justify-center py-16">
         <LoadingLogo />
       </div>
     );
   }
+
+  if ((isError && !heroData) || (isHeroesError && !heroes)) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Unable to load hero stats</AlertTitle>
+        <AlertDescription>
+          <p>Your filters are still selected. Try loading the data again.</p>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isFetching || isFetchingHeroes}
+            onClick={() => {
+              if (isError) void refetch();
+              if (isHeroesError) void refetchHeroes();
+            }}
+          >
+            Try again
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  const visibleCount = limitedData?.filter((row) => matchesNameQuery(row.hero_id)).length ?? 0;
+  if (visibleCount === 0) {
+    const hasData = (heroData?.length ?? 0) > 0;
+    return (
+      <Empty className="border" aria-live="polite">
+        <EmptyHeader>
+          <EmptyTitle>{hasData ? "No heroes match your search" : "No hero stats for these filters"}</EmptyTitle>
+          <EmptyDescription>
+            {hasData
+              ? "Try another hero name or clear your search."
+              : "Try a wider date range, more ranks, or lower match requirements."}
+          </EmptyDescription>
+        </EmptyHeader>
+        {hasData && onClearNameQuery && (
+          <EmptyContent>
+            <Button variant="outline" onClick={onClearNameQuery}>
+              Clear search
+            </Button>
+          </EmptyContent>
+        )}
+      </Empty>
+    );
+  }
+
+  const resultsSummary =
+    nameQuery !== undefined ? (
+      <output className="text-xs text-muted-foreground">
+        Showing {visibleCount} of {limitedData?.length ?? 0} heroes.
+        {normalizedNameQuery && " Rates and positions remain relative to the full filtered roster."}
+        {groupByType && " Group summaries include all heroes in each type."}
+      </output>
+    ) : null;
 
   const renderTableHeader = (showIndex: boolean) => (
     <TableHeader className="bg-muted">
@@ -530,7 +610,10 @@ export function HeroStatsTable({
             #
           </TableHead>
         )}
-        <TableHead style={{ width: "1%", minWidth: "10rem" }}>
+        <TableHead
+          aria-sort={activeSortKey === "hero" ? (sortDir === "desc" ? "ascending" : "descending") : undefined}
+          style={{ width: "1%", minWidth: "10rem" }}
+        >
           <button
             type="button"
             className="inline-flex cursor-pointer items-center justify-center gap-1 transition-colors hover:text-foreground"
@@ -559,7 +642,10 @@ export function HeroStatsTable({
           />
         )}
         {columns.includes("pickRate") && (
-          <TableHead className="w-[19%] text-center">
+          <TableHead
+            aria-sort={activeSortKey === "pickRate" ? (sortDir === "desc" ? "descending" : "ascending") : undefined}
+            className="w-[19%] text-center"
+          >
             <div className="inline-flex items-center justify-center gap-2">
               {banStatsMap.size > 0 ? (
                 <div className="inline-flex items-center rounded-md border border-border bg-background p-0.5 text-xs">
@@ -567,7 +653,7 @@ export function HeroStatsTable({
                     type="button"
                     className={cn(
                       "cursor-pointer rounded-sm px-2 py-0.5 transition-colors",
-                      !showPresence
+                      !showPresence && !showBanRate
                         ? "bg-muted font-semibold text-foreground"
                         : "text-muted-foreground hover:text-foreground",
                     )}
@@ -690,6 +776,11 @@ export function HeroStatsTable({
             <HeroImage heroId={row.hero_id} />
             <HeroName heroId={row.hero_id} linkToDetail />
           </div>
+        )}
+        {showMatchCounts && (
+          <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+            {row.matches.toLocaleString("en-US")} matches
+          </p>
         )}
       </TableCell>
       {columns.includes("winRate") && (
@@ -1006,9 +1097,11 @@ export function HeroStatsTable({
 
   if (groupByType && groupedData && groupStats) {
     return (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4">
+        {resultsSummary}
         {groupStats.map((group) => {
           const heroesInGroup = groupedData.get(group.type) ?? [];
+          if (!heroesInGroup.some((row) => matchesNameQuery(row.hero_id))) return null;
           const config = HERO_TYPE_CONFIG[group.type];
           const winrateDelta = group.prevWinrate !== undefined ? group.winrate - group.prevWinrate : undefined;
           const pickrateDelta = group.prevPickrate !== undefined ? group.pickrate - group.prevPickrate : undefined;
@@ -1020,7 +1113,10 @@ export function HeroStatsTable({
                 <div className="flex items-center gap-2">
                   <config.icon className="size-5" style={{ color: config.color }} />
                   <h3 className="text-lg font-semibold">{config.label}</h3>
-                  <span className="text-sm text-muted-foreground">({heroesInGroup.length} heroes)</span>
+                  <span className="text-sm text-muted-foreground">
+                    ({heroesInGroup.filter((row) => matchesNameQuery(row.hero_id)).length} of {heroesInGroup.length}{" "}
+                    heroes)
+                  </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
                   {columns.includes("winRate") && (
@@ -1116,11 +1212,14 @@ export function HeroStatsTable({
   }
 
   return (
-    <Table>
-      {!hideHeader && renderTableHeader(!hideIndex)}
-      <TableBody>
-        {limitedData?.map((row, index) => matchesNameQuery(row.hero_id) && renderHeroRow(row, index, !hideIndex))}
-      </TableBody>
-    </Table>
+    <div className="flex flex-col gap-3">
+      {resultsSummary}
+      <Table>
+        {!hideHeader && renderTableHeader(!hideIndex)}
+        <TableBody>
+          {limitedData?.map((row, index) => matchesNameQuery(row.hero_id) && renderHeroRow(row, index, !hideIndex))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
