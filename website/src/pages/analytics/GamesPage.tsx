@@ -8,89 +8,18 @@ import GamesOverview from "~/components/games-page/GamesOverview";
 import { ALL_STAT_KEYS } from "~/components/games-page/stat-definitions";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
-import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { useAnalyticsTab } from "~/hooks/useAnalyticsTab";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { analyticsPageTitle, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
-import { prefetchSafe } from "~/lib/prefetch-safe";
-import { defaultUnixRange, defaultPrevUnixRange } from "~/lib/seasons";
-import { seo } from "~/lib/seo";
-import { loadSeasons } from "~/queries/asset-queries";
-import { gameStatsQueryOptions } from "~/queries/games-query";
-import type { RouterContext } from "~/router";
 
 const GamesOverTimeChart = lazy(() => import("~/components/games-page/GamesOverTimeChart"));
 const GamesByRankChart = lazy(() => import("~/components/games-page/GamesByRankChart"));
 const EconomyTab = lazy(() => import("~/components/games-page/EconomyTab"));
 
-const MATCH_LENGTH_ANSWER = "A typical Deadlock match lasts around 30-40 minutes, varying by game mode and skill.";
-
-export const gamesPageOptions = {
-  beforeLoad: redirectAnalyticsTab,
-  component: Games,
-  loader: async ({ context: { queryClient } }: { context: RouterContext }) => {
-    const seasons = await loadSeasons(queryClient);
-    const range = defaultUnixRange(seasons);
-    const prevRange = defaultPrevUnixRange(seasons);
-    const baseParams: AnalyticsApiGameStatsRequest = {
-      gameMode: "normal",
-      matchMode: DEFAULT_MATCH_MODE,
-      ...range,
-      minAverageBadge: 0,
-      maxAverageBadge: 116,
-    };
-    await Promise.all([
-      prefetchSafe(queryClient.ensureQueryData(gameStatsQueryOptions({ ...baseParams, bucket: "no_bucket" }))),
-      prefetchSafe(
-        queryClient.ensureQueryData(
-          gameStatsQueryOptions({
-            ...baseParams,
-            ...prevRange,
-            bucket: "no_bucket",
-          }),
-        ),
-      ),
-    ]);
-  },
-  head: ({ match }: { match: { pathname: string } }) =>
-    seo({
-      title: analyticsPageTitle(match.pathname, "Deadlock Game Stats: Match Trends, Avg Kills & Souls by Rank"),
-      description:
-        "Deadlock match stats by rank and game mode: average match length, kills, souls, and objective timings. See how long a typical Deadlock game lasts.",
-      path: match.pathname.replace(/\/$/, ""),
-      jsonLd: [
-        {
-          "@context": "https://schema.org",
-          "@type": "Dataset",
-          name: "Deadlock Match Stats",
-          description:
-            "Average match statistics for Deadlock, including average kills, souls, and game length, calculated from tracked matches. Filterable by rank, patch, and game mode.",
-          url: `https://deadlock-api.com${match.pathname.replace(/\/$/, "")}`,
-          keywords: ["Deadlock", "match stats", "average kills", "souls", "game length"],
-          creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
-          isAccessibleForFree: true,
-          license: "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE",
-        },
-        {
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: [
-            {
-              "@type": "Question",
-              name: "How long is a Deadlock match?",
-              acceptedAnswer: { "@type": "Answer", text: MATCH_LENGTH_ANSWER },
-            },
-          ],
-        },
-      ],
-    }),
-};
-
-function Games() {
+export function Games() {
   const [tab, setTab] = useAnalyticsTab("games");
   const { mode, setMode, gameMode, matchMode } = useModeState();
   const isStreetBrawl = mode === "street_brawl";

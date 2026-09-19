@@ -1,8 +1,8 @@
 import type { Leaderboard } from "deadlock_api_client";
 import Fuse from "fuse.js";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
-import { HeroImage } from "~/components/HeroImage";
+import { HeroImageFromAsset } from "~/components/HeroImage";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { useHeroById } from "~/hooks/useAssetById";
@@ -33,6 +33,8 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
     setItemsPerPage,
   } = usePaginationQueryState();
   const [highlightedRank, setHighlightedRank] = useState<number | null>(null);
+  // Echo keystrokes before searching and rendering the result rows.
+  const deferredSearchQuery = useDeferredValue(searchQuery);
 
   const sortedEntries = useMemo(
     () => [...leaderboard.entries].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0)),
@@ -49,8 +51,8 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
   );
 
   const filteredEntries = useMemo(
-    () => (searchQuery ? fuse.search(searchQuery).map((r) => r.item) : sortedEntries),
-    [searchQuery, sortedEntries, fuse],
+    () => (deferredSearchQuery ? fuse.search(deferredSearchQuery).map((r) => r.item) : sortedEntries),
+    [deferredSearchQuery, sortedEntries, fuse],
   );
 
   const shouldShowTopHeroesColumn = useMemo(
@@ -104,7 +106,7 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
             {shouldShowTopHeroesColumn && <TableHead className="min-w-40 text-right">Top Heroes</TableHead>}
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody aria-busy={searchQuery !== deferredSearchQuery}>
           {paginatedEntries.map((entry) => (
             <LeaderboardTableRow
               key={`${entry.account_name}-${entry.rank}`}
@@ -157,13 +159,17 @@ function LeaderboardTableRow({
 }
 
 function TopHeroButton({ heroId, onClick }: { heroId: number; onClick: () => void }) {
-  const { hero } = useHeroById(heroId);
+  const { hero, isLoading } = useHeroById(heroId);
   const label = hero ? `Filter by ${hero.name}` : "Filter by hero";
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button type="button" onClick={onClick} className="cursor-pointer" aria-label={label}>
-          <HeroImage heroId={heroId} className="h-8 w-8 rounded-full border border-border object-cover" />
+          <HeroImageFromAsset
+            hero={hero}
+            isLoading={isLoading}
+            className="size-8 rounded-full border border-border object-cover"
+          />
         </button>
       </TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Upgrade } from "deadlock_api_client";
 import { memo, useCallback, useMemo, useState } from "react";
 
-import { ItemImage } from "~/components/ItemImage";
+import { ItemImageFromAsset } from "~/components/ItemImage";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
@@ -25,20 +25,14 @@ function setsEqual(a: Set<number>, b: Set<number>): boolean {
 }
 
 interface ItemCardProps {
-  itemId: number;
+  item: Upgrade;
   included: boolean;
   excluded: boolean;
   onToggleInclude: (id: number) => void;
   onToggleExclude: (id: number) => void;
 }
 
-const ItemCard = memo(function ItemCard({
-  itemId,
-  included,
-  excluded,
-  onToggleInclude,
-  onToggleExclude,
-}: ItemCardProps) {
+const ItemCard = memo(function ItemCard({ item, included, excluded, onToggleInclude, onToggleExclude }: ItemCardProps) {
   return (
     <div
       className={cn(
@@ -47,14 +41,14 @@ const ItemCard = memo(function ItemCard({
         excluded && "border-red-500/60 bg-red-500/10",
       )}
     >
-      <ItemImage itemId={itemId} className="size-full" />
+      <ItemImageFromAsset item={item} className="size-full" />
       <button
         type="button"
         className={cn(
           "absolute bottom-2 left-2 z-10 inline-flex size-5 items-center justify-center rounded-lg text-white shadow ring-1 ring-black/40 transition-colors",
           included ? "bg-green-500/85 hover:bg-green-400" : "bg-green-700/55 hover:bg-green-600/80",
         )}
-        onClick={() => onToggleInclude(itemId)}
+        onClick={() => onToggleInclude(item.id)}
         aria-label={included ? "Remove from included" : "Include item"}
       >
         <span className="icon-[mdi--plus] size-3.5" />
@@ -65,7 +59,7 @@ const ItemCard = memo(function ItemCard({
           "absolute right-2 bottom-2 z-10 inline-flex size-5 items-center justify-center rounded-lg text-white shadow ring-1 ring-black/40 transition-colors",
           excluded ? "bg-red-500/85 hover:bg-red-400" : "bg-red-700/55 hover:bg-red-600/80",
         )}
-        onClick={() => onToggleExclude(itemId)}
+        onClick={() => onToggleExclude(item.id)}
         aria-label={excluded ? "Remove from excluded" : "Exclude item"}
       >
         <span className="icon-[mdi--minus] size-3.5" />
@@ -241,7 +235,7 @@ function ItemQuickSelectDialogBody({
                           {items.map((item) => (
                             <ItemCard
                               key={item.id}
-                              itemId={item.id}
+                              item={item}
                               included={stagedInclude.has(item.id)}
                               excluded={stagedExclude.has(item.id)}
                               onToggleInclude={toggleInclude}

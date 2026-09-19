@@ -33,23 +33,35 @@ const defaultSeo = seo({
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   loader: async ({ context: { queryClient }, location }) => {
-    // Content pages do not consume game assets. Fetching them here delays SSR
-    // and serializes the entire catalog into HTML that these pages never use.
+    // Only serialize catalogs used by the current page. In particular, game
+    // hubs need none and Deadlockdle uses separate, full-detail queries.
     const pathname = location.pathname.replace(/\/$/, "") || "/";
-    if (
-      pathname === "/" ||
-      pathname === "/blog" ||
-      pathname.startsWith("/blog/") ||
-      pathname === "/data-dumps" ||
-      pathname === "/data-privacy"
-    )
-      return;
+    const isAnalytics = pathname.startsWith("/analytics/");
+    const isGameAnalytics = /^\/analytics\/games(?:\/|$)/.test(pathname);
+    const isPlayerTracker = pathname.startsWith("/tracker/players/");
+    const preloads: Promise<unknown>[] = [];
 
-    await Promise.all([
-      queryClient.ensureQueryData(heroesQueryOptions),
-      queryClient.ensureQueryData(ranksQueryOptions),
-      queryClient.ensureQueryData(itemUpgradesQueryOptions),
-    ]);
+    if (
+      (isAnalytics && !isGameAnalytics) ||
+      isPlayerTracker ||
+      pathname === "/community/heatmap" ||
+      pathname === "/community/leaderboard" ||
+      pathname === "/games/flashcards/heroes" ||
+      pathname.startsWith("/streamkit/widgets/")
+    ) {
+      preloads.push(queryClient.ensureQueryData(heroesQueryOptions));
+    }
+    if (isAnalytics || isPlayerTracker || pathname === "/community/badge-distribution") {
+      preloads.push(queryClient.ensureQueryData(ranksQueryOptions));
+    }
+    if (
+      /^\/analytics\/(heroes|items|abilities)(?:\/|$)/.test(pathname) ||
+      pathname === "/games/flashcards/items" ||
+      pathname === "/games/flashcards/item-upgrades"
+    ) {
+      preloads.push(queryClient.ensureQueryData(itemUpgradesQueryOptions));
+    }
+    await Promise.all(preloads);
   },
   head: () => ({
     meta: [

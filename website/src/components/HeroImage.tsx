@@ -1,6 +1,7 @@
 import { AssetImage } from "~/components/AssetImage";
 import { useHeroById } from "~/hooks/useAssetById";
 import { cn } from "~/lib/utils";
+import type { SlimHero } from "~/queries/asset-queries";
 
 export function HeroImage({
   heroId,
@@ -14,6 +15,21 @@ export function HeroImage({
 }) {
   const { hero, isLoading } = useHeroById(heroId);
 
+  return <HeroImageFromAsset hero={hero} isLoading={isLoading} className={className} title={title} />;
+}
+
+/** Render a hero already read by the parent without another query subscription. */
+export function HeroImageFromAsset({
+  hero,
+  isLoading = false,
+  className,
+  title,
+}: {
+  hero: SlimHero | undefined;
+  isLoading?: boolean;
+  className?: string;
+  title?: string;
+}) {
   return (
     <AssetImage
       asset={
