@@ -6,9 +6,6 @@ import { analyticsPageTitle, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultUnixRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
-import { loadSeasons } from "~/queries/asset-queries";
-import { playerScoreboardQueryOptions } from "~/queries/player-scoreboard-query";
-import { steamProfileBatches, steamProfilesQueryOptions } from "~/queries/steam-queries";
 import type { RouterContext } from "~/router";
 
 export const MAX_ENTRIES = 1000;
@@ -28,6 +25,12 @@ export const playersPageOptions = {
     context: RouterContext;
     deps: { heroId: number | undefined };
   }) => {
+    const [{ loadSeasons }, { playerScoreboardQueryOptions }, { steamProfileBatches, steamProfilesQueryOptions }] =
+      await Promise.all([
+        import("~/queries/asset-queries"),
+        import("~/queries/player-scoreboard-query"),
+        import("~/queries/steam-queries"),
+      ]);
     const range = defaultUnixRange(await loadSeasons(queryClient));
     const scoreboard = await prefetchSafe(
       queryClient.ensureQueryData(

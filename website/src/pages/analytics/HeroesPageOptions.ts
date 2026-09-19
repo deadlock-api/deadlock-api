@@ -6,9 +6,7 @@ import { analyticsPageTitle, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultPrevUnixRange, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
-import { heroesQueryOptions, loadSeasons, type SlimHero } from "~/queries/asset-queries";
-import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
-import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
+import type { SlimHero } from "~/queries/asset-queries";
 import type { RouterContext } from "~/router";
 
 const DEFAULT_MIN_RANK = 91;
@@ -46,6 +44,14 @@ export const heroesPageOptions = {
   beforeLoad: redirectAnalyticsTab,
   component: lazyRouteComponent(() => import("./HeroesPage"), "HeroesPage"),
   loader: async ({ context: { queryClient } }: { context: RouterContext }) => {
+    // Shared route options are not automatically split by the router plugin.
+    // Import query code only when this loader runs, rather than on every page.
+    const [{ heroesQueryOptions, loadSeasons }, { heroBanStatsQueryOptions }, { heroStatsQueryOptions }] =
+      await Promise.all([
+        import("~/queries/asset-queries"),
+        import("~/queries/hero-ban-stats-query"),
+        import("~/queries/hero-stats-query"),
+      ]);
     const r = defaultHeroStatsRanges(await loadSeasons(queryClient));
     const common = {
       minHeroMatches: 0,

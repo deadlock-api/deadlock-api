@@ -6,8 +6,6 @@ import { analyticsPageTitle, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultPrevUnixRange, defaultUnixRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
-import { loadSeasons } from "~/queries/asset-queries";
-import { gameStatsQueryOptions } from "~/queries/games-query";
 import type { RouterContext } from "~/router";
 
 const MATCH_LENGTH_ANSWER = "A typical Deadlock match lasts around 30-40 minutes, varying by game mode and skill.";
@@ -16,6 +14,10 @@ export const gamesPageOptions = {
   beforeLoad: redirectAnalyticsTab,
   component: lazyRouteComponent(() => import("./GamesPage"), "Games"),
   loader: async ({ context: { queryClient } }: { context: RouterContext }) => {
+    const [{ loadSeasons }, { gameStatsQueryOptions }] = await Promise.all([
+      import("~/queries/asset-queries"),
+      import("~/queries/games-query"),
+    ]);
     const seasons = await loadSeasons(queryClient);
     const range = defaultUnixRange(seasons);
     const prevRange = defaultPrevUnixRange(seasons);

@@ -6,8 +6,6 @@ import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultPrevUnixRange, defaultUnixRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
 import { wilsonScoreInterval } from "~/lib/wilson";
-import { itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
-import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 import type { RouterContext } from "~/router";
 
 /** The item whose win rate is most confidently high: the largest Wilson lower bound, as the table ranks confidence. */
@@ -43,6 +41,10 @@ export const itemsPageOptions = {
     return { heroId: typeof hero === "number" && Number.isInteger(hero) ? hero : null };
   },
   loader: async ({ context: { queryClient }, deps }: { context: RouterContext; deps: { heroId: number | null } }) => {
+    const [{ itemUpgradesQueryOptions, loadSeasons }, { itemStatsQueryOptions }] = await Promise.all([
+      import("~/queries/asset-queries"),
+      import("~/queries/item-stats-query"),
+    ]);
     const seasons = await loadSeasons(queryClient);
     const range = defaultUnixRange(seasons);
     const prevRange = defaultPrevUnixRange(seasons);

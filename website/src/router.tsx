@@ -1,7 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
-import { isAxiosError } from "axios";
+import type { AxiosError } from "axios";
 
 import { NotFound } from "./components/NotFound";
 import { RouteError } from "./components/RouteError";
@@ -14,7 +14,15 @@ export interface RouterContext {
 }
 
 function isClientError(error: unknown): boolean {
-  const status = isAxiosError(error) ? error.response?.status : error instanceof ApiError ? error.status : undefined;
+  // Axios's public error marker lets the router classify retries without
+  // loading the HTTP client on pages that make no API requests.
+  const isAxiosError =
+    typeof error === "object" && error !== null && "isAxiosError" in error && error.isAxiosError === true;
+  const status = isAxiosError
+    ? (error as AxiosError).response?.status
+    : error instanceof ApiError
+      ? error.status
+      : undefined;
   return status !== undefined && status >= 400 && status < 500;
 }
 

@@ -48,11 +48,11 @@ export const Route = createFileRoute("/community/leaderboard")({
     }),
 });
 
-const REGION_VALUES = Object.values(LeaderboardRegionEnum) as [LeaderboardRegionEnum, ...LeaderboardRegionEnum[]];
-
 function LeaderboardPage() {
+  // Keep the generated API client's runtime enum in this route's component chunk.
+  const regions = Object.values(LeaderboardRegionEnum) as [LeaderboardRegionEnum, ...LeaderboardRegionEnum[]];
   const { defaultRegion } = Route.useLoaderData();
-  const [region, setRegion] = useQueryState("region", parseAsStringLiteral(REGION_VALUES).withDefault(defaultRegion));
+  const [region, setRegion] = useQueryState("region", parseAsStringLiteral(regions).withDefault(defaultRegion));
   const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger);
 
   const [leaderboardQuery] = useQueries({
