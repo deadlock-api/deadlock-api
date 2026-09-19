@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AnalyticsApiGameStatsRequest, AnalyticsGameStats, GameStatsBucketEnum } from "deadlock_api_client";
+import type { AnalyticsApiGameStatsRequest, AnalyticsGameStats } from "deadlock_api_client";
 import { ArrowDown, ArrowUp } from "lucide-react";
-import { Fragment, lazy, Suspense, useState } from "react";
+import { Fragment, lazy, useState } from "react";
 
+import type { StatTrendBucket } from "~/components/analytics/StatTrendChart";
+import { StatTrendHoverCard } from "~/components/analytics/StatTrendHoverCard";
 import { LoadingLogo } from "~/components/LoadingLogo";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/hover-card";
 import { formatSignedPercent } from "~/lib/format";
 import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/games-query";
@@ -36,7 +37,7 @@ interface GamesOverviewProps {
 }
 
 export default function GamesOverview({ params, prevParams, onStatClick, isStreetBrawl = false }: GamesOverviewProps) {
-  const [trendBucket, setTrendBucket] = useState<GameStatsBucketEnum>("start_time_day");
+  const [trendBucket, setTrendBucket] = useState<StatTrendBucket>("start_time_day");
   const { data: currentData, isPending } = useQuery(gameStatsQueryOptions({ ...params, bucket: "no_bucket" }));
   const { data: prevData } = useQuery({
     ...gameStatsQueryOptions({ ...(prevParams as AnalyticsApiGameStatsRequest), bucket: "no_bucket" }),
@@ -119,8 +120,8 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
 
                 return (
                   <Fragment key={stat.key}>
-                    <HoverCard openDelay={150} closeDelay={100}>
-                      <HoverCardTrigger asChild>
+                    <StatTrendHoverCard
+                      trigger={
                         <button
                           type="button"
                           className={cn(
@@ -159,24 +160,15 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                             )}
                           </div>
                         </button>
-                      </HoverCardTrigger>
-                      <HoverCardContent className="w-[28rem] max-w-[90vw]" align="end">
-                        <Suspense
-                          fallback={
-                            <div className="flex h-[250px] items-center justify-center">
-                              <LoadingLogo />
-                            </div>
-                          }
-                        >
-                          <StatTrendChart
-                            params={params}
-                            stat={stat}
-                            bucket={trendBucket}
-                            onBucketChange={setTrendBucket}
-                          />
-                        </Suspense>
-                      </HoverCardContent>
-                    </HoverCard>
+                      }
+                    >
+                      <StatTrendChart
+                        params={params}
+                        stat={stat}
+                        bucket={trendBucket}
+                        onBucketChange={setTrendBucket}
+                      />
+                    </StatTrendHoverCard>
                     {stat.key === "total_players" && teamWinRow}
                   </Fragment>
                 );

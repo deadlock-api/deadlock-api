@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { withoutOpenTimeBucket } from "./time-buckets";
+import { completeTimeBuckets, withoutOpenTimeBucket } from "./time-buckets";
 
 const now = Date.UTC(2026, 8, 19, 12, 34);
 const unix = (date: string) => Date.parse(date) / 1000;
@@ -41,4 +41,36 @@ test("calendar months close correctly across leap years", (context) => {
   context.mock.timers.enable({ apis: ["Date"], now: Date.UTC(2024, 2, 15) });
   const rows = ["2024-01-01", "2024-02-01", "2024-03-01"].map((date) => ({ bucket: unix(`${date}T00:00:00Z`) }));
   assert.deepEqual(withoutOpenTimeBucket(rows, "start_time_month"), rows.slice(0, 2));
+});
+
+test("hover trends omit partial buckets at both selected boundaries, even with no complete buckets left", (context) => {
+  context.mock.timers.enable({ apis: ["Date"], now });
+  const rows = [17, 18, 19].map((date) => ({ bucket: unix(`2026-09-${date}T00:00:00Z`) }));
+  assert.deepEqual(
+    completeTimeBuckets(rows, "start_time_day", {
+      minUnixTimestamp: unix("2026-09-17T12:00:00Z"),
+      maxUnixTimestamp: unix("2026-09-19T06:00:00Z"),
+    }),
+    [rows[1]],
+  );
+  assert.deepEqual(completeTimeBuckets([rows[2]], "start_time_day"), []);
+  assert.deepEqual(
+    completeTimeBuckets(rows, "start_time_day", {
+      minUnixTimestamp: rows[1].bucket,
+      maxUnixTimestamp: rows[2].bucket,
+    }),
+    [rows[1]],
+  );
+});
+
+test("complete monthly buckets use UTC calendar boundaries, including leap years", (context) => {
+  context.mock.timers.enable({ apis: ["Date"], now });
+  const rows = ["2024-01-01", "2024-02-01", "2024-03-01"].map((date) => ({ bucket: unix(`${date}T00:00:00Z`) }));
+  assert.deepEqual(
+    completeTimeBuckets(rows, "start_time_month", {
+      minUnixTimestamp: unix("2024-01-15T12:00:00Z"),
+      maxUnixTimestamp: unix("2024-03-15T12:00:00Z"),
+    }),
+    [rows[1]],
+  );
 });

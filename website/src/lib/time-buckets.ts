@@ -26,3 +26,21 @@ export function withoutOpenTimeBucket<T extends { bucket: number }>(rows: T[], i
   }
   return closedBuckets.size >= 2 ? rows.filter((row) => closedBuckets.has(row.bucket)) : rows;
 }
+
+/** Only include buckets fully contained in the selected range and already closed in UTC. */
+export function completeTimeBuckets<T extends { bucket: number }>(
+  rows: T[],
+  interval: string,
+  { minUnixTimestamp, maxUnixTimestamp }: { minUnixTimestamp?: number | null; maxUnixTimestamp?: number | null } = {},
+): T[] {
+  const unit = BUCKET_UNIT[interval as keyof typeof BUCKET_UNIT];
+  if (!unit) return rows;
+  const end = Math.min(maxUnixTimestamp ?? Infinity, Date.now() / 1000);
+  const complete = new Map<number, boolean>();
+  return rows.filter(({ bucket }) => {
+    if (!complete.has(bucket)) {
+      complete.set(bucket, bucket >= (minUnixTimestamp ?? 0) && day.unix(bucket).utc().add(1, unit).unix() <= end);
+    }
+    return complete.get(bucket);
+  });
+}

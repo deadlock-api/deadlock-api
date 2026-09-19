@@ -14,14 +14,15 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
+import type { StatTrendBucket } from "~/components/analytics/StatTrendChart";
 import { HeroDetailsTooltip } from "~/components/heroes-page/HeroDetailsTooltip";
+import { HeroStatTrend } from "~/components/heroes-page/HeroStatTrend";
 import { type SortKey, SortableHeader } from "~/components/heroes-page/SortableHeader";
 import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
-import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import type { MatchMode } from "~/components/selectors/MatchModeSelector";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -104,6 +105,7 @@ export function HeroStatsTable({
   onClearNameQuery?: () => void;
   showMatchCounts?: boolean;
 }) {
+  const [trendBucket, setTrendBucket] = useState<StatTrendBucket>("start_time_day");
   const [activeSortKey, setActiveSortKey] = useQueryState("hero_sort_key", parseAsSortKey.withDefault("winrate"));
   const [sortDir, setSortDir] = useQueryState("hero_sort_dir", parseAsSortDir.withDefault("desc"));
   const [pickRateMode, setPickRateMode] = useQueryState(
@@ -785,7 +787,13 @@ export function HeroStatsTable({
       </TableCell>
       {columns.includes("winRate") && (
         <TableCell>
-          <ProgressBarWithLabel
+          <HeroStatTrend
+            params={heroStatsQuery}
+            heroId={row.hero_id}
+            heroName={heroNameMap.get(row.hero_id) ?? `Hero ${row.hero_id}`}
+            stat="winRate"
+            bucket={trendBucket}
+            onBucketChange={setTrendBucket}
             min={minWinrate}
             max={maxWinrate}
             value={row.wins / row.matches}
@@ -795,28 +803,6 @@ export function HeroStatsTable({
               prevStatsMap?.get(row.hero_id) !== undefined
                 ? row.wins / row.matches - prevStatsMap.get(row.hero_id)!.winrate
                 : undefined
-            }
-            tooltip={
-              <div className="flex flex-col gap-1 text-xs">
-                <div className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Matches</span>
-                  <span className="font-medium">{row.matches.toLocaleString("en-US")}</span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Wins</span>
-                  <span className="font-medium">{row.wins.toLocaleString("en-US")}</span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Win rate</span>
-                  <span className="font-medium">{((row.wins / row.matches) * 100).toFixed(2)}%</span>
-                </div>
-                {prevStatsMap?.get(row.hero_id) !== undefined && (
-                  <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
-                    <span className="text-muted-foreground">Previous</span>
-                    <span className="font-medium">{(prevStatsMap.get(row.hero_id)!.winrate * 100).toFixed(2)}%</span>
-                  </div>
-                )}
-              </div>
             }
           />
         </TableCell>
@@ -830,7 +816,13 @@ export function HeroStatsTable({
               const presence = presenceMap.get(row.hero_id) ?? pickRate + banRate;
               const prev = prevStatsMap?.get(row.hero_id);
               return (
-                <ProgressBarWithLabel
+                <HeroStatTrend
+                  params={heroStatsQuery}
+                  heroId={row.hero_id}
+                  heroName={heroNameMap.get(row.hero_id) ?? `Hero ${row.hero_id}`}
+                  stat="presence"
+                  bucket={trendBucket}
+                  onBucketChange={setTrendBucket}
                   min={minPresence}
                   max={maxPresence}
                   value={presence}
@@ -866,34 +858,6 @@ export function HeroStatsTable({
                     </span>
                   }
                   delta={undefined}
-                  tooltip={
-                    <div className="flex flex-col gap-1 text-xs">
-                      <div className="flex justify-between gap-4">
-                        <span className="flex items-center gap-1.5 text-muted-foreground">
-                          <span className="inline-block size-2 rounded-sm" style={{ backgroundColor: "#22d3ee" }} />
-                          Pick rate
-                        </span>
-                        <span className="font-medium">{(pickRate * 100).toFixed(2)}%</span>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <span className="flex items-center gap-1.5 text-muted-foreground">
-                          <span className="inline-block size-2 rounded-sm" style={{ backgroundColor: "#f97316" }} />
-                          Ban rate
-                        </span>
-                        <span className="font-medium">{(banRate * 100).toFixed(2)}%</span>
-                      </div>
-                      <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
-                        <span className="text-muted-foreground">Presence</span>
-                        <span className="font-medium">{(presence * 100).toFixed(2)}%</span>
-                      </div>
-                      {prev !== undefined && (
-                        <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">Previous</span>
-                          <span className="font-medium">{(prev.presence * 100).toFixed(2)}%</span>
-                        </div>
-                      )}
-                    </div>
-                  }
                 />
               );
             })()
@@ -902,32 +866,30 @@ export function HeroStatsTable({
               const banRate = banStatsMap.get(row.hero_id) ?? 0;
               const prev = prevStatsMap?.get(row.hero_id);
               return (
-                <ProgressBarWithLabel
+                <HeroStatTrend
+                  params={heroStatsQuery}
+                  heroId={row.hero_id}
+                  heroName={heroNameMap.get(row.hero_id) ?? `Hero ${row.hero_id}`}
+                  stat="banRate"
+                  bucket={trendBucket}
+                  onBucketChange={setTrendBucket}
                   min={minBanRate}
                   max={maxBanRate}
                   value={banRate}
                   color={"#f97316"}
                   label={`${(banRate * 100).toFixed(1)}% `}
                   delta={prev !== undefined ? banRate - prev.banrate : undefined}
-                  tooltip={
-                    <div className="flex flex-col gap-1 text-xs">
-                      <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Ban rate</span>
-                        <span className="font-medium">{(banRate * 100).toFixed(2)}%</span>
-                      </div>
-                      {prev !== undefined && (
-                        <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
-                          <span className="text-muted-foreground">Previous</span>
-                          <span className="font-medium">{(prev.banrate * 100).toFixed(2)}%</span>
-                        </div>
-                      )}
-                    </div>
-                  }
                 />
               );
             })()
           ) : (
-            <ProgressBarWithLabel
+            <HeroStatTrend
+              params={heroStatsQuery}
+              heroId={row.hero_id}
+              heroName={heroNameMap.get(row.hero_id) ?? `Hero ${row.hero_id}`}
+              stat="pickRate"
+              bucket={trendBucket}
+              onBucketChange={setTrendBucket}
               min={minMatches}
               max={maxMatches}
               value={row.matches}
@@ -944,37 +906,6 @@ export function HeroStatsTable({
                     : pickrateMultiplier * (row.matches / sumMatches) - prevStatsMap.get(row.hero_id)!.pickrate
                   : undefined
               }
-              tooltip={
-                <div className="flex flex-col gap-1 text-xs">
-                  <div className="flex justify-between gap-4">
-                    <span className="text-muted-foreground">Matches</span>
-                    <span className="font-medium">{row.matches.toLocaleString("en-US")}</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-muted-foreground">Pick rate</span>
-                    <span className="font-medium">
-                      {(minHeroMatchesTotal || minHeroMatches
-                        ? (row.matches / maxMatches) * 100
-                        : pickrateMultiplier * (row.matches / sumMatches) * 100
-                      ).toFixed(2)}
-                      %
-                    </span>
-                  </div>
-                  {prevStatsMap?.get(row.hero_id) !== undefined && (
-                    <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
-                      <span className="text-muted-foreground">Previous</span>
-                      <span className="font-medium">
-                        {(
-                          (minHeroMatchesTotal || minHeroMatches
-                            ? prevStatsMap.get(row.hero_id)!.normalizedPickrate
-                            : prevStatsMap.get(row.hero_id)!.pickrate) * 100
-                        ).toFixed(2)}
-                        %
-                      </span>
-                    </div>
-                  )}
-                </div>
-              }
             />
           )}
         </TableCell>
@@ -986,7 +917,13 @@ export function HeroStatsTable({
             const prevScore = prevStatsMap?.get(row.hero_id)?.zScore;
             const delta = prevScore !== undefined ? score - prevScore : undefined;
             return (
-              <ProgressBarWithLabel
+              <HeroStatTrend
+                params={heroStatsQuery}
+                heroId={row.hero_id}
+                heroName={heroNameMap.get(row.hero_id) ?? `Hero ${row.hero_id}`}
+                stat="zScore"
+                bucket={trendBucket}
+                onBucketChange={setTrendBucket}
                 min={minZScore}
                 max={maxZScore}
                 value={score}
@@ -994,30 +931,6 @@ export function HeroStatsTable({
                 label={`${score >= 0 ? "+" : ""}${score.toFixed(2)}`}
                 delta={delta}
                 deltaFormat="raw"
-                tooltip={
-                  <div className="flex flex-col gap-1 text-xs">
-                    <div className="flex justify-between gap-4">
-                      <span className="text-muted-foreground">Win rate</span>
-                      <span className="font-medium">{((row.wins / row.matches) * 100).toFixed(2)}%</span>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <span className="text-muted-foreground">Pick rate</span>
-                      <span className="font-medium">
-                        {(pickrateMultiplier * (row.matches / sumMatches) * 100).toFixed(2)}%
-                      </span>
-                    </div>
-                    <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
-                      <span className="text-muted-foreground">Z-Score</span>
-                      <span className="font-medium">{score.toFixed(3)}</span>
-                    </div>
-                    {prevScore !== undefined && (
-                      <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Previous</span>
-                        <span className="font-medium">{prevScore.toFixed(3)}</span>
-                      </div>
-                    )}
-                  </div>
-                }
               />
             );
           })()}
@@ -1028,51 +941,22 @@ export function HeroStatsTable({
           {(() => {
             const data = residualMap.get(row.hero_id);
             const residual = data?.residual ?? 0;
-            const expected = data?.expected ?? 0;
-            const wr = row.wins / row.matches;
-            const pr = pickrateMultiplier * (row.matches / sumMatches);
             const prevResidual = prevStatsMap?.get(row.hero_id)?.residual;
             const delta = prevResidual !== undefined ? residual - prevResidual : undefined;
             return (
-              <ProgressBarWithLabel
+              <HeroStatTrend
+                params={heroStatsQuery}
+                heroId={row.hero_id}
+                heroName={heroNameMap.get(row.hero_id) ?? `Hero ${row.hero_id}`}
+                stat="residual"
+                bucket={trendBucket}
+                onBucketChange={setTrendBucket}
                 min={minResidual}
                 max={maxResidual}
                 value={residual}
                 color={residual >= 0 ? "#f59e0b" : "#6b7280"}
                 label={`${residual >= 0 ? "+" : ""}${(residual * 100).toFixed(2)}%`}
                 delta={delta}
-                tooltip={
-                  <div className="flex flex-col gap-1 text-xs">
-                    <div className="flex justify-between gap-4">
-                      <span className="text-muted-foreground">Win rate</span>
-                      <span className="font-medium">{(wr * 100).toFixed(2)}%</span>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <span className="text-muted-foreground">Pick rate</span>
-                      <span className="font-medium">{(pr * 100).toFixed(2)}%</span>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <span className="text-muted-foreground">Expected WR</span>
-                      <span className="font-medium">{(expected * 100).toFixed(2)}%</span>
-                    </div>
-                    <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
-                      <span className="text-muted-foreground">Over/Under</span>
-                      <span className="font-medium">
-                        {residual >= 0 ? "+" : ""}
-                        {(residual * 100).toFixed(2)}%
-                      </span>
-                    </div>
-                    {prevResidual !== undefined && (
-                      <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Previous</span>
-                        <span className="font-medium">
-                          {prevResidual >= 0 ? "+" : ""}
-                          {(prevResidual * 100).toFixed(2)}%
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                }
               />
             );
           })()}
