@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Renders the static Open Graph cards in public/og/ (1200x630).
+ * Renders the static Open Graph cards in public/og/v2/ (1200x630).
  *
  * Google Search, WhatsApp and iMessage center-crop the card to a square, so
  * everything that matters has to sit inside the central 630x630 area: three
@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const OUT_DIR = join(ROOT, "public", "og");
+const OUT_DIR = join(ROOT, "public", "og", "v2");
 const BLOG_DIR = join(ROOT, "content", "blog");
 const HEROES_URL = "https://assets.deadlock-api.com/v2/heroes?only_active=true";
 const HEROES_PER_CARD = 7;
@@ -143,7 +143,7 @@ for (const [name, title, subtitle] of cards) {
     for (let size = 60; size > 28 && !fits(); size -= 2) h1.style.fontSize = `${size}px`;
   });
   await page.screenshot({ path: join(OUT_DIR, `${name}.png`) });
-  console.log(`public/og/${name}.png`);
+  console.log(`public/og/v2/${name}.png`);
 }
 /* oxlint-enable no-await-in-loop */
 await browser.close();

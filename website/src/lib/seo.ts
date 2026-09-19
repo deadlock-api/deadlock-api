@@ -22,29 +22,29 @@ export interface SeoResult {
   scripts: ScriptEntry[];
 }
 
-/** Per-route OG images (1200x630). Falls back to /og/default.png */
+/** Per-route OG images (1200x630). Falls back to /og/v2/default.png */
 const OG_IMAGES: Record<string, string> = {
-  "/": "/og/default.png",
-  "/analytics/heroes": "/og/heroes.png",
-  "/analytics/items": "/og/items.png",
-  "/analytics/abilities": "/og/abilities.png",
-  "/community/leaderboard": "/og/leaderboard.png",
-  "/community/badge-distribution": "/og/badge-distribution.png",
-  "/analytics/games": "/og/games.png",
-  "/community/heatmap": "/og/heatmap.png",
-  "/analytics/players": "/og/player-scoreboard.png",
-  "/streamkit": "/og/streamkit.png",
-  "/data-privacy": "/og/default.png",
-  "/data-dumps": "/og/default.png",
-  "/ingest-cache": "/og/ingest-cache.png",
-  "/blog": "/og/blog.png",
-  "/games/deadlockdle": "/og/default.png",
+  "/": "/og/v2/default.png",
+  "/analytics/heroes": "/og/v2/heroes.png",
+  "/analytics/items": "/og/v2/items.png",
+  "/analytics/abilities": "/og/v2/abilities.png",
+  "/community/leaderboard": "/og/v2/leaderboard.png",
+  "/community/badge-distribution": "/og/v2/badge-distribution.png",
+  "/analytics/games": "/og/v2/games.png",
+  "/community/heatmap": "/og/v2/heatmap.png",
+  "/analytics/players": "/og/v2/player-scoreboard.png",
+  "/streamkit": "/og/v2/streamkit.png",
+  "/data-privacy": "/og/v2/default.png",
+  "/data-dumps": "/og/v2/default.png",
+  "/ingest-cache": "/og/v2/ingest-cache.png",
+  "/blog": "/og/v2/blog.png",
+  "/games/deadlockdle": "/og/v2/default.png",
 };
 
 export function seo({ title, description, path, ogImage, ogType, publishedTime, jsonLd }: SeoOptions): SeoResult {
   const url = `${SITE_URL}${path}`;
   const sectionImage = Object.entries(OG_IMAGES).find(([route]) => path.startsWith(`${route}/`))?.[1];
-  const image = ogImage ?? `${SITE_URL}${OG_IMAGES[path] ?? sectionImage ?? "/og/default.png"}`;
+  const image = ogImage ?? `${SITE_URL}${OG_IMAGES[path] ?? sectionImage ?? "/og/v2/default.png"}`;
 
   const meta: MetaEntry[] = [
     { title },
@@ -79,7 +79,7 @@ export function seo({ title, description, path, ogImage, ogType, publishedTime, 
 
 /** OG image for a blog post by slug */
 export function getBlogOGImage(slug: string): string {
-  return `/og/blog-${slug}.png`;
+  return `/og/v2/blog-${slug}.png`;
 }
 
 export { SITE_URL };
