@@ -570,7 +570,11 @@ export function HeroStatsOverTimeChart({
                 </figure>
               )}
               <p className="border-t px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-                Gaps indicate missing or insufficient data. {heroStat === "winrate" && "Dashed line: 50% win rate. "}
+                Gaps indicate missing or insufficient data.{" "}
+                {heroStat === "winrate" &&
+                  yTicks[0] <= 50 &&
+                  yTicks[yTicks.length - 1] >= 50 &&
+                  "Dashed line: 50% win rate. "}
                 {isBanRate && "Ban rates are unaffected by player match-count filters. "}
                 {requiresSampleFloor &&
                   `Buckets below ${minMatchesPerBucket.toLocaleString("en-US")} matches are omitted. `}
