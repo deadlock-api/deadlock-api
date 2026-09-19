@@ -11,7 +11,6 @@ import {
   Map,
   Medal,
   Package,
-  Radio,
   ShoppingBag,
   Swords,
   Trophy,
@@ -107,14 +106,6 @@ const services = [
     icon: Package,
     external: true,
     cta: "Explore UI Components",
-  },
-  {
-    title: "Live Events API",
-    description: "Real-time game events via Server-Sent Events for live match tracking.",
-    href: "https://github.com/deadlock-api/deadlock-api/tree/master/live-events",
-    icon: Radio,
-    external: true,
-    cta: "View Live Events API",
   },
   {
     title: "Data Lake",
@@ -338,7 +329,7 @@ function IndexRoute() {
           <p className="mt-1 text-sm text-muted-foreground">APIs, tools, and data for the Deadlock community</p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {services.map((service) => {
             const Icon = service.icon;
             const card = (

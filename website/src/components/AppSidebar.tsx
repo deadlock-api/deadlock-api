@@ -1,9 +1,8 @@
 import { useLocation } from "@tanstack/react-router";
-import { BarChart3, Menu, Radio, X } from "lucide-react";
+import { Code, Menu, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { PrefetchAnchor } from "~/components/PrefetchAnchor";
-import { SmartLink } from "~/components/SmartLink";
 import { Button } from "~/components/ui/button";
 import { API_ORIGIN } from "~/lib/constants";
 import { bottomNavLinks, type NavLink, navGroups, topLinks } from "~/lib/site-nav";
@@ -174,36 +173,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </nav>
 
-      {/* Service links */}
       <div className="border-t border-sidebar-border px-3 py-2">
-        <p className="px-3 pb-1.5 text-xs font-semibold tracking-wider text-sidebar-foreground/40 uppercase">
-          Services
-        </p>
-        <div className="grid grid-cols-2 gap-1">
-          {[
-            { href: API_ORIGIN, label: "Game Data", icon: BarChart3, external: true },
-            {
-              href: "https://github.com/deadlock-api/deadlock-api/tree/master/live-events",
-              label: "Live Events",
-              icon: Radio,
-              external: true,
-            },
-          ].map((link) => {
-            const Icon = link.icon;
-            return (
-              <SmartLink
-                key={link.href}
-                href={link.href}
-                external={link.external}
-                onClick={link.external ? undefined : onNavigate}
-                className="group flex items-center justify-center gap-1.5 rounded-md border border-sidebar-border/50 px-2 py-1.5 text-xs font-medium text-sidebar-foreground/50 transition-colors duration-150 hover:border-sidebar-border hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-              >
-                <Icon className="h-3 w-3 shrink-0 opacity-60" />
-                {link.label}
-              </SmartLink>
-            );
-          })}
-        </div>
+        <a
+          href={`${API_ORIGIN}/docs`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 rounded-md border border-primary/30 bg-primary/15 px-3 py-1.5 text-sm font-medium text-primary transition-all duration-150 hover:bg-primary/25"
+        >
+          <Code className="h-4 w-4 shrink-0" />
+          API Documentation
+        </a>
       </div>
 
       {/* Bottom nav links */}

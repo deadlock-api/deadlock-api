@@ -10,7 +10,6 @@
 
 ## APIs
 - [Game Data API](https://api.deadlock-api.com): Real-time and historical match data, hero and item analytics, leaderboard endpoints, game assets (OpenAPI spec: https://api.deadlock-api.com/openapi.json)
-- [Live Events API](https://github.com/deadlock-api/deadlock-api/tree/master/live-events): Server-Sent Events stream for real-time match data
 
 ## Data
 - Match data tracked in real time for millions of players; updated continuously
