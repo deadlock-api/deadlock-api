@@ -43,6 +43,7 @@ export const Route = createFileRoute("/community/leaderboard")({
         keywords: ["Deadlock", "leaderboard", "leaderboards", "top players", "ranked ladder"],
         creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
         isAccessibleForFree: true,
+        license: "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE",
       },
     }),
 });

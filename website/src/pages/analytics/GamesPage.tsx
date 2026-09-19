@@ -73,7 +73,7 @@ export const gamesPageOptions = {
           keywords: ["Deadlock", "match stats", "average kills", "souls", "game length"],
           creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
           isAccessibleForFree: true,
-          license: "https://github.com/deadlock-api/",
+          license: "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE",
         },
         {
           "@context": "https://schema.org",

@@ -120,6 +120,7 @@ export const itemsPageOptions = {
         keywords: ["Deadlock", "item win rates", "build stats", "item combos"],
         creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
         isAccessibleForFree: true,
+        license: "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE",
       },
     });
   },

@@ -179,7 +179,7 @@ export const heroesPageOptions = {
         keywords: ["Deadlock", "hero win rates", "pick rates", "ban rates", "matchups", "hero meta"],
         creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
         isAccessibleForFree: true,
-        license: "https://github.com/deadlock-api/",
+        license: "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE",
       },
     });
   },

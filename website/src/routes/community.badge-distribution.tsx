@@ -73,6 +73,7 @@ export const Route = createFileRoute("/community/badge-distribution")({
         keywords: ["Deadlock", "rank distribution", "badge distribution", "rank percentiles", "MMR"],
         creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
         isAccessibleForFree: true,
+        license: "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE",
       },
     });
   },

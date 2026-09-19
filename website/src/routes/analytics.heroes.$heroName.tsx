@@ -202,7 +202,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
         keywords: ["Deadlock", heroName, "win rate", "pick rate", "matchups"],
         creator: { "@type": "Organization", name: "Deadlock API", url: SITE_URL },
         isAccessibleForFree: true,
-        license: "https://github.com/deadlock-api/",
+        license: "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE",
       },
     });
   },
