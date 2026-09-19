@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { cn } from "~/lib/utils";
 import type { Color } from "~/types/general";
 
 export function ProgressBar({
@@ -62,6 +63,7 @@ export function ProgressBarWithLabel({
   label,
   delta,
   deltaFormat = "percent",
+  compact = false,
   tooltip,
   segments,
 }: {
@@ -72,6 +74,7 @@ export function ProgressBarWithLabel({
   label?: ReactNode;
   delta?: number;
   deltaFormat?: "percent" | "raw";
+  compact?: boolean;
   tooltip?: ReactNode;
   segments?: { value: number; color: string }[];
 }) {
@@ -81,10 +84,20 @@ export function ProgressBarWithLabel({
     delta === undefined ? undefined : Math.round((deltaFormat === "raw" ? delta : delta * 100) * 10) / 10;
   const formatDelta = (d: number) => `${d > 0 ? "+" : ""}${d.toFixed(1)}${deltaFormat === "raw" ? "" : "%"}`;
   const content = (
-    <div className={`flex w-full flex-col gap-2 min-w-24${tooltip ? " cursor-default" : ""}`}>
-      <ProgressBar value={value} min={min} max={max} color={color} segments={segments} />
+    <div
+      className={cn(
+        "flex w-full min-w-24 flex-col gap-2",
+        compact && "flex-row items-center gap-2",
+        tooltip && "cursor-default",
+      )}
+    >
+      <div className={cn(compact && "w-10 shrink-0")} aria-hidden="true">
+        <ProgressBar value={value} min={min} max={max} color={color} segments={segments} />
+      </div>
       <div className="flex items-baseline gap-1.5">
-        <span className="text-left text-sm text-muted-foreground">{label || `${percentage}%` || 0}</span>
+        <span className={cn("text-left text-sm text-muted-foreground", compact && "text-xs tabular-nums")}>
+          {label || `${percentage}%` || 0}
+        </span>
         {roundedDelta !== undefined && roundedDelta !== 0 && (
           <span className={`text-xs font-medium ${roundedDelta > 0 ? "text-green-500" : "text-red-500"}`}>
             {formatDelta(roundedDelta)}

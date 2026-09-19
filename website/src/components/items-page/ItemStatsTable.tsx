@@ -4,6 +4,7 @@ import type { ItemStats } from "deadlock_api_client";
 import { parseAsArrayOf, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { memo, type ReactNode, useCallback, useMemo, useState } from "react";
 
+import { SortableHeader } from "~/components/heroes-page/SortableHeader";
 import { ItemImage, ItemImageFromAsset } from "~/components/ItemImage";
 import { ItemName } from "~/components/ItemName";
 import { ItemQuickSelectDialog } from "~/components/items-page/ItemQuickSelectDialog";
@@ -260,7 +261,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
   return (
     <>
       <TableRow
-        className={`cursor-pointer ${shouldDim ? "brightness-60" : ""}`}
+        className={cn("cursor-pointer [&>td]:py-1.5", shouldDim && "brightness-60")}
         onClick={() => customDropdownContent && setOpen(!open)}
       >
         {customDropdownContent && (
@@ -284,21 +285,24 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
           </TableCell>
         )}
         {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
-        <TableCell>
+        <TableCell className="sticky left-0 z-10 bg-card">
           <div className="flex items-center gap-2">
-            <ItemImageFromAsset item={row.item} />
+            <ItemImageFromAsset item={row.item} className="size-7 shrink-0" />
             {row.item ? (
               <Link
                 to="/analytics/items/$itemName"
                 params={{ itemName: itemSlug(row.item.name) }}
                 preload="intent"
                 onClick={(e) => e.stopPropagation()}
-                className="truncate hover:underline"
+                className="max-w-32 truncate hover:underline sm:max-w-56"
+                title={itemName}
               >
                 {itemName}
               </Link>
             ) : (
-              <span className="truncate">{itemName}</span>
+              <span className="max-w-32 truncate sm:max-w-56" title={itemName}>
+                {itemName}
+              </span>
             )}
           </div>
         </TableCell>
@@ -310,6 +314,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
         {columns.includes("winRate") && (
           <TableCell className="text-center">
             <ProgressBarWithLabel
+              compact
               min={minWinRate}
               max={maxWinRate}
               value={row.wins / row.matches}
@@ -348,6 +353,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
         {columns.includes("matches") && (
           <TableCell className="text-center">
             <ProgressBarWithLabel
+              compact
               min={minUsage}
               max={maxUsage}
               value={row.matches}
@@ -564,16 +570,6 @@ export function ItemStatsTable({
     setSort(newSort);
   };
 
-  // Arrow indicator for sort direction
-  const getSortArrow = (field: SortField) => {
-    if (sort.field !== field) return null;
-    return sort.direction === "asc" ? (
-      <span className="mb-0.5 ml-1 icon-[material-symbols--arrow-upward]" />
-    ) : (
-      <span className="mb-0.5 ml-1 icon-[material-symbols--arrow-downward]" />
-    );
-  };
-
   return (
     <div aria-live="polite" aria-busy={isLoading}>
       <ItemQuickSelectDialog
@@ -638,7 +634,7 @@ export function ItemStatsTable({
             </div>
           )}
           <div className={cn("transition-opacity", isRefetching && "pointer-events-none opacity-50")}>
-            <Table>
+            <Table aria-label="Item statistics" className="tabular-nums">
               {!hideHeader && (
                 <TableHeader className="bg-muted">
                   <TableRow>
@@ -648,35 +644,27 @@ export function ItemStatsTable({
                       </TableHead>
                     )}
                     {!hideIndex && <TableHead className="text-center">#</TableHead>}
-                    <TableHead>Item</TableHead>
+                    <TableHead className="sticky left-0 z-10 bg-muted">Item</TableHead>
                     {columns.includes("itemsTier") && <TableHead>Tier</TableHead>}
                     {columns.includes("winRate") && (
-                      <TableHead
-                        className="cursor-pointer text-center transition-colors hover:bg-accent"
-                        onClick={() => toggleSort("winRate")}
-                        aria-sort={
-                          sort.field === "winRate" ? (sort.direction === "asc" ? "ascending" : "descending") : undefined
-                        }
-                      >
-                        <div className="flex items-center">
-                          <span>Win Rate</span>
-                          {getSortArrow("winRate")}
-                        </div>
-                      </TableHead>
+                      <SortableHeader
+                        label="Win Rate"
+                        sortKey="winRate"
+                        activeSortKey={sort.field}
+                        sortDir={sort.direction}
+                        onSort={toggleSort}
+                        className="text-left"
+                      />
                     )}
                     {columns.includes("matches") && (
-                      <TableHead
-                        className="cursor-pointer text-center transition-colors hover:bg-accent"
-                        onClick={() => toggleSort("matches")}
-                        aria-sort={
-                          sort.field === "matches" ? (sort.direction === "asc" ? "ascending" : "descending") : undefined
-                        }
-                      >
-                        <div className="flex items-center">
-                          <span>Pick Rate</span>
-                          {getSortArrow("matches")}
-                        </div>
-                      </TableHead>
+                      <SortableHeader
+                        label="Pick Rate"
+                        sortKey="matches"
+                        activeSortKey={sort.field}
+                        sortDir={sort.direction}
+                        onSort={toggleSort}
+                        className="text-left"
+                      />
                     )}
                     {columns.includes("confidence") && <TableHead className="text-center">Confidence</TableHead>}
                     <TableHead className="text-center">
