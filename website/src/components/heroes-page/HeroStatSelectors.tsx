@@ -27,7 +27,7 @@ export function HeroStatSelector<T extends readonly string[]>({
             options: items.map((key) => ({
               value: key,
               label:
-                HERO_TREND_LABELS[key as keyof typeof HERO_TREND_LABELS] ??
+                (key === "pickrate" ? "Pick rate" : HERO_TREND_LABELS[key as keyof typeof HERO_TREND_LABELS]) ??
                 key.replace(/_/g, " ").replace(/^./, (letter) => letter.toUpperCase()),
             })),
           },

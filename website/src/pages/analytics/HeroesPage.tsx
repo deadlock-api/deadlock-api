@@ -3,6 +3,7 @@ import type { HeroScoreboardSortByEnum } from "deadlock_api_client";
 import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense, useId, useState } from "react";
 
+import { ChartToolbar } from "~/components/analytics/ChartToolbar";
 import { DataPageHeader } from "~/components/analytics/DataPageHeader";
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { HeroFiltersSection } from "~/components/heroes-page/HeroFiltersSection";
@@ -206,9 +207,9 @@ export function HeroesPage() {
         <TabsContent value="stats-by-duration">
           <div className="flex flex-col gap-4">
             <h2 className="sr-only">Hero Stats by Game Duration</h2>
-            <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
-              <div className="flex flex-col gap-1.5">
-                <span className="text-sm text-muted-foreground">Stat</span>
+            <ChartToolbar title="Duration comparison">
+              <div className="flex w-full items-center gap-2 sm:w-auto">
+                <span className="shrink-0 text-xs text-muted-foreground">Metric</span>
                 <HeroStatSelector
                   label="Stat"
                   value={filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat}
@@ -216,7 +217,7 @@ export function HeroesPage() {
                   options={HERO_STATS}
                 />
               </div>
-            </div>
+            </ChartToolbar>
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingLogo />}>
                 <HeroStatsByDurationChart
@@ -240,9 +241,9 @@ export function HeroesPage() {
             <h2 className="sr-only">Hero Stats by Rank</h2>
             {MODE_CONFIG[filters.mode].supportsRank ? (
               <>
-                <div className="flex flex-wrap items-center justify-center gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-sm text-muted-foreground">X Axis</span>
+                <ChartToolbar title="Rank comparison">
+                  <div className="flex w-full items-center gap-2 sm:w-auto">
+                    <span className="shrink-0 text-xs text-muted-foreground">X Axis</span>
                     <HeroStatSelector
                       label="X Axis"
                       value={filters.byRankX}
@@ -250,8 +251,8 @@ export function HeroesPage() {
                       options={BY_RANK_STATS}
                     />
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-sm text-muted-foreground">Y Axis</span>
+                  <div className="flex w-full items-center gap-2 sm:w-auto">
+                    <span className="shrink-0 text-xs text-muted-foreground">Y Axis</span>
                     <HeroStatSelector
                       label="Y Axis"
                       value={filters.byRankY}
@@ -259,7 +260,7 @@ export function HeroesPage() {
                       options={BY_RANK_STATS}
                     />
                   </div>
-                </div>
+                </ChartToolbar>
                 <ChunkErrorBoundary>
                   <Suspense fallback={<LoadingLogo />}>
                     <HeroStatsByRankChart

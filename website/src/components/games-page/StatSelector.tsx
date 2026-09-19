@@ -1,6 +1,7 @@
 import type React from "react";
 import { useMemo } from "react";
 
+import { ChartToolbar } from "~/components/analytics/ChartToolbar";
 import { MetricSelect } from "~/components/analytics/MetricSelect";
 
 import { getFilteredCategories } from "./stat-definitions";
@@ -18,11 +19,7 @@ export function StatSelector({
 }) {
   const categories = useMemo(() => getFilteredCategories(isStreetBrawl), [isStreetBrawl]);
   return (
-    <section
-      aria-label="Metric controls"
-      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card px-3 py-2"
-    >
-      <span className="text-sm font-semibold">Game metrics</span>
+    <ChartToolbar title="Game metrics" label="Metric controls">
       <MetricSelect
         value={value}
         onChange={onChange}
@@ -33,6 +30,6 @@ export function StatSelector({
         }))}
       />
       {children}
-    </section>
+    </ChartToolbar>
   );
 }

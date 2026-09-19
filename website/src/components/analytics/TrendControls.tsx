@@ -1,5 +1,4 @@
-import { ChartNoAxesCombined } from "lucide-react";
-
+import { ChartToolbar } from "~/components/analytics/ChartToolbar";
 import { MetricSelect } from "~/components/analytics/MetricSelect";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { useHydrated } from "~/hooks/useHydrated";
@@ -27,14 +26,7 @@ export function TrendControls({
   const hydrated = useHydrated();
 
   return (
-    <section
-      aria-label="Trend controls"
-      className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border bg-card px-3 py-2"
-    >
-      <div className="sr-only sm:not-sr-only sm:mr-auto sm:flex sm:items-center sm:gap-2">
-        <ChartNoAxesCombined className="size-4 text-primary" aria-hidden="true" />
-        <h2 className="text-sm font-semibold">{title}</h2>
-      </div>
+    <ChartToolbar title={title} label="Trend controls">
       <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
         <span className="text-xs text-muted-foreground">Metric</span>
         <MetricSelect value={metric} groups={metricGroups} onChange={onMetricChange} />
@@ -57,6 +49,6 @@ export function TrendControls({
           ))}
         </ToggleGroup>
       </div>
-    </section>
+    </ChartToolbar>
   );
 }
