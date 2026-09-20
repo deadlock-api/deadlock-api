@@ -1,5 +1,5 @@
 use axum::body::Body;
-use axum::http::Response;
+use axum::http::{Response, header};
 use axum::response::IntoResponse;
 use reqwest::StatusCode;
 use serde_json::json;
@@ -92,6 +92,7 @@ impl APIError {
 fn build_error_response(status: StatusCode, error: impl serde::Serialize) -> Response<Body> {
     Response::builder()
         .status(status)
+        .header(header::CONTENT_TYPE, "application/json")
         .body(
             serde_json::to_string(&json!({
                 "status": status.as_u16(),
@@ -149,6 +150,7 @@ impl IntoResponse for APIError {
                     }
                 }
                 res.status(StatusCode::TOO_MANY_REQUESTS)
+                    .header(header::CONTENT_TYPE, "application/json")
                     .body(
                         serde_json::to_string(&json!({
                             "status": StatusCode::TOO_MANY_REQUESTS.as_u16(),
@@ -299,5 +301,20 @@ mod tests {
         let error = APIError::RateLimitExceeded { status };
         let response = error.into_response();
         assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+        assert_eq!(
+            response.headers().get(header::CONTENT_TYPE).unwrap(),
+            "application/json"
+        );
+    }
+
+    #[test]
+    fn test_api_error_status_msg_content_type() {
+        let error = APIError::status_msg(StatusCode::BAD_REQUEST, "bad input");
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            response.headers().get(header::CONTENT_TYPE).unwrap(),
+            "application/json"
+        );
     }
 }
