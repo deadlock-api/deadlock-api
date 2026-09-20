@@ -1,5 +1,6 @@
 import type { Upgrade } from "deadlock_api_client";
 import type { ItemStats } from "deadlock_api_client";
+import { ListFilter } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { memo, type ReactNode, useCallback, useMemo, useState } from "react";
 
@@ -11,6 +12,7 @@ import { ItemTierSelector } from "~/components/domain/selectors/ItemTierSelector
 import { ItemQuickSelectDialog } from "~/components/features/items/ItemQuickSelectDialog";
 import { ExpandableRow, ExpandableRowToggle } from "~/components/patterns/data-table/ExpandableRow";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
+import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Badge } from "~/components/ui/badge";
@@ -514,24 +516,18 @@ export function ItemStatsTable({
         initialExclude={excludeItems}
         onApply={handleApply}
       />
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 sm:px-6">
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <div className="flex items-center gap-1.5">
-            <span className="icon-[mdi--filter-variant] size-4 text-muted-foreground" />
-            <p className="text-sm font-medium text-foreground">Item Filters</p>
-          </div>
-          <div className="flex min-w-0 flex-wrap items-center gap-1">
-            {Array.from(includeItems).map((id) => (
-              <ItemChip key={`inc-${id}`} id={id} variant="include" onRemove={removeInclude} />
-            ))}
-            {Array.from(excludeItems).map((id) => (
-              <ItemChip key={`exc-${id}`} id={id} variant="exclude" onRemove={removeExclude} />
-            ))}
-            <Button variant="subtle" size="xs" shape="pill" onClick={() => setDialogOpen(true)}>
-              <span className="icon-[mdi--plus] size-3" />
-              Add Items
-            </Button>
-          </div>
+      <FilterBar variant="toolbar" title="Item filters" icon={ListFilter} aria-label="Item table controls">
+        <div className="flex min-w-0 flex-wrap items-center gap-1">
+          {Array.from(includeItems).map((id) => (
+            <ItemChip key={`inc-${id}`} id={id} variant="include" onRemove={removeInclude} />
+          ))}
+          {Array.from(excludeItems).map((id) => (
+            <ItemChip key={`exc-${id}`} id={id} variant="exclude" onRemove={removeExclude} />
+          ))}
+          <Button variant="subtle" size="xs" shape="pill" onClick={() => setDialogOpen(true)}>
+            <span className="icon-[mdi--plus] size-3" />
+            Add Items
+          </Button>
         </div>
         {!hideItemTierFilter && (
           <>
@@ -541,17 +537,17 @@ export function ItemStatsTable({
               placeholder="Filter by name…"
               aria-label="Filter items by name"
               size="sm"
-              className="w-40 self-end"
+              className="w-40"
             />
-            <ItemSlotSelector value={itemSlots} onValueChange={setItemSlots} />
-            <ItemTierSelector value={itemTiers} onValueChange={setItemTiers} />
+            <ItemSlotSelector orientation="horizontal" value={itemSlots} onValueChange={setItemSlots} />
+            <ItemTierSelector orientation="horizontal" value={itemTiers} onValueChange={setItemTiers} />
           </>
         )}
         {/* NOTE: "Highlight overperforming items" toggle hidden for now — not very useful in its
             current form. May bring back later; if reviving, restore the Switch+Label toggle here
             plus the related `dim_low_confidence` useQueryState (see git history) and wire it
             through to `ItemStatsTableRow`'s `dimLowConfidence` prop. Delete this comment on revival. */}
-      </div>
+      </FilterBar>
       {isLoading ? (
         <LoadingState label="item statistics" align="center" />
       ) : (

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Plus, Workflow } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -705,7 +705,7 @@ export function ItemFlowGraph({
 
   return (
     <Stack gap={4}>
-      <FilterBar variant="toolbar" aria-label="Build flow controls" className="justify-end">
+      <FilterBar variant="toolbar" title="Build flow" icon={Workflow} aria-label="Build flow controls">
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="sm" className="text-xs text-muted-foreground">
