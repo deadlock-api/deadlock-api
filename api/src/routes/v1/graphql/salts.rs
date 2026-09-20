@@ -20,13 +20,16 @@ const COLUMNS: &str =
     "match_id, cluster_id, metadata_salt, replay_salt, toUnixTimestamp(created_at) AS created_at";
 
 /// Tail of a `match_salts FINAL` query that keeps the one row per match the
-/// REST reader in `matches::salts` would serve: usable, not failed, verified
-/// first. `FINAL` is required: an unmerged verification stamp carries only the
-/// sorting key and would otherwise hide a failure.
+/// REST reader in `matches::salts` would serve: usable, not failed before
+/// failed, verified first. A written-off candidate is only a last resort, see
+/// the REST reader for why it is served at all. `FINAL` is required: an
+/// unmerged verification stamp carries only the sorting key and would otherwise
+/// hide a failure.
 fn best_row_per_match(dir: &str) -> String {
     format!(
-        "metadata_salt > 0 AND cluster_id > 0 AND failed_at IS NULL \
-         ORDER BY match_id {dir}, verified_at IS NOT NULL DESC, match_salts.created_at DESC \
+        "metadata_salt > 0 AND cluster_id > 0 \
+         ORDER BY match_id {dir}, failed_at IS NULL DESC, verified_at IS NOT NULL DESC, \
+         match_salts.created_at DESC \
          LIMIT 1 BY match_id"
     )
 }
@@ -188,7 +191,10 @@ mod tests {
             "WITH t_matches AS (SELECT DISTINCT match_id FROM match_salts WHERE match_id > 5 AND metadata_salt > 0 AND cluster_id > 0 ORDER BY match_id DESC LIMIT 10 OFFSET 20) "
         ));
         assert!(sql.contains("FROM match_salts FINAL WHERE match_id IN t_matches AND match_id > 5 AND metadata_salt > 0"));
-        assert!(sql.contains("failed_at IS NULL"));
+        assert!(sql.contains(
+            "ORDER BY match_id DESC, failed_at IS NULL DESC, verified_at IS NOT NULL DESC"
+        ));
+        assert!(!sql.contains("AND failed_at IS NULL"));
         assert!(!sql.contains("username"));
         assert_valid_sql(&sql);
     }

@@ -1,5 +1,4 @@
 use core::time::Duration;
-use std::sync::LazyLock;
 
 use axum::Json;
 use axum::extract::{Path, State};
@@ -7,10 +6,8 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use cached::macros::cached;
-use cached::{Cached, TtlCache};
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
-use tokio::sync::Mutex;
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 use valveprotos::deadlock::{
@@ -40,11 +37,17 @@ impl BatchQuery for MatchSaltsReadQuery {
     fn build_query(keys: &[u64]) -> String {
         // FINAL is required: an unmerged verification stamp carries only the sorting key and
         // would otherwise win the ordering with a NULL replay salt.
+        //
+        // A written-off candidate (`failed_at` set) is still served, but only when nothing
+        // better exists. The downloader gives up on a match after about four days, and its
+        // verdict is permanent: a later re-insert of the same salts coalesces onto the stamped
+        // row. Valve does publish some metadata later than that, so hiding the candidate
+        // would send every request for such a match to Steam, which only returns the same
+        // salts again (or 503s when no bot is free) even though the file is there by now.
         format!(
             "SELECT ?fields FROM match_salts FINAL \
              WHERE match_id IN ({}) AND metadata_salt > 0 AND cluster_id > 0 \
-               AND failed_at IS NULL \
-             ORDER BY verified_at IS NOT NULL DESC, created_at DESC \
+             ORDER BY failed_at IS NULL DESC, verified_at IS NOT NULL DESC, created_at DESC \
              LIMIT 1 BY match_id \
              SETTINGS log_comment = 'salts_read'",
             in_clause(keys)
@@ -164,20 +167,6 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for MatchSaltsResponse 
     }
 }
 
-/// Matches Steam has just reported no salts for. The `cached` wrapper below keeps only
-/// successes, so every miss re-ran both `ClickHouse` lookups and a Steam call, and callers poll:
-/// a third of the metadata endpoint's 404s repeat within a minute. A miss is stable for at
-/// least that long; `ingest_salts` clears the entry when salts arrive through the API.
-pub(super) static SALTS_NOT_FOUND: LazyLock<Mutex<TtlCache<u64, ()>>> = LazyLock::new(|| {
-    Mutex::new(
-        TtlCache::<u64, ()>::builder()
-            .ttl(Duration::from_mins(1))
-            .initial_capacity(100_000)
-            .build()
-            .expect("ttl is set"),
-    )
-});
-
 fn not_found(match_id: u64) -> APIError {
     APIError::status_msg(
         StatusCode::NOT_FOUND,
@@ -198,10 +187,6 @@ pub(super) async fn fetch_match_salts(
     is_custom: bool,
     disable_steam: bool,
 ) -> Result<CMsgClientToGcGetMatchMetaDataResponse, APIError> {
-    if SALTS_NOT_FOUND.lock().await.cache_get(&match_id).is_some() {
-        return Err(not_found(match_id));
-    }
-
     // Try fetch from Clickhouse via batcher
     if let Ok(salts) = state.batchers.match_salts_read.load(match_id).await {
         debug!("Match salts found in Clickhouse");
@@ -279,7 +264,6 @@ pub(super) async fn fetch_match_salts(
     if salts.result.is_none_or(|r| {
         r != c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultSuccess as i32
     }) {
-        SALTS_NOT_FOUND.lock().await.cache_set(match_id, ());
         return Err(APIError::status_msg(
             StatusCode::NOT_FOUND,
             format!("Failed to fetch match salts for match {match_id}"),
@@ -295,7 +279,6 @@ pub(super) async fn fetch_match_salts(
         debug!("Match salts fetched from Steam");
         return Ok(salts);
     }
-    SALTS_NOT_FOUND.lock().await.cache_set(match_id, ());
     Err(not_found(match_id))
 }
 
