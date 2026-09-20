@@ -52,7 +52,7 @@ export function FilterBar({
       data-slot="filter-bar"
       data-variant="cells"
       aria-label={ariaLabel ?? title ?? "Filters"}
-      className={cn("@container flex flex-wrap items-center gap-1 rounded-lg border bg-card p-1.5", className)}
+      className={cn("@container flex flex-wrap items-center gap-2 rounded-lg border bg-card p-2", className)}
       {...props}
     >
       <FilterRootContext.Provider value={true}>{children}</FilterRootContext.Provider>

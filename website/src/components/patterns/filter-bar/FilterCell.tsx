@@ -12,7 +12,8 @@ import { cn } from "~/lib/utils";
 export const FilterRootContext = createContext(false);
 
 const cellBase = "flex min-w-0 flex-col justify-center gap-0.5 px-4 py-2 text-start transition-colors";
-const cellInRoot = "h-8 rounded-md";
+// In a bar each cell is one chip, so a label reads with its own value and not with its neighbour.
+const cellInRoot = "h-8 rounded-md border border-hairline bg-subtle";
 const cellStandalone = "rounded-lg border bg-card";
 const activeUnderline = "shadow-active-underline";
 const CELL_SELECTOR = '[data-slot="filter-cell"], [data-slot="filter-toggle-cell"]';
@@ -138,7 +139,7 @@ export function FilterCell({
               FOCUS_RING,
               "col-start-1 row-start-1 hover:bg-accent focus-visible:bg-accent focus-visible:ring-inset data-[state=open]:bg-accent",
               compact && "flex-row items-center justify-start gap-2 rounded-md px-3 py-0",
-              inRoot && "px-2.5",
+              inRoot && "gap-1.5 px-2.5",
               compact && onReset && active && "pe-8",
             )}
           >
@@ -223,7 +224,9 @@ export function FilterToggleCell<T extends string>({
       className={cn(
         cellBase,
         "relative",
-        inRoot ? "h-auto min-h-8 flex-row flex-wrap items-center gap-2 rounded-md px-2.5 py-0" : cellStandalone,
+        inRoot
+          ? "h-auto min-h-8 flex-row flex-wrap items-center gap-2 rounded-md border border-hairline bg-subtle py-0 ps-2.5 pe-0.5"
+          : cellStandalone,
         active && activeUnderline,
         className,
       )}
@@ -250,6 +253,7 @@ export function FilterToggleCell<T extends string>({
         disabled={disabled}
         aria-label={label}
         width="hug"
+        size={inRoot ? "sm" : "default"}
         className="@md:flex-nowrap"
       >
         {children}
