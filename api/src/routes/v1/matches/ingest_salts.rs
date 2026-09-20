@@ -10,6 +10,7 @@ use tracing::debug;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::salts::insert_salts;
 use crate::routes::v1::matches::types::ClickhouseSalts;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
@@ -120,7 +121,7 @@ pub(super) async fn ingest_salts(
     if count > 1 {
         debug!("Inserting salts: {}", count);
     }
-    state.batchers.match_salts_insert.insert(new_salts).await;
+    insert_salts(&state.ch_client, &new_salts).await?;
     Ok(Json(
         json!({ "status": "success", "salts_ingested": count }),
     ))

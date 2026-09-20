@@ -19,7 +19,6 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::ClickhouseSalts;
 use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
-use crate::services::clickhouse_insert_batcher::{BatchInsert, ClickhouseInsertBatcher};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
@@ -61,17 +60,18 @@ impl BatchQuery for MatchSaltsReadQuery {
 
 pub(crate) type MatchSaltsReadBatcher = ClickhouseBatcher<MatchSaltsReadQuery>;
 
-pub(crate) struct MatchSaltsInsert;
-
-impl BatchInsert for MatchSaltsInsert {
-    type Row = ClickhouseSalts;
-
-    fn table_name() -> &'static str {
-        "match_salts"
+/// Salts cost a bot job or a contributor's upload, so they are written before the caller is
+/// answered rather than through an insert batcher, whose buffer dies with the process.
+pub(super) async fn insert_salts(
+    ch_client: &clickhouse::Client,
+    salts: &[ClickhouseSalts],
+) -> clickhouse::error::Result<()> {
+    let mut inserter = ch_client.insert::<ClickhouseSalts>("match_salts").await?;
+    for salt in salts {
+        inserter.write(salt).await?;
     }
+    inserter.end().await
 }
-
-pub(crate) type MatchSaltsInsertBatcher = ClickhouseInsertBatcher<MatchSaltsInsert>;
 
 #[derive(Debug, Clone, Row, Deserialize)]
 pub(crate) struct MatchSaltsExistsRow {
@@ -270,12 +270,7 @@ pub(super) async fn fetch_match_salts(
         ));
     }
     if salts.replay_group_id.is_some() && salts.metadata_salt.unwrap_or_default() != 0 {
-        // Queue for batch insertion into Clickhouse
-        state
-            .batchers
-            .match_salts_insert
-            .insert(vec![(match_id, salts, username).into()])
-            .await;
+        insert_salts(&state.ch_client, &[(match_id, salts, username).into()]).await?;
         debug!("Match salts fetched from Steam");
         return Ok(salts);
     }
