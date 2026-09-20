@@ -126,7 +126,7 @@ function buildChartData({
     if (rowTotalMatches) {
       for (const inc of bucketIncrements) {
         const avgMatches = computeAverageMatchCount(itemData, inc);
-        const avgPercent = rowTotalMatches ? avgMatches / rowTotalMatches : 0;
+        const avgPercent = avgMatches / rowTotalMatches;
         if (avgPercent >= minAvgThreshold) {
           increment = inc;
           break;
