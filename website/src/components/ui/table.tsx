@@ -13,7 +13,8 @@ const CELL_DENSITY: Record<TableDensity, string> = { default: "p-2", compact: "p
 
 /**
  * `density` sets the row height of every cell at once: `default` for short lists, `compact` (about 40px rows) for
- * data tables, `dense` for tables inside panels and dialogs.
+ * data tables, `dense` for tables inside panels and dialogs. The scroll container is rounded like the cards and bars
+ * around it, which clips the fill of the head row and of the pinned column at the corners.
  */
 function Table({
   className,
@@ -22,7 +23,7 @@ function Table({
 }: React.ComponentProps<"table"> & { density?: TableDensity }) {
   return (
     <TableDensityContext value={density}>
-      <div data-slot="table-container" className="relative w-full scrollbar-thin overflow-x-auto">
+      <div data-slot="table-container" className="relative w-full scrollbar-thin overflow-x-auto rounded-lg">
         <table
           data-slot="table"
           data-density={density}
