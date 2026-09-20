@@ -3,7 +3,7 @@ import { Card } from "~/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { cn } from "~/lib/utils";
 
-export interface ResultGridColumn {
+interface ResultGridColumn {
   name: string;
   /** The column's data type, shown when its heading is hovered: "BIGINT". */
   type?: string;
@@ -32,7 +32,6 @@ export function ResultGrid({
   density = "dense",
   formatCell = defaultFormat,
   nullLabel = "NULL",
-  emptyLabel = "No rows",
   label,
   className,
   ...props
@@ -43,7 +42,6 @@ export function ResultGrid({
   density?: "dense" | "compact";
   formatCell?: (value: unknown) => string;
   nullLabel?: string;
-  emptyLabel?: React.ReactNode;
   /** Names the table for assistive technology: "Query result". */
   label?: string;
 }) {
@@ -79,7 +77,7 @@ export function ResultGrid({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.length === 0 && <TableEmptyRow colSpan={Math.max(1, columns.length)}>{emptyLabel}</TableEmptyRow>}
+          {rows.length === 0 && <TableEmptyRow colSpan={Math.max(1, columns.length)}>No rows</TableEmptyRow>}
           {rows.map((row, i) => (
             // oxlint-disable-next-line react/no-array-index-key -- a result set has no ids; its order is stable
             <TableRow key={i} className="odd:bg-subtle">

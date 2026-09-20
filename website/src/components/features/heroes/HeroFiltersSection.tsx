@@ -1,9 +1,9 @@
 import { Filter } from "~/components/domain/filters";
-import { DEFAULT_MODE } from "~/components/domain/selectors/ModeSelector";
 import { HeroCombFilters } from "~/components/features/heroes/HeroCombFilters";
 import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { STATS_TABS, type useHeroFilters } from "~/hooks/useHeroFilters";
+import { DEFAULT_MODE } from "~/lib/game-mode";
 
 type HeroFiltersProps = Pick<
   ReturnType<typeof useHeroFilters>,
@@ -90,7 +90,7 @@ export function HeroFiltersSection({
       <Filter.SeasonPatchDate
         value={{ startDate, endDate }}
         onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
-        resetRange={defaultRange}
+        defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
       />
       {tab === "hero-combs" && <HeroCombFilters />}
       {(tab === "matchups" || tab === "hero-matchup-details") && (

@@ -7,8 +7,7 @@ import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { ChartSidebarLayout } from "~/components/patterns/charts/ChartSidebarLayout";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
-import StatTrendChart, { type StatTrendBucket, type StatTrendPoint } from "~/components/patterns/charts/StatTrendChart";
-import { StatTrendHoverCard } from "~/components/patterns/charts/StatTrendHoverCard";
+import StatTrendChart, { type StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
 import {
   CHART_AXIS,
   CHART_BASELINE,
@@ -19,11 +18,11 @@ import {
 import { TrendIntervalField, TrendMetricField } from "~/components/patterns/charts/TrendControls";
 import { type WeekEntry, WeeklyTrendChart } from "~/components/patterns/charts/WeeklyTrendChart";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
-import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { OptionRow } from "~/components/ui/option-row";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
+import type { StatTrendPoint } from "~/lib/stat-format";
 
 const METRIC_LABELS: Record<string, string> = {
   win_rate: "Win rate",
@@ -203,30 +202,6 @@ export function ChartsMore() {
               </Card>
             </div>
           ))}
-        </Variants>
-      </Specimen>
-
-      <Specimen
-        name="StatTrendHoverCard"
-        source="patterns/charts/StatTrendHoverCard"
-        note="Opens a lazy trend chart when a table value is hovered or focused. It brings the Suspense fallback; the trigger must be focusable."
-      >
-        <Variants>
-          <StatTrendHoverCard
-            trigger={
-              <Button variant="ghost" size="sm" className="tabular-nums">
-                52.4%
-              </Button>
-            }
-          >
-            <StatTrendChart
-              data={trendPoints(bucket)}
-              state="ready"
-              stat={stat}
-              value={bucket}
-              onValueChange={setBucket}
-            />
-          </StatTrendHoverCard>
         </Variants>
       </Specimen>
 

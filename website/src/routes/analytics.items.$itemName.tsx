@@ -5,7 +5,6 @@ import { lazy, Suspense, useMemo } from "react";
 
 import { NotFound } from "~/components/app/NotFound";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
-import { DEFAULT_MATCH_MODE } from "~/components/domain/selectors/MatchModeSelector";
 import { ItemEffectCard } from "~/components/features/items/ItemEffectCard";
 import { ItemUpgradePath } from "~/components/features/items/ItemUpgradePath";
 import { ChartLoading } from "~/components/patterns/charts/ChartStates";
@@ -22,6 +21,7 @@ import { Stat, StatGroup } from "~/components/ui/stat";
 import { useSeasons } from "~/hooks/useSeasons";
 import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { formatPercent } from "~/lib/format";
+import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { findItemBySlug, itemSlug } from "~/lib/item-slug";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";

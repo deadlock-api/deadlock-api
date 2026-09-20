@@ -5,20 +5,19 @@ import { useMemo } from "react";
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
-import type { MatchMode } from "~/components/domain/selectors/MatchModeSelector";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
 import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { Tooltip, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { formatSignedPercent } from "~/lib/format";
+import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { matchupWinRateChange } from "~/lib/matchup-stats";
 import { queryKeys } from "~/queries/query-keys";
 
@@ -357,14 +356,8 @@ export function HeroMatchupDetailsStatsTable({
               )}
             </TableCell>
             <TableCell>
-              <ProgressBarWithLabel
-                min={minRelWinrate}
-                max={maxRelWinrate}
-                value={row.relWinrate}
-                color={isSynergy ? "var(--primary)" : "var(--chart-4)"}
-                label={formatSignedPercent(row.relWinrate)}
-                delta={row.prevRelWinrate !== undefined ? row.relWinrate - row.prevRelWinrate : undefined}
-                tooltip={
+              <Tooltip
+                content={
                   <>
                     <TooltipStats variant="plain">
                       <TooltipStat label="Matches" value={row.matches.toLocaleString("en-US")} />
@@ -378,7 +371,18 @@ export function HeroMatchupDetailsStatsTable({
                     )}
                   </>
                 }
-              />
+              >
+                <TooltipTarget display="block">
+                  <ProgressBarWithLabel
+                    min={minRelWinrate}
+                    max={maxRelWinrate}
+                    value={row.relWinrate}
+                    color={isSynergy ? "var(--primary)" : "var(--chart-4)"}
+                    label={formatSignedPercent(row.relWinrate)}
+                    delta={row.prevRelWinrate !== undefined ? row.relWinrate - row.prevRelWinrate : undefined}
+                  />
+                </TooltipTarget>
+              </Tooltip>
             </TableCell>
           </TableRow>
         ))}

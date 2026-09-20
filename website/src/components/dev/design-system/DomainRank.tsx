@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, Cell, Customized, ReferenceLine, XAxis, YAxis } from "recharts";
 
 import { Specimen } from "~/components/dev/design-system/Specimen";
-import { RANK_ICON_AXIS_HEIGHT, RankTierIcons, type TierSpan } from "~/components/domain/rank/RankTierIcons";
+import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/RankTierIcons";
 import { RankTierTick } from "~/components/domain/rank/RankTierTick";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_AXIS, CHART_BASELINE, CHART_COLOR, CHART_GRID, CHART_MARGIN } from "~/components/patterns/charts/theme";
@@ -20,7 +20,11 @@ const PLAYERS_BY_BADGE = TIERS.flatMap((tier) =>
     players: Math.round(9000 * Math.exp(-(((tier - 1) * 6 + subtier - 30) ** 2) / 320)),
   })),
 );
-const TIER_SPANS: TierSpan[] = TIERS.map((tier) => ({ tier, firstBadge: tier * 10 + 1, lastBadge: tier * 10 + 6 }));
+const TIER_SPANS: React.ComponentProps<typeof RankTierIcons>["tiers"] = TIERS.map((tier) => ({
+  tier,
+  firstBadge: tier * 10 + 1,
+  lastBadge: tier * 10 + 6,
+}));
 const WIN_RATE_BY_TIER = TIERS.map((tier) => ({ tier, winRate: 0.468 + tier * 0.006 + (tier % 3) * 0.003 }));
 const WIN_RATE_AXIS = winRateDomain([0.5, ...WIN_RATE_BY_TIER.map((entry) => entry.winRate)]);
 const percent = (v: number) => `${Math.round(v * 100)}%`;
@@ -65,7 +69,7 @@ export function DomainRank() {
       <Specimen
         name="RankTierTick"
         source="domain/rank/RankTierTick"
-        note="The x-axis tick of a chart with one bar or point per rank tier: the tier's badge, or its name when it has no image. Without a size the badges shrink to the chart's width; size fixes them."
+        note="The x-axis tick of a chart with one bar or point per rank tier: the tier's badge, or its name when it has no image. The badges shrink to the chart's width."
         className="grid gap-3 lg:grid-cols-2"
       >
         <ChartSurface label="Win rate by rank tier, RankTierTick sized from the chart" size="md">
@@ -90,13 +94,7 @@ export function DomainRank() {
         <ChartSurface label="Win rate by rank tier, RankTierTick without badge images" size="md">
           <BarChart data={namedTiers} margin={CHART_MARGIN}>
             <CartesianGrid {...CHART_GRID} />
-            <XAxis
-              {...CHART_AXIS}
-              dataKey="tier"
-              interval={0}
-              height={32}
-              tick={<RankTierTick tiers={namedTiers} size={24} />}
-            />
+            <XAxis {...CHART_AXIS} dataKey="tier" interval={0} height={32} tick={<RankTierTick tiers={namedTiers} />} />
             <YAxis
               {...CHART_AXIS}
               domain={WIN_RATE_AXIS}

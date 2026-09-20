@@ -1,6 +1,6 @@
 import { createContext, use } from "react";
 
-export interface FieldControl {
+interface FieldControl {
   describedBy?: string;
   invalid: boolean;
 }

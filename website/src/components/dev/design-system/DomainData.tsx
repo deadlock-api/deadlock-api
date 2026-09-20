@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PlayerScoreboardSortByEnum } from "deadlock_api_client";
-import { useState } from "react";
+import { type ComponentProps, useState } from "react";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
-import MatchHistoryCard, { type MatchHistoryCardProps } from "~/components/domain/match/MatchHistoryCard";
+import MatchHistoryCard from "~/components/domain/match/MatchHistoryCard";
 import { ScoreboardTable } from "~/components/domain/player-scoreboard/ScoreboardTable";
 import { SortBySelector } from "~/components/domain/player-scoreboard/SortBySelector";
 import { QueryRenderer } from "~/components/patterns/states/QueryRenderer";
@@ -12,7 +12,7 @@ import { normalizeUnixFloor } from "~/lib/time-normalize";
 import { playerScoreboardQueryOptions } from "~/queries/player-scoreboard-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
-const BUILD_MATCH: MatchHistoryCardProps = {
+const BUILD_MATCH: ComponentProps<typeof MatchHistoryCard> = {
   timeAgo: "2 hours ago",
   matchId: 38214577,
   result: "win",
@@ -22,7 +22,7 @@ const BUILD_MATCH: MatchHistoryCardProps = {
   deaths: 3,
   assists: 11,
   averageBadge: 94,
-  steamProfile: { personaname: "Showcase Player" },
+  accountId: 74963221,
   buildData: {
     items: [
       { itemId: 1548066885, gameTimeS: 45, sold: false },
@@ -62,7 +62,7 @@ export function DomainData() {
       <Specimen
         name="MatchHistoryCard"
         source="domain/match/MatchHistoryCard"
-        note="One match of one player; the left edge carries the result. It lists the purchases by phase (sold items dimmed, imbued abilities numbered) and the ability order. Pass steamProfile to skip the card's own Steam lookup."
+        note="One match of one player; the left edge carries the result. It lists the purchases by phase (sold items dimmed, imbued abilities numbered) and the ability order."
       >
         <Variants label={`onPlayerClick${clickedPlayer ? `: ${clickedPlayer}` : ""}`}>
           <MatchHistoryCard {...BUILD_MATCH} ranks={ranks} onPlayerClick={setClickedPlayer} />

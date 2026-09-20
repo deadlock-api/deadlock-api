@@ -1,9 +1,8 @@
 import type { AnalyticsHeroStats, HeroBanStats } from "deadlock_api_client";
 
-import type { StatFormat } from "~/components/features/games/stat-definitions";
-import type { StatTrendPoint } from "~/components/patterns/charts/StatTrendChart";
 import { BANS_PER_MATCH, computeBanRatesByBucket } from "~/lib/ban-rate";
 import { computeResiduals, computeZScores } from "~/lib/hero-scoring";
+import type { StatFormat, StatTrendPoint } from "~/lib/stat-format";
 
 export const HERO_TABLE_TRENDS = {
   winRate: { label: "Win Rate", format: "percent" },

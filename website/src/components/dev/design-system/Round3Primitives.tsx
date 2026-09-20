@@ -18,7 +18,7 @@ import { SplitBar } from "~/components/ui/rate-bar";
 import { SearchInput } from "~/components/ui/search-input";
 import { Separator } from "~/components/ui/separator";
 import { StatusDot } from "~/components/ui/status-dot";
-import { progressSteps, StepMeter, StepMeterStep, type StepState } from "~/components/ui/step-meter";
+import { StepMeter, StepMeterStep, type StepState } from "~/components/ui/step-meter";
 import { SwitchField } from "~/components/ui/switch-field";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { TextLink } from "~/components/ui/text-link";
@@ -39,10 +39,10 @@ const STEP_VARIANTS = ["dots", "squares", "track"] as const;
 const STEP_EXAMPLES = [
   { label: "Solved on attempt 3 of 6", steps: QUIZ_STEPS },
   { label: "Question 5 of 8, 3 correct", steps: ROUND_STEPS },
-  { label: "Step 4 of 5", steps: progressSteps(3, 5) },
+  { label: "Step 4 of 5", steps: ["done", "done", "done", "current", "empty"] satisfies StepState[] },
 ];
 const STEP_STATES: readonly StepState[] = ["done", "current", "correct", "wrong", "empty"];
-const DOT_TONES = ["muted", "primary", "positive", "negative", "warning", "info"] as const;
+const DOT_TONES = ["muted", "primary"] as const;
 
 function SearchInputExamples() {
   const [query, setQuery] = useState("Infernus");
@@ -279,7 +279,7 @@ export function Round3Primitives() {
       <Specimen
         name="StepMeter"
         source="ui/step-meter"
-        note="A few discrete steps and the state of each: quiz attempts, questions of a round, stages of a flow. StepMeterStep children carry the state; aria-label is what a screen reader hears. progressSteps(value, max) builds the states of a plain progress."
+        note="A few discrete steps and the state of each: quiz attempts, questions of a round, stages of a flow. StepMeterStep children carry the state; label is what a screen reader hears."
       >
         {STEP_VARIANTS.map((variant) => (
           <Variants key={variant} label={`variant="${variant}"`} className="gap-6">
@@ -287,7 +287,7 @@ export function Round3Primitives() {
               <StepMeter
                 key={example.label}
                 variant={variant}
-                aria-label={example.label}
+                label={example.label}
                 className={variant === "track" ? "max-w-48" : undefined}
               >
                 {example.steps.map((state, index) => (
@@ -304,10 +304,10 @@ export function Round3Primitives() {
         >
           {STEP_STATES.map((state) => (
             <span key={state} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <StepMeter aria-label={state}>
+              <StepMeter label={state}>
                 <StepMeterStep state={state} />
               </StepMeter>
-              <StepMeter variant="track" aria-label={state} className="w-8">
+              <StepMeter variant="track" label={state} className="w-8">
                 <StepMeterStep state={state} />
               </StepMeter>
               {state}

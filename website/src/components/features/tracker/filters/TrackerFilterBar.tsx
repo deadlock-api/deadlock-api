@@ -2,8 +2,7 @@ import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 
 import { Filter } from "~/components/domain/filters";
-import { type Mode, MODE_CONFIG, ModeSelector } from "~/components/domain/selectors/ModeSelector";
-import { dateRangeLabel } from "~/components/domain/selectors/SeasonPatchDatePicker";
+import { ModeSelector } from "~/components/domain/selectors/ModeSelector";
 import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
 import { Button } from "~/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
@@ -13,6 +12,8 @@ import { useHeroById } from "~/hooks/useAssetById";
 import { useSeasons } from "~/hooks/useSeasons";
 import { PATCHES } from "~/lib/constants";
 import type { DateFilterAction, DateRange } from "~/lib/date-filter-preference";
+import { type Mode, MODE_CONFIG } from "~/lib/game-mode";
+import { dateRangeLabel } from "~/lib/seasons";
 import type { ResultFilter } from "~/lib/tracker/compute";
 
 export function TrackerFilterBar({
@@ -82,9 +83,9 @@ export function TrackerFilterBar({
             <Filter.SeasonPatchDate
               value={{ startDate, endDate }}
               onValueChange={(next) => onDateChange(next.startDate, next.endDate, next.action)}
-              resetRange={resetRange}
+              defaultValue={{ startDate: resetRange[0], endDate: resetRange[1] }}
             />
-            <Filter.Hero value={heroId} onValueChange={onHeroChange} allowNull label="Hero" />
+            <Filter.Hero value={heroId} onValueChange={onHeroChange} allowNull />
             <ModeSelector value={mode} onValueChange={onModeChange} />
             <FilterToggleCell
               label="Result"

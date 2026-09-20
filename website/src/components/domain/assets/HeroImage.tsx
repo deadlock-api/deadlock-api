@@ -28,11 +28,7 @@ export type HeroSource =
   | { hero: SlimHero | undefined; loading?: boolean; heroId?: never };
 
 type HeroImageLook = HeroImageVariants &
-  Omit<
-    React.ComponentProps<typeof AssetImage>,
-    "asset" | "loading" | "skeletonClassName" | "emptyClassName" | "imgClassName"
-  > & {
-    className?: string;
+  Omit<React.ComponentProps<typeof AssetImage>, "asset" | "loading" | "placeholderClassName"> & {
     /** A CSS color for the frame when it comes from data (a lane, the hero's own color). Replaces `ring`. */
     ringColor?: string;
     /** Native hover title, the name by default; pass "" where a tooltip already names the image. */
@@ -77,12 +73,11 @@ function HeroImageView({
             }
           : undefined
       }
-      loading={loading}
-      skeletonClassName={cn("aspect-square size-8 rounded-full", look)}
-      emptyClassName={cn("aspect-square size-8 rounded-full bg-muted", look)}
-      imgClassName={cn("aspect-square size-8", look)}
-      style={ringStyle ? { ...ringStyle, ...style } : style}
       {...props}
+      loading={loading}
+      placeholderClassName={cn("aspect-square size-8 rounded-full", look)}
+      className={cn("aspect-square size-8", look)}
+      style={ringStyle ? { ...ringStyle, ...style } : style}
     />
   );
 }

@@ -1,9 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import type { UseMatchHistoryResult } from "~/components/features/streamkit/widgets/MatchHistory/MatchHistory.types";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { matchHistoryQueryOptions } from "~/queries/match-history-queries";
+
+export interface Match {
+  match_id: number;
+  hero_id: number;
+  match_result: number;
+  player_team: number;
+}
+
+interface UseMatchHistoryResult {
+  matches: Match[];
+  heroes: Map<number, string>;
+  loading: boolean;
+}
 
 interface UseMatchHistoryParams {
   accountId: string;

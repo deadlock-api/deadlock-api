@@ -3,8 +3,6 @@ import { useMemo } from "react";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartHeroSelector } from "~/components/domain/selectors/ChartHeroSelector";
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
-import type { MatchMode } from "~/components/domain/selectors/MatchModeSelector";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartSidebarLayout } from "~/components/patterns/charts/ChartSidebarLayout";
@@ -19,6 +17,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { formatCompactAxisTick, niceTicks } from "~/lib/chart-axis";
 import { DURATION_BUCKETS, MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
+import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { formatTrendValue, HERO_TREND_LABELS } from "~/lib/hero-trends";
 import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
@@ -144,7 +143,7 @@ export function HeroStatsByDurationChart({
   return (
     <div aria-live="polite" aria-busy={isLoading}>
       {isLoading ? (
-        <ChartLoading label="hero duration data" />
+        <ChartLoading label="hero duration data" size="xl" />
       ) : isErrorBuckets || isErrorHeroes ? (
         <ChartError
           label="hero duration data"
@@ -186,7 +185,11 @@ export function HeroStatsByDurationChart({
                 }
               />
             ) : (
-              <ChartSurface variant="flush" label={`Hero ${heroStat.replace(/_/g, " ")} by match duration chart`}>
+              <ChartSurface
+                variant="flush"
+                size="xl"
+                label={`Hero ${heroStat.replace(/_/g, " ")} by match duration chart`}
+              >
                 <LineChart data={formattedData} margin={{ top: 16, right: 12, bottom: 20, left: 0 }}>
                   <CartesianGrid {...CHART_GRID} verticalCoordinatesGenerator={() => []} />
                   <XAxis

@@ -45,3 +45,10 @@ export function formatStatValue(value: number | undefined | null, format: StatFo
       return value.toFixed(2);
   }
 }
+
+/** One bucket of a stat trend: the bucket's start as a unix timestamp and the value, `null` where data is missing. */
+export interface StatTrendPoint {
+  date: number;
+  value: number | null;
+  matches?: number;
+}

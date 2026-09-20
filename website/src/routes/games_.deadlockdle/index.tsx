@@ -7,7 +7,7 @@ import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
 import { type DailyStatus, GameCard, getDailyResult, getDailyStatus } from "~/components/features/deadlockdle/GameCard";
 import { DURATION, enter, fadeUp, stagger } from "~/components/features/deadlockdle/motion";
 import { ShareButton } from "~/components/features/deadlockdle/ShareButton";
-import { Hero, HeroActions, HeroGlow } from "~/components/patterns/page/Hero";
+import { Hero, HeroActions } from "~/components/patterns/page/Hero";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Input } from "~/components/ui/input";
@@ -142,8 +142,6 @@ function DeadlockdleHub() {
   return (
     <PageShell density="marketing" className="theme-terminal">
       <Hero size="sm">
-        <HeroGlow size="sm" />
-
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={enter}>
           <PageHeader
             size="display"

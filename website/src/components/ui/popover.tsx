@@ -1,7 +1,7 @@
 import { Popover as PopoverPrimitive } from "radix-ui";
 import * as React from "react";
 
-import { POPPER_MOTION } from "~/components/ui/recipes";
+import { FOCUS_RING, POPPER_MOTION } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 function Popover({ ...props }: React.ComponentProps<typeof PopoverPrimitive.Root>) {
@@ -25,8 +25,9 @@ function PopoverContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
+          FOCUS_RING,
           POPPER_MOTION,
-          "z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-hidden focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
+          "z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-md border bg-popover p-4 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
           className,
         )}
         {...props}

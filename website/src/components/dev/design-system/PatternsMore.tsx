@@ -9,7 +9,6 @@ import {
   FilteredSelectPopover,
 } from "~/components/patterns/filter-bar/FilteredSelectPopover";
 import { SideNav, SideNavFooter, SideNavGroup, SideNavItem } from "~/components/patterns/navigation/SideNav";
-import { SideNavSection } from "~/components/patterns/navigation/SideNavSection";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -78,7 +77,6 @@ export function PageShellSpecimen() {
 
 export function SideNavSpecimen() {
   const [current, setCurrent] = useState("heroes");
-  const [currentSmall, setCurrentSmall] = useState("badge");
   const link = (id: string, active: string, select: (id: string) => void) => ({
     href: "#sidenav",
     active: active === id,
@@ -88,7 +86,6 @@ export function SideNavSpecimen() {
     },
   });
   const item = (id: string) => link(id, current, setCurrent);
-  const smallItem = (id: string) => link(id, currentSmall, setCurrentSmall);
 
   return (
     <>
@@ -132,48 +129,7 @@ export function SideNavSpecimen() {
               </SideNavFooter>
             </div>
           </div>
-          <div className="flex w-44 flex-col gap-1.5">
-            <span className="eyebrow">size="sm"</span>
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-2">
-              <SideNav size="sm" aria-label="Small SideNav example" className="gap-3">
-                <SideNavGroup label="Primitives">
-                  <SideNavItem {...smallItem("button")}>Button</SideNavItem>
-                  <SideNavItem {...smallItem("badge")}>Badge</SideNavItem>
-                  <SideNavItem {...smallItem("segmented")}>Segmented</SideNavItem>
-                </SideNavGroup>
-                <SideNavGroup label="Patterns">
-                  <SideNavItem {...smallItem("page-header")}>PageHeader</SideNavItem>
-                  <SideNavItem {...smallItem("section")}>Section</SideNavItem>
-                </SideNavGroup>
-              </SideNav>
-            </div>
-          </div>
         </Variants>
-      </Specimen>
-
-      <Specimen
-        name="SideNavSection"
-        source="patterns/navigation/SideNavSection"
-        note="A category of a SideNav that opens and closes. Sections nest: level 1 holds level 2, which holds the items. This page's own index is built from it."
-      >
-        <SideNav size="sm" aria-label="Nested example" className="max-w-60 gap-1">
-          <SideNavSection label="Primitives" count={5} defaultOpen>
-            <SideNavSection level={2} label="Actions" count={3} defaultOpen>
-              <SideNavItem href="#sidenavsection" active>
-                Button
-              </SideNavItem>
-              <SideNavItem href="#sidenavsection">TextLink</SideNavItem>
-              <SideNavItem href="#sidenavsection">Segmented</SideNavItem>
-            </SideNavSection>
-            <SideNavSection level={2} label="Forms" count={2}>
-              <SideNavItem href="#sidenavsection">Input</SideNavItem>
-              <SideNavItem href="#sidenavsection">Select</SideNavItem>
-            </SideNavSection>
-          </SideNavSection>
-          <SideNavSection label="Patterns" count={1}>
-            <SideNavItem href="#sidenavsection">PageShell</SideNavItem>
-          </SideNavSection>
-        </SideNav>
       </Specimen>
     </>
   );

@@ -3,7 +3,6 @@ import { parseAsInteger, useQueryState } from "nuqs";
 import { Suspense, useMemo, useState } from "react";
 
 import { Filter } from "~/components/domain/filters";
-import { DEFAULT_MATCH_MODE } from "~/components/domain/selectors/MatchModeSelector";
 import AbilityOrderTree from "~/components/features/abilities/AbilityOrderTree";
 import type { TriState } from "~/components/patterns/filter-bar/TriStateSelector";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
@@ -12,7 +11,7 @@ import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBound
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
-import { getEffectiveRankRange } from "~/lib/game-mode";
+import { DEFAULT_MATCH_MODE, getEffectiveRankRange } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultUnixRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
@@ -101,11 +100,11 @@ function AbilitiesPage() {
           }}
         />
         <Filter.MinMatches value={minMatches} onValueChange={setMinMatches} min={0} defaultValue={20} />
-        <Filter.ItemsTriState value={itemSelections} onValueChange={setItemSelections} label="Items" />
+        <Filter.ItemsTriState value={itemSelections} onValueChange={setItemSelections} />
         <Filter.SeasonPatchDate
           value={{ startDate, endDate }}
           onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
-          resetRange={defaultRange}
+          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
         />
       </Filter.Root>
 

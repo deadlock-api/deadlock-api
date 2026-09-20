@@ -23,9 +23,7 @@ const cardVariants = cva("group/card flex min-w-0 flex-col text-card-foreground"
       primary: "border border-primary/30 bg-primary/5",
       positive: "border border-positive/30 bg-positive/5",
       warning: "border border-warning/30 bg-warning/5",
-      info: "border border-info/30 bg-info/5",
       negative: "border border-negative/30 bg-negative/5",
-      destructive: "border border-destructive/30 bg-destructive/5",
     },
     size: {
       default: "gap-6 rounded-xl py-6",

@@ -6,6 +6,7 @@ import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "~/components/ui/dialog";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { FOCUS_RING } from "~/components/ui/recipes";
+import { Text } from "~/components/ui/text";
 import { cn } from "~/lib/utils";
 
 // ds-allow law19-viewport-breakpoint: a dialog is sized against the viewport, and only `sm:` overrides ui/dialog's own
@@ -15,10 +16,12 @@ interface PanelWithDetailsProps extends Omit<React.ComponentProps<typeof Panel>,
   /** Also names the dialog and the "Show more" button, so it must be a string. */
   title: string;
   icon?: LucideIcon;
-  /** Sample size or date range, on the trailing edge of the header. */
+  /** A quiet line beside the title, in the panel and in the dialog: the sample size, the date range. */
+  description?: ReactNode;
+  /** Controls on the trailing edge of the header, in the panel and in the dialog. */
+  actions?: ReactNode;
+  /** @deprecated Text is `description`, controls are `actions`. */
   meta?: ReactNode;
-  /** Where the `meta` shows: in the panel header only, or in the dialog header as well. */
-  metaPlacement?: "panel" | "both";
   /** A footnote beside the "Show more" button. */
   footer?: ReactNode;
   /**
@@ -38,8 +41,9 @@ interface PanelWithDetailsProps extends Omit<React.ComponentProps<typeof Panel>,
 export function PanelWithDetails({
   title,
   icon,
+  description,
+  actions,
   meta,
-  metaPlacement = "panel",
   footer,
   details,
   dialogSize = "full",
@@ -54,11 +58,14 @@ export function PanelWithDetails({
     onValueChange: onOpenChange,
   });
 
+  const controls = actions ?? meta;
+  const trailing = controls && <div className="ms-auto flex flex-wrap items-center gap-2">{controls}</div>;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <Panel {...props}>
-        <PanelHeader title={title} icon={icon} size="sm">
-          {meta && <div className="text-3xs text-muted-foreground tabular-nums">{meta}</div>}
+        <PanelHeader title={title} description={description} icon={icon} size="sm">
+          {trailing}
         </PanelHeader>
         <PanelBody size="sm" className="flex flex-col gap-1">
           {children}
@@ -81,7 +88,12 @@ export function PanelWithDetails({
         <DialogHeader className="shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-3 pe-8">
             <DialogTitle>{title}</DialogTitle>
-            {metaPlacement === "both" && meta && <div className="text-xs text-muted-foreground">{meta}</div>}
+            {description && (
+              <Text variant="meta" tone="muted" numeric="tabular">
+                {description}
+              </Text>
+            )}
+            {trailing}
           </div>
         </DialogHeader>
         {/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- Keyboard users need to focus and scroll the dialog body, even when it contains only a table. */}

@@ -7,7 +7,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Filter } from "~/components/domain/filters";
 import { formatDateRange } from "~/components/domain/filters/utils";
-import { type Mode, MODE_CONFIG } from "~/components/domain/selectors/ModeSelector";
 import { CounterMatrix } from "~/components/features/team-builder/CounterMatrix";
 import { DetailDialog } from "~/components/features/team-builder/DetailDialog";
 import { DraftBoard } from "~/components/features/team-builder/DraftBoard";
@@ -29,6 +28,7 @@ import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useDraft } from "~/hooks/useDraft";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import { type Mode, MODE_CONFIG } from "~/lib/game-mode";
 import { seo } from "~/lib/seo";
 import {
   analyzeDraft,
@@ -369,7 +369,7 @@ function TeamBuilderPage() {
         <Filter.SeasonPatchDate
           value={{ startDate, endDate }}
           onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
-          resetRange={defaultRange}
+          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
         />
         <MatchImportControl
           matchId={importedMatchId}

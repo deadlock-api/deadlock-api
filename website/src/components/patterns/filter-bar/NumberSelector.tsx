@@ -2,6 +2,7 @@ import { MinusIcon, PlusIcon } from "lucide-react";
 
 import { FilterCell, type FilterCellPassthroughProps } from "~/components/patterns/filter-bar/FilterCell";
 import { Button } from "~/components/ui/button";
+import { FOCUS_WITHIN_RING } from "~/components/ui/recipes";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { cn } from "~/lib/utils";
 
@@ -10,7 +11,6 @@ interface NumberSelectorBareProps extends Omit<React.ComponentProps<"div">, "onC
   onValueChange?: (value: number) => void;
   step?: number;
   min?: number;
-  max?: number;
   disabled?: boolean;
 }
 
@@ -20,7 +20,6 @@ function NumberSelectorBare({
   onValueChange,
   step = 1,
   min = 0,
-  max = Number.POSITIVE_INFINITY,
   disabled = false,
   className,
   ...props
@@ -30,7 +29,8 @@ function NumberSelectorBare({
       data-slot="number-selector"
       data-disabled={disabled || undefined}
       className={cn(
-        "flex h-9 w-full min-w-0 items-center rounded-md border bg-transparent p-1 text-sm focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50",
+        FOCUS_WITHIN_RING,
+        "flex h-9 w-full min-w-0 items-center rounded-md border bg-transparent p-1 text-sm",
         className,
       )}
       {...props}
@@ -51,8 +51,8 @@ function NumberSelectorBare({
         size="icon-xs"
         aria-label="Increase"
         className="text-muted-foreground"
-        disabled={disabled || value >= max}
-        onClick={() => onValueChange?.(Math.min(max, value + step))}
+        disabled={disabled}
+        onClick={() => onValueChange?.(value + step)}
       >
         <PlusIcon />
       </Button>
@@ -66,7 +66,6 @@ interface NumberSelectorProps extends Omit<FilterCellPassthroughProps, "onChange
   label: string;
   step?: number;
   min?: number;
-  max?: number;
   /** The value the reset returns to; `min` without it. */
   defaultValue?: number;
 }
@@ -78,13 +77,12 @@ export function NumberSelector({
   label,
   step = 1,
   min = 0,
-  max = Number.POSITIVE_INFINITY,
   defaultValue,
   contentClassName,
   ...props
 }: NumberSelectorProps) {
   const resetValue = defaultValue ?? min;
-  const presets = [...new Set([min, step, step * 5, step * 10, step * 50])].filter((v) => v >= min && v <= max);
+  const presets = [...new Set([min, step, step * 5, step * 10, step * 50])].filter((v) => v >= min);
 
   return (
     <FilterCell
@@ -96,7 +94,7 @@ export function NumberSelector({
       {...props}
     >
       <div className="flex flex-col gap-2">
-        <NumberSelectorBare value={value} onValueChange={onValueChange} step={step} min={min} max={max} />
+        <NumberSelectorBare value={value} onValueChange={onValueChange} step={step} min={min} />
         <Segmented
           value={String(value)}
           onValueChange={(v) => onValueChange?.(Number(v))}

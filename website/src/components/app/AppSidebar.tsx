@@ -26,7 +26,7 @@ function NavItem({ link }: { link: NavLink }) {
   const Icon = link.icon;
   return (
     <SideNavItem asChild active={active} variant={link.special ? "highlight" : "default"}>
-      <PrefetchAnchor to={link.to}>
+      <PrefetchAnchor href={link.to}>
         <Icon />
         <span className="truncate">{link.label}</span>
       </PrefetchAnchor>
@@ -39,7 +39,7 @@ function SidebarContent() {
     <>
       <SideNavHeader>
         <SideNavBrand asChild>
-          <PrefetchAnchor to="/">
+          <PrefetchAnchor href="/">
             <img
               src="https://deadlock-api.com/favicon.webp"
               loading="lazy"
@@ -83,7 +83,7 @@ function SidebarContent() {
           const Icon = link.icon;
           return (
             <Button key={link.to} asChild variant="outline" size="sm" className="text-xs text-muted-foreground">
-              <PrefetchAnchor to={link.to}>
+              <PrefetchAnchor href={link.to}>
                 <Icon className="size-3" />
                 {link.label}
               </PrefetchAnchor>

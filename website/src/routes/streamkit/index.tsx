@@ -4,13 +4,14 @@ import { CheckCircle, Layers, Terminal } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { type ReactNode, useEffect } from "react";
 
-import { SteamSignInButton } from "~/components/domain/auth/SteamSignInButton";
+import { SteamIcon } from "~/components/domain/brand/BrandIcons";
 import { CommandBuilder } from "~/components/features/streamkit/command/CommandBuilder";
 import { WidgetBuilder } from "~/components/features/streamkit/widget-builder";
-import { Hero, HeroGlow } from "~/components/patterns/page/Hero";
+import { Hero } from "~/components/patterns/page/Hero";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Alert, AlertDescription } from "~/components/ui/alert";
+import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Field } from "~/components/ui/field";
 import { Heading } from "~/components/ui/heading";
@@ -86,7 +87,6 @@ function StreamKit() {
   return (
     <PageShell density="content">
       <Hero size="sm">
-        <HeroGlow />
         <PageHeader
           size="lg"
           title="Stream Kit"
@@ -151,13 +151,18 @@ function StreamKit() {
                     Sign in directly with Steam
                   </Text>
                 </Stack>
-                <SteamSignInButton
+                <Button
+                  variant="steam"
+                  size="lg"
                   className="w-full sm:w-auto"
                   onClick={() => {
                     const returnPath = region ? `/streamkit?region=${encodeURIComponent(region)}` : "/streamkit";
                     window.location.href = generateSteamAuthUrl({ returnPath });
                   }}
-                />
+                >
+                  <SteamIcon />
+                  Sign in with Steam
+                </Button>
               </Stack>
             </div>
 

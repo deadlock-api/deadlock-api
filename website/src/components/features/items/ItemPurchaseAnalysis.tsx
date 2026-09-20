@@ -3,14 +3,13 @@ import { ChartNoAxesCombined } from "lucide-react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
 import { ItemSelectorMultiple } from "~/components/domain/selectors/ItemSelector";
-import type { MatchMode } from "~/components/domain/selectors/MatchModeSelector";
 import { ItemBuyTimingChart } from "~/components/features/items/ItemBuyTimingChart";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Field } from "~/components/ui/field";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 
 export function ItemPurchaseAnalysis({

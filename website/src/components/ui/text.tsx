@@ -28,7 +28,7 @@ const textVariants = cva("min-w-0", {
   defaultVariants: { variant: "body", tone: "inherit", align: "start", wrap: "wrap", numeric: "proportional" },
 });
 
-type TextElement = "span" | "p" | "div" | "strong" | "em" | "small" | "label" | "dt" | "dd" | "figcaption";
+type TextElement = "span" | "p" | "div" | "strong";
 
 interface TextProps extends Omit<React.ComponentProps<"span">, "color">, VariantProps<typeof textVariants> {
   as?: TextElement;

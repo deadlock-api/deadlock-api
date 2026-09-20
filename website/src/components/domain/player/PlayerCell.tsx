@@ -26,7 +26,7 @@ export function PlayerCell({
   avatar,
   loading = false,
   showAccountId = false,
-  linkToTracker = false,
+  linkToDetail = false,
   size,
   className,
   ...props
@@ -39,14 +39,14 @@ export function PlayerCell({
     loading?: boolean;
     showAccountId?: boolean;
     /** Links the name to the player's tracker page. Leave it off when the whole row is already the link. */
-    linkToTracker?: boolean;
+    linkToDetail?: boolean;
   }) {
   const resolvedSize = size ?? "default";
   const label = name ?? (accountId != null ? `Player ${accountId}` : "Unknown player");
 
   const nameNode = loading ? (
     <Skeleton className="h-4 w-24" />
-  ) : linkToTracker && accountId != null ? (
+  ) : linkToDetail && accountId != null ? (
     <Link
       to="/tracker/players/$accountId"
       params={{ accountId: String(accountId) }}

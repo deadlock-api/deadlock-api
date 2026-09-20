@@ -5,7 +5,7 @@ import { ResponsiveContainer } from "recharts";
 import { cn } from "~/lib/utils";
 
 /**
- * Plot heights. Every chart picks one; the loading skeleton takes the same one so nothing jumps. `default` and `lg`
+ * Plot heights. Every chart picks one; the loading skeleton takes the same one so nothing jumps. `default`, `lg` and `xl`
  * step up with the width of the nearest `@container` ancestor, so the element that carries them sits inside one.
  */
 export const chartSizeVariants = cva("", {
@@ -16,6 +16,7 @@ export const chartSizeVariants = cva("", {
       md: "h-55",
       default: "h-70 @xl:h-80",
       lg: "h-90 @xl:h-105",
+      xl: "h-105 @xl:h-140",
       /** The parent sets the height. */
       fill: "h-full",
     },
@@ -23,19 +24,23 @@ export const chartSizeVariants = cva("", {
   defaultVariants: { size: "default" },
 });
 
-const chartSurfaceVariants = cva("@container grid min-w-0 grid-cols-1 select-none [&_*]:outline-none", {
-  variants: {
-    variant: {
-      /** A standalone plot. */
-      card: "rounded-xl border bg-card",
-      /** Inside a ChartCard or Panel, which already draws the surface. */
-      flush: "",
-      /** No chrome or padding: sparklines, plots inside a table cell or tooltip. */
-      bare: "",
+// Recharts focuses its marks on click, which would outline them; keyboard focus (`accessibilityLayer`) keeps its outline.
+const chartSurfaceVariants = cva(
+  "@container grid min-w-0 grid-cols-1 select-none [&_*:focus:not(:focus-visible)]:outline-none",
+  {
+    variants: {
+      variant: {
+        /** A standalone plot. */
+        card: "rounded-xl border bg-card",
+        /** Inside a ChartCard or Panel, which already draws the surface. */
+        flush: "",
+        /** No chrome or padding: sparklines, plots inside a table cell or tooltip. */
+        bare: "",
+      },
     },
+    defaultVariants: { variant: "card" },
   },
-  defaultVariants: { variant: "card" },
-});
+);
 
 export type ChartSize = NonNullable<VariantProps<typeof chartSizeVariants>["size"]>;
 
@@ -48,8 +53,6 @@ interface ChartSurfaceProps
   label: string;
   /** The plot's size in pixels, for ticks and tooltips that must adapt to it. */
   onResize?: ComponentProps<typeof ResponsiveContainer>["onResize"];
-  /** The size to render at on the server, before the container can be measured. */
-  initialDimension?: ComponentProps<typeof ResponsiveContainer>["initialDimension"];
   children: ComponentProps<typeof ResponsiveContainer>["children"];
 }
 
@@ -60,7 +63,6 @@ export function ChartSurface({
   variant = "card",
   className,
   onResize,
-  initialDimension,
   children,
   ...props
 }: ChartSurfaceProps) {
@@ -80,7 +82,7 @@ export function ChartSurface({
           variant !== "bare" && "p-2",
         )}
       >
-        <ResponsiveContainer width="100%" height="100%" onResize={onResize} initialDimension={initialDimension}>
+        <ResponsiveContainer width="100%" height="100%" onResize={onResize}>
           {children}
         </ResponsiveContainer>
       </div>

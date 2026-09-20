@@ -6,7 +6,6 @@ import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
-import { Text } from "~/components/ui/text";
 import { TONE_TEXT } from "~/lib/tone";
 import { type Insight, MIN_DELTA_POINTS, MIN_HERO_MATCHES, MIN_SPLIT_MATCHES } from "~/lib/tracker/insights";
 import { cn } from "~/lib/utils";
@@ -24,11 +23,14 @@ export function PerformanceInsights({
 }) {
   return (
     <Panel>
-      <PanelHeader title="Performance insights" icon={Lightbulb} size="sm">
-        <Text variant="meta" tone="muted" numeric="tabular">
-          {resultFiltered ? "Win-rate comparisons paused" : `${(baseline * 100).toFixed(1)}% overall win rate`}
-        </Text>
-      </PanelHeader>
+      <PanelHeader
+        title="Performance insights"
+        description={
+          resultFiltered ? "Win-rate comparisons paused" : `${(baseline * 100).toFixed(1)}% overall win rate`
+        }
+        icon={Lightbulb}
+        size="sm"
+      />
       <PanelBody size="sm">
         {resultFiltered || insights.length === 0 ? (
           <EmptyState

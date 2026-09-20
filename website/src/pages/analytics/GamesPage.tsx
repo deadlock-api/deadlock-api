@@ -91,7 +91,7 @@ export function Games() {
         <Filter.SeasonPatchDate
           value={{ startDate, endDate }}
           onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
-          resetRange={defaultRange}
+          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
         />
         <Filter.MatchDuration
           value={[minDurationS ?? undefined, maxDurationS ?? undefined]}

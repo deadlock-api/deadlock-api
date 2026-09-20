@@ -1,14 +1,13 @@
 import { useQueryState } from "nuqs";
 import { useMemo } from "react";
 
-import { computePreviousPeriod } from "~/components/domain/selectors/SeasonPatchDatePicker";
 import type { Dayjs } from "~/dayjs";
 import { useDateFilterPreference } from "~/hooks/useDateFilterPreference";
 import { useSeasons } from "~/hooks/useSeasons";
 import { PATCHES } from "~/lib/constants";
 import type { DateFilterAction } from "~/lib/date-filter-preference";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
-import { defaultDateRange } from "~/lib/seasons";
+import { defaultDateRange, computePreviousPeriod } from "~/lib/seasons";
 
 /** Explicit URL range, otherwise the current season or patch chosen by the cookie. */
 export function useDateRangeState() {

@@ -1,4 +1,4 @@
-import { type AnchorHTMLAttributes, type ReactNode, useCallback } from "react";
+import { type ComponentProps, useCallback } from "react";
 
 const prefetched = new Set<string>();
 
@@ -13,30 +13,29 @@ function prefetch(href: string) {
   document.head.appendChild(link);
 }
 
-interface PrefetchAnchorProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> {
-  to: string;
-  children: ReactNode;
+interface PrefetchAnchorProps extends ComponentProps<"a"> {
+  href: string;
 }
 
-export function PrefetchAnchor({ to, children, onMouseEnter, onFocus, ...rest }: PrefetchAnchorProps) {
+export function PrefetchAnchor({ href, children, onMouseEnter, onFocus, ...rest }: PrefetchAnchorProps) {
   const handleMouseEnter = useCallback<NonNullable<typeof onMouseEnter>>(
     (e) => {
-      prefetch(to);
+      prefetch(href);
       onMouseEnter?.(e);
     },
-    [to, onMouseEnter],
+    [href, onMouseEnter],
   );
 
   const handleFocus = useCallback<NonNullable<typeof onFocus>>(
     (e) => {
-      prefetch(to);
+      prefetch(href);
       onFocus?.(e);
     },
-    [to, onFocus],
+    [href, onFocus],
   );
 
   return (
-    <a data-slot="prefetch-anchor" href={to} onMouseEnter={handleMouseEnter} onFocus={handleFocus} {...rest}>
+    <a data-slot="prefetch-anchor" href={href} onMouseEnter={handleMouseEnter} onFocus={handleFocus} {...rest}>
       {children}
     </a>
   );

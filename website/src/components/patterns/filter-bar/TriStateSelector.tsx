@@ -7,7 +7,7 @@ import { useControllableState } from "~/components/ui/hooks/use-controllable-sta
 import { cn } from "~/lib/utils";
 
 export type TriState = "included" | "excluded";
-export type TriStateValue = Map<number, TriState>;
+type TriStateValue = Map<number, TriState>;
 
 const NO_SELECTIONS: TriStateValue = new Map();
 
@@ -123,8 +123,8 @@ interface TriStateSelectorProps extends FilterCellPassthroughProps {
   value?: TriStateValue;
   defaultValue?: TriStateValue;
   onValueChange?: (value: TriStateValue) => void;
-  /** `lg` is wide enough for a `TriStateSection` to lay three groups side by side. */
-  size?: "default" | "lg";
+  /** `wide` has room for a `TriStateSection` to lay three groups side by side. */
+  width?: "default" | "wide";
   /** `TriStateItem`s, grouped by `TriStateGroup` and `TriStateSection` where the list is long. */
   children?: ReactNode;
 }
@@ -143,7 +143,7 @@ export function TriStateSelector({
   value: valueProp,
   defaultValue = NO_SELECTIONS,
   onValueChange,
-  size = "default",
+  width = "default",
   icon,
   contentClassName,
   children,
@@ -171,13 +171,13 @@ export function TriStateSelector({
       icon={icon}
       contentClassName={cn(
         "max-h-100 max-w-(--radix-popover-content-available-width) overflow-auto p-2",
-        size === "lg" ? "w-160" : "w-64",
+        width === "wide" ? "w-160" : "w-64",
         contentClassName,
       )}
       {...props}
     >
       <TriStateContext value={{ value, toggle }}>
-        <div data-slot="tri-state-list" className={cn("flex flex-col", size === "lg" ? "gap-3" : "gap-0.5")}>
+        <div data-slot="tri-state-list" className={cn("flex flex-col", width === "wide" ? "gap-3" : "gap-0.5")}>
           {children}
         </div>
       </TriStateContext>

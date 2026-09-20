@@ -29,8 +29,6 @@ import {
 } from "recharts";
 
 import { ChartHeroSelector } from "~/components/domain/selectors/ChartHeroSelector";
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
-import type { MatchMode } from "~/components/domain/selectors/MatchModeSelector";
 import { HeroTrendSummary } from "~/components/features/heroes/HeroTrendSummary";
 import { HeroTrendTooltip } from "~/components/features/heroes/HeroTrendTooltip";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
@@ -49,6 +47,7 @@ import { api } from "~/lib/api";
 import { computeBanRatesByBucket } from "~/lib/ban-rate";
 import { formatCompactAxisTick, niceTicks } from "~/lib/chart-axis";
 import { MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
+import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { buildHeroTrendPoints, HERO_TREND_LABELS, isPercentageTrend, type HeroTrendBuckets } from "~/lib/hero-trends";
 import { withoutOpenTimeBucket } from "~/lib/time-buckets";
 import { queryKeys } from "~/queries/query-keys";
@@ -450,7 +449,7 @@ export function HeroStatsOverTimeChart({
   return (
     <div aria-live="polite" aria-busy={isLoading}>
       {isLoading ? (
-        <ChartLoading label="hero trends" />
+        <ChartLoading label="hero trends" size="xl" />
       ) : (
         <div className="flex flex-col gap-3">
           <ChartSidebarLayout
@@ -519,6 +518,7 @@ export function HeroStatsOverTimeChart({
                   style={highlightStyles}
                   onResize={setChartWidth}
                   variant="flush"
+                  size="xl"
                   label={`Hero ${heroStat.replace(/_/g, " ")} over time chart`}
                 >
                   <LineChart

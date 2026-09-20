@@ -1,8 +1,18 @@
 import type { Ability } from "deadlock_api_client";
 
-import type { FullBuildItem } from "~/components/domain/match/MatchHistoryCard";
 import { day } from "~/dayjs";
 import type { SlimHero } from "~/queries/asset-queries";
+
+export interface FullBuildItem {
+  itemId: number;
+  gameTimeS: number;
+  sold: boolean;
+  /** When truly sold (not upgraded), the game time the item was sold. */
+  soldTimeS?: number;
+  /** Cumulative souls spent on items at the moment of this purchase (refund-adjusted). */
+  soulsSpent?: number;
+  imbuedAbilityNumber?: number;
+}
 
 /** Shape of a match returned by the bulk metadata endpoint with player items + kda + info. */
 export interface BulkMatchMetadata {

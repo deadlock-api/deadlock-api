@@ -1,8 +1,6 @@
 import { type Options, throttle, useQueryStates } from "nuqs";
 
-import { parseAsGameMode } from "~/components/domain/selectors/GameModeSelector";
-import { type MatchMode, parseAsMatchMode } from "~/components/domain/selectors/MatchModeSelector";
-import { type Mode, MODE_CONFIG } from "~/components/domain/selectors/ModeSelector";
+import { type MatchMode, type Mode, MODE_CONFIG, parseAsGameMode, parseAsMatchMode } from "~/lib/game-mode";
 
 const NORMAL_MODE_BY_MATCH_MODE: Record<MatchMode, Mode> = {
   "ranked,unranked": "normal_all",

@@ -5,19 +5,8 @@ import { FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 /** A vertical list of links: the app's main navigation, or the index of a long page. */
-export function SideNav({
-  size = "default",
-  className,
-  ...props
-}: React.ComponentProps<"nav"> & { size?: "default" | "sm" }) {
-  return (
-    <nav
-      data-slot="side-nav"
-      data-size={size}
-      className={cn("group/side-nav flex flex-col gap-4", className)}
-      {...props}
-    />
-  );
+export function SideNav({ className, ...props }: React.ComponentProps<"nav">) {
+  return <nav data-slot="side-nav" className={cn("flex flex-col gap-4", className)} {...props} />;
 }
 
 export function SideNavGroup({
@@ -29,10 +18,7 @@ export function SideNavGroup({
   return (
     <div data-slot="side-nav-group" className={cn("flex flex-col gap-0.5", className)} {...props}>
       {label && (
-        <p
-          data-slot="side-nav-group-label"
-          className="px-3 pb-1 eyebrow text-xs group-data-[size=sm]/side-nav:px-2 group-data-[size=sm]/side-nav:text-3xs"
-        >
+        <p data-slot="side-nav-group-label" className="px-3 pb-1 eyebrow text-xs">
           {label}
         </p>
       )}
@@ -46,7 +32,6 @@ const sideNavItemVariants = cva(
     "flex min-w-0 items-center gap-2.5 rounded-md border-s-2 px-3 py-1.5 text-sm font-medium transition-colors duration-fast ease-standard",
     FOCUS_RING,
     "[&_svg]:size-4 [&_svg]:shrink-0",
-    "group-data-[size=sm]/side-nav:gap-2 group-data-[size=sm]/side-nav:px-2 group-data-[size=sm]/side-nav:py-1 group-data-[size=sm]/side-nav:text-xs group-data-[size=sm]/side-nav:font-normal",
   ],
   {
     variants: {
@@ -86,24 +71,9 @@ export function SideNavItem({
   );
 }
 
-/**
- * A bordered strip under the links: calls to action, legal links, social icons. It follows the `size` of a SideNav
- * around it; outside one, as in the app sidebar, pass `size` yourself.
- */
-export function SideNavFooter({
-  size = "default",
-  className,
-  ...props
-}: React.ComponentProps<"div"> & { size?: "default" | "sm" }) {
+/** A bordered strip under the links: calls to action, legal links, social icons. */
+export function SideNavFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div
-      data-slot="side-nav-footer"
-      data-size={size}
-      className={cn(
-        "border-t border-sidebar-border px-3 py-2 group-data-[size=sm]/side-nav:px-2 group-data-[size=sm]/side-nav:py-1.5 group-data-[size=sm]/side-nav:text-xs data-[size=sm]:px-2 data-[size=sm]:py-1.5 data-[size=sm]:text-xs",
-        className,
-      )}
-      {...props}
-    />
+    <div data-slot="side-nav-footer" className={cn("border-t border-sidebar-border px-3 py-2", className)} {...props} />
   );
 }

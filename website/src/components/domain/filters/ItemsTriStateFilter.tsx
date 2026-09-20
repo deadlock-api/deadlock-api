@@ -10,7 +10,7 @@ import {
   TriStateSelector,
 } from "~/components/patterns/filter-bar/TriStateSelector";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
-import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
+import { filterShopableItems, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 
 const TIERS = [1, 2, 3, 4];
 
@@ -26,10 +26,11 @@ export function ItemsTriStateFilter({
   value: valueProp,
   defaultValue = NO_SELECTIONS,
   onValueChange,
-  label,
-  icon,
   ...props
-}: Omit<React.ComponentProps<typeof TriStateSelector>, "value" | "defaultValue" | "onValueChange" | "children"> & {
+}: Omit<
+  React.ComponentProps<typeof TriStateSelector>,
+  "value" | "defaultValue" | "onValueChange" | "children" | "label" | "icon"
+> & {
   /** Item id to included / excluded. */
   value?: Map<number, TriState>;
   defaultValue?: Map<number, TriState>;
@@ -44,8 +45,7 @@ export function ItemsTriStateFilter({
 
   const items = useMemo(() => {
     if (!data) return [];
-    return data
-      .filter((i) => !i.disabled && i.shopable && i.shop_image_webp)
+    return filterShopableItems(data)
       .sort((a, b) => {
         if (a.item_tier !== b.item_tier) return a.item_tier - b.item_tier;
         const slotOrder = SLOTS.map((slot) => slot.key);
@@ -64,11 +64,9 @@ export function ItemsTriStateFilter({
     <TriStateSelector
       value={value}
       onValueChange={setValue}
-      label={label || "Items"}
-      size="lg"
-      icon={
-        icon ?? (firstSelected && <ItemImage itemId={firstSelected.id} className="size-5 shrink-0 object-contain" />)
-      }
+      label="Items"
+      width="wide"
+      icon={firstSelected && <ItemImage itemId={firstSelected.id} className="size-5 shrink-0 object-contain" />}
       {...props}
     >
       {TIERS.map((tier) => (

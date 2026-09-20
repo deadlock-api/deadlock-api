@@ -2,11 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiHeroStatsRequest, AnalyticsApiHeroBanStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
 import StatTrendChart, { type StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { getPickrateMultiplier, MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
+import type { GameMode } from "~/lib/game-mode";
 import { buildHeroTableTrend, HERO_TABLE_TRENDS, type HeroTableTrend } from "~/lib/hero-table-trends";
 import { completeTimeBuckets } from "~/lib/time-buckets";
 import { queryKeys } from "~/queries/query-keys";

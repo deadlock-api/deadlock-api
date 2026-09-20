@@ -4,6 +4,7 @@ import { HeroCell } from "~/components/domain/assets/HeroCell";
 import type { ScoreboardSort } from "~/components/domain/player-scoreboard/ScoreboardTable";
 import { formatStatValue } from "~/components/domain/player-scoreboard/sort-options";
 import { SortBySelector } from "~/components/domain/player-scoreboard/SortBySelector";
+import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { SortButton, ariaSort } from "~/components/ui/sort-button";
 import { Inline } from "~/components/ui/stack";
@@ -32,11 +33,15 @@ export function HeroScoreboardTable({ entries, sortBy, sortDirection, onSortChan
           <TableHead className="w-10 text-end">#</TableHead>
           <TableHead data-pinned>Hero</TableHead>
           {sortBy !== "matches" && (
-            <TableHead aria-sort="none" className="hidden text-end sm:table-cell">
-              <SortButton active={false} sortDir={sortDirection} align="end" onClick={handleMatchesClick}>
-                <span>Matches</span>
-              </SortButton>
-            </TableHead>
+            <SortableHeader
+              label="Matches"
+              sortKey="matches"
+              activeSortKey={sortBy}
+              sortDir={sortDirection}
+              align="end"
+              className="hidden sm:table-cell"
+              onSort={handleMatchesClick}
+            />
           )}
           <TableHead aria-sort={ariaSort(true, sortDirection)} className="text-end">
             <Inline gap={1} justify="end" wrap="nowrap">

@@ -16,7 +16,6 @@ import {
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
-import { Text } from "~/components/ui/text";
 import {
   Tooltip as HoverTooltip,
   TooltipCard,
@@ -72,11 +71,12 @@ export function PerformanceTrendPanel({
 
   return (
     <Panel className={className}>
-      <PanelHeader title="Performance trend" icon={ChartNoAxesCombined} size="sm">
-        <Text variant="meta" tone="muted" numeric="tabular">
-          Rolling {window} matches
-        </Text>
-      </PanelHeader>
+      <PanelHeader
+        title="Performance trend"
+        description={`Rolling ${window} matches`}
+        icon={ChartNoAxesCombined}
+        size="sm"
+      />
       <PanelBody size="sm" className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-center justify-between gap-1">
           <Segmented size="sm" width="hug" value={metric} onValueChange={setMetric} aria-label="Performance metric">

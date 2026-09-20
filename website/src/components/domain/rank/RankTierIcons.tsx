@@ -7,7 +7,7 @@ const AXIS_GAP = 4;
 /** X axis height that fits the badges; pass it to the chart's `<XAxis height>`. */
 export const RANK_ICON_AXIS_HEIGHT = ICON_SIZE + 2 * AXIS_GAP;
 
-export interface TierSpan {
+interface TierSpan {
   tier: number;
   firstBadge: number;
   lastBadge: number;

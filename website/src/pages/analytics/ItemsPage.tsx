@@ -2,7 +2,6 @@ import { parseAsInteger, useQueryState } from "nuqs";
 import { lazy, Suspense } from "react";
 
 import { Filter } from "~/components/domain/filters";
-import { DEFAULT_MODE } from "~/components/domain/selectors/ModeSelector";
 import { ItemCombFilters } from "~/components/features/items/ItemCombFilters";
 import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigation/ResponsiveTabsList";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
@@ -14,7 +13,7 @@ import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { useAnalyticsTab } from "~/hooks/useAnalyticsTab";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
-import { getEffectiveRankRange } from "~/lib/game-mode";
+import { DEFAULT_MODE, getEffectiveRankRange } from "~/lib/game-mode";
 
 const ItemPurchaseAnalysis = lazy(() =>
   import("~/components/features/items/ItemPurchaseAnalysis").then((m) => ({ default: m.ItemPurchaseAnalysis })),
@@ -77,7 +76,7 @@ export function ItemsPage() {
         <Filter.SeasonPatchDate
           value={{ startDate, endDate }}
           onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
-          resetRange={defaultRange}
+          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
         />
         {tab === "item-combos" && <ItemCombFilters />}
       </Filter.Root>

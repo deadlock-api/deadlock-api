@@ -8,8 +8,6 @@ import { useMemo, useState } from "react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
-import type { MatchMode } from "~/components/domain/selectors/MatchModeSelector";
 import { HeroDetailsTooltip } from "~/components/features/heroes/HeroDetailsTooltip";
 import { HeroStatTrend } from "~/components/features/heroes/HeroStatTrend";
 import type { StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
@@ -35,6 +33,7 @@ import { BANS_PER_MATCH, computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
 import { useExperiment } from "~/lib/experiments";
 import { formatPercent } from "~/lib/format";
+import type { GameMode, MatchMode } from "~/lib/game-mode";
 import {
   Z_SCORE_BR_WEIGHT,
   Z_SCORE_PR_WEIGHT,

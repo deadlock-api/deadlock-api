@@ -34,6 +34,7 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
 import { Field } from "~/components/ui/field";
+import { SearchInput } from "~/components/ui/search-input";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { type SortDir } from "~/components/ui/sort-button";
@@ -229,7 +230,7 @@ export function Patterns() {
       <Specimen
         name="Data table"
         source="ui/table · patterns/data-table/*"
-        note="SortableHeader carries aria-sort. data-pinned pins the identity column while the rest scrolls. Tones come from toneOf()."
+        note='SortableHeader carries aria-sort; size="sm" drops the idle arrows for dense tables, sortLabel names the button when the visible label is not enough, and label takes a node. data-pinned pins the identity column while the rest scrolls. Tones come from toneOf().'
       >
         <Segmented size="sm" width="hug" aria-label="Density" value={density} onValueChange={setDensity}>
           <SegmentedItem value="default">default</SegmentedItem>
@@ -261,13 +262,19 @@ export function Patterns() {
                 <SortableHeader
                   label="Pick rate"
                   align="end"
+                  size="sm"
+                  sortLabel={`Sort by pick rate, ${sortKey === "pickRate" && sortDir === "desc" ? "ascending" : "descending"}`}
                   sortKey="pickRate"
                   activeSortKey={sortKey}
                   sortDir={sortDir}
                   onSort={onSort}
                 />
                 <SortableHeader
-                  label="Matches"
+                  label={
+                    <>
+                      Matches <span className="font-normal text-muted-foreground">(n)</span>
+                    </>
+                  }
                   align="end"
                   sortKey="matches"
                   activeSortKey={sortKey}
@@ -301,27 +308,32 @@ export function Patterns() {
       <Specimen
         name="PaginationControls"
         source="patterns/data-table/PaginationControls"
-        note='Search, rows per page and paging in one wrapping row. size="sm" shrinks every control for panels and dialogs.'
+        note='Rows per page and paging in one wrapping row; a SearchInput child takes the row it wraps onto. size="sm" shrinks every control for panels and dialogs.'
       >
         <Variants label="default" className="block">
           <PaginationControls
-            searchQuery={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Search heroes"
-            itemsPerPage={perPage}
-            onItemsPerPageChange={setPerPage}
-            currentPage={page}
+            page={page}
             onPageChange={setPage}
+            pageSize={perPage}
+            onPageSizeChange={setPerPage}
             totalPages={3}
-          />
+          >
+            <SearchInput
+              size="sm"
+              placeholder="Search heroes"
+              aria-label="Search heroes"
+              value={search}
+              onValueChange={setSearch}
+            />
+          </PaginationControls>
         </Variants>
         <Variants label='size="sm"' className="block">
           <PaginationControls
             size="sm"
-            itemsPerPage={perPage}
-            onItemsPerPageChange={setPerPage}
-            currentPage={page}
+            page={page}
             onPageChange={setPage}
+            pageSize={perPage}
+            onPageSizeChange={setPerPage}
             totalPages={3}
           />
         </Variants>
@@ -333,6 +345,26 @@ export function Patterns() {
         note="A titled block of a dashboard. The parts bring their own padding, so a table or chart can run edge to edge."
       >
         <Variants className="grid items-start md:grid-cols-3">
+          <Panel>
+            <PanelHeader title="Win rate by lane" description="1,204 matches" size="sm" />
+            <PanelBody size="sm" className="text-sm">
+              description: a quiet line beside the title.
+            </PanelBody>
+          </Panel>
+          <Panel className="max-w-72">
+            <PanelHeader
+              title="A long title that has to truncate"
+              description="A long description wraps under the title: 12 Aug to 20 Sep, 1,204 matches, all ranks"
+              size="sm"
+            >
+              <Badge variant="muted" size="sm">
+                12
+              </Badge>
+            </PanelHeader>
+            <PanelBody size="sm" className="text-sm">
+              Overflowing description with a trailing control, in a narrow panel.
+            </PanelBody>
+          </Panel>
           <Panel>
             <PanelHeader title="Best next pick">
               <Badge variant="muted" size="sm">

@@ -3,13 +3,13 @@ import { type ReactNode, useState } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
+import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { PanelWithDetails } from "~/components/patterns/panel/PanelWithDetails";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Button } from "~/components/ui/button";
 import { Field } from "~/components/ui/field";
-import { RateBar } from "~/components/ui/rate-bar";
+import { ProgressBar } from "~/components/ui/progress-bar";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
-import { ariaSort, SortButton } from "~/components/ui/sort-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip } from "~/components/ui/tooltip";
 import type { TrackerHeroRow } from "~/lib/tracker/compute";
@@ -56,7 +56,6 @@ export function HeroStatsTable({
       open={open}
       onOpenChange={setOpen}
       details={details({ minimumMatches, sort, direction, close: () => setOpen(false) })}
-      metaPlacement="both"
       title="Hero pool"
       icon={Users}
       footer={
@@ -65,7 +64,7 @@ export function HeroStatsTable({
           {minimumMatches > 0 ? ` · ${minimumMatches}+ games` : " · selected matches"}
         </output>
       }
-      meta={
+      actions={
         <Field orientation="horizontal" label="Min. games">
           <Segmented
             size="sm"
@@ -106,22 +105,21 @@ export function HeroStatsTable({
                 <span className="text-3xs text-muted-foreground">Hero</span>
               </TableHead>
               {columns.map(({ key, label, name }) => (
-                <TableHead key={key} className="text-end" aria-sort={ariaSort(sort === key, sortDir)}>
-                  <SortButton
-                    active={sort === key}
-                    sortDir={sortDir}
-                    align="end"
-                    size="sm"
-                    aria-label={`Sort by ${name}, ${sort === key && direction === "descending" ? "ascending" : "descending"}`}
-                    onClick={() => {
-                      setDirection(sort === key && direction === "descending" ? "ascending" : "descending");
-                      setSort(key);
-                    }}
-                    className="text-3xs text-muted-foreground"
-                  >
-                    {label}
-                  </SortButton>
-                </TableHead>
+                <SortableHeader
+                  key={key}
+                  label={label}
+                  sortKey={key}
+                  activeSortKey={sort}
+                  sortDir={sortDir}
+                  align="end"
+                  size="sm"
+                  className="text-3xs text-muted-foreground"
+                  sortLabel={`Sort by ${name}, ${sort === key && direction === "descending" ? "ascending" : "descending"}`}
+                  onSort={(next) => {
+                    setDirection(sort === next && direction === "descending" ? "ascending" : "descending");
+                    setSort(next);
+                  }}
+                />
               ))}
             </TableRow>
           </TableHeader>
@@ -149,7 +147,7 @@ export function HeroStatsTable({
                 <TableCell className="text-end">
                   <div className="ms-auto flex w-12 flex-col gap-1 text-xs tabular-nums">
                     <span>{(row.winrate * 100).toFixed(0)}%</span>
-                    <RateBar rate={row.winrate} className="h-1" />
+                    <ProgressBar variant="thin" value={row.winrate} className="h-1" />
                   </div>
                 </TableCell>
                 <TableCell className="text-end">

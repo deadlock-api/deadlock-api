@@ -8,8 +8,8 @@ import { Section } from "~/components/patterns/page/Section";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Card } from "~/components/ui/card";
 import { CheckboxField } from "~/components/ui/checkbox-field";
-import { ColorInput } from "~/components/ui/color-input";
 import { Field } from "~/components/ui/field";
+import { Input } from "~/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Inline, Stack } from "~/components/ui/stack";
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -141,7 +141,8 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
           />
           {!config.previewBackgroundImage && (
             <Field label="Background Color" orientation="horizontal">
-              <ColorInput
+              <Input
+                type="color"
                 aria-label="Background Color"
                 disabled={config.previewBackgroundImage}
                 value={config.previewBackgroundColor}

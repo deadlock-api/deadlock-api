@@ -2,7 +2,7 @@ import { ChevronDownIcon, TriangleAlertIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
-import StatTrendChart, { type StatTrendPoint } from "~/components/patterns/charts/StatTrendChart";
+import StatTrendChart from "~/components/patterns/charts/StatTrendChart";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { FilterCell } from "~/components/patterns/filter-bar/FilterCell";
@@ -25,8 +25,8 @@ import { Input } from "~/components/ui/input";
 import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { OptionRow } from "~/components/ui/option-row";
 import { Pips } from "~/components/ui/pips";
-import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
-import { DivergingBar, RateBar } from "~/components/ui/rate-bar";
+import { ProgressBar, ProgressBarWithLabel } from "~/components/ui/progress-bar";
+import { DivergingBar } from "~/components/ui/rate-bar";
 import { SearchInput } from "~/components/ui/search-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Slider } from "~/components/ui/slider";
@@ -36,6 +36,7 @@ import { StatusDot } from "~/components/ui/status-dot";
 import { SwitchField } from "~/components/ui/switch-field";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Textarea } from "~/components/ui/textarea";
+import type { StatTrendPoint } from "~/lib/stat-format";
 
 const LONG_LABEL =
   "Durchschnittliche Netzwertentwicklung pro Minute im Vergleich zum Lobby-Durchschnitt derselben Rangstufe";
@@ -279,7 +280,7 @@ function StatusDotStates() {
   return (
     <Variants label="tone, color and ring, always beside the text that carries the meaning">
       <span className="flex items-center gap-1.5 text-sm">
-        <StatusDot tone="positive" />
+        <StatusDot tone="primary" />
         Live
       </span>
       <span className="flex items-center gap-1.5 text-sm">
@@ -287,8 +288,8 @@ function StatusDotStates() {
         Series 4
       </span>
       <span className="flex items-center gap-1.5 text-sm">
-        <StatusDot tone="warning" />
-        Degraded
+        <StatusDot />
+        Idle
       </span>
     </Variants>
   );
@@ -298,8 +299,8 @@ function BarStates() {
   return (
     <>
       <Variants label="rate and no value" className="w-72 flex-col items-stretch gap-4">
-        <RateBar rate={0.62} />
-        <RateBar rate={null} />
+        <ProgressBar variant="thin" value={0.62} />
+        <ProgressBar variant="thin" />
       </Variants>
       <Variants label="diverging: gain, loss, and an interval" className="w-72 flex-col items-stretch gap-4">
         <DivergingBar value={0.04} scale={0.1} />
@@ -308,7 +309,7 @@ function BarStates() {
       </Variants>
       <Variants label="right to left" className="w-72 flex-col items-stretch">
         <div dir="rtl" className="flex flex-col gap-4">
-          <RateBar rate={0.62} />
+          <ProgressBar variant="thin" value={0.62} />
           <DivergingBar value={0.04} scale={0.1} />
         </div>
       </Variants>
@@ -372,6 +373,16 @@ function FilterCellStates() {
             <StringOption value="namerica">North America</StringOption>
           </StringSelector>
           <FilterCell label="Hero" value="Infernus" active onReset={() => undefined}>
+            <p className="text-sm">The editor of this filter.</p>
+          </FilterCell>
+        </FilterBar>
+      </Variants>
+      <Variants label="size sm, in a toolbar" className="items-stretch">
+        <FilterBar variant="toolbar" title="Matchups" className="w-full">
+          <FilterCell size="sm" label="Hero" value="Infernus">
+            <p className="text-sm">The editor of this filter.</p>
+          </FilterCell>
+          <FilterCell size="sm" label="Hero" value="Infernus" active onReset={() => undefined}>
             <p className="text-sm">The editor of this filter.</p>
           </FilterCell>
         </FilterBar>
@@ -655,9 +666,8 @@ export function Round4States() {
         source="ui/progress-bar"
         note="Without a label the bar prints its own percentage; with neither a label nor a reading it prints NoValue instead of a misleading “0%”."
       >
-        <Variants label="reading, horizontal, no reading" className="items-start">
+        <Variants label="reading, no reading" className="items-start">
           <ProgressBarWithLabel value={0.62} label="62%" delta={0.021} className="w-40" />
-          <ProgressBarWithLabel orientation="horizontal" value={0.62} className="w-40" />
           <ProgressBarWithLabel value={undefined} className="w-40" />
         </Variants>
       </Specimen>

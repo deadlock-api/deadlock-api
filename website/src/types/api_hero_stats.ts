@@ -59,3 +59,6 @@ export const TIME_INTERVALS: TimeInterval[] = [
     query: "start_time_week",
   },
 ];
+
+export const BY_RANK_STATS = [...HERO_STATS_WITH_BAN_RATE, "pickrate"] as const;
+export type ByRankStat = (typeof BY_RANK_STATS)[number];

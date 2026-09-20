@@ -18,17 +18,14 @@ export function RankTierTick({
   y,
   payload,
   tiers,
-  size: sizeProp,
 }: {
   x?: number;
   y?: number;
   payload?: { value: number };
   tiers: readonly RankTickTier[];
-  /** Badge edge in px; sized from the width of the chart it is drawn in when omitted. */
-  size?: number;
 }) {
   const chartWidth = useChartWidth() ?? 0;
-  const size = sizeProp ?? rankTickSize(chartWidth, tiers.length);
+  const size = rankTickSize(chartWidth, tiers.length);
   const entry = tiers.find((t) => t.tier === payload?.value);
   if (x === undefined || y === undefined || !entry) return null;
   return entry.image ? (

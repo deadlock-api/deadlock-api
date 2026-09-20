@@ -27,7 +27,6 @@ export function ItemTierSelector({
       <ToggleGroup
         type="multiple"
         variant="outline"
-        size="sm"
         disabled={disabled}
         value={value.map(String)}
         onValueChange={(tiers) => setValue(tiers.map(Number))}

@@ -50,16 +50,12 @@ export function ComparisonTable({
 }
 
 /** The heading row. Children are the `ComparisonColumn`s; the feature column gets a heading for screen readers. */
-export function ComparisonHeader({
-  featureLabel = "Feature",
-  children,
-  ...props
-}: React.ComponentProps<typeof TableHeader> & { featureLabel?: string }) {
+export function ComparisonHeader({ children, ...props }: React.ComponentProps<typeof TableHeader>) {
   return (
     <TableHeader tone="muted" {...props}>
       <TableRow className="hover:bg-transparent">
         <TableHead className="px-4">
-          <span className="sr-only">{featureLabel}</span>
+          <span className="sr-only">Feature</span>
         </TableHead>
         {withColumnIndex(children)}
       </TableRow>
@@ -103,14 +99,13 @@ export function ComparisonRow({
 
 /**
  * What one plan offers for one feature. `included` draws a check, its absence a dash, each with a text
- * alternative; children replace both with a value such as "50 accounts".
+ * alternative.
  */
 export function ComparisonCell({
   included = false,
   className,
-  children,
   ...props
-}: React.ComponentProps<typeof TableCell> & { included?: boolean }) {
+}: Omit<React.ComponentProps<typeof TableCell>, "children"> & { included?: boolean }) {
   const highlighted = useHighlighted();
   const Icon = included ? CheckIcon : MinusIcon;
   return (
@@ -124,12 +119,8 @@ export function ComparisonCell({
       )}
       {...props}
     >
-      {children ?? (
-        <>
-          <Icon aria-hidden="true" className="mx-auto size-4" />
-          <span className="sr-only">{included ? "Included" : "Not included"}</span>
-        </>
-      )}
+      <Icon aria-hidden="true" className="mx-auto size-4" />
+      <span className="sr-only">{included ? "Included" : "Not included"}</span>
     </TableCell>
   );
 }

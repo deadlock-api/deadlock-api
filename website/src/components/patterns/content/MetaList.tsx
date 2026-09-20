@@ -6,22 +6,12 @@ import { cn } from "~/lib/utils";
  * A line of facts about one thing, divided by bars: date, author, reading time. Built from spans, so it is valid
  * inside a paragraph such as a PageHeader description.
  */
-export function MetaList({
-  size = "default",
-  className,
-  children,
-  ...props
-}: React.ComponentProps<"span"> & { size?: "sm" | "default" }) {
+export function MetaList({ className, children, ...props }: React.ComponentProps<"span">) {
   const items = Children.toArray(children);
   return (
     <span
       data-slot="meta-list"
-      data-size={size}
-      className={cn(
-        "flex min-w-0 flex-wrap items-center text-muted-foreground",
-        size === "sm" ? "gap-x-2 gap-y-0.5 text-2xs" : "gap-x-3 gap-y-1 text-xs",
-        className,
-      )}
+      className={cn("flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground", className)}
       {...props}
     >
       {items.map((item, i) => (

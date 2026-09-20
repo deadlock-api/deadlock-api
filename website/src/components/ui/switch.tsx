@@ -1,7 +1,7 @@
 import { Switch as SwitchPrimitive } from "radix-ui";
 import * as React from "react";
 
-import { FOCUS_RING_BORDER, INVALID_STATE } from "~/components/ui/recipes";
+import { DISABLED_STATE, FOCUS_RING_BORDER, INVALID_STATE } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 // The tracks are under 24px tall; the pseudo-element extends the hit area to 24px.
@@ -30,7 +30,8 @@ function Switch({
       className={cn(
         FOCUS_RING_BORDER,
         INVALID_STATE,
-        "peer relative inline-flex shrink-0 items-center rounded-full border border-transparent shadow-xs transition-all after:absolute after:inset-x-0 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:hover:bg-primary/90 data-[state=unchecked]:bg-input/80 data-[state=unchecked]:hover:bg-input",
+        DISABLED_STATE,
+        "peer relative inline-flex shrink-0 items-center rounded-full border border-transparent shadow-xs transition-all after:absolute after:inset-x-0 data-[state=checked]:bg-primary data-[state=checked]:hover:bg-primary/90 data-[state=unchecked]:bg-input/80 data-[state=unchecked]:hover:bg-input",
         TRACK[size],
         className,
       )}

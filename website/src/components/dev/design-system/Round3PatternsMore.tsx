@@ -56,8 +56,8 @@ function CodeSpecimens() {
         <Variants label='overflow="wrap" size="lg"' className="block max-w-md">
           <HighlightedCode language="bash" code={INSTALL} overflow="wrap" size="lg" actions="copy" />
         </Variants>
-        <Variants label='size="sm", actions="none" (default)' className="block">
-          <HighlightedCode language="json" code={'{ "version": 123, "tables": [] }'} size="sm" />
+        <Variants label='actions="none" (default)' className="block">
+          <HighlightedCode language="json" code={'{ "version": 123, "tables": [] }'} />
         </Variants>
       </Specimen>
 
@@ -111,20 +111,24 @@ function PanelSpecimens() {
       <Specimen
         name="PanelWithDetails"
         source="patterns/panel/PanelWithDetails"
-        note='A compact panel whose "Show more" opens the full content in a dialog. children are the compact view, details is the dialog body (mounted only while open). open / onOpenChange.'
+        note='A compact panel whose "Show more" opens the full content in a dialog. children are the compact view, details is the dialog body (mounted only while open). description (text) and actions (controls) show in the panel header and in the dialog. open / onOpenChange.'
       >
         <Variants
-          label='with icon, meta, footer and dialogSize="default"; bare, dialogSize="full" (default)'
+          label='with icon, description, actions, footer and dialogSize="default"; bare, dialogSize="full" (default)'
           className="grid items-start sm:grid-cols-2"
         >
           <PanelWithDetails
             title="Companions"
             icon={Users}
-            meta="120 matches"
-            metaPlacement="both"
+            description="120 matches"
+            actions={
+              <Button variant="outline" size="xs">
+                Any mode
+              </Button>
+            }
             footer="Players you queued with at least 3 times"
             dialogSize="default"
-            details={<SkeletonMediaRow rows={6} variant="divided" label="companions" />}
+            details={<SkeletonMediaRow rows={6} label="companions" />}
           >
             <SkeletonMediaRow rows={2} />
           </PanelWithDetails>
@@ -191,9 +195,8 @@ function StatesSpecimens() {
           <SkeletonRows size="sm" rows={3} variant="solid" />
           <SkeletonRows rows={3} />
         </Variants>
-        <Variants label='SkeletonMediaRow: variant "plain" | "divided"' className="grid items-start sm:grid-cols-2">
+        <Variants label="SkeletonMediaRow" className="block">
           <SkeletonMediaRow rows={2} />
-          <SkeletonMediaRow rows={2} variant="divided" />
         </Variants>
         <Variants label="SkeletonStatTiles (steps down with its container)" className="block">
           <SkeletonStatTiles count={6} />
@@ -262,7 +265,7 @@ function DataTableSpecimens() {
       <Specimen
         name="ComparisonTable"
         source="patterns/data-table/ComparisonTable"
-        note="Features down the side, plans across the top, composed from rows and cells. highlightedColumn tints one plan. A cell is a check, a dash, or its children."
+        note="Features down the side, plans across the top, composed from rows and cells. highlightedColumn tints one plan. A cell is a check or a dash."
       >
         <ComparisonTable highlightedColumn={1} className="max-w-2xl">
           <ComparisonHeader>
@@ -277,10 +280,6 @@ function DataTableSpecimens() {
             <ComparisonRow label="Dedicated queue with reserved resources, which is a long label that wraps">
               <ComparisonCell />
               <ComparisonCell included />
-            </ComparisonRow>
-            <ComparisonRow label="Prioritized accounts">
-              <ComparisonCell>1</ComparisonCell>
-              <ComparisonCell>Up to 50</ComparisonCell>
             </ComparisonRow>
           </TableBody>
         </ComparisonTable>

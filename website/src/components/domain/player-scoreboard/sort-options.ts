@@ -1,6 +1,6 @@
 export type SortVariant = "avg" | "max" | "total";
 
-export interface SortCategory {
+interface SortCategory {
   label: string;
   key: string;
   variants?: SortVariant[];

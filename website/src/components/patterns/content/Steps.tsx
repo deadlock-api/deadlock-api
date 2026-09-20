@@ -3,16 +3,6 @@ import { createContext, useContext } from "react";
 
 import { cn } from "~/lib/utils";
 
-const stepsVariants = cva("group/steps flex min-w-0 list-none flex-col [counter-reset:step]", {
-  variants: {
-    size: {
-      sm: "gap-1 text-xs",
-      default: "gap-3 text-sm",
-    },
-  },
-  defaultVariants: { size: "default" },
-});
-
 const markerVariants = cva("tabular-nums", {
   variants: {
     variant: {
@@ -33,17 +23,15 @@ const StepsVariantContext = createContext<StepsVariant>("badge");
 /** Numbered instructions. The numbers come from a CSS counter, so steps can be added, removed or conditional. */
 export function Steps({
   variant = "badge",
-  size = "default",
   className,
   ...props
-}: React.ComponentProps<"ol"> & VariantProps<typeof stepsVariants> & { variant?: StepsVariant }) {
+}: React.ComponentProps<"ol"> & { variant?: StepsVariant }) {
   return (
     <StepsVariantContext.Provider value={variant}>
       <ol
         data-slot="steps"
         data-variant={variant}
-        data-size={size}
-        className={cn(stepsVariants({ size }), className)}
+        className={cn("group/steps flex min-w-0 list-none flex-col gap-3 text-sm [counter-reset:step]", className)}
         {...props}
       />
     </StepsVariantContext.Provider>
@@ -71,7 +59,7 @@ export function Step({
       >
         <span className={markerVariants({ variant })} />
       </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-2 group-data-[size=sm]/steps:gap-1">
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
         {title && <p className="text-foreground">{title}</p>}
         {children}
       </div>

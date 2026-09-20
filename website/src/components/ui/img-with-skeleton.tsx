@@ -1,29 +1,34 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
-import { Skeleton } from "~/components/ui/skeleton";
 import { cn } from "~/lib/utils";
 
-export function ImgWithSkeleton(props: React.ImgHTMLAttributes<HTMLImageElement>) {
+/** An image that pulses like a `Skeleton` in its own box until it has loaded or failed. */
+export function ImgWithSkeleton({ className, ref, onLoad, onError, alt, ...props }: React.ComponentProps<"img">) {
   const [loaded, setLoaded] = useState(false);
 
-  // An SSR'd or cached image can finish loading before React attaches onLoad, so
-  // that event never fires — check completeness once the element is attached.
-  const ref = useCallback((img: HTMLImageElement | null) => {
-    if (img?.complete) setLoaded(true);
-  }, []);
-
   return (
-    <>
-      {!loaded && <Skeleton className={cn("size-5", props.className)} />}
-      <img
-        data-slot="img-with-skeleton"
-        {...props}
-        ref={ref}
-        style={{ display: loaded ? "block" : "none", ...(props.style || {}) }}
-        onLoad={() => setLoaded(true)}
-        onError={() => setLoaded(true)}
-        alt={props.alt}
-      />
-    </>
+    <img
+      data-slot="img-with-skeleton"
+      data-state={loaded ? "loaded" : "loading"}
+      ref={(img) => {
+        // An SSR'd or cached image can finish loading before React attaches onLoad, so
+        // that event never fires — check completeness once the element is attached.
+        if (img?.complete) setLoaded(true);
+        if (typeof ref === "function") return ref(img);
+        if (ref) ref.current = img;
+      }}
+      alt={alt}
+      // The alt text stays hidden while loading so it cannot flash inside the pulse; a failed image shows it.
+      className={cn(!loaded && "animate-pulse rounded-md bg-accent text-transparent", className)}
+      onLoad={(event) => {
+        setLoaded(true);
+        onLoad?.(event);
+      }}
+      onError={(event) => {
+        setLoaded(true);
+        onError?.(event);
+      }}
+      {...props}
+    />
   );
 }

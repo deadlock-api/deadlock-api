@@ -3,13 +3,13 @@ import { Fragment, useState } from "react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroName } from "~/components/domain/assets/HeroName";
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
 import { Panel, PanelBody, PanelHeader, PanelShowMore } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { SkeletonRows } from "~/components/patterns/states/Skeletons";
 import { Button } from "~/components/ui/button";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
+import type { GameMode } from "~/lib/game-mode";
 import type { Recommendation, Side, Swap } from "~/lib/team-builder/analysis";
 import { deltaClass, formatPoints, formatRate } from "~/lib/team-builder/format";
 import { slotLane } from "~/lib/team-builder/lanes";

@@ -8,12 +8,13 @@ import {
   ComparisonRow,
   ComparisonTable,
 } from "~/components/patterns/data-table/ComparisonTable";
-import { Hero, HeroActions, HeroGlow, HeroNote } from "~/components/patterns/page/Hero";
+import { Hero, HeroActions } from "~/components/patterns/page/Hero";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Button } from "~/components/ui/button";
 import { IconTile } from "~/components/ui/icon-tile";
 import { TableBody } from "~/components/ui/table";
+import { Text } from "~/components/ui/text";
 
 /** One feature the free tier also has. A patron-only feature is a `ComparisonRow` with an empty free cell. */
 function FreeAndPatronRow({ label }: { label: string }) {
@@ -38,7 +39,6 @@ export function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
   return (
     <PageShell density="content">
       <Hero>
-        <HeroGlow />
         <PageHeader
           size="lg"
           title={
@@ -60,7 +60,9 @@ export function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
             </a>
           </Button>
         </HeroActions>
-        <HeroNote>Starting at $1.50/month, every cent goes to infrastructure</HeroNote>
+        <Text as="p" variant="caption" tone="muted">
+          Starting at $1.50/month, every cent goes to infrastructure
+        </Text>
       </Hero>
 
       <ComparisonTable highlightedColumn={1} className="mx-auto w-full max-w-2xl">

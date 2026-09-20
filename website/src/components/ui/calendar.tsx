@@ -10,13 +10,10 @@ function Calendar({
   classNames,
   showOutsideDays = true,
   captionLayout = "label",
-  buttonVariant = "ghost",
   formatters,
   components,
   ...props
-}: React.ComponentProps<typeof DayPicker> & {
-  buttonVariant?: React.ComponentProps<typeof Button>["variant"];
-}) {
+}: React.ComponentProps<typeof DayPicker>) {
   const defaultClassNames = getDefaultClassNames();
 
   return (
@@ -39,12 +36,12 @@ function Calendar({
         month: cn("flex w-full flex-col gap-4", defaultClassNames.month),
         nav: cn("absolute inset-x-0 top-0 flex w-full items-center justify-between gap-1", defaultClassNames.nav),
         button_previous: cn(
-          buttonVariants({ variant: buttonVariant }),
+          buttonVariants({ variant: "ghost" }),
           "size-(--cell-size) p-0 select-none aria-disabled:opacity-50",
           defaultClassNames.button_previous,
         ),
         button_next: cn(
-          buttonVariants({ variant: buttonVariant }),
+          buttonVariants({ variant: "ghost" }),
           "size-(--cell-size) p-0 select-none aria-disabled:opacity-50",
           defaultClassNames.button_next,
         ),

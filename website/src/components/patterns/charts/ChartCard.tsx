@@ -26,8 +26,7 @@ export function ChartCard({
   return (
     <Panel asChild className={className} {...props}>
       <section>
-        <PanelHeader title={title} size="sm">
-          {description && <span className="text-xs text-muted-foreground tabular-nums">{description}</span>}
+        <PanelHeader title={title} description={description} size="sm">
           {actions && <div className="ms-auto flex flex-wrap items-center gap-2">{actions}</div>}
         </PanelHeader>
         {children}

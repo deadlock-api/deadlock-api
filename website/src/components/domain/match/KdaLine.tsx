@@ -1,34 +1,25 @@
-import { cva, type VariantProps } from "class-variance-authority";
-
 import { cn } from "~/lib/utils";
-
-const kdaLineVariants = cva("inline-flex items-baseline gap-0.5 font-bold tracking-wide text-foreground tabular-nums", {
-  variants: {
-    size: { default: "text-base leading-none" },
-  },
-  defaultVariants: { size: "default" },
-});
 
 /** Kills / deaths / assists of one player in one match: the numbers in ink, the slashes muted. */
 export function KdaLine({
   kills,
   deaths,
   assists,
-  size,
   className,
   ...props
-}: Omit<React.ComponentProps<"span">, "children"> &
-  VariantProps<typeof kdaLineVariants> & {
-    kills: number;
-    deaths: number;
-    assists: number;
-  }) {
+}: Omit<React.ComponentProps<"span">, "children"> & {
+  kills: number;
+  deaths: number;
+  assists: number;
+}) {
   const slash = <span className="font-medium text-muted-foreground">/</span>;
   return (
     <span
       data-slot="kda-line"
-      data-size={size ?? "default"}
-      className={cn(kdaLineVariants({ size }), className)}
+      className={cn(
+        "inline-flex items-baseline gap-0.5 text-base leading-none font-bold tracking-wide text-foreground tabular-nums",
+        className,
+      )}
       {...props}
     >
       <span className="sr-only">{`${kills} kills, ${deaths} deaths, ${assists} assists`}</span>

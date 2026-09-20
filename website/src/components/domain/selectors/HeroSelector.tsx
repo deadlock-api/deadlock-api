@@ -27,7 +27,6 @@ export function HeroSelector({
   defaultValue,
   onValueChange,
   allowNull,
-  label,
   className,
   ...props
 }: Omit<
@@ -40,7 +39,6 @@ export function HeroSelector({
   defaultValue?: number | null;
   onValueChange?: (heroId: number | null) => void;
   allowNull?: boolean;
-  label?: string;
 }) {
   const [selectedHero, setSelectedHero] = useControllableState<number | null>({
     value: valueProp,
@@ -73,7 +71,7 @@ export function HeroSelector({
 
   return (
     <FilterCell
-      label={label ?? "Hero"}
+      label="Hero"
       value={displayValue}
       active={isActive}
       onReset={allowNull || defaultValue != null ? () => select(defaultValue ?? null) : undefined}

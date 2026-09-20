@@ -3,14 +3,13 @@ import type { HashMapValue } from "deadlock_api_client";
 import { Coins, Flame, HeartPulse, type LucideIcon, Swords, Wheat } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
-import type { MatchMode } from "~/components/domain/selectors/MatchModeSelector";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { CHART_COLOR, SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { PLAYER_METRIC_CATEGORIES, PLAYER_METRICS, type PlayerMetricCategory } from "~/lib/player-metrics";
 import { playerStatsMetricsQueryOptions } from "~/queries/player-stats-metrics-query";
 

@@ -8,7 +8,7 @@ import { GraphNodeCard } from "~/components/domain/graph/GraphNodeCard";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
-import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import type { AbilityTrieNode } from "~/lib/ability-order-utils";
 import { getPickRate, getSortedChildren, getWinRate } from "~/lib/ability-order-utils";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
@@ -107,6 +107,57 @@ export default function AbilityOrderNode({
 
   const childrenRowRef = useRef<HTMLDivElement>(null);
 
+  const details = (
+    <>
+      <TooltipHeader title={`T${abilityLevel} · ${cumulativePoints} ability points spent`} />
+      <TooltipStats>
+        <TooltipStat label="Win Rate" value={`${wrPercent.toFixed(1)}%`} className={TONE_TEXT[toneOf(winRate, 0.5)]} />
+        <TooltipStat label="Pick Rate" value={`${prPercent.toFixed(1)}%`} />
+        <TooltipStat label="Chain Pick Rate" value={`${chainPrPercent.toFixed(1)}%`} />
+        <TooltipStat label="Players" value={node.players.toLocaleString("en-US")} />
+        <TooltipStat label="Matches" value={node.matches.toLocaleString("en-US")} />
+        <TooltipStat
+          label="W / L"
+          value={
+            <>
+              <span className="text-positive">{node.wins.toLocaleString("en-US")}</span>
+              {" / "}
+              <span className="text-negative">{node.losses.toLocaleString("en-US")}</span>
+            </>
+          }
+        />
+        <TooltipStat label="Avg KDA" value={`${avgKills} / ${avgDeaths} / ${avgAssists}`} />
+      </TooltipStats>
+    </>
+  );
+
+  const card = (
+    <GraphNodeCard
+      data-ability-card
+      className="w-40"
+      accent={slot ? SLOT_ACCENT[slot as keyof typeof SLOT_ACCENT] : "none"}
+      fill="accent"
+      emphasis={emphasis}
+      selected={isFocused}
+      interaction={isFocusable ? "pressable" : "none"}
+      onClick={isFocusable ? () => onToggleFocus(currentPath) : undefined}
+      media={
+        node.abilityId != null ? <AbilityImage abilityId={node.abilityId} className="size-10 shrink-0" /> : undefined
+      }
+      name={node.abilityId != null ? <AbilityName abilityId={node.abilityId} /> : "Root"}
+      meta={
+        <>
+          <Badge variant="muted" size="sm">
+            T{abilityLevel}
+          </Badge>
+          <span>{cumulativePoints} pts</span>
+        </>
+      }
+      winRate={winRate}
+      pickRate={pickRate}
+    />
+  );
+
   return (
     <motion.div
       className="flex flex-col items-center"
@@ -115,57 +166,9 @@ export default function AbilityOrderNode({
       animate="show"
       transition={{ delay: index * 0.06 }}
     >
-      <GraphNodeCard
-        data-ability-card
-        className="w-40"
-        accent={slot ? SLOT_ACCENT[slot as keyof typeof SLOT_ACCENT] : "none"}
-        fill="accent"
-        emphasis={emphasis}
-        selected={isFocused}
-        onClick={isFocusable ? () => onToggleFocus(currentPath) : undefined}
-        media={
-          node.abilityId != null ? <AbilityImage abilityId={node.abilityId} className="size-10 shrink-0" /> : undefined
-        }
-        name={node.abilityId != null ? <AbilityName abilityId={node.abilityId} /> : "Root"}
-        meta={
-          <>
-            <Badge variant="muted" size="sm">
-              T{abilityLevel}
-            </Badge>
-            <span>{cumulativePoints} pts</span>
-          </>
-        }
-        winRate={winRate}
-        pickRate={pickRate}
-        tooltipSide="right"
-        tooltip={
-          <>
-            <TooltipHeader title={`T${abilityLevel} · ${cumulativePoints} ability points spent`} />
-            <TooltipStats>
-              <TooltipStat
-                label="Win Rate"
-                value={`${wrPercent.toFixed(1)}%`}
-                className={TONE_TEXT[toneOf(winRate, 0.5)]}
-              />
-              <TooltipStat label="Pick Rate" value={`${prPercent.toFixed(1)}%`} />
-              <TooltipStat label="Chain Pick Rate" value={`${chainPrPercent.toFixed(1)}%`} />
-              <TooltipStat label="Players" value={node.players.toLocaleString("en-US")} />
-              <TooltipStat label="Matches" value={node.matches.toLocaleString("en-US")} />
-              <TooltipStat
-                label="W / L"
-                value={
-                  <>
-                    <span className="text-positive">{node.wins.toLocaleString("en-US")}</span>
-                    {" / "}
-                    <span className="text-negative">{node.losses.toLocaleString("en-US")}</span>
-                  </>
-                }
-              />
-              <TooltipStat label="Avg KDA" value={`${avgKills} / ${avgDeaths} / ${avgAssists}`} />
-            </TooltipStats>
-          </>
-        }
-      />
+      <Tooltip side="right" content={details}>
+        {isFocusable ? card : <TooltipTarget display="block">{card}</TooltipTarget>}
+      </Tooltip>
 
       {/* Expand/collapse button */}
       {hasChildren && !isWithinDefaultDepth && siblingCount !== 1 && (

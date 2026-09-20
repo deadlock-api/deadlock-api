@@ -2,17 +2,13 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { ArrowDown, ArrowUp, Minus, TrendingDown, TrendingUp } from "lucide-react";
 import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
-import { useDeferredValue, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
-import type { MatchMode } from "~/components/domain/selectors/MatchModeSelector";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
-import { Panel } from "~/components/patterns/panel/Panel";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Badge } from "~/components/ui/badge";
-import { SearchInput } from "~/components/ui/search-input";
 import { Skeleton } from "~/components/ui/skeleton";
 import { SortButton, ariaSort } from "~/components/ui/sort-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -22,6 +18,7 @@ import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { formatSignedPercent } from "~/lib/format";
+import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
@@ -163,20 +160,11 @@ export function HeroStatsByExperienceTable({
     return rows;
   }, [anyLoaded, bucketData, heroStat]);
 
-  const [search, setSearch] = useState("");
-  const deferredSearch = useDeferredValue(search);
-
   const [sortKey, setSortKey] = useQueryState("exp_sort_key", parseAsStringLiteral(SORT_KEYS).withDefault("trend"));
   const [sortAsc, setSortAsc] = useQueryState("exp_sort_asc", parseAsBoolean.withDefault(false));
 
-  const filteredRows = useMemo(() => {
-    const q = deferredSearch.trim().toLowerCase();
-    if (!q) return heroRows;
-    return heroRows.filter((row) => (heroIdMap[row.heroId]?.name ?? "").toLowerCase().includes(q));
-  }, [heroRows, heroIdMap, deferredSearch]);
-
   const sortedRows = useMemo(() => {
-    return [...filteredRows].sort((a, b) => {
+    return [...heroRows].sort((a, b) => {
       if (sortKey === "name") {
         const aName = heroIdMap[a.heroId]?.name ?? "";
         const bName = heroIdMap[b.heroId]?.name ?? "";
@@ -204,7 +192,7 @@ export function HeroStatsByExperienceTable({
       if (bVal === null) return -1;
       return sortAsc ? aVal - bVal : bVal - aVal;
     });
-  }, [filteredRows, sortKey, sortAsc, heroIdMap]);
+  }, [heroRows, sortKey, sortAsc, heroIdMap]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -275,90 +263,66 @@ export function HeroStatsByExperienceTable({
   );
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="max-w-prose text-sm text-muted-foreground">
-          How each hero's stats shift as players accumulate matches on them. Deltas and the trend line compare every
-          experience tier against <span className="font-medium text-foreground">Beginner</span>.
-        </p>
-        <SearchInput
-          value={search}
-          onValueChange={setSearch}
-          placeholder="Search heroes…"
-          aria-label="Search heroes"
-          className="w-full sm:max-w-56"
-        />
-      </div>
-
-      <Panel>
-        <Table>
-          <TableHeader tone="muted">
-            <TableRow>
-              <TableHead className="w-10 text-center">#</TableHead>
-              <SortableHeader
-                label="Hero"
-                sortKey="name"
-                activeSortKey={sortKey}
-                sortDir={sortDir}
-                onSort={handleSort}
-                align="start"
-                className="min-w-40"
-                data-pinned
-              />
-              {EXPERIENCE_BUCKETS.map((bucket, i) => (
-                <TableHead
-                  key={bucket.label}
-                  className="text-center select-none"
-                  aria-sort={ariaSort(sortKey === `value-${i}` || sortKey === `delta-${i}`, sortDir)}
+    <Table>
+      <TableHeader tone="muted">
+        <TableRow>
+          <TableHead className="w-10 text-center">#</TableHead>
+          <SortableHeader
+            label="Hero"
+            sortKey="name"
+            activeSortKey={sortKey}
+            sortDir={sortDir}
+            onSort={handleSort}
+            align="start"
+            className="min-w-40"
+            data-pinned
+          />
+          {EXPERIENCE_BUCKETS.map((bucket, i) => (
+            <TableHead
+              key={bucket.label}
+              className="text-center select-none"
+              aria-sort={ariaSort(sortKey === `value-${i}` || sortKey === `delta-${i}`, sortDir)}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <SortButton
+                  active={sortKey === `value-${i}`}
+                  sortDir={sortDir}
+                  onClick={() => handleSort(`value-${i}`)}
                 >
-                  <div className="flex flex-col items-center gap-1">
-                    <SortButton
-                      active={sortKey === `value-${i}`}
-                      sortDir={sortDir}
-                      onClick={() => handleSort(`value-${i}`)}
-                    >
-                      {bucket.label}
-                    </SortButton>
-                    <span className="text-3xs font-normal text-muted-foreground">{bucket.sublabel}</span>
-                    {i !== BASELINE_BUCKET ? (
-                      <SortButton
-                        active={sortKey === `delta-${i}`}
-                        sortDir={sortDir}
-                        onClick={() => handleSort(`delta-${i}`)}
-                        className="text-3xs font-normal text-muted-foreground"
-                      >
-                        {"Δ"} vs Beginner
-                      </SortButton>
-                    ) : (
-                      <span className="text-3xs font-normal text-muted-foreground">baseline</span>
-                    )}
-                  </div>
-                </TableHead>
-              ))}
-              <SortableHeader
-                label="Trend"
-                sortKey="trend"
-                activeSortKey={sortKey}
-                sortDir={sortDir}
-                onSort={handleSort}
-              />
+                  {bucket.label}
+                </SortButton>
+                <span className="text-3xs font-normal text-muted-foreground">{bucket.sublabel}</span>
+                {i !== BASELINE_BUCKET ? (
+                  <SortButton
+                    active={sortKey === `delta-${i}`}
+                    sortDir={sortDir}
+                    onClick={() => handleSort(`delta-${i}`)}
+                    className="text-3xs font-normal text-muted-foreground"
+                  >
+                    {"Δ"} vs Beginner
+                  </SortButton>
+                ) : (
+                  <span className="text-3xs font-normal text-muted-foreground">baseline</span>
+                )}
+              </div>
+            </TableHead>
+          ))}
+          <SortableHeader label="Trend" sortKey="trend" activeSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {sortedRows.length === 0 ? (
+          <TableEmptyRow colSpan={EXPERIENCE_BUCKETS.length + 3}>No hero stats for these filters.</TableEmptyRow>
+        ) : (
+          sortedRows.map((row, index) => (
+            <TableRow key={row.heroId}>
+              <TableCell className="text-center font-semibold text-muted-foreground">{index + 1}</TableCell>
+              {heroCells.get(row.heroId)}
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedRows.length === 0 ? (
-              <TableEmptyRow colSpan={EXPERIENCE_BUCKETS.length + 3}>No heroes match "{deferredSearch}".</TableEmptyRow>
-            ) : (
-              sortedRows.map((row, index) => (
-                <TableRow key={row.heroId}>
-                  <TableCell className="text-center font-semibold text-muted-foreground">{index + 1}</TableCell>
-                  {heroCells.get(row.heroId)}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Panel>
-    </div>
+          ))
+        )}
+      </TableBody>
+    </Table>
   );
 }
 

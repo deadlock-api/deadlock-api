@@ -32,7 +32,6 @@ export function ItemSlotSelector({
       <ToggleGroup
         type="multiple"
         variant="outline"
-        size="sm"
         disabled={disabled}
         value={value}
         onValueChange={(slots) => setValue(slots as ItemSlotType[])}

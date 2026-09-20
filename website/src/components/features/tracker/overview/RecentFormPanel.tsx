@@ -218,7 +218,7 @@ export function RecentFormPanel({
       title="Recent form"
       dialogSize="default"
       icon={Flame}
-      meta={meta}
+      description={meta}
       open={open}
       onOpenChange={setOpen}
       details={

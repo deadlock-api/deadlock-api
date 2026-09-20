@@ -87,11 +87,11 @@ export function PlayersPage() {
             }
           }}
         />
-        <Filter.Hero value={heroId} onValueChange={setHeroId} allowNull label="Hero" />
+        <Filter.Hero value={heroId} onValueChange={setHeroId} allowNull />
         <Filter.SeasonPatchDate
           value={{ startDate, endDate }}
           onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
-          resetRange={defaultRange}
+          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
         />
         {tab === "scoreboard" && (
           <Filter.MinMatches value={minMatches} onValueChange={setMinMatches} min={1} defaultValue={0} />

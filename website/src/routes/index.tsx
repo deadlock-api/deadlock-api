@@ -22,7 +22,7 @@ import { SmartLink } from "~/components/domain/navigation/SmartLink";
 import { LinkCard } from "~/components/patterns/content/LinkCard";
 import { LogoWallItem } from "~/components/patterns/content/LogoWall";
 import { Prose } from "~/components/patterns/content/Prose";
-import { Hero, HeroActions, HeroGlow, HeroLead } from "~/components/patterns/page/Hero";
+import { Hero, HeroActions, HeroLead } from "~/components/patterns/page/Hero";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Section } from "~/components/patterns/page/Section";
@@ -219,7 +219,6 @@ function IndexRoute() {
   return (
     <PageShell density="marketing">
       <Hero size="sm">
-        <HeroGlow size="sm" />
         <Stack gap={2} align="center">
           <PageHeader size="display" title="Deadlock API" />
           <Text variant="eyebrow">sponsored by</Text>

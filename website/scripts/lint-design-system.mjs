@@ -96,7 +96,7 @@ const LAW_RULES = [
     message: "Law 9/11: one vocabulary; value callbacks are `onValueChange`, open state is `onOpenChange`",
     pattern: /\bon(?:[A-Z]\w*)?(?:Selected|Select|Changed)\??:|\b(?:selected[A-Z]\w*|on[A-Z]\w*Change)\??:\s*\(/g,
     only: SYSTEM,
-    skip: (line) => /\bon(?:Value|Open|Checked|Pressed|Sort|Page|Search|Items?PerPage)Change\??:/.test(line),
+    skip: (line) => /\bon(?:Value|Open|Checked|Pressed|Sort|Page|PageSize)Change\??:/.test(line),
   },
   {
     id: "law13-business-import",
@@ -183,7 +183,7 @@ const RULES = [
   },
   {
     id: "raw-control",
-    message: "raw form control; use Input, Textarea, Select, Checkbox, Switch, Slider or ColorInput",
+    message: "raw form control; use Input, Textarea, Select, Checkbox, Switch or Slider",
     pattern: /<(?:input|select|textarea)[\s>]/g,
     skip: insideSystem,
   },
@@ -367,11 +367,6 @@ for (const file of walk(SRC)) {
 
 // Everything in the design system is shown on the dev page: a component nobody can see gets reinvented.
 const SHOWCASE = "src/components/dev/design-system";
-const NOT_COMPONENTS = new Set([
-  // Parsers and constants for URL state; they render nothing.
-  "src/components/domain/selectors/GameModeSelector.tsx",
-  "src/components/domain/selectors/MatchModeSelector.tsx",
-]);
 const showcaseSource = walk(path.join(ROOT, SHOWCASE))
   .map((file) => fs.readFileSync(file, "utf8"))
   .join("\n");
@@ -379,7 +374,7 @@ const filterIndex = fs.readFileSync(path.join(SRC, "components/domain/filters/in
 for (const layer of ["ui", "patterns", "domain"]) {
   for (const file of walk(path.join(SRC, "components", layer))) {
     const rel = path.relative(ROOT, file);
-    if (!rel.endsWith(".tsx") || rel.endsWith(".test.tsx") || NOT_COMPONENTS.has(rel)) continue;
+    if (!rel.endsWith(".tsx") || rel.endsWith(".test.tsx")) continue;
     const spec = `~/${rel.slice("src/".length).replace(/\.tsx$/, "")}`;
     const viaFilterNamespace =
       filterIndex.includes(`"${spec}"`) && showcaseSource.includes('"~/components/domain/filters"');

@@ -3,7 +3,6 @@ import type { AbilityOrderStatsGameModeEnum } from "deadlock_api_client";
 import { motion } from "framer-motion";
 import { useCallback, useMemo, useState } from "react";
 
-import type { MatchMode } from "~/components/domain/selectors/MatchModeSelector";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { DragScroll } from "~/components/ui/drag-scroll";
@@ -12,6 +11,7 @@ import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { buildAbilityTrie, getSortedChildren, mergeStreetBrawlRows } from "~/lib/ability-order-utils";
 import { api } from "~/lib/api";
+import type { MatchMode } from "~/lib/game-mode";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
 import { abilitiesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";

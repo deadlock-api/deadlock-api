@@ -1,11 +1,11 @@
 import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 
-import { BY_RANK_STATS } from "~/components/features/heroes/HeroStatSelectors";
 import { useAnalyticsTab } from "~/hooks/useAnalyticsTab";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import type { AnalyticsTab } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
+import { BY_RANK_STATS } from "~/types/api_hero_stats";
 import { HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
 
 export const STATS_TABS: readonly HeroTab[] = [

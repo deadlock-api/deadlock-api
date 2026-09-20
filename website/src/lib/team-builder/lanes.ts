@@ -1,4 +1,4 @@
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
+import type { GameMode } from "~/lib/game-mode";
 
 export interface LaneInfo {
   /** `assigned_lane` as reported by the game. Indexes the `lane_info` array of the generic-data asset. */

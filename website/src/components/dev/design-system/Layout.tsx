@@ -74,13 +74,13 @@ export function Layout() {
       <Specimen
         name="Box"
         source="ui/box"
-        note="Padding from the spacing scale and nothing else. A surface is a Card; a Box never draws."
+        note="Inline padding from the spacing scale and nothing else. A surface is a Card; a Box never draws."
       >
         <Inline gap={3}>
           {([1, 3, 6] as const).map((padding) => (
             <Card key={padding} tone="outline" size="flush">
-              <Box padding={padding}>
-                <Tile>padding {padding}</Tile>
+              <Box paddingX={padding}>
+                <Tile>paddingX {padding}</Tile>
               </Box>
             </Card>
           ))}

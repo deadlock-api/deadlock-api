@@ -1,4 +1,5 @@
 import { Skeleton } from "~/components/ui/skeleton";
+import { Stat, StatGroup } from "~/components/ui/stat";
 import { cn } from "~/lib/utils";
 
 interface SkeletonLayoutProps extends Omit<React.ComponentProps<"div">, "children"> {
@@ -46,21 +47,11 @@ export function SkeletonRows({
 }
 
 /** Stand-in for a list of people or entities: an avatar and two lines of text per row. */
-export function SkeletonMediaRow({
-  rows = 1,
-  variant = "plain",
-  className,
-  ...props
-}: SkeletonLayoutProps & { rows?: number; variant?: "plain" | "divided" }) {
-  const divided = variant === "divided";
+export function SkeletonMediaRow({ rows = 1, className, ...props }: SkeletonLayoutProps & { rows?: number }) {
   return (
-    <SkeletonLayout
-      data-slot="skeleton-media-row"
-      className={cn("flex flex-col", divided ? "divide-y" : "gap-3", className)}
-      {...props}
-    >
+    <SkeletonLayout data-slot="skeleton-media-row" className={cn("flex flex-col divide-y", className)} {...props}>
       {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className={cn("flex items-center gap-3", divided && "py-3")}>
+        <div key={i} className="flex items-center gap-3 py-3">
           <Skeleton className="size-8 shrink-0 rounded-full" />
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <Skeleton className="h-4 w-2/3" />
@@ -76,15 +67,17 @@ export function SkeletonMediaRow({
 export function SkeletonStatTiles({ count = 4, className, ...props }: SkeletonLayoutProps & { count?: number }) {
   return (
     <SkeletonLayout data-slot="skeleton-stat-tiles" className={cn("@container", className)} {...props}>
-      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border @xs:grid-cols-3 @3xl:grid-cols-6">
+      <StatGroup variant="joined" size="sm" className="grid-cols-2 @xs:grid-cols-3 @3xl:grid-cols-6">
         {Array.from({ length: count }, (_, i) => (
-          <div key={i} className="flex flex-col gap-2 bg-card px-3 py-2">
-            <Skeleton className="h-3 w-16" />
-            <Skeleton className="h-6 w-20" />
-            <Skeleton className="h-3 w-full" />
-          </div>
+          <Stat
+            key={i}
+            className="gap-2"
+            label={<Skeleton className="h-3 w-16" />}
+            value={<Skeleton className="h-6 w-20" />}
+            sub={<Skeleton className="h-3 w-full" />}
+          />
         ))}
-      </div>
+      </StatGroup>
     </SkeletonLayout>
   );
 }

@@ -10,15 +10,12 @@ import type { Dayjs } from "~/dayjs";
 import { day } from "~/dayjs";
 import { cn } from "~/lib/utils";
 
-export interface DateRangeValue {
+interface DateRangeValue {
   startDate?: Dayjs;
   endDate?: Dayjs;
 }
 
-export interface DateRangePickerProps extends Omit<
-  React.ComponentProps<"div">,
-  "children" | "defaultValue" | "onChange"
-> {
+interface DateRangePickerProps extends Omit<React.ComponentProps<"div">, "children" | "defaultValue" | "onChange"> {
   /** An open end is a missing date; `{}` is no range at all. */
   value?: DateRangeValue;
   defaultValue?: DateRangeValue;

@@ -5,7 +5,7 @@ import type { LucideIcon } from "lucide-react";
 
 import { GameTile } from "~/components/domain/minigames/GameTile";
 import { enter, fadeUp, stagger } from "~/components/features/deadlockdle/motion";
-import { Hero, HeroGlow } from "~/components/patterns/page/Hero";
+import { Hero } from "~/components/patterns/page/Hero";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { seo } from "~/lib/seo";
@@ -59,7 +59,6 @@ function FlashcardsHub() {
   return (
     <PageShell density="marketing" className="theme-terminal">
       <Hero size="sm">
-        <HeroGlow size="sm" />
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={enter}>
           <PageHeader
             size="display"

@@ -8,9 +8,19 @@ import { cn } from "~/lib/utils";
  * scrollbar. The wheel, the scrollbar and the keyboard keep working; a drag that moved the content swallows the
  * click that ends it, so dragging across a link does not follow it.
  */
-export function DragScroll({ className, children, ...props }: React.ComponentProps<"div">) {
+export function DragScroll({
+  className,
+  children,
+  ref: forwardedRef,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerLeave,
+  onClickCapture,
+  ...props
+}: React.ComponentProps<"div">) {
   const ref = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ x: number; left: number; moved: boolean } | null>(null);
+  const drag = useRef<{ x: number; left: number; moved: boolean; active: boolean } | null>(null);
 
   return (
     <div
@@ -18,27 +28,39 @@ export function DragScroll({ className, children, ...props }: React.ComponentPro
       role="presentation"
       // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scroll container must be reachable by keyboard
       tabIndex={0}
-      ref={ref}
+      ref={(element) => {
+        ref.current = element;
+        if (typeof forwardedRef === "function") return forwardedRef(element);
+        if (forwardedRef) forwardedRef.current = element;
+      }}
       className={cn(FOCUS_RING, "cursor-grab overflow-x-auto active:cursor-grabbing", className)}
       onPointerDown={(event) => {
+        onPointerDown?.(event);
         if (event.button !== 0 || !ref.current) return;
-        drag.current = { x: event.clientX, left: ref.current.scrollLeft, moved: false };
+        drag.current = { x: event.clientX, left: ref.current.scrollLeft, moved: false, active: true };
       }}
       onPointerMove={(event) => {
+        onPointerMove?.(event);
         const state = drag.current;
-        if (!state || !ref.current) return;
+        if (!state?.active || !ref.current) return;
         const delta = event.clientX - state.x;
         if (Math.abs(delta) > 3) state.moved = true;
         ref.current.scrollLeft = state.left - delta;
       }}
-      onPointerUp={() => {
-        drag.current = null;
+      onPointerUp={(event) => {
+        onPointerUp?.(event);
+        // The click comes after pointerup, so `moved` has to outlive it; onClickCapture clears the drag.
+        if (drag.current) drag.current.active = false;
       }}
-      onPointerLeave={() => {
+      onPointerLeave={(event) => {
+        onPointerLeave?.(event);
         drag.current = null;
       }}
       onClickCapture={(event) => {
-        if (!drag.current?.moved) return;
+        onClickCapture?.(event);
+        const moved = drag.current?.moved;
+        drag.current = null;
+        if (!moved) return;
         event.preventDefault();
         event.stopPropagation();
       }}

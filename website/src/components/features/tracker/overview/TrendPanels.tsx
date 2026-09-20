@@ -69,7 +69,7 @@ export function TrendPanels({
       <PanelWithDetails
         title="Rank history"
         icon={Medal}
-        meta={`${ranks.length} recorded`}
+        description={`${ranks.length} recorded`}
         open={rankHistoryOpen}
         onOpenChange={setRankHistoryOpen}
         details={
@@ -134,7 +134,7 @@ export function TrendPanels({
       <PanelWithDetails
         title="Match activity"
         icon={Activity}
-        meta={activity.granularity === "week" ? "Weekly" : "Monthly"}
+        description={activity.granularity === "week" ? "Weekly" : "Monthly"}
         open={activityOpen}
         onOpenChange={setActivityOpen}
         details={

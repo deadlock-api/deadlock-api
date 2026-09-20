@@ -6,7 +6,9 @@ import { useMemo } from "react";
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
 import { PaginationControls } from "~/components/patterns/data-table/PaginationControls";
+import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
+import { SearchInput } from "~/components/ui/search-input";
 import { ariaSort, SortButton } from "~/components/ui/sort-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { usePaginationQueryState } from "~/hooks/usePaginationQueryState";
@@ -19,7 +21,7 @@ import { SortBySelector } from "./SortBySelector";
 
 export type ScoreboardSort = { sortBy: string; sortDirection: "desc" | "asc" };
 
-export interface ScoreboardTableProps extends React.ComponentProps<"div"> {
+interface ScoreboardTableProps extends React.ComponentProps<"div"> {
   entries: PlayerEntry[];
   sortBy: string;
   sortDirection: "desc" | "asc";
@@ -112,15 +114,20 @@ export function ScoreboardTable({
 
   const controls = (
     <PaginationControls
-      searchQuery={searchQuery}
-      onSearchChange={handleSearchChange}
-      itemsPerPage={itemsPerPage}
-      onItemsPerPageChange={handleItemsPerPageChange}
-      currentPage={currentPage}
+      page={currentPage}
       onPageChange={setCurrentPage}
+      pageSize={itemsPerPage}
+      onPageSizeChange={handleItemsPerPageChange}
       totalPages={totalPages}
-      searchPlaceholder="Search player..."
-    />
+    >
+      <SearchInput
+        size="sm"
+        placeholder="Search player..."
+        aria-label="Search player"
+        value={searchQuery}
+        onValueChange={handleSearchChange}
+      />
+    </PaginationControls>
   );
 
   return (
@@ -132,24 +139,23 @@ export function ScoreboardTable({
             <TableHead className="w-12 text-end">#</TableHead>
             <TableHead>Player</TableHead>
             {sortBy !== "matches" && (
-              <TableHead className="hidden text-end sm:table-cell" aria-sort={ariaSort(false, sortDirection)}>
-                <SortButton
-                  active={false}
-                  sortDir={sortDirection}
-                  align="end"
-                  onClick={() =>
-                    sort(
-                      sortBy === "matches"
-                        ? { sortBy, sortDirection: flip() }
-                        : { sortBy: "matches", sortDirection: "desc" },
-                    )
-                  }
-                >
-                  <span>Matches</span>
-                </SortButton>
-              </TableHead>
+              <SortableHeader
+                label="Matches"
+                sortKey="matches"
+                activeSortKey={sortBy}
+                sortDir={sortDirection}
+                align="end"
+                className="hidden sm:table-cell"
+                onSort={() =>
+                  sort(
+                    sortBy === "matches"
+                      ? { sortBy, sortDirection: flip() }
+                      : { sortBy: "matches", sortDirection: "desc" },
+                  )
+                }
+              />
             )}
-            <TableHead className="text-end">
+            <TableHead className="text-end" aria-sort={ariaSort(true, sortDirection)}>
               <div className="flex items-center justify-end gap-1">
                 <SortBySelector
                   value={sortBy}

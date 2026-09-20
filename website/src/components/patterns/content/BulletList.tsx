@@ -2,19 +2,15 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "~/lib/utils";
 
-const bulletListVariants = cva("flex min-w-0 text-muted-foreground", {
+const bulletListVariants = cva("flex min-w-0 text-sm text-muted-foreground", {
   variants: {
     /** `horizontal` is a wrapping row of short claims under a call to action. */
     orientation: {
       vertical: "flex-col gap-1.5",
       horizontal: "flex-row flex-wrap items-center gap-x-4 gap-y-1.5",
     },
-    size: {
-      sm: "text-xs",
-      default: "text-sm",
-    },
   },
-  defaultVariants: { orientation: "vertical", size: "default" },
+  defaultVariants: { orientation: "vertical" },
 });
 
 const bulletVariants = cva("size-1.5 rounded-full", {
@@ -22,10 +18,6 @@ const bulletVariants = cva("size-1.5 rounded-full", {
     tone: {
       primary: "bg-primary",
       muted: "bg-muted-foreground",
-      positive: "bg-positive",
-      negative: "bg-negative",
-      warning: "bg-warning",
-      info: "bg-info",
     },
   },
   defaultVariants: { tone: "primary" },
@@ -34,7 +26,6 @@ const bulletVariants = cva("size-1.5 rounded-full", {
 /** A list of short points with a dot each. Numbered instructions are `Steps`; text with paragraphs is `Prose`. */
 export function BulletList({
   orientation,
-  size,
   className,
   ...props
 }: React.ComponentProps<"ul"> & VariantProps<typeof bulletListVariants>) {
@@ -42,7 +33,7 @@ export function BulletList({
     <ul
       data-slot="bullet-list"
       data-orientation={orientation ?? "vertical"}
-      className={cn(bulletListVariants({ orientation, size }), className)}
+      className={cn(bulletListVariants({ orientation }), className)}
       {...props}
     />
   );

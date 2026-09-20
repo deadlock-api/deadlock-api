@@ -60,7 +60,7 @@ export function StringOption({ value, disabled = false, className, onClick, chil
   );
 }
 
-export interface StringSelectorProps extends FilterCellPassthroughProps {
+interface StringSelectorProps extends FilterCellPassthroughProps {
   label?: string;
   value?: string | null;
   /** The value the filter starts from and resets to. Without it (and without an empty option) there is no reset. */

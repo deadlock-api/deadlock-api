@@ -4,51 +4,48 @@ import { useCallback } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { SearchInput } from "~/components/ui/search-input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { cn } from "~/lib/utils";
 
-export interface PaginationControlsProps extends Omit<React.ComponentProps<"div">, "children"> {
-  searchQuery?: string;
-  onSearchChange?: (query: string) => void;
-  itemsPerPage: number;
-  onItemsPerPageChange: (items: number) => void;
-  currentPage: number;
+interface PaginationControlsProps extends React.ComponentProps<"div"> {
+  /** Zero-based. */
+  page: number;
   onPageChange: (page: number) => void;
+  pageSize: number;
+  onPageSizeChange: (pageSize: number) => void;
   totalPages: number;
-  searchPlaceholder?: string;
-  children?: React.ReactNode;
   /** `sm` is one tight row with icon buttons, for a table inside a panel. */
   size?: "sm" | "default";
 }
 
+/**
+ * Rows per page and paging in one wrapping row. Children are the table's other controls and come first; a
+ * `SearchInput` among them takes the whole row it wraps onto in a narrow container.
+ */
 export function PaginationControls({
-  searchQuery,
-  onSearchChange,
-  itemsPerPage,
-  onItemsPerPageChange,
-  currentPage,
+  page,
   onPageChange,
+  pageSize,
+  onPageSizeChange,
   totalPages,
-  searchPlaceholder = "Search...",
   children,
   size = "default",
   className,
   ...props
 }: PaginationControlsProps) {
   const compact = size === "sm";
-  const handleItemsPerPageChange = useCallback(
+  const handlePageSizeChange = useCallback(
     (value: string) => {
-      onItemsPerPageChange(Number(value));
+      onPageSizeChange(Number(value));
     },
-    [onItemsPerPageChange],
+    [onPageSizeChange],
   );
 
   const handlePageInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const page = parseInt(e.target.value, 10);
-      if (!Number.isNaN(page) && page > 0 && page <= totalPages) {
-        onPageChange(page - 1);
+      const pageNumber = parseInt(e.target.value, 10);
+      if (!Number.isNaN(pageNumber) && pageNumber > 0 && pageNumber <= totalPages) {
+        onPageChange(pageNumber - 1);
       }
     },
     [onPageChange, totalPages],
@@ -60,32 +57,21 @@ export function PaginationControls({
       data-size={compact ? "sm" : "default"}
       className={cn(
         "@container flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3",
+        // A search takes the rest of the row it wraps onto, rather than leaving a phone-wide gap beside it.
+        "[&>:where([data-slot=search-input])]:flex-1 [&>:where([data-slot=search-input])]:basis-full @lg:[&>:where([data-slot=search-input])]:w-48 @lg:[&>:where([data-slot=search-input])]:flex-none @lg:[&>:where([data-slot=search-input])]:basis-auto",
         compact && "gap-x-2 gap-y-1 py-1",
         className,
       )}
       {...props}
     >
-      {onSearchChange && (
-        // The search takes the rest of the row it wraps onto, rather than leaving a phone-wide gap beside it.
-        <div className="flex flex-1 basis-full items-center gap-2 @lg:flex-none @lg:basis-auto">
-          <SearchInput
-            placeholder={searchPlaceholder}
-            aria-label={searchPlaceholder.replace(/[.…]+$/, "")}
-            value={searchQuery ?? ""}
-            onValueChange={onSearchChange}
-            size="sm"
-            className="w-full @lg:w-48"
-          />
-        </div>
-      )}
       {children}
       <div className={cn("flex items-center gap-2", compact && "gap-1")}>
         <span className={cn("text-sm text-muted-foreground", compact && "text-xs")}>
           {compact ? "Rows" : "Rows per page"}
         </span>
-        <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
+        <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
           <SelectTrigger size="sm" className={compact ? "w-16 gap-1 px-2" : "w-20"} aria-label="Rows per page">
-            <SelectValue placeholder={itemsPerPage} />
+            <SelectValue placeholder={pageSize} />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
@@ -106,7 +92,7 @@ export function PaginationControls({
             aria-label="Page number"
             max={totalPages}
             min={1}
-            value={currentPage + 1}
+            value={page + 1}
             onChange={handlePageInputChange}
             size="sm"
             className={cn("text-center", compact ? "w-12 px-1" : "w-16")}
@@ -120,8 +106,8 @@ export function PaginationControls({
           size={compact ? "icon-sm" : "sm"}
           aria-label="Previous page"
           title={compact ? "Previous page" : undefined}
-          onClick={() => onPageChange(Math.max(0, currentPage - 1))}
-          disabled={currentPage === 0}
+          onClick={() => onPageChange(Math.max(0, page - 1))}
+          disabled={page === 0}
         >
           {compact ? <ChevronLeft aria-hidden="true" /> : "Previous"}
         </Button>
@@ -130,8 +116,8 @@ export function PaginationControls({
           size={compact ? "icon-sm" : "sm"}
           aria-label="Next page"
           title={compact ? "Next page" : undefined}
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage >= totalPages - 1}
+          onClick={() => onPageChange(page + 1)}
+          disabled={page >= totalPages - 1}
         >
           {compact ? <ChevronRight aria-hidden="true" /> : "Next"}
         </Button>

@@ -1,32 +1,18 @@
+import { ProgressBar } from "~/components/ui/progress-bar";
 import { TONE_BG, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
+import type { Color } from "~/types/general";
 
-/** A thin 0 to 1 bar beside a visible rate label, which it decorates. */
+/** @deprecated Use `<ProgressBar variant="thin" value={rate ?? undefined} />`. */
 export function RateBar({
   rate,
   color,
-  className,
   ...props
 }: Omit<React.ComponentProps<"div">, "color" | "children"> & {
   rate: number | null;
-  /** A CSS color for a bar that is a series rather than a good/bad rate: `var(--chart-4)`. Defaults to positive. */
-  color?: string;
+  color?: Color;
 }) {
-  return (
-    <div
-      data-slot="rate-bar"
-      className={cn("relative h-1.5 min-w-0 rounded-full bg-muted", className)}
-      aria-hidden="true"
-      {...props}
-    >
-      {rate !== null && (
-        <div
-          className={cn("h-full rounded-full", !color && "bg-positive")}
-          style={{ width: `${Math.max(0, Math.min(1, rate)) * 100}%`, backgroundColor: color }}
-        />
-      )}
-    </div>
-  );
+  return <ProgressBar variant="thin" value={rate ?? undefined} color={color} {...props} />;
 }
 
 /**

@@ -241,7 +241,7 @@ function Trivia() {
             </Stack>
 
             <StepMeter
-              aria-label={`Question ${state.currentQuestion + 1} of ${QUESTION_COUNT}`}
+              label={`Question ${state.currentQuestion + 1} of ${QUESTION_COUNT}`}
               className="justify-center pt-2"
             >
               {questions.map((q, i) => (

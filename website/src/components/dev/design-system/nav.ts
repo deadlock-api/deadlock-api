@@ -65,7 +65,6 @@ export const NAV: readonly NavChapter[] = [
           "Input",
           "SearchInput",
           "Textarea",
-          "ColorInput",
           "Select",
           "Checkbox and Switch",
           "CheckboxField",
@@ -110,14 +109,7 @@ export const NAV: readonly NavChapter[] = [
       },
       {
         title: "Bars",
-        items: [
-          "ProgressBar",
-          "ProgressBar variants",
-          "ProgressBarWithLabel orientation",
-          "RateBar",
-          "SplitBar",
-          "DivergingBar interval",
-        ],
+        items: ["ProgressBar", "ProgressBar variants", "RateBar", "SplitBar", "DivergingBar interval"],
       },
       {
         title: "Navigation",
@@ -136,7 +128,7 @@ export const NAV: readonly NavChapter[] = [
           "Sonner",
         ],
       },
-      { title: "Feedback", items: ["Alert", "Alert negative", "Skeleton", "Spinner", "Empty"] },
+      { title: "Feedback", items: ["Alert", "Skeleton", "Spinner"] },
       { title: "Media", items: ["ImgWithSkeleton"] },
     ],
   },
@@ -161,7 +153,7 @@ export const NAV: readonly NavChapter[] = [
       },
       {
         title: "Navigation",
-        items: ["SideNavShell", "SideNav", "SideNavSection", "Breadcrumb", "ResponsiveTabsList", "DragScroll"],
+        items: ["SideNavShell", "SideNav", "Breadcrumb", "ResponsiveTabsList", "DragScroll"],
       },
       {
         title: "Filter bar",
@@ -221,7 +213,7 @@ export const NAV: readonly NavChapter[] = [
       { title: "Controls and layout", items: ["MetricSelect", "Trend fields", "ChartSidebarLayout"] },
       {
         title: "Ready-made charts",
-        items: ["WinRateBarChart", "StatTrendChart", "StatTrendHoverCard", "WeeklyTrendChart", "StatTrendChart states"],
+        items: ["WinRateBarChart", "StatTrendChart", "WeeklyTrendChart", "StatTrendChart states"],
       },
     ],
   },
@@ -278,7 +270,7 @@ export const NAV: readonly NavChapter[] = [
       },
       { title: "Graphs", items: ["GraphNodeCard"] },
       { title: "Draft", items: ["DraftSlot"] },
-      { title: "Brand and auth", items: ["SteamSignInButton", "BrandIcons and SocialLinks"] },
+      { title: "Brand", items: ["BrandIcons and SocialLinks"] },
       { title: "Navigation", items: ["SmartLink", "PrefetchAnchor"] },
       {
         title: "Mini-games",

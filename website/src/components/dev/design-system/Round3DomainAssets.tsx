@@ -32,13 +32,12 @@ export function Round3DomainAssets() {
         source="domain/assets/HeroCell · domain/assets/ItemCell"
         note="The identity of a table or list row: image and name on one line, the name truncating to the width the parent leaves. Pass item instead of itemId to render an item the table already holds, so a long table keeps one subscription."
       >
-        <Variants label="size: default, sm · linkToDetail">
+        <Variants label="HeroCell size: default, sm · linkToDetail">
           <HeroCell heroId={HERO_IDS[0]} />
           <HeroCell heroId={HERO_IDS[1]} linkToDetail />
           <HeroCell heroId={HERO_IDS[2]} size="sm" className="text-xs" />
           <ItemCell itemId={ITEM_IDS[0]} />
           <ItemCell itemId={ITEM_IDS[1]} linkToDetail />
-          <ItemCell itemId={ITEM_IDS[2]} size="sm" className="text-xs" />
         </Variants>
         <Variants label='shape="circle", truncation (max-w-24 on the cell), unknown id, loading'>
           <HeroCell heroId={HERO_IDS[3]} shape="circle" />
@@ -65,7 +64,6 @@ export function Round3DomainAssets() {
                   <ItemCell
                     item={items?.find((item) => item.id === ITEM_IDS[i])}
                     loading={isLoadingItems}
-                    size="sm"
                     linkToDetail
                   />
                 </TableCell>

@@ -2,16 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { Fragment, memo, useMemo } from "react";
 
 import { ItemCell } from "~/components/domain/assets/ItemCell";
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
-import type { MatchMode } from "~/components/domain/selectors/MatchModeSelector";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
+import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { shrunkWinRate } from "~/lib/shrinkage";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
@@ -221,14 +220,8 @@ export function ItemCombStatsTable({
                   <ComboItems itemIds={row.item_ids} />
                   {columns.includes("winRate") && (
                     <TableCell className="text-center">
-                      <ProgressBarWithLabel
-                        min={minWinrate}
-                        max={maxWinrate}
-                        value={row.wins / row.matches}
-                        color="var(--primary)"
-                        label={`${Math.round((row.wins / row.matches) * 100).toFixed(0)}% `}
-                        delta={prev !== undefined ? row.wins / row.matches - prev.winrate : undefined}
-                        tooltip={
+                      <Tooltip
+                        content={
                           <>
                             <TooltipHeader title="Win rate" />
                             <TooltipStats>
@@ -241,21 +234,24 @@ export function ItemCombStatsTable({
                             </TooltipStats>
                           </>
                         }
-                      />
+                      >
+                        <TooltipTarget display="block">
+                          <ProgressBarWithLabel
+                            min={minWinrate}
+                            max={maxWinrate}
+                            value={row.wins / row.matches}
+                            color="var(--primary)"
+                            label={`${Math.round((row.wins / row.matches) * 100).toFixed(0)}% `}
+                            delta={prev !== undefined ? row.wins / row.matches - prev.winrate : undefined}
+                          />
+                        </TooltipTarget>
+                      </Tooltip>
                     </TableCell>
                   )}
                   {columns.includes("pickRate") && (
                     <TableCell className="text-center">
-                      <ProgressBarWithLabel
-                        min={minMatchesVal}
-                        max={maxMatchesVal}
-                        value={row.matches}
-                        color="var(--chart-4)"
-                        label={`${Math.round((row.matches / maxMatchesVal) * 100).toFixed(0)}%`}
-                        delta={
-                          prev !== undefined ? row.matches / maxMatchesVal - prev.matches / prevMaxMatches : undefined
-                        }
-                        tooltip={
+                      <Tooltip
+                        content={
                           <>
                             <TooltipHeader title="Pick rate" />
                             <TooltipStats>
@@ -276,7 +272,22 @@ export function ItemCombStatsTable({
                             </TooltipStats>
                           </>
                         }
-                      />
+                      >
+                        <TooltipTarget display="block">
+                          <ProgressBarWithLabel
+                            min={minMatchesVal}
+                            max={maxMatchesVal}
+                            value={row.matches}
+                            color="var(--chart-4)"
+                            label={`${Math.round((row.matches / maxMatchesVal) * 100).toFixed(0)}%`}
+                            delta={
+                              prev !== undefined
+                                ? row.matches / maxMatchesVal - prev.matches / prevMaxMatches
+                                : undefined
+                            }
+                          />
+                        </TooltipTarget>
+                      </Tooltip>
                     </TableCell>
                   )}
                   {columns.includes("totalMatches") && (

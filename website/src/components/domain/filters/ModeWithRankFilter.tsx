@@ -1,6 +1,7 @@
-import { DEFAULT_MODE, type Mode, MODE_CONFIG, ModeSelector } from "~/components/domain/selectors/ModeSelector";
+import { ModeSelector } from "~/components/domain/selectors/ModeSelector";
 import { type RankRange, RankRangeSelector } from "~/components/domain/selectors/RankRangeSelector";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
+import { DEFAULT_MODE, type Mode, MODE_CONFIG } from "~/lib/game-mode";
 
 export interface ModeWithRank {
   mode: Mode;

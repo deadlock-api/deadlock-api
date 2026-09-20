@@ -6,16 +6,7 @@ import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { AbilityName } from "~/components/domain/assets/AbilityName";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
-import { SteamSignInButton } from "~/components/domain/auth/SteamSignInButton";
-import {
-  DiscordIcon,
-  GitHubIcon,
-  PatreonIcon,
-  SocialLinks,
-  StatusIcon,
-  SteamIcon,
-} from "~/components/domain/brand/BrandIcons";
-import { HeatmapViewModeFilter } from "~/components/domain/filters/HeatmapViewModeFilter";
+import { SocialLinks, SteamIcon } from "~/components/domain/brand/BrandIcons";
 import { GraphNodeCard } from "~/components/domain/graph/GraphNodeCard";
 import { GamePage } from "~/components/domain/minigames/GamePage";
 import { GameTile } from "~/components/domain/minigames/GameTile";
@@ -27,7 +18,7 @@ import { ModeSelector } from "~/components/domain/selectors/ModeSelector";
 import { RankRangeSelector } from "~/components/domain/selectors/RankRangeSelector";
 import { Badge } from "~/components/ui/badge";
 import { Card, CardContent } from "~/components/ui/card";
-import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 
 const ITEM_NODES = [
   { itemId: 1548066885, accent: "weapon", winRate: 0.534, pickRate: 0.31 },
@@ -44,31 +35,13 @@ export function Round3DomainMisc() {
   return (
     <>
       <Specimen
-        name="SteamSignInButton"
-        source="domain/auth/SteamSignInButton"
-        note='Starts Steam OpenID sign-in: Button variant="steam" with the Steam mark. The caller owns the redirect, because the return path differs per page.'
-      >
-        <Variants label="size: lg (default), default, sm · custom label · disabled">
-          <SteamSignInButton />
-          <SteamSignInButton size="default" />
-          <SteamSignInButton size="sm">Connect Steam</SteamSignInButton>
-          <SteamSignInButton disabled />
-        </Variants>
-      </Specimen>
-
-      <Specimen
         name="BrandIcons and SocialLinks"
         source="domain/brand/BrandIcons"
         note="Third-party marks as components that take the text color and size-4 by default. SocialLinks is the row of the project's outbound links; each icon lights up in its brand's color on hover."
       >
-        <Variants label="PatreonIcon, StatusIcon, DiscordIcon, GitHubIcon, SteamIcon · size by className">
-          <PatreonIcon />
-          <StatusIcon />
-          <DiscordIcon />
-          <GitHubIcon />
+        <Variants label="SteamIcon · size by className">
           <SteamIcon />
-          <DiscordIcon className="size-6 text-discord" />
-          <StatusIcon className="size-6 text-positive" />
+          <SteamIcon className="size-6" />
         </Variants>
         <Variants label="SocialLinks">
           <SocialLinks />
@@ -78,36 +51,16 @@ export function Round3DomainMisc() {
       <Specimen
         name="GraphNodeCard"
         source="domain/graph/GraphNodeCard"
-        note="One node of a build graph (item flow, ability order): image, name, meta line and win / pick rate mini-bars. The left edge carries the category. With onClick it is a button that can be selected; the graph places it through className and style."
+        note="One node of a build graph (item flow, ability order): image, name, meta line and win / pick rate mini-bars. The left edge carries the category. With onClick it is a button that can be selected; the graph places it through className and style. Details on hover are a Tooltip around it; a static node goes inside a TooltipTarget."
       >
         <Variants
           label="accent: weapon, vitality, spirit · selectable (click: selected shows a pin) · status · tooltip · focus-visible"
           className="items-stretch"
         >
           {ITEM_NODES.map((node, index) => (
-            <GraphNodeCard
+            <Tooltip
               key={node.itemId}
-              className="w-52"
-              accent={node.accent}
-              media={<ItemImage itemId={node.itemId} className="size-9 shrink-0" />}
-              name={<ItemName itemId={node.itemId} />}
-              meta={
-                <>
-                  <Badge variant="muted" size="sm">
-                    T{index + 2}
-                  </Badge>
-                  <span className="tabular-nums">{((index + 1) * 1600).toLocaleString("en-US")}</span>
-                </>
-              }
-              status={
-                index === 0 && <ShieldCheckIcon aria-label="High confidence" className="size-3.5 text-positive" />
-              }
-              winRate={node.winRate}
-              pickRate={node.pickRate}
-              pickRateFill={node.pickRate / 0.31}
-              selected={locked === node.itemId}
-              onClick={() => setLocked(locked === node.itemId ? null : node.itemId)}
-              tooltip={
+              content={
                 <>
                   <TooltipHeader title={<ItemName itemId={node.itemId} />} />
                   <TooltipStats>
@@ -116,10 +69,34 @@ export function Round3DomainMisc() {
                   </TooltipStats>
                 </>
               }
-            />
+            >
+              <GraphNodeCard
+                className="w-52"
+                accent={node.accent}
+                media={<ItemImage itemId={node.itemId} className="size-9 shrink-0" />}
+                name={<ItemName itemId={node.itemId} />}
+                meta={
+                  <>
+                    <Badge variant="muted" size="sm">
+                      T{index + 2}
+                    </Badge>
+                    <span className="tabular-nums">{((index + 1) * 1600).toLocaleString("en-US")}</span>
+                  </>
+                }
+                status={
+                  index === 0 && <ShieldCheckIcon aria-label="High confidence" className="size-3.5 text-positive" />
+                }
+                winRate={node.winRate}
+                pickRate={node.pickRate}
+                pickRateFill={node.pickRate / 0.31}
+                selected={locked === node.itemId}
+                interaction="pressable"
+                onClick={() => setLocked(locked === node.itemId ? null : node.itemId)}
+              />
+            </Tooltip>
           ))}
         </Variants>
-        <Variants label='accent: ability-1 ... ability-4, fill="accent" · static (no onClick) · emphasis by pick rate · dimmed · no media'>
+        <Variants label='accent: ability-1 ... ability-4, fill="accent" · static (interaction none) · emphasis by pick rate · dimmed · no media'>
           {ABILITY_IDS.map((abilityId, index) => (
             <GraphNodeCard
               key={abilityId}
@@ -157,12 +134,11 @@ export function Round3DomainMisc() {
           <ItemSlotSelector defaultValue={["weapon"]} />
           <ItemTierSelector defaultValue={[1]} disabled />
         </Variants>
-        <Variants label="Uncontrolled filter cells: HeroSelector, ModeSelector, RankRangeSelector, MatchTimeRangeSelector, HeatmapViewModeFilter">
+        <Variants label="Uncontrolled filter cells: HeroSelector, ModeSelector, RankRangeSelector, MatchTimeRangeSelector">
           <HeroSelector allowNull />
           <ModeSelector defaultValue="normal_ranked" />
           <RankRangeSelector />
           <MatchTimeRangeSelector defaultValue={[600, undefined]} />
-          <HeatmapViewModeFilter defaultValue="kd" />
         </Variants>
       </Specimen>
 

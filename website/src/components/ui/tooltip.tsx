@@ -113,7 +113,6 @@ function Tooltip({
 }
 
 const TOOLTIP_TARGET_DISPLAY = {
-  inline: "inline",
   "inline-block": "inline-block",
   block: "block",
 };
@@ -128,9 +127,8 @@ function TooltipTarget({
   ...props
 }: ComponentProps<"span"> & {
   /**
-   * How the target sits in its line. It defaults to `inline-block` so the focus ring boxes the whole trigger; an
-   * `inline` target whose content wraps gets one ring fragment per line. A trigger that must fill its column — a
-   * bar, a full-width row — takes `block`.
+   * How the target sits in its line. `inline-block` lets the focus ring box the whole trigger. A trigger that must
+   * fill its column — a bar, a full-width row — takes `block`.
    */
   display?: keyof typeof TOOLTIP_TARGET_DISPLAY;
 }) {

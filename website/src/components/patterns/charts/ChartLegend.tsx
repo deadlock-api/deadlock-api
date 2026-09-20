@@ -45,7 +45,7 @@ export function ChartSwatch({
   );
 }
 
-export interface ChartLegendItemProps extends Omit<React.ComponentProps<"li">, "color"> {
+interface ChartLegendItemProps extends Omit<React.ComponentProps<"li">, "color"> {
   /** A CSS color: a token such as `var(--chart-2)`, or a hero or rank color from the assets API. */
   color: string;
   /** Match the mark: `line` for line and area series, `square` for bars and stacks, `dot` for points. */

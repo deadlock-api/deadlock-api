@@ -12,28 +12,18 @@ import { FOCUS_RING } from "~/components/ui/recipes";
 import { Tooltip } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
+import type { FullBuildItem } from "~/lib/build-transform";
 import { TONE_BORDER, TONE_TEXT } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 import { queryKeys } from "~/queries/query-keys";
 
-export interface FullBuildItem {
-  itemId: number;
-  gameTimeS: number;
-  sold: boolean;
-  /** When truly sold (not upgraded), the game time the item was sold. */
-  soldTimeS?: number;
-  /** Cumulative souls spent on items at the moment of this purchase (refund-adjusted). */
-  soulsSpent?: number;
-  imbuedAbilityNumber?: number;
-}
-
-export interface BuildData {
+interface BuildData {
   items: FullBuildItem[];
   abilityBuildOrder?: number[];
   abilityUpgradeSequence?: number[];
 }
 
-export interface MatchHistoryCardProps extends Omit<React.ComponentProps<typeof Card>, "children" | "size" | "tone"> {
+interface MatchHistoryCardProps extends Omit<React.ComponentProps<typeof Card>, "children" | "size" | "tone"> {
   timeAgo: string;
   matchId: number;
   result: "win" | "loss";
@@ -48,8 +38,6 @@ export interface MatchHistoryCardProps extends Omit<React.ComponentProps<typeof 
   ranks?: Rank[];
   /** When provided, the player's name becomes a button that invokes this with the resolved persona name. */
   onPlayerClick?: (name?: string) => void;
-  /** Pre-fetched Steam profile. When provided the card skips its own profile query. */
-  steamProfile?: { personaname: string } | null;
 }
 
 function formatDuration(seconds: number): string {
@@ -136,7 +124,6 @@ export default function MatchHistoryCard({
   averageBadge,
   ranks,
   onPlayerClick,
-  steamProfile: steamProfileProp,
   className,
   ...props
 }: MatchHistoryCardProps) {
@@ -148,18 +135,16 @@ export default function MatchHistoryCard({
   const midItems = buildData.items.filter((i) => i.gameTimeS >= EARLY_MAX_S && i.gameTimeS < MID_MAX_S);
   const lateItems = buildData.items.filter((i) => i.gameTimeS >= MID_MAX_S);
 
-  const { data: fetchedProfile } = useQuery({
+  const { data: steamProfile } = useQuery({
     queryKey: queryKeys.steam.profile(accountId),
     queryFn: async () => {
       if (accountId == null) return null;
       const res = await api.steam_api.steam({ accountIds: [accountId] });
       return res.data[0] ?? null;
     },
-    enabled: accountId != null && steamProfileProp === undefined,
+    enabled: accountId != null,
     staleTime: CACHE_DURATIONS.FOREVER,
   });
-
-  const steamProfile = steamProfileProp !== undefined ? steamProfileProp : fetchedProfile;
 
   return (
     <Card

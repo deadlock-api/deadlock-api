@@ -7,12 +7,15 @@ import { lazy, Suspense } from "react";
 import { Filter } from "~/components/domain/filters";
 import type { ModeWithRank } from "~/components/domain/filters/ModeWithRankFilter";
 import HeatmapCanvas from "~/components/features/heatmap/HeatmapCanvas";
+import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
+import { StringOption, StringSelector } from "~/components/patterns/filter-bar/StringSelector";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { combineQueryStates } from "~/components/patterns/states/QueryRenderer";
+import { SegmentedItem } from "~/components/ui/segmented";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -25,6 +28,11 @@ import { killDeathStatsQueryOptions, mapQueryOptions } from "~/queries/heatmap-q
 const Heatmap3D = lazy(() => import("~/components/features/heatmap/Heatmap3D"));
 
 const VIEW_MODES = ["kills", "deaths", "kd"] as const;
+const VIEW_MODE_LABELS: Record<(typeof VIEW_MODES)[number], string> = {
+  kills: "Kills",
+  deaths: "Deaths",
+  kd: "K/D",
+};
 
 export const Route = createFileRoute("/community/heatmap")({
   component: HeatmapPage,
@@ -88,15 +96,38 @@ function HeatmapPage() {
       <PageHeader title="Kill/Death Heatmap" description="Visualize kill and death hotspots across the map" />
 
       <Filter.Root>
-        <Filter.Team value={team} onValueChange={setTeam} />
-        <Filter.HeatmapViewMode value={viewMode} onValueChange={setViewMode} />
-        <Filter.DimensionToggle value={is3D} onValueChange={setIs3D} />
-        <Filter.Hero value={heroId} onValueChange={setHeroId} allowNull label="Hero" />
+        <StringSelector
+          label="Team"
+          value={String(team)}
+          defaultValue="0"
+          onValueChange={(next) => setTeam(Number(next))}
+        >
+          <StringOption value="0">The Hidden King</StringOption>
+          <StringOption value="1">The Archmother</StringOption>
+        </StringSelector>
+        {/* Three segments stay under the auto-wide threshold, but these labels do not fit a default cell. */}
+        <FilterToggleCell label="Show" width="wide" value={viewMode} defaultValue="kills" onValueChange={setViewMode}>
+          {VIEW_MODES.map((viewModeOption) => (
+            <SegmentedItem key={viewModeOption} value={viewModeOption}>
+              {VIEW_MODE_LABELS[viewModeOption]}
+            </SegmentedItem>
+          ))}
+        </FilterToggleCell>
+        <FilterToggleCell
+          label="View"
+          value={is3D ? "3d" : "2d"}
+          defaultValue="2d"
+          onValueChange={(next) => setIs3D(next === "3d")}
+        >
+          <SegmentedItem value="2d">2D</SegmentedItem>
+          <SegmentedItem value="3d">3D</SegmentedItem>
+        </FilterToggleCell>
+        <Filter.Hero value={heroId} onValueChange={setHeroId} allowNull />
         <Filter.ModeWithRank value={{ mode, rank: [minRankId, maxRankId] }} onValueChange={handleModeWithRankChange} />
         <Filter.SeasonPatchDate
           value={{ startDate, endDate }}
           onValueChange={({ startDate: start, endDate: end, action }) => handleDateChange(start, end, action)}
-          resetRange={defaultRange}
+          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
         />
         <Filter.TimeRange
           value={[minGameTime || undefined, maxGameTime < 3600 ? maxGameTime : undefined]}

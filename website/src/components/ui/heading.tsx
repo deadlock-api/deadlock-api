@@ -35,6 +35,6 @@ export function Heading({
   font,
   className,
   ...props
-}: React.ComponentProps<"h2"> & VariantProps<typeof headingVariants> & { as?: "h2" | "h3" | "h4" | "h5" | "h6" }) {
+}: React.ComponentProps<"h2"> & VariantProps<typeof headingVariants> & { as?: "h2" | "h3" | "h4" }) {
   return <Tag data-slot="heading" className={cn(headingVariants({ size, font }), className)} {...props} />;
 }

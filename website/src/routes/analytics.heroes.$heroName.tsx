@@ -6,7 +6,6 @@ import { lazy, Suspense, useMemo } from "react";
 
 import { NotFound } from "~/components/app/NotFound";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
-import { DEFAULT_MATCH_MODE } from "~/components/domain/selectors/MatchModeSelector";
 import { LinkCard } from "~/components/patterns/content/LinkCard";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
@@ -22,6 +21,7 @@ import { computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
 import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { formatPercent } from "~/lib/format";
+import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { findHeroBySlug, heroSlug } from "~/lib/hero-slug";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";

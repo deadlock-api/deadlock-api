@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiGameStatsRequest, AnalyticsGameStats } from "deadlock_api_client";
-import { Fragment, lazy, useState } from "react";
+import { Fragment, lazy, Suspense, useState } from "react";
 
 import type { StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
-import { StatTrendHoverCard } from "~/components/patterns/charts/StatTrendHoverCard";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -12,6 +11,7 @@ import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
 import { Inline } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
+import { Tooltip } from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
@@ -111,28 +111,39 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
 
                 return (
                   <Fragment key={stat.key}>
-                    <StatTrendHoverCard
-                      triggerAs="child"
-                      trigger={
-                        <Button
-                          variant="row"
-                          className="justify-between px-4 py-2.5"
-                          onClick={() => onStatClick?.(stat.key)}
+                    <Tooltip
+                      variant="preview"
+                      side="bottom"
+                      align="end"
+                      content={
+                        <Suspense
+                          fallback={<LoadingState label="trend" className="flex h-62.5 items-center justify-center" />}
                         >
-                          <span className="text-start text-sm text-muted-foreground">{stat.label}</span>
-                          <div className="flex items-center gap-2.5">
-                            <span className="text-sm font-semibold tabular-nums">
-                              {formatStatValue(value, stat.format)}
-                            </span>
-                            {delta != null && (
-                              <Delta value={delta} sign="arrow" display="badge" className="min-w-13 font-normal" />
-                            )}
-                          </div>
-                        </Button>
+                          <StatTrendChart
+                            params={params}
+                            stat={stat}
+                            value={trendBucket}
+                            onValueChange={setTrendBucket}
+                          />
+                        </Suspense>
                       }
                     >
-                      <StatTrendChart params={params} stat={stat} value={trendBucket} onValueChange={setTrendBucket} />
-                    </StatTrendHoverCard>
+                      <Button
+                        variant="row"
+                        className="justify-between px-4 py-2.5"
+                        onClick={() => onStatClick?.(stat.key)}
+                      >
+                        <span className="text-start text-sm text-muted-foreground">{stat.label}</span>
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-sm font-semibold tabular-nums">
+                            {formatStatValue(value, stat.format)}
+                          </span>
+                          {delta != null && (
+                            <Delta value={delta} sign="arrow" display="badge" className="min-w-13 font-normal" />
+                          )}
+                        </div>
+                      </Button>
+                    </Tooltip>
                     {stat.key === "total_players" && teamWinRow}
                   </Fragment>
                 );

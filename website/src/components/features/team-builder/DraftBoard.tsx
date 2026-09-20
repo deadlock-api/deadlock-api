@@ -269,6 +269,7 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
                         {(["ally", "enemy"] as const).map((side) => (
                           <span key={side} className="flex w-12 items-center gap-1">
                             <TeamEmblem side={side} className="size-3 shrink-0 text-muted-foreground" />
+                            <span className="sr-only">{TEAM_NAMES[side]}</span>
                             <Points value={contribution[side]} align="end" className="flex-1 font-semibold" />
                           </span>
                         ))}

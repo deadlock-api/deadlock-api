@@ -4,10 +4,10 @@ import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts"
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { chartSizeVariants, ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_AXIS, CHART_GRID, CHART_MARGIN } from "~/components/patterns/charts/theme";
+import { CHART_AXIS, CHART_COLOR, CHART_GRID, CHART_MARGIN } from "~/components/patterns/charts/theme";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { day } from "~/dayjs";
-import { formatAxisTick, formatStatValue, type StatFormat, valueSpan } from "~/lib/stat-format";
+import { formatAxisTick, formatStatValue, type StatFormat, type StatTrendPoint, valueSpan } from "~/lib/stat-format";
 import { cn } from "~/lib/utils";
 
 const STAT_TREND_BUCKETS = [
@@ -26,12 +26,6 @@ const STAT_TREND_BUCKETS = [
 const STATE_SIZE = cn(chartSizeVariants({ size: "md" }), "grid");
 
 export type StatTrendBucket = (typeof STAT_TREND_BUCKETS)[number]["value"];
-
-export interface StatTrendPoint {
-  date: number;
-  value: number | null;
-  matches?: number;
-}
 
 interface StatTrendChartProps extends Omit<React.ComponentProps<"div">, "onChange" | "defaultValue"> {
   data: StatTrendPoint[];
@@ -87,8 +81,8 @@ export default function StatTrendChart({
             <AreaChart data={chartData} margin={CHART_MARGIN}>
               <defs>
                 <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
+                  <stop offset="0%" stopColor={CHART_COLOR.primary} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={CHART_COLOR.primary} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid {...CHART_GRID} />
@@ -129,7 +123,7 @@ export default function StatTrendChart({
                 type="linear"
                 isAnimationActive={false}
                 dataKey="value"
-                stroke="var(--primary)"
+                stroke={CHART_COLOR.primary}
                 fill={`url(#${fillId})`}
                 dot={chartData.length === 1 ? { r: 3, strokeWidth: 0 } : false}
                 activeDot={{ r: 3, strokeWidth: 0 }}

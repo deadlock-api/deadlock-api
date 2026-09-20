@@ -1,11 +1,11 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { PinIcon } from "lucide-react";
 
-import { RateBar } from "~/components/ui/rate-bar";
+import { ProgressBar } from "~/components/ui/progress-bar";
 import { FOCUS_RING } from "~/components/ui/recipes";
-import { Tooltip } from "~/components/ui/tooltip";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
+import type { Color } from "~/types/general";
 
 const graphNodeCardVariants = cva(
   [
@@ -57,13 +57,13 @@ function RateRow({
   label: string;
   rate: number;
   fill: number;
-  color: string;
+  color: Color;
   className: string;
 }) {
   return (
     <div className="flex items-center gap-1.5 text-3xs">
       <span className="w-4 shrink-0 font-medium text-muted-foreground">{label}</span>
-      <RateBar rate={fill} color={color} className="flex-1" />
+      <ProgressBar variant="thin" value={fill} color={color} className="flex-1" />
       <span className={cn("w-9 shrink-0 text-end font-semibold tabular-nums", className)}>
         {(rate * 100).toFixed(1)}%
       </span>
@@ -73,8 +73,11 @@ function RateRow({
 
 /**
  * One node of a build graph (item flow, ability order): image, name, a meta line and the win and pick rate as
- * mini-bars. With `onClick` it is a button (lock, focus); without, a plain block. The graph owns the placement:
+ * mini-bars. `interaction="pressable"` makes it a button (lock, focus); otherwise a plain block. The graph owns the placement:
  * position and size arrive through `className` and `style`.
+ *
+ * Details on hover are a `Tooltip` around the card; a static card goes inside a `TooltipTarget` so the keyboard
+ * reaches its tooltip too.
  */
 export function GraphNodeCard({
   media,
@@ -90,10 +93,8 @@ export function GraphNodeCard({
   selected = false,
   dimmed,
   emphasis = 1,
-  tooltip,
-  tooltipSide = "top",
+  interaction = "none",
   className,
-  onClick,
   ...props
 }: Omit<React.ComponentProps<"button">, "children" | "name" | "type" | "disabled"> &
   VariantProps<typeof graphNodeCardVariants> & {
@@ -117,24 +118,27 @@ export function GraphNodeCard({
     selected?: boolean;
     /** 0 to 1, how much the node matters (its pick rate share); a weak node fades. `dimmed` is the hover version. */
     emphasis?: number;
-    /** Body of the hover card. */
-    tooltip?: React.ReactNode;
-    tooltipSide?: React.ComponentProps<typeof Tooltip>["side"];
+    /**
+     * `pressable` renders the toggle button (`aria-pressed`) that `onClick` drives; `none` a static block. It is not
+     * read off `onClick`, which a wrapping `Tooltip` also injects.
+     */
+    interaction?: "none" | "pressable";
   }) {
+  const pressable = interaction === "pressable";
   // Typed as the button it usually is; the static variant only drops `type` and the pressed state.
-  const Comp = (onClick ? "button" : "div") as "button";
-  const card = (
+  const Comp = (pressable ? "button" : "div") as "button";
+  return (
     <Comp
       data-slot="graph-node-card"
       data-selected={selected ? "" : undefined}
-      type={onClick ? "button" : undefined}
-      aria-pressed={onClick ? selected : undefined}
-      onClick={onClick}
+      data-interaction={interaction}
+      type={pressable ? "button" : undefined}
+      aria-pressed={pressable ? selected : undefined}
       className={cn(
         EMPHASIS[Math.round(Math.max(0, Math.min(1, emphasis)) * (EMPHASIS.length - 1))],
         graphNodeCardVariants({ accent, dimmed }),
         fill === "accent" && ACCENT_TINT[accent ?? "none"],
-        onClick && "cursor-pointer hover:border-y-muted-foreground hover:border-e-muted-foreground",
+        pressable && "cursor-pointer hover:border-y-muted-foreground hover:border-e-muted-foreground",
         selected && "border-primary bg-primary/10 hover:border-y-primary hover:border-e-primary",
         className,
       )}
@@ -166,13 +170,5 @@ export function GraphNodeCard({
         <RateRow label="PR" rate={pickRate} fill={pickRateFill} color="var(--chart-4)" className="text-chart-4" />
       </div>
     </Comp>
-  );
-
-  if (!tooltip) return card;
-
-  return (
-    <Tooltip side={tooltipSide} content={tooltip}>
-      {card}
-    </Tooltip>
   );
 }

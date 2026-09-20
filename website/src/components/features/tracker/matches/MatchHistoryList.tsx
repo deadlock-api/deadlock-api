@@ -34,7 +34,7 @@ function sessionDateLabel(unix: number): string {
 function SessionHeader({ session }: { session: PlaySession }) {
   return (
     // The strip sticks to the top of the list while its session scrolls, so it has to be opaque.
-    <PanelSection title={sessionDateLabel(session.startUnix)} as="div" tone="opaque" className="px-3">
+    <PanelSection title={sessionDateLabel(session.startUnix)} tone="opaque" className="px-3">
       <span className="flex flex-1 items-center gap-2 tabular-nums">
         <span>
           <span className={cn("font-semibold", TONE_TEXT.positive)}>{session.wins}W</span>

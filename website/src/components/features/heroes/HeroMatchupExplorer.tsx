@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Swords } from "lucide-react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroSelector } from "~/components/domain/selectors/HeroSelector";
@@ -7,12 +8,12 @@ import {
   type MatchupRow,
   useHeroMatchupRows,
 } from "~/components/features/heroes/HeroMatchupDetailsStatsTable";
+import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
-import { Heading } from "~/components/ui/heading";
 import { DivergingBar } from "~/components/ui/rate-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { formatPercent, formatSignedPercent } from "~/lib/format";
@@ -130,13 +131,15 @@ export function HeroMatchupExplorer({
 
   return (
     <div className="flex flex-col gap-3">
-      <section aria-label={`${heroName} matchup overview`} className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <Heading as="h2" className="sr-only">
-          {heroName}’s matchups
-        </Heading>
+      <FilterBar
+        variant="toolbar"
+        title={`${heroName}’s matchups`}
+        icon={Swords}
+        aria-label={`${heroName} matchup overview`}
+      >
         <HeroSelector
+          size="sm"
           value={params.heroId}
-          label="Hero"
           defaultValue={params.heroId}
           onValueChange={(id) => {
             if (id != null) onHeroSelected(id);
@@ -150,7 +153,7 @@ export function HeroMatchupExplorer({
             win rate <span aria-hidden="true">·</span> {number(heroStats.matches)} matches
           </p>
         ) : null}
-      </section>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState variant="skeleton" label="hero matchups" className="h-80" />

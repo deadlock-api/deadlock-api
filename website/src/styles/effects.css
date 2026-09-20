@@ -65,6 +65,13 @@ body[data-feedback-spotlight] [data-slot="dialog-overlay"] {
   mask-image: radial-gradient(circle 320px at calc(100% - 80px) calc(100% - 38px), transparent 35%, black 90%);
 }
 
+/* The brand mark behind the page: tilted into the corner and faded out towards the content. */
+.page-backdrop {
+  transform: perspective(900px) rotateX(12deg) rotateY(-8deg) rotateZ(-14deg);
+  -webkit-mask-image: linear-gradient(to top left, black 10%, rgb(0 0 0 / 0.15) 80%);
+  mask-image: linear-gradient(to top left, black 10%, rgb(0 0 0 / 0.15) 80%);
+}
+
 /* Native dialogs make the page inert, but scroll locking is separate. */
 html:has(.mobile-navigation[open]) {
   overflow: hidden;

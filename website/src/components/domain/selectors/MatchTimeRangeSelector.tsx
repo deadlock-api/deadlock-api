@@ -25,8 +25,7 @@ export interface MatchTimeRangeSelectorProps extends Omit<
   title?: string;
   /** Max slider value in seconds. @default 3600 */
   max?: number;
-  /** Preset buttons. Pass `null` to hide presets entirely. */
-  presets?: { label: string; start: number; end: number }[] | null;
+  presets?: { label: string; start: number; end: number }[];
 }
 
 const DEFAULT_MAX = 60 * 60;
@@ -77,7 +76,7 @@ export function MatchTimeRangeSelector({
   };
 
   const isActive = minTime != null || maxTime != null;
-  const activePreset = presets?.find((p) => p.start === committedValue[0] && p.end === committedValue[1])?.label ?? "";
+  const activePreset = presets.find((p) => p.start === committedValue[0] && p.end === committedValue[1])?.label ?? "";
 
   return (
     <FilterCell
@@ -112,7 +111,7 @@ export function MatchTimeRangeSelector({
           <span>{draftValue[1] === max ? "End of Game" : formatTime(draftValue[1])}</span>
         </div>
 
-        {presets && presets.length > 0 && (
+        {presets.length > 0 && (
           <Segmented
             value={activePreset}
             onValueChange={(name) => {

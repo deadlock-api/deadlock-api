@@ -211,7 +211,7 @@ function PickerBody({
 
         {takenRows.length > 0 && (
           <>
-            <PanelSection title="Already drafted" as="div" />
+            <PanelSection title="Already drafted" />
             {takenRows.map((heroId) => (
               <OptionRow
                 key={heroId}

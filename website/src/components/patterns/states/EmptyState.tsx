@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "~/components/ui/empty";
 import { cn } from "~/lib/utils";
 
 interface EmptyStateProps extends Omit<React.ComponentProps<"div">, "title" | "children"> {
@@ -41,23 +40,48 @@ export function EmptyState({
     );
   }
   return (
-    <Empty
+    <div
+      data-slot="empty"
+      data-size="default"
       data-empty-state
       data-variant={variant}
       aria-live="polite"
-      className={cn("p-6", variant === "panel" && "border", className)}
+      className={cn(
+        "flex min-w-0 flex-1 flex-col items-center justify-center gap-6 rounded-lg p-6 text-center text-balance",
+        variant === "panel" && "border",
+        className,
+      )}
       {...props}
     >
-      <EmptyHeader>
+      <div data-slot="empty-header" className="flex max-w-sm flex-col items-center gap-2 text-center">
         {Icon && (
-          <EmptyMedia variant="icon">
+          <div
+            data-slot="empty-icon"
+            className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-6"
+          >
             <Icon aria-hidden="true" />
-          </EmptyMedia>
+          </div>
         )}
-        <EmptyTitle>{title}</EmptyTitle>
-        {description && <EmptyDescription>{description}</EmptyDescription>}
-      </EmptyHeader>
-      {action && <EmptyContent>{action}</EmptyContent>}
-    </Empty>
+        <div data-slot="empty-title" className="text-lg font-medium tracking-tight break-words">
+          {title}
+        </div>
+        {description && (
+          <p
+            data-slot="empty-description"
+            className="text-sm/relaxed text-muted-foreground [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary"
+          >
+            {description}
+          </p>
+        )}
+      </div>
+      {action && (
+        <div
+          data-slot="empty-content"
+          className="flex w-full max-w-sm min-w-0 flex-col items-center gap-4 text-sm text-balance"
+        >
+          {action}
+        </div>
+      )}
+    </div>
   );
 }

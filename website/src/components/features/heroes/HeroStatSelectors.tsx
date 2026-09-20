@@ -2,7 +2,7 @@ import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
 import { HERO_TREND_LABELS } from "~/lib/hero-trends";
-import { HERO_STATS, HERO_STATS_WITH_BAN_RATE, TIME_INTERVALS } from "~/types/api_hero_stats";
+import { HERO_STATS, TIME_INTERVALS } from "~/types/api_hero_stats";
 
 function metricLabel(key: string) {
   return (
@@ -67,6 +67,3 @@ export function HeroTimeIntervalSelector({
     </Segmented>
   );
 }
-
-export const BY_RANK_STATS = [...HERO_STATS_WITH_BAN_RATE, "pickrate"] as const;
-export type ByRankStat = (typeof BY_RANK_STATS)[number];

@@ -1,14 +1,11 @@
 import { Link, useMatches, useRouterState } from "@tanstack/react-router";
 import { Home } from "lucide-react";
-import { Fragment } from "react";
 
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
-  BreadcrumbList,
   BreadcrumbPage,
-  BreadcrumbSeparator,
 } from "~/components/patterns/navigation/Breadcrumb";
 
 const ROUTE_LABELS: Record<string, string> = {
@@ -98,37 +95,32 @@ export function Breadcrumbs() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       <Breadcrumb className="ps-8 md:ps-0">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/" aria-label="Home">
-                <Home />
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          {items.map((item, i) => {
-            const isLast = i === items.length - 1;
-            return (
-              <Fragment key={item.path}>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  {isLast ? (
-                    <BreadcrumbPage>{item.label}</BreadcrumbPage>
-                  ) : (
-                    <BreadcrumbLink asChild>
-                      <Link
-                        to={item.path}
-                        search={item.path === "/games/deadlockdle" && puzzleDate ? { date: puzzleDate } : undefined}
-                      >
-                        {item.label}
-                      </Link>
-                    </BreadcrumbLink>
-                  )}
-                </BreadcrumbItem>
-              </Fragment>
-            );
-          })}
-        </BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbLink asChild>
+            <Link to="/" aria-label="Home">
+              <Home />
+            </Link>
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        {items.map((item, i) => {
+          const isLast = i === items.length - 1;
+          return (
+            <BreadcrumbItem key={item.path}>
+              {isLast ? (
+                <BreadcrumbPage>{item.label}</BreadcrumbPage>
+              ) : (
+                <BreadcrumbLink asChild>
+                  <Link
+                    to={item.path}
+                    search={item.path === "/games/deadlockdle" && puzzleDate ? { date: puzzleDate } : undefined}
+                  >
+                    {item.label}
+                  </Link>
+                </BreadcrumbLink>
+              )}
+            </BreadcrumbItem>
+          );
+        })}
       </Breadcrumb>
     </>
   );

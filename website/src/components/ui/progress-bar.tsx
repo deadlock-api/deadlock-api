@@ -3,7 +3,6 @@ import { Children, createContext, isValidElement, use, type ReactNode } from "re
 
 import { Delta } from "~/components/ui/delta";
 import { NoValue } from "~/components/ui/no-value";
-import { Tooltip } from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
 import type { Color } from "~/types/general";
 
@@ -17,6 +16,8 @@ const progressBarVariants = cva("", {
        * `relative` element so it stays above the fill.
        */
       cell: "pointer-events-none absolute inset-0 opacity-20",
+      /** A thin rounded bar beside a visible rate label. Its fill defaults to positive. */
+      thin: "relative h-1.5 min-w-0 rounded-full bg-muted",
     },
   },
   defaultVariants: { variant: "bar" },
@@ -84,7 +85,8 @@ export function ProgressBar({
   const total = segmentTotal(children);
   const clamped = Math.max(Math.min(total || value || 0, maxVal), minVal);
   const width = `${(((clamped - minVal) / (maxVal - minVal)) * 100).toFixed(2)}%`;
-  const fill = "h-full transition-all duration-slow ease-standard";
+  const fill = cn("h-full transition-all duration-slow ease-standard", variant === "thin" && "rounded-full");
+  const fallbackColor = variant === "thin" ? "var(--positive)" : "var(--primary)";
 
   return (
     <div
@@ -101,7 +103,7 @@ export function ProgressBar({
           <ProgressBarTotalContext value={total}>{children}</ProgressBarTotalContext>
         </div>
       ) : (
-        <div className={fill} style={{ backgroundColor: color || "var(--primary)", width }} />
+        <div className={fill} style={{ backgroundColor: color || fallbackColor, width }} />
       )}
     </div>
   );
@@ -115,8 +117,6 @@ export function ProgressBarWithLabel({
   label,
   delta,
   deltaFormat = "percent",
-  orientation = "vertical",
-  tooltip,
   className,
   children,
   ...props
@@ -128,42 +128,28 @@ export function ProgressBarWithLabel({
   label?: ReactNode;
   delta?: number;
   deltaFormat?: React.ComponentProps<typeof Delta>["format"];
-  /** `vertical` puts the label under the bar; `horizontal` puts a short bar before it, for table cells. */
-  orientation?: "vertical" | "horizontal";
-  tooltip?: ReactNode;
   /** `ProgressBarSegment` elements, for a stacked bar. */
   children?: ReactNode;
 }) {
-  const horizontal = orientation === "horizontal";
   const reading = typeof value === "number" && Number.isFinite(value);
   const percentage = Math.round((((value || 0) - (min || 0)) / ((max || 1) - (min || 0))) * 100);
-  const content = (
+  return (
     <div
       data-slot="progress-bar-with-label"
-      data-orientation={horizontal ? "horizontal" : "vertical"}
-      className={cn(
-        "flex w-full min-w-24 flex-col gap-2",
-        horizontal && "flex-row items-center gap-2",
-        tooltip && "cursor-default",
-        className,
-      )}
+      className={cn("flex w-full min-w-24 flex-col gap-2", className)}
       {...props}
     >
-      <div className={cn(horizontal && "w-10 shrink-0")} aria-hidden="true">
+      <div aria-hidden="true">
         <ProgressBar value={value} min={min} max={max} color={color}>
           {children}
         </ProgressBar>
       </div>
       <div className="flex items-baseline gap-1.5">
-        <span className={cn("text-start text-sm text-muted-foreground", horizontal && "text-xs tabular-nums")}>
+        <span className="text-start text-sm text-muted-foreground">
           {label || (reading ? `${percentage}%` : <NoValue />)}
         </span>
         {delta !== undefined && <Delta value={delta} format={deltaFormat} className="text-xs" />}
       </div>
     </div>
   );
-
-  if (!tooltip) return content;
-
-  return <Tooltip content={tooltip}>{content}</Tooltip>;
 }

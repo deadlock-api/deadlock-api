@@ -13,7 +13,7 @@ interface SideNavSectionProps extends Omit<React.ComponentProps<typeof Collapsib
 }
 
 /**
- * A category of a SideNav that opens and closes. Sections nest: a level 1 section holds level 2 sections, which
+ * A category of the showcase index that opens and closes. Sections nest: a level 1 section holds level 2 sections, which
  * hold SideNavItems. State is `open` / `defaultOpen` / `onOpenChange`.
  */
 export function SideNavSection({ label, count, level = 1, className, children, ...props }: SideNavSectionProps) {

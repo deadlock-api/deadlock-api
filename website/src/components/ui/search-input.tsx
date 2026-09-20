@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { Button } from "~/components/ui/button";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { Input } from "~/components/ui/input";
-import { FOCUS_RING } from "~/components/ui/recipes";
+import { DISABLED_STATE, FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 interface SearchInputProps extends Omit<React.ComponentProps<"input">, "value" | "defaultValue" | "type" | "size"> {
@@ -63,7 +63,8 @@ export function SearchInput({
           className={cn(
             hideNativeClear,
             FOCUS_RING,
-            "w-full min-w-0 rounded-sm bg-transparent pe-8 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-3 aria-invalid:ring-destructive/40 [&[readonly]]:cursor-default",
+            DISABLED_STATE,
+            "w-full min-w-0 rounded-sm bg-transparent pe-8 placeholder:text-muted-foreground aria-invalid:ring-3 aria-invalid:ring-destructive/40 [&[readonly]]:cursor-default",
             size === "sm" ? "h-8 ps-5.5 text-sm" : "h-9 ps-6 text-base",
           )}
           {...fieldProps}

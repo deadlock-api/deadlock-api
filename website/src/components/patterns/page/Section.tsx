@@ -19,7 +19,7 @@ interface SectionProps
   title: ReactNode;
   description?: ReactNode;
   /** The heading level. Pick by document outline, not by looks; `size` sets the looks. */
-  as?: "h2" | "h3" | "h4";
+  as?: "h2" | "h3";
   /** `hidden` keeps the heading in the outline but does not draw it, for a tab panel whose tab already names it. */
   titleDisplay?: "visible" | "hidden";
   /** `center` for marketing pages; data and content pages stay start-aligned. */

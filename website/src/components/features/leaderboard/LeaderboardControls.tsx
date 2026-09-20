@@ -1,5 +1,6 @@
 import { PaginationControls } from "~/components/patterns/data-table/PaginationControls";
 import { Input } from "~/components/ui/input";
+import { SearchInput } from "~/components/ui/search-input";
 
 export interface LeaderboardControlsProps {
   searchQuery: string;
@@ -24,21 +25,25 @@ export function LeaderboardControls({
 }: LeaderboardControlsProps) {
   return (
     <PaginationControls
-      searchQuery={searchQuery}
-      onSearchChange={(query) => {
-        setSearchQuery(query);
-        if (query.length > 0) setCurrentPage(0);
-      }}
-      itemsPerPage={itemsPerPage}
-      onItemsPerPageChange={(items) => {
+      page={currentPage}
+      onPageChange={(page) => setCurrentPage(page)}
+      pageSize={itemsPerPage}
+      onPageSizeChange={(items) => {
         setItemsPerPage(items);
         setCurrentPage(0);
       }}
-      currentPage={currentPage}
-      onPageChange={(page) => setCurrentPage(page)}
       totalPages={totalPages}
-      searchPlaceholder="Search player..."
     >
+      <SearchInput
+        size="sm"
+        placeholder="Search player..."
+        aria-label="Search player"
+        value={searchQuery}
+        onValueChange={(query) => {
+          setSearchQuery(query);
+          if (query.length > 0) setCurrentPage(0);
+        }}
+      />
       <Input
         type="number"
         min={1}

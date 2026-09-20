@@ -1,7 +1,7 @@
 import type { RankedSeason } from "deadlock_api_client";
 
 import { type Dayjs, day } from "~/dayjs";
-import { PATCHES } from "~/lib/constants";
+import { PATCHES, type PatchInfo } from "~/lib/constants";
 import type { DateFilterPreference, DateRange } from "~/lib/date-filter-preference";
 import { normalizeUnixCeil, normalizeUnixFloor, registerExactBoundaries } from "~/lib/time-normalize";
 
@@ -90,4 +90,71 @@ export function defaultUnixRange(seasons: readonly SeasonInfo[], preference: Dat
 export function defaultPrevUnixRange(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   const [start, end] = defaultPrevDateRange(seasons, preference);
   return { minUnixTimestamp: normalizeUnixFloor(start) ?? 0, maxUnixTimestamp: normalizeUnixCeil(end) };
+}
+
+export function patchMatches(patch: PatchInfo, startDate: Dayjs, endDate?: Dayjs): boolean {
+  if (!patch.startDate.isSame(startDate, "day")) return false;
+  if (patch.endDate === undefined) return endDate === undefined;
+  return endDate !== undefined && patch.endDate.isSame(endDate, "day");
+}
+
+// Seasons match to the second, unlike patches: a season can begin on the same
+// day as the patch that starts it, and day-granularity matching would then
+// report the patch selection as its season.
+export function seasonMatches(season: SeasonInfo, startDate: Dayjs, endDate?: Dayjs): boolean {
+  if (season.startDate.unix() !== startDate.unix()) return false;
+  if (season.endDate === undefined) return endDate === undefined;
+  return endDate !== undefined && season.endDate.unix() === endDate.unix();
+}
+
+/** The same human-readable date label in the picker and compact filter summaries. */
+export function dateRangeLabel(
+  { startDate, endDate }: { startDate?: Dayjs; endDate?: Dayjs },
+  { seasons = [], patches = [] }: { seasons?: readonly SeasonInfo[]; patches?: readonly PatchInfo[] } = {},
+): string {
+  const season = startDate && seasons.find((candidate) => seasonMatches(candidate, startDate, endDate));
+  if (season) return season.name;
+  const patch = startDate && patches.find((candidate) => patchMatches(candidate, startDate, endDate));
+  if (patch) return patch.name;
+  if (!startDate && !endDate) return "All Time";
+  if (startDate && endDate) return `${startDate.format("MMM D")} - ${endDate.format("MMM D")}`;
+  if (startDate) return `since ${startDate.format("MMM D")}`;
+  return `until ${endDate!.format("MMM D")}`;
+}
+
+export function computePreviousPeriod(
+  startDate?: Dayjs,
+  endDate?: Dayjs,
+  ranges?: { seasons?: readonly SeasonInfo[]; patches?: readonly PatchInfo[] },
+): { prevStartDate?: Dayjs; prevEndDate?: Dayjs } {
+  if (!startDate) return {};
+
+  const seasons = ranges?.seasons;
+  if (seasons) {
+    const seasonIndex = seasons.findIndex((season) => seasonMatches(season, startDate, endDate));
+    if (seasonIndex >= 0) {
+      const [prevStartDate, prevEndDate] = previousSeasonRange(seasons, seasonIndex);
+      return { prevStartDate, prevEndDate };
+    }
+  }
+
+  const patches = ranges?.patches;
+  if (patches) {
+    const patchIndex = patches.findIndex((patch) => patchMatches(patch, startDate, endDate));
+    if (patchIndex >= 0 && patchIndex + 1 < patches.length) {
+      const prevPatch = patches[patchIndex + 1];
+      return {
+        prevStartDate: prevPatch.startDate,
+        prevEndDate: patches[patchIndex].startDate,
+      };
+    }
+  }
+
+  if (!endDate) return {};
+  // Duration shift fallback for custom ranges.
+  const durationSeconds = endDate.unix() - startDate.unix();
+  return {
+    prevStartDate: startDate.subtract(durationSeconds, "second"),
+    prevEndDate: startDate,
+  };
 }

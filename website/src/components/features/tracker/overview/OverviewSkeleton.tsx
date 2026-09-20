@@ -15,7 +15,7 @@ export function OverviewSkeleton() {
           <PanelBody size="sm" className="flex flex-col gap-3">
             <Skeleton className="h-5 w-24" />
             <Skeleton className="h-7 w-full" />
-            <SkeletonMediaRow rows={10} variant="divided" />
+            <SkeletonMediaRow rows={10} />
           </PanelBody>
         </Panel>
         <div className="flex min-w-0 flex-col gap-2">

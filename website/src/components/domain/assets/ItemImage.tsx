@@ -8,8 +8,10 @@ export type ItemSource =
   | { itemId: number; item?: never; loading?: never }
   | { item: Upgrade | undefined; loading?: boolean; itemId?: never };
 
-type ItemImageLook = Omit<React.ComponentProps<typeof AssetImage>, "asset" | "loading" | "title"> & {
-  className?: string;
+type ItemImageLook = Omit<
+  React.ComponentProps<typeof AssetImage>,
+  "asset" | "loading" | "title" | "placeholderClassName"
+> & {
   /** Native hover title, the name by default; pass "" where a tooltip already names the image. */
   title?: string;
 };
@@ -45,11 +47,10 @@ function ItemImageView({
             }
           : undefined
       }
-      loading={loading}
-      skeletonClassName={cn("size-8 rounded-sm", className)}
-      emptyClassName={cn("aspect-square size-8 rounded-sm bg-muted", className)}
-      imgClassName={cn("aspect-square size-8 rounded-sm", className)}
       {...props}
+      loading={loading}
+      placeholderClassName={cn("aspect-square size-8 rounded-sm", className)}
+      className={cn("aspect-square size-8 rounded-sm", className)}
     />
   );
 }

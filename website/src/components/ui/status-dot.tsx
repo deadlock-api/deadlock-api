@@ -7,10 +7,6 @@ const statusDotVariants = cva("inline-block size-2 shrink-0 rounded-full", {
     tone: {
       muted: "bg-muted-foreground",
       primary: "bg-primary",
-      positive: "bg-positive",
-      negative: "bg-negative",
-      warning: "bg-warning",
-      info: "bg-info",
     },
   },
   defaultVariants: { tone: "muted" },

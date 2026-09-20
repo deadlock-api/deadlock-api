@@ -1,7 +1,7 @@
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
-import type { Mode } from "~/components/domain/selectors/ModeSelector";
 import { day } from "~/dayjs";
+import type { Mode } from "~/lib/game-mode";
 
 import { TEAMS } from "./teams";
 

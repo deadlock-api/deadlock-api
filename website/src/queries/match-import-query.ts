@@ -1,8 +1,8 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
+import type { GameMode } from "~/lib/game-mode";
 import type { Side } from "~/lib/team-builder/analysis";
 import { lanesOf, slotsOfLane, TEAM_SIZE } from "~/lib/team-builder/lanes";
 

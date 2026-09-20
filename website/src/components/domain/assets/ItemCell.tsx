@@ -1,4 +1,3 @@
-import { cva, type VariantProps } from "class-variance-authority";
 import type { Upgrade } from "deadlock_api_client";
 
 import { ItemImage, type ItemSource } from "~/components/domain/assets/ItemImage";
@@ -6,18 +5,10 @@ import { ItemName } from "~/components/domain/assets/ItemName";
 import { useItemById } from "~/hooks/useAssetById";
 import { cn } from "~/lib/utils";
 
-const itemCellVariants = cva("flex min-w-0 items-center", {
-  variants: { size: { sm: "gap-1.5", default: "gap-2" } },
-  defaultVariants: { size: "default" },
-});
-
-const IMAGE_SIZE = { sm: "size-6", default: "size-8" } as const;
-
-type ItemCellProps = Omit<React.ComponentProps<"span">, "children"> &
-  VariantProps<typeof itemCellVariants> & {
-    /** Links the name to the item's analytics page. */
-    linkToDetail?: boolean;
-  };
+type ItemCellProps = Omit<React.ComponentProps<"span">, "children"> & {
+  /** Links the name to the item's analytics page. */
+  linkToDetail?: boolean;
+};
 
 /**
  * A shop item as the identity of a row: icon and name on one line. The name truncates to the width the parent leaves
@@ -37,20 +28,14 @@ function ItemCellById({ itemId, ...props }: ItemCellProps & { itemId: number }) 
 function ItemCellView({
   item,
   loading = false,
-  size,
   linkToDetail = false,
   className,
   ...props
 }: ItemCellProps & { item: Upgrade | undefined; loading?: boolean }) {
   return (
-    <span
-      data-slot="item-cell"
-      data-size={size ?? "default"}
-      className={cn(itemCellVariants({ size }), className)}
-      {...props}
-    >
+    <span data-slot="item-cell" className={cn("flex min-w-0 items-center gap-2", className)} {...props}>
       {/* The name beside it already says what this is. */}
-      <ItemImage item={item} loading={loading} title="" className={cn("shrink-0", IMAGE_SIZE[size ?? "default"])} />
+      <ItemImage item={item} loading={loading} title="" className="size-8 shrink-0" />
       <ItemName item={item} loading={loading} linkToDetail={linkToDetail} />
     </span>
   );

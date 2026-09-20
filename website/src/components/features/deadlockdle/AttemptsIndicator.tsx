@@ -20,7 +20,7 @@ export function AttemptsIndicator({ total, used, status }: AttemptsIndicatorProp
         <Text tone="muted" variant="caption" aria-hidden="true">
           [
         </Text>
-        <StepMeter variant="squares" aria-label={`${used} of ${total} attempts used`}>
+        <StepMeter variant="squares" label={`${used} of ${total} attempts used`}>
           {Array.from({ length: total }, (_, i) => (
             <StepMeterStep key={i} state={attemptState(i, used, status === "won", status === "playing")} />
           ))}

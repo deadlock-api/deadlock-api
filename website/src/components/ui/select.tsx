@@ -2,7 +2,14 @@ import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { Select as SelectPrimitive } from "radix-ui";
 import * as React from "react";
 
-import { FOCUS_RING_BORDER, INVALID_STATE, POPPER_MOTION, SVG_SLOT } from "~/components/ui/recipes";
+import {
+  CONTROL_SURFACE,
+  DISABLED_STATE,
+  FOCUS_RING_BORDER,
+  INVALID_STATE,
+  POPPER_MOTION,
+  SVG_SLOT,
+} from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 function Select({ ...props }: React.ComponentProps<typeof SelectPrimitive.Root>) {
@@ -31,9 +38,11 @@ function SelectTrigger({
       data-size={size}
       className={cn(
         FOCUS_RING_BORDER,
+        DISABLED_STATE,
+        CONTROL_SURFACE,
         INVALID_STATE,
         SVG_SLOT,
-        "flex w-fit min-w-0 items-center justify-between gap-2 rounded-md border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] hover:bg-input/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-input/30 data-[placeholder]:text-muted-foreground *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:min-w-0 *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 data-[state=open]:border-ring data-[state=open]:bg-input/50 [&_svg:not([class*='text-'])]:text-muted-foreground",
+        "flex w-fit min-w-0 items-center justify-between gap-2 px-3 py-2 whitespace-nowrap hover:bg-input/50 data-[placeholder]:text-muted-foreground *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:min-w-0 *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 data-[state=open]:border-ring data-[state=open]:bg-input/50 [&_svg:not([class*='text-'])]:text-muted-foreground",
         // A plain class, not a `data-[size]:` variant, so a caller's height wins.
         size === "sm" ? "h-8" : "h-9",
         className,

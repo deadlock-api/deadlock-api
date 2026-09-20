@@ -6,7 +6,6 @@ import { Bar, BarChart, CartesianGrid, Cell, Customized, Label, ReferenceLine, T
 import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/RankTierIcons";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_AXIS, CHART_BASELINE, CHART_GRID, CHART_TICK } from "~/components/patterns/charts/theme";
-import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { niceTicks } from "~/lib/chart-axis";
 import { extractBadgeMap } from "~/lib/leaderboard";
@@ -19,12 +18,11 @@ export interface BadgeDistributionChartProps {
   badgeDistributionData: BadgeDistribution[];
   ranksData: Rank[];
   metric: BadgeDistributionMetric;
-  onMetricChange: (metric: BadgeDistributionMetric) => void;
 }
 
 type Metric = BadgeDistributionMetric;
 
-const METRIC_LABEL: Record<Metric, string> = { players: "Players", matches: "Matches" };
+export const BADGE_DISTRIBUTION_METRIC_LABEL: Record<Metric, string> = { players: "Players", matches: "Matches" };
 
 const formatPercent = (ratio: number) => `${(ratio * 100).toFixed(1)}%`;
 const compactNumber = new Intl.NumberFormat("en-US", { notation: "compact" });
@@ -40,7 +38,6 @@ export default function BadgeDistributionChart({
   badgeDistributionData,
   ranksData,
   metric,
-  onMetricChange,
 }: BadgeDistributionChartProps) {
   const tierData = useMemo(() => {
     const map = new Map<number, Rank>();
@@ -99,7 +96,6 @@ export default function BadgeDistributionChart({
     }
     return undefined;
   }, [chartData, shares.total]);
-  const medianInfo = medianBadge === undefined ? undefined : badgeMap.get(medianBadge);
 
   const ticks = useMemo(() => {
     const badges = badgeDistributionData.map((item) => item.badge_level);
@@ -127,25 +123,6 @@ export default function BadgeDistributionChart({
 
   return (
     <div className="flex h-full w-full flex-col">
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">
-          {medianInfo ? (
-            <>
-              Median {metric === "players" ? "player" : "match"} rank:{" "}
-              <span className="font-medium text-foreground">
-                {medianInfo.name} {medianInfo.subtier}
-              </span>
-            </>
-          ) : null}
-        </p>
-        <Segmented aria-label="Metric" width="hug" value={metric} onValueChange={onMetricChange}>
-          {BADGE_DISTRIBUTION_METRICS.map((value) => (
-            <SegmentedItem key={value} value={value}>
-              {METRIC_LABEL[value]}
-            </SegmentedItem>
-          ))}
-        </Segmented>
-      </div>
       <ChartSurface
         label={`Rank badge distribution chart showing ${metric} per rank`}
         size="fill"
@@ -180,7 +157,10 @@ export default function BadgeDistributionChart({
                     title={`${rankName} ${subtier}`}
                   />
                   <TooltipStats>
-                    <TooltipStat label={METRIC_LABEL[metric]} value={entry.value.toLocaleString("en-US")} />
+                    <TooltipStat
+                      label={BADGE_DISTRIBUTION_METRIC_LABEL[metric]}
+                      value={entry.value.toLocaleString("en-US")}
+                    />
                     {shares.total > 0 && (
                       <>
                         <TooltipStat label={`Share of ${metric}`} value={formatPercent(entry.value / shares.total)} />
@@ -213,8 +193,14 @@ export default function BadgeDistributionChart({
             domain={[0, valueTicks[valueTicks.length - 1]]}
             tickFormatter={(value: number) => compactNumber.format(value)}
             textAnchor="end"
+            width={64}
           >
-            <Label value={METRIC_LABEL[metric]} position="middle" textAnchor="middle" />
+            <Label
+              value={BADGE_DISTRIBUTION_METRIC_LABEL[metric]}
+              angle={-90}
+              position="insideLeft"
+              textAnchor="middle"
+            />
           </YAxis>
           {medianBadge !== undefined && (
             <ReferenceLine

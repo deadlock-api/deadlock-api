@@ -5,19 +5,18 @@ import { useMemo } from "react";
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
-import type { MatchMode } from "~/components/domain/selectors/MatchModeSelector";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Delta } from "~/components/ui/delta";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
 import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { formatSignedPercent } from "~/lib/format";
+import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { queryKeys } from "~/queries/query-keys";
 import type { Color } from "~/types/general";
 
@@ -177,14 +176,8 @@ function MatchupCell({
     <TableCell>
       <Inline wrap="nowrap">
         <HeroImage heroId={partnerId} />
-        <ProgressBarWithLabel
-          min={min}
-          max={max}
-          value={relWinrate}
-          color={color}
-          label={formatSignedPercent(relWinrate)}
-          delta={prevRelWinrate !== undefined ? relWinrate - prevRelWinrate : undefined}
-          tooltip={
+        <Tooltip
+          content={
             <MatchupTooltip
               heroId={heroId}
               partnerId={partnerId}
@@ -195,7 +188,18 @@ function MatchupCell({
               prevRelWinrate={prevRelWinrate}
             />
           }
-        />
+        >
+          <TooltipTarget display="block" className="w-full">
+            <ProgressBarWithLabel
+              min={min}
+              max={max}
+              value={relWinrate}
+              color={color}
+              label={formatSignedPercent(relWinrate)}
+              delta={prevRelWinrate !== undefined ? relWinrate - prevRelWinrate : undefined}
+            />
+          </TooltipTarget>
+        </Tooltip>
       </Inline>
     </TableCell>
   );

@@ -194,7 +194,6 @@ export function MatchTimeline({
               value={visibleLayers}
               onValueChange={setVisibleLayers}
               aria-label="Match timeline layers"
-              size="sm"
               spacing={1}
             >
               <ToggleGroupItem

@@ -1,3 +1,5 @@
+import { useId } from "react";
+
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { snakeToPretty } from "~/lib/utils";
@@ -9,6 +11,7 @@ interface ExtraArgumentsProps {
 }
 
 export function ExtraArguments({ extraArgs, extraValues, onChange }: ExtraArgumentsProps) {
+  const baseId = useId();
   if (!extraArgs || extraArgs.length === 0) return null;
 
   extraArgs = [...new Set(extraArgs)];
@@ -17,8 +20,11 @@ export function ExtraArguments({ extraArgs, extraValues, onChange }: ExtraArgume
     <div className="ms-8 mt-2 space-y-2">
       {extraArgs.map((arg) => (
         <div key={arg} className="flex items-center gap-2">
-          <Label className="text-sm text-muted-foreground">{snakeToPretty(arg)}:</Label>
+          <Label htmlFor={`${baseId}-${arg}`} className="text-sm text-muted-foreground">
+            {snakeToPretty(arg)}:
+          </Label>
           <Input
+            id={`${baseId}-${arg}`}
             type="text"
             value={extraValues[arg] ?? ""}
             onChange={(e) => onChange(arg, e.target.value)}

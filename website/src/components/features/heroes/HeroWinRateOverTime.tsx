@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiHeroStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
 import { type WeekEntry, WeeklyTrendChart } from "~/components/patterns/charts/WeeklyTrendChart";
 import { Section } from "~/components/patterns/page/Section";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -11,6 +10,7 @@ import { day } from "~/dayjs";
 import { api } from "~/lib/api";
 import { getPickrateMultiplier } from "~/lib/constants";
 import { formatPercent, possessive } from "~/lib/format";
+import type { GameMode } from "~/lib/game-mode";
 import { withoutOpenTimeBucket } from "~/lib/time-buckets";
 import { queryKeys } from "~/queries/query-keys";
 

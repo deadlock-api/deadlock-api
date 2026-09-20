@@ -1,4 +1,4 @@
-import { type ReactNode, useContext, useSyncExternalStore } from "react";
+import { type ReactNode, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
 import { NAV_NAMES, slug } from "~/components/dev/design-system/nav";
@@ -13,6 +13,40 @@ const noSlot = () => null;
 function InSlot({ id, children }: { id: string; children: ReactNode }) {
   const slot = useSyncExternalStore(slotStore.subscribe, () => slotStore.get(id), noSlot);
   return slot ? createPortal(children, slot) : null;
+}
+
+const NEAR_VIEWPORT_MARGIN = "800px 0px";
+const ESTIMATED_BODY_HEIGHT = 160;
+
+/**
+ * The live examples of a specimen, mounted only while they are near the viewport. The page holds every component of
+ * the system, so mounting all of it at once is what made it slow. Off screen the body keeps its last measured height,
+ * so the page does not jump and the index still scrolls to the right place.
+ */
+function LazyBody({ className, children }: { className?: string; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [near, setNear] = useState(false);
+  const [height, setHeight] = useState(ESTIMATED_BODY_HEIGHT);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    let mounted = false;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (mounted && !entry.isIntersecting) setHeight(element.offsetHeight);
+        mounted = entry.isIntersecting;
+        setNear(entry.isIntersecting);
+      },
+      { rootMargin: NEAR_VIEWPORT_MARGIN },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className={className} style={near ? undefined : { minHeight: height }}>
+      {near ? children : null}
+    </div>
+  );
 }
 
 /**
@@ -83,7 +117,11 @@ export function Specimen({
         {source && <UsageBadge source={source} />}
         {note && <p className="basis-full text-xs text-muted-foreground">{note}</p>}
       </header>
-      <div className={cn("flex min-w-0 flex-col gap-3", className)}>{children}</div>
+      {inSlot ? (
+        <LazyBody className={cn("flex min-w-0 flex-col gap-3", className)}>{children}</LazyBody>
+      ) : (
+        <div className={cn("flex min-w-0 flex-col gap-3", className)}>{children}</div>
+      )}
     </article>
   );
   // A specimen that nav.ts does not list has no slot: it renders where it is written, at the end of the page.

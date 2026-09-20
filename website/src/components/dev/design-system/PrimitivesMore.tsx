@@ -8,7 +8,6 @@ import { PrefetchAnchor } from "~/components/domain/navigation/PrefetchAnchor";
 import { SmartLink } from "~/components/domain/navigation/SmartLink";
 import { Button } from "~/components/ui/button";
 import { Calendar } from "~/components/ui/calendar";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "~/components/ui/empty";
 import { Heading } from "~/components/ui/heading";
 import { IconTile } from "~/components/ui/icon-tile";
 import { ImgWithSkeleton } from "~/components/ui/img-with-skeleton";
@@ -121,47 +120,15 @@ export function PrimitivesMore() {
       </Specimen>
 
       <Specimen
-        name="Empty"
-        source="ui/empty"
-        note="The shadcn parts under EmptyState. Pages use EmptyState; compose these only for an empty screen with a custom layout."
-      >
-        <Variants className="grid items-stretch md:grid-cols-2">
-          <Empty className="border md:p-6">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <FolderOpen />
-              </EmptyMedia>
-              <EmptyTitle>No saved builds</EmptyTitle>
-              <EmptyDescription>
-                Builds you save show up here. <a href="#empty">Learn more</a>
-              </EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <Button size="sm">Browse builds</Button>
-            </EmptyContent>
-          </Empty>
-          <Empty className="border md:p-6">
-            <EmptyHeader>
-              <EmptyMedia>
-                <FolderOpen className="size-8 text-muted-foreground" />
-              </EmptyMedia>
-              <EmptyTitle>EmptyMedia variant="default"</EmptyTitle>
-              <EmptyDescription>The media slot without the tile, for an illustration or an avatar.</EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        </Variants>
-      </Specimen>
-
-      <Specimen
         name="ImgWithSkeleton"
         source="ui/img-with-skeleton"
-        note="An image that shows a Skeleton of the same classes until it has loaded or failed. For remote images whose size is set by className."
+        note="An image that pulses like a Skeleton in its own box until it has loaded or failed. One element: ref, props and className all land on the img."
       >
         <Variants className="gap-6">
           <ImgWithSkeleton src="/favicon.png" alt="Deadlock API logo" className="size-12 rounded-lg" />
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <ImgWithSkeleton src="/favicon.png" alt="" className="size-5 rounded" />
-            default skeleton size (size-5)
+            inline with text
           </div>
         </Variants>
       </Specimen>
@@ -173,10 +140,10 @@ export function PrimitivesMore() {
       >
         <Variants>
           <Button asChild variant="outline" size="sm">
-            <PrefetchAnchor to="/analytics/heroes">As a button</PrefetchAnchor>
+            <PrefetchAnchor href="/analytics/heroes">As a button</PrefetchAnchor>
           </Button>
           <Button asChild variant="link" className="h-auto p-0">
-            <PrefetchAnchor to="/analytics/items">As a text link</PrefetchAnchor>
+            <PrefetchAnchor href="/analytics/items">As a text link</PrefetchAnchor>
           </Button>
         </Variants>
       </Specimen>

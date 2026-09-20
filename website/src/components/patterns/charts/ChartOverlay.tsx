@@ -47,9 +47,6 @@ export function ChartOverlay({
 const REGION_TONE = {
   positive: "bg-positive/8",
   negative: "bg-negative/8",
-  warning: "bg-warning/8",
-  info: "bg-info/8",
-  muted: "bg-muted/40",
 } as const;
 
 interface ChartRegionProps extends Omit<React.ComponentProps<"div">, "children"> {
@@ -70,7 +67,7 @@ interface ChartRegionProps extends Omit<React.ComponentProps<"div">, "children">
  * a `label`. The edges are percentages of the `ChartStage` and are logical, so they mirror in RTL.
  */
 export function ChartRegion({
-  tone = "muted",
+  tone = "positive",
   start = 0,
   end = 0,
   top = 0,

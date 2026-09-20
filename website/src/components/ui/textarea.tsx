@@ -1,5 +1,5 @@
 import { useFieldControlProps } from "~/components/ui/hooks/use-field-control";
-import { FOCUS_RING_BORDER, INVALID_STATE } from "~/components/ui/recipes";
+import { CONTROL_SURFACE, DISABLED_STATE, FOCUS_RING_BORDER, INVALID_STATE, READ_ONLY } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
@@ -8,10 +8,12 @@ function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
     <textarea
       data-slot="textarea"
       className={cn(
-        "flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-input/30 px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] placeholder:text-muted-foreground hover:border-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-input",
+        DISABLED_STATE,
+        CONTROL_SURFACE,
+        "flex field-sizing-content min-h-16 w-full px-3 py-2 placeholder:text-muted-foreground hover:border-muted-foreground",
         // iOS zooms the page when a focused field is under 16px. That is about touch, not about the viewport width.
         "pointer-coarse:text-base",
-        "[&[readonly]]:cursor-default [&[readonly]]:border-dashed [&[readonly]]:bg-transparent [&[readonly]]:shadow-none",
+        READ_ONLY,
         FOCUS_RING_BORDER,
         INVALID_STATE,
         className,

@@ -6,8 +6,6 @@ import { parseAsInteger, useQueryState } from "nuqs";
 import { useCallback, useMemo, useState } from "react";
 
 import MatchHistoryCard from "~/components/domain/match/MatchHistoryCard";
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
-import type { MatchMode } from "~/components/domain/selectors/MatchModeSelector";
 import { ItemBuyTimingChart } from "~/components/features/items/ItemBuyTimingChart";
 import {
   getDisplayItemStats,
@@ -31,6 +29,7 @@ import {
   buildUpgradeChainLookup,
   getHeroAbilityMetadata,
 } from "~/lib/build-transform";
+import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { cn } from "~/lib/utils";
 import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";

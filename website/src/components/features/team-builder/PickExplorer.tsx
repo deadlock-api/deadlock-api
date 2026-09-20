@@ -162,8 +162,18 @@ export function PickExplorer({ recommendations, onPick }: PickExplorerProps) {
           >
             {/* Quadrant tints: the top-right corner is the one worth picking from, and the shading says
                 so without the reader having to trace both axes. */}
-            <ChartRegion tone="positive" start={(zeroX / width) * 100} bottom={100 - (zeroY / HEIGHT) * 100} />
-            <ChartRegion tone="negative" end={100 - (zeroX / width) * 100} top={(zeroY / HEIGHT) * 100} />
+            <ChartRegion
+              tone="positive"
+              label="Strong pick"
+              start={(zeroX / width) * 100}
+              bottom={100 - (zeroY / HEIGHT) * 100}
+            />
+            <ChartRegion
+              tone="negative"
+              label="Weak pick"
+              end={100 - (zeroX / width) * 100}
+              top={(zeroY / HEIGHT) * 100}
+            />
 
             {/* Gridlines carry the scale, the middle one of each axis being the quadrant divider; the
                 tints carry the sign. */}

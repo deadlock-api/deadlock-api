@@ -7,14 +7,17 @@ import { Suspense, useMemo } from "react";
 import { Filter } from "~/components/domain/filters";
 import type { MatchTimeRange } from "~/components/domain/selectors/MatchTimeRangeSelector";
 import BadgeDistributionChart, {
+  BADGE_DISTRIBUTION_METRIC_LABEL,
   BADGE_DISTRIBUTION_METRICS,
 } from "~/components/features/badge-distribution/BadgeDistributionChart";
+import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { combineQueryStates } from "~/components/patterns/states/QueryRenderer";
+import { SegmentedItem } from "~/components/ui/segmented";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { prefetchSafe } from "~/lib/prefetch-safe";
@@ -139,8 +142,15 @@ function BadgeDistributionPage() {
         <Filter.SeasonPatchDate
           value={{ startDate, endDate }}
           onValueChange={({ startDate: start, endDate: end, action }) => handleDateChange(start, end, action)}
-          resetRange={defaultRange}
+          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
         />
+        <FilterToggleCell label="Metric" value={metric} defaultValue="players" onValueChange={setMetric}>
+          {BADGE_DISTRIBUTION_METRICS.map((value) => (
+            <SegmentedItem key={value} value={value}>
+              {BADGE_DISTRIBUTION_METRIC_LABEL[value]}
+            </SegmentedItem>
+          ))}
+        </FilterToggleCell>
       </Filter.Root>
       <div className="flex min-h-0 flex-1 items-center justify-center">
         {isPending ? (
@@ -162,7 +172,6 @@ function BadgeDistributionPage() {
                 badgeDistributionData={badgeDistributionQuery.data}
                 ranksData={ranks.data ?? []}
                 metric={metric}
-                onMetricChange={setMetric}
               />
             </Suspense>
           </ChunkErrorBoundary>

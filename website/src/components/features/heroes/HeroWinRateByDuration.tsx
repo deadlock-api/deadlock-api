@@ -2,7 +2,6 @@ import { useQueries } from "@tanstack/react-query";
 import type { AnalyticsApiHeroStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { Section } from "~/components/patterns/page/Section";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -11,6 +10,7 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { DURATION_BUCKETS } from "~/lib/constants";
 import { formatPercent, possessive } from "~/lib/format";
+import type { GameMode } from "~/lib/game-mode";
 import { queryKeys } from "~/queries/query-keys";
 
 const MIN_BUCKET_MATCHES = 100;

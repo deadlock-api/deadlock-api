@@ -36,23 +36,19 @@ const STEP_STATE: Record<StepState, string> = {
 
 const StepMeterVariantContext = createContext<StepMeterVariant>("dots");
 
-/** Steps `0..value-1` done, step `value` current, the rest empty: the states of a plain "3 of 10" progress. */
-export function progressSteps(value: number, max: number): StepState[] {
-  return Array.from({ length: max }, (_, index) => (index < value ? "done" : index === value ? "current" : "empty"));
-}
-
 /**
  * A few discrete steps and the state of each: attempts of a quiz, questions of a round, stages of a flow. The
- * children are `StepMeterStep`s; the meter is one image whose name is `aria-label`.
+ * children are `StepMeterStep`s; the meter is one image whose name is `label`.
  */
 function StepMeter({
   variant = "dots",
+  label,
   className,
   ...props
 }: React.ComponentProps<"span"> &
   VariantProps<typeof stepMeterVariants> & {
     /** Read out in place of the marks: "2 of 6 attempts used". */
-    "aria-label": string;
+    label: string;
   }) {
   const resolved = variant ?? "dots";
   return (
@@ -62,6 +58,7 @@ function StepMeter({
         data-variant={resolved}
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the marks are drawn with CSS; there is no image file
         role="img"
+        aria-label={label}
         className={cn(stepMeterVariants({ variant }), className)}
         {...props}
       />

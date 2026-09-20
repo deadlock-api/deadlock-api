@@ -3,7 +3,7 @@ import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui";
 import { createContext, use } from "react";
 
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
-import { DISABLED_STATE, FOCUS_RING } from "~/components/ui/recipes";
+import { DISABLED_STATE, FOCUS_RING, SELECTED_STATE } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 const segmentedItemVariants = cva(
@@ -12,7 +12,7 @@ const segmentedItemVariants = cva(
     FOCUS_RING,
     DISABLED_STATE,
     "hover:bg-accent hover:text-foreground",
-    "data-[state=on]:bg-primary/15 data-[state=on]:text-foreground data-[state=on]:ring-1 data-[state=on]:ring-primary/40 data-[state=on]:ring-inset",
+    SELECTED_STATE,
     "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
   ],
   {

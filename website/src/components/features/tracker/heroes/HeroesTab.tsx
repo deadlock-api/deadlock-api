@@ -10,13 +10,13 @@ import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
 import { FormDots } from "~/components/domain/match/FormDots";
 import { TrackerQueryPaused } from "~/components/features/tracker/shared/TrackerQueryPaused";
+import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { QueryRenderer } from "~/components/patterns/states/QueryRenderer";
 import { Button } from "~/components/ui/button";
-import { RateBar } from "~/components/ui/rate-bar";
-import { ariaSort, SortButton } from "~/components/ui/sort-button";
+import { ProgressBar } from "~/components/ui/progress-bar";
 import { SwitchField } from "~/components/ui/switch-field";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
@@ -271,21 +271,17 @@ export function HeroesTab({
                   <TableRow>
                     <TableHead data-pinned={showAllStats ? "" : undefined}>Hero</TableHead>
                     {COLUMNS.map((column) => (
-                      <TableHead
+                      <SortableHeader
                         key={column.key}
-                        className={cn("text-end", !showAllStats && column.className)}
-                        aria-sort={ariaSort(sortKey === column.key, sortDir)}
-                      >
-                        <SortButton
-                          active={sortKey === column.key}
-                          sortDir={sortDir}
-                          align="end"
-                          aria-label={`Sort by ${column.label.toLowerCase()}, ${sortKey === column.key && sortDir === "desc" ? "ascending" : "descending"}`}
-                          onClick={() => handleSort(column.key)}
-                        >
-                          {column.label}
-                        </SortButton>
-                      </TableHead>
+                        label={column.label}
+                        sortKey={column.key}
+                        activeSortKey={sortKey}
+                        sortDir={sortDir}
+                        align="end"
+                        className={showAllStats ? undefined : column.className}
+                        sortLabel={`Sort by ${column.label.toLowerCase()}, ${sortKey === column.key && sortDir === "desc" ? "ascending" : "descending"}`}
+                        onSort={handleSort}
+                      />
                     ))}
                   </TableRow>
                 </TableHeader>
@@ -333,7 +329,7 @@ export function HeroesTab({
                                   />
                                 )}
                                 <span>{column.format(row)}</span>
-                                <RateBar rate={row.winrate} className="hidden w-16 @md:block" />
+                                <ProgressBar variant="thin" value={row.winrate} className="hidden w-16 @md:block" />
                               </div>
                             ) : column.key === "recentWinrate" ? (
                               <FormDots form={formByHero.get(row.heroId) ?? []} className="justify-end" />

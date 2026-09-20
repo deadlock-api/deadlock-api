@@ -11,11 +11,8 @@ const SIDE_BORDER: Record<DraftSide, string> = {
 interface DraftSlotTargetProps extends React.ComponentProps<"button"> {
   /** Which team's row the slot belongs to; it tints the empty outline. */
   side?: DraftSide;
-  /**
-   * `idle` is the waiting outline, `over` the one a hero is being dragged onto (solid, not only brighter),
-   * `filled` the slot that already holds a hero and would swap.
-   */
-  state?: "idle" | "over" | "filled";
+  /** `idle` is the waiting outline, `over` the one a hero is being dragged onto (solid, not only brighter). */
+  state?: "idle" | "over";
 }
 
 /** The round drop target of a draft board: an empty slot, or the ring a filled one shows while a hero hovers it. */

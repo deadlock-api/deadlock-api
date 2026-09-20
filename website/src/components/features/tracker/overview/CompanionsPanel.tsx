@@ -4,7 +4,6 @@ import { UsersRound } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
-import { MODE_CONFIG } from "~/components/domain/selectors/ModeSelector";
 import { CompanionMatchesDialog } from "~/components/features/tracker/breakdown/CompanionMatchesDialog";
 import { EnemiesTab, MatesTab } from "~/components/features/tracker/breakdown/PlayerStatsTable";
 import { PanelWithDetails } from "~/components/patterns/panel/PanelWithDetails";
@@ -15,6 +14,7 @@ import { Button } from "~/components/ui/button";
 import { Heading } from "~/components/ui/heading";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
+import { MODE_CONFIG } from "~/lib/game-mode";
 import { type CompanionRow, intersectCompanionRows } from "~/lib/tracker/companions";
 import type { TrackerFilterValues } from "~/lib/tracker/compute";
 import { trackerEnemyStatsQueryOptions, trackerMateStatsQueryOptions } from "~/queries/tracker-queries";
@@ -62,7 +62,7 @@ export function CompanionsPanel({
     <PanelWithDetails
       title="Teammates & opponents"
       icon={UsersRound}
-      meta="Frequent encounters"
+      description="Frequent encounters"
       footer="Your win rate · 2+ shared games in selected matches"
       open={open}
       onOpenChange={setOpen}
@@ -194,7 +194,7 @@ function CompanionPreview({
                       name={profile?.personaname}
                       avatar={profile?.avatar}
                       loading={isLoading && !profile}
-                      linkToTracker
+                      linkToDetail
                     />
                   </TableCell>
                   <TableCell className="text-end tabular-nums">

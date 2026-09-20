@@ -1,4 +1,4 @@
-import type { Match } from "~/components/features/streamkit/widgets/MatchHistory/MatchHistory.types";
+import type { Match } from "~/hooks/streamkit/useMatchHistory";
 
 export interface MatchItemProps {
   match: Match;

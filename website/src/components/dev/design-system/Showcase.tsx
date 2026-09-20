@@ -7,9 +7,9 @@ import { Layout } from "~/components/dev/design-system/Layout";
 import { NAV, NAV_NAMES, slug } from "~/components/dev/design-system/nav";
 import { Patterns } from "~/components/dev/design-system/Patterns";
 import { Primitives } from "~/components/dev/design-system/Primitives";
+import { SideNavSection } from "~/components/dev/design-system/SideNavSection";
 import { SlotLayoutContext, slotStore } from "~/components/dev/design-system/slots";
 import { SideNav, SideNavItem } from "~/components/patterns/navigation/SideNav";
-import { SideNavSection } from "~/components/patterns/navigation/SideNavSection";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Badge } from "~/components/ui/badge";
@@ -52,9 +52,51 @@ function useActiveTarget() {
   return active;
 }
 
+const LANDING_WINDOW_MS = 2000;
+const USER_SCROLL_EVENTS = ["wheel", "touchstart", "keydown", "pointerdown"] as const;
+
+let stopLanding = () => {};
+
+/**
+ * Scrolls to a specimen and keeps it there while the page settles: the specimens around a target mount only once
+ * it is near (Specimen's LazyBody) and change the page height. Any input from the reader ends it at once.
+ */
+function landOn(id: string) {
+  stopLanding();
+  const target = document.getElementById(id);
+  if (!target) return;
+  const land = () => target.scrollIntoView({ block: "start" });
+  const observer = new ResizeObserver(land);
+  const stop = () => {
+    observer.disconnect();
+    clearTimeout(timer);
+    for (const type of USER_SCROLL_EVENTS) window.removeEventListener(type, stop);
+  };
+  const timer = setTimeout(stop, LANDING_WINDOW_MS);
+  for (const type of USER_SCROLL_EVENTS) window.addEventListener(type, stop, { passive: true });
+  stopLanding = stop;
+  land();
+  observer.observe(document.body);
+}
+
 function jumpTo(id: string) {
-  document.getElementById(id)?.scrollIntoView({ block: "start" });
+  landOn(id);
   history.replaceState(null, "", `#${id}`);
+}
+
+/** Index links and deep links move by the URL hash, which the browser scrolls to before the lazy bodies settle. */
+function useLandOnHash() {
+  useEffect(() => {
+    const land = () => {
+      if (location.hash.length > 1) landOn(decodeURIComponent(location.hash.slice(1)));
+    };
+    land();
+    window.addEventListener("hashchange", land);
+    return () => {
+      stopLanding();
+      window.removeEventListener("hashchange", land);
+    };
+  }, []);
 }
 
 /** Which sections the reader opened or closed by hand. Anything not in here follows the active specimen. */
@@ -113,7 +155,6 @@ function Sidebar({ active }: { active: string }) {
         </Inline>
       </Inline>
       <SideNav
-        size="sm"
         aria-label="Design system"
         className="min-h-0 scrollbar-thin gap-1 overflow-y-auto overscroll-contain pe-1"
       >
@@ -139,7 +180,12 @@ function Sidebar({ active }: { active: string }) {
                     onOpenChange={toggle(id)}
                   >
                     {group.items.map((item) => (
-                      <SideNavItem key={item} href={`#${slug(item)}`} active={active === slug(item)}>
+                      <SideNavItem
+                        key={item}
+                        href={`#${slug(item)}`}
+                        active={active === slug(item)}
+                        className="gap-2 px-2 py-1 text-xs font-normal"
+                      >
                         {item}
                       </SideNavItem>
                     ))}
@@ -202,6 +248,7 @@ function Slot({ id, ...props }: React.ComponentProps<"div"> & { id: string }) {
 
 export default function Showcase() {
   const active = useActiveTarget();
+  useLandOnHash();
   return (
     <PageShell density="content">
       <PageHeader

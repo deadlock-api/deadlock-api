@@ -9,12 +9,13 @@ import { ItemSelectorMultiple } from "~/components/domain/selectors/ItemSelector
 import { ItemSlotSelector } from "~/components/domain/selectors/ItemSlotSelector";
 import { ItemTierSelector } from "~/components/domain/selectors/ItemTierSelector";
 import { MatchTimeRangeSelector } from "~/components/domain/selectors/MatchTimeRangeSelector";
-import { type Mode, ModeSelector } from "~/components/domain/selectors/ModeSelector";
+import { ModeSelector } from "~/components/domain/selectors/ModeSelector";
 import { RankRangeSelector } from "~/components/domain/selectors/RankRangeSelector";
 import { SeasonPatchDatePicker } from "~/components/domain/selectors/SeasonPatchDatePicker";
 import { Field } from "~/components/ui/field";
 import type { Dayjs } from "~/dayjs";
 import { PATCHES } from "~/lib/constants";
+import type { Mode } from "~/lib/game-mode";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 
 type TimeRange = [number | undefined, number | undefined];
@@ -60,7 +61,6 @@ export function DomainSelectors() {
         <Variants>
           <HeroSelector value={anyHero} onValueChange={setAnyHero} allowNull />
           <HeroSelector
-            label="Required hero"
             value={requiredHero}
             defaultValue={1}
             onValueChange={(id) => {
@@ -129,8 +129,8 @@ export function DomainSelectors() {
           <Field label="Items">
             <ItemSelectorMultiple value={items} onValueChange={setItems} />
           </Field>
-          <Field label="Custom empty label">
-            <ItemSelectorMultiple value={[]} onValueChange={setItems} label="Compare items..." />
+          <Field label="Nothing chosen">
+            <ItemSelectorMultiple value={[]} onValueChange={setItems} />
           </Field>
         </Variants>
       </Specimen>
@@ -184,7 +184,7 @@ export function DomainSelectors() {
             label="Bought at"
             title="Purchase Time Window"
             max={40 * 60}
-            presets={null}
+            presets={[]}
           />
         </Variants>
       </Specimen>
@@ -192,14 +192,14 @@ export function DomainSelectors() {
       <Specimen
         name="SeasonPatchDatePicker"
         source="domain/selectors/SeasonPatchDatePicker"
-        note="A date range picked as a ranked season, a patch or custom dates; onValueChange also carries the previous period for comparisons. Filter.SeasonPatchDate is this component; patchDates defaults to the site's patch list."
+        note="A date range picked as a ranked season, a patch or custom dates; onValueChange also carries the previous period for comparisons. Filter.SeasonPatchDate is this component; defaultValue is the range the reset returns to."
       >
         <Variants>
           <SeasonPatchDatePicker
             value={dates}
             onValueChange={({ startDate, endDate }) => setDates({ startDate, endDate })}
             defaultTab="patch"
-            resetRange={[PATCHES[0].startDate, PATCHES[0].endDate]}
+            defaultValue={{ startDate: PATCHES[0].startDate, endDate: PATCHES[0].endDate }}
           />
         </Variants>
       </Specimen>

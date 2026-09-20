@@ -23,7 +23,7 @@ export type HighlightLanguage = "bash" | "python" | "javascript" | "sql" | "json
 interface HighlightedCodeProps extends Omit<React.ComponentProps<"div">, "children"> {
   code: string;
   language: HighlightLanguage;
-  size?: "sm" | "default" | "lg";
+  size?: "default" | "lg";
   /** `wrap` breaks long lines instead of scrolling sideways, for a command inside a narrow column. */
   overflow?: "scroll" | "wrap";
   /** `copy` puts a copy button over the top trailing corner. */
@@ -33,7 +33,7 @@ interface HighlightedCodeProps extends Omit<React.ComponentProps<"div">, "childr
   copyLabel?: string;
 }
 
-const sizeClass = { sm: "text-2xs", default: "text-xs", lg: "text-sm" };
+const sizeClass = { default: "text-xs", lg: "text-sm" };
 
 /** A block of code with syntax colors. A short piece of code inside a sentence is `ui/Code`. */
 export function HighlightedCode({

@@ -15,17 +15,6 @@ const heroGlowVariants = cva(
   },
 );
 
-/** The soft brand-colored light behind a hero title: the first child of a `Hero`, which stacks it under the rest. */
-export function HeroGlow({
-  size,
-  className,
-  ...props
-}: Omit<React.ComponentProps<"div">, "children"> & VariantProps<typeof heroGlowVariants>) {
-  return (
-    <div data-slot="hero-glow" aria-hidden="true" className={cn(heroGlowVariants({ size }), className)} {...props} />
-  );
-}
-
 const heroVariants = cva("relative isolate flex min-w-0 flex-col items-center text-center", {
   variants: {
     size: {
@@ -37,15 +26,21 @@ const heroVariants = cva("relative isolate flex min-w-0 flex-col items-center te
 });
 
 /**
- * The opening block of a hub or marketing page: a centred column of `HeroGlow`, `PageHeader`, `HeroLead`,
- * `HeroActions` and `HeroNote`. `HeroActions` also holds a row of pills under the title. Every part is optional.
+ * The opening block of a hub or marketing page: a centred column of `PageHeader`, `HeroLead` and `HeroActions`
+ * over a soft brand-colored glow. `HeroActions` also holds a row of pills under the title. Every part is optional.
  */
 export function Hero({
   size = "default",
   className,
+  children,
   ...props
 }: React.ComponentProps<"section"> & VariantProps<typeof heroVariants>) {
-  return <section data-slot="hero" data-size={size} className={cn(heroVariants({ size }), className)} {...props} />;
+  return (
+    <section data-slot="hero" data-size={size} className={cn(heroVariants({ size }), className)} {...props}>
+      <div data-slot="hero-glow" aria-hidden="true" className={heroGlowVariants({ size })} />
+      {children}
+    </section>
+  );
 }
 
 /** The paragraph that says what the page is, in a measure that stays readable. */
@@ -68,9 +63,4 @@ export function HeroActions({ className, ...props }: React.ComponentProps<"div">
       {...props}
     />
   );
-}
-
-/** Fine print under the actions: the price, a condition. */
-export function HeroNote({ className, ...props }: React.ComponentProps<"p">) {
-  return <p data-slot="hero-note" className={cn("text-xs text-muted-foreground", className)} {...props} />;
 }

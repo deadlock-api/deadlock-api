@@ -9,19 +9,19 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
 import { useSeasons } from "~/hooks/useSeasons";
-import { PATCHES } from "~/lib/constants";
+import { PATCHES, type PatchInfo } from "~/lib/constants";
 import type { DateFilterAction, DateRange } from "~/lib/date-filter-preference";
-import { type SeasonInfo, defaultDateRange, previousSeasonRange, seasonContaining } from "~/lib/seasons";
+import {
+  type SeasonInfo,
+  computePreviousPeriod,
+  dateRangeLabel,
+  defaultDateRange,
+  patchMatches,
+  seasonContaining,
+  seasonMatches,
+} from "~/lib/seasons";
 
-export interface PatchInfo {
-  id: string;
-  name: string;
-  startDate: Dayjs;
-  // Undefined = active patch (open-ended).
-  endDate?: Dayjs;
-}
-
-export interface SeasonPatchDatePickerValue {
+interface SeasonPatchDatePickerValue {
   action: DateFilterAction;
   startDate?: Dayjs;
   endDate?: Dayjs;
@@ -36,84 +36,20 @@ const ALL_TIME: DateValue = {};
 const TABS = ["season", "patch", "custom"] as const;
 type PickerTab = (typeof TABS)[number];
 
-export interface SeasonPatchDatePickerProps extends Omit<
+interface SeasonPatchDatePickerProps extends Omit<
   React.ComponentProps<typeof FilterCell>,
   "label" | "value" | "defaultValue" | "active" | "onReset" | "icon" | "children"
 > {
-  patchDates?: readonly PatchInfo[];
   value?: DateValue;
-  /** The range it starts at when uncontrolled: all time unless given. */
+  /**
+   * The range it starts at, and the one the reset returns to. Without it the picker starts at all time and resets to
+   * the current season.
+   */
   defaultValue?: DateValue;
   onValueChange?: (value: SeasonPatchDatePickerValue) => void;
   defaultTab?: PickerTab;
+  /** @deprecated Pass `defaultValue`. */
   resetRange?: DateRange;
-}
-
-function patchMatches(patch: PatchInfo, startDate: Dayjs, endDate?: Dayjs): boolean {
-  if (!patch.startDate.isSame(startDate, "day")) return false;
-  if (patch.endDate === undefined) return endDate === undefined;
-  return endDate !== undefined && patch.endDate.isSame(endDate, "day");
-}
-
-// Seasons match to the second, unlike patches: a season can begin on the same
-// day as the patch that starts it, and day-granularity matching would then
-// report the patch selection as its season.
-function seasonMatches(season: SeasonInfo, startDate: Dayjs, endDate?: Dayjs): boolean {
-  if (season.startDate.unix() !== startDate.unix()) return false;
-  if (season.endDate === undefined) return endDate === undefined;
-  return endDate !== undefined && season.endDate.unix() === endDate.unix();
-}
-
-/** The same human-readable date label in the picker and compact filter summaries. */
-export function dateRangeLabel(
-  { startDate, endDate }: { startDate?: Dayjs; endDate?: Dayjs },
-  { seasons = [], patches = [] }: { seasons?: readonly SeasonInfo[]; patches?: readonly PatchInfo[] } = {},
-): string {
-  const season = startDate && seasons.find((candidate) => seasonMatches(candidate, startDate, endDate));
-  if (season) return season.name;
-  const patch = startDate && patches.find((candidate) => patchMatches(candidate, startDate, endDate));
-  if (patch) return patch.name;
-  if (!startDate && !endDate) return "All Time";
-  if (startDate && endDate) return `${startDate.format("MMM D")} - ${endDate.format("MMM D")}`;
-  if (startDate) return `since ${startDate.format("MMM D")}`;
-  return `until ${endDate!.format("MMM D")}`;
-}
-
-export function computePreviousPeriod(
-  startDate?: Dayjs,
-  endDate?: Dayjs,
-  ranges?: { seasons?: readonly SeasonInfo[]; patches?: readonly PatchInfo[] },
-): { prevStartDate?: Dayjs; prevEndDate?: Dayjs } {
-  if (!startDate) return {};
-
-  const seasons = ranges?.seasons;
-  if (seasons) {
-    const seasonIndex = seasons.findIndex((season) => seasonMatches(season, startDate, endDate));
-    if (seasonIndex >= 0) {
-      const [prevStartDate, prevEndDate] = previousSeasonRange(seasons, seasonIndex);
-      return { prevStartDate, prevEndDate };
-    }
-  }
-
-  const patches = ranges?.patches;
-  if (patches) {
-    const patchIndex = patches.findIndex((patch) => patchMatches(patch, startDate, endDate));
-    if (patchIndex >= 0 && patchIndex + 1 < patches.length) {
-      const prevPatch = patches[patchIndex + 1];
-      return {
-        prevStartDate: prevPatch.startDate,
-        prevEndDate: patches[patchIndex].startDate,
-      };
-    }
-  }
-
-  if (!endDate) return {};
-  // Duration shift fallback for custom ranges.
-  const durationSeconds = endDate.unix() - startDate.unix();
-  return {
-    prevStartDate: startDate.subtract(durationSeconds, "second"),
-    prevEndDate: startDate,
-  };
 }
 
 function inferTabFromValue({
@@ -156,9 +92,8 @@ function groupPatchesBySeason(patches: readonly PatchInfo[], seasons: readonly S
 }
 
 export function SeasonPatchDatePicker({
-  patchDates = PATCHES,
   value: valueProp,
-  defaultValue = ALL_TIME,
+  defaultValue,
   onValueChange,
   defaultTab = "season",
   resetRange,
@@ -167,7 +102,7 @@ export function SeasonPatchDatePicker({
 }: SeasonPatchDatePickerProps) {
   const [value, setValue] = useControllableState<DateValue>({
     value: valueProp,
-    defaultValue,
+    defaultValue: defaultValue ?? ALL_TIME,
     // `emit` below is the only writer and always sends the full SeasonPatchDatePickerValue.
     onValueChange: onValueChange as ((value: DateValue) => void) | undefined,
   });
@@ -176,7 +111,7 @@ export function SeasonPatchDatePicker({
   const { startDate: valueStart, endDate: valueEnd } = value;
   const matchingSeason = valueStart ? seasons.find((season) => seasonMatches(season, valueStart, valueEnd)) : undefined;
   const matchingPatch =
-    !matchingSeason && valueStart ? patchDates.find((patch) => patchMatches(patch, valueStart, valueEnd)) : undefined;
+    !matchingSeason && valueStart ? PATCHES.find((patch) => patchMatches(patch, valueStart, valueEnd)) : undefined;
 
   const [queryTab, setQueryTab] = useQueryState("pd-picker-tab", parseAsStringLiteral(TABS));
   const tab =
@@ -190,7 +125,7 @@ export function SeasonPatchDatePicker({
     });
 
   const emit = (startDate: Dayjs | undefined, endDate: Dayjs | undefined, action: DateFilterAction) => {
-    const prev = computePreviousPeriod(startDate, endDate, { seasons, patches: patchDates });
+    const prev = computePreviousPeriod(startDate, endDate, { seasons, patches: PATCHES });
     const next: SeasonPatchDatePickerValue = { startDate, endDate, ...prev, action };
     setValue(next);
   };
@@ -201,7 +136,7 @@ export function SeasonPatchDatePicker({
   };
 
   const handlePatchSelect = (patchId: string) => {
-    const patch = patchDates.find((p) => p.id === patchId);
+    const patch = PATCHES.find((p) => p.id === patchId);
     emit(patch?.startDate, patch?.endDate, "patch");
   };
 
@@ -209,14 +144,16 @@ export function SeasonPatchDatePicker({
     emit(range.startDate?.startOf("day"), range.endDate?.endOf("day"), "custom");
   };
 
-  const [defaultStart, defaultEnd] = resetRange ?? defaultDateRange(seasons);
+  const [defaultStart, defaultEnd] = defaultValue
+    ? [defaultValue.startDate, defaultValue.endDate]
+    : (resetRange ?? defaultDateRange(seasons));
   const isActive =
     value.startDate?.valueOf() !== defaultStart?.valueOf() || value.endDate?.valueOf() !== defaultEnd?.valueOf();
 
   return (
     <FilterCell
       label="Date"
-      value={dateRangeLabel(value, { seasons, patches: patchDates })}
+      value={dateRangeLabel(value, { seasons, patches: PATCHES })}
       active={isActive}
       onReset={() => {
         emit(defaultStart, defaultEnd, "reset");
@@ -273,7 +210,7 @@ export function SeasonPatchDatePicker({
         {tab === "patch" && (
           <div className="flex flex-col gap-1.5">
             <div className="flex max-h-64 flex-col overflow-y-auto">
-              {groupPatchesBySeason(patchDates, seasons).map((group) => (
+              {groupPatchesBySeason(PATCHES, seasons).map((group) => (
                 <div key={group.label ?? "patches"}>
                   {group.label && <div className="px-2 pt-2 pb-1 eyebrow first:pt-0">{group.label}</div>}
                   {group.patches.map((patch) => (

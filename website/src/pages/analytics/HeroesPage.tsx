@@ -1,14 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import type { HeroScoreboardSortByEnum } from "deadlock_api_client";
-import { ChartNoAxesCombined, Table2 } from "lucide-react";
+import { ChartNoAxesCombined, GraduationCap, Table2 } from "lucide-react";
 import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense, useId, useState } from "react";
 
 import { ALL_SORT_BY_VALUES } from "~/components/domain/player-scoreboard/sort-options";
-import { MODE_CONFIG } from "~/components/domain/selectors/ModeSelector";
 import { HeroFiltersSection } from "~/components/features/heroes/HeroFiltersSection";
 import { HeroScoreboardTable } from "~/components/features/heroes/HeroScoreboardTable";
-import { BY_RANK_STATS, HeroStatSelector } from "~/components/features/heroes/HeroStatSelectors";
+import { HeroStatSelector } from "~/components/features/heroes/HeroStatSelectors";
 import { HeroStatsTable } from "~/components/features/heroes/HeroStatsTable";
 import { HeroTrendControls } from "~/components/features/heroes/HeroTrendControls";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
@@ -28,7 +27,9 @@ import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { type HeroTab, useHeroFilters } from "~/hooks/useHeroFilters";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import { MODE_CONFIG } from "~/lib/game-mode";
 import { heroScoreboardQueryOptions } from "~/queries/hero-scoreboard-query";
+import { BY_RANK_STATS } from "~/types/api_hero_stats";
 import { HERO_STATS } from "~/types/api_hero_stats";
 
 const HeroStatsOverTimeChart = lazy(() =>
@@ -302,7 +303,12 @@ export function HeroesPage() {
 
         <TabsContent value="stats-by-experience">
           <Section titleDisplay="hidden" title="Hero Stats by Experience">
-            <FilterBar variant="toolbar" title="Experience comparison" aria-label="Experience table controls">
+            <FilterBar
+              variant="toolbar"
+              title="Experience comparison"
+              icon={GraduationCap}
+              aria-label="Experience table controls"
+            >
               <Field label="Stat" orientation="horizontal" className="w-full sm:w-auto">
                 <HeroStatSelector
                   label="Stat"

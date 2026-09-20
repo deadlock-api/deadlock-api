@@ -5,7 +5,7 @@ import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
 import { FilteredSelectOption, FilteredSelectPopover } from "~/components/patterns/filter-bar/FilteredSelectPopover";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
-import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
+import { filterShopableItems, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 
 function sortItems(a: Upgrade, b: Upgrade) {
   if (a.item_tier !== b.item_tier) {
@@ -17,7 +17,7 @@ function sortItems(a: Upgrade, b: Upgrade) {
 function useItems() {
   const { data: sortedItems = [], isLoading } = useQuery({
     ...itemUpgradesQueryOptions,
-    select: (items) => items.filter((i) => !i.disabled && i.shopable && i.shop_image_webp).sort(sortItems),
+    select: (items) => filterShopableItems(items).sort(sortItems),
   });
   return { sortedItems, isLoading };
 }
@@ -28,7 +28,6 @@ export function ItemSelectorMultiple({
   value: valueProp,
   defaultValue = NO_ITEMS,
   onValueChange,
-  label,
   ...props
 }: Omit<
   React.ComponentProps<typeof FilteredSelectPopover>,
@@ -37,7 +36,6 @@ export function ItemSelectorMultiple({
   value?: number[];
   defaultValue?: number[];
   onValueChange?: (itemIds: number[]) => void;
-  label?: string;
 }) {
   const [selectedItems, onItemsSelected] = useControllableState({
     value: valueProp,
@@ -54,7 +52,7 @@ export function ItemSelectorMultiple({
     <FilteredSelectPopover
       value={selectedItems}
       onValueChange={onItemsSelected}
-      emptyLabel={label ?? "Select Items..."}
+      emptyLabel="Select Items..."
       {...props}
     >
       {sortedItems.map((item: Upgrade) => (

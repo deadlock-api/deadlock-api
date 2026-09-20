@@ -1,18 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import {
-  BarChart3Icon,
-  CheckIcon,
-  GlobeIcon,
-  LayersIcon,
-  MailIcon,
-  SwordsIcon,
-  TriangleAlertIcon,
-  UserIcon,
-} from "lucide-react";
+import { BarChart3Icon, CheckIcon, GlobeIcon, LayersIcon, MailIcon, SwordsIcon, UserIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
@@ -23,7 +13,7 @@ import { Heading } from "~/components/ui/heading";
 import { IconTile } from "~/components/ui/icon-tile";
 import { Input } from "~/components/ui/input";
 import { OptionRow } from "~/components/ui/option-row";
-import { ProgressBar, ProgressBarSegment, ProgressBarWithLabel } from "~/components/ui/progress-bar";
+import { ProgressBar, ProgressBarSegment } from "~/components/ui/progress-bar";
 import { DivergingBar } from "~/components/ui/rate-bar";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Slider } from "~/components/ui/slider";
@@ -343,18 +333,6 @@ export function Round3PrimitivesMore() {
       </Specimen>
 
       <Specimen
-        name="Alert negative"
-        source="ui/alert"
-        note='variant="negative": a bad outcome that is not a failure of the site, such as a loss or a wrong answer. A failed request is destructive.'
-      >
-        <Alert variant="negative" className="max-w-md">
-          <TriangleAlertIcon />
-          <AlertTitle>Wrong answer</AlertTitle>
-          <AlertDescription>That item is a Spirit item. Two attempts left.</AlertDescription>
-        </Alert>
-      </Specimen>
-
-      <Specimen
         name="OptionRow link and description"
         source="ui/option-row"
         note="description adds a quiet second line; asChild makes the row a link whose children are the label. The row now shows the shared focus ring."
@@ -432,6 +410,16 @@ export function Round3PrimitivesMore() {
             <ProgressBarSegment value={2} color="var(--item-vitality)" />
             <ProgressBarSegment value={1} color="var(--item-spirit)" />
           </ProgressBar>
+        </Variants>
+        <Variants label='variant="thin": beside a visible rate; positive unless a color is given' className="gap-6">
+          {[0.62, 0.48, 0.31].map((rate) => (
+            <span key={rate} className="flex items-center gap-2 text-xs tabular-nums">
+              {Math.round(rate * 100)}%
+              <ProgressBar variant="thin" value={rate} className="w-24" />
+            </span>
+          ))}
+          <ProgressBar variant="thin" value={0.4} color="var(--chart-4)" className="w-24" />
+          <ProgressBar variant="thin" className="w-24" />
         </Variants>
         <Variants label='variant="cell"'>
           <Table density="compact" className="max-w-sm">
@@ -519,21 +507,6 @@ export function Round3PrimitivesMore() {
           <SortButton size="sm" active={false} sortDir="asc" align="start">
             sm, idle
           </SortButton>
-        </Variants>
-      </Specimen>
-
-      <Specimen
-        name="ProgressBarWithLabel orientation"
-        source="ui/progress-bar"
-        note="vertical puts the label under the bar; horizontal puts a short bar before it, for table cells."
-      >
-        <Variants className="items-start gap-6">
-          <div className="w-40">
-            <ProgressBarWithLabel value={0.62} delta={0.021} />
-          </div>
-          <div className="w-40">
-            <ProgressBarWithLabel orientation="horizontal" value={0.62} delta={-0.013} />
-          </div>
         </Variants>
       </Specimen>
 

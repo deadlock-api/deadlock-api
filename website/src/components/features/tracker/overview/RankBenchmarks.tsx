@@ -3,7 +3,6 @@ import type { HashMapValue } from "deadlock_api_client";
 import { ChartNoAxesCombined } from "lucide-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 
-import { MODE_CONFIG } from "~/components/domain/selectors/ModeSelector";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { PanelWithDetails } from "~/components/patterns/panel/PanelWithDetails";
@@ -15,6 +14,7 @@ import { DetailPopover } from "~/components/ui/detail-popover";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
 import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { MODE_CONFIG } from "~/lib/game-mode";
 import { formatPlayerMetricValue, PLAYER_METRICS, type PlayerMetricDefinition } from "~/lib/player-metrics";
 import { benchmarkRankRange, compareBenchmark } from "~/lib/tracker/benchmarks";
 import type { TrackerFilterValues } from "~/lib/tracker/compute";
@@ -188,7 +188,6 @@ export function RankBenchmarks({
   return (
     <PanelWithDetails
       title="Rank benchmarks"
-      metaPlacement="both"
       details={renderContent(true)}
       footer={
         mode.supportsRank && selection === "auto" && autoRange
@@ -196,7 +195,7 @@ export function RankBenchmarks({
           : "Your average / lobby average"
       }
       icon={ChartNoAxesCombined}
-      meta={
+      actions={
         mode.supportsRank ? (
           <Select
             value={selection}

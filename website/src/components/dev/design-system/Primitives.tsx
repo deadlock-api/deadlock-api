@@ -27,7 +27,6 @@ import { Button } from "~/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { CheckboxField } from "~/components/ui/checkbox-field";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
-import { ColorInput } from "~/components/ui/color-input";
 import { CopyButton } from "~/components/ui/copy-button";
 import { Delta } from "~/components/ui/delta";
 import {
@@ -86,18 +85,7 @@ const BADGE_VARIANTS = [
   "info",
   "destructive",
 ] as const;
-const CARD_TONES = [
-  "card",
-  "glass",
-  "inset",
-  "muted",
-  "primary",
-  "positive",
-  "negative",
-  "warning",
-  "info",
-  "destructive",
-] as const;
+const CARD_TONES = ["card", "glass", "inset", "muted", "primary", "positive", "negative", "warning"] as const;
 const INTERVALS = (
   <>
     <SegmentedItem value="day">Day</SegmentedItem>
@@ -236,7 +224,7 @@ export function Primitives() {
         note="Independent on/off options. For one choice out of a few, text or icon, use Segmented."
       >
         <Variants label='type="multiple"'>
-          <ToggleGroup type="multiple" size="sm" variant="outline" value={views} onValueChange={setViews}>
+          <ToggleGroup type="multiple" variant="outline" value={views} onValueChange={setViews}>
             <ToggleGroupItem value="grid" aria-label="Grid">
               <LayoutGrid />
             </ToggleGroupItem>
@@ -389,6 +377,8 @@ export function Primitives() {
           <Input size="sm" placeholder='size="sm"' className="w-48" aria-label="Small input" />
           <Input disabled placeholder="Disabled" className="w-48" aria-label="Disabled input" />
           <Input aria-invalid defaultValue="Invalid" className="w-48" aria-label="Invalid input" />
+          {/* ds-allow color-literal: the value of a native color input is user data and must be a hex string */}
+          <Input type="color" defaultValue="#fa4454" aria-label="Font color" />
         </Variants>
       </Specimen>
 
@@ -398,15 +388,6 @@ export function Primitives() {
           className="max-w-md"
           aria-label="Template"
         />
-      </Specimen>
-
-      <Specimen
-        name="ColorInput"
-        source="ui/color-input"
-        note="A swatch that opens the native picker. The value is a hex string because it is user data, not a theme color."
-      >
-        {/* ds-allow color-literal: the value of a native color input is user data and must be a hex string */}
-        <ColorInput defaultValue="#fa4454" aria-label="Font color" />
       </Specimen>
 
       <Specimen
@@ -468,31 +449,23 @@ export function Primitives() {
       <Specimen
         name="ProgressBar"
         source="ui/progress-bar"
-        note='Comparative bars in tables. orientation="horizontal" puts the bar and the numbers on one row.'
+        note="Comparative bars in tables, with the reading and its change under the bar."
       >
         <Variants className="items-start gap-6">
           <div className="flex w-56 flex-col gap-3">
             <ProgressBarWithLabel value={0.524} min={0.4} max={0.6} label="52.4%" delta={0.012} />
-            <ProgressBarWithLabel
-              value={0.081}
-              max={0.2}
-              color="var(--chart-4)"
-              label="8.1%"
-              delta={-0.004}
-              orientation="horizontal"
-            />
+            <ProgressBarWithLabel value={0.081} max={0.2} color="var(--chart-4)" label="8.1%" delta={-0.004} />
           </div>
         </Variants>
       </Specimen>
 
-      <Specimen name="RateBar" source="ui/rate-bar" note="A thin 0 to 1 bar that decorates a visible rate label.">
-        <Variants className="gap-6">
-          {[0.62, 0.48, 0.31].map((rate) => (
-            <span key={rate} className="flex items-center gap-2 text-xs tabular-nums">
-              {Math.round(rate * 100)}%
-              <RateBar rate={rate} className="w-24" />
-            </span>
-          ))}
+      <Specimen
+        name="RateBar"
+        source="ui/rate-bar"
+        note='RateBar is deprecated: use ProgressBar variant="thin". DivergingBar draws a signed value from the centre.'
+      >
+        <Variants label="RateBar (deprecated)">
+          <RateBar rate={0.62} className="w-24" />
         </Variants>
         <Variants label="DivergingBar: a signed value from the centre" className="gap-6">
           {[0.042, -0.018, 0.009, -0.06].map((value) => (
@@ -571,11 +544,6 @@ export function Primitives() {
         </Variants>
         <Variants label="TooltipTarget display (tab through them to see the ring)" className="items-stretch">
           <div className="flex w-full max-w-md flex-col gap-2 text-sm">
-            <p className="text-muted-foreground">
-              A sentence whose{" "}
-              <TooltipTarget display="inline">inline target breaks across its lines with the text</TooltipTarget> and
-              gets one ring fragment per line.
-            </p>
             <p className="text-muted-foreground">
               The default <TooltipTarget>inline-block</TooltipTarget> keeps one box, so the ring wraps the whole
               trigger.

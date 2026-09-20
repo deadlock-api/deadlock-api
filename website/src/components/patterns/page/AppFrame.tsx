@@ -42,11 +42,11 @@ export function AppBody({
       <div
         data-slot="app-body-shade"
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-0 bg-linear-to-br from-black/35 to-transparent"
+        // Behind the content by z-index, not by wrapping the content: the router's scripts must stay direct children
+        // of <body>, the only place React tolerates a script tag it did not render while hydrating.
+        className="pointer-events-none fixed inset-0 -z-10 bg-linear-to-br from-scrim to-transparent"
       />
-      <div data-slot="app-body-content" className="relative z-10">
-        {children}
-      </div>
+      {children}
     </Comp>
   );
 }

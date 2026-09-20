@@ -2,17 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { Fragment, useMemo } from "react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
-import type { MatchMode } from "~/components/domain/selectors/MatchModeSelector";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
 import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { Tooltip, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
+import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { shrunkWinRate } from "~/lib/shrinkage";
 import { queryKeys } from "~/queries/query-keys";
 
@@ -196,18 +195,8 @@ export function HeroCombStatsTable({
                 </TableCell>
                 {columns.includes("winRate") && (
                   <TableCell className="text-center">
-                    <ProgressBarWithLabel
-                      min={minWinrate}
-                      max={maxWinrate}
-                      value={row.wins / row.matches}
-                      color="var(--primary)"
-                      label={`${Math.round((row.wins / row.matches) * 100).toFixed(0)}% `}
-                      delta={(() => {
-                        const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
-                        const prev = prevStatsMap?.get(key);
-                        return prev !== undefined ? row.wins / row.matches - prev.winrate : undefined;
-                      })()}
-                      tooltip={
+                    <Tooltip
+                      content={
                         <>
                           <TooltipStats variant="plain">
                             <TooltipStat label="Matches" value={row.matches.toLocaleString("en-US")} />
@@ -225,23 +214,28 @@ export function HeroCombStatsTable({
                           })()}
                         </>
                       }
-                    />
+                    >
+                      <TooltipTarget display="block">
+                        <ProgressBarWithLabel
+                          min={minWinrate}
+                          max={maxWinrate}
+                          value={row.wins / row.matches}
+                          color="var(--primary)"
+                          label={`${Math.round((row.wins / row.matches) * 100).toFixed(0)}% `}
+                          delta={(() => {
+                            const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
+                            const prev = prevStatsMap?.get(key);
+                            return prev !== undefined ? row.wins / row.matches - prev.winrate : undefined;
+                          })()}
+                        />
+                      </TooltipTarget>
+                    </Tooltip>
                   </TableCell>
                 )}
                 {columns.includes("pickRate") && (
                   <TableCell className="text-center">
-                    <ProgressBarWithLabel
-                      min={minMatches}
-                      max={maxMatches}
-                      value={row.matches}
-                      color="var(--chart-4)"
-                      label={`${Math.round((row.matches / maxMatches) * 100).toFixed(0)}%`}
-                      delta={(() => {
-                        const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
-                        const prev = prevStatsMap?.get(key);
-                        return prev !== undefined ? row.matches / maxMatches - prev.normalizedPickrate : undefined;
-                      })()}
-                      tooltip={
+                    <Tooltip
+                      content={
                         <>
                           <TooltipStats variant="plain">
                             <TooltipStat
@@ -264,7 +258,22 @@ export function HeroCombStatsTable({
                           })()}
                         </>
                       }
-                    />
+                    >
+                      <TooltipTarget display="block">
+                        <ProgressBarWithLabel
+                          min={minMatches}
+                          max={maxMatches}
+                          value={row.matches}
+                          color="var(--chart-4)"
+                          label={`${Math.round((row.matches / maxMatches) * 100).toFixed(0)}%`}
+                          delta={(() => {
+                            const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
+                            const prev = prevStatsMap?.get(key);
+                            return prev !== undefined ? row.matches / maxMatches - prev.normalizedPickrate : undefined;
+                          })()}
+                        />
+                      </TooltipTarget>
+                    </Tooltip>
                   </TableCell>
                 )}
                 {columns.includes("totalMatches") && (

@@ -6,8 +6,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
 import { GraphNodeCard } from "~/components/domain/graph/GraphNodeCard";
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
-import type { MatchMode } from "~/components/domain/selectors/MatchModeSelector";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -22,10 +20,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
 import { Stack } from "~/components/ui/stack";
-import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { TONE_COLOR, TONE_TEXT, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 import { wilsonScoreInterval } from "~/lib/wilson";
@@ -280,38 +279,8 @@ const ItemFlowCard = memo(function ItemFlowCard({
   const wrBar = showRaw ? node.wrBarRaw : node.wrBar;
   const conf = confidenceLevel(node.wrLow, node.wrHigh);
   return (
-    <GraphNodeCard
-      className="absolute"
-      style={{ left: node.x, top: node.y, width: CARD_W, height: CARD_H }}
-      accent={accent}
-      selected={node.locked}
-      dimmed={dimmed}
-      onMouseEnter={() => onHover(node.key)}
-      onMouseLeave={() => onHover(null)}
-      onClick={() => onLock(node.key)}
-      status={
-        <span
-          className={cn(conf.icon, "size-3.5", conf.color)}
-          title={`Confidence: ${conf.label} (${node.matches.toLocaleString("en-US")} matches, 95% CI ${(node.wrLow * 100).toFixed(1)}–${(node.wrHigh * 100).toFixed(1)}%)`}
-        />
-      }
-      media={<ItemImage itemId={node.itemId} className="size-9 shrink-0" />}
-      name={<ItemName itemId={node.itemId} />}
-      meta={
-        <>
-          {tier > 0 && (
-            <Badge variant="muted" size="sm">
-              T{tier}
-            </Badge>
-          )}
-          {cost > 0 && <span className="tabular-nums">{cost.toLocaleString("en-US")}</span>}
-        </>
-      }
-      winRate={displayWr}
-      winRateFill={wrBar}
-      pickRate={node.pickRate}
-      pickRateFill={node.pickBar}
-      tooltip={
+    <Tooltip
+      content={
         <>
           <TooltipHeader title={<ItemName itemId={node.itemId} />} />
           <TooltipStats>
@@ -371,7 +340,41 @@ const ItemFlowCard = memo(function ItemFlowCard({
           </div>
         </>
       }
-    />
+    >
+      <GraphNodeCard
+        className="absolute"
+        style={{ left: node.x, top: node.y, width: CARD_W, height: CARD_H }}
+        accent={accent}
+        selected={node.locked}
+        dimmed={dimmed}
+        onMouseEnter={() => onHover(node.key)}
+        onMouseLeave={() => onHover(null)}
+        interaction="pressable"
+        onClick={() => onLock(node.key)}
+        status={
+          <span
+            className={cn(conf.icon, "size-3.5", conf.color)}
+            title={`Confidence: ${conf.label} (${node.matches.toLocaleString("en-US")} matches, 95% CI ${(node.wrLow * 100).toFixed(1)}–${(node.wrHigh * 100).toFixed(1)}%)`}
+          />
+        }
+        media={<ItemImage itemId={node.itemId} className="size-9 shrink-0" />}
+        name={<ItemName itemId={node.itemId} />}
+        meta={
+          <>
+            {tier > 0 && (
+              <Badge variant="muted" size="sm">
+                T{tier}
+              </Badge>
+            )}
+            {cost > 0 && <span className="tabular-nums">{cost.toLocaleString("en-US")}</span>}
+          </>
+        }
+        winRate={displayWr}
+        winRateFill={wrBar}
+        pickRate={node.pickRate}
+        pickRateFill={node.pickBar}
+      />
+    </Tooltip>
   );
 });
 

@@ -133,7 +133,7 @@ export function Charts() {
       <Specimen
         name="ChartSurface"
         source="patterns/charts/ChartSurface"
-        note="size: xs, sm, md, default, lg, fill. variant: card, flush, bare. The loading skeleton takes the same size."
+        note="size: xs, sm, md, default, lg, xl (the main plot of a page), fill. variant: card, flush, bare. The loading skeleton takes the same size."
       >
         <Variants className="grid items-start md:grid-cols-2">
           <ChartSurface label="Win rate by rank" size="md">

@@ -6,13 +6,15 @@ import { useCallback } from "react";
 
 import { Filter } from "~/components/domain/filters";
 import { LeaderboardTable } from "~/components/features/leaderboard/LeaderboardTable";
+import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { combineQueryStates } from "~/components/patterns/states/QueryRenderer";
+import { SegmentedItem } from "~/components/ui/segmented";
 import { prefetchSafe } from "~/lib/prefetch-safe";
-import { getDefaultRegion } from "~/lib/region";
+import { getDefaultRegion, REGION_LABELS } from "~/lib/region";
 import { fetchDefaultRegion } from "~/lib/region-fns";
 import { seo } from "~/lib/seo";
 import { leaderboardQueryOptions } from "~/queries/leaderboard-queries";
@@ -82,7 +84,13 @@ function LeaderboardPage() {
       </PageHeader>
       <Filter.Root>
         <Filter.Hero value={heroId} onValueChange={setHeroId} allowNull />
-        <Filter.Region value={region} defaultValue={defaultRegion} onValueChange={setRegion} />
+        <FilterToggleCell label="Region" value={region} defaultValue={defaultRegion} onValueChange={setRegion}>
+          {regions.map((regionOption) => (
+            <SegmentedItem key={regionOption} value={regionOption}>
+              {REGION_LABELS[regionOption]}
+            </SegmentedItem>
+          ))}
+        </FilterToggleCell>
       </Filter.Root>
       <div className="min-h-200">
         {isPending ? (

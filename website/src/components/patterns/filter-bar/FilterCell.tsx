@@ -86,7 +86,12 @@ interface FilterCellProps extends Omit<React.ComponentProps<"div">, "children"> 
   children: React.ReactNode;
   /** Sizes the popover: its width and padding. */
   contentClassName?: string;
-  align?: "start" | "center" | "end";
+  align?: "start" | "center";
+  /**
+   * `sm` is one line at the height of `Select size="sm"`, with the label beside the value: for a selector inside a
+   * `FilterBar variant="toolbar"`. Cells of a `cells` bar are laid out by the bar and stay `default`.
+   */
+  size?: "default" | "sm";
 }
 
 /** What a selector built on `FilterCell` passes through to it: everything but the value wiring it supplies itself. */
@@ -110,17 +115,21 @@ export function FilterCell({
   contentClassName,
   className,
   align = "start",
+  size = "default",
   ...props
 }: FilterCellProps) {
   const inRoot = useContext(FilterRootContext);
+  const compact = size === "sm" && !inRoot;
   return (
     <Popover>
       <div
         data-slot="filter-cell"
         data-active={active || undefined}
+        data-size={compact ? "sm" : "default"}
         className={cn(
           "grid min-w-0",
           inRoot ? cn(cellInRoot, "static @2xl:relative") : cn(cellStandalone, "relative"),
+          compact && "h-8 rounded-md",
           active && activeUnderline,
           className,
         )}
@@ -134,9 +143,19 @@ export function FilterCell({
               cellBase,
               FOCUS_RING,
               "col-start-1 row-start-1 hover:bg-accent focus-visible:bg-accent focus-visible:ring-inset data-[state=open]:bg-accent",
+              compact && "flex-row items-center justify-start gap-2 rounded-md px-3 py-0",
+              compact && onReset && active && "pe-8",
             )}
           >
-            {label && (
+            {label && compact && (
+              <span
+                data-slot="filter-cell-label"
+                className={cn("type-caption text-muted-foreground", active && "text-primary")}
+              >
+                {label}
+              </span>
+            )}
+            {label && !compact && (
               <CellLabel active={active} className={onReset ? "max-w-full pe-5" : undefined}>
                 {label}
               </CellLabel>
@@ -159,7 +178,12 @@ export function FilterCell({
           </button>
         </PopoverTrigger>
         {onReset && active && (
-          <span className="pointer-events-none col-start-1 row-start-1 self-start justify-self-end p-0.5">
+          <span
+            className={cn(
+              "pointer-events-none col-start-1 row-start-1 justify-self-end p-0.5",
+              compact ? "self-center" : "self-start",
+            )}
+          >
             <CellReset label={label} active={active} onReset={onReset} className="pointer-events-auto" />
           </span>
         )}
@@ -181,10 +205,6 @@ interface FilterToggleCellProps<T extends string> extends Omit<React.ComponentPr
   /** The choice it starts on when uncontrolled, and the one the reset returns to. */
   defaultValue?: T;
   onValueChange?: (value: T) => void;
-  /** Defaults to "the value differs from `defaultValue`". */
-  active?: boolean;
-  /** Defaults to choosing `defaultValue` again; without a `defaultValue` there is no reset. */
-  onReset?: () => void;
   disabled?: boolean;
   /**
    * `wide` gives a long row of segments a whole line of a narrow bar. The default is `wide` from four segments up.
@@ -200,8 +220,6 @@ export function FilterToggleCell<T extends string>({
   value,
   defaultValue,
   onValueChange,
-  active: activeProp,
-  onReset: onResetProp,
   disabled = false,
   width,
   className,
@@ -214,8 +232,8 @@ export function FilterToggleCell<T extends string>({
     defaultValue: defaultValue ?? "",
     onValueChange: onValueChange as ((next: T | "") => void) | undefined,
   });
-  const active = activeProp ?? (defaultValue !== undefined && current !== defaultValue);
-  const onReset = onResetProp ?? (defaultValue !== undefined ? () => setCurrent(defaultValue) : undefined);
+  const active = defaultValue !== undefined && current !== defaultValue;
+  const onReset = defaultValue !== undefined ? () => setCurrent(defaultValue) : undefined;
   const isWide = width == null ? Children.count(children) > 3 : width === "wide";
   return (
     <div

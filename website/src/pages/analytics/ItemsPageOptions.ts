@@ -1,7 +1,7 @@
 import { lazyRouteComponent } from "@tanstack/react-router";
 
-import { DEFAULT_MATCH_MODE } from "~/components/domain/selectors/MatchModeSelector";
 import { analyticsPageTitle, redirectAnalyticsTab } from "~/lib/analytics-tabs";
+import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultPrevUnixRange, defaultUnixRange } from "~/lib/seasons";
 import { seo } from "~/lib/seo";

@@ -4,8 +4,6 @@ import { useMemo } from "react";
 import { CartesianGrid, Scatter, ScatterChart, type ScatterProps, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartHeroSelector } from "~/components/domain/selectors/ChartHeroSelector";
-import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
-import type { MatchMode } from "~/components/domain/selectors/MatchModeSelector";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { ChartSidebarLayout } from "~/components/patterns/charts/ChartSidebarLayout";
@@ -22,12 +20,12 @@ import { api } from "~/lib/api";
 import { BANS_PER_MATCH } from "~/lib/ban-rate";
 import { niceTicks } from "~/lib/chart-axis";
 import { getPickrateMultiplier } from "~/lib/constants";
+import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { getRankImageUrl } from "~/lib/rank-utils";
 import { queryKeys } from "~/queries/query-keys";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
-
-import type { ByRankStat } from "./HeroStatSelectors";
+import type { ByRankStat } from "~/types/api_hero_stats";
 
 interface HeroStatsByRankChartProps {
   minHeroMatches?: number;
@@ -351,7 +349,7 @@ export function HeroStatsByRankChart({
   return (
     <div aria-live="polite" aria-busy={isLoading}>
       {isLoading ? (
-        <ChartLoading label="hero rank data" />
+        <ChartLoading label="hero rank data" size="xl" />
       ) : isErrorHeroStats || isErrorRanks || isErrorHeroes || (needsBanData && isErrorBanStats) ? (
         <ChartError
           label="hero rank data"
@@ -392,7 +390,7 @@ export function HeroStatsByRankChart({
             ) : (
               <ChartSurface
                 variant="flush"
-                size="lg"
+                size="xl"
                 label={`Hero ${formatStatLabel(xStat)} vs ${formatStatLabel(yStat)} by rank chart`}
               >
                 <ScatterChart margin={{ top: 20, right: 30, bottom: 30, left: 20 }}>

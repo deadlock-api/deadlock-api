@@ -1,7 +1,6 @@
 import { useId } from "react";
 
 import { ExtraArguments } from "~/components/features/streamkit/widgets/ExtraArguments";
-import { ColorInput } from "~/components/ui/color-input";
 import { Field } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
@@ -42,7 +41,8 @@ export function RawWidgetConfig({ config, updateConfig, availableVariables }: Ra
           </Select>
         </Field>
         <Field label="Font Color">
-          <ColorInput
+          <Input
+            type="color"
             aria-label="Font Color"
             value={config.fontColor}
             onChange={(e) => updateConfig({ fontColor: e.target.value as Color })}

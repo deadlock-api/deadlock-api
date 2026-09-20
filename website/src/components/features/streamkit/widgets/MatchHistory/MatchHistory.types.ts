@@ -1,12 +1,5 @@
 import type { Theme } from "~/types/streamkit/widget";
 
-export interface Match {
-  match_id: number;
-  hero_id: number;
-  match_result: number;
-  player_team: number;
-}
-
 export interface Hero {
   id: number;
   images: {
@@ -20,10 +13,4 @@ export interface MatchHistoryProps {
   accountId: string;
 
   opacity?: number;
-}
-
-export interface UseMatchHistoryResult {
-  matches: Match[];
-  heroes: Map<number, string>;
-  loading: boolean;
 }

@@ -27,9 +27,7 @@ import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
-  BreadcrumbList,
   BreadcrumbPage,
-  BreadcrumbSeparator,
 } from "~/components/patterns/navigation/Breadcrumb";
 import { SideNav, SideNavFooter, SideNavGroup, SideNavItem } from "~/components/patterns/navigation/SideNav";
 import {
@@ -39,7 +37,7 @@ import {
   SideNavShell,
 } from "~/components/patterns/navigation/SideNavShell";
 import { AppBody, AppFrame, PageBackdrop } from "~/components/patterns/page/AppFrame";
-import { Hero, HeroActions, HeroGlow, HeroLead, HeroNote } from "~/components/patterns/page/Hero";
+import { Hero, HeroActions, HeroLead } from "~/components/patterns/page/Hero";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Badge } from "~/components/ui/badge";
@@ -47,6 +45,7 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { IconTile } from "~/components/ui/icon-tile";
 import { Inline } from "~/components/ui/stack";
+import { Text } from "~/components/ui/text";
 
 /** A box that contains `fixed` descendants, so the app chrome can be shown inside a specimen. */
 function Viewport({ className, children }: { className?: string; children: React.ReactNode }) {
@@ -121,11 +120,10 @@ function PageChromeSpecimens() {
       <Specimen
         name="Hero"
         source="patterns/page/Hero"
-        note="The opening block of a hub or marketing page. Compose HeroGlow, a PageHeader, then HeroLead, HeroActions (calls to action, or a row of pills) and HeroNote as needed."
+        note="The opening block of a hub or marketing page. It draws its own glow at the matching size. Compose a PageHeader, then HeroLead and HeroActions (calls to action, or a row of pills) as needed."
       >
         <Variants label='size="default": every part' className="block">
           <Hero>
-            <HeroGlow />
             <PageHeader
               as="div"
               size="lg"
@@ -163,12 +161,13 @@ function PageChromeSpecimens() {
                 Become a Patron
               </Button>
             </HeroActions>
-            <HeroNote>Starting at $1.50/month, every cent goes to infrastructure</HeroNote>
+            <Text as="p" variant="caption" tone="muted">
+              Starting at $1.50/month, every cent goes to infrastructure
+            </Text>
           </Hero>
         </Variants>
-        <Variants label='size="sm" with HeroGlow size="sm": a display title only' className="block">
+        <Variants label='size="sm": a display title only' className="block">
           <Hero size="sm">
-            <HeroGlow size="sm" />
             <PageHeader as="div" size="display" title="Deadlock API" />
           </Hero>
         </Variants>
@@ -207,7 +206,7 @@ function NavigationSpecimens() {
           </SideNavItem>
         </SideNavGroup>
       </SideNav>
-      <SideNavFooter size="sm">
+      <SideNavFooter>
         <Button variant="soft" size="sm" className="w-full">
           <Code2 />
           API Documentation
@@ -240,14 +239,6 @@ function NavigationSpecimens() {
             <p className="hidden p-3 text-xs text-muted-foreground md:block">Hidden from md up.</p>
           </Viewport>
         </Variants>
-        <Variants label='SideNavFooter size="sm" and size="default"' className="grid items-start sm:grid-cols-2">
-          <Card tone="inset" size="flush">
-            <SideNavFooter size="sm">size="sm"</SideNavFooter>
-          </Card>
-          <Card tone="inset" size="flush">
-            <SideNavFooter>size="default"</SideNavFooter>
-          </Card>
-        </Variants>
       </Specimen>
 
       <Specimen
@@ -257,34 +248,27 @@ function NavigationSpecimens() {
       >
         <Variants label="home icon, ancestors, current page" className="block">
           <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="#breadcrumb" aria-label="Home">
-                  <Home />
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink href="#breadcrumb">Analytics</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Heroes</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="#breadcrumb" aria-label="Home">
+                <Home />
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="#breadcrumb">Analytics</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbItem>
+              <BreadcrumbPage>Heroes</BreadcrumbPage>
+            </BreadcrumbItem>
           </Breadcrumb>
         </Variants>
         <Variants label="overflowing: the current page truncates" className="block max-w-64">
           <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="#breadcrumb">Blog</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>How the match ingestion pipeline handles a patch day</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="#breadcrumb">Blog</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbItem>
+              <BreadcrumbPage>How the match ingestion pipeline handles a patch day</BreadcrumbPage>
+            </BreadcrumbItem>
           </Breadcrumb>
         </Variants>
       </Specimen>
@@ -478,8 +462,8 @@ function ContentSpecimens() {
             <Step title="Ask a question about the data in plain language. A long instruction wraps under its own first line, never under the number." />
           </Steps>
         </Variants>
-        <Variants label='variant="plain" size="sm": inside an Alert or a Card' className="block">
-          <Steps variant="plain" size="sm">
+        <Variants label='variant="plain": inside an Alert or a Card' className="block">
+          <Steps variant="plain">
             <Step title="Add a new browser source in OBS." />
             <Step title="Paste the generated URL into the URL field." />
             <Step title="Click OK." />
@@ -492,17 +476,13 @@ function ContentSpecimens() {
         source="patterns/content/MetaList"
         note="A line of facts about one thing, divided by bars. Built from spans, so it is valid inside a PageHeader description."
       >
-        <Variants label='size="default" | "sm"; wraps when narrow'>
+        <Variants label="wraps when narrow">
           <MetaList>
             <MetaItem icon={<Calendar />}>
               <time dateTime="2026-05-04">May 4, 2026</time>
             </MetaItem>
             <MetaItem>Manuel</MetaItem>
             <MetaItem icon={<Clock />}>6 min read</MetaItem>
-          </MetaList>
-          <MetaList size="sm">
-            <MetaItem>12,480 matches</MetaItem>
-            <MetaItem>last 30 days</MetaItem>
           </MetaList>
         </Variants>
       </Specimen>
@@ -515,14 +495,13 @@ function ContentSpecimens() {
         <Variants label='orientation="vertical" (default), tones' className="block">
           <BulletList>
             <BulletItem>Privacy-focused: only match IDs are submitted</BulletItem>
-            <BulletItem tone="positive">A positive point</BulletItem>
             <BulletItem tone="muted">
               A long point wraps under its own text, and the dot stays on the first line however many lines follow it.
             </BulletItem>
           </BulletList>
         </Variants>
-        <Variants label='orientation="horizontal" size="sm"' className="block">
-          <BulletList orientation="horizontal" size="sm">
+        <Variants label='orientation="horizontal"' className="block">
+          <BulletList orientation="horizontal">
             <BulletItem>Lightweight background service</BulletItem>
             <BulletItem>No admin rights required</BulletItem>
             <BulletItem>Open source</BulletItem>
@@ -536,8 +515,8 @@ function ContentSpecimens() {
         note="A centred invitation to do one thing: subscribe, upgrade, sign in. A status message is an Alert."
       >
         <Variants
-          label='size="default" with media, action and note; size="sm"; another tone'
-          className="grid items-start lg:grid-cols-3"
+          label="with media, action and note; without an enabled action"
+          className="grid items-start lg:grid-cols-2"
         >
           <CalloutCard
             media={
@@ -551,14 +530,6 @@ function ContentSpecimens() {
             footer="Starting at $1.50/month"
           />
           <CalloutCard
-            size="sm"
-            as="h3"
-            title="Want to prioritize more accounts?"
-            description="Each additional $1.50/month unlocks another slot."
-            action={<Button size="sm">Increase pledge</Button>}
-          />
-          <CalloutCard
-            tone="glass"
             title="Nothing to do yet"
             description="A callout without an action still renders."
             action={<Button disabled>Disabled action</Button>}

@@ -3,6 +3,7 @@ import { ChevronDownIcon, type LucideIcon } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
+import { Text } from "~/components/ui/text";
 import { cn } from "~/lib/utils";
 
 /**
@@ -20,9 +21,9 @@ const panelHeaderSizes = {
 
 export function PanelHeader({
   title,
+  description,
   icon: Icon,
   size = "default",
-  as: Heading = "h3",
   accent,
   className,
   style,
@@ -30,12 +31,13 @@ export function PanelHeader({
   ...props
 }: Omit<React.ComponentProps<"div">, "title"> & {
   title: React.ReactNode;
+  /** A quiet line beside the title: the date range, the sample size, the unit. */
+  description?: React.ReactNode;
   icon?: LucideIcon;
   size?: keyof typeof panelHeaderSizes;
-  as?: "h2" | "h3" | "h4";
   /** A CSS color that identifies the panel's group: a stripe on the leading edge, and the icon takes it too. */
   accent?: string;
-  /** Controls and meta, pushed to the trailing edge. */
+  /** Controls, pushed to the trailing edge. */
   children?: React.ReactNode;
 }) {
   return (
@@ -52,7 +54,7 @@ export function PanelHeader({
       )}
       {...props}
     >
-      <Heading className={cn("flex min-w-0 items-center gap-2 font-semibold", size === "sm" ? "text-xs" : "text-sm")}>
+      <h3 className={cn("flex min-w-0 items-center gap-2 font-semibold", size === "sm" ? "text-xs" : "text-sm")}>
         {Icon && (
           <Icon
             aria-hidden="true"
@@ -61,7 +63,12 @@ export function PanelHeader({
           />
         )}
         <span className="truncate">{title}</span>
-      </Heading>
+      </h3>
+      {description && (
+        <Text data-slot="panel-header-description" variant="meta" tone="muted" numeric="tabular">
+          {description}
+        </Text>
+      )}
       {children}
     </div>
   );
@@ -130,14 +137,12 @@ export function PanelShowMore({
 /** A titled strip that divides the rows of a panel or list into groups: "Today", "Core items". */
 export function PanelSection({
   title,
-  as: Heading = "h4",
   tone = "subtle",
   className,
   children,
   ...props
 }: Omit<React.ComponentProps<"div">, "title"> & {
   title: React.ReactNode;
-  as?: "h3" | "h4" | "h5" | "div";
   /** `subtle` is the translucent strip; `opaque` is the panel's own surface, for a strip that rows scroll under. */
   tone?: "subtle" | "opaque";
   /** Counts or controls on the trailing edge of the strip. */
@@ -154,7 +159,7 @@ export function PanelSection({
       )}
       {...props}
     >
-      <Heading className="truncate eyebrow text-2xs">{title}</Heading>
+      <div className="truncate eyebrow text-2xs">{title}</div>
       {children}
     </div>
   );

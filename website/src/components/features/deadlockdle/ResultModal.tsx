@@ -110,7 +110,7 @@ export function ResultModal({
               <motion.div variants={fadeUp}>
                 <StepMeter
                   variant="track"
-                  aria-label={
+                  label={
                     isWin
                       ? `Solved in ${guesses.length} of ${maxAttempts} attempts`
                       : `All ${maxAttempts} attempts used`

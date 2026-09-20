@@ -5,7 +5,6 @@ import { useMemo } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
-import { MODE_CONFIG } from "~/components/domain/selectors/ModeSelector";
 import { HeroesTab } from "~/components/features/tracker/heroes/HeroesTab";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -15,11 +14,11 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Heading } from "~/components/ui/heading";
 import { IconTile } from "~/components/ui/icon-tile";
 import { KeyValue, KeyValueList } from "~/components/ui/key-value";
-import { RateBar } from "~/components/ui/rate-bar";
+import { ProgressBar } from "~/components/ui/progress-bar";
 import { Stat, StatGroup } from "~/components/ui/stat";
-import { Text } from "~/components/ui/text";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
+import { MODE_CONFIG } from "~/lib/game-mode";
 import {
   computeActivity,
   computeOutcomeSplits,
@@ -178,11 +177,7 @@ export function OverviewTab({
 
       <div className="grid gap-2 @xl/overview:grid-cols-3">
         <Panel>
-          <PanelHeader title="Combat" icon={Crosshair} size="sm">
-            <Text variant="meta" tone="muted">
-              Per match
-            </Text>
-          </PanelHeader>
+          <PanelHeader title="Combat" description="Per match" icon={Crosshair} size="sm" />
           <PanelBody size="sm">
             <Card tone="muted" size="xs">
               <CardContent>
@@ -218,11 +213,7 @@ export function OverviewTab({
           </PanelBody>
         </Panel>
         <Panel>
-          <PanelHeader title="Economy" icon={Coins} size="sm">
-            <Text variant="meta" tone="muted">
-              Per match
-            </Text>
-          </PanelHeader>
+          <PanelHeader title="Economy" description="Per match" icon={Coins} size="sm" />
           <PanelBody size="sm">
             <KeyValueList>
               <KeyValue label="Souls earned" value={integer(s.avgSouls)} />
@@ -293,11 +284,7 @@ export function OverviewTab({
 
       <div className="grid gap-2 @2xl/overview:grid-cols-2 @5xl/overview:grid-cols-3">
         <Panel className="@container/splits">
-          <PanelHeader title="Where you win" icon={GitCompareArrows} size="sm">
-            <Text variant="meta" tone="muted">
-              Games / win rate
-            </Text>
-          </PanelHeader>
+          <PanelHeader title="Where you win" description="Games / win rate" icon={GitCompareArrows} size="sm" />
           <PanelBody size="sm" className="flex flex-col gap-2">
             <div className="grid gap-x-4 gap-y-2 @xs/splits:grid-cols-2">
               <SplitRows label="Match duration" rows={data.splits.byDuration} />
@@ -313,11 +300,7 @@ export function OverviewTab({
           </PanelBody>
         </Panel>
         <Panel>
-          <PanelHeader title="Play habits" icon={Clock3} size="sm">
-            <Text variant="meta" tone="muted">
-              Your local time
-            </Text>
-          </PanelHeader>
+          <PanelHeader title="Play habits" description="Your local time" icon={Clock3} size="sm" />
           <PanelBody size="sm">
             <div className="grid grid-cols-3 gap-2 pb-2">
               {[
@@ -335,11 +318,7 @@ export function OverviewTab({
           </PanelBody>
         </Panel>
         <Panel className="@container/records">
-          <PanelHeader title="Personal bests" icon={Trophy} size="sm">
-            <Text variant="meta" tone="muted">
-              In selected matches
-            </Text>
-          </PanelHeader>
+          <PanelHeader title="Personal bests" description="In selected matches" icon={Trophy} size="sm" />
           <PanelBody size="sm" className="flex flex-col gap-2">
             <div className="grid grid-cols-2 gap-1.5 @xs/records:grid-cols-3">
               {RECORD_KINDS.map(({ key, label, format }) => {
@@ -403,7 +382,11 @@ function SplitRows({ label, rows }: { label: string; rows: OutcomeSplit[] }) {
             <span className="min-w-7 text-end font-medium tabular-nums">
               {row.matches ? `${Math.round((row.wins / row.matches) * 100)}%` : "—"}
             </span>
-            <RateBar rate={row.matches ? row.wins / row.matches : null} className="col-span-3 h-0.5" />
+            <ProgressBar
+              variant="thin"
+              value={row.matches ? row.wins / row.matches : undefined}
+              className="col-span-3 h-0.5"
+            />
           </div>
         ))}
       </div>

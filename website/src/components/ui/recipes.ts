@@ -8,9 +8,25 @@ export const FOCUS_RING = "outline-none focus-visible:ring-3 focus-visible:ring-
 export const FOCUS_RING_BORDER =
   "outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
+/** A bordered group of controls shows the focus of whichever control inside it has it. */
+export const FOCUS_WITHIN_RING = "focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50";
+
 export const INVALID_STATE = "aria-invalid:border-destructive aria-invalid:ring-destructive/40";
 
 export const DISABLED_STATE = "disabled:pointer-events-none disabled:opacity-50";
+
+/** The chosen option of a Segmented or ToggleGroup, and any other `data-state="on"` choice. */
+export const SELECTED_STATE =
+  "data-[state=on]:bg-primary/15 data-[state=on]:text-foreground data-[state=on]:ring-1 data-[state=on]:ring-primary/40 data-[state=on]:ring-inset";
+
+/** The box of a text control: Input, Textarea and the Select trigger. */
+export const CONTROL_SURFACE =
+  "rounded-md border border-input bg-input/30 text-sm shadow-xs transition-[color,box-shadow]";
+
+// Read-only keeps the focus ring and the text at full strength and drops the fill: the value can be read and copied,
+// not edited. `[readonly]` rather than `:read-only`, which also matches a disabled input.
+export const READ_ONLY =
+  "[&[readonly]]:cursor-default [&[readonly]]:border-dashed [&[readonly]]:bg-transparent [&[readonly]]:shadow-none";
 
 /** Icons inside a control: inert, never squeezed, 16px unless the icon sets its own `size-*`. */
 export const SVG_SLOT = "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";

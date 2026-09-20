@@ -114,8 +114,7 @@ function MiniGameStates() {
           label="the mystery sound"
           onClick={() => setPlaying(!playing)}
         />
-        <PlayButton size="default" label="the clip" />
-        <PlayButton size="default" label="the clip" disabled />
+        <PlayButton label="the clip" disabled />
       </Variants>
       <Variants label="SilhouetteFrame" className="items-end">
         <SilhouetteFrame label="Hidden hero">
@@ -259,11 +258,11 @@ export function Round4Requests2() {
         note="`surface` puts a halo of the page behind the dot, so it stays legible when it sits on artwork or overlaps another image."
       >
         <Variants>
-          <StatusDot tone="positive" />
-          <StatusDot tone="positive" ring="surface" />
+          <StatusDot tone="primary" />
+          <StatusDot tone="primary" ring="surface" />
           <span className="relative inline-flex">
             <HeroImage heroId={HERO_IDS[0]} shape="circle" className="size-10" />
-            <StatusDot tone="positive" ring="surface" className="absolute end-0 bottom-0" />
+            <StatusDot tone="primary" ring="surface" className="absolute end-0 bottom-0" />
           </span>
         </Variants>
       </Specimen>

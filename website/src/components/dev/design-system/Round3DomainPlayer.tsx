@@ -35,11 +35,11 @@ export function Round3DomainPlayer() {
       <Specimen
         name="PlayerCell"
         source="domain/player/PlayerCell"
-        note="A player as the identity of a row: avatar, persona name and optionally the account id. linkToTracker links the name to the player's tracker page; leave it off when the whole row is the link. loading covers the wait for the Steam profiles."
+        note="A player as the identity of a row: avatar, persona name and optionally the account id. linkToDetail links the name to the player's tracker page; leave it off when the whole row is the link. loading covers the wait for the Steam profiles."
       >
         <Variants label="size: sm, default">
-          <PlayerCell size="sm" accountId={ACCOUNT_ID} name="Manuel" avatar={AVATAR} linkToTracker />
-          <PlayerCell accountId={ACCOUNT_ID} name="Manuel" avatar={AVATAR} linkToTracker showAccountId />
+          <PlayerCell size="sm" accountId={ACCOUNT_ID} name="Manuel" avatar={AVATAR} linkToDetail />
+          <PlayerCell accountId={ACCOUNT_ID} name="Manuel" avatar={AVATAR} linkToDetail showAccountId />
         </Variants>
         <Variants label="No profile, no account, loading, truncation">
           <PlayerCell accountId={ACCOUNT_ID} />
@@ -49,7 +49,7 @@ export function Round3DomainPlayer() {
             accountId={ACCOUNT_ID}
             name="A very long persona name that does not fit"
             avatar={AVATAR}
-            linkToTracker
+            linkToDetail
             className="max-w-40"
           />
         </Variants>
@@ -87,7 +87,7 @@ export function Round3DomainPlayer() {
           <TableBody>
             <TableRow>
               <TableCell>
-                <PlayerCell accountId={ACCOUNT_ID} name="Manuel" avatar={AVATAR} linkToTracker />
+                <PlayerCell accountId={ACCOUNT_ID} name="Manuel" avatar={AVATAR} linkToDetail />
               </TableCell>
               <TableCell className="text-end">
                 <KdaLine kills={7} deaths={3} assists={12} />

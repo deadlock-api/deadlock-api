@@ -3,20 +3,21 @@ import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { useId, useMemo, useState } from "react";
 
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
-import { MODE_CONFIG } from "~/components/domain/selectors/ModeSelector";
 import { PaginationControls } from "~/components/patterns/data-table/PaginationControls";
+import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { Field } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { RateBar } from "~/components/ui/rate-bar";
-import { ariaSort, SortButton } from "~/components/ui/sort-button";
+import { ProgressBar } from "~/components/ui/progress-bar";
+import { SearchInput } from "~/components/ui/search-input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
+import { MODE_CONFIG } from "~/lib/game-mode";
 import {
   type CompanionRow,
   type CompanionSort,
@@ -24,7 +25,6 @@ import {
   sortCompanionRows,
 } from "~/lib/tracker/companions";
 import type { TrackerFilterValues } from "~/lib/tracker/compute";
-import { cn } from "~/lib/utils";
 import { trackerEnemyStatsQueryOptions, trackerMateStatsQueryOptions } from "~/queries/tracker-queries";
 
 import { CompanionMatchesDialog } from "./CompanionMatchesDialog";
@@ -109,21 +109,25 @@ function CompanionTable({
       )}
       <PaginationControls
         size="sm"
-        searchQuery={searchQuery}
-        onSearchChange={(query) => {
-          setSearchQuery(query);
-          setCurrentPage(0);
-        }}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={(count) => {
+        page={visiblePage}
+        onPageChange={setCurrentPage}
+        pageSize={itemsPerPage}
+        onPageSizeChange={(count) => {
           setItemsPerPage(count);
           setCurrentPage(0);
         }}
-        currentPage={visiblePage}
-        onPageChange={setCurrentPage}
         totalPages={totalPages}
-        searchPlaceholder="Search player..."
       >
+        <SearchInput
+          size="sm"
+          placeholder="Search player..."
+          aria-label="Search player"
+          value={searchQuery}
+          onValueChange={(query) => {
+            setSearchQuery(query);
+            setCurrentPage(0);
+          }}
+        />
         <Field orientation="horizontal" label="Min matches" htmlFor={minimumMatchesId}>
           <Input
             id={minimumMatchesId}
@@ -151,26 +155,22 @@ function CompanionTable({
                 { key: "lastPlayedUnix", label: "Last played", className: "hidden @lg:table-cell" },
               ] satisfies { key: CompanionSort; label: string; className?: string }[]
             ).map((column) => (
-              <TableHead
+              <SortableHeader
                 key={column.key}
-                className={cn("text-end", column.className)}
+                label={column.label}
+                sortKey={column.key}
+                activeSortKey={sortKey}
+                sortDir={sortDir}
+                align="end"
+                className={column.className}
                 title={column.key === "matches" ? matchesLabel : undefined}
-                aria-sort={ariaSort(sortKey === column.key, sortDir)}
-              >
-                <SortButton
-                  active={sortKey === column.key}
-                  sortDir={sortDir}
-                  align="end"
-                  aria-label={`Sort by ${column.label.toLowerCase()}, ${sortKey === column.key && sortDir === "desc" ? "ascending" : "descending"}`}
-                  onClick={() => {
-                    setSortDir(sortKey === column.key && sortDir === "desc" ? "asc" : "desc");
-                    setSortKey(column.key);
-                    setCurrentPage(0);
-                  }}
-                >
-                  {column.label}
-                </SortButton>
-              </TableHead>
+                sortLabel={`Sort by ${column.label.toLowerCase()}, ${sortKey === column.key && sortDir === "desc" ? "ascending" : "descending"}`}
+                onSort={(key) => {
+                  setSortDir(sortKey === key && sortDir === "desc" ? "asc" : "desc");
+                  setSortKey(key);
+                  setCurrentPage(0);
+                }}
+              />
             ))}
           </TableRow>
         </TableHeader>
@@ -186,7 +186,7 @@ function CompanionTable({
                     name={profile?.personaname}
                     avatar={profile?.avatar}
                     loading={isLoadingProfiles && !profile}
-                    linkToTracker
+                    linkToDetail
                   />
                 </TableCell>
                 <TableCell className="text-end tabular-nums">
@@ -204,7 +204,7 @@ function CompanionTable({
                 <TableCell>
                   <div className="flex items-center justify-end gap-2">
                     <span className="tabular-nums">{(winrate * 100).toFixed(1)}%</span>
-                    <RateBar rate={winrate} className="hidden w-16 @md:block" />
+                    <ProgressBar variant="thin" value={winrate} className="hidden w-16 @md:block" />
                   </div>
                 </TableCell>
                 <TableCell className="hidden text-end whitespace-nowrap text-muted-foreground @lg:table-cell">

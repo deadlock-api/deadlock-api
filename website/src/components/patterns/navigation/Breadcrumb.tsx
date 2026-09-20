@@ -4,28 +4,32 @@ import { Slot } from "radix-ui";
 import { FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
-/** The trail from the home page to this one. Compose: `BreadcrumbList` > `BreadcrumbItem` > link or page. */
-export function Breadcrumb({ className, ...props }: React.ComponentProps<"nav">) {
-  return <nav data-slot="breadcrumb" aria-label="Breadcrumb" className={cn("min-w-0", className)} {...props} />;
-}
-
-export function BreadcrumbList({ className, ...props }: React.ComponentProps<"ol">) {
+/** The trail from the home page to this one. Compose: `BreadcrumbItem` > `BreadcrumbLink` or `BreadcrumbPage`. */
+export function Breadcrumb({ className, children, ...props }: React.ComponentProps<"nav">) {
   return (
-    <ol
-      data-slot="breadcrumb-list"
-      className={cn("flex min-w-0 items-center gap-1 text-sm text-muted-foreground", className)}
-      {...props}
-    />
+    <nav data-slot="breadcrumb" aria-label="Breadcrumb" className={cn("min-w-0", className)} {...props}>
+      <ol data-slot="breadcrumb-list" className="flex min-w-0 items-center gap-1 text-sm text-muted-foreground">
+        {children}
+      </ol>
+    </nav>
   );
 }
 
-export function BreadcrumbItem({ className, ...props }: React.ComponentProps<"li">) {
+/** One entry of the trail. Every entry but the first draws the separator before itself. */
+export function BreadcrumbItem({ className, children, ...props }: React.ComponentProps<"li">) {
   return (
     <li
       data-slot="breadcrumb-item"
-      className={cn("flex shrink-0 items-center gap-1 last:min-w-0 last:shrink", className)}
+      className={cn("group/breadcrumb-item flex shrink-0 items-center gap-1 last:min-w-0 last:shrink", className)}
       {...props}
-    />
+    >
+      <ChevronRightIcon
+        data-slot="breadcrumb-separator"
+        aria-hidden="true"
+        className="size-3 shrink-0 group-first/breadcrumb-item:hidden"
+      />
+      {children}
+    </li>
   );
 }
 
@@ -61,19 +65,5 @@ export function BreadcrumbPage({ className, children, ...props }: React.Componen
     >
       {children}
     </span>
-  );
-}
-
-export function BreadcrumbSeparator({ className, children, ...props }: React.ComponentProps<"li">) {
-  return (
-    <li
-      data-slot="breadcrumb-separator"
-      role="presentation"
-      aria-hidden="true"
-      className={cn("shrink-0 text-muted-foreground [&>svg]:size-3", className)}
-      {...props}
-    >
-      {children ?? <ChevronRightIcon />}
-    </li>
   );
 }

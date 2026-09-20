@@ -125,11 +125,11 @@ export function DomainAssets() {
               }
             }
             loading={!portrait}
-            skeletonClassName="size-10 rounded-full"
-            imgClassName="size-10"
+            placeholderClassName="size-10 rounded-full"
+            className="size-10"
           />
-          <AssetImage asset={undefined} loading skeletonClassName="size-10 rounded-full" />
-          <AssetImage asset={undefined} loading={false} emptyClassName="size-10 rounded-full bg-muted" />
+          <AssetImage asset={undefined} loading placeholderClassName="size-10 rounded-full" />
+          <AssetImage asset={undefined} loading={false} placeholderClassName="size-10 rounded-full" />
         </Variants>
       </Specimen>
 

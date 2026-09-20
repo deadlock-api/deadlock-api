@@ -8,8 +8,6 @@ interface LoadingLogoProps extends Omit<React.ComponentProps<"div">, "children">
   text?: React.ReactNode;
   /** `sm` fits a panel, a popover or a table row; `default` stands in for a page or a tab. */
   size?: "sm" | "default";
-  /** Delay in ms before showing the loading logo (default: 150) */
-  delay?: number;
 }
 
 const PATHS = [
@@ -30,14 +28,16 @@ const PATHS = [
   },
 ];
 
-function LoadingLogo({ className, text, size = "default", delay = 150, ...props }: LoadingLogoProps) {
-  const [show, setShow] = useState(delay <= 0);
+// A load that finishes sooner than this never flashes the logo.
+const SHOW_DELAY_MS = 150;
+
+function LoadingLogo({ className, text, size = "default", ...props }: LoadingLogoProps) {
+  const [show, setShow] = useState(false);
 
   useEffect(() => {
-    if (delay <= 0) return;
-    const timer = setTimeout(() => setShow(true), delay);
+    const timer = setTimeout(() => setShow(true), SHOW_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [delay]);
+  }, []);
 
   if (!show) return null;
 

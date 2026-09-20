@@ -7,7 +7,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { cn } from "~/lib/utils";
 
-export interface BadgeImageProps {
+interface BadgeImageProps {
   badge: number;
   ranks: Rank[];
   /**
