@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::routes::v1::graphql::salts::MatchSaltsGraphQlBatcher;
 use crate::routes::v1::matches::metadata::DemoPlayerBatcher;
 use crate::routes::v1::matches::salts::{
-    MatchInfoExistsBatcher, MatchSaltsExistsBatcher, MatchSaltsInsertBatcher, MatchSaltsReadBatcher,
+    MatchInfoExistsBatcher, MatchSaltsExistsBatcher, MatchSaltsReadBatcher,
 };
 use crate::routes::v1::players::hero_stats::PlayerHeroStatsBatcher;
 use crate::routes::v1::players::match_history::{
@@ -20,7 +20,6 @@ pub(crate) struct Batchers {
     pub(crate) match_salts_read: MatchSaltsReadBatcher,
     pub(crate) match_salts_graphql: MatchSaltsGraphQlBatcher,
     pub(crate) match_salts_exists: MatchSaltsExistsBatcher,
-    pub(crate) match_salts_insert: Arc<MatchSaltsInsertBatcher>,
     pub(crate) match_info_exists: MatchInfoExistsBatcher,
     pub(crate) game_server_metrics: Arc<GameServerMetricsInsertBatcher>,
     pub(crate) player_hero_stats: PlayerHeroStatsBatcher,
@@ -38,7 +37,6 @@ impl Batchers {
             match_salts_read: MatchSaltsReadBatcher::new(ch_client_ro.clone()),
             match_salts_graphql: MatchSaltsGraphQlBatcher::new(ch_client_ro.clone()),
             match_salts_exists: MatchSaltsExistsBatcher::new(ch_client_ro.clone()),
-            match_salts_insert: Arc::new(MatchSaltsInsertBatcher::new(ch_client.clone())),
             match_info_exists: MatchInfoExistsBatcher::new(ch_client_ro.clone()),
             game_server_metrics: Arc::new(GameServerMetricsInsertBatcher::new(ch_client.clone())),
             player_hero_stats: PlayerHeroStatsBatcher::new(ch_client_ro.clone()),
@@ -52,7 +50,6 @@ impl Batchers {
     /// Spawn background flush tasks for all insert batchers.
     pub(crate) fn start_background_flushes(&self) {
         self.match_history_insert.clone().start_background_flush();
-        self.match_salts_insert.clone().start_background_flush();
         self.game_server_metrics.clone().start_background_flush();
     }
 }
