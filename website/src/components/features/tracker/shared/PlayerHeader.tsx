@@ -49,9 +49,10 @@ export function PlayerHeader({
   }, [entries, ranks]);
 
   return (
-    // Equal outer columns keep the filters centered independently of profile and rank widths.
+    // The filters take the column that is left over. It has to be a sized column, not `auto`: the filter bar is a
+    // query container and would collapse to nothing in a column that asks it for its own width.
     <div className="@container">
-      <div className="grid items-center gap-3 [grid-template-areas:'profile'_'rank'_'filters'] sm:grid-cols-[minmax(0,1fr)_auto] sm:[grid-template-areas:'profile_rank'_'filters_filters'] @7xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @7xl:[grid-template-areas:'profile_filters_rank']">
+      <div className="grid items-center gap-3 [grid-template-areas:'profile'_'rank'_'filters'] sm:grid-cols-[minmax(0,1fr)_auto] sm:[grid-template-areas:'profile_rank'_'filters_filters'] @7xl:grid-cols-[auto_minmax(0,1fr)_auto] @7xl:[grid-template-areas:'profile_filters_rank']">
         <div className="flex min-w-0 flex-col gap-1 [grid-area:profile]">
           <PageHeader
             media={

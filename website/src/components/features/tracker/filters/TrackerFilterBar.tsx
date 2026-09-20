@@ -47,7 +47,12 @@ export function TrackerFilterBar({
   const resultLabel = result === "all" ? "All results" : result === "win" ? "Wins" : "Losses";
   const summary = `${heroLabel} · ${modeLabel} · ${resultLabel}`;
   return (
-    <Collapsible open={expanded} onOpenChange={setExpanded} className="mx-auto flex w-full flex-col gap-1 lg:w-fit">
+    <Collapsible
+      open={expanded}
+      onOpenChange={setExpanded} // Full width, never shrink-to-fit: the bar inside is a query container, which has no intrinsic width of its own
+      // and centres itself once it has room for one row.
+      className="flex w-full flex-col gap-1"
+    >
       <div className="flex items-center gap-1 lg:hidden">
         <CollapsibleTrigger asChild>
           <Button
