@@ -16,6 +16,8 @@ const cellBase = "flex min-w-0 flex-col justify-center gap-0.5 px-4 py-2 text-st
 const cellInRoot = "h-8 rounded-md border border-hairline bg-subtle";
 const cellStandalone = "rounded-lg border bg-card";
 const activeUnderline = "shadow-active-underline";
+// A chip is rounded, which bends an underline: a changed chip takes the tint of the soft Button on its whole edge.
+const activeChip = "border-primary/30 bg-primary/10";
 const CELL_SELECTOR = '[data-slot="filter-cell"], [data-slot="filter-toggle-cell"]';
 
 function CellReset({
@@ -125,7 +127,7 @@ export function FilterCell({
           "relative grid min-w-0",
           inRoot ? cellInRoot : cellStandalone,
           compact && "h-8 rounded-md",
-          active && activeUnderline,
+          active && (inRoot ? activeChip : activeUnderline),
           className,
         )}
         {...props}
@@ -227,7 +229,7 @@ export function FilterToggleCell<T extends string>({
         inRoot
           ? "h-auto min-h-8 flex-row flex-wrap items-center gap-2 rounded-md border border-hairline bg-subtle py-0 ps-2.5 pe-0.5"
           : cellStandalone,
-        active && activeUnderline,
+        active && (inRoot ? activeChip : activeUnderline),
         className,
       )}
       {...props}
