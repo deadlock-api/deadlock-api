@@ -1,9 +1,4 @@
-/** Tailwind's green-400 / red-400, which the draft palette is built around. */
-export const GOOD_RGB = "74, 222, 128";
-export const BAD_RGB = "248, 113, 113";
-
-/** The dark ground the heat ramp passes through at zero. */
-export const HEAT_BASE = "#151b23";
+import { TONE_COLOR, TONE_TEXT, toneOf } from "~/lib/tone";
 
 /** What every Team Builder number prints when it has nothing to report. */
 export const NO_DATA = "n/a";
@@ -37,32 +32,23 @@ export function formatCount(value: number | undefined): string {
 
 /** Rounded like `formatPoints`, so a value that prints `+0.0` reads as neutral rather than a gain or a loss. */
 export function deltaClass(value: number | undefined): string {
-  const rounded = value === undefined ? 0 : Math.round(value * 10) / 10;
-  if (rounded === 0) return "text-muted-foreground";
-  return rounded > 0 ? "text-green-400" : "text-red-400";
+  return TONE_TEXT[toneOf(value === undefined ? 0 : Math.round(value * 10) / 10)];
 }
 
 /** `deltaClass` as a paintable colour, for bars that cannot take a text class. */
 export function deltaBarColor(value: number | undefined): string {
   if (value === undefined || !Number.isFinite(value)) return "transparent";
-  return `rgb(${value >= 0 ? GOOD_RGB : BAD_RGB})`;
+  return value >= 0 ? TONE_COLOR.positive : TONE_COLOR.negative;
 }
 
-/** A bar anchored at the centre of its track, growing right for gains and left for losses. */
-export function barGeometry(value: number | undefined, scale: number): { left: string; width: string } {
-  if (value === undefined || !Number.isFinite(value)) return { left: "50%", width: "0%" };
-  const t = Math.max(-1, Math.min(1, value / scale));
-  return t >= 0 ? { left: "50%", width: `${t * 50}%` } : { left: `${50 + t * 50}%`, width: `${-t * 50}%` };
-}
-
-/** Heat fill for matrix cells: green above zero, red below, opacity scaled by magnitude. */
+/** Heat fill for matrix cells: positive above zero, negative below, opacity scaled by magnitude. */
 export function heatBackground(value: number | undefined, scale: number): string {
   if (value === undefined || !Number.isFinite(value)) {
-    return `repeating-linear-gradient(45deg,#0f141a,#0f141a 3px,${HEAT_BASE} 3px,${HEAT_BASE} 6px)`;
+    return "repeating-linear-gradient(45deg,var(--card),var(--card) 3px,var(--muted) 3px,var(--muted) 6px)";
   }
   const t = Math.max(-1, Math.min(1, value / scale));
-  const rgb = t >= 0 ? GOOD_RGB : BAD_RGB;
-  return `rgba(${rgb}, ${(0.08 + 0.32 * Math.abs(t)).toFixed(3)})`;
+  const tone = t >= 0 ? TONE_COLOR.positive : TONE_COLOR.negative;
+  return `color-mix(in srgb, ${tone} ${(8 + 32 * Math.abs(t)).toFixed(1)}%, transparent)`;
 }
 
 /** Calibrated to what a per-pairing sample reaches on one patch at a narrow rank band. */

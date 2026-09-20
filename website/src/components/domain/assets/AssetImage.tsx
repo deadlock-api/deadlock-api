@@ -1,0 +1,64 @@
+import { Skeleton } from "~/components/ui/skeleton";
+import { cn } from "~/lib/utils";
+
+export interface AssetImageData {
+  webp?: string | null;
+  png?: string | null;
+  fallbackSrc?: string | null;
+  alt: string;
+  title?: string;
+}
+
+export interface AssetImageProps extends Omit<
+  React.ComponentProps<"img">,
+  "src" | "alt" | "title" | "className" | "loading"
+> {
+  asset: AssetImageData | undefined;
+  loading?: boolean;
+  /** `dim` quiets art that is context rather than the subject: a slot that is not this build's pick. */
+  emphasis?: "normal" | "dim";
+  skeletonClassName?: string;
+  emptyClassName?: string;
+  imgClassName?: string;
+}
+
+export function AssetImage({
+  asset,
+  loading = false,
+  emphasis = "normal",
+  skeletonClassName,
+  emptyClassName,
+  imgClassName,
+  ...props
+}: AssetImageProps) {
+  if (loading) {
+    return <Skeleton className={skeletonClassName} />;
+  }
+
+  if (!asset?.webp && !asset?.png) {
+    return <div className={emptyClassName} />;
+  }
+
+  const src = asset.fallbackSrc ?? asset.webp ?? asset.png ?? "";
+
+  return (
+    // Sizing lands on the <img>, so the <picture> must not be a flex/grid item itself: its unstyled
+    // box would collapse and preflight's `img { max-width: 100% }` would squash the art to fit.
+    <picture className="contents">
+      {/* `display: contents` promotes these to layout children, and preflight leaves <source> as
+          `inline` rather than the UA sheet's `none`, so each portrait would count as three grid
+          items. Resource selection is unaffected by CSS display. */}
+      {asset.webp && <source className="hidden" srcSet={asset.webp} type="image/webp" />}
+      {asset.png && <source className="hidden" srcSet={asset.png} type="image/png" />}
+      <img
+        loading="lazy"
+        src={src}
+        alt={asset.alt}
+        title={asset.title ?? asset.alt}
+        data-emphasis={emphasis}
+        className={cn(emphasis === "dim" && "opacity-40 saturate-50", imgClassName)}
+        {...props}
+      />
+    </picture>
+  );
+}

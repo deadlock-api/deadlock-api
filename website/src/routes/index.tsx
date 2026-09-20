@@ -1,10 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  ArrowRight,
   BarChart3,
   Code,
   Database,
-  ExternalLink,
   HardDrive,
   Heart,
   ListOrdered,
@@ -19,8 +17,23 @@ import {
   UsersRound,
 } from "lucide-react";
 
-import { OptimizedImage } from "~/components/OptimizedImage";
-import { SmartLink } from "~/components/SmartLink";
+import { SmartLink } from "~/components/domain/navigation/SmartLink";
+import { LinkCard } from "~/components/patterns/content/LinkCard";
+import { LogoWall, LogoWallItem } from "~/components/patterns/content/LogoWall";
+import { Prose } from "~/components/patterns/content/Prose";
+import { Hero, HeroGlow, HeroLead, HeroPills } from "~/components/patterns/page/Hero";
+import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { PageShell } from "~/components/patterns/page/PageShell";
+import { Section } from "~/components/patterns/page/Section";
+import { Button } from "~/components/ui/button";
+import { Card } from "~/components/ui/card";
+import { Grid } from "~/components/ui/grid";
+import { IconTile } from "~/components/ui/icon-tile";
+import { OptimizedImage } from "~/components/ui/optimized-image";
+import { Separator } from "~/components/ui/separator";
+import { Inline, Stack } from "~/components/ui/stack";
+import { Text } from "~/components/ui/text";
+import { TextLink } from "~/components/ui/text-link";
 import { API_ORIGIN } from "~/lib/constants";
 import { seo } from "~/lib/seo";
 
@@ -204,173 +217,116 @@ const sponsors = [
 
 function IndexRoute() {
   return (
-    <div className="space-y-16">
-      {/* Hero */}
-      <section className="relative mb-10 pt-8 md:pt-4">
-        <div className="pointer-events-none absolute top-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/8 blur-[100px]" />
+    <PageShell density="marketing">
+      <Hero size="sm">
+        <HeroGlow size="sm" />
+        <Stack gap={2} align="center">
+          <PageHeader size="display" title="Deadlock API" />
+          <Text variant="eyebrow">sponsored by</Text>
+          <Card asChild tone="primary" size="sm" interaction="pressable" className="px-4">
+            <a href={mainSponsor.href} title={mainSponsor.title} target="_blank" rel="noreferrer">
+              <OptimizedImage
+                src={mainSponsor.logo}
+                widths={[192, 240, 384, 480, 576, 720]}
+                sizes="(min-width: 1024px) 227px, 189px"
+                alt={`${mainSponsor.title} Logo`}
+                width={600}
+                height={127}
+                className="h-auto w-47 object-contain lg:w-57"
+              />
+            </a>
+          </Card>
+        </Stack>
 
-        <div className="relative flex flex-col gap-8">
-          <div className="min-w-0 flex-1">
-            <div className="mb-5 flex flex-col items-center gap-2">
-              <h1 className="bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-5xl font-bold tracking-tight text-transparent sm:text-6xl lg:text-7xl">
-                Deadlock API
-              </h1>
-              <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">sponsored by</span>
-              <a
-                href={mainSponsor.href}
-                title={mainSponsor.title}
-                target="_blank"
-                rel="noreferrer"
-                className="group rounded-xl border border-primary/30 bg-primary/5 px-4 py-2 shadow-md shadow-primary/5 transition-all hover:border-primary/60 hover:bg-primary/10"
-              >
-                <OptimizedImage
-                  src={mainSponsor.logo}
-                  widths={[192, 240, 384, 480, 576, 720]}
-                  sizes="(min-width: 1024px) 227px, 189px"
-                  alt={`${mainSponsor.title} Logo`}
-                  width={600}
-                  height={127}
-                  className="h-auto w-[189px] object-contain transition-transform group-hover:scale-105 lg:w-[227px]"
-                />
-              </a>
-            </div>
+        <HeroPills>
+          {valueProps.map((prop) => (
+            <Button key={prop.label} asChild variant="outline" shape="pill">
+              <SmartLink href={prop.href} external={prop.external} title={prop.title}>
+                <prop.icon className="size-3.5" />
+                {prop.label}
+              </SmartLink>
+            </Button>
+          ))}
+        </HeroPills>
 
-            <div className="mb-6 flex flex-wrap justify-center gap-3">
-              {valueProps.map((prop) => (
-                <SmartLink
-                  key={prop.label}
-                  href={prop.href}
-                  external={prop.external}
-                  title={prop.title}
-                  className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-4 py-2 text-sm font-medium text-foreground/80 transition-colors hover:border-primary/40 hover:text-primary"
-                >
-                  <prop.icon className="size-3.5" />
-                  {prop.label}
-                </SmartLink>
-              ))}
-            </div>
+        <HeroLead>
+          Track Deadlock stats: hero win rates, pick rates, item analytics, rank distribution, and leaderboards, updated
+          live from Valve's servers. A comprehensive set of endpoints also gives developers access to Deadlock game
+          data, match history, player statistics, hero analytics, and more.
+        </HeroLead>
+      </Hero>
 
-            <p className="mx-auto max-w-2xl text-center text-base leading-relaxed text-pretty text-muted-foreground">
-              Track Deadlock stats: hero win rates, pick rates, item analytics, rank distribution, and leaderboards,
-              updated live from Valve's servers. A comprehensive set of endpoints also gives developers access to
-              Deadlock game data, match history, player statistics, hero analytics, and more.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Analytics Links */}
-      <section>
-        <div className="mb-8 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight">Deadlock Stats, Hero Win Rates & Leaderboards</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Dive into analytics, leaderboards, and visualizations powered by millions of tracked matches
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <Section
+        size="lg"
+        align="center"
+        title="Deadlock Stats, Hero Win Rates & Leaderboards"
+        description="Dive into analytics, leaderboards, and visualizations powered by millions of tracked matches"
+      >
+        <Grid columns={{ base: 1, sm: 2, xl: 5 }}>
           {analyticsLinks.map((item) => {
             const Icon = item.icon;
             return (
-              <SmartLink key={item.title} href={item.href}>
-                <div className="group flex h-full flex-col rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/30 hover:bg-muted/30">
-                  <div className="mb-2 flex items-center gap-3">
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted transition-colors group-hover:border-primary/20 group-hover:bg-primary/5">
-                      <Icon className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
-                    </div>
-                    <h3 className="text-sm font-semibold text-foreground">{item.title}</h3>
-                  </div>
-                  <p className="text-xs leading-relaxed text-muted-foreground">{item.description}</p>
-                  <div className="mt-auto pt-2">
-                    <span className="flex items-center gap-1 text-xs font-medium text-primary">
-                      View
-                      <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
-                    </span>
-                  </div>
-                </div>
-              </SmartLink>
+              <LinkCard
+                key={item.title}
+                asChild
+                size="sm"
+                title={item.title}
+                description={item.description}
+                cta="View"
+                media={
+                  <IconTile size="sm" hover="card">
+                    <Icon />
+                  </IconTile>
+                }
+              >
+                <SmartLink href={item.href}>{null}</SmartLink>
+              </LinkCard>
             );
           })}
-        </div>
-      </section>
+        </Grid>
+      </Section>
 
-      {/* Services */}
-      <section>
-        <div className="mb-8 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight">Developer Services</h2>
-          <p className="mt-1 text-sm text-muted-foreground">APIs, tools, and data for the Deadlock community</p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <Section
+        size="lg"
+        align="center"
+        title="Developer Services"
+        description="APIs, tools, and data for the Deadlock community"
+      >
+        <Grid columns={{ base: 1, sm: 2, lg: 3 }} gap={4}>
           {services.map((service) => {
             const Icon = service.icon;
-            const card = (
-              <div className="group relative flex h-full flex-col rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/30 hover:bg-muted/30">
-                <div className="mb-3 flex items-center gap-3">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-muted transition-colors group-hover:border-primary/20 group-hover:bg-primary/5">
-                    <Icon className="size-5 text-muted-foreground transition-colors group-hover:text-primary" />
-                  </div>
-                  <h3 className="flex min-w-0 items-center gap-1.5 font-semibold text-foreground">
-                    {service.title}
-                    {service.external && (
-                      <ExternalLink className="size-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                    )}
-                  </h3>
-                </div>
-                <p className="text-sm leading-relaxed text-muted-foreground">{service.description}</p>
-                <div className="mt-auto pt-3">
-                  <span className="flex items-center gap-1.5 text-sm font-medium text-primary transition-colors group-hover:text-primary">
-                    {service.cta}
-                    <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-                  </span>
-                </div>
-              </div>
-            );
-
             return (
-              <SmartLink key={service.title} href={service.href} external={service.external}>
-                {card}
-              </SmartLink>
+              <LinkCard
+                key={service.title}
+                asChild
+                title={service.title}
+                description={service.description}
+                cta={service.cta}
+                external={service.external}
+                media={
+                  <IconTile hover="card">
+                    <Icon />
+                  </IconTile>
+                }
+              >
+                <SmartLink href={service.href} external={service.external}>
+                  {null}
+                </SmartLink>
+              </LinkCard>
             );
           })}
-        </div>
-      </section>
+        </Grid>
+      </Section>
 
-      {/* Sponsors */}
-      <section>
-        <div className="mb-6 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight">Our Sponsors</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Supporting the Deadlock API and the community</p>
-        </div>
-        <div className="flex flex-wrap items-center justify-center gap-8">
-          <a
-            href={mainSponsor.href}
-            title={mainSponsor.title}
-            target="_blank"
-            rel="noreferrer"
-            className="opacity-70 transition-opacity hover:opacity-100"
-          >
-            <OptimizedImage
-              src={mainSponsor.logo}
-              widths={[140, 280, 420]}
-              sizes="140px"
-              alt={`${mainSponsor.title} Logo`}
-              width={mainSponsor.width}
-              height={mainSponsor.height}
-              loading="lazy"
-              fetchPriority="low"
-              className="max-h-10 max-w-[140px] object-contain"
-            />
-          </a>
-          {sponsors.map((sponsor) => (
-            <a
-              key={sponsor.href}
-              href={sponsor.href}
-              title={sponsor.title}
-              target="_blank"
-              rel="noreferrer"
-              className="opacity-70 transition-opacity hover:opacity-100"
-            >
+      <Section
+        size="lg"
+        align="center"
+        title="Our Sponsors"
+        description="Supporting the Deadlock API and the community"
+      >
+        <LogoWall>
+          {[mainSponsor, ...sponsors].map((sponsor) => (
+            <LogoWallItem key={sponsor.href} href={sponsor.href} title={sponsor.title} target="_blank" rel="noreferrer">
               <OptimizedImage
                 src={sponsor.logo}
                 widths={[140, 280, 420]}
@@ -380,30 +336,27 @@ function IndexRoute() {
                 height={sponsor.height}
                 loading="lazy"
                 fetchPriority="low"
-                className="max-h-10 max-w-[140px] object-contain"
+                className="max-h-10 max-w-35 object-contain"
               />
-            </a>
+            </LogoWallItem>
           ))}
-        </div>
-        <div className="mt-6 text-center">
-          <a
+        </LogoWall>
+        <Inline justify="center">
+          <TextLink
             href="https://www.patreon.com/c/manuelhexe"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs font-medium text-primary underline underline-offset-4"
+            underline="always"
+            className="text-xs font-medium"
             title="Support on Patreon"
           >
             Become a sponsor
-          </a>
-        </div>
-      </section>
+          </TextLink>
+        </Inline>
+      </Section>
 
-      {/* About Deadlock */}
-      <section>
-        <div className="mb-8 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight">What is Deadlock?</h2>
-        </div>
-        <div className="mx-auto max-w-3xl space-y-4 text-sm leading-relaxed text-muted-foreground">
+      <Section size="lg" align="center" title="What is Deadlock?">
+        <Prose className="mx-auto max-w-3xl">
           <p>
             Deadlock is a team-based multiplayer game developed and published by Valve that combines elements of
             third-person shooters and MOBAs. Players choose from a roster of heroes, each with unique abilities, and
@@ -416,15 +369,11 @@ function IndexRoute() {
             leaderboards across all regions. All data is updated in real time and can be filtered by rank, patch, game
             mode, and date range.
           </p>
-        </div>
-      </section>
+        </Prose>
+      </Section>
 
-      {/* How It Works */}
-      <section>
-        <div className="mb-8 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight">How Our Data Works</h2>
-        </div>
-        <div className="mx-auto max-w-3xl space-y-4 text-sm leading-relaxed text-muted-foreground">
+      <Section size="lg" align="center" title="How Our Data Works">
+        <Prose className="mx-auto max-w-3xl">
           <p>
             Deadlock API collects publicly available match data through Valve's game client APIs. Every tracked match is
             processed to extract hero performance, item purchases, ability upgrade paths, and average match rankings.
@@ -436,23 +385,19 @@ function IndexRoute() {
             researchers and developers. A $1.50/month patron tier offers prioritized data fetching for personal Steam
             accounts, ensuring your matches and stats are always up to date.
           </p>
-        </div>
-      </section>
+        </Prose>
+      </Section>
 
-      {/* Disclaimer */}
-      <section className="border-t border-border pt-6">
-        <p className="text-center text-xs text-muted-foreground">
-          <a
-            href="https://deadlock-api.com"
-            title="Deadlock API"
-            className="font-medium text-primary underline underline-offset-4"
-          >
+      <Stack gap={6}>
+        <Separator />
+        <Text as="p" variant="caption" tone="muted" align="center">
+          <TextLink href="https://deadlock-api.com" title="Deadlock API" underline="always" className="font-medium">
             deadlock-api.com
-          </a>{" "}
+          </TextLink>{" "}
           is not endorsed by Valve and does not reflect the views or opinions of Valve or anyone officially involved in
           producing or managing Valve properties.
-        </p>
-      </section>
-    </div>
+        </Text>
+      </Stack>
+    </PageShell>
   );
 }

@@ -1,14 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { Ability } from "deadlock_api_client";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Copy } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type RefCallback } from "react";
 
-import { GameShell } from "~/components/deadlockdle/GameShell";
-import { GuessFeedback } from "~/components/deadlockdle/GuessFeedback";
-import { NextGameButton } from "~/components/deadlockdle/NextGameButton";
-import { LoadingLogo } from "~/components/LoadingLogo";
-import { Button } from "~/components/ui/button";
+import { AnswerOption, revealedState } from "~/components/domain/minigames/AnswerOption";
+import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
+import { GameShell } from "~/components/features/deadlockdle/GameShell";
+import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
+import { NextGameButton } from "~/components/features/deadlockdle/NextGameButton";
+import { ScoreSummary } from "~/components/features/deadlockdle/ScoreSummary";
+import { ShareButton } from "~/components/features/deadlockdle/ShareButton";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { Card, CardContent } from "~/components/ui/card";
+import { Stack } from "~/components/ui/stack";
+import { StepMeter, StepMeterStep } from "~/components/ui/step-meter";
+import { Text } from "~/components/ui/text";
 import { useAbilities, useHeroes, useItems, useNpcUnits } from "~/lib/deadlockdle/queries";
 import {
   getDayNumber,
@@ -26,7 +32,6 @@ import {
 } from "~/lib/deadlockdle/trivia-questions";
 import { useCountdown } from "~/lib/deadlockdle/use-countdown";
 import { seo } from "~/lib/seo";
-import { cn } from "~/lib/utils";
 import { filterPlayableHeroes } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/deadlockdle/trivia")({
@@ -105,7 +110,6 @@ function Trivia() {
 
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [isRevealed, setIsRevealed] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [feedbackType, setFeedbackType] = useState<"correct" | "wrong" | null>(null);
 
   const isLoading = heroesLoading || itemsLoading || npcsLoading || abilitiesLoading;
@@ -179,12 +183,6 @@ function Trivia() {
     return `Deadlockdle #${dayNum} - Trivia ${state.score}/${QUESTION_COUNT}\nhttps://deadlock-api.com/games/deadlockdle`;
   }, [date, state.score]);
 
-  async function handleCopy() {
-    await navigator.clipboard.writeText(shareText);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
   const resultsScrollRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
     if (node) {
       setTimeout(() => node.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150);
@@ -192,14 +190,8 @@ function Trivia() {
   }, []);
 
   if (isLoading || questions.length === 0) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <LoadingLogo className="h-16 w-16 animate-pulse" />
-      </div>
-    );
+    return <LoadingState label="puzzle" />;
   }
-
-  const scoreColor = state.score >= 8 ? "text-green-400" : state.score >= 5 ? "text-amber-400" : "text-primary";
 
   return (
     <GameShell
@@ -221,77 +213,52 @@ function Trivia() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="space-y-5"
+            className="flex flex-col gap-5"
           >
-            <div className="text-center">
-              <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground/40 uppercase">
-                Question {state.currentQuestion + 1}/{QUESTION_COUNT}
-              </p>
-            </div>
+            <Text as="p" variant="eyebrow" align="center" className="font-mono">
+              Question {state.currentQuestion + 1}/{QUESTION_COUNT}
+            </Text>
 
             <div className="flex justify-center">
-              <span className="border border-muted-foreground/20 bg-muted-foreground/5 px-2.5 py-0.5 font-mono text-[10px] tracking-wider text-muted-foreground/50 uppercase">
+              <TerminalBadge variant="outline" size="sm" className="text-muted-foreground">
                 {currentQ.category}
-              </span>
+              </TerminalBadge>
             </div>
 
             <p className="px-2 text-center text-lg font-semibold tracking-tight">{currentQ.question}</p>
 
-            <div className="mx-auto max-w-lg space-y-2.5">
-              {currentQ.options.map((option, i) => {
-                const isCorrectOption = i === currentQ.correctIndex;
-                const isSelectedOption = i === selectedAnswer;
-                const isWrongSelection = isRevealed && isSelectedOption && !isCorrectOption;
+            <Stack gap={2.5} className="mx-auto w-full max-w-lg">
+              {currentQ.options.map((option, i) => (
+                <AnswerOption
+                  key={`${state.currentQuestion}-opt-${option}`}
+                  state={isRevealed ? revealedState(i === currentQ.correctIndex, i === selectedAnswer) : "idle"}
+                  onClick={() => handleAnswer(i)}
+                  disabled={isRevealed}
+                >
+                  {option}
+                </AnswerOption>
+              ))}
+            </Stack>
 
-                return (
-                  <motion.button
-                    key={`${state.currentQuestion}-opt-${option}`}
-                    type="button"
-                    whileTap={!isRevealed ? { scale: 0.97, transition: { duration: 0 } } : undefined}
-                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                    onClick={() => handleAnswer(i)}
-                    disabled={isRevealed}
-                    className={cn(
-                      "cursor-target w-full border px-4 py-3.5 text-left font-mono text-xs font-medium transition-colors sm:py-3 sm:text-sm",
-                      "disabled:cursor-default",
-                      isRevealed
-                        ? isCorrectOption
-                          ? "border-green-500 bg-green-500/15 text-green-400"
-                          : isWrongSelection
-                            ? "border-red-500 bg-red-500/15 text-red-400"
-                            : "border-muted-foreground/10 bg-transparent text-muted-foreground/30"
-                        : "border-muted-foreground/20 bg-[#0d1117]/60 text-foreground hover:border-primary/60 hover:bg-primary/5",
-                    )}
-                  >
-                    {option}
-                  </motion.button>
-                );
-              })}
-            </div>
-
-            <div className="flex justify-center gap-1.5 pt-2">
-              {questions.map((q, i) => {
-                const answered = state.answers[i] !== null;
-                const correct = answered && state.answers[i] === q.correctIndex;
-                const isCurrent = i === state.currentQuestion;
-
-                return (
-                  <div
-                    key={q.question}
-                    className={cn(
-                      "h-2.5 w-2.5 rounded-full transition-all sm:h-2 sm:w-2",
-                      isCurrent
-                        ? "scale-125 bg-primary"
-                        : answered
-                          ? correct
-                            ? "bg-green-500"
-                            : "bg-red-500"
-                          : "bg-muted-foreground/20",
-                    )}
-                  />
-                );
-              })}
-            </div>
+            <StepMeter
+              aria-label={`Question ${state.currentQuestion + 1} of ${QUESTION_COUNT}`}
+              className="justify-center pt-2"
+            >
+              {questions.map((q, i) => (
+                <StepMeterStep
+                  key={q.question}
+                  state={
+                    i === state.currentQuestion
+                      ? "current"
+                      : state.answers[i] === null
+                        ? "empty"
+                        : state.answers[i] === q.correctIndex
+                          ? "correct"
+                          : "wrong"
+                  }
+                />
+              ))}
+            </StepMeter>
           </motion.div>
         ) : state.completed ? (
           <motion.div
@@ -300,62 +267,40 @@ function Trivia() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
-            className="space-y-6"
+            className="flex flex-col gap-6"
           >
-            <div className="border border-muted-foreground/20 bg-[#0d1117]/80 py-6 text-center backdrop-blur-sm">
-              <p className={cn("font-mono text-4xl font-bold tracking-wider", scoreColor)}>
-                {state.score}/{QUESTION_COUNT}
-              </p>
-              <p className="mt-2 text-[10px] tracking-wider text-muted-foreground/50 uppercase">
-                {state.score >= 8 ? "Excellent" : state.score >= 5 ? "Not Bad" : "Keep Studying"}
-              </p>
-            </div>
+            <ScoreSummary
+              score={`${state.score}/${QUESTION_COUNT}`}
+              scoreLabel={state.score >= 8 ? "Excellent" : state.score >= 5 ? "Not Bad" : "Keep Studying"}
+              grade={state.score >= 8 ? "good" : state.score >= 5 ? "fair" : "poor"}
+              countdown={isArchive ? undefined : { label: "Next Trivia", value: countdown }}
+            />
 
-            <div className="space-y-1">
+            <Stack gap={1}>
               {questions.map((q, i) => {
-                const userAnswer = state.answers[i];
-                const correct = userAnswer === q.correctIndex;
+                const tone = state.answers[i] === q.correctIndex ? "positive" : "negative";
                 return (
-                  <div
-                    key={q.question}
-                    className={cn(
-                      "flex items-center gap-2 border px-3 py-2 font-mono text-xs",
-                      correct
-                        ? "border-green-500/20 bg-green-500/5 text-green-400/80"
-                        : "border-red-500/20 bg-red-500/5 text-red-400/80",
-                    )}
-                  >
-                    <span className="w-4 shrink-0 text-center">{correct ? "✓" : "✗"}</span>
-                    <span className="flex-1 truncate">{q.question}</span>
-                    {!correct && <span className="shrink-0 text-muted-foreground/50">{q.options[q.correctIndex]}</span>}
-                  </div>
+                  <Card key={q.question} tone={tone} size="xs">
+                    <CardContent className="flex items-center gap-2 font-mono text-xs">
+                      <Text tone={tone} variant="caption" align="center" className="w-4 shrink-0">
+                        {tone === "positive" ? "✓" : "✗"}
+                      </Text>
+                      <Text tone={tone} variant="caption" wrap="truncate" className="flex-1">
+                        {q.question}
+                      </Text>
+                      {tone === "negative" && (
+                        <Text tone="muted" variant="caption" className="shrink-0">
+                          {q.options[q.correctIndex]}
+                        </Text>
+                      )}
+                    </CardContent>
+                  </Card>
                 );
               })}
-            </div>
-
-            {!isArchive && (
-              <div className="border border-muted-foreground/10 py-4 text-center">
-                <p className="mb-1 text-[10px] tracking-wider text-muted-foreground/40 uppercase">Next Trivia</p>
-                <p className="font-mono text-lg font-bold tracking-widest">{countdown}</p>
-              </div>
-            )}
+            </Stack>
 
             <div className="flex flex-col items-center gap-3">
-              <Button
-                onClick={handleCopy}
-                variant="outline"
-                className="border-primary/40 font-mono text-xs tracking-wider uppercase hover:border-primary/60 hover:bg-primary/10"
-              >
-                {copied ? (
-                  <>
-                    <Check className="mr-1.5 h-3.5 w-3.5" /> Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="mr-1.5 h-3.5 w-3.5" /> Share Result
-                  </>
-                )}
-              </Button>
+              <ShareButton text={shareText}>Share Result</ShareButton>
               <NextGameButton currentMode="trivia" date={date} />
             </div>
           </motion.div>

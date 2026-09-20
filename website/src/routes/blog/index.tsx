@@ -1,9 +1,15 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { ArrowRight, Calendar, Clock, Tag } from "lucide-react";
+import { Calendar, Clock } from "lucide-react";
 
+import { LinkCard } from "~/components/patterns/content/LinkCard";
+import { MetaItem, MetaList } from "~/components/patterns/content/MetaList";
+import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { PageShell } from "~/components/patterns/page/PageShell";
+import { Stack } from "~/components/ui/stack";
 import { fetchBlogPosts } from "~/lib/blog-fns";
 import { seo } from "~/lib/seo";
-import { cn } from "~/lib/utils";
+
+import { TagBadge } from "./-tag-badge";
 
 export const Route = createFileRoute("/blog/")({
   head: () =>
@@ -24,82 +30,43 @@ function formatDate(dateStr: string): string {
   });
 }
 
-const tagColors: Record<string, string> = {
-  announcement: "bg-primary/15 text-primary border-primary/30",
-  community: "bg-blue-500/15 text-blue-400 border-blue-500/30",
-  data: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-  guide: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  engineering: "bg-violet-500/15 text-violet-400 border-violet-500/30",
-  infrastructure: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",
-  meta: "bg-rose-500/15 text-rose-400 border-rose-500/30",
-  patch: "bg-orange-500/15 text-orange-400 border-orange-500/30",
-};
-
 function BlogIndex() {
   const posts = Route.useLoaderData();
 
   return (
-    <div className="space-y-8">
-      <section className="text-center">
-        <h1 className="mb-2 text-3xl font-bold tracking-tight">Blog</h1>
-        <p className="text-sm text-muted-foreground">
-          Updates, patch analyses, and insights from the Deadlock API team
-        </p>
-      </section>
+    <PageShell width="prose" density="content">
+      <PageHeader
+        size="lg"
+        title="Blog"
+        description="Updates, patch analyses, and insights from the Deadlock API team"
+      />
 
-      <div className="mx-auto max-w-4xl space-y-4">
+      <Stack gap={4}>
         {posts.map((post) => (
-          <div key={post.slug}>
-            <Link
-              to="/blog/$slug"
-              params={{ slug: post.slug }}
-              preload="intent"
-              className="group block rounded-xl border border-border bg-card p-6 transition-colors hover:border-primary/40 hover:bg-muted/50"
-            >
-              <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <Calendar className="size-3.5" />
-                  {formatDate(post.date)}
-                </span>
-                <span className="text-border">|</span>
-                <span>{post.author}</span>
-                <span className="text-border">|</span>
-                <span className="flex items-center gap-1.5">
-                  <Clock className="size-3.5" />
-                  {post.readingMinutes} min read
-                </span>
-              </div>
-
-              <h2 className="mb-2 text-lg font-semibold text-foreground transition-colors group-hover:text-primary">
-                {post.title}
-              </h2>
-
-              <p className="mb-4 text-sm leading-relaxed text-muted-foreground">{post.description}</p>
-
-              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                <div className="flex flex-wrap gap-2">
-                  {post.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className={cn(
-                        "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium",
-                        tagColors[tag] ?? "border-border bg-muted text-muted-foreground",
-                      )}
-                    >
-                      <Tag className="size-2.5" />
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-primary transition-colors group-hover:text-primary">
-                  Read more
-                  <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
-                </span>
-              </div>
-            </Link>
-          </div>
+          <LinkCard
+            key={post.slug}
+            asChild
+            size="lg"
+            titleAs="h2"
+            eyebrow={
+              <MetaList>
+                <MetaItem icon={<Calendar />}>{formatDate(post.date)}</MetaItem>
+                <MetaItem>{post.author}</MetaItem>
+                <MetaItem icon={<Clock />}>{post.readingMinutes} min read</MetaItem>
+              </MetaList>
+            }
+            title={post.title}
+            description={post.description}
+            cta="Read more"
+            ctaPosition="end"
+            footer={post.tags.map((tag) => (
+              <TagBadge key={tag} tag={tag} />
+            ))}
+          >
+            <Link to="/blog/$slug" params={{ slug: post.slug }} preload="intent" />
+          </LinkCard>
         ))}
-      </div>
-    </div>
+      </Stack>
+    </PageShell>
   );
 }

@@ -4,11 +4,13 @@ import { LeaderboardRegionEnum } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useCallback } from "react";
 
-import { DataPageHeader } from "~/components/analytics/DataPageHeader";
-import { Filter } from "~/components/Filter";
-import { LeaderboardTable } from "~/components/leaderboard/LeaderboardTable";
-import { LoadingLogo } from "~/components/LoadingLogo";
-import { combineQueryStates } from "~/components/QueryRenderer";
+import { Filter } from "~/components/domain/filters";
+import { LeaderboardTable } from "~/components/features/leaderboard/LeaderboardTable";
+import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { PageShell } from "~/components/patterns/page/PageShell";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { combineQueryStates } from "~/components/patterns/states/QueryRenderer";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { getDefaultRegion } from "~/lib/region";
 import { fetchDefaultRegion } from "~/lib/region-fns";
@@ -70,37 +72,36 @@ function LeaderboardPage() {
   );
 
   return (
-    <div className="flex flex-col gap-3">
-      <section className="flex flex-col gap-3">
-        <DataPageHeader title="Deadlock Leaderboard" description="Ranked player standings across all regions">
-          <p>
-            Browse the top-ranked Deadlock players by region. Filter by hero to see who dominates with specific
-            characters, search for any player, and jump to any rank to see where you stand on the competitive ladder.
-            Rankings are based on matchmaking rating earned through ranked play.
-          </p>
-        </DataPageHeader>
-        <Filter.Root>
-          <Filter.Hero value={heroId} onChange={setHeroId} allowNull />
-          <Filter.Region
-            value={region}
-            defaultValue={defaultRegion}
-            onChange={(r) => setRegion(r as LeaderboardRegionEnum)}
+    <PageShell>
+      <PageHeader title="Deadlock Leaderboard" description="Ranked player standings across all regions">
+        <p>
+          Browse the top-ranked Deadlock players by region. Filter by hero to see who dominates with specific
+          characters, search for any player, and jump to any rank to see where you stand on the competitive ladder.
+          Rankings are based on matchmaking rating earned through ranked play.
+        </p>
+      </PageHeader>
+      <Filter.Root>
+        <Filter.Hero value={heroId} onValueChange={setHeroId} allowNull />
+        <Filter.Region
+          value={region}
+          defaultValue={defaultRegion}
+          onValueChange={(r) => setRegion(r as LeaderboardRegionEnum)}
+        />
+      </Filter.Root>
+      <div className="min-h-200">
+        {isPending ? (
+          <LoadingState label="leaderboard" className="flex items-center justify-center py-24" />
+        ) : isError ? (
+          <ErrorState
+            title="Failed to load leaderboard"
+            description={error?.message}
+            retrying={leaderboardQuery.isFetching}
+            onRetry={() => void leaderboardQuery.refetch()}
           />
-        </Filter.Root>
-        <div className="min-h-200">
-          {isPending ? (
-            <div className="flex items-center justify-center py-24">
-              <LoadingLogo />
-            </div>
-          ) : isError ? (
-            <div className="py-8 text-center text-sm text-destructive">
-              Failed to load leaderboard: {error?.message}
-            </div>
-          ) : leaderboardQuery.data ? (
-            <LeaderboardTable leaderboard={leaderboardQuery.data} onHeroClick={handleHeroClick} />
-          ) : null}
-        </div>
-      </section>
-    </div>
+        ) : leaderboardQuery.data ? (
+          <LeaderboardTable leaderboard={leaderboardQuery.data} onHeroClick={handleHeroClick} />
+        ) : null}
+      </div>
+    </PageShell>
   );
 }

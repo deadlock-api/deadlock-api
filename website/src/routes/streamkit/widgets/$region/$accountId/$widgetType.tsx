@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 
-import { BoxWidget } from "~/components/streamkit/widgets/box";
-import { RawWidget } from "~/components/streamkit/widgets/raw";
+import { BoxWidget } from "~/components/features/streamkit/widgets/box";
+import { RawWidget } from "~/components/features/streamkit/widgets/raw";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { API_ORIGIN } from "~/lib/constants";
 import { snakeToPretty } from "~/lib/utils";

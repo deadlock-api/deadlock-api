@@ -3,14 +3,22 @@ import { Link, type NotFoundRouteProps, createFileRoute, notFound } from "@tanst
 import type { AnalyticsHeroStats, ItemStats } from "deadlock_api_client";
 import { lazy, Suspense, useMemo } from "react";
 
-import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
-import { ItemImage } from "~/components/ItemImage";
-import { ItemEffectCard } from "~/components/items-page/ItemEffectCard";
-import { ItemUpgradePath } from "~/components/items-page/ItemUpgradePath";
-import { LoadingLogo } from "~/components/LoadingLogo";
-import { NotFound } from "~/components/NotFound";
-import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
-import { StatCard } from "~/components/StatCard";
+import { NotFound } from "~/components/app/NotFound";
+import { ItemImage } from "~/components/domain/assets/ItemImage";
+import { DEFAULT_MATCH_MODE } from "~/components/domain/selectors/MatchModeSelector";
+import { ItemEffectCard } from "~/components/features/items/ItemEffectCard";
+import { ItemUpgradePath } from "~/components/features/items/ItemUpgradePath";
+import { ChartLoading } from "~/components/patterns/charts/ChartStates";
+import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { PageShell } from "~/components/patterns/page/PageShell";
+import { Section } from "~/components/patterns/page/Section";
+import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { Button } from "~/components/ui/button";
+import { Card } from "~/components/ui/card";
+import { Separator } from "~/components/ui/separator";
+import { Inline, Stack } from "~/components/ui/stack";
+import { Stat, StatGroup } from "~/components/ui/stat";
 import { useSeasons } from "~/hooks/useSeasons";
 import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { formatPercent } from "~/lib/format";
@@ -25,19 +33,19 @@ import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
 const ItemHeroBreakdown = lazy(() =>
-  import("~/components/items-page/ItemHeroBreakdown").then((m) => ({ default: m.ItemHeroBreakdown })),
+  import("~/components/features/items/ItemHeroBreakdown").then((m) => ({ default: m.ItemHeroBreakdown })),
 );
 
 const ItemWinRateOverTime = lazy(() =>
-  import("~/components/items-page/ItemWinRateOverTime").then((m) => ({ default: m.ItemWinRateOverTime })),
+  import("~/components/features/items/ItemWinRateOverTime").then((m) => ({ default: m.ItemWinRateOverTime })),
 );
 
 const ItemWinRateByRank = lazy(() =>
-  import("~/components/items-page/ItemWinRateByRank").then((m) => ({ default: m.ItemWinRateByRank })),
+  import("~/components/features/items/ItemWinRateByRank").then((m) => ({ default: m.ItemWinRateByRank })),
 );
 
 const ItemWinRateByBuyTime = lazy(() =>
-  import("~/components/items-page/ItemWinRateByBuyTime").then((m) => ({ default: m.ItemWinRateByBuyTime })),
+  import("~/components/features/items/ItemWinRateByBuyTime").then((m) => ({ default: m.ItemWinRateByBuyTime })),
 );
 
 const DEFAULT_MIN_RANK = 91;
@@ -201,14 +209,12 @@ function ItemDetailPage() {
   const facts = [`Tier ${tier}`, slot, cost !== null && `${cost.toLocaleString("en-US")} souls`].filter(Boolean);
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-4">
-        <ItemImage itemId={itemId} className="size-16 rounded-sm" />
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight">{itemName}: Deadlock Win Rate &amp; Best Heroes</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{facts.join(" · ")}</p>
-        </div>
-      </div>
+    <PageShell density="data">
+      <PageHeader
+        title={`${itemName}: Deadlock Win Rate & Best Heroes`}
+        description={facts.join(" · ")}
+        media={<ItemImage itemId={itemId} className="size-16" />}
+      />
 
       {summary ? (
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
@@ -232,39 +238,40 @@ function ItemDetailPage() {
       )}
 
       {summary && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <StatCard
+        <StatGroup variant="tiles" className="grid-cols-2 sm:grid-cols-4">
+          <Stat
             label="Win Rate"
             value={formatPercent(summary.winRate)}
             sub={`#${summary.winRateRank} of ${summary.itemCount} items`}
           />
-          <StatCard
+          <Stat
             label="Bought"
             value={summary.usage !== undefined ? formatPercent(summary.usage) : "—"}
             sub={`by ${summary.players.toLocaleString("en-US")} players`}
           />
-          <StatCard label="Matches" value={summary.matches.toLocaleString("en-US")} />
-          <StatCard label="Avg Buy Time" value={clock(summary.avgBuyTimeS)} sub="into the match" />
-        </div>
+          <Stat label="Matches" value={summary.matches.toLocaleString("en-US")} />
+          <Stat label="Avg Buy Time" value={clock(summary.avgBuyTimeS)} sub="into the match" />
+        </StatGroup>
       )}
 
       {itemQuery.data && (itemQuery.data.tooltip_sections?.length ?? 0) > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold tracking-tight">What {itemName} Does</h2>
-          <ItemEffectCard item={itemQuery.data} className="max-w-3xl rounded-lg border border-border bg-card p-4" />
-        </section>
+        <Section title={`What ${itemName} Does`}>
+          <Card size="sm" className="max-w-3xl p-4">
+            <ItemEffectCard item={itemQuery.data} />
+          </Card>
+        </Section>
       )}
 
       <ItemUpgradePath itemId={itemId} itemName={itemName} request={itemRequest} />
 
       <ChunkErrorBoundary>
-        <Suspense fallback={<LoadingLogo />}>
+        <Suspense fallback={<LoadingState label={`${itemName} hero breakdown`} />}>
           <ItemHeroBreakdown itemId={itemId} itemName={itemName} itemRequest={itemRequest} heroRequest={heroRequest} />
         </Suspense>
       </ChunkErrorBoundary>
 
       <ChunkErrorBoundary>
-        <Suspense fallback={<LoadingLogo />}>
+        <Suspense fallback={<ChartLoading label={`${itemName} win rate over time`} />}>
           <ItemWinRateOverTime
             itemId={itemId}
             itemName={itemName}
@@ -275,7 +282,7 @@ function ItemDetailPage() {
       </ChunkErrorBoundary>
 
       <ChunkErrorBoundary>
-        <Suspense fallback={<LoadingLogo />}>
+        <Suspense fallback={<ChartLoading label={`${itemName} win rate by rank`} />}>
           <ItemWinRateByRank
             itemId={itemId}
             itemName={itemName}
@@ -285,25 +292,29 @@ function ItemDetailPage() {
       </ChunkErrorBoundary>
 
       <ChunkErrorBoundary>
-        <Suspense fallback={<LoadingLogo />}>
+        <Suspense fallback={<ChartLoading label={`${itemName} win rate by purchase time`} />}>
           <ItemWinRateByBuyTime itemId={itemId} itemName={itemName} request={itemRequest} />
         </Suspense>
       </ChunkErrorBoundary>
 
-      <nav aria-label="Related pages" className="flex flex-wrap gap-4 border-t border-border pt-4 text-sm">
-        <Link
-          to="/analytics/items"
-          search={{ include_items: itemId }}
-          preload="intent"
-          className="font-medium text-primary underline underline-offset-4"
-        >
-          Builds with {itemName}
-        </Link>
-        <Link to="/analytics/items" preload="intent" className="font-medium text-primary underline underline-offset-4">
-          All item win rates
-        </Link>
-      </nav>
-    </div>
+      <Stack gap={4}>
+        <Separator />
+        <Inline asChild gap={4} className="text-sm">
+          <nav aria-label="Related pages">
+            <Button asChild variant="link" size="inline">
+              <Link to="/analytics/items" search={{ include_items: itemId }} preload="intent">
+                Builds with {itemName}
+              </Link>
+            </Button>
+            <Button asChild variant="link" size="inline">
+              <Link to="/analytics/items" preload="intent">
+                All item win rates
+              </Link>
+            </Button>
+          </nav>
+        </Inline>
+      </Stack>
+    </PageShell>
   );
 }
 

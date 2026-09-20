@@ -6,7 +6,7 @@ import type {
   LaneSoulCurve,
 } from "deadlock_api_client";
 
-import type { GameMode } from "~/components/selectors/GameModeSelector";
+import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
 
 import { type LaneInfo, laneOfSlot, lanesOf, slotsOfLane, TEAM_SIZE } from "./lanes";
 

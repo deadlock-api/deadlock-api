@@ -1,17 +1,19 @@
-import type { GameMode } from "~/components/selectors/GameModeSelector";
+import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
 
 export interface LaneInfo {
   /** `assigned_lane` as reported by the game. Indexes the `lane_info` array of the generic-data asset. */
   id: number;
   name: string;
   color: string;
+  /** The same colour as a text utility, for the lane's name. */
+  textClass: string;
 }
 
 /** The three duo lanes of the current map. Ids 1/4/6 are the only non-zero `assigned_lane` values in play. */
 export const LANES: readonly LaneInfo[] = [
-  { id: 1, name: "Yellow", color: "#facc15" },
-  { id: 4, name: "Blue", color: "#22d3ee" },
-  { id: 6, name: "Purple", color: "#a78bfa" },
+  { id: 1, name: "Yellow", color: "var(--lane-yellow)", textClass: "text-lane-yellow" },
+  { id: 4, name: "Blue", color: "var(--lane-blue)", textClass: "text-lane-blue" },
+  { id: 6, name: "Purple", color: "var(--lane-purple)", textClass: "text-lane-purple" },
 ];
 
 export const SLOTS_PER_LANE = 2;
@@ -47,3 +49,6 @@ export function slotsOfLane(laneIndex: number): number[] {
  * See <https://deadlock.wiki/Teams>.
  */
 export const TEAM_NAMES = { ally: "The Hidden King", enemy: "The Archmother" } as const;
+
+/** The `HeroImage ring` that marks a portrait as belonging to a side. */
+export const SIDE_RING = { ally: "positive", enemy: "primary" } as const;

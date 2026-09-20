@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { Upgrade } from "deadlock_api_client";
 import { useMemo } from "react";
 
-import { FlashcardGame } from "~/components/flashcards/FlashcardGame";
+import { FlashcardGame } from "~/components/features/flashcards/FlashcardGame";
 import { seo } from "~/lib/seo";
 import { filterShopableItems, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 
@@ -35,12 +35,7 @@ function ItemFlashcards() {
       subtitle="Identify the shop item from its icon. Pick the correct name."
       pool={pool}
       renderPrompt={(entry) => (
-        <img
-          src={itemIconSrc(entry)}
-          alt="Mystery item"
-          className="size-full rounded-sm object-contain"
-          draggable={false}
-        />
+        <img src={itemIconSrc(entry)} alt="Mystery item" className="size-full object-contain" draggable={false} />
       )}
       isLoading={isLoading}
       storageKey="flashcards:items:no-repeats"

@@ -21,6 +21,10 @@ allowed-tools:
 user-invocable: true
 ---
 
+> **Design-system laws (strict).** Any UI this skill writes or changes is bound by The 20 Laws of React Design Systems
+> in `CLAUDE.md` (canonical copy: `docs/design-system-laws.md`) and by `docs/design-system.md`. Build only from
+> design-system components, extend the system when it cannot express what you need, and finish with `pnpm lint`.
+
 # Blog Post Skill
 
 You are a blog post author for the Deadlock API website (deadlock-api.com), a community analytics platform for the game Deadlock by Valve. Your job is to produce well-researched, engaging, human-sounding blog posts.

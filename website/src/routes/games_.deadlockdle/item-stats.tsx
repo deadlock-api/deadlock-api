@@ -1,12 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Copy } from "lucide-react";
 import { useCallback, useMemo, useState, type RefCallback } from "react";
 
-import { GameShell } from "~/components/deadlockdle/GameShell";
-import { NextGameButton } from "~/components/deadlockdle/NextGameButton";
-import { LoadingLogo } from "~/components/LoadingLogo";
-import { Button } from "~/components/ui/button";
+import { AnswerOption, type AnswerOptionState, revealedState } from "~/components/domain/minigames/AnswerOption";
+import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
+import { GameShell } from "~/components/features/deadlockdle/GameShell";
+import { NextGameButton } from "~/components/features/deadlockdle/NextGameButton";
+import { ScoreSummary } from "~/components/features/deadlockdle/ScoreSummary";
+import { ShareButton } from "~/components/features/deadlockdle/ShareButton";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { Card, CardContent } from "~/components/ui/card";
+import { Field } from "~/components/ui/field";
+import { Stack } from "~/components/ui/stack";
+import { Text } from "~/components/ui/text";
 import { useItems } from "~/lib/deadlockdle/queries";
 import {
   getDayNumber,
@@ -20,7 +26,6 @@ import {
 import { gameStorageKey } from "~/lib/deadlockdle/storage";
 import { useCountdown } from "~/lib/deadlockdle/use-countdown";
 import { seo } from "~/lib/seo";
-import { cn } from "~/lib/utils";
 import { filterShopableItems } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/deadlockdle/item-stats")({
@@ -89,31 +94,15 @@ function formatSlotLabel(slot: string): string {
   return slot.charAt(0).toUpperCase() + slot.slice(1);
 }
 
-function getSlotColor(slot: SlotType): {
-  bg: string;
-  border: string;
-  text: string;
-} {
-  switch (slot) {
-    case "weapon":
-      return {
-        bg: "bg-amber-500/15",
-        border: "border-amber-500/40",
-        text: "text-amber-400",
-      };
-    case "spirit":
-      return {
-        bg: "bg-purple-500/15",
-        border: "border-purple-500/40",
-        text: "text-purple-400",
-      };
-    case "vitality":
-      return {
-        bg: "bg-green-500/15",
-        border: "border-green-500/40",
-        text: "text-green-400",
-      };
-  }
+const SLOT_TONE: Record<SlotType, React.ComponentProps<typeof AnswerOption>["tone"]> = {
+  weapon: "item-weapon",
+  spirit: "item-spirit",
+  vitality: "item-vitality",
+};
+
+function tileState(isSelected: boolean, isAnswer: boolean, revealed: boolean): AnswerOptionState {
+  if (revealed) return revealedState(isAnswer, isSelected);
+  return isSelected ? "selected" : "idle";
 }
 
 function ItemStatsQuiz() {
@@ -124,7 +113,6 @@ function ItemStatsQuiz() {
   const storageKey = gameStorageKey("item-stats", date);
   const countdown = useCountdown();
 
-  const [copied, setCopied] = useState(false);
   const [state, setState] = useState<ItemStatsState>(() => initialState(storageKey, date));
   const [loadedKey, setLoadedKey] = useState(storageKey);
 
@@ -223,11 +211,7 @@ function ItemStatsQuiz() {
   }, []);
 
   if (isLoading || dailyItems.length === 0) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <LoadingLogo className="h-16 w-16 animate-pulse" />
-      </div>
-    );
+    return <LoadingState label="puzzle" />;
   }
 
   return (
@@ -240,10 +224,11 @@ function ItemStatsQuiz() {
       hideAttempts
       date={date}
     >
-      <div className="space-y-4">
+      <Stack gap={4}>
         {dailyItems.map((item, index) => {
           const answer = state.answers[item.id] ?? {};
           const result = fieldResults?.[item.id];
+          const revealed = result != null;
           const imgSrc = item.shop_image_webp ?? item.shop_image ?? "";
 
           return (
@@ -256,160 +241,100 @@ function ItemStatsQuiz() {
                 delay: index * 0.08,
                 ease: "easeOut",
               }}
-              className="border border-muted-foreground/20 bg-[#0d1117]/60 p-4 backdrop-blur-sm"
             >
-              <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center border border-muted-foreground/10 bg-black/30">
-                  <picture>
-                    {item.shop_image_webp && <source srcSet={item.shop_image_webp} type="image/webp" />}
-                    {item.shop_image && <source srcSet={item.shop_image} type="image/png" />}
-                    <img
-                      src={imgSrc}
-                      alt={item.name}
-                      className="h-12 w-12 rounded-sm object-contain"
-                      draggable={false}
-                    />
-                  </picture>
-                </div>
-                <div>
-                  <p className="text-sm font-bold tracking-tight">{item.name}</p>
-                  <p className="font-mono text-[10px] tracking-wider text-muted-foreground/40 uppercase">
-                    Item {index + 1} of {ITEMS_COUNT}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <div className="space-y-1.5">
-                  <p className="font-mono text-[10px] tracking-wider text-muted-foreground/50 uppercase">Activation</p>
-                  <div className="flex gap-1.5">
-                    {([true, false] as const).map((isActive) => {
-                      const label = isActive ? "Active" : "Passive";
-                      const isSelected = answer.active === isActive;
-                      const isCorrect = result && isActive === item.is_active_item;
-                      const isWrongSelection = result && isSelected && !result.active;
-
-                      return (
-                        <motion.button
-                          key={label}
-                          type="button"
-                          whileTap={!state.submitted ? { scale: 0.93, transition: { duration: 0 } } : undefined}
-                          transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                          onClick={() => setAnswer(item.id, "active", isActive)}
-                          disabled={state.submitted}
-                          className={cn(
-                            "cursor-target flex-1 border py-2.5 font-mono text-xs font-semibold transition-colors",
-                            "disabled:cursor-default",
-                            result
-                              ? isCorrect
-                                ? "border-green-500/60 bg-green-500/15 text-green-400"
-                                : isWrongSelection
-                                  ? "border-red-500/60 bg-red-500/15 text-red-400"
-                                  : "border-muted-foreground/10 bg-transparent text-muted-foreground/30"
-                              : isSelected
-                                ? "border-primary/60 bg-primary/15 text-primary"
-                                : "border-muted-foreground/20 bg-black/30 text-muted-foreground/50 hover:border-muted-foreground/40",
-                          )}
-                        >
-                          {label}
-                        </motion.button>
-                      );
-                    })}
+              <Card size="sm">
+                <CardContent className="flex flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    <Card tone="inset" size="flush" className="size-16 shrink-0 items-center justify-center">
+                      <picture>
+                        {item.shop_image_webp && <source srcSet={item.shop_image_webp} type="image/webp" />}
+                        {item.shop_image && <source srcSet={item.shop_image} type="image/png" />}
+                        <img src={imgSrc} alt={item.name} className="h-12 w-12 object-contain" draggable={false} />
+                      </picture>
+                    </Card>
+                    <div>
+                      <p className="text-sm font-bold tracking-tight">{item.name}</p>
+                      <Text as="p" variant="eyebrow" className="font-mono">
+                        Item {index + 1} of {ITEMS_COUNT}
+                      </Text>
+                    </div>
                   </div>
-                  {result && !result.active && (
-                    <p className="font-mono text-[10px] text-red-400/80">
-                      Correct: {item.is_active_item ? "Active" : "Passive"}
-                    </p>
-                  )}
-                </div>
 
-                <div className="space-y-1.5">
-                  <p className="font-mono text-[10px] tracking-wider text-muted-foreground/50 uppercase">Tier</p>
-                  <div className="flex gap-1.5">
-                    {[1, 2, 3, 4].map((tier) => {
-                      const isSelected = answer.tier === tier;
-                      const isCorrect = result && tier === item.item_tier;
-                      const isWrongSelection = result && isSelected && !result.tier;
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <Field label="Activation" className="font-mono">
+                      <div className="flex gap-1.5">
+                        {([true, false] as const).map((isActive) => {
+                          const isSelected = answer.active === isActive;
+                          return (
+                            <AnswerOption
+                              key={String(isActive)}
+                              variant="tile"
+                              state={tileState(isSelected, isActive === item.is_active_item, revealed)}
+                              aria-pressed={isSelected}
+                              onClick={() => setAnswer(item.id, "active", isActive)}
+                              disabled={state.submitted}
+                            >
+                              {isActive ? "Active" : "Passive"}
+                            </AnswerOption>
+                          );
+                        })}
+                      </div>
+                      {result && !result.active && (
+                        <p className="text-3xs text-negative">Correct: {item.is_active_item ? "Active" : "Passive"}</p>
+                      )}
+                    </Field>
 
-                      return (
-                        <motion.button
-                          key={tier}
-                          type="button"
-                          whileTap={!state.submitted ? { scale: 0.93, transition: { duration: 0 } } : undefined}
-                          transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                          onClick={() => setAnswer(item.id, "tier", tier)}
-                          disabled={state.submitted}
-                          className={cn(
-                            "cursor-target flex-1 border py-2.5 font-mono text-sm font-bold transition-colors",
-                            "disabled:cursor-default",
-                            result
-                              ? isCorrect
-                                ? "border-green-500/60 bg-green-500/15 text-green-400"
-                                : isWrongSelection
-                                  ? "border-red-500/60 bg-red-500/15 text-red-400"
-                                  : "border-muted-foreground/10 bg-transparent text-muted-foreground/30"
-                              : isSelected
-                                ? "border-primary/60 bg-primary/15 text-primary"
-                                : "border-muted-foreground/20 bg-black/30 text-muted-foreground/50 hover:border-muted-foreground/40",
-                          )}
-                        >
-                          {tier}
-                        </motion.button>
-                      );
-                    })}
+                    <Field label="Tier" className="font-mono">
+                      <div className="flex gap-1.5">
+                        {[1, 2, 3, 4].map((tier) => {
+                          const isSelected = answer.tier === tier;
+                          return (
+                            <AnswerOption
+                              key={tier}
+                              variant="tile"
+                              state={tileState(isSelected, tier === item.item_tier, revealed)}
+                              aria-pressed={isSelected}
+                              onClick={() => setAnswer(item.id, "tier", tier)}
+                              disabled={state.submitted}
+                            >
+                              {tier}
+                            </AnswerOption>
+                          );
+                        })}
+                      </div>
+                      {result && !result.tier && <p className="text-3xs text-negative">Correct: T{item.item_tier}</p>}
+                    </Field>
+
+                    <Field label="Slot" className="font-mono">
+                      <div className="flex gap-1.5">
+                        {SLOT_TYPES.map((slot) => {
+                          const isSelected = answer.slot === slot;
+                          return (
+                            <AnswerOption
+                              key={slot}
+                              variant="tile"
+                              state={tileState(isSelected, slot === item.item_slot_type, revealed)}
+                              aria-pressed={isSelected}
+                              onClick={() => setAnswer(item.id, "slot", slot)}
+                              disabled={state.submitted}
+                              tone={SLOT_TONE[slot]}
+                            >
+                              {formatSlotLabel(slot)}
+                            </AnswerOption>
+                          );
+                        })}
+                      </div>
+                      {result && !result.slot && (
+                        <p className="text-3xs text-negative">Correct: {formatSlotLabel(item.item_slot_type)}</p>
+                      )}
+                    </Field>
                   </div>
-                  {result && !result.tier && (
-                    <p className="font-mono text-[10px] text-red-400/80">Correct: T{item.item_tier}</p>
-                  )}
-                </div>
-
-                <div className="space-y-1.5">
-                  <p className="font-mono text-[10px] tracking-wider text-muted-foreground/50 uppercase">Slot</p>
-                  <div className="flex gap-1.5">
-                    {SLOT_TYPES.map((slot) => {
-                      const isSelected = answer.slot === slot;
-                      const isCorrect = result && slot === item.item_slot_type;
-                      const isWrongSelection = result && isSelected && !result.slot;
-                      const colors = getSlotColor(slot);
-
-                      return (
-                        <motion.button
-                          key={slot}
-                          type="button"
-                          whileTap={!state.submitted ? { scale: 0.93, transition: { duration: 0 } } : undefined}
-                          transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                          onClick={() => setAnswer(item.id, "slot", slot)}
-                          disabled={state.submitted}
-                          className={cn(
-                            "cursor-target flex-1 border py-2.5 font-mono text-xs font-semibold transition-colors",
-                            "disabled:cursor-default",
-                            result
-                              ? isCorrect
-                                ? `border-green-500/60 bg-green-500/15 text-green-400`
-                                : isWrongSelection
-                                  ? "border-red-500/60 bg-red-500/15 text-red-400"
-                                  : "border-muted-foreground/10 bg-transparent text-muted-foreground/30"
-                              : isSelected
-                                ? `${colors.border} ${colors.bg} ${colors.text}`
-                                : "border-muted-foreground/20 bg-black/30 text-muted-foreground/50 hover:border-muted-foreground/40",
-                          )}
-                        >
-                          {formatSlotLabel(slot)}
-                        </motion.button>
-                      );
-                    })}
-                  </div>
-                  {result && !result.slot && (
-                    <p className="font-mono text-[10px] text-red-400/80">
-                      Correct: {formatSlotLabel(item.item_slot_type)}
-                    </p>
-                  )}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </motion.div>
           );
         })}
-      </div>
+      </Stack>
 
       {!state.submitted && (
         <motion.div
@@ -418,21 +343,9 @@ function ItemStatsQuiz() {
           transition={{ delay: ITEMS_COUNT * 0.08 + 0.2 }}
           className="flex justify-center"
         >
-          <motion.button
-            type="button"
-            whileTap={allFieldsFilled ? { scale: 0.95, transition: { duration: 0 } } : undefined}
-            transition={{ type: "spring", stiffness: 400, damping: 17 }}
-            onClick={handleSubmit}
-            disabled={!allFieldsFilled}
-            className={cn(
-              "cursor-target border px-8 py-3 font-mono text-sm font-bold tracking-wider uppercase transition-colors",
-              allFieldsFilled
-                ? "border-primary/60 bg-primary/15 text-primary hover:bg-primary/25 hover:shadow-[0_0_12px_rgba(250,68,84,0.2)]"
-                : "cursor-not-allowed border-muted-foreground/20 bg-black/30 text-muted-foreground/30",
-            )}
-          >
+          <TerminalButton variant="soft" size="lg" onClick={handleSubmit} disabled={!allFieldsFilled}>
             Submit All
-          </motion.button>
+          </TerminalButton>
         </motion.div>
       )}
 
@@ -443,50 +356,20 @@ function ItemStatsQuiz() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="space-y-4"
+            className="flex flex-col gap-4"
           >
-            <div className="border border-muted-foreground/20 bg-[#0d1117]/80 py-4 text-center backdrop-blur-sm">
-              <p
-                className={cn(
-                  "font-mono text-3xl font-bold tracking-wider",
-                  state.score >= TOTAL_FIELDS * 0.8
-                    ? "text-green-400"
-                    : state.score >= TOTAL_FIELDS * 0.5
-                      ? "text-amber-400"
-                      : "text-primary",
-                )}
-              >
-                {state.score}/{state.totalFields}
-              </p>
-              <p className="mt-1 text-[10px] tracking-wider text-muted-foreground/50 uppercase">Correct Answers</p>
-            </div>
-            {!isArchive && (
-              <div className="border border-muted-foreground/10 py-4 text-center">
-                <p className="mb-1 text-[10px] tracking-wider text-muted-foreground/40 uppercase">Next Quiz</p>
-                <p className="font-mono text-lg font-bold tracking-widest">{countdown}</p>
-              </div>
-            )}
+            <ScoreSummary
+              score={`${state.score}/${state.totalFields}`}
+              scoreLabel="Correct Answers"
+              grade={state.score >= TOTAL_FIELDS * 0.8 ? "good" : state.score >= TOTAL_FIELDS * 0.5 ? "fair" : "poor"}
+              countdown={isArchive ? undefined : { label: "Next Quiz", value: countdown }}
+            />
             <div className="flex flex-col items-center gap-3">
-              <Button
-                onClick={async () => {
-                  const text = `Deadlockdle #${getDayNumber(state.date)} - Stats ${state.score}/${state.totalFields}\nhttps://deadlock-api.com/games/deadlockdle`;
-                  await navigator.clipboard.writeText(text);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                }}
-                variant="outline"
-                className="cursor-target border-primary/40 font-mono text-xs tracking-wider uppercase hover:border-primary/60 hover:bg-primary/10"
+              <ShareButton
+                text={`Deadlockdle #${getDayNumber(state.date)} - Stats ${state.score}/${state.totalFields}\nhttps://deadlock-api.com/games/deadlockdle`}
               >
-                {copied ? (
-                  <>
-                    <Check className="mr-1.5 h-3.5 w-3.5" /> Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="mr-1.5 h-3.5 w-3.5" /> Share Result
-                  </>
-                )}
-              </Button>
+                Share Result
+              </ShareButton>
               <NextGameButton currentMode="item-stats" date={date} />
             </div>
           </motion.div>

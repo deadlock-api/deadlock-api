@@ -1,0 +1,202 @@
+import { useQuery } from "@tanstack/react-query";
+import type { PlayerEntry } from "deadlock_api_client";
+import Fuse from "fuse.js";
+import { useMemo } from "react";
+
+import { BadgeImage } from "~/components/domain/assets/BadgeImage";
+import { PlayerCell } from "~/components/domain/player/PlayerCell";
+import { PaginationControls } from "~/components/patterns/data-table/PaginationControls";
+import { ariaSort, SortButton } from "~/components/patterns/data-table/SortableHeader";
+import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { usePaginationQueryState } from "~/hooks/usePaginationQueryState";
+import { useSteamProfiles } from "~/hooks/useSteamProfiles";
+import { extractBadgeMap } from "~/lib/leaderboard";
+import { ranksQueryOptions } from "~/queries/ranks-query";
+
+import { formatStatValue } from "./sort-options";
+import { SortBySelector } from "./SortBySelector";
+
+export type ScoreboardSort = { sortBy: string; sortDirection: "desc" | "asc" };
+
+export interface ScoreboardTableProps extends React.ComponentProps<"div"> {
+  entries: PlayerEntry[];
+  sortBy: string;
+  sortDirection: "desc" | "asc";
+  /** The header always sets column and direction together, so one callback carries both. */
+  onSortChange?: (sort: ScoreboardSort) => void;
+}
+
+export function ScoreboardTable({
+  entries,
+  sortBy,
+  sortDirection,
+  onSortChange,
+  className,
+  ...props
+}: ScoreboardTableProps) {
+  const sort = (next: ScoreboardSort) => onSortChange?.(next);
+  const flip = (): "desc" | "asc" => (sortDirection === "desc" ? "asc" : "desc");
+  const {
+    searchQuery,
+    setSearchQuery,
+    currentPage: requestedPage,
+    setCurrentPage,
+    itemsPerPage,
+    setItemsPerPage,
+  } = usePaginationQueryState();
+
+  const steamAccountIds = useMemo(
+    () => entries.map((e) => e.account_id).filter((id): id is number => id != null),
+    [entries],
+  );
+
+  const { profiles, isLoading: isLoadingProfiles } = useSteamProfiles(steamAccountIds);
+
+  const isRankSort = sortBy === "rank";
+  const { data: ranks } = useQuery({ ...ranksQueryOptions, enabled: isRankSort });
+  const badgeMap = useMemo(() => extractBadgeMap(ranks ?? []), [ranks]);
+
+  const renderValue = (value: number) => {
+    if (!isRankSort) return formatStatValue(value, sortBy);
+    const badge = badgeMap.get(value);
+    if (!badge) return <span className="text-muted-foreground">Unranked</span>;
+    return (
+      <div className="flex items-center justify-end gap-1.5">
+        <BadgeImage badge={value} ranks={ranks ?? []} className="size-6" />
+        <span>{`${badge.name} ${badge.subtier}`}</span>
+      </div>
+    );
+  };
+
+  const enrichedEntries = useMemo(
+    () =>
+      entries.map((entry) => {
+        const profile = entry.account_id != null ? profiles[entry.account_id] : undefined;
+        return { ...entry, personaname: profile?.personaname };
+      }),
+    [entries, profiles],
+  );
+
+  const fuse = useMemo(
+    () =>
+      new Fuse(enrichedEntries, {
+        keys: ["personaname", "account_id"],
+        threshold: 0.4,
+      }),
+    [enrichedEntries],
+  );
+
+  const filteredEntries = useMemo(
+    () => (searchQuery ? fuse.search(searchQuery).map((r) => r.item) : enrichedEntries),
+    [searchQuery, enrichedEntries, fuse],
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / itemsPerPage));
+  // A filter change can leave the URL's page past the end of the new board.
+  const currentPage = Math.min(requestedPage, totalPages - 1);
+
+  const paginatedEntries = useMemo(
+    () => filteredEntries.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage),
+    [filteredEntries, currentPage, itemsPerPage],
+  );
+  const handleItemsPerPageChange = (perPage: number) => {
+    setItemsPerPage(perPage);
+    setCurrentPage(0);
+  };
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(0);
+  };
+
+  const controls = (
+    <PaginationControls
+      searchQuery={searchQuery}
+      onSearchChange={handleSearchChange}
+      itemsPerPage={itemsPerPage}
+      onItemsPerPageChange={handleItemsPerPageChange}
+      currentPage={currentPage}
+      onPageChange={setCurrentPage}
+      totalPages={totalPages}
+      searchPlaceholder="Search player..."
+    />
+  );
+
+  return (
+    <div className={className} {...props}>
+      {controls}
+      <Table density="compact" className="tabular-nums">
+        <TableHeader tone="muted">
+          <TableRow>
+            <TableHead className="w-12 text-end">#</TableHead>
+            <TableHead>Player</TableHead>
+            {sortBy !== "matches" && (
+              <TableHead className="hidden text-end sm:table-cell" aria-sort={ariaSort(false, sortDirection)}>
+                <SortButton
+                  active={false}
+                  sortDir={sortDirection}
+                  align="end"
+                  onClick={() =>
+                    sort(
+                      sortBy === "matches"
+                        ? { sortBy, sortDirection: flip() }
+                        : { sortBy: "matches", sortDirection: "desc" },
+                    )
+                  }
+                >
+                  <span>Matches</span>
+                </SortButton>
+              </TableHead>
+            )}
+            <TableHead className="text-end">
+              <div className="flex items-center justify-end gap-1">
+                <SortBySelector
+                  value={sortBy}
+                  defaultValue="kills"
+                  onValueChange={(next) => sort({ sortBy: next, sortDirection })}
+                />
+                <SortButton
+                  active
+                  sortDir={sortDirection}
+                  onClick={() => sort({ sortBy, sortDirection: flip() })}
+                  aria-label="Toggle sort direction"
+                />
+              </div>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {paginatedEntries.map((entry, i) => {
+            const accountId = entry.account_id;
+            const profile = accountId != null ? profiles[accountId] : undefined;
+            return (
+              // oxlint-disable-next-line react/no-array-index-key
+              <TableRow key={`${accountId ?? i}-${entry.rank}`}>
+                <TableCell className="text-end">{entry.rank + 1}</TableCell>
+                <TableCell>
+                  <PlayerCell
+                    accountId={accountId}
+                    name={profile?.personaname ?? (accountId == null ? `#${entry.rank}` : undefined)}
+                    avatar={profile?.avatar}
+                    loading={isLoadingProfiles && !profile}
+                    showAccountId
+                    className="max-w-72"
+                  />
+                </TableCell>
+                {sortBy !== "matches" && (
+                  <TableCell className="hidden text-end sm:table-cell">
+                    {entry.matches.toLocaleString("en-US")}
+                  </TableCell>
+                )}
+                <TableCell className="text-end">{renderValue(entry.value)}</TableCell>
+              </TableRow>
+            );
+          })}
+          {paginatedEntries.length === 0 && <TableEmptyRow colSpan={sortBy === "matches" ? 3 : 4} />}
+        </TableBody>
+      </Table>
+      {controls}
+    </div>
+  );
+}

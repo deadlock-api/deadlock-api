@@ -34,7 +34,7 @@ test("rates use each bucket's full roster, with normalized pick rates using its 
   assert.deepEqual(buildHeroTableTrend({ ...options, stat: "banRate" }), [{ date: 1000000, value: 0.5 }]);
   assert.deepEqual(
     buildHeroTableTrend({ ...options, stat: "presence" }).map((p) => p.value),
-    [0.9, null],
+    [0.9, 1],
   );
 });
 

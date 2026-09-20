@@ -1,7 +1,7 @@
 import { createParser, type Options, useQueryState } from "nuqs";
 import { useCallback, useMemo } from "react";
 
-import type { GameMode } from "~/components/selectors/GameModeSelector";
+import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
 import type { Draft, Side } from "~/lib/team-builder/analysis";
 import { TEAM_SIZE } from "~/lib/team-builder/lanes";
 

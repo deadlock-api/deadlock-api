@@ -1,0 +1,249 @@
+/* Design tokens, in three tiers. Components reference tier 2 only, through the utilities tier 3 generates
+   (bg-card, text-positive, border-hairline). Tier 1 exists so a rebrand is a change to this block alone. */
+
+/* Tier 1: primitives. Raw values with no meaning attached. */
+:root {
+  --ink-950: #010409;
+  --ink-900: #0d1117;
+  --ink-850: #151b23;
+  --ink-800: #1c2128;
+  --ink-700: #21262d;
+  --ink-400: #8b949e;
+  --ink-200: #d2d8de;
+  --ink-100: #e6edf3;
+  --white: #ffffff;
+
+  --red-500: #fa4454;
+  --red-400: #f85149;
+  --teal-500: #0ea5a0;
+  --amber-400: #fbbf24;
+  --amber-500: #f59e0b;
+  --sky-400: #38bdf8;
+  --sky-600: #0284c7;
+  /* Series hues, stepped for the dark band (OKLCH L 0.48-0.67) */
+  --series-green: #199e70;
+  --series-yellow: #c98500;
+  --series-blue: #3987e5;
+  --series-orange: #d95926;
+  --series-violet: #9085e9;
+  --series-forest: #008300;
+  --series-magenta: #d55181;
+}
+
+/* Tier 2: semantic tokens. What a color is for. */
+:root {
+  --radius: 0.75rem;
+
+  /* Surfaces, darkest to most raised */
+  --background: var(--ink-950);
+  --foreground: var(--ink-100);
+  --card: var(--ink-900);
+  --card-foreground: var(--ink-100);
+  --popover: var(--ink-900);
+  --popover-foreground: var(--ink-100);
+  --secondary: var(--ink-850);
+  --secondary-foreground: var(--ink-200);
+  --muted: var(--ink-850);
+  --muted-foreground: var(--ink-400);
+  --accent: var(--ink-800);
+  --accent-foreground: var(--ink-100);
+
+  /* Translucent layers for panels that sit on imagery or on another surface */
+  --hairline: rgb(255 255 255 / 0.06);
+  --subtle: rgb(255 255 255 / 0.02);
+  --subtle-hover: rgb(255 255 255 / 0.04);
+  --subtle-active: rgb(255 255 255 / 0.1);
+
+  /* Brand and interaction */
+  --primary: var(--red-500);
+  /* Ink, not white: white on the brand red is 3.5:1 and fails AA for text. */
+  --primary-foreground: var(--ink-950);
+  --border: var(--ink-700);
+  --input: var(--ink-700);
+  --ring: var(--red-500);
+
+  /* Status. Positive is teal rather than green so that the positive/negative pair stays distinguishable for
+     red-green colorblind readers; both are checked for contrast against --card. */
+  --positive: var(--teal-500);
+  --negative: var(--red-500);
+  --warning: var(--amber-400);
+  --info: var(--sky-400);
+  --destructive: var(--red-400);
+  --destructive-foreground: var(--ink-950);
+
+  /* Categorical series. Assign in this order and never cycle: the order is what passes the colorblind-separation
+     check between neighbours (validated against --card with the dataviz palette validator). */
+  --chart-1: var(--red-500);
+  --chart-2: var(--series-green);
+  --chart-3: var(--series-yellow);
+  --chart-4: var(--series-blue);
+  --chart-5: var(--series-orange);
+  --chart-6: var(--series-violet);
+  --chart-7: var(--series-forest);
+  --chart-8: var(--series-magenta);
+  /* Fixed-meaning series and chart chrome */
+  --chart-win-rate: var(--amber-500);
+  --chart-share: var(--sky-600);
+  --chart-grid: var(--ink-700);
+  --chart-axis: var(--ink-400);
+
+  /* Game identity: item categories, as colored in the game client */
+  --item-weapon: rgb(229 138 0);
+  --item-vitality: rgb(0 255 153);
+  --item-spirit: rgb(0 221 255);
+  /* Game identity: the three lanes, named after their colors in the client */
+  --lane-yellow: #facc15;
+  --lane-blue: #22d3ee;
+  --lane-purple: #a78bfa;
+
+  /* Sidebar */
+  --sidebar: var(--ink-950);
+  --sidebar-foreground: var(--ink-100);
+  --sidebar-primary: var(--red-500);
+  --sidebar-primary-foreground: var(--ink-950);
+  --sidebar-accent: var(--ink-800);
+  --sidebar-accent-foreground: var(--ink-100);
+  --sidebar-border: var(--ink-700);
+  --sidebar-ring: var(--red-500);
+
+  /* Third-party brands */
+  --steam-bg: #171a21;
+  --steam-bg-hover: #1f232b;
+  --steam-border: #2a2f3a;
+  --discord: #5865f2;
+
+  /* Motion. Under prefers-reduced-motion every duration collapses, so a component that uses these needs no branch. */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Shadows: higher opacity than Tailwind's defaults, for a near-black page */
+  --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.1);
+  --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.15);
+  --shadow-sm: 0px 1px 3px 0px hsl(0 0% 0% / 0.2), 0px 1px 2px -1px hsl(0 0% 0% / 0.2);
+  --shadow: 0px 2px 4px 0px hsl(0 0% 0% / 0.2), 0px 1px 2px -1px hsl(0 0% 0% / 0.2);
+  --shadow-md: 0px 2px 6px 0px hsl(0 0% 0% / 0.25), 0px 2px 4px -1px hsl(0 0% 0% / 0.2);
+  --shadow-lg: 0px 4px 8px 0px hsl(0 0% 0% / 0.3), 0px 4px 6px -1px hsl(0 0% 0% / 0.2);
+  --shadow-xl: 0px 8px 16px 0px hsl(0 0% 0% / 0.35), 0px 8px 10px -1px hsl(0 0% 0% / 0.2);
+  --shadow-2xl: 0px 16px 32px 0px hsl(0 0% 0% / 0.5);
+  /* Ability glyphs ship as dark line art; this theme draws them in ink. A light theme would set `none`. */
+  --glyph-filter: brightness(0) invert(1);
+  /* The darkening behind a control that sits on artwork, so a translucent variant stays legible. */
+  --scrim: color-mix(in oklab, black 40%, transparent);
+  --scrim-hover: color-mix(in oklab, black 55%, transparent);
+
+  /* Shadows that carry meaning rather than elevation: the glow under the active page tab, the underline of a
+     filter that differs from its default. */
+  --shadow-glow-primary: 0 1px 6px color-mix(in srgb, var(--primary) 50%, transparent);
+  --shadow-active-underline: inset 0 -2px 0 0 var(--primary);
+}
+
+/* Tier 3: the Tailwind theme. Every entry here becomes a utility. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-hairline: var(--hairline);
+  --color-subtle: var(--subtle);
+  --color-subtle-hover: var(--subtle-hover);
+  --color-subtle-active: var(--subtle-active);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
+  --color-chart-win-rate: var(--chart-win-rate);
+  --color-chart-share: var(--chart-share);
+
+  --color-item-weapon: var(--item-weapon);
+  --color-item-vitality: var(--item-vitality);
+  --color-item-spirit: var(--item-spirit);
+  --color-lane-yellow: var(--lane-yellow);
+  --color-lane-blue: var(--lane-blue);
+  --color-lane-purple: var(--lane-purple);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-steam-bg: var(--steam-bg);
+  --color-steam-bg-hover: var(--steam-bg-hover);
+  --color-steam-border: var(--steam-border);
+  --color-discord: var(--discord);
+  --color-scrim: var(--scrim);
+  --color-scrim-hover: var(--scrim-hover);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: "Inter Variable", sans-serif;
+  --font-mono: JetBrains Mono, monospace;
+  --font-serif: Source Serif 4, serif;
+  --font-game: "New Rocker", system-ui;
+
+  --blur-hairline: 1px;
+  --ease-standard: var(--ease-standard);
+  --default-transition-duration: var(--duration-fast);
+  --default-transition-timing-function: var(--ease-standard);
+
+  /* Dense data type, below Tailwind's text-xs (12px) */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-3xs: 0.625rem;
+  --text-3xs--line-height: 0.875rem;
+  --text-4xs: 0.5625rem;
+  --text-4xs--line-height: 0.75rem;
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+  --shadow-glow-primary: var(--shadow-glow-primary);
+  --shadow-active-underline: var(--shadow-active-underline);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0.01ms;
+    --duration-normal: 0.01ms;
+    --duration-slow: 0.01ms;
+  }
+}

@@ -1,4 +1,4 @@
-import { type Mode, MODE_CONFIG } from "~/components/selectors/ModeSelector";
+import { type Mode, MODE_CONFIG } from "~/components/domain/selectors/ModeSelector";
 
 export function getEffectiveRankRange(
   mode: Mode,

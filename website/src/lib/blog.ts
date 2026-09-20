@@ -145,20 +145,20 @@ function rehypeBlogFigures() {
         ...props,
         loading: first ? "eager" : "lazy",
         fetchPriority: first ? "high" : undefined,
-        className: ["aspect-[4/3]", "w-full", "rounded-lg", "border", "border-border"],
+        className: ["aspect-4/3", "w-full"],
       };
       first = false;
       const figure: Element = {
         type: "element",
         tagName: "figure",
-        properties: { className: ["not-prose", "my-6"] },
+        properties: {},
         children: [svg ? { type: "raw", value: svg } : img],
       };
       if (typeof title === "string" && title) {
         figure.children.push({
           type: "element",
           tagName: "figcaption",
-          properties: { className: ["mt-2", "text-[13px]", "leading-snug", "text-muted-foreground"] },
+          properties: { className: ["text-sm", "leading-snug", "text-muted-foreground"] },
           children: [{ type: "text", value: title }],
         });
       }

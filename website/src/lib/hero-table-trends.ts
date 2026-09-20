@@ -1,7 +1,7 @@
 import type { AnalyticsHeroStats, HeroBanStats } from "deadlock_api_client";
 
-import type { StatTrendPoint } from "~/components/analytics/StatTrendChart";
-import type { StatFormat } from "~/components/games-page/stat-definitions";
+import type { StatFormat } from "~/components/features/games/stat-definitions";
+import type { StatTrendPoint } from "~/components/patterns/charts/StatTrendChart";
 import { BANS_PER_MATCH, computeBanRatesByBucket } from "~/lib/ban-rate";
 import { computeResiduals, computeZScores } from "~/lib/hero-scoring";
 
@@ -72,7 +72,9 @@ export function buildHeroTableTrend({
           value = normalizedPickrate ? row.matches / Math.max(...rows.map((hero) => hero.matches)) : pickrate;
           break;
         case "presence":
-          value = rates ? pickrate + (rates.get(heroId) ?? 0) : null;
+          // A bucket without ban data (unranked modes, the time before bans existed) counts as zero bans: the hero was
+          // still present through its picks, and a gap would read as missing data.
+          value = pickrate + (rates?.get(heroId) ?? 0);
           break;
         case "zScore":
         case "residual": {

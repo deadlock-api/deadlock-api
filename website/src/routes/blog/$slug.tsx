@@ -1,9 +1,20 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRight, Calendar, Clock, Tag } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, Clock } from "lucide-react";
 
+import { LinkCard } from "~/components/patterns/content/LinkCard";
+import { MetaItem, MetaList } from "~/components/patterns/content/MetaList";
+import { Prose } from "~/components/patterns/content/Prose";
+import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { PageShell } from "~/components/patterns/page/PageShell";
+import { Section } from "~/components/patterns/page/Section";
+import { Button } from "~/components/ui/button";
+import { Separator } from "~/components/ui/separator";
+import { Inline, Stack } from "~/components/ui/stack";
+import { TextLink } from "~/components/ui/text-link";
 import { fetchBlogPost } from "~/lib/blog-fns";
 import { SITE_URL, getBlogOGImage, seo } from "~/lib/seo";
-import { cn } from "~/lib/utils";
+
+import { TagBadge } from "./-tag-badge";
 
 export const Route = createFileRoute("/blog/$slug")({
   loader: async ({ params }) => {
@@ -85,33 +96,17 @@ function formatDate(dateStr: string): string {
   });
 }
 
-const tagColors: Record<string, string> = {
-  announcement: "bg-primary/15 text-primary border-primary/30",
-  community: "bg-blue-500/15 text-blue-400 border-blue-500/30",
-  data: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-  guide: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  engineering: "bg-violet-500/15 text-violet-400 border-violet-500/30",
-  infrastructure: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",
-  meta: "bg-rose-500/15 text-rose-400 border-rose-500/30",
-  patch: "bg-orange-500/15 text-orange-400 border-orange-500/30",
-};
-
-const proseClasses =
-  "prose prose-invert max-w-none md:prose-p:text-justify md:prose-p:hyphens-auto prose-p:text-pretty prose-headings:font-semibold prose-headings:tracking-tight prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-2xl prose-h3:mt-7 prose-h3:mb-3 prose-h3:text-lg prose-p:leading-relaxed prose-p:text-muted-foreground prose-a:text-primary prose-a:no-underline prose-a:hover:underline prose-strong:text-foreground prose-li:text-muted-foreground prose-ol:text-muted-foreground prose-ul:text-muted-foreground prose-img:rounded-lg prose-img:border prose-img:border-border prose-pre:bg-muted/50 prose-pre:border prose-pre:border-border prose-code:text-foreground";
-
 function PostNotFound() {
   return (
-    <div className="flex flex-col items-center justify-center py-20">
-      <h1 className="mb-2 text-3xl font-bold">Post not found</h1>
-      <p className="mb-6 text-muted-foreground">The blog post you're looking for doesn't exist.</p>
-      <Link
-        to="/blog"
-        className="flex items-center gap-2 text-sm font-medium text-primary transition-colors hover:text-primary/80"
-      >
-        <ArrowLeft className="size-4" />
-        Back to blog
-      </Link>
-    </div>
+    <PageShell width="prose" density="content" className="items-center py-20">
+      <PageHeader size="lg" title="Post not found" description="The blog post you're looking for doesn't exist." />
+      <Button asChild variant="link">
+        <Link to="/blog">
+          <ArrowLeft />
+          Back to blog
+        </Link>
+      </Button>
+    </PageShell>
   );
 }
 
@@ -124,27 +119,17 @@ function NeighbourPostLink({
 }) {
   const newer = direction === "newer";
   return (
-    <Link
-      to="/blog/$slug"
-      params={{ slug: post.slug }}
-      preload="intent"
-      className={cn(
-        "group flex min-w-0 items-center gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-muted/50",
-        newer && "text-right sm:flex-row-reverse",
-      )}
+    <LinkCard
+      asChild
+      size="sm"
+      orientation="horizontal"
+      mediaPosition={newer ? "end" : "start"}
+      media={newer ? <ArrowRight /> : <ArrowLeft />}
+      eyebrow={newer ? "Newer post" : "Older post"}
+      title={post.title}
     >
-      {newer ? (
-        <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
-      ) : (
-        <ArrowLeft className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
-      )}
-      <span className="min-w-0 flex-1">
-        <span className="block text-xs text-muted-foreground">{newer ? "Newer post" : "Older post"}</span>
-        <span className="block truncate text-sm font-semibold text-foreground transition-colors group-hover:text-primary">
-          {post.title}
-        </span>
-      </span>
-    </Link>
+      <Link to="/blog/$slug" params={{ slug: post.slug }} preload="intent" />
+    </LinkCard>
   );
 }
 
@@ -152,80 +137,74 @@ function BlogPostPage() {
   const post = Route.useLoaderData();
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <Link
-        to="/blog"
-        className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="size-3.5" />
-        All posts
-      </Link>
-
-      <header className="mb-10 border-b border-border pb-8">
-        <h1 className="mb-4 text-4xl font-bold tracking-tight">{post.title}</h1>
-        <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <Calendar className="size-3.5" />
-            <time dateTime={post.date}>{formatDate(post.date)}</time>
-          </span>
-          <span className="text-border">|</span>
-          <span>{post.author}</span>
-          <span className="text-border">|</span>
-          <span className="flex items-center gap-1.5">
-            <Clock className="size-3.5" />
-            {post.readingMinutes} min read
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-2">
+    <PageShell width="prose" density="content">
+      <Stack gap={4}>
+        <PageHeader
+          size="lg"
+          align="start"
+          eyebrow={
+            <TextLink asChild tone="muted">
+              <Link to="/blog" className="inline-flex items-center gap-1.5">
+                <ArrowLeft className="size-3.5" />
+                All posts
+              </Link>
+            </TextLink>
+          }
+          title={post.title}
+          description={
+            <MetaList className="text-sm">
+              <MetaItem icon={<Calendar />}>
+                <time dateTime={post.date}>{formatDate(post.date)}</time>
+              </MetaItem>
+              <MetaItem>{post.author}</MetaItem>
+              <MetaItem icon={<Clock />}>{post.readingMinutes} min read</MetaItem>
+            </MetaList>
+          }
+        />
+        <Inline>
           {post.tags.map((tag) => (
-            <span
-              key={tag}
-              className={cn(
-                "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium",
-                tagColors[tag] ?? "border-border bg-muted text-muted-foreground",
-              )}
-            >
-              <Tag className="size-2.5" />
-              {tag}
-            </span>
+            <TagBadge key={tag} tag={tag} />
           ))}
-        </div>
-      </header>
+        </Inline>
+      </Stack>
+
+      <Separator />
 
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: HTML is rendered on the server from our own markdown */}
-      <article className={proseClasses} dangerouslySetInnerHTML={{ __html: post.html }} />
+      <Prose as="article" align="justify" dangerouslySetInnerHTML={{ __html: post.html }} />
 
       {(post.older || post.newer) && (
-        <nav aria-label="Older and newer posts" className="mt-12 grid gap-3 border-t border-border pt-8 sm:grid-cols-2">
-          {post.older ? <NeighbourPostLink post={post.older} direction="older" /> : <div />}
-          {post.newer && <NeighbourPostLink post={post.newer} direction="newer" />}
-        </nav>
+        <>
+          <Separator />
+          <nav aria-label="Older and newer posts" className="grid gap-3 sm:grid-cols-2">
+            {post.older ? <NeighbourPostLink post={post.older} direction="older" /> : <div />}
+            {post.newer && <NeighbourPostLink post={post.newer} direction="newer" />}
+          </nav>
+        </>
       )}
 
       {post.related.length > 0 && (
-        <section className="mt-12 border-t border-border pt-8">
-          <h2 className="mb-4 text-lg font-semibold">More posts</h2>
-          <div className="space-y-3">
-            {post.related.map((related) => (
-              <Link
-                key={related.slug}
-                to="/blog/$slug"
-                params={{ slug: related.slug }}
-                preload="intent"
-                className="group block rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-muted/50"
-              >
-                <div className="mb-1 text-xs text-muted-foreground">
-                  <time dateTime={related.date}>{formatDate(related.date)}</time>
-                </div>
-                <h3 className="text-sm font-semibold text-foreground transition-colors group-hover:text-primary">
-                  {related.title}
-                </h3>
-                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{related.description}</p>
-              </Link>
-            ))}
-          </div>
-        </section>
+        <>
+          <Separator />
+          <Section title="More posts">
+            <Stack gap={3}>
+              {post.related.map((related) => (
+                <LinkCard
+                  key={related.slug}
+                  asChild
+                  size="sm"
+                  eyebrow={<time dateTime={related.date}>{formatDate(related.date)}</time>}
+                  title={related.title}
+                  description={related.description}
+                  clamp={2}
+                >
+                  <Link to="/blog/$slug" params={{ slug: related.slug }} preload="intent" />
+                </LinkCard>
+              ))}
+            </Stack>
+          </Section>
+        </>
       )}
-    </div>
+    </PageShell>
   );
 }

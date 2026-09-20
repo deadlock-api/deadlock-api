@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import type { UseMatchHistoryResult } from "~/components/streamkit/widgets/MatchHistory/MatchHistory.types";
+import type { UseMatchHistoryResult } from "~/components/features/streamkit/widgets/MatchHistory/MatchHistory.types";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { matchHistoryQueryOptions } from "~/queries/match-history-queries";
 

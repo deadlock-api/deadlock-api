@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import type { GameMode } from "~/components/selectors/GameModeSelector";
+import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import type { Side } from "~/lib/team-builder/analysis";

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { AuthenticatedDashboard, PatronPageSkeleton } from "~/components/patron/AuthenticatedDashboard";
-import { UnauthenticatedState } from "~/components/patron/UnauthenticatedState";
+import { AuthenticatedDashboard, PatronPageSkeleton } from "~/components/features/patron/AuthenticatedDashboard";
+import { UnauthenticatedState } from "~/components/features/patron/UnauthenticatedState";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 import { usePatronAuth } from "~/hooks/usePatronAuth";
 import { seo } from "~/lib/seo";

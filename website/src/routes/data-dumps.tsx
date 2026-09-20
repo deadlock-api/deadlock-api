@@ -1,11 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2, Search, Terminal, X } from "lucide-react";
+import { Terminal } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { Suspense, lazy, useCallback, useMemo, useState } from "react";
 
-import { CopyButton } from "~/components/copy-button";
-import { LakeTableRow } from "~/components/data-dumps/TableRow";
+import { LakeTableRow } from "~/components/features/data-dumps/TableRow";
 import {
   type ColumnInfo,
   type LakeTable,
@@ -13,17 +12,27 @@ import {
   type PlaygroundTable,
   SQL_PLAYGROUND_DEFAULT_QUERY,
   lakeTables,
-} from "~/components/data-dumps/types";
-import { UsageInstructions } from "~/components/data-dumps/UsageInstructions";
-import { MANIFEST_URL, formatBytes, formatTimestamp } from "~/components/data-dumps/utils";
+} from "~/components/features/data-dumps/types";
+import { UsageInstructions } from "~/components/features/data-dumps/UsageInstructions";
+import { MANIFEST_URL, formatBytes, formatTimestamp } from "~/components/features/data-dumps/utils";
+import { CopyableUrl } from "~/components/patterns/code/CopyableCode";
+import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
+import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { PageShell } from "~/components/patterns/page/PageShell";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
+import { Card } from "~/components/ui/card";
+import { SearchInput } from "~/components/ui/search-input";
+import { Spinner } from "~/components/ui/spinner";
+import { Inline, Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Text } from "~/components/ui/text";
 import { prewarmDuckDb } from "~/lib/duckdb-client";
 import { seo } from "~/lib/seo";
 
 const SqlPlayground = lazy(() =>
-  import("~/components/data-dumps/SqlPlayground").then((m) => ({ default: m.SqlPlayground })),
+  import("~/components/features/data-dumps/SqlPlayground").then((m) => ({ default: m.SqlPlayground })),
 );
 
 export const Route = createFileRoute("/data-dumps")({
@@ -98,20 +107,17 @@ function DataDumps() {
   const totalFiles = useMemo(() => visibleTables.reduce((sum, t) => sum + t.files.length, 0), [visibleTables]);
 
   return (
-    <div className="space-y-6">
-      <section className="space-y-2 text-center">
-        <h1 className="text-3xl font-bold tracking-tight">MCP & Data Lake</h1>
-        <p className="mx-auto max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          The public tables of the Deadlock API database are exported every hour to a public data lake. Query it from
-          your AI assistant via MCP, attach it in DuckDB, or download the Parquet files for offline analysis, research,
-          or community projects. No credentials needed.
-        </p>
-      </section>
+    <PageShell density="content" width="wide">
+      <PageHeader
+        size="lg"
+        title="MCP & Data Lake"
+        description="The public tables of the Deadlock API database are exported every hour to a public data lake. Query it from your AI assistant via MCP, attach it in DuckDB, or download the Parquet files for offline analysis, research, or community projects. No credentials needed."
+      />
 
-      <div className="mx-auto max-w-5xl space-y-3">
+      <Stack gap={3}>
         <ManifestUrlBar onOpenPlayground={() => setPlaygroundOpen(true)} />
         <UsageInstructions />
-      </div>
+      </Stack>
 
       {playgroundOpen && (
         <Suspense fallback={null}>
@@ -126,104 +132,80 @@ function DataDumps() {
         </Suspense>
       )}
 
-      <div className="mx-auto max-w-5xl space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="px-1 text-sm text-muted-foreground">
+      <Stack gap={3}>
+        <Inline>
+          <Inline className="px-1 text-sm text-muted-foreground">
             {manifest.data ? (
               <>
                 Manifest v{manifest.data.version} · updated {formatTimestamp(manifest.data.generated_at)}
-                {manifest.isFetching && <Loader2 className="ml-2 inline size-3.5 animate-spin" />}
+                {manifest.isFetching && <Spinner size="sm" label="Refreshing manifest" />}
               </>
             ) : (
               "Tables"
             )}
-          </div>
-          <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
-            <SearchInput value={search} onChange={(v) => setSearch(v || null)} />
-          </div>
-        </div>
+          </Inline>
+          <SearchInput
+            size="sm"
+            placeholder="Search tables & columns…"
+            aria-label="Search tables and columns"
+            value={search}
+            onValueChange={(v) => setSearch(v || null)}
+            className="w-full sm:ms-auto sm:w-56"
+          />
+        </Inline>
 
         {manifest.isError ? (
-          <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-6 text-center text-sm text-destructive">
-            Failed to load the data lake manifest:{" "}
-            {manifest.error instanceof Error ? manifest.error.message : "Unknown error"}
-          </div>
+          <ErrorState
+            title="Failed to load the data lake manifest"
+            description={manifest.error instanceof Error ? manifest.error.message : "Unknown error"}
+            retrying={manifest.isFetching}
+            onRetry={() => void manifest.refetch()}
+          />
         ) : (
-          <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]">
+          <Card size="flush">
             <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead>Table</TableHead>
-                  <TableHead className="hidden w-16 text-right sm:table-cell">Files</TableHead>
-                  <TableHead className="hidden w-20 text-right md:table-cell">Rows</TableHead>
-                  <TableHead className="hidden w-24 text-right sm:table-cell">Size</TableHead>
+                  <TableHead className="hidden w-16 text-end sm:table-cell">Files</TableHead>
+                  <TableHead className="hidden w-20 text-end md:table-cell">Rows</TableHead>
+                  <TableHead className="hidden w-24 text-end sm:table-cell">Size</TableHead>
                   <TableHead className="hidden w-40 lg:table-cell">Data up to</TableHead>
-                  <TableHead className="w-20 text-right">Actions</TableHead>
+                  <TableHead className="w-20 text-end">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {manifest.isPending ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-10 text-center">
-                      <Loader2 className="mx-auto size-5 animate-spin text-muted-foreground" />
+                  <TableRow data-plain>
+                    <TableCell colSpan={6}>
+                      <LoadingState size="sm" text="Loading tables…" label="tables" className="py-6" />
                     </TableCell>
                   </TableRow>
                 ) : visibleTables.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
-                      {search ? "No table or column matches the search." : "No tables published yet."}
-                    </TableCell>
-                  </TableRow>
+                  <TableEmptyRow colSpan={6}>
+                    {search ? "No table or column matches the search." : "No tables published yet."}
+                  </TableEmptyRow>
                 ) : (
                   visibleTables.map((t) => <LakeTableRow key={t.name} table={t} matchedColumns={matchedColumns(t)} />)
                 )}
               </TableBody>
             </Table>
-          </div>
+          </Card>
         )}
 
         {manifest.data && visibleTables.length > 0 && (
-          <div className="flex justify-end px-1 text-xs text-muted-foreground tabular-nums">
+          <Text as="div" variant="caption" tone="muted" align="end" numeric="tabular" className="px-1">
             {visibleTables.length} tables · {totalFiles} files · {formatBytes(totalBytes)} total
-          </div>
+          </Text>
         )}
-      </div>
-    </div>
-  );
-}
-
-function SearchInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="relative min-w-0 flex-1 sm:flex-none">
-      <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
-      <Input
-        type="search"
-        placeholder="Search tables & columns…"
-        aria-label="Search tables and columns"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-8 w-full pl-8 text-xs sm:w-56"
-      />
-      {value && (
-        <button
-          type="button"
-          onClick={() => onChange("")}
-          className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          aria-label="Clear search"
-        >
-          <X className="size-3.5" />
-        </button>
-      )}
-    </div>
+      </Stack>
+    </PageShell>
   );
 }
 
 function ManifestUrlBar({ onOpenPlayground }: { onOpenPlayground: () => void }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-      <span className="shrink-0 text-xs font-semibold tracking-wider text-muted-foreground uppercase">Manifest</span>
-      <code className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">{MANIFEST_URL}</code>
-      <CopyButton iconOnly text={MANIFEST_URL} title="Copy manifest URL" />
+    <CopyableUrl label="Manifest" value={MANIFEST_URL} copyLabel="Copy manifest URL">
       <Button
         type="button"
         variant="outline"
@@ -235,12 +217,12 @@ function ManifestUrlBar({ onOpenPlayground }: { onOpenPlayground: () => void }) 
         onFocus={() => {
           void prewarmDuckDb();
         }}
-        className="h-7 shrink-0 gap-1.5 text-xs"
+        className="shrink-0 text-xs"
         title="Open SQL Playground"
       >
         <Terminal className="size-3.5" />
         SQL Playground
       </Button>
-    </div>
+    </CopyableUrl>
   );
 }

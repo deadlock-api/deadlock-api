@@ -1,8 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
 import * as React from "react";
 import { useEffect, useRef, useState } from "react";
 
+import { BulletItem, BulletList } from "~/components/patterns/content/BulletList";
+import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { PageShell } from "~/components/patterns/page/PageShell";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +19,10 @@ import {
 } from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { Heading } from "~/components/ui/heading";
+import { Stack } from "~/components/ui/stack";
+import { Text } from "~/components/ui/text";
+import { TextLink } from "~/components/ui/text-link";
 import { useSteamAuthCallback } from "~/hooks/useSteamAuthCallback";
 import { sendDataPrivacyRequest } from "~/lib/data-privacy-api";
 import { seo } from "~/lib/seo";
@@ -59,7 +66,7 @@ function DataPrivacyActionCard({
     confirmText: string;
   };
 }) {
-  const titleClassName = variant === "danger" ? "text-red-400" : "text-green-400";
+  const titleClassName = variant === "danger" ? "text-destructive" : "text-positive";
   const buttonVariant = variant === "danger" ? "destructive" : "default";
 
   const button = (
@@ -67,16 +74,10 @@ function DataPrivacyActionCard({
       onClick={confirmDialog ? undefined : onAction}
       variant={buttonVariant}
       className="w-full"
-      disabled={isLoading}
+      loading={isLoading}
+      loadingLabel="Processing"
     >
-      {isLoading ? (
-        <>
-          <Loader2 className="mr-2 size-4 animate-spin" />
-          Processing...
-        </>
-      ) : (
-        buttonText
-      )}
+      {isLoading ? "Processing..." : buttonText}
     </Button>
   );
 
@@ -86,35 +87,52 @@ function DataPrivacyActionCard({
         <CardTitle className={titleClassName}>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">{details}</p>
-        <ul className="ml-4 list-inside list-disc space-y-1 text-sm text-muted-foreground">
-          {listItems.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-        {notice}
-        {confirmDialog ? (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>{button}</AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle className={titleClassName}>{confirmDialog.title}</AlertDialogTitle>
-                <AlertDialogDescription className="space-y-3">{confirmDialog.description}</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={onAction} className="bg-red-600 hover:bg-red-700">
-                  {confirmDialog.confirmText}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        ) : (
-          button
-        )}
+      <CardContent>
+        <Stack gap={4}>
+          <Text as="p" tone="muted">
+            {details}
+          </Text>
+          <BulletList className="ps-4">
+            {listItems.map((item) => (
+              <BulletItem key={item} tone="muted">
+                {item}
+              </BulletItem>
+            ))}
+          </BulletList>
+          {notice}
+          {confirmDialog ? (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>{button}</AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className={titleClassName}>{confirmDialog.title}</AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <Stack gap={3}>{confirmDialog.description}</Stack>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={onAction} variant="destructive">
+                    {confirmDialog.confirmText}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          ) : (
+            button
+          )}
+        </Stack>
       </CardContent>
     </Card>
+  );
+}
+
+function InfoBlock({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <Stack gap={2}>
+      <Heading size="lg">{title}</Heading>
+      {children}
+    </Stack>
   );
 }
 
@@ -178,24 +196,17 @@ function DataPrivacy() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Data Privacy</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Manage your data privacy settings and control how your information is used
-        </p>
-      </div>
+    <PageShell density="content">
+      <PageHeader
+        size="lg"
+        title="Data Privacy"
+        description="Manage your data privacy settings and control how your information is used"
+      />
 
       {message && (
-        <Card className={`border ${message.type === "success" ? "border-green-500/50" : "border-destructive/50"}`}>
-          <CardContent className="p-6">
-            <p
-              className={`text-center font-medium ${message.type === "success" ? "text-green-400" : "text-destructive"}`}
-            >
-              {message.text}
-            </p>
-          </CardContent>
-        </Card>
+        <Alert variant={message.type === "success" ? "positive" : "destructive"}>
+          <AlertTitle>{message.text}</AlertTitle>
+        </Alert>
       )}
 
       <Card>
@@ -203,44 +214,42 @@ function DataPrivacy() {
           <CardTitle>What Data We Collect and Store</CardTitle>
           <CardDescription>Understanding how the Deadlock API handles your gaming data</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <h3 className="mb-2 text-lg font-semibold">Game Statistics</h3>
-            <p className="text-muted-foreground">
-              We collect and store publicly available game statistics from Deadlock matches.
-            </p>
-          </div>
+        <CardContent>
+          <Stack gap={4}>
+            <InfoBlock title="Game Statistics">
+              <p className="text-muted-foreground">
+                We collect and store publicly available game statistics from Deadlock matches.
+              </p>
+            </InfoBlock>
 
-          <div>
-            <h3 className="mb-2 text-lg font-semibold">Steam Account Information</h3>
-            <p className="text-muted-foreground">We may store your:</p>
-            <ul className="mt-2 ml-4 list-inside list-disc space-y-1 text-muted-foreground">
-              <li>Steam ID</li>
-              <li>Public profile information (username, avatar)</li>
-              <li>Match data</li>
-            </ul>
-          </div>
+            <InfoBlock title="Steam Account Information">
+              <p className="text-muted-foreground">We may store your:</p>
+              <BulletList className="ps-4 text-base">
+                <BulletItem tone="muted">Steam ID</BulletItem>
+                <BulletItem tone="muted">Public profile information (username, avatar)</BulletItem>
+                <BulletItem tone="muted">Match data</BulletItem>
+              </BulletList>
+            </InfoBlock>
 
-          <div>
-            <h3 className="mb-2 text-lg font-semibold">Data Usage</h3>
-            <p className="text-muted-foreground">
-              Your data is used to provide comprehensive game analytics, improve our services, and contribute to the
-              broader Deadlock community through aggregated statistics and insights.
-            </p>
-          </div>
+            <InfoBlock title="Data Usage">
+              <p className="text-muted-foreground">
+                Your data is used to provide comprehensive game analytics, improve our services, and contribute to the
+                broader Deadlock community through aggregated statistics and insights.
+              </p>
+            </InfoBlock>
 
-          <div>
-            <h3 className="mb-2 text-lg font-semibold">Website Analytics</h3>
-            <p className="text-muted-foreground">
-              We use PostHog (EU-hosted) in cookieless mode to understand how the website is used. It sets no cookies
-              and stores nothing in your browser; visitors are counted with a short-lived, non-reversible hash and are
-              never linked to a Steam account.
-            </p>
-          </div>
+            <InfoBlock title="Website Analytics">
+              <p className="text-muted-foreground">
+                We use PostHog (EU-hosted) in cookieless mode to understand how the website is used. It sets no cookies
+                and stores nothing in your browser; visitors are counted with a short-lived, non-reversible hash and are
+                never linked to a Steam account.
+              </p>
+            </InfoBlock>
+          </Stack>
         </CardContent>
       </Card>
 
-      <fieldset className="grid gap-6 border-0 p-0 md:grid-cols-2">
+      <fieldset className="grid gap-6 md:grid-cols-2">
         <legend className="sr-only">Privacy actions</legend>
         <DataPrivacyActionCard
           title="Request Data Deletion"
@@ -248,12 +257,14 @@ function DataPrivacy() {
           details="This will permanently delete all data associated with your Steam account and block future API requests, including:"
           listItems={["Match history and statistics", "Profile information", "Ranking data", "Any stored preferences"]}
           notice={
-            <div className="rounded-md border border-yellow-500/20 bg-yellow-500/10 p-3">
-              <p className="text-sm font-medium text-yellow-400">
-                ⚠️ Warning: This action is permanent and cannot be undone. Even if you re-enable tracking later, your
-                historical data may not be recovered.
-              </p>
-            </div>
+            <Alert variant="warning">
+              <AlertDescription>
+                <p>
+                  ⚠️ Warning: This action is permanent and cannot be undone. Even if you re-enable tracking later, your
+                  historical data may not be recovered.
+                </p>
+              </AlertDescription>
+            </Alert>
           }
           buttonText="Request Data Deletion"
           variant="danger"
@@ -270,13 +281,13 @@ function DataPrivacy() {
                   Once you confirm data deletion, all your information will be permanently removed from our systems,
                   including:
                 </p>
-                <ul className="ml-4 list-inside list-disc space-y-1">
-                  <li>Match history and statistics</li>
-                  <li>Profile information</li>
-                  <li>Ranking data</li>
-                  <li>Any stored preferences</li>
-                </ul>
-                <p className="font-semibold text-yellow-400">
+                <BulletList className="ps-4">
+                  <BulletItem tone="muted">Match history and statistics</BulletItem>
+                  <BulletItem tone="muted">Profile information</BulletItem>
+                  <BulletItem tone="muted">Ranking data</BulletItem>
+                  <BulletItem tone="muted">Any stored preferences</BulletItem>
+                </BulletList>
+                <p className="font-semibold text-warning">
                   Important: Even if you re-enable tracking later, we will not be able to recover your historical data.
                   You will start with a completely fresh profile.
                 </p>
@@ -297,12 +308,14 @@ function DataPrivacy() {
             "Contribute to community analytics",
           ]}
           notice={
-            <div className="rounded-md border border-blue-500/20 bg-blue-500/10 p-3">
-              <p className="text-sm text-blue-400">
-                <strong>Note:</strong> Re-enabling tracking will start fresh data collection. Any historical data from
-                before deletion may not be recovered.
-              </p>
-            </div>
+            <Alert variant="info">
+              <AlertDescription>
+                <p>
+                  <strong>Note:</strong> Re-enabling tracking will start fresh data collection. Any historical data from
+                  before deletion may not be recovered.
+                </p>
+              </AlertDescription>
+            </Alert>
           }
           buttonText="Re-enable Tracking"
           variant="safe"
@@ -315,34 +328,31 @@ function DataPrivacy() {
         <CardHeader>
           <CardTitle>Important Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <h3 className="mb-2 text-lg font-semibold">Authentication Process</h3>
-            <p className="text-muted-foreground">
-              Both actions require Steam OpenID authentication to verify your account ownership. You will be redirected
-              to Steam's secure login page and then back to this site.
-            </p>
-          </div>
+        <CardContent>
+          <Stack gap={4}>
+            <InfoBlock title="Authentication Process">
+              <p className="text-muted-foreground">
+                Both actions require Steam OpenID authentication to verify your account ownership. You will be
+                redirected to Steam's secure login page and then back to this site.
+              </p>
+            </InfoBlock>
 
-          <div>
-            <h3 className="mb-2 text-lg font-semibold">Processing Time</h3>
-            <p className="text-muted-foreground">
-              Data deletion requests are typically processed within 24-48 hours. Re-enabling tracking takes effect
-              immediately after verification.
-            </p>
-          </div>
+            <InfoBlock title="Processing Time">
+              <p className="text-muted-foreground">
+                Data deletion requests are typically processed within 24-48 hours. Re-enabling tracking takes effect
+                immediately after verification.
+              </p>
+            </InfoBlock>
 
-          <div>
-            <h3 className="mb-2 text-lg font-semibold">Contact</h3>
-            <p className="text-muted-foreground">
-              If you have questions about your data or need assistance, please contact us at{" "}
-              <a href="mailto:info@deadlock-api.com" className="text-primary hover:underline">
-                info@deadlock-api.com
-              </a>
-            </p>
-          </div>
+            <InfoBlock title="Contact">
+              <p className="text-muted-foreground">
+                If you have questions about your data or need assistance, please contact us at{" "}
+                <TextLink href="mailto:info@deadlock-api.com">info@deadlock-api.com</TextLink>
+              </p>
+            </InfoBlock>
+          </Stack>
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   );
 }

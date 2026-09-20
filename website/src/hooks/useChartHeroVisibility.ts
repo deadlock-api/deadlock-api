@@ -15,7 +15,7 @@ export function useHeroColorMap() {
     const map: Record<number, { name: string; color: string }> = {};
     for (const hero of assetsHeroes || []) {
       const uiColor = hero.colors?.style ?? hero.colors?.ui;
-      map[hero.id] = { name: hero.name, color: uiColor ? `rgb(${uiColor.join(",")})` : "#ffffff" };
+      map[hero.id] = { name: hero.name, color: uiColor ? `rgb(${uiColor.join(",")})` : "var(--foreground)" };
     }
     return map;
   }, [assetsHeroes]);

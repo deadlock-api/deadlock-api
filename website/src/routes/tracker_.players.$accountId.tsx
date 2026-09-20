@@ -4,21 +4,24 @@ import { ArrowLeft, Info } from "lucide-react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { QueryRenderer } from "~/components/QueryRenderer";
-import { EnemiesTab, MatesTab } from "~/components/tracker-page/breakdown/PlayerStatsTable";
-import { TrackerFilterBar } from "~/components/tracker-page/filters/TrackerFilterBar";
-import { HeroesTab } from "~/components/tracker-page/heroes/HeroesTab";
-import { MatchesTab } from "~/components/tracker-page/matches/MatchesTab";
-import { OverviewSkeleton } from "~/components/tracker-page/overview/OverviewSkeleton";
-import { OverviewTab } from "~/components/tracker-page/overview/OverviewTab";
-import { FeedbackNoticeDialog } from "~/components/tracker-page/shared/FeedbackNoticeDialog";
-import { PlayerHeader } from "~/components/tracker-page/shared/PlayerHeader";
-import { TrackerEmptyState } from "~/components/tracker-page/shared/TrackerEmptyState";
-import { TrackerGate } from "~/components/tracker-page/shared/TrackerGate";
-import { TrackerQueryError } from "~/components/tracker-page/shared/TrackerQueryError";
-import { TrackerQueryPaused } from "~/components/tracker-page/shared/TrackerQueryPaused";
+import { EnemiesTab, MatesTab } from "~/components/features/tracker/breakdown/PlayerStatsTable";
+import { TrackerFilterBar } from "~/components/features/tracker/filters/TrackerFilterBar";
+import { HeroesTab } from "~/components/features/tracker/heroes/HeroesTab";
+import { MatchesTab } from "~/components/features/tracker/matches/MatchesTab";
+import { OverviewSkeleton } from "~/components/features/tracker/overview/OverviewSkeleton";
+import { OverviewTab } from "~/components/features/tracker/overview/OverviewTab";
+import { FeedbackNoticeDialog } from "~/components/features/tracker/shared/FeedbackNoticeDialog";
+import { PlayerHeader } from "~/components/features/tracker/shared/PlayerHeader";
+import { TrackerEmptyState } from "~/components/features/tracker/shared/TrackerEmptyState";
+import { TrackerGate } from "~/components/features/tracker/shared/TrackerGate";
+import { TrackerQueryPaused } from "~/components/features/tracker/shared/TrackerQueryPaused";
+import { PageShell } from "~/components/patterns/page/PageShell";
+import { Section } from "~/components/patterns/page/Section";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
+import { QueryRenderer } from "~/components/patterns/states/QueryRenderer";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
+import { Heading } from "~/components/ui/heading";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 import { useTrackerFilters } from "~/hooks/useTrackerFilters";
 import { prefetchSafe } from "~/lib/prefetch-safe";
@@ -183,7 +186,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <PageShell>
       <FeedbackNoticeDialog />
       <PlayerHeader accountId={accountId} entries={historyQuery.data} ranks={ranks} onOpenMatch={openMatch}>
         <TrackerFilterBar
@@ -209,7 +212,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
           }
         />
       ) : historyQuery.isError ? (
-        <TrackerQueryError
+        <ErrorState
           title={historyQuery.data ? "Could not refresh match history" : "Could not load match history"}
           description={
             historyQuery.data
@@ -217,7 +220,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
               : "Your match history is temporarily unavailable. Try loading it again."
           }
           onRetry={() => historyQuery.refetch()}
-          isRetrying={historyQuery.isFetching}
+          retrying={historyQuery.isFetching}
         />
       ) : null}
 
@@ -247,7 +250,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
         aria-label={
           tab === "matches" ? "Player overview" : tab === "heroes" ? "All hero stats" : "Teammate and opponent stats"
         }
-        className="flex min-w-0 scroll-mt-4 flex-col gap-3 outline-none"
+        className="flex min-w-0 scroll-mt-4 flex-col gap-3"
       >
         {tab !== "matches" && (
           <div className="flex flex-wrap items-center gap-3">
@@ -262,9 +265,9 @@ function TrackerContent({ accountId }: { accountId: number }) {
               <ArrowLeft data-icon="inline-start" />
               Back to overview
             </Button>
-            <h2 className="text-sm font-semibold">
+            <Heading as="h2" size="sm">
               {tab === "heroes" ? "All Hero Stats" : "Teammate & Opponent Stats"}
-            </h2>
+            </Heading>
           </div>
         )}
         {tab === "matches" && (
@@ -333,17 +336,15 @@ function TrackerContent({ accountId }: { accountId: number }) {
 
         {tab === "mates" && (
           <div className="grid gap-6 xl:grid-cols-2">
-            <div className="min-w-0">
-              <h3 className="mb-2 text-lg font-semibold">Mates</h3>
+            <Section as="h3" title="Mates" className="gap-2">
               <MatesTab onOpenMatch={openMatch} accountId={accountId} filters={filters} entries={filteredEntries} />
-            </div>
-            <div className="min-w-0">
-              <h3 className="mb-2 text-lg font-semibold">Enemies</h3>
+            </Section>
+            <Section as="h3" title="Enemies" className="gap-2">
               <EnemiesTab onOpenMatch={openMatch} accountId={accountId} filters={filters} entries={filteredEntries} />
-            </div>
+            </Section>
           </div>
         )}
       </section>
-    </div>
+    </PageShell>
   );
 }

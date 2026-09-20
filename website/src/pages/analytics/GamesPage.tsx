@@ -2,13 +2,14 @@ import type { AnalyticsApiGameStatsRequest, GameStatsBucketEnum } from "deadlock
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense } from "react";
 
-import { DataPageHeader } from "~/components/analytics/DataPageHeader";
-import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
-import { Filter } from "~/components/Filter";
-import GamesOverview from "~/components/games-page/GamesOverview";
-import { ALL_STAT_KEYS } from "~/components/games-page/stat-definitions";
-import { LoadingLogo } from "~/components/LoadingLogo";
-import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
+import { Filter } from "~/components/domain/filters";
+import GamesOverview from "~/components/features/games/GamesOverview";
+import { ALL_STAT_KEYS } from "~/components/features/games/stat-definitions";
+import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigation/ResponsiveTabsList";
+import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { PageShell } from "~/components/patterns/page/PageShell";
+import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { useAnalyticsTab } from "~/hooks/useAnalyticsTab";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
@@ -16,9 +17,9 @@ import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 
-const GamesOverTimeChart = lazy(() => import("~/components/games-page/GamesOverTimeChart"));
-const GamesByRankChart = lazy(() => import("~/components/games-page/GamesByRankChart"));
-const EconomyTab = lazy(() => import("~/components/games-page/EconomyTab"));
+const GamesOverTimeChart = lazy(() => import("~/components/features/games/GamesOverTimeChart"));
+const GamesByRankChart = lazy(() => import("~/components/features/games/GamesByRankChart"));
+const EconomyTab = lazy(() => import("~/components/features/games/EconomyTab"));
 
 export function Games() {
   const [tab, setTab] = useAnalyticsTab("games");
@@ -68,57 +69,54 @@ export function Games() {
       : null;
 
   return (
-    <div className="flex flex-col gap-3">
-      <DataPageHeader title="Deadlock Game Stats" description="Aggregate match statistics and trends">
+    <PageShell>
+      <PageHeader title="Deadlock Game Stats" description="Aggregate match statistics and trends">
         <p>
           Track Deadlock match trends including average kills, deaths, game duration, and more. View stats over time,
           compare across ranks, and spot meta shifts as patches roll out.
         </p>
-      </DataPageHeader>
+      </PageHeader>
 
       <Filter.Root>
         <Filter.ModeWithRank
-          mode={mode}
-          onModeChange={setMode}
-          minRank={minRankId}
-          maxRank={maxRankId}
-          onRankChange={(min, max) => {
-            setMinRankId(min);
-            setMaxRankId(max);
+          value={{ mode, rank: [minRankId, maxRankId] }}
+          onValueChange={(next) => {
+            if (next.mode !== mode) setMode(next.mode);
+            if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
+              setMinRankId(next.rank[0]);
+              setMaxRankId(next.rank[1]);
+            }
           }}
         />
         <Filter.SeasonPatchDate
-          startDate={startDate}
-          endDate={endDate}
-          onDateChange={handleDateChange}
+          value={{ startDate, endDate }}
+          onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
           resetRange={defaultRange}
         />
         <Filter.MatchDuration
-          minTime={minDurationS ?? undefined}
-          maxTime={maxDurationS ?? undefined}
-          onTimeChange={(min, max) => {
+          value={[minDurationS ?? undefined, maxDurationS ?? undefined]}
+          onValueChange={([min, max]) => {
             setMinDurationS(min ?? null);
             setMaxDurationS(max ?? null);
           }}
         />
       </Filter.Root>
 
-      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="tabs-nav w-full">
+      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
         <ResponsiveTabsList
-          ariaLabel="Game stats sections"
+          aria-label="Game stats sections"
           value={tab ?? undefined}
           onValueChange={(value) => setTab(value as typeof tab)}
-          options={[
-            { value: "overview", label: "Overview" },
-            { value: "over-time", label: "Over Time" },
-            { value: "by-rank", label: "By Rank" },
-            { value: "economy", label: "Economy" },
-          ]}
-        />
+        >
+          <ResponsiveTab value="overview">Overview</ResponsiveTab>
+          <ResponsiveTab value="over-time">Over Time</ResponsiveTab>
+          <ResponsiveTab value="by-rank">By Rank</ResponsiveTab>
+          <ResponsiveTab value="economy">Economy</ResponsiveTab>
+        </ResponsiveTabsList>
 
         <TabsContent value="overview">
           <ChunkErrorBoundary>
-            <Suspense fallback={<LoadingLogo />}>
+            <Suspense fallback={<LoadingState />}>
               <GamesOverview
                 params={baseParams}
                 prevParams={prevParams}
@@ -134,7 +132,7 @@ export function Games() {
 
         <TabsContent value="over-time">
           <ChunkErrorBoundary>
-            <Suspense fallback={<LoadingLogo />}>
+            <Suspense fallback={<LoadingState />}>
               <GamesOverTimeChart
                 params={baseParams}
                 stat={stat}
@@ -149,7 +147,7 @@ export function Games() {
 
         <TabsContent value="by-rank">
           <ChunkErrorBoundary>
-            <Suspense fallback={<LoadingLogo />}>
+            <Suspense fallback={<LoadingState />}>
               <GamesByRankChart params={baseParams} stat={stat} onStatChange={setStat} isStreetBrawl={isStreetBrawl} />
             </Suspense>
           </ChunkErrorBoundary>
@@ -157,12 +155,12 @@ export function Games() {
 
         <TabsContent value="economy">
           <ChunkErrorBoundary>
-            <Suspense fallback={<LoadingLogo />}>
+            <Suspense fallback={<LoadingState />}>
               <EconomyTab params={baseParams} isStreetBrawl={isStreetBrawl} />
             </Suspense>
           </ChunkErrorBoundary>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageShell>
   );
 }

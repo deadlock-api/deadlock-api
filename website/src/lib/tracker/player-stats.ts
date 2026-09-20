@@ -1,4 +1,5 @@
 import type { TrackerMatchMetadata, TrackerMatchPlayer } from "~/queries/tracker-queries";
+import type { Color } from "~/types/general";
 
 import { timeDeadInMatch } from "./fights";
 
@@ -11,7 +12,8 @@ export interface PlayerStatColumn {
   label: string;
   value: (player: TrackerMatchPlayer) => number;
   format: (value: number) => string;
-  barClassName: string;
+  /** The fill drawn behind the value in the cell, as a CSS color. */
+  barColor: Color;
   /** Container width the column appears at; narrower panels list it under the player instead. */
   reveal: keyof typeof REVEAL;
 }
@@ -43,7 +45,7 @@ export const PLAYER_STAT_COLUMNS: PlayerStatColumn[] = [
     label: "Souls",
     value: (player) => player.net_worth,
     format: whole,
-    barClassName: "bg-amber-500/15",
+    barColor: "var(--warning)",
     reveal: "always",
   },
   {
@@ -52,7 +54,7 @@ export const PLAYER_STAT_COLUMNS: PlayerStatColumn[] = [
     label: "Hero damage",
     value: (player) => player.player_damage,
     format: compactNumber,
-    barClassName: "bg-primary/15",
+    barColor: "var(--primary)",
     reveal: "sm",
   },
   {
@@ -61,7 +63,7 @@ export const PLAYER_STAT_COLUMNS: PlayerStatColumn[] = [
     label: "Last hits",
     value: (player) => player.last_hits,
     format: whole,
-    barClassName: "bg-sky-500/15",
+    barColor: "var(--info)",
     reveal: "md",
   },
   {
@@ -70,7 +72,7 @@ export const PLAYER_STAT_COLUMNS: PlayerStatColumn[] = [
     label: "Denies",
     value: (player) => player.denies,
     format: whole,
-    barClassName: "bg-sky-500/15",
+    barColor: "var(--info)",
     reveal: "md",
   },
   {
@@ -79,7 +81,7 @@ export const PLAYER_STAT_COLUMNS: PlayerStatColumn[] = [
     label: "Damage taken",
     value: (player) => player.player_damage_taken,
     format: compactNumber,
-    barClassName: "bg-orange-500/15",
+    barColor: "var(--chart-5)",
     reveal: "lg",
   },
   {
@@ -88,7 +90,7 @@ export const PLAYER_STAT_COLUMNS: PlayerStatColumn[] = [
     label: "Objective damage",
     value: (player) => player.boss_damage,
     format: compactNumber,
-    barClassName: "bg-violet-500/15",
+    barColor: "var(--chart-6)",
     reveal: "lg",
   },
   {
@@ -97,7 +99,7 @@ export const PLAYER_STAT_COLUMNS: PlayerStatColumn[] = [
     label: "Healing",
     value: (player) => player.player_healing,
     format: compactNumber,
-    barClassName: "bg-emerald-500/15",
+    barColor: "var(--positive)",
     reveal: "lg",
   },
 ];
