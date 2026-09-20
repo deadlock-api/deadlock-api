@@ -31,7 +31,6 @@ function HeroNameView({
   loading = false,
   linkToDetail = false,
   className,
-  onClick,
   ...props
 }: HeroNameLook & { hero: SlimHero | undefined; loading?: boolean }) {
   if (loading) {
@@ -52,7 +51,7 @@ function HeroNameView({
         // Rows that hold this name are often clickable themselves (expand, select); the link must not trigger them.
         onClick={(event) => {
           event.stopPropagation();
-          onClick?.(event);
+          props.onClick?.(event);
         }}
       >
         {name}
@@ -61,7 +60,7 @@ function HeroNameView({
   }
 
   return (
-    <span title={name} className={cn("truncate", className)} onClick={onClick} {...props}>
+    <span title={name} className={cn("truncate", className)} {...props}>
       {name}
     </span>
   );

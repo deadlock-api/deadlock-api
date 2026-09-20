@@ -31,7 +31,6 @@ function ItemNameView({
   loading = false,
   linkToDetail = false,
   className,
-  onClick,
   ...props
 }: ItemNameLook & { item: Upgrade | undefined; loading?: boolean }) {
   if (loading) {
@@ -52,7 +51,7 @@ function ItemNameView({
         // Rows that hold this name are often clickable themselves (expand, select); the link must not trigger them.
         onClick={(event) => {
           event.stopPropagation();
-          onClick?.(event);
+          props.onClick?.(event);
         }}
       >
         {name}
@@ -61,7 +60,7 @@ function ItemNameView({
   }
 
   return (
-    <span title={name} className={cn("truncate", className)} onClick={onClick} {...props}>
+    <span title={name} className={cn("truncate", className)} {...props}>
       {name}
     </span>
   );
