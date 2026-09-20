@@ -4,14 +4,17 @@ import type { BadgeDistribution, Rank } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Suspense, useMemo } from "react";
 
-import { DataPageHeader } from "~/components/analytics/DataPageHeader";
+import { Filter } from "~/components/domain/filters";
+import type { MatchTimeRange } from "~/components/domain/selectors/MatchTimeRangeSelector";
 import BadgeDistributionChart, {
   BADGE_DISTRIBUTION_METRICS,
-} from "~/components/badge-distribution/BadgeDistributionChart";
-import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
-import { Filter } from "~/components/Filter";
-import { LoadingLogo } from "~/components/LoadingLogo";
-import { combineQueryStates } from "~/components/QueryRenderer";
+} from "~/components/features/badge-distribution/BadgeDistributionChart";
+import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { PageShell } from "~/components/patterns/page/PageShell";
+import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { combineQueryStates } from "~/components/patterns/states/QueryRenderer";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { prefetchSafe } from "~/lib/prefetch-safe";
@@ -98,7 +101,7 @@ function BadgeDistributionPage() {
     maxDurationS: maxDurationS ?? undefined,
   };
 
-  const handleDurationChange = (min: number | undefined, max: number | undefined) => {
+  const handleDurationChange = ([min, max]: MatchTimeRange) => {
     setMinDurationS(min ?? null);
     setMaxDurationS(max ?? null);
   };
@@ -119,41 +122,42 @@ function BadgeDistributionPage() {
   );
 
   return (
-    <div className="flex flex-col gap-3">
-      <DataPageHeader
-        title="Deadlock Rank Distribution"
-        description="Average match rank distribution across all badges"
-      >
+    <PageShell height="viewport">
+      <PageHeader title="Deadlock Rank Distribution" description="Average match rank distribution across all badges">
         {rankNames.length > 1 && (
           <p>
             Deadlock ranks climb from {rankNames.slice(0, -1).join(", ")} to {rankNames.at(-1)}, with every rank except{" "}
             {rankNames[0]} split into 6 subrank badges.
           </p>
         )}
-      </DataPageHeader>
+      </PageHeader>
       <Filter.Root>
         <Filter.MatchDuration
-          minTime={minDurationS ?? undefined}
-          maxTime={maxDurationS ?? undefined}
-          onTimeChange={handleDurationChange}
+          value={[minDurationS ?? undefined, maxDurationS ?? undefined]}
+          onValueChange={handleDurationChange}
         />
         <Filter.SeasonPatchDate
-          startDate={startDate}
-          endDate={endDate}
-          onDateChange={handleDateChange}
+          value={{ startDate, endDate }}
+          onValueChange={({ startDate: start, endDate: end, action }) => handleDateChange(start, end, action)}
           resetRange={defaultRange}
         />
       </Filter.Root>
-      <div className="flex h-[60dvh] items-center justify-center">
+      <div className="flex min-h-0 flex-1 items-center justify-center">
         {isPending ? (
-          <div className="flex items-center justify-center">
-            <LoadingLogo />
-          </div>
+          <LoadingState label="rank distribution" />
         ) : isError ? (
-          <div className="text-center text-sm text-destructive">Failed to load rank distribution: {error?.message}</div>
+          <ErrorState
+            title="Failed to load rank distribution"
+            description={error?.message}
+            retrying={badgeDistributionQuery.isFetching || ranks.isFetching}
+            onRetry={() => {
+              if (badgeDistributionQuery.isError) void badgeDistributionQuery.refetch();
+              if (ranks.isError) void ranks.refetch();
+            }}
+          />
         ) : badgeDistributionQuery.data ? (
           <ChunkErrorBoundary>
-            <Suspense fallback={<LoadingLogo />}>
+            <Suspense fallback={<LoadingState label="rank distribution chart" />}>
               <BadgeDistributionChart
                 badgeDistributionData={badgeDistributionQuery.data}
                 ranksData={ranks.data ?? []}
@@ -164,6 +168,6 @@ function BadgeDistributionPage() {
           </ChunkErrorBoundary>
         ) : null}
       </div>
-    </div>
+    </PageShell>
   );
 }

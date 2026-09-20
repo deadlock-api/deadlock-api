@@ -1,17 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import type { Upgrade } from "deadlock_api_client";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, Check, RotateCcw, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { LoadingLogo } from "~/components/LoadingLogo";
-import { Button } from "~/components/ui/button";
-import { Checkbox } from "~/components/ui/checkbox";
-import { Label } from "~/components/ui/label";
+import { AnswerOption, revealedState } from "~/components/domain/minigames/AnswerOption";
+import {
+  EMPTY_FLASHCARD_STATS,
+  FlashcardMastered,
+  FlashcardPage,
+  FlashcardStatStrip,
+  NoRepeatsToggle,
+  PromptFrame,
+  ResultMark,
+} from "~/components/features/flashcards/FlashcardChrome";
+import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { Inline, Stack } from "~/components/ui/stack";
+import { Text } from "~/components/ui/text";
 import { useHydrated } from "~/hooks/useHydrated";
 import { seo } from "~/lib/seo";
-import { cn } from "~/lib/utils";
 import { filterShopableItems, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 
 const OPTION_COUNT = 4;
@@ -198,11 +206,7 @@ function ItemUpgradePathFlashcards() {
   }, [items]);
 
   if (isLoading || !hydrated) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <LoadingLogo className="h-16 w-16 animate-pulse" />
-      </div>
-    );
+    return <LoadingState label="flashcards" />;
   }
 
   return <ItemUpgradePathFlashcardsReady pool={pool} />;
@@ -211,7 +215,7 @@ function ItemUpgradePathFlashcards() {
 function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) {
   const [card, setCard] = useState<UpgradePathCard | null>(() => (pool.length > 0 ? pickCard(pool, new Set()) : null));
   const [selected, setSelected] = useState<string | null>(null);
-  const [stats, setStats] = useState({ correct: 0, seen: 0, streak: 0, bestStreak: 0 });
+  const [stats, setStats] = useState(EMPTY_FLASHCARD_STATS);
   const [seenIds, setSeenIds] = useState<Set<number>>(new Set());
   const [noRepeats, setNoRepeats] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -229,7 +233,7 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
 
   const resetGame = useCallback(() => {
     clearAdvanceTimer();
-    setStats({ correct: 0, seen: 0, streak: 0, bestStreak: 0 });
+    setStats(EMPTY_FLASHCARD_STATS);
     setSelected(null);
     setSeenIds(new Set());
     setCard(pool.length > 0 ? pickCard(pool, new Set()) : null);
@@ -280,102 +284,27 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
     [card, selected, seenIds, pool],
   );
 
-  const accuracy = stats.seen > 0 ? Math.round((stats.correct / stats.seen) * 100) : 0;
   const empty = pool.length === 0;
   const exhausted = noRepeats && pool.length > 0 && seenIds.size >= pool.length;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, ease: "easeOut" }}
-      className="mx-auto max-w-4xl px-4 py-8"
-    >
-      <div className="mb-6">
-        <Link
-          to="/games/flashcards"
-          className="mb-4 inline-flex items-center gap-1.5 font-mono text-xs tracking-wider text-muted-foreground/50 uppercase transition-colors hover:text-primary"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          Back to Hub
-        </Link>
-        <h1 className="bg-linear-to-b from-foreground to-foreground/50 bg-clip-text font-game text-2xl tracking-tight text-transparent uppercase">
-          Item Upgrade Paths
-        </h1>
-        <p className="mt-1 font-mono text-sm text-muted-foreground/60">
-          Match each upgraded item to its direct component path.
-        </p>
-      </div>
+    <FlashcardPage title="Item Upgrade Paths" subtitle="Match each upgraded item to its direct component path.">
+      <FlashcardStatStrip stats={stats} onReset={resetGame} />
 
-      <div className="mb-3 flex flex-wrap items-center gap-3 border border-border bg-card/40 px-4 py-3 font-mono text-xs tracking-wider uppercase">
-        <Stat label="Correct" value={`${stats.correct}/${stats.seen}`} />
-        <Divider />
-        <Stat label="Accuracy" value={`${accuracy}%`} />
-        <Divider />
-        <Stat label="Streak" value={`${stats.streak}`} highlight={stats.streak >= 3} />
-        <Divider />
-        <Stat label="Best" value={`${stats.bestStreak}`} />
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={resetGame}
-          disabled={stats.seen === 0}
-          className="ml-auto h-7 gap-1.5 px-2 text-xs"
-        >
-          <RotateCcw className="size-3" />
-          Reset
-        </Button>
-      </div>
-
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 px-1 font-mono text-xs tracking-wider uppercase">
-        <Label
-          htmlFor="flashcard-upgrade-no-repeats"
-          className="flex cursor-pointer items-center gap-2 text-muted-foreground/70 hover:text-foreground"
-        >
-          <Checkbox
-            id="flashcard-upgrade-no-repeats"
-            checked={noRepeats}
-            onCheckedChange={(value) => updateNoRepeats(value === true)}
-          />
-          <span>No repeats</span>
-          {noRepeats && (
-            <span className="text-muted-foreground/40 normal-case">
-              ({seenIds.size}/{pool.length} mastered)
-            </span>
-          )}
-        </Label>
+      <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-xs tracking-wider uppercase">
+        <NoRepeatsToggle
+          id="flashcard-upgrade-no-repeats"
+          checked={noRepeats}
+          onCheckedChange={updateNoRepeats}
+          mastered={seenIds.size}
+          total={pool.length}
+        />
       </div>
 
       {empty ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-          className="flex flex-col items-center gap-4 border border-border bg-card/40 px-6 py-12 text-center"
-        >
-          <p className="font-mono text-sm tracking-wider text-muted-foreground/70 uppercase">No upgrade paths found.</p>
-        </motion.div>
+        <EmptyState title="No upgrade paths found." />
       ) : exhausted || !card ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-          className="flex flex-col items-center gap-4 border border-green-500/30 bg-green-500/5 px-6 py-12 text-center"
-        >
-          <div className="flex size-12 items-center justify-center rounded-full bg-green-500/15 text-green-400">
-            <Check className="size-6" />
-          </div>
-          <div>
-            <p className="font-game text-xl tracking-tight text-foreground uppercase">All upgrade paths mastered</p>
-            <p className="mt-1 font-mono text-xs tracking-wider text-muted-foreground/60 uppercase">
-              You got {stats.correct}/{stats.seen} correct ({accuracy}%)
-            </p>
-          </div>
-          <Button onClick={resetGame} variant="outline" className="gap-2">
-            <RotateCcw className="size-4" />
-            Play again
-          </Button>
-        </motion.div>
+        <FlashcardMastered label="All upgrade paths mastered" stats={stats} onReset={resetGame} />
       ) : (
         <AnimatePresence mode="wait">
           <motion.div
@@ -386,39 +315,35 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
             transition={{ duration: 0.18, ease: "easeOut" }}
             className="flex flex-col items-center gap-6"
           >
-            <div
-              className={cn(
-                "flex w-full max-w-xl items-center gap-4 border bg-muted/25 p-4 ring-1 transition-colors duration-200",
-                selected === null
-                  ? "border-border/80 ring-border/30"
-                  : selected === card.answer.answerKey
-                    ? "border-green-500/50 ring-green-500/30"
-                    : "border-primary/50 ring-primary/30",
-              )}
+            <PromptFrame
+              verdict={selected === null ? null : selected === card.answer.answerKey ? "correct" : "wrong"}
+              className="w-full max-w-xl flex-row items-center gap-4 p-4"
             >
               <img
                 src={itemImageSrc(card.answer.target)}
                 alt={card.answer.target.name}
-                className="size-20 shrink-0 rounded-sm object-contain sm:size-24"
+                className="size-20 shrink-0 object-contain sm:size-24"
                 draggable={false}
               />
-              <div className="min-w-0 flex-1">
-                <div className="font-mono text-[10px] tracking-wider text-muted-foreground/50 uppercase">
-                  Upgraded item
+              <Stack gap={1} className="flex-1">
+                <div>
+                  <Text as="div" variant="eyebrow" className="font-mono">
+                    Upgraded item
+                  </Text>
+                  <div className="truncate text-lg font-semibold text-foreground">{card.answer.target.name}</div>
                 </div>
-                <div className="truncate text-lg font-semibold text-foreground">{card.answer.target.name}</div>
-                <div className="mt-1 flex flex-wrap items-center gap-2 font-mono text-xs tracking-wider text-muted-foreground/60 uppercase">
+                <div className="flex flex-wrap items-center gap-2 font-mono text-xs tracking-wider text-muted-foreground uppercase">
                   <span>{card.answer.target.item_slot_type}</span>
-                  <span className="text-muted-foreground/25">|</span>
+                  <span className="text-muted-foreground">|</span>
                   <span>Tier {card.answer.target.item_tier}</span>
                   {card.answer.target.cost != null && (
                     <>
-                      <span className="text-muted-foreground/25">|</span>
+                      <span className="text-muted-foreground">|</span>
                       <span>{card.answer.target.cost.toLocaleString("en-US")} souls</span>
                     </>
                   )}
                 </div>
-              </div>
+              </Stack>
               <AnimatePresence>
                 {selected !== null && (
                   <motion.div
@@ -426,81 +351,46 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.18, ease: "easeOut" }}
-                    className={cn(
-                      "flex size-9 shrink-0 items-center justify-center rounded-full border-2 shadow-lg",
-                      selected === card.answer.answerKey
-                        ? "border-green-400 bg-green-500 text-white"
-                        : "border-primary/70 bg-primary text-primary-foreground",
-                    )}
                   >
-                    {selected === card.answer.answerKey ? <Check className="size-5" /> : <X className="size-5" />}
+                    <ResultMark correct={selected === card.answer.answerKey} />
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+            </PromptFrame>
 
             <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
-              {card.options.map((option) => {
-                const isAnswer = option.key === card.answer.answerKey;
-                const isPicked = option.key === selected;
-                const revealed = selected !== null;
-                return (
-                  <button
-                    key={option.key}
-                    type="button"
-                    onClick={() => handleChoice(option.key)}
-                    disabled={revealed}
-                    className={cn(
-                      "flex min-h-20 items-center justify-between gap-3 border px-3 py-3 text-left transition-colors duration-150",
-                      !revealed &&
-                        "border-border bg-card hover:border-primary/50 hover:bg-primary/5 hover:text-primary",
-                      revealed && isAnswer && "border-green-500/60 bg-green-500/10 text-green-300",
-                      revealed && !isAnswer && isPicked && "border-primary/60 bg-primary/10 text-primary",
-                      revealed && !isAnswer && !isPicked && "border-border/50 bg-card/40 text-muted-foreground/60",
-                    )}
-                  >
-                    <ComponentPath option={option} />
-                    {revealed && isAnswer && <Check className="size-4 shrink-0 text-green-400" />}
-                    {revealed && !isAnswer && isPicked && <X className="size-4 shrink-0 text-primary" />}
-                  </button>
-                );
-              })}
+              {card.options.map((option) => (
+                <AnswerOption
+                  key={option.key}
+                  state={
+                    selected === null
+                      ? "idle"
+                      : revealedState(option.key === card.answer.answerKey, option.key === selected)
+                  }
+                  onClick={() => handleChoice(option.key)}
+                  disabled={selected !== null}
+                  className="min-h-20 px-3"
+                >
+                  <ComponentPath option={option} />
+                </AnswerOption>
+              ))}
             </div>
           </motion.div>
         </AnimatePresence>
       )}
-    </motion.div>
+    </FlashcardPage>
   );
 }
 
 function ComponentPath({ option }: { option: UpgradePathOption }) {
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <div className="flex shrink-0 -space-x-1.5">
+      <Inline gap={1} wrap="nowrap" className="shrink-0">
         {option.components.map((item) => (
-          <img
-            key={item.id}
-            src={itemImageSrc(item)}
-            alt=""
-            className="size-10 rounded-sm border border-background bg-muted object-contain"
-            draggable={false}
-          />
+          <img key={item.id} src={itemImageSrc(item)} alt="" className="size-10 object-contain" draggable={false} />
         ))}
-      </div>
+      </Inline>
       <span className="min-w-0 font-mono text-sm font-medium tracking-wide uppercase">{option.label}</span>
     </div>
   );
-}
-
-function Stat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
-  return (
-    <div className="flex items-baseline gap-1.5">
-      <span className="text-muted-foreground/50">{label}</span>
-      <span className={cn("font-semibold text-foreground", highlight && "text-primary")}>{value}</span>
-    </div>
-  );
-}
-
-function Divider() {
-  return <span className="text-muted-foreground/20">|</span>;
 }

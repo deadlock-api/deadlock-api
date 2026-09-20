@@ -2,9 +2,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle } from "lucide-react";
 import { useEffect } from "react";
 
+import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { PageShell } from "~/components/patterns/page/PageShell";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Inline } from "~/components/ui/stack";
 import { seo } from "~/lib/seo";
 
 interface PatreonCallbackSearch {
@@ -61,36 +63,30 @@ function PatreonCallbackPage() {
   };
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle>Patreon Authentication</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!errorMessage && (
-            <Alert>
-              <CheckCircle className="size-4" />
-              <AlertTitle>Success!</AlertTitle>
-              <AlertDescription>You have been authenticated. Redirecting...</AlertDescription>
-            </Alert>
-          )}
+    <PageShell width="narrow" density="content" height="fill" className="justify-center">
+      <PageHeader title="Patreon Authentication" />
+      {!errorMessage && (
+        <Alert>
+          <CheckCircle className="size-4" />
+          <AlertTitle>Success!</AlertTitle>
+          <AlertDescription>You have been authenticated. Redirecting...</AlertDescription>
+        </Alert>
+      )}
 
-          {errorMessage && (
-            <div className="space-y-4">
-              <Alert variant="destructive">
-                <AlertCircle className="size-4" />
-                <AlertTitle>Authentication Failed</AlertTitle>
-                <AlertDescription>{errorMessage}</AlertDescription>
-              </Alert>
-              <div className="flex justify-center">
-                <Button onClick={handleGoBack} variant="outline">
-                  Go Back
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+      {errorMessage && (
+        <>
+          <Alert variant="destructive">
+            <AlertCircle className="size-4" />
+            <AlertTitle>Authentication Failed</AlertTitle>
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+          <Inline justify="center">
+            <Button onClick={handleGoBack} variant="outline">
+              Go Back
+            </Button>
+          </Inline>
+        </>
+      )}
+    </PageShell>
   );
 }

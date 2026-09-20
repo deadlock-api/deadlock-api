@@ -3,14 +3,17 @@ import type { PlayerScoreboardSortByEnum } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense } from "react";
 
-import { DataPageHeader } from "~/components/analytics/DataPageHeader";
-import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
-import { Filter } from "~/components/Filter";
-import { LoadingLogo } from "~/components/LoadingLogo";
-import { ScoreboardTable } from "~/components/player-scoreboard/ScoreboardTable";
-import { ALL_SORT_BY_VALUES } from "~/components/player-scoreboard/sort-options";
-import { QueryRenderer } from "~/components/QueryRenderer";
-import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
+import { Filter } from "~/components/domain/filters";
+import { ScoreboardTable } from "~/components/domain/player-scoreboard/ScoreboardTable";
+import { ALL_SORT_BY_VALUES } from "~/components/domain/player-scoreboard/sort-options";
+import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigation/ResponsiveTabsList";
+import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { PageShell } from "~/components/patterns/page/PageShell";
+import { Section } from "~/components/patterns/page/Section";
+import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { QueryRenderer } from "~/components/patterns/states/QueryRenderer";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { useAnalyticsTab } from "~/hooks/useAnalyticsTab";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
@@ -22,7 +25,7 @@ import { playerScoreboardQueryOptions } from "~/queries/player-scoreboard-query"
 import { MAX_ENTRIES } from "./PlayersPageOptions";
 
 const PlayerStatsDistributionCharts = lazy(() =>
-  import("~/components/players-page/PlayerStatsDistributionCharts").then((m) => ({
+  import("~/components/features/players/PlayerStatsDistributionCharts").then((m) => ({
     default: m.PlayerStatsDistributionCharts,
   })),
 );
@@ -65,62 +68,58 @@ export function PlayersPage() {
   );
 
   return (
-    <div className="flex flex-col gap-3">
-      <DataPageHeader title="Player Analytics" description="Player performance and stat distributions">
+    <PageShell>
+      <PageHeader title="Player Analytics" description="Player performance and stat distributions">
         <p>
           Compare top player performances and view percentile distributions across a range of performance metrics.
           Filter by hero, rank, and patch.
         </p>
-      </DataPageHeader>
+      </PageHeader>
 
       <Filter.Root>
         <Filter.ModeWithRank
-          mode={mode}
-          onModeChange={setMode}
-          minRank={minRankId}
-          maxRank={maxRankId}
-          onRankChange={(min, max) => {
-            setMinRankId(min);
-            setMaxRankId(max);
+          value={{ mode, rank: [minRankId, maxRankId] }}
+          onValueChange={(next) => {
+            if (next.mode !== mode) setMode(next.mode);
+            if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
+              setMinRankId(next.rank[0]);
+              setMaxRankId(next.rank[1]);
+            }
           }}
         />
-        <Filter.Hero value={heroId} onChange={setHeroId} allowNull label="Hero" />
+        <Filter.Hero value={heroId} onValueChange={setHeroId} allowNull label="Hero" />
         <Filter.SeasonPatchDate
-          startDate={startDate}
-          endDate={endDate}
-          onDateChange={handleDateChange}
+          value={{ startDate, endDate }}
+          onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
           resetRange={defaultRange}
         />
         {tab === "scoreboard" && (
-          <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={1} defaultValue={0} />
+          <Filter.MinMatches value={minMatches} onValueChange={setMinMatches} min={1} defaultValue={0} />
         )}
       </Filter.Root>
 
-      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="tabs-nav w-full">
+      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
         <ResponsiveTabsList
-          ariaLabel="Player analytics sections"
+          aria-label="Player analytics sections"
           value={tab ?? undefined}
           onValueChange={(value) => setTab(value as typeof tab)}
-          options={[
-            { value: "scoreboard", label: "Scoreboard" },
-            { value: "stats-metrics", label: "Stats Metrics" },
-          ]}
-        />
+        >
+          <ResponsiveTab value="scoreboard">Scoreboard</ResponsiveTab>
+          <ResponsiveTab value="stats-metrics">Stats Metrics</ResponsiveTab>
+        </ResponsiveTabsList>
 
         <TabsContent value="scoreboard">
-          <div className="flex flex-col gap-4">
-            <h2 className="sr-only">Player Scoreboard</h2>
+          <Section titleDisplay="hidden" title="Player Scoreboard">
             <QueryRenderer
               query={scoreboardQuery}
-              loadingFallback={
-                <div className="flex items-center justify-center py-24">
-                  <LoadingLogo />
-                </div>
-              }
+              loadingFallback={<LoadingState label="player scoreboard" align="center" />}
               errorFallback={(error) => (
-                <div className="py-8 text-center text-sm text-destructive">
-                  Failed to load scoreboard: {error.message}
-                </div>
+                <ErrorState
+                  title="Failed to load scoreboard"
+                  description={error.message}
+                  onRetry={() => void scoreboardQuery.refetch()}
+                  retrying={scoreboardQuery.isFetching}
+                />
               )}
             >
               {(data) => (
@@ -128,19 +127,20 @@ export function PlayersPage() {
                   entries={data}
                   sortBy={sortBy}
                   sortDirection={sortDirection}
-                  onSortByChange={setSortBy}
-                  onSortDirectionChange={setSortDirection}
+                  onSortChange={(next) => {
+                    if (next.sortBy !== sortBy) setSortBy(next.sortBy);
+                    if (next.sortDirection !== sortDirection) setSortDirection(next.sortDirection);
+                  }}
                 />
               )}
             </QueryRenderer>
-          </div>
+          </Section>
         </TabsContent>
 
         <TabsContent value="stats-metrics">
-          <div className="flex flex-col gap-4">
-            <h2 className="sr-only">Player Stats Metrics</h2>
+          <Section titleDisplay="hidden" title="Player Stats Metrics">
             <ChunkErrorBoundary>
-              <Suspense fallback={<LoadingLogo />}>
+              <Suspense fallback={<LoadingState />}>
                 <PlayerStatsDistributionCharts
                   heroId={heroId}
                   gameMode={gameMode}
@@ -152,9 +152,9 @@ export function PlayersPage() {
                 />
               </Suspense>
             </ChunkErrorBoundary>
-          </div>
+          </Section>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageShell>
   );
 }

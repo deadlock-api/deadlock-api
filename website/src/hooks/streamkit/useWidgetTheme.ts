@@ -27,7 +27,7 @@ export const useWidgetTheme = (theme: Theme, opacity = 100, showOutline = true) 
         return cn("[background:rgba(255,255,255,var(--bg-opacity))]", "border-gray-100/5");
       }
 
-      return cn("[background:rgba(26,27,30,var(--bg-opacity))]", "border-white/[0.03]");
+      return cn("[background:rgba(26,27,30,var(--bg-opacity))]", "border-hairline");
     };
 
     const getHeaderStyle = () => {
@@ -42,7 +42,7 @@ export const useWidgetTheme = (theme: Theme, opacity = 100, showOutline = true) 
 
       return cn(
         "[background:linear-gradient(to_right,rgba(26,27,30,var(--bg-opacity)),rgba(37,38,43,var(--bg-opacity)))]",
-        "border-b border-white/[0.03]",
+        "border-b border-hairline",
       );
     };
 
@@ -84,11 +84,8 @@ export const useWidgetTheme = (theme: Theme, opacity = 100, showOutline = true) 
       statClasses: THEME_STYLES[theme].stat,
       brandingLinkClasses: getBrandingLinkClasses(),
       brandingTextClasses: {
-        primary: cn("text-[11px] font-medium transition-all", theme === "light" ? "text-gray-500" : "text-white/50"),
-        secondary: cn(
-          "text-[11px] font-semibold transition-all",
-          theme === "light" ? "text-black/80" : "text-white/80",
-        ),
+        primary: cn("text-2xs font-medium transition-all", theme === "light" ? "text-gray-500" : "text-white/50"),
+        secondary: cn("text-2xs font-semibold transition-all", theme === "light" ? "text-black/80" : "text-white/80"),
       },
       userNameClasses: getUserNameClasses(),
     };

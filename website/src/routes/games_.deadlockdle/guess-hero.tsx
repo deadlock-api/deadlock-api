@@ -2,17 +2,20 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
-import { GameShell } from "~/components/deadlockdle/GameShell";
-import { GuessFeedback } from "~/components/deadlockdle/GuessFeedback";
-import { GuessInput } from "~/components/deadlockdle/GuessInput";
-import { HintReveal } from "~/components/deadlockdle/HintReveal";
-import { ResultModal } from "~/components/deadlockdle/ResultModal";
-import { LoadingLogo } from "~/components/LoadingLogo";
+import { SilhouetteFrame } from "~/components/domain/minigames/SilhouetteFrame";
+import { GameShell } from "~/components/features/deadlockdle/GameShell";
+import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
+import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
+import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
+import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuesses";
+import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { Stack } from "~/components/ui/stack";
 import { useHeroes } from "~/lib/deadlockdle/queries";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
 import { seo } from "~/lib/seo";
-import { cn, snakeToPretty } from "~/lib/utils";
+import { snakeToPretty } from "~/lib/utils";
 import { filterPlayableHeroes } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/deadlockdle/guess-hero")({
@@ -29,12 +32,12 @@ export const Route = createFileRoute("/games_/deadlockdle/guess-hero")({
 const MAX_ATTEMPTS = 6;
 
 const WARP_STEPS = [
-  { scale: 30, freq: 0.015, brightness: 0, saturate: 0 },
-  { scale: 25, freq: 0.02, brightness: 0, saturate: 0 },
-  { scale: 20, freq: 0.025, brightness: 0, saturate: 0 },
-  { scale: 16, freq: 0.025, brightness: 0, saturate: 0 },
-  { scale: 8, freq: 0.03, brightness: 0, saturate: 0 },
-  { scale: 3, freq: 0.03, brightness: 0, saturate: 0 },
+  { scale: 30, freq: 0.015 },
+  { scale: 25, freq: 0.02 },
+  { scale: 20, freq: 0.025 },
+  { scale: 16, freq: 0.025 },
+  { scale: 8, freq: 0.03 },
+  { scale: 3, freq: 0.03 },
 ];
 
 function WarpFilters() {
@@ -58,11 +61,10 @@ function WarpFilters() {
   );
 }
 
-function getSilhouetteFilter(guessCount: number, isFinished: boolean): string {
+function getWarpFilter(guessCount: number, isFinished: boolean): string {
   if (isFinished) return "none";
   const i = Math.min(guessCount, WARP_STEPS.length - 1);
-  const step = WARP_STEPS[i];
-  return `url(#dldle-warp-${i}) brightness(${step.brightness}) saturate(${step.saturate})`;
+  return `url(#dldle-warp-${i})`;
 }
 
 function GuessHero() {
@@ -155,11 +157,7 @@ function GuessHero() {
   }
 
   if (isLoading || !dailyHero) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <LoadingLogo className="h-16 w-16 animate-pulse" />
-      </div>
-    );
+    return <LoadingState label="puzzle" />;
   }
 
   const heroCardSrc = dailyHero.images?.icon_hero_card_webp ?? dailyHero.images?.icon_hero_card ?? "";
@@ -182,33 +180,32 @@ function GuessHero() {
         transition={{ duration: 0.35, ease: "easeInOut" }}
         className="flex justify-center"
       >
-        <div className="relative">
-          <div
-            className={cn(
-              "relative h-32 w-32 overflow-hidden rounded-xl ring-1 transition-all duration-700 sm:h-[200px] sm:w-[200px]",
-              !isFinished ? "bg-primary ring-white/10" : "bg-transparent ring-transparent",
-            )}
+        <Stack gap={2}>
+          <SilhouetteFrame
+            state={isFinished ? "revealed" : "hidden"}
+            label={isFinished ? dailyHero.name : "Mystery hero"}
+            className="h-32 w-32 sm:h-50 sm:w-50"
           >
             <img
               src={heroCardSrc}
               alt="Mystery hero"
-              className="h-32 w-32 object-contain transition-all duration-500 sm:h-[200px] sm:w-[200px]"
+              className="h-32 w-32 object-contain sm:h-50 sm:w-50"
               style={{
-                filter: getSilhouetteFilter(gameState.guesses.length, isFinished),
+                filter: getWarpFilter(gameState.guesses.length, isFinished),
               }}
               draggable={false}
             />
-          </div>
+          </SilhouetteFrame>
           {isFinished && (
             <motion.p
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-2 text-center font-mono text-sm font-semibold text-foreground"
+              className="text-center font-mono text-sm font-semibold text-foreground"
             >
               {dailyHero.name}
             </motion.p>
           )}
-        </div>
+        </Stack>
       </motion.div>
 
       {hints.length > 0 && <HintReveal hints={hints} revealedCount={gameState.hintsRevealed} />}
@@ -222,29 +219,7 @@ function GuessHero() {
         />
       </div>
 
-      {gameState.guesses.length > 0 && (
-        <div className="space-y-1.5">
-          <p className="font-mono text-[10px] tracking-wider text-muted-foreground/40 uppercase">Previous Guesses</p>
-          <div className="flex flex-wrap gap-2">
-            {gameState.guesses.map((guess) => {
-              const isCorrect = guess.toLowerCase() === dailyHero.name.toLowerCase();
-              return (
-                <span
-                  key={guess}
-                  className={cn(
-                    "border px-2.5 py-1 font-mono text-xs",
-                    isCorrect
-                      ? "border-green-500/40 bg-green-500/10 text-green-400"
-                      : "border-primary/20 bg-primary/5 text-primary/70",
-                  )}
-                >
-                  {guess}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <PreviousGuesses guesses={gameState.guesses} answer={dailyHero.name} />
 
       <ResultModal
         open={isFinished}

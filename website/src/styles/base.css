@@ -1,0 +1,33 @@
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    background-image: radial-gradient(
+      ellipse 80% 50% at 50% -20%,
+      color-mix(in srgb, var(--primary) 3%, transparent) 0%,
+      transparent 70%
+    );
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* Users who ask the OS to reduce motion get no transitions or animations. Durations that come from the motion
+   tokens collapse in tokens.css; this catches everything else (third-party keyframes, numeric durations). It sits
+   outside every cascade layer on purpose: unlayered rules outrank layered utilities, so it wins on its own. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
+    scroll-behavior: auto;
+  }
+}

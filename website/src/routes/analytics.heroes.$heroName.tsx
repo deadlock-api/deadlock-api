@@ -4,12 +4,19 @@ import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { ListOrdered, type LucideIcon, Map, ShoppingBag, Trophy, Users } from "lucide-react";
 import { lazy, Suspense, useMemo } from "react";
 
-import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
-import { HeroImage } from "~/components/HeroImage";
-import { LoadingLogo } from "~/components/LoadingLogo";
-import { NotFound } from "~/components/NotFound";
-import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
-import { StatCard } from "~/components/StatCard";
+import { NotFound } from "~/components/app/NotFound";
+import { HeroImage } from "~/components/domain/assets/HeroImage";
+import { DEFAULT_MATCH_MODE } from "~/components/domain/selectors/MatchModeSelector";
+import { LinkCard } from "~/components/patterns/content/LinkCard";
+import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { PageShell } from "~/components/patterns/page/PageShell";
+import { Section } from "~/components/patterns/page/Section";
+import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { Button } from "~/components/ui/button";
+import { Separator } from "~/components/ui/separator";
+import { Stack } from "~/components/ui/stack";
+import { Stat, StatGroup } from "~/components/ui/stat";
 import { useSeasons } from "~/hooks/useSeasons";
 import { computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
@@ -32,33 +39,33 @@ import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
 const HeroMatchupDetailsStatsTable = lazy(() =>
-  import("~/components/heroes-page/HeroMatchupDetailsStatsTable").then((m) => ({
+  import("~/components/features/heroes/HeroMatchupDetailsStatsTable").then((m) => ({
     default: m.HeroMatchupDetailsStatsTable,
   })),
 );
 
 const HeroMatchupSummary = lazy(() =>
-  import("~/components/heroes-page/HeroMatchupSummary").then((m) => ({ default: m.HeroMatchupSummary })),
+  import("~/components/features/heroes/HeroMatchupSummary").then((m) => ({ default: m.HeroMatchupSummary })),
 );
 
 const HeroSkillOrder = lazy(() =>
-  import("~/components/heroes-page/HeroSkillOrder").then((m) => ({ default: m.HeroSkillOrder })),
+  import("~/components/features/heroes/HeroSkillOrder").then((m) => ({ default: m.HeroSkillOrder })),
 );
 
 const HeroTopItems = lazy(() =>
-  import("~/components/heroes-page/HeroTopItems").then((m) => ({ default: m.HeroTopItems })),
+  import("~/components/features/heroes/HeroTopItems").then((m) => ({ default: m.HeroTopItems })),
 );
 
 const HeroWinRateByDuration = lazy(() =>
-  import("~/components/heroes-page/HeroWinRateByDuration").then((m) => ({ default: m.HeroWinRateByDuration })),
+  import("~/components/features/heroes/HeroWinRateByDuration").then((m) => ({ default: m.HeroWinRateByDuration })),
 );
 
 const HeroWinRateOverTime = lazy(() =>
-  import("~/components/heroes-page/HeroWinRateOverTime").then((m) => ({ default: m.HeroWinRateOverTime })),
+  import("~/components/features/heroes/HeroWinRateOverTime").then((m) => ({ default: m.HeroWinRateOverTime })),
 );
 
 const HeroWinRateByRank = lazy(() =>
-  import("~/components/heroes-page/HeroWinRateByRank").then((m) => ({ default: m.HeroWinRateByRank })),
+  import("~/components/features/heroes/HeroWinRateByRank").then((m) => ({ default: m.HeroWinRateByRank })),
 );
 
 const DEFAULT_MIN_RANK = 91;
@@ -234,18 +241,9 @@ function HeroLinkCard({
   description: string;
 }) {
   return (
-    <Link
-      to={to}
-      search={search}
-      preload="intent"
-      className="group flex items-start gap-3 rounded-lg border border-border bg-card px-4 py-3 transition-colors hover:border-primary/50 hover:bg-accent/40"
-    >
-      <Icon className="mt-0.5 size-5 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
-      <div className="min-w-0">
-        <div className="font-medium">{title}</div>
-        <div className="mt-0.5 text-xs text-muted-foreground">{description}</div>
-      </div>
-    </Link>
+    <LinkCard asChild size="sm" orientation="horizontal" media={<Icon />} title={title} description={description}>
+      <Link to={to} search={search} preload="intent" />
+    </LinkCard>
   );
 }
 
@@ -271,50 +269,48 @@ function HeroDetailPage() {
     summary && rank !== undefined ? `#${rank} of ${summary.heroCount} heroes` : undefined;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
-        <HeroImage heroId={heroId} className="size-12" />
-        <h1 className="text-2xl font-bold tracking-tight">{heroName}: Deadlock Win Rate &amp; Pick Rate</h1>
-      </div>
-
-      {summary ? (
-        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          In the current patch, {heroName} holds a{" "}
-          <span className="font-semibold text-foreground">{formatPercent(summary.winRate)}</span> win rate across{" "}
-          <span className="font-semibold text-foreground">{summary.matches.toLocaleString("en-US")}</span> tracked
-          ranked matches, with a{" "}
-          <span className="font-semibold text-foreground">{formatPercent(summary.pickRate)}</span> pick rate
-          {summary.banRate !== undefined && (
+    <PageShell>
+      <PageHeader
+        media={<HeroImage heroId={heroId} className="size-12" />}
+        title={<>{heroName}: Deadlock Win Rate &amp; Pick Rate</>}
+        description={
+          summary ? (
             <>
-              {" "}
-              and a <span className="font-semibold text-foreground">{formatPercent(summary.banRate)}</span> ban rate
+              In the current patch, {heroName} holds a{" "}
+              <span className="font-semibold text-foreground">{formatPercent(summary.winRate)}</span> win rate across{" "}
+              <span className="font-semibold text-foreground">{summary.matches.toLocaleString("en-US")}</span> tracked
+              ranked matches, with a{" "}
+              <span className="font-semibold text-foreground">{formatPercent(summary.pickRate)}</span> pick rate
+              {summary.banRate !== undefined && (
+                <>
+                  {" "}
+                  and a <span className="font-semibold text-foreground">{formatPercent(summary.banRate)}</span> ban rate
+                </>
+              )}
+              . Numbers are drawn from live match data and refreshed daily.
             </>
-          )}
-          . Numbers are drawn from live match data and refreshed daily.
-        </p>
-      ) : (
-        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          Live win rate, pick rate, and matchup statistics for {heroName} in Deadlock, drawn from tracked ranked matches
-          and updated daily.
-        </p>
-      )}
+          ) : (
+            `Live win rate, pick rate, and matchup statistics for ${heroName} in Deadlock, drawn from tracked ranked matches and updated daily.`
+          )
+        }
+      />
 
       {summary && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <StatCard label="Win Rate" value={formatPercent(summary.winRate)} sub={rankLabel(summary.winRateRank)} />
-          <StatCard label="Pick Rate" value={formatPercent(summary.pickRate)} sub={rankLabel(summary.pickRateRank)} />
-          <StatCard label="Matches" value={summary.matches.toLocaleString("en-US")} />
-          <StatCard
+        <StatGroup variant="tiles" className="grid-cols-2 sm:grid-cols-4">
+          <Stat label="Win Rate" value={formatPercent(summary.winRate)} sub={rankLabel(summary.winRateRank)} />
+          <Stat label="Pick Rate" value={formatPercent(summary.pickRate)} sub={rankLabel(summary.pickRateRank)} />
+          <Stat label="Matches" value={summary.matches.toLocaleString("en-US")} />
+          <Stat
             label="Ban Rate"
             value={summary.banRate !== undefined ? formatPercent(summary.banRate) : "—"}
             sub={rankLabel(summary.banRateRank)}
           />
-        </div>
+        </StatGroup>
       )}
 
       {summary && (
         <ChunkErrorBoundary>
-          <Suspense fallback={<LoadingLogo />}>
+          <Suspense fallback={<LoadingState />}>
             <HeroTopItems
               heroId={heroId}
               heroName={heroName}
@@ -327,7 +323,7 @@ function HeroDetailPage() {
 
       {summary && (
         <ChunkErrorBoundary>
-          <Suspense fallback={<LoadingLogo />}>
+          <Suspense fallback={<LoadingState />}>
             <HeroSkillOrder
               heroId={heroId}
               heroName={heroName}
@@ -339,7 +335,7 @@ function HeroDetailPage() {
 
       {summary && (
         <ChunkErrorBoundary>
-          <Suspense fallback={<LoadingLogo />}>
+          <Suspense fallback={<LoadingState />}>
             <HeroWinRateOverTime
               heroId={heroId}
               heroName={heroName}
@@ -351,7 +347,7 @@ function HeroDetailPage() {
 
       {summary && (
         <ChunkErrorBoundary>
-          <Suspense fallback={<LoadingLogo />}>
+          <Suspense fallback={<LoadingState />}>
             <HeroWinRateByRank
               heroId={heroId}
               heroName={heroName}
@@ -363,7 +359,7 @@ function HeroDetailPage() {
 
       {summary && (
         <ChunkErrorBoundary>
-          <Suspense fallback={<LoadingLogo />}>
+          <Suspense fallback={<LoadingState />}>
             <HeroWinRateByDuration
               heroId={heroId}
               heroName={heroName}
@@ -373,13 +369,12 @@ function HeroDetailPage() {
         </ChunkErrorBoundary>
       )}
 
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">{heroName} Matchups & Synergies</h2>
-        <p className="text-sm text-muted-foreground">
-          Which heroes {heroName} counters, which heroes counter {heroName}, and the best teammates to pair with.
-        </p>
+      <Section
+        title={`${heroName} Matchups & Synergies`}
+        description={`Which heroes ${heroName} counters, which heroes counter ${heroName}, and the best teammates to pair with.`}
+      >
         <ChunkErrorBoundary>
-          <Suspense fallback={<LoadingLogo />}>
+          <Suspense fallback={<LoadingState />}>
             <HeroMatchupSummary
               heroId={heroId}
               heroName={heroName}
@@ -420,10 +415,9 @@ function HeroDetailPage() {
             </div>
           </Suspense>
         </ChunkErrorBoundary>
-      </section>
+      </Section>
 
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">More {heroName} Stats</h2>
+      <Section title={`More ${heroName} Stats`}>
         <nav aria-label={`More ${heroName} stats`} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <HeroLinkCard
             to="/analytics/items"
@@ -461,14 +455,19 @@ function HeroDetailPage() {
             description={`Where ${heroName} gets kills and dies across the map.`}
           />
         </nav>
-      </section>
+      </Section>
 
-      <nav aria-label="Related pages" className="flex flex-wrap gap-4 border-t border-border pt-4 text-sm">
-        <Link to="/analytics/heroes" preload="intent" className="font-medium text-primary underline underline-offset-4">
-          All hero win rates
-        </Link>
-      </nav>
-    </div>
+      <Stack gap={4}>
+        <Separator />
+        <nav aria-label="Related pages" className="flex flex-wrap gap-4 text-sm">
+          <Button asChild variant="link" className="h-auto p-0">
+            <Link to="/analytics/heroes" preload="intent">
+              All hero win rates
+            </Link>
+          </Button>
+        </nav>
+      </Stack>
+    </PageShell>
   );
 }
 

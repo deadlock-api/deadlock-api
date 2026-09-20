@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 
-import { FlashcardGame } from "~/components/flashcards/FlashcardGame";
+import { FlashcardGame } from "~/components/features/flashcards/FlashcardGame";
 import { seo } from "~/lib/seo";
 import { filterPlayableHeroes, heroesQueryOptions, type SlimHero } from "~/queries/asset-queries";
 

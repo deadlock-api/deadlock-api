@@ -1,6 +1,6 @@
 import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 
-import { BY_RANK_STATS } from "~/components/heroes-page/HeroStatSelectors";
+import { BY_RANK_STATS } from "~/components/features/heroes/HeroStatSelectors";
 import { useAnalyticsTab } from "~/hooks/useAnalyticsTab";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";

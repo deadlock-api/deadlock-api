@@ -1,22 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  CalendarDays,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Copy,
-  Crosshair,
-  Ear,
-  HelpCircle,
-  Puzzle,
-  ShoppingBag,
-  Swords,
-} from "lucide-react";
-import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Crosshair, Ear, HelpCircle, Puzzle, ShoppingBag, Swords } from "lucide-react";
+import { useMemo } from "react";
 
-import { type DailyStatus, GameCard, getDailyResult, getDailyStatus } from "~/components/deadlockdle/GameCard";
-import { Button } from "~/components/ui/button";
+import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
+import { type DailyStatus, GameCard, getDailyResult, getDailyStatus } from "~/components/features/deadlockdle/GameCard";
+import { DURATION, enter, fadeUp, stagger } from "~/components/features/deadlockdle/motion";
+import { ShareButton } from "~/components/features/deadlockdle/ShareButton";
+import { Hero, HeroActions, HeroGlow } from "~/components/patterns/page/Hero";
+import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { PageShell } from "~/components/patterns/page/PageShell";
+import { Input } from "~/components/ui/input";
 import { day } from "~/dayjs";
 import {
   EPOCH_DATE,
@@ -100,20 +94,6 @@ const GAMES: {
   },
 ];
 
-const stagger = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.07 } },
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.4, ease: "easeOut" as const },
-  },
-};
-
 function buildShareText(date: string, statuses: Record<GameMode, DailyStatus>): string {
   const lines: string[] = [`Deadlockdle Day ${getDayNumber(date)}`, ""];
 
@@ -136,7 +116,6 @@ function DeadlockdleHub() {
   const date = resolvePuzzleDate(dateParam);
   const isArchive = date !== today;
   const dayNum = getDayNumber(date);
-  const [copied, setCopied] = useState(false);
 
   const statuses = useMemo(() => {
     if (typeof window === "undefined") return null;
@@ -161,82 +140,62 @@ function DeadlockdleHub() {
   );
 
   return (
-    <div className="space-y-10">
-      <section className="relative pt-4 pb-2 text-center">
-        <div className="pointer-events-none absolute top-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/8 blur-[100px]" />
+    <PageShell density="marketing" className="theme-terminal">
+      <Hero size="sm">
+        <HeroGlow size="sm" />
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="relative"
-        >
-          <div className="relative inline-block">
-            <h1 className="bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text font-game text-5xl font-normal tracking-tight text-transparent lg:text-6xl">
-              Deadlockdle
-            </h1>
-            <span className="absolute -top-2 -right-10 font-game text-sm font-semibold text-primary/70">
-              Day {dayNum}
-            </span>
-          </div>
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={enter}>
+          <PageHeader
+            size="display"
+            eyebrow={<span className="font-game text-sm font-semibold text-primary">Day {dayNum}</span>}
+            title={<span className="font-game font-normal">Deadlockdle</span>}
+            description={
+              isArchive
+                ? `Replaying the puzzles from ${day(date).format("MMMM D, YYYY")}.`
+                : "Test your Deadlock knowledge with daily puzzles. New challenges every day."
+            }
+          />
         </motion.div>
 
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.15, duration: 0.4 }}
-          className="mx-auto mt-3 max-w-lg text-sm text-muted-foreground"
-        >
-          {isArchive
-            ? `Replaying the puzzles from ${day(date).format("MMMM D, YYYY")}.`
-            : "Test your Deadlock knowledge with daily puzzles. New challenges every day."}
-        </motion.p>
-
-        <div className="relative mt-5 flex flex-wrap items-center justify-center gap-2">
-          <button
-            type="button"
+        <HeroActions className="gap-2">
+          <TerminalButton
+            size="icon-sm"
             onClick={() => goToDate(prevDate)}
             disabled={!isValidPuzzleDate(prevDate)}
+            aria-label="Previous day"
             title="Previous day"
-            className="cursor-target flex size-8 items-center justify-center border border-border bg-card text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary disabled:pointer-events-none disabled:opacity-30"
           >
-            <ChevronLeft className="size-4" />
-          </button>
+            <ChevronLeft />
+          </TerminalButton>
 
-          <label className="flex items-center gap-2 border border-border bg-card px-3 py-1.5 text-muted-foreground focus-within:border-primary/40">
-            <CalendarDays className="size-3.5 text-muted-foreground/50" />
-            <input
-              type="date"
-              aria-label="Puzzle date"
-              value={date}
-              min={EPOCH_DATE}
-              max={today}
-              onChange={(e) => goToDate(e.target.value)}
-              className="cursor-target bg-transparent font-mono text-xs text-foreground [color-scheme:dark] outline-none"
-            />
-          </label>
+          <Input
+            type="date"
+            aria-label="Puzzle date"
+            value={date}
+            min={EPOCH_DATE}
+            max={today}
+            onChange={(e) => goToDate(e.target.value)}
+            size="sm"
+            className="cursor-target w-auto font-mono text-xs [color-scheme:dark] md:text-xs"
+          />
 
-          <button
-            type="button"
+          <TerminalButton
+            size="icon-sm"
             onClick={() => goToDate(nextDate)}
             disabled={!isValidPuzzleDate(nextDate)}
+            aria-label="Next day"
             title="Next day"
-            className="cursor-target flex size-8 items-center justify-center border border-border bg-card text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary disabled:pointer-events-none disabled:opacity-30"
           >
-            <ChevronRight className="size-4" />
-          </button>
+            <ChevronRight />
+          </TerminalButton>
 
           {isArchive && (
-            <Button
-              onClick={() => goToDate(today)}
-              variant="outline"
-              className="cursor-target h-8 border-primary/30 font-mono text-xs tracking-wider uppercase hover:border-primary/50 hover:bg-primary/5"
-            >
+            <TerminalButton size="sm" onClick={() => goToDate(today)}>
               Today
-            </Button>
+            </TerminalButton>
           )}
-        </div>
-      </section>
+        </HeroActions>
+      </Hero>
 
       <section>
         <motion.div
@@ -259,32 +218,15 @@ function DeadlockdleHub() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.15 }}
+            transition={{ duration: DURATION.slow, delay: DURATION.fast }}
             className="flex justify-center"
           >
-            <Button
-              onClick={async () => {
-                const text = buildShareText(date, statuses);
-                await navigator.clipboard.writeText(text);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              }}
-              variant="outline"
-              className="cursor-target gap-1.5 border-primary/30 px-6 hover:border-primary/50 hover:bg-primary/5"
-            >
-              {copied ? (
-                <>
-                  <Check className="size-3.5" /> Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="size-3.5" /> Share All Results
-                </>
-              )}
-            </Button>
+            <ShareButton variant="soft" text={() => buildShareText(date, statuses)}>
+              Share All Results
+            </ShareButton>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </PageShell>
   );
 }

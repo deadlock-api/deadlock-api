@@ -1,20 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { Ability } from "deadlock_api_client";
 import { motion } from "framer-motion";
-import { Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { Volume2, VolumeX } from "lucide-react";
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { GameShell } from "~/components/deadlockdle/GameShell";
-import { GuessFeedback } from "~/components/deadlockdle/GuessFeedback";
-import { GuessInput } from "~/components/deadlockdle/GuessInput";
-import { HintReveal } from "~/components/deadlockdle/HintReveal";
-import { ResultModal } from "~/components/deadlockdle/ResultModal";
-import { LoadingLogo } from "~/components/LoadingLogo";
+import { PlayButton } from "~/components/domain/minigames/PlayButton";
+import { GameShell } from "~/components/features/deadlockdle/GameShell";
+import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
+import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
+import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
+import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuesses";
+import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { Button } from "~/components/ui/button";
+import { Field } from "~/components/ui/field";
+import { ProgressBar } from "~/components/ui/progress-bar";
+import { Slider } from "~/components/ui/slider";
+import { Stack } from "~/components/ui/stack";
 import { useAbilities, useHeroes, useSounds } from "~/lib/deadlockdle/queries";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
 import { seo } from "~/lib/seo";
-import { cn } from "~/lib/utils";
 import { filterPlayableHeroes } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/deadlockdle/guess-sound")({
@@ -397,11 +403,7 @@ function GuessSound() {
   const isLoading = heroesLoading || soundsLoading || abilitiesLoading;
 
   if (isLoading || !dailySound) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <LoadingLogo className="h-16 w-16 animate-pulse" />
-      </div>
-    );
+    return <LoadingState label="puzzle" />;
   }
 
   const formattedDuration = duration > 0 ? `${duration.toFixed(1)}s` : "--";
@@ -436,78 +438,52 @@ function GuessSound() {
           <track kind="captions" />
         </audio>
 
-        <motion.button
-          type="button"
-          whileTap={{ scale: 0.93, transition: { duration: 0 } }}
-          transition={{ type: "spring", stiffness: 400, damping: 17 }}
+        <PlayButton
+          state={isPlaying ? "playing" : "idle"}
+          label="sound"
           onClick={togglePlayPause}
-          className={cn(
-            "relative h-16 w-16 rounded-full border-2 transition-colors duration-300 sm:h-20 sm:w-20 md:h-24 md:w-24",
-            "flex items-center justify-center",
-            "border-primary/40 bg-primary/10 hover:border-primary/60 hover:bg-primary/20",
-            "focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none",
-            isPlaying && "border-primary/70 shadow-[0_0_24px_rgba(250,68,84,0.3)]",
-          )}
-        >
-          {isPlaying && (
-            <motion.div
-              className="absolute inset-0 rounded-full border-2 border-primary/30"
-              animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0, 0.6] }}
-              transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-            />
-          )}
-          {isPlaying ? (
-            <Pause className="h-6 w-6 text-primary sm:h-7 sm:w-7 md:h-8 md:w-8" />
-          ) : (
-            <Play className="ml-0.5 h-6 w-6 text-primary sm:ml-1 sm:h-7 sm:w-7 md:h-8 md:w-8" />
-          )}
-        </motion.button>
+          className="cursor-target size-16 sm:size-20 md:size-24"
+        />
 
-        <div className="w-full max-w-xs space-y-1.5">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted-foreground/10">
-            <motion.div
-              className="h-full rounded-full bg-primary/60"
-              style={{ width: `${progress * 100}%` }}
-              transition={{ duration: 0.05 }}
-            />
-          </div>
-          <div className="flex items-center justify-between font-mono text-[10px] text-muted-foreground/40">
+        <Stack gap={1.5} className="w-full max-w-xs">
+          <ProgressBar value={progress} />
+          <div className="flex items-center justify-between font-mono text-3xs text-muted-foreground">
             <span className="flex items-center gap-1">
-              <Volume2 className="h-3 w-3" />
+              <Volume2 className="size-3" />
               SOUND
             </span>
             <span>{formattedDuration}</span>
           </div>
-        </div>
+        </Stack>
 
-        <div className="flex w-full max-w-xs items-center gap-2">
-          <button
-            type="button"
+        <Field label="Volume" labelDisplay="hidden" orientation="horizontal" className="w-full max-w-xs">
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={() => changeVolume(isMuted ? 0.7 : 0)}
-            className="p-0.5 text-muted-foreground/50 transition-colors hover:text-foreground"
             aria-label={isMuted ? "Unmute" : "Mute"}
+            className="cursor-target text-muted-foreground"
           >
-            {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-          </button>
-          <input
-            type="range"
+            {isMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
+          </Button>
+          <Slider
+            aria-label="Volume"
             min={0}
             max={1}
             step={0.01}
-            value={volume}
-            onChange={(e) => changeVolume(Number.parseFloat(e.target.value))}
-            className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-muted-foreground/10 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-primary [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-[0_0_6px_rgba(250,68,84,0.4)]"
-            aria-label="Volume"
+            value={[volume]}
+            onValueChange={([next]) => changeVolume(next)}
+            className="cursor-target flex-1"
           />
-          <span className="w-7 text-right font-mono text-[10px] text-muted-foreground/40">
+          <span className="w-7 text-end font-mono text-3xs text-muted-foreground tabular-nums">
             {Math.round(volume * 100)}
           </span>
-        </div>
+        </Field>
 
         {isFinished && (
           <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="text-center">
             <p className="font-mono text-sm font-semibold text-foreground">{dailySound.abilityName}</p>
-            <p className="font-mono text-xs text-muted-foreground/50">{dailySound.heroName}</p>
+            <p className="font-mono text-xs text-muted-foreground">{dailySound.heroName}</p>
           </motion.div>
         )}
       </motion.div>
@@ -523,29 +499,7 @@ function GuessSound() {
         />
       </div>
 
-      {gameState.guesses.length > 0 && (
-        <div className="space-y-1.5">
-          <p className="font-mono text-[10px] tracking-wider text-muted-foreground/40 uppercase">Previous Guesses</p>
-          <div className="flex flex-wrap gap-2">
-            {gameState.guesses.map((guess) => {
-              const isCorrect = dailySound && guess.toLowerCase() === dailySound.abilityName.toLowerCase();
-              return (
-                <span
-                  key={guess}
-                  className={cn(
-                    "border px-2.5 py-1 font-mono text-xs",
-                    isCorrect
-                      ? "border-green-500/40 bg-green-500/10 text-green-400"
-                      : "border-primary/20 bg-primary/5 text-primary/70",
-                  )}
-                >
-                  {guess}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <PreviousGuesses guesses={gameState.guesses} answer={dailySound.abilityName} />
 
       <ResultModal
         open={isFinished}

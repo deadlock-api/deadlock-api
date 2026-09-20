@@ -8,12 +8,14 @@ import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
 import * as React from "react";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
-import { FeedbackWidget } from "~/components/annotate/FeedbackWidget";
-import { ApiErrorFallback } from "~/components/ApiErrorFallback";
-import { AppSidebar, MobileMenuButton } from "~/components/AppSidebar";
-import { Breadcrumbs } from "~/components/Breadcrumbs";
-import { ThemeProvider } from "~/components/ThemeProvider";
+import { ApiErrorFallback } from "~/components/app/ApiErrorFallback";
+import { AppSidebar, MobileMenuButton } from "~/components/app/AppSidebar";
+import { Breadcrumbs } from "~/components/app/Breadcrumbs";
+import { ThemeProvider } from "~/components/app/ThemeProvider";
+import { FeedbackWidget } from "~/components/features/annotate/FeedbackWidget";
+import { AppBody, AppFrame, PageBackdrop } from "~/components/patterns/page/AppFrame";
 import { Toaster } from "~/components/ui/sonner";
+import { Stack } from "~/components/ui/stack";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import { getAnalytics } from "~/lib/analytics";
 import { installChunkReloadHandlers, isChunkLoadError, reloadOnceForStaleChunk } from "~/lib/chunk-reload";
@@ -81,6 +83,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         content: "Deadlock, API, Game, Data, Images, Stats, Heroes, Items, Weapons, Abilities, Leaderboard, Analytics",
       },
       { name: "robots", content: "index, follow" },
+      // ds-allow color-literal: a meta tag cannot read CSS variables; mirrors --primary
       { name: "theme-color", content: "#fa4454" },
       { property: "og:site_name", content: "Deadlock API" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -170,37 +173,28 @@ function RootComponent() {
           <TooltipProvider>
             <div className="flex min-h-screen">
               <AppSidebar />
-              <main className="min-w-0 flex-1 overflow-x-clip md:ml-64">
+              <main className="min-w-0 flex-1 overflow-x-clip md:ps-64">
                 <MobileMenuButton />
-                <div className="relative flex min-h-full items-start justify-center">
-                  <img
-                    src="/logo/hexe.svg"
-                    fetchPriority="high"
-                    alt=""
-                    aria-hidden="true"
-                    className="pointer-events-none fixed right-0 bottom-0 h-[36rem] w-[36rem] opacity-[0.10] select-none"
-                    style={{
-                      transform: "perspective(900px) rotateX(12deg) rotateY(-8deg) rotateZ(-14deg)",
-                      maskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
-                      WebkitMaskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
-                    }}
-                  />
-                  <div className="relative m-2 min-h-[calc(100dvh-1rem)] w-full min-w-0 rounded-xl border border-white/10 bg-background/60 p-4 shadow-xl backdrop-blur-md sm:p-6 xl:w-[92%]">
+                <PageBackdrop src="/logo/hexe.svg" fetchPriority="high" />
+                <AppFrame>
+                  <Stack gap={4} className="flex-1">
                     <Breadcrumbs />
-                    <QueryErrorResetBoundary>
-                      {({ reset }) => (
-                        <QueryErrorBoundary
-                          onReset={reset}
-                          fallbackRender={({ resetErrorBoundary }) => (
-                            <ApiErrorFallback resetErrorBoundary={resetErrorBoundary} />
-                          )}
-                        >
-                          <Outlet />
-                        </QueryErrorBoundary>
-                      )}
-                    </QueryErrorResetBoundary>
-                  </div>
-                </div>
+                    <Stack gap={0} className="flex-1">
+                      <QueryErrorResetBoundary>
+                        {({ reset }) => (
+                          <QueryErrorBoundary
+                            onReset={reset}
+                            fallbackRender={({ resetErrorBoundary }) => (
+                              <ApiErrorFallback resetErrorBoundary={resetErrorBoundary} />
+                            )}
+                          >
+                            <Outlet />
+                          </QueryErrorBoundary>
+                        )}
+                      </QueryErrorResetBoundary>
+                    </Stack>
+                  </Stack>
+                </AppFrame>
               </main>
             </div>
             {/* Keep notification actions clear of the fixed feedback launcher. */}
@@ -214,32 +208,15 @@ function RootComponent() {
 }
 
 function RootDocument({ children, bare = false }: { children: React.ReactNode; bare?: boolean }) {
-  if (bare) {
-    return (
-      <html lang="en" suppressHydrationWarning>
-        <head>
-          <HeadContent />
-        </head>
-        <body style={{ background: "transparent" }}>
-          {children}
-          <Scripts />
-        </body>
-      </html>
-    );
-  }
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
-      <body
-        className="overflow-x-hidden bg-cover bg-fixed bg-center bg-no-repeat bg-blend-difference"
-        style={{ backgroundImage: "url('/background.svg')" }}
-      >
-        <div className="pointer-events-none fixed inset-0 z-0 bg-gradient-to-br from-black/35 to-transparent" />
-        <div className="relative z-10">{children}</div>
+      <AppBody variant={bare ? "bare" : "page"} backgroundSrc="/background.svg">
+        {children}
         <Scripts />
-      </body>
+      </AppBody>
     </html>
   );
 }

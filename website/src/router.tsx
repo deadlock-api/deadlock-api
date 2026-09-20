@@ -3,8 +3,8 @@ import { createRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 import type { AxiosError } from "axios";
 
-import { NotFound } from "./components/NotFound";
-import { RouteError } from "./components/RouteError";
+import { NotFound } from "./components/app/NotFound";
+import { RouteError } from "./components/app/RouteError";
 import { isChunkLoadError, reloadOnceForStaleChunk } from "./lib/chunk-reload";
 import { ApiError } from "./lib/http";
 import type { Preferences } from "./lib/preferences";

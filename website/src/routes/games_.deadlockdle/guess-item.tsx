@@ -2,17 +2,19 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
-import { GameShell } from "~/components/deadlockdle/GameShell";
-import { GuessFeedback } from "~/components/deadlockdle/GuessFeedback";
-import { GuessInput } from "~/components/deadlockdle/GuessInput";
-import { HintReveal } from "~/components/deadlockdle/HintReveal";
-import { ResultModal } from "~/components/deadlockdle/ResultModal";
-import { LoadingLogo } from "~/components/LoadingLogo";
+import { SilhouetteFrame } from "~/components/domain/minigames/SilhouetteFrame";
+import { GameShell } from "~/components/features/deadlockdle/GameShell";
+import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
+import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
+import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
+import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuesses";
+import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { Stack } from "~/components/ui/stack";
 import { useItems } from "~/lib/deadlockdle/queries";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
 import { seo } from "~/lib/seo";
-import { cn } from "~/lib/utils";
 import { filterShopableItems } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/deadlockdle/guess-item")({
@@ -118,11 +120,7 @@ function GuessItem() {
   }
 
   if (isLoading || !dailyItem) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <LoadingLogo className="h-16 w-16 animate-pulse" />
-      </div>
-    );
+    return <LoadingState label="puzzle" />;
   }
 
   const itemImgSrc = dailyItem.shop_image_webp ?? dailyItem.shop_image ?? "";
@@ -144,30 +142,37 @@ function GuessItem() {
         transition={{ duration: 0.35, ease: "easeInOut" }}
         className="flex justify-center"
       >
-        <div className="relative">
-          <picture>
-            {dailyItem.shop_image_webp && <source srcSet={dailyItem.shop_image_webp} type="image/webp" />}
-            {dailyItem.shop_image && <source srcSet={dailyItem.shop_image} type="image/png" />}
-            <img
-              src={itemImgSrc}
-              alt="Mystery item"
-              className="h-28 w-28 rounded-sm object-contain transition-all duration-500 sm:h-[160px] sm:w-[160px]"
-              style={{
-                filter: getBlurFilter(gameState.hintsRevealed, isFinished),
-              }}
-              draggable={false}
-            />
-          </picture>
+        <Stack gap={2}>
+          {/* The art keeps its own colors: this round hides the item behind blur, not behind a silhouette. */}
+          <SilhouetteFrame
+            state={isFinished ? "revealed" : "hidden"}
+            reveal={1}
+            label={isFinished ? dailyItem.name : "Mystery item"}
+          >
+            <picture>
+              {dailyItem.shop_image_webp && <source srcSet={dailyItem.shop_image_webp} type="image/webp" />}
+              {dailyItem.shop_image && <source srcSet={dailyItem.shop_image} type="image/png" />}
+              <img
+                src={itemImgSrc}
+                alt="Mystery item"
+                className="h-28 w-28 object-contain sm:h-40 sm:w-40"
+                style={{
+                  filter: getBlurFilter(gameState.hintsRevealed, isFinished),
+                }}
+                draggable={false}
+              />
+            </picture>
+          </SilhouetteFrame>
           {isFinished && (
             <motion.p
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-2 text-center font-mono text-sm font-semibold text-foreground"
+              className="text-center font-mono text-sm font-semibold text-foreground"
             >
               {dailyItem.name}
             </motion.p>
           )}
-        </div>
+        </Stack>
       </motion.div>
 
       {hints.length > 0 && <HintReveal hints={hints} revealedCount={gameState.hintsRevealed} />}
@@ -181,29 +186,7 @@ function GuessItem() {
         />
       </div>
 
-      {gameState.guesses.length > 0 && (
-        <div className="space-y-1.5">
-          <p className="font-mono text-[10px] tracking-wider text-muted-foreground/40 uppercase">Previous Guesses</p>
-          <div className="flex flex-wrap gap-2">
-            {gameState.guesses.map((guess) => {
-              const isCorrect = guess.toLowerCase() === dailyItem.name.toLowerCase();
-              return (
-                <span
-                  key={guess}
-                  className={cn(
-                    "border px-2.5 py-1 font-mono text-xs",
-                    isCorrect
-                      ? "border-green-500/40 bg-green-500/10 text-green-400"
-                      : "border-primary/20 bg-primary/5 text-primary/70",
-                  )}
-                >
-                  {guess}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <PreviousGuesses guesses={gameState.guesses} answer={dailyItem.name} />
 
       <ResultModal
         open={isFinished}

@@ -3,11 +3,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { Upgrade } from "deadlock_api_client";
 import { useMemo, useState } from "react";
 
-import { FlashcardGame } from "~/components/flashcards/FlashcardGame";
-import { ItemEffectCard } from "~/components/items-page/ItemEffectCard";
-import { Checkbox } from "~/components/ui/checkbox";
-import { Label } from "~/components/ui/label";
-import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
+import { FlashcardGame } from "~/components/features/flashcards/FlashcardGame";
+import { ItemEffectCard } from "~/components/features/items/ItemEffectCard";
+import { CheckboxField } from "~/components/ui/checkbox-field";
+import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { seo } from "~/lib/seo";
 import { filterShopableItems, itemUpgradesFullQueryOptions } from "~/queries/asset-queries";
 
@@ -29,12 +28,7 @@ export const Route = createFileRoute("/games_/flashcards/item-effects")({
 function ItemNameOption({ item }: { item: Upgrade }) {
   return (
     <span className="flex min-w-0 items-center gap-3">
-      <img
-        src={item.shop_image_webp ?? ""}
-        alt=""
-        className="size-8 shrink-0 rounded-sm object-contain"
-        draggable={false}
-      />
+      <img src={item.shop_image_webp ?? ""} alt="" className="size-8 shrink-0 object-contain" draggable={false} />
       <span className="truncate tracking-wide uppercase">{item.name}</span>
     </span>
   );
@@ -73,7 +67,7 @@ function ItemEffectFlashcards() {
             <img
               src={item.shop_image_webp ?? ""}
               alt={item.name}
-              className="size-16 shrink-0 rounded-sm object-contain"
+              className="size-16 shrink-0 object-contain"
               draggable={false}
             />
             <span className="font-game text-2xl tracking-tight uppercase">{item.name}</span>
@@ -87,31 +81,18 @@ function ItemEffectFlashcards() {
       }
       controls={
         <div className="flex flex-wrap items-center gap-4">
-          <Label
-            htmlFor="flashcard-exclude-legendary"
-            className="flex cursor-pointer items-center gap-2 text-muted-foreground/70 hover:text-foreground"
-          >
-            <Checkbox
-              id="flashcard-exclude-legendary"
-              checked={excludeLegendary}
-              onCheckedChange={(v) => setExcludeLegendary(v === true)}
-            />
-            <span>Exclude legendary</span>
-          </Label>
-          <ToggleGroup
-            type="single"
-            value={direction}
-            onValueChange={(v) => v && setDirection(v as Direction)}
-            variant="outline"
+          <CheckboxField
+            id="flashcard-exclude-legendary"
+            label="Exclude legendary"
+            checked={excludeLegendary}
+            onCheckedChange={(v) => setExcludeLegendary(v === true)}
             size="sm"
-          >
-            <ToggleGroupItem value="effects-to-name" className="px-3 text-xs">
-              Effects → Name
-            </ToggleGroupItem>
-            <ToggleGroupItem value="name-to-effects" className="px-3 text-xs">
-              Name → Effects
-            </ToggleGroupItem>
-          </ToggleGroup>
+            className="items-center"
+          />
+          <Segmented aria-label="Card direction" value={direction} onValueChange={setDirection} width="hug">
+            <SegmentedItem value="effects-to-name">Effects → Name</SegmentedItem>
+            <SegmentedItem value="name-to-effects">Name → Effects</SegmentedItem>
+          </Segmented>
         </div>
       }
       isLoading={isLoading}

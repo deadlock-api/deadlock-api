@@ -1,20 +1,20 @@
 # Compact data views
 
-Use these shared components for analytics and other data-heavy pages. The hero over-time page is the reference implementation.
+Rules for analytics and other data-heavy pages, on top of `docs/design-system.md`. The hero over-time page is the reference implementation.
 
-| Need                      | Component                         | Behavior                                                                                       |
-| ------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Page heading              | `analytics/DataPageHeader`        | Compact title and description; longer context in an accessible disclosure.                     |
-| Chart controls            | `analytics/ChartToolbar`          | One compact row on desktop; controls wrap on narrow screens.                                   |
-| Large metric option sets  | `analytics/MetricSelect`          | Grouped options, explicit accessible label, and a stable label during SSR.                     |
-| Historical chart controls | `analytics/TrendControls`         | Metric menu and interval toggle group; route components own URL state.                         |
-| Plot surface              | `analytics/ChartSurface`          | 280px mobile / 320px desktop; semantic card colors. Override height for dense scatter plots.   |
-| Chart and entity picker   | `analytics/ChartSidebarLayout`    | 18rem sidebar at large widths, matching the chart panel's height; stacked on mobile.           |
-| Hero selection            | `selectors/ChartHeroSelector`     | Portrait grid, selected count, Show all/Clear, unavailable heroes disabled, scrollable roster. |
-| Chart readings            | `analytics/ChartReadings`         | Aligned values, bounded and keyboard-scrollable when many series are present.                  |
-| Query feedback            | `analytics/ChartStates`           | Loading skeleton, actionable retry, and distinct empty results.                                |
-| Sortable columns          | `heroes-page/SortableHeader`      | Native buttons, focus indication, and `aria-sort`; accepts any string key.                     |
-| Dense comparative bars    | `primitives/ProgressBarWithLabel` | `compact` puts the bar and numbers on one row.                                                 |
+| Need                      | Component                                  | Behavior                                                                                       |
+| ------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| Page heading              | `patterns/page/PageHeader`                 | Compact title and description; longer context in an accessible disclosure.                     |
+| Chart controls            | `patterns/charts/ChartToolbar`             | One compact row on desktop; controls wrap on narrow screens.                                   |
+| Large metric option sets  | `patterns/charts/MetricSelect`             | Grouped options, explicit accessible label, and a stable label during SSR.                     |
+| Historical chart controls | `patterns/charts/TrendControls`            | Metric menu and interval toggle group; route components own URL state.                         |
+| Plot surface              | `patterns/charts/ChartSurface`             | 280px mobile / 320px desktop; semantic card colors. Override height for dense scatter plots.   |
+| Chart and entity picker   | `patterns/charts/ChartSidebarLayout`       | 18rem sidebar at large widths, matching the chart panel's height; stacked on mobile.           |
+| Hero selection            | `domain/selectors/ChartHeroSelector`       | Portrait grid, selected count, Show all/Clear, unavailable heroes disabled, scrollable roster. |
+| Chart readings            | `patterns/charts/ChartReadings`            | Aligned values, bounded and keyboard-scrollable when many series are present.                  |
+| Query feedback            | `patterns/charts/ChartStates`              | Loading skeleton, actionable retry, and distinct empty results.                                |
+| Sortable columns          | `patterns/data-table/SortableHeader`       | Native buttons, focus indication, and `aria-sort`; accepts any string key.                     |
+| Dense comparative bars    | `ui/progress-bar` (`ProgressBarWithLabel`) | `compact` puts the bar and numbers on one row.                                                 |
 
 ## Layout and interaction
 

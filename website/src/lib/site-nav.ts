@@ -10,6 +10,7 @@ import {
   ListOrdered,
   Map,
   Medal,
+  Palette,
   Radio,
   Shield,
   ShoppingBag,
@@ -77,6 +78,10 @@ export const navGroups: NavGroup[] = [
       { to: "/games/flashcards", label: "Flashcards", icon: GraduationCap },
     ],
   },
+  // The route itself returns 404 outside the dev server; this only keeps the link out of production navigation.
+  ...(import.meta.env.DEV
+    ? [{ label: "Dev", links: [{ to: "/dev/design-system", label: "Design System", icon: Palette }] }]
+    : []),
 ];
 
 export const bottomNavLinks: NavLink[] = [

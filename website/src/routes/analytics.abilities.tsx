@@ -2,13 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { Suspense, useMemo, useState } from "react";
 
-import AbilityOrderTree from "~/components/abilities/AbilityOrderTree";
-import { DataPageHeader } from "~/components/analytics/DataPageHeader";
-import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
-import { Filter } from "~/components/Filter";
-import { LoadingLogo } from "~/components/LoadingLogo";
-import { DEFAULT_MATCH_MODE } from "~/components/selectors/MatchModeSelector";
-import type { TriState } from "~/components/selectors/TriStateSelector";
+import { Filter } from "~/components/domain/filters";
+import { DEFAULT_MATCH_MODE } from "~/components/domain/selectors/MatchModeSelector";
+import AbilityOrderTree from "~/components/features/abilities/AbilityOrderTree";
+import type { TriState } from "~/components/patterns/filter-bar/TriStateSelector";
+import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { PageShell } from "~/components/patterns/page/PageShell";
+import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { getEffectiveRankRange } from "~/lib/game-mode";
@@ -73,47 +74,43 @@ function AbilitiesPage() {
   );
 
   return (
-    <div className="flex flex-col gap-3">
-      <DataPageHeader
-        title="Ability Stats"
-        description="Explore the most common ability upgrade paths and their win rates"
-      >
+    <PageShell>
+      <PageHeader title="Ability Stats" description="Explore the most common ability upgrade paths and their win rates">
         <p>
           Analyze the most popular and highest win rate ability upgrade paths for every Deadlock hero. See which skill
           orders are favored at different rank brackets, and how item choices affect optimal ability leveling.
         </p>
-      </DataPageHeader>
+      </PageHeader>
 
       <Filter.Root>
         <Filter.Hero
           value={heroId}
           defaultValue={DEFAULT_HERO_ID}
-          onChange={(id) => {
+          onValueChange={(id) => {
             if (id != null) setHeroId(id);
           }}
         />
         <Filter.ModeWithRank
-          mode={mode}
-          onModeChange={setMode}
-          minRank={minRankId}
-          maxRank={maxRankId}
-          onRankChange={(min, max) => {
-            setMinRankId(min);
-            setMaxRankId(max);
+          value={{ mode, rank: [minRankId, maxRankId] }}
+          onValueChange={(next) => {
+            if (next.mode !== mode) setMode(next.mode);
+            if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
+              setMinRankId(next.rank[0]);
+              setMaxRankId(next.rank[1]);
+            }
           }}
         />
-        <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={0} defaultValue={20} />
-        <Filter.ItemsTriState selections={itemSelections} onSelectionsChange={setItemSelections} label="Items" />
+        <Filter.MinMatches value={minMatches} onValueChange={setMinMatches} min={0} defaultValue={20} />
+        <Filter.ItemsTriState value={itemSelections} onValueChange={setItemSelections} label="Items" />
         <Filter.SeasonPatchDate
-          startDate={startDate}
-          endDate={endDate}
-          onDateChange={handleDateChange}
+          value={{ startDate, endDate }}
+          onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
           resetRange={defaultRange}
         />
       </Filter.Root>
 
       <ChunkErrorBoundary>
-        <Suspense fallback={<LoadingLogo />}>
+        <Suspense fallback={<LoadingState />}>
           <AbilityOrderTree
             heroId={heroId}
             minRankId={effectiveMinRankId}
@@ -129,6 +126,6 @@ function AbilitiesPage() {
           />
         </Suspense>
       </ChunkErrorBoundary>
-    </div>
+    </PageShell>
   );
 }

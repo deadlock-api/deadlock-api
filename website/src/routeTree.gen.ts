@@ -49,6 +49,7 @@ import { Route as DeadlockdleGuessItemRouteImport } from './routes/deadlockdle/g
 import { Route as DeadlockdleGuessSoundRouteImport } from './routes/deadlockdle/guess-sound'
 import { Route as DeadlockdleItemStatsRouteImport } from './routes/deadlockdle/item-stats'
 import { Route as DeadlockdleTriviaRouteImport } from './routes/deadlockdle/trivia'
+import { Route as DevDesignSystemRouteImport } from './routes/dev.design-system'
 import { Route as FlashcardsIndexRouteImport } from './routes/flashcards/index'
 import { Route as FlashcardsHeroesRouteImport } from './routes/flashcards/heroes'
 import { Route as FlashcardsItemEffectsRouteImport } from './routes/flashcards/item-effects'
@@ -300,6 +301,11 @@ const DeadlockdleTriviaRoute = DeadlockdleTriviaRouteImport.update({
   id: '/trivia',
   path: '/trivia',
   getParentRoute: () => DeadlockdleRoute,
+} as any)
+const DevDesignSystemRoute = DevDesignSystemRouteImport.update({
+  id: '/dev/design-system',
+  path: '/dev/design-system',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const FlashcardsIndexRoute = FlashcardsIndexRouteImport.update({
   id: '/',
@@ -603,6 +609,7 @@ export interface FileRoutesByFullPath {
   '/deadlockdle/guess-sound': typeof DeadlockdleGuessSoundRoute
   '/deadlockdle/item-stats': typeof DeadlockdleItemStatsRoute
   '/deadlockdle/trivia': typeof DeadlockdleTriviaRoute
+  '/dev/design-system': typeof DevDesignSystemRoute
   '/flashcards/heroes': typeof FlashcardsHeroesRoute
   '/flashcards/item-effects': typeof FlashcardsItemEffectsRoute
   '/flashcards/item-upgrades': typeof FlashcardsItemUpgradesRoute
@@ -687,6 +694,7 @@ export interface FileRoutesByTo {
   '/deadlockdle/guess-sound': typeof DeadlockdleGuessSoundRoute
   '/deadlockdle/item-stats': typeof DeadlockdleItemStatsRoute
   '/deadlockdle/trivia': typeof DeadlockdleTriviaRoute
+  '/dev/design-system': typeof DevDesignSystemRoute
   '/flashcards/heroes': typeof FlashcardsHeroesRoute
   '/flashcards/item-effects': typeof FlashcardsItemEffectsRoute
   '/flashcards/item-upgrades': typeof FlashcardsItemUpgradesRoute
@@ -778,6 +786,7 @@ export interface FileRoutesById {
   '/deadlockdle/guess-sound': typeof DeadlockdleGuessSoundRoute
   '/deadlockdle/item-stats': typeof DeadlockdleItemStatsRoute
   '/deadlockdle/trivia': typeof DeadlockdleTriviaRoute
+  '/dev/design-system': typeof DevDesignSystemRoute
   '/flashcards/heroes': typeof FlashcardsHeroesRoute
   '/flashcards/item-effects': typeof FlashcardsItemEffectsRoute
   '/flashcards/item-upgrades': typeof FlashcardsItemUpgradesRoute
@@ -872,6 +881,7 @@ export interface FileRouteTypes {
     | '/deadlockdle/guess-sound'
     | '/deadlockdle/item-stats'
     | '/deadlockdle/trivia'
+    | '/dev/design-system'
     | '/flashcards/heroes'
     | '/flashcards/item-effects'
     | '/flashcards/item-upgrades'
@@ -956,6 +966,7 @@ export interface FileRouteTypes {
     | '/deadlockdle/guess-sound'
     | '/deadlockdle/item-stats'
     | '/deadlockdle/trivia'
+    | '/dev/design-system'
     | '/flashcards/heroes'
     | '/flashcards/item-effects'
     | '/flashcards/item-upgrades'
@@ -1046,6 +1057,7 @@ export interface FileRouteTypes {
     | '/deadlockdle/guess-sound'
     | '/deadlockdle/item-stats'
     | '/deadlockdle/trivia'
+    | '/dev/design-system'
     | '/flashcards/heroes'
     | '/flashcards/item-effects'
     | '/flashcards/item-upgrades'
@@ -1133,6 +1145,7 @@ export interface RootRouteChildren {
   CommunityBadgeDistributionRoute: typeof CommunityBadgeDistributionRoute
   CommunityHeatmapRoute: typeof CommunityHeatmapRoute
   CommunityLeaderboardRoute: typeof CommunityLeaderboardRoute
+  DevDesignSystemRoute: typeof DevDesignSystemRoute
   GamesDeadlockdleRoute: typeof GamesDeadlockdleRouteWithChildren
   GamesFlashcardsRoute: typeof GamesFlashcardsRouteWithChildren
   PlayersAccountIdRoute: typeof PlayersAccountIdRoute
@@ -1427,6 +1440,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/deadlockdle/trivia'
       preLoaderRoute: typeof DeadlockdleTriviaRouteImport
       parentRoute: typeof DeadlockdleRoute
+    }
+    '/dev/design-system': {
+      id: '/dev/design-system'
+      path: '/dev/design-system'
+      fullPath: '/dev/design-system'
+      preLoaderRoute: typeof DevDesignSystemRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/flashcards/': {
       id: '/flashcards/'
@@ -2006,6 +2026,7 @@ const rootRouteChildren: RootRouteChildren = {
   CommunityBadgeDistributionRoute: CommunityBadgeDistributionRoute,
   CommunityHeatmapRoute: CommunityHeatmapRoute,
   CommunityLeaderboardRoute: CommunityLeaderboardRoute,
+  DevDesignSystemRoute: DevDesignSystemRoute,
   GamesDeadlockdleRoute: GamesDeadlockdleRouteWithChildren,
   GamesFlashcardsRoute: GamesFlashcardsRouteWithChildren,
   PlayersAccountIdRoute: PlayersAccountIdRoute,

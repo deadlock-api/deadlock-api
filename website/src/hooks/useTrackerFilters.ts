@@ -1,9 +1,9 @@
 import { parseAsInteger, parseAsString, parseAsStringLiteral, throttle, useQueryState, useQueryStates } from "nuqs";
 import { useMemo } from "react";
 
-import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
-import { parseAsMatchMode } from "~/components/selectors/MatchModeSelector";
-import { MODE_CONFIG } from "~/components/selectors/ModeSelector";
+import { parseAsGameMode } from "~/components/domain/selectors/GameModeSelector";
+import { parseAsMatchMode } from "~/components/domain/selectors/MatchModeSelector";
+import { MODE_CONFIG } from "~/components/domain/selectors/ModeSelector";
 import { day } from "~/dayjs";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";

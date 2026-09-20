@@ -2,11 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo } from "react";
 
-import { TrackerAccountList } from "~/components/tracker-page/shared/TrackerAccountList";
-import { TrackerQueryError } from "~/components/tracker-page/shared/TrackerQueryError";
+import { TrackerAccountList } from "~/components/features/tracker/shared/TrackerAccountList";
+import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { PageShell } from "~/components/patterns/page/PageShell";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
+import { Stack } from "~/components/ui/stack";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 import { usePatronAuth } from "~/hooks/usePatronAuth";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
@@ -78,11 +81,11 @@ function MyAccountsCard() {
             </div>
           </div>
         ) : accountsQuery.isError && activeAccounts.length === 0 ? (
-          <TrackerQueryError
+          <ErrorState
             title="Could not load your accounts"
             description="Your account list is temporarily unavailable. Try loading it again."
             onRetry={() => accountsQuery.refetch()}
-            isRetrying={accountsQuery.isFetching}
+            retrying={accountsQuery.isFetching}
           />
         ) : activeAccounts.length === 0 ? (
           <div className="flex flex-col gap-3 px-3 py-2">
@@ -98,11 +101,11 @@ function MyAccountsCard() {
         ) : (
           <>
             {accountsQuery.isError && (
-              <TrackerQueryError
+              <ErrorState
                 title="Could not refresh your accounts"
                 description="Showing the last loaded account list. Recent changes may not appear yet."
                 onRetry={() => accountsQuery.refetch()}
-                isRetrying={accountsQuery.isFetching}
+                retrying={accountsQuery.isFetching}
               />
             )}
             <TrackerAccountList
@@ -121,18 +124,23 @@ function MyAccountsCard() {
 
 function TrackerLandingPage() {
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-6">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Player Tracker</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Match history, rank progression, hero breakdowns, and mate &amp; opponent analytics
-        </p>
-        <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-          Available for the prioritized Steam accounts linked to your Patreon subscription. Pick one of your accounts
-          below.
-        </p>
-      </div>
+    <PageShell width="narrow" density="content">
+      <PageHeader
+        size="lg"
+        title="Player Tracker"
+        description={
+          <Stack gap={2} asChild>
+            <span>
+              <span>Match history, rank progression, hero breakdowns, and mate &amp; opponent analytics</span>
+              <span>
+                Available for the prioritized Steam accounts linked to your Patreon subscription. Pick one of your
+                accounts below.
+              </span>
+            </span>
+          </Stack>
+        }
+      />
       <MyAccountsCard />
-    </div>
+    </PageShell>
   );
 }

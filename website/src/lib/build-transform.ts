@@ -1,6 +1,6 @@
 import type { Ability } from "deadlock_api_client";
 
-import type { FullBuildItem } from "~/components/MatchHistoryCard";
+import type { FullBuildItem } from "~/components/domain/match/MatchHistoryCard";
 import { day } from "~/dayjs";
 import type { SlimHero } from "~/queries/asset-queries";
 

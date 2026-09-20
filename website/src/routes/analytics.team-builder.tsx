@@ -1,26 +1,29 @@
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { AnalyticsApiHeroCountersStatsRequest } from "deadlock_api_client";
-import { DicesIcon, RotateCwIcon, SearchIcon, TriangleAlertIcon, UsersRoundIcon } from "lucide-react";
+import { DicesIcon, SearchIcon, TriangleAlertIcon, UsersRoundIcon } from "lucide-react";
 import { type Options, parseAsBoolean, parseAsInteger, useQueryState } from "nuqs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { DataPageHeader } from "~/components/analytics/DataPageHeader";
-import { Filter } from "~/components/Filter";
-import { formatDateRange } from "~/components/Filter/utils";
-import { combineQueryStates } from "~/components/QueryRenderer";
-import { type Mode, MODE_CONFIG } from "~/components/selectors/ModeSelector";
-import { CounterMatrix } from "~/components/team-builder/CounterMatrix";
-import { DetailDialog } from "~/components/team-builder/DetailDialog";
-import { DraftBoard } from "~/components/team-builder/DraftBoard";
-import { HeroPickerDialog, type PickerTarget } from "~/components/team-builder/HeroPickerDialog";
-import { LaneCards } from "~/components/team-builder/LaneCards";
-import { MatchImportControl } from "~/components/team-builder/MatchImportControl";
-import { NextPickPanel } from "~/components/team-builder/NextPickPanel";
-import { PairDetailBody } from "~/components/team-builder/PairDetailDialog";
-import { PairsPanel } from "~/components/team-builder/PairsPanel";
-import { Panel } from "~/components/team-builder/Panel";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Filter } from "~/components/domain/filters";
+import { formatDateRange } from "~/components/domain/filters/utils";
+import { type Mode, MODE_CONFIG } from "~/components/domain/selectors/ModeSelector";
+import { CounterMatrix } from "~/components/features/team-builder/CounterMatrix";
+import { DetailDialog } from "~/components/features/team-builder/DetailDialog";
+import { DraftBoard } from "~/components/features/team-builder/DraftBoard";
+import { HeroPickerDialog, type PickerTarget } from "~/components/features/team-builder/HeroPickerDialog";
+import { LaneCards } from "~/components/features/team-builder/LaneCards";
+import { MatchImportControl } from "~/components/features/team-builder/MatchImportControl";
+import { NextPickPanel } from "~/components/features/team-builder/NextPickPanel";
+import { PairDetailBody } from "~/components/features/team-builder/PairDetailDialog";
+import { PairsPanel } from "~/components/features/team-builder/PairsPanel";
+import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { PageShell } from "~/components/patterns/page/PageShell";
+import { Panel } from "~/components/patterns/panel/Panel";
+import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
+import { combineQueryStates } from "~/components/patterns/states/QueryRenderer";
+import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useDraft } from "~/hooks/useDraft";
@@ -342,8 +345,8 @@ function TeamBuilderPage() {
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <DataPageHeader
+    <PageShell>
+      <PageHeader
         title="Team Builder"
         description={
           hasLanes
@@ -354,19 +357,18 @@ function TeamBuilderPage() {
 
       <Filter.Root>
         <Filter.ModeWithRank
-          mode={mode}
-          onModeChange={changeMode}
-          minRank={minRankId}
-          maxRank={maxRankId}
-          onRankChange={(min, max) => {
-            setMinRankId(min);
-            setMaxRankId(max);
+          value={{ mode, rank: [minRankId, maxRankId] }}
+          onValueChange={(next) => {
+            if (next.mode !== mode) changeMode(next.mode);
+            if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
+              setMinRankId(next.rank[0]);
+              setMaxRankId(next.rank[1]);
+            }
           }}
         />
         <Filter.SeasonPatchDate
-          startDate={startDate}
-          endDate={endDate}
-          onDateChange={handleDateChange}
+          value={{ startDate, endDate }}
+          onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
           resetRange={defaultRange}
         />
         <MatchImportControl
@@ -382,17 +384,13 @@ function TeamBuilderPage() {
       {/* Above the board rather than replacing it: the stats failing says nothing about the draft,
           and swapping the page out would take the user's picks off screen with it. */}
       {isError && (
-        <Alert variant="destructive">
-          <TriangleAlertIcon />
-          <AlertTitle>Could not load the draft stats</AlertTitle>
-          <AlertDescription className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <ErrorState
+          title="Could not load the draft stats"
+          description={
             <span title={error?.message}>Your draft is unchanged. The numbers below need the stats to load.</span>
-            <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs" onClick={() => void refetchStats()}>
-              <RotateCwIcon className="size-3" />
-              Try again
-            </Button>
-          </AlertDescription>
-        </Alert>
+          }
+          onRetry={() => void refetchStats()}
+        />
       )}
 
       {/* The board only needs hero assets, so it stays interactive while the stats load and the
@@ -413,30 +411,27 @@ function TeamBuilderPage() {
       {!isError && (
         <>
           {totalPicked === 0 ? (
-            <Panel className="items-center px-6 py-10 text-center">
-              <UsersRoundIcon className="size-9 text-muted-foreground/40" />
-              <div className="mt-3 text-base font-semibold">Pick a hero to start</div>
-              <p className="mt-1 max-w-105 text-sm text-balance text-muted-foreground">
-                {hasLanes
+            <EmptyState
+              icon={UsersRoundIcon}
+              title="Pick a hero to start"
+              description={
+                hasLanes
                   ? "Win rate, synergy and lane matchups appear as soon as two heroes share a side. Lanes are optional; the team-wide numbers work without them."
-                  : "Win rate, synergy and counters appear as soon as two heroes share a side."}
-              </p>
-              <div className="mt-4 flex flex-wrap justify-center gap-2">
-                <Button className="gap-1.5 rounded-full" onClick={() => openNextSlot("ally")}>
-                  <SearchIcon className="size-3.5" />
-                  Add hero
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="gap-1.5 rounded-full"
-                  disabled={importing}
-                  onClick={() => void randomComp()}
-                >
-                  <DicesIcon className="size-3.5" />
-                  Random comp
-                </Button>
-              </div>
-            </Panel>
+                  : "Win rate, synergy and counters appear as soon as two heroes share a side."
+              }
+              action={
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button shape="pill" onClick={() => openNextSlot("ally")}>
+                    <SearchIcon className="size-3.5" />
+                    Add hero
+                  </Button>
+                  <Button variant="secondary" shape="pill" disabled={importing} onClick={() => void randomComp()}>
+                    <DicesIcon className="size-3.5" />
+                    Random comp
+                  </Button>
+                </div>
+              }
+            />
           ) : (
             <>
               {hasLanes && (
@@ -450,9 +445,9 @@ function TeamBuilderPage() {
               )}
 
               {incompleteLanes > 0 && (
-                <Alert className="border-primary/25 bg-primary/[0.06] [&>svg]:text-primary">
+                <Alert variant="primary">
                   <TriangleAlertIcon />
-                  <AlertDescription className="text-[13px] text-foreground">
+                  <AlertDescription className="text-foreground">
                     {incompleteLanes === 1 ? "One lane is" : `${incompleteLanes} lanes are`} still incomplete. Lane win
                     rates stay blank until both slots on both sides of a lane are filled.
                   </AlertDescription>
@@ -502,6 +497,6 @@ function TeamBuilderPage() {
       <DetailDialog value={pairDetail} onClose={() => setPairDetail(null)}>
         {(pair) => <PairDetailBody pair={pair} analysis={analysis} index={index} filterSummary={filterSummary} />}
       </DetailDialog>
-    </div>
+    </PageShell>
   );
 }

@@ -3,17 +3,18 @@ import type { Ability, Hero } from "deadlock_api_client";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
-import { GameShell } from "~/components/deadlockdle/GameShell";
-import { GuessFeedback } from "~/components/deadlockdle/GuessFeedback";
-import { GuessInput } from "~/components/deadlockdle/GuessInput";
-import { HintReveal } from "~/components/deadlockdle/HintReveal";
-import { ResultModal } from "~/components/deadlockdle/ResultModal";
-import { LoadingLogo } from "~/components/LoadingLogo";
+import { GameShell } from "~/components/features/deadlockdle/GameShell";
+import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
+import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
+import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
+import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuesses";
+import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { Stack } from "~/components/ui/stack";
 import { useAbilities, useHeroes } from "~/lib/deadlockdle/queries";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
 import { seo } from "~/lib/seo";
-import { cn } from "~/lib/utils";
 import { filterPlayableHeroes } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/deadlockdle/guess-ability")({
@@ -143,11 +144,7 @@ function GuessAbility() {
   const isLoading = heroesLoading || abilitiesLoading;
 
   if (isLoading || !dailyEntry) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <LoadingLogo className="h-16 w-16 animate-pulse" />
-      </div>
-    );
+    return <LoadingState label="puzzle" />;
   }
 
   const { ability, hero } = dailyEntry;
@@ -170,24 +167,24 @@ function GuessAbility() {
         transition={{ duration: 0.35, ease: "easeInOut" }}
         className="flex justify-center"
       >
-        <div className="relative">
+        <Stack gap={2}>
           <picture>
             {ability.image_webp && <source srcSet={ability.image_webp} type="image/webp" />}
             {ability.image && <source srcSet={ability.image} type="image/png" />}
             <img
               src={abilityImgSrc}
               alt="Mystery ability"
-              className="h-28 w-28 object-contain sm:h-[160px] sm:w-[160px]"
+              className="h-28 w-28 object-contain sm:h-40 sm:w-40"
               draggable={false}
             />
           </picture>
           {isFinished && (
-            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-2 text-center">
+            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="text-center">
               <p className="font-mono text-sm font-semibold text-foreground">{ability.name}</p>
-              <p className="font-mono text-xs text-muted-foreground/50">{hero.name}</p>
+              <p className="font-mono text-xs text-muted-foreground">{hero.name}</p>
             </motion.div>
           )}
-        </div>
+        </Stack>
       </motion.div>
 
       {hints.length > 0 && <HintReveal hints={hints} revealedCount={gameState.hintsRevealed} />}
@@ -201,29 +198,7 @@ function GuessAbility() {
         />
       </div>
 
-      {gameState.guesses.length > 0 && (
-        <div className="space-y-1.5">
-          <p className="font-mono text-[10px] tracking-wider text-muted-foreground/40 uppercase">Previous Guesses</p>
-          <div className="flex flex-wrap gap-2">
-            {gameState.guesses.map((guess) => {
-              const isCorrect = guess.toLowerCase() === ability.name.toLowerCase();
-              return (
-                <span
-                  key={guess}
-                  className={cn(
-                    "border px-2.5 py-1 font-mono text-xs",
-                    isCorrect
-                      ? "border-green-500/40 bg-green-500/10 text-green-400"
-                      : "border-primary/20 bg-primary/5 text-primary/70",
-                  )}
-                >
-                  {guess}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <PreviousGuesses guesses={gameState.guesses} answer={ability.name} />
 
       <ResultModal
         open={isFinished}

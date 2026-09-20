@@ -83,6 +83,8 @@ export default defineConfig({
           // Query variants share one output file; crawling them overwrites the default page's HTML.
           !path.includes("?") &&
           !/^\/(deadlockdle|flashcards)(\/|$)/.test(path) &&
+          // Dev-only pages answer 404 in a production build, which the prerenderer treats as a failure.
+          !/^\/dev(\/|$)/.test(path) &&
           // Filtered pages and their legacy redirects need request-specific server rendering.
           !/^\/(analytics|community|tracker)(\/|$)/.test(path) &&
           !/^\/(games|heroes|items|abilities|players|team-builder|leaderboard|badge-distribution|heatmap)(\/|$)/.test(

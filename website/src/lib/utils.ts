@@ -26,13 +26,6 @@ export function snakeToPretty(str: string): string {
     .join(" ");
 }
 
-export function randomColorHex(seed: number) {
-  const random = Math.sin(seed) * 10000;
-  return `#${Math.floor((random * random * 16777215) % 16777215)
-    .toString(16)
-    .padStart(6, "0")}`;
-}
-
 export function hexToRgba(hex: string, alpha: number): string {
   const cleaned = hex.replace("#", "");
   const r = parseInt(cleaned.substring(0, 2), 16);

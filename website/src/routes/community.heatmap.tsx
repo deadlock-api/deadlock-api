@@ -4,12 +4,15 @@ import type { AnalyticsApiKillDeathStatsRequest } from "deadlock_api_client";
 import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense } from "react";
 
-import { DataPageHeader } from "~/components/analytics/DataPageHeader";
-import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
-import { Filter } from "~/components/Filter";
-import HeatmapCanvas from "~/components/heatmap/HeatmapCanvas";
-import { LoadingLogo } from "~/components/LoadingLogo";
-import { combineQueryStates } from "~/components/QueryRenderer";
+import { Filter } from "~/components/domain/filters";
+import type { ModeWithRank } from "~/components/domain/filters/ModeWithRankFilter";
+import HeatmapCanvas from "~/components/features/heatmap/HeatmapCanvas";
+import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { PageShell } from "~/components/patterns/page/PageShell";
+import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { combineQueryStates } from "~/components/patterns/states/QueryRenderer";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -19,7 +22,7 @@ import { seo } from "~/lib/seo";
 import { loadSeasons } from "~/queries/asset-queries";
 import { killDeathStatsQueryOptions, mapQueryOptions } from "~/queries/heatmap-queries";
 
-const Heatmap3D = lazy(() => import("~/components/heatmap/Heatmap3D"));
+const Heatmap3D = lazy(() => import("~/components/features/heatmap/Heatmap3D"));
 
 const VIEW_MODES = ["kills", "deaths", "kd"] as const;
 
@@ -74,37 +77,30 @@ function HeatmapPage() {
 
   const { isPending, isError, error } = combineQueryStates(mapQuery, killDeathQuery);
 
-  const handleRankChange = (min: number, max: number) => {
+  const handleModeWithRankChange = ({ mode: nextMode, rank: [min, max] }: ModeWithRank) => {
+    setMode(nextMode);
     setMinRankId(min);
     setMaxRankId(max);
   };
 
   return (
-    <div className="flex h-[calc(100dvh-2rem)] flex-col gap-3">
-      <DataPageHeader title="Kill/Death Heatmap" description="Visualize kill and death hotspots across the map" />
+    <PageShell height="viewport">
+      <PageHeader title="Kill/Death Heatmap" description="Visualize kill and death hotspots across the map" />
 
       <Filter.Root>
-        <Filter.Team value={team} onChange={setTeam} />
-        <Filter.HeatmapViewMode value={viewMode} onChange={(m) => setViewMode(m as typeof viewMode)} />
-        <Filter.DimensionToggle value={is3D} onChange={setIs3D} />
-        <Filter.Hero value={heroId} onChange={setHeroId} allowNull label="Hero" />
-        <Filter.ModeWithRank
-          mode={mode}
-          onModeChange={setMode}
-          minRank={minRankId}
-          maxRank={maxRankId}
-          onRankChange={handleRankChange}
-        />
+        <Filter.Team value={team} onValueChange={setTeam} />
+        <Filter.HeatmapViewMode value={viewMode} onValueChange={(m) => setViewMode(m as typeof viewMode)} />
+        <Filter.DimensionToggle value={is3D} onValueChange={setIs3D} />
+        <Filter.Hero value={heroId} onValueChange={setHeroId} allowNull label="Hero" />
+        <Filter.ModeWithRank value={{ mode, rank: [minRankId, maxRankId] }} onValueChange={handleModeWithRankChange} />
         <Filter.SeasonPatchDate
-          startDate={startDate}
-          endDate={endDate}
-          onDateChange={handleDateChange}
+          value={{ startDate, endDate }}
+          onValueChange={({ startDate: start, endDate: end, action }) => handleDateChange(start, end, action)}
           resetRange={defaultRange}
         />
         <Filter.TimeRange
-          minTime={minGameTime || undefined}
-          maxTime={maxGameTime < 3600 ? maxGameTime : undefined}
-          onTimeChange={(min, max) => {
+          value={[minGameTime || undefined, maxGameTime < 3600 ? maxGameTime : undefined]}
+          onValueChange={([min, max]) => {
             setMinGameTime(min ?? 0);
             setMaxGameTime(max ?? 3600);
           }}
@@ -113,15 +109,23 @@ function HeatmapPage() {
         />
       </Filter.Root>
 
-      <div className="flex max-h-[62.5vh] min-h-0 flex-1 items-center justify-center">
+      <div className="flex min-h-0 flex-1 items-center justify-center">
         {isPending ? (
-          <LoadingLogo />
+          <LoadingState label="heatmap" />
         ) : isError ? (
-          <div className="text-center text-sm text-destructive">Failed to load heatmap data: {error?.message}</div>
+          <ErrorState
+            title="Failed to load heatmap data"
+            description={error?.message}
+            retrying={mapQuery.isFetching || killDeathQuery.isFetching}
+            onRetry={() => {
+              if (mapQuery.isError) void mapQuery.refetch();
+              if (killDeathQuery.isError) void killDeathQuery.refetch();
+            }}
+          />
         ) : mapQuery.data && killDeathQuery.data ? (
           is3D ? (
             <ChunkErrorBoundary>
-              <Suspense fallback={<LoadingLogo />}>
+              <Suspense fallback={<LoadingState label="3D heatmap" />}>
                 <Heatmap3D
                   data={killDeathQuery.data}
                   mapData={mapQuery.data}
@@ -142,6 +146,6 @@ function HeatmapPage() {
           )
         ) : null}
       </div>
-    </div>
+    </PageShell>
   );
 }

@@ -1,0 +1,234 @@
+# Design system
+
+The source of truth for how the website looks and how its UI code is organised. `pnpm lint` enforces the rules marked
+**(linted)** through `scripts/lint-design-system.mjs`. Every component and token is rendered on the dev-only page
+`/dev/design-system` (`pnpm dev`; it is linked under "Dev" in the sidebar and has its own searchable index): look there
+before building anything.
+
+## The laws
+
+`docs/design-system-laws.md` holds The 20 Laws of React Design Systems. They are strict laws for this codebase. The
+table says how each one is implemented here and which lint rule (`scripts/lint-design-system.mjs`, run by
+`pnpm lint`) enforces it. A law without a rule is enforced in review and by the Specimen it must ship with.
+
+| Law                                       | Here                                                                                                                                                                                                                                                      | Lint rule                                                                                                                                      |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 Everything is a token                   | `src/styles/tokens.css`: primitive → semantic → theme. Motion: `duration-fast` / `-normal` / `-slow`, `ease-standard`.                                                                                                                                    | `palette-color`, `arbitrary-color`, `arbitrary-alpha`, `color-literal`, `arbitrary-text-size`, `law1-arbitrary-value`, `law1-numeric-duration` |
+| 2 A theme is a token swap                 | Themes and density are CSS variable scopes (`:root`, `.theme-terminal`). No `dark:` and no theme branches in components.                                                                                                                                  | `law2-theme-branch`                                                                                                                            |
+| 3 Scales, not numbers                     | Spacing is the 0.25rem scale (`Space` in `ui/layout-props.ts`; half steps exist for dense data). Type is the named scale `type-display` … `type-meta`, `eyebrow`, `type-value`, used through `Text` and `Heading`.                                        | `law1-arbitrary-value`, `arbitrary-text-size`                                                                                                  |
+| 4 Layout belongs to the parent            | `Stack`, `Inline`, `Grid`, `Box`, `Text` (`ui/`). No numeric margins or `space-x/y` anywhere; spacing is `gap`. `PageShell` spaces the blocks of a page.                                                                                                  | `law4-outer-margin`                                                                                                                            |
+| 5 One styling strategy, zero runtime      | Tailwind classes only, resolved at build time; variants through `cva`; caller classes merged last with `cn()`. Sizes a caller may override are plain classes, not `data-[…]:` variants. The reduced-motion reset wins by cascade layer, not `!important`. | `law5-important`, `drawing-style`                                                                                                              |
+| 6 Extend the native element               | Props are `React.ComponentProps<'el'>` of the root plus variants; `...props` (with `ref`) is spread on the root.                                                                                                                                          | review                                                                                                                                         |
+| 7 Variants are enums                      | `variant`, `size`, `tone`, `shape`, `align`, `width`, `display`, `position`. Booleans are for state and behaviour only.                                                                                                                                   | `law7-boolean-look`                                                                                                                            |
+| 8 Zero props render correctly             | Every optional prop has a default in the signature.                                                                                                                                                                                                       | review, Specimen                                                                                                                               |
+| 9 State ownership is explicit             | `value` / `defaultValue` / `onValueChange`, `open` / `defaultOpen` / `onOpenChange`, through `ui/hooks/use-controllable-state`.                                                                                                                           | `law11-vocabulary`                                                                                                                             |
+| 10 Composition over configuration         | Compound components and children (`Panel` + `PanelHeader`, `Steps` + `Step`). No `items=[…]` config props, no `renderX`.                                                                                                                                  | `law10-config-array`, `law10-render-prop`                                                                                                      |
+| 11 One vocabulary                         | The names above, everywhere. `className` reaches the root only and is for layout.                                                                                                                                                                         | `law11-vocabulary`, `drawing-class`                                                                                                            |
+| 12 Behavior is headless                   | Radix primitives and hooks in `ui/hooks/`; components stay presentational.                                                                                                                                                                                | review                                                                                                                                         |
+| 13 No business logic in shared components | `ui/` and `patterns/` never import the router, the API client, queries, analytics or a feature. Links arrive through `asChild`. `domain/` is the app-aware layer.                                                                                         | `law13-business-import`, `layer-import`                                                                                                        |
+| 14 Render pure, keep state minimal        | React Compiler plus the `react-hooks-js/*` rules (purity, refs, set-state-in-effect/render, immutability). IDs from `useId`.                                                                                                                              | oxlint `react-hooks-js/*`                                                                                                                      |
+| 15 Server-render safe                     | No browser API, locale formatting, clock or randomness during render; the site is server-rendered on every route.                                                                                                                                         | oxlint `react-hooks-js/purity`, build + SSR check                                                                                              |
+| 16 AA is the floor                        | Native elements first; `Field` connects label, help and error; charts and icon buttons carry labels.                                                                                                                                                      | oxlint `jsx-a11y/*`, `raw-button`, `raw-control`                                                                                               |
+| 17 Full keyboard, visible focus           | One focus treatment (`focus-visible:ring-3 ring-ring/50`); Radix supplies focus trap, Escape and focus return.                                                                                                                                            | `law17-focus-removed`, oxlint `jsx-a11y/*`                                                                                                     |
+| 18 Perceivable by everyone                | Text tokens at full strength (no alpha on text); tones ship with a sign, icon or label; targets ≥ 1.5rem; motion tokens collapse under reduced motion.                                                                                                    | `law18-text-alpha`, `scripts/check-contrast.mjs` (every text/fill pair the tokens produce, 4.5:1 text, 3:1 UI)                                 |
+| 19 Adapt to the environment               | rem sizes, logical properties (`ms-`, `pe-`, `start-`, `text-end`, `border-s`), container queries inside components (viewport breakpoints only in `patterns/page` and `patterns/navigation`).                                                             | `law19-physical-direction`, `law19-viewport-breakpoint`, `law1-arbitrary-value`                                                                |
+| 20 Every state is specified               | The Specimen of a component shows every state that applies to it.                                                                                                                                                                                         | `showcase`                                                                                                                                     |
+
+## The rule
+
+**The website is a composition of the design system.** Routes and feature components arrange design-system
+components; they do not draw UI of their own. In feature code, `className` carries layout (flex, grid, gap, width,
+margin, responsive visibility) and plain text utilities. Surfaces, controls, headings, tables, charts, tooltips,
+badges, bars, navigation and loading / empty / error states all come from `ui/`, `patterns/` or `domain/`. When the
+system cannot express what a feature needs, the system grows first (a variant, a token, a component, a Specimen), and
+the feature then uses it. Even the app shell and its sidebar are built this way.
+
+This is linted strictly. In `src/routes`, `src/pages`, `src/components/features` and `src/components/app`:
+
+- **`drawing-class`**: no utility that draws. That is `bg-*`, `border*`, `rounded*`, `shadow*`, `ring*`, `outline*`,
+  `divide*`, gradients (`from-` / `via-` / `to-`), `backdrop-*`, `opacity-*`, filters, `fill-*` / `stroke-*`,
+  `transition*` / `duration-*` / `animate-*`, `cursor-*`, `underline`, `glass`, in any variant (`hover:`, `md:`,
+  `data-[...]:`). Allowed: layout (flex, grid, gap, padding, margin, size, position, overflow, display, order,
+  responsive and container variants) and type (size, weight, color token, leading, tracking, truncate, tabular-nums,
+  whitespace, alignment, `eyebrow`).
+- **`drawing-style`**: no inline `style` with a visual key (color, background, border, shadow, outline, opacity,
+  filter, fill, stroke). Geometry computed from data (width, left, height, transform) is fine. A color that comes
+  from data is passed to a component prop built for it (`RateBar color`, `Card accent`, `PanelHeader accent`,
+  `ChartSwatch color`, `HeroImage ring`).
+
+When the lint fires, the answer is never a `ds-allow`: it is a component, a variant or a prop in the system.
+
+## Layers
+
+```
+src/styles/
+  tailwind.css      entry: imports only
+  tokens.css        tier 1 primitives -> tier 2 semantic tokens -> tier 3 Tailwind theme
+  base.css          element defaults, reduced motion
+  utilities.css     glass, scrollbars, eyebrow
+  effects.css       keyframes and one-off brand effects
+  vendor.css        overrides for Radix and Recharts markup
+
+src/components/
+  ui/               1. Primitives. One element or one Radix widget, styled. No game data, no queries.
+  patterns/         2. Compositions of primitives that any data site could use: page shell, panel, filter bar,
+                       data table, chart frame, states.
+  domain/           3. Deadlock-aware building blocks shared by features: hero and item images, rank ticks,
+                       hero/item/rank selectors, the Filter namespace.
+  features/<name>/  4. One product area each. Composes the layers below; owns no reusable styling.
+  app/              5. The shell: sidebar, breadcrumbs, error and not-found pages.
+```
+
+**A layer imports only from layers below it (linted).** `ui/` and `patterns/` never import the API client, `~/queries`
+or asset hooks (linted). When two features need the same component, move it down: to `domain/` if it knows about
+Deadlock, to `patterns/` if it does not. Never import one feature from another feature's internals to share styling.
+
+File names: `ui/` is kebab-case (`stat-bar.tsx`), everything else is PascalCase per component. No barrel files except
+`domain/filters/index.ts`.
+
+## Tokens
+
+Components use semantic utilities only. **No raw palette classes (`text-green-400`), no hex or `rgb()` in classes or
+code, no `white/[0.06]` alphas, no `text-[11px]` (all linted).** If a token is missing, add it to `tokens.css` in all
+three tiers and to the dev page; do not inline the value.
+
+| Need                                                              | Token utilities                                                                                            |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Page, raised surface, popover                                     | `bg-background`, `bg-card`, `bg-popover`, `bg-muted`, `bg-accent` (hover)                                  |
+| Translucent panel on imagery                                      | `border-hairline`, `bg-subtle`, `bg-subtle-hover`, `bg-subtle-active`                                      |
+| Text                                                              | `text-foreground`, `text-muted-foreground`, `text-primary`                                                 |
+| Brand, selection, focus                                           | `primary` (+ `/15` fill, `/40` ring for selected), `ring`                                                  |
+| Good / bad (win rate vs 50%, deltas, win / loss, correct / wrong) | `positive`, `negative` via `toneOf()` + `TONE_TEXT` from `~/lib/tone`, or `<Delta>`                        |
+| Caution, archive, personal best                                   | `warning`                                                                                                  |
+| Neutral information                                               | `info`                                                                                                     |
+| Irreversible action, request failure                              | `destructive`                                                                                              |
+| Item categories, lanes                                            | `item-weapon`, `item-vitality`, `item-spirit`; `lane-yellow`, `lane-blue`, `lane-purple`                   |
+| Chart series                                                      | `chart-1` ... `chart-8` in order, never cycled; `chart-win-rate`, `chart-share` for those two fixed series |
+| Third-party brands                                                | `steam-*`, `discord`                                                                                       |
+
+Positive is teal, not green, so the positive/negative pair survives red-green colorblindness. The categorical chart
+order is validated for colorblind separation between neighbours; do not reorder it or insert hues.
+
+Type scale: Tailwind's, plus `text-2xs` (11px), `text-3xs` (10px), `text-4xs` (9px) for dense data. The `eyebrow`
+utility is the small uppercase label above a value. Numbers that line up use `tabular-nums`.
+
+Radius: controls `rounded-md`, nested blocks `rounded-lg`, cards and panels `rounded-xl`, pills `rounded-full`.
+Spacing between page blocks comes from `PageShell`, never from margins on the blocks.
+
+Control heights: `h-9` default forms, `h-8` (`size="sm"`) toolbars and tables, `h-7` Segmented, `h-6`
+(`size="xs"`) inside dense panels. Pick the size prop; do not override heights with classes.
+
+## Components
+
+Reach for these in order. Outside `ui/` and `patterns/` these raw elements are lint errors: `<button>`, `<h1>`-`<h6>`,
+`<input>` / `<select>` / `<textarea>`, `<table>`, a bare Recharts `ResponsiveContainer`, `animate-spin` and a direct
+`LoadingLogo`. Do not restyle a primitive with a long `className`: if a look is needed twice, it is a variant.
+**Every component in `ui/`, `patterns/` and `domain/` must have a Specimen on the dev page (linted).**
+
+### Primitives (`~/components/ui/*`)
+
+| Component                                                                                                                                                                                                                       | Use                                                                                                            | Variants                                                                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Button`                                                                                                                                                                                                                        | Every action. Links that look like buttons: `<Button asChild><Link/></Button>`.                                | `variant`: default, secondary, outline, ghost, link, soft, subtle, destructive, destructive-soft, positive-soft, negative-soft, row (a full-width list row that acts as one button). `size`: xs, sm, default, lg, icon-xs, icon-sm, icon, icon-lg. `shape`: default, pill |
+| `Badge`                                                                                                                                                                                                                         | Status, tags, counts.                                                                                          | `variant`: default, secondary, outline, muted, soft, positive, negative, warning, info, destructive, chart-1 ... chart-8 (categories without a status meaning, such as tags). `size`: sm, default. `shape`: pill, square                                                  |
+| `Segmented`                                                                                                                                                                                                                     | One choice from a few short options.                                                                           | `size`: sm, default, lg. `width`: fill, hug. `SegmentedItem` children take `aria-label`, `disabled`                                                                                                                                                                       |
+| `ToggleGroup` / `Toggle`                                                                                                                                                                                                        | Independent on/off options (multi-select), icon view switches.                                                 | shadcn                                                                                                                                                                                                                                                                    |
+| `Tabs`                                                                                                                                                                                                                          | `nav`: top-level sections of a page. `line`: sections of one block. `default`: views inside a panel or dialog. | `variant` on `TabsList`                                                                                                                                                                                                                                                   |
+| `Card`                                                                                                                                                                                                                          | The one surface.                                                                                               | `tone`: card, glass, inset, muted, primary, positive, negative, warning, info, destructive. `size`: default, sm, xs, flush. `interaction`: none, pressable. `asChild` (a card that is a link or a `<section>`)                                                            |
+| `Stat` in `StatGroup`                                                                                                                                                                                                           | Headline numbers.                                                                                              | group `variant`: tiles, joined, plain; `size`: sm, default. stat `tone`, `align`                                                                                                                                                                                          |
+| `Heading`                                                                                                                                                                                                                       | A heading that is not the title of a page, section, panel or card.                                             | `as`: h2-h6 (by outline). `size`: eyebrow, xs, sm, md, lg, xl, 2xl                                                                                                                                                                                                        |
+| `Delta`                                                                                                                                                                                                                         | A signed change, colored by direction.                                                                         | `format`, `digits`, `invert`                                                                                                                                                                                                                                              |
+| `Field`                                                                                                                                                                                                                         | A label tied to a control, outside a FilterBar.                                                                | `orientation`: vertical, horizontal. `labelDisplay`: visible, hidden                                                                                                                                                                                                      |
+| `OptionRow`                                                                                                                                                                                                                     | One choice in a popover or dialog list.                                                                        | `selected`, `active` (keyboard cursor), `leading`, `hint`, `trailing`                                                                                                                                                                                                     |
+| `ProgressBar`, `ProgressBarWithLabel`                                                                                                                                                                                           | Comparative bars in tables.                                                                                    | `variant`: bar, track, cell. `orientation`: vertical, horizontal. `ProgressBarSegment` children                                                                                                                                                                           |
+| `RateBar`, `DivergingBar`                                                                                                                                                                                                       | A thin 0 to 1 bar beside a visible rate label; a signed value drawn from the centre of its track.              | `rate`, `baseline`; `value`, `scale`                                                                                                                                                                                                                                      |
+| `SortButton`                                                                                                                                                                                                                    | The button inside a sortable header (see `SortableHeader`).                                                    | `active`, `sortDir`, `align`, `size`: default, sm                                                                                                                                                                                                                         |
+| `PanelTooltip`, `PanelTooltipCard`, `TooltipHeader`, `TooltipStats`, `TooltipStat`                                                                                                                                              | The hover card for data: the only tooltip surface for charts and tables.                                       |                                                                                                                                                                                                                                                                           |
+| `Spinner`                                                                                                                                                                                                                       | Inline busy indicator.                                                                                         | `size`                                                                                                                                                                                                                                                                    |
+| `LoadingLogo`                                                                                                                                                                                                                   | Brand loader (use through `LoadingState`).                                                                     | `text`, `size`: sm, default                                                                                                                                                                                                                                               |
+| `Table`                                                                                                                                                                                                                         |                                                                                                                | `density`: default, compact, dense. `data-pinned` on a head/cell pins the identity column                                                                                                                                                                                 |
+| `Input` (`size`: default, sm), `Textarea`, `ColorInput`, `Select` (`size`: default, sm), `Slider` (`aria-label` or `thumbLabels` reach the thumbs), `Alert` (`variant`: default, primary, info, warning, positive, destructive) |                                                                                                                |                                                                                                                                                                                                                                                                           |
+| `Checkbox`, `Switch`, `Label`, `Dialog`, `AlertDialog`, `Sheet`, `Popover`, `HoverCard`, `Tooltip`, `Collapsible`, `Calendar`, `Avatar`, `Skeleton`, `Empty`, `Sonner`                                                          | shadcn primitives. Add more with `pnpm dlx shadcn@latest add <name>`, then `pnpm fmt`.                         |                                                                                                                                                                                                                                                                           |
+
+### Patterns (`~/components/patterns/*`)
+
+| Need                                                                   | Component                                                                                                                                                      |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Outermost element of a route                                           | `page/PageShell` (`density`: data, content, marketing; `width`: full, wide, prose, narrow; `height`: auto, fill, viewport)                                     |
+| The page's `<h1>`                                                      | `page/PageHeader` (`size`: default, lg, display; `media`, `actions`, `eyebrow`, children = "About this data")                                                  |
+| A named block under it                                                 | `page/Section` (`as`, `size`, `align`, `actions`, `titleDisplay`: visible, hidden)                                                                             |
+| Dashboard block with a title strip                                     | `panel/Panel`, `PanelHeader` (`icon`, `size`, `as`, `accent`), `PanelBody`, `PanelFooter`, `PanelMessage`, `PanelSkeleton`, `PanelShowMore`, `PanelViewToggle` |
+| Page filters                                                           | `filter-bar/FilterBar` + `FilterCell` / `FilterToggleCell` (or the domain `Filter.*` namespace)                                                                |
+| Controls of one chart or table                                         | `FilterBar variant="toolbar"` (or `charts/ChartToolbar`) with `Field orientation="horizontal"`, `Segmented`, `Select size="sm"`                                |
+| Generic filter controls                                                | `filter-bar/StringSelector`, `TriStateSelector`, `FilteredSelectPopover`, `NumberSelector`, `DateRangePicker`                                                  |
+| Sortable column                                                        | `data-table/SortableHeader`, or `SortButton` + `ariaSort()` when the cell is not a `TableHead`                                                                 |
+| Empty table body                                                       | `data-table/TableEmptyRow`                                                                                                                                     |
+| Pagination                                                             | `data-table/PaginationControls`                                                                                                                                |
+| Query to UI                                                            | `states/QueryRenderer`                                                                                                                                         |
+| Loading                                                                | `states/LoadingState` (`variant`: logo, skeleton; `text` under the logo; `size`: sm, default). A busy control uses `Spinner`.                                  |
+| Succeeded with nothing                                                 | `states/EmptyState` (`variant`: panel, plain, inline)                                                                                                          |
+| Failed                                                                 | `states/ErrorState` with `onRetry` (`variant`: alert, inline). A failure never looks like an empty result.                                                     |
+| Lazy chunk boundary                                                    | `states/ChunkErrorBoundary`                                                                                                                                    |
+| Page-level tabs that collapse to a select                              | `navigation/ResponsiveTabsList`                                                                                                                                |
+| A vertical list of links: the app navigation, the index of a long page | `navigation/SideNav`, `SideNavGroup`, `SideNavItem` (`variant`: default, highlight; `active`, `asChild`), `SideNavFooter`; `size`: default, sm                 |
+| Code block                                                             | `code/HighlightedCode`                                                                                                                                         |
+
+### Charts (`~/components/patterns/charts/*`)
+
+| Need                                         | Component                                                                                                                                                             |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The frame of every Recharts plot             | `ChartSurface` (`size`: xs, sm, md, default, lg, fill; `variant`: card, flush, bare; `onResize`, `ref`, `style`). Never put surface classes on `ResponsiveContainer`. |
+| Title strip + plot + footnote                | `ChartCard` with `<ChartSurface variant="flush">` inside                                                                                                              |
+| Grid, axes, ticks, baseline, cursor, margins | spread the constants from `theme.ts`: `CHART_GRID`, `CHART_AXIS`, `CHART_TICK`, `CHART_BASELINE`, `CHART_CURSOR_LINE`, `CHART_CURSOR_BAND`, `CHART_MARGIN`            |
+| Series colors                                | `SERIES_COLORS[i]` by fixed index; `CHART_COLOR.winRate` etc. for fixed-meaning series; entity colors (hero, rank) from the assets API with `CHART_COLOR.fallback`    |
+| Tooltip                                      | `ChartReadings`, or `PanelTooltipCard` + `TooltipHeader` + `TooltipStats` (`variant="plain"` without a header) for a custom body                                      |
+| Legend                                       | `ChartLegend` (2+ series always get one; text stays in ink, the swatch carries the color)                                                                             |
+| Loading, error, empty                        | `ChartLoading` (same `size` as the plot), `ChartError`, `ChartEmpty`                                                                                                  |
+| Chart beside an entity picker                | `ChartSidebarLayout`                                                                                                                                                  |
+| Metric and interval controls                 | `TrendControls`, `MetricSelect`                                                                                                                                       |
+| Ticks and domains                            | `~/lib/chart-axis`                                                                                                                                                    |
+
+One y-axis per chart: two measures on different scales get a plot each on a shared x-axis (`WeeklyTrendChart` is the
+reference). Missing observations are gaps, not zeros. See `docs/compact-data-ui.md` for data-view rules.
+
+## Responsive rules
+
+- Every component works from 320px. Rows of controls wrap (`flex-wrap`); grids step down (`grid-cols-2 sm:grid-cols-4`).
+- Components that live in panels of varying width use container queries (`@container` + `@md:`), not viewport
+  breakpoints. Page-level layout uses viewport breakpoints.
+- Tables scroll horizontally inside `Table`'s own container and drop secondary columns with
+  `hidden @md:table-cell`; the identity column is pinned with `data-pinned`.
+- Touch targets are at least 24px; icon-only buttons have an `aria-label`.
+
+## Accessibility rules
+
+- Native elements first: `Button` renders a `<button>`, links are links (`asChild`).
+- One `<h1>` per page (from `PageHeader`); `Section` picks the level by outline, `size` picks the look.
+- Color is never the only signal: tones ship with a sign, an arrow or a label.
+- Focus is always visible: never remove `focus-visible` styles from a primitive.
+- Sortable headers carry `aria-sort`; icon buttons carry `aria-label`; charts carry a `label`.
+
+## Adding or changing a component
+
+1. Check the dev page and the tables above. Extend an existing component with a variant before adding a new one.
+2. Put it in the lowest layer that can hold it. Build it from the layer below.
+3. Variants go through `cva`; expose them as typed props (`VariantProps`), never as class strings the caller must know.
+   Accept `className` on the root element only, merged with `cn()`. Extend the native element's props. Set
+   `data-slot="<name>"` on each part, and `data-state` / `data-size` where a parent may need to style by it.
+4. Compose with children and sub-components (`Panel` + `PanelHeader`), not with a growing list of boolean props.
+5. Support controlled use (`value` / `onValueChange` or `onChange`); name props after the platform, not the feature.
+6. Add a `Specimen` for it under `src/components/dev/design-system/` with every variant and size, list its name in
+   `nav.ts` there, and add it to the tables above.
+7. `pnpm typecheck && pnpm lint && pnpm fmt`.
+
+## Exceptions
+
+`// ds-allow <rule>: <reason>` on the line, or up to three lines above, silences one finding. Rules: `palette-color`,
+`arbitrary-color`, `arbitrary-alpha`, `color-literal`, `arbitrary-text-size`, `raw-button`, `raw-heading`,
+`raw-control`, `raw-table`, `raw-chart-frame`, `raw-loading`, `drawing-class`, `drawing-style`, `layer-import`,
+`showcase`, and the `law*` rules in the table at the top. Legitimate
+reasons: a color that comes from data (hero color), a third-party brand, a canvas or WebGL palette, a `<button>` that
+is a hit area of a bespoke visualisation (a draft slot, a heatmap cell, a graph node). "It looked better" is not one.
+Stream overlays under `features/streamkit/widgets/` are exempt: they render in OBS with a viewer-chosen theme. The
+mini-games keep their square, monospace look through the `theme-terminal` scope (it sets `--radius: 0`), not through
+per-element overrides.

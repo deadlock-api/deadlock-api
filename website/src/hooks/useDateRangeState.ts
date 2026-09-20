@@ -1,7 +1,7 @@
 import { useQueryState } from "nuqs";
 import { useMemo } from "react";
 
-import { computePreviousPeriod } from "~/components/SeasonPatchDatePicker";
+import { computePreviousPeriod } from "~/components/domain/selectors/SeasonPatchDatePicker";
 import type { Dayjs } from "~/dayjs";
 import { useDateFilterPreference } from "~/hooks/useDateFilterPreference";
 import { useSeasons } from "~/hooks/useSeasons";
