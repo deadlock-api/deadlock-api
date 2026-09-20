@@ -87,13 +87,7 @@ export function TrackerFilterBar({
             />
             <Filter.Hero value={heroId} onValueChange={onHeroChange} allowNull />
             <ModeSelector value={mode} onValueChange={onModeChange} />
-            <FilterToggleCell
-              label="Result"
-              value={result}
-              defaultValue="all"
-              onValueChange={onResultChange}
-              width="wide"
-            >
+            <FilterToggleCell label="Result" value={result} defaultValue="all" onValueChange={onResultChange}>
               <SegmentedItem value="all">All</SegmentedItem>
               <SegmentedItem value="win">Wins</SegmentedItem>
               <SegmentedItem value="loss">Losses</SegmentedItem>

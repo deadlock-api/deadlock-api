@@ -5,13 +5,13 @@ import { cn } from "~/lib/utils";
 
 interface FilterBarProps extends Omit<React.ComponentProps<"section">, "title"> {
   /**
-   * - `cells`: a grid of FilterCells divided by hairlines, for the filters of a page. Two across a narrow bar, three
-   *   across a medium one, one row when there is room.
+   * - `cells`: the filters of a page, as the caption of what they filter: one quiet, start-aligned band of one-line
+   *   FilterCells that wraps, directly above the table or chart. A `FilterBarEnd` holds the controls of the view.
    * - `toolbar`: a wrapping row of compact controls (Field, Segmented, Select size="sm"), for the controls of one
    *   chart or table.
    */
   variant?: "cells" | "toolbar";
-  /** Names the toolbar. Drawn when the toolbar is wide enough; always available to assistive technology. */
+  /** Names the bar. A toolbar draws it when it is wide enough; it is always available to assistive technology. */
   title?: string;
   icon?: LucideIcon;
 }
@@ -51,16 +51,22 @@ export function FilterBar({
     <section
       data-slot="filter-bar"
       data-variant="cells"
-      aria-label={ariaLabel}
-      className={cn("@container w-full min-w-0", className)}
+      aria-label={ariaLabel ?? title ?? "Filters"}
+      className={cn("@container flex flex-wrap items-center gap-1 rounded-lg border bg-card p-1.5", className)}
       {...props}
     >
-      <div className="relative mx-auto w-full overflow-hidden rounded-xl border bg-card shadow-md @2xl:w-fit">
-        {/* The hairlines between the cells are the 1px gaps, through which this background shows. */}
-        <div className="flex flex-wrap items-stretch gap-px bg-border">
-          <FilterRootContext.Provider value={true}>{children}</FilterRootContext.Provider>
-        </div>
-      </div>
+      <FilterRootContext.Provider value={true}>{children}</FilterRootContext.Provider>
     </section>
+  );
+}
+
+/** The trailing end of a `FilterBar` of `cells`: the controls of the one view under it (a search, a switch, a metric). */
+export function FilterBarEnd({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="filter-bar-end"
+      className={cn("ms-auto flex flex-wrap items-center gap-x-4 gap-y-2 ps-2.5 pe-1", className)}
+      {...props}
+    />
   );
 }

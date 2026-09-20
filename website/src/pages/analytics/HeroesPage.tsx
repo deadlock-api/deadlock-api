@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import type { HeroScoreboardSortByEnum } from "deadlock_api_client";
-import { ChartNoAxesCombined, GraduationCap, Table2 } from "lucide-react";
 import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense, useId, useState } from "react";
 
@@ -10,7 +9,7 @@ import { HeroScoreboardTable } from "~/components/features/heroes/HeroScoreboard
 import { HeroStatSelector } from "~/components/features/heroes/HeroStatSelectors";
 import { HeroStatsTable } from "~/components/features/heroes/HeroStatsTable";
 import { HeroTrendControls } from "~/components/features/heroes/HeroTrendControls";
-import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
+import { FilterBarEnd } from "~/components/patterns/filter-bar/FilterBar";
 import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigation/ResponsiveTabsList";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
@@ -102,6 +101,7 @@ export function HeroesPage() {
   return (
     <PageShell>
       <PageHeader
+        align="start"
         title={
           filters.tab === "hero-matchup-details"
             ? "Hero matchup explorer"
@@ -117,8 +117,6 @@ export function HeroesPage() {
               : "Compare hero performance across ranks, patches, and game modes."
         }
       />
-
-      <HeroFiltersSection {...filters} />
 
       <Tabs
         value={filters.tab ?? undefined}
@@ -140,10 +138,9 @@ export function HeroesPage() {
           <ResponsiveTab value="hero-matchup-details">Matchup Details</ResponsiveTab>
           <ResponsiveTab value="hero-scoreboard">Scoreboard</ResponsiveTab>
         </ResponsiveTabsList>
-
-        <TabsContent value="stats">
-          <Section titleDisplay="hidden" title="Overall Hero Stats">
-            <FilterBar variant="toolbar" title="Overall stats" icon={Table2} aria-label="Hero table controls">
+        <HeroFiltersSection {...filters}>
+          {filters.tab === "stats" && (
+            <FilterBarEnd>
               <SearchInput
                 value={heroNameQuery}
                 onValueChange={setHeroNameQuery}
@@ -159,7 +156,44 @@ export function HeroesPage() {
                   onCheckedChange={(checked) => setGroupByType(checked)}
                 />
               </Field>
-            </FilterBar>
+            </FilterBarEnd>
+          )}
+          {(filters.tab === "stats-by-duration" || filters.tab === "stats-by-experience") && (
+            <FilterBarEnd>
+              <Field label="Metric" orientation="horizontal" className="w-full sm:w-auto">
+                <HeroStatSelector
+                  label="Stat"
+                  value={filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat}
+                  onChange={(val) => filters.setHeroStat(val as typeof filters.heroStat)}
+                  options={HERO_STATS}
+                />
+              </Field>
+            </FilterBarEnd>
+          )}
+          {filters.tab === "stats-by-rank" && MODE_CONFIG[filters.mode].supportsRank && (
+            <FilterBarEnd>
+              <Field label="X Axis" orientation="horizontal" className="w-full sm:w-auto">
+                <HeroStatSelector
+                  label="X Axis"
+                  value={filters.byRankX}
+                  onChange={(val) => filters.setByRankX(val)}
+                  options={BY_RANK_STATS}
+                />
+              </Field>
+              <Field label="Y Axis" orientation="horizontal" className="w-full sm:w-auto">
+                <HeroStatSelector
+                  label="Y Axis"
+                  value={filters.byRankY}
+                  onChange={(val) => filters.setByRankY(val)}
+                  options={BY_RANK_STATS}
+                />
+              </Field>
+            </FilterBarEnd>
+          )}
+        </HeroFiltersSection>
+
+        <TabsContent value="stats">
+          <Section titleDisplay="hidden" title="Overall Hero Stats">
             <HeroStatsTable
               columns={["winRate", "pickRate", "zScore", "residual", "details"]}
               groupByType={groupByType}
@@ -209,21 +243,6 @@ export function HeroesPage() {
 
         <TabsContent value="stats-by-duration">
           <Section titleDisplay="hidden" title="Hero Stats by Game Duration">
-            <FilterBar
-              variant="toolbar"
-              title="Duration comparison"
-              icon={ChartNoAxesCombined}
-              aria-label="Chart controls"
-            >
-              <Field label="Metric" orientation="horizontal" className="w-full sm:w-auto">
-                <HeroStatSelector
-                  label="Stat"
-                  value={filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat}
-                  onChange={(val) => filters.setHeroStat(val as typeof filters.heroStat)}
-                  options={HERO_STATS}
-                />
-              </Field>
-            </FilterBar>
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
                 <HeroStatsByDurationChart
@@ -246,29 +265,6 @@ export function HeroesPage() {
           <Section titleDisplay="hidden" title="Hero Stats by Rank">
             {MODE_CONFIG[filters.mode].supportsRank ? (
               <>
-                <FilterBar
-                  variant="toolbar"
-                  title="Rank comparison"
-                  icon={ChartNoAxesCombined}
-                  aria-label="Chart controls"
-                >
-                  <Field label="X Axis" orientation="horizontal" className="w-full sm:w-auto">
-                    <HeroStatSelector
-                      label="X Axis"
-                      value={filters.byRankX}
-                      onChange={(val) => filters.setByRankX(val)}
-                      options={BY_RANK_STATS}
-                    />
-                  </Field>
-                  <Field label="Y Axis" orientation="horizontal" className="w-full sm:w-auto">
-                    <HeroStatSelector
-                      label="Y Axis"
-                      value={filters.byRankY}
-                      onChange={(val) => filters.setByRankY(val)}
-                      options={BY_RANK_STATS}
-                    />
-                  </Field>
-                </FilterBar>
                 <ChunkErrorBoundary>
                   <Suspense fallback={<LoadingState />}>
                     <HeroStatsByRankChart
@@ -303,21 +299,6 @@ export function HeroesPage() {
 
         <TabsContent value="stats-by-experience">
           <Section titleDisplay="hidden" title="Hero Stats by Experience">
-            <FilterBar
-              variant="toolbar"
-              title="Experience comparison"
-              icon={GraduationCap}
-              aria-label="Experience table controls"
-            >
-              <Field label="Stat" orientation="horizontal" className="w-full sm:w-auto">
-                <HeroStatSelector
-                  label="Stat"
-                  value={filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat}
-                  onChange={(val) => filters.setHeroStat(val as typeof filters.heroStat)}
-                  options={HERO_STATS}
-                />
-              </Field>
-            </FilterBar>
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
                 <HeroStatsByExperienceTable

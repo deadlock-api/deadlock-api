@@ -43,43 +43,17 @@ export function ItemsPage() {
 
   return (
     <PageShell>
-      <PageHeader title="Deadlock Item Stats" description="Win rates, purchase timing, and item combination analytics">
+      <PageHeader
+        align="start"
+        title="Deadlock Item Stats"
+        description="Win rates, purchase timing, and item combination analytics"
+      >
         <p>
           Analyze item win rates with statistical confidence intervals, optimal purchase timing, and the best item
           combinations for Deadlock. Filter by hero, rank, and patch to build smarter and climb the ladder. Statistics
           use Wilson score intervals for reliable estimates even on less popular items.
         </p>
       </PageHeader>
-      <Filter.Root>
-        <Filter.Hero value={hero} onValueChange={setHero} allowNull />
-        <Filter.MinMatches value={minMatches} onValueChange={setMinMatches} defaultValue={10} />
-        <Filter.ModeWithRank
-          value={{ mode, rank: [minRankId, maxRankId] }}
-          defaultValue={{ mode: DEFAULT_MODE, rank: [91, 116] }}
-          onValueChange={(next) => {
-            if (next.mode !== mode) setMode(next.mode);
-            if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
-              setMinRankId(next.rank[0]);
-              setMaxRankId(next.rank[1]);
-            }
-          }}
-        />
-        <Filter.TimeRange
-          value={[minBoughtAtS ?? undefined, maxBoughtAtS ?? undefined]}
-          onValueChange={([min, max]) => {
-            setMinBoughtAtS(min ?? null);
-            setMaxBoughtAtS(max ?? null);
-          }}
-          label="Time"
-          title="Purchase Time Window"
-        />
-        <Filter.SeasonPatchDate
-          value={{ startDate, endDate }}
-          onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
-          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
-        />
-        {tab === "item-combos" && <ItemCombFilters />}
-      </Filter.Root>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
         <ResponsiveTabsList
@@ -92,6 +66,38 @@ export function ItemsPage() {
           <ResponsiveTab value="build-flow">Build Flow</ResponsiveTab>
           <ResponsiveTab value="item-combos">Item Combos</ResponsiveTab>
         </ResponsiveTabsList>
+
+        <Filter.Root>
+          <Filter.Hero value={hero} onValueChange={setHero} allowNull />
+          <Filter.MinMatches value={minMatches} onValueChange={setMinMatches} defaultValue={10} />
+          <Filter.ModeWithRank
+            value={{ mode, rank: [minRankId, maxRankId] }}
+            defaultValue={{ mode: DEFAULT_MODE, rank: [91, 116] }}
+            onValueChange={(next) => {
+              if (next.mode !== mode) setMode(next.mode);
+              if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
+                setMinRankId(next.rank[0]);
+                setMaxRankId(next.rank[1]);
+              }
+            }}
+          />
+          <Filter.TimeRange
+            value={[minBoughtAtS ?? undefined, maxBoughtAtS ?? undefined]}
+            onValueChange={([min, max]) => {
+              setMinBoughtAtS(min ?? null);
+              setMaxBoughtAtS(max ?? null);
+            }}
+            label="Time"
+            title="Purchase Time Window"
+          />
+          <Filter.SeasonPatchDate
+            value={{ startDate, endDate }}
+            onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
+            defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
+          />
+          {tab === "item-combos" && <ItemCombFilters />}
+        </Filter.Root>
+
         <TabsContent value="item-stats">
           <Section titleDisplay="hidden" title="Overall Item Stats">
             <ChunkErrorBoundary>

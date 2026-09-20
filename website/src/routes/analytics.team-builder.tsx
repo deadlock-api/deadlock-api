@@ -347,6 +347,7 @@ function TeamBuilderPage() {
   return (
     <PageShell>
       <PageHeader
+        align="start"
         title="Team Builder"
         description={
           hasLanes

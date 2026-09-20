@@ -26,7 +26,10 @@ type HeroFiltersProps = Pick<
   | "defaultRange"
   | "sameLaneFilter"
   | "setSameLaneFilter"
->;
+> & {
+  /** A `FilterBarEnd` with the controls of the open tab. */
+  children?: React.ReactNode;
+};
 
 export function HeroFiltersSection({
   tab,
@@ -48,6 +51,7 @@ export function HeroFiltersSection({
   defaultRange,
   sameLaneFilter,
   setSameLaneFilter,
+  children,
 }: HeroFiltersProps) {
   return (
     <Filter.Root>
@@ -104,6 +108,7 @@ export function HeroFiltersSection({
           <SegmentedItem value="any">Any lane</SegmentedItem>
         </FilterToggleCell>
       )}
+      {children}
     </Filter.Root>
   );
 }

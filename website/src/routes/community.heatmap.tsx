@@ -93,7 +93,11 @@ function HeatmapPage() {
 
   return (
     <PageShell height="viewport">
-      <PageHeader title="Kill/Death Heatmap" description="Visualize kill and death hotspots across the map" />
+      <PageHeader
+        align="start"
+        title="Kill/Death Heatmap"
+        description="Visualize kill and death hotspots across the map"
+      />
 
       <Filter.Root>
         <StringSelector
@@ -106,7 +110,7 @@ function HeatmapPage() {
           <StringOption value="1">The Archmother</StringOption>
         </StringSelector>
         {/* Three segments stay under the auto-wide threshold, but these labels do not fit a default cell. */}
-        <FilterToggleCell label="Show" width="wide" value={viewMode} defaultValue="kills" onValueChange={setViewMode}>
+        <FilterToggleCell label="Show" value={viewMode} defaultValue="kills" onValueChange={setViewMode}>
           {VIEW_MODES.map((viewModeOption) => (
             <SegmentedItem key={viewModeOption} value={viewModeOption}>
               {VIEW_MODE_LABELS[viewModeOption]}

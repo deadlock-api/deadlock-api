@@ -70,37 +70,12 @@ export function Games() {
 
   return (
     <PageShell>
-      <PageHeader title="Deadlock Game Stats" description="Aggregate match statistics and trends">
+      <PageHeader align="start" title="Deadlock Game Stats" description="Aggregate match statistics and trends">
         <p>
           Track Deadlock match trends including average kills, deaths, game duration, and more. View stats over time,
           compare across ranks, and spot meta shifts as patches roll out.
         </p>
       </PageHeader>
-
-      <Filter.Root>
-        <Filter.ModeWithRank
-          value={{ mode, rank: [minRankId, maxRankId] }}
-          onValueChange={(next) => {
-            if (next.mode !== mode) setMode(next.mode);
-            if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
-              setMinRankId(next.rank[0]);
-              setMaxRankId(next.rank[1]);
-            }
-          }}
-        />
-        <Filter.SeasonPatchDate
-          value={{ startDate, endDate }}
-          onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
-          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
-        />
-        <Filter.MatchDuration
-          value={[minDurationS ?? undefined, maxDurationS ?? undefined]}
-          onValueChange={([min, max]) => {
-            setMinDurationS(min ?? null);
-            setMaxDurationS(max ?? null);
-          }}
-        />
-      </Filter.Root>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
         <ResponsiveTabsList
@@ -113,6 +88,31 @@ export function Games() {
           <ResponsiveTab value="by-rank">By Rank</ResponsiveTab>
           <ResponsiveTab value="economy">Economy</ResponsiveTab>
         </ResponsiveTabsList>
+
+        <Filter.Root>
+          <Filter.ModeWithRank
+            value={{ mode, rank: [minRankId, maxRankId] }}
+            onValueChange={(next) => {
+              if (next.mode !== mode) setMode(next.mode);
+              if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
+                setMinRankId(next.rank[0]);
+                setMaxRankId(next.rank[1]);
+              }
+            }}
+          />
+          <Filter.SeasonPatchDate
+            value={{ startDate, endDate }}
+            onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
+            defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
+          />
+          <Filter.MatchDuration
+            value={[minDurationS ?? undefined, maxDurationS ?? undefined]}
+            onValueChange={([min, max]) => {
+              setMinDurationS(min ?? null);
+              setMaxDurationS(max ?? null);
+            }}
+          />
+        </Filter.Root>
 
         <TabsContent value="overview">
           <ChunkErrorBoundary>

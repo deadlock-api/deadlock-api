@@ -1,20 +1,18 @@
 import { ChevronDownIcon, RotateCcw } from "lucide-react";
-import { Children, createContext, useContext } from "react";
+import { createContext, useContext } from "react";
 
 import { Button } from "~/components/ui/button";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
-import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { FOCUS_RING } from "~/components/ui/recipes";
 import { Segmented } from "~/components/ui/segmented";
 import { cn } from "~/lib/utils";
 
-/** True inside `Filter.Root`, where cells share one border and divide it with hairlines. */
+/** True inside a `FilterBar` of `cells`, where the bar draws the surface and a cell is one borderless line in it. */
 export const FilterRootContext = createContext(false);
 
 const cellBase = "flex min-w-0 flex-col justify-center gap-0.5 px-4 py-2 text-start transition-colors";
-// The bar draws the hairlines as 1px gaps, so the bases leave room for them: two cells across a narrow bar, three
-// from `@md`, and as many as fit from `@2xl`. The queries read the width of the `FilterBar`.
-const cellInRoot = "grow basis-2/5 bg-card @md:basis-1/4 @2xl:min-w-28 @2xl:shrink-0 @2xl:basis-auto";
+const cellInRoot = "h-8 rounded-md";
 const cellStandalone = "rounded-lg border bg-card";
 const activeUnderline = "shadow-active-underline";
 const CELL_SELECTOR = '[data-slot="filter-cell"], [data-slot="filter-toggle-cell"]';
@@ -89,7 +87,7 @@ interface FilterCellProps extends Omit<React.ComponentProps<"div">, "children"> 
   align?: "start" | "center";
   /**
    * `sm` is one line at the height of `Select size="sm"`, with the label beside the value: for a selector inside a
-   * `FilterBar variant="toolbar"`. Cells of a `cells` bar are laid out by the bar and stay `default`.
+   * `FilterBar variant="toolbar"`. Cells of a `cells` bar are always one line.
    */
   size?: "default" | "sm";
 }
@@ -100,11 +98,7 @@ export type FilterCellPassthroughProps = Omit<
   "label" | "value" | "defaultValue" | "active" | "onReset" | "children"
 >;
 
-/**
- * A filter trigger that opens its editor in a popover. Inside a `FilterBar` the popover is anchored to the cell
- * when the bar is wide and to the whole bar when it is narrow; it is never narrower than its anchor
- * (`--radix-popover-trigger-width`, which Radix derives from the anchor).
- */
+/** A filter trigger that opens its editor in a popover. Inside a `FilterBar` of `cells` it is one line, like `sm`. */
 export function FilterCell({
   label,
   value,
@@ -119,7 +113,7 @@ export function FilterCell({
   ...props
 }: FilterCellProps) {
   const inRoot = useContext(FilterRootContext);
-  const compact = size === "sm" && !inRoot;
+  const compact = size === "sm" || inRoot;
   return (
     <Popover>
       <div
@@ -127,8 +121,8 @@ export function FilterCell({
         data-active={active || undefined}
         data-size={compact ? "sm" : "default"}
         className={cn(
-          "grid min-w-0",
-          inRoot ? cn(cellInRoot, "static @2xl:relative") : cn(cellStandalone, "relative"),
+          "relative grid min-w-0",
+          inRoot ? cellInRoot : cellStandalone,
           compact && "h-8 rounded-md",
           active && activeUnderline,
           className,
@@ -144,6 +138,7 @@ export function FilterCell({
               FOCUS_RING,
               "col-start-1 row-start-1 hover:bg-accent focus-visible:bg-accent focus-visible:ring-inset data-[state=open]:bg-accent",
               compact && "flex-row items-center justify-start gap-2 rounded-md px-3 py-0",
+              inRoot && "px-2.5",
               compact && onReset && active && "pe-8",
             )}
           >
@@ -170,11 +165,6 @@ export function FilterCell({
               <span className="truncate">{value ?? label}</span>
               <ChevronDownIcon className="size-3.5 shrink-0 opacity-50" />
             </span>
-            {inRoot && (
-              <PopoverAnchor asChild>
-                <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-0" />
-              </PopoverAnchor>
-            )}
           </button>
         </PopoverTrigger>
         {onReset && active && (
@@ -188,11 +178,7 @@ export function FilterCell({
           </span>
         )}
       </div>
-      <PopoverContent
-        align={align}
-        sideOffset={6}
-        className={cn("p-2", inRoot && "min-w-(--radix-popover-trigger-width)", contentClassName)}
-      >
+      <PopoverContent align={align} sideOffset={6} className={cn("p-2", contentClassName)}>
         {children}
       </PopoverContent>
     </Popover>
@@ -206,10 +192,6 @@ interface FilterToggleCellProps<T extends string> extends Omit<React.ComponentPr
   defaultValue?: T;
   onValueChange?: (value: T) => void;
   disabled?: boolean;
-  /**
-   * `wide` gives a long row of segments a whole line of a narrow bar. The default is `wide` from four segments up.
-   */
-  width?: "default" | "wide";
   /** `SegmentedItem`s. */
   children?: React.ReactNode;
 }
@@ -221,7 +203,6 @@ export function FilterToggleCell<T extends string>({
   defaultValue,
   onValueChange,
   disabled = false,
-  width,
   className,
   children,
   ...props
@@ -234,7 +215,6 @@ export function FilterToggleCell<T extends string>({
   });
   const active = defaultValue !== undefined && current !== defaultValue;
   const onReset = defaultValue !== undefined ? () => setCurrent(defaultValue) : undefined;
-  const isWide = width == null ? Children.count(children) > 3 : width === "wide";
   return (
     <div
       data-slot="filter-toggle-cell"
@@ -243,18 +223,25 @@ export function FilterToggleCell<T extends string>({
       className={cn(
         cellBase,
         "relative",
-        inRoot ? cellInRoot : cellStandalone,
-        // Long segment rows outgrow a half-width cell and a third-width cell.
-        inRoot && isWide && "basis-full @md:basis-3/5",
+        inRoot ? "h-auto min-h-8 flex-row flex-wrap items-center gap-2 rounded-md px-2.5 py-0" : cellStandalone,
         active && activeUnderline,
         className,
       )}
       {...props}
     >
-      <span className={cn("flex", onReset && "pe-5")}>
-        <CellLabel active={active}>{label}</CellLabel>
-      </span>
-      {onReset && active && !disabled && (
+      {inRoot ? (
+        <span
+          data-slot="filter-cell-label"
+          className={cn("type-caption text-muted-foreground", active && "text-primary")}
+        >
+          {label}
+        </span>
+      ) : (
+        <span className={cn("flex", onReset && "pe-5")}>
+          <CellLabel active={active}>{label}</CellLabel>
+        </span>
+      )}
+      {onReset && active && !disabled && !inRoot && (
         <CellReset label={label} active={active} onReset={onReset} className="absolute end-0.5 top-0.5" />
       )}
       <Segmented
@@ -267,6 +254,7 @@ export function FilterToggleCell<T extends string>({
       >
         {children}
       </Segmented>
+      {onReset && active && !disabled && inRoot && <CellReset label={label} active={active} onReset={onReset} />}
     </div>
   );
 }

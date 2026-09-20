@@ -16,7 +16,7 @@ import { PaginationControls } from "~/components/patterns/data-table/PaginationC
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { DateRangePicker } from "~/components/patterns/filter-bar/DateRangePicker";
-import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
+import { FilterBar, FilterBarEnd } from "~/components/patterns/filter-bar/FilterBar";
 import { FilterCell, FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
 import { NumberSelector } from "~/components/patterns/filter-bar/NumberSelector";
 import { StringOption, StringSelector } from "~/components/patterns/filter-bar/StringSelector";
@@ -155,11 +155,11 @@ export function Patterns() {
       <Specimen
         name="FilterBar cells"
         source="patterns/filter-bar/FilterBar · FilterCell · StringSelector · NumberSelector · TriStateSelector · DateRangePicker"
-        note="The filters of a page: two across on a phone, three on a tablet, one row on a desktop. A changed filter is underlined and gets a reset."
+        note="The filters of a page, as the caption of what they filter: one quiet band of one-line cells that wraps, directly above the table or chart. A changed filter is underlined and gets a reset. FilterBarEnd holds the controls of the view under it."
       >
         <Variants className="block">
           <FilterBar>
-            <FilterToggleCell label="Side" value={side} defaultValue="all" onValueChange={setSide} width="wide">
+            <FilterToggleCell label="Side" value={side} defaultValue="all" onValueChange={setSide}>
               <SegmentedItem value="all">All</SegmentedItem>
               <SegmentedItem value="amber">Amber</SegmentedItem>
               <SegmentedItem value="sapphire">Sapphire</SegmentedItem>
@@ -192,6 +192,9 @@ export function Patterns() {
             >
               <DateRangePicker value={dates} onValueChange={setDates} />
             </FilterCell>
+            <FilterBarEnd>
+              <SearchInput placeholder="Find a hero…" aria-label="Filter heroes by name" size="sm" />
+            </FilterBarEnd>
           </FilterBar>
         </Variants>
       </Specimen>

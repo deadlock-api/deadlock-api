@@ -69,34 +69,12 @@ export function PlayersPage() {
 
   return (
     <PageShell>
-      <PageHeader title="Player Analytics" description="Player performance and stat distributions">
+      <PageHeader align="start" title="Player Analytics" description="Player performance and stat distributions">
         <p>
           Compare top player performances and view percentile distributions across a range of performance metrics.
           Filter by hero, rank, and patch.
         </p>
       </PageHeader>
-
-      <Filter.Root>
-        <Filter.ModeWithRank
-          value={{ mode, rank: [minRankId, maxRankId] }}
-          onValueChange={(next) => {
-            if (next.mode !== mode) setMode(next.mode);
-            if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
-              setMinRankId(next.rank[0]);
-              setMaxRankId(next.rank[1]);
-            }
-          }}
-        />
-        <Filter.Hero value={heroId} onValueChange={setHeroId} allowNull />
-        <Filter.SeasonPatchDate
-          value={{ startDate, endDate }}
-          onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
-          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
-        />
-        {tab === "scoreboard" && (
-          <Filter.MinMatches value={minMatches} onValueChange={setMinMatches} min={1} defaultValue={0} />
-        )}
-      </Filter.Root>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
         <ResponsiveTabsList
@@ -107,6 +85,28 @@ export function PlayersPage() {
           <ResponsiveTab value="scoreboard">Scoreboard</ResponsiveTab>
           <ResponsiveTab value="stats-metrics">Stats Metrics</ResponsiveTab>
         </ResponsiveTabsList>
+
+        <Filter.Root>
+          <Filter.ModeWithRank
+            value={{ mode, rank: [minRankId, maxRankId] }}
+            onValueChange={(next) => {
+              if (next.mode !== mode) setMode(next.mode);
+              if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
+                setMinRankId(next.rank[0]);
+                setMaxRankId(next.rank[1]);
+              }
+            }}
+          />
+          <Filter.Hero value={heroId} onValueChange={setHeroId} allowNull />
+          <Filter.SeasonPatchDate
+            value={{ startDate, endDate }}
+            onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
+            defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
+          />
+          {tab === "scoreboard" && (
+            <Filter.MinMatches value={minMatches} onValueChange={setMinMatches} min={1} defaultValue={0} />
+          )}
+        </Filter.Root>
 
         <TabsContent value="scoreboard">
           <Section titleDisplay="hidden" title="Player Scoreboard">

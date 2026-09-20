@@ -74,7 +74,11 @@ function AbilitiesPage() {
 
   return (
     <PageShell>
-      <PageHeader title="Ability Stats" description="Explore the most common ability upgrade paths and their win rates">
+      <PageHeader
+        align="start"
+        title="Ability Stats"
+        description="Explore the most common ability upgrade paths and their win rates"
+      >
         <p>
           Analyze the most popular and highest win rate ability upgrade paths for every Deadlock hero. See which skill
           orders are favored at different rank brackets, and how item choices affect optimal ability leveling.

@@ -75,7 +75,7 @@ function LeaderboardPage() {
 
   return (
     <PageShell>
-      <PageHeader title="Deadlock Leaderboard" description="Ranked player standings across all regions">
+      <PageHeader align="start" title="Deadlock Leaderboard" description="Ranked player standings across all regions">
         <p>
           Browse the top-ranked Deadlock players by region. Filter by hero to see who dominates with specific
           characters, search for any player, and jump to any rank to see where you stand on the competitive ladder.
