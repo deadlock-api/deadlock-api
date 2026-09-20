@@ -165,7 +165,7 @@ function CompanionTable({
                 className={column.className}
                 title={column.key === "matches" ? matchesLabel : undefined}
                 sortLabel={`Sort by ${column.label.toLowerCase()}, ${sortKey === column.key && sortDir === "desc" ? "ascending" : "descending"}`}
-                onSort={(key) => {
+                onSortChange={(key) => {
                   setSortDir(sortKey === key && sortDir === "desc" ? "asc" : "desc");
                   setSortKey(key);
                   setCurrentPage(0);

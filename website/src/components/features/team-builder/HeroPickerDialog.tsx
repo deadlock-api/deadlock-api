@@ -25,14 +25,14 @@ type SortKey = "score" | "synergy" | "counter" | "winRate";
 function SortHeader({
   column,
   sort,
-  onSort,
+  onSortChange,
   align = "end",
   className,
   children,
 }: {
   column: SortKey;
   sort: SortKey;
-  onSort: (key: SortKey) => void;
+  onSortChange: (key: SortKey) => void;
   align?: "start" | "end";
   className?: string;
   children: React.ReactNode;
@@ -43,7 +43,7 @@ function SortHeader({
       active={active}
       sortDir="desc"
       align={align}
-      onClick={() => onSort(column)}
+      onClick={() => onSortChange(column)}
       className={cn(active && "text-foreground", className)}
     >
       {children}
@@ -168,16 +168,16 @@ function PickerBody({
       <Separator />
 
       <div className="flex px-4 py-2 eyebrow">
-        <SortHeader column="score" sort={sort} onSort={setSort} align="start" className="flex-1">
+        <SortHeader column="score" sort={sort} onSortChange={setSort} align="start" className="flex-1">
           Hero
         </SortHeader>
-        <SortHeader column="synergy" sort={sort} onSort={setSort} className="w-20">
+        <SortHeader column="synergy" sort={sort} onSortChange={setSort} className="w-20">
           Synergy
         </SortHeader>
-        <SortHeader column="counter" sort={sort} onSort={setSort} className="w-20">
+        <SortHeader column="counter" sort={sort} onSortChange={setSort} className="w-20">
           Vs. enemy
         </SortHeader>
-        <SortHeader column="winRate" sort={sort} onSort={setSort} className="w-18">
+        <SortHeader column="winRate" sort={sort} onSortChange={setSort} className="w-18">
           Win rate
         </SortHeader>
       </div>

@@ -146,7 +146,7 @@ export function ScoreboardTable({
                 sortDir={sortDirection}
                 align="end"
                 className="hidden sm:table-cell"
-                onSort={() =>
+                onSortChange={() =>
                   sort(
                     sortBy === "matches"
                       ? { sortBy, sortDirection: flip() }

@@ -1,16 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { memo } from "react";
 
+import { EntityName, type EntityNameProps } from "~/components/domain/assets/EntityName";
 import type { HeroSource } from "~/components/domain/assets/HeroImage";
-import { FOCUS_RING } from "~/components/ui/recipes";
-import { Skeleton } from "~/components/ui/skeleton";
 import { useHeroById } from "~/hooks/useAssetById";
 import { heroSlug } from "~/lib/hero-slug";
-import { cn } from "~/lib/utils";
 import type { SlimHero } from "~/queries/asset-queries";
 
-// No `ref`: the root is an anchor when linked and a span otherwise, so no single element type would be true.
-type HeroNameLook = Omit<React.ComponentPropsWithoutRef<"span">, "children"> & {
+type HeroNameLook = Omit<EntityNameProps, "name" | "loading" | "link" | "size"> & {
   /** Links the name to the hero's analytics page. */
   linkToDetail?: boolean;
 };
@@ -22,46 +19,24 @@ export const HeroName = memo(function HeroName(props: HeroNameLook & HeroSource)
 
 function HeroNameById({ heroId, ...props }: HeroNameLook & { heroId: number }) {
   const { hero, isLoading } = useHeroById(heroId);
-
   return <HeroNameView {...props} hero={hero} loading={isLoading} />;
 }
 
 function HeroNameView({
   hero,
-  loading = false,
   linkToDetail = false,
-  className,
   ...props
 }: HeroNameLook & { hero: SlimHero | undefined; loading?: boolean }) {
-  if (loading) {
-    return <Skeleton className={cn("inline-block h-4 w-20", className)} />;
-  }
-
-  const name = hero?.name ?? "Unknown Hero";
-
-  if (linkToDetail && hero) {
-    return (
-      <Link
-        to="/analytics/heroes/$heroName"
-        params={{ heroName: heroSlug(hero.name) }}
-        preload="intent"
-        title={name}
-        className={cn(FOCUS_RING, "truncate rounded-sm hover:underline", className)}
-        {...props}
-        // Rows that hold this name are often clickable themselves (expand, select); the link must not trigger them.
-        onClick={(event) => {
-          event.stopPropagation();
-          props.onClick?.(event);
-        }}
-      >
-        {name}
-      </Link>
-    );
-  }
-
   return (
-    <span title={name} className={cn("truncate", className)} {...props}>
-      {name}
-    </span>
+    <EntityName
+      name={hero?.name ?? "Unknown Hero"}
+      size="sm"
+      link={
+        linkToDetail && hero ? (
+          <Link to="/analytics/heroes/$heroName" params={{ heroName: heroSlug(hero.name) }} preload="intent" />
+        ) : undefined
+      }
+      {...props}
+    />
   );
 }

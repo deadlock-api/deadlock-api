@@ -5,11 +5,13 @@ import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { AbilityName } from "~/components/domain/assets/AbilityName";
 import { AssetImage } from "~/components/domain/assets/AssetImage";
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
+import { EntityName } from "~/components/domain/assets/EntityName";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
 import { OptimizedImage } from "~/components/domain/assets/OptimizedImage";
+import { TextLink } from "~/components/ui/text-link";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -106,6 +108,22 @@ export function DomainAssets() {
           <span className="flex items-center gap-2 text-sm">
             <AbilityImage abilityId={UNKNOWN_ID} />
             <AbilityName abilityId={UNKNOWN_ID} />
+          </span>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="EntityName"
+        source="domain/assets/EntityName"
+        note="The truncating line under HeroName, ItemName and AbilityName: text, a link when `link` is given, a skeleton while loading. Use it only to add another kind of asset name."
+      >
+        <Variants label="text, link, loading (sm, default), truncated">
+          <EntityName name="Abrams" className="text-sm" />
+          <EntityName name="Abrams" link={<TextLink href="#EntityName" />} className="text-sm" />
+          <EntityName name="" loading />
+          <EntityName name="" loading size="default" />
+          <span className="flex w-24 text-sm">
+            <EntityName name="A name too long for its cell" />
           </span>
         </Variants>
       </Specimen>

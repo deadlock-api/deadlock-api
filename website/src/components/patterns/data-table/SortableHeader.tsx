@@ -10,7 +10,7 @@ export function SortableHeader<Key extends string>({
   sortKey,
   activeSortKey,
   sortDir,
-  onSort,
+  onSortChange,
   align = "center",
   size = "default",
   sortLabel,
@@ -22,7 +22,7 @@ export function SortableHeader<Key extends string>({
   sortKey: Key;
   activeSortKey: Key;
   sortDir: SortDir;
-  onSort: (key: Key) => void;
+  onSortChange: (key: Key) => void;
   align?: "start" | "center" | "end";
   size?: React.ComponentProps<typeof SortButton>["size"];
   /** Accessible name of the button where the visible label is not enough, such as "Sort by win rate, descending". */
@@ -44,7 +44,7 @@ export function SortableHeader<Key extends string>({
         align={align}
         size={size}
         aria-label={sortLabel}
-        onClick={() => onSort(sortKey)}
+        onClick={() => onSortChange(sortKey)}
       >
         <span>{label}</span>
         {children}

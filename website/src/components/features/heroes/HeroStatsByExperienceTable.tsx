@@ -272,7 +272,7 @@ export function HeroStatsByExperienceTable({
             sortKey="name"
             activeSortKey={sortKey}
             sortDir={sortDir}
-            onSort={handleSort}
+            onSortChange={handleSort}
             align="start"
             className="min-w-40"
             data-pinned
@@ -307,7 +307,13 @@ export function HeroStatsByExperienceTable({
               </div>
             </TableHead>
           ))}
-          <SortableHeader label="Trend" sortKey="trend" activeSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+          <SortableHeader
+            label="Trend"
+            sortKey="trend"
+            activeSortKey={sortKey}
+            sortDir={sortDir}
+            onSortChange={handleSort}
+          />
         </TableRow>
       </TableHeader>
       <TableBody>

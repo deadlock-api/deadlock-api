@@ -44,7 +44,7 @@ import { Label } from "~/components/ui/label";
 import { OptionRow } from "~/components/ui/option-row";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
-import { DivergingBar, RateBar } from "~/components/ui/rate-bar";
+import { DivergingBar } from "~/components/ui/rate-bar";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -459,14 +459,7 @@ export function Primitives() {
         </Variants>
       </Specimen>
 
-      <Specimen
-        name="RateBar"
-        source="ui/rate-bar"
-        note='RateBar is deprecated: use ProgressBar variant="thin". DivergingBar draws a signed value from the centre.'
-      >
-        <Variants label="RateBar (deprecated)">
-          <RateBar rate={0.62} className="w-24" />
-        </Variants>
+      <Specimen name="DivergingBar" source="ui/rate-bar" note="Draws a signed value from the centre of its track.">
         <Variants label="DivergingBar: a signed value from the centre" className="gap-6">
           {[0.042, -0.018, 0.009, -0.06].map((value) => (
             <span key={value} className="flex items-center gap-2 text-xs tabular-nums">

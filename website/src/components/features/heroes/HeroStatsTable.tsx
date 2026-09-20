@@ -624,7 +624,7 @@ export function HeroStatsTable({
             sortKey="winrate"
             activeSortKey={activeSortKey}
             sortDir={sortDir}
-            onSort={handleSort}
+            onSortChange={handleSort}
             className="w-19/100 text-center"
           />
         )}
@@ -663,7 +663,7 @@ export function HeroStatsTable({
             sortKey="zScore"
             activeSortKey={activeSortKey}
             sortDir={sortDir}
-            onSort={handleSort}
+            onSortChange={handleSort}
             className="w-19/100 text-center"
           >
             <Tooltip
@@ -685,7 +685,7 @@ export function HeroStatsTable({
             sortKey="residual"
             activeSortKey={activeSortKey}
             sortDir={sortDir}
-            onSort={handleSort}
+            onSortChange={handleSort}
             className="w-19/100 text-center"
           >
             <Tooltip

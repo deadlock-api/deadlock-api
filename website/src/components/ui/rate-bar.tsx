@@ -1,19 +1,5 @@
-import { ProgressBar } from "~/components/ui/progress-bar";
 import { TONE_BG, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
-import type { Color } from "~/types/general";
-
-/** @deprecated Use `<ProgressBar variant="thin" value={rate ?? undefined} />`. */
-export function RateBar({
-  rate,
-  color,
-  ...props
-}: Omit<React.ComponentProps<"div">, "color" | "children"> & {
-  rate: number | null;
-  color?: Color;
-}) {
-  return <ProgressBar variant="thin" value={rate ?? undefined} color={color} {...props} />;
-}
 
 /**
  * A signed value drawn from the middle of its track: right and positive for a gain, left and negative for a loss,

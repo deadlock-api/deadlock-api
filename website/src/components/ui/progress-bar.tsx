@@ -86,7 +86,7 @@ export function ProgressBar({
   const clamped = Math.max(Math.min(total || value || 0, maxVal), minVal);
   const width = `${(((clamped - minVal) / (maxVal - minVal)) * 100).toFixed(2)}%`;
   const fill = cn("h-full transition-all duration-slow ease-standard", variant === "thin" && "rounded-full");
-  const fallbackColor = variant === "thin" ? "var(--positive)" : "var(--primary)";
+  const fallbackFill = variant === "thin" ? "bg-positive" : "bg-primary";
 
   return (
     <div
@@ -103,7 +103,7 @@ export function ProgressBar({
           <ProgressBarTotalContext value={total}>{children}</ProgressBarTotalContext>
         </div>
       ) : (
-        <div className={fill} style={{ backgroundColor: color || fallbackColor, width }} />
+        <div className={cn(fill, !color && fallbackFill)} style={{ backgroundColor: color, width }} />
       )}
     </div>
   );

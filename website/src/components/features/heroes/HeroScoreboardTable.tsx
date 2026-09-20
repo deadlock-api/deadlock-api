@@ -40,7 +40,7 @@ export function HeroScoreboardTable({ entries, sortBy, sortDirection, onSortChan
               sortDir={sortDirection}
               align="end"
               className="hidden sm:table-cell"
-              onSort={handleMatchesClick}
+              onSortChange={handleMatchesClick}
             />
           )}
           <TableHead aria-sort={ariaSort(true, sortDirection)} className="text-end">

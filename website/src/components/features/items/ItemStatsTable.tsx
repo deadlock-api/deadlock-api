@@ -573,7 +573,7 @@ export function ItemStatsTable({
                       sortKey="winRate"
                       activeSortKey={sort.field}
                       sortDir={sort.direction}
-                      onSort={toggleSort}
+                      onSortChange={toggleSort}
                       className="text-start"
                     />
                   )}
@@ -583,7 +583,7 @@ export function ItemStatsTable({
                       sortKey="matches"
                       activeSortKey={sort.field}
                       sortDir={sort.direction}
-                      onSort={toggleSort}
+                      onSortChange={toggleSort}
                       className="text-start"
                     />
                   )}

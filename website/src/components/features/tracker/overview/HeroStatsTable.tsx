@@ -115,7 +115,7 @@ export function HeroStatsTable({
                   size="sm"
                   className="text-3xs text-muted-foreground"
                   sortLabel={`Sort by ${name}, ${sort === key && direction === "descending" ? "ascending" : "descending"}`}
-                  onSort={(next) => {
+                  onSortChange={(next) => {
                     setDirection(sort === next && direction === "descending" ? "ascending" : "descending");
                     setSort(next);
                   }}

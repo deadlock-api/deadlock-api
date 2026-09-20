@@ -248,7 +248,7 @@ export function Patterns() {
                   sortKey="hero"
                   activeSortKey={sortKey}
                   sortDir={sortDir}
-                  onSort={onSort}
+                  onSortChange={onSort}
                 />
                 <SortableHeader
                   label="Win rate"
@@ -256,7 +256,7 @@ export function Patterns() {
                   sortKey="winRate"
                   activeSortKey={sortKey}
                   sortDir={sortDir}
-                  onSort={onSort}
+                  onSortChange={onSort}
                 />
                 <TableHead className="text-end">Change</TableHead>
                 <SortableHeader
@@ -267,7 +267,7 @@ export function Patterns() {
                   sortKey="pickRate"
                   activeSortKey={sortKey}
                   sortDir={sortDir}
-                  onSort={onSort}
+                  onSortChange={onSort}
                 />
                 <SortableHeader
                   label={
@@ -279,7 +279,7 @@ export function Patterns() {
                   sortKey="matches"
                   activeSortKey={sortKey}
                   sortDir={sortDir}
-                  onSort={onSort}
+                  onSortChange={onSort}
                 />
               </TableRow>
             </TableHeader>

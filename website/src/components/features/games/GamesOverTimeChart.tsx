@@ -8,9 +8,11 @@ import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartLoading, ChartError, ChartEmpty } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
+import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
 import { CHART_AXIS, CHART_GRID } from "~/components/patterns/charts/theme";
-import { TrendIntervalField, TrendMetricField } from "~/components/patterns/charts/TrendControls";
+import { TrendIntervalField } from "~/components/patterns/charts/TrendControls";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
+import { Field } from "~/components/ui/field";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
 import { day } from "~/dayjs";
@@ -70,18 +72,20 @@ export default function GamesOverTimeChart({
   return (
     <div className="flex flex-col gap-3">
       <FilterBar variant="toolbar" title="Game trends" icon={ChartNoAxesCombined} aria-label="Trend controls">
-        <TrendMetricField value={stat} valueLabel={statDef?.label} onValueChange={onStatChange}>
-          {categories.map((category) => (
-            <SelectGroup key={category.label}>
-              <SelectLabel>{category.label}</SelectLabel>
-              {category.stats.map((option) => (
-                <SelectItem key={option.key} value={option.key}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          ))}
-        </TrendMetricField>
+        <Field label="Metric" orientation="horizontal" className="w-full @sm:w-auto">
+          <MetricSelect value={stat} valueLabel={statDef?.label} onValueChange={onStatChange}>
+            {categories.map((category) => (
+              <SelectGroup key={category.label}>
+                <SelectLabel>{category.label}</SelectLabel>
+                {category.stats.map((option) => (
+                  <SelectItem key={option.key} value={option.key}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ))}
+          </MetricSelect>
+        </Field>
         <TrendIntervalField
           value={timeBucket}
           onValueChange={(value) => onTimeBucketChange(value as GameStatsBucketEnum)}

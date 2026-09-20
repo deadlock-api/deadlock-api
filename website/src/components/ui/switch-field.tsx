@@ -1,6 +1,6 @@
 import { useId } from "react";
 
-import { Label } from "~/components/ui/label";
+import { ControlRow } from "~/components/ui/field";
 import { Switch } from "~/components/ui/switch";
 import { cn } from "~/lib/utils";
 
@@ -17,29 +17,23 @@ interface SwitchFieldProps extends Omit<React.ComponentProps<typeof Switch>, "ch
 export function SwitchField({ label, description, size = "default", id, className, ...props }: SwitchFieldProps) {
   const generatedId = useId();
   const controlId = id ?? generatedId;
-  const descriptionId = `${controlId}-description`;
   return (
-    <div
-      data-slot="switch-field"
-      data-size={size}
-      data-disabled={props.disabled || undefined}
-      className={cn("group flex min-w-0 items-start gap-2", className)}
+    <ControlRow
+      slot="switch-field"
+      controlId={controlId}
+      label={label}
+      description={description}
+      size={size}
+      disabled={props.disabled}
+      labelClassName={cn("leading-5", size === "sm" && "text-xs leading-4")}
+      className={className}
     >
-      <Switch id={controlId} size={size} aria-describedby={description ? descriptionId : undefined} {...props} />
-      <div className="flex min-w-0 flex-col gap-1">
-        <Label htmlFor={controlId} className={cn("leading-5", size === "sm" && "text-xs leading-4")}>
-          {label}
-        </Label>
-        {description && (
-          <p
-            id={descriptionId}
-            data-slot="switch-field-description"
-            className="type-caption text-muted-foreground group-data-[disabled=true]:opacity-50"
-          >
-            {description}
-          </p>
-        )}
-      </div>
-    </div>
+      <Switch
+        id={controlId}
+        size={size}
+        aria-describedby={description ? `${controlId}-description` : undefined}
+        {...props}
+      />
+    </ControlRow>
   );
 }

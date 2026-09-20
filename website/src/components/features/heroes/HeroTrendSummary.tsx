@@ -114,7 +114,7 @@ export function HeroTrendSummary({
                   sortKey={key}
                   activeSortKey={sort.key}
                   sortDir={sort.direction}
-                  onSort={onSort}
+                  onSortChange={onSort}
                   align="start"
                   data-pinned={key === "hero" || undefined}
                 />

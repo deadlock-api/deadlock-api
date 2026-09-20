@@ -2,6 +2,7 @@ import { TriangleAlertIcon } from "lucide-react";
 import { useId } from "react";
 
 import { FieldControlContext } from "~/components/ui/hooks/use-field-control";
+import { Label } from "~/components/ui/label";
 import { cn } from "~/lib/utils";
 
 interface FieldProps extends React.ComponentProps<"div"> {
@@ -109,5 +110,59 @@ export function Field({
         )}
       </div>
     </FieldControlContext>
+  );
+}
+
+interface ControlRowProps extends Omit<React.ComponentProps<"div">, "children"> {
+  /** The `data-slot` of the row; the description's slot is derived from it. */
+  slot: string;
+  /** The id of the control, which the label points at. The description's id is `<controlId>-description`. */
+  controlId: string;
+  label: React.ReactNode;
+  description?: React.ReactNode;
+  size?: "default" | "sm";
+  disabled?: boolean;
+  labelClassName?: string;
+  /** The control itself. */
+  children: React.ReactNode;
+}
+
+/** The row `CheckboxField` and `SwitchField` are built on: the control, then its label over a quiet description. */
+export function ControlRow({
+  slot,
+  controlId,
+  label,
+  description,
+  size = "default",
+  disabled = false,
+  labelClassName,
+  className,
+  children,
+  ...props
+}: ControlRowProps) {
+  return (
+    <div
+      data-slot={slot}
+      data-size={size}
+      data-disabled={disabled || undefined}
+      className={cn("group flex min-w-0 items-start gap-2", className)}
+      {...props}
+    >
+      {children}
+      <div className="flex min-w-0 flex-col gap-1">
+        <Label htmlFor={controlId} className={labelClassName}>
+          {label}
+        </Label>
+        {description && (
+          <p
+            id={`${controlId}-description`}
+            data-slot={`${slot}-description`}
+            className="type-caption text-muted-foreground group-data-[disabled=true]:opacity-50"
+          >
+            {description}
+          </p>
+        )}
+      </div>
+    </div>
   );
 }

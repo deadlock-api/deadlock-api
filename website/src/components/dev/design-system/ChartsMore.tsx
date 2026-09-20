@@ -15,10 +15,11 @@ import {
   CHART_MARGIN,
   SERIES_COLORS,
 } from "~/components/patterns/charts/theme";
-import { TrendIntervalField, TrendMetricField } from "~/components/patterns/charts/TrendControls";
+import { TrendIntervalField } from "~/components/patterns/charts/TrendControls";
 import { type WeekEntry, WeeklyTrendChart } from "~/components/patterns/charts/WeeklyTrendChart";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Card } from "~/components/ui/card";
+import { Field } from "~/components/ui/field";
 import { OptionRow } from "~/components/ui/option-row";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
@@ -126,9 +127,11 @@ export function ChartsMore() {
         note="The fields of a historical chart's toolbar: a MetricSelect and the time interval, inside a FilterBar toolbar. They hold no URL state; the route passes values and setters."
       >
         <FilterBar variant="toolbar" title="Hero trends" icon={ChartNoAxesCombined} aria-label="Trend controls">
-          <TrendMetricField value={metric} valueLabel={METRIC_LABELS[metric]} onValueChange={setMetric}>
-            {metricOptions}
-          </TrendMetricField>
+          <Field label="Metric" orientation="horizontal" className="w-full @sm:w-auto">
+            <MetricSelect value={metric} valueLabel={METRIC_LABELS[metric]} onValueChange={setMetric}>
+              {metricOptions}
+            </MetricSelect>
+          </Field>
           <TrendIntervalField value={interval} onValueChange={setInterval}>
             {INTERVALS.map((option) => (
               <SegmentedItem key={option.value} value={option.value}>

@@ -2,7 +2,7 @@ import { CheckIcon } from "lucide-react";
 import { Checkbox as CheckboxPrimitive } from "radix-ui";
 import { useId } from "react";
 
-import { Label } from "~/components/ui/label";
+import { ControlRow } from "~/components/ui/field";
 import { DISABLED_STATE, FOCUS_RING_BORDER, INVALID_STATE } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
@@ -44,29 +44,18 @@ interface CheckboxFieldProps extends Omit<React.ComponentProps<typeof Checkbox>,
 export function CheckboxField({ label, description, size = "default", id, className, ...props }: CheckboxFieldProps) {
   const generatedId = useId();
   const controlId = id ?? generatedId;
-  const descriptionId = `${controlId}-description`;
   return (
-    <div
-      data-slot="checkbox-field"
-      data-size={size}
-      data-disabled={props.disabled || undefined}
-      className={cn("group flex min-w-0 items-start gap-2", className)}
+    <ControlRow
+      slot="checkbox-field"
+      controlId={controlId}
+      label={label}
+      description={description}
+      size={size}
+      disabled={props.disabled}
+      labelClassName={cn("leading-4", size === "sm" && "text-xs")}
+      className={className}
     >
-      <Checkbox id={controlId} aria-describedby={description ? descriptionId : undefined} {...props} />
-      <div className="flex min-w-0 flex-col gap-1">
-        <Label htmlFor={controlId} className={cn("leading-4", size === "sm" && "text-xs")}>
-          {label}
-        </Label>
-        {description && (
-          <p
-            id={descriptionId}
-            data-slot="checkbox-field-description"
-            className="type-caption text-muted-foreground group-data-[disabled=true]:opacity-50"
-          >
-            {description}
-          </p>
-        )}
-      </div>
-    </div>
+      <Checkbox id={controlId} aria-describedby={description ? `${controlId}-description` : undefined} {...props} />
+    </ControlRow>
   );
 }

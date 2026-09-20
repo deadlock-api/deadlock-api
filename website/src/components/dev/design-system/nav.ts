@@ -109,7 +109,7 @@ export const NAV: readonly NavChapter[] = [
       },
       {
         title: "Bars",
-        items: ["ProgressBar", "ProgressBar variants", "RateBar", "SplitBar", "DivergingBar interval"],
+        items: ["ProgressBar", "ProgressBar variants", "DivergingBar", "SplitBar", "DivergingBar interval"],
       },
       {
         title: "Navigation",
@@ -227,6 +227,7 @@ export const NAV: readonly NavChapter[] = [
           "HeroImage and HeroName",
           "ItemImage and ItemName",
           "AbilityImage and AbilityName",
+          "EntityName",
           "AssetImage",
           "BadgeImage",
           "OptimizedImage",

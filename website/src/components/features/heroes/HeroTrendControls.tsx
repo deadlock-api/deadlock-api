@@ -1,7 +1,9 @@
 import { ChartNoAxesCombined } from "lucide-react";
 
-import { TrendIntervalField, TrendMetricField } from "~/components/patterns/charts/TrendControls";
+import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
+import { TrendIntervalField } from "~/components/patterns/charts/TrendControls";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
+import { Field } from "~/components/ui/field";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
 import { HERO_TREND_LABELS, type HeroTrendStat } from "~/lib/hero-trends";
@@ -38,22 +40,24 @@ export function HeroTrendControls({
 }) {
   return (
     <FilterBar variant="toolbar" title="Hero trends" icon={ChartNoAxesCombined} aria-label="Trend controls">
-      <TrendMetricField
-        value={stat}
-        valueLabel={HERO_TREND_LABELS[stat]}
-        onValueChange={(value) => onStatChange(value as HeroTrendStat)}
-      >
-        {METRIC_GROUPS.map((group) => (
-          <SelectGroup key={group.label}>
-            <SelectLabel>{group.label}</SelectLabel>
-            {group.stats.map((value) => (
-              <SelectItem key={value} value={value}>
-                {HERO_TREND_LABELS[value]}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        ))}
-      </TrendMetricField>
+      <Field label="Metric" orientation="horizontal" className="w-full @sm:w-auto">
+        <MetricSelect
+          value={stat}
+          valueLabel={HERO_TREND_LABELS[stat]}
+          onValueChange={(value) => onStatChange(value as HeroTrendStat)}
+        >
+          {METRIC_GROUPS.map((group) => (
+            <SelectGroup key={group.label}>
+              <SelectLabel>{group.label}</SelectLabel>
+              {group.stats.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {HERO_TREND_LABELS[value]}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          ))}
+        </MetricSelect>
+      </Field>
       <TrendIntervalField value={interval} onValueChange={onIntervalChange}>
         {intervals.map((entry) => (
           <SegmentedItem key={entry.value} value={entry.value}>
