@@ -160,7 +160,7 @@ export function PlayerHeroBuildsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Stack gap={3} className="min-h-0 flex-1 overflow-y-auto pe-1">
+        <Stack gap={3} className="min-h-0 flex-1 overflow-y-auto pe-1 [&>*]:shrink-0">
           {isLoading ? (
             <LoadingState label="recent matches" align="center" />
           ) : (
