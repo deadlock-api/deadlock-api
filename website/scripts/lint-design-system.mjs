@@ -43,7 +43,7 @@ const LAW_RULES = [
     id: "law1-arbitrary-value",
     message: "Law 1/3: arbitrary value; use the spacing scale, a named type step, or add a token",
     // `(--token)` references and `calc()` over tokens are token usage, not raw values.
-    // Grid templates describe structure, and `icon-[set--name]` is the icon plugin's syntax; neither is a raw value.
+    // Grid templates describe structure, and `icon-[…]` is the icon plugin's syntax (not spelled out: Tailwind scans this file); neither is a raw value.
     token: (raw, base) =>
       /^-?[a-z][a-z0-9-]*-\[(?!--|var\(|calc\(var\()[^\]]*\d[^\]]*\]$/.test(base) &&
       !/^(?:icon|grid-cols|grid-rows|col|row|auto-cols|auto-rows)-\[/.test(base),
