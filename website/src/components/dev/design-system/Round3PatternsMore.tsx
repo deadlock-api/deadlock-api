@@ -12,6 +12,14 @@ import {
   ComparisonTable,
 } from "~/components/patterns/data-table/ComparisonTable";
 import { ExpandableRow, ExpandableRowToggle } from "~/components/patterns/data-table/ExpandableRow";
+import {
+  HeatGrid,
+  HeatGridBody,
+  HeatGridCell,
+  HeatGridColumn,
+  HeatGridHead,
+  HeatGridRow,
+} from "~/components/patterns/data-table/HeatGrid";
 import { ResultGrid } from "~/components/patterns/data-table/ResultGrid";
 import { FilterCell } from "~/components/patterns/filter-bar/FilterCell";
 import { FilteredSelectOption, FilteredSelectPopover } from "~/components/patterns/filter-bar/FilteredSelectPopover";
@@ -236,6 +244,52 @@ const PLAYERS = ["Abrams main", "Seven enjoyer", "Haze", "Wraith", "Kelvin", "In
   matches: 240 - i * 31,
 }));
 
+const HEAT_DAYS = ["Mon", "Tue", "Wed"];
+const HEAT_HOURS = [0, 4, 8, 12, 16, 20];
+
+function HeatGridDemo() {
+  const [inspected, setInspected] = useState<number | null>(null);
+  return (
+    <div className="flex w-full max-w-md flex-col gap-2">
+      <HeatGrid
+        label="Matches by weekday and four-hour window"
+        columns={HEAT_HOURS.length}
+        value={inspected}
+        onValueChange={setInspected}
+      >
+        <HeatGridHead corner="Weekday">
+          {HEAT_HOURS.map((hour) => (
+            <HeatGridColumn key={hour}>{hour}</HeatGridColumn>
+          ))}
+        </HeatGridHead>
+        <HeatGridBody>
+          {HEAT_DAYS.map((day, row) => (
+            <HeatGridRow key={day} label={day}>
+              {HEAT_HOURS.map((hour, column) => {
+                const matches = (row * 5 + column * 3) % 8;
+                return (
+                  <HeatGridCell
+                    key={hour}
+                    index={row * HEAT_HOURS.length + column}
+                    label={`${day} ${hour}:00, ${matches} matches`}
+                    color={
+                      matches ? `color-mix(in srgb, var(--positive) ${20 + matches * 10}%, var(--muted))` : undefined
+                    }
+                    tooltip={column % 2 === 0 ? `${matches} matches` : undefined}
+                  />
+                );
+              })}
+            </HeatGridRow>
+          ))}
+        </HeatGridBody>
+      </HeatGrid>
+      <span className="text-xs text-muted-foreground">
+        {inspected == null ? "Nothing inspected" : `Inspected cell ${inspected}`}
+      </span>
+    </div>
+  );
+}
+
 function DataTableSpecimens() {
   const [selected, setSelected] = useState<number[]>([0, 1, 2]);
   return (
@@ -260,6 +314,14 @@ function DataTableSpecimens() {
         <Variants label='density="compact", empty' className="block">
           <ResultGrid density="compact" columns={[{ name: "hero_id" }, { name: "games" }]} rows={[]} />
         </Variants>
+      </Specimen>
+
+      <Specimen
+        name="HeatGrid"
+        source="patterns/data-table/HeatGrid"
+        note="Readings over two axes. A real table with row and column headers and role=grid: one tab stop, arrows between cells, Home and End within a row, Control Home or End to the corners, Escape clears the inspected cell. A cell with no reading is hatched. value / onValueChange is the inspected cell."
+      >
+        <HeatGridDemo />
       </Specimen>
 
       <Specimen

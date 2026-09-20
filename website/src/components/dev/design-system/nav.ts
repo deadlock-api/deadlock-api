@@ -167,7 +167,15 @@ export const NAV: readonly NavChapter[] = [
       },
       {
         title: "Data table",
-        items: ["Data table", "PaginationControls", "ExpandableRow", "ResultGrid", "ComparisonTable", "Table states"],
+        items: [
+          "Data table",
+          "PaginationControls",
+          "ExpandableRow",
+          "ResultGrid",
+          "HeatGrid",
+          "ComparisonTable",
+          "Table states",
+        ],
       },
       { title: "Panel", items: ["Panel", "PanelWithDetails", "PanelSection", "PanelSection tone"] },
       {
