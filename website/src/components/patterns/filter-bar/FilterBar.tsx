@@ -11,8 +11,6 @@ interface FilterBarProps extends Omit<React.ComponentProps<"section">, "title"> 
    *   chart or table.
    */
   variant?: "cells" | "toolbar";
-  /** `sticky` keeps a toolbar at the top of its scroll container while the long table under it scrolls. */
-  position?: "static" | "sticky";
   /** Names the toolbar. Drawn when the toolbar is wide enough; always available to assistive technology. */
   title?: string;
   icon?: LucideIcon;
@@ -20,7 +18,6 @@ interface FilterBarProps extends Omit<React.ComponentProps<"section">, "title"> 
 
 export function FilterBar({
   variant = "cells",
-  position = "static",
   title,
   icon: Icon,
   "aria-label": ariaLabel,
@@ -33,11 +30,9 @@ export function FilterBar({
       <section
         data-slot="filter-bar"
         data-variant="toolbar"
-        data-position={position}
         aria-label={ariaLabel ?? title ?? "Controls"}
         className={cn(
           "@container flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border bg-card px-3 py-2",
-          position === "sticky" && "sticky top-2 z-20 bg-popover/90 shadow-md backdrop-blur-md",
           className,
         )}
         {...props}

@@ -4,7 +4,7 @@ import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
-import { ItemCell, ItemCellFromAsset } from "~/components/domain/assets/ItemCell";
+import { ItemCell } from "~/components/domain/assets/ItemCell";
 import { RankedEntityCard, RankedEntityGrid } from "~/components/domain/assets/RankedEntityGrid";
 import { KeyValue } from "~/components/ui/key-value";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -30,7 +30,7 @@ export function Round3DomainAssets() {
       <Specimen
         name="HeroCell and ItemCell"
         source="domain/assets/HeroCell · domain/assets/ItemCell"
-        note="The identity of a table or list row: image and name on one line, the name truncating to the width the parent leaves. ItemCellFromAsset renders an item the table already holds, so a long table keeps one subscription."
+        note="The identity of a table or list row: image and name on one line, the name truncating to the width the parent leaves. Pass item instead of itemId to render an item the table already holds, so a long table keeps one subscription."
       >
         <Variants label="size: default, sm · linkToDetail">
           <HeroCell heroId={HERO_IDS[0]} />
@@ -46,7 +46,7 @@ export function Round3DomainAssets() {
           <ItemCell itemId={ITEM_IDS[0]} linkToDetail className="max-w-24" />
           <HeroCell heroId={UNKNOWN_ID} />
           <ItemCell itemId={UNKNOWN_ID} />
-          <ItemCellFromAsset item={undefined} loading />
+          <ItemCell item={undefined} loading />
         </Variants>
         <Table density="compact" aria-label="Cells in a table">
           <TableHeader>
@@ -62,7 +62,7 @@ export function Round3DomainAssets() {
                   <HeroCell heroId={heroId} linkToDetail />
                 </TableCell>
                 <TableCell>
-                  <ItemCellFromAsset
+                  <ItemCell
                     item={items?.find((item) => item.id === ITEM_IDS[i])}
                     loading={isLoadingItems}
                     size="sm"

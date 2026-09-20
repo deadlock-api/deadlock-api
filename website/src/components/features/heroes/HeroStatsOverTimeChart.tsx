@@ -466,7 +466,7 @@ export function HeroStatsOverTimeChart({
           >
             <ChartCard
               title={`${statLabel} over time`}
-              subtitle={
+              description={
                 <>
                   {day.unix(minDataDate).utc().format("MMM D, YYYY")} –{" "}
                   {day.unix(maxDataDate).utc().format("MMM D, YYYY")}
@@ -480,7 +480,7 @@ export function HeroStatsOverTimeChart({
                   {visibleHeroIds.length} {visibleHeroIds.length === 1 ? "hero" : "heroes"} selected
                 </Badge>
               }
-              footnote={
+              footer={
                 <>
                   Gaps indicate missing or insufficient data.{" "}
                   {heroStat === "winrate" &&

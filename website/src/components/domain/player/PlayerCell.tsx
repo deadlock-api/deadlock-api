@@ -2,18 +2,19 @@ import { Link } from "@tanstack/react-router";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { SteamAvatar } from "~/components/domain/player/SteamAvatar";
+import { FOCUS_RING } from "~/components/ui/recipes";
 import { Skeleton } from "~/components/ui/skeleton";
 import { cn } from "~/lib/utils";
 
 const playerCellVariants = cva("flex min-w-0 items-center", {
   variants: {
-    /** `sm` for dense panels, `default` for table rows, `lg` for a list of accounts: the id moves under the name. */
-    size: { sm: "gap-1.5 text-xs", default: "gap-2", lg: "gap-3 text-sm" },
+    /** `sm` for dense panels, `default` for table rows. */
+    size: { sm: "gap-1.5 text-xs", default: "gap-2" },
   },
   defaultVariants: { size: "default" },
 });
 
-const AVATAR_SIZE = { sm: "xs", default: "sm", lg: "default" } as const;
+const AVATAR_SIZE = { sm: "xs", default: "sm" } as const;
 
 /**
  * A player as the identity of a row: Steam avatar, persona name and, on request, the account id. While the Steam
@@ -41,7 +42,6 @@ export function PlayerCell({
     linkToTracker?: boolean;
   }) {
   const resolvedSize = size ?? "default";
-  const stacked = resolvedSize === "lg";
   const label = name ?? (accountId != null ? `Player ${accountId}` : "Unknown player");
 
   const nameNode = loading ? (
@@ -53,15 +53,12 @@ export function PlayerCell({
       title={`Open ${label} in the player tracker`}
       // Rows that hold this cell are often clickable themselves; the link must not trigger them.
       onClick={(event) => event.stopPropagation()}
-      className={cn(
-        "truncate rounded-sm outline-none hover:text-primary hover:underline focus-visible:ring-3 focus-visible:ring-ring/50",
-        stacked && "font-medium",
-      )}
+      className={cn(FOCUS_RING, "truncate rounded-sm hover:text-primary hover:underline")}
     >
       {label}
     </Link>
   ) : (
-    <span title={label} className={cn("truncate", stacked && "font-medium")}>
+    <span title={label} className="truncate">
       {label}
     </span>
   );
@@ -80,17 +77,8 @@ export function PlayerCell({
       {...props}
     >
       <SteamAvatar src={avatar} loading={loading} size={AVATAR_SIZE[resolvedSize]} />
-      {stacked ? (
-        <span className="flex min-w-0 flex-1 flex-col">
-          {nameNode}
-          {idNode}
-        </span>
-      ) : (
-        <>
-          {nameNode}
-          {idNode}
-        </>
-      )}
+      {nameNode}
+      {idNode}
     </span>
   );
 }

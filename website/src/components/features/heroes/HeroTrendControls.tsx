@@ -1,5 +1,9 @@
-import { TrendControls, TrendIntervalField, TrendMetricField } from "~/components/patterns/charts/TrendControls";
+import { ChartNoAxesCombined } from "lucide-react";
+
+import { TrendIntervalField, TrendMetricField } from "~/components/patterns/charts/TrendControls";
+import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { SegmentedItem } from "~/components/ui/segmented";
+import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
 import { HERO_TREND_LABELS, type HeroTrendStat } from "~/lib/hero-trends";
 import { TIME_INTERVALS } from "~/types/api_hero_stats";
 
@@ -19,10 +23,6 @@ const METRIC_GROUPS = [
   },
 ] as const;
 
-const metricGroups = METRIC_GROUPS.map((group) => ({
-  label: group.label,
-  options: group.stats.map((value) => ({ value, label: HERO_TREND_LABELS[value] })),
-}));
 const intervals = TIME_INTERVALS.map((interval) => ({ value: interval.query, label: interval.label }));
 
 export function HeroTrendControls({
@@ -37,12 +37,23 @@ export function HeroTrendControls({
   onIntervalChange: (interval: string) => void;
 }) {
   return (
-    <TrendControls title="Hero trends">
+    <FilterBar variant="toolbar" title="Hero trends" icon={ChartNoAxesCombined} aria-label="Trend controls">
       <TrendMetricField
         value={stat}
-        groups={metricGroups}
+        valueLabel={HERO_TREND_LABELS[stat]}
         onValueChange={(value) => onStatChange(value as HeroTrendStat)}
-      />
+      >
+        {METRIC_GROUPS.map((group) => (
+          <SelectGroup key={group.label}>
+            <SelectLabel>{group.label}</SelectLabel>
+            {group.stats.map((value) => (
+              <SelectItem key={value} value={value}>
+                {HERO_TREND_LABELS[value]}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        ))}
+      </TrendMetricField>
       <TrendIntervalField value={interval} onValueChange={onIntervalChange}>
         {intervals.map((entry) => (
           <SegmentedItem key={entry.value} value={entry.value}>
@@ -50,6 +61,6 @@ export function HeroTrendControls({
           </SegmentedItem>
         ))}
       </TrendIntervalField>
-    </TrendControls>
+    </FilterBar>
   );
 }

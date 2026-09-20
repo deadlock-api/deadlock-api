@@ -3,7 +3,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Customized, ReferenceLine, XAxis, Y
 
 import { Specimen } from "~/components/dev/design-system/Specimen";
 import { RANK_ICON_AXIS_HEIGHT, RankTierIcons, type TierSpan } from "~/components/domain/rank/RankTierIcons";
-import { RankTierTick, SizedRankTierTick } from "~/components/domain/rank/RankTierTick";
+import { RankTierTick } from "~/components/domain/rank/RankTierTick";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_AXIS, CHART_BASELINE, CHART_COLOR, CHART_GRID, CHART_MARGIN } from "~/components/patterns/charts/theme";
 import { percentTicks, winRateDomain } from "~/lib/chart-axis";
@@ -65,13 +65,13 @@ export function DomainRank() {
       <Specimen
         name="RankTierTick"
         source="domain/rank/RankTierTick"
-        note="The x-axis tick of a chart with one bar or point per rank tier: the tier's badge, or its name when it has no image. SizedRankTierTick shrinks the badges to the chart's width; RankTierTick takes a fixed size (rankTickSize computes one)."
+        note="The x-axis tick of a chart with one bar or point per rank tier: the tier's badge, or its name when it has no image. Without a size the badges shrink to the chart's width; size fixes them."
         className="grid gap-3 lg:grid-cols-2"
       >
-        <ChartSurface label="Win rate by rank tier, SizedRankTierTick" size="md">
+        <ChartSurface label="Win rate by rank tier, RankTierTick sized from the chart" size="md">
           <BarChart data={tiers} margin={CHART_MARGIN}>
             <CartesianGrid {...CHART_GRID} />
-            <XAxis {...CHART_AXIS} dataKey="tier" interval={0} height={48} tick={<SizedRankTierTick tiers={tiers} />} />
+            <XAxis {...CHART_AXIS} dataKey="tier" interval={0} height={48} tick={<RankTierTick tiers={tiers} />} />
             <YAxis
               {...CHART_AXIS}
               domain={WIN_RATE_AXIS}

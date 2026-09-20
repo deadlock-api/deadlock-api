@@ -5,7 +5,6 @@ import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { CopyableCode, CopyableUrl } from "~/components/patterns/code/CopyableCode";
 import { HighlightedCode } from "~/components/patterns/code/HighlightedCode";
 import {
-  ComparisonBody,
   ComparisonCell,
   ComparisonColumn,
   ComparisonHeader,
@@ -13,20 +12,10 @@ import {
   ComparisonTable,
 } from "~/components/patterns/data-table/ComparisonTable";
 import { ExpandableRow, ExpandableRowToggle } from "~/components/patterns/data-table/ExpandableRow";
-import { PaginatedTable } from "~/components/patterns/data-table/PaginatedTable";
-import { PaginationControls } from "~/components/patterns/data-table/PaginationControls";
 import { ResultGrid } from "~/components/patterns/data-table/ResultGrid";
-import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { FilterCell } from "~/components/patterns/filter-bar/FilterCell";
 import { FilteredSelectOption, FilteredSelectPopover } from "~/components/patterns/filter-bar/FilteredSelectPopover";
-import {
-  Panel,
-  PanelBody,
-  PanelHeader,
-  PanelSection,
-  PanelShowMore,
-  PanelSkeleton,
-} from "~/components/patterns/panel/Panel";
+import { Panel, PanelBody, PanelHeader, PanelSection, PanelShowMore } from "~/components/patterns/panel/Panel";
 import { PanelWithDetails } from "~/components/patterns/panel/PanelWithDetails";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -34,8 +23,6 @@ import { SkeletonMediaRow, SkeletonRows, SkeletonStatTiles } from "~/components/
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
-import { Field } from "~/components/ui/field";
-import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 
 const INSTALL =
@@ -124,10 +111,10 @@ function PanelSpecimens() {
       <Specimen
         name="PanelWithDetails"
         source="patterns/panel/PanelWithDetails"
-        note='A compact panel whose "Show more" opens the full content in a dialog. children are the compact view, details is the dialog body (mounted only while open). open / defaultOpen / onOpenChange.'
+        note='A compact panel whose "Show more" opens the full content in a dialog. children are the compact view, details is the dialog body (mounted only while open). open / onOpenChange.'
       >
         <Variants
-          label='size="sm" (default) with icon, meta, footer; size="default"'
+          label='with icon, meta, footer and dialogSize="default"; bare, dialogSize="full" (default)'
           className="grid items-start sm:grid-cols-2"
         >
           <PanelWithDetails
@@ -143,8 +130,6 @@ function PanelSpecimens() {
           </PanelWithDetails>
           <PanelWithDetails
             title="Item builds"
-            size="default"
-            dialogSize="lg"
             details={<p className="text-sm text-muted-foreground">Every build, in a wider dialog.</p>}
           >
             <p className="text-sm text-muted-foreground">The three most played builds.</p>
@@ -155,10 +140,10 @@ function PanelSpecimens() {
       <Specimen
         name="PanelSection"
         source="patterns/panel/Panel"
-        note="A titled strip that divides the rows of a panel or list into groups. Children sit on the trailing edge. Also here: PanelHeader description and PanelShowMore as a row button."
+        note="A titled strip that divides the rows of a panel or list into groups. Children sit on the trailing edge. Also here: PanelShowMore as a row button."
       >
         <Panel>
-          <PanelHeader title="Match history" description="Grouped by day, newest first" icon={Layers} />
+          <PanelHeader title="Match history" icon={Layers} />
           <PanelSection title="Today">
             <Badge variant="muted" size="sm">
               3
@@ -196,7 +181,7 @@ function StatesSpecimens() {
       <Specimen
         name="Skeletons"
         source="patterns/states/Skeletons"
-        note="Stand-ins shaped like what is loading. label announces it once; leave it out when a parent already does. PanelSkeleton is SkeletonRows with panel padding."
+        note="Stand-ins shaped like what is loading. label announces it once; leave it out when a parent already does. Inside a Panel, SkeletonRows sits in a PanelBody."
       >
         <Variants
           label='SkeletonRows: size xs | sm | default, variant "fade" | "solid"'
@@ -206,20 +191,19 @@ function StatesSpecimens() {
           <SkeletonRows size="sm" rows={3} variant="solid" />
           <SkeletonRows rows={3} />
         </Variants>
-        <Variants
-          label='SkeletonMediaRow: variant "plain" | "divided", shape "circle" | "square"'
-          className="grid items-start sm:grid-cols-2"
-        >
+        <Variants label='SkeletonMediaRow: variant "plain" | "divided"' className="grid items-start sm:grid-cols-2">
           <SkeletonMediaRow rows={2} />
-          <SkeletonMediaRow rows={2} variant="divided" shape="square" />
+          <SkeletonMediaRow rows={2} variant="divided" />
         </Variants>
         <Variants label="SkeletonStatTiles (steps down with its container)" className="block">
           <SkeletonStatTiles count={6} />
         </Variants>
-        <Variants label="PanelSkeleton" className="block">
+        <Variants label="SkeletonRows in a PanelBody" className="block">
           <Panel>
             <PanelHeader title="Loading panel" />
-            <PanelSkeleton rows={3} />
+            <PanelBody>
+              <SkeletonRows rows={3} />
+            </PanelBody>
           </Panel>
         </Variants>
       </Specimen>
@@ -250,67 +234,9 @@ const PLAYERS = ["Abrams main", "Seven enjoyer", "Haze", "Wraith", "Kelvin", "In
 }));
 
 function DataTableSpecimens() {
-  const [page, setPage] = useState(0);
-  const [perPage, setPerPage] = useState(10);
-  const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<number[]>([0, 1, 2]);
-  const pagination = {
-    currentPage: page,
-    onPageChange: setPage,
-    itemsPerPage: perPage,
-    onItemsPerPageChange: setPerPage,
-    totalPages: 12,
-  };
-  const rows = PLAYERS.filter((player) => player.name.toLowerCase().includes(search.toLowerCase()));
   return (
     <>
-      <Specimen
-        name="PaginatedTable"
-        source="patterns/data-table/PaginatedTable"
-        note='A table with its PaginationControls above, below or both. PaginationControls size="sm" is the tight row for a table inside a panel; its search is a SearchInput.'
-      >
-        <Variants label='position="both" (default)' className="block">
-          <PaginatedTable
-            controls={
-              <PaginationControls
-                {...pagination}
-                searchQuery={search}
-                onSearchChange={setSearch}
-                searchPlaceholder="Search player..."
-              />
-            }
-          >
-            <Table density="compact">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Player</TableHead>
-                  <TableHead className="text-end">Matches</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.slice(0, 3).map((player) => (
-                  <TableRow key={player.id}>
-                    <TableCell>{player.name}</TableCell>
-                    <TableCell className="text-end tabular-nums">{player.matches}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </PaginatedTable>
-        </Variants>
-        <Variants label='position="bottom" with PaginationControls size="sm"' className="block max-w-md">
-          <PaginatedTable position="bottom" controls={<PaginationControls {...pagination} size="sm" />}>
-            <Table density="dense">
-              <TableBody>
-                <TableRow>
-                  <TableCell>One row</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </PaginatedTable>
-        </Variants>
-      </Specimen>
-
       <Specimen
         name="ResultGrid"
         source="patterns/data-table/ResultGrid"
@@ -343,7 +269,7 @@ function DataTableSpecimens() {
             <ComparisonColumn>Free</ComparisonColumn>
             <ComparisonColumn>Patron</ComparisonColumn>
           </ComparisonHeader>
-          <ComparisonBody>
+          <TableBody>
             <ComparisonRow label="Full API access">
               <ComparisonCell included />
               <ComparisonCell included />
@@ -356,7 +282,7 @@ function DataTableSpecimens() {
               <ComparisonCell>1</ComparisonCell>
               <ComparisonCell>Up to 50</ComparisonCell>
             </ComparisonRow>
-          </ComparisonBody>
+          </TableBody>
         </ComparisonTable>
       </Specimen>
 
@@ -400,23 +326,10 @@ function DataTableSpecimens() {
       </Specimen>
 
       <Specimen
-        name="FilterBar position and FilterCell contentClassName"
-        source="patterns/filter-bar/FilterBar"
-        note='A toolbar with position="sticky" stays at the top of its scroll container. FilterCell sizes its popover with contentClassName. FilteredSelectPopover rows are OptionRows (keyboard reachable), its chips are Badges and its trigger a regular Button.'
+        name="FilterCell contentClassName"
+        source="patterns/filter-bar/FilterCell · FilteredSelectPopover"
+        note="FilterCell sizes its popover with contentClassName. FilteredSelectPopover rows are OptionRows (keyboard reachable), its chips are Badges and its trigger a regular Button."
       >
-        <Variants label='variant="toolbar" position="sticky": scroll the box' className="block">
-          <Card tone="inset" size="flush" className="h-40 overflow-y-auto p-2">
-            <FilterBar variant="toolbar" position="sticky" title="Sticky controls">
-              <Field orientation="horizontal" label="View">
-                <Segmented size="sm" aria-label="View" value="table" onValueChange={() => {}}>
-                  <SegmentedItem value="table">Table</SegmentedItem>
-                  <SegmentedItem value="chart">Chart</SegmentedItem>
-                </Segmented>
-              </Field>
-            </FilterBar>
-            <SkeletonRows rows={8} variant="solid" className="pt-2" />
-          </Card>
-        </Variants>
         <Variants label="FilterCell: eyebrow label, active tone, contentClassName">
           <FilterCell
             label="Players"
@@ -431,7 +344,7 @@ function DataTableSpecimens() {
             <p className="text-xs text-muted-foreground">Default width.</p>
           </FilterCell>
         </Variants>
-        <Variants label="FilteredSelectPopover: empty, some, more than maxChips">
+        <Variants label="FilteredSelectPopover: empty, some, more than two">
           <FilteredSelectPopover value={[]} onValueChange={() => {}} emptyLabel="Select players...">
             {PLAYERS.map((player) => (
               <FilteredSelectOption key={player.id} value={player.id}>

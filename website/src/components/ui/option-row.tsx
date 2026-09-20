@@ -2,6 +2,7 @@ import { CheckIcon } from "lucide-react";
 import { Slot } from "radix-ui";
 import { cloneElement, isValidElement } from "react";
 
+import { DISABLED_STATE, FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 interface OptionRowProps extends React.ComponentProps<"button"> {
@@ -63,7 +64,9 @@ export function OptionRow({
     "data-active": active || undefined,
     "aria-current": selected || undefined,
     className: cn(
-      "flex w-full items-center justify-between gap-3 rounded-sm px-2 py-1.5 text-start text-sm whitespace-nowrap outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 active:bg-accent disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-active:bg-accent",
+      FOCUS_RING,
+      DISABLED_STATE,
+      "flex w-full items-center justify-between gap-3 rounded-sm px-2 py-1.5 text-start text-sm whitespace-nowrap hover:bg-accent focus-visible:bg-accent active:bg-accent aria-disabled:pointer-events-none aria-disabled:opacity-50 data-active:bg-accent",
       selected && "font-medium",
       className,
     ),

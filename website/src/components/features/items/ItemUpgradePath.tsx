@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client";
 import { ArrowDown, ArrowRight } from "lucide-react";
 
-import { ItemImageFromAsset } from "~/components/domain/assets/ItemImage";
+import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { Section } from "~/components/patterns/page/Section";
 import { Card } from "~/components/ui/card";
 import { Heading } from "~/components/ui/heading";
@@ -20,7 +20,7 @@ function UpgradeTile({ item, winRate, current }: { item: SlimUpgrade; winRate?: 
   return (
     <li>
       <Card tone={current ? "primary" : "card"} size="xs" className="w-full flex-row items-center gap-3 px-3">
-        <ItemImageFromAsset item={item} className="size-10 shrink-0" />
+        <ItemImage item={item} className="size-10 shrink-0" />
         <Stack gap={0.5} className="flex-1">
           {current ? (
             <span className="text-sm leading-tight font-medium">{item.name}</span>

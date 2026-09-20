@@ -135,7 +135,7 @@ function MatchHeader({
               </span>
               <span className="inline-flex items-center gap-0.5">
                 Match {matchId}
-                <CopyButton text={String(matchId)} display="icon" size="icon-xs" title="Copy match ID" />
+                <CopyButton text={String(matchId)} size="icon-xs" title="Copy match ID" />
                 <SaveMatchButton accountId={accountId} matchId={matchId} />
               </span>
               <CopyButton

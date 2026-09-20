@@ -1,6 +1,8 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { ChevronDownIcon } from "lucide-react";
 
+import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
+import { FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 const disclosureVariants = cva("group/disclosure min-w-0", {
@@ -18,7 +20,10 @@ const disclosureVariants = cva("group/disclosure min-w-0", {
 });
 
 const summaryVariants = cva(
-  "flex cursor-pointer list-none items-center gap-2 outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:shrink-0 [&::-webkit-details-marker]:hidden",
+  [
+    FOCUS_RING,
+    "flex cursor-pointer list-none items-center gap-2 select-none [&_svg]:shrink-0 [&::-webkit-details-marker]:hidden",
+  ],
   {
     variants: {
       variant: {
@@ -76,20 +81,25 @@ export function Disclosure({
   icon,
   variant = "plain",
   size = "default",
-  open,
-  defaultOpen,
+  open: openProp,
+  defaultOpen = false,
   onOpenChange,
   className,
   children,
   ...props
 }: DisclosureProps) {
+  const [open, setOpen] = useControllableState({
+    value: openProp,
+    defaultValue: defaultOpen,
+    onValueChange: onOpenChange,
+  });
   return (
     <details
       data-slot="disclosure"
       data-variant={variant}
-      open={open ?? defaultOpen}
+      open={open}
       onToggle={(event) => {
-        if (event.currentTarget.open !== open) onOpenChange?.(event.currentTarget.open);
+        if (event.currentTarget.open !== open) setOpen(event.currentTarget.open);
       }}
       className={cn(disclosureVariants({ variant }), className)}
       {...props}

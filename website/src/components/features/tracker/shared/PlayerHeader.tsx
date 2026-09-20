@@ -14,19 +14,16 @@ import { formatPlaytime, peakRank, summarize } from "~/lib/tracker/compute";
 import { steamProfileQueryOptions, trackerRankQueryOptions } from "~/queries/tracker-queries";
 
 import { RefreshControl } from "./RefreshControl";
-import { SavedMatchesMenu } from "./SavedMatchesMenu";
 
 export function PlayerHeader({
   accountId,
   entries,
   ranks,
-  onOpenMatch,
   children,
 }: {
   accountId: number;
   entries: PlayerMatchHistoryEntry[] | undefined;
   ranks: Rank[];
-  onOpenMatch: (matchId: number) => void;
   /** The filter bar, centered between the profile and the rank when the header is wide enough, else below both. */
   children: ReactNode;
 }) {
@@ -89,7 +86,6 @@ export function PlayerHeader({
                   )}
                 </span>
                 <RefreshControl accountId={accountId} />
-                <SavedMatchesMenu key={accountId} accountId={accountId} entries={entries} onOpenMatch={onOpenMatch} />
               </span>
             }
           />

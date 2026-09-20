@@ -3,12 +3,12 @@ import { useMemo, useState } from "react";
 
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
 import { Card } from "~/components/ui/card";
-import { TooltipTarget } from "~/components/ui/panel-tooltip";
 import { Pips } from "~/components/ui/pips";
 import { DivergingBar } from "~/components/ui/rate-bar";
 import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
+import { TooltipTarget } from "~/components/ui/tooltip";
 import type { DraftControls } from "~/hooks/useDraft";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import type { DraftAnalysis, LaneReassignment, Side, Swap } from "~/lib/team-builder/analysis";

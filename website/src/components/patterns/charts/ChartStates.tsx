@@ -4,20 +4,20 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { cn } from "~/lib/utils";
 
-/** Plots this short have no room for a block with a title and a description; they get the one-line state. */
-const isStrip = (size?: ChartSize) => size === "xs" || size === "sm";
-
 /** The plot heights step with their container, so every state is its own container, as `ChartSurface` is. */
 const stateRoot = "@container min-w-0";
 
 interface ChartStateProps extends Omit<React.ComponentProps<"div">, "children"> {
   /** What the chart shows, in lower case: "win rate by rank". */
   label: string;
+}
+
+interface ChartLoadingProps extends ChartStateProps {
   /** The plot's `size`, so the state takes the plot's height and the layout does not jump. */
   size?: ChartSize;
 }
 
-export function ChartLoading({ label, size = "default", className, ...props }: ChartStateProps) {
+export function ChartLoading({ label, size = "default", className, ...props }: ChartLoadingProps) {
   return (
     <div data-slot="chart-loading" className={cn(stateRoot, size === "fill" && "h-full", className)} {...props}>
       <LoadingState variant="skeleton" label={label} className={chartSizeVariants({ size })} />
@@ -30,12 +30,12 @@ interface ChartErrorProps extends ChartStateProps {
   retrying?: boolean;
 }
 
-export function ChartError({ label, onRetry, retrying = false, size, className, ...props }: ChartErrorProps) {
+export function ChartError({ label, onRetry, retrying = false, className, ...props }: ChartErrorProps) {
   return (
-    <div data-slot="chart-error" className={cn(stateRoot, size === "fill" && "h-full", className)} {...props}>
-      <div className={cn(size && chartSizeVariants({ size }), "flex min-w-0 flex-col justify-center")}>
+    <div data-slot="chart-error" className={cn(stateRoot, className)} {...props}>
+      <div className="flex min-w-0 flex-col justify-center">
         <ErrorState
-          variant={isStrip(size) ? "inline" : "alert"}
+          variant="alert"
           title={`Unable to load ${label}`}
           description="Your filters are still selected. Try loading the chart again."
           onRetry={onRetry}
@@ -46,22 +46,10 @@ export function ChartError({ label, onRetry, retrying = false, size, className, 
   );
 }
 
-export function ChartEmpty({ label, size, className, ...props }: ChartStateProps) {
+export function ChartEmpty({ label, className, ...props }: ChartStateProps) {
   return (
-    <div data-slot="chart-empty" className={cn(stateRoot, size === "fill" && "h-full", className)} {...props}>
-      {isStrip(size) ? (
-        <EmptyState
-          variant="inline"
-          title={`No ${label} for these filters`}
-          className={cn(chartSizeVariants({ size }), "flex items-center justify-center py-0")}
-        />
-      ) : (
-        <EmptyState
-          title={`No ${label} for these filters`}
-          description="Try a wider date range or fewer filters."
-          className={size ? cn(chartSizeVariants({ size }), "flex-none") : undefined}
-        />
-      )}
+    <div data-slot="chart-empty" className={cn(stateRoot, className)} {...props}>
+      <EmptyState title={`No ${label} for these filters`} description="Try a wider date range or fewer filters." />
     </div>
   );
 }

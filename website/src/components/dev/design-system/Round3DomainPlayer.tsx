@@ -37,16 +37,14 @@ export function Round3DomainPlayer() {
         source="domain/player/PlayerCell"
         note="A player as the identity of a row: avatar, persona name and optionally the account id. linkToTracker links the name to the player's tracker page; leave it off when the whole row is the link. loading covers the wait for the Steam profiles."
       >
-        <Variants label="size: sm, default, lg (the id moves under the name)">
+        <Variants label="size: sm, default">
           <PlayerCell size="sm" accountId={ACCOUNT_ID} name="Manuel" avatar={AVATAR} linkToTracker />
           <PlayerCell accountId={ACCOUNT_ID} name="Manuel" avatar={AVATAR} linkToTracker showAccountId />
-          <PlayerCell size="lg" accountId={ACCOUNT_ID} name="Manuel" avatar={AVATAR} showAccountId />
         </Variants>
         <Variants label="No profile, no account, loading, truncation">
           <PlayerCell accountId={ACCOUNT_ID} />
           <PlayerCell name="#12" />
           <PlayerCell loading />
-          <PlayerCell size="lg" loading />
           <PlayerCell
             accountId={ACCOUNT_ID}
             name="A very long persona name that does not fit"
@@ -60,12 +58,11 @@ export function Round3DomainPlayer() {
       <Specimen
         name="KdaLine"
         source="domain/match/KdaLine"
-        note="Kills / deaths / assists of one player in one match, the slashes muted. sm takes the text size of its row; default and lg are the headline of a match card."
+        note="Kills / deaths / assists of one player in one match, the slashes muted. Sized as the headline of a match card."
       >
-        <Variants label="size: sm, default, lg">
-          <KdaLine size="sm" kills={7} deaths={3} assists={12} className="text-xs" />
+        <Variants label="A match, a deathless match">
           <KdaLine kills={7} deaths={3} assists={12} />
-          <KdaLine size="lg" kills={12} deaths={0} assists={21} />
+          <KdaLine kills={12} deaths={0} assists={21} />
         </Variants>
       </Specimen>
 
@@ -93,7 +90,7 @@ export function Round3DomainPlayer() {
                 <PlayerCell accountId={ACCOUNT_ID} name="Manuel" avatar={AVATAR} linkToTracker />
               </TableCell>
               <TableCell className="text-end">
-                <KdaLine size="sm" kills={7} deaths={3} assists={12} />
+                <KdaLine kills={7} deaths={3} assists={12} />
               </TableCell>
               <TableCell>
                 <FormDots form={["loss", "win", "win", "loss", "win"]} className="justify-end" />

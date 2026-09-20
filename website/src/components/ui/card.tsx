@@ -2,6 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
 import * as React from "react";
 
+import { DISABLED_STATE, FOCUS_RING_BORDER } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 /**
@@ -41,8 +42,11 @@ const cardVariants = cva("group/card flex min-w-0 flex-col text-card-foreground"
     /** `pressable`: the whole card is one link or button (`asChild`), so it answers to hover and focus. */
     interaction: {
       none: "",
-      pressable:
-        "transition-colors duration-fast ease-standard outline-none hover:border-primary/40 hover:bg-muted/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:bg-muted disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50",
+      pressable: [
+        FOCUS_RING_BORDER,
+        DISABLED_STATE,
+        "transition-colors duration-fast ease-standard hover:border-primary/40 hover:bg-muted/50 active:bg-muted aria-disabled:pointer-events-none aria-disabled:opacity-50",
+      ],
     },
   },
   defaultVariants: { tone: "card", size: "default", radius: "default", interaction: "none" },
@@ -144,18 +148,4 @@ function CardContent({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-footer"
-      className={cn(
-        "flex items-center group-data-[size=flush]/card:border-t group-data-[size=flush]/card:py-2 group-data-[size=flush]/card:text-xs group-data-[size=flush]/card:text-muted-foreground [.border-t]:pt-6 group-data-[size=sm]/card:[.border-t]:pt-3 group-data-[size=xs]/card:[.border-t]:pt-2",
-        inset,
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-export { Card, CardHeader, CardFooter, CardTitle, CardAction, CardDescription, CardContent, cardVariants };
+export { Card, CardHeader, CardTitle, CardAction, CardDescription, CardContent, cardVariants };

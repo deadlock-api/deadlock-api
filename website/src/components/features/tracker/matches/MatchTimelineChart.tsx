@@ -16,14 +16,8 @@ import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_AXIS, CHART_COLOR, CHART_CURSOR_LINE } from "~/components/patterns/charts/theme";
 import { IconTile } from "~/components/ui/icon-tile";
-import {
-  PanelTooltipCard,
-  PanelTooltipContent,
-  TooltipHeader,
-  TooltipStat,
-  TooltipStats,
-} from "~/components/ui/panel-tooltip";
-import { Tooltip as HoverTooltip, TooltipTrigger } from "~/components/ui/tooltip";
+import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { Tooltip as HoverTooltip } from "~/components/ui/tooltip";
 import { niceTicks } from "~/lib/chart-axis";
 import { TONE_TEXT } from "~/lib/tone";
 import { formatMatchDuration } from "~/lib/tracker/compute";
@@ -96,41 +90,42 @@ function ObjectiveMarker({
   const inset = OBJECTIVE_INSET_PX + level * OBJECTIVE_SLOT_PX;
   const top = event.own ? cy + inset : cy - inset - size;
   return (
-    <HoverTooltip>
-      <TooltipTrigger asChild>
-        <g>
-          <foreignObject
-            x={Math.min(Math.max(cx - size / 2, plotLeft), plotRight - size) - 2}
-            y={top - 2}
-            width={size + 4}
-            height={size + 4}
-          >
-            <div className="p-0.5">
-              <div
-                style={{
-                  width: size,
-                  height: size,
-                  backgroundColor: color,
-                  mask: `url("${src}") center / contain no-repeat`,
-                }}
-              />
-            </div>
-          </foreignObject>
-        </g>
-      </TooltipTrigger>
-      <PanelTooltipContent>
-        <TooltipHeader
-          title={OBJECTIVE_LABELS[event.kind]}
-          subtitle={
-            <span className={event.own ? TONE_TEXT.positive : TONE_TEXT.negative}>
-              {describeObjectiveOutcome(event)}
-            </span>
-          }
-        />
-        <TooltipStats>
-          <TooltipStat label="Match time" value={formatMatchDuration(event.time)} />
-        </TooltipStats>
-      </PanelTooltipContent>
+    <HoverTooltip
+      content={
+        <>
+          <TooltipHeader
+            title={OBJECTIVE_LABELS[event.kind]}
+            subtitle={
+              <span className={event.own ? TONE_TEXT.positive : TONE_TEXT.negative}>
+                {describeObjectiveOutcome(event)}
+              </span>
+            }
+          />
+          <TooltipStats>
+            <TooltipStat label="Match time" value={formatMatchDuration(event.time)} />
+          </TooltipStats>
+        </>
+      }
+    >
+      <g>
+        <foreignObject
+          x={Math.min(Math.max(cx - size / 2, plotLeft), plotRight - size) - 2}
+          y={top - 2}
+          width={size + 4}
+          height={size + 4}
+        >
+          <div className="p-0.5">
+            <div
+              style={{
+                width: size,
+                height: size,
+                backgroundColor: color,
+                mask: `url("${src}") center / contain no-repeat`,
+              }}
+            />
+          </div>
+        </foreignObject>
+      </g>
     </HoverTooltip>
   );
 }
@@ -158,7 +153,7 @@ function LeadTooltipContent({ active, payload }: { active?: boolean; payload?: {
   if (!active || !payload?.length) return null;
   const point = payload[0].payload;
   return (
-    <PanelTooltipCard>
+    <TooltipCard>
       <TooltipHeader
         title={
           <span
@@ -177,7 +172,7 @@ function LeadTooltipContent({ active, payload }: { active?: boolean; payload?: {
         <TooltipStat label="Your team" value={point.own.toLocaleString("en-US")} />
         <TooltipStat label="Enemy team" value={point.enemy.toLocaleString("en-US")} />
       </TooltipStats>
-    </PanelTooltipCard>
+    </TooltipCard>
   );
 }
 
@@ -279,19 +274,16 @@ function ChipMarker({
     <g>
       <line x1={cx} y1={cy} x2={cx} y2={center - (direction * CHIP_PX) / 2} stroke={color} strokeOpacity={0.7} />
       <foreignObject x={cx - CHIP_PX / 2 - 2} y={center - CHIP_PX / 2 - 2} width={CHIP_PX + 4} height={CHIP_PX + 4}>
-        <HoverTooltip>
-          <TooltipTrigger asChild>
-            <div className="p-0.5">
-              {event.hero ? (
-                <HeroImage heroId={event.hero.hero_id} shape="circle" ring={tone} className="size-5" title="" />
-              ) : (
-                <IconTile size="xs" shape="circle" tone={tone} className="size-5">
-                  <Skull />
-                </IconTile>
-              )}
-            </div>
-          </TooltipTrigger>
-          <PanelTooltipContent>{event.tooltip}</PanelTooltipContent>
+        <HoverTooltip content={event.tooltip}>
+          <div className="p-0.5">
+            {event.hero ? (
+              <HeroImage heroId={event.hero.hero_id} shape="circle" ring={tone} className="size-5" title="" />
+            ) : (
+              <IconTile size="xs" shape="circle" tone={tone} className="size-5">
+                <Skull />
+              </IconTile>
+            )}
+          </div>
         </HoverTooltip>
       </foreignObject>
     </g>

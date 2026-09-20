@@ -9,6 +9,7 @@ import { FilteredSelectList, FilteredSelectOption } from "~/components/patterns/
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { Input } from "~/components/ui/input";
 import { OptionRow } from "~/components/ui/option-row";
+import { FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions, type SlimHero } from "~/queries/asset-queries";
 
@@ -25,7 +26,7 @@ export function HeroSelector({
   value: valueProp,
   defaultValue,
   onValueChange,
-  allowSelectNull,
+  allowNull,
   label,
   className,
   ...props
@@ -38,7 +39,7 @@ export function HeroSelector({
   /** The hero it starts on when uncontrolled, and the one the reset returns to. */
   defaultValue?: number | null;
   onValueChange?: (heroId: number | null) => void;
-  allowSelectNull?: boolean;
+  allowNull?: boolean;
   label?: string;
 }) {
   const [selectedHero, setSelectedHero] = useControllableState<number | null>({
@@ -75,7 +76,7 @@ export function HeroSelector({
       label={label ?? "Hero"}
       value={displayValue}
       active={isActive}
-      onReset={allowSelectNull || defaultValue != null ? () => select(defaultValue ?? null) : undefined}
+      onReset={allowNull || defaultValue != null ? () => select(defaultValue ?? null) : undefined}
       icon={icon}
       className={className}
       contentClassName="w-80 p-0"
@@ -92,7 +93,7 @@ export function HeroSelector({
         />
       </div>
       <div className="flex max-h-80 flex-col gap-1 overflow-y-auto p-2">
-        {allowSelectNull && !search && (
+        {allowNull && !search && (
           <OptionRow selected={selectedHero == null} onClick={() => select(null)}>
             Any Hero
           </OptionRow>
@@ -213,7 +214,8 @@ export function HeroSelectionGrid({
           aria-pressed={selectedHeroes.includes(hero.id)}
           disabled={disabledHeroIds?.has(hero.id)}
           className={cn(
-            "flex cursor-pointer flex-col items-center gap-1 rounded-md p-1.5 outline-none hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-default disabled:opacity-40",
+            FOCUS_RING,
+            "flex cursor-pointer flex-col items-center gap-1 rounded-md p-1.5 hover:bg-accent disabled:cursor-default disabled:opacity-40",
             small && "gap-0.5 p-1",
             selectedHeroes.includes(hero.id) && "bg-primary/15 ring-1 ring-primary/40 ring-inset",
           )}
@@ -224,14 +226,7 @@ export function HeroSelectionGrid({
           onBlur={onHeroHighlight ? () => onHeroHighlight(null) : undefined}
         >
           <HeroImage heroId={hero.id} className={cn("size-9 shrink-0 object-contain", small && "size-8")} />
-          <span
-            className={cn(
-              "w-full truncate text-center text-3xs leading-tight text-muted-foreground",
-              small && "text-3xs",
-            )}
-          >
-            {hero.name}
-          </span>
+          <span className="w-full truncate text-center text-3xs leading-tight text-muted-foreground">{hero.name}</span>
         </button>
       ))}
     </div>

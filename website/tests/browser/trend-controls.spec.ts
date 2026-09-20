@@ -57,7 +57,7 @@ test("game rank metrics reuse the grouped selector and compact plot", async ({ p
   await expect(page).toHaveURL(/stat=avg_deaths/);
   const chart = page.getByRole("figure", { name: "Avg Deaths by rank chart" });
   await expect(chart).toBeVisible();
-  expect((await chart.boundingBox())!.height).toBe(320);
+  expect((await chart.locator("[data-slot=chart-surface-plot]").boundingBox())!.height).toBe(320);
   expect(await chart.locator(".recharts-wrapper").evaluate((element) => getComputedStyle(element).userSelect)).toBe(
     "none",
   );

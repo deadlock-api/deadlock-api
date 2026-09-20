@@ -5,9 +5,9 @@ Rules for analytics and other data-heavy pages, on top of `docs/design-system.md
 | Need                      | Component                                  | Behavior                                                                                       |
 | ------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------- |
 | Page heading              | `patterns/page/PageHeader`                 | Compact title and description; longer context in an accessible disclosure.                     |
-| Chart controls            | `patterns/charts/ChartToolbar`             | One compact row on desktop; controls wrap on narrow screens.                                   |
+| Chart controls            | `FilterBar variant="toolbar"`              | One compact row on desktop; controls wrap on narrow screens.                                   |
 | Large metric option sets  | `patterns/charts/MetricSelect`             | Grouped options, explicit accessible label, and a stable label during SSR.                     |
-| Historical chart controls | `patterns/charts/TrendControls`            | Metric menu and interval toggle group; route components own URL state.                         |
+| Historical chart controls | `patterns/charts/TrendControls`            | `TrendMetricField` and `TrendIntervalField`; route components own URL state.                   |
 | Plot surface              | `patterns/charts/ChartSurface`             | 280px mobile / 320px desktop; semantic card colors. Override height for dense scatter plots.   |
 | Chart and entity picker   | `patterns/charts/ChartSidebarLayout`       | 18rem sidebar at large widths, matching the chart panel's height; stacked on mobile.           |
 | Hero selection            | `domain/selectors/ChartHeroSelector`       | Portrait grid, selected count, Show all/Clear, unavailable heroes disabled, scrollable roster. |

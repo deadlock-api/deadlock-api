@@ -2,9 +2,9 @@ import { usageOf } from "~/components/dev/design-system/usage";
 import { Badge } from "~/components/ui/badge";
 import { DetailPopover } from "~/components/ui/detail-popover";
 import { KeyValue, KeyValueList } from "~/components/ui/key-value";
-import { TooltipHeader } from "~/components/ui/panel-tooltip";
 import { Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
+import { TooltipHeader } from "~/components/ui/tooltip";
 
 const MOST_FILES = 12;
 

@@ -32,7 +32,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
 
-const TILE_TONES = ["muted", "primary", "positive", "negative", "warning", "info"] as const;
+const TILE_TONES = ["muted", "primary", "positive", "negative"] as const;
 const TILE_SIZES = ["xs", "sm", "default", "lg"] as const;
 const SCOREBOARD = [
   { hero: "Infernus", damage: 41_200, souls: 38_400 },
@@ -167,7 +167,7 @@ export function Round3PrimitivesMore() {
       <Specimen
         name="Button additions"
         source="ui/button"
-        note='size="inline" is for variant="link" inside a sentence: no box, the type size around it. warning-soft and info-soft complete the soft tones. steam is the Steam sign-in button only.'
+        note='size="inline" is for variant="link" inside a sentence: no box, the type size around it. steam is the Steam sign-in button only.'
       >
         <Variants label='variant="link" size="inline"'>
           <p className="text-sm text-muted-foreground">
@@ -187,21 +187,6 @@ export function Round3PrimitivesMore() {
               show more
             </Button>
           </p>
-        </Variants>
-        <Variants label="warning-soft, info-soft">
-          <Button variant="warning-soft">
-            <TriangleAlertIcon /> Archive
-          </Button>
-          <Button variant="info-soft">About this data</Button>
-          <Button variant="warning-soft" size="sm">
-            sm
-          </Button>
-          <Button variant="info-soft" size="xs">
-            xs
-          </Button>
-          <Button variant="warning-soft" disabled>
-            Disabled
-          </Button>
         </Variants>
         <Variants label="steam">
           <Button variant="steam" size="lg">
@@ -399,17 +384,17 @@ export function Round3PrimitivesMore() {
       <Specimen
         name="CopyButton label"
         source="ui/copy-button"
-        note='display="label" keeps the children and a leading icon, and reads copiedLabel for two seconds after the copy: share buttons are this. display="icon" is the icon alone and needs an aria-label.'
+        note='A text size keeps the children and a leading icon, and reads "Copied" for two seconds after the copy: share buttons are this. An icon size (icon-xs, icon-sm, icon) is the icon alone and needs an aria-label.'
       >
         <Variants>
           <CopyButton text="deadlock-api.com" variant="outline" size="sm" />
-          <CopyButton text="Deadlockdle 214, solved in 3 of 6" variant="soft" copiedLabel="Result copied">
+          <CopyButton text="Deadlockdle 214, solved in 3 of 6" variant="soft">
             Share result
           </CopyButton>
-          <CopyButton text={() => window.location.href} variant="ghost" size="sm" copiedLabel="Link copied">
+          <CopyButton text={() => window.location.href} variant="ghost" size="sm">
             Copy link
           </CopyButton>
-          <CopyButton text="deadlock-api.com" display="icon" size="icon-xs" aria-label="Copy domain" />
+          <CopyButton text="deadlock-api.com" size="icon-xs" aria-label="Copy domain" />
           <CopyButton text="deadlock-api.com" variant="outline" size="sm" disabled />
         </Variants>
       </Specimen>
@@ -417,10 +402,10 @@ export function Round3PrimitivesMore() {
       <Specimen
         name="Heading font"
         source="ui/heading"
-        note="font is independent of size: sans for the site, mono for the terminal voice of the mini-games, game for the game's display face."
+        note="font is independent of size: sans for the site, mono for the terminal voice of the mini-games."
       >
         <div className="flex flex-col gap-2">
-          {(["sans", "mono", "game"] as const).map((font) => (
+          {(["sans", "mono"] as const).map((font) => (
             <div key={font} className="flex flex-wrap items-baseline gap-x-3">
               <code className="w-16 shrink-0 font-mono text-2xs text-muted-foreground">{font}</code>
               <Heading as="h4" size="xl" font={font}>
@@ -437,20 +422,12 @@ export function Round3PrimitivesMore() {
       <Specimen
         name="ProgressBar variants"
         source="ui/progress-bar"
-        note="track is the thin rounded geometry of RateBar, for progress through something. cell is drawn behind the value of a relative table cell, for scoreboards. aria-label makes any of them a named progressbar; without it the bar is decorative. className sizes the root."
+        note="cell is drawn behind the value of a relative table cell, for scoreboards. aria-label makes any of them a named progressbar; without it the bar is decorative. className sizes the root."
       >
-        <Variants label="bar (default), track, with className and label" className="items-center gap-6">
+        <Variants label="bar (default), with className and label" className="items-center gap-6">
           <ProgressBar value={0.62} className="w-40" />
-          <ProgressBar variant="track" value={0.62} className="w-40" />
-          <ProgressBar
-            variant="track"
-            value={7}
-            max={10}
-            color="var(--positive)"
-            aria-label="Question 7 of 10"
-            className="w-40"
-          />
-          <ProgressBar variant="track" max={10} className="w-40">
+          <ProgressBar value={7} max={10} color="var(--positive)" aria-label="Question 7 of 10" className="w-40" />
+          <ProgressBar max={10} className="w-40">
             <ProgressBarSegment value={4} color="var(--item-weapon)" />
             <ProgressBarSegment value={2} color="var(--item-vitality)" />
             <ProgressBarSegment value={1} color="var(--item-spirit)" />

@@ -190,10 +190,9 @@ function FieldStates() {
 function SearchInputStates() {
   return (
     <>
-      <Variants label="empty, typed, searching" className="items-start">
+      <Variants label="empty, typed" className="items-start">
         <SearchInput aria-label="Search heroes" placeholder="Search heroes…" className="w-52" />
         <SearchInput aria-label="Search heroes, typed" defaultValue="Infernus" className="w-52" />
-        <SearchInput aria-label="Search heroes, searching" defaultValue="infer" loading className="w-52" />
       </Variants>
       <Variants label="ghost, disabled, read-only, invalid" className="items-start">
         <SearchInput aria-label="Filter items" variant="ghost" placeholder="Filter items…" className="w-52" />
@@ -270,7 +269,7 @@ function ChoiceStates() {
         <SwitchField label="Compare to the lobby average" />
         <SwitchField label="Show item icons" defaultChecked description="Draws the build as pictures." />
         <SwitchField label="Live updates" description="Paused while a filter is open." disabled />
-        <SwitchField label={LONG_LABEL} side="end" />
+        <SwitchField label={LONG_LABEL} />
       </Variants>
     </>
   );
@@ -278,11 +277,15 @@ function ChoiceStates() {
 
 function StatusDotStates() {
   return (
-    <Variants label="tone, size, motion, and a dot that stands alone">
-      <StatusDot tone="positive" motion="pulse" label="Live" />
-      <StatusDot tone="muted" label="Idle" />
-      <StatusDot tone="negative" size="lg" label="Failed" />
-      <StatusDot color="var(--chart-4)" ring="surface" label="Series 4" />
+    <Variants label="tone, color and ring, always beside the text that carries the meaning">
+      <span className="flex items-center gap-1.5 text-sm">
+        <StatusDot tone="positive" />
+        Live
+      </span>
+      <span className="flex items-center gap-1.5 text-sm">
+        <StatusDot color="var(--chart-4)" ring="surface" />
+        Series 4
+      </span>
       <span className="flex items-center gap-1.5 text-sm">
         <StatusDot tone="warning" />
         Degraded
@@ -294,10 +297,9 @@ function StatusDotStates() {
 function BarStates() {
   return (
     <>
-      <Variants label="rate, rate against a baseline, and no value" className="w-72 flex-col items-stretch gap-4">
+      <Variants label="rate and no value" className="w-72 flex-col items-stretch gap-4">
         <RateBar rate={0.62} />
-        <RateBar rate={0.48} baseline={0.5} />
-        <RateBar rate={null} baseline={0.5} />
+        <RateBar rate={null} />
       </Variants>
       <Variants label="diverging: gain, loss, and an interval" className="w-72 flex-col items-stretch gap-4">
         <DivergingBar value={0.04} scale={0.1} />
@@ -306,7 +308,7 @@ function BarStates() {
       </Variants>
       <Variants label="right to left" className="w-72 flex-col items-stretch">
         <div dir="rtl" className="flex flex-col gap-4">
-          <RateBar rate={0.62} baseline={0.5} />
+          <RateBar rate={0.62} />
           <DivergingBar value={0.04} scale={0.1} />
         </div>
       </Variants>
@@ -371,12 +373,6 @@ function FilterCellStates() {
           </StringSelector>
           <FilterCell label="Hero" value="Infernus" active onReset={() => undefined}>
             <p className="text-sm">The editor of this filter.</p>
-          </FilterCell>
-          <FilterCell label="Items" loading>
-            <p className="text-sm">Still fetching the item list.</p>
-          </FilterCell>
-          <FilterCell label="Patch" value="Unavailable" disabled>
-            <p className="text-sm">No patches for this mode.</p>
           </FilterCell>
         </FilterBar>
       </Variants>
@@ -504,7 +500,7 @@ export function Round4States() {
       <Specimen
         name="SearchInput states"
         source="ui/search-input"
-        note="`loading` turns the magnifier into a spinner and marks the field busy; the clear button appears only once there is something to clear and the field can be edited."
+        note="The clear button appears only once there is something to clear and the field can be edited."
       >
         <SearchInputStates />
       </Specimen>
@@ -536,7 +532,7 @@ export function Round4States() {
       <Specimen
         name="StatusDot states"
         source="ui/status-dot"
-        note="The pulse of `motion` is for a state happening right now and collapses under prefers-reduced-motion; a dot without a `label` is decorative and the text beside it must carry the meaning."
+        note="The dot is decorative and hidden from assistive technology, so the text beside it must carry the meaning."
       >
         <StatusDotStates />
       </Specimen>
@@ -672,10 +668,18 @@ export function Round4States() {
         note="Hover rings the cell in the brand color at the width the selected ring already uses, so nothing shifts under the pointer; the picked cell keeps the foreground ring and `aria-pressed`. A cell with no reading is hatched, so “no sample” reads without color, and a disabled cell drops the hover ring."
       >
         <Variants label="reading, no reading, selected, disabled">
-          <HeatCell intensity={0.8} label="Tuesday 18:00, 64 matches" />
-          <HeatCell intensity={null} label="Tuesday 19:00, no matches" />
-          <HeatCell intensity={0.6} selected label="Tuesday 20:00, 41 matches, selected" />
-          <HeatCell intensity={0.4} disabled label="Tuesday 21:00, outside the range" />
+          <HeatCell color="color-mix(in oklab, var(--primary) 80%, transparent)" label="Tuesday 18:00, 64 matches" />
+          <HeatCell label="Tuesday 19:00, no matches" />
+          <HeatCell
+            color="color-mix(in oklab, var(--primary) 60%, transparent)"
+            selected
+            label="Tuesday 20:00, 41 matches, selected"
+          />
+          <HeatCell
+            color="color-mix(in oklab, var(--primary) 40%, transparent)"
+            disabled
+            label="Tuesday 21:00, outside the range"
+          />
         </Variants>
       </Specimen>
 

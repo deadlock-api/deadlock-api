@@ -18,8 +18,8 @@ import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { BulletItem, BulletList } from "~/components/patterns/content/BulletList";
 import { CalloutCard } from "~/components/patterns/content/CalloutCard";
 import { Disclosure } from "~/components/patterns/content/Disclosure";
-import { ArrowLink, LinkCard } from "~/components/patterns/content/LinkCard";
-import { LogoWall, LogoWallItem } from "~/components/patterns/content/LogoWall";
+import { LinkCard } from "~/components/patterns/content/LinkCard";
+import { LogoWallItem } from "~/components/patterns/content/LogoWall";
 import { MetaItem, MetaList } from "~/components/patterns/content/MetaList";
 import { Prose } from "~/components/patterns/content/Prose";
 import { Step, Steps } from "~/components/patterns/content/Steps";
@@ -39,13 +39,14 @@ import {
   SideNavShell,
 } from "~/components/patterns/navigation/SideNavShell";
 import { AppBody, AppFrame, PageBackdrop } from "~/components/patterns/page/AppFrame";
-import { Hero, HeroActions, HeroGlow, HeroLead, HeroNote, HeroPills } from "~/components/patterns/page/Hero";
+import { Hero, HeroActions, HeroGlow, HeroLead, HeroNote } from "~/components/patterns/page/Hero";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { IconTile } from "~/components/ui/icon-tile";
+import { Inline } from "~/components/ui/stack";
 
 /** A box that contains `fixed` descendants, so the app chrome can be shown inside a specimen. */
 function Viewport({ className, children }: { className?: string; children: React.ReactNode }) {
@@ -69,7 +70,7 @@ function PageChromeSpecimens() {
             <AppBody as="div" backgroundSrc="/background.svg" className="h-full">
               <PageBackdrop src="/logo/hexe.svg" />
               <AppFrame className="min-h-80">
-                <PageHeader titleAs="div" title="A page" description="Everything a route renders sits on this panel." />
+                <PageHeader as="div" title="A page" description="Everything a route renders sits on this panel." />
               </AppFrame>
             </AppBody>
           </Viewport>
@@ -90,7 +91,7 @@ function PageChromeSpecimens() {
           <Card tone="inset" size="flush" className="h-96">
             <PageShell density="content" height="fill" align="center">
               <PageHeader
-                titleAs="div"
+                as="div"
                 size="lg"
                 figure="404"
                 title="Page Not Found"
@@ -110,7 +111,7 @@ function PageChromeSpecimens() {
           <Card tone="inset" size="xs">
             <CardContent>
               <PageShell>
-                <PageHeader titleAs="div" align="start" title="A data page" description="Blocks stack from the top." />
+                <PageHeader as="div" align="start" title="A data page" description="Blocks stack from the top." />
               </PageShell>
             </CardContent>
           </Card>
@@ -120,13 +121,13 @@ function PageChromeSpecimens() {
       <Specimen
         name="Hero"
         source="patterns/page/Hero"
-        note="The opening block of a hub or marketing page. Compose HeroGlow, a PageHeader, then HeroPills, HeroLead, HeroActions and HeroNote as needed."
+        note="The opening block of a hub or marketing page. Compose HeroGlow, a PageHeader, then HeroLead, HeroActions (calls to action, or a row of pills) and HeroNote as needed."
       >
         <Variants label='size="default": every part' className="block">
           <Hero>
             <HeroGlow />
             <PageHeader
-              titleAs="div"
+              as="div"
               size="lg"
               title={
                 <>
@@ -135,7 +136,7 @@ function PageChromeSpecimens() {
               }
               description="Patron accounts get a dedicated queue with reserved resources."
             />
-            <HeroPills>
+            <HeroActions>
               <Button variant="outline" shape="pill" size="sm">
                 <BarChart3 />
                 Analytics
@@ -148,7 +149,7 @@ function PageChromeSpecimens() {
                 <BookOpen />
                 Disabled
               </Button>
-            </HeroPills>
+            </HeroActions>
             <HeroLead>
               Track hero win rates, pick rates, item analytics, rank distribution and leaderboards, updated live. This
               paragraph keeps a readable measure however wide the page is.
@@ -168,7 +169,7 @@ function PageChromeSpecimens() {
         <Variants label='size="sm" with HeroGlow size="sm": a display title only' className="block">
           <Hero size="sm">
             <HeroGlow size="sm" />
-            <PageHeader titleAs="div" size="display" title="Deadlock API" />
+            <PageHeader as="div" size="display" title="Deadlock API" />
           </Hero>
         </Variants>
       </Specimen>
@@ -328,7 +329,7 @@ function ContentSpecimens() {
           <LinkCard
             href="#linkcard"
             size="lg"
-            titleAs="h2"
+            as="h2"
             eyebrow={
               <MetaList>
                 <MetaItem icon={<Calendar />}>May 4, 2026</MetaItem>
@@ -378,14 +379,6 @@ function ContentSpecimens() {
           >
             <span className="text-2xs text-muted-foreground">Children land under the description.</span>
           </LinkCard>
-        </Variants>
-        <Variants label="ArrowLink on its own (asChild makes it the link)">
-          <ArrowLink asChild size="sm">
-            <a href="#linkcard">size="sm"</a>
-          </ArrowLink>
-          <ArrowLink asChild>
-            <a href="#linkcard">size="default"</a>
-          </ArrowLink>
         </Variants>
       </Specimen>
 
@@ -555,7 +548,7 @@ function ContentSpecimens() {
             title="Get prioritized fetching"
             description="Subscribe to unlock a dedicated queue with reserved resources."
             action={<Button size="lg">Subscribe</Button>}
-            note="Starting at $1.50/month"
+            footer="Starting at $1.50/month"
           />
           <CalloutCard
             size="sm"
@@ -574,17 +567,17 @@ function ContentSpecimens() {
       </Specimen>
 
       <Specimen
-        name="LogoWall"
+        name="LogoWallItem"
         source="patterns/content/LogoWall"
-        note="A wrapping, centred row of sponsor logos, dimmed until hovered or focused."
+        note="A sponsor logo as a link, dimmed until hovered or focused. The wall is an Inline with justify center and gap 8."
       >
-        <LogoWall>
+        <Inline justify="center" gap={8}>
           {["One", "Two", "Three"].map((name) => (
             <LogoWallItem key={name} href="#logowall" title={`Sponsor ${name}`}>
               <img src="/logo/hexe.svg" alt={`Sponsor ${name} logo`} className="h-10 w-auto object-contain" />
             </LogoWallItem>
           ))}
-        </LogoWall>
+        </Inline>
       </Specimen>
     </>
   );

@@ -1,11 +1,37 @@
 "use client";
 
-import { type VariantProps } from "class-variance-authority";
+import { cva, type VariantProps } from "class-variance-authority";
 import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui";
 import * as React from "react";
 
-import { toggleVariants } from "~/components/ui/toggle";
+import { DISABLED_STATE, FOCUS_RING_BORDER, INVALID_STATE, SVG_SLOT } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
+
+const toggleVariants = cva(
+  [
+    FOCUS_RING_BORDER,
+    INVALID_STATE,
+    DISABLED_STATE,
+    SVG_SLOT,
+    "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-[color,box-shadow] hover:bg-muted hover:text-muted-foreground data-[state=on]:bg-primary/15 data-[state=on]:text-foreground data-[state=on]:ring-1 data-[state=on]:ring-primary/40 data-[state=on]:ring-inset",
+  ],
+  {
+    variants: {
+      variant: {
+        default: "bg-transparent",
+        outline: "border border-input bg-transparent shadow-xs hover:bg-accent hover:text-accent-foreground",
+      },
+      size: {
+        default: "h-9 min-w-9 px-2",
+        sm: "h-8 min-w-8 px-1.5",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  },
+);
 
 const ToggleGroupContext = React.createContext<
   VariantProps<typeof toggleVariants> & {
@@ -43,30 +69,24 @@ function ToggleGroup({
   );
 }
 
-function ToggleGroupItem({
-  className,
-  children,
-  variant,
-  size,
-  ...props
-}: React.ComponentProps<typeof ToggleGroupPrimitive.Item> & VariantProps<typeof toggleVariants>) {
+function ToggleGroupItem({ className, children, ...props }: React.ComponentProps<typeof ToggleGroupPrimitive.Item>) {
   const context = React.useContext(ToggleGroupContext);
 
   return (
     <ToggleGroupPrimitive.Item
       data-slot="toggle-group-item"
-      data-variant={context.variant || variant}
-      data-size={context.size || size}
+      data-variant={context.variant}
+      data-size={context.size}
       data-spacing={context.spacing}
       className={cn(
         toggleVariants({
-          variant: context.variant || variant,
-          size: context.size || size,
+          variant: context.variant,
+          size: context.size,
         }),
         "w-auto min-w-0 shrink-0 px-3 focus:z-10 focus-visible:z-10",
         // Joined items share their borders. Plain classes, so one class from a caller still wins.
         context.spacing === 0 && "rounded-none shadow-none first:rounded-s-md last:rounded-e-md",
-        context.spacing === 0 && (context.variant || variant) === "outline" && "border-s-0 first:border-s",
+        context.spacing === 0 && context.variant === "outline" && "border-s-0 first:border-s",
         className,
       )}
       {...props}

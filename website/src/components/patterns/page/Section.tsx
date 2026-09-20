@@ -18,8 +18,6 @@ interface SectionProps
   extends Omit<React.ComponentProps<"section">, "title">, VariantProps<typeof sectionTitleVariants> {
   title: ReactNode;
   description?: ReactNode;
-  /** Controls on the trailing edge of the heading row. */
-  actions?: ReactNode;
   /** The heading level. Pick by document outline, not by looks; `size` sets the looks. */
   as?: "h2" | "h3" | "h4";
   /** `hidden` keeps the heading in the outline but does not draw it, for a tab panel whose tab already names it. */
@@ -32,7 +30,6 @@ interface SectionProps
 export function Section({
   title,
   description,
-  actions,
   as: Heading = "h2",
   size,
   titleDisplay = "visible",
@@ -56,7 +53,6 @@ export function Section({
             <Heading className={sectionTitleVariants({ size })}>{title}</Heading>
             {description && <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{description}</p>}
           </div>
-          {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
         </div>
       )}
       {children}

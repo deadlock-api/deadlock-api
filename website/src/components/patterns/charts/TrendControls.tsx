@@ -1,5 +1,4 @@
-import { ChartToolbar } from "~/components/patterns/charts/ChartToolbar";
-import { MetricSelect, type MetricOptionGroup } from "~/components/patterns/charts/MetricSelect";
+import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
 import { Field } from "~/components/ui/field";
 import { Segmented } from "~/components/ui/segmented";
 import { useHydrated } from "~/hooks/useHydrated";
@@ -7,26 +6,32 @@ import { cn } from "~/lib/utils";
 
 interface TrendMetricFieldProps extends Omit<
   React.ComponentProps<typeof Field>,
-  "label" | "children" | "onChange" | "defaultValue"
+  "label" | "onChange" | "defaultValue"
 > {
   value: string;
-  groups: readonly MetricOptionGroup[];
+  /** The selected option in words; see `MetricSelect`. */
+  valueLabel?: string;
   onValueChange?: (value: string) => void;
   label?: string;
+  /** The `SelectItem`s and `SelectGroup`s of the `MetricSelect`. */
+  children?: React.ReactNode;
 }
 
 /** The metric picker of a trend toolbar. */
 export function TrendMetricField({
   value,
-  groups,
+  valueLabel,
   onValueChange,
   label = "Metric",
   className,
+  children,
   ...props
 }: TrendMetricFieldProps) {
   return (
     <Field label={label} orientation="horizontal" className={cn("w-full @sm:w-auto", className)} {...props}>
-      <MetricSelect value={value} groups={groups} onValueChange={onValueChange} />
+      <MetricSelect value={value} valueLabel={valueLabel} onValueChange={onValueChange}>
+        {children}
+      </MetricSelect>
     </Field>
   );
 }
@@ -62,19 +67,5 @@ export function TrendIntervalField({
         {children}
       </Segmented>
     </Field>
-  );
-}
-
-interface TrendControlsProps extends Omit<React.ComponentProps<typeof ChartToolbar>, "children"> {
-  /** `TrendMetricField`, `TrendIntervalField` and any other toolbar field. */
-  children?: React.ReactNode;
-}
-
-/** Compact, URL-state-agnostic controls shared by historical analytics charts. */
-export function TrendControls({ title, label = "Trend controls", children, ...props }: TrendControlsProps) {
-  return (
-    <ChartToolbar title={title} label={label} {...props}>
-      {children}
-    </ChartToolbar>
   );
 }

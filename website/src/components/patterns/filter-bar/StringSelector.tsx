@@ -1,6 +1,6 @@
 import { Children, createContext, isValidElement, type ReactNode, use } from "react";
 
-import { FilterCell } from "~/components/patterns/filter-bar/FilterCell";
+import { FilterCell, type FilterCellPassthroughProps } from "~/components/patterns/filter-bar/FilterCell";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { OptionRow } from "~/components/ui/option-row";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
@@ -60,10 +60,7 @@ export function StringOption({ value, disabled = false, className, onClick, chil
   );
 }
 
-export interface StringSelectorProps extends Omit<
-  React.ComponentProps<typeof FilterCell>,
-  "label" | "value" | "defaultValue" | "active" | "onReset" | "children"
-> {
+export interface StringSelectorProps extends FilterCellPassthroughProps {
   label?: string;
   value?: string | null;
   /** The value the filter starts from and resets to. Without it (and without an empty option) there is no reset. */

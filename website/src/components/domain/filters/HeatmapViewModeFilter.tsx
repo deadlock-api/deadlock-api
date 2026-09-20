@@ -1,5 +1,4 @@
 import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
-import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { SegmentedItem } from "~/components/ui/segmented";
 
 const VIEW_MODES = ["kills", "deaths", "kd"] as const;
@@ -12,12 +11,12 @@ const VIEW_MODE_LABELS: Record<HeatmapViewMode, string> = {
 };
 
 export function HeatmapViewModeFilter({
-  value: valueProp,
+  value,
   defaultValue = "kills",
   onValueChange,
   ...props
 }: Omit<
-  React.ComponentProps<typeof FilterToggleCell>,
+  React.ComponentProps<typeof FilterToggleCell<HeatmapViewMode>>,
   "label" | "value" | "defaultValue" | "onValueChange" | "active" | "onReset" | "children"
 > & {
   value?: HeatmapViewMode;
@@ -25,18 +24,12 @@ export function HeatmapViewModeFilter({
   defaultValue?: HeatmapViewMode;
   onValueChange?: (mode: HeatmapViewMode) => void;
 }) {
-  const [value, setValue] = useControllableState({
-    value: valueProp,
-    defaultValue,
-    onValueChange,
-  });
   return (
     <FilterToggleCell
       label="Show"
       value={value}
-      onValueChange={setValue}
-      active={value !== defaultValue}
-      onReset={() => setValue(defaultValue)}
+      defaultValue={defaultValue}
+      onValueChange={onValueChange}
       // Three segments stay under the auto-wide threshold, but these labels do not fit a default cell.
       width="wide"
       {...props}

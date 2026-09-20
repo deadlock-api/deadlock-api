@@ -1,3 +1,4 @@
+import { ChartNoAxesCombined } from "lucide-react";
 import { useState } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from "recharts";
 
@@ -5,7 +6,6 @@ import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { ChartSidebarLayout } from "~/components/patterns/charts/ChartSidebarLayout";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { ChartToolbar } from "~/components/patterns/charts/ChartToolbar";
 import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
 import StatTrendChart, { type StatTrendBucket, type StatTrendPoint } from "~/components/patterns/charts/StatTrendChart";
 import { StatTrendHoverCard } from "~/components/patterns/charts/StatTrendHoverCard";
@@ -16,40 +16,43 @@ import {
   CHART_MARGIN,
   SERIES_COLORS,
 } from "~/components/patterns/charts/theme";
-import { TrendControls, TrendIntervalField, TrendMetricField } from "~/components/patterns/charts/TrendControls";
+import { TrendIntervalField, TrendMetricField } from "~/components/patterns/charts/TrendControls";
 import { type WeekEntry, WeeklyTrendChart } from "~/components/patterns/charts/WeeklyTrendChart";
+import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
-import { Field } from "~/components/ui/field";
 import { OptionRow } from "~/components/ui/option-row";
-import { Segmented, SegmentedItem } from "~/components/ui/segmented";
+import { SegmentedItem } from "~/components/ui/segmented";
+import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
 
-const METRIC_GROUPS = [
-  {
-    label: "Outcome",
-    options: [
-      { value: "win_rate", label: "Win rate" },
-      { value: "pick_rate", label: "Pick rate" },
-      { value: "ban_rate", label: "Ban rate" },
-    ],
-  },
-  {
-    label: "Combat",
-    options: [
-      { value: "kills", label: "Kills per match" },
-      { value: "deaths", label: "Deaths per match" },
-      { value: "player_damage", label: "Player damage per minute" },
-    ],
-  },
-] as const;
+const METRIC_LABELS: Record<string, string> = {
+  win_rate: "Win rate",
+  pick_rate: "Pick rate",
+  ban_rate: "Ban rate",
+  kills: "Kills per match",
+  deaths: "Deaths per match",
+  player_damage: "Player damage per minute",
+};
+const metricOptions = (
+  <>
+    <SelectGroup>
+      <SelectLabel>Outcome</SelectLabel>
+      <SelectItem value="win_rate">{METRIC_LABELS.win_rate}</SelectItem>
+      <SelectItem value="pick_rate">{METRIC_LABELS.pick_rate}</SelectItem>
+      <SelectItem value="ban_rate">{METRIC_LABELS.ban_rate}</SelectItem>
+    </SelectGroup>
+    <SelectGroup>
+      <SelectLabel>Combat</SelectLabel>
+      <SelectItem value="kills">{METRIC_LABELS.kills}</SelectItem>
+      <SelectItem value="deaths">{METRIC_LABELS.deaths}</SelectItem>
+      <SelectItem value="player_damage">{METRIC_LABELS.player_damage}</SelectItem>
+    </SelectGroup>
+  </>
+);
 const INTERVALS = [
   { value: "day", label: "Day" },
   { value: "week", label: "Week" },
   { value: "month", label: "Month" },
-] as const;
-const SCALES = [
-  { value: "linear", label: "Linear" },
-  { value: "log", label: "Log" },
 ] as const;
 
 const HOUR = 3_600_000;
@@ -92,7 +95,6 @@ const percent = (value: number) => `${Math.round(value * 100)}%`;
 export function ChartsMore() {
   const [metric, setMetric] = useState("win_rate");
   const [interval, setInterval] = useState("week");
-  const [scale, setScale] = useState<(typeof SCALES)[number]["value"]>("linear");
   const [bucket, setBucket] = useState<StatTrendBucket>("start_time_day");
   const [visible, setVisible] = useState(HEROES.slice(0, 3));
 
@@ -103,43 +105,31 @@ export function ChartsMore() {
   return (
     <>
       <Specimen
-        name="ChartToolbar"
-        source="patterns/charts/ChartToolbar"
-        note="The controls of one chart, above it: a FilterBar toolbar with the chart icon. Children are horizontal Fields, Segmented and small Selects."
-      >
-        <ChartToolbar title="Trend">
-          <Field label="Scale" orientation="horizontal">
-            <Segmented width="hug" aria-label="Scale" value={scale} onValueChange={setScale}>
-              {SCALES.map((option) => (
-                <SegmentedItem key={option.value} value={option.value}>
-                  {option.label}
-                </SegmentedItem>
-              ))}
-            </Segmented>
-          </Field>
-          <Field label="Metric" orientation="horizontal">
-            <MetricSelect value={metric} groups={METRIC_GROUPS} onValueChange={setMetric} />
-          </Field>
-        </ChartToolbar>
-      </Specimen>
-
-      <Specimen
         name="MetricSelect"
         source="patterns/charts/MetricSelect"
-        note="A small Select of grouped metrics, for option sets too large for a Segmented. Disabled until hydration because its value usually comes from the URL."
+        note="A small Select of grouped metrics, for option sets too large for a Segmented. The options are SelectGroup / SelectLabel / SelectItem children; valueLabel names the selected one on the trigger during SSR. Disabled until hydration because its value usually comes from the URL."
       >
         <Variants>
-          <MetricSelect value={metric} groups={METRIC_GROUPS} onValueChange={setMetric} label="Example metric" />
+          <MetricSelect
+            value={metric}
+            valueLabel={METRIC_LABELS[metric]}
+            onValueChange={setMetric}
+            label="Example metric"
+          >
+            {metricOptions}
+          </MetricSelect>
         </Variants>
       </Specimen>
 
       <Specimen
-        name="TrendControls"
+        name="Trend fields"
         source="patterns/charts/TrendControls"
-        note="The ready-made toolbar of a historical chart: a MetricSelect and the time interval. It holds no URL state; the route passes values and setters."
+        note="The fields of a historical chart's toolbar: a MetricSelect and the time interval, inside a FilterBar toolbar. They hold no URL state; the route passes values and setters."
       >
-        <TrendControls title="Hero trends">
-          <TrendMetricField value={metric} groups={METRIC_GROUPS} onValueChange={setMetric} />
+        <FilterBar variant="toolbar" title="Hero trends" icon={ChartNoAxesCombined} aria-label="Trend controls">
+          <TrendMetricField value={metric} valueLabel={METRIC_LABELS[metric]} onValueChange={setMetric}>
+            {metricOptions}
+          </TrendMetricField>
           <TrendIntervalField value={interval} onValueChange={setInterval}>
             {INTERVALS.map((option) => (
               <SegmentedItem key={option.value} value={option.value}>
@@ -147,7 +137,7 @@ export function ChartsMore() {
               </SegmentedItem>
             ))}
           </TrendIntervalField>
-        </TrendControls>
+        </FilterBar>
       </Specimen>
 
       <Specimen
@@ -166,7 +156,7 @@ export function ChartsMore() {
             </Card>
           }
         >
-          <ChartCard title="Win rate over time" subtitle={`${visible.length} selected`}>
+          <ChartCard title="Win rate over time" description={`${visible.length} selected`}>
             <ChartSurface label="Win rate over time for the selected heroes" size="md" variant="flush">
               <LineChart data={HERO_WEEKS} margin={CHART_MARGIN}>
                 <CartesianGrid {...CHART_GRID} />
@@ -245,7 +235,7 @@ export function ChartsMore() {
         source="patterns/charts/WeeklyTrendChart"
         note="Win rate and a share (pick or purchase rate) by week, as two plots on one synced week axis: each measure keeps its own scale without a second y-axis."
       >
-        <WeeklyTrendChart weeks={WEEKS} shareLabel="Pick rate" ariaLabel="Infernus win rate and pick rate by week" />
+        <WeeklyTrendChart weeks={WEEKS} shareLabel="Pick rate" label="Infernus win rate and pick rate by week" />
       </Specimen>
     </>
   );

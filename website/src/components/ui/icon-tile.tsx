@@ -1,5 +1,6 @@
 import { cva, type VariantProps } from "class-variance-authority";
 
+import { TONE_SOFT } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 
 const iconTileVariants = cva("inline-flex shrink-0 items-center justify-center border [&_svg]:shrink-0", {
@@ -7,10 +8,8 @@ const iconTileVariants = cva("inline-flex shrink-0 items-center justify-center b
     tone: {
       muted: "bg-muted text-muted-foreground",
       primary: "border-primary/30 bg-primary/10 text-primary",
-      positive: "border-positive/30 bg-positive/10 text-positive",
-      negative: "border-negative/30 bg-negative/10 text-negative",
-      warning: "border-warning/30 bg-warning/10 text-warning",
-      info: "border-info/30 bg-info/10 text-info",
+      positive: TONE_SOFT.positive,
+      negative: TONE_SOFT.negative,
     },
     size: {
       xs: "size-6 [&_svg:not([class*='size-'])]:size-3",

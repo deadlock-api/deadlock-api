@@ -1,5 +1,6 @@
 import { Pause, Play } from "lucide-react";
 
+import { DISABLED_STATE, FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 interface PlayButtonProps extends Omit<React.ComponentProps<"button">, "children"> {
@@ -28,8 +29,9 @@ export function PlayButton({ state = "idle", size = "lg", label = "Play", classN
       className={cn(
         "relative inline-flex shrink-0 cursor-pointer items-center justify-center rounded-full border border-primary/40",
         "bg-primary/15 text-primary transition-all duration-normal",
-        "outline-none hover:bg-primary/25 focus-visible:ring-3 focus-visible:ring-ring/50",
-        "disabled:pointer-events-none disabled:opacity-50",
+        FOCUS_RING,
+        "hover:bg-primary/25",
+        DISABLED_STATE,
         size === "lg" ? "size-20 [&_svg]:size-8" : "size-12 [&_svg]:size-5",
         state === "playing" && "shadow-glow-primary",
         className,

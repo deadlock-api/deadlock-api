@@ -13,7 +13,6 @@ import { playerScoreboardQueryOptions } from "~/queries/player-scoreboard-query"
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
 const BUILD_MATCH: MatchHistoryCardProps = {
-  gameMode: "Ranked",
   timeAgo: "2 hours ago",
   matchId: 38214577,
   result: "win",
@@ -22,7 +21,6 @@ const BUILD_MATCH: MatchHistoryCardProps = {
   kills: 14,
   deaths: 3,
   assists: 11,
-  itemIds: [],
   averageBadge: 94,
   steamProfile: { personaname: "Showcase Player" },
   buildData: {
@@ -41,34 +39,8 @@ const BUILD_MATCH: MatchHistoryCardProps = {
   },
 };
 
-const SUMMARY_MATCH: MatchHistoryCardProps = {
-  gameMode: "Ranked",
-  timeAgo: "Yesterday",
-  matchId: 38177402,
-  result: "loss",
-  durationSeconds: 41 * 60 + 5,
-  heroId: 1,
-  kills: 6,
-  deaths: 9,
-  assists: 13,
-  killParticipation: 58,
-  headshotPercent: 17,
-  itemIds: [
-    1548066885, 1009965641, 2064029594, 811521119, 710436191, 1437614329, 499683006, 1414025773, 968099481, 7409189,
-    619484391, 3577481646,
-  ],
-  averageBadge: 64,
-  placement: "4th",
-  placementLabel: "Souls",
-  teams: [
-    [1, 2, 3, 4, 6, 7].map((heroId, i) => ({ heroId, name: `Amber ${i + 1}` })),
-    [8, 10, 11, 12, 13, 14].map((heroId, i) => ({ heroId, name: `Sapphire ${i + 1}` })),
-  ],
-};
-
 export function DomainData() {
   const { data: ranks } = useQuery(ranksQueryOptions);
-  const [expanded, setExpanded] = useState(false);
   const [clickedPlayer, setClickedPlayer] = useState<string>();
 
   const [sortBy, setSortBy] = useState("kills");
@@ -90,20 +62,10 @@ export function DomainData() {
       <Specimen
         name="MatchHistoryCard"
         source="domain/match/MatchHistoryCard"
-        note="One match of one player; the left edge carries the result. With buildData it lists the purchases by phase (sold items dimmed, imbued abilities numbered) and the ability order; without it, the final inventory, placement and both teams. Pass steamProfile to skip the card's own Steam lookup."
+        note="One match of one player; the left edge carries the result. It lists the purchases by phase (sold items dimmed, imbued abilities numbered) and the ability order. Pass steamProfile to skip the card's own Steam lookup."
       >
-        <Variants
-          label={`With buildData, expandable={false}, onPlayerClick${clickedPlayer ? `: ${clickedPlayer}` : ""}`}
-        >
-          <MatchHistoryCard {...BUILD_MATCH} ranks={ranks} expandable={false} onPlayerClick={setClickedPlayer} />
-        </Variants>
-        <Variants label="Loss, without buildData, expandable" className="overflow-x-auto">
-          <MatchHistoryCard
-            {...SUMMARY_MATCH}
-            ranks={ranks}
-            expanded={expanded}
-            onToggleExpand={() => setExpanded((open) => !open)}
-          />
+        <Variants label={`onPlayerClick${clickedPlayer ? `: ${clickedPlayer}` : ""}`}>
+          <MatchHistoryCard {...BUILD_MATCH} ranks={ranks} onPlayerClick={setClickedPlayer} />
         </Variants>
       </Specimen>
 

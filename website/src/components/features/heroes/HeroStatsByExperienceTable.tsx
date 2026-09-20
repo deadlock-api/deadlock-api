@@ -7,15 +7,16 @@ import { useDeferredValue, useMemo, useState } from "react";
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
 import type { MatchMode } from "~/components/domain/selectors/MatchModeSelector";
-import { SortableHeader, SortButton, ariaSort } from "~/components/patterns/data-table/SortableHeader";
+import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { Panel } from "~/components/patterns/panel/Panel";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Badge } from "~/components/ui/badge";
-import { PanelTooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
 import { SearchInput } from "~/components/ui/search-input";
 import { Skeleton } from "~/components/ui/skeleton";
+import { SortButton, ariaSort } from "~/components/ui/sort-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -371,10 +372,10 @@ function DeltaBadge({ delta, isPercent }: { delta: number | null; isPercent: boo
     ? `${sign}${rounded.toFixed(1)}%`
     : `${sign}${rounded.toLocaleString(undefined, { maximumFractionDigits: 1 })}`;
   return (
-    <Badge variant={tone === "neutral" ? "muted" : tone} size="sm" shape="square">
+    <Badge variant={tone} size="sm" shape="square">
       {tone === "positive" && <ArrowUp />}
       {tone === "negative" && <ArrowDown />}
-      {tone === "neutral" && <Minus />}
+      {tone === "muted" && <Minus />}
       {text}
     </Badge>
   );
@@ -442,7 +443,7 @@ function BucketTooltip({
   const netWorth = Math.round(entry.total_net_worth / entry.matches).toLocaleString("en-US");
 
   return (
-    <PanelTooltip
+    <Tooltip
       content={
         <>
           <TooltipHeader title={bucketLabel} />
@@ -460,7 +461,7 @@ function BucketTooltip({
       }
     >
       <span>{children}</span>
-    </PanelTooltip>
+    </Tooltip>
   );
 }
 
@@ -491,11 +492,11 @@ function DeltaTooltip({
   };
 
   return (
-    <PanelTooltip
+    <Tooltip
       content={
         <>
           <TooltipHeader
-            lead={
+            leading={
               diff > 0 ? (
                 <TrendingUp className="size-3.5 text-positive" />
               ) : diff < 0 ? (
@@ -518,7 +519,7 @@ function DeltaTooltip({
       }
     >
       <span>{children}</span>
-    </PanelTooltip>
+    </Tooltip>
   );
 }
 

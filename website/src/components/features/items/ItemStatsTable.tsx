@@ -1,15 +1,17 @@
 import type { Upgrade } from "deadlock_api_client";
-import type { ItemStats } from "deadlock_api_client";
-import { ListFilter } from "lucide-react";
+import type { AnalyticsApiItemStatsRequest, ItemStats } from "deadlock_api_client";
+import { Table2 } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { memo, type ReactNode, useCallback, useMemo, useState } from "react";
 
-import { ItemCellFromAsset } from "~/components/domain/assets/ItemCell";
+import { ItemCell } from "~/components/domain/assets/ItemCell";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
 import { ITEM_SLOTS, ItemSlotSelector } from "~/components/domain/selectors/ItemSlotSelector";
 import { ItemTierSelector } from "~/components/domain/selectors/ItemTierSelector";
 import { ItemQuickSelectDialog } from "~/components/features/items/ItemQuickSelectDialog";
+import { ItemStatTrend } from "~/components/features/items/ItemStatTrend";
+import type { StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
 import { ExpandableRow, ExpandableRowToggle } from "~/components/patterns/data-table/ExpandableRow";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
@@ -17,8 +19,6 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
-import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
 import { SearchInput } from "~/components/ui/search-input";
 import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -78,6 +78,10 @@ export interface ItemStatsTableProps {
   minUsage: number;
   maxUsage: number;
   initialSort?: SortState;
+  /** Controls that sit at the end of the toolbar. */
+  actions?: ReactNode;
+  /** The request behind `data`: hovering a win rate charts that item's win rate over time from it. */
+  trendParams: AnalyticsApiItemStatsRequest;
   prevStatsMap?: Map<number, { winrate: number; pickrate: number; normalizedPickrate: number }>;
   customDropdownContent?: ({
     itemId,
@@ -120,6 +124,9 @@ interface ItemStatsTableRowProps {
   maxWinRate: number;
   minUsage: number;
   maxUsage: number;
+  trendParams: AnalyticsApiItemStatsRequest;
+  trendBucket: StatTrendBucket;
+  onTrendBucketChange: (bucket: StatTrendBucket) => void;
   isIncluded: boolean;
   isExcluded: boolean;
   prevStatsMap?: Map<number, { winrate: number; pickrate: number; normalizedPickrate: number }>;
@@ -216,6 +223,9 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
   maxWinRate,
   minUsage,
   maxUsage,
+  trendParams,
+  trendBucket,
+  onTrendBucketChange,
   isIncluded,
   isExcluded,
   prevStatsMap,
@@ -246,7 +256,10 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
       )}
       {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
       <TableCell data-pinned>
-        <ItemCellFromAsset item={row.item} linkToDetail className="max-w-44 sm:max-w-64" />
+        <Stack gap={1}>
+          <ItemCell item={row.item} linkToDetail className="max-w-44 sm:max-w-64" />
+          <p className="text-xs text-muted-foreground tabular-nums">{row.matches.toLocaleString("en-US")} matches</p>
+        </Stack>
       </TableCell>
       {columns.includes("itemsTier") && (
         <TableCell>
@@ -254,9 +267,14 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
         </TableCell>
       )}
       {columns.includes("winRate") && (
-        <TableCell className="text-center">
-          <ProgressBarWithLabel
-            orientation="horizontal"
+        <TableCell>
+          <ItemStatTrend
+            params={trendParams}
+            itemId={row.item_id}
+            itemName={itemName}
+            stat="winRate"
+            bucket={trendBucket}
+            onBucketChange={onTrendBucketChange}
             min={minWinRate}
             max={maxWinRate}
             value={row.wins / row.matches}
@@ -267,29 +285,18 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
                 ? row.wins / row.matches - prevStatsMap.get(row.item_id)!.winrate
                 : undefined
             }
-            tooltip={
-              <>
-                <TooltipHeader title={itemName} subtitle="Win rate" />
-                <TooltipStats>
-                  <TooltipStat label="Matches" value={row.matches.toLocaleString("en-US")} />
-                  <TooltipStat label="Wins" value={row.wins.toLocaleString("en-US")} />
-                  <TooltipStat label="Win rate" value={`${((row.wins / row.matches) * 100).toFixed(2)}%`} />
-                  {prevStatsMap?.get(row.item_id) !== undefined && (
-                    <TooltipStat
-                      label="Previous"
-                      value={`${(prevStatsMap.get(row.item_id)!.winrate * 100).toFixed(2)}%`}
-                    />
-                  )}
-                </TooltipStats>
-              </>
-            }
           />
         </TableCell>
       )}
       {columns.includes("matches") && (
-        <TableCell className="text-center">
-          <ProgressBarWithLabel
-            orientation="horizontal"
+        <TableCell>
+          <ItemStatTrend
+            params={trendParams}
+            itemId={row.item_id}
+            itemName={itemName}
+            stat="pickRate"
+            bucket={trendBucket}
+            onBucketChange={onTrendBucketChange}
             min={minUsage}
             max={maxUsage}
             value={row.matches}
@@ -299,21 +306,6 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
               prevStatsMap?.get(row.item_id) !== undefined
                 ? row.matches / maxUsage - prevStatsMap.get(row.item_id)!.normalizedPickrate
                 : undefined
-            }
-            tooltip={
-              <>
-                <TooltipHeader title={itemName} subtitle="Pick rate" />
-                <TooltipStats>
-                  <TooltipStat label="Matches" value={row.matches.toLocaleString("en-US")} />
-                  <TooltipStat label="Pick rate" value={`${((row.matches / maxUsage) * 100).toFixed(2)}%`} />
-                  {prevStatsMap?.get(row.item_id) !== undefined && (
-                    <TooltipStat
-                      label="Previous"
-                      value={`${(prevStatsMap.get(row.item_id)!.normalizedPickrate * 100).toFixed(2)}%`}
-                    />
-                  )}
-                </TooltipStats>
-              </>
             }
           />
         </TableCell>
@@ -394,9 +386,12 @@ export function ItemStatsTable({
   minUsage,
   maxUsage,
   initialSort = DEFAULT_SORT_STATE,
+  actions,
+  trendParams,
   prevStatsMap,
   customDropdownContent,
 }: ItemStatsTableProps) {
+  const [trendBucket, setTrendBucket] = useState<StatTrendBucket>("start_time_day");
   const [sortField, setSortField] = useQueryState("item_sort_field", parseAsSortField.withDefault(initialSort.field));
   const [sortDirection, setSortDirection] = useQueryState(
     "item_sort_direction",
@@ -494,6 +489,13 @@ export function ItemStatsTable({
 
   const nameTerm = nameQuery.trim().toLowerCase();
 
+  const visibleData = processedData.filter(
+    (row) =>
+      (itemTiers.length === 0 || itemTiers.includes(row.itemTier)) &&
+      (itemSlots.length === 0 || !row.item || itemSlots.includes(row.item.item_slot_type)) &&
+      (!nameTerm || (row.item?.name ?? "").toLowerCase().includes(nameTerm)),
+  );
+
   const toggleSort = (field: SortField) => {
     let newSort: SortState;
     if (sort.field === field) {
@@ -508,7 +510,7 @@ export function ItemStatsTable({
   };
 
   return (
-    <Stack gap={4} aria-live="polite" aria-busy={isLoading} className="pt-4">
+    <Stack gap={4} aria-live="polite" aria-busy={isLoading}>
       <ItemQuickSelectDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
@@ -516,7 +518,7 @@ export function ItemStatsTable({
         initialExclude={excludeItems}
         onApply={handleApply}
       />
-      <FilterBar variant="toolbar" title="Item filters" icon={ListFilter} aria-label="Item table controls">
+      <FilterBar variant="toolbar" title="Overall stats" icon={Table2} aria-label="Item table controls">
         <div className="flex min-w-0 flex-wrap items-center gap-1">
           {Array.from(includeItems).map((id) => (
             <ItemChip key={`inc-${id}`} id={id} variant="include" onRemove={removeInclude} />
@@ -537,12 +539,13 @@ export function ItemStatsTable({
               placeholder="Filter by name…"
               aria-label="Filter items by name"
               size="sm"
-              className="w-40"
+              className="w-full sm:w-60"
             />
             <ItemSlotSelector orientation="horizontal" value={itemSlots} onValueChange={setItemSlots} />
             <ItemTierSelector orientation="horizontal" value={itemTiers} onValueChange={setItemTiers} />
           </>
         )}
+        {actions}
         {/* NOTE: "Highlight overperforming items" toggle hidden for now — not very useful in its
             current form. May bring back later; if reviving, restore the Switch+Label toggle here
             plus the related `dim_low_confidence` useQueryState (see git history) and wire it
@@ -552,7 +555,7 @@ export function ItemStatsTable({
         <LoadingState label="item statistics" align="center" />
       ) : (
         <StaleOverlay active={isRefetching} label="item statistics">
-          <Table aria-label="Item statistics" density="compact" className="tabular-nums">
+          <Table aria-label="Item statistics" className="tabular-nums">
             {!hideHeader && (
               <TableHeader tone="muted">
                 <TableRow>
@@ -593,33 +596,29 @@ export function ItemStatsTable({
               </TableHeader>
             )}
             <TableBody>
-              {processedData
-                .filter(
-                  (row) =>
-                    itemTiers.includes(row.itemTier) &&
-                    (!row.item || itemSlots.includes(row.item.item_slot_type)) &&
-                    (!nameTerm || (row.item?.name ?? "").toLowerCase().includes(nameTerm)),
-                )
-                .map((row, index) => (
-                  <ItemStatsTableRow
-                    key={row.item_id}
-                    row={row}
-                    index={hideIndex ? 0 : index}
-                    columns={columns}
-                    hideIndex={hideIndex}
-                    dimLowConfidence={false}
-                    minWinRate={minWinRate}
-                    maxWinRate={maxWinRate}
-                    minUsage={minUsage}
-                    maxUsage={maxUsage}
-                    isIncluded={includeItems.has(row.item_id)}
-                    isExcluded={excludeItems.has(row.item_id)}
-                    prevStatsMap={prevStatsMap}
-                    onItemInclude={addInclude}
-                    onItemExclude={addExclude}
-                    customDropdownContent={customDropdownContent}
-                  />
-                ))}
+              {visibleData.map((row, index) => (
+                <ItemStatsTableRow
+                  key={row.item_id}
+                  row={row}
+                  index={hideIndex ? 0 : index}
+                  columns={columns}
+                  hideIndex={hideIndex}
+                  dimLowConfidence={false}
+                  minWinRate={minWinRate}
+                  maxWinRate={maxWinRate}
+                  minUsage={minUsage}
+                  maxUsage={maxUsage}
+                  trendParams={trendParams}
+                  trendBucket={trendBucket}
+                  onTrendBucketChange={setTrendBucket}
+                  isIncluded={includeItems.has(row.item_id)}
+                  isExcluded={excludeItems.has(row.item_id)}
+                  prevStatsMap={prevStatsMap}
+                  onItemInclude={addInclude}
+                  onItemExclude={addExclude}
+                  customDropdownContent={customDropdownContent}
+                />
+              ))}
             </TableBody>
           </Table>
         </StaleOverlay>

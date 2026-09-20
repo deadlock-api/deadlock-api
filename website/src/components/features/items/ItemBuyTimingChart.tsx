@@ -19,17 +19,17 @@ import {
 import { PanelBody } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Field } from "~/components/ui/field";
-import {
-  PanelTooltip,
-  PanelTooltipCard,
-  TooltipHeader,
-  TooltipStat,
-  TooltipStats,
-} from "~/components/ui/panel-tooltip";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
 import { Inline } from "~/components/ui/stack";
 import { SwitchField } from "~/components/ui/switch-field";
+import {
+  Tooltip as HoverTooltip,
+  TooltipCard,
+  TooltipHeader,
+  TooltipStat,
+  TooltipStats,
+} from "~/components/ui/tooltip";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
@@ -253,7 +253,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
 
   return (
     <TooltipProvider>
-      <ChartCard title="Purchase Analysis" subtitle={`Win rate by ${purchaseAxis}`} className="w-full">
+      <ChartCard title="Purchase Analysis" description={`Win rate by ${purchaseAxis}`} className="w-full">
         <PanelBody size="sm">
           <Inline className="gap-x-4 gap-y-2">
             <Field label="View by" orientation="horizontal">
@@ -273,7 +273,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
               label={
                 <>
                   Use conservative win-rate estimate based on volume
-                  <PanelTooltip
+                  <HoverTooltip
                     content={
                       <p>
                         Less matches played for a datapoint means we're less confident in the win rate, so we reduce it
@@ -282,7 +282,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
                     }
                   >
                     <span className="icon-[material-symbols--info] size-4 text-muted-foreground" />
-                  </PanelTooltip>
+                  </HoverTooltip>
                 </>
               }
             />
@@ -346,13 +346,13 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
                     content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
                       return (
-                        <PanelTooltipCard>
+                        <TooltipCard>
                           {payload.map((entry) => {
                             const d = entry.payload as ChartPoint;
                             return (
                               <Fragment key={`${entry.name} ${d.bucketStart}-${d.bucketEnd}`}>
                                 <TooltipHeader
-                                  lead={<ChartSwatch shape="line" color={entry.color ?? CHART_COLOR.neutral} />}
+                                  leading={<ChartSwatch shape="line" color={entry.color ?? CHART_COLOR.neutral} />}
                                   title={entry.name}
                                   subtitle={`${config.tooltipPrefix} ${config.formatter(d.bucketStart)} - ${config.formatter(d.bucketEnd)}`}
                                 />
@@ -372,7 +372,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
                               </Fragment>
                             );
                           })}
-                        </PanelTooltipCard>
+                        </TooltipCard>
                       );
                     }}
                   />

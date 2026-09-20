@@ -2,7 +2,6 @@ import { ArrowRight, LogIn } from "lucide-react";
 
 import { CalloutCard } from "~/components/patterns/content/CalloutCard";
 import {
-  ComparisonBody,
   ComparisonCell,
   ComparisonColumn,
   ComparisonHeader,
@@ -14,6 +13,7 @@ import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Button } from "~/components/ui/button";
 import { IconTile } from "~/components/ui/icon-tile";
+import { TableBody } from "~/components/ui/table";
 
 /** One feature the free tier also has. A patron-only feature is a `ComparisonRow` with an empty free cell. */
 function FreeAndPatronRow({ label }: { label: string }) {
@@ -68,7 +68,7 @@ export function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
           <ComparisonColumn>Free</ComparisonColumn>
           <ComparisonColumn>Patron</ComparisonColumn>
         </ComparisonHeader>
-        <ComparisonBody>
+        <TableBody>
           <FreeAndPatronRow label="Full API access" />
           <FreeAndPatronRow label="Match history & stats" />
           <PatronOnlyRow label="Dedicated queue with reserved resources" />
@@ -77,7 +77,7 @@ export function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
           <PatronOnlyRow label="Up to 50 prioritized accounts" />
           <PatronOnlyRow label="Swap accounts anytime" />
           <PatronOnlyRow label="Accurate rank data from Steam" />
-        </ComparisonBody>
+        </TableBody>
       </ComparisonTable>
     </PageShell>
   );
@@ -104,7 +104,7 @@ export function NotSubscribedState() {
             </a>
           </Button>
         }
-        note="Starting at $1.50/month, every cent goes to infrastructure"
+        footer="Starting at $1.50/month, every cent goes to infrastructure"
       />
     </PageShell>
   );

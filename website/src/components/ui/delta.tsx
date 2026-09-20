@@ -50,13 +50,7 @@ export function Delta({
   );
   if (display === "badge") {
     return (
-      <Badge
-        data-slot="delta"
-        variant={tone === "neutral" ? "muted" : tone}
-        shape="square"
-        className={className}
-        {...props}
-      >
+      <Badge data-slot="delta" variant={tone} shape="square" className={className} {...props}>
         {content}
       </Badge>
     );

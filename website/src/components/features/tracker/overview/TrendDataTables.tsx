@@ -4,8 +4,8 @@ import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { RankDelta } from "~/components/features/tracker/shared/RankDelta";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Button } from "~/components/ui/button";
-import { PanelTooltip } from "~/components/ui/panel-tooltip";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Tooltip } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import type { Activity, RankHistoryPoint } from "~/lib/tracker/compute";
 
@@ -78,7 +78,7 @@ export function RankHistoryTable({
           {visible.map((point) => (
             <TableRow key={point.matchId}>
               <TableHead scope="row">
-                <PanelTooltip content={`Open match ${point.matchId}`}>
+                <Tooltip content={`Open match ${point.matchId}`}>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -103,7 +103,7 @@ export function RankHistoryTable({
                     </time>
                     <ArrowUpRight data-icon="inline-end" className="hidden @xs/stats-dialog:block" />
                   </Button>
-                </PanelTooltip>
+                </Tooltip>
               </TableHead>
               <TableCell className="whitespace-normal">{rankName(point.badge)}</TableCell>
               <TableCell className="text-end tabular-nums">

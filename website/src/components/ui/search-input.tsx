@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { Button } from "~/components/ui/button";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { Input } from "~/components/ui/input";
-import { Spinner } from "~/components/ui/spinner";
+import { FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 interface SearchInputProps extends Omit<React.ComponentProps<"input">, "value" | "defaultValue" | "type" | "size"> {
@@ -14,11 +14,6 @@ interface SearchInputProps extends Omit<React.ComponentProps<"input">, "value" |
   size?: "default" | "sm";
   /** `ghost` has no frame of its own, for a search that is the header of a dialog or popover. */
   variant?: "default" | "ghost";
-  clearLabel?: string;
-  /** Results for the current term are on their way: the magnifier becomes a spinner and the field reads busy. */
-  loading?: boolean;
-  /** What the spinner announces while `loading`. */
-  loadingLabel?: string;
 }
 
 /**
@@ -32,9 +27,6 @@ export function SearchInput({
   onChange,
   size = "default",
   variant = "default",
-  clearLabel = "Clear search",
-  loading = false,
-  loadingLabel = "Searching",
   className,
   ref,
   ...props
@@ -49,7 +41,6 @@ export function SearchInput({
   const fieldProps = {
     ref: setRefs,
     type: "search",
-    "aria-busy": loading || undefined,
     value,
     onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
       onChange?.(event);
@@ -64,24 +55,15 @@ export function SearchInput({
     variant === "ghost" ? "start-0" : size === "sm" ? "start-2.5" : "start-3",
   );
   return (
-    <div
-      data-slot="search-input"
-      data-size={size}
-      data-variant={variant}
-      data-loading={loading || undefined}
-      className={cn("relative min-w-0", className)}
-    >
-      {loading ? (
-        <Spinner size={size === "sm" ? "sm" : "default"} label={loadingLabel} className={leadingClass} />
-      ) : (
-        <SearchIcon aria-hidden="true" className={leadingClass} />
-      )}
+    <div data-slot="search-input" data-size={size} data-variant={variant} className={cn("relative min-w-0", className)}>
+      <SearchIcon aria-hidden="true" className={leadingClass} />
       {variant === "ghost" ? (
         <input
           data-slot="input"
           className={cn(
             hideNativeClear,
-            "w-full min-w-0 rounded-sm bg-transparent pe-8 outline-none placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-3 aria-invalid:ring-destructive/40 [&[readonly]]:cursor-default",
+            FOCUS_RING,
+            "w-full min-w-0 rounded-sm bg-transparent pe-8 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-3 aria-invalid:ring-destructive/40 [&[readonly]]:cursor-default",
             size === "sm" ? "h-8 ps-5.5 text-sm" : "h-9 ps-6 text-base",
           )}
           {...fieldProps}
@@ -93,7 +75,7 @@ export function SearchInput({
         <Button
           variant="ghost"
           size="icon-xs"
-          aria-label={clearLabel}
+          aria-label="Clear search"
           className="absolute end-1 top-1/2 -translate-y-1/2 text-muted-foreground"
           onClick={() => {
             setValue("");

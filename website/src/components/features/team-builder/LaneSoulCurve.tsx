@@ -3,7 +3,7 @@ import { Area, AreaChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts"
 
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_AXIS_SM, CHART_BASELINE, CHART_COLOR, CHART_CURSOR_LINE } from "~/components/patterns/charts/theme";
-import { PanelTooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
+import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import type { LaneSoulPoint } from "~/lib/team-builder/analysis";
 import { compactNumber, deltaBarColor, deltaClass, formatCount } from "~/lib/team-builder/format";
 
@@ -121,7 +121,7 @@ export function LaneSoulCurve({ points }: { points: LaneSoulPoint[] }) {
             const point = payload[0].payload as LaneSoulPoint;
             const ahead = point.diff >= 0;
             return (
-              <PanelTooltipCard>
+              <TooltipCard>
                 <TooltipHeader title={`${Math.round(point.timeS / 60)} minutes in`} />
                 <TooltipStats>
                   <TooltipStat
@@ -134,7 +134,7 @@ export function LaneSoulCurve({ points }: { points: LaneSoulPoint[] }) {
                 {point.lo < 0 && point.hi > 0 && (
                   <div className="text-3xs text-muted-foreground">Too close to call at this sample size</div>
                 )}
-              </PanelTooltipCard>
+              </TooltipCard>
             );
           }}
         />

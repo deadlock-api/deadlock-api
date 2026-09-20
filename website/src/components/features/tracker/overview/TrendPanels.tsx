@@ -18,12 +18,12 @@ import {
 import { PanelWithDetails } from "~/components/patterns/panel/PanelWithDetails";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import {
-  PanelTooltip,
-  PanelTooltipCard,
+  Tooltip as HoverTooltip,
+  TooltipCard,
   TooltipHeader,
   TooltipStat,
   TooltipStats,
-} from "~/components/ui/panel-tooltip";
+} from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import type { Activity as MatchActivity, RankHistoryPoint, ResultFilter } from "~/lib/tracker/compute";
@@ -83,7 +83,7 @@ export function TrendPanels({
           />
         }
       >
-        <PanelTooltip
+        <HoverTooltip
           content={
             <TooltipHeader
               title={latestRank ? rankName(latestRank.badge) : "No recorded rank"}
@@ -94,7 +94,7 @@ export function TrendPanels({
           <div className="truncate text-lg font-semibold">
             {latestRank ? rankName(latestRank.badge) : "No recorded rank"}
           </div>
-        </PanelTooltip>
+        </HoverTooltip>
         {ranks.length < 2 ? (
           <EmptyState
             variant="inline"
@@ -208,7 +208,7 @@ function RankTooltip({
   if (!active || !payload?.length) return null;
   const point = payload[0].payload;
   return (
-    <PanelTooltipCard>
+    <TooltipCard>
       <TooltipHeader title={rankName(point.badge)} subtitle={day.unix(point.time).format("MMM D, YYYY · HH:mm")} />
       <TooltipStats>
         <TooltipStat label="Match" value={point.matchId} />
@@ -217,7 +217,7 @@ function RankTooltip({
           value={point.delta == null ? "—" : point.delta === 0 ? "0" : <RankDelta value={point.delta} />}
         />
       </TooltipStats>
-    </PanelTooltipCard>
+    </TooltipCard>
   );
 }
 
@@ -234,7 +234,7 @@ function ActivityTooltip({
   const point = payload[0].payload;
   const total = point.wins + point.losses;
   return (
-    <PanelTooltipCard>
+    <TooltipCard>
       <TooltipHeader
         title={`${granularity === "week" ? "Week of " : ""}${day.unix(point.bucketStartUnix).format(granularity === "week" ? "MMM D, YYYY" : "MMM YYYY")}`}
         subtitle="Match activity"
@@ -244,6 +244,6 @@ function ActivityTooltip({
         <TooltipStat label="Losses" value={point.losses} className="text-negative" />
         <TooltipStat label="Win rate" value={total > 0 ? `${Math.round((point.wins / total) * 100)}%` : "—"} />
       </TooltipStats>
-    </PanelTooltipCard>
+    </TooltipCard>
   );
 }

@@ -1,16 +1,14 @@
 import { TONE_BG, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 
-/** A thin 0 to 1 bar beside a visible rate label, which it decorates. The tick marks the comparison baseline. */
+/** A thin 0 to 1 bar beside a visible rate label, which it decorates. */
 export function RateBar({
   rate,
-  baseline,
   color,
   className,
   ...props
 }: Omit<React.ComponentProps<"div">, "color" | "children"> & {
   rate: number | null;
-  baseline?: number;
   /** A CSS color for a bar that is a series rather than a good/bad rate: `var(--chart-4)`. Defaults to positive. */
   color?: string;
 }) {
@@ -25,12 +23,6 @@ export function RateBar({
         <div
           className={cn("h-full rounded-full", !color && "bg-positive")}
           style={{ width: `${Math.max(0, Math.min(1, rate)) * 100}%`, backgroundColor: color }}
-        />
-      )}
-      {rate !== null && baseline !== undefined && (
-        <span
-          className="absolute -top-0.5 h-2.5 w-px bg-foreground"
-          style={{ insetInlineStart: `${baseline * 100}%` }}
         />
       )}
     </div>

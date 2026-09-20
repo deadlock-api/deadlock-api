@@ -27,7 +27,6 @@ import {
   buildUpgradeChainLookup,
   getHeroAbilityMetadata,
 } from "~/lib/build-transform";
-import { PATCHES } from "~/lib/constants";
 import { useDebouncedState } from "~/lib/utils";
 import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
@@ -147,7 +146,6 @@ export function PlayerHeroBuildsDialog({
               onSelect={(profile) => setOverridePlayer({ accountId: profile.account_id, name: profile.personaname })}
             />
             <SeasonPatchDatePicker
-              patchDates={PATCHES}
               value={dateRange}
               onValueChange={({ startDate, endDate }) => setDateRange({ startDate, endDate })}
               defaultTab="custom"
@@ -169,7 +167,7 @@ export function PlayerHeroBuildsDialog({
             <>
               {averageBuild && <AverageBuildCard build={averageBuild} heroId={heroId} />}
               {cards.map((card) => (
-                <MatchHistoryCard key={card.matchId} {...card} ranks={ranks} expandable={false} />
+                <MatchHistoryCard key={card.matchId} {...card} ranks={ranks} />
               ))}
             </>
           )}

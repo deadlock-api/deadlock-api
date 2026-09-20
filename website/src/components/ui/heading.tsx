@@ -20,8 +20,6 @@ const headingVariants = cva("text-balance break-words", {
       sans: "",
       /** The terminal voice of the mini-games. */
       mono: "font-mono",
-      /** The game's display face, for a hero or item name set as a title. */
-      game: "font-game font-normal tracking-normal",
     },
   },
   defaultVariants: { size: "sm", font: "sans" },

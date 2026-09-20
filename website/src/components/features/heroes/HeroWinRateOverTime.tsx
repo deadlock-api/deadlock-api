@@ -81,7 +81,7 @@ export function HeroWinRateOverTime({
         </>
       }
     >
-      <WeeklyTrendChart weeks={weeks} shareLabel="Pick rate" ariaLabel={`${heroName} win rate and pick rate by week`} />
+      <WeeklyTrendChart weeks={weeks} shareLabel="Pick rate" label={`${heroName} win rate and pick rate by week`} />
     </Section>
   );
 }

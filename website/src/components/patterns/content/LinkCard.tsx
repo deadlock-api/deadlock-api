@@ -5,10 +5,11 @@ import { cloneElement, isValidElement } from "react";
 
 import { CardContent, cardVariants } from "~/components/ui/card";
 import { Heading } from "~/components/ui/heading";
+import { FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 const arrowLinkVariants = cva(
-  "group/arrow-link inline-flex shrink-0 items-center rounded-sm font-medium text-primary outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+  [FOCUS_RING, "group/arrow-link inline-flex shrink-0 items-center rounded-sm font-medium text-primary"],
   {
     variants: {
       size: {
@@ -24,7 +25,7 @@ const arrowLinkVariants = cva(
  * "View", "Read more", "Play": a label whose arrow nudges forward on hover. Inside a `LinkCard` it is a span, because
  * the card is the link; on its own, pass the link through `asChild`.
  */
-export function ArrowLink({
+function ArrowLink({
   size,
   asChild = false,
   className,
@@ -69,7 +70,7 @@ interface LinkCardProps extends Omit<React.ComponentProps<"a">, "title" | "media
   /** Clamp the description to this many lines. */
   clamp?: 2 | 3;
   tone?: VariantProps<typeof cardVariants>["tone"];
-  titleAs?: "h2" | "h3" | "h4";
+  as?: "h2" | "h3" | "h4";
   /** The child is the link (a router `Link`, a `SmartLink`); its own children land under the description. */
   asChild?: boolean;
 }
@@ -89,7 +90,7 @@ export function LinkCard({
   external = false,
   clamp,
   tone = "card",
-  titleAs = "h3",
+  as = "h3",
   asChild = false,
   className,
   children,
@@ -111,7 +112,7 @@ export function LinkCard({
   );
   const heading = (
     <Heading
-      as={titleAs}
+      as={as}
       size={HEADING_SIZE[size]}
       className={cn(
         "flex min-w-0 items-center gap-1.5 transition-colors duration-fast ease-standard group-hover/card:text-primary",

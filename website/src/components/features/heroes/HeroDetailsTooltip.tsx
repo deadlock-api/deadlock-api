@@ -1,10 +1,10 @@
 import { Info } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
-import { TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Separator } from "~/components/ui/separator";
 import { Stack } from "~/components/ui/stack";
+import { TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 
 interface HeroDetailsRow {
   hero_id: number;

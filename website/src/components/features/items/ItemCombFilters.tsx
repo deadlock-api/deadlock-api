@@ -11,9 +11,8 @@ export function ItemCombFilters() {
       <FilterToggleCell
         label="Combo size"
         value={String(combSize)}
+        defaultValue="2"
         onValueChange={(v) => setCombSize(Number(v))}
-        active={combSize !== 2}
-        onReset={() => setCombSize(2)}
       >
         {ITEM_COMB_SIZES.map((size) => (
           <SegmentedItem key={size} value={String(size)}>
@@ -24,9 +23,8 @@ export function ItemCombFilters() {
       <FilterToggleCell
         label="Show"
         value={String(combsToShow)}
+        defaultValue={String(ITEM_COMBS_TO_SHOW[0])}
         onValueChange={(v) => setCombsToShow(Number(v))}
-        active={combsToShow !== ITEM_COMBS_TO_SHOW[0]}
-        onReset={() => setCombsToShow(ITEM_COMBS_TO_SHOW[0])}
       >
         {ITEM_COMBS_TO_SHOW.map((count) => (
           <SegmentedItem key={count} value={String(count)}>

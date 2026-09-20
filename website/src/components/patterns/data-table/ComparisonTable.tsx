@@ -2,7 +2,7 @@ import { CheckIcon, MinusIcon } from "lucide-react";
 import { Children, createContext, useContext } from "react";
 
 import { Card } from "~/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Table, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { cn } from "~/lib/utils";
 
 /** The index of the highlighted plan column, and of the cell being rendered. */
@@ -82,10 +82,6 @@ export function ComparisonColumn({ className, ...props }: React.ComponentProps<t
       {...props}
     />
   );
-}
-
-export function ComparisonBody(props: React.ComponentProps<typeof TableBody>) {
-  return <TableBody {...props} />;
 }
 
 /** One feature. `label` is the row heading; children are one `ComparisonCell` per plan, in column order. */

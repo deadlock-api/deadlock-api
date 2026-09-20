@@ -76,13 +76,3 @@ export function formatStatValue(value: number, sortBy: string): string {
   }
   return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
-
-const VARIANT_LABELS: Record<SortVariant, string> = { avg: "Avg", max: "Max", total: "Total" };
-
-export function getSortByLabel(sortBy: string): string {
-  const { key, variant } = parseSortByValue(sortBy);
-  const cat = SORT_CATEGORIES.find((c) => c.key === key);
-  if (!cat) return sortBy;
-  if (!variant) return cat.label;
-  return `${VARIANT_LABELS[variant]} ${cat.label}`;
-}

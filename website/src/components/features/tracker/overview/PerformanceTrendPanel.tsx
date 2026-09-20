@@ -15,15 +15,15 @@ import {
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { Segmented, SegmentedItem } from "~/components/ui/segmented";
+import { Text } from "~/components/ui/text";
 import {
-  PanelTooltip,
-  PanelTooltipCard,
+  Tooltip as HoverTooltip,
+  TooltipCard,
   TooltipHeader,
   TooltipStat,
   TooltipStats,
-} from "~/components/ui/panel-tooltip";
-import { Segmented, SegmentedItem } from "~/components/ui/segmented";
-import { Text } from "~/components/ui/text";
+} from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import { computePerformanceTrend, performanceWindow, type ResultFilter } from "~/lib/tracker/compute";
 
@@ -95,11 +95,11 @@ export function PerformanceTrendPanel({
           >
             {windows.map((choice) =>
               choice === "auto" ? (
-                <PanelTooltip key={choice} content="Window grows with your selected match history">
+                <HoverTooltip key={choice} content="Window grows with your selected match history">
                   <SegmentedItem value={choice} aria-label="Automatic window size">
                     Auto
                   </SegmentedItem>
-                </PanelTooltip>
+                </HoverTooltip>
               ) : (
                 <SegmentedItem key={choice} value={choice} aria-label={`${choice} matches`}>
                   {choice}
@@ -186,12 +186,12 @@ function PerformanceTooltip({
   const point = payload[0].payload;
   const selected = metrics[metric];
   return (
-    <PanelTooltipCard>
+    <TooltipCard>
       <TooltipHeader title={selected.label} subtitle={day.unix(point.time).format("MMM D, YYYY · HH:mm")} />
       <TooltipStats>
         <TooltipStat label={selected.label} value={selected.format(point[metric])} />
         <TooltipStat label="Rolling window" value={`${window} matches`} />
       </TooltipStats>
-    </PanelTooltipCard>
+    </TooltipCard>
   );
 }

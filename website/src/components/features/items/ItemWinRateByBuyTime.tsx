@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { Section } from "~/components/patterns/page/Section";
-import { PanelTooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
+import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { formatPercent } from "~/lib/format";
@@ -57,14 +57,14 @@ function binByBuyMinute(rows: readonly { bucket: number; wins: number; matches: 
 function BinTooltip({ entry }: { entry?: BinEntry }) {
   if (!entry) return null;
   return (
-    <PanelTooltipCard>
+    <TooltipCard>
       <TooltipHeader title={`Bought at ${entry.label}`} />
       <TooltipStats>
         <TooltipStat label="Win rate" value={formatPercent(entry.winRate)} />
         <TooltipStat label="Of purchases" value={formatPercent(entry.share, 0)} />
         <TooltipStat label="Matches" value={entry.matches.toLocaleString("en-US")} />
       </TooltipStats>
-    </PanelTooltipCard>
+    </TooltipCard>
   );
 }
 

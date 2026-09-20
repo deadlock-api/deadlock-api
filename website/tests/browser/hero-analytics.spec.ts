@@ -59,22 +59,21 @@ test("search preserves roster rates and positions, hides empty groups and recove
   await page.goto(overviewUrl);
   const panel = page.getByRole("tabpanel", { name: "Overall Stats" });
   const search = page.getByRole("searchbox", { name: "Filter heroes by name" });
-  await expect(panel.getByText("Showing 2 of 2 heroes.")).toBeVisible();
   await expect(panel.getByText("100 matches", { exact: true })).toBeVisible();
   await expect(panel.getByRole("columnheader", { name: "Win Rate" })).toHaveAttribute("aria-sort", "descending");
   const infernus = panel.getByRole("row").filter({ hasText: "Infernus" });
   const originalRow = await infernus.textContent();
   await search.fill("  INFERNUS  ");
-  await expect(panel.getByRole("status")).toContainText("Showing 1 of 2 heroes");
+  await expect(panel.locator("tbody > tr")).toHaveCount(1);
   await expect(infernus).toHaveText(originalRow!);
   await page.getByRole("switch", { name: "Group by Type" }).click();
-  await expect(panel.getByRole("heading", { name: "Brawler", exact: true })).toBeVisible();
-  await expect(panel.getByRole("heading", { name: "Mystic", exact: true })).toHaveCount(0);
+  await expect(panel.getByRole("heading", { name: /^Brawler/ })).toBeVisible();
+  await expect(panel.getByRole("heading", { name: /^Mystic/ })).toHaveCount(0);
   await search.fill("no-such-hero");
   await expect(panel.getByText("No heroes match your search")).toBeVisible();
   await panel.getByRole("button", { name: "Clear search", exact: true }).last().click();
   await expect(search).toHaveValue("");
-  await expect(panel.getByRole("heading", { name: "Mystic", exact: true })).toBeVisible();
+  await expect(panel.getByRole("heading", { name: /^Mystic/ })).toBeVisible();
 });
 
 test("Brawl excludes normal-mode bans and explains why rank breakdown is unavailable", async ({ page }) => {
@@ -86,10 +85,10 @@ test("Brawl excludes normal-mode bans and explains why rank breakdown is unavail
     }
   });
   await page.goto(overviewUrl);
-  await expect(page.getByRole("button", { name: "Presence", exact: true })).toBeVisible();
+  await expect(page.getByRole("radio", { name: "Presence", exact: true })).toBeVisible();
   await page.getByRole("radio", { name: "Brawl", exact: true }).click();
   await expect(page.getByRole("radio", { name: "Brawl", exact: true })).toBeChecked();
-  await expect(page.getByRole("button", { name: "Presence", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("radio", { name: "Presence", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Sort by pick rate", exact: true })).toBeVisible();
   await page.getByRole("tab", { name: "By Rank", exact: true }).click();
   await expect(page.getByText("Rank breakdown is unavailable for Brawl")).toBeVisible();
@@ -123,7 +122,7 @@ test("failed stats can be retried without losing filters", async ({ page }) => {
   });
   fail = false;
   await page.getByRole("button", { name: "Try again", exact: true }).click();
-  await expect(page.getByText("Showing 2 of 2 heroes.")).toBeVisible();
+  await expect(page.getByRole("row").filter({ hasText: "Infernus" })).toBeVisible();
   await expect(page).toHaveURL(/min_rank=0/);
 });
 
@@ -133,7 +132,7 @@ test("scoreboard requests wait until its tab is selected", async ({ page }) => {
     if (new URL(request.url()).pathname === "/v1/analytics/scoreboards/heroes") requests.push(request.url());
   });
   await page.goto(overviewUrl);
-  await expect(page.getByText("Showing 2 of 2 heroes.")).toBeVisible();
+  await expect(page.getByRole("row").filter({ hasText: "Infernus" })).toBeVisible();
   expect(requests).toEqual([]);
   await page.getByRole("tab", { name: "Scoreboard", exact: true }).click();
   await expect.poll(() => requests.length).toBeGreaterThan(0);
@@ -143,7 +142,7 @@ test("overview search and recovery fit a narrow mobile viewport", async ({ page 
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto(overviewUrl);
   const search = page.getByRole("searchbox", { name: "Filter heroes by name" });
-  await expect(page.getByText("Showing 2 of 2 heroes.")).toBeVisible();
+  await expect(page.getByRole("row").filter({ hasText: "Infernus" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await search.fill("unknown");
   await expect(page.getByText("No heroes match your search")).toBeVisible();
@@ -389,13 +388,18 @@ test("crowded trend tooltips can scroll through every hero without changing the 
   );
   await page.goto(`${trendUrl}&trend_heroes=${heroIds.join(",")}`);
   await expect(page.locator(".recharts-line-curve")).toHaveCount(20);
-  await page.locator(".hero-dot-101").first().hover();
+  // The first dot of the lowest series sits on the corner of the plot; its centre is the plot's edge, which Recharts
+  // counts as outside. Hover the quadrant of the dot that is inside the plot.
+  await page
+    .locator(".hero-dot-101")
+    .first()
+    .hover({ position: { x: 4, y: 1 } });
   const readings = page.getByRole("region", { name: /^Hero values for/ });
   await expect(readings).toBeVisible();
   await expect(readings.getByRole("listitem")).toHaveCount(20);
   await expect(readings.getByRole("listitem").first()).toContainText("Hero 101");
   await expect(readings.getByRole("listitem").first()).toContainText("50%");
-  await expect(readings.getByRole("listitem").first().getByLabel("100 matches")).toBeVisible();
+  await expect(readings.getByRole("listitem").first()).toContainText("100 matches");
   const bucket = await readings.getAttribute("aria-label");
   await readings.hover();
   await page.mouse.wheel(0, 900);

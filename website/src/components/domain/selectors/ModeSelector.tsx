@@ -1,7 +1,6 @@
 import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
 import type { MatchMode } from "~/components/domain/selectors/MatchModeSelector";
 import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
-import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { SegmentedItem } from "~/components/ui/segmented";
 
 /**
@@ -42,7 +41,7 @@ export const DEFAULT_MODE: Mode = "normal_all";
 const MODES = Object.keys(MODE_CONFIG) as Mode[];
 
 export function ModeSelector({
-  value: valueProp,
+  value,
   defaultValue = DEFAULT_MODE,
   onValueChange,
   ...props
@@ -55,20 +54,8 @@ export function ModeSelector({
   defaultValue?: Mode;
   onValueChange?: (mode: Mode) => void;
 }) {
-  const [value, setValue] = useControllableState({
-    value: valueProp,
-    defaultValue,
-    onValueChange,
-  });
   return (
-    <FilterToggleCell
-      label="Mode"
-      value={value}
-      onValueChange={setValue}
-      active={value !== defaultValue}
-      onReset={() => setValue(defaultValue)}
-      {...props}
-    >
+    <FilterToggleCell label="Mode" value={value} defaultValue={defaultValue} onValueChange={onValueChange} {...props}>
       {MODES.map((mode) => (
         <SegmentedItem key={mode} value={mode}>
           {MODE_CONFIG[mode].label}

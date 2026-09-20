@@ -21,9 +21,8 @@ export function HeroCombFilters() {
       <FilterToggleCell
         label="Combo size"
         value={String(combSize)}
+        defaultValue="2"
         onValueChange={(v) => setCombSize(Number(v))}
-        active={combSize !== 2}
-        onReset={() => setCombSize(2)}
       >
         {HERO_COMB_SIZES.map((n) => (
           <SegmentedItem key={n} value={String(n)}>
@@ -34,9 +33,8 @@ export function HeroCombFilters() {
       <FilterToggleCell
         label="Show"
         value={String(combsToShow)}
+        defaultValue={String(HERO_COMBS_TO_SHOW[0])}
         onValueChange={(v) => setCombsToShow(Number(v))}
-        active={combsToShow !== HERO_COMBS_TO_SHOW[0]}
-        onReset={() => setCombsToShow(HERO_COMBS_TO_SHOW[0])}
       >
         {HERO_COMBS_TO_SHOW.map((n) => (
           <SegmentedItem key={n} value={String(n)}>

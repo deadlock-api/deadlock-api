@@ -97,9 +97,8 @@ export function HeroFiltersSection({
         <FilterToggleCell
           label="Lane"
           value={sameLaneFilter ? "same" : "any"}
+          defaultValue="same"
           onValueChange={(v) => setSameLaneFilter(v === "same")}
-          active={!sameLaneFilter}
-          onReset={() => setSameLaneFilter(true)}
         >
           <SegmentedItem value="same">Same lane</SegmentedItem>
           <SegmentedItem value="any">Any lane</SegmentedItem>

@@ -2,10 +2,14 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { type HTMLMotionProps, motion } from "framer-motion";
 import { Check, X } from "lucide-react";
 
+import { FOCUS_RING_BORDER } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 const answerOptionVariants = cva(
-  "cursor-target flex items-center border font-mono transition-colors duration-fast outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-default",
+  [
+    FOCUS_RING_BORDER,
+    "cursor-target flex items-center border font-mono transition-colors duration-fast disabled:cursor-default",
+  ],
   {
     variants: {
       state: {

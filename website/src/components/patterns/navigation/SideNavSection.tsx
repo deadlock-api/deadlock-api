@@ -1,6 +1,7 @@
 import { ChevronRight } from "lucide-react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
+import { FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 interface SideNavSectionProps extends Omit<React.ComponentProps<typeof Collapsible>, "title"> {
@@ -25,7 +26,8 @@ export function SideNavSection({ label, count, level = 1, className, children, .
     >
       <CollapsibleTrigger
         className={cn(
-          "group/section flex min-h-7 w-full min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-start transition-colors duration-fast outline-none hover:bg-sidebar-accent/50 focus-visible:ring-3 focus-visible:ring-ring/50",
+          FOCUS_RING,
+          "group/section flex min-h-7 w-full min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-start transition-colors duration-fast hover:bg-sidebar-accent/50",
           level === 1 ? "eyebrow text-sidebar-foreground" : "type-caption font-medium text-muted-foreground",
         )}
       >

@@ -87,11 +87,7 @@ export function ItemWinRateOverTime({
         </>
       }
     >
-      <WeeklyTrendChart
-        weeks={weeks}
-        shareLabel="Bought"
-        ariaLabel={`${itemName} win rate and purchase rate by week`}
-      />
+      <WeeklyTrendChart weeks={weeks} shareLabel="Bought" label={`${itemName} win rate and purchase rate by week`} />
     </Section>
   );
 }

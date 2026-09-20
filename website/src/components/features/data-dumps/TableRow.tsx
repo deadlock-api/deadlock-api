@@ -151,7 +151,7 @@ export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matc
 function FileActions({ url }: { url: string }) {
   return (
     <Inline gap={1} justify="end" wrap="nowrap">
-      <CopyButton display="icon" text={url} title="Copy URL" />
+      <CopyButton size="icon-sm" text={url} title="Copy URL" />
       <Button asChild variant="ghost" size="icon-sm">
         <a href={url} target="_blank" rel="noopener noreferrer" title="Download" aria-label="Download" download>
           <Download className="size-3.5" />

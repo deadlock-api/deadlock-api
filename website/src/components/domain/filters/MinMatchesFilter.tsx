@@ -8,7 +8,6 @@ export function MinMatchesFilter({
   label = "Min Matches",
   step = 10,
   min,
-  max,
   ...props
 }: Omit<
   React.ComponentProps<typeof NumberSelector>,
@@ -21,7 +20,6 @@ export function MinMatchesFilter({
   label?: string;
   step?: number;
   min?: number;
-  max?: number;
 }) {
   const [value, setValue] = useControllableState({
     value: valueProp,
@@ -35,7 +33,6 @@ export function MinMatchesFilter({
       label={label}
       step={step}
       min={min}
-      max={max}
       defaultValue={defaultValue}
       {...props}
     />

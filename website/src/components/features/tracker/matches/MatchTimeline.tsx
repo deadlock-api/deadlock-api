@@ -6,7 +6,6 @@ import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { Card } from "~/components/ui/card";
 import { IconTile } from "~/components/ui/icon-tile";
-import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
 import {
   Select,
   SelectContent,
@@ -17,6 +16,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
+import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { TONE_TEXT } from "~/lib/tone";
 import { formatMatchDuration } from "~/lib/tracker/compute";
 import type { FightSummary } from "~/lib/tracker/fights";
@@ -72,7 +72,7 @@ export function MatchTimeline({
       tooltip: (
         <>
           <TooltipHeader
-            lead={<HeroImage heroId={kill.victim.hero_id} shape="circle" className="size-8 shrink-0" title="" />}
+            leading={<HeroImage heroId={kill.victim.hero_id} shape="circle" className="size-8 shrink-0" title="" />}
             title={nameOf(kill.victim)}
             subtitle={<span className={killTextClass}>Killed by {viewedName}</span>}
           />
@@ -92,7 +92,7 @@ export function MatchTimeline({
       tooltip: (
         <>
           <TooltipHeader
-            lead={
+            leading={
               death.killer ? (
                 <HeroImage heroId={death.killer.hero_id} shape="circle" className="size-8 shrink-0" title="" />
               ) : (

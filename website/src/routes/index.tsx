@@ -17,11 +17,12 @@ import {
   UsersRound,
 } from "lucide-react";
 
+import { OptimizedImage } from "~/components/domain/assets/OptimizedImage";
 import { SmartLink } from "~/components/domain/navigation/SmartLink";
 import { LinkCard } from "~/components/patterns/content/LinkCard";
-import { LogoWall, LogoWallItem } from "~/components/patterns/content/LogoWall";
+import { LogoWallItem } from "~/components/patterns/content/LogoWall";
 import { Prose } from "~/components/patterns/content/Prose";
-import { Hero, HeroGlow, HeroLead, HeroPills } from "~/components/patterns/page/Hero";
+import { Hero, HeroActions, HeroGlow, HeroLead } from "~/components/patterns/page/Hero";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Section } from "~/components/patterns/page/Section";
@@ -29,7 +30,6 @@ import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { Grid } from "~/components/ui/grid";
 import { IconTile } from "~/components/ui/icon-tile";
-import { OptimizedImage } from "~/components/ui/optimized-image";
 import { Separator } from "~/components/ui/separator";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
@@ -238,7 +238,7 @@ function IndexRoute() {
           </Card>
         </Stack>
 
-        <HeroPills>
+        <HeroActions>
           {valueProps.map((prop) => (
             <Button key={prop.label} asChild variant="outline" shape="pill">
               <SmartLink href={prop.href} external={prop.external} title={prop.title}>
@@ -247,7 +247,7 @@ function IndexRoute() {
               </SmartLink>
             </Button>
           ))}
-        </HeroPills>
+        </HeroActions>
 
         <HeroLead>
           Track Deadlock stats: hero win rates, pick rates, item analytics, rank distribution, and leaderboards, updated
@@ -324,7 +324,7 @@ function IndexRoute() {
         title="Our Sponsors"
         description="Supporting the Deadlock API and the community"
       >
-        <LogoWall>
+        <Inline justify="center" gap={8}>
           {[mainSponsor, ...sponsors].map((sponsor) => (
             <LogoWallItem key={sponsor.href} href={sponsor.href} title={sponsor.title} target="_blank" rel="noreferrer">
               <OptimizedImage
@@ -340,7 +340,7 @@ function IndexRoute() {
               />
             </LogoWallItem>
           ))}
-        </LogoWall>
+        </Inline>
         <Inline justify="center">
           <TextLink
             href="https://www.patreon.com/c/manuelhexe"
@@ -356,7 +356,7 @@ function IndexRoute() {
       </Section>
 
       <Section size="lg" align="center" title="What is Deadlock?">
-        <Prose className="mx-auto max-w-3xl">
+        <Prose className="mx-auto w-full max-w-3xl">
           <p>
             Deadlock is a team-based multiplayer game developed and published by Valve that combines elements of
             third-person shooters and MOBAs. Players choose from a roster of heroes, each with unique abilities, and
@@ -373,7 +373,7 @@ function IndexRoute() {
       </Section>
 
       <Section size="lg" align="center" title="How Our Data Works">
-        <Prose className="mx-auto max-w-3xl">
+        <Prose className="mx-auto w-full max-w-3xl">
           <p>
             Deadlock API collects publicly available match data through Valve's game client APIs. Every tracked match is
             processed to extract hero performance, item purchases, ability upgrade paths, and average match rankings.

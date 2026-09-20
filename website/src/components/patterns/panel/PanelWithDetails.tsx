@@ -5,10 +5,11 @@ import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "~/components/ui/dialog";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
+import { FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 // ds-allow law19-viewport-breakpoint: a dialog is sized against the viewport, and only `sm:` overrides ui/dialog's own
-const dialogWidths = { default: "sm:max-w-2xl", lg: "sm:max-w-4xl", full: "sm:max-w-7xl" };
+const dialogWidths = { default: "sm:max-w-2xl", full: "sm:max-w-7xl" };
 
 interface PanelWithDetailsProps extends Omit<React.ComponentProps<typeof Panel>, "title"> {
   /** Also names the dialog and the "Show more" button, so it must be a string. */
@@ -26,10 +27,7 @@ interface PanelWithDetailsProps extends Omit<React.ComponentProps<typeof Panel>,
    */
   details: ReactNode;
   dialogSize?: keyof typeof dialogWidths;
-  size?: "sm" | "default";
-  as?: "h2" | "h3" | "h4";
   open?: boolean;
-  defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
 
@@ -45,27 +43,24 @@ export function PanelWithDetails({
   footer,
   details,
   dialogSize = "full",
-  size = "sm",
-  as,
   open: openProp,
-  defaultOpen = false,
   onOpenChange,
   children,
   ...props
 }: PanelWithDetailsProps) {
   const [open, setOpen] = useControllableState({
     value: openProp,
-    defaultValue: defaultOpen,
+    defaultValue: false,
     onValueChange: onOpenChange,
   });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <Panel {...props}>
-        <PanelHeader title={title} icon={icon} size={size} as={as}>
+        <PanelHeader title={title} icon={icon} size="sm">
           {meta && <div className="text-3xs text-muted-foreground tabular-nums">{meta}</div>}
         </PanelHeader>
-        <PanelBody size={size} className="flex flex-col gap-1">
+        <PanelBody size="sm" className="flex flex-col gap-1">
           {children}
           <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
             {footer && <div className="min-w-0 flex-1 text-3xs text-muted-foreground">{footer}</div>}
@@ -93,7 +88,10 @@ export function PanelWithDetails({
         <section
           tabIndex={0}
           aria-label={`${title} details`}
-          className="@container/stats-dialog min-h-0 overflow-y-auto rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+          className={cn(
+            FOCUS_RING,
+            "@container/stats-dialog min-h-0 overflow-y-auto rounded-sm focus-visible:ring-inset",
+          )}
         >
           {details}
         </section>

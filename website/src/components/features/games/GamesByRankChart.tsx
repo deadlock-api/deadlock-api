@@ -8,7 +8,7 @@ import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/R
 import { ChartLoading, ChartError, ChartEmpty } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_AXIS, CHART_GRID } from "~/components/patterns/charts/theme";
-import { PanelTooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
+import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -145,9 +145,9 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
                   const info = badgeMap.get(entry.badge);
                   const imageUrl = info?.large_webp ?? info?.large;
                   return (
-                    <PanelTooltipCard>
+                    <TooltipCard>
                       <TooltipHeader
-                        lead={imageUrl && <img src={imageUrl} alt="" className="size-5" />}
+                        leading={imageUrl && <img src={imageUrl} alt="" className="size-5" />}
                         title={entry.label}
                       />
                       <TooltipStats>
@@ -156,7 +156,7 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
                           value={statDef ? formatStatValue(entry.value, statDef.format) : entry.value}
                         />
                       </TooltipStats>
-                    </PanelTooltipCard>
+                    </TooltipCard>
                   );
                 }}
               />

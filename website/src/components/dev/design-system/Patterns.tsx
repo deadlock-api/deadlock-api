@@ -13,7 +13,7 @@ import { Round3PatternsMore } from "~/components/dev/design-system/Round3Pattern
 import { Chapter, Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { HighlightedCode } from "~/components/patterns/code/HighlightedCode";
 import { PaginationControls } from "~/components/patterns/data-table/PaginationControls";
-import { type SortDir, SortableHeader } from "~/components/patterns/data-table/SortableHeader";
+import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { DateRangePicker } from "~/components/patterns/filter-bar/DateRangePicker";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
@@ -24,18 +24,11 @@ import { type TriState, TriStateItem, TriStateSelector } from "~/components/patt
 import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigation/ResponsiveTabsList";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { Section } from "~/components/patterns/page/Section";
-import {
-  Panel,
-  PanelBody,
-  PanelFooter,
-  PanelHeader,
-  PanelMessage,
-  PanelShowMore,
-  PanelSkeleton,
-} from "~/components/patterns/panel/Panel";
+import { Panel, PanelBody, PanelFooter, PanelHeader, PanelShowMore } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { SkeletonRows } from "~/components/patterns/states/Skeletons";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -43,6 +36,7 @@ import { Delta } from "~/components/ui/delta";
 import { Field } from "~/components/ui/field";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import { type SortDir } from "~/components/ui/sort-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
@@ -111,13 +105,13 @@ export function Patterns() {
         note="The one h1 of a page. Wrapped in PageShell, which owns page width and the gap between blocks."
       >
         <Variants label="default, centered, with the About disclosure" className="block">
-          <PageHeader titleAs="div" title="Hero Stats" description="Win, pick and ban rates for every hero.">
+          <PageHeader as="div" title="Hero Stats" description="Win, pick and ban rates for every hero.">
             Rates are computed from ranked matches in the selected window.
           </PageHeader>
         </Variants>
         <Variants label="media and actions" className="block">
           <PageHeader
-            titleAs="div"
+            as="div"
             title="Infernus"
             description="Brawler · 84,120 matches in the last 30 days"
             media={
@@ -137,7 +131,7 @@ export function Patterns() {
         </Variants>
         <Variants label='size="lg"' className="block">
           <PageHeader
-            titleAs="div"
+            as="div"
             size="lg"
             title="Data Dumps"
             description="Every match we have ever ingested, as Parquet files you can query in place."
@@ -150,17 +144,7 @@ export function Patterns() {
         source="patterns/page/Section"
         note="A named block. as picks the heading level by outline; size picks the look."
       >
-        <Section
-          title="Win rate by rank"
-          description="How the hero performs from Initiate to Eternus."
-          actions={
-            <Segmented size="sm" width="hug" aria-label="Side" value={side} onValueChange={setSide}>
-              <SegmentedItem value="all">All</SegmentedItem>
-              <SegmentedItem value="amber">Amber</SegmentedItem>
-              <SegmentedItem value="sapphire">Sapphire</SegmentedItem>
-            </Segmented>
-          }
-        >
+        <Section title="Win rate by rank" description="How the hero performs from Initiate to Eternus.">
           <div className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
             Section content
           </div>
@@ -174,14 +158,7 @@ export function Patterns() {
       >
         <Variants className="block">
           <FilterBar>
-            <FilterToggleCell
-              label="Side"
-              value={side}
-              onValueChange={setSide}
-              width="wide"
-              active={side !== "all"}
-              onReset={() => setSide("all")}
-            >
+            <FilterToggleCell label="Side" value={side} defaultValue="all" onValueChange={setSide} width="wide">
               <SegmentedItem value="all">All</SegmentedItem>
               <SegmentedItem value="amber">Amber</SegmentedItem>
               <SegmentedItem value="sapphire">Sapphire</SegmentedItem>
@@ -367,12 +344,14 @@ export function Patterns() {
           </Panel>
           <Panel>
             <PanelHeader title="Recent form" icon={Swords} size="sm" />
-            <PanelSkeleton rows={3} />
+            <PanelBody>
+              <SkeletonRows rows={3} />
+            </PanelBody>
             <PanelFooter>Last 20 matches</PanelFooter>
           </Panel>
           <Panel>
             <PanelHeader title="Counters" size="sm" />
-            <PanelMessage>Pick a hero to see who counters it.</PanelMessage>
+            <EmptyState variant="inline" className="px-4 py-6" title="Pick a hero to see who counters it." />
           </Panel>
         </Variants>
       </Specimen>

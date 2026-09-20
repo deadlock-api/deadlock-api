@@ -37,8 +37,8 @@ const heroVariants = cva("relative isolate flex min-w-0 flex-col items-center te
 });
 
 /**
- * The opening block of a hub or marketing page: a centred column of `HeroGlow`, `PageHeader`, `HeroPills`,
- * `HeroLead`, `HeroActions` and `HeroNote`, in that order. Every part is optional.
+ * The opening block of a hub or marketing page: a centred column of `HeroGlow`, `PageHeader`, `HeroLead`,
+ * `HeroActions` and `HeroNote`. `HeroActions` also holds a row of pills under the title. Every part is optional.
  */
 export function Hero({
   size = "default",
@@ -46,11 +46,6 @@ export function Hero({
   ...props
 }: React.ComponentProps<"section"> & VariantProps<typeof heroVariants>) {
   return <section data-slot="hero" data-size={size} className={cn(heroVariants({ size }), className)} {...props} />;
-}
-
-/** A wrapping row of pill buttons or badges under the title: what the product offers, where to go first. */
-export function HeroPills({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="hero-pills" className={cn("flex flex-wrap justify-center gap-3", className)} {...props} />;
 }
 
 /** The paragraph that says what the page is, in a measure that stays readable. */

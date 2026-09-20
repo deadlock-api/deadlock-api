@@ -3,6 +3,7 @@ import { Slot } from "radix-ui";
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { Button } from "~/components/ui/button";
+import { FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 /**
@@ -164,10 +165,7 @@ export function SideNavBrand({
   return (
     <Comp
       data-slot="side-nav-brand"
-      className={cn(
-        "flex min-w-0 flex-1 items-center gap-3 rounded-md text-lg font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-        className,
-      )}
+      className={cn(FOCUS_RING, "flex min-w-0 flex-1 items-center gap-3 rounded-md text-lg font-semibold", className)}
       {...props}
     />
   );

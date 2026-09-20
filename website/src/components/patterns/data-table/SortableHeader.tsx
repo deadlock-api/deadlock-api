@@ -2,8 +2,6 @@ import { ariaSort, SortButton, type SortDir } from "~/components/ui/sort-button"
 import { TableHead } from "~/components/ui/table";
 import { cn } from "~/lib/utils";
 
-export { ariaSort, SortButton, type SortDir };
-
 const cellAlignClass = { start: "text-start", center: "text-center", end: "text-end" };
 
 /** A sortable column of a `Table`. Where the header cell is not a `TableHead`, use `SortButton` and `ariaSort()`. */

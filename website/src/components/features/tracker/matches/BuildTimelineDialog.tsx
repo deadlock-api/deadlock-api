@@ -2,7 +2,7 @@ import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ListOrdered, Plus } from
 import { useLayoutEffect, useRef, useState } from "react";
 
 import { AbilityImage } from "~/components/domain/assets/AbilityImage";
-import { ItemImageFromAsset } from "~/components/domain/assets/ItemImage";
+import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { Button } from "~/components/ui/button";
 import { CornerBadge } from "~/components/ui/corner-badge";
 import {
@@ -32,7 +32,7 @@ function EventImage({ event }: { event: BuildEvent }) {
   return "ability" in event ? (
     <AbilityImage abilityId={event.ability.id} className="size-6" title="" />
   ) : (
-    <ItemImageFromAsset item={event.item.upgrade} className="size-6" title="" />
+    <ItemImage item={event.item.upgrade} className="size-6" title="" />
   );
 }
 

@@ -2,6 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Tabs as TabsPrimitive } from "radix-ui";
 import * as React from "react";
 
+import { DISABLED_STATE, FOCUS_RING, FOCUS_RING_BORDER, SVG_SLOT } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 type TabsOrientation = NonNullable<React.ComponentProps<typeof TabsPrimitive.Root>["orientation"]>;
@@ -74,7 +75,10 @@ function TabsList({
 
 const tabsTriggerVariants = cva(
   [
-    "relative inline-flex h-full flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap text-muted-foreground transition-all outline-none hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+    FOCUS_RING_BORDER,
+    DISABLED_STATE,
+    SVG_SLOT,
+    "relative inline-flex h-full flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap text-muted-foreground transition-all hover:text-foreground data-[state=active]:text-foreground",
     "after:absolute after:rounded-full after:bg-primary after:opacity-0 after:transition-opacity",
   ],
   {
@@ -113,7 +117,7 @@ function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPr
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
-      className={cn("flex-1 rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50", className)}
+      className={cn(FOCUS_RING, "flex-1 rounded-sm", className)}
       {...props}
     />
   );

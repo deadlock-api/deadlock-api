@@ -3,7 +3,8 @@ import { Children, createContext, type ReactNode, useContext } from "react";
 
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { NoValue } from "~/components/ui/no-value";
-import { PanelTooltipCard } from "~/components/ui/panel-tooltip";
+import { FOCUS_RING } from "~/components/ui/recipes";
+import { TooltipCard } from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
 
 const ExtraColumnContext = createContext(false);
@@ -52,7 +53,7 @@ export function ChartReading({
   );
 }
 
-interface ChartReadingsProps extends Omit<React.ComponentProps<typeof PanelTooltipCard>, "title"> {
+interface ChartReadingsProps extends Omit<React.ComponentProps<typeof TooltipCard>, "title"> {
   title: ReactNode;
   /** A count on the leading edge of the column headings: "12 heroes". */
   summary?: ReactNode;
@@ -61,6 +62,8 @@ interface ChartReadingsProps extends Omit<React.ComponentProps<typeof PanelToolt
   /** The heading of the `extra` column; passing it adds the column. */
   extraLabel?: ReactNode;
   scrollHint?: string;
+  /** Names the scrollable list of readings: what they are and which bucket they belong to. */
+  label?: string;
   /** `lg` is a fixed, wider card for readings with a swatch and two value columns. */
   size?: "default" | "lg";
 }
@@ -75,6 +78,7 @@ export function ChartReadings({
   valueLabel,
   extraLabel,
   scrollHint = "Scroll for all readings",
+  label = "Chart readings",
   size = "default",
   className,
   children,
@@ -83,7 +87,7 @@ export function ChartReadings({
   const count = Children.count(children);
   const hasExtraColumn = extraLabel != null;
   return (
-    <PanelTooltipCard
+    <TooltipCard
       data-slot="chart-readings"
       className={cn("gap-1.5 p-2.5", size === "lg" ? "w-64 max-w-full" : "max-w-72", className)}
       onMouseMove={(event) => event.stopPropagation()}
@@ -100,9 +104,12 @@ export function ChartReadings({
       )}
       <section
         key={typeof title === "string" ? title : undefined}
-        aria-label="Chart readings"
+        aria-label={label}
         tabIndex={0}
-        className="max-h-44 scrollbar-thin overflow-y-auto overscroll-contain rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+        className={cn(
+          FOCUS_RING,
+          "max-h-44 scrollbar-thin overflow-y-auto overscroll-contain rounded-sm focus-visible:ring-inset",
+        )}
       >
         {children && (
           <ExtraColumnContext.Provider value={hasExtraColumn}>
@@ -111,6 +118,6 @@ export function ChartReadings({
         )}
       </section>
       {count > 7 && <p className="text-xs text-muted-foreground">{scrollHint}</p>}
-    </PanelTooltipCard>
+    </TooltipCard>
   );
 }

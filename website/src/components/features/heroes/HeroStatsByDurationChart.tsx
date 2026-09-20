@@ -166,8 +166,9 @@ export function HeroStatsByDurationChart({
           }
         >
           <ChartCard
+            aria-label="Duration chart"
             title={`${HERO_TREND_LABELS[heroStat]} by match duration`}
-            footnote={
+            footer={
               <>
                 Gaps indicate missing data.
                 {requiresSampleFloor && ` Buckets below ${MIN_MATCHES_PER_BUCKET} matches are omitted.`}

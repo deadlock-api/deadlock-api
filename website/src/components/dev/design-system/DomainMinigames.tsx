@@ -69,7 +69,7 @@ export function DomainMinigames() {
         <Card tone="inset" size="sm">
           <CardContent>
             <GamePage
-              titleAs="div"
+              as="div"
               title="Trivia"
               subtitle="Ten questions about Deadlock. One try each."
               hub="/games/deadlockdle"

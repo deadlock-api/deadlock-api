@@ -36,6 +36,7 @@ export function HeroTrendTooltip({
       valueLabel={HERO_TREND_LABELS[stat]}
       extraLabel={showMatches ? "Matches" : undefined}
       scrollHint="Scroll for all heroes"
+      label={`Hero values for ${date}`}
     >
       {entries.map((item) => {
         const matches = item.payload?.[`${item.dataKey}_matches`];
@@ -45,7 +46,14 @@ export function HeroTrendTooltip({
             label={String(item.name)}
             color={item.color}
             highlighted={Number(item.dataKey) === highlightedHeroId}
-            extra={matches == null ? undefined : Number(matches).toLocaleString("en-US")}
+            extra={
+              matches == null ? undefined : (
+                <>
+                  {Number(matches).toLocaleString("en-US")}
+                  <span className="sr-only"> matches</span>
+                </>
+              )
+            }
           >
             {formatTrendValue(Number(item.value), stat)}
           </ChartReading>

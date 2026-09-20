@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Upgrade } from "deadlock_api_client";
 import { memo, useCallback, useMemo, useState } from "react";
 
-import { ItemImageFromAsset } from "~/components/domain/assets/ItemImage";
+import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Box } from "~/components/ui/box";
 import { Button } from "~/components/ui/button";
@@ -44,7 +44,7 @@ const ItemCard = memo(function ItemCard({ item, included, excluded, onToggleIncl
   const tone = included ? "positive" : excluded ? "negative" : "glass";
   return (
     <Card tone={tone} size="xs" className="relative p-1.5">
-      <ItemImageFromAsset item={item} className="size-full" />
+      <ItemImage item={item} className="size-full" />
       <Button
         variant={included ? "positive-soft" : "subtle"}
         scrim="dark"

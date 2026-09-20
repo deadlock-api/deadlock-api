@@ -1,10 +1,9 @@
 import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
-import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { SegmentedItem } from "~/components/ui/segmented";
 
 /** `true` is the 3D view. */
 export function DimensionToggleFilter({
-  value: valueProp,
+  value,
   defaultValue = false,
   onValueChange,
   ...props
@@ -17,18 +16,12 @@ export function DimensionToggleFilter({
   defaultValue?: boolean;
   onValueChange?: (is3D: boolean) => void;
 }) {
-  const [value, setValue] = useControllableState({
-    value: valueProp,
-    defaultValue,
-    onValueChange,
-  });
   return (
     <FilterToggleCell
       label="View"
-      value={value ? "3d" : "2d"}
-      onValueChange={(next) => setValue(next === "3d")}
-      active={value !== defaultValue}
-      onReset={() => setValue(defaultValue)}
+      value={value === undefined ? undefined : value ? "3d" : "2d"}
+      defaultValue={defaultValue ? "3d" : "2d"}
+      onValueChange={(next) => onValueChange?.(next === "3d")}
       {...props}
     >
       <SegmentedItem value="2d">2D</SegmentedItem>

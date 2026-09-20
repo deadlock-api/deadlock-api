@@ -9,34 +9,22 @@ import { cn } from "~/lib/utils";
 type CopyButtonProps = ComponentProps<typeof Button> & {
   /** A function defers the value to click time, for text that only exists in the browser like the page URL. */
   text: string | (() => string);
-  /** `label` shows the icon and the children; `icon` shows the icon alone and needs an `aria-label` or `title`. */
-  display?: "label" | "icon";
-  /** What the label reads for two seconds after a copy. */
-  copiedLabel?: React.ReactNode;
 };
 
-export function CopyButton({
-  text,
-  display = "label",
-  copiedLabel = "Copied",
-  children = "Copy",
-  className,
-  variant,
-  size,
-  onClick,
-  ...props
-}: CopyButtonProps) {
+/** An `icon*` size shows the icon alone and needs an `aria-label` or `title`; any other size adds the children. */
+
+export function CopyButton({ text, children = "Copy", className, variant, size, onClick, ...props }: CopyButtonProps) {
   const { copied, copy } = useCopyToClipboard();
-  const iconDisplay = display === "icon";
+  const iconDisplay = size?.startsWith("icon") ?? false;
 
   return (
     <Button
       type="button"
       variant={variant ?? (iconDisplay ? "ghost" : "default")}
-      size={size ?? (iconDisplay ? "icon" : "default")}
+      size={size}
       data-slot="copy-button"
       data-state={copied ? "copied" : "idle"}
-      className={cn("shrink-0", iconDisplay && !size && "size-7", className)}
+      className={cn("shrink-0", className)}
       {...props}
       aria-label={
         iconDisplay ? (copied ? "Copied" : (props["aria-label"] ?? props.title ?? "Copy")) : props["aria-label"]
@@ -51,7 +39,7 @@ export function CopyButton({
       }}
     >
       {copied ? <Check /> : <Copy />}
-      {!iconDisplay && (copied ? copiedLabel : children)}
+      {!iconDisplay && (copied ? "Copied" : children)}
     </Button>
   );
 }

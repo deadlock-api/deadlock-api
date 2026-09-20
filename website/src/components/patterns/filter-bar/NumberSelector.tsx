@@ -1,6 +1,6 @@
 import { MinusIcon, PlusIcon } from "lucide-react";
 
-import { FilterCell } from "~/components/patterns/filter-bar/FilterCell";
+import { FilterCell, type FilterCellPassthroughProps } from "~/components/patterns/filter-bar/FilterCell";
 import { Button } from "~/components/ui/button";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { cn } from "~/lib/utils";
@@ -15,7 +15,7 @@ interface NumberSelectorBareProps extends Omit<React.ComponentProps<"div">, "onC
 }
 
 /** A stepper: the value between a minus and a plus button. */
-export function NumberSelectorBare({
+function NumberSelectorBare({
   value,
   onValueChange,
   step = 1,
@@ -60,10 +60,7 @@ export function NumberSelectorBare({
   );
 }
 
-interface NumberSelectorProps extends Omit<
-  React.ComponentProps<typeof FilterCell>,
-  "value" | "defaultValue" | "onChange" | "active" | "onReset" | "children"
-> {
+interface NumberSelectorProps extends Omit<FilterCellPassthroughProps, "onChange"> {
   value: number;
   onValueChange?: (value: number) => void;
   label: string;

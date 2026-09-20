@@ -55,10 +55,10 @@ export function DomainSelectors() {
       <Specimen
         name="HeroSelector"
         source="domain/selectors/HeroSelector"
-        note="One hero, as a FilterCell with a searchable portrait grid. allowSelectNull adds Any Hero; a defaultValue makes the cell active (and resettable) whenever another hero is picked. In a filter bar, use Filter.Hero."
+        note="One hero, as a FilterCell with a searchable portrait grid. allowNull adds Any Hero; a defaultValue makes the cell active (and resettable) whenever another hero is picked. In a filter bar, use Filter.Hero."
       >
         <Variants>
-          <HeroSelector value={anyHero} onValueChange={setAnyHero} allowSelectNull />
+          <HeroSelector value={anyHero} onValueChange={setAnyHero} allowNull />
           <HeroSelector
             label="Required hero"
             value={requiredHero}
@@ -183,9 +183,7 @@ export function DomainSelectors() {
             onValueChange={([min, max]) => setBuyTime([min, max])}
             label="Bought at"
             title="Purchase Time Window"
-            maxLabel="Any time"
             max={40 * 60}
-            step={120}
             presets={null}
           />
         </Variants>
@@ -194,11 +192,10 @@ export function DomainSelectors() {
       <Specimen
         name="SeasonPatchDatePicker"
         source="domain/selectors/SeasonPatchDatePicker"
-        note="A date range picked as a ranked season, a patch or custom dates; onValueChange also carries the previous period for comparisons. Pages use Filter.SeasonPatchDate, which supplies the patch list."
+        note="A date range picked as a ranked season, a patch or custom dates; onValueChange also carries the previous period for comparisons. Filter.SeasonPatchDate is this component; patchDates defaults to the site's patch list."
       >
         <Variants>
           <SeasonPatchDatePicker
-            patchDates={PATCHES}
             value={dates}
             onValueChange={({ startDate, endDate }) => setDates({ startDate, endDate })}
             defaultTab="patch"

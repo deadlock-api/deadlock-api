@@ -3,15 +3,15 @@ import { type ReactNode, useState } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
-import { ariaSort, SortButton } from "~/components/patterns/data-table/SortableHeader";
 import { PanelWithDetails } from "~/components/patterns/panel/PanelWithDetails";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Button } from "~/components/ui/button";
 import { Field } from "~/components/ui/field";
-import { PanelTooltip } from "~/components/ui/panel-tooltip";
 import { RateBar } from "~/components/ui/rate-bar";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
+import { ariaSort, SortButton } from "~/components/ui/sort-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Tooltip } from "~/components/ui/tooltip";
 import type { TrackerHeroRow } from "~/lib/tracker/compute";
 
 type Sort = "matches" | "winrate" | "kdaRatio" | "soulsPerMin";
@@ -129,7 +129,7 @@ export function HeroStatsTable({
             {visible.map((row) => (
               <TableRow key={row.heroId}>
                 <TableCell className="ps-0">
-                  <PanelTooltip content="Filter matches to this hero">
+                  <Tooltip content="Filter matches to this hero">
                     <Button
                       variant="ghost"
                       onClick={() => onSelectHero(row.heroId)}
@@ -141,7 +141,7 @@ export function HeroStatsTable({
                       <HeroName heroId={row.heroId} className="max-w-24 text-xs font-medium group-hover:text-primary" />
                       <ArrowUpRight aria-hidden="true" className="size-3 text-muted-foreground" />
                     </Button>
-                  </PanelTooltip>
+                  </Tooltip>
                 </TableCell>
                 <TableCell className="text-end">
                   <span className="text-xs tabular-nums">{row.matches.toLocaleString("en-US")}</span>

@@ -13,7 +13,7 @@ interface CalloutCardProps extends Omit<
   /** The one thing to do: usually a single `Button size="lg"`. */
   action?: React.ReactNode;
   /** Fine print under the action: the price, a condition. */
-  note?: React.ReactNode;
+  footer?: React.ReactNode;
   as?: "h2" | "h3" | "h4";
   size?: "sm" | "default";
 }
@@ -24,7 +24,7 @@ export function CalloutCard({
   description,
   media,
   action,
-  note,
+  footer,
   as = "h2",
   size = "default",
   tone = "primary",
@@ -52,12 +52,12 @@ export function CalloutCard({
         )}
       </div>
       {children}
-      {(action || note) && (
+      {(action || footer) && (
         <div className="flex flex-col items-center gap-3">
           {action}
-          {note && (
-            <p data-slot="callout-card-note" className="text-xs text-muted-foreground">
-              {note}
+          {footer && (
+            <p data-slot="callout-card-footer" className="text-xs text-muted-foreground">
+              {footer}
             </p>
           )}
         </div>

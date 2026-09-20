@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { ChartOverlay, ChartRegion, ChartStage } from "~/components/patterns/charts/ChartOverlay";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
-import { PanelBody, PanelMessage } from "~/components/patterns/panel/Panel";
+import { PanelBody } from "~/components/patterns/panel/Panel";
+import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
@@ -139,7 +140,9 @@ export function PickExplorer({ recommendations, onPick }: PickExplorerProps) {
   }, [plotted, width]);
 
   if (nodes.length === 0) {
-    return <PanelMessage>Draft heroes on both sides to plot the candidates.</PanelMessage>;
+    return (
+      <EmptyState variant="inline" className="px-4 py-6" title="Draft heroes on both sides to plot the candidates." />
+    );
   }
 
   return (

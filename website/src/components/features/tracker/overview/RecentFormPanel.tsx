@@ -10,10 +10,10 @@ import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { Delta } from "~/components/ui/delta";
 import { Heading } from "~/components/ui/heading";
-import { PanelTooltipContent, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
+import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { Tooltip } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import { TONE_TEXT } from "~/lib/tone";
 import { formatMatchDuration, isWin, type TrackerSummary } from "~/lib/tracker/compute";
@@ -123,69 +123,71 @@ function ResultGrid({
     <fieldset ref={gridRef} className="grid min-w-0 grid-cols-[repeat(auto-fill,minmax(1.5rem,1fr))] gap-0.5">
       <legend className="sr-only">Recent results, newest first. Use arrow keys to move between matches.</legend>
       {entries.map((entry, index) => (
-        <Tooltip key={entry.match_id}>
-          <TooltipTrigger asChild>
-            <Button
-              variant={isWin(entry) ? "positive-soft" : "negative-soft"}
-              size="xs"
-              onClick={() => onOpenMatch(entry.match_id)}
-              tabIndex={index === tabIndex ? 0 : -1}
-              onFocus={() => setFocusedIndex(index)}
-              onKeyDown={(event) => {
-                if (event.altKey) return;
-                const grid = gridRef.current;
-                if (!grid) return;
-                const buttons = [...grid.querySelectorAll<HTMLButtonElement>("button")];
-                const firstRowTop = buttons[0].getBoundingClientRect().top;
-                const columns = buttons.filter(
-                  (button) => Math.abs(button.getBoundingClientRect().top - firstRowTop) < 1,
-                ).length;
-                const delta =
-                  event.key === "ArrowRight"
-                    ? 1
-                    : event.key === "ArrowLeft"
-                      ? -1
-                      : event.key === "ArrowDown"
-                        ? columns
-                        : event.key === "ArrowUp"
-                          ? -columns
-                          : null;
-                if (delta == null && event.key !== "Home" && event.key !== "End") return;
-                event.preventDefault();
-                const next = Math.max(
-                  0,
-                  Math.min(
-                    entries.length - 1,
-                    event.key === "Home" ? 0 : event.key === "End" ? entries.length - 1 : index + (delta ?? 0),
-                  ),
-                );
-                buttons[next]?.focus();
-              }}
-              aria-label={`Open match ${entry.match_id}, ${isWin(entry) ? "win" : "loss"}, ${day.unix(entry.start_time).format("MMM D, YYYY")}`}
-              className="w-full px-0 font-semibold"
-            >
-              {isWin(entry) ? "W" : "L"}
-            </Button>
-          </TooltipTrigger>
-          <PanelTooltipContent>
-            <TooltipHeader
-              lead={<HeroImage heroId={entry.hero_id} shape="circle" title="" />}
-              title={<HeroName heroId={entry.hero_id} />}
-              subtitle={day.unix(entry.start_time).format("MMM D, YYYY · HH:mm")}
-            />
-            <TooltipStats>
-              <TooltipStat
-                label="Result"
-                value={isWin(entry) ? "Victory" : "Defeat"}
-                className={TONE_TEXT[isWin(entry) ? "positive" : "negative"]}
+        <Tooltip
+          key={entry.match_id}
+          content={
+            <>
+              <TooltipHeader
+                leading={<HeroImage heroId={entry.hero_id} shape="circle" title="" />}
+                title={<HeroName heroId={entry.hero_id} />}
+                subtitle={day.unix(entry.start_time).format("MMM D, YYYY · HH:mm")}
               />
-              <TooltipStat
-                label="K / D / A"
-                value={`${entry.player_kills} / ${entry.player_deaths} / ${entry.player_assists}`}
-              />
-              <TooltipStat label="Duration" value={formatMatchDuration(entry.match_duration_s)} />
-            </TooltipStats>
-          </PanelTooltipContent>
+              <TooltipStats>
+                <TooltipStat
+                  label="Result"
+                  value={isWin(entry) ? "Victory" : "Defeat"}
+                  className={TONE_TEXT[isWin(entry) ? "positive" : "negative"]}
+                />
+                <TooltipStat
+                  label="K / D / A"
+                  value={`${entry.player_kills} / ${entry.player_deaths} / ${entry.player_assists}`}
+                />
+                <TooltipStat label="Duration" value={formatMatchDuration(entry.match_duration_s)} />
+              </TooltipStats>
+            </>
+          }
+        >
+          <Button
+            variant={isWin(entry) ? "positive-soft" : "negative-soft"}
+            size="xs"
+            onClick={() => onOpenMatch(entry.match_id)}
+            tabIndex={index === tabIndex ? 0 : -1}
+            onFocus={() => setFocusedIndex(index)}
+            onKeyDown={(event) => {
+              if (event.altKey) return;
+              const grid = gridRef.current;
+              if (!grid) return;
+              const buttons = [...grid.querySelectorAll<HTMLButtonElement>("button")];
+              const firstRowTop = buttons[0].getBoundingClientRect().top;
+              const columns = buttons.filter(
+                (button) => Math.abs(button.getBoundingClientRect().top - firstRowTop) < 1,
+              ).length;
+              const delta =
+                event.key === "ArrowRight"
+                  ? 1
+                  : event.key === "ArrowLeft"
+                    ? -1
+                    : event.key === "ArrowDown"
+                      ? columns
+                      : event.key === "ArrowUp"
+                        ? -columns
+                        : null;
+              if (delta == null && event.key !== "Home" && event.key !== "End") return;
+              event.preventDefault();
+              const next = Math.max(
+                0,
+                Math.min(
+                  entries.length - 1,
+                  event.key === "Home" ? 0 : event.key === "End" ? entries.length - 1 : index + (delta ?? 0),
+                ),
+              );
+              buttons[next]?.focus();
+            }}
+            aria-label={`Open match ${entry.match_id}, ${isWin(entry) ? "win" : "loss"}, ${day.unix(entry.start_time).format("MMM D, YYYY")}`}
+            className="w-full px-0 font-semibold"
+          >
+            {isWin(entry) ? "W" : "L"}
+          </Button>
         </Tooltip>
       ))}
     </fieldset>

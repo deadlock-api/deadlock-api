@@ -1,4 +1,4 @@
-import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
+import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { formatShare } from "~/lib/format";
 import { PLAYER_STAT_COLUMNS } from "~/lib/tracker/player-stats";
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";

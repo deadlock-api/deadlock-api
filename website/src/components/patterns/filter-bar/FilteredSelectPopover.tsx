@@ -7,7 +7,6 @@ import { useControllableState } from "~/components/ui/hooks/use-controllable-sta
 import { OptionRow } from "~/components/ui/option-row";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Separator } from "~/components/ui/separator";
-import { Spinner } from "~/components/ui/spinner";
 import { cn } from "~/lib/utils";
 
 type OptionValue = string | number;
@@ -106,11 +105,10 @@ type FilteredSelectPopoverProps<T extends OptionValue> = SelectionProps<T> &
   Omit<React.ComponentProps<typeof Button>, keyof SelectionProps<T>> & {
     /** What the trigger says while nothing is chosen. */
     emptyLabel?: string;
-    /** How many selected entries the trigger names before it counts the rest. */
-    maxChips?: number;
-    /** The entries are still being fetched: the trigger is busy and cannot be opened. */
-    loading?: boolean;
   };
+
+/** How many selected entries the trigger names before it counts the rest. */
+const MAX_CHIPS = 2;
 
 export function FilteredSelectPopover<T extends OptionValue = number>({
   value,
@@ -118,9 +116,6 @@ export function FilteredSelectPopover<T extends OptionValue = number>({
   onValueChange,
   children,
   emptyLabel = "Select…",
-  maxChips = 2,
-  loading = false,
-  disabled = false,
   className,
   ...props
 }: FilteredSelectPopoverProps<T>) {
@@ -133,29 +128,22 @@ export function FilteredSelectPopover<T extends OptionValue = number>({
         <Button
           data-slot="filtered-select-trigger"
           variant="outline"
-          disabled={disabled || loading}
-          aria-busy={loading || undefined}
           className={cn("max-w-full min-w-40 justify-between px-2", className)}
           {...props}
         >
           <span className="flex min-w-0 items-center gap-1 overflow-hidden">
-            {loading ? (
-              <span className="flex items-center gap-1.5 px-1 font-normal text-muted-foreground">
-                <Spinner size="sm" />
-                Loading…
-              </span>
-            ) : selected.length === 0 ? (
+            {selected.length === 0 ? (
               <span className="truncate px-1 font-normal text-muted-foreground">{emptyLabel}</span>
             ) : (
-              selected.slice(0, maxChips).map((id) => (
+              selected.slice(0, MAX_CHIPS).map((id) => (
                 <Badge key={id} variant="muted" className="shrink-0 gap-1">
                   {state.options.find((option) => option.props.value === id)?.props.children ?? id}
                 </Badge>
               ))
             )}
-            {!loading && selected.length > maxChips && (
+            {selected.length > MAX_CHIPS && (
               <span className="shrink-0 text-xs font-normal text-muted-foreground tabular-nums">
-                +{selected.length - maxChips}
+                +{selected.length - MAX_CHIPS}
               </span>
             )}
           </span>

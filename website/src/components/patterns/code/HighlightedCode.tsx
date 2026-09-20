@@ -8,6 +8,7 @@ import sql from "highlight.js/lib/languages/sql";
 import { useMemo } from "react";
 
 import { CopyButton } from "~/components/ui/copy-button";
+import { FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 hljs.registerLanguage("bash", bash);
@@ -65,7 +66,8 @@ export function HighlightedCode({
         // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrollable region must be reachable by keyboard
         tabIndex={overflow === "scroll" ? 0 : undefined}
         className={cn(
-          "scrollbar-thin overflow-x-auto rounded-md font-mono leading-relaxed outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+          FOCUS_RING,
+          "scrollbar-thin overflow-x-auto rounded-md font-mono leading-relaxed",
           overflow === "wrap" && "break-all whitespace-pre-wrap",
         )}
       >
@@ -78,7 +80,7 @@ export function HighlightedCode({
       </pre>
       {actions === "copy" && (
         <CopyButton
-          display="icon"
+          size="icon-sm"
           text={code}
           title={copyLabel}
           className="absolute end-1.5 top-1.5 bg-background/60 backdrop-blur"

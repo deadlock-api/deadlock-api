@@ -1,8 +1,33 @@
+import { CheckIcon } from "lucide-react";
+import { Checkbox as CheckboxPrimitive } from "radix-ui";
 import { useId } from "react";
 
-import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
+import { FOCUS_RING_BORDER, INVALID_STATE } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
+
+function Checkbox({ className, ...props }: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
+  return (
+    <CheckboxPrimitive.Root
+      data-slot="checkbox"
+      className={cn(
+        // The box is 16px; the pseudo-element extends its hit area to 24px.
+        FOCUS_RING_BORDER,
+        INVALID_STATE,
+        "peer relative size-4 shrink-0 rounded-xs border border-input bg-input/30 shadow-xs transition-shadow after:absolute after:-inset-1 hover:border-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-input data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground",
+        className,
+      )}
+      {...props}
+    >
+      <CheckboxPrimitive.Indicator
+        data-slot="checkbox-indicator"
+        className="grid place-content-center text-current transition-none"
+      >
+        <CheckIcon className="size-3.5" />
+      </CheckboxPrimitive.Indicator>
+    </CheckboxPrimitive.Root>
+  );
+}
 
 interface CheckboxFieldProps extends Omit<React.ComponentProps<typeof Checkbox>, "children"> {
   label: React.ReactNode;

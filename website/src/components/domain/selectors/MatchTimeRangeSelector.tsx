@@ -23,18 +23,14 @@ export interface MatchTimeRangeSelectorProps extends Omit<
   label?: string;
   /** Popover heading. @default "Match Time Window" */
   title?: string;
-  /** Label shown when the slider end is at max. @default "End of Game" */
-  maxLabel?: string;
   /** Max slider value in seconds. @default 3600 */
   max?: number;
-  /** Slider step in seconds. @default 60 */
-  step?: number;
   /** Preset buttons. Pass `null` to hide presets entirely. */
   presets?: { label: string; start: number; end: number }[] | null;
 }
 
 const DEFAULT_MAX = 60 * 60;
-const DEFAULT_STEP = 60;
+const STEP = 60;
 
 const DEFAULT_PRESETS = [
   { label: "Early (0-10m)", start: 0, end: 10 * 60 },
@@ -52,9 +48,7 @@ export function MatchTimeRangeSelector({
   onValueChange,
   label = "Time",
   title = "Match Time Window",
-  maxLabel = "End of Game",
   max = DEFAULT_MAX,
-  step = DEFAULT_STEP,
   presets = DEFAULT_PRESETS,
   className,
   ...props
@@ -107,7 +101,7 @@ export function MatchTimeRangeSelector({
             value={draftValue}
             min={0}
             max={max}
-            step={step}
+            step={STEP}
             minStepsBetweenThumbs={1}
             onValueChange={(newValue) => setDraftValue([newValue[0] ?? 0, newValue[1] ?? max])}
             onValueCommit={handleValueCommit}
@@ -115,7 +109,7 @@ export function MatchTimeRangeSelector({
         </div>
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>{formatTime(draftValue[0])}</span>
-          <span>{draftValue[1] === max ? maxLabel : formatTime(draftValue[1])}</span>
+          <span>{draftValue[1] === max ? "End of Game" : formatTime(draftValue[1])}</span>
         </div>
 
         {presets && presets.length > 0 && (

@@ -1,10 +1,12 @@
+import { ChartNoAxesCombined } from "lucide-react";
 import type React from "react";
 import { useMemo } from "react";
 
-import { ChartToolbar } from "~/components/patterns/charts/ChartToolbar";
 import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
+import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
+import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
 
-import { getFilteredCategories } from "./stat-definitions";
+import { getFilteredCategories, getStatDefinition } from "./stat-definitions";
 
 export function StatSelector({
   value,
@@ -19,17 +21,25 @@ export function StatSelector({
 }) {
   const categories = useMemo(() => getFilteredCategories(isStreetBrawl), [isStreetBrawl]);
   return (
-    <ChartToolbar title="Game metrics" label="Metric controls">
+    <FilterBar variant="toolbar" title="Game metrics" icon={ChartNoAxesCombined} aria-label="Metric controls">
       <MetricSelect
         value={value}
+        valueLabel={getStatDefinition(value)?.label}
         onValueChange={onChange}
         label="Game metric"
-        groups={categories.map((category) => ({
-          label: category.label,
-          options: category.stats.map((stat) => ({ value: stat.key, label: stat.label })),
-        }))}
-      />
+      >
+        {categories.map((category) => (
+          <SelectGroup key={category.label}>
+            <SelectLabel>{category.label}</SelectLabel>
+            {category.stats.map((stat) => (
+              <SelectItem key={stat.key} value={stat.key}>
+                {stat.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        ))}
+      </MetricSelect>
       {children}
-    </ChartToolbar>
+    </FilterBar>
   );
 }

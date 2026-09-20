@@ -7,22 +7,22 @@ import { useMemo, useState } from "react";
 import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
-import { ItemImageFromAsset } from "~/components/domain/assets/ItemImage";
+import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { RankDelta } from "~/components/features/tracker/shared/RankDelta";
-import { ariaSort, SortButton } from "~/components/patterns/data-table/SortableHeader";
 import { Box } from "~/components/ui/box";
 import { Button } from "~/components/ui/button";
 import { CornerBadge } from "~/components/ui/corner-badge";
 import { DetailPopover } from "~/components/ui/detail-popover";
-import { PanelTooltipContent, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
 import { Pips } from "~/components/ui/pips";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
+import { ariaSort, SortButton } from "~/components/ui/sort-button";
 import { Stack } from "~/components/ui/stack";
 import { StatusDot } from "~/components/ui/status-dot";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
+import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { Tooltip } from "~/components/ui/tooltip";
 import { IS_DEV } from "~/lib/constants";
 import { formatShare } from "~/lib/format";
 import { LANES } from "~/lib/team-builder/lanes";
@@ -154,7 +154,7 @@ function ItemChip({ item }: { item: BuildItem }) {
       details={
         <>
           <TooltipHeader
-            lead={<ItemImageFromAsset item={item.upgrade} className="size-8 shrink-0" title="" />}
+            leading={<ItemImage item={item.upgrade} className="size-8 shrink-0" title="" />}
             title={item.upgrade.name}
             subtitle={item.upgrade.cost != null && `${item.upgrade.cost.toLocaleString("en-US")} souls`}
           />
@@ -167,7 +167,7 @@ function ItemChip({ item }: { item: BuildItem }) {
       }
     >
       <span className="relative">
-        <ItemImageFromAsset item={item.upgrade} className="size-5" title="" />
+        <ItemImage item={item.upgrade} className="size-5" title="" />
         {item.imbuedInto && (
           <StatusDot color="var(--chart-6)" ring="surface" className="absolute -end-0.5 -bottom-0.5" />
         )}
@@ -249,7 +249,7 @@ function PlayerStatsDetails({
   return (
     <>
       <TooltipHeader
-        lead={<HeroImage heroId={player.hero_id} shape="circle" className="size-8 shrink-0" title="" />}
+        leading={<HeroImage heroId={player.hero_id} shape="circle" className="size-8 shrink-0" title="" />}
         title={name}
         subtitle={[heroName, player.level > 0 && `Level ${player.level}`, lane && `${lane.name} lane`]
           .filter(Boolean)
@@ -340,7 +340,7 @@ export function Scoreboard({
                 {team.name}
               </DetailPopover>
               <span
-                className={cn("text-xs font-bold", TONE_TEXT[hasWinner ? (won ? "positive" : "negative") : "neutral"])}
+                className={cn("text-xs font-bold", TONE_TEXT[hasWinner ? (won ? "positive" : "negative") : "muted"])}
               >
                 {hasWinner ? (won ? "Victory" : "Defeat") : "Result unavailable"}
               </span>
@@ -536,11 +536,8 @@ export function Scoreboard({
                             </Link>
                           )}
                           {player.mvp_rank === 1 && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Crown className="size-3.5 shrink-0 text-warning" aria-label="Match MVP" />
-                              </TooltipTrigger>
-                              <PanelTooltipContent>Match MVP</PanelTooltipContent>
+                            <Tooltip content="Match MVP">
+                              <Crown className="size-3.5 shrink-0 text-warning" aria-label="Match MVP" />
                             </Tooltip>
                           )}
                           {(player.rank_delta || player.demotion_protected || player.rank_badge != null) && (

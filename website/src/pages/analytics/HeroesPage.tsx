@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { HeroScoreboardSortByEnum } from "deadlock_api_client";
-import { Table2 } from "lucide-react";
+import { ChartNoAxesCombined, Table2 } from "lucide-react";
 import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense, useId, useState } from "react";
 
@@ -11,7 +11,6 @@ import { HeroScoreboardTable } from "~/components/features/heroes/HeroScoreboard
 import { BY_RANK_STATS, HeroStatSelector } from "~/components/features/heroes/HeroStatSelectors";
 import { HeroStatsTable } from "~/components/features/heroes/HeroStatsTable";
 import { HeroTrendControls } from "~/components/features/heroes/HeroTrendControls";
-import { ChartToolbar } from "~/components/patterns/charts/ChartToolbar";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigation/ResponsiveTabsList";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
@@ -209,7 +208,12 @@ export function HeroesPage() {
 
         <TabsContent value="stats-by-duration">
           <Section titleDisplay="hidden" title="Hero Stats by Game Duration">
-            <ChartToolbar title="Duration comparison">
+            <FilterBar
+              variant="toolbar"
+              title="Duration comparison"
+              icon={ChartNoAxesCombined}
+              aria-label="Chart controls"
+            >
               <Field label="Metric" orientation="horizontal" className="w-full sm:w-auto">
                 <HeroStatSelector
                   label="Stat"
@@ -218,7 +222,7 @@ export function HeroesPage() {
                   options={HERO_STATS}
                 />
               </Field>
-            </ChartToolbar>
+            </FilterBar>
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
                 <HeroStatsByDurationChart
@@ -241,7 +245,12 @@ export function HeroesPage() {
           <Section titleDisplay="hidden" title="Hero Stats by Rank">
             {MODE_CONFIG[filters.mode].supportsRank ? (
               <>
-                <ChartToolbar title="Rank comparison">
+                <FilterBar
+                  variant="toolbar"
+                  title="Rank comparison"
+                  icon={ChartNoAxesCombined}
+                  aria-label="Chart controls"
+                >
                   <Field label="X Axis" orientation="horizontal" className="w-full sm:w-auto">
                     <HeroStatSelector
                       label="X Axis"
@@ -258,7 +267,7 @@ export function HeroesPage() {
                       options={BY_RANK_STATS}
                     />
                   </Field>
-                </ChartToolbar>
+                </FilterBar>
                 <ChunkErrorBoundary>
                   <Suspense fallback={<LoadingState />}>
                     <HeroStatsByRankChart

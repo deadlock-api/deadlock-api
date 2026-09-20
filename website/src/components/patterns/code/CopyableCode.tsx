@@ -1,6 +1,7 @@
 import { HighlightedCode, type HighlightLanguage } from "~/components/patterns/code/HighlightedCode";
 import { Card } from "~/components/ui/card";
 import { CopyButton } from "~/components/ui/copy-button";
+import { FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 type CardRootProps = Omit<
@@ -42,12 +43,15 @@ export function CopyableCode({
         <code
           // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrollable region must be reachable by keyboard
           tabIndex={0}
-          className="min-w-0 flex-1 scrollbar-thin self-center overflow-x-auto rounded-sm font-mono text-xs whitespace-pre text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className={cn(
+            FOCUS_RING,
+            "min-w-0 flex-1 scrollbar-thin self-center overflow-x-auto rounded-sm font-mono text-xs whitespace-pre text-foreground",
+          )}
         >
           {code}
         </code>
       )}
-      <CopyButton display="icon" text={code} aria-label={copyLabel} title={copyLabel} />
+      <CopyButton size="icon-sm" text={code} aria-label={copyLabel} title={copyLabel} />
     </Card>
   );
 }
@@ -99,7 +103,7 @@ export function CopyableUrl({
       ) : (
         <span className="min-w-0 flex-1 text-xs text-muted-foreground">{placeholder}</span>
       )}
-      <CopyButton display="icon" text={value} disabled={!value} aria-label={name} title={name} />
+      <CopyButton size="icon-sm" text={value} disabled={!value} aria-label={name} title={name} />
       {children}
     </Card>
   );

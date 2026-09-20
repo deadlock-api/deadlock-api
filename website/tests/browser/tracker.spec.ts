@@ -320,35 +320,12 @@ test("saved markers persist across reload and clear when a saved match is remove
 
   await page.reload();
   await expect(historyRow.getByLabel("Saved match", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Saved matches (1)", exact: true }).click();
-  await page.getByRole("button", { name: `Remove saved match ${CURRENT_MATCH}`, exact: true }).click();
-  await expect(page.getByText("No saved matches yet", { exact: true })).toBeVisible();
-  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Remove match from saved matches", exact: true }).click();
   await expect(historyRow.getByLabel("Saved match", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Save match for later", exact: true })).toHaveAttribute(
     "aria-pressed",
     "false",
   );
-});
-
-test("saved search includes matches beyond the first page and preserves removal focus", async ({ page }) => {
-  await page.addInitScript(({ key, ids }) => localStorage.setItem(key, JSON.stringify(ids)), {
-    key: `tracker:saved-matches:${ACCOUNT_ID}`,
-    ids: history.map((entry) => entry.match_id),
-  });
-  await page.goto(TRACKER_URL);
-  await page.getByRole("button", { name: "Saved matches (50)", exact: true }).click();
-  const search = page.getByRole("searchbox", { name: "Search saved matches by hero or match ID" });
-  await search.fill("  DyNaMo  ");
-  await expect(page.locator("[data-saved-row]")).toHaveCount(20);
-  await page.getByRole("button", { name: "Show 5 more", exact: true }).click();
-  await expect(page.locator("[data-saved-row]")).toHaveCount(25);
-  await expect(page.getByRole("button", { name: "Open saved match 2960", exact: true })).toBeFocused();
-  await search.fill("2952");
-  await expect(page.locator("[data-saved-row]")).toHaveCount(1);
-  await page.getByRole("button", { name: "Remove saved match 2952", exact: true }).click();
-  await expect(page.getByText("No matches found", { exact: true })).toBeVisible();
-  await expect(search).toBeFocused();
 });
 
 test("saved markers synchronize when another tab removes the bookmark", async ({ page, context }) => {
@@ -364,7 +341,6 @@ test("saved markers synchronize when another tab removes the bookmark", async ({
   await expect(
     page.locator(`[data-match-id="${CURRENT_MATCH}"]`).getByLabel("Saved match", { exact: true }),
   ).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Saved matches (0)", exact: true })).toBeVisible();
 });
 
 test("a failed browser-storage write does not show a match as saved", async ({ page }) => {
@@ -628,18 +604,15 @@ test("undoing a saved-match removal preserves newer bookmarks from another tab",
   const secondTab = await context.newPage();
   await secondTab.goto(TRACKER_URL.replace(`match=${CURRENT_MATCH}`, "match=2997"));
   await expect(secondTab.getByRole("button", { name: "Save match for later", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Saved matches (3)", exact: true }).click();
-  await page.getByRole("button", { name: `Remove saved match ${CURRENT_MATCH}`, exact: true }).click();
+  await page.getByRole("button", { name: "Remove match from saved matches", exact: true }).click();
   await secondTab.getByRole("button", { name: "Save match for later", exact: true }).click();
   await page.getByRole("button", { name: "Undo", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Saved matches (4)", exact: true })).toBeVisible();
   await expect(
     page.locator(`[data-match-id="${CURRENT_MATCH}"]`).getByLabel("Saved match", { exact: true }),
   ).toBeVisible();
   expect(
     await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "[]"), `tracker:saved-matches:${ACCOUNT_ID}`),
   ).toEqual([2997, 3000, 2998, 2996]);
-  await expect(secondTab.getByRole("button", { name: "Saved matches (4)", exact: true })).toBeVisible();
 });
 
 test("team totals aggregate every teammate and fit a narrow scoreboard", async ({ page }) => {
@@ -690,7 +663,6 @@ test("saved matches and undo remain scoped to their player after account navigat
   await page.getByRole("button", { name: "Remove match from saved matches", exact: true }).click();
   await page.getByRole("link", { name: "Open player tracker", exact: true }).click();
   await expect(page).toHaveURL(/\/players\/42(?:\?|$)/);
-  await expect(page.getByRole("button", { name: "Saved matches (1)", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Undo", exact: true }).click();
   expect(
     await page.evaluate(
@@ -701,18 +673,6 @@ test("saved matches and undo remain scoped to their player after account navigat
       ACCOUNT_ID,
     ),
   ).toEqual({ original: [2998], current: [3000] });
-
-  await page.getByRole("button", { name: "Saved matches (1)", exact: true }).click();
-  const search = page.getByRole("searchbox", { name: "Search saved matches by hero or match ID" });
-  await search.fill("not a saved match");
-  await expect(page.getByText("No matches found", { exact: true })).toBeVisible();
-  await page.goBack();
-  await expect(page).toHaveURL(new RegExp(`/tracker/players/${ACCOUNT_ID}\\?`));
-  await expect(search).toHaveCount(0);
-  await page.getByRole("button", { name: "Saved matches (1)", exact: true }).click();
-  await expect(search).toHaveValue("");
-  await expect(page.getByRole("button", { name: "Open saved match 2998", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Open saved match 3000", exact: true })).toHaveCount(0);
 });
 
 test("match navigation keeps the selected history row visible without stealing button focus", async ({ page }) => {

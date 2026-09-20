@@ -15,7 +15,6 @@ import {
   type ItemStatsTableProps,
 } from "~/components/features/items/ItemStatsTable";
 import { PlayerHeroBuildsDialog } from "~/components/features/items/PlayerHeroBuildsDialog";
-import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
@@ -273,88 +272,83 @@ export function ItemStatsExplorer({
 
   return (
     <Stack gap={4}>
-      {/* overflow-clip, not the Card's overflow-hidden: a scroll container here would break the sticky builds column. */}
-      <Panel tone="glass" className="overflow-clip">
-        <PanelHeader title="Item Stats">
-          {topBuildsEnabled && (
-            <Button
-              variant="ghost"
-              size="xs"
-              aria-expanded={topBuildsOpen}
-              onClick={() => setTopBuildsOpen((open) => !open)}
-              className="text-muted-foreground"
-            >
-              Top Builds
-              {topBuildsOpen ? (
-                <PanelRightClose aria-hidden="true" className="size-4" />
-              ) : (
-                <PanelRightOpen aria-hidden="true" className="size-4" />
-              )}
-            </Button>
-          )}
-        </PanelHeader>
-        <div className={cn(topBuildsEnabled && "flex flex-col lg:flex-row")}>
-          <div className="min-w-0 flex-1 overflow-hidden">
-            <div className="py-4">
-              <ItemStatsTable
-                data={displayData}
-                isLoading={isLoadingItemStats || isLoadingItemAssets}
-                isRefetching={isRefetchingItemStats}
-                columns={TABLE_COLUMNS}
-                hideHeader={false}
-                hideIndex={true}
-                hideItemTierFilter={false}
-                minWinRate={minWinRate}
-                maxWinRate={maxWinRate}
-                minUsage={minUsage}
-                maxUsage={maxUsage}
-                prevStatsMap={prevStatsMap}
-                customDropdownContent={renderBuyTiming}
-              />
-            </div>
-          </div>
-
-          {topBuildsEnabled && topBuildsOpen && (
-            <>
-              <Separator className="lg:hidden" />
-              <Separator orientation="vertical" className="hidden lg:block" />
-              <div className="flex min-h-0 min-w-0 flex-col overflow-hidden lg:sticky lg:top-0 lg:max-h-dvh lg:w-96 lg:shrink-0">
-                <div className="min-h-0 flex-1 overflow-y-auto p-4">
-                  {isLoadingTopBuilds ? (
-                    <LoadingState label="top builds" size="sm" align="center" />
-                  ) : topBuildsCards.length > 0 ? (
-                    <div className="flex flex-col gap-2">
-                      {topBuildsCards.map((card) => (
-                        <MatchHistoryCard
-                          key={card.matchId}
-                          {...card}
-                          ranks={ranksData}
-                          expandable={false}
-                          onPlayerClick={(name) => setSelectedPlayer({ accountId: card.accountId, name })}
-                        />
-                      ))}
-                      {(isFetchingTopBuilds || (topBuildsData?.length ?? 0) >= topBuildsLimit) && (
-                        <Button
-                          variant="subtle"
-                          size="sm"
-                          onClick={() => setTopBuildsLimit((prev) => prev + TOP_BUILDS_PAGE_SIZE)}
-                          disabled={isFetchingTopBuilds}
-                          className="w-full"
-                        >
-                          {isFetchingTopBuilds && <Spinner size="sm" />}
-                          {isFetchingTopBuilds ? "Loading…" : "Load more"}
-                        </Button>
-                      )}
-                    </div>
+      <div className={cn(topBuildsEnabled && "flex flex-col gap-4 lg:flex-row")}>
+        <div className="min-w-0 flex-1">
+          <ItemStatsTable
+            data={displayData}
+            isLoading={isLoadingItemStats || isLoadingItemAssets}
+            isRefetching={isRefetchingItemStats}
+            columns={TABLE_COLUMNS}
+            hideHeader={false}
+            hideIndex={false}
+            hideItemTierFilter={false}
+            minWinRate={minWinRate}
+            maxWinRate={maxWinRate}
+            minUsage={minUsage}
+            maxUsage={maxUsage}
+            trendParams={queryStatOptions}
+            prevStatsMap={prevStatsMap}
+            customDropdownContent={renderBuyTiming}
+            actions={
+              topBuildsEnabled && (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  aria-expanded={topBuildsOpen}
+                  onClick={() => setTopBuildsOpen((open) => !open)}
+                  className="text-muted-foreground"
+                >
+                  Top Builds
+                  {topBuildsOpen ? (
+                    <PanelRightClose aria-hidden="true" className="size-4" />
                   ) : (
-                    <EmptyState variant="inline" title="No matching builds found." className="py-4" />
+                    <PanelRightOpen aria-hidden="true" className="size-4" />
                   )}
-                </div>
-              </div>
-            </>
-          )}
+                </Button>
+              )
+            }
+          />
         </div>
-      </Panel>
+
+        {topBuildsEnabled && topBuildsOpen && (
+          <>
+            <Separator className="lg:hidden" />
+            <Separator orientation="vertical" className="hidden lg:block" />
+            <div className="flex min-h-0 min-w-0 flex-col overflow-hidden lg:sticky lg:top-0 lg:max-h-dvh lg:w-96 lg:shrink-0">
+              <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                {isLoadingTopBuilds ? (
+                  <LoadingState label="top builds" size="sm" align="center" />
+                ) : topBuildsCards.length > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    {topBuildsCards.map((card) => (
+                      <MatchHistoryCard
+                        key={card.matchId}
+                        {...card}
+                        ranks={ranksData}
+                        onPlayerClick={(name) => setSelectedPlayer({ accountId: card.accountId, name })}
+                      />
+                    ))}
+                    {(isFetchingTopBuilds || (topBuildsData?.length ?? 0) >= topBuildsLimit) && (
+                      <Button
+                        variant="subtle"
+                        size="sm"
+                        onClick={() => setTopBuildsLimit((prev) => prev + TOP_BUILDS_PAGE_SIZE)}
+                        disabled={isFetchingTopBuilds}
+                        className="w-full"
+                      >
+                        {isFetchingTopBuilds && <Spinner size="sm" />}
+                        {isFetchingTopBuilds ? "Loading…" : "Load more"}
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <EmptyState variant="inline" title="No matching builds found." className="py-4" />
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
 
       {hero != null && (
         <PlayerHeroBuildsDialog

@@ -27,7 +27,7 @@ import { ModeSelector } from "~/components/domain/selectors/ModeSelector";
 import { RankRangeSelector } from "~/components/domain/selectors/RankRangeSelector";
 import { Badge } from "~/components/ui/badge";
 import { Card, CardContent } from "~/components/ui/card";
-import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
+import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 
 const ITEM_NODES = [
   { itemId: 1548066885, accent: "weapon", winRate: 0.534, pickRate: 0.31 },
@@ -119,7 +119,7 @@ export function Round3DomainMisc() {
             />
           ))}
         </Variants>
-        <Variants label='accent: ability-1 ... ability-4, fill="accent" · static (no onClick) · emphasis by pick rate · dimmed · no media · disabled'>
+        <Variants label='accent: ability-1 ... ability-4, fill="accent" · static (no onClick) · emphasis by pick rate · dimmed · no media'>
           {ABILITY_IDS.map((abilityId, index) => (
             <GraphNodeCard
               key={abilityId}
@@ -142,7 +142,6 @@ export function Round3DomainMisc() {
             />
           ))}
           <GraphNodeCard className="w-40" name="Root" winRate={0.5} pickRate={1} dimmed />
-          <GraphNodeCard className="w-40" name="Disabled" winRate={0.5} pickRate={0.2} onClick={() => {}} disabled />
         </Variants>
       </Specimen>
 
@@ -159,7 +158,7 @@ export function Round3DomainMisc() {
           <ItemTierSelector defaultValue={[1]} disabled />
         </Variants>
         <Variants label="Uncontrolled filter cells: HeroSelector, ModeSelector, RankRangeSelector, MatchTimeRangeSelector, HeatmapViewModeFilter">
-          <HeroSelector allowSelectNull />
+          <HeroSelector allowNull />
           <ModeSelector defaultValue="normal_ranked" />
           <RankRangeSelector />
           <MatchTimeRangeSelector defaultValue={[600, undefined]} />
@@ -170,19 +169,18 @@ export function Round3DomainMisc() {
       <Specimen
         name="GameTile and GamePage heading level"
         source="domain/minigames/GameTile · domain/minigames/GamePage"
-        note='GameTile is a LinkCard; "as" sets the heading level its hub outline asks for (h2 by default). GamePage passes titleAs to PageHeader, so a preview inside another page does not add a second h1.'
+        note="GameTile is a LinkCard whose title is the h2 a hub outline asks for. GamePage passes as to PageHeader, so a preview inside another page does not add a second h1."
         className="theme-terminal grid gap-3 sm:grid-cols-2"
       >
         <GameTile
           to="/games/deadlockdle/trivia"
-          title='Trivia (as="h4")'
+          title="Trivia"
           description="Ten questions about heroes, items and the map."
           icon={BrainIcon}
-          as="h4"
         />
         <Card tone="inset" size="sm">
           <CardContent>
-            <GamePage title='titleAs="div"' subtitle="No second h1." hub="/games/deadlockdle" titleAs="div">
+            <GamePage title='as="div"' subtitle="No second h1." hub="/games/deadlockdle" as="div">
               {null}
             </GamePage>
           </CardContent>

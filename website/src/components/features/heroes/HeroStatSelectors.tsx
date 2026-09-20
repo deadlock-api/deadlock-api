@@ -1,7 +1,15 @@
 import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
+import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
 import { HERO_TREND_LABELS } from "~/lib/hero-trends";
 import { HERO_STATS, HERO_STATS_WITH_BAN_RATE, TIME_INTERVALS } from "~/types/api_hero_stats";
+
+function metricLabel(key: string) {
+  return (
+    (key === "pickrate" ? "Pick rate" : HERO_TREND_LABELS[key as keyof typeof HERO_TREND_LABELS]) ??
+    key.replace(/_/g, " ").replace(/^./, (letter) => letter.toUpperCase())
+  );
+}
 
 export function HeroStatSelector<T extends readonly string[]>({
   value,
@@ -17,22 +25,16 @@ export function HeroStatSelector<T extends readonly string[]>({
   const items = options ?? HERO_STATS;
   if (items.length > 7) {
     return (
-      <MetricSelect
-        value={value}
-        onValueChange={onChange}
-        label={label}
-        groups={[
-          {
-            label: "Hero metrics",
-            options: items.map((key) => ({
-              value: key,
-              label:
-                (key === "pickrate" ? "Pick rate" : HERO_TREND_LABELS[key as keyof typeof HERO_TREND_LABELS]) ??
-                key.replace(/_/g, " ").replace(/^./, (letter) => letter.toUpperCase()),
-            })),
-          },
-        ]}
-      />
+      <MetricSelect value={value} valueLabel={metricLabel(value)} onValueChange={onChange} label={label}>
+        <SelectGroup>
+          <SelectLabel>Hero metrics</SelectLabel>
+          {items.map((key) => (
+            <SelectItem key={key} value={key}>
+              {metricLabel(key)}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </MetricSelect>
     );
   }
   return (

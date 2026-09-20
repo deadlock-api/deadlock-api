@@ -88,13 +88,13 @@ export function ItemsPage() {
           value={tab ?? undefined}
           onValueChange={(value) => setTab(value as typeof tab)}
         >
-          <ResponsiveTab value="item-stats">Item Stats</ResponsiveTab>
+          <ResponsiveTab value="item-stats">Overall Stats</ResponsiveTab>
           <ResponsiveTab value="item-purchase-analysis">Purchase Analysis</ResponsiveTab>
           <ResponsiveTab value="build-flow">Build Flow</ResponsiveTab>
           <ResponsiveTab value="item-combos">Item Combos</ResponsiveTab>
         </ResponsiveTabsList>
         <TabsContent value="item-stats">
-          <Section titleDisplay="hidden" title="Item Stats">
+          <Section titleDisplay="hidden" title="Overall Item Stats">
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
                 <ItemStatsExplorer

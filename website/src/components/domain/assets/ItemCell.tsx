@@ -1,11 +1,9 @@
-import { Link } from "@tanstack/react-router";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { Upgrade } from "deadlock_api_client";
 
-import { ItemImageFromAsset } from "~/components/domain/assets/ItemImage";
-import { Skeleton } from "~/components/ui/skeleton";
+import { ItemImage, type ItemSource } from "~/components/domain/assets/ItemImage";
+import { ItemName } from "~/components/domain/assets/ItemName";
 import { useItemById } from "~/hooks/useAssetById";
-import { itemSlug } from "~/lib/item-slug";
 import { cn } from "~/lib/utils";
 
 const itemCellVariants = cva("flex min-w-0 items-center", {
@@ -24,14 +22,19 @@ type ItemCellProps = Omit<React.ComponentProps<"span">, "children"> &
 /**
  * A shop item as the identity of a row: icon and name on one line. The name truncates to the width the parent leaves
  * (cap it with a `max-w-*` on the cell); the text size is the parent's.
+ *
+ * Pass `item` to render an item already read by the parent: a long table then holds one subscription, not one per row.
  */
-export function ItemCell({ itemId, ...props }: ItemCellProps & { itemId: number }) {
-  const { item, isLoading } = useItemById(itemId);
-  return <ItemCellFromAsset item={item} loading={isLoading} {...props} />;
+export function ItemCell(props: ItemCellProps & ItemSource) {
+  return props.itemId !== undefined ? <ItemCellById {...props} /> : <ItemCellView {...props} />;
 }
 
-/** Render an item already read by the parent: a long table then holds one subscription, not one per row. */
-export function ItemCellFromAsset({
+function ItemCellById({ itemId, ...props }: ItemCellProps & { itemId: number }) {
+  const { item, isLoading } = useItemById(itemId);
+  return <ItemCellView {...props} item={item} loading={isLoading} />;
+}
+
+function ItemCellView({
   item,
   loading = false,
   size,
@@ -39,7 +42,6 @@ export function ItemCellFromAsset({
   className,
   ...props
 }: ItemCellProps & { item: Upgrade | undefined; loading?: boolean }) {
-  const name = item?.name ?? "Unknown Item";
   return (
     <span
       data-slot="item-cell"
@@ -48,31 +50,8 @@ export function ItemCellFromAsset({
       {...props}
     >
       {/* The name beside it already says what this is. */}
-      <ItemImageFromAsset
-        item={item}
-        loading={loading}
-        title=""
-        className={cn("shrink-0", IMAGE_SIZE[size ?? "default"])}
-      />
-      {loading ? (
-        <Skeleton className="h-4 w-24" />
-      ) : linkToDetail && item ? (
-        <Link
-          to="/analytics/items/$itemName"
-          params={{ itemName: itemSlug(item.name) }}
-          preload="intent"
-          title={name}
-          // Rows that hold this cell are often clickable themselves (expand, select); the link must not trigger them.
-          onClick={(event) => event.stopPropagation()}
-          className="truncate rounded-sm outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          {name}
-        </Link>
-      ) : (
-        <span title={name} className="truncate">
-          {name}
-        </span>
-      )}
+      <ItemImage item={item} loading={loading} title="" className={cn("shrink-0", IMAGE_SIZE[size ?? "default"])} />
+      <ItemName item={item} loading={loading} linkToDetail={linkToDetail} />
     </span>
   );
 }

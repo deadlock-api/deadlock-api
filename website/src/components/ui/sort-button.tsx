@@ -1,10 +1,11 @@
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 
+import { DISABLED_STATE, FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 export type SortDir = "asc" | "desc";
 
-export const sortAlignClass = { start: "justify-start", center: "justify-center", end: "justify-end" };
+const sortAlignClass = { start: "justify-start", center: "justify-center", end: "justify-end" };
 
 /**
  * The only sortable column header. A native button inside the `<th>`, which carries `aria-sort`. Usable on its own
@@ -33,7 +34,9 @@ export function SortButton({
       data-slot="sort-button"
       data-size={small ? "sm" : "default"}
       className={cn(
-        "inline-flex min-h-6 items-center gap-1 rounded-sm transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50",
+        FOCUS_RING,
+        DISABLED_STATE,
+        "inline-flex min-h-6 items-center gap-1 rounded-sm transition-colors hover:text-foreground aria-disabled:pointer-events-none aria-disabled:opacity-50",
         sortAlignClass[align],
         className,
       )}

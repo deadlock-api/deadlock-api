@@ -2,11 +2,11 @@ import type { Leaderboard } from "deadlock_api_client";
 import Fuse from "fuse.js";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
-import { HeroImageFromAsset } from "~/components/domain/assets/HeroImage";
+import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { Button } from "~/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { Tooltip } from "~/components/ui/tooltip";
 import { useHeroById } from "~/hooks/useAssetById";
 import { usePaginationQueryState } from "~/hooks/usePaginationQueryState";
 
@@ -159,13 +159,10 @@ function TopHeroButton({ heroId, onClick }: { heroId: number; onClick: () => voi
   const { hero, isLoading } = useHeroById(heroId);
   const label = hero ? `Filter by ${hero.name}` : "Filter by hero";
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button variant="ghost" size="icon-sm" shape="pill" onClick={onClick} aria-label={label}>
-          <HeroImageFromAsset hero={hero} loading={isLoading} shape="circle" ring="border" className="size-7" />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
+    <Tooltip content={label}>
+      <Button variant="ghost" size="icon-sm" shape="pill" onClick={onClick} aria-label={label}>
+        <HeroImage hero={hero} loading={isLoading} shape="circle" ring="border" className="size-7" />
+      </Button>
     </Tooltip>
   );
 }

@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import { useFieldControlProps } from "~/components/ui/hooks/use-field-control";
+import { DISABLED_STATE, FOCUS_RING_BORDER, INVALID_STATE } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 // Read-only keeps the focus ring and the text at full strength and drops the fill: the value can be read and copied,
@@ -32,12 +33,13 @@ function Input({
       data-size={size}
       data-spinners={spinners}
       className={cn(
-        "h-9 w-full min-w-0 rounded-md border border-input bg-input/30 px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground hover:border-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
+        DISABLED_STATE,
+        "h-9 w-full min-w-0 rounded-md border border-input bg-input/30 px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground hover:border-muted-foreground disabled:cursor-not-allowed",
         // iOS zooms the page when a focused field is under 16px. That is about touch, not about the viewport width.
         "pointer-coarse:text-base",
         READ_ONLY,
-        "outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
-        "aria-invalid:border-destructive aria-invalid:ring-destructive/40",
+        FOCUS_RING_BORDER,
+        INVALID_STATE,
         // As plain classes, not `data-[size=sm]:` variants: a variant outranks a caller's `ps-7`, which would push a
         // leading icon under the text.
         size === "sm" && "h-8 px-2.5",

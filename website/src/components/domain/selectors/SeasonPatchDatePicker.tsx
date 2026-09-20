@@ -9,6 +9,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
 import { useSeasons } from "~/hooks/useSeasons";
+import { PATCHES } from "~/lib/constants";
 import type { DateFilterAction, DateRange } from "~/lib/date-filter-preference";
 import { type SeasonInfo, defaultDateRange, previousSeasonRange, seasonContaining } from "~/lib/seasons";
 
@@ -39,7 +40,7 @@ export interface SeasonPatchDatePickerProps extends Omit<
   React.ComponentProps<typeof FilterCell>,
   "label" | "value" | "defaultValue" | "active" | "onReset" | "icon" | "children"
 > {
-  patchDates: readonly PatchInfo[];
+  patchDates?: readonly PatchInfo[];
   value?: DateValue;
   /** The range it starts at when uncontrolled: all time unless given. */
   defaultValue?: DateValue;
@@ -155,7 +156,7 @@ function groupPatchesBySeason(patches: readonly PatchInfo[], seasons: readonly S
 }
 
 export function SeasonPatchDatePicker({
-  patchDates,
+  patchDates = PATCHES,
   value: valueProp,
   defaultValue = ALL_TIME,
   onValueChange,

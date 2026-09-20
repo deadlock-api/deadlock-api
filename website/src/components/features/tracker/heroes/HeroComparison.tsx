@@ -1,6 +1,6 @@
 import { Delta } from "~/components/ui/delta";
 import { DetailPopover } from "~/components/ui/detail-popover";
-import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
+import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { useHeroById } from "~/hooks/useAssetById";
 import { cn } from "~/lib/utils";
 

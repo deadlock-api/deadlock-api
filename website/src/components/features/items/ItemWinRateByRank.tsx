@@ -2,12 +2,12 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 
-import { SizedRankTierTick } from "~/components/domain/rank/RankTierTick";
+import { RankTierTick } from "~/components/domain/rank/RankTierTick";
 import { ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { Section } from "~/components/patterns/page/Section";
-import { PanelTooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
+import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { formatPercent } from "~/lib/format";
@@ -31,13 +31,13 @@ interface TierEntry {
 function TierTooltip({ entry }: { entry?: TierEntry }) {
   if (!entry) return null;
   return (
-    <PanelTooltipCard>
-      <TooltipHeader lead={entry.image && <img src={entry.image} alt="" className="size-6" />} title={entry.name} />
+    <TooltipCard>
+      <TooltipHeader leading={entry.image && <img src={entry.image} alt="" className="size-6" />} title={entry.name} />
       <TooltipStats>
         <TooltipStat label="Win rate" value={formatPercent(entry.winRate)} />
         <TooltipStat label="Matches" value={entry.matches.toLocaleString("en-US")} />
       </TooltipStats>
-    </PanelTooltipCard>
+    </TooltipCard>
   );
 }
 
@@ -115,7 +115,7 @@ export function ItemWinRateByRank({
         valueKey="winRate"
         colorKey="color"
         xAxisHeight={48}
-        xTick={<SizedRankTierTick tiers={tiers} />}
+        xTick={<RankTierTick tiers={tiers} />}
         tooltip={<TierTooltip />}
       />
     </Section>

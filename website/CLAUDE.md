@@ -119,7 +119,7 @@ Read `docs/design-system.md` before touching anything under `src/components`, `s
    token is added to `src/styles/tokens.css` (all three tiers), never inlined.
 3. **No raw UI outside `components/ui` and `components/patterns`:** no `<button>`, `<h1>`-`<h6>` (use `PageHeader`,
    `Section`, `PanelHeader`, `CardTitle`, `Heading`), `<input>` / `<select>` / `<textarea>`, `<table>`, bare
-   `ResponsiveContainer`, `animate-spin` or direct `LoadingLogo`. No hand-rolled tab bars, pills, tooltips, bars, stat
+   `ResponsiveContainer` or `animate-spin`. No hand-rolled tab bars, pills, tooltips, bars, stat
    tiles or navigation.
 4. **Respect the layers.** `ui` < `patterns` < `domain` < `features` < `app`; import downwards only. `ui` and
    `patterns` never touch the API client, `~/queries` or asset hooks. Shared between two features means it moves down a

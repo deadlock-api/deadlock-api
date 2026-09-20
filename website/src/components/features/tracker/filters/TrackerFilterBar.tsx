@@ -89,10 +89,9 @@ export function TrackerFilterBar({
             <FilterToggleCell
               label="Result"
               value={result}
+              defaultValue="all"
               onValueChange={onResultChange}
               width="wide"
-              active={result !== "all"}
-              onReset={() => onResultChange("all")}
             >
               <SegmentedItem value="all">All</SegmentedItem>
               <SegmentedItem value="win">Wins</SegmentedItem>

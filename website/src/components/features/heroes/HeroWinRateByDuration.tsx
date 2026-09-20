@@ -6,7 +6,7 @@ import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { Section } from "~/components/patterns/page/Section";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
-import { PanelTooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
+import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { DURATION_BUCKETS } from "~/lib/constants";
@@ -28,14 +28,14 @@ interface DurationEntry {
 function DurationTooltip({ entry }: { entry?: DurationEntry }) {
   if (!entry) return null;
   return (
-    <PanelTooltipCard>
+    <TooltipCard>
       <TooltipHeader title={entry.label} />
       <TooltipStats>
         <TooltipStat label="Win rate" value={formatPercent(entry.winRate)} />
         <TooltipStat label="Share of games" value={formatPercent(entry.share, 0)} />
         <TooltipStat label="Matches" value={entry.matches.toLocaleString("en-US")} />
       </TooltipStats>
-    </PanelTooltipCard>
+    </TooltipCard>
   );
 }
 

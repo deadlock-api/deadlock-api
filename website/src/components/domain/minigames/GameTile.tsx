@@ -11,31 +11,19 @@ interface GameTileProps extends Omit<React.ComponentProps<"a">, "title" | "href"
   description: string;
   icon: LucideIcon;
   tone?: React.ComponentProps<typeof LinkCard>["tone"];
-  /** The heading level the hub's outline asks for. */
-  as?: React.ComponentProps<typeof LinkCard>["titleAs"];
   /** The state of today's run, on the trailing edge of the footer. */
   badge?: React.ReactNode;
 }
 
 /** A game on a hub page. */
-export function GameTile({
-  to,
-  search,
-  title,
-  description,
-  icon: Icon,
-  tone,
-  as = "h2",
-  badge,
-  ...props
-}: GameTileProps) {
+export function GameTile({ to, search, title, description, icon: Icon, tone, badge, ...props }: GameTileProps) {
   return (
     <LinkCard
       asChild
       size="sm"
       tone={tone}
       title={title}
-      titleAs={as}
+      as="h2"
       description={description}
       media={
         <IconTile size="sm">

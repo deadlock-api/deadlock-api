@@ -78,11 +78,11 @@ export function Charts() {
       <Specimen
         name="ChartCard"
         source="patterns/charts/ChartCard"
-        note="Title strip, plot and footnote. The plot inside is a flush ChartSurface; hover it for the ChartReadings tooltip."
+        note="Title strip, plot and footer. The plot inside is a flush ChartSurface; hover it for the ChartReadings tooltip."
       >
         <ChartCard
           title="Win rate over time"
-          subtitle="Last 10 weeks · UTC"
+          description="Last 10 weeks · UTC"
           actions={
             <ChartLegend>
               {SERIES.map((label, i) => (
@@ -92,7 +92,7 @@ export function Charts() {
               ))}
             </ChartLegend>
           }
-          footnote="Weeks with fewer than 100 matches are left as gaps."
+          footer="Weeks with fewer than 100 matches are left as gaps."
         >
           <ChartSurface label="Win rate over time for four heroes" variant="flush">
             <LineChart data={WEEKS} margin={CHART_MARGIN}>

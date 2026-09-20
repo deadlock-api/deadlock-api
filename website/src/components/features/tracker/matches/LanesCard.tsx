@@ -1,8 +1,8 @@
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { Card } from "~/components/ui/card";
 import { DetailPopover } from "~/components/ui/detail-popover";
-import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
 import { StatusDot } from "~/components/ui/status-dot";
+import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { formatMatchDuration } from "~/lib/tracker/compute";
 import type { LaneMatchup, LanePlayer } from "~/lib/tracker/lane-matchup";
@@ -31,7 +31,7 @@ function Laner({
       details={
         <>
           <TooltipHeader
-            lead={<HeroImage heroId={player.hero_id} shape="circle" className="shrink-0" title="" />}
+            leading={<HeroImage heroId={player.hero_id} shape="circle" className="shrink-0" title="" />}
             title={name}
             subtitle={
               stat ? `Recorded at ${formatMatchDuration(stat.time_stamp_s)}` : `At ${formatMatchDuration(time)}`

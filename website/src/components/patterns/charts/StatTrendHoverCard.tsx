@@ -1,11 +1,9 @@
 import { Suspense, type ReactElement } from "react";
 
 import { LoadingState } from "~/components/patterns/states/LoadingState";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/hover-card";
-import { TooltipTarget } from "~/components/ui/panel-tooltip";
-import { cn } from "~/lib/utils";
+import { Tooltip, TooltipTarget } from "~/components/ui/tooltip";
 
-interface StatTrendHoverCardProps extends React.ComponentProps<typeof HoverCardContent> {
+interface StatTrendHoverCardProps extends Pick<React.ComponentProps<typeof Tooltip>, "side" | "align"> {
   /** The element the card hangs off. */
   trigger: ReactElement;
   /**
@@ -16,39 +14,31 @@ interface StatTrendHoverCardProps extends React.ComponentProps<typeof HoverCardC
   triggerAs?: "target" | "child";
   /** How the focusable target sits in its line. A trigger that must fill its column, such as a bar, takes `block`. */
   triggerDisplay?: React.ComponentProps<typeof TooltipTarget>["display"];
-  open?: boolean;
-  defaultOpen?: boolean;
-  onOpenChange?: (open: boolean) => void;
+  children: React.ReactNode;
 }
 
 export function StatTrendHoverCard({
   trigger,
   triggerAs = "target",
   triggerDisplay,
-  open,
-  defaultOpen,
-  onOpenChange,
+  side = "bottom",
   align = "end",
-  collisionPadding = 16,
-  className,
   children,
   ...props
 }: StatTrendHoverCardProps) {
   return (
-    <HoverCard openDelay={150} closeDelay={100} open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
-      <HoverCardTrigger asChild>
-        {triggerAs === "target" ? <TooltipTarget display={triggerDisplay}>{trigger}</TooltipTarget> : trigger}
-      </HoverCardTrigger>
-      <HoverCardContent
-        align={align}
-        collisionPadding={collisionPadding}
-        className={cn("w-112 max-w-[var(--radix-hover-card-content-available-width)]", className)}
-        {...props}
-      >
+    <Tooltip
+      variant="preview"
+      side={side}
+      align={align}
+      content={
         <Suspense fallback={<LoadingState label="trend" className="flex h-62.5 items-center justify-center" />}>
           {children}
         </Suspense>
-      </HoverCardContent>
-    </HoverCard>
+      }
+      {...props}
+    >
+      {triggerAs === "target" ? <TooltipTarget display={triggerDisplay}>{trigger}</TooltipTarget> : trigger}
+    </Tooltip>
   );
 }

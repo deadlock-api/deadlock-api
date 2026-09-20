@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiGameStatsRequest, GameStatsBucketEnum } from "deadlock_api_client";
+import { ChartNoAxesCombined } from "lucide-react";
 import { useMemo } from "react";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -8,8 +9,10 @@ import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartR
 import { ChartLoading, ChartError, ChartEmpty } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_AXIS, CHART_GRID } from "~/components/patterns/charts/theme";
-import { TrendControls, TrendIntervalField, TrendMetricField } from "~/components/patterns/charts/TrendControls";
+import { TrendIntervalField, TrendMetricField } from "~/components/patterns/charts/TrendControls";
+import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { SegmentedItem } from "~/components/ui/segmented";
+import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
 import { day } from "~/dayjs";
 import { withoutOpenTimeBucket } from "~/lib/time-buckets";
 import { gameStatsQueryOptions } from "~/queries/games-query";
@@ -50,14 +53,7 @@ export default function GamesOverTimeChart({
   );
 
   const statDef = getStatDefinition(stat);
-  const metricGroups = useMemo(
-    () =>
-      getFilteredCategories(isStreetBrawl).map((category) => ({
-        label: category.label,
-        options: category.stats.map((option) => ({ value: option.key, label: option.label })),
-      })),
-    [isStreetBrawl],
-  );
+  const categories = useMemo(() => getFilteredCategories(isStreetBrawl), [isStreetBrawl]);
 
   const chartData = useMemo(() => {
     if (!data) return [];
@@ -73,8 +69,19 @@ export default function GamesOverTimeChart({
 
   return (
     <div className="flex flex-col gap-3">
-      <TrendControls title="Game trends">
-        <TrendMetricField value={stat} groups={metricGroups} onValueChange={onStatChange} />
+      <FilterBar variant="toolbar" title="Game trends" icon={ChartNoAxesCombined} aria-label="Trend controls">
+        <TrendMetricField value={stat} valueLabel={statDef?.label} onValueChange={onStatChange}>
+          {categories.map((category) => (
+            <SelectGroup key={category.label}>
+              <SelectLabel>{category.label}</SelectLabel>
+              {category.stats.map((option) => (
+                <SelectItem key={option.key} value={option.key}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          ))}
+        </TrendMetricField>
         <TrendIntervalField
           value={timeBucket}
           onValueChange={(value) => onTimeBucketChange(value as GameStatsBucketEnum)}
@@ -85,7 +92,7 @@ export default function GamesOverTimeChart({
             </SegmentedItem>
           ))}
         </TrendIntervalField>
-      </TrendControls>
+      </FilterBar>
 
       <div aria-live="polite" aria-busy={isPending}>
         {isPending ? (
@@ -97,8 +104,8 @@ export default function GamesOverTimeChart({
         ) : (
           <ChartCard
             title={`${statDef?.label ?? stat} over time`}
-            subtitle={`${day.utc(chartData[0].date).format("MMM D, YYYY")} – ${day.utc(chartData.at(-1)!.date).format("MMM D, YYYY")} · UTC`}
-            footnote={`${chartData.length.toLocaleString("en-US")} buckets · The ongoing interval is omitted when at least two completed intervals are available.`}
+            description={`${day.utc(chartData[0].date).format("MMM D, YYYY")} – ${day.utc(chartData.at(-1)!.date).format("MMM D, YYYY")} · UTC`}
+            footer={`${chartData.length.toLocaleString("en-US")} buckets · The ongoing interval is omitted when at least two completed intervals are available.`}
           >
             <ChartSurface label={`${statDef?.label ?? stat} over time chart`} variant="flush">
               <LineChart data={chartData} margin={{ top: 16, right: 12, bottom: 8, left: 0 }}>

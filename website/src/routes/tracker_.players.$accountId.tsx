@@ -188,7 +188,7 @@ function TrackerContent({ accountId }: { accountId: number }) {
   return (
     <PageShell>
       <FeedbackNoticeDialog />
-      <PlayerHeader accountId={accountId} entries={historyQuery.data} ranks={ranks} onOpenMatch={openMatch}>
+      <PlayerHeader accountId={accountId} entries={historyQuery.data} ranks={ranks}>
         <TrackerFilterBar
           mode={mode}
           onModeChange={setMode}

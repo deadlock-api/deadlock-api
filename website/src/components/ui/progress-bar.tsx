@@ -3,8 +3,7 @@ import { Children, createContext, isValidElement, use, type ReactNode } from "re
 
 import { Delta } from "~/components/ui/delta";
 import { NoValue } from "~/components/ui/no-value";
-import { PanelTooltipContent } from "~/components/ui/panel-tooltip";
-import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
+import { Tooltip } from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
 import type { Color } from "~/types/general";
 
@@ -13,8 +12,6 @@ const progressBarVariants = cva("", {
     variant: {
       /** The square comparative bar of analytics tables. */
       bar: "h-2.5 w-full bg-muted",
-      /** A thin rounded track, the geometry of RateBar: progress through a video, a round, an upload. */
-      track: "h-1.5 w-full overflow-hidden rounded-full bg-muted",
       /**
        * Drawn behind the value of a table cell, as scoreboards do. The cell is `relative` and its value sits in a
        * `relative` element so it stays above the fill.
@@ -87,7 +84,7 @@ export function ProgressBar({
   const total = segmentTotal(children);
   const clamped = Math.max(Math.min(total || value || 0, maxVal), minVal);
   const width = `${(((clamped - minVal) / (maxVal - minVal)) * 100).toFixed(2)}%`;
-  const fill = cn("h-full transition-all duration-slow ease-standard", variant === "track" && "rounded-full");
+  const fill = "h-full transition-all duration-slow ease-standard";
 
   return (
     <div
@@ -130,7 +127,7 @@ export function ProgressBarWithLabel({
   color?: Color;
   label?: ReactNode;
   delta?: number;
-  deltaFormat?: "percent" | "raw";
+  deltaFormat?: React.ComponentProps<typeof Delta>["format"];
   /** `vertical` puts the label under the bar; `horizontal` puts a short bar before it, for table cells. */
   orientation?: "vertical" | "horizontal";
   tooltip?: ReactNode;
@@ -161,19 +158,12 @@ export function ProgressBarWithLabel({
         <span className={cn("text-start text-sm text-muted-foreground", horizontal && "text-xs tabular-nums")}>
           {label || (reading ? `${percentage}%` : <NoValue />)}
         </span>
-        {delta !== undefined && (
-          <Delta value={delta} format={deltaFormat === "raw" ? "number" : "percent"} className="text-xs" />
-        )}
+        {delta !== undefined && <Delta value={delta} format={deltaFormat} className="text-xs" />}
       </div>
     </div>
   );
 
   if (!tooltip) return content;
 
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{content}</TooltipTrigger>
-      <PanelTooltipContent>{tooltip}</PanelTooltipContent>
-    </Tooltip>
-  );
+  return <Tooltip content={tooltip}>{content}</Tooltip>;
 }

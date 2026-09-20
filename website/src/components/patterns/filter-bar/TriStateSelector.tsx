@@ -1,7 +1,7 @@
 import { CircleMinus, CirclePlus } from "lucide-react";
 import { createContext, type ReactNode, use } from "react";
 
-import { FilterCell } from "~/components/patterns/filter-bar/FilterCell";
+import { FilterCell, type FilterCellPassthroughProps } from "~/components/patterns/filter-bar/FilterCell";
 import { Button } from "~/components/ui/button";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { cn } from "~/lib/utils";
@@ -89,7 +89,7 @@ export function TriStateGroup({
       className={cn("flex min-w-0 flex-col", className)}
       {...props}
     >
-      <div className="px-2 py-1 text-xs font-semibold tracking-wide uppercase" style={color ? { color } : undefined}>
+      <div className="px-2 py-1 eyebrow text-xs text-foreground" style={color ? { color } : undefined}>
         {label}
       </div>
       {children}
@@ -111,16 +111,13 @@ export function TriStateSection({
       className={cn("flex min-w-0 flex-col", className)}
       {...props}
     >
-      <div className="px-1 py-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">{label}</div>
+      <div className="px-1 py-1 eyebrow text-xs">{label}</div>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-x-3">{children}</div>
     </section>
   );
 }
 
-interface TriStateSelectorProps extends Omit<
-  React.ComponentProps<typeof FilterCell>,
-  "label" | "value" | "defaultValue" | "active" | "onReset" | "children"
-> {
+interface TriStateSelectorProps extends FilterCellPassthroughProps {
   label?: string;
   /** Entry id to included / excluded; an entry that is neither has no key. */
   value?: TriStateValue;

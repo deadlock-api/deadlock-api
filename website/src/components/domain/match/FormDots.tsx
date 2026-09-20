@@ -1,4 +1,4 @@
-import { PanelTooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
+import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { TONE_BG } from "~/lib/tone";
 import type { FormResult } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
@@ -13,7 +13,7 @@ export function FormDots({
   const wins = form.filter((result) => result === "win").length;
   const summary = `Last ${form.length}: ${wins} wins, ${form.length - wins} losses, newest first`;
   return (
-    <PanelTooltip
+    <Tooltip
       content={
         <>
           <TooltipHeader title={`Last ${form.length} matches`} subtitle="Newest first" />
@@ -41,6 +41,6 @@ export function FormDots({
           />
         ))}
       </div>
-    </PanelTooltip>
+    </Tooltip>
   );
 }

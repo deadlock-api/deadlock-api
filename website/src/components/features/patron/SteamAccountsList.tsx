@@ -22,7 +22,7 @@ import { Spinner } from "~/components/ui/spinner";
 import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { TextLink } from "~/components/ui/text-link";
-import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { Tooltip } from "~/components/ui/tooltip";
 import { formatCooldownRemaining, formatDate, formatRelativeTime } from "~/lib/format";
 import { type PlayerCard, type SteamAccount, steamId3ToSteamId64 } from "~/lib/patron-api";
 import { getRankImageUrl, getRankLabel } from "~/lib/rank-utils";
@@ -74,16 +74,11 @@ function BotFriendCell({ cardQuery }: { cardQuery: CardQuery }) {
     if (Object.hasOwn(errObj, "invites") && Array.isArray(errObj.invites)) {
       return (
         <>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="destructive-soft" size="xs" onClick={() => setDialogOpen(true)}>
-                <AlertTriangle />
-                Add bot friend
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-56 text-center">
-              The bot needs to be your Steam friend to access your match history for priority ingestion
-            </TooltipContent>
+          <Tooltip content="The bot needs to be your Steam friend to access your match history for priority ingestion">
+            <Button variant="destructive-soft" size="xs" onClick={() => setDialogOpen(true)}>
+              <AlertTriangle />
+              Add bot friend
+            </Button>
           </Tooltip>
           <AddBotDialog
             open={dialogOpen}
@@ -225,11 +220,8 @@ function AccountRow({
         </TextLink>
       </TableCell>
       <TableCell>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span>{formatRelativeTime(account.created_at)}</span>
-          </TooltipTrigger>
-          <TooltipContent>{formatDate(account.created_at)}</TooltipContent>
+        <Tooltip content={formatDate(account.created_at)}>
+          <span>{formatRelativeTime(account.created_at)}</span>
         </Tooltip>
       </TableCell>
       <TableCell>

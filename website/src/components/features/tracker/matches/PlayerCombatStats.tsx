@@ -1,6 +1,6 @@
 import { Badge } from "~/components/ui/badge";
 import { DetailPopover } from "~/components/ui/detail-popover";
-import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
+import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { formatMatchDuration } from "~/lib/tracker/compute";
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 

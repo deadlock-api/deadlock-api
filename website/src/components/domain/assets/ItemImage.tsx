@@ -4,30 +4,34 @@ import { AssetImage } from "~/components/domain/assets/AssetImage";
 import { useItemById } from "~/hooks/useAssetById";
 import { cn } from "~/lib/utils";
 
-export function ItemImage({
-  itemId,
-  className,
-  ...props
-}: Omit<React.ComponentProps<typeof ItemImageFromAsset>, "item" | "loading" | "isLoading"> & { itemId: number }) {
-  const { item, isLoading } = useItemById(itemId);
+export type ItemSource =
+  | { itemId: number; item?: never; loading?: never }
+  | { item: Upgrade | undefined; loading?: boolean; itemId?: never };
 
-  return <ItemImageFromAsset item={item} loading={isLoading} className={className} {...props} />;
+type ItemImageLook = Omit<React.ComponentProps<typeof AssetImage>, "asset" | "loading" | "title"> & {
+  className?: string;
+  /** Native hover title, the name by default; pass "" where a tooltip already names the image. */
+  title?: string;
+};
+
+/** Pass `item` to use already-loaded assets in tables instead of subscribing once per image. */
+export function ItemImage(props: ItemImageLook & ItemSource) {
+  return props.itemId !== undefined ? <ItemImageById {...props} /> : <ItemImageView {...props} />;
 }
 
-/** Use already-loaded assets in tables instead of subscribing once per image. */
-export function ItemImageFromAsset({
+function ItemImageById({ itemId, ...props }: ItemImageLook & { itemId: number }) {
+  const { item, isLoading } = useItemById(itemId);
+
+  return <ItemImageView {...props} item={item} loading={isLoading} />;
+}
+
+function ItemImageView({
   item,
   loading,
   className,
   title,
   ...props
-}: Omit<React.ComponentProps<typeof AssetImage>, "asset" | "loading" | "title"> & {
-  item: Upgrade | undefined;
-  loading?: boolean;
-  className?: string;
-  /** Native hover title, the name by default; pass "" where a tooltip already names the image. */
-  title?: string;
-}) {
+}: ItemImageLook & { item: Upgrade | undefined; loading?: boolean }) {
   return (
     <AssetImage
       asset={

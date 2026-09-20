@@ -17,7 +17,7 @@ interface GamePageProps extends Omit<React.ComponentProps<typeof MotionPageShell
   badge?: React.ReactNode;
   width?: "wide" | "prose";
   /** Only for previews that show the page inside another page, which already has its top-level heading. */
-  titleAs?: React.ComponentProps<typeof PageHeader>["titleAs"];
+  as?: React.ComponentProps<typeof PageHeader>["as"];
   children: React.ReactNode;
 }
 
@@ -29,7 +29,7 @@ export function GamePage({
   hubSearch,
   badge,
   width = "wide",
-  titleAs,
+  as,
   children,
   className,
   ...props
@@ -46,7 +46,7 @@ export function GamePage({
     >
       <PageHeader
         align="start"
-        titleAs={titleAs}
+        as={as}
         eyebrow={
           <Link
             to={hub}

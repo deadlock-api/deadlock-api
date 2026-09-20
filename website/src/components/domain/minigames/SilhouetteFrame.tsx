@@ -1,30 +1,21 @@
 import { cn } from "~/lib/utils";
 
-/** How far the art is blurred while nothing of a `blur` round is shown yet. */
-const HIDDEN_BLUR_PX = 20;
-
 interface SilhouetteFrameProps extends React.ComponentProps<"div"> {
   /** `hidden` paints the art as one brand-colored shape; `revealed` lets its own colors back in. */
   state?: "hidden" | "revealed";
-  /** How the art is hidden: flattened to a brand silhouette, or kept in its own colors behind blur. */
-  mode?: "silhouette" | "blur";
   /** How much of the art shows through while a round is being narrowed down, 0 to 1. */
   reveal?: number;
-  /** A CSS filter for the art, such as a round's own SVG warp: `url(#warp-2)`. Replaces the filter of the mode. */
-  filter?: string;
   /** What the art is, once it is revealed. While hidden the frame announces itself as a mystery. */
   label?: string;
 }
 
 /**
- * Mystery art: the image is hidden behind a solid brand silhouette or behind blur, and comes back to itself as the
- * round is solved. The children are the art; the frame owns the filter and its transition.
+ * Mystery art: the image is hidden behind a solid brand silhouette, and comes back to itself as the round is solved.
+ * The children are the art; the frame owns the filter and its transition.
  */
 export function SilhouetteFrame({
   state = "hidden",
-  mode = "silhouette",
   reveal,
-  filter,
   label,
   className,
   style,
@@ -32,9 +23,7 @@ export function SilhouetteFrame({
   ...props
 }: SilhouetteFrameProps) {
   const shown = state === "revealed" ? 1 : Math.max(0, Math.min(1, reveal ?? 0));
-  const silhouetted = mode === "silhouette" && shown < 1;
-  // `filter` outranks the mode, so a round that brings its own effect still uses `state` / `reveal` for the frame.
-  const artFilter = filter ?? (mode === "blur" ? `blur(${(1 - shown) * HIDDEN_BLUR_PX}px)` : undefined);
+  const silhouetted = shown < 1;
   return (
     <div
       data-slot="silhouette-frame"
@@ -61,16 +50,7 @@ export function SilhouetteFrame({
           style={{ opacity: 1 - shown }}
         />
       )}
-      {artFilter === undefined ? (
-        children
-      ) : (
-        <span
-          className="inline-flex transition-[filter] duration-slow motion-reduce:transition-none"
-          style={{ filter: artFilter }}
-        >
-          {children}
-        </span>
-      )}
+      {children}
     </div>
   );
 }

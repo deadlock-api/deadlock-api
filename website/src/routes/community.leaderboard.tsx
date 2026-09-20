@@ -82,11 +82,7 @@ function LeaderboardPage() {
       </PageHeader>
       <Filter.Root>
         <Filter.Hero value={heroId} onValueChange={setHeroId} allowNull />
-        <Filter.Region
-          value={region}
-          defaultValue={defaultRegion}
-          onValueChange={(r) => setRegion(r as LeaderboardRegionEnum)}
-        />
+        <Filter.Region value={region} defaultValue={defaultRegion} onValueChange={setRegion} />
       </Filter.Root>
       <div className="min-h-200">
         {isPending ? (

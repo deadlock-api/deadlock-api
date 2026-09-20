@@ -110,7 +110,8 @@ const LAW_RULES = [
   },
   {
     id: "law17-focus-removed",
-    message: "Law 17: outline removed without a focus-visible replacement in the same class list",
+    message:
+      "Law 17: outline removed without a focus-visible replacement in the same class list; use FOCUS_RING from ~/components/ui/recipes",
     pattern: /(?<![\w:-])outline-(?:none|hidden)\b/g,
     skip: (line) => /focus-visible:|focus-within:|focus:/.test(line),
     only: SYSTEM,
@@ -169,7 +170,7 @@ const RULES = [
   },
   {
     id: "raw-button",
-    message: "raw <button>; use Button, SortButton, Segmented, OptionRow or Toggle from ~/components/ui",
+    message: "raw <button>; use Button, SortButton, Segmented, OptionRow or ToggleGroup from ~/components/ui",
     pattern: /<(?:motion\.)?button\b/g,
     skip: (rel) => rel.startsWith("src/components/ui/"),
   },
@@ -201,7 +202,7 @@ const RULES = [
   {
     id: "raw-loading",
     message: "hand-rolled loading indicator; use Spinner or LoadingState",
-    pattern: /animate-spin|<LoadingLogo[\s/>]/g,
+    pattern: /animate-spin/g,
     skip: insideSystem,
   },
 ];

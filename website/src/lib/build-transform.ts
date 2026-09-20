@@ -189,7 +189,6 @@ export function timeAgo(dateStr: string): string {
 
 export interface PlayerBuildCard {
   matchId: number;
-  gameMode: string;
   timeAgo: string;
   startTime: string;
   result: "win" | "loss";
@@ -199,7 +198,6 @@ export interface PlayerBuildCard {
   kills: number;
   deaths: number;
   assists: number;
-  itemIds: number[];
   buildData: {
     items: FullBuildItem[];
     abilityBuildOrder?: number[];
@@ -305,7 +303,6 @@ export function buildPlayerBuildCards(
     return [
       {
         matchId: match.match_id,
-        gameMode: match.match_mode,
         timeAgo: timeAgo(match.start_time),
         startTime: match.start_time,
         result: (isWin ? "win" : "loss") as "win" | "loss",
@@ -315,7 +312,6 @@ export function buildPlayerBuildCards(
         kills: player.kills,
         deaths: player.deaths,
         assists: player.assists,
-        itemIds: [] as number[],
         buildData: {
           items: fullBuildItems,
           abilityBuildOrder: abilityBuildData?.abilityBuildOrder,

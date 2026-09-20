@@ -1,5 +1,6 @@
 import { Collapsible as CollapsiblePrimitive } from "radix-ui";
 
+import { DISABLED_STATE, FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 function Collapsible({ ...props }: React.ComponentProps<typeof CollapsiblePrimitive.Root>) {
@@ -14,10 +15,7 @@ function CollapsibleTrigger({
     <CollapsiblePrimitive.CollapsibleTrigger
       data-slot="collapsible-trigger"
       // No radius here: with `asChild` the class lands on the child, whose own radius must keep winning.
-      className={cn(
-        "outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50",
-        className,
-      )}
+      className={cn(FOCUS_RING, DISABLED_STATE, className)}
       {...props}
     />
   );

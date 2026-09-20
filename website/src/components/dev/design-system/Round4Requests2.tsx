@@ -17,10 +17,10 @@ import { DetailPopover } from "~/components/ui/detail-popover";
 import { DragScroll } from "~/components/ui/drag-scroll";
 import { HeatCell } from "~/components/ui/heat-cell";
 import { MaskedIcon } from "~/components/ui/masked-icon";
-import { TooltipTarget } from "~/components/ui/panel-tooltip";
 import { StatusDot } from "~/components/ui/status-dot";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { TextLink } from "~/components/ui/text-link";
+import { TooltipTarget } from "~/components/ui/tooltip";
 import { Tooltip } from "~/components/ui/tooltip";
 
 const HERO_IDS = [1, 2, 4, 6];
@@ -62,6 +62,9 @@ function TableGroupStates() {
   );
 }
 
+const heat = (level: number, token = "primary") =>
+  `color-mix(in oklab, var(--${token}) ${Math.round(level * 100)}%, transparent)`;
+
 function HeatGrid() {
   const [selected, setSelected] = useState<number | null>(14);
   return (
@@ -69,7 +72,7 @@ function HeatGrid() {
       {HOURS.map((hour) => (
         <HeatCell
           key={hour}
-          intensity={Math.abs(Math.sin(hour / 3))}
+          color={heat(Math.abs(Math.sin(hour / 3)))}
           selected={selected === hour}
           label={`${String(hour).padStart(2, "0")}:00, ${Math.round(Math.abs(Math.sin(hour / 3)) * 80)} matches`}
           onClick={() => setSelected(hour === selected ? null : hour)}
@@ -256,11 +259,11 @@ export function Round4Requests2() {
         note="`surface` puts a halo of the page behind the dot, so it stays legible when it sits on artwork or overlaps another image."
       >
         <Variants>
-          <StatusDot tone="positive" size="lg" label="Live" />
-          <StatusDot tone="positive" size="lg" ring="surface" label="Live on artwork" />
+          <StatusDot tone="positive" />
+          <StatusDot tone="positive" ring="surface" />
           <span className="relative inline-flex">
             <HeroImage heroId={HERO_IDS[0]} shape="circle" className="size-10" />
-            <StatusDot tone="positive" size="lg" ring="surface" className="absolute end-0 bottom-0" label="Online" />
+            <StatusDot tone="positive" ring="surface" className="absolute end-0 bottom-0" />
           </span>
         </Variants>
       </Specimen>
@@ -282,7 +285,7 @@ export function Round4Requests2() {
           >
             412 matches
           </DetailPopover>
-          <Tooltip>
+          <Tooltip content="412 matches in this bucket.">
             <TooltipTarget>Hover or tab to this value</TooltipTarget>
           </Tooltip>
         </Variants>
@@ -296,40 +299,33 @@ export function Round4Requests2() {
         <Variants className="items-stretch">
           <HeatGrid />
         </Variants>
-        <Variants label="tones and empty">
-          <HeatCell intensity={0.8} tone="positive" label="Strong, positive" />
-          <HeatCell intensity={0.8} tone="negative" label="Strong, negative" />
+        <Variants label="color and empty">
+          <HeatCell color={heat(0.8, "positive")} label="Strong, positive" />
+          <HeatCell color={heat(0.8, "negative")} label="Strong, negative" />
           <HeatCell color="var(--chart-3)" label="Straight from a ramp" />
-          <HeatCell intensity={null} label="No reading, hatched" />
-          <HeatCell intensity={0.6} selected label="Selected" />
-        </Variants>
-        <Variants label="pattern">
-          <HeatCell intensity={null} label="No reading: hatch by default" />
-          <HeatCell intensity={null} pattern="none" label="Empty, hatch turned off" />
-          <HeatCell intensity={0.35} pattern="hatch" label="A reading the grid marks as provisional" />
+          <HeatCell label="No reading, hatched" />
+          <HeatCell color={heat(0.6)} selected label="Selected" />
         </Variants>
         <Variants label="title is opt-in; the name always comes from label">
-          <HeatCell intensity={0.8} title="Tuesday 18:00, 64 matches" label="Tuesday 18:00, 64 matches" />
-          <HeatCell intensity={0.8} label="Tuesday 19:00, 61 matches: named, but no native tooltip" />
+          <HeatCell color={heat(0.8)} title="Tuesday 18:00, 64 matches" label="Tuesday 18:00, 64 matches" />
+          <HeatCell color={heat(0.8)} label="Tuesday 19:00, 61 matches: named, but no native tooltip" />
         </Variants>
       </Specimen>
 
       <Specimen
-        name="PanelSection tone and position"
+        name="PanelSection tone"
         source="patterns/panel/Panel"
-        note="The strip that groups the rows of a panel. It is translucent by default, so a pinned one takes the panel's own surface instead: rows would otherwise scroll through it."
+        note="The strip that groups the rows of a panel. It is translucent by default; a strip that rows scroll under takes the panel's own surface with the opaque tone."
       >
         <Variants className="items-stretch">
           <div className="max-h-40 w-full overflow-y-auto rounded-lg border">
-            <PanelSection title="Today" position="sticky">
-              4 matches
-            </PanelSection>
+            <PanelSection title="Today">4 matches</PanelSection>
             {["Win, 32:14", "Loss, 28:02", "Win, 41:37", "Win, 25:50"].map((row) => (
               <p key={row} className="px-4 py-2 text-sm">
                 {row}
               </p>
             ))}
-            <PanelSection title="Yesterday" position="sticky">
+            <PanelSection title="Yesterday" tone="opaque">
               3 matches
             </PanelSection>
             {["Loss, 30:11", "Win, 22:45", "Loss, 36:19"].map((row) => (

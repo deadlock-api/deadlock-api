@@ -4,16 +4,11 @@ import { Fragment, useState } from "react";
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroName } from "~/components/domain/assets/HeroName";
 import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
-import {
-  Panel,
-  PanelHeader,
-  PanelMessage,
-  PanelShowMore,
-  PanelSkeleton,
-  PanelViewOption,
-  PanelViewToggle,
-} from "~/components/patterns/panel/Panel";
+import { Panel, PanelBody, PanelHeader, PanelShowMore } from "~/components/patterns/panel/Panel";
+import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { SkeletonRows } from "~/components/patterns/states/Skeletons";
 import { Button } from "~/components/ui/button";
+import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
 import type { Recommendation, Side, Swap } from "~/lib/team-builder/analysis";
 import { deltaClass, formatPoints, formatRate } from "~/lib/team-builder/format";
@@ -99,19 +94,25 @@ export function NextPickPanel({
       <Panel>
         <PanelHeader title="Best replacement">
           <SideToggle value={side} onValueChange={setSide} />
-          <PanelViewToggle value={view} onValueChange={setView}>
-            <PanelViewOption value="list" label="Ranked list">
+          <Segmented size="sm" width="hug" aria-label="View" value={view} onValueChange={setView}>
+            <SegmentedItem value="list" aria-label="Ranked list" title="Ranked list">
               <ListIcon />
-            </PanelViewOption>
-            <PanelViewOption value="plot" label="Synergy against counter plot">
+            </SegmentedItem>
+            <SegmentedItem value="plot" aria-label="Synergy against counter plot" title="Synergy against counter plot">
               <ChartScatterIcon />
-            </PanelViewOption>
-          </PanelViewToggle>
+            </SegmentedItem>
+          </Segmented>
         </PanelHeader>
         {loading ? (
-          <PanelSkeleton rows={COLLAPSED_ROWS} />
+          <PanelBody>
+            <SkeletonRows rows={COLLAPSED_ROWS} />
+          </PanelBody>
         ) : topSwaps.length === 0 ? (
-          <PanelMessage>No replacement improves this draft. Every slot is already the best fit found.</PanelMessage>
+          <EmptyState
+            variant="inline"
+            className="px-4 py-6"
+            title="No replacement improves this draft. Every slot is already the best fit found."
+          />
         ) : (
           <>
             <div className={cn(SWAP_COLUMNS, HEADER)}>
@@ -147,22 +148,28 @@ export function NextPickPanel({
     <Panel>
       <PanelHeader title={hasOpenSlot ? "Best next pick" : "Best replacement"}>
         <SideToggle value={side} onValueChange={setSide} />
-        <PanelViewToggle value={view} onValueChange={setView}>
-          <PanelViewOption value="list" label="Ranked list">
+        <Segmented size="sm" width="hug" aria-label="View" value={view} onValueChange={setView}>
+          <SegmentedItem value="list" aria-label="Ranked list" title="Ranked list">
             <ListIcon />
-          </PanelViewOption>
-          <PanelViewOption value="plot" label="Synergy against counter plot">
+          </SegmentedItem>
+          <SegmentedItem value="plot" aria-label="Synergy against counter plot" title="Synergy against counter plot">
             <ChartScatterIcon />
-          </PanelViewOption>
-        </PanelViewToggle>
+          </SegmentedItem>
+        </Segmented>
       </PanelHeader>
 
       {loading ? (
-        <PanelSkeleton rows={COLLAPSED_ROWS} />
+        <PanelBody>
+          <SkeletonRows rows={COLLAPSED_ROWS} />
+        </PanelBody>
       ) : view === "plot" ? (
         <PickExplorer recommendations={sideRecommendations} onPick={(heroId) => onPick(side, heroId)} />
       ) : top.length === 0 ? (
-        <PanelMessage>No candidate clears the minimum match count. Lower it in the filter bar.</PanelMessage>
+        <EmptyState
+          variant="inline"
+          className="px-4 py-6"
+          title="No candidate clears the minimum match count. Lower it in the filter bar."
+        />
       ) : (
         <>
           <div className={cn(COLUMNS, HEADER)}>

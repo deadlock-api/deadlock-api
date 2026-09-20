@@ -2,21 +2,22 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
 import * as React from "react";
 
+import { DISABLED_STATE, FOCUS_RING_BORDER, INVALID_STATE, SVG_SLOT } from "~/components/ui/recipes";
 import { Spinner } from "~/components/ui/spinner";
 import { cn } from "~/lib/utils";
 
 const buttonVariants = cva(
   [
     "inline-flex shrink-0 items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap transition-all",
-    "outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+    FOCUS_RING_BORDER,
     // Pressed is a nudge rather than a color, so it reads the same on every variant and next to a color-blind eye.
     "active:translate-y-px aria-disabled:active:translate-y-0",
-    "disabled:pointer-events-none disabled:opacity-50",
+    DISABLED_STATE,
     // `aria-disabled` is the unavailable action that must stay focusable, so it keeps its events and only stops
     // reacting to the pointer.
     "aria-disabled:cursor-default aria-disabled:opacity-50 aria-disabled:hover:bg-inherit aria-disabled:hover:text-inherit",
-    "aria-invalid:border-destructive aria-invalid:ring-destructive/40",
-    "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+    INVALID_STATE,
+    SVG_SLOT,
   ],
   {
     variants: {
@@ -33,8 +34,6 @@ const buttonVariants = cva(
         "destructive-soft": "border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15",
         "positive-soft": "border border-positive/30 bg-positive/10 text-positive hover:bg-positive/20",
         "negative-soft": "border border-negative/30 bg-negative/10 text-negative hover:bg-negative/15",
-        "warning-soft": "border border-warning/30 bg-warning/10 text-warning hover:bg-warning/20",
-        "info-soft": "border border-info/30 bg-info/10 text-info hover:bg-info/20",
         /** "Sign in through Steam" only: Valve's brand surface, the same in both themes. */
         steam: "border border-steam-border bg-steam-bg font-semibold text-foreground hover:bg-steam-bg-hover",
         /** A name inside a clickable row: no box of its own, it keeps the surrounding type and only recolors. */

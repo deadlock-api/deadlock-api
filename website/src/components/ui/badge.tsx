@@ -2,10 +2,16 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
 import * as React from "react";
 
+import { FOCUS_RING_BORDER, INVALID_STATE } from "~/components/ui/recipes";
+import { TONE_SOFT } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex w-fit max-w-full shrink-0 items-center justify-center gap-1 overflow-hidden border border-transparent font-medium whitespace-nowrap transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 [&>span]:min-w-0 [&>span]:truncate [&>svg]:pointer-events-none [&>svg]:size-3 [&>svg]:shrink-0",
+  [
+    FOCUS_RING_BORDER,
+    INVALID_STATE,
+    "inline-flex w-fit max-w-full shrink-0 items-center justify-center gap-1 overflow-hidden border border-transparent font-medium whitespace-nowrap transition-[color,box-shadow] [&>span]:min-w-0 [&>span]:truncate [&>svg]:pointer-events-none [&>svg]:size-3 [&>svg]:shrink-0",
+  ],
   {
     variants: {
       variant: {
@@ -14,12 +20,10 @@ const badgeVariants = cva(
         destructive:
           "bg-destructive text-destructive-foreground focus-visible:ring-destructive/40 [a&]:hover:bg-destructive/90",
         outline: "border-border text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
-        ghost: "[a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 [a&]:hover:underline",
         muted: "bg-muted text-muted-foreground",
         soft: "border-primary/30 bg-primary/10 text-primary",
-        positive: "border-positive/30 bg-positive/10 text-positive",
-        negative: "border-negative/30 bg-negative/10 text-negative",
+        positive: TONE_SOFT.positive,
+        negative: TONE_SOFT.negative,
         warning: "border-warning/30 bg-warning/10 text-warning",
         info: "border-info/30 bg-info/10 text-info",
         // Categories with no status meaning, such as blog tags. The tint carries the category; the text stays in ink,
@@ -77,4 +81,4 @@ function Badge({
   );
 }
 
-export { Badge, badgeVariants };
+export { Badge };

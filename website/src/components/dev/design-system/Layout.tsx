@@ -5,22 +5,8 @@ import { Grid } from "~/components/ui/grid";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 
-const TYPE_STEPS = [
-  "display",
-  "title-lg",
-  "title",
-  "heading",
-  "subheading",
-  "label",
-  "body",
-  "prose",
-  "caption",
-  "meta",
-  "eyebrow",
-  "value-lg",
-  "value",
-] as const;
-const TONES = ["default", "muted", "primary", "positive", "negative", "warning", "info", "destructive"] as const;
+const TYPE_STEPS = ["label", "body", "caption", "meta", "eyebrow"] as const;
+const TONES = ["default", "muted", "positive", "negative", "warning", "destructive"] as const;
 
 function Tile({ children }: { children: React.ReactNode }) {
   return (

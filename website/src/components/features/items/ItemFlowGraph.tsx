@@ -18,11 +18,11 @@ import { Delta } from "~/components/ui/delta";
 import { Field } from "~/components/ui/field";
 import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { OptionRow } from "~/components/ui/option-row";
-import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
 import { Stack } from "~/components/ui/stack";
+import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -955,11 +955,16 @@ export function ItemFlowGraph({
                   <KeyValueList variant="plain">
                     <KeyValue label="Matches" value={pathStats.matches.toLocaleString("en-US")} />
                     <KeyValue label="Players" value={pathStats.players.toLocaleString("en-US")} />
-                    <KeyValue label="W / L">
-                      <span className="text-positive">{pathStats.wins.toLocaleString("en-US")}</span>
-                      {" / "}
-                      <span className="text-negative">{pathStats.losses.toLocaleString("en-US")}</span>
-                    </KeyValue>
+                    <KeyValue
+                      label="W / L"
+                      value={
+                        <>
+                          <span className="text-positive">{pathStats.wins.toLocaleString("en-US")}</span>
+                          {" / "}
+                          <span className="text-negative">{pathStats.losses.toLocaleString("en-US")}</span>
+                        </>
+                      }
+                    />
                     <KeyValue label="Path Frequency" value={`${(pathStats.pathFrequency * 100).toFixed(1)}%`} />
                     <KeyValue label="Overall WR" value={`${(pathStats.baseWinRate * 100).toFixed(1)}%`} />
                     <KeyValue

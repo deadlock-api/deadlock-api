@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { BarChart3, ChevronDown, Download, Info, LayoutGrid, List, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { useState } from "react";
 
-import { HeadingSpecimen, PrimitivesMore, ToggleSpecimen } from "~/components/dev/design-system/PrimitivesMore";
+import { HeadingSpecimen, PrimitivesMore } from "~/components/dev/design-system/PrimitivesMore";
 import { Round3Primitives } from "~/components/dev/design-system/Round3Primitives";
 import { Round3PrimitivesMore } from "~/components/dev/design-system/Round3PrimitivesMore";
 import { Round4Requests } from "~/components/dev/design-system/Round4Requests";
@@ -24,16 +24,8 @@ import {
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
-import { Checkbox } from "~/components/ui/checkbox";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { CheckboxField } from "~/components/ui/checkbox-field";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { ColorInput } from "~/components/ui/color-input";
 import { CopyButton } from "~/components/ui/copy-button";
@@ -48,18 +40,14 @@ import {
   DialogTrigger,
 } from "~/components/ui/dialog";
 import { Field } from "~/components/ui/field";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/hover-card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { LoadingLogo } from "~/components/ui/loading-logo";
 import { OptionRow } from "~/components/ui/option-row";
-import { PanelTooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/panel-tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
 import { DivergingBar, RateBar } from "~/components/ui/rate-bar";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "~/components/ui/sheet";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Slider } from "~/components/ui/slider";
 import { SortButton } from "~/components/ui/sort-button";
@@ -69,7 +57,7 @@ import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
-import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 
 const BUTTON_VARIANTS = [
   "default",
@@ -245,7 +233,7 @@ export function Primitives() {
       <Specimen
         name="ToggleGroup"
         source="ui/toggle-group"
-        note="Independent on/off options and icon-only view switches. For one text choice out of a few, use Segmented."
+        note="Independent on/off options. For one choice out of a few, text or icon, use Segmented."
       >
         <Variants label='type="multiple"'>
           <ToggleGroup type="multiple" size="sm" variant="outline" value={views} onValueChange={setViews}>
@@ -261,8 +249,6 @@ export function Primitives() {
           </ToggleGroup>
         </Variants>
       </Specimen>
-
-      <ToggleSpecimen />
 
       <Specimen
         name="Tabs"
@@ -316,7 +302,6 @@ export function Primitives() {
                 </CardAction>
               </CardHeader>
               <CardContent className="text-sm">Content</CardContent>
-              <CardFooter className="text-xs text-muted-foreground">Footer</CardFooter>
             </Card>
           ))}
         </Variants>
@@ -444,12 +429,9 @@ export function Primitives() {
         </Variants>
       </Specimen>
 
-      <Specimen name="Checkbox and Switch" source="ui/checkbox · ui/switch · ui/label">
+      <Specimen name="Checkbox and Switch" source="ui/checkbox-field · ui/switch · ui/label">
         <Variants className="gap-6">
-          <div className="flex items-center gap-2">
-            <Checkbox id="ds-check" defaultChecked />
-            <Label htmlFor="ds-check">Include bots</Label>
-          </div>
+          <CheckboxField label="Include bots" defaultChecked />
           <div className="flex items-center gap-2">
             <Switch id="ds-switch" />
             <Label htmlFor="ds-switch">Compare to previous period</Label>
@@ -503,16 +485,12 @@ export function Primitives() {
         </Variants>
       </Specimen>
 
-      <Specimen
-        name="RateBar"
-        source="ui/rate-bar"
-        note="A thin 0 to 1 bar that decorates a visible rate label. The tick marks the baseline it is compared with."
-      >
+      <Specimen name="RateBar" source="ui/rate-bar" note="A thin 0 to 1 bar that decorates a visible rate label.">
         <Variants className="gap-6">
           {[0.62, 0.48, 0.31].map((rate) => (
             <span key={rate} className="flex items-center gap-2 text-xs tabular-nums">
               {Math.round(rate * 100)}%
-              <RateBar rate={rate} baseline={0.5} className="w-24" />
+              <RateBar rate={rate} className="w-24" />
             </span>
           ))}
         </Variants>
@@ -550,26 +528,18 @@ export function Primitives() {
         </Variants>
       </Specimen>
 
-      <Specimen name="Tooltip" source="ui/tooltip" note="Names an icon-only button. For data, use PanelTooltip.">
-        <Variants>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button size="icon-sm" variant="outline" aria-label="Add">
-                <Plus />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Add to comparison</TooltipContent>
-          </Tooltip>
-        </Variants>
-      </Specimen>
-
       <Specimen
-        name="PanelTooltip"
-        source="ui/panel-tooltip"
-        note="The hover card for data: the only tooltip surface for tables and charts. PanelTooltipCard is the same surface for Recharts. TooltipTarget makes a plain value focusable so its card is reachable by keyboard; its display prop decides how it sits in the line, and defaults to inline-block so the focus ring boxes the whole trigger."
+        name="Tooltip"
+        source="ui/tooltip"
+        note='The one hover surface: a hint that names an icon-only button, the details behind a value, a preview. The child is the trigger. variant="preview" is for heavy or interactive content such as a chart: it renders once, opens after a short delay and is not read out as a description. TooltipCard is the same surface for Recharts. TooltipTarget makes a plain value focusable so its tooltip is reachable by keyboard; its display prop decides how it sits in the line, and defaults to inline-block so the focus ring boxes the whole trigger.'
       >
-        <Variants>
-          <PanelTooltip
+        <Variants label='variant="hint" (default)'>
+          <Tooltip content="Add to comparison">
+            <Button size="icon-sm" variant="outline" aria-label="Add">
+              <Plus />
+            </Button>
+          </Tooltip>
+          <Tooltip
             content={
               <>
                 <TooltipHeader title="Infernus" subtitle="Last 30 days" />
@@ -581,9 +551,23 @@ export function Primitives() {
             }
           >
             <Button variant="outline" size="sm">
-              PanelTooltip
+              With data
             </Button>
-          </PanelTooltip>
+          </Tooltip>
+          {(["right", "bottom", "left"] as const).map((side) => (
+            <Tooltip key={side} side={side} content={`side="${side}"`}>
+              <Button variant="outline" size="sm">
+                {side}
+              </Button>
+            </Tooltip>
+          ))}
+        </Variants>
+        <Variants label='variant="preview"'>
+          <Tooltip variant="preview" content="Room for a chart and its controls.">
+            <Button variant="link" className="h-auto p-0">
+              Preview
+            </Button>
+          </Tooltip>
         </Variants>
         <Variants label="TooltipTarget display (tab through them to see the ring)" className="items-stretch">
           <div className="flex w-full max-w-md flex-col gap-2 text-sm">
@@ -603,7 +587,11 @@ export function Primitives() {
         </Variants>
       </Specimen>
 
-      <Specimen name="Popover and HoverCard" source="ui/popover · ui/hover-card">
+      <Specimen
+        name="Popover"
+        source="ui/popover"
+        note="Opens on click and holds controls: a filter list, a calendar, a menu. Information shown on hover is a Tooltip."
+      >
         <Variants>
           <Popover>
             <PopoverTrigger asChild>
@@ -613,14 +601,6 @@ export function Primitives() {
             </PopoverTrigger>
             <PopoverContent className="w-56 text-sm">Popover content</PopoverContent>
           </Popover>
-          <HoverCard>
-            <HoverCardTrigger asChild>
-              <Button variant="link" className="h-auto p-0">
-                HoverCard
-              </Button>
-            </HoverCardTrigger>
-            <HoverCardContent className="text-sm">Richer preview on hover.</HoverCardContent>
-          </HoverCard>
         </Variants>
       </Specimen>
 
@@ -667,24 +647,6 @@ export function Primitives() {
         </Variants>
       </Specimen>
 
-      <Specimen name="Sheet" source="ui/sheet" note="A side panel for secondary tasks and mobile navigation.">
-        <Variants>
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm">
-                Sheet
-              </Button>
-            </SheetTrigger>
-            <SheetContent>
-              <SheetHeader>
-                <SheetTitle>Sheet</SheetTitle>
-                <SheetDescription>Side panel for secondary tasks.</SheetDescription>
-              </SheetHeader>
-            </SheetContent>
-          </Sheet>
-        </Variants>
-      </Specimen>
-
       <Specimen
         name="Alert"
         source="ui/alert"
@@ -721,15 +683,6 @@ export function Primitives() {
         </Variants>
       </Specimen>
 
-      <Specimen name="LoadingLogo" source="ui/loading-logo" note="The brand loader. Use it through LoadingState.">
-        <Variants className="gap-10">
-          {/* ds-allow raw-loading: the specimen of the primitive itself */}
-          <LoadingLogo />
-          <LoadingLogo text="Loading matches…" />
-          <LoadingLogo size="sm" text="Loading…" />
-        </Variants>
-      </Specimen>
-
       <Specimen name="Avatar" source="ui/avatar">
         <Variants>
           <Avatar>
@@ -755,7 +708,7 @@ export function Primitives() {
       <Specimen name="CopyButton" source="ui/copy-button">
         <Variants>
           <CopyButton text="deadlock-api.com" variant="outline" size="sm" />
-          <CopyButton text="deadlock-api.com" variant="ghost" size="icon-sm" display="icon" />
+          <CopyButton text="deadlock-api.com" variant="ghost" size="icon-sm" />
         </Variants>
       </Specimen>
 

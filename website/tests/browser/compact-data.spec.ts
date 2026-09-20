@@ -19,13 +19,12 @@ test.beforeEach(async ({ context }) => {
   });
 });
 
-test("item statistics retain compact rows, keyboard sorting, and visible names while scrolling", async ({ page }) => {
+test("item statistics retain keyboard sorting and visible names while scrolling", async ({ page }) => {
   await page.goto("/analytics/items?date_range=_");
   const table = page.getByRole("table", { name: "Item statistics", exact: true });
   const rows = table.locator("tbody > tr");
   await expect(rows).toHaveCount(2);
   await expect(rows.first()).toContainText("Sold Item 1");
-  expect((await rows.first().boundingBox())!.height).toBeLessThan(48);
   const sort = table.getByRole("button", { name: "Win Rate", exact: true });
   await sort.focus();
   await sort.press("Enter");

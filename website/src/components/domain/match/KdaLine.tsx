@@ -4,8 +4,7 @@ import { cn } from "~/lib/utils";
 
 const kdaLineVariants = cva("inline-flex items-baseline gap-0.5 font-bold tracking-wide text-foreground tabular-nums", {
   variants: {
-    /** `sm` takes the text size of its parent (a table cell, a list row); `default` and `lg` are a card's headline. */
-    size: { sm: "font-semibold tracking-normal", default: "text-base leading-none", lg: "text-xl leading-none" },
+    size: { default: "text-base leading-none" },
   },
   defaultVariants: { size: "default" },
 });

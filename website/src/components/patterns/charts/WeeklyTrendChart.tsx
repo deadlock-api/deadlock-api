@@ -31,12 +31,12 @@ export interface WeekEntry {
 export function WeeklyTrendChart({
   weeks,
   shareLabel,
-  ariaLabel,
+  label,
   ...props
 }: Omit<React.ComponentProps<typeof Card>, "children" | "size"> & {
   weeks: WeekEntry[];
   shareLabel: string;
-  ariaLabel: string;
+  label: string;
 }) {
   const winRateAxis = winRateDomain(weeks.map((week) => week.winRate));
   const maxShare = Math.max(...weeks.map((week) => week.share));
@@ -50,7 +50,7 @@ export function WeeklyTrendChart({
   // the reader compare heights that mean nothing.
   return (
     // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the tags it suggests (fieldset, details, optgroup) are none of them a chart
-    <Card size="xs" role="group" aria-label={ariaLabel} {...props}>
+    <Card size="xs" role="group" aria-label={label} {...props}>
       <CardContent className="flex flex-col gap-1">
         <ChartLegend>
           <ChartLegendItem color={WIN_RATE_COLOR} shape="line">

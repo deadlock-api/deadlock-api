@@ -13,7 +13,6 @@ import { InlineStat } from "~/components/ui/inline-stat";
 import { Kbd } from "~/components/ui/kbd";
 import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { NoValue } from "~/components/ui/no-value";
-import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
 import { Pips } from "~/components/ui/pips";
 import { SplitBar } from "~/components/ui/rate-bar";
 import { SearchInput } from "~/components/ui/search-input";
@@ -23,6 +22,7 @@ import { progressSteps, StepMeter, StepMeterStep, type StepState } from "~/compo
 import { SwitchField } from "~/components/ui/switch-field";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { TextLink } from "~/components/ui/text-link";
+import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 
 const QUIZ_STEPS: readonly StepState[] = ["wrong", "wrong", "correct", "empty", "empty", "empty"];
 const ROUND_STEPS: readonly StepState[] = [
@@ -124,7 +124,7 @@ function FieldRowExamples() {
       <Specimen
         name="SwitchField"
         source="ui/switch-field"
-        note='A switch with its label on one row, for a setting that applies at once. side="end" is the full-width settings row.'
+        note="A switch with its label on one row, for a setting that applies at once."
       >
         <Variants label="size" className="items-start gap-6">
           <SwitchField label="All stats" defaultChecked />
@@ -132,10 +132,9 @@ function FieldRowExamples() {
           <SwitchField label="Disabled" disabled />
           <SwitchField label="Disabled, on" disabled defaultChecked />
         </Variants>
-        <Variants label='side="end", description'>
+        <Variants label="description">
           <div className="w-full max-w-md">
             <SwitchField
-              side="end"
               label="Conservative win rate"
               description="Fewer matches behind a point mean less confidence, so its win rate is pulled toward 50%."
               checked={wilson}
@@ -320,7 +319,7 @@ export function Round3Primitives() {
       <Specimen
         name="StatusDot"
         source="ui/status-dot"
-        note="A dot of state beside a label that says the same thing, or the swatch of a data color. Decorative unless it gets a label."
+        note="A dot of state beside a label that says the same thing, or the swatch of a data color. Always decorative."
       >
         <Variants label="tone">
           {DOT_TONES.map((tone) => (
@@ -329,17 +328,10 @@ export function Round3Primitives() {
             </span>
           ))}
         </Variants>
-        <Variants label='size, motion="pulse", color, label'>
-          <StatusDot tone="primary" size="sm" />
-          <StatusDot tone="primary" />
-          <StatusDot tone="primary" size="lg" />
-          <span className="flex items-center gap-1.5 text-xs">
-            <StatusDot tone="positive" motion="pulse" /> Live
-          </span>
+        <Variants label="color">
           <span className="flex items-center gap-1.5 text-xs">
             <StatusDot color="var(--lane-purple)" /> Purple lane
           </span>
-          <StatusDot tone="warning" label="Cursor mode on" />
         </Variants>
       </Specimen>
 
@@ -350,16 +342,16 @@ export function Round3Primitives() {
       >
         <Variants className="items-start gap-6">
           <div className="flex w-56 flex-col gap-1.5">
-            <span className="eyebrow">divided, sm (default)</span>
+            <span className="eyebrow">divided (default)</span>
             <KeyValueList>
               <KeyValue label="Matches" value="4,120" />
               <KeyValue label="Win rate" value="52.4%" />
-              <KeyValue label="Avg. duration">32:10</KeyValue>
+              <KeyValue label="Avg. duration" value="32:10" />
             </KeyValueList>
           </div>
           <div className="flex w-56 flex-col gap-1.5">
-            <span className="eyebrow">plain, default</span>
-            <KeyValueList variant="plain" size="default">
+            <span className="eyebrow">plain</span>
+            <KeyValueList variant="plain">
               <KeyValue label="Matches" value="4,120" />
               <KeyValue label="Win rate" value="52.4%" />
               <KeyValue label="Avg. duration" value="32:10" />
@@ -407,7 +399,7 @@ export function Round3Primitives() {
           <Pips value={1} max={4} label="Level 1 of 4" />
           <Pips value={2} max={3} tone="positive" label="Confidence 2 of 3" />
           <Pips value={1} max={3} tone="negative" label="Confidence 1 of 3" />
-          <Pips value={2} max={5} tone="neutral" label="2 of 5" />
+          <Pips value={2} max={5} tone="muted" label="2 of 5" />
         </Variants>
       </Specimen>
 
@@ -417,7 +409,7 @@ export function Round3Primitives() {
         note="A count pinned to the corner of an icon or portrait. The parent is relative."
       >
         <Variants className="gap-6 py-2">
-          {(["top-end", "bottom-end", "top-start", "bottom-start"] as const).map((corner) => (
+          {(["top-end", "bottom-end", "top-start"] as const).map((corner) => (
             <span key={corner} className="relative">
               <Avatar className="rounded-md">
                 <AvatarFallback className="rounded-md">IN</AvatarFallback>

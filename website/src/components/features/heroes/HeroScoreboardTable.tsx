@@ -4,8 +4,8 @@ import { HeroCell } from "~/components/domain/assets/HeroCell";
 import type { ScoreboardSort } from "~/components/domain/player-scoreboard/ScoreboardTable";
 import { formatStatValue } from "~/components/domain/player-scoreboard/sort-options";
 import { SortBySelector } from "~/components/domain/player-scoreboard/SortBySelector";
-import { SortButton, ariaSort } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
+import { SortButton, ariaSort } from "~/components/ui/sort-button";
 import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 

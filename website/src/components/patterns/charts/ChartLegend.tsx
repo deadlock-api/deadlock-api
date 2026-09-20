@@ -1,6 +1,5 @@
 import { createContext, useContext } from "react";
 
-import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
 type SwatchShape = "line" | "square" | "dot" | "ring";
@@ -53,58 +52,17 @@ export interface ChartLegendItemProps extends Omit<React.ComponentProps<"li">, "
   shape?: SwatchShape;
   /** Replaces the swatch, for a layer drawn with a glyph rather than a color. */
   icon?: React.ReactNode;
-  /** The series is switched off. Only meaningful with `onToggle`. */
-  hidden?: boolean;
-  /** Makes the entry a toggle button that shows or hides its series. */
-  onToggle?: () => void;
-  /** Names the toggle for assistive technology when the label is not text. */
-  toggleLabel?: string;
 }
 
 const LegendSizeContext = createContext<"sm" | "default">("default");
 
-/**
- * One series of a `ChartLegend`; children are its label. With `onToggle` it is a button: a hidden series is struck
- * through, never removed, so it can be brought back.
- */
-export function ChartLegendItem({
-  color,
-  shape,
-  icon,
-  hidden = false,
-  onToggle,
-  toggleLabel,
-  className,
-  children,
-  ...props
-}: ChartLegendItemProps) {
+/** One series of a `ChartLegend`; children are its label. */
+export function ChartLegendItem({ color, shape, icon, className, children, ...props }: ChartLegendItemProps) {
   const size = useContext(LegendSizeContext);
-  const mark = icon ?? <ChartSwatch color={color} shape={shape} size={size} />;
   return (
-    <li
-      data-slot="chart-legend-item"
-      data-state={hidden ? "off" : "on"}
-      className={cn("flex items-center gap-1.5", className)}
-      {...props}
-    >
-      {onToggle ? (
-        <Button
-          variant="ghost"
-          size="xs"
-          aria-pressed={!hidden}
-          aria-label={toggleLabel}
-          onClick={onToggle}
-          className={cn("gap-1.5 font-normal", hidden && "text-muted-foreground line-through")}
-        >
-          {mark}
-          {children}
-        </Button>
-      ) : (
-        <>
-          {mark}
-          {children}
-        </>
-      )}
+    <li data-slot="chart-legend-item" className={cn("flex items-center gap-1.5", className)} {...props}>
+      {icon ?? <ChartSwatch color={color} shape={shape} size={size} />}
+      {children}
     </li>
   );
 }
@@ -145,7 +103,6 @@ export function ChartGradientLegend({
   min,
   max,
   label = "Color scale",
-  size = "default",
   className,
   ...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
@@ -154,7 +111,6 @@ export function ChartGradientLegend({
   min: React.ReactNode;
   max: React.ReactNode;
   label?: string;
-  size?: "sm" | "default";
 }) {
   return (
     <div
@@ -167,7 +123,7 @@ export function ChartGradientLegend({
       <span className="sr-only">to</span>
       <span
         aria-hidden="true"
-        className={cn("rounded-full", size === "sm" ? "h-2 w-16" : "h-2.5 w-24")}
+        className="h-2.5 w-24 rounded-full"
         style={{ background: `linear-gradient(to right, ${stops.join(", ")})` }}
       />
       <span>{max}</span>

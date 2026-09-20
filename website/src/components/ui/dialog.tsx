@@ -4,6 +4,7 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 import * as React from "react";
 
 import { Button } from "~/components/ui/button";
+import { DIALOG_CONTENT, DIALOG_OVERLAY } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -23,36 +24,20 @@ function DialogClose({ ...props }: React.ComponentProps<typeof DialogPrimitive.C
 }
 
 function DialogOverlay({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
-  return (
-    <DialogPrimitive.Overlay
-      data-slot="dialog-overlay"
-      className={cn(
-        "fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <DialogPrimitive.Overlay data-slot="dialog-overlay" className={cn(DIALOG_OVERLAY, className)} {...props} />;
 }
 
-// Centred by the inline insets plus auto margins rather than `start-1/2` and a translate, which would need a mirrored
-// translate in RTL. The insets are also the gutter on a narrow screen, so the width needs no viewport breakpoint.
-// It is the query container of its header and footer.
-const dialogContentVariants = cva(
-  "@container fixed inset-x-4 top-1/2 z-50 mx-auto grid max-h-dvh -translate-y-1/2 gap-4 overflow-y-auto rounded-lg border bg-background p-6 shadow-lg duration-normal outline-none focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
-  {
-    variants: {
-      size: {
-        sm: "max-w-md",
-        default: "max-w-lg",
-        lg: "max-w-2xl",
-        xl: "max-w-4xl",
-        full: "max-w-7xl",
-      },
+const dialogContentVariants = cva(DIALOG_CONTENT, {
+  variants: {
+    size: {
+      default: "max-w-lg",
+      lg: "max-w-2xl",
+      xl: "max-w-4xl",
+      full: "max-w-7xl",
     },
-    defaultVariants: { size: "default" },
   },
-);
+  defaultVariants: { size: "default" },
+});
 
 function DialogContent({
   className,
@@ -149,8 +134,6 @@ export {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogOverlay,
-  DialogPortal,
   DialogTitle,
   DialogTrigger,
 };

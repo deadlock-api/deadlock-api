@@ -89,7 +89,7 @@ function HeatmapPage() {
 
       <Filter.Root>
         <Filter.Team value={team} onValueChange={setTeam} />
-        <Filter.HeatmapViewMode value={viewMode} onValueChange={(m) => setViewMode(m as typeof viewMode)} />
+        <Filter.HeatmapViewMode value={viewMode} onValueChange={setViewMode} />
         <Filter.DimensionToggle value={is3D} onValueChange={setIs3D} />
         <Filter.Hero value={heroId} onValueChange={setHeroId} allowNull label="Hero" />
         <Filter.ModeWithRank value={{ mode, rank: [minRankId, maxRankId] }} onValueChange={handleModeWithRankChange} />

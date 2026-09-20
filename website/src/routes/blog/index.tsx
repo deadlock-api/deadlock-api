@@ -47,7 +47,7 @@ function BlogIndex() {
             key={post.slug}
             asChild
             size="lg"
-            titleAs="h2"
+            as="h2"
             eyebrow={
               <MetaList>
                 <MetaItem icon={<Calendar />}>{formatDate(post.date)}</MetaItem>

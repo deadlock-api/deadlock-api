@@ -67,7 +67,7 @@ interface StatProps extends Omit<React.ComponentProps<"div">, "children"> {
 }
 
 /** One headline number with its label. Must sit inside a StatGroup, which supplies the `<dl>`. */
-function Stat({ label, value, sub, tone = "neutral", align = "start", className, ...props }: StatProps) {
+function Stat({ label, value, sub, tone, align = "start", className, ...props }: StatProps) {
   const { variant, size } = use(StatGroupContext);
   return (
     <div
@@ -86,7 +86,7 @@ function Stat({ label, value, sub, tone = "neutral", align = "start", className,
         className={cn(
           "max-w-full min-w-0 truncate",
           size === "sm" ? "type-value" : "type-value-lg",
-          tone !== "neutral" && TONE_TEXT[tone],
+          tone && TONE_TEXT[tone],
         )}
       >
         {value ?? <NoValue />}

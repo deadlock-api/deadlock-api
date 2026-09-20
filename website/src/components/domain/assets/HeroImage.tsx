@@ -23,24 +23,34 @@ const heroImageVariants = cva("", {
 
 export type HeroImageVariants = VariantProps<typeof heroImageVariants>;
 
-export function HeroImage({
-  heroId,
-  ...props
-}: HeroImageVariants & {
-  heroId: number;
-  className?: string;
-  /** A CSS color for the frame when it comes from data (a lane, the hero's own color). Replaces `ring`. */
-  ringColor?: string;
-  /** Native hover title, the name by default; pass "" where a tooltip already names the image. */
-  title?: string;
-}) {
-  const { hero, isLoading } = useHeroById(heroId);
+export type HeroSource =
+  | { heroId: number; hero?: never; loading?: never }
+  | { hero: SlimHero | undefined; loading?: boolean; heroId?: never };
 
-  return <HeroImageFromAsset hero={hero} loading={isLoading} {...props} />;
+type HeroImageLook = HeroImageVariants &
+  Omit<
+    React.ComponentProps<typeof AssetImage>,
+    "asset" | "loading" | "skeletonClassName" | "emptyClassName" | "imgClassName"
+  > & {
+    className?: string;
+    /** A CSS color for the frame when it comes from data (a lane, the hero's own color). Replaces `ring`. */
+    ringColor?: string;
+    /** Native hover title, the name by default; pass "" where a tooltip already names the image. */
+    title?: string;
+  };
+
+/** Pass `hero` to render a hero already read by the parent without another query subscription. */
+export function HeroImage(props: HeroImageLook & HeroSource) {
+  return props.heroId !== undefined ? <HeroImageById {...props} /> : <HeroImageView {...props} />;
 }
 
-/** Render a hero already read by the parent without another query subscription. */
-export function HeroImageFromAsset({
+function HeroImageById({ heroId, ...props }: HeroImageLook & { heroId: number }) {
+  const { hero, isLoading } = useHeroById(heroId);
+
+  return <HeroImageView {...props} hero={hero} loading={isLoading} />;
+}
+
+function HeroImageView({
   hero,
   loading,
   shape,
@@ -50,18 +60,7 @@ export function HeroImageFromAsset({
   title,
   style,
   ...props
-}: HeroImageVariants &
-  Omit<
-    React.ComponentProps<typeof AssetImage>,
-    "asset" | "loading" | "skeletonClassName" | "emptyClassName" | "imgClassName"
-  > & {
-    hero: SlimHero | undefined;
-    loading?: boolean;
-    className?: string;
-    /** A CSS color for the frame when it comes from data (a lane, the hero's own color). Replaces `ring`. */
-    ringColor?: string;
-    title?: string;
-  }) {
+}: HeroImageLook & { hero: SlimHero | undefined; loading?: boolean }) {
   const look = cn(heroImageVariants({ shape, ring: ringColor ? "none" : ring }), className);
   // A data color cannot be a class, and a border would eat into the art: the frame is an inset shadow.
   const ringStyle = ringColor ? { boxShadow: `inset 0 0 0 1px ${ringColor}` } : undefined;

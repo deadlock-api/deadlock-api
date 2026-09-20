@@ -2,9 +2,10 @@ import { ChevronDownIcon, RotateCcw } from "lucide-react";
 import { Children, createContext, useContext } from "react";
 
 import { Button } from "~/components/ui/button";
+import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
+import { FOCUS_RING } from "~/components/ui/recipes";
 import { Segmented } from "~/components/ui/segmented";
-import { Spinner } from "~/components/ui/spinner";
 import { cn } from "~/lib/utils";
 
 /** True inside `Filter.Root`, where cells share one border and divide it with hairlines. */
@@ -80,9 +81,6 @@ interface FilterCellProps extends Omit<React.ComponentProps<"div">, "children"> 
   /** The filter differs from its default: the label turns primary, the cell is underlined and the reset shows. */
   active?: boolean;
   onReset?: () => void;
-  disabled?: boolean;
-  /** The choices are still being fetched: the cell is busy and cannot be opened. */
-  loading?: boolean;
   icon?: React.ReactNode;
   /** The editor, shown in the popover. */
   children: React.ReactNode;
@@ -90,6 +88,12 @@ interface FilterCellProps extends Omit<React.ComponentProps<"div">, "children"> 
   contentClassName?: string;
   align?: "start" | "center" | "end";
 }
+
+/** What a selector built on `FilterCell` passes through to it: everything but the value wiring it supplies itself. */
+export type FilterCellPassthroughProps = Omit<
+  FilterCellProps,
+  "label" | "value" | "defaultValue" | "active" | "onReset" | "children"
+>;
 
 /**
  * A filter trigger that opens its editor in a popover. Inside a `FilterBar` the popover is anchored to the cell
@@ -101,8 +105,6 @@ export function FilterCell({
   value,
   active = false,
   onReset,
-  disabled = false,
-  loading = false,
   icon,
   children,
   contentClassName,
@@ -116,8 +118,6 @@ export function FilterCell({
       <div
         data-slot="filter-cell"
         data-active={active || undefined}
-        data-disabled={disabled || undefined}
-        aria-busy={loading || undefined}
         className={cn(
           "grid min-w-0",
           inRoot ? cn(cellInRoot, "static @2xl:relative") : cn(cellStandalone, "relative"),
@@ -130,10 +130,10 @@ export function FilterCell({
           {/* ds-allow raw-button: the cell itself is the trigger; its two-line label/value layout is not a Button */}
           <button
             type="button"
-            disabled={disabled || loading}
             className={cn(
               cellBase,
-              "col-start-1 row-start-1 outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-50 data-[state=open]:bg-accent",
+              FOCUS_RING,
+              "col-start-1 row-start-1 hover:bg-accent focus-visible:bg-accent focus-visible:ring-inset data-[state=open]:bg-accent",
             )}
           >
             {label && (
@@ -147,8 +147,8 @@ export function FilterCell({
                 active ? "text-foreground" : "text-muted-foreground",
               )}
             >
-              {loading ? <Spinner size="sm" /> : icon}
-              <span className="truncate">{loading ? "Loading…" : (value ?? label)}</span>
+              {icon}
+              <span className="truncate">{value ?? label}</span>
               <ChevronDownIcon className="size-3.5 shrink-0 opacity-50" />
             </span>
             {inRoot && (
@@ -158,7 +158,7 @@ export function FilterCell({
             )}
           </button>
         </PopoverTrigger>
-        {onReset && active && !disabled && !loading && (
+        {onReset && active && (
           <span className="pointer-events-none col-start-1 row-start-1 self-start justify-self-end p-0.5">
             <CellReset label={label} active={active} onReset={onReset} className="pointer-events-auto" />
           </span>
@@ -178,9 +178,12 @@ export function FilterCell({
 interface FilterToggleCellProps<T extends string> extends Omit<React.ComponentProps<"div">, "defaultValue"> {
   label: string;
   value?: T;
+  /** The choice it starts on when uncontrolled, and the one the reset returns to. */
   defaultValue?: T;
   onValueChange?: (value: T) => void;
+  /** Defaults to "the value differs from `defaultValue`". */
   active?: boolean;
+  /** Defaults to choosing `defaultValue` again; without a `defaultValue` there is no reset. */
   onReset?: () => void;
   disabled?: boolean;
   /**
@@ -197,8 +200,8 @@ export function FilterToggleCell<T extends string>({
   value,
   defaultValue,
   onValueChange,
-  active = false,
-  onReset,
+  active: activeProp,
+  onReset: onResetProp,
   disabled = false,
   width,
   className,
@@ -206,6 +209,13 @@ export function FilterToggleCell<T extends string>({
   ...props
 }: FilterToggleCellProps<T>) {
   const inRoot = useContext(FilterRootContext);
+  const [current, setCurrent] = useControllableState<T | "">({
+    value,
+    defaultValue: defaultValue ?? "",
+    onValueChange: onValueChange as ((next: T | "") => void) | undefined,
+  });
+  const active = activeProp ?? (defaultValue !== undefined && current !== defaultValue);
+  const onReset = onResetProp ?? (defaultValue !== undefined ? () => setCurrent(defaultValue) : undefined);
   const isWide = width == null ? Children.count(children) > 3 : width === "wide";
   return (
     <div
@@ -230,9 +240,8 @@ export function FilterToggleCell<T extends string>({
         <CellReset label={label} active={active} onReset={onReset} className="absolute end-0.5 top-0.5" />
       )}
       <Segmented
-        value={value}
-        defaultValue={defaultValue}
-        onValueChange={onValueChange}
+        value={current}
+        onValueChange={setCurrent}
         disabled={disabled}
         aria-label={label}
         width="hug"

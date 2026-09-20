@@ -32,7 +32,6 @@ export function generateShareText(
 export function ShareButton({ variant = "outline", ...props }: React.ComponentProps<typeof CopyButton>) {
   return (
     <CopyButton
-      display="label"
       variant={variant}
       {...props}
       className={cn("cursor-target font-mono text-xs tracking-wider uppercase", props.className)}

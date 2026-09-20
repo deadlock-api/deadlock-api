@@ -3,13 +3,13 @@ import type { AnalyticsApiGameStatsRequest, Rank } from "deadlock_api_client";
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 
-import { SizedRankTierTick } from "~/components/domain/rank/RankTierTick";
+import { RankTierTick } from "~/components/domain/rank/RankTierTick";
 import { ChartLegend, ChartLegendItem, ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_AXIS, CHART_CURSOR_BAND, CHART_GRID } from "~/components/patterns/charts/theme";
-import { PanelTooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
+import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -116,7 +116,7 @@ export default function EconomySourcesByRank({ params }: EconomySourcesByRankPro
                 dataKey="tier"
                 interval={0}
                 height={44}
-                tick={<SizedRankTierTick tiers={chartData} />}
+                tick={<RankTierTick tiers={chartData} />}
               />
               <YAxis
                 {...CHART_AXIS}
@@ -131,9 +131,9 @@ export default function EconomySourcesByRank({ params }: EconomySourcesByRankPro
                   if (!active || !payload?.length) return null;
                   const row = payload[0].payload as TierRow;
                   return (
-                    <PanelTooltipCard>
+                    <TooltipCard>
                       <TooltipHeader
-                        lead={row.image && <img src={row.image} alt="" className="size-5" />}
+                        leading={row.image && <img src={row.image} alt="" className="size-5" />}
                         title={row.name}
                         subtitle={`Total ${formatSouls(row.total)}`}
                       />
@@ -160,7 +160,7 @@ export default function EconomySourcesByRank({ params }: EconomySourcesByRankPro
                             />
                           ))}
                       </TooltipStats>
-                    </PanelTooltipCard>
+                    </TooltipCard>
                   );
                 }}
               />

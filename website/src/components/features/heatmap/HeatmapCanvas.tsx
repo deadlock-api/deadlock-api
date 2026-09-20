@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ChartOverlay, ChartStage } from "~/components/patterns/charts/ChartOverlay";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
-import { PanelTooltipCard, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
+import { TooltipCard, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 
 import { buildHeatGrids, COLOR_LUT, GRID_RES, normalizeHeatGrids, sampleBilinear } from "./heatmap-grid";
 import { HeatmapLegend } from "./HeatmapLegend";
@@ -231,7 +231,7 @@ export default function HeatmapCanvas({
         </ChartOverlay>
       </ChartStage>
       {tooltip && (
-        <PanelTooltipCard
+        <TooltipCard
           className="pointer-events-none absolute z-50"
           style={{
             left: tooltip.x,
@@ -243,7 +243,7 @@ export default function HeatmapCanvas({
             <TooltipStat label="Deaths" value={tooltip.deaths.toLocaleString("en-US")} className="text-info" />
             {tooltip.deaths > 0 && <TooltipStat label="K/D" value={(tooltip.kills / tooltip.deaths).toFixed(2)} />}
           </TooltipStats>
-        </PanelTooltipCard>
+        </TooltipCard>
       )}
     </div>
   );

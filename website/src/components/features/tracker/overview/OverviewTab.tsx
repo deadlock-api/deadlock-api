@@ -15,10 +15,10 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Heading } from "~/components/ui/heading";
 import { IconTile } from "~/components/ui/icon-tile";
 import { KeyValue, KeyValueList } from "~/components/ui/key-value";
-import { PanelTooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
 import { RateBar } from "~/components/ui/rate-bar";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { Text } from "~/components/ui/text";
+import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import {
   computeActivity,
@@ -198,7 +198,7 @@ export function OverviewTab({
                 label="Kill / death ratio"
                 value={(s.avgDeaths > 0 ? s.avgKills / s.avgDeaths : s.avgKills * s.matches).toFixed(2)}
               />
-              <PanelTooltip
+              <Tooltip
                 content={
                   <>
                     <TooltipHeader title="Takedowns / match" subtitle="Kills + assists per match" />
@@ -209,7 +209,7 @@ export function OverviewTab({
                 }
               >
                 <KeyValue label="Takedowns / match" value={decimal(s.avgKills + s.avgAssists)} />
-              </PanelTooltip>
+              </Tooltip>
               <KeyValue
                 label="Total kills / assists"
                 value={`${integer(s.avgKills * s.matches)} / ${integer(s.avgAssists * s.matches)}`}

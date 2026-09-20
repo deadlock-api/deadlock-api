@@ -5,10 +5,11 @@ import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { AbilityName } from "~/components/domain/assets/AbilityName";
 import { AssetImage } from "~/components/domain/assets/AssetImage";
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
-import { HeroImage, HeroImageFromAsset } from "~/components/domain/assets/HeroImage";
+import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
-import { ItemImage, ItemImageFromAsset } from "~/components/domain/assets/ItemImage";
+import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
+import { OptimizedImage } from "~/components/domain/assets/OptimizedImage";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -30,7 +31,7 @@ export function DomainAssets() {
       <Specimen
         name="HeroImage and HeroName"
         source="domain/assets/HeroImage · domain/assets/HeroName"
-        note="A hero anywhere outside a chart: pass the id, the component reads the cached hero list. HeroImageFromAsset renders a hero the parent already holds, without one query subscription per row."
+        note="A hero anywhere outside a chart: pass the id, the component reads the cached hero list. Pass hero instead of heroId to render a hero the parent already holds, without one query subscription per row."
       >
         <Variants label="Image + name">
           {HERO_IDS.map((id) => (
@@ -53,14 +54,14 @@ export function DomainAssets() {
             <HeroImage heroId={UNKNOWN_ID} />
             <HeroName heroId={UNKNOWN_ID} />
           </span>
-          <HeroImageFromAsset hero={undefined} loading />
+          <HeroImage hero={undefined} loading />
         </Variants>
       </Specimen>
 
       <Specimen
         name="ItemImage and ItemName"
         source="domain/assets/ItemImage · domain/assets/ItemName"
-        note="A shop item by id. In tables that already hold the item list, ItemImageFromAsset skips the per-image subscription."
+        note="A shop item by id. In tables that already hold the item list, pass item instead of itemId to skip the per-image subscription."
       >
         <Variants label="Image + name">
           {ITEM_IDS.map((id) => (
@@ -82,7 +83,7 @@ export function DomainAssets() {
             <ItemImage itemId={UNKNOWN_ID} />
             <ItemName itemId={UNKNOWN_ID} />
           </span>
-          <ItemImageFromAsset item={undefined} loading />
+          <ItemImage item={undefined} loading />
         </Variants>
       </Specimen>
 
@@ -152,6 +153,25 @@ export function DomainAssets() {
         <Variants label="Loading, unknown badge">
           <BadgeImage badge={64} ranks={[]} className="size-10" />
           {ranks && <BadgeImage badge={999} ranks={ranks} className="size-10" />}
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="OptimizedImage"
+        source="domain/assets/OptimizedImage"
+        note="An image from public/ served through the site's Cloudflare image resizing as a srcSet. In dev and for SVGs it renders the original unchanged."
+      >
+        <Variants>
+          <OptimizedImage
+            src="/logo/deadchaps.png"
+            alt="Deadchaps logo"
+            widths={[192, 384]}
+            sizes="192px"
+            width={600}
+            height={127}
+            loading="lazy"
+            className="h-auto w-48 object-contain"
+          />
         </Variants>
       </Specimen>
     </>

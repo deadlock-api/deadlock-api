@@ -1,7 +1,7 @@
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
-import { PanelTooltipContent, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
-import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
+import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { Tooltip } from "~/components/ui/tooltip";
 import type { StatsIndex } from "~/lib/team-builder/analysis";
 import { deltaClass, formatCount, formatPoints, formatRate } from "~/lib/team-builder/format";
 
@@ -13,32 +13,31 @@ export interface TooltipRow {
 
 /** The one hover surface every Team Builder number uses, so they all read the same way. */
 export function StatTooltip({
-  lead,
+  leading,
   title,
   rows,
   children,
 }: {
-  lead?: React.ReactNode;
+  leading?: React.ReactNode;
   title: React.ReactNode;
   rows: TooltipRow[];
   children: React.ReactNode;
 }) {
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <PanelTooltipContent
-        // To the right: rows are scanned vertically, so a card above or below sits in the way.
-        side="right"
-        sideOffset={6}
-        collisionPadding={12}
-      >
-        <TooltipHeader lead={lead} title={title} />
-        <TooltipStats>
-          {rows.map((row) => (
-            <TooltipStat key={row.label} label={row.label} value={row.value} className={row.className} />
-          ))}
-        </TooltipStats>
-      </PanelTooltipContent>
+    <Tooltip
+      side="right"
+      content={
+        <>
+          <TooltipHeader leading={leading} title={title} />
+          <TooltipStats>
+            {rows.map((row) => (
+              <TooltipStat key={row.label} label={row.label} value={row.value} className={row.className} />
+            ))}
+          </TooltipStats>
+        </>
+      }
+    >
+      {children}
     </Tooltip>
   );
 }
@@ -58,7 +57,7 @@ export function HeroTooltip({
     <StatTooltip
       // A name element rather than a string: the card renders on hover, so a grid full of portraits
       // does not each hold a hero-asset subscription just to label a tooltip nobody opened.
-      lead={<HeroImage heroId={heroId} shape="circle" className="size-5 shrink-0" />}
+      leading={<HeroImage heroId={heroId} shape="circle" className="size-5 shrink-0" />}
       title={<HeroName heroId={heroId} />}
       rows={[
         { label: "Baseline win rate", value: formatRate(index.heroWinRate(heroId)) },

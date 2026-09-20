@@ -1,5 +1,6 @@
 import { useRef } from "react";
 
+import { FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 /**
@@ -18,10 +19,7 @@ export function DragScroll({ className, children, ...props }: React.ComponentPro
       // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scroll container must be reachable by keyboard
       tabIndex={0}
       ref={ref}
-      className={cn(
-        "cursor-grab overflow-x-auto outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:cursor-grabbing",
-        className,
-      )}
+      className={cn(FOCUS_RING, "cursor-grab overflow-x-auto active:cursor-grabbing", className)}
       onPointerDown={(event) => {
         if (event.button !== 0 || !ref.current) return;
         drag.current = { x: event.clientX, left: ref.current.scrollLeft, moved: false };

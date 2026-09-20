@@ -13,7 +13,7 @@ import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStat
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_AXIS, CHART_COLOR, CHART_GRID } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
-import { PanelTooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
+import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
@@ -94,9 +94,9 @@ function CustomTooltip({
   if (!active || !payload?.length) return null;
   const data = payload[0].payload;
   return (
-    <PanelTooltipCard>
+    <TooltipCard>
       <TooltipHeader
-        lead={
+        leading={
           data.badgeImageUrl && <img src={data.badgeImageUrl} alt={data.rankName} className="size-6 object-contain" />
         }
         title={
@@ -112,7 +112,7 @@ function CustomTooltip({
         <TooltipStat label={formatStatLabel(yStat)} value={formatStatValue(yStat, data.yValue)} />
         <TooltipStat label="Matches" value={data.matches.toLocaleString("en-US")} />
       </TooltipStats>
-    </PanelTooltipCard>
+    </TooltipCard>
   );
 }
 
@@ -375,8 +375,9 @@ export function HeroStatsByRankChart({
           }
         >
           <ChartCard
+            aria-label="Rank comparison chart"
             title="Hero performance by rank"
-            footnote="Each badge shows a rank tier. Lines connect ranks for the same hero."
+            footer="Each badge shows a rank tier. Lines connect ranks for the same hero."
           >
             {selectedIds.length === 0 ? (
               <EmptyState

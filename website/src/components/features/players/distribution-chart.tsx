@@ -3,7 +3,7 @@ import { Area, AreaChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts"
 
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_COLOR, CHART_CURSOR_LINE, CHART_TICK_SM } from "~/components/patterns/charts/theme";
-import { PanelTooltipCard } from "~/components/ui/panel-tooltip";
+import { TooltipCard } from "~/components/ui/tooltip";
 
 export interface CurvePoint {
   x: number;
@@ -42,9 +42,9 @@ export function buildDistributionCurve(values: HashMapValue): CurvePoint[] {
 function DistributionTooltip({ payload, fmt }: { payload?: { payload: CurvePoint }[]; fmt: (v: number) => string }) {
   if (!payload?.length) return null;
   return (
-    <PanelTooltipCard className="px-2.5 py-1.5 text-xs">
+    <TooltipCard className="px-2.5 py-1.5 text-xs">
       <span className="tabular-nums">{fmt(payload[0].payload.x)}</span>
-    </PanelTooltipCard>
+    </TooltipCard>
   );
 }
 

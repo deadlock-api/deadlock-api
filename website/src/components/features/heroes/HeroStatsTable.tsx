@@ -13,20 +13,20 @@ import type { MatchMode } from "~/components/domain/selectors/MatchModeSelector"
 import { HeroDetailsTooltip } from "~/components/features/heroes/HeroDetailsTooltip";
 import { HeroStatTrend } from "~/components/features/heroes/HeroStatTrend";
 import type { StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
-import { SortableHeader, SortButton, ariaSort } from "~/components/patterns/data-table/SortableHeader";
+import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
-import { PanelTooltipContent } from "~/components/ui/panel-tooltip";
 import { ProgressBarSegment } from "~/components/ui/progress-bar";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
+import { SortButton, ariaSort } from "~/components/ui/sort-button";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { TextLink } from "~/components/ui/text-link";
-import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
+import { Tooltip } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -600,15 +600,6 @@ export function HeroStatsTable({
     );
   }
 
-  const resultsSummary =
-    nameQuery !== undefined ? (
-      <output className="text-xs text-muted-foreground">
-        Showing {visibleCount} of {limitedData?.length ?? 0} heroes.
-        {normalizedNameQuery && " Rates and positions remain relative to the full filtered roster."}
-        {groupByType && " Group summaries include all heroes in each type."}
-      </output>
-    ) : null;
-
   const renderTableHeader = (showIndex: boolean) => (
     <TableHeader tone="muted">
       <TableRow>
@@ -676,15 +667,16 @@ export function HeroStatsTable({
             onSort={handleSort}
             className="w-19/100 text-center"
           >
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="size-3.5 text-muted-foreground" />
-              </TooltipTrigger>
-              <PanelTooltipContent className="max-w-64 text-xs font-normal">
-                Combines win rate, pick rate, and ban rate using z-scores (standard deviations from the mean). Weights:{" "}
-                {Z_SCORE_WR_WEIGHT * 100}% win rate, {Z_SCORE_PR_WEIGHT * 100}% pick rate, {Z_SCORE_BR_WEIGHT * 100}%
-                ban rate. Positive = above average, negative = below average.
-              </PanelTooltipContent>
+            <Tooltip
+              content={
+                <>
+                  Combines win rate, pick rate, and ban rate using z-scores (standard deviations from the mean).
+                  Weights: {Z_SCORE_WR_WEIGHT * 100}% win rate, {Z_SCORE_PR_WEIGHT * 100}% pick rate,{" "}
+                  {Z_SCORE_BR_WEIGHT * 100}% ban rate. Positive = above average, negative = below average.
+                </>
+              }
+            >
+              <Info className="size-3.5 text-muted-foreground" />
             </Tooltip>
           </SortableHeader>
         )}
@@ -697,16 +689,17 @@ export function HeroStatsTable({
             onSort={handleSort}
             className="w-19/100 text-center"
           >
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="size-3.5 text-muted-foreground" />
-              </TooltipTrigger>
-              <PanelTooltipContent className="max-w-64 text-xs font-normal">
-                How much a hero over- or underperforms relative to their draft prevalence. Uses LOESS smoothing (locally
-                weighted regression) on log(presence) vs win rate, where presence = pick rate + ban rate. Weighted by
-                sample size. Positive = overperforming, negative = underperforming for how often they appear in the
-                draft.
-              </PanelTooltipContent>
+            <Tooltip
+              content={
+                <>
+                  How much a hero over- or underperforms relative to their draft prevalence. Uses LOESS smoothing
+                  (locally weighted regression) on log(presence) vs win rate, where presence = pick rate + ban rate.
+                  Weighted by sample size. Positive = overperforming, negative = underperforming for how often they
+                  appear in the draft.
+                </>
+              }
+            >
+              <Info className="size-3.5 text-muted-foreground" />
             </Tooltip>
           </SortableHeader>
         )}
@@ -869,7 +862,7 @@ export function HeroStatsTable({
                 color={score >= 0 ? "var(--positive)" : "var(--negative)"}
                 label={`${score >= 0 ? "+" : ""}${score.toFixed(2)}`}
                 delta={delta}
-                deltaFormat="raw"
+                deltaFormat="number"
               />
             );
           })()}
@@ -921,7 +914,6 @@ export function HeroStatsTable({
   if (groupByType && groupedData && groupStats) {
     return (
       <div className="flex flex-col gap-4">
-        {resultsSummary}
         {groupStats.map((group) => {
           const heroesInGroup = groupedData.get(group.type) ?? [];
           if (!heroesInGroup.some((row) => matchesNameQuery(row.hero_id))) return null;
@@ -985,7 +977,6 @@ export function HeroStatsTable({
 
   return (
     <div className="flex flex-col gap-3">
-      {resultsSummary}
       <Table>
         {!hideHeader && renderTableHeader(!hideIndex)}
         <TableBody>

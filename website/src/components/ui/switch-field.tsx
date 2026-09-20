@@ -8,23 +8,13 @@ interface SwitchFieldProps extends Omit<React.ComponentProps<typeof Switch>, "ch
   label: React.ReactNode;
   /** A quiet line under the label; the switch is described by it. */
   description?: React.ReactNode;
-  /** `end` puts the switch on the trailing edge of a full-width settings row. */
-  side?: "start" | "end";
 }
 
 /**
  * A switch and its label on one row. The switch is the element this component stands for, so `ref`, `name`,
  * `aria-*` and every other prop reach it; only `className` styles the row. `size` sizes both.
  */
-export function SwitchField({
-  label,
-  description,
-  side = "start",
-  size = "default",
-  id,
-  className,
-  ...props
-}: SwitchFieldProps) {
+export function SwitchField({ label, description, size = "default", id, className, ...props }: SwitchFieldProps) {
   const generatedId = useId();
   const controlId = id ?? generatedId;
   const descriptionId = `${controlId}-description`;
@@ -33,11 +23,7 @@ export function SwitchField({
       data-slot="switch-field"
       data-size={size}
       data-disabled={props.disabled || undefined}
-      className={cn(
-        "group flex min-w-0 items-start gap-2",
-        side === "end" && "w-full flex-row-reverse justify-between gap-4",
-        className,
-      )}
+      className={cn("group flex min-w-0 items-start gap-2", className)}
     >
       <Switch id={controlId} size={size} aria-describedby={description ? descriptionId : undefined} {...props} />
       <div className="flex min-w-0 flex-col gap-1">

@@ -1,3 +1,4 @@
+import { FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 type DraftSide = "ally" | "enemy";
@@ -34,7 +35,8 @@ export function DraftSlotTarget({
       data-state={state}
       className={cn(
         "flex size-11 items-center justify-center rounded-full border border-dashed text-muted-foreground",
-        "transition-colors duration-fast outline-none hover:bg-subtle-hover focus-visible:ring-3 focus-visible:ring-ring/50",
+        FOCUS_RING,
+        "transition-colors duration-fast hover:bg-subtle-hover",
         state === "over" ? "border-solid border-foreground/40 bg-subtle-active" : SIDE_BORDER[side],
         className,
       )}
@@ -60,7 +62,8 @@ export function DraggablePortrait({ dragging = false, className, children, ...pr
       data-slot="draggable-portrait"
       data-dragging={dragging || undefined}
       className={cn(
-        "block cursor-grab rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:cursor-grabbing",
+        FOCUS_RING,
+        "block cursor-grab rounded-full active:cursor-grabbing",
         dragging && "opacity-40",
         className,
       )}

@@ -10,12 +10,11 @@ import {
 } from "~/components/patterns/charts/ChartLegend";
 import { ChartOverlay, ChartOverlayItem, ChartStage } from "~/components/patterns/charts/ChartOverlay";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
-import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { Field } from "~/components/ui/field";
-import { PanelTooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
 import { Slider } from "~/components/ui/slider";
+import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 
 interface Bin {
   tick: string;
@@ -35,13 +34,13 @@ const BINS: Bin[] = [
 function BinTooltip({ entry }: { entry?: Bin }) {
   if (!entry) return null;
   return (
-    <PanelTooltipCard>
+    <TooltipCard>
       <TooltipHeader title={`Bought at ${entry.label}`} />
       <TooltipStats>
         <TooltipStat label="Win rate" value={`${(entry.winRate * 100).toFixed(1)}%`} />
         <TooltipStat label="Matches" value={entry.matches.toLocaleString("en-US")} />
       </TooltipStats>
-    </PanelTooltipCard>
+    </TooltipCard>
   );
 }
 
@@ -52,9 +51,7 @@ const LAYERS = [
 ] as const;
 
 export function Round3PatternsCharts() {
-  const [hidden, setHidden] = useState<string[]>(["death"]);
   const [opacity, setOpacity] = useState(60);
-  const toggle = (id: string) => setHidden(hidden.includes(id) ? hidden.filter((x) => x !== id) : [...hidden, id]);
   return (
     <>
       <Specimen
@@ -87,9 +84,9 @@ export function Round3PatternsCharts() {
       </Specimen>
 
       <Specimen
-        name="ChartLegend items and toggles"
+        name="ChartLegend items"
         source="patterns/charts/ChartLegend"
-        note="Compose ChartLegendItem children. With onToggle an entry is a button: a hidden series is struck through and aria-pressed is false, never removed. ChartSwatch is the mark on its own, for a tooltip row or a table cell."
+        note="Compose ChartLegendItem children. ChartSwatch is the mark on its own, for a tooltip row or a table cell."
       >
         <Variants label='size="default" | "sm"' className="block">
           <ChartLegend>
@@ -108,25 +105,14 @@ export function Round3PatternsCharts() {
             <ChartLegendItem color={SERIES_COLORS[1]}>Pick rate</ChartLegendItem>
           </ChartLegend>
         </Variants>
-        <Variants label="interactive: on, off (hidden), with an icon instead of a swatch" className="block">
+        <Variants label="with an icon instead of a swatch" className="block">
           <ChartLegend label="Timeline layers">
             {LAYERS.map((layer) => (
-              <ChartLegendItem
-                key={layer.id}
-                color={layer.color}
-                shape="dot"
-                hidden={hidden.includes(layer.id)}
-                onToggle={() => toggle(layer.id)}
-              >
+              <ChartLegendItem key={layer.id} color={layer.color} shape="dot">
                 {layer.label}
               </ChartLegendItem>
             ))}
-            <ChartLegendItem
-              color="var(--foreground)"
-              icon={<Flag />}
-              hidden={hidden.includes("objective")}
-              onToggle={() => toggle("objective")}
-            >
+            <ChartLegendItem color="var(--foreground)" icon={<Flag />}>
               Objectives
             </ChartLegendItem>
           </ChartLegend>
@@ -176,23 +162,6 @@ export function Round3PatternsCharts() {
       </Specimen>
 
       <Specimen
-        name="ChartEmpty and ChartError size"
-        source="patterns/charts/ChartStates"
-        note="Pass the plot's size, as ChartLoading already takes it, so a state is as tall as the plot it stands in for. Strips (xs, sm) get the one-line state."
-      >
-        <Variants label='size="md": loading | empty | error' className="grid items-start lg:grid-cols-3">
-          <ChartLoading label="win rate" size="md" />
-          <ChartEmpty label="win rate data" size="md" />
-          <ChartError label="win rate" size="md" onRetry={() => {}} retrying={false} />
-        </Variants>
-        <Variants label='size="sm": one line' className="grid items-start lg:grid-cols-3">
-          <ChartLoading label="sparkline" size="sm" />
-          <ChartEmpty label="trend" size="sm" />
-          <ChartError label="trend" size="sm" onRetry={() => {}} retrying />
-        </Variants>
-      </Specimen>
-
-      <Specimen
         name="ChartOverlay"
         source="patterns/charts/ChartOverlay"
         note="Glass pills floating in a corner of a canvas, a map or a WebGL scene: ChartStage is the rounded, clipped box, ChartOverlay names the corner, ChartOverlayItem is one pill. ChartGradientLegend is the key to a continuous scale."
@@ -229,14 +198,6 @@ export function Round3PatternsCharts() {
             </ChartOverlayItem>
           </ChartOverlay>
         </ChartStage>
-        <Variants label='ChartGradientLegend size="sm"'>
-          <ChartGradientLegend
-            size="sm"
-            min="0.4"
-            max="2.1"
-            stops={["var(--negative)", "var(--muted)", "var(--positive)"]}
-          />
-        </Variants>
       </Specimen>
     </>
   );

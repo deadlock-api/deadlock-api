@@ -1,14 +1,17 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { PinIcon } from "lucide-react";
 
-import { PanelTooltipContent } from "~/components/ui/panel-tooltip";
 import { RateBar } from "~/components/ui/rate-bar";
-import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
+import { FOCUS_RING } from "~/components/ui/recipes";
+import { Tooltip } from "~/components/ui/tooltip";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 
 const graphNodeCardVariants = cva(
-  "relative flex flex-col justify-center gap-1.5 rounded-lg border border-s-2 border-border bg-card/90 p-2 text-start backdrop-blur-sm transition duration-normal ease-standard outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+  [
+    FOCUS_RING,
+    "relative flex flex-col justify-center gap-1.5 rounded-lg border border-s-2 border-border bg-card/90 p-2 text-start backdrop-blur-sm transition duration-normal ease-standard",
+  ],
   {
     variants: {
       /** The category on the left edge: an item's shop slot, or which of the hero's four abilities this is. */
@@ -92,7 +95,7 @@ export function GraphNodeCard({
   className,
   onClick,
   ...props
-}: Omit<React.ComponentProps<"button">, "children" | "name" | "type"> &
+}: Omit<React.ComponentProps<"button">, "children" | "name" | "type" | "disabled"> &
   VariantProps<typeof graphNodeCardVariants> & {
     /** The entity's image; a muted block when the node has none (a root). */
     media?: React.ReactNode;
@@ -116,7 +119,7 @@ export function GraphNodeCard({
     emphasis?: number;
     /** Body of the hover card. */
     tooltip?: React.ReactNode;
-    tooltipSide?: React.ComponentProps<typeof PanelTooltipContent>["side"];
+    tooltipSide?: React.ComponentProps<typeof Tooltip>["side"];
   }) {
   // Typed as the button it usually is; the static variant only drops `type` and the pressed state.
   const Comp = (onClick ? "button" : "div") as "button";
@@ -131,8 +134,7 @@ export function GraphNodeCard({
         EMPHASIS[Math.round(Math.max(0, Math.min(1, emphasis)) * (EMPHASIS.length - 1))],
         graphNodeCardVariants({ accent, dimmed }),
         fill === "accent" && ACCENT_TINT[accent ?? "none"],
-        onClick &&
-          "cursor-pointer hover:border-y-muted-foreground hover:border-e-muted-foreground disabled:pointer-events-none disabled:opacity-50",
+        onClick && "cursor-pointer hover:border-y-muted-foreground hover:border-e-muted-foreground",
         selected && "border-primary bg-primary/10 hover:border-y-primary hover:border-e-primary",
         className,
       )}
@@ -169,9 +171,8 @@ export function GraphNodeCard({
   if (!tooltip) return card;
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>{card}</TooltipTrigger>
-      <PanelTooltipContent side={tooltipSide}>{tooltip}</PanelTooltipContent>
+    <Tooltip side={tooltipSide} content={tooltip}>
+      {card}
     </Tooltip>
   );
 }

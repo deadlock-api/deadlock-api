@@ -3,16 +3,11 @@ import { Fragment, useState } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
-import {
-  Panel,
-  PanelHeader,
-  PanelMessage,
-  PanelShowMore,
-  PanelSkeleton,
-  PanelViewOption,
-  PanelViewToggle,
-} from "~/components/patterns/panel/Panel";
+import { Panel, PanelBody, PanelHeader, PanelShowMore } from "~/components/patterns/panel/Panel";
+import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { SkeletonRows } from "~/components/patterns/states/Skeletons";
 import { Button } from "~/components/ui/button";
+import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
 import type { PairRow, Side, StatsIndex } from "~/lib/team-builder/analysis";
 import { formatCount, formatRate } from "~/lib/team-builder/format";
@@ -51,21 +46,25 @@ export function PairsPanel({ allyPairs, enemyPairs, index, loading, onOpen }: Pa
     <Panel>
       <PanelHeader title="Pairs">
         <SideToggle value={side} onValueChange={setSide} />
-        <PanelViewToggle value={view} onValueChange={setView}>
-          <PanelViewOption value="list" label="Ranked list">
+        <Segmented size="sm" width="hug" aria-label="View" value={view} onValueChange={setView}>
+          <SegmentedItem value="list" aria-label="Ranked list" title="Ranked list">
             <ListIcon />
-          </PanelViewOption>
-          <PanelViewOption value="chart" label="Synergy chart">
+          </SegmentedItem>
+          <SegmentedItem value="chart" aria-label="Synergy chart" title="Synergy chart">
             <ChartNoAxesGanttIcon />
-          </PanelViewOption>
-        </PanelViewToggle>
+          </SegmentedItem>
+        </Segmented>
       </PanelHeader>
       {loading ? (
-        <PanelSkeleton rows={6} />
+        <PanelBody>
+          <SkeletonRows rows={6} />
+        </PanelBody>
       ) : pairs.length === 0 ? (
-        <PanelMessage>
-          Pick at least two heroes on {side === "ally" ? "your side" : "their side"} to compare pairings.
-        </PanelMessage>
+        <EmptyState
+          variant="inline"
+          className="px-4 py-6"
+          title={`Pick at least two heroes on ${side === "ally" ? "your side" : "their side"} to compare pairings.`}
+        />
       ) : view === "chart" ? (
         <PairsChart pairs={pairs} index={index} onOpen={onOpen} />
       ) : (

@@ -2,6 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { HeroImage, type HeroImageVariants } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
+import { useHeroById } from "~/hooks/useAssetById";
 import { cn } from "~/lib/utils";
 
 const heroCellVariants = cva("flex min-w-0 items-center", {
@@ -29,6 +30,7 @@ export function HeroCell({
     /** Links the name to the hero's analytics page. */
     linkToDetail?: boolean;
   }) {
+  const { hero, isLoading } = useHeroById(heroId);
   return (
     <span
       data-slot="hero-cell"
@@ -37,8 +39,14 @@ export function HeroCell({
       {...props}
     >
       {/* The name beside it already says who this is. */}
-      <HeroImage heroId={heroId} shape={shape} title="" className={cn("shrink-0", IMAGE_SIZE[size ?? "default"])} />
-      <HeroName heroId={heroId} linkToDetail={linkToDetail} />
+      <HeroImage
+        hero={hero}
+        loading={isLoading}
+        shape={shape}
+        title=""
+        className={cn("shrink-0", IMAGE_SIZE[size ?? "default"])}
+      />
+      <HeroName hero={hero} loading={isLoading} linkToDetail={linkToDetail} />
     </span>
   );
 }

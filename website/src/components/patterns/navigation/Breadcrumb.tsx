@@ -1,6 +1,7 @@
 import { ChevronRightIcon } from "lucide-react";
 import { Slot } from "radix-ui";
 
+import { FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 /** The trail from the home page to this one. Compose: `BreadcrumbList` > `BreadcrumbItem` > link or page. */
@@ -39,7 +40,8 @@ export function BreadcrumbLink({
     <Comp
       data-slot="breadcrumb-link"
       className={cn(
-        "flex shrink-0 items-center gap-1 rounded-sm transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-3.5",
+        FOCUS_RING,
+        "flex shrink-0 items-center gap-1 rounded-sm transition-colors hover:text-foreground [&_svg]:size-3.5",
         className,
       )}
       {...props}

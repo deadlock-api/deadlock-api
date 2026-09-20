@@ -2,17 +2,15 @@ import { useId } from "react";
 import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
-import { ChartLoading } from "~/components/patterns/charts/ChartStates";
-import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_GRID, CHART_TICK } from "~/components/patterns/charts/theme";
-import { EmptyState } from "~/components/patterns/states/EmptyState";
-import { ErrorState } from "~/components/patterns/states/ErrorState";
+import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
+import { chartSizeVariants, ChartSurface } from "~/components/patterns/charts/ChartSurface";
+import { CHART_AXIS, CHART_GRID, CHART_MARGIN } from "~/components/patterns/charts/theme";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { day } from "~/dayjs";
 import { formatAxisTick, formatStatValue, type StatFormat, valueSpan } from "~/lib/stat-format";
 import { cn } from "~/lib/utils";
 
-export const STAT_TREND_BUCKETS = [
+const STAT_TREND_BUCKETS = [
   { value: "start_time_hour", label: "Hour", tickFormat: "MM/DD HH:mm", tooltipFormat: "YYYY-MM-DD HH:mm" },
   { value: "start_time_day", label: "Day", tickFormat: "MM/DD", tooltipFormat: "YYYY-MM-DD" },
   { value: "start_time_week", label: "Week", tickFormat: "MM/DD", tooltipFormat: "YYYY-MM-DD" },
@@ -23,6 +21,9 @@ export const STAT_TREND_BUCKETS = [
   tickFormat: string;
   tooltipFormat: string;
 }>;
+
+// The states take the plot's height, so the hover card does not resize between them.
+const STATE_SIZE = cn(chartSizeVariants({ size: "md" }), "grid");
 
 export type StatTrendBucket = (typeof STAT_TREND_BUCKETS)[number]["value"];
 
@@ -78,20 +79,12 @@ export default function StatTrendChart({
         {state === "loading" ? (
           <ChartLoading label={`${stat.label} trend`} size="md" />
         ) : state === "error" ? (
-          <ErrorState
-            variant="inline"
-            className="flex h-55 flex-col justify-center py-0"
-            title="Unable to load trend data"
-          />
+          <ChartError label={`${stat.label} trend`} className={STATE_SIZE} />
         ) : !chartData.some((point) => point.value != null) ? (
-          <EmptyState
-            variant="inline"
-            className="flex h-55 flex-col justify-center py-0 text-xs"
-            title="No complete buckets with enough data. Try a shorter interval."
-          />
+          <ChartEmpty label={`${stat.label} trend`} className={STATE_SIZE} />
         ) : (
           <ChartSurface label={`${stat.label} over time`} size="md" variant="bare">
-            <AreaChart data={chartData} margin={{ top: 8, right: 12, bottom: 4, left: 12 }}>
+            <AreaChart data={chartData} margin={CHART_MARGIN}>
               <defs>
                 <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.35} />
@@ -105,16 +98,14 @@ export default function StatTrendChart({
                 scale="time"
                 domain={["dataMin", "dataMax"]}
                 tickFormatter={(ts) => day.utc(ts).format(bucketDef.tickFormat)}
-                stroke="var(--chart-axis)"
-                tick={CHART_TICK}
+                {...CHART_AXIS}
                 tickMargin={8}
                 minTickGap={28}
               />
               <YAxis
                 domain={["dataMin", "auto"]}
                 tickFormatter={(v) => formatAxisTick(v, stat.format, span)}
-                stroke="var(--chart-axis)"
-                tick={CHART_TICK}
+                {...CHART_AXIS}
                 tickMargin={6}
                 width={56}
               />

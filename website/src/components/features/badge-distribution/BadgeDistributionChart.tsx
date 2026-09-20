@@ -6,8 +6,8 @@ import { Bar, BarChart, CartesianGrid, Cell, Customized, Label, ReferenceLine, T
 import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/RankTierIcons";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_AXIS, CHART_BASELINE, CHART_GRID, CHART_TICK } from "~/components/patterns/charts/theme";
-import { PanelTooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
+import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { niceTicks } from "~/lib/chart-axis";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { range } from "~/lib/utils";
@@ -174,9 +174,9 @@ export default function BadgeDistributionChart({
               const info = badgeMap.get(entry.badge);
               const imageUrl = info?.large_webp ?? info?.large;
               return (
-                <PanelTooltipCard>
+                <TooltipCard>
                   <TooltipHeader
-                    lead={imageUrl && <img src={imageUrl} alt="" className="size-5" />}
+                    leading={imageUrl && <img src={imageUrl} alt="" className="size-5" />}
                     title={`${rankName} ${subtier}`}
                   />
                   <TooltipStats>
@@ -191,7 +191,7 @@ export default function BadgeDistributionChart({
                       </>
                     )}
                   </TooltipStats>
-                </PanelTooltipCard>
+                </TooltipCard>
               );
             }}
           />

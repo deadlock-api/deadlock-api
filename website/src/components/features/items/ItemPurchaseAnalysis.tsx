@@ -1,4 +1,5 @@
 import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client";
+import { ChartNoAxesCombined } from "lucide-react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
@@ -6,7 +7,7 @@ import type { GameMode } from "~/components/domain/selectors/GameModeSelector";
 import { ItemSelectorMultiple } from "~/components/domain/selectors/ItemSelector";
 import type { MatchMode } from "~/components/domain/selectors/MatchModeSelector";
 import { ItemBuyTimingChart } from "~/components/features/items/ItemBuyTimingChart";
-import { ChartToolbar } from "~/components/patterns/charts/ChartToolbar";
+import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Field } from "~/components/ui/field";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -68,11 +69,16 @@ export function ItemPurchaseAnalysis({
   return (
     <div>
       <div className="flex flex-col gap-4">
-        <ChartToolbar title="Purchase analysis" label="Purchase analysis controls">
+        <FilterBar
+          variant="toolbar"
+          title="Purchase analysis"
+          icon={ChartNoAxesCombined}
+          aria-label="Purchase analysis controls"
+        >
           <Field label="Items" orientation="horizontal">
             <ItemSelectorMultiple value={Array.from(itemIds)} onValueChange={(i) => setItemIds(new Set(i))} />
           </Field>
-        </ChartToolbar>
+        </FilterBar>
         <ItemBuyTimingChart itemIds={Array.from(itemIds)} baseQueryOptions={queryStatOptions} />
       </div>
     </div>

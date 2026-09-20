@@ -1,6 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
 
+import { FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 /** A vertical list of links: the app's main navigation, or the index of a long page. */
@@ -30,7 +31,7 @@ export function SideNavGroup({
       {label && (
         <p
           data-slot="side-nav-group-label"
-          className="px-3 pb-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase group-data-[size=sm]/side-nav:px-2 group-data-[size=sm]/side-nav:text-3xs"
+          className="px-3 pb-1 eyebrow text-xs group-data-[size=sm]/side-nav:px-2 group-data-[size=sm]/side-nav:text-3xs"
         >
           {label}
         </p>
@@ -43,7 +44,8 @@ export function SideNavGroup({
 const sideNavItemVariants = cva(
   [
     "flex min-w-0 items-center gap-2.5 rounded-md border-s-2 px-3 py-1.5 text-sm font-medium transition-colors duration-fast ease-standard",
-    "outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4 [&_svg]:shrink-0",
+    FOCUS_RING,
+    "[&_svg]:size-4 [&_svg]:shrink-0",
     "group-data-[size=sm]/side-nav:gap-2 group-data-[size=sm]/side-nav:px-2 group-data-[size=sm]/side-nav:py-1 group-data-[size=sm]/side-nav:text-xs group-data-[size=sm]/side-nav:font-normal",
   ],
   {

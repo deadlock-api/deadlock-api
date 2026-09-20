@@ -1,4 +1,4 @@
-import { Bold, ExternalLink, FolderOpen, Italic, Underline } from "lucide-react";
+import { ExternalLink, FolderOpen } from "lucide-react";
 import { useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { toast } from "sonner";
@@ -12,10 +12,8 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTi
 import { Heading } from "~/components/ui/heading";
 import { IconTile } from "~/components/ui/icon-tile";
 import { ImgWithSkeleton } from "~/components/ui/img-with-skeleton";
-import { OptimizedImage } from "~/components/ui/optimized-image";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Toaster } from "~/components/ui/sonner";
-import { Toggle } from "~/components/ui/toggle";
 import { useHydrated } from "~/hooks/useHydrated";
 
 const HEADING_SIZES = ["eyebrow", "xs", "sm", "default", "lg", "xl", "2xl"] as const;
@@ -38,38 +36,6 @@ export function HeadingSpecimen() {
           </div>
         ))}
       </div>
-    </Specimen>
-  );
-}
-
-export function ToggleSpecimen() {
-  return (
-    <Specimen
-      name="Toggle"
-      source="ui/toggle"
-      note="One independent on/off button. Several of them that belong together are a ToggleGroup."
-    >
-      <Variants label="variant">
-        <Toggle aria-label="Bold (default)" defaultPressed>
-          <Bold />
-        </Toggle>
-        <Toggle variant="outline" aria-label="Italic (outline)">
-          <Italic />
-        </Toggle>
-        <Toggle variant="outline" defaultPressed>
-          <Underline /> With text
-        </Toggle>
-        <Toggle variant="outline" disabled>
-          Disabled
-        </Toggle>
-      </Variants>
-      <Variants label="size">
-        {(["sm", "default", "lg"] as const).map((size) => (
-          <Toggle key={size} size={size} variant="outline">
-            {size}
-          </Toggle>
-        ))}
-      </Variants>
     </Specimen>
   );
 }
@@ -197,25 +163,6 @@ export function PrimitivesMore() {
             <ImgWithSkeleton src="/favicon.png" alt="" className="size-5 rounded" />
             default skeleton size (size-5)
           </div>
-        </Variants>
-      </Specimen>
-
-      <Specimen
-        name="OptimizedImage"
-        source="ui/optimized-image"
-        note="An image from public/ served through Cloudflare image resizing as a srcSet. In dev and for SVGs it renders the original unchanged."
-      >
-        <Variants>
-          <OptimizedImage
-            src="/logo/deadchaps.png"
-            alt="Deadchaps logo"
-            widths={[192, 384]}
-            sizes="192px"
-            width={600}
-            height={127}
-            loading="lazy"
-            className="h-auto w-48 object-contain"
-          />
         </Variants>
       </Specimen>
 

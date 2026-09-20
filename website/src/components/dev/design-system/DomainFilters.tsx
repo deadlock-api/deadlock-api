@@ -1,3 +1,4 @@
+import type { LeaderboardRegionEnum } from "deadlock_api_client";
 import { useState } from "react";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
@@ -14,7 +15,7 @@ const DEFAULT_DATES: DateRange = [PATCHES[0].startDate, PATCHES[0].endDate];
 
 export function DomainFilters() {
   const [hero, setHero] = useState<number | null>(null);
-  const [region, setRegion] = useState("Europe");
+  const [region, setRegion] = useState<LeaderboardRegionEnum>("Europe");
   const [mode, setMode] = useState<Mode>("normal_ranked");
   const [ranks, setRanks] = useState<[number, number]>([0, 116]);
   const [minMatches, setMinMatches] = useState(20);

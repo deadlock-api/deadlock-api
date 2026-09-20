@@ -1,6 +1,7 @@
 import { Slider as SliderPrimitive } from "radix-ui";
 import * as React from "react";
 
+import { FOCUS_RING_BORDER } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 function Slider({
@@ -52,7 +53,10 @@ function Slider({
           // Radix puts role="slider" on the thumb, so a label on the root never reaches assistive technology.
           aria-label={thumbLabels?.[index] ?? ariaLabel}
           // Radix marks a disabled thumb with `data-disabled`, not the `:disabled` of a form control.
-          className="relative block size-4 shrink-0 rounded-full border border-primary bg-primary-foreground shadow-sm ring-ring/50 transition-[color,box-shadow] outline-none after:absolute after:-inset-1 hover:ring-4 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-[disabled]:cursor-not-allowed data-[disabled]:hover:ring-0"
+          className={cn(
+            FOCUS_RING_BORDER,
+            "relative block size-4 shrink-0 rounded-full border border-primary bg-primary-foreground shadow-sm ring-ring/50 transition-[color,box-shadow] after:absolute after:-inset-1 hover:ring-4 data-[disabled]:cursor-not-allowed data-[disabled]:hover:ring-0",
+          )}
         />
       ))}
     </SliderPrimitive.Root>

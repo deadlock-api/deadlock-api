@@ -5,17 +5,16 @@ import { useId, useMemo, useState } from "react";
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
 import { MODE_CONFIG } from "~/components/domain/selectors/ModeSelector";
 import { PaginationControls } from "~/components/patterns/data-table/PaginationControls";
-import { ariaSort, SortButton } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { Field } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { PanelTooltipContent } from "~/components/ui/panel-tooltip";
 import { RateBar } from "~/components/ui/rate-bar";
+import { ariaSort, SortButton } from "~/components/ui/sort-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
+import { Tooltip } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import {
@@ -209,13 +208,8 @@ function CompanionTable({
                   </div>
                 </TableCell>
                 <TableCell className="hidden text-end whitespace-nowrap text-muted-foreground @lg:table-cell">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span>{day.unix(row.lastPlayedUnix).fromNow()}</span>
-                    </TooltipTrigger>
-                    <PanelTooltipContent>
-                      {day.unix(row.lastPlayedUnix).format("MMM D, YYYY HH:mm")}
-                    </PanelTooltipContent>
+                  <Tooltip content={day.unix(row.lastPlayedUnix).format("MMM D, YYYY HH:mm")}>
+                    <span>{day.unix(row.lastPlayedUnix).fromNow()}</span>
                   </Tooltip>
                 </TableCell>
               </TableRow>

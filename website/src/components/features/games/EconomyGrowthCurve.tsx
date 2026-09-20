@@ -8,8 +8,8 @@ import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartR
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_AXIS, CHART_CURSOR_LINE, CHART_GRID, CHART_TICK } from "~/components/patterns/charts/theme";
-import { PanelTooltipCard, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
+import { TooltipCard, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance-curve-query";
 
 import { formatSouls, formatSoulsCompact, SOUL_SOURCE_GROUPS } from "./economy-definitions";
@@ -191,7 +191,7 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
                   if (!active || !payload?.length) return null;
                   const row = payload[0].payload as (typeof chartData)[number];
                   return (
-                    <PanelTooltipCard>
+                    <TooltipCard>
                       <div className="text-xs font-semibold">{label}% into the match</div>
                       <TooltipStats>
                         {[...SOUL_SOURCE_GROUPS]
@@ -209,7 +209,7 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
                             />
                           ))}
                       </TooltipStats>
-                    </PanelTooltipCard>
+                    </TooltipCard>
                   );
                 }}
               />

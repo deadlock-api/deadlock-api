@@ -1,9 +1,9 @@
 import { type KeyboardEvent, useId, useRef, useState } from "react";
 
 import { HeatCell } from "~/components/ui/heat-cell";
-import { PanelTooltipContent, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/panel-tooltip";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { Tooltip, TooltipTrigger } from "~/components/ui/tooltip";
+import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { Tooltip } from "~/components/ui/tooltip";
 import {
   type PlaytimeCell,
   type PlaytimeHabits,
@@ -97,45 +97,46 @@ export function PlaytimeHeatmap({ habits }: { habits: PlaytimeHabits }) {
                 const description = describeCell(cell);
                 return (
                   <TableCell key={cell.hour} className="p-0">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HeatCell
-                          ref={(button) => {
-                            buttons.current[index] = button;
-                          }}
-                          tabIndex={activeCell === index ? 0 : -1}
-                          label={description}
-                          // The cell already has a rich Tooltip; the native one would double it.
-                          title={undefined}
-                          selected={inspectedCell === index}
-                          color={
-                            cell.matches
-                              ? `color-mix(in srgb, var(--positive) ${20 + (cell.matches / habits.maxMatches) * 80}%, var(--muted))`
-                              : undefined
-                          }
-                          onFocus={() => {
-                            setActiveCell(index);
-                            setInspectedCell(index);
-                          }}
-                          onClick={() => setInspectedCell(index)}
-                          onKeyDown={(event) => navigate(event, index)}
-                          className="block aspect-auto h-6 w-full"
-                        />
-                      </TooltipTrigger>
-                      <PanelTooltipContent>
-                        <TooltipHeader
-                          title={`${weekday} ${hourLabel(cell.hour)}–${hourLabel(cell.hour + PLAYTIME_BUCKET_HOURS)}`}
-                          subtitle="Your local time"
-                        />
-                        <TooltipStats>
-                          <TooltipStat label="Matches" value={cell.matches} />
-                          <TooltipStat label="Wins / losses" value={`${cell.wins} / ${cell.matches - cell.wins}`} />
-                          <TooltipStat
-                            label="Win rate"
-                            value={cell.matches > 0 ? `${Math.round((cell.wins / cell.matches) * 100)}%` : "—"}
+                    <Tooltip
+                      content={
+                        <>
+                          <TooltipHeader
+                            title={`${weekday} ${hourLabel(cell.hour)}–${hourLabel(cell.hour + PLAYTIME_BUCKET_HOURS)}`}
+                            subtitle="Your local time"
                           />
-                        </TooltipStats>
-                      </PanelTooltipContent>
+                          <TooltipStats>
+                            <TooltipStat label="Matches" value={cell.matches} />
+                            <TooltipStat label="Wins / losses" value={`${cell.wins} / ${cell.matches - cell.wins}`} />
+                            <TooltipStat
+                              label="Win rate"
+                              value={cell.matches > 0 ? `${Math.round((cell.wins / cell.matches) * 100)}%` : "—"}
+                            />
+                          </TooltipStats>
+                        </>
+                      }
+                    >
+                      <HeatCell
+                        ref={(button) => {
+                          buttons.current[index] = button;
+                        }}
+                        tabIndex={activeCell === index ? 0 : -1}
+                        label={description}
+                        // The cell already has a rich Tooltip; the native one would double it.
+                        title={undefined}
+                        selected={inspectedCell === index}
+                        color={
+                          cell.matches
+                            ? `color-mix(in srgb, var(--positive) ${20 + (cell.matches / habits.maxMatches) * 80}%, var(--muted))`
+                            : undefined
+                        }
+                        onFocus={() => {
+                          setActiveCell(index);
+                          setInspectedCell(index);
+                        }}
+                        onClick={() => setInspectedCell(index)}
+                        onKeyDown={(event) => navigate(event, index)}
+                        className="block aspect-auto h-6 w-full"
+                      />
                     </Tooltip>
                   </TableCell>
                 );
