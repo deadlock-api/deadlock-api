@@ -25,7 +25,7 @@ const STATIC_ENTRIES: SitemapEntry[] = [
   { path: "/analytics/games", changefreq: "daily", priority: 0.7 },
   { path: "/community/heatmap", changefreq: "weekly", priority: 0.7 },
   { path: "/analytics/players", changefreq: "daily", priority: 0.7 },
-  { path: "/tracker", changefreq: "weekly", priority: 0.7 },
+  { path: "/tracker/demo", changefreq: "weekly", priority: 0.7 },
   { path: "/analytics/team-builder", changefreq: "weekly", priority: 0.7 },
   { path: "/streamkit", lastmod: "2026-03-12", changefreq: "monthly", priority: 0.6 },
   { path: "/data-privacy", lastmod: "2026-03-22", changefreq: "monthly", priority: 0.5 },

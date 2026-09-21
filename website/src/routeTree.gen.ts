@@ -63,6 +63,7 @@ import { Route as ItemsIndexRouteImport } from './routes/items.index'
 import { Route as ItemsItemNameRouteImport } from './routes/items.$itemName'
 import { Route as PlayersAccountIdRouteImport } from './routes/players_.$accountId'
 import { Route as StreamkitIndexRouteImport } from './routes/streamkit/index'
+import { Route as TrackerDemoRouteImport } from './routes/tracker_.demo'
 import { Route as AnalyticsGamesIndexRouteImport } from './routes/analytics.games.index'
 import { Route as AnalyticsGamesByRankRouteImport } from './routes/analytics.games.by-rank'
 import { Route as AnalyticsGamesEconomyRouteImport } from './routes/analytics.games.economy'
@@ -372,6 +373,11 @@ const StreamkitIndexRoute = StreamkitIndexRouteImport.update({
   path: '/streamkit/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TrackerDemoRoute = TrackerDemoRouteImport.update({
+  id: '/tracker_/demo',
+  path: '/tracker/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AnalyticsGamesIndexRoute = AnalyticsGamesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -619,6 +625,7 @@ export interface FileRoutesByFullPath {
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
   '/players/$accountId': typeof PlayersAccountIdRoute
+  '/tracker/demo': typeof TrackerDemoRoute
   '/analytics/': typeof AnalyticsIndexRoute
   '/blog/': typeof BlogIndexRoute
   '/community/': typeof CommunityIndexRoute
@@ -702,6 +709,7 @@ export interface FileRoutesByTo {
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
   '/players/$accountId': typeof PlayersAccountIdRoute
+  '/tracker/demo': typeof TrackerDemoRoute
   '/analytics': typeof AnalyticsIndexRoute
   '/blog': typeof BlogIndexRoute
   '/community': typeof CommunityIndexRoute
@@ -796,6 +804,7 @@ export interface FileRoutesById {
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
   '/players_/$accountId': typeof PlayersAccountIdRoute
+  '/tracker_/demo': typeof TrackerDemoRoute
   '/analytics/': typeof AnalyticsIndexRoute
   '/blog/': typeof BlogIndexRoute
   '/community/': typeof CommunityIndexRoute
@@ -891,6 +900,7 @@ export interface FileRouteTypes {
     | '/heroes/$heroName'
     | '/items/$itemName'
     | '/players/$accountId'
+    | '/tracker/demo'
     | '/analytics/'
     | '/blog/'
     | '/community/'
@@ -974,6 +984,7 @@ export interface FileRouteTypes {
     | '/heroes/$heroName'
     | '/items/$itemName'
     | '/players/$accountId'
+    | '/tracker/demo'
     | '/analytics'
     | '/blog'
     | '/community'
@@ -1067,6 +1078,7 @@ export interface FileRouteTypes {
     | '/heroes/$heroName'
     | '/items/$itemName'
     | '/players_/$accountId'
+    | '/tracker_/demo'
     | '/analytics/'
     | '/blog/'
     | '/community/'
@@ -1149,6 +1161,7 @@ export interface RootRouteChildren {
   GamesDeadlockdleRoute: typeof GamesDeadlockdleRouteWithChildren
   GamesFlashcardsRoute: typeof GamesFlashcardsRouteWithChildren
   PlayersAccountIdRoute: typeof PlayersAccountIdRoute
+  TrackerDemoRoute: typeof TrackerDemoRoute
   AnalyticsIndexRoute: typeof AnalyticsIndexRoute
   BlogIndexRoute: typeof BlogIndexRoute
   CommunityIndexRoute: typeof CommunityIndexRoute
@@ -1537,6 +1550,13 @@ declare module '@tanstack/react-router' {
       path: '/streamkit'
       fullPath: '/streamkit/'
       preLoaderRoute: typeof StreamkitIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tracker_/demo': {
+      id: '/tracker_/demo'
+      path: '/tracker/demo'
+      fullPath: '/tracker/demo'
+      preLoaderRoute: typeof TrackerDemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/analytics/games/': {
@@ -2030,6 +2050,7 @@ const rootRouteChildren: RootRouteChildren = {
   GamesDeadlockdleRoute: GamesDeadlockdleRouteWithChildren,
   GamesFlashcardsRoute: GamesFlashcardsRouteWithChildren,
   PlayersAccountIdRoute: PlayersAccountIdRoute,
+  TrackerDemoRoute: TrackerDemoRoute,
   AnalyticsIndexRoute: AnalyticsIndexRoute,
   BlogIndexRoute: BlogIndexRoute,
   CommunityIndexRoute: CommunityIndexRoute,

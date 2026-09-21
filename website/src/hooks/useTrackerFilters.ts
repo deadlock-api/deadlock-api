@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { day } from "~/dayjs";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
+import type { DateRange } from "~/lib/date-filter-preference";
 import { MODE_CONFIG, parseAsGameMode, parseAsMatchMode } from "~/lib/game-mode";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import type { ResultFilter, TrackerFilterValues } from "~/lib/tracker/compute";
@@ -22,12 +23,12 @@ const TRACKER_SELECTION_PARSERS = {
   match: parseAsInteger,
 };
 
-export function useTrackerFilters() {
+export function useTrackerFilters(defaultDateRange?: DateRange) {
   const [tab, setTab] = useQueryState("tab", parseAsStringLiteral(TRACKER_TABS).withDefault("matches"));
   const { mode, setMode, gameMode, matchMode } = useModeState();
   const [heroId, setHeroId] = useQueryState("hero", parseAsInteger);
   const [result, setResult] = useQueryState("result", parseAsStringLiteral(RESULT_FILTERS).withDefault("all"));
-  const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
+  const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState(defaultDateRange);
   const [, setFilterQuery] = useQueryStates(TRACKER_SELECTION_PARSERS);
   // The picker already supplies day, season or patch boundaries. Rounding them to UTC days can
   // add matches outside a local calendar-day selection, so every tracker view uses the exact instants.

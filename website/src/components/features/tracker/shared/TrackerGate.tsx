@@ -61,6 +61,9 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
         )}
         <div className="flex flex-col gap-2 pt-2 sm:flex-row">
           <Button onClick={login}>Sign in with Patreon</Button>
+          <Button variant="secondary" asChild>
+            <Link to="/tracker/demo">View demo profile</Link>
+          </Button>
           <Button variant="outline" asChild>
             <Link to="/patron">Learn more</Link>
           </Button>

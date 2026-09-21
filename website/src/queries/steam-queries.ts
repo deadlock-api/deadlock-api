@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
+import { isDemoAccount } from "~/lib/tracker/demo";
 
 import { queryKeys } from "./query-keys";
 
@@ -19,9 +20,15 @@ export function steamProfilesQueryOptions(batch: number[]) {
   return queryOptions({
     queryKey: queryKeys.steam.profiles(batch),
     queryFn: async () => {
-      const response = await api.steam_api.steam({ accountIds: batch });
+      // Generated players exist only on the demo tracker profile; Steam has never heard of them.
+      const demoIds = batch.filter(isDemoAccount);
+      const realIds = batch.filter((accountId) => !isDemoAccount(accountId));
+      const [demoData, response] = await Promise.all([
+        demoIds.length > 0 ? import("~/lib/tracker/demo-data") : null,
+        realIds.length > 0 ? api.steam_api.steam({ accountIds: realIds }) : null,
+      ]);
       const map: SteamProfileMap = {};
-      for (const profile of response.data) {
+      for (const profile of [...(response?.data ?? []), ...demoIds.map((id) => demoData!.demoSteamProfile(id))]) {
         map[profile.account_id] = {
           personaname: profile.personaname,
           avatar: profile.avatar,

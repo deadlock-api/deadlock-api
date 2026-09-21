@@ -5,16 +5,22 @@ import type { Dayjs } from "~/dayjs";
 import { useDateFilterPreference } from "~/hooks/useDateFilterPreference";
 import { useSeasons } from "~/hooks/useSeasons";
 import { PATCHES } from "~/lib/constants";
-import type { DateFilterAction } from "~/lib/date-filter-preference";
+import type { DateFilterAction, DateRange } from "~/lib/date-filter-preference";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { defaultDateRange, computePreviousPeriod } from "~/lib/seasons";
 
-/** Explicit URL range, otherwise the current season or patch chosen by the cookie. */
-export function useDateRangeState() {
+/**
+ * Explicit URL range, otherwise `fallbackRange`, otherwise the current season or patch chosen by the cookie.
+ * `fallbackRange` has to be referentially stable.
+ */
+export function useDateRangeState(fallbackRange?: DateRange) {
   const { seasons } = useSeasons();
   const { preference, selectPreference } = useDateFilterPreference();
   const [urlRange, setUrlRange] = useQueryState("date_range", parseAsDayjsRange);
-  const defaultRange = useMemo(() => defaultDateRange(seasons, preference), [seasons, preference]);
+  const defaultRange = useMemo(
+    () => fallbackRange ?? defaultDateRange(seasons, preference),
+    [fallbackRange, seasons, preference],
+  );
   const [startDate, endDate] = urlRange ?? defaultRange;
   const isDefaultRange =
     startDate?.valueOf() === defaultRange[0]?.valueOf() && endDate?.valueOf() === defaultRange[1]?.valueOf();

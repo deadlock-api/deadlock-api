@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import type {
   PlayerMatchHistoryEntry,
@@ -12,14 +12,26 @@ import { api } from "~/lib/api";
 import { API_ORIGIN } from "~/lib/constants";
 import { graphql, isGraphqlRateLimited } from "~/lib/graphql";
 import { combatStats, type CombatStats, resolveCustomStats } from "~/lib/tracker/combat-stats";
+import { DEMO_ACCOUNT_ID, isDemoAccount, isDemoMatch } from "~/lib/tracker/demo";
 
-import { abilitiesQueryOptions } from "./asset-queries";
+import {
+  abilitiesQueryOptions,
+  filterPlayableHeroes,
+  heroesQueryOptions,
+  itemUpgradesQueryOptions,
+} from "./asset-queries";
 import { queryKeys } from "./query-keys";
+
+/** The demo profile is generated instead of fetched; the generator only loads once a demo id asks for it. */
+const loadDemoData = () => import("~/lib/tracker/demo-data");
+
+const demoHistory = (client: QueryClient) => client.ensureQueryData(trackerMatchHistoryQueryOptions(DEMO_ACCOUNT_ID));
 
 export function steamProfileQueryOptions(accountId: number) {
   return queryOptions({
     queryKey: queryKeys.steam.profile(accountId),
     queryFn: async () => {
+      if (isDemoAccount(accountId)) return (await loadDemoData()).demoSteamProfile(accountId);
       const response = await api.steam_api.steam({ accountIds: [accountId] });
       return response.data[0] ?? null;
     },
@@ -30,7 +42,17 @@ export function steamProfileQueryOptions(accountId: number) {
 export function trackerMatchHistoryQueryOptions(accountId: number) {
   return queryOptions({
     queryKey: queryKeys.players.matchHistory(accountId),
-    queryFn: async () => {
+    queryFn: async ({ client }) => {
+      if (isDemoAccount(accountId)) {
+        const [{ demoMatchHistory }, heroes] = await Promise.all([
+          loadDemoData(),
+          client.ensureQueryData(heroesQueryOptions),
+        ]);
+        return demoMatchHistory(
+          filterPlayableHeroes(heroes).map((hero) => hero.id),
+          Date.now() / 1000,
+        );
+      }
       try {
         const response = await api.players_api.matchHistory({ accountId });
         return response.data;
@@ -54,7 +76,8 @@ export function trackerMatchHistoryQueryOptions(accountId: number) {
 export function trackerRankQueryOptions(accountId: number) {
   return queryOptions({
     queryKey: queryKeys.players.rank(accountId),
-    queryFn: async () => {
+    queryFn: async ({ client }) => {
+      if (isDemoAccount(accountId)) return (await loadDemoData()).demoRank(await demoHistory(client));
       const response = await api.players_api.rank({ accountId });
       return response.data;
     },
@@ -65,7 +88,10 @@ export function trackerRankQueryOptions(accountId: number) {
 export function trackerHeroStatsQueryOptions(params: PlayersApiPlayerHeroStatsRequest) {
   return queryOptions({
     queryKey: queryKeys.players.heroStats(params),
-    queryFn: async () => {
+    queryFn: async ({ client }) => {
+      if (params.accountIds.some(isDemoAccount)) {
+        return (await loadDemoData()).demoHeroStats(await demoHistory(client), params);
+      }
       const response = await api.players_api.playerHeroStats(params);
       return response.data;
     },
@@ -76,7 +102,10 @@ export function trackerHeroStatsQueryOptions(params: PlayersApiPlayerHeroStatsRe
 export function trackerMateStatsQueryOptions(params: PlayersApiMateStatsRequest) {
   return queryOptions({
     queryKey: queryKeys.players.mateStats(params),
-    queryFn: async () => {
+    queryFn: async ({ client }) => {
+      if (isDemoAccount(params.accountId)) {
+        return (await loadDemoData()).demoMateStats(await demoHistory(client), params);
+      }
       const response = await api.players_api.mateStats(params);
       return response.data;
     },
@@ -87,7 +116,10 @@ export function trackerMateStatsQueryOptions(params: PlayersApiMateStatsRequest)
 export function trackerEnemyStatsQueryOptions(params: PlayersApiEnemyStatsRequest) {
   return queryOptions({
     queryKey: queryKeys.players.enemyStats(params),
-    queryFn: async () => {
+    queryFn: async ({ client }) => {
+      if (isDemoAccount(params.accountId)) {
+        return (await loadDemoData()).demoEnemyStats(await demoHistory(client), params);
+      }
       const response = await api.players_api.enemyStats(params);
       return response.data;
     },
@@ -453,7 +485,17 @@ async function unlessRateLimited<T>(query: Promise<T>): Promise<T | null> {
 export function trackerMatchMetadataQueryOptions(matchId: number) {
   return queryOptions({
     queryKey: queryKeys.players.matchMetadata(matchId),
-    queryFn: async (): Promise<TrackerMatchMetadata | null> => {
+    queryFn: async ({ client }): Promise<TrackerMatchMetadata | null> => {
+      if (isDemoMatch(matchId)) {
+        const [{ demoMatchMetadata }, history, heroes, items, abilities] = await Promise.all([
+          loadDemoData(),
+          demoHistory(client),
+          client.ensureQueryData(heroesQueryOptions),
+          client.ensureQueryData(itemUpgradesQueryOptions),
+          client.ensureQueryData(trackerAbilitiesQueryOptions),
+        ]);
+        return demoMatchMetadata(matchId, history, { heroes, items, abilities });
+      }
       const result = await unlessRateLimited(
         graphql.query({
           matches: {

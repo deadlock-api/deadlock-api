@@ -36,7 +36,7 @@ function TrackerRoute() {
 }
 
 function MyAccountsCard() {
-  const { isAuthenticated, isActive, isLoading, login, totalSlots } = usePatronAuth();
+  const { isAuthenticated, isActive, isLoading, totalSlots } = usePatronAuth();
 
   const accountsQuery = useQuery({ ...steamAccountsQueryOptions(), enabled: isAuthenticated });
   const activeAccounts = useMemo(
@@ -53,6 +53,12 @@ function MyAccountsCard() {
     navigate({ to: "/tracker/players/$accountId", params: { accountId: String(soleAccountId) }, replace: true });
   }, [navigate, soleAccountId]);
 
+  // Without a sign-in there are no accounts to list, so the visitor gets the demo profile and its sign-in prompt.
+  const signedOut = !isLoading && !isAuthenticated;
+  useEffect(() => {
+    if (signedOut) navigate({ to: "/tracker/demo", replace: true });
+  }, [navigate, signedOut]);
+
   return (
     <Card>
       <CardHeader>
@@ -60,25 +66,10 @@ function MyAccountsCard() {
         <CardDescription>Prioritized Steam accounts on your Patreon subscription</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
-        {isLoading || (isAuthenticated && accountsQuery.isPending) || soleAccountId !== undefined ? (
+        {isLoading || signedOut || (isAuthenticated && accountsQuery.isPending) || soleAccountId !== undefined ? (
           <div className="flex flex-col gap-2 px-3 py-1">
             <Skeleton className="h-8 w-full" />
             <Skeleton className="h-8 w-full" />
-          </div>
-        ) : !isAuthenticated ? (
-          <div className="flex flex-col gap-3 px-3 py-2">
-            <p className="text-sm text-muted-foreground">
-              Sign in with Patreon to see your prioritized accounts here. The tracker is available for linked patron
-              accounts only.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={login}>
-                Sign in with Patreon
-              </Button>
-              <Button size="sm" variant="outline" asChild>
-                <Link to="/patron">Learn more</Link>
-              </Button>
-            </div>
           </div>
         ) : accountsQuery.isError && activeAccounts.length === 0 ? (
           <ErrorState

@@ -48,7 +48,9 @@ export function PatronAuthProvider({ children }: PatronAuthProviderProps) {
   );
 
   const login = useCallback(() => {
-    sessionStorage.setItem("patron_redirect_path", window.location.pathname);
+    // Signing in from the demo tracker leads to the real one.
+    const { pathname } = window.location;
+    sessionStorage.setItem("patron_redirect_path", pathname === "/tracker/demo" ? "/tracker" : pathname);
     window.location.href = `${API_ORIGIN}/v1/auth/patreon`;
   }, []);
 
