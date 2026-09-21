@@ -2,7 +2,7 @@ import type { Upgrade } from "deadlock_api_client";
 import type { AnalyticsApiItemStatsRequest, ItemStats } from "deadlock_api_client";
 import { Table2 } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { memo, type ReactNode, useCallback, useMemo, useState } from "react";
+import { memo, type ReactNode, useCallback, useDeferredValue, useMemo, useState } from "react";
 
 import { ItemCell } from "~/components/domain/assets/ItemCell";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
@@ -430,31 +430,20 @@ export function ItemStatsTable({
     setExcludeItems(nextExclude);
   };
 
+  // Functional updates keep both callbacks stable, so a click re-renders one memoized row instead of the whole table.
   const addInclude = useCallback(
     (id: number) => {
-      const next = new Set(includeItems);
-      next.add(id);
-      setIncludeItems(next);
-      if (excludeItems.has(id)) {
-        const nextExclude = new Set(excludeItems);
-        nextExclude.delete(id);
-        setExcludeItems(nextExclude);
-      }
+      setIncludeItems((prev) => new Set(prev).add(id));
+      setExcludeItems((prev) => (prev.has(id) ? new Set([...prev].filter((other) => other !== id)) : prev));
     },
-    [includeItems, excludeItems, setIncludeItems, setExcludeItems],
+    [setIncludeItems, setExcludeItems],
   );
   const addExclude = useCallback(
     (id: number) => {
-      const next = new Set(excludeItems);
-      next.add(id);
-      setExcludeItems(next);
-      if (includeItems.has(id)) {
-        const nextInclude = new Set(includeItems);
-        nextInclude.delete(id);
-        setIncludeItems(nextInclude);
-      }
+      setExcludeItems((prev) => new Set(prev).add(id));
+      setIncludeItems((prev) => (prev.has(id) ? new Set([...prev].filter((other) => other !== id)) : prev));
     },
-    [includeItems, excludeItems, setIncludeItems, setExcludeItems],
+    [setIncludeItems, setExcludeItems],
   );
   const removeInclude = (id: number) => {
     const next = new Set(includeItems);
@@ -487,7 +476,8 @@ export function ItemStatsTable({
     });
   }, [data, sort]);
 
-  const nameTerm = nameQuery.trim().toLowerCase();
+  // Echo keystrokes before filtering and rendering the rows.
+  const nameTerm = useDeferredValue(nameQuery).trim().toLowerCase();
 
   const visibleData = processedData.filter(
     (row) =>

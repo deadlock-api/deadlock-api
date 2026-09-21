@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PlayerEntry } from "deadlock_api_client";
 import Fuse from "fuse.js";
-import { useMemo } from "react";
+import { useDeferredValue, useMemo } from "react";
 
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
@@ -89,9 +89,12 @@ export function ScoreboardTable({
     [enrichedEntries],
   );
 
+  // Echo keystrokes before searching and rendering the result rows.
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+
   const filteredEntries = useMemo(
-    () => (searchQuery ? fuse.search(searchQuery).map((r) => r.item) : enrichedEntries),
-    [searchQuery, enrichedEntries, fuse],
+    () => (deferredSearchQuery ? fuse.search(deferredSearchQuery).map((r) => r.item) : enrichedEntries),
+    [deferredSearchQuery, enrichedEntries, fuse],
   );
 
   const totalPages = Math.max(1, Math.ceil(filteredEntries.length / itemsPerPage));

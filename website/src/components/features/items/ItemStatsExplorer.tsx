@@ -3,7 +3,7 @@ import type { ItemStats } from "deadlock_api_client";
 import type { AnalyticsApiItemStatsRequest, MatchesApiBulkMetadataRequest } from "deadlock_api_client";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { parseAsInteger, useQueryState } from "nuqs";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useMemo, useState } from "react";
 
 import MatchHistoryCard from "~/components/domain/match/MatchHistoryCard";
 import { ItemBuyTimingChart } from "~/components/features/items/ItemBuyTimingChart";
@@ -258,11 +258,14 @@ export function ItemStatsExplorer({
 
   const limitedData = useMemo(() => (limit ? sortedData?.slice(0, limit) : sortedData), [sortedData, limit]);
   const displayData = useMemo(() => getDisplayItemStats(limitedData, assetsItems || []), [limitedData, assetsItems]);
+  // Every row takes these options, so a filter change re-renders the whole table. Deferred, that render is
+  // interruptible and stays out of the interaction that changed the filter.
+  const rowQueryOptions = useDeferredValue(queryStatOptions);
   const renderBuyTiming = useCallback<NonNullable<ItemStatsTableProps["customDropdownContent"]>>(
     ({ itemId, rowTotal }) => (
-      <ItemBuyTimingChart itemIds={[itemId]} baseQueryOptions={queryStatOptions} rowTotalMatches={rowTotal} />
+      <ItemBuyTimingChart itemIds={[itemId]} baseQueryOptions={rowQueryOptions} rowTotalMatches={rowTotal} />
     ),
-    [queryStatOptions],
+    [rowQueryOptions],
   );
 
   if (isLoadingItemAssets) {
@@ -285,7 +288,7 @@ export function ItemStatsExplorer({
             maxWinRate={maxWinRate}
             minUsage={minUsage}
             maxUsage={maxUsage}
-            trendParams={queryStatOptions}
+            trendParams={rowQueryOptions}
             prevStatsMap={prevStatsMap}
             customDropdownContent={renderBuyTiming}
             actions={
