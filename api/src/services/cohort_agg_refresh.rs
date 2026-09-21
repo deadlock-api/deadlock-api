@@ -39,34 +39,60 @@ const STATE_TABLE: &str = "default.cohort_agg_refresh_state";
 struct CohortSpec {
     table: &'static str,
     staging: &'static str,
-    bucket_select: &'static str,
-    bucket_col: &'static str,
-    extra_array_join: &'static str,
+    source: Source,
+}
+
+enum Source {
+    /// Fans each purchase out once per item the buyer owned (`cohort_item_id`).
+    Cohort {
+        bucket_select: &'static str,
+        bucket_col: &'static str,
+        extra_array_join: &'static str,
+    },
+    /// Fans each purchase out once per hero on the opposing team (`enemy_hero_id`).
+    EnemyHero,
 }
 
 // The _v2 tables carry uniqCombined(14) player states (migration 40); the plain uniq states
 // of the v1 tables were ~90% of item_stats_cohort_mv's CPU. Pointing the job here builds them
 // from scratch while the API keeps reading v1 until they cover the horizon.
-fn cohort_specs() -> [CohortSpec; 2] {
+fn cohort_specs() -> [CohortSpec; 3] {
     [
         CohortSpec {
             table: "default.item_cohort_stats_time_agg_v2",
             staging: "default.item_cohort_stats_time_agg_v2_staging",
-            bucket_select: "toUInt32(floor(buy_time / 60)) AS bucket_minute",
-            bucket_col: "bucket_minute",
-            extra_array_join: "",
+            source: Source::Cohort {
+                bucket_select: "toUInt32(floor(buy_time / 60)) AS bucket_minute",
+                bucket_col: "bucket_minute",
+                extra_array_join: "",
+            },
         },
         CohortSpec {
             table: "default.item_cohort_stats_net_worth_agg_v2",
             staging: "default.item_cohort_stats_net_worth_agg_v2_staging",
-            bucket_select: "toUInt32(floor(net_worth_at_buy / 1000) * 1000) AS bucket_net_worth",
-            bucket_col: "bucket_net_worth",
-            extra_array_join: ",\n    `upgrades.net_worth_at_buy` AS net_worth_at_buy",
+            source: Source::Cohort {
+                bucket_select: "toUInt32(floor(net_worth_at_buy / 1000) * 1000) AS bucket_net_worth",
+                bucket_col: "bucket_net_worth",
+                extra_array_join: ",\n    `upgrades.net_worth_at_buy` AS net_worth_at_buy",
+            },
+        },
+        CohortSpec {
+            table: "default.item_enemy_stats_agg",
+            staging: "default.item_enemy_stats_agg_staging",
+            source: Source::EnemyHero,
         },
     ]
 }
 
 fn select_body(spec: &CohortSpec, since_clause: &str) -> String {
+    let Source::Cohort {
+        bucket_select,
+        bucket_col,
+        extra_array_join,
+    } = spec.source
+    else {
+        return enemy_hero_select_body(since_clause);
+    };
     format!(
         "SELECT
     game_mode,
@@ -92,10 +118,56 @@ ARRAY JOIN arrayDistinct(items.item_id) AS cohort_item_id
 WHERE match_mode IN ('Ranked', 'Unranked')
     AND {since_clause}
     AND duration_s > 0
-GROUP BY game_mode, match_mode, day, cohort_item_id, item_id, {bucket_col}",
-        bucket_select = spec.bucket_select,
-        extra_array_join = spec.extra_array_join,
-        bucket_col = spec.bucket_col,
+GROUP BY game_mode, match_mode, day, cohort_item_id, item_id, {bucket_col}"
+    )
+}
+
+/// Keep in sync with the backfill in
+/// `tools/migrations/clickhouse/41_create_item_enemy_stats_agg.sql`. The opposing-team
+/// expression mirrors the semi-join of the `item_stats` base query so both count the same rows.
+fn enemy_hero_select_body(since_clause: &str) -> String {
+    format!(
+        "SELECT
+    game_mode,
+    match_mode,
+    toDate(start_time) AS day,
+    enemy_hero_id,
+    ifNull(average_badge, 0) AS least_badge,
+    ifNull(average_badge, 65535) AS greatest_badge,
+    CAST(upgrade_item_id, 'UInt32') AS item_id,
+    count() AS n_matches,
+    sum(won) AS n_wins,
+    sum(buy_time) AS sum_buy_time,
+    sum((buy_time / duration_s) * 100) AS sum_buy_rel,
+    sum(if(sold_time > 0, sold_time, 0)) AS sum_sold_time,
+    sum(toUInt64(sold_time > 0)) AS n_sold,
+    sum(if(sold_time > 0, (sold_time / duration_s) * 100, 0)) AS sum_sold_rel,
+    uniqCombinedState(14)(account_id) AS players_state
+FROM (
+    SELECT
+        game_mode, match_mode, start_time, average_badge, won, duration_s, account_id,
+        `upgrades.item_id` AS item_ids,
+        `upgrades.game_time_s` AS buy_times,
+        `upgrades.sold_time_s` AS sold_times,
+        arrayJoin(enemies.enemy_hero_ids) AS enemy_hero_id
+    FROM default.match_player AS buyers
+    INNER JOIN (
+        SELECT match_id, team AS enemy_team, groupUniqArray(hero_id) AS enemy_hero_ids
+        FROM default.match_player
+        WHERE match_mode IN ('Ranked', 'Unranked') AND team IN ('Team0', 'Team1')
+            AND {since_clause}
+        GROUP BY match_id, team
+    ) AS enemies ON enemies.match_id = buyers.match_id
+        AND enemies.enemy_team = if(buyers.team = 'Team0', 'Team1', 'Team0')
+    WHERE match_mode IN ('Ranked', 'Unranked')
+        AND {since_clause}
+        AND duration_s > 0
+)
+ARRAY JOIN
+    item_ids AS upgrade_item_id,
+    buy_times AS buy_time,
+    sold_times AS sold_time
+GROUP BY game_mode, match_mode, day, enemy_hero_id, least_badge, greatest_badge, item_id"
     )
 }
 

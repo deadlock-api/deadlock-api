@@ -314,7 +314,8 @@ const MV_HORIZON_DAYS: i64 = 65;
 /// Horizon of the `item_cohort_stats_*_agg` tables, in days. Matches
 /// `MV_HORIZON_DAYS` so cohort queries over the current-patch window (a fixed
 /// start date, often >30 days back) route to the rollup instead of the base
-/// table. Keep in sync with `HORIZON_DAYS` in `services/cohort_agg_refresh.rs`
+/// table. Also bounds `item_enemy_stats_agg`, which the same job maintains. Keep in
+/// sync with `HORIZON_DAYS` in `services/cohort_agg_refresh.rs`
 /// and the backfill range in
 /// `tools/migrations/clickhouse/32_cohort_agg_incremental.sql`.
 const COHORT_MV_HORIZON_DAYS: i64 = 65;
@@ -596,6 +597,126 @@ GROUP BY item_id, bucket
 {having_clause}
 ORDER BY item_id, bucket
 SETTINGS log_comment = 'item_stats_cohort_mv'
+        "
+    ))
+}
+
+/// Builds a query against the `item_enemy_stats_agg` rollup for the plain "what
+/// beats hero X" shape (exactly one enemy hero, no granular filters), else `None`.
+/// On the base table this shape decompresses the item arrays of the whole window:
+/// the enemy hero is in ~20% of matches, spread evenly, so no granule is skipped.
+#[expect(clippy::too_many_lines)]
+fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
+    let enemy_hero_id = match query.enemy_hero_ids.as_deref() {
+        Some(ids) if !ids.is_empty() && ids.iter().all_equal() => ids[0],
+        _ => return None,
+    };
+    // Hero/team are not in the rollup grain; hero-filtered enemy queries are
+    // served fast by the base-table projection.
+    let bucket_expr = match query.bucket {
+        BucketQuery::Hero | BucketQuery::Team => return None,
+        bucket => bucket.mv_bucket_expr()?,
+    };
+
+    #[expect(deprecated)]
+    let unsupported = query.hero_id.is_some()
+        || query.hero_ids.as_ref().is_some_and(|v| !v.is_empty())
+        || query.account_id.is_some()
+        || query.account_ids.as_ref().is_some_and(|v| !v.is_empty())
+        || query.min_enemy_networth.is_some()
+        || query.max_enemy_networth.is_some()
+        || query.same_lane_filter == Some(true)
+        || query
+            .include_item_ids
+            .as_ref()
+            .is_some_and(|v| !v.is_empty())
+        || query
+            .exclude_item_ids
+            .as_ref()
+            .is_some_and(|v| !v.is_empty())
+        || query.min_networth.is_some()
+        || query.max_networth.is_some()
+        || query.min_duration_s.is_some()
+        || query.max_duration_s.is_some()
+        || query.min_bought_at_s.is_some()
+        || query.max_bought_at_s.is_some()
+        || query.item_order.as_ref().is_some_and(|v| !v.is_empty())
+        || query.min_match_id.is_some()
+        || query.max_match_id.is_some()
+        || !MatchMode::is_agg_servable(query.match_mode.as_deref());
+    if unsupported {
+        return None;
+    }
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_secs()
+        .cast_signed();
+    let oldest_servable = now - (COHORT_MV_HORIZON_DAYS - MV_ROUTING_MARGIN_DAYS) * 86_400;
+    if query
+        .min_unix_timestamp
+        .is_none_or(|min_ts| min_ts < oldest_servable)
+    {
+        return None;
+    }
+
+    let mut filters = vec![
+        GameMode::sql_filter(query.game_mode),
+        format!("enemy_hero_id = {enemy_hero_id}"),
+    ];
+    filters.extend(MatchMode::agg_sql_filter(query.match_mode.as_deref()));
+    if let Some(v) = query.min_unix_timestamp {
+        filters.push(format!("day >= toDate({v})"));
+    }
+    if let Some(v) = query.max_unix_timestamp {
+        filters.push(format!("day <= toDate({v})"));
+    }
+    // Same badge semantics and no-op guards as build_mv_query.
+    if let Some(v) = query.min_average_badge
+        && v > 11
+    {
+        filters.push(format!("least_badge >= {v}"));
+    }
+    if let Some(v) = query.max_average_badge
+        && v < 116
+    {
+        filters.push(format!("greatest_badge <= {v}"));
+    }
+    let where_clause = filters.join(" AND ");
+
+    let mut having_filters = vec![];
+    if let Some(min_matches) = query.min_matches {
+        having_filters.push(format!("matches >= {min_matches}"));
+    }
+    if let Some(max_matches) = query.max_matches {
+        having_filters.push(format!("matches <= {max_matches}"));
+    }
+    let having_clause = if having_filters.is_empty() {
+        String::new()
+    } else {
+        format!("HAVING {}", having_filters.join(" AND "))
+    };
+
+    Some(format!(
+        "
+SELECT
+    item_id,
+    {bucket_expr}    AS bucket,
+    sum(n_wins)                            AS wins,
+    toUInt64(sum(n_matches) - sum(n_wins)) AS losses,
+    sum(n_matches)                         AS matches,
+    uniqCombinedMerge(14)(players_state)   AS players,
+    sum(sum_buy_time) / sum(n_matches)                       AS avg_buy_time_s,
+    if(sum(n_sold) = 0, 0, sum(sum_sold_time) / sum(n_sold)) AS avg_sell_time_s,
+    sum(sum_buy_rel) / sum(n_matches)                        AS avg_buy_time_relative,
+    if(sum(n_sold) = 0, 0, sum(sum_sold_rel) / sum(n_sold))  AS avg_sell_time_relative
+FROM item_enemy_stats_agg
+WHERE {where_clause}
+GROUP BY item_id, bucket
+{having_clause}
+ORDER BY item_id, bucket
+SETTINGS log_comment = 'item_stats_enemy_mv'
         "
     ))
 }
@@ -1017,6 +1138,13 @@ async fn get_item_stats(
             "single-item item_stats cohort query not routed to rollup, using base table"
         );
     }
+    if let Some(enemy_mv_query) = build_enemy_mv_query(&query) {
+        debug!(?enemy_mv_query);
+        match run_query(ch_client, &enemy_mv_query).await {
+            Ok(rows) => return Ok(rows),
+            Err(e) => warn!("item_stats enemy MV query failed, falling back to base table: {e}"),
+        }
+    }
     let base_query = build_query(&query);
     debug!(?base_query);
     Ok(run_query(ch_client, &base_query).await?)
@@ -1082,6 +1210,13 @@ mod proptests {
         }
 
         #[test]
+        fn item_stats_build_enemy_mv_query_is_valid_sql(query: ItemStatsQuery) {
+            if let Some(sql) = build_enemy_mv_query(&query) {
+                assert_valid_sql(&sql);
+            }
+        }
+
+        #[test]
         fn item_stats_build_mv_query_is_valid_sql(query: ItemStatsQuery) {
             if let Some(sql) = build_mv_query(&query) {
                 assert_valid_sql(&sql);
@@ -1120,6 +1255,61 @@ mod tests {
         assert!(plain.contains("\nWHERE match_mode IN ('Ranked', 'Unranked') AND 1=1 "));
     }
     use crate::utils::proptest_utils::assert_valid_sql;
+
+    #[test]
+    fn enemy_mv_serves_only_the_single_enemy_hero_shape() {
+        let recent = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .cast_signed()
+            - 30 * 86_400;
+        let servable = ItemStatsQuery {
+            enemy_hero_ids: Some(vec![6]),
+            min_unix_timestamp: Some(recent),
+            min_average_badge: Some(91),
+            ..Default::default()
+        };
+        let sql = build_enemy_mv_query(&servable).unwrap();
+        assert_valid_sql(&sql);
+        assert!(sql.contains("FROM item_enemy_stats_agg"));
+        assert!(sql.contains("enemy_hero_id = 6"));
+        assert!(sql.contains("least_badge >= 91"));
+
+        let declined = [
+            ItemStatsQuery {
+                enemy_hero_ids: Some(vec![6, 7]),
+                ..servable.clone()
+            },
+            ItemStatsQuery {
+                hero_ids: Some(vec![1]),
+                ..servable.clone()
+            },
+            ItemStatsQuery {
+                same_lane_filter: Some(true),
+                ..servable.clone()
+            },
+            ItemStatsQuery {
+                min_enemy_networth: Some(1),
+                ..servable.clone()
+            },
+            ItemStatsQuery {
+                bucket: BucketQuery::Hero,
+                ..servable.clone()
+            },
+            ItemStatsQuery {
+                min_unix_timestamp: Some(recent - 60 * 86_400),
+                ..servable.clone()
+            },
+            ItemStatsQuery {
+                enemy_hero_ids: None,
+                ..servable
+            },
+        ];
+        for query in &declined {
+            assert!(build_enemy_mv_query(query).is_none(), "{query:?}");
+        }
+    }
 
     #[test]
     fn item_order_predicate_is_noop_for_short_chains() {
