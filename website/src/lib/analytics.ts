@@ -16,6 +16,11 @@ export function getAnalytics(): Promise<PostHog | null> {
       ui_host: "https://eu.posthog.com",
       defaults: "2026-08-30",
       cookieless_mode: "always",
+      capture_dead_clicks: {
+        // Radix tabs switch on mousedown; the detector only counts DOM changes after the click, so every tab
+        // switch reads as dead. A custom list replaces the defaults, hence the two `ph-no-*` entries.
+        css_selector_ignorelist: [".ph-no-deadclick", ".ph-no-capture", '[role="tab"]'],
+      },
     });
     return posthog;
   })();
