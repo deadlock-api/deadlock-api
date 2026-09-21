@@ -30,7 +30,7 @@ const textLinkVariants = cva([FOCUS_RING, "rounded-sm underline-offset-4 transit
 
 /**
  * A link inside running text. A link that looks like a button is `<Button asChild>`. With `asChild` the child is the
- * anchor: a router `Link`, a `SmartLink`, a `PrefetchAnchor`.
+ * anchor: a router `Link` or a `SmartLink`.
  */
 function TextLink({
   tone,

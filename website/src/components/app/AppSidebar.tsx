@@ -2,7 +2,7 @@ import { useLocation } from "@tanstack/react-router";
 import { Code } from "lucide-react";
 
 import { SocialLinks } from "~/components/domain/brand/BrandIcons";
-import { PrefetchAnchor } from "~/components/domain/navigation/PrefetchAnchor";
+import { SmartLink } from "~/components/domain/navigation/SmartLink";
 import { SideNav, SideNavFooter, SideNavGroup, SideNavItem } from "~/components/patterns/navigation/SideNav";
 import {
   SideNavBrand,
@@ -26,10 +26,10 @@ function NavItem({ link }: { link: NavLink }) {
   const Icon = link.icon;
   return (
     <SideNavItem asChild active={active} variant={link.special ? "highlight" : "default"}>
-      <PrefetchAnchor href={link.to}>
+      <SmartLink href={link.to}>
         <Icon />
         <span className="truncate">{link.label}</span>
-      </PrefetchAnchor>
+      </SmartLink>
     </SideNavItem>
   );
 }
@@ -39,7 +39,7 @@ function SidebarContent() {
     <>
       <SideNavHeader>
         <SideNavBrand asChild>
-          <PrefetchAnchor href="/">
+          <SmartLink href="/">
             <img
               src="https://deadlock-api.com/favicon.webp"
               loading="lazy"
@@ -50,7 +50,7 @@ function SidebarContent() {
               className="aspect-square object-contain"
             />
             <span className="truncate">Deadlock API</span>
-          </PrefetchAnchor>
+          </SmartLink>
         </SideNavBrand>
       </SideNavHeader>
 
@@ -83,10 +83,10 @@ function SidebarContent() {
           const Icon = link.icon;
           return (
             <Button key={link.to} asChild variant="outline" size="sm" className="text-xs text-muted-foreground">
-              <PrefetchAnchor href={link.to}>
+              <SmartLink href={link.to}>
                 <Icon className="size-3" />
                 {link.label}
-              </PrefetchAnchor>
+              </SmartLink>
             </Button>
           );
         })}

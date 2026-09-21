@@ -4,7 +4,6 @@ import type { DateRange } from "react-day-picker";
 import { toast } from "sonner";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
-import { PrefetchAnchor } from "~/components/domain/navigation/PrefetchAnchor";
 import { SmartLink } from "~/components/domain/navigation/SmartLink";
 import { Button } from "~/components/ui/button";
 import { Calendar } from "~/components/ui/calendar";
@@ -130,21 +129,6 @@ export function PrimitivesMore() {
             <ImgWithSkeleton src="/favicon.png" alt="" className="size-5 rounded" />
             inline with text
           </div>
-        </Variants>
-      </Specimen>
-
-      <Specimen
-        name="PrefetchAnchor"
-        source="domain/navigation/PrefetchAnchor"
-        note="A plain <a> that prefetches the document on hover or focus. For links that must do a full page load, such as the sidebar."
-      >
-        <Variants>
-          <Button asChild variant="outline" size="sm">
-            <PrefetchAnchor href="/analytics/heroes">As a button</PrefetchAnchor>
-          </Button>
-          <Button asChild variant="link" className="h-auto p-0">
-            <PrefetchAnchor href="/analytics/items">As a text link</PrefetchAnchor>
-          </Button>
         </Variants>
       </Specimen>
 

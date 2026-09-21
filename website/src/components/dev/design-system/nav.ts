@@ -280,7 +280,7 @@ export const NAV: readonly NavChapter[] = [
       { title: "Graphs", items: ["GraphNodeCard"] },
       { title: "Draft", items: ["DraftSlot"] },
       { title: "Brand", items: ["BrandIcons and SocialLinks"] },
-      { title: "Navigation", items: ["SmartLink", "PrefetchAnchor"] },
+      { title: "Navigation", items: ["SmartLink"] },
       {
         title: "Mini-games",
         items: [

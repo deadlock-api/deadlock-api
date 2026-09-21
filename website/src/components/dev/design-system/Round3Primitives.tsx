@@ -153,7 +153,7 @@ export function Round3Primitives() {
       <Specimen
         name="TextLink"
         source="ui/text-link"
-        note='A link inside running text. A link that looks like a button is Button asChild. asChild makes a router Link, a SmartLink or a PrefetchAnchor the anchor. underline="dotted" is the "there is more behind this word" mark: a muted dotted rule that goes solid and takes the link colour on hover and on focus.'
+        note='A link inside running text. A link that looks like a button is Button asChild. asChild makes a router Link or a SmartLink the anchor. underline="dotted" is the "there is more behind this word" mark: a muted dotted rule that goes solid and takes the link colour on hover and on focus.'
       >
         <Variants label="tone">
           <TextLink href="#text-link">primary</TextLink>
