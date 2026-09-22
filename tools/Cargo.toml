@@ -15,10 +15,10 @@ futures = "0.3.34"
 itertools = "0.15.0"
 metrics = "0.24.6"
 object_store = { version = "0.14.2", features = ["aws"] }
-opentelemetry = { version = "0.32", features = ["logs", "trace"] }
-opentelemetry_sdk = { version = "0.32", features = ["logs", "trace"] }
-opentelemetry-otlp = { version = "0.32", features = ["grpc-tonic", "logs", "trace"] }
-opentelemetry-appender-tracing = { version = "0.32", features = ["experimental_metadata_attributes"] }
+opentelemetry = { version = "0.33", features = ["logs", "trace"] }
+opentelemetry_sdk = { version = "0.33", features = ["logs", "trace"] }
+opentelemetry-otlp = { version = "0.33", features = ["grpc-tonic", "logs", "trace"] }
+opentelemetry-appender-tracing = { version = "0.33", features = ["experimental_metadata_attributes"] }
 prost = "0.14.4"
 rand = "0.10.2"
 reqwest = "0.13.5"
