@@ -242,20 +242,20 @@ function useAudioPlayer(url: string | null) {
     cancelAnimationFrame(animRef.current);
   }, []);
 
-  const togglePlayPause = useCallback(() => {
+  // The clips last a second or two, so every press plays from the start: a press while playing means "again".
+  const play = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (audio.paused) {
-      audio.volume = volume;
-      audio.play();
-      setIsPlaying(true);
-      startProgressLoop(audioRef, animRef, setProgress);
-    } else {
-      audio.pause();
+    stopProgressLoop();
+    audio.volume = volume;
+    audio.currentTime = 0;
+    setIsPlaying(true);
+    startProgressLoop(audioRef, animRef, setProgress);
+    audio.play().catch(() => {
       setIsPlaying(false);
       stopProgressLoop();
-    }
+    });
   }, [volume, stopProgressLoop]);
 
   const handleEnded = useCallback(() => {
@@ -282,7 +282,7 @@ function useAudioPlayer(url: string | null) {
     duration,
     volume,
     changeVolume,
-    togglePlayPause,
+    play,
     handleEnded,
     handleLoadedMetadata,
   };
@@ -333,17 +333,8 @@ function GuessSound() {
     return seededPick(allSounds, rng);
   }, [allSounds, date]);
 
-  const {
-    audioRef,
-    isPlaying,
-    progress,
-    duration,
-    volume,
-    changeVolume,
-    togglePlayPause,
-    handleEnded,
-    handleLoadedMetadata,
-  } = useAudioPlayer(dailySound?.url ?? null);
+  const { audioRef, isPlaying, progress, duration, volume, changeVolume, play, handleEnded, handleLoadedMetadata } =
+    useAudioPlayer(dailySound?.url ?? null);
 
   const hints = useMemo(() => {
     if (!dailySound) return [];
@@ -441,7 +432,8 @@ function GuessSound() {
         <PlayButton
           state={isPlaying ? "playing" : "idle"}
           label="sound"
-          onClick={togglePlayPause}
+          playingAction="replay"
+          onClick={play}
           className="cursor-target size-16 sm:size-20 md:size-24"
         />
 

@@ -423,11 +423,12 @@ export function Round4Requests2() {
       <Specimen
         name="Play a sound"
         source="domain/minigames/PlayButton"
-        note="The one control of a sound round: large, round, and lit while it plays. The glyph changes with the state, so the glow never has to carry it alone."
+        note="The one control of a sound round: large, round, and lit while it plays. The glyph changes with the state, so the glow never has to carry it alone. playingAction=replay restarts a short clip instead of pausing it."
       >
         <Variants>
           <PlayButton label="the mystery sound" />
           <PlayButton state="playing" label="the mystery sound" />
+          <PlayButton state="playing" playingAction="replay" label="the mystery sound" />
           <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
             <Volume2 aria-hidden="true" className="size-4" />
             Round 3 of 8
