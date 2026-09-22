@@ -696,22 +696,29 @@ fn build_query(
         advanced_player_filters = true;
     }
 
-    // Add player filter subquery if any player filters exist
-    if !player_filters.is_empty() {
-        if advanced_player_filters {
-            let mut match_player_filters = info_filters.clone();
-            match_player_filters.extend(player_filters);
-            info_filters.push(format!(
-                "match_id IN (SELECT match_id FROM match_player WHERE {})",
-                match_player_filters.join(" AND ")
-            ));
-        } else {
-            info_filters.push(format!(
-                "match_id IN (SELECT match_id FROM player_match_history WHERE {})",
-                player_filters.join(" AND ")
-            ));
-        }
-    }
+    // The flat path applies the player filters as `match_id IN (...)`. The CTE path joins
+    // them instead: an IN-subquery inside t_matches leaves that plan uncloneable, and
+    // ClickHouse 26.9 then fails to build the primary-key set for the outer
+    // `match_id IN t_matches` (NOT_IMPLEMENTED "Cannot clone a plan holding a
+    // DelayedCreatingSets step with sets").
+    let player_filter_subquery = if player_filters.is_empty() {
+        None
+    } else if advanced_player_filters {
+        let mut match_player_filters = info_filters.clone();
+        match_player_filters.extend(player_filters);
+        Some(format!(
+            "SELECT match_id FROM match_player WHERE {}",
+            match_player_filters.join(" AND ")
+        ))
+    } else {
+        Some(format!(
+            "SELECT match_id FROM player_match_history WHERE {}",
+            player_filters.join(" AND ")
+        ))
+    };
+    let player_filter_in = player_filter_subquery
+        .as_ref()
+        .map(|sub| format!("match_id IN ({sub})"));
 
     // Inner CTE groups by match_id — non-key columns must be aggregated.
     let inner_order_expr = match query.order_by {
@@ -752,6 +759,7 @@ fn build_query(
         // AS match_mode would otherwise shadow match_mode in WHERE).
         let qualified: Vec<String> = info_filters
             .iter()
+            .chain(player_filter_in.as_ref())
             .map(|f| qualify_match_player_filter(f))
             .chain(players_filter)
             .collect();
@@ -780,15 +788,29 @@ fn build_query(
         // index (measured -15% wall, -59% read_rows). The history subquery in info_filters
         // stays so the match set is unchanged. Item filters and pool flags need columns only
         // match_player has.
+        let join_clause = player_filter_subquery
+            .as_ref()
+            .map(|sub| {
+                format!(
+                    " INNER JOIN (SELECT DISTINCT match_id AS _pf_match_id FROM ({sub})) pf \
+                     ON match_id = pf._pf_match_id"
+                )
+            })
+            .unwrap_or_default();
         let t_matches_source = match &account_filter {
             Some(account_filter) if !advanced_player_filters && !wide_only_filter => {
+                let mut conds = vec![account_filter.clone()];
+                conds.extend(info_filters.iter().cloned());
                 format!(
-                    "player_match_stats WHERE {account_filter} AND {}",
-                    info_filters.join(" AND ")
+                    "player_match_stats{join_clause} WHERE {}",
+                    conds.join(" AND ")
                 )
             }
-            _ if info_filters.is_empty() => "match_player".to_owned(),
-            _ => format!("match_player WHERE {}", info_filters.join(" AND ")),
+            _ if info_filters.is_empty() => format!("match_player{join_clause}"),
+            _ => format!(
+                "match_player{join_clause} WHERE {}",
+                info_filters.join(" AND ")
+            ),
         };
         query.push_str("WITH ");
         write!(
@@ -971,12 +993,15 @@ mod proptests {
         )
         .expect("query should build");
         assert_valid_sql(&sql);
+        assert!(sql.contains("t_matches AS (SELECT match_id FROM player_match_stats INNER JOIN"));
         assert!(sql.contains(
-            "t_matches AS (SELECT match_id FROM player_match_stats WHERE account_id IN (848124002) AND match_mode IN ('Ranked', 'Unranked') AND"
+            "WHERE account_id IN (848124002) AND match_mode IN ('Ranked', 'Unranked') AND"
         ));
-        assert!(sql.contains(
-            "AND match_id IN (SELECT match_id FROM player_match_history WHERE account_id IN (848124002)) GROUP BY match_id"
-        ));
+        assert!(
+            sql.contains(
+                "SELECT match_id FROM player_match_history WHERE account_id IN (848124002)"
+            )
+        );
     }
 
     #[test]
@@ -992,7 +1017,7 @@ mod proptests {
             None,
         )
         .expect("query should build");
-        assert!(sql.contains("t_matches AS (SELECT match_id FROM match_player WHERE"));
+        assert!(sql.contains("t_matches AS (SELECT match_id FROM match_player INNER JOIN"));
         assert!(!sql.contains("FROM player_match_stats"));
     }
 
@@ -1133,7 +1158,7 @@ mod proptests {
         .expect("query should build");
 
         assert!(sql.contains(
-            "match_id IN (SELECT match_id FROM match_player WHERE match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 AND start_time >= 1780256805 AND start_time <= 1780270000 AND average_badge >= 101 AND hero_id IN (7) AND hero_id = 7 AND hasAll(items.item_id, [1282141666]))"
+            "SELECT match_id FROM match_player WHERE match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 AND start_time >= 1780256805 AND start_time <= 1780270000 AND average_badge >= 101 AND hero_id IN (7) AND hero_id = 7 AND hasAll(items.item_id, [1282141666])"
         ));
     }
 }
