@@ -1331,6 +1331,7 @@ dependencies = [
  "tracing",
  "url",
  "uuid",
+ "zstd 0.13.3",
 ]
 
 [[package]]

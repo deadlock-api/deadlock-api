@@ -17,7 +17,7 @@ pub fn get_ch_client() -> Result<clickhouse::Client, VarError> {
         .with_user(env::var("CLICKHOUSE_USER")?)
         .with_password(env::var("CLICKHOUSE_PASSWORD")?)
         .with_database(env::var("CLICKHOUSE_DB")?)
-        .with_compression(Compression::None)
+        .with_compression(Compression::zstd())
         // Disable schema validation: clickhouse 0.15 fetches the table schema via
         // DESCRIBE and parses every column type, but clickhouse-types cannot parse
         // named tuples like `match_player.final_stats Tuple(ability_kills UInt32, ...)`,

@@ -174,6 +174,7 @@ impl AppState {
             .with_user(&config.clickhouse.username)
             .with_password(&config.clickhouse.password)
             .with_database(&config.clickhouse.dbname)
+            .with_compression(clickhouse::Compression::zstd())
             .with_setting("output_format_json_quote_64bit_integers", "0")
             .with_setting("output_format_json_named_tuples_as_objects", "1")
             .with_setting("enable_json_type", "1")
@@ -211,6 +212,7 @@ impl AppState {
             .with_user(&config.clickhouse.username)
             .with_password(&config.clickhouse.password)
             .with_database(&config.clickhouse.dbname)
+            .with_compression(clickhouse::Compression::zstd())
             .with_setting("output_format_json_quote_64bit_integers", "0")
             .with_setting("output_format_json_named_tuples_as_objects", "1")
             .with_setting("enable_json_type", "1")
@@ -246,6 +248,7 @@ impl AppState {
             .with_user(&config.clickhouse.restricted_username)
             .with_password(&config.clickhouse.restricted_password)
             .with_database(&config.clickhouse.dbname)
+            .with_compression(clickhouse::Compression::zstd())
             .with_setting("allow_statistics_optimize", "0")
             .with_setting("max_memory_usage", "26843545600")
             .with_setting("use_query_cache", "0");
@@ -390,6 +393,7 @@ impl AppState {
                 .with_user(&config.data_dump.username)
                 .with_password(&config.data_dump.password)
                 .with_database("dump")
+                .with_compression(clickhouse::Compression::zstd())
                 // Exports run for up to two hours; keep the HTTP connection busy meanwhile.
                 .with_setting("send_progress_in_http_headers", "1")
                 .with_setting("http_headers_progress_interval_ms", "10000")

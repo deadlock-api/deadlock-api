@@ -18,7 +18,7 @@ opentelemetry-otlp = { version = "0.32", features = ["grpc-tonic", "logs", "trac
 opentelemetry-appender-tracing = { version = "0.32", features = ["experimental_metadata_attributes", "experimental_span_attributes"] }
 tracing-opentelemetry = "0.33"
 redis = { version = "1.6.0", default-features = false, features = ["tokio-comp"] }
-clickhouse = { version = "0.15.2", features = ["chrono", "uuid"] }
+clickhouse = { version = "0.15.2", features = ["chrono", "uuid", "zstd"] }
 sqlx = { version = "0.9.0", features = ["chrono", "derive", "postgres", "runtime-tokio", "uuid"] }
 uuid = { version = "1.26.0", features = ["serde", "v4"] }
 cached = { version = "3.1", features = ["async"] }
