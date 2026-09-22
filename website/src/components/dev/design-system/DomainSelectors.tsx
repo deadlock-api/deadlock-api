@@ -138,7 +138,7 @@ export function DomainSelectors() {
       <Specimen
         name="ItemSlotSelector and ItemTierSelector"
         source="domain/selectors/ItemSlotSelector · domain/selectors/ItemTierSelector"
-        note="Multi-select chips that narrow an item table by slot and by tier. Each brings its own Field label."
+        note="Multi-select chips that narrow an item table by slot and by tier. With every chip on, pressing one keeps only that chip; releasing the last chip turns all back on. Each brings its own Field label."
       >
         <Variants className="items-start gap-4">
           <ItemSlotSelector value={slots} onValueChange={setSlots} />
