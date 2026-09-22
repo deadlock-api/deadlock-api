@@ -4,6 +4,7 @@ import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts"
 
 import { ChartHeroSelector } from "~/components/domain/selectors/ChartHeroSelector";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
+import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartSidebarLayout } from "~/components/patterns/charts/ChartSidebarLayout";
 import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
@@ -174,6 +175,15 @@ export function HeroStatsByDurationChart({
               </>
             }
           >
+            {selectedIds.length > 0 && (
+              <ChartLegend label="Selected heroes" className="px-3 pt-2 select-none">
+                {selectedIds.map((heroId) => (
+                  <ChartLegendItem key={heroId} color={heroIdMap[heroId]?.color ?? CHART_COLOR.fallback} shape="line">
+                    {heroIdMap[heroId]?.name ?? `Hero ${heroId}`}
+                  </ChartLegendItem>
+                ))}
+              </ChartLegend>
+            )}
             {selectedIds.length === 0 ? (
               <EmptyState
                 variant="plain"

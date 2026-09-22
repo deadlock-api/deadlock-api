@@ -5,7 +5,7 @@ import { CartesianGrid, Scatter, ScatterChart, type ScatterProps, Tooltip, XAxis
 
 import { ChartHeroSelector } from "~/components/domain/selectors/ChartHeroSelector";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
-import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
+import { ChartLegend, ChartLegendItem, ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { ChartSidebarLayout } from "~/components/patterns/charts/ChartSidebarLayout";
 import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
@@ -377,6 +377,15 @@ export function HeroStatsByRankChart({
             title="Hero performance by rank"
             footer="Each badge shows a rank tier. Lines connect ranks for the same hero."
           >
+            {selectedIds.length > 0 && (
+              <ChartLegend label="Selected heroes" className="px-3 pt-2 select-none">
+                {selectedIds.map((heroId) => (
+                  <ChartLegendItem key={heroId} color={heroIdMap[heroId]?.color ?? CHART_COLOR.fallback} shape="line">
+                    {heroIdMap[heroId]?.name ?? `Hero ${heroId}`}
+                  </ChartLegendItem>
+                ))}
+              </ChartLegend>
+            )}
             {selectedIds.length === 0 ? (
               <EmptyState
                 variant="plain"
