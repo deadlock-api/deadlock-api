@@ -34,8 +34,13 @@ impl BatchQuery for MatchSaltsReadQuery {
     type Value = ClickhouseSalts;
 
     fn build_query(keys: &[u64]) -> String {
-        // FINAL is required: an unmerged verification stamp carries only the sorting key and
-        // would otherwise win the ordering with a NULL replay salt.
+        // Coalescing is done by hand instead of with FINAL, which was ~6x the rows and ~7x the
+        // latency for these point lookups. An unmerged verification stamp carries only the
+        // sorting key, so each key group is folded to what a merge would produce: the last
+        // inserted non-NULL value per column. Insert order is the part's max block number
+        // (third field of `_part`; inserts coalesce within their own part). `max()` stands in
+        // where the value never conflicts within a group (replay salt) or only its presence
+        // matters (the verdict stamps).
         //
         // A written-off candidate (`failed_at` set) is still served, but only when nothing
         // better exists. The downloader gives up on a match after about four days, and its
@@ -44,8 +49,22 @@ impl BatchQuery for MatchSaltsReadQuery {
         // would send every request for such a match to Steam, which only returns the same
         // salts again (or 503s when no bot is free) even though the file is there by now.
         format!(
-            "SELECT ?fields FROM match_salts FINAL \
-             WHERE match_id IN ({}) AND metadata_salt > 0 AND cluster_id > 0 \
+            "SELECT ?fields FROM ( \
+                 SELECT match_id, cluster_id, metadata_salt, \
+                     max(replay_salt) AS replay_salt, \
+                     argMaxIf(username, block, username IS NOT NULL) AS username, \
+                     argMax(created_at, block) AS created_at, \
+                     max(verified_at) AS verified_at, \
+                     max(failed_at) AS failed_at \
+                 FROM ( \
+                     SELECT match_id, cluster_id, metadata_salt, replay_salt, username, \
+                         created_at, verified_at, failed_at, \
+                         toUInt64(splitByChar('_', _part)[3]) AS block \
+                     FROM match_salts \
+                     WHERE match_id IN ({}) AND metadata_salt > 0 AND cluster_id > 0 \
+                 ) \
+                 GROUP BY match_id, cluster_id, metadata_salt \
+             ) \
              ORDER BY failed_at IS NULL DESC, verified_at IS NOT NULL DESC, created_at DESC \
              LIMIT 1 BY match_id \
              SETTINGS log_comment = 'salts_read'",
