@@ -36,7 +36,7 @@ export function SortButton({
       className={cn(
         FOCUS_RING,
         DISABLED_STATE,
-        "inline-flex min-h-6 items-center gap-1 rounded-sm transition-colors hover:text-foreground aria-disabled:pointer-events-none aria-disabled:opacity-50",
+        "inline-flex min-h-6 min-w-6 items-center gap-1 rounded-sm transition-colors hover:text-foreground aria-disabled:pointer-events-none aria-disabled:opacity-50",
         sortAlignClass[align],
         className,
       )}
