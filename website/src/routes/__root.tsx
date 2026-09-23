@@ -57,7 +57,13 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         ),
       );
     }
-    if (isAnalytics || isPlayerTracker || pathname === "/community/badge-distribution") {
+    // The heatmap's rank filter renders nothing until the ranks arrive, so without them its filter bar reflows.
+    if (
+      isAnalytics ||
+      isPlayerTracker ||
+      pathname === "/community/badge-distribution" ||
+      pathname === "/community/heatmap"
+    ) {
       preloads.push(
         import("~/queries/ranks-query").then(({ ranksQueryOptions }) => queryClient.ensureQueryData(ranksQueryOptions)),
       );
