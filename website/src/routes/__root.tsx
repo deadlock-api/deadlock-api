@@ -75,37 +75,46 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     }
     await Promise.all(preloads);
   },
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      {
-        name: "keywords",
-        content: "Deadlock, API, Game, Data, Images, Stats, Heroes, Items, Weapons, Abilities, Leaderboard, Analytics",
-      },
-      { name: "robots", content: "index, follow" },
-      // ds-allow color-literal: a meta tag cannot read CSS variables; mirrors --primary
-      { name: "theme-color", content: "#fa4454" },
-      { property: "og:site_name", content: "Deadlock API" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { property: "twitter:domain", content: "deadlock-api.com" },
-      ...defaultSeo.meta,
-    ],
-    links: [
-      { rel: "stylesheet", href: appCss, fetchPriority: "high" },
-      { rel: "icon", type: "image/ico", href: "/favicon.ico" },
-      { rel: "icon", type: "image/webp", href: "https://deadlock-api.com/favicon.webp" },
-      { rel: "icon", type: "image/png", href: "https://deadlock-api.com/favicon.png" },
-      { rel: "manifest", href: "/manifest.webmanifest" },
-      {
-        rel: "preload",
-        href: interWoff2,
-        as: "font",
-        type: "font/woff2",
-        crossOrigin: "anonymous",
-      },
-    ],
-  }),
+  head: ({ matches }) => {
+    // A 404 or error page names itself and asks not to be indexed (NotFound / RouteError render those tags); the
+    // site-wide title and "index, follow" would otherwise come first in the server HTML and contradict them.
+    // `_notFound` marks the match that renders a global 404 (an unmatched URL), whose status stays "success".
+    const failed = matches.some(
+      (match) => match.status === "notFound" || match.status === "error" || match._notFound === true,
+    );
+    return {
+      meta: [
+        { charSet: "utf-8" },
+        { name: "viewport", content: "width=device-width, initial-scale=1" },
+        {
+          name: "keywords",
+          content:
+            "Deadlock, API, Game, Data, Images, Stats, Heroes, Items, Weapons, Abilities, Leaderboard, Analytics",
+        },
+        ...(failed ? [] : [{ name: "robots", content: "index, follow" }]),
+        // ds-allow color-literal: a meta tag cannot read CSS variables; mirrors --primary
+        { name: "theme-color", content: "#fa4454" },
+        { property: "og:site_name", content: "Deadlock API" },
+        { name: "twitter:card", content: "summary_large_image" },
+        { property: "twitter:domain", content: "deadlock-api.com" },
+        ...(failed ? defaultSeo.meta.filter((tag) => !("title" in tag)) : defaultSeo.meta),
+      ],
+      links: [
+        { rel: "stylesheet", href: appCss, fetchPriority: "high" },
+        { rel: "icon", type: "image/ico", href: "/favicon.ico" },
+        { rel: "icon", type: "image/webp", href: "https://deadlock-api.com/favicon.webp" },
+        { rel: "icon", type: "image/png", href: "https://deadlock-api.com/favicon.png" },
+        { rel: "manifest", href: "/manifest.webmanifest" },
+        {
+          rel: "preload",
+          href: interWoff2,
+          as: "font",
+          type: "font/woff2",
+          crossOrigin: "anonymous",
+        },
+      ],
+    };
+  },
   component: RootComponent,
 });
 
