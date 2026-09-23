@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit",
     "test:tracker": "tsx --test src/lib/steam.test.ts src/lib/steam-profile-batches.test.ts src/lib/tracker/*.test.ts src/lib/local-storage.test.ts",
     "test:tracker:browser": "playwright test",
-    "test:unit": "tsx --test src/lib/site-helpers.test.ts",
+    "test:unit": "tsx --test src/lib/site-helpers.test.ts src/components/patterns/states/QueryRenderer.test.tsx",
     "bench:avg": "tsx scripts/playground/bench-average-build.ts",
     "og": "node scripts/generate-og-images.mjs",
     "smoke": "node scripts/smoke-routes.mjs"
