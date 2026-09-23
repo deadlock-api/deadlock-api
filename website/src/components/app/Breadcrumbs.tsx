@@ -7,6 +7,7 @@ import {
   BreadcrumbLink,
   BreadcrumbPage,
 } from "~/components/patterns/navigation/Breadcrumb";
+import { serializeJsonLd } from "~/lib/seo";
 
 const ROUTE_LABELS: Record<string, string> = {
   "/analytics": "Analytics",
@@ -93,7 +94,7 @@ export function Breadcrumbs() {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(structuredData) }} />
       <Breadcrumb className="ps-8 md:ps-0">
         <BreadcrumbItem>
           <BreadcrumbLink asChild>

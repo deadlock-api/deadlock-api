@@ -70,11 +70,19 @@ export function seo({ title, description, path, ogImage, ogType, publishedTime, 
   if (jsonLd) {
     scripts.push({
       type: "application/ld+json",
-      children: JSON.stringify(jsonLd),
+      children: serializeJsonLd(jsonLd),
     });
   }
 
   return { meta, links, scripts };
+}
+
+/**
+ * JSON for an inline `<script type="application/ld+json">`. `JSON.stringify` leaves `<` alone, so a value such as a
+ * Steam name of `</script><script>…` would close the tag and run as HTML; `\u003c` is the same string to a JSON parser.
+ */
+export function serializeJsonLd(data: unknown): string {
+  return JSON.stringify(data).replace(/</g, "\\u003c");
 }
 
 /** OG image for a blog post by slug */
