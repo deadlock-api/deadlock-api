@@ -140,7 +140,7 @@ const context = await browser.newContext({
   serviceWorkers: "block",
 });
 // Analytics must not count smoke runs as visitors.
-await context.route(/posthog|i\.deadlock-api\.com/, (route) => route.abort());
+await context.route(/posthog|\/\/i\.deadlock-api\.com\//, (route) => route.abort());
 
 console.log(`smoke: ${routes.length} routes on ${args.base} at ${args.width}px${args.tz ? ` in ${args.tz}` : ""}`);
 const results = [];
