@@ -40,6 +40,9 @@ const SAMPLE_PARAMS = {
     ?.replace(/\.md$/, ""),
 };
 const SKIP = [/^\/auth\//, /^\/streamkit\/widgets\//, /\$accountId/, /\.xml$/];
+// The design system showcase only exists in `pnpm dev`; a build answers 404 there by design.
+const DEV_SERVER = "http://localhost:3000";
+if (args.base !== DEV_SERVER) SKIP.push(/^\/dev\//);
 
 // Recharts and third-party scripts log noise that says nothing about our pages.
 const IGNORED_CONSOLE = [/Download the React DevTools/, /react-compiler/i, /posthog/i, /\[vite\]/];
