@@ -39,15 +39,17 @@ function LoadingLogo({ className, text, size = "default", ...props }: LoadingLog
     return () => clearTimeout(timer);
   }, []);
 
-  if (!show) return null;
-
+  // Hidden rather than absent during the delay: the space is held from the first frame, so the logo appearing (or
+  // the content replacing it) does not push the page down.
   return (
     <div
       data-slot="loading-logo"
       data-size={size}
+      data-state={show ? "visible" : "delayed"}
       className={cn(
         "flex flex-col items-center justify-center",
         size === "sm" ? "gap-1.5 py-3" : "gap-3 py-12",
+        !show && "invisible",
         className,
       )}
       {...props}
