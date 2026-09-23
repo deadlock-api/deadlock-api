@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { ChartOverlay, ChartOverlayItem, ChartStage } from "~/components/patterns/charts/ChartOverlay";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Field } from "~/components/ui/field";
 import { Slider } from "~/components/ui/slider";
 
@@ -134,11 +136,18 @@ function HeatBars({ grid, opacity }: { grid: Float32Array; opacity: number }) {
   );
 }
 
-function MapPlane({ mapImages }: { mapImages: { background: string; frame: string; mid: string } }) {
+function MapPlane({
+  mapImages,
+  onStatusChange,
+}: {
+  mapImages: { background: string; frame: string; mid: string };
+  onStatusChange: (status: "loading" | "ready" | "error") => void;
+}) {
   const [texture, setTexture] = useState<THREE.Texture | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    onStatusChange("loading");
     const loader = new THREE.ImageLoader();
     const load = (url: string) => loader.loadAsync(url);
 
@@ -164,14 +173,16 @@ function MapPlane({ mapImages }: { mapImages: { background: string; frame: strin
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.needsUpdate = true;
       setTexture(tex);
+      onStatusChange("ready");
     };
-    void loadAll().catch((error) => {
-      if (!cancelled) console.error("Failed to load heatmap images", error);
+    // A failed image used to leave bars floating over a bare disc; the 2D view's error and retry now apply here too.
+    void loadAll().catch(() => {
+      if (!cancelled) onStatusChange("error");
     });
     return () => {
       cancelled = true;
     };
-  }, [mapImages.background, mapImages.frame, mapImages.mid]);
+  }, [mapImages.background, mapImages.frame, mapImages.mid, onStatusChange]);
 
   // Disposed once it is replaced or the plane unmounts, not when new images start loading: the old texture is still
   // on screen until then, and three.js would silently re-upload a disposed one.
@@ -200,6 +211,8 @@ function BasePlane() {
 export default function Heatmap3D({ data, mapData, viewMode, sensitivity, onSensitivityChange }: Heatmap3DProps) {
   const radius = mapData.radius ?? 10752;
   const [opacity, setOpacity] = useState(0.85);
+  const [mapStatus, setMapStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [mapAttempt, setMapAttempt] = useState(0);
   const rawGrids = useMemo(() => (data.length > 0 ? buildHeatGrids(data, radius) : null), [data, radius]);
 
   const { grid, legendMax } = useMemo(() => {
@@ -222,7 +235,8 @@ export default function Heatmap3D({ data, mapData, viewMode, sensitivity, onSens
         <directionalLight position={[-3, 5, -3]} intensity={0.3} />
 
         <BasePlane />
-        <MapPlane mapImages={mapData.images} />
+        {/* A retry remounts the plane, which loads the images again. */}
+        <MapPlane key={mapAttempt} mapImages={mapData.images} onStatusChange={setMapStatus} />
         <HeatBars grid={grid} opacity={opacity} />
 
         <OrbitControls
@@ -235,6 +249,19 @@ export default function Heatmap3D({ data, mapData, viewMode, sensitivity, onSens
           target={[0, 0, 0]}
         />
       </Canvas>
+
+      {mapStatus === "loading" && (
+        <LoadingState size="sm" text="Loading map…" label="map" className="absolute inset-0" />
+      )}
+      {mapStatus === "error" && (
+        <div className="absolute inset-0 flex items-center justify-center p-4">
+          <ErrorState
+            title="The map images did not load"
+            description="The heatmap needs the map to draw on. Check your connection and try again."
+            onRetry={() => setMapAttempt((n) => n + 1)}
+          />
+        </div>
+      )}
 
       {/* Top corner: on a phone the legend and the bottom-start controls ran into each other over the map. */}
       <ChartOverlay position="top-end">
