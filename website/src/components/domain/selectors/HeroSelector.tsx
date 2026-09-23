@@ -83,9 +83,16 @@ export function HeroSelector({
       <div className="relative border-b p-2">
         <SearchIcon className="absolute start-4 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
+          aria-label="Search heroes"
           placeholder="Search heroes..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          // Enter takes the first match, so typing "kel" and Enter picks Kelvin without tabbing into the grid.
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" || !search || filteredHeroes.length === 0) return;
+            e.preventDefault();
+            select(filteredHeroes[0].id);
+          }}
           size="sm"
           className="ps-7 text-sm"
         />

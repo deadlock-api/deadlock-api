@@ -104,7 +104,7 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
           <TableRow>
             <TableHead className="w-12 text-end">#</TableHead>
             <TableHead>Account Name</TableHead>
-            {shouldShowTopHeroesColumn && <TableHead className="min-w-40 text-end">Top Heroes</TableHead>}
+            {shouldShowTopHeroesColumn && <TableHead className="min-w-28 text-end">Top Heroes</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody aria-busy={searchQuery !== deferredSearchQuery}>
@@ -144,7 +144,7 @@ function LeaderboardTableRow({
       </TableCell>
       {shouldShowTopHeroesColumn && (
         <TableCell>
-          <div className="flex min-h-7 justify-end gap-2">
+          <div className="flex min-h-7 justify-end gap-1">
             {entry.top_hero_ids?.map((heroId) => (
               <TopHeroButton key={heroId} heroId={heroId} onClick={() => onHeroClick(heroId)} />
             ))}
