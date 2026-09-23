@@ -20,7 +20,9 @@ function SteamIdFormatHelper() {
       <Card tone="inset" size="sm" radius="lg" className="gap-3 p-4 text-sm">
         <Stack gap={1}>
           <p className="font-medium">Steam ID Formats</p>
-          <p className="text-muted-foreground">You can enter your Steam ID in either format:</p>
+          <p className="text-muted-foreground">
+            Paste your profile link (steamcommunity.com/profiles/…), or enter either ID:
+          </p>
         </Stack>
 
         <Stack gap={2}>

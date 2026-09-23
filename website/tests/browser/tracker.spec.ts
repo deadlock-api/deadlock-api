@@ -977,3 +977,17 @@ test("replacing a removed account keeps the dialog open with the API's reason wh
   await dialog.getByRole("button", { name: "Replace Account", exact: true }).click();
   await expect(dialog).toHaveCount(0);
 });
+
+test("a refused sign-out keeps the patron signed in and says so", async ({ page }) => {
+  await page.route(`${API_ORIGIN}/v1/patron/status`, (route) => route.fulfill({ json: patronStatus }));
+  await page.route(`${API_ORIGIN}/v1/patron/steam-accounts`, (route) =>
+    route.fulfill({
+      json: { accounts: [steamAccount(ACCOUNT_ID)], summary: { total_slots: 2, used_slots: 1, available_slots: 1 } },
+    }),
+  );
+  await page.route(`${API_ORIGIN}/v1/auth/patreon/logout`, (route) => route.fulfill({ status: 500, body: "" }));
+  await page.goto("/patron");
+  await page.getByRole("button", { name: /log ?out|sign out/i }).click();
+  await expect(page.getByText("Could not sign out", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /log ?out|sign out/i })).toBeEnabled();
+});

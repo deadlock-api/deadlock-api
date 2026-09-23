@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { PatronAuthContext, type PatronAuthContextValue, type PatronAuthState } from "~/contexts/patron-auth-context";
 import { API_ORIGIN } from "~/lib/constants";
@@ -64,15 +65,21 @@ export function PatronAuthProvider({ children }: PatronAuthProviderProps) {
 
   const logout = useCallback(async () => {
     setIsLoggingOut(true);
-    try {
-      await fetch(`${API_ORIGIN}/v1/auth/patreon/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch (error) {
-      console.error("Failed to logout:", error);
-    }
+    // Only a confirmed logout clears the page: otherwise the session cookie survives and the next status check would
+    // sign the patron back in, so they are told instead.
+    const loggedOut = await fetch(`${API_ORIGIN}/v1/auth/patreon/logout`, {
+      method: "POST",
+      credentials: "include",
+    }).then(
+      (res) => res.ok,
+      () => false,
+    );
     setIsLoggingOut(false);
+    if (!loggedOut) {
+      toast.error("Could not sign out", { description: "Try again in a moment." });
+      return;
+    }
+    queryClient.removeQueries({ queryKey: queryKeys.patron.steamAccounts() });
     queryClient.setQueryData(queryKeys.patron.status(), null);
   }, [queryClient]);
 
