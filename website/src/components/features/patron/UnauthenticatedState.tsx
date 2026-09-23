@@ -60,7 +60,7 @@ export function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
             </a>
           </Button>
         </HeroActions>
-        <Text as="p" variant="caption" tone="muted">
+        <Text as="p" variant="caption" tone="muted" className="text-center">
           Starting at $1.50/month, every cent goes to infrastructure
         </Text>
       </Hero>
