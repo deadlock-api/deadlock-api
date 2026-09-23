@@ -1,6 +1,6 @@
 import type { Rank } from "deadlock_api_client";
 import type { BadgeDistribution } from "deadlock_api_client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Customized, Label, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
 import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/RankTierIcons";
@@ -107,7 +107,11 @@ export default function BadgeDistributionChart({
 
   const valueTicks = useMemo(() => niceTicks(0, Math.max(0, ...chartData.map((entry) => entry.value))), [chartData]);
 
-  const xAxisTickFormatter = (badge: number) => tierData.get(Math.floor(badge / 10))?.name ?? "";
+  // Rank names need about 64px each. Narrower (a phone), Recharts dropped every other one and the rest drifted off
+  // their icons, so only the icons stay; they carry the name in their tooltip.
+  const [chartWidth, setChartWidth] = useState(0);
+  const showNames = ticks.length > 0 && chartWidth / ticks.length >= 64;
+  const xAxisTickFormatter = (badge: number) => (showNames ? (tierData.get(Math.floor(badge / 10))?.name ?? "") : "");
 
   const tierCenters = useMemo(() => {
     const badges = badgeDistributionData.map((item) => item.badge_level);
@@ -128,6 +132,7 @@ export default function BadgeDistributionChart({
         size="fill"
         variant="bare"
         className="min-h-0 w-full flex-1"
+        onResize={setChartWidth}
       >
         <BarChart accessibilityLayer data={chartData}>
           <CartesianGrid {...CHART_GRID} />
