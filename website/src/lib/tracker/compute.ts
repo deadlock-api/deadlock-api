@@ -88,7 +88,9 @@ function matchesMode(entry: PlayerMatchHistoryEntry, mode: Mode): boolean {
     case "normal_unranked":
       return entry.game_mode === GAME_MODE_NORMAL && entry.match_mode === MATCH_MODE_UNRANKED;
     case "street_brawl":
-      return entry.game_mode === GAME_MODE_STREET_BRAWL;
+      // Public lobbies only, like the normal modes and like the Brawl queries of the Heroes tab (match mode
+      // "unranked"): private brawl lobbies made the Overview count more games than the Heroes tab.
+      return entry.game_mode === GAME_MODE_STREET_BRAWL && entry.match_mode === MATCH_MODE_UNRANKED;
   }
 }
 

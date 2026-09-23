@@ -209,7 +209,9 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
   const { profiles } = useSteamProfiles(unnamedAccountIds);
 
   const tracked = match?.players.find((player) => player.account_id === accountId);
-  const ownTeam = tracked?.team ?? TEAMS[0].key;
+  // The history entry knows the side even when the metadata lacks the player (partial ingestion); guessing Team0
+  // would invert the soul lead and the objectives for a player on the other side.
+  const ownTeam = tracked?.team ?? TEAMS[entry.player_team === 1 ? 1 : 0].key;
 
   const soulLead = useMemo(() => (match ? computeSoulLead(match.players, ownTeam) : null), [match, ownTeam]);
   const objectiveEvents = useMemo(() => (match ? computeObjectiveEvents(match, ownTeam) : []), [match, ownTeam]);
