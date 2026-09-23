@@ -92,6 +92,10 @@ interface FilterCellProps extends Omit<React.ComponentProps<"div">, "children"> 
    * `FilterBar variant="toolbar"`. Cells of a `cells` bar are laid out by the bar and stay `default`.
    */
   size?: "default" | "sm";
+  /** Whether the editor is showing; a single-choice selector closes it once a choice is made. */
+  open?: boolean;
+  defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 /** What a selector built on `FilterCell` passes through to it: everything but the value wiring it supplies itself. */
@@ -116,12 +120,15 @@ export function FilterCell({
   className,
   align = "start",
   size = "default",
+  open,
+  defaultOpen = false,
+  onOpenChange,
   ...props
 }: FilterCellProps) {
   const inRoot = useContext(FilterRootContext);
   const compact = size === "sm" && !inRoot;
   return (
-    <Popover>
+    <Popover open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       <div
         data-slot="filter-cell"
         data-active={active || undefined}

@@ -47,6 +47,8 @@ export function HeroSelector({
   });
   const { sortedHeroes } = useHeroes();
   const [search, setSearch] = useState("");
+  // A hero is one choice, so picking it (or Any) closes the editor like a select would.
+  const [open, setOpen] = useState(false);
 
   const currentHero = selectedHero ? sortedHeroes.find((h: SlimHero) => h.id === selectedHero) : undefined;
 
@@ -67,6 +69,7 @@ export function HeroSelector({
   const select = (heroId: number | null) => {
     setSelectedHero(heroId);
     setSearch("");
+    setOpen(false);
   };
 
   return (
@@ -78,6 +81,8 @@ export function HeroSelector({
       icon={icon}
       className={className}
       contentClassName="w-80 p-0"
+      open={open}
+      onOpenChange={setOpen}
       {...props}
     >
       <div className="relative border-b p-2">
