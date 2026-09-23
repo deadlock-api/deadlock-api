@@ -9,7 +9,10 @@ interface FieldProps extends React.ComponentProps<"div"> {
   label: React.ReactNode;
   /** `vertical` puts an eyebrow label above the control; `horizontal` puts a quiet label to its left, for toolbars. */
   orientation?: "vertical" | "horizontal";
-  /** The control's id, when it is a native input. Other controls are labelled through the group. */
+  /**
+   * The control's id, when it is a native input. Other controls are labelled through the group, and a `SelectTrigger`
+   * also names itself with the label (see `useFieldLabelledBy`).
+   */
   htmlFor?: string;
   /** `hidden` keeps the label for assistive technology but does not draw it. */
   labelDisplay?: "visible" | "hidden";
