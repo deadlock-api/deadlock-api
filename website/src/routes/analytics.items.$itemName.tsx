@@ -6,6 +6,7 @@ import { lazy, Suspense, useMemo } from "react";
 import { NotFound } from "~/components/app/NotFound";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemEffectCard } from "~/components/features/items/ItemEffectCard";
+import { ItemHeroBreakdown } from "~/components/features/items/ItemHeroBreakdown";
 import { ItemUpgradePath } from "~/components/features/items/ItemUpgradePath";
 import { ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
@@ -13,7 +14,6 @@ import { PageShell } from "~/components/patterns/page/PageShell";
 import { Section } from "~/components/patterns/page/Section";
 import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
-import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
@@ -32,10 +32,6 @@ import { closestNameBySlug, slugify } from "~/lib/slug";
 import { filterShopableItems, itemQueryOptions, itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
-
-const ItemHeroBreakdown = lazy(() =>
-  import("~/components/features/items/ItemHeroBreakdown").then((m) => ({ default: m.ItemHeroBreakdown })),
-);
 
 const ItemWinRateOverTime = lazy(() =>
   import("~/components/features/items/ItemWinRateOverTime").then((m) => ({ default: m.ItemWinRateOverTime })),
@@ -285,11 +281,7 @@ function ItemDetailPage() {
 
       <ItemUpgradePath itemId={itemId} itemName={itemName} request={itemRequest} />
 
-      <ChunkErrorBoundary>
-        <Suspense fallback={<LoadingState label={`${itemName} hero breakdown`} />}>
-          <ItemHeroBreakdown itemId={itemId} itemName={itemName} itemRequest={itemRequest} heroRequest={heroRequest} />
-        </Suspense>
-      </ChunkErrorBoundary>
+      <ItemHeroBreakdown itemId={itemId} itemName={itemName} itemRequest={itemRequest} heroRequest={heroRequest} />
 
       <ChunkErrorBoundary>
         <Suspense fallback={<ChartLoading label={`${itemName} win rate over time`} />}>
