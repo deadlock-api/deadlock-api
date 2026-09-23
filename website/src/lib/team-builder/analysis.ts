@@ -198,23 +198,32 @@ export class StatsIndex {
   }
 
   /**
+   * Log-odds a sample sits above what `expected` (the heroes' own strength, in log-odds) predicts.
+   * The sample is shrunk toward that expectation rather than toward an even split, so a cell seen in
+   * a handful of games reads as no edge instead of as the inverse of its heroes' strength.
+   */
+  private excessEdge(sample: Sample | undefined, expected: number, k: number): number {
+    return logit(shrunk(sample, sigmoid(logit(this.baseRate) + expected), k)) - logit(this.baseRate) - expected;
+  }
+
+  /**
    * Baseline is the *sum* of the two hero edges, not their average: a pair's win rate is a team win
    * rate carrying both contributions, so averaging removes only half and leaves the rest in here.
    */
   synergyEdge(a: number, b: number): number {
-    const pair = logit(shrunk(this.pairSample(a, b), this.baseRate, this.model.shrinkage[1])) - logit(this.baseRate);
-    return pair - (this.heroEdge(a) + this.heroEdge(b));
+    return this.excessEdge(this.pairSample(a, b), this.heroEdge(a) + this.heroEdge(b), this.model.shrinkage[1]);
   }
 
   /** Worth of the matchup once *both* heroes' own strength is taken out. */
   counterMatchupEdge(hero: number, enemy: number): number {
-    const cell =
-      logit(shrunk(this.counterSample(hero, enemy), this.baseRate, this.model.shrinkage[2])) - logit(this.baseRate);
-    return cell - (this.heroEdge(hero) - this.heroEdge(enemy));
+    const expected = this.heroEdge(hero) - this.heroEdge(enemy);
+    return this.excessEdge(this.counterSample(hero, enemy), expected, this.model.shrinkage[2]);
   }
 
+  /** The same, for the games the two heroes shared a lane. */
   laneDuelEdge(hero: number, enemy: number): number {
-    return logit(shrunk(this.laneCounterSample(hero, enemy), 0.5, this.model.shrinkage[3]));
+    const expected = this.heroEdge(hero) - this.heroEdge(enemy);
+    return this.excessEdge(this.laneCounterSample(hero, enemy), expected, this.model.shrinkage[3]);
   }
 
   heroSample(heroId: number): Sample | undefined {

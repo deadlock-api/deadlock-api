@@ -80,6 +80,9 @@ export function useHeroMatchupRows({
 
   const heroStatsQuery = {
     minHeroMatches: minHeroMatches ?? 0,
+    // Stated although 0 is the default: the hero page asks for the same stats with it, and only an identical
+    // query key shares the cached response instead of fetching /hero-stats a second time.
+    minHeroMatchesTotal: 0,
     minAverageBadge: minRankId,
     maxAverageBadge: maxRankId,
     minUnixTimestamp: minUnixTimestamp ?? 0,
