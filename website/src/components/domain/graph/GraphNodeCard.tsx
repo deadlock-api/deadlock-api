@@ -33,7 +33,7 @@ const graphNodeCardVariants = cva(
 
 type Accent = NonNullable<VariantProps<typeof graphNodeCardVariants>["accent"]>;
 
-/** Opacity steps for `emphasis`, faintest first. */
+/** Opacity steps for `emphasis`, faintest first. They fade the image and bars; text stays at full contrast (Law 18). */
 const EMPHASIS = ["opacity-60", "opacity-70", "opacity-80", "opacity-90", "opacity-100"] as const;
 
 const ACCENT_TINT: Record<Accent, string> = {
@@ -52,18 +52,20 @@ function RateRow({
   rate,
   fill,
   color,
+  fade,
   className,
 }: {
   label: string;
   rate: number;
   fill: number;
   color: Color;
+  fade: string;
   className: string;
 }) {
   return (
     <div className="flex items-center gap-1.5 text-3xs">
       <span className="w-4 shrink-0 font-medium text-muted-foreground">{label}</span>
-      <ProgressBar variant="thin" value={fill} color={color} className="flex-1" />
+      <ProgressBar variant="thin" value={fill} color={color} className={cn("flex-1", fade)} />
       <span className={cn("w-9 shrink-0 text-end font-semibold tabular-nums", className)}>
         {(rate * 100).toFixed(1)}%
       </span>
@@ -127,6 +129,7 @@ export function GraphNodeCard({
   const pressable = interaction === "pressable";
   // Typed as the button it usually is; the static variant only drops `type` and the pressed state.
   const Comp = (pressable ? "button" : "div") as "button";
+  const fade = EMPHASIS[Math.round(Math.max(0, Math.min(1, emphasis)) * (EMPHASIS.length - 1))];
   return (
     <Comp
       data-slot="graph-node-card"
@@ -135,7 +138,6 @@ export function GraphNodeCard({
       type={pressable ? "button" : undefined}
       aria-pressed={pressable ? selected : undefined}
       className={cn(
-        EMPHASIS[Math.round(Math.max(0, Math.min(1, emphasis)) * (EMPHASIS.length - 1))],
         graphNodeCardVariants({ accent, dimmed }),
         fill === "accent" && ACCENT_TINT[accent ?? "none"],
         pressable && "cursor-pointer hover:border-y-muted-foreground hover:border-e-muted-foreground",
@@ -151,7 +153,7 @@ export function GraphNodeCard({
         </div>
       )}
       <div className={cn("flex items-center gap-2", (status || selected) && "pe-9")}>
-        {media ?? <div className="size-10 shrink-0 rounded-lg bg-muted" />}
+        <div className={cn("shrink-0", fade)}>{media ?? <div className="size-10 rounded-lg bg-muted" />}</div>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs leading-tight font-semibold">
           {name}
           {meta && (
@@ -165,9 +167,17 @@ export function GraphNodeCard({
           rate={winRate}
           fill={winRateFill}
           color="var(--primary)"
+          fade={fade}
           className={TONE_TEXT[toneOf(winRate, 0.5)]}
         />
-        <RateRow label="PR" rate={pickRate} fill={pickRateFill} color="var(--chart-4)" className="text-chart-4" />
+        <RateRow
+          label="PR"
+          rate={pickRate}
+          fill={pickRateFill}
+          color="var(--chart-4)"
+          fade={fade}
+          className="text-chart-4"
+        />
       </div>
     </Comp>
   );
