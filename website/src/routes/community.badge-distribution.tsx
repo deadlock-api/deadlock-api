@@ -14,6 +14,7 @@ import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
+import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { combineQueryStates } from "~/components/patterns/states/QueryRenderer";
@@ -164,6 +165,12 @@ function BadgeDistributionPage() {
               if (badgeDistributionQuery.isError) void badgeDistributionQuery.refetch();
               if (ranks.isError) void ranks.refetch();
             }}
+          />
+        ) : badgeDistributionQuery.data?.length === 0 ? (
+          // An empty answer drew a bare grid with only an axis label.
+          <EmptyState
+            title="No ranked matches for these filters"
+            description="Try a wider date range or a shorter minimum match duration."
           />
         ) : badgeDistributionQuery.data ? (
           <ChunkErrorBoundary>

@@ -94,7 +94,7 @@ export function PlayersPage() {
           defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
         />
         {tab === "scoreboard" && (
-          <Filter.MinMatches value={minMatches} onValueChange={setMinMatches} min={1} defaultValue={0} />
+          <Filter.MinMatches value={minMatches} onValueChange={setMinMatches} min={0} defaultValue={0} />
         )}
       </Filter.Root>
 
