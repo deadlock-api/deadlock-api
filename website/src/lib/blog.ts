@@ -7,6 +7,8 @@ import remarkRehype from "remark-rehype";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
 
+import blogImageSizes from "./blog-image-sizes.json";
+
 export interface BlogPost {
   slug: string;
   title: string;
@@ -115,8 +117,9 @@ export function getAllSlugs(): string[] {
 }
 
 // A paragraph holding only an image becomes a full-width figure; the image title is the visible caption, the alt
-// stays a short description. Chart images are generated at a 4:3 aspect ratio, which the img reserves so the page
-// does not shift while they load. The first image is usually above the fold, so it loads eagerly.
+// stays a short description. Raster charts carry their pixel size (scripts/blog-image-sizes.mjs), which reserves their
+// aspect ratio so the page does not shift while they load. The first image is usually above the fold, so it loads
+// eagerly.
 function inlineSvg(src: string, alt: string): string | null {
   const match = src.match(/^\/blog\/images\/([\w-]+\.svg)$/);
   const raw = match ? svgModules[`../../public/blog/images/${match[1]}`] : undefined;
@@ -132,6 +135,11 @@ function inlineSvg(src: string, alt: string): string | null {
     });
 }
 
+function imageSize(src: string): { width?: number; height?: number } {
+  const size: number[] | undefined = (blogImageSizes as Record<string, number[]>)[src];
+  return size ? { width: size[0], height: size[1] } : {};
+}
+
 function rehypeBlogFigures() {
   return (tree: Root) => {
     let first = true;
@@ -145,7 +153,9 @@ function rehypeBlogFigures() {
         ...props,
         loading: first ? "eager" : "lazy",
         fetchPriority: first ? "high" : undefined,
-        className: ["aspect-4/3", "w-full"],
+        // The real size reserves the image's own aspect ratio while it loads; a forced 4:3 squashed every chart.
+        ...imageSize(String(props.src ?? "")),
+        className: ["w-full", "h-auto"],
       };
       first = false;
       const figure: Element = {

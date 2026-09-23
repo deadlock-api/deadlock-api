@@ -95,3 +95,9 @@ test("widget lists keep commas inside an entry and read URLs from before the esc
     { variables: ["wins", "kd"], labels: ["W", "KD"], subtexts: ["a"] },
   );
 });
+
+test("every raster blog image has its size in the manifest (run scripts/blog-image-sizes.mjs after adding one)", async () => {
+  const { readBlogImageSizes } = await import("../../scripts/blog-image-sizes.mjs");
+  const manifest = await import("./blog-image-sizes.json", { with: { type: "json" } });
+  assert.deepEqual(manifest.default, readBlogImageSizes());
+});
