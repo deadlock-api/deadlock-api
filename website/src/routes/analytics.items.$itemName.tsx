@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, type NotFoundRouteProps, createFileRoute, notFound } from "@tanstack/react-router";
+import { Link, type NotFoundRouteProps, createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import type { AnalyticsHeroStats, ItemStats } from "deadlock_api_client";
 import { lazy, Suspense, useMemo } from "react";
 
@@ -27,7 +27,7 @@ import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
 import { defaultPeriodLabel, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { SITE_URL, seo } from "~/lib/seo";
-import { closestNameBySlug } from "~/lib/slug";
+import { closestNameBySlug, slugify } from "~/lib/slug";
 import { filterShopableItems, itemQueryOptions, itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
@@ -123,7 +123,18 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
     ]);
     const shopable = filterShopableItems(items);
     const item = findItemBySlug(shopable, params.itemName);
-    if (!item) throw notFound({ data: { suggestion: closestNameBySlug(shopable, params.itemName)?.name } });
+    if (!item) {
+      // "Extra_Health" names an item exactly once normalized: send it to its canonical address.
+      const canonical = findItemBySlug(shopable, slugify(params.itemName));
+      if (canonical) {
+        throw redirect({
+          to: "/analytics/items/$itemName",
+          params: { itemName: itemSlug(canonical.name) },
+          statusCode: 301,
+        });
+      }
+      throw notFound({ data: { suggestion: closestNameBySlug(shopable, params.itemName)?.name } });
+    }
     const [stats, heroStats] = await Promise.all([
       prefetchSafe(
         queryClient.ensureQueryData(itemStatsQueryOptions(currentItemStatsParams(seasons, preferences.dateFilter))),

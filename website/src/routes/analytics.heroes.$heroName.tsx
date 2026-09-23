@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, type NotFoundRouteProps, createFileRoute, notFound } from "@tanstack/react-router";
+import { Link, type NotFoundRouteProps, createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { ListOrdered, type LucideIcon, Map, ShoppingBag, Trophy, Users } from "lucide-react";
 import { lazy, Suspense, useMemo } from "react";
@@ -33,7 +33,7 @@ import {
   type SeasonInfo,
 } from "~/lib/seasons";
 import { SITE_URL, seo } from "~/lib/seo";
-import { closestNameBySlug } from "~/lib/slug";
+import { closestNameBySlug, slugify } from "~/lib/slug";
 import {
   filterPlayableHeroes,
   heroesQueryOptions,
@@ -163,7 +163,18 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
     ]);
     const playable = filterPlayableHeroes(heroes);
     const hero = findHeroBySlug(playable, params.heroName);
-    if (!hero) throw notFound({ data: { suggestion: closestNameBySlug(playable, params.heroName)?.name } });
+    if (!hero) {
+      // "Haze" or "grey_talon" name a hero exactly once normalized: send them to its canonical address.
+      const canonical = findHeroBySlug(playable, slugify(params.heroName));
+      if (canonical) {
+        throw redirect({
+          to: "/analytics/heroes/$heroName",
+          params: { heroName: heroSlug(canonical.name) },
+          statusCode: 301,
+        });
+      }
+      throw notFound({ data: { suggestion: closestNameBySlug(playable, params.heroName)?.name } });
+    }
     const [stats] = await Promise.all([
       prefetchSafe(
         queryClient.ensureQueryData(heroStatsQueryOptions(currentStatsParams(seasons, preferences.dateFilter))),
@@ -269,11 +280,12 @@ function HeroDetailPage() {
     const banRates = banQuery.data ? computeBanRates(banQuery.data) : undefined;
     const banRate = banRates?.get(heroId);
     const banRateRank = banRate !== undefined && banRates ? rankOf(banRate, [...banRates.values()]) : undefined;
-    return { ...base, banRate, banRateRank };
+    // Ranked among the heroes with ban data, so "of N" counts those, not the heroes played (they can differ).
+    return { ...base, banRate, banRateRank, banHeroCount: banRates?.size };
   }, [statsQuery.data, banQuery.data, heroId]);
 
-  const rankLabel = (rank: number | undefined) =>
-    summary && rank !== undefined ? `#${rank} of ${summary.heroCount} heroes` : undefined;
+  const rankLabel = (rank: number | undefined, total?: number) =>
+    summary && rank !== undefined ? `#${rank} of ${total ?? summary.heroCount} heroes` : undefined;
 
   return (
     <PageShell>
@@ -310,7 +322,7 @@ function HeroDetailPage() {
           <Stat
             label="Ban Rate"
             value={summary.banRate !== undefined ? formatPercent(summary.banRate) : "—"}
-            sub={rankLabel(summary.banRateRank)}
+            sub={rankLabel(summary.banRateRank, summary.banHeroCount)}
           />
         </StatGroup>
       )}
