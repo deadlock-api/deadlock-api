@@ -380,7 +380,7 @@ function IndexRoute() {
             reliability.
           </p>
           <p>
-            The platform is fully open source and provides free access to all data, including daily database dumps for
+            The platform is fully open source and provides free access to all data, including hourly database dumps for
             researchers and developers. A $1.50/month patron tier offers prioritized data fetching for personal Steam
             accounts, ensuring your matches and stats are always up to date.
           </p>
