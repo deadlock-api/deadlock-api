@@ -1,7 +1,7 @@
 import { useQueries } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { LeaderboardRegionEnum } from "deadlock_api_client";
-import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
+import { parseAsInteger, parseAsStringLiteral, throttle, useQueryState } from "nuqs";
 import { useCallback } from "react";
 
 import { Filter } from "~/components/domain/filters";
@@ -53,12 +53,32 @@ export const Route = createFileRoute("/community/leaderboard")({
     }),
 });
 
+/** Board and page change in one throttled URL update, so one history entry. */
+const together = { limitUrlUpdates: throttle(50) };
+
 function LeaderboardPage() {
   // Keep the generated API client's runtime enum in this route's component chunk.
   const regions = Object.values(LeaderboardRegionEnum) as [LeaderboardRegionEnum, ...LeaderboardRegionEnum[]];
   const { defaultRegion } = Route.useLoaderData();
-  const [region, setRegion] = useQueryState("region", parseAsStringLiteral(regions).withDefault(defaultRegion));
-  const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger);
+  const [region, setRegionParam] = useQueryState("region", parseAsStringLiteral(regions).withDefault(defaultRegion));
+  const [heroId, setHeroIdParam] = useQueryState("hero_id", parseAsInteger);
+  const [, setPage] = useQueryState("page", parseAsInteger);
+  // Another board starts on its first page: a kept `page=6` showed an empty page for a four-player hero board and
+  // jumped back to rank 126 when the hero was cleared.
+  const setHeroId = useCallback(
+    (id: number | null) => {
+      void setHeroIdParam(id, together);
+      void setPage(null, together);
+    },
+    [setHeroIdParam, setPage],
+  );
+  const setRegion = useCallback(
+    (next: LeaderboardRegionEnum) => {
+      void setRegionParam(next, together);
+      void setPage(null, together);
+    },
+    [setRegionParam, setPage],
+  );
 
   const [leaderboardQuery] = useQueries({
     queries: [leaderboardQueryOptions(region, heroId)],
