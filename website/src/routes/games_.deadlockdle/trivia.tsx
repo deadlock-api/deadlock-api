@@ -112,6 +112,13 @@ function Trivia() {
     };
   }, []);
 
+  // The day the page shows now, for the advance timer: one still pending at midnight must not save yesterday's quiz
+  // as the new day's state.
+  const currentDate = useRef(date);
+  useEffect(() => {
+    currentDate.current = date;
+  }, [date]);
+
   const handleAnswer = useCallback(
     (optionIndex: number) => {
       if (state.completed || isRevealed || !currentQ) return;
@@ -140,7 +147,7 @@ function Trivia() {
         setSelectedAnswer(null);
         setIsRevealed(false);
 
-        if (!isLastQuestion) {
+        if (!isLastQuestion && currentDate.current === newState.date) {
           const advancedState: TriviaState = {
             ...newState,
             currentQuestion: newState.currentQuestion + 1,

@@ -84,9 +84,10 @@ export function ProgressBar({
   const maxVal = max || 1;
   const total = segmentTotal(children);
   const clamped = Math.max(Math.min(total || value || 0, maxVal), minVal);
-  // An empty range (every row equal) has no scale; an unscaled value would divide by zero and fill the track.
+  // An empty range (one row, or every row equal) has no scale: the value is the maximum, so the bar is full rather
+  // than a width of NaN% (which only happened to fill the track) or an empty bar that reads as the worst value.
   const span = maxVal - minVal;
-  const width = `${(span > 0 ? ((clamped - minVal) / span) * 100 : 0).toFixed(2)}%`;
+  const width = `${(span > 0 ? ((clamped - minVal) / span) * 100 : 100).toFixed(2)}%`;
   const fill = cn("h-full transition-all duration-slow ease-standard", variant === "thin" && "rounded-full");
   const fallbackFill = variant === "thin" ? "bg-positive" : "bg-primary";
 
@@ -135,7 +136,7 @@ export function ProgressBarWithLabel({
 }) {
   const reading = typeof value === "number" && Number.isFinite(value);
   const span = (max || 1) - (min || 0);
-  const percentage = span > 0 ? Math.round((((value || 0) - (min || 0)) / span) * 100) : 0;
+  const percentage = span > 0 ? Math.round((((value || 0) - (min || 0)) / span) * 100) : 100;
   return (
     <div
       data-slot="progress-bar-with-label"

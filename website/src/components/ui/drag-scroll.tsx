@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 
 import { FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
@@ -21,6 +21,15 @@ export function DragScroll({
   ...props
 }: React.ComponentProps<"div">) {
   const ref = useRef<HTMLDivElement>(null);
+  // Stable, so a caller's ref callback runs again only when the caller changes it, not on every render.
+  const setRefs = useCallback(
+    (element: HTMLDivElement | null) => {
+      ref.current = element;
+      if (typeof forwardedRef === "function") return forwardedRef(element);
+      if (forwardedRef) forwardedRef.current = element;
+    },
+    [forwardedRef],
+  );
   const drag = useRef<{ x: number; left: number; moved: boolean; active: boolean } | null>(null);
 
   return (
@@ -29,11 +38,7 @@ export function DragScroll({
       role="presentation"
       // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scroll container must be reachable by keyboard
       tabIndex={0}
-      ref={(element) => {
-        ref.current = element;
-        if (typeof forwardedRef === "function") return forwardedRef(element);
-        if (forwardedRef) forwardedRef.current = element;
-      }}
+      ref={setRefs}
       className={cn(FOCUS_RING, "cursor-grab overflow-x-auto active:cursor-grabbing", className)}
       onPointerDown={(event) => {
         onPointerDown?.(event);
