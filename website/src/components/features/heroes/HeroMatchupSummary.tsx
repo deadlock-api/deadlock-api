@@ -1,6 +1,7 @@
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
 import { type HeroMatchupParams, useHeroMatchupRows } from "~/components/features/heroes/HeroMatchupDetailsStatsTable";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Card } from "~/components/ui/card";
 import { Delta } from "~/components/ui/delta";
 import { Heading } from "~/components/ui/heading";
@@ -43,8 +44,12 @@ function MatchupCard({ title, caption, rows }: { title: string; caption: string;
 }
 
 export function HeroMatchupSummary({ heroName, ...params }: HeroMatchupParams & { heroName: string }) {
-  const { synergyRows, counterRows, isLoading } = useHeroMatchupRows(params);
+  const { synergyRows, counterRows, isLoading, isError, retry } = useHeroMatchupRows(params);
   if (isLoading) return null;
+  // Said, not hidden: an empty summary reads as "no reliable matchups" rather than as a failed request.
+  if (isError && synergyRows.length === 0 && counterRows.length === 0) {
+    return <ErrorState variant="inline" title={`${heroName}'s matchups did not load`} onRetry={() => void retry()} />;
+  }
 
   const reliable = (rows: SummaryRow[]) =>
     rows.filter((row) => row.matches >= MIN_MATCHES && Number.isFinite(row.relWinrate));
