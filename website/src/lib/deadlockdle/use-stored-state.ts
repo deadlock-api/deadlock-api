@@ -23,6 +23,8 @@ interface StoredStateOptions<T> {
   scope?: string;
   /** Whether a saved value still applies; a rejected one is replaced by `fresh()`. */
   accept?: (saved: T) => boolean;
+  /** Read when `key` holds nothing: where the value was stored before. Saving always writes `key`. */
+  fallbackKey?: string;
 }
 
 /**
@@ -30,7 +32,11 @@ interface StoredStateOptions<T> {
  * browser; the saved value loads on the render after, and again whenever `key` or `scope` changes. `save` updates the
  * state and persists it.
  */
-export function useStoredState<T>(key: string, fresh: () => T, { scope = "", accept }: StoredStateOptions<T> = {}) {
+export function useStoredState<T>(
+  key: string,
+  fresh: () => T,
+  { scope = "", accept, fallbackKey }: StoredStateOptions<T> = {},
+) {
   const hydrated = useHydrated();
   const source = hydrated ? `${key}@${scope}` : `ssr@${scope}`;
   const [state, setState] = useState<T>(fresh);
@@ -38,7 +44,9 @@ export function useStoredState<T>(key: string, fresh: () => T, { scope = "", acc
 
   if (loadedFrom !== source) {
     setLoadedFrom(source);
-    const saved = hydrated ? readStoredJson<T | null>(key, null) : null;
+    const saved = hydrated
+      ? (readStoredJson<T | null>(key, null) ?? (fallbackKey ? readStoredJson<T | null>(fallbackKey, null) : null))
+      : null;
     setState(saved != null && (accept?.(saved) ?? true) ? saved : fresh());
   }
 
@@ -54,9 +62,14 @@ export function useStoredState<T>(key: string, fresh: () => T, { scope = "", acc
 }
 
 /**
- * One puzzle day's saved progress. It starts over when `date` moves on while the page stays open (midnight UTC),
- * because today's storage key carries no date.
+ * One puzzle day's saved progress, which starts over when `date` moves on while the page stays open (midnight UTC).
+ * `fallbackKey` is where the day may have been saved before (see `legacyGameStorageKey`).
  */
-export function useStoredDailyState<T extends { date: string }>(key: string, date: string, fresh: (date: string) => T) {
-  return useStoredState(key, () => fresh(date), { scope: date, accept: (saved) => saved.date === date });
+export function useStoredDailyState<T extends { date: string }>(
+  key: string,
+  date: string,
+  fresh: (date: string) => T,
+  fallbackKey?: string,
+) {
+  return useStoredState(key, () => fresh(date), { scope: date, accept: (saved) => saved.date === date, fallbackKey });
 }

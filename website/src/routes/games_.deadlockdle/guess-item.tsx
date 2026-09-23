@@ -42,19 +42,26 @@ function formatSlotType(slot: string): string {
 }
 
 function getPropertyHint(
-  properties: Record<string, { value?: unknown; label?: string | null }> | null | undefined,
+  properties: Record<string, { value?: unknown; label?: string | null; postfix?: string | null }> | null | undefined,
 ): string {
   if (!properties) return "No properties available";
 
+  // The unit ("s", "m", "%") comes separately; without it "Cooldown: 23" reads as a bare number.
+  const withUnit = (prop: { value?: unknown; postfix?: string | null }) => {
+    const value = String(prop.value);
+    const postfix = (prop.postfix ?? "").trim();
+    return value.endsWith(postfix) ? value : value + postfix;
+  };
+
   for (const [, prop] of Object.entries(properties)) {
     if (prop.label && prop.value != null && typeof prop.value === "number") {
-      return `${prop.label}: ${prop.value}`;
+      return `${prop.label}: ${withUnit(prop)}`;
     }
   }
 
   for (const [, prop] of Object.entries(properties)) {
     if (prop.label && prop.value != null) {
-      return `${prop.label}: ${String(prop.value)}`;
+      return `${prop.label}: ${withUnit(prop)}`;
     }
   }
 
@@ -89,7 +96,10 @@ function GuessItem() {
     const activation = dailyItem.is_active_item ? "Active" : "Passive";
 
     const propertyHint = getPropertyHint(
-      dailyItem.properties as Record<string, { value?: unknown; label?: string | null }> | null,
+      dailyItem.properties as Record<
+        string,
+        { value?: unknown; label?: string | null; postfix?: string | null }
+      > | null,
     );
 
     return [

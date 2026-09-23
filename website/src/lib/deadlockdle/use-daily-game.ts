@@ -3,7 +3,7 @@ import { useCallback } from "react";
 import { day } from "~/dayjs";
 
 import { getTodayDate, resolvePuzzleDate } from "./seed";
-import { gameStorageKey } from "./storage";
+import { gameStorageKey, legacyGameStorageKey } from "./storage";
 import type { DailyGameState, GameMode, GameStatus, StreakState } from "./types";
 import { useStoredDailyState, useStoredState } from "./use-stored-state";
 
@@ -40,7 +40,12 @@ export function useDailyGame(mode: GameMode, maxAttempts: number, date?: string)
   const gameKey = gameStorageKey(mode, puzzleDate);
   const streakKey = `deadlockdle:${mode}:streak`;
 
-  const [gameState, saveGameState] = useStoredDailyState(gameKey, puzzleDate, freshGameState);
+  const [gameState, saveGameState] = useStoredDailyState(
+    gameKey,
+    puzzleDate,
+    freshGameState,
+    legacyGameStorageKey(mode),
+  );
   const [streakState, saveStreak] = useStoredState(streakKey, freshStreakState);
 
   const attemptsLeft = maxAttempts - gameState.guesses.length;

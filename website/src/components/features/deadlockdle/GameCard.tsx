@@ -3,9 +3,8 @@ import type { LucideIcon } from "lucide-react";
 import { GameTile } from "~/components/domain/minigames/GameTile";
 import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
 import { getTodayDate } from "~/lib/deadlockdle/seed";
-import { gameStorageKey } from "~/lib/deadlockdle/storage";
+import { readStoredGame } from "~/lib/deadlockdle/storage";
 import type { GameMode } from "~/lib/deadlockdle/types";
-import { readLocalStorage } from "~/lib/local-storage";
 
 export type DailyStatus = "untouched" | "won" | "lost" | "playing";
 
@@ -20,53 +19,46 @@ interface GameCardProps {
   status?: DailyStatus;
 }
 
+/** The fields the hub reads from any game's saved state (guess games, trivia, item stats). */
+interface StoredGame {
+  status?: DailyStatus;
+  completed?: boolean;
+  currentQuestion?: number;
+  submitted?: boolean;
+  answers?: Record<string, unknown>;
+  score?: number;
+  totalFields?: number;
+}
+
+function readGame(mode: GameMode, date: string): StoredGame | null {
+  if (typeof window === "undefined") return null;
+  return readStoredGame(mode, date) as StoredGame | null;
+}
+
 export function getDailyStatus(mode: GameMode, date: string = getTodayDate()): DailyStatus {
-  if (typeof window === "undefined") return "untouched";
-  try {
-    const raw = readLocalStorage(gameStorageKey(mode, date));
-    if (!raw) return "untouched";
-    const state = JSON.parse(raw);
-    if (state.date !== date) return "untouched";
+  const state = readGame(mode, date);
+  if (!state) return "untouched";
+  if (state.status) return state.status;
 
-    if (state.status) return state.status;
-
-    if ("completed" in state) {
-      if (state.completed) return state.score >= 5 ? "won" : "lost";
-      if (state.currentQuestion > 0) return "playing";
-      return "untouched";
-    }
-
-    if ("submitted" in state) {
-      if (state.submitted) return state.score >= state.totalFields * 0.5 ? "won" : "lost";
-      if (Object.keys(state.answers ?? {}).length > 0) return "playing";
-      return "untouched";
-    }
-
-    return "untouched";
-  } catch {
-    return "untouched";
+  if (state.completed !== undefined) {
+    if (state.completed) return (state.score ?? 0) >= 5 ? "won" : "lost";
+    return (state.currentQuestion ?? 0) > 0 ? "playing" : "untouched";
   }
+
+  if (state.submitted !== undefined) {
+    if (state.submitted) return (state.score ?? 0) >= (state.totalFields ?? 0) * 0.5 ? "won" : "lost";
+    return Object.keys(state.answers ?? {}).length > 0 ? "playing" : "untouched";
+  }
+
+  return "untouched";
 }
 
 export function getDailyResult(mode: GameMode, date: string = getTodayDate()): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = readLocalStorage(gameStorageKey(mode, date));
-    if (!raw) return null;
-    const state = JSON.parse(raw);
-    if (state.date !== date) return null;
-
-    if (state.status === "won") return null;
-    if (state.status === "lost") return null;
-
-    if ("completed" in state && state.completed) return `${state.score}/10`;
-
-    if ("submitted" in state && state.submitted) return `${state.score}/${state.totalFields}`;
-
-    return null;
-  } catch {
-    return null;
-  }
+  const state = readGame(mode, date);
+  if (!state || state.status === "won" || state.status === "lost") return null;
+  if (state.completed) return `${state.score}/10`;
+  if (state.submitted) return `${state.score}/${state.totalFields}`;
+  return null;
 }
 
 const STATUS_BADGE = {

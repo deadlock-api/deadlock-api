@@ -55,7 +55,13 @@ export function getDayNumber(date: string): number {
 
 /** A playable puzzle day: from the epoch up to today. ISO dates compare lexicographically. */
 export function isValidPuzzleDate(date: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(date) && day.utc(date).isValid() && date >= EPOCH_DATE && date <= getTodayDate();
+  // A round trip, not isValid(): dayjs rolls 2026-04-31 over to May 1, which would give a second puzzle for "Day 41".
+  return (
+    /^\d{4}-\d{2}-\d{2}$/.test(date) &&
+    day.utc(date).format("YYYY-MM-DD") === date &&
+    date >= EPOCH_DATE &&
+    date <= getTodayDate()
+  );
 }
 
 /** A `?date=` search param, falling back to today when absent or out of range */

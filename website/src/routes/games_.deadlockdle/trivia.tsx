@@ -23,7 +23,7 @@ import {
   seededRandom,
   validatePuzzleDateSearch,
 } from "~/lib/deadlockdle/seed";
-import { gameStorageKey } from "~/lib/deadlockdle/storage";
+import { gameStorageKey, legacyGameStorageKey } from "~/lib/deadlockdle/storage";
 import {
   buildAbilitiesWithHeroes,
   generateDailyQuestions,
@@ -82,7 +82,7 @@ function Trivia() {
   const countdown = useCountdown();
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [state, saveState] = useStoredDailyState(storageKey, date, freshState);
+  const [state, saveState] = useStoredDailyState(storageKey, date, freshState, legacyGameStorageKey("trivia"));
 
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [isRevealed, setIsRevealed] = useState(false);

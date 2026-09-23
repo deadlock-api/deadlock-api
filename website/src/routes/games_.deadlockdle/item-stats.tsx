@@ -22,7 +22,7 @@ import {
   seededShuffle,
   validatePuzzleDateSearch,
 } from "~/lib/deadlockdle/seed";
-import { gameStorageKey } from "~/lib/deadlockdle/storage";
+import { gameStorageKey, legacyGameStorageKey } from "~/lib/deadlockdle/storage";
 import { useCountdown } from "~/lib/deadlockdle/use-countdown";
 import { useStoredDailyState } from "~/lib/deadlockdle/use-stored-state";
 import { seo } from "~/lib/seo";
@@ -95,7 +95,7 @@ function ItemStatsQuiz() {
   const storageKey = gameStorageKey("item-stats", date);
   const countdown = useCountdown();
 
-  const [state, saveState] = useStoredDailyState(storageKey, date, freshState);
+  const [state, saveState] = useStoredDailyState(storageKey, date, freshState, legacyGameStorageKey("item-stats"));
 
   const shopableItems = useMemo(
     () =>

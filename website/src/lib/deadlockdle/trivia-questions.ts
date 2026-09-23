@@ -29,6 +29,14 @@ const ITEM_SLOTS = ["Weapon", "Spirit", "Vitality"] as const;
 const ABILITY_TYPES = ["Signature", "Ultimate", "Innate"] as const;
 const VALID_ABILITY_TYPES = new Set(["signature", "ultimate", "innate"]);
 
+/**
+ * Shared innate movement abilities (mantle, slide, zipline boost) carry no translated name, only their class name
+ * (`citadel_ability_mantle`), so they make neither a question nor an answer.
+ */
+export function hasDisplayName(ability: Ability): boolean {
+  return Boolean(ability.name) && !/^[a-z0-9_]+$/.test(ability.name);
+}
+
 const HERO_STAT_KEYS = [
   { key: "max_health", label: "Max Health" },
   { key: "light_melee_damage", label: "Light Melee Damage" },
@@ -196,7 +204,8 @@ const oddOneOutHeroTypeQuestion: QuestionGenerator = (heroes, _items, _npcs, _ab
   const decoys = seededPickN(matching, 3, rng).map((h) => h.name);
   const { options, correctIndex } = buildOptions(oddOne.name, decoys, rng);
 
-  return { question: `Which hero is NOT a ${type}?`, options, correctIndex, category: "Hero" };
+  const article = /^[aeiou]/i.test(type) ? "an" : "a";
+  return { question: `Which hero is NOT ${article} ${type}?`, options, correctIndex, category: "Hero" };
 };
 
 /** "Which hero has the highest base {stat}?" — 4 heroes compared */
@@ -238,8 +247,8 @@ const heroStatQuestion: QuestionGenerator = (heroes, _items, _npcs, _abilities, 
   const value = getHeroStat(hero, statDef.key);
   if (value == null) return null;
 
-  const stats = hero.starting_stats as unknown as Record<string, { display_stat_name: string } | null | undefined>;
-  const displayLabel = stats[statDef.key]?.display_stat_name || statDef.label;
+  // Our label, not the API's `display_stat_name`: that is a localization key such as "ELightMeleeDamage".
+  const displayLabel = statDef.label;
   const wrong = generateNumericOptions(value, rng, 3);
   const { options, correctIndex } = buildOptions(String(value), wrong, rng);
 
@@ -563,7 +572,7 @@ export function buildAbilitiesWithHeroes(rawAbilities: Ability[], playableHeroes
   const result: AbilityWithHero[] = [];
   for (const ability of rawAbilities) {
     if (!ability.ability_type || !VALID_ABILITY_TYPES.has(ability.ability_type)) continue;
-    if (!ability.name || !ability.hero) continue;
+    if (!hasDisplayName(ability) || !ability.hero) continue;
     const hero = heroMap.get(ability.hero);
     if (!hero) continue;
     result.push({ ability, heroName: hero.name });

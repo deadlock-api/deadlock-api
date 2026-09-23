@@ -18,6 +18,7 @@ import { Slider } from "~/components/ui/slider";
 import { Stack } from "~/components/ui/stack";
 import { useAbilities, useHeroes, useSounds } from "~/lib/deadlockdle/queries";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
+import { hasDisplayName } from "~/lib/deadlockdle/trivia-questions";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
 import { seo } from "~/lib/seo";
 import { filterPlayableHeroes } from "~/queries/asset-queries";
@@ -173,6 +174,7 @@ function buildAbilitiesByHero(abilities: Ability[]): Map<number, Ability[]> {
   const map = new Map<number, Ability[]>();
   for (const ability of abilities) {
     if (!ability.hero || !ability.ability_type || !VALID_ABILITY_TYPES.has(ability.ability_type)) continue;
+    if (!hasDisplayName(ability)) continue;
     const list = map.get(ability.hero) ?? [];
     list.push(ability);
     map.set(ability.hero, list);
@@ -362,7 +364,7 @@ function GuessSound() {
     if (rawAbilities) {
       for (const ability of rawAbilities as Ability[]) {
         if (!ability.ability_type || !VALID_ABILITY_TYPES.has(ability.ability_type)) continue;
-        if (!ability.name || !ability.hero) continue;
+        if (!hasDisplayName(ability) || !ability.hero) continue;
         const heroInfo = playableHeroes.find((h) => h.id === ability.hero);
         if (!heroInfo) continue;
         const lower = ability.name.toLowerCase();
@@ -461,11 +463,12 @@ function GuessSound() {
           </Button>
           <Slider
             aria-label="Volume"
+            // In percent, so assistive technology reads "70" like the label beside it, not 0.699999988.
             min={0}
-            max={1}
-            step={0.01}
-            value={[volume]}
-            onValueChange={([next]) => changeVolume(next)}
+            max={100}
+            step={1}
+            value={[Math.round(volume * 100)]}
+            onValueChange={([next]) => changeVolume(next / 100)}
             className="cursor-target flex-1"
           />
           <span className="w-7 text-end font-mono text-3xs text-muted-foreground tabular-nums">
