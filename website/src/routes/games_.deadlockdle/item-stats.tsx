@@ -4,7 +4,7 @@ import { useCallback, useMemo, type RefCallback } from "react";
 
 import { AnswerOption, type AnswerOptionState, revealedState } from "~/components/domain/minigames/AnswerOption";
 import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
-import { GameShell, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
+import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { NextGameButton } from "~/components/features/deadlockdle/NextGameButton";
 import { ScoreSummary } from "~/components/features/deadlockdle/ScoreSummary";
 import { ShareButton } from "~/components/features/deadlockdle/ShareButton";
@@ -12,7 +12,7 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Field } from "~/components/ui/field";
 import { Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
-import { useItems } from "~/lib/deadlockdle/queries";
+import { useItems, puzzleLoadError } from "~/lib/deadlockdle/queries";
 import {
   getDayNumber,
   getModeSeed,
@@ -89,7 +89,8 @@ function tileState(isSelected: boolean, isAnswer: boolean, revealed: boolean): A
 }
 
 function ItemStatsQuiz() {
-  const { data: items, isLoading } = useItems();
+  const itemsQuery = useItems();
+  const { data: items, isLoading } = itemsQuery;
   const { date: dateParam } = Route.useSearch();
   const date = resolvePuzzleDate(dateParam);
   const isArchive = date !== getTodayDate();
@@ -167,6 +168,20 @@ function ItemStatsQuiz() {
       setTimeout(() => node.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150);
     }
   }, []);
+
+  // A failed query leaves no puzzle to build, so without this the loader would spin forever.
+  const loadError = puzzleLoadError(itemsQuery);
+  if (loadError.isError) {
+    return (
+      <GameShellError
+        title="Item Stats Quiz"
+        subtitle="Fill in the missing stats for each item"
+        date={date}
+        onRetry={loadError.retry}
+        retrying={loadError.retrying}
+      />
+    );
+  }
 
   if (isLoading || dailyItems.length === 0) {
     return <GameShellLoading title="Item Stats Quiz" subtitle="Fill in the missing stats for each item" date={date} />;

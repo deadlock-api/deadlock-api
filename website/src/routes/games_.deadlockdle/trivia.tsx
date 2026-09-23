@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type RefCallback } f
 
 import { AnswerOption, revealedState } from "~/components/domain/minigames/AnswerOption";
 import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
-import { GameShell, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
+import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { NextGameButton } from "~/components/features/deadlockdle/NextGameButton";
 import { ScoreSummary } from "~/components/features/deadlockdle/ScoreSummary";
@@ -14,7 +14,7 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Stack } from "~/components/ui/stack";
 import { StepMeter, StepMeterStep } from "~/components/ui/step-meter";
 import { Text } from "~/components/ui/text";
-import { useAbilities, useHeroes, useItems, useNpcUnits } from "~/lib/deadlockdle/queries";
+import { useAbilities, useHeroes, useItems, useNpcUnits, puzzleLoadError } from "~/lib/deadlockdle/queries";
 import {
   getDayNumber,
   getModeSeed,
@@ -71,10 +71,14 @@ function freshState(date: string): TriviaState {
 }
 
 function Trivia() {
-  const { data: heroes, isLoading: heroesLoading } = useHeroes();
-  const { data: items, isLoading: itemsLoading } = useItems();
-  const { data: npcUnits, isLoading: npcsLoading } = useNpcUnits();
-  const { data: rawAbilities, isLoading: abilitiesLoading } = useAbilities();
+  const heroesQuery = useHeroes();
+  const { data: heroes, isLoading: heroesLoading } = heroesQuery;
+  const itemsQuery = useItems();
+  const { data: items, isLoading: itemsLoading } = itemsQuery;
+  const npcUnitsQuery = useNpcUnits();
+  const { data: npcUnits, isLoading: npcsLoading } = npcUnitsQuery;
+  const abilitiesQuery = useAbilities();
+  const { data: rawAbilities, isLoading: abilitiesLoading } = abilitiesQuery;
 
   const { date: dateParam } = Route.useSearch();
   const date = resolvePuzzleDate(dateParam);
@@ -166,6 +170,20 @@ function Trivia() {
       setTimeout(() => node.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150);
     }
   }, []);
+
+  // A failed query leaves no puzzle to build, so without this the loader would spin forever.
+  const loadError = puzzleLoadError(heroesQuery, itemsQuery, npcUnitsQuery, abilitiesQuery);
+  if (loadError.isError) {
+    return (
+      <GameShellError
+        title="Deadlock Trivia"
+        subtitle="10 questions to test your Deadlock knowledge"
+        date={date}
+        onRetry={loadError.retry}
+        retrying={loadError.retrying}
+      />
+    );
+  }
 
   if (isLoading || questions.length === 0) {
     return (

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 
 import { api } from "~/lib/api";
 import { heroesFullQueryOptions, itemUpgradesFullQueryOptions } from "~/queries/asset-queries";
@@ -44,4 +44,17 @@ export function useNpcUnits() {
     },
     staleTime: Number.POSITIVE_INFINITY,
   });
+}
+
+/** Whether a puzzle's queries failed. A puzzle needs every one of them, so any query that failed with no data
+ * leaves nothing to play; `retry` refetches only those. */
+export function puzzleLoadError(...queries: Pick<UseQueryResult, "data" | "isError" | "isFetching" | "refetch">[]) {
+  const failed = queries.filter((query) => query.isError && query.data === undefined);
+  return {
+    isError: failed.length > 0,
+    retrying: failed.some((query) => query.isFetching),
+    retry: () => {
+      for (const query of failed) void query.refetch();
+    },
+  };
 }

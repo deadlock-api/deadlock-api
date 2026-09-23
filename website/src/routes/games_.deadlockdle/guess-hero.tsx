@@ -3,14 +3,14 @@ import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
 import { SilhouetteFrame } from "~/components/domain/minigames/SilhouetteFrame";
-import { GameShell, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
+import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
 import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
 import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuesses";
 import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
 import { Stack } from "~/components/ui/stack";
-import { useHeroes } from "~/lib/deadlockdle/queries";
+import { useHeroes, puzzleLoadError } from "~/lib/deadlockdle/queries";
 import { redactName } from "~/lib/deadlockdle/redact";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
@@ -68,7 +68,8 @@ function getWarpFilter(guessCount: number, isFinished: boolean): string {
 }
 
 function GuessHero() {
-  const { data: heroes, isLoading } = useHeroes();
+  const heroesQuery = useHeroes();
+  const { data: heroes, isLoading } = heroesQuery;
   const { date: dateParam } = Route.useSearch();
   const { gameState, streakState, isFinished, submitGuess, date, isArchive } = useDailyGame(
     "guess-hero",
@@ -154,6 +155,20 @@ function GuessHero() {
     if (!correct) {
       setShakeKey((k) => k + 1);
     }
+  }
+
+  // A failed query leaves no puzzle to build, so without this the loader would spin forever.
+  const loadError = puzzleLoadError(heroesQuery);
+  if (loadError.isError) {
+    return (
+      <GameShellError
+        title="Guess the Hero"
+        subtitle="Identify the hero from their silhouette"
+        date={date}
+        onRetry={loadError.retry}
+        retrying={loadError.retrying}
+      />
+    );
   }
 
   if (isLoading || !dailyHero) {

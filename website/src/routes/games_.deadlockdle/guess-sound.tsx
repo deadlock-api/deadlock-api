@@ -5,7 +5,7 @@ import { Volume2, VolumeX } from "lucide-react";
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PlayButton } from "~/components/domain/minigames/PlayButton";
-import { GameShell, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
+import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
 import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
@@ -16,7 +16,7 @@ import { Field } from "~/components/ui/field";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { Slider } from "~/components/ui/slider";
 import { Stack } from "~/components/ui/stack";
-import { useAbilities, useHeroes, useSounds } from "~/lib/deadlockdle/queries";
+import { useAbilities, useHeroes, useSounds, puzzleLoadError } from "~/lib/deadlockdle/queries";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { hasDisplayName } from "~/lib/deadlockdle/trivia-questions";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
@@ -290,9 +290,12 @@ function useAudioPlayer(url: string | null) {
 }
 
 function GuessSound() {
-  const { data: heroes, isLoading: heroesLoading } = useHeroes();
-  const { data: soundsData, isLoading: soundsLoading } = useSounds();
-  const { data: rawAbilities, isLoading: abilitiesLoading } = useAbilities();
+  const heroesQuery = useHeroes();
+  const { data: heroes, isLoading: heroesLoading } = heroesQuery;
+  const soundsQuery = useSounds();
+  const { data: soundsData, isLoading: soundsLoading } = soundsQuery;
+  const abilitiesQuery = useAbilities();
+  const { data: rawAbilities, isLoading: abilitiesLoading } = abilitiesQuery;
   const { date: dateParam } = Route.useSearch();
   const { gameState, streakState, isFinished, submitGuess, date, isArchive } = useDailyGame(
     "guess-sound",
@@ -393,6 +396,20 @@ function GuessSound() {
   }
 
   const isLoading = heroesLoading || soundsLoading || abilitiesLoading;
+
+  // A failed query leaves no puzzle to build, so without this the loader would spin forever.
+  const loadError = puzzleLoadError(heroesQuery, soundsQuery, abilitiesQuery);
+  if (loadError.isError) {
+    return (
+      <GameShellError
+        title="Guess the Sound"
+        subtitle="Listen to the sound and name the ability"
+        date={date}
+        onRetry={loadError.retry}
+        retrying={loadError.retrying}
+      />
+    );
+  }
 
   if (isLoading || !dailySound) {
     return <GameShellLoading title="Guess the Sound" subtitle="Listen to the sound and name the ability" date={date} />;

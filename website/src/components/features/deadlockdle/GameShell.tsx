@@ -1,5 +1,6 @@
 import { GamePage } from "~/components/domain/minigames/GamePage";
 import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { day } from "~/dayjs";
 import { getDayNumber, getTodayDate } from "~/lib/deadlockdle/seed";
@@ -62,6 +63,34 @@ export function GameShellLoading({ title, subtitle, date }: Pick<GameShellProps,
       hideAttempts
     >
       <LoadingState label="puzzle" />
+    </GameShell>
+  );
+}
+
+/** The page chrome when the puzzle's data failed to load, so the page offers a retry instead of loading forever. */
+export function GameShellError({
+  title,
+  subtitle,
+  date,
+  onRetry,
+  retrying,
+}: Pick<GameShellProps, "title" | "subtitle" | "date"> & { onRetry: () => void; retrying: boolean }) {
+  return (
+    <GameShell
+      title={title}
+      subtitle={subtitle}
+      date={date}
+      status="playing"
+      totalAttempts={0}
+      usedAttempts={0}
+      hideAttempts
+    >
+      <ErrorState
+        title="Could not load today's puzzle"
+        description="Your progress is saved. Try loading the puzzle again."
+        onRetry={onRetry}
+        retrying={retrying}
+      />
     </GameShell>
   );
 }

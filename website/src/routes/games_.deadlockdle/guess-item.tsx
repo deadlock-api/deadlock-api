@@ -3,14 +3,14 @@ import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
 import { SilhouetteFrame } from "~/components/domain/minigames/SilhouetteFrame";
-import { GameShell, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
+import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
 import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
 import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuesses";
 import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
 import { Stack } from "~/components/ui/stack";
-import { useItems } from "~/lib/deadlockdle/queries";
+import { useItems, puzzleLoadError } from "~/lib/deadlockdle/queries";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
 import { seo } from "~/lib/seo";
@@ -69,7 +69,8 @@ function getPropertyHint(
 }
 
 function GuessItem() {
-  const { data: items, isLoading } = useItems();
+  const itemsQuery = useItems();
+  const { data: items, isLoading } = itemsQuery;
   const { date: dateParam } = Route.useSearch();
   const { gameState, streakState, isFinished, submitGuess, date, isArchive } = useDailyGame(
     "guess-item",
@@ -126,6 +127,20 @@ function GuessItem() {
     if (!correct) {
       setShakeKey((k) => k + 1);
     }
+  }
+
+  // A failed query leaves no puzzle to build, so without this the loader would spin forever.
+  const loadError = puzzleLoadError(itemsQuery);
+  if (loadError.isError) {
+    return (
+      <GameShellError
+        title="Guess the Item"
+        subtitle="Identify the item from its blurred shop image"
+        date={date}
+        onRetry={loadError.retry}
+        retrying={loadError.retrying}
+      />
+    );
   }
 
   if (isLoading || !dailyItem) {

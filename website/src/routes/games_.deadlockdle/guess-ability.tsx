@@ -3,14 +3,14 @@ import type { Ability, Hero } from "deadlock_api_client";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
-import { GameShell, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
+import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
 import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
 import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuesses";
 import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
 import { Stack } from "~/components/ui/stack";
-import { useAbilities, useHeroes } from "~/lib/deadlockdle/queries";
+import { useAbilities, useHeroes, puzzleLoadError } from "~/lib/deadlockdle/queries";
 import { redactName } from "~/lib/deadlockdle/redact";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
@@ -67,8 +67,10 @@ function buildGuessableAbilities(abilities: Ability[], playableHeroes: Hero[]): 
 }
 
 function GuessAbility() {
-  const { data: heroes, isLoading: heroesLoading } = useHeroes();
-  const { data: abilities, isLoading: abilitiesLoading } = useAbilities();
+  const heroesQuery = useHeroes();
+  const { data: heroes, isLoading: heroesLoading } = heroesQuery;
+  const abilitiesQuery = useAbilities();
+  const { data: abilities, isLoading: abilitiesLoading } = abilitiesQuery;
   const { date: dateParam } = Route.useSearch();
   const { gameState, streakState, isFinished, submitGuess, date, isArchive } = useDailyGame(
     "guess-ability",
@@ -143,6 +145,20 @@ function GuessAbility() {
   }
 
   const isLoading = heroesLoading || abilitiesLoading;
+
+  // A failed query leaves no puzzle to build, so without this the loader would spin forever.
+  const loadError = puzzleLoadError(heroesQuery, abilitiesQuery);
+  if (loadError.isError) {
+    return (
+      <GameShellError
+        title="Guess the Ability"
+        subtitle="Name the ability from its icon"
+        date={date}
+        onRetry={loadError.retry}
+        retrying={loadError.retrying}
+      />
+    );
+  }
 
   if (isLoading || !dailyEntry) {
     return <GameShellLoading title="Guess the Ability" subtitle="Name the ability from its icon" date={date} />;
