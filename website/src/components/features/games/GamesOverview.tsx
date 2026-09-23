@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiGameStatsRequest, AnalyticsGameStats } from "deadlock_api_client";
 import { Fragment, lazy, Suspense, useState } from "react";
 
@@ -7,6 +7,7 @@ import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
@@ -49,10 +50,16 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
     isPending,
     isError,
     refetch,
-  } = useQuery(gameStatsQueryOptions({ ...params, bucket: "no_bucket" }));
-  const { data: prevData } = useQuery({
+    isPlaceholderData: isRefetching,
+  } = useQuery({
+    ...gameStatsQueryOptions({ ...params, bucket: "no_bucket" }),
+    // A filter change keeps the old numbers, dimmed, until the new ones arrive, instead of emptying the page.
+    placeholderData: keepPreviousData,
+  });
+  const { data: prevData, isPlaceholderData: isRefetchingPrev } = useQuery({
     ...gameStatsQueryOptions({ ...(prevParams as AnalyticsApiGameStatsRequest), bucket: "no_bucket" }),
     enabled: prevParams != null,
+    placeholderData: keepPreviousData,
   });
 
   if (isPending) {
@@ -96,7 +103,11 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
     ) : null;
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <StaleOverlay
+      active={isRefetching || isRefetchingPrev}
+      label="game stats"
+      className="grid grid-cols-1 gap-4 lg:grid-cols-2"
+    >
       {getFilteredCategories(isStreetBrawl).map((category) => {
         const Icon = CATEGORY_ICONS[category.label];
         // Fields the game stopped reporting still come back as an exact 0 average.
@@ -175,6 +186,6 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
           </Panel>
         );
       })}
-    </div>
+    </StaleOverlay>
   );
 }
