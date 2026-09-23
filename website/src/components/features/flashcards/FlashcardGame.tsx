@@ -115,8 +115,10 @@ function FlashcardGameReady<T extends FlashcardEntry>({
       noRepeatsRef.current = value;
       setNoRepeats(value);
       writeLocalStorage(storageKey, String(value));
+      // Allowing repeats again after the pool was mastered: deal a card rather than stay on "mastered".
+      if (!value && card === null && pool.length > 0) setCard(pickCard(pool, new Set()));
     },
-    [storageKey],
+    [storageKey, card, pool],
   );
 
   useEffect(() => {
@@ -145,7 +147,8 @@ function FlashcardGameReady<T extends FlashcardEntry>({
         () => {
           setSelected(null);
           setSeenIds(nextSeen);
-          const exclude = noRepeatsRef.current ? nextSeen : new Set<number>([card.answer.id]);
+          // Without no-repeats only the card just seen is skipped, unless it is the only one.
+          const exclude = noRepeatsRef.current ? nextSeen : new Set<number>(pool.length > 1 ? [card.answer.id] : []);
           setCard(pickCard(pool, exclude));
         },
         correct ? CORRECT_FEEDBACK_MS : WRONG_FEEDBACK_MS,
@@ -157,7 +160,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
   const redraw = useCallback(() => {
     if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current);
     setSelected(null);
-    const exclude = noRepeatsRef.current ? seenIds : new Set<number>(card ? [card.answer.id] : []);
+    const exclude = noRepeatsRef.current ? seenIds : new Set<number>(card && pool.length > 1 ? [card.answer.id] : []);
     setCard(pickCard(pool, exclude));
   }, [pool, seenIds, card]);
 

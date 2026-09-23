@@ -47,7 +47,10 @@ export function GuessInput({ options, onSubmit, disabled, placeholder = "TYPE YO
       setSelectedIndex((i) => Math.max(i - 1, 0));
     } else if (e.key === "Enter" && results[selectedIndex]) {
       e.preventDefault();
-      handleSubmit(results[selectedIndex]);
+      // Only a guess the player can see: after Escape closed the list, Enter reopens it instead of spending an
+      // attempt on a hidden suggestion.
+      if (showDropdown) handleSubmit(results[selectedIndex]);
+      else setShowDropdown(true);
     } else if (e.key === "Escape") {
       setShowDropdown(false);
     }
