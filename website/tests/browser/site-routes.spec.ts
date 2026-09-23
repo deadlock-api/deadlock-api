@@ -125,3 +125,30 @@ test("game hubs keep archive dates and use their new paths", async ({ page }) =>
     "https://deadlock-api.com/games/flashcards",
   );
 });
+
+test("hero and item slugs written another way redirect to the canonical address", async ({ request }) => {
+  await Promise.all(
+    [
+      ["/analytics/heroes/Dynamo", "/analytics/heroes/dynamo"],
+      ["/analytics/items/Sold_Item_1", "/analytics/items/sold-item-1"],
+    ].map(async ([from, to]) => {
+      const response = await request.get(from, { maxRedirects: 0 });
+      expect(response.status()).toBe(301);
+      expect(response.headers().location).toBe(to);
+    }),
+  );
+  expect((await request.get("/analytics/heroes/dynamoo", { maxRedirects: 0 })).status()).toBe(404);
+});
+
+test("a Deadlockdle game saved as today still reads as finished once it is in the past", async ({ page }) => {
+  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+  // Games saved before each day got its own storage slot live under the undated key.
+  await page.addInitScript((date) => {
+    localStorage.setItem(
+      "deadlockdle:guess-hero:game",
+      JSON.stringify({ date, status: "won", guesses: ["Dynamo"], hintsRevealed: 1 }),
+    );
+  }, yesterday);
+  await page.goto(`/games/deadlockdle?date=${yesterday}`);
+  await expect(page.getByRole("link", { name: /Guess the Hero/ })).toContainText(/completed/i);
+});
