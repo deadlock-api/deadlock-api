@@ -161,7 +161,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       });
     }
     const { itemName, slug, image, tier, slot, summary } = loaderData;
-    const url = `${SITE_URL}/items/${slug}`;
+    const url = `${SITE_URL}/analytics/items/${slug}`;
     const usage = summary?.usage !== undefined ? ` and shows up in ${formatPercent(summary.usage)} of builds` : "";
     const description = summary
       ? `${itemName} wins ${formatPercent(summary.winRate)} of Deadlock ranked matches (#${summary.rank} of ${summary.itemCount} items)${usage}. Best heroes, common pairings, and buy timing, updated daily.`

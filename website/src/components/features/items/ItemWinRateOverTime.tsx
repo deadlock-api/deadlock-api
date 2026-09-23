@@ -57,7 +57,7 @@ export function ItemWinRateOverTime({
       .sort((a, b) => a.bucket - b.bucket)
       .map((row): WeekEntry => ({
         weekStart: row.bucket,
-        label: day.unix(row.bucket).format("MMM D"),
+        label: day.unix(row.bucket).utc().format("MMM D"),
         winRate: row.wins / row.matches,
         share: row.matches / (playerMatches.get(row.bucket) ?? row.matches),
         matches: row.matches,

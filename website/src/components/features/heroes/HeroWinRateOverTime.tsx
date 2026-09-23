@@ -49,7 +49,7 @@ export function HeroWinRateOverTime({
       .sort(([a], [b]) => a - b)
       .map(([weekStart, agg]): WeekEntry => ({
         weekStart,
-        label: day.unix(weekStart).format("MMM D"),
+        label: day.unix(weekStart).utc().format("MMM D"),
         winRate: agg.wins / agg.matches,
         share: (multiplier * agg.matches) / (all.get(weekStart) ?? agg.matches),
         matches: agg.matches,

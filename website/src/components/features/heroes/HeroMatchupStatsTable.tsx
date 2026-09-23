@@ -41,7 +41,7 @@ function buildSynergyMap(
 ): Record<number, SynergyEntry[]> {
   const synergyMap: Record<number, SynergyEntry[]> = {};
   for (const synergy of synergyData || []) {
-    if (!synergy?.matches_played || !synergy?.wins) continue;
+    if (!synergy?.matches_played || synergy.wins == null) continue;
     if (!heroStatsMap[synergy.hero_id2]?.matches || !heroStatsMap[synergy.hero_id1]?.matches) continue;
     if (!synergyMap[synergy.hero_id1]) synergyMap[synergy.hero_id1] = [];
     if (!synergyMap[synergy.hero_id2]) synergyMap[synergy.hero_id2] = [];
@@ -83,7 +83,7 @@ function buildCounterMap(
 ): Record<number, CounterEntry[]> {
   const counterMap: Record<number, CounterEntry[]> = {};
   for (const counter of counterData || []) {
-    if (!counter?.matches_played || !counter?.wins) continue;
+    if (!counter?.matches_played || counter.wins == null) continue;
     if (!heroStatsMap[counter.hero_id]?.matches || !heroStatsMap[counter.hero_id]?.wins) continue;
     if (!counterMap[counter.hero_id]) counterMap[counter.hero_id] = [];
     counterMap[counter.hero_id].push({
@@ -361,7 +361,7 @@ export function HeroMatchupStatsTable({
   const prevSynergyRelWinrateMap = useMemo(() => {
     const map: Record<number, Record<number, number>> = {};
     for (const synergy of prevSynergyData || []) {
-      if (!synergy?.matches_played || !synergy?.wins) continue;
+      if (!synergy?.matches_played || synergy.wins == null) continue;
       if (!prevHeroStatsMap[synergy.hero_id1]?.matches || !prevHeroStatsMap[synergy.hero_id2]?.matches) continue;
       const relWinrate =
         synergy.wins / synergy.matches_played -
@@ -379,7 +379,7 @@ export function HeroMatchupStatsTable({
   const prevCounterRelWinrateMap = useMemo(() => {
     const map: Record<number, Record<number, number>> = {};
     for (const counter of prevCounterData || []) {
-      if (!counter?.matches_played || !counter?.wins) continue;
+      if (!counter?.matches_played || counter.wins == null) continue;
       if (!prevHeroStatsMap[counter.hero_id]?.matches) continue;
       const relWinrate =
         counter.wins / counter.matches_played -

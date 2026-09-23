@@ -231,10 +231,6 @@ export function ItemStatsExplorer({
     return buildPlayerBuildCards(topBuildsData, hero, heroAbilityMetadata, upgradeChainLookup);
   }, [topBuildsData, hero, upgradeChainLookup, heroesData, abilityItems]);
 
-  const minWinRate = useMemo(() => Math.min(...data.map((item) => item.wins / item.matches)), [data]);
-  const maxWinRate = useMemo(() => Math.max(...data.map((item) => item.wins / item.matches)), [data]);
-  const minUsage = useMemo(() => Math.min(...data.map((item) => item.matches)), [data]);
-  const maxUsage = useMemo(() => Math.max(...data.map((item) => item.matches)), [data]);
   const shopableItemIds = useMemo(
     () =>
       new Set(
@@ -243,6 +239,11 @@ export function ItemStatsExplorer({
     [assetsItems],
   );
   const filteredData = useMemo(() => data.filter((item) => shopableItemIds.has(item.item_id)), [data, shopableItemIds]);
+  // Scale the bars to the rows on screen: a hidden non-shop item with an extreme rate would squash every visible bar.
+  const minWinRate = useMemo(() => Math.min(...filteredData.map((item) => item.wins / item.matches)), [filteredData]);
+  const maxWinRate = useMemo(() => Math.max(...filteredData.map((item) => item.wins / item.matches)), [filteredData]);
+  const minUsage = useMemo(() => Math.min(...filteredData.map((item) => item.matches)), [filteredData]);
+  const maxUsage = useMemo(() => Math.max(...filteredData.map((item) => item.matches)), [filteredData]);
 
   const sortedData = useMemo(
     () =>

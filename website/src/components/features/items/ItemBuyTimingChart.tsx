@@ -117,7 +117,7 @@ function buildChartData({
 
   for (const itemId of itemIds) {
     const itemData = data?.filter((d) => d.item_id === itemId) ?? [];
-    if (itemData.length === 0) return [];
+    if (itemData.length === 0) continue;
 
     const bucketIncrements =
       bucketType === "net_worth_by_1000" ? BUCKET_INCREMENTS : BUCKET_INCREMENTS.map((inc) => inc / 1000);
@@ -380,7 +380,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
                     <Line
                       key={itemId}
                       dataKey="winrate"
-                      data={(chartData as unknown as Record<string, { winrate: number | null }[]>)[itemId]}
+                      data={(chartData as unknown as Record<string, { winrate: number | null }[]>)[itemId] ?? []}
                       type="monotone"
                       stroke={seriesColor(index)}
                       dot={{ r: 3, fill: seriesColor(index), strokeWidth: 0 }}

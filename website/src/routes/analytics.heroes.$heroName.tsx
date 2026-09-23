@@ -198,7 +198,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       });
     }
     const { heroName, slug, cardImage, summary } = loaderData;
-    const url = `${SITE_URL}/heroes/${slug}`;
+    const url = `${SITE_URL}/analytics/heroes/${slug}`;
     const description = summary
       ? `${heroName} holds a ${formatPercent(summary.winRate)} win rate (#${summary.rank} of ${summary.heroCount} heroes) and a ${formatPercent(summary.pickRate)} pick rate in Deadlock ranked matches. Live matchups, synergies, and counters, updated daily.`
       : `${heroName} win rate, pick rate, best items, and matchups in Deadlock. Live stats from tracked ranked matches, updated daily.`;
