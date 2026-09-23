@@ -30,11 +30,13 @@ const ABILITY_TYPES = ["Signature", "Ultimate", "Innate"] as const;
 const VALID_ABILITY_TYPES = new Set(["signature", "ultimate", "innate"]);
 
 /**
- * Shared innate movement abilities (mantle, slide, zipline boost) carry no translated name, only their class name
- * (`citadel_ability_mantle`), so they make neither a question nor an answer.
+ * Shared movement abilities (`citadel_ability_*`: mantle, slide, jump, dash, parry) belong to every hero, though the
+ * assets file them under one; some carry no translated name either. They make neither a question nor an answer.
  */
 export function hasDisplayName(ability: Ability): boolean {
-  return Boolean(ability.name) && !/^[a-z0-9_]+$/.test(ability.name);
+  return (
+    Boolean(ability.name) && !/^[a-z0-9_]+$/.test(ability.name) && !ability.class_name.startsWith("citadel_ability_")
+  );
 }
 
 const HERO_STAT_KEYS = [
@@ -46,7 +48,7 @@ const HERO_STAT_KEYS = [
   { key: "stamina", label: "Stamina" },
   { key: "max_move_speed", label: "Max Move Speed" },
   { key: "sprint_speed", label: "Sprint Speed" },
-  { key: "reload_speed", label: "Reload Speed" },
+  // Not reload speed: it is 1 for every hero, so every question about it was a tie or a two-option guess.
 ] as const;
 
 type QuestionGenerator = (
@@ -87,27 +89,30 @@ function generateNumericOptions(
   count: number = 3,
   multipliers: number[] = [0.6, 0.75, 0.85, 1.15, 1.3, 1.5],
 ): string[] {
+  // Decoys carry the answer's precision, or "6.7" stands out among whole numbers as the only decimal.
+  const decimals = Math.min(2, (String(correctValue).split(".")[1] ?? "").length);
+  const scale = 10 ** decimals;
+  const round = (value: number) => Math.round(value * scale) / scale;
   const wrongValues = new Set<number>();
   const shuffledMultipliers = seededShuffle([...multipliers], rng);
 
   for (const mult of shuffledMultipliers) {
     if (wrongValues.size >= count) break;
-    const candidate = Math.round(correctValue * mult);
+    const candidate = round(correctValue * mult);
     if (candidate !== correctValue && candidate > 0) {
       wrongValues.add(candidate);
     }
   }
 
-  let offset = 1;
-  while (wrongValues.size < count && offset < 100) {
-    const candidate = correctValue + offset * (wrongValues.size % 2 === 0 ? 1 : -1);
-    if (candidate > 0 && candidate !== correctValue) {
-      wrongValues.add(candidate);
+  // Small values round several multipliers onto the same number; step away from the answer on both sides, one step
+  // further each round, so a value of 1 still gets three decoys (2, 3, 4) instead of stalling below zero.
+  for (let step = 1; wrongValues.size < count && step < 100; step++) {
+    for (const candidate of [round(correctValue + step / scale), round(correctValue - step / scale)]) {
+      if (wrongValues.size < count && candidate > 0 && candidate !== correctValue) wrongValues.add(candidate);
     }
-    offset++;
   }
 
-  return [...wrongValues].slice(0, count).map(String);
+  return [...wrongValues].slice(0, count).map((value) => value.toFixed(decimals));
 }
 
 /** Generate plausible wrong cost options: correct cost +/- [500, 1000, 1500, 2000] randomly */
@@ -226,6 +231,9 @@ const highestStatQuestion: QuestionGenerator = (heroes, _items, _npcs, _abilitie
       bestVal = val;
     }
   }
+
+  // Several heroes on the top value (three at 63 light melee damage) would make more than one option right.
+  if (candidates.filter((h) => getHeroStat(h, statDef.key) === bestVal).length > 1) return null;
 
   const wrong = candidates.filter((h) => h.id !== best.id).map((h) => h.name);
   const { options, correctIndex } = buildOptions(best.name, wrong, rng);

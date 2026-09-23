@@ -11,6 +11,7 @@ import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuess
 import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
 import { Stack } from "~/components/ui/stack";
 import { useHeroes } from "~/lib/deadlockdle/queries";
+import { redactName } from "~/lib/deadlockdle/redact";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
 import { seo } from "~/lib/seo";
@@ -109,7 +110,7 @@ function GuessHero() {
         : "No stats available";
 
     const stripHtml = (text: string) => text.replace(/<[^>]*>/g, "");
-    const redact = (text: string) => stripHtml(text).replace(new RegExp(dailyHero.name, "gi"), "???");
+    const redact = (text: string) => redactName(stripHtml(text), dailyHero.name);
 
     const lore = dailyHero.description?.lore;
     const loreRedacted = lore ? redact(lore) : null;

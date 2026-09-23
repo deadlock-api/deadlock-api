@@ -11,6 +11,7 @@ import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuess
 import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
 import { Stack } from "~/components/ui/stack";
 import { useAbilities, useHeroes } from "~/lib/deadlockdle/queries";
+import { redactName } from "~/lib/deadlockdle/redact";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
 import { seo } from "~/lib/seo";
@@ -101,7 +102,8 @@ function GuessAbility() {
 
     const heroName = hero.name;
 
-    const rawDesc = ability.description?.desc?.replace(/<[^>]*>/g, "") ?? "";
+    // The description often names the ability itself ("If you perform Ground Strike while airborne").
+    const rawDesc = redactName(ability.description?.desc?.replace(/<[^>]*>/g, "") ?? "", ability.name);
     const descTruncated = rawDesc
       ? rawDesc.length > 120
         ? `${rawDesc.slice(0, 120)}...`
