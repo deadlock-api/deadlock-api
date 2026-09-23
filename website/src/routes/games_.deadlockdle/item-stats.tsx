@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useMemo, type RefCallback } from "react";
+import { useCallback, useMemo, useRef, type RefCallback } from "react";
 
 import { AnswerOption, type AnswerOptionState, revealedState } from "~/components/domain/minigames/AnswerOption";
 import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
@@ -160,11 +160,16 @@ function ItemStatsQuiz() {
       );
     }, 0);
 
+    justSubmitted.current = true;
     saveState({ ...state, submitted: true, score, totalFields: TOTAL_FIELDS });
   }, [allFieldsFilled, state, dailyItems, saveState]);
 
+  // Submitting unmounts the Submit All button, which dropped focus to <body>; the score takes it instead (only right
+  // after submitting, not when a finished day is reopened).
+  const justSubmitted = useRef(false);
   const scoreScrollRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
     if (node) {
+      if (justSubmitted.current) node.focus({ preventScroll: true });
       setTimeout(() => node.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150);
     }
   }, []);
@@ -326,6 +331,7 @@ function ItemStatsQuiz() {
         {state.submitted && (
           <motion.div
             ref={scoreScrollRef}
+            tabIndex={-1}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
