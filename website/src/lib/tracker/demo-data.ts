@@ -369,12 +369,16 @@ export function demoEnemyStats(history: readonly PlayerMatchHistoryEntry[], filt
 export function demoPlayerMetrics(cohort: Record<string, HashMapValue>): Record<string, HashMapValue> {
   const rng = mulberry32(0xbe7c4);
   return Object.fromEntries(
-    Object.entries(cohort).map(([key, value]) => {
-      const factor = between(rng, 0.88, 1.22);
-      const shifted = { ...value };
-      for (const stat of Object.keys(shifted) as (keyof HashMapValue)[]) shifted[stat] *= factor;
-      return [key, shifted];
-    }),
+    // In key order: the API's map comes back in any order, and the seeded factors went to different stats on every
+    // load, so the demo's "your average" changed with each reload.
+    Object.entries(cohort)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => {
+        const factor = between(rng, 0.88, 1.22);
+        const shifted = { ...value };
+        for (const stat of Object.keys(shifted) as (keyof HashMapValue)[]) shifted[stat] *= factor;
+        return [key, shifted];
+      }),
   );
 }
 
