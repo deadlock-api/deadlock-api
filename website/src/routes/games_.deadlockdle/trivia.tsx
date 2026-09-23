@@ -107,6 +107,12 @@ function Trivia() {
   }, [heroes, items, npcUnits, abilitiesWithHeroes, date]);
 
   const shownIndex = revealing ?? state.currentQuestion;
+  // Answering disables the options and the next question replaces them, which drops focus to <body>; after an answer
+  // the next question's first option takes it back, so the quiz can be played with the keyboard alone.
+  const answered = useRef(false);
+  const focusFirstOption = useCallback((element: HTMLButtonElement | null) => {
+    if (element && answered.current && document.activeElement === document.body) element.focus();
+  }, []);
   const currentQ = questions[shownIndex] ?? null;
 
   useEffect(() => {
@@ -122,6 +128,7 @@ function Trivia() {
       const isCorrect = optionIndex === currentQ.correctIndex;
       setSelectedAnswer(optionIndex);
       setRevealing(state.currentQuestion);
+      answered.current = true;
       setFeedbackType(isCorrect ? "correct" : "wrong");
       setTimeout(() => setFeedbackType(null), 900);
 
@@ -204,6 +211,7 @@ function Trivia() {
               {currentQ.options.map((option, i) => (
                 <AnswerOption
                   key={`${shownIndex}-opt-${option}`}
+                  ref={i === 0 ? focusFirstOption : undefined}
                   state={isRevealed ? revealedState(i === currentQ.correctIndex, i === selectedAnswer) : "idle"}
                   onClick={() => handleAnswer(i)}
                   disabled={isRevealed}
