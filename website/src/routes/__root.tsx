@@ -75,13 +75,10 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     }
     await Promise.all(preloads);
   },
-  head: ({ matches }) => {
-    // A 404 or error page names itself and asks not to be indexed (NotFound / RouteError render those tags); the
-    // site-wide title and "index, follow" would otherwise come first in the server HTML and contradict them.
-    // `_notFound` marks the match that renders a global 404 (an unmatched URL), whose status stays "success".
-    const failed = matches.some(
-      (match) => match.status === "notFound" || match.status === "error" || match._notFound === true,
-    );
+  head: () => {
+    // No site-wide title or robots tag: every page's head names itself, and a 404 or error page renders its own title
+    // and "noindex". A default here came first in the server HTML and contradicted them ("index, follow" is what no
+    // robots tag means anyway).
     return {
       meta: [
         { charSet: "utf-8" },
@@ -91,13 +88,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
           content:
             "Deadlock, API, Game, Data, Images, Stats, Heroes, Items, Weapons, Abilities, Leaderboard, Analytics",
         },
-        ...(failed ? [] : [{ name: "robots", content: "index, follow" }]),
         // ds-allow color-literal: a meta tag cannot read CSS variables; mirrors --primary
         { name: "theme-color", content: "#fa4454" },
         { property: "og:site_name", content: "Deadlock API" },
         { name: "twitter:card", content: "summary_large_image" },
         { property: "twitter:domain", content: "deadlock-api.com" },
-        ...(failed ? defaultSeo.meta.filter((tag) => !("title" in tag)) : defaultSeo.meta),
+        ...defaultSeo.meta.filter((tag) => !("title" in tag)),
       ],
       links: [
         { rel: "stylesheet", href: appCss, fetchPriority: "high" },
