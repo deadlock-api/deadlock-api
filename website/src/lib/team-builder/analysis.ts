@@ -353,15 +353,21 @@ export interface DraftAnalysis {
 /**
  * A shrunk rate on `n` matches behaves like one measured over `n + k`, so its log-odds variance is
  * about `4/(n + k)` near an even split; averaging divides that by the cell count squared.
+ *
+ * Each term is given as the means it is made of: solo and synergy are "ally mean minus enemy mean", so each side
+ * is averaged over its own cells and the two variances add. Pooling both sides into one mean divided by the total
+ * count squared, which made those terms' margin about half what it is.
  */
-function predictionMargin(termSamples: number[][], model: DraftModel, logOdds: number): number | undefined {
+function predictionMargin(termMeans: number[][][], model: DraftModel, logOdds: number): number | undefined {
   let variance = 0;
   let known = false;
-  termSamples.forEach((samples, i) => {
-    if (samples.length === 0) return;
-    known = true;
-    const cellVariance = samples.reduce((sum, n) => sum + 4 / (n + model.shrinkage[i]), 0) / samples.length ** 2;
-    variance += model.weights[i] ** 2 * cellVariance;
+  termMeans.forEach((means, i) => {
+    for (const samples of means) {
+      if (samples.length === 0) continue;
+      known = true;
+      const meanVariance = samples.reduce((sum, n) => sum + 4 / (n + model.shrinkage[i]), 0) / samples.length ** 2;
+      variance += model.weights[i] ** 2 * meanVariance;
+    }
   });
   if (!known) return undefined;
   const p = sigmoid(logOdds);
@@ -631,9 +637,12 @@ export function analyzeDraft(draft: Draft, index: StatsIndex): DraftAnalysis {
     enemyHeroes,
     predicted: index.hasData ? predictedFrom(terms, model) : undefined,
     margin: predictionMargin(
-      terms.hasLanes
-        ? [heroMatches, pairMatches, counterMatches, duelMatches]
-        : [heroMatches, pairMatches, counterMatches],
+      [
+        [allyHeroes, enemyHeroes].map((side) => side.map((h) => index.heroSample(h)?.matches ?? 0)),
+        [allyPairs, enemyPairs].map((side) => side.map((p) => p.matches)),
+        [counterMatches],
+        ...(terms.hasLanes ? [[duelMatches]] : []),
+      ],
       model,
       draftLogOdds(terms, model),
     ),
