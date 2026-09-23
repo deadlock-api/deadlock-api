@@ -1,28 +1,20 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { AnimatePresence, motion, MotionConfig } from "framer-motion";
 import { Crosshair } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 
 import { TargetCursor } from "~/components/features/deadlockdle/TargetCursor";
 import { Button } from "~/components/ui/button";
 import { StatusDot } from "~/components/ui/status-dot";
+import { useStoredState } from "~/lib/deadlockdle/use-stored-state";
 import { NEW_ROCKER_PRELOAD } from "~/lib/fonts";
 
 const CURSOR_STORAGE_KEY = "deadlockdle:custom-cursor";
 
 function useCursorToggle() {
-  const [enabled, setEnabled] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem(CURSOR_STORAGE_KEY) === "true";
-  });
-
-  const toggle = useCallback(() => {
-    setEnabled((prev) => {
-      const next = !prev;
-      localStorage.setItem(CURSOR_STORAGE_KEY, String(next));
-      return next;
-    });
-  }, []);
+  // Stored as the JSON literal "true" / "false"; off until hydrated so the server markup matches.
+  const [enabled, setEnabled] = useStoredState(CURSOR_STORAGE_KEY, () => false);
+  const toggle = useCallback(() => setEnabled(!enabled), [enabled, setEnabled]);
 
   return [enabled, toggle] as const;
 }

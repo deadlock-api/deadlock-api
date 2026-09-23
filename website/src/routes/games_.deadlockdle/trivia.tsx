@@ -31,6 +31,7 @@ import {
   type TriviaQuestion,
 } from "~/lib/deadlockdle/trivia-questions";
 import { useCountdown } from "~/lib/deadlockdle/use-countdown";
+import { useStoredDailyState } from "~/lib/deadlockdle/use-stored-state";
 import { seo } from "~/lib/seo";
 import { filterPlayableHeroes } from "~/queries/asset-queries";
 
@@ -65,26 +66,8 @@ const DEFAULT_STATE: TriviaState = {
   completed: false,
 };
 
-function saveState(key: string, state: TriviaState): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(key, JSON.stringify(state));
-}
-
-function initialState(key: string, date: string): TriviaState {
-  if (typeof window === "undefined") return DEFAULT_STATE;
-  let saved = DEFAULT_STATE;
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw) saved = JSON.parse(raw) as TriviaState;
-  } catch {
-    saved = DEFAULT_STATE;
-  }
-  if (saved.date !== date) {
-    const fresh = { ...DEFAULT_STATE, date };
-    saveState(key, fresh);
-    return fresh;
-  }
-  return saved;
+function freshState(date: string): TriviaState {
+  return { ...DEFAULT_STATE, date };
 }
 
 function Trivia() {
@@ -100,13 +83,7 @@ function Trivia() {
   const countdown = useCountdown();
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [state, setState] = useState<TriviaState>(() => initialState(storageKey, date));
-  const [loadedKey, setLoadedKey] = useState(storageKey);
-
-  if (loadedKey !== storageKey) {
-    setLoadedKey(storageKey);
-    setState(initialState(storageKey, date));
-  }
+  const [state, saveState] = useStoredDailyState(storageKey, date, freshState);
 
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [isRevealed, setIsRevealed] = useState(false);
@@ -156,10 +133,8 @@ function Trivia() {
         answers: newAnswers,
         score: newScore,
         completed: isLastQuestion,
-        currentQuestion: isLastQuestion ? state.currentQuestion : state.currentQuestion,
       };
-      saveState(storageKey, newState);
-      setState(newState);
+      saveState(newState);
 
       advanceTimerRef.current = setTimeout(() => {
         setSelectedAnswer(null);
@@ -170,12 +145,11 @@ function Trivia() {
             ...newState,
             currentQuestion: newState.currentQuestion + 1,
           };
-          saveState(storageKey, advancedState);
-          setState(advancedState);
+          saveState(advancedState);
         }
       }, ADVANCE_DELAY_MS);
     },
-    [state, isRevealed, currentQ, storageKey],
+    [state, isRevealed, currentQ, saveState],
   );
 
   const shareText = useMemo(() => {

@@ -6,6 +6,7 @@ import { AnswerOption, revealedState } from "~/components/domain/minigames/Answe
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { useHydrated } from "~/hooks/useHydrated";
+import { readLocalStorage, writeLocalStorage } from "~/lib/local-storage";
 import { cn } from "~/lib/utils";
 
 import {
@@ -100,10 +101,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
   const [selected, setSelected] = useState<number | null>(null);
   const [stats, setStats] = useState(EMPTY_FLASHCARD_STATS);
   const [seenIds, setSeenIds] = useState<Set<number>>(new Set());
-  const [noRepeats, setNoRepeats] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem(storageKey) === "true";
-  });
+  const [noRepeats, setNoRepeats] = useState(() => readLocalStorage(storageKey) === "true");
   const advanceTimer = useRef<number | null>(null);
   const noRepeatsRef = useRef(noRepeats);
   const prevReshuffleKey = useRef(reshuffleKey);
@@ -112,7 +110,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
     (value: boolean) => {
       noRepeatsRef.current = value;
       setNoRepeats(value);
-      localStorage.setItem(storageKey, String(value));
+      writeLocalStorage(storageKey, String(value));
     },
     [storageKey],
   );
@@ -174,7 +172,9 @@ function FlashcardGameReady<T extends FlashcardEntry>({
   }, [pool]);
 
   const empty = pool.length === 0;
-  const exhausted = noRepeats && pool.length > 0 && seenIds.size >= pool.length;
+  // A filter can shrink the pool below cards already mastered; only the ones still in it count.
+  const masteredInPool = pool.reduce((count, entry) => count + Number(seenIds.has(entry.id)), 0);
+  const exhausted = noRepeats && pool.length > 0 && masteredInPool >= pool.length;
 
   return (
     <FlashcardPage title={title} subtitle={subtitle}>
@@ -185,7 +185,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
           id="flashcard-no-repeats"
           checked={noRepeats}
           onCheckedChange={updateNoRepeats}
-          mastered={seenIds.size}
+          mastered={masteredInPool}
           total={pool.length}
         />
         {controls}

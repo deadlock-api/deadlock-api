@@ -411,24 +411,26 @@ function GuessSound() {
     >
       <GuessFeedback type={feedbackType} triggerKey={shakeKey} />
 
+      {/* Outside the shaking wrapper: its key changes on every wrong guess, which would swap in a new, paused
+          element while the old one keeps playing and the progress bar freezes. */}
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- Game sound effect used as puzzle content */}
+      <audio
+        ref={audioRef}
+        src={dailySound.url}
+        preload="auto"
+        aria-label="Ability sound clip"
+        onEnded={handleEnded}
+        onLoadedMetadata={handleLoadedMetadata}
+      >
+        <track kind="captions" />
+      </audio>
+
       <motion.div
         key={shakeKey}
         animate={shakeKey > 0 ? { x: [-8, 8, -4, 4, 0] } : undefined}
         transition={{ duration: 0.35, ease: "easeInOut" }}
         className="flex flex-col items-center gap-4"
       >
-        {/* eslint-disable-next-line jsx-a11y/media-has-caption -- Game sound effect used as puzzle content */}
-        <audio
-          ref={audioRef}
-          src={dailySound.url}
-          preload="auto"
-          aria-label="Ability sound clip"
-          onEnded={handleEnded}
-          onLoadedMetadata={handleLoadedMetadata}
-        >
-          <track kind="captions" />
-        </audio>
-
         <PlayButton
           state={isPlaying ? "playing" : "idle"}
           label="sound"

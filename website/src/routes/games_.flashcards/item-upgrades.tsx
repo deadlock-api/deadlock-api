@@ -19,6 +19,7 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { useHydrated } from "~/hooks/useHydrated";
+import { readLocalStorage, writeLocalStorage } from "~/lib/local-storage";
 import { seo } from "~/lib/seo";
 import { filterShopableItems, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 
@@ -212,15 +213,14 @@ function ItemUpgradePathFlashcards() {
   return <ItemUpgradePathFlashcardsReady pool={pool} />;
 }
 
+const NO_REPEATS_KEY = "flashcards:item-upgrades:no-repeats";
+
 function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) {
   const [card, setCard] = useState<UpgradePathCard | null>(() => (pool.length > 0 ? pickCard(pool, new Set()) : null));
   const [selected, setSelected] = useState<string | null>(null);
   const [stats, setStats] = useState(EMPTY_FLASHCARD_STATS);
   const [seenIds, setSeenIds] = useState<Set<number>>(new Set());
-  const [noRepeats, setNoRepeats] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("flashcards:item-upgrades:no-repeats") === "true";
-  });
+  const [noRepeats, setNoRepeats] = useState(() => readLocalStorage(NO_REPEATS_KEY) === "true");
   const advanceTimer = useRef<number | null>(null);
   const noRepeatsRef = useRef(noRepeats);
 
@@ -246,9 +246,7 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
   const updateNoRepeats = useCallback((value: boolean) => {
     noRepeatsRef.current = value;
     setNoRepeats(value);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("flashcards:item-upgrades:no-repeats", String(value));
-    }
+    writeLocalStorage(NO_REPEATS_KEY, String(value));
   }, []);
 
   const handleChoice = useCallback(

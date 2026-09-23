@@ -12,6 +12,7 @@ import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Input } from "~/components/ui/input";
 import { day } from "~/dayjs";
+import { useHydrated } from "~/hooks/useHydrated";
 import {
   EPOCH_DATE,
   getDayNumber,
@@ -117,14 +118,16 @@ function DeadlockdleHub() {
   const isArchive = date !== today;
   const dayNum = getDayNumber(date);
 
+  // Saved progress lives in the browser; reading it before hydration would make the server markup differ.
+  const hydrated = useHydrated();
   const statuses = useMemo(() => {
-    if (typeof window === "undefined") return null;
+    if (!hydrated) return null;
     const result = {} as Record<GameMode, DailyStatus>;
     for (const game of GAMES) {
       result[game.mode] = getDailyStatus(game.mode, date);
     }
     return result;
-  }, [date]);
+  }, [date, hydrated]);
 
   const prevDate = day(date).subtract(1, "day").format("YYYY-MM-DD");
   const nextDate = day(date).add(1, "day").format("YYYY-MM-DD");
@@ -205,7 +208,7 @@ function DeadlockdleHub() {
         >
           {GAMES.map((game) => (
             <motion.div key={game.mode} variants={fadeUp}>
-              <GameCard {...game} date={date} />
+              <GameCard {...game} date={date} status={statuses?.[game.mode] ?? "untouched"} />
             </motion.div>
           ))}
         </motion.div>

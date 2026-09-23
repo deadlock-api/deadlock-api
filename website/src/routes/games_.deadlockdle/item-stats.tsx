@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useMemo, useState, type RefCallback } from "react";
+import { useCallback, useMemo, type RefCallback } from "react";
 
 import { AnswerOption, type AnswerOptionState, revealedState } from "~/components/domain/minigames/AnswerOption";
 import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
@@ -25,6 +25,7 @@ import {
 } from "~/lib/deadlockdle/seed";
 import { gameStorageKey } from "~/lib/deadlockdle/storage";
 import { useCountdown } from "~/lib/deadlockdle/use-countdown";
+import { useStoredDailyState } from "~/lib/deadlockdle/use-stored-state";
 import { seo } from "~/lib/seo";
 import { filterShopableItems } from "~/queries/asset-queries";
 
@@ -68,26 +69,8 @@ const DEFAULT_STATE: ItemStatsState = {
   totalFields: TOTAL_FIELDS,
 };
 
-function saveState(key: string, state: ItemStatsState): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(key, JSON.stringify(state));
-}
-
-function initialState(key: string, date: string): ItemStatsState {
-  if (typeof window === "undefined") return DEFAULT_STATE;
-  let saved = DEFAULT_STATE;
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw) saved = JSON.parse(raw) as ItemStatsState;
-  } catch {
-    saved = DEFAULT_STATE;
-  }
-  if (saved.date !== date) {
-    const fresh = { ...DEFAULT_STATE, date };
-    saveState(key, fresh);
-    return fresh;
-  }
-  return saved;
+function freshState(date: string): ItemStatsState {
+  return { ...DEFAULT_STATE, date };
 }
 
 function formatSlotLabel(slot: string): string {
@@ -113,13 +96,7 @@ function ItemStatsQuiz() {
   const storageKey = gameStorageKey("item-stats", date);
   const countdown = useCountdown();
 
-  const [state, setState] = useState<ItemStatsState>(() => initialState(storageKey, date));
-  const [loadedKey, setLoadedKey] = useState(storageKey);
-
-  if (loadedKey !== storageKey) {
-    setLoadedKey(storageKey);
-    setState(initialState(storageKey, date));
-  }
+  const [state, saveState] = useStoredDailyState(storageKey, date, freshState);
 
   const shopableItems = useMemo(
     () =>
@@ -140,22 +117,12 @@ function ItemStatsQuiz() {
   const setAnswer = useCallback(
     (itemId: number, field: keyof ItemAnswer, value: number | string | boolean) => {
       if (state.submitted) return;
-      setState((prev) => {
-        const next: ItemStatsState = {
-          ...prev,
-          answers: {
-            ...prev.answers,
-            [itemId]: {
-              ...prev.answers[itemId],
-              [field]: value,
-            },
-          },
-        };
-        saveState(storageKey, next);
-        return next;
+      saveState({
+        ...state,
+        answers: { ...state.answers, [itemId]: { ...state.answers[itemId], [field]: value } },
       });
     },
-    [state.submitted, storageKey],
+    [state, saveState],
   );
 
   const allFieldsFilled = useMemo(() => {
@@ -192,17 +159,8 @@ function ItemStatsQuiz() {
       );
     }, 0);
 
-    setState((prev) => {
-      const next: ItemStatsState = {
-        ...prev,
-        submitted: true,
-        score,
-        totalFields: TOTAL_FIELDS,
-      };
-      saveState(storageKey, next);
-      return next;
-    });
-  }, [allFieldsFilled, state.submitted, state.answers, dailyItems, storageKey]);
+    saveState({ ...state, submitted: true, score, totalFields: TOTAL_FIELDS });
+  }, [allFieldsFilled, state, dailyItems, saveState]);
 
   const scoreScrollRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
     if (node) {

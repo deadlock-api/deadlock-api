@@ -1,11 +1,11 @@
 import type { LucideIcon } from "lucide-react";
-import { useMemo } from "react";
 
 import { GameTile } from "~/components/domain/minigames/GameTile";
 import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
 import { getTodayDate } from "~/lib/deadlockdle/seed";
 import { gameStorageKey } from "~/lib/deadlockdle/storage";
 import type { GameMode } from "~/lib/deadlockdle/types";
+import { readLocalStorage } from "~/lib/local-storage";
 
 export type DailyStatus = "untouched" | "won" | "lost" | "playing";
 
@@ -16,12 +16,14 @@ interface GameCardProps {
   icon: LucideIcon;
   path: string;
   date: string;
+  /** Today's progress, read from storage by the page once hydrated. */
+  status?: DailyStatus;
 }
 
 export function getDailyStatus(mode: GameMode, date: string = getTodayDate()): DailyStatus {
   if (typeof window === "undefined") return "untouched";
   try {
-    const raw = localStorage.getItem(gameStorageKey(mode, date));
+    const raw = readLocalStorage(gameStorageKey(mode, date));
     if (!raw) return "untouched";
     const state = JSON.parse(raw);
     if (state.date !== date) return "untouched";
@@ -49,7 +51,7 @@ export function getDailyStatus(mode: GameMode, date: string = getTodayDate()): D
 export function getDailyResult(mode: GameMode, date: string = getTodayDate()): string | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(gameStorageKey(mode, date));
+    const raw = readLocalStorage(gameStorageKey(mode, date));
     if (!raw) return null;
     const state = JSON.parse(raw);
     if (state.date !== date) return null;
@@ -81,8 +83,7 @@ const STATUS_TONE = {
   lost: "negative",
 } as const;
 
-export function GameCard({ mode, title, description, icon, path, date }: GameCardProps) {
-  const status = useMemo(() => getDailyStatus(mode, date), [mode, date]);
+export function GameCard({ title, description, icon, path, date, status = "untouched" }: GameCardProps) {
   const badge = STATUS_BADGE[status];
 
   return (
