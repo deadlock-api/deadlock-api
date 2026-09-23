@@ -25,7 +25,7 @@ import { combineQueryStates } from "~/components/patterns/states/QueryRenderer";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
-import { useDraft } from "~/hooks/useDraft";
+import { useDraft, DRAFT_URL_UPDATES } from "~/hooks/useDraft";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { type Mode, MODE_CONFIG } from "~/lib/game-mode";
@@ -72,8 +72,14 @@ export const Route = createFileRoute("/analytics/team-builder")({
 
 function TeamBuilderPage() {
   const queryClient = useQueryClient();
-  const [importedMatchId, setImportedMatchId] = useQueryState("match", parseAsInteger);
-  const [sidesSwapped, setSidesSwapped] = useQueryState("swap", parseAsBoolean.withDefault(false));
+  const [importedMatchId, setImportedMatchId] = useQueryState(
+    "match",
+    parseAsInteger.withOptions({ limitUrlUpdates: DRAFT_URL_UPDATES }),
+  );
+  const [sidesSwapped, setSidesSwapped] = useQueryState(
+    "swap",
+    parseAsBoolean.withDefault(false).withOptions({ limitUrlUpdates: DRAFT_URL_UPDATES }),
+  );
   // Editing any slot means the board no longer mirrors the imported match, so the reference is dropped
   // rather than left pointing at a draft it does not describe. `loadMatch` re-sets it afterwards.
   const forgetImport = useCallback(() => {

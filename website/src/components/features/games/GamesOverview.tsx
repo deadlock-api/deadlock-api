@@ -149,7 +149,13 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                             {formatStatValue(value, stat.format)}
                           </span>
                           {delta != null && (
-                            <Delta value={delta} sign="arrow" display="badge" className="min-w-13 font-normal" />
+                            <Delta
+                              value={delta}
+                              invert={stat.lowerIsBetter}
+                              sign="arrow"
+                              display="badge"
+                              className="min-w-13 font-normal"
+                            />
                           )}
                         </div>
                       </Button>

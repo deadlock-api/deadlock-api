@@ -1,4 +1,4 @@
-import { createParser, type Options, useQueryState } from "nuqs";
+import { createParser, type Options, throttle, useQueryState } from "nuqs";
 import { useCallback, useMemo } from "react";
 
 import type { GameMode } from "~/lib/game-mode";
@@ -35,11 +35,19 @@ export interface DraftControls {
   nextOpenSlot: (side: Side) => number | null;
 }
 
+/** One URL update for every key of the board changed in the same tick (see `useModeState`). */
+export const DRAFT_URL_UPDATES = throttle(50);
+
 export function useDraft(gameMode: GameMode, onManualEdit?: () => void): DraftControls {
   const teamSize = TEAM_SIZE[gameMode];
   // The parser is what sizes the side, so a mode switch re-reads the same URL at the new width:
   // a 6v6 link opened as Street Brawl keeps its first four picks per side.
-  const parser = useMemo(() => parseAsTeam(teamSize).withDefault(emptySide(teamSize)), [teamSize]);
+  // Throttled rather than the app's per-key debounce, like the match and swap keys of the page: an edit also drops
+  // the imported match, and per-key timers would push that as a history entry of its own, which Back then lands on.
+  const parser = useMemo(
+    () => parseAsTeam(teamSize).withDefault(emptySide(teamSize)).withOptions({ limitUrlUpdates: DRAFT_URL_UPDATES }),
+    [teamSize],
+  );
   const [ally, setAlly] = useQueryState("ally", parser);
   const [enemy, setEnemy] = useQueryState("enemy", parser);
 

@@ -594,9 +594,10 @@ export function analyzeDraft(draft: Draft, index: StatsIndex): DraftAnalysis {
       key: "counters",
       label: "Counter picks",
       value: points(residual[2], 2),
-      // Both heroes' strength is already out of this term, so the enemy view is an exact mirror.
-      ally: points(residual[2], 2),
-      enemy: -points(residual[2], 2),
+      // Both heroes' strength is already out of this term, so the enemy view is an exact mirror. Without a hero on
+      // each side there is no matchup to read, which is "n/a" like the other terms, not a measured +0.0.
+      ally: counterMatches.length > 0 ? points(residual[2], 2) : undefined,
+      enemy: counterMatches.length > 0 ? -points(residual[2], 2) : undefined,
       matches: minOf(counterMatches),
     },
   ];
@@ -605,8 +606,8 @@ export function analyzeDraft(draft: Draft, index: StatsIndex): DraftAnalysis {
       key: "lanes",
       label: "Lane matchups",
       value: points(residual[3], 3),
-      ally: points(residual[3], 3),
-      enemy: -points(residual[3], 3),
+      ally: duelMatches.length > 0 ? points(residual[3], 3) : undefined,
+      enemy: duelMatches.length > 0 ? -points(residual[3], 3) : undefined,
       matches: minOf(duelMatches),
     });
   }

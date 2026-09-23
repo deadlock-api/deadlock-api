@@ -9,6 +9,8 @@ export interface StatDefinition {
   key: keyof AnalyticsGameStats;
   label: string;
   format: StatFormat;
+  /** A fall is the good news (abandons), so the change badge colours a drop positive. */
+  lowerIsBetter?: boolean;
 }
 
 export interface StatCategory {
@@ -23,7 +25,7 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
       { key: "total_matches", label: "Total Matches", format: "integer" },
       { key: "total_players", label: "Total Players", format: "integer" },
       { key: "avg_duration_s", label: "Avg Duration", format: "duration" },
-      { key: "abandon_rate", label: "Abandon Rate", format: "percent" },
+      { key: "abandon_rate", label: "Abandon Rate", format: "percent", lowerIsBetter: true },
       { key: "mid_boss_kill_rate", label: "Mid Boss Kill Rate", format: "percent" },
       { key: "avg_first_mid_boss_time_s", label: "Avg First Mid Boss", format: "duration" },
       {
