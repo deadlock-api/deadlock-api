@@ -4,6 +4,7 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 import * as React from "react";
 
 import { Button } from "~/components/ui/button";
+import { FieldLabelContext } from "~/components/ui/hooks/use-field-control";
 import { DIALOG_CONTENT, DIALOG_OVERLAY } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
@@ -57,33 +58,36 @@ function DialogContent({
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
-      <DialogPrimitive.Content
-        data-slot="dialog-content"
-        data-size={size}
-        className={cn(dialogContentVariants({ size }), className)}
-        onOpenAutoFocus={(event) => {
-          opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-          onOpenAutoFocus?.(event);
-        }}
-        onCloseAutoFocus={(event) => {
-          onCloseAutoFocus?.(event);
-          const element = opener.current;
-          if (event.defaultPrevented || !element?.isConnected || element === document.body) return;
-          event.preventDefault();
-          element.focus();
-        }}
-        {...props}
-      >
-        {children}
-        {showCloseButton && (
-          <DialogPrimitive.Close asChild>
-            <Button data-slot="dialog-close" variant="ghost" size="icon-sm" className="absolute end-2 top-2">
-              <XIcon />
-              <span className="sr-only">Close</span>
-            </Button>
-          </DialogPrimitive.Close>
-        )}
-      </DialogPrimitive.Content>
+      {/* A dialog opened from inside a Field is not labelled by it. */}
+      <FieldLabelContext value={null}>
+        <DialogPrimitive.Content
+          data-slot="dialog-content"
+          data-size={size}
+          className={cn(dialogContentVariants({ size }), className)}
+          onOpenAutoFocus={(event) => {
+            opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            onOpenAutoFocus?.(event);
+          }}
+          onCloseAutoFocus={(event) => {
+            onCloseAutoFocus?.(event);
+            const element = opener.current;
+            if (event.defaultPrevented || !element?.isConnected || element === document.body) return;
+            event.preventDefault();
+            element.focus();
+          }}
+          {...props}
+        >
+          {children}
+          {showCloseButton && (
+            <DialogPrimitive.Close asChild>
+              <Button data-slot="dialog-close" variant="ghost" size="icon-sm" className="absolute end-2 top-2">
+                <XIcon />
+                <span className="sr-only">Close</span>
+              </Button>
+            </DialogPrimitive.Close>
+          )}
+        </DialogPrimitive.Content>
+      </FieldLabelContext>
     </DialogPortal>
   );
 }
