@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AnswerOption, revealedState } from "~/components/domain/minigames/AnswerOption";
 import {
+  AnswerKeysHint,
   EMPTY_FLASHCARD_STATS,
   FlashcardMastered,
   FlashcardPage,
@@ -14,6 +15,7 @@ import {
   PromptFrame,
   ResultMark,
 } from "~/components/features/flashcards/FlashcardChrome";
+import { useAnswerKeys } from "~/components/features/flashcards/use-answer-keys";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -300,6 +302,15 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
     [card, selected, seenIds, pool],
   );
 
+  const pickByKey = useCallback(
+    (index: number) => {
+      const option = card?.options[index];
+      if (option) handleChoice(option.key);
+    },
+    [card, handleChoice],
+  );
+  useAnswerKeys(card?.options.length ?? 0, pickByKey, selected === null);
+
   const empty = pool.length === 0;
   const exhausted = noRepeats && pool.length > 0 && seenIds.size >= pool.length;
 
@@ -391,6 +402,7 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
                 </AnswerOption>
               ))}
             </div>
+            <AnswerKeysHint count={card.options.length} />
           </motion.div>
         </AnimatePresence>
       )}

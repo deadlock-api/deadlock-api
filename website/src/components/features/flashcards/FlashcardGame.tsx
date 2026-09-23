@@ -11,6 +11,7 @@ import { readLocalStorage, writeLocalStorage } from "~/lib/local-storage";
 import { cn } from "~/lib/utils";
 
 import {
+  AnswerKeysHint,
   EMPTY_FLASHCARD_STATS,
   FlashcardMastered,
   FlashcardPage,
@@ -19,6 +20,7 @@ import {
   PromptFrame,
   ResultMark,
 } from "./FlashcardChrome";
+import { useAnswerKeys } from "./use-answer-keys";
 
 const OPTION_COUNT = 4;
 const CORRECT_FEEDBACK_MS = 500;
@@ -177,6 +179,15 @@ function FlashcardGameReady<T extends FlashcardEntry>({
     [card, selected, pool, seenIds],
   );
 
+  const pickByKey = useCallback(
+    (index: number) => {
+      const option = card?.options[index];
+      if (option) handleChoice(option.id);
+    },
+    [card, handleChoice],
+  );
+  useAnswerKeys(card?.options.length ?? 0, pickByKey, selected === null);
+
   const redraw = useCallback(() => {
     if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current);
     setSelected(null);
@@ -269,6 +280,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
                 </AnswerOption>
               ))}
             </div>
+            <AnswerKeysHint count={card.options.length} />
           </motion.div>
         </AnimatePresence>
       )}

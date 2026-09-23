@@ -5,6 +5,7 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { CheckboxField } from "~/components/ui/checkbox-field";
 import { IconTile } from "~/components/ui/icon-tile";
+import { Kbd } from "~/components/ui/kbd";
 import { Stack } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
 
@@ -136,4 +137,14 @@ export function PromptFrame({
   ...props
 }: Omit<React.ComponentProps<typeof Card>, "tone" | "size"> & { verdict: "correct" | "wrong" | null }) {
   return <Card tone={verdict ? VERDICT_TONE[verdict] : "card"} size="flush" className={className} {...props} />;
+}
+
+/** Tells keyboard users the number keys answer. Hidden on touch screens, which have no number row to press. */
+export function AnswerKeysHint({ count }: { count: number }) {
+  if (count < 2) return null;
+  return (
+    <p className="hidden items-center justify-center gap-1.5 text-xs text-muted-foreground pointer-fine:flex">
+      Press <Kbd>1</Kbd>–<Kbd>{count}</Kbd> to answer
+    </p>
+  );
 }
