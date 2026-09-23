@@ -127,7 +127,15 @@ function BadgeDistributionPage() {
 
   return (
     <PageShell height="viewport">
-      <PageHeader title="Deadlock Rank Distribution" description="Average match rank distribution across all badges">
+      <PageHeader
+        title="Deadlock Rank Distribution"
+        // Follows the metric: "players" counts players per badge of their matches' average rank, not matches.
+        description={
+          metric === "players"
+            ? "Players by the average rank of their matches, badge by badge"
+            : "Matches by their average rank, badge by badge"
+        }
+      >
         {rankNames.length > 1 && (
           <p>
             Deadlock ranks climb from {rankNames.slice(0, -1).join(", ")} to {rankNames.at(-1)}, with every rank except{" "}
