@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 
 import { TrackerAccountList } from "~/components/features/tracker/shared/TrackerAccountList";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
@@ -36,8 +36,16 @@ function TrackerRoute() {
 }
 
 function MyAccountsCard() {
-  const { isAuthenticated, isActive, isLoading, isResolved, statusError, refreshStatus, totalSlots } = usePatronAuth();
-  const [retryingStatus, setRetryingStatus] = useState(false);
+  const {
+    isAuthenticated,
+    isActive,
+    isLoading,
+    isResolved,
+    statusError,
+    isRefreshingStatus,
+    refreshStatus,
+    totalSlots,
+  } = usePatronAuth();
 
   const accountsQuery = useQuery({ ...steamAccountsQueryOptions(), enabled: isAuthenticated });
   const activeAccounts = useMemo(
@@ -73,11 +81,8 @@ function MyAccountsCard() {
           <ErrorState
             title="Could not check your sign-in"
             description="The Patreon status is temporarily unavailable. Try again in a moment."
-            onRetry={() => {
-              setRetryingStatus(true);
-              void refreshStatus().finally(() => setRetryingStatus(false));
-            }}
-            retrying={retryingStatus}
+            onRetry={() => void refreshStatus()}
+            retrying={isRefreshingStatus}
           />
         ) : isLoading ||
           !isResolved ||

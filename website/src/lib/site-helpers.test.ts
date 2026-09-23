@@ -7,6 +7,7 @@ import { formatSignedPercent } from "./format";
 import { parsePreferencesCookie } from "./preferences";
 import { serializeJsonLd } from "./seo";
 import { headersFor, parseHeadersFile } from "./static-headers";
+import { parseSteamIdInput } from "./steam";
 import { compactNumber } from "./team-builder/format";
 
 test("inline JSON-LD cannot close its script tag", () => {
@@ -67,4 +68,19 @@ test("puzzle dates must be real calendar days", () => {
 test("blog dates are calendar days, the same in every timezone", () => {
   assert.equal(formatBlogDate("2026-03-22"), "March 22, 2026");
   assert.equal(formatBlogDate("2026-01-01"), "January 1, 2026");
+});
+
+test("the add-account form reads every common Steam ID form", () => {
+  for (const input of [
+    "76561197960287930",
+    "22202",
+    "[U:1:22202]",
+    "STEAM_0:0:11101",
+    "https://steamcommunity.com/profiles/76561197960287930/",
+  ]) {
+    assert.deepEqual(parseSteamIdInput(input), { steamId3: 22202 }, input);
+  }
+  for (const input of ["0", "abc", "99999999999", "https://steamcommunity.com/id/gabelogannewell"]) {
+    assert.ok("error" in parseSteamIdInput(input), input);
+  }
 });

@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Lock, ShieldX } from "lucide-react";
-import { useState } from "react";
 
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -32,9 +31,17 @@ function GateCard({ icon, title, children }: { icon: React.ReactNode; title: str
 }
 
 export function TrackerGate({ accountId, children }: { accountId: number; children: React.ReactNode }) {
-  const { isAuthenticated, isActive, isLoading, isResolved, statusError, refreshStatus, login, totalSlots } =
-    usePatronAuth();
-  const [retryingStatus, setRetryingStatus] = useState(false);
+  const {
+    isAuthenticated,
+    isActive,
+    isLoading,
+    isResolved,
+    statusError,
+    isRefreshingStatus,
+    refreshStatus,
+    login,
+    totalSlots,
+  } = usePatronAuth();
   // An inactive membership can still hold prioritized account slots (e.g. a slot override).
   const hasSlots = isActive || totalSlots > 0;
 
@@ -58,11 +65,8 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
         <ErrorState
           title="Could not check your sign-in"
           description="The Patreon status is temporarily unavailable. Try again in a moment."
-          onRetry={() => {
-            setRetryingStatus(true);
-            void refreshStatus().finally(() => setRetryingStatus(false));
-          }}
-          retrying={retryingStatus}
+          onRetry={() => void refreshStatus()}
+          retrying={isRefreshingStatus}
         />
       </div>
     );

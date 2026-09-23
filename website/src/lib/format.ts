@@ -60,7 +60,8 @@ export function formatCooldownRemaining(deletedAt: string): string | null {
   if (remainingHours > 0) {
     return `${remainingHours}h ${remainingMinutes}m`;
   }
-  return `${remainingMinutes}m`;
+  // The last minute read as "0m", as if the cooldown were already over.
+  return remainingMinutes > 0 ? `${remainingMinutes}m` : "< 1m";
 }
 
 /** Formats a ratio in `[0,1]` as a percentage, e.g. `52.6%`. */

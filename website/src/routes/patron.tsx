@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { AuthenticatedDashboard, PatronPageSkeleton } from "~/components/features/patron/AuthenticatedDashboard";
 import { UnauthenticatedState } from "~/components/features/patron/UnauthenticatedState";
+import { PageShell } from "~/components/patterns/page/PageShell";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 import { usePatronAuth } from "~/hooks/usePatronAuth";
 import { seo } from "~/lib/seo";
@@ -25,10 +27,24 @@ function PatronRoute() {
 }
 
 function PatronPage() {
-  const { isAuthenticated, isLoading, login } = usePatronAuth();
+  const { isAuthenticated, isLoading, statusError, isRefreshingStatus, refreshStatus, login } = usePatronAuth();
 
   if (isLoading) {
     return <PatronPageSkeleton />;
+  }
+
+  // An outage is not a sign-out: the sign-in pitch would ask a patron to log in again.
+  if (statusError) {
+    return (
+      <PageShell>
+        <ErrorState
+          title="Could not check your sign-in"
+          description="The Patreon status is temporarily unavailable. Try again in a moment."
+          onRetry={() => void refreshStatus()}
+          retrying={isRefreshingStatus}
+        />
+      </PageShell>
+    );
   }
 
   if (!isAuthenticated) {

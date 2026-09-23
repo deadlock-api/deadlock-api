@@ -13,6 +13,9 @@ import { Stat, StatGroup } from "~/components/ui/stat";
 import { formatCurrency, formatDate } from "~/lib/format";
 import { usePatronStatus } from "~/queries/patron-queries";
 
+/** The API caps a pledge at 50 prioritized accounts (`calculate_slot_limit`). */
+const MAX_SLOTS = 50;
+
 function PatronStatusCardSkeleton() {
   return (
     <Card>
@@ -78,7 +81,7 @@ export function PatronStatusCard() {
   const { is_active, pledge_amount_cents, last_verified_at, steam_accounts_summary, total_slots } = status;
   const { active_count, cooldown_count, available_slots } = steam_accounts_summary;
   const usedSlots = active_count + cooldown_count;
-  const canUpgrade = total_slots < 10;
+  const canUpgrade = total_slots < MAX_SLOTS;
 
   return (
     <Card>
@@ -136,7 +139,7 @@ export function PatronStatusCard() {
           <CalloutCard
             as="h3"
             title="Want to prioritize more accounts?"
-            description={`Each additional $1.50/month unlocks another slot. You can add up to ${50 - total_slots} more.`}
+            description={`Each additional $1.50/month unlocks another slot. You can add up to ${MAX_SLOTS - total_slots} more.`}
             action={
               <Button size="lg" asChild>
                 <a href="https://www.patreon.com/c/manuelhexe" target="_blank" rel="noopener noreferrer">

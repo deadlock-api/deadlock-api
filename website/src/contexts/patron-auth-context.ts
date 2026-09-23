@@ -16,6 +16,8 @@ export interface PatronAuthState {
    * treat it as signed out: an outage would send patrons to the demo or the sign-in prompt.
    */
   statusError: boolean;
+  /** The status is being requested again, e.g. after `refreshStatus`. */
+  isRefreshingStatus: boolean;
   isLoggingOut: boolean;
 }
 

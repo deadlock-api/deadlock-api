@@ -186,7 +186,7 @@ function AccountRow({
   account: SteamAccount;
   onDelete: () => void;
   isDeleting: boolean;
-  onReplace: (steamId3: number) => void;
+  onReplace: (steamId3: number) => Promise<void>;
   isReplacing: boolean;
   onReactivate: () => void;
   isReactivating: boolean;
@@ -291,24 +291,16 @@ export function SteamAccountsList() {
       onSuccess: () => {
         toast.success("Steam account removed successfully");
       },
-      onError: () => {
-        toast.error("Failed to remove Steam account");
+      onError: (error) => {
+        toast.error("Failed to remove Steam account", { description: error.message });
       },
     });
   };
 
-  const handleReplaceAccount = (accountId: string, steamId3: number) => {
-    replaceSteamAccountMutation.mutate(
-      { accountId, steamId3 },
-      {
-        onSuccess: () => {
-          toast.success("Steam account replaced successfully");
-        },
-        onError: () => {
-          toast.error("Failed to replace Steam account");
-        },
-      },
-    );
+  // Resolves once the replacement is saved, so the dialog stays open (with the typed ID) until then.
+  const handleReplaceAccount = async (accountId: string, steamId3: number) => {
+    await replaceSteamAccountMutation.mutateAsync({ accountId, steamId3 });
+    toast.success("Steam account replaced successfully");
   };
 
   const handleReactivateAccount = (accountId: string) => {
@@ -316,8 +308,8 @@ export function SteamAccountsList() {
       onSuccess: () => {
         toast.success("Steam account reactivated successfully");
       },
-      onError: () => {
-        toast.error("Failed to reactivate Steam account");
+      onError: (error) => {
+        toast.error("Failed to reactivate Steam account", { description: error.message });
       },
     });
   };

@@ -25,6 +25,27 @@ export function parseSteamIdToId3(input: string): string {
 }
 
 /**
+ * Validate and parse a Steam ID input: a SteamID64, an account ID, `[U:1:x]`, `STEAM_x:y:z`, or a
+ * steamcommunity.com/profiles/<id64> link.
+ */
+export function parseSteamIdInput(input: string): { steamId3: number } | { error: string } {
+  const trimmed = input.trim();
+  if (!trimmed) return { error: "Steam ID is required" };
+
+  const profile = /steamcommunity\.com\/profiles\/(\d+)/i.exec(trimmed);
+  if (/steamcommunity\.com\/id\//i.test(trimmed)) {
+    return { error: "Custom profile links cannot be read. Paste your SteamID64 or account ID instead." };
+  }
+  const parsed = parseSteamIdToId3(profile ? profile[1] : trimmed);
+  if (!/^\d+$/.test(parsed)) {
+    return { error: "Enter a SteamID64, an account ID, [U:1:…], STEAM_0:…, or a steamcommunity.com/profiles/ link" };
+  }
+  const steamId3 = Number(parsed);
+  if (steamId3 === 0 || BigInt(steamId3) > MAX_ACCOUNT_ID) return { error: "Invalid Steam ID" };
+  return { steamId3 };
+}
+
+/**
  * Convert a SteamID64 to SteamID3
  */
 export function steamId64ToSteamId3(steamId64: string): number {

@@ -159,45 +159,6 @@ export function steamId3ToSteamId64(steamId3: number): string {
 }
 
 /**
- * Validate and parse a Steam ID input (accepts both SteamID64 and SteamID3)
- * @param input - The user input string
- * @returns Object with parsed steamId3 and detected format, or error message
- */
-export function parseSteamIdInput(input: string): { steamId3: number; format: "id64" | "id3" } | { error: string } {
-  const trimmed = input.trim();
-
-  if (!trimmed) {
-    return { error: "Steam ID is required" };
-  }
-
-  // Check if it's a valid number
-  if (!/^\d+$/.test(trimmed)) {
-    return { error: "Steam ID must contain only digits" };
-  }
-
-  const value = BigInt(trimmed);
-
-  // SteamID64 is 17 digits starting with 7656119
-  if (trimmed.length === 17 && trimmed.startsWith("7656119")) {
-    const id3 = Number(value - STEAM_ID_64_BASE);
-    if (id3 < 0 || id3 > 4294967295) {
-      return { error: "Invalid SteamID64" };
-    }
-    return { steamId3: id3, format: "id64" };
-  }
-
-  // SteamID3 is a 32-bit unsigned integer (0 to 4,294,967,295)
-  const id3 = Number(value);
-  if (id3 < 0 || id3 > 4294967295) {
-    return {
-      error: "Invalid Steam ID. Must be a valid SteamID64 (17 digits) or SteamID3 (0-4,294,967,295)",
-    };
-  }
-
-  return { steamId3: id3, format: "id3" };
-}
-
-/**
  * Fetches the Steam profile card for a given account.
  * Uses the generated PlayersApi client. Public endpoint — no auth required.
  * Throws BotNotFriendError if the account hasn't friended a bot yet.

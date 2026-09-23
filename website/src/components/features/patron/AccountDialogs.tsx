@@ -18,7 +18,7 @@ import { Field } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
 import { Stack } from "~/components/ui/stack";
-import { parseSteamIdInput } from "~/lib/patron-api";
+import { parseSteamIdInput } from "~/lib/steam";
 
 export function DeleteAccountDialog({
   steamId3,
@@ -69,7 +69,8 @@ export function ReplaceAccountDialog({
   isReplacing,
 }: {
   oldSteamId3: number;
-  onReplace: (steamId3: number) => void;
+  /** Rejects with the reason when the replacement is refused; the dialog then stays open and shows it. */
+  onReplace: (steamId3: number) => Promise<void>;
   isReplacing: boolean;
 }) {
   const [steamIdInput, setSteamIdInput] = useState("");
@@ -91,13 +92,18 @@ export function ReplaceAccountDialog({
     }
   };
 
-  const handleReplace = () => {
+  const handleReplace = (event: React.MouseEvent) => {
+    // The action would close the dialog at once; it closes only when the replacement is saved.
+    event.preventDefault();
     const result = parseSteamIdInput(steamIdInput);
     if ("error" in result) {
       setValidationError(result.error);
       return;
     }
-    onReplace(result.steamId3);
+    onReplace(result.steamId3).then(
+      () => handleOpenChange(false),
+      (error: unknown) => setValidationError(error instanceof Error ? error.message : "Could not replace the account"),
+    );
   };
 
   const isInputValid = steamIdInput.trim() !== "" && validationError === null;
@@ -130,7 +136,7 @@ export function ReplaceAccountDialog({
                 <Input
                   id={inputId}
                   type="text"
-                  placeholder="Enter SteamID64 (17 digits) or SteamID3"
+                  placeholder="SteamID64, account ID, or profile link"
                   value={steamIdInput}
                   onChange={(e) => handleInputChange(e.target.value)}
                   disabled={isReplacing}

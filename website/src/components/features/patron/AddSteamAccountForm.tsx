@@ -11,7 +11,7 @@ import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import { Stack } from "~/components/ui/stack";
-import { parseSteamIdInput } from "~/lib/patron-api";
+import { parseSteamIdInput } from "~/lib/steam";
 import { useAddSteamAccount, usePatronStatus } from "~/queries/patron-queries";
 
 function SteamIdFormatHelper() {
@@ -100,8 +100,8 @@ export function AddSteamAccountForm() {
         setSteamIdInput("");
         setValidationError(null);
       },
-      onError: () => {
-        toast.error("Failed to add Steam account");
+      onError: (error) => {
+        toast.error("Failed to add Steam account", { description: error.message });
       },
     });
   };
@@ -130,7 +130,7 @@ export function AddSteamAccountForm() {
             <Input
               id={inputId}
               type="text"
-              placeholder="Enter SteamID64 (17 digits) or SteamID3"
+              placeholder="SteamID64, account ID, or profile link"
               value={steamIdInput}
               onChange={(e) => handleInputChange(e.target.value)}
               disabled={addSteamAccountMutation.isPending}

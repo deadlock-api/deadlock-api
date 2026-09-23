@@ -935,3 +935,45 @@ test("the tracker landing page lists accounts when a patron has more than one", 
   await expect(accounts.getByRole("link", { name: `Player ${ACCOUNT_ID + 1}` })).toBeVisible();
   await expect(page).toHaveURL(/\/tracker$/);
 });
+
+test("a Patreon status outage offers a retry instead of treating the patron as signed out", async ({ page }) => {
+  let available = false;
+  await page.route(`${API_ORIGIN}/v1/patron/status`, (route) =>
+    available ? route.fulfill({ status: 401, json: {} }) : route.fulfill({ status: 503, body: "down" }),
+  );
+  await page.goto("/tracker");
+  await expect(page.getByText("Could not check your sign-in", { exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page).toHaveURL(/\/tracker$/);
+  available = true;
+  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(page).toHaveURL(/\/tracker\/demo/);
+});
+
+test("replacing a removed account keeps the dialog open with the API's reason when it is refused", async ({ page }) => {
+  await page.route(`${API_ORIGIN}/v1/patron/status`, (route) => route.fulfill({ json: patronStatus }));
+  await page.route(`${API_ORIGIN}/v1/patron/steam-accounts`, (route) =>
+    route.fulfill({
+      json: {
+        accounts: [steamAccount(ACCOUNT_ID), steamAccount(ACCOUNT_ID + 1, "2026-09-01T00:00:00Z")],
+        summary: { total_slots: 2, used_slots: 1, available_slots: 1, slots_in_cooldown: 0 },
+      },
+    }),
+  );
+  let replaced = false;
+  await page.route(`${API_ORIGIN}/v1/patron/steam-accounts/${ACCOUNT_ID + 1}`, (route) => {
+    if (route.request().method() !== "PUT") return route.fallback();
+    if (replaced) return route.fulfill({ json: steamAccount(22202) });
+    replaced = true;
+    return route.fulfill({ status: 409, json: { message: "This Steam account is already linked" } });
+  });
+  await page.goto("/patron");
+  await page.getByRole("button", { name: "Replace account", exact: true }).click();
+  const dialog = page.getByRole("alertdialog");
+  await dialog.getByRole("textbox").fill("https://steamcommunity.com/profiles/76561197960287930/");
+  await dialog.getByRole("button", { name: "Replace Account", exact: true }).click();
+  await expect(dialog.getByText("This Steam account is already linked")).toBeVisible();
+  await expect(dialog.getByRole("textbox")).toHaveValue("https://steamcommunity.com/profiles/76561197960287930/");
+  await dialog.getByRole("textbox").fill("[U:1:22202]");
+  await dialog.getByRole("button", { name: "Replace Account", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+});
