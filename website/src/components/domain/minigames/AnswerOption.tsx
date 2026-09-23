@@ -2,6 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { type HTMLMotionProps, motion } from "framer-motion";
 import { Check, X } from "lucide-react";
 
+import { Kbd } from "~/components/ui/kbd";
 import { FOCUS_RING_BORDER } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
@@ -51,6 +52,12 @@ export function revealedState(correct: boolean, picked: boolean): AnswerOptionSt
 interface AnswerOptionProps
   extends Omit<HTMLMotionProps<"button">, "children">, VariantProps<typeof answerOptionVariants> {
   children: React.ReactNode;
+  /**
+   * The key that picks this answer, e.g. "1": drawn as a keycap in front of the text on devices with a fine pointer
+   * (a touch screen has no number row), and announced through `aria-keyshortcuts` rather than read as part of the name.
+   * The game listens for the key itself.
+   */
+  shortcut?: string;
 }
 
 /** One answer of a quiz, in every game. The result is carried by a mark as well as by color. */
@@ -61,6 +68,7 @@ export function AnswerOption({
   className,
   children,
   disabled,
+  shortcut,
   ...props
 }: AnswerOptionProps) {
   return (
@@ -73,9 +81,19 @@ export function AnswerOption({
       whileTap={disabled ? undefined : { scale: 0.97, transition: { duration: 0 } }}
       transition={{ type: "spring", stiffness: 400, damping: 17 }}
       className={cn(answerOptionVariants({ state, variant, tone }), className)}
+      aria-keyshortcuts={shortcut}
       {...props}
     >
-      {children}
+      {shortcut ? (
+        <span className="flex min-w-0 items-center gap-3">
+          <Kbd aria-hidden="true" className="hidden pointer-fine:inline-flex">
+            {shortcut}
+          </Kbd>
+          {children}
+        </span>
+      ) : (
+        children
+      )}
       {variant === "row" && state === "correct" && <Check aria-label="Correct" className="size-4 shrink-0" />}
       {variant === "row" && state === "wrong" && <X aria-label="Wrong" className="size-4 shrink-0" />}
     </motion.button>

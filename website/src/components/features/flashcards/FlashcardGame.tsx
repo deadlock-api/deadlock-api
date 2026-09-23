@@ -11,7 +11,6 @@ import { readLocalStorage, writeLocalStorage } from "~/lib/local-storage";
 import { cn } from "~/lib/utils";
 
 import {
-  AnswerKeysHint,
   EMPTY_FLASHCARD_STATS,
   FlashcardMastered,
   FlashcardPage,
@@ -274,13 +273,13 @@ function FlashcardGameReady<T extends FlashcardEntry>({
                     selected === null ? "idle" : revealedState(option.id === card.answer.id, option.id === selected)
                   }
                   onClick={() => handleChoice(option.id)}
+                  shortcut={String(index + 1)}
                   disabled={selected !== null}
                 >
                   {renderOption(option)}
                 </AnswerOption>
               ))}
             </div>
-            <AnswerKeysHint count={card.options.length} />
           </motion.div>
         </AnimatePresence>
       )}

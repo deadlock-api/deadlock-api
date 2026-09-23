@@ -21,13 +21,20 @@ export function DomainMinigames() {
       <Specimen
         name="AnswerOption"
         source="domain/minigames/AnswerOption"
-        note="One answer of a quiz, in every game. row is a full-width answer with a trailing result mark; tile is one of a few short choices on a line. After the reveal, revealedState() maps each option to correct, wrong or dimmed."
+        note="One answer of a quiz, in every game. row is a full-width answer with a trailing result mark; tile is one of a few short choices on a line. After the reveal, revealedState() maps each option to correct, wrong or dimmed. shortcut draws the key that picks it as a keycap in front of the text (fine pointers only) and sets aria-keyshortcuts; the game listens for the key."
         className="theme-terminal"
       >
         <Variants label="row · idle, selected, correct, wrong, dimmed" className="max-w-lg flex-col items-stretch">
           {ANSWER_STATES.map((state) => (
             <AnswerOption key={state} state={state} disabled={state !== "idle" && state !== "selected"}>
               {state}
+            </AnswerOption>
+          ))}
+        </Variants>
+        <Variants label="row · shortcut" className="max-w-lg flex-col items-stretch">
+          {["Haze", "Vindicta", "Seven"].map((name, i) => (
+            <AnswerOption key={name} shortcut={String(i + 1)}>
+              {name}
             </AnswerOption>
           ))}
         </Variants>

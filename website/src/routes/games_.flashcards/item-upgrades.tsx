@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AnswerOption, revealedState } from "~/components/domain/minigames/AnswerOption";
 import {
-  AnswerKeysHint,
   EMPTY_FLASHCARD_STATS,
   FlashcardMastered,
   FlashcardPage,
@@ -386,7 +385,7 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
             </PromptFrame>
 
             <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
-              {card.options.map((option) => (
+              {card.options.map((option, index) => (
                 <AnswerOption
                   key={option.key}
                   state={
@@ -395,6 +394,7 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
                       : revealedState(option.key === card.answer.answerKey, option.key === selected)
                   }
                   onClick={() => handleChoice(option.key)}
+                  shortcut={String(index + 1)}
                   disabled={selected !== null}
                   className="min-h-20 px-3"
                 >
@@ -402,7 +402,6 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
                 </AnswerOption>
               ))}
             </div>
-            <AnswerKeysHint count={card.options.length} />
           </motion.div>
         </AnimatePresence>
       )}
