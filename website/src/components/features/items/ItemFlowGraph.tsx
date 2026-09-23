@@ -425,12 +425,18 @@ export function ItemFlowGraph({
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   // Locks are scoped to a stage, keyed by `${column}:${itemId}`. Persisted in the URL so a
   // build path can be shared via link.
-  const [locked, setLocked] = useQueryState("build_path", parseAsArrayOf(parseAsString).withDefault([]));
+  const [storedLocked, setLocked] = useQueryState("build_path", parseAsArrayOf(parseAsString).withDefault([]));
 
   const isStreetBrawl = gameMode === "street_brawl";
   // Street Brawl has no adjusted win rate to show or pick; a kept `flow_sort=winrate_adj` ordered its cards by it.
   const cardSort = isStreetBrawl && sortBy === "winrate_adj" ? "pickrate" : sortBy;
   const columnCount = isStreetBrawl ? STREET_BRAWL_ROUNDS : PHASE_COUNT;
+  // A lock from the other mode's stages (Street Brawl round 7 in a four-phase normal graph) padded the graph with
+  // empty columns and sent the API a column it does not have; only locks this mode can hold apply.
+  const locked = useMemo(
+    () => storedLocked.filter((key) => Number(key.split(":")[0]) < columnCount),
+    [storedLocked, columnCount],
+  );
 
   const [wrapperRef, containerWidth] = useContainerWidth();
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
