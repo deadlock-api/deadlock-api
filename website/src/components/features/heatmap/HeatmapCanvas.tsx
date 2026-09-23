@@ -11,6 +11,8 @@ import { buildHeatGrids, COLOR_LUT, GRID_RES, normalizeHeatGrids, sampleBilinear
 import { HeatmapLegend } from "./HeatmapLegend";
 import { SensitivitySlider } from "./SensitivitySlider";
 
+const UNSIZED = { width: 0, height: 0 };
+
 type ViewMode = "kills" | "deaths" | "kd";
 
 interface TooltipState {
@@ -226,11 +228,14 @@ export default function HeatmapCanvas({
     // The tooltip sits outside the stage, which clips what leaves it.
     <div ref={containerRef} className="relative size-full">
       <ChartStage className="flex items-center justify-center">
-        <canvas ref={mapCanvasRef} aria-hidden="true" className="absolute" />
+        {/* No area until the first draw sizes them (the style never changes, so React leaves the drawn size alone):
+            at the browser's default 300×150 they would jump across the stage when sized. */}
+        <canvas ref={mapCanvasRef} aria-hidden="true" className="absolute" style={UNSIZED} />
         <canvas
           ref={heatCanvasRef}
           aria-hidden="true"
           className="absolute"
+          style={UNSIZED}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
         />
