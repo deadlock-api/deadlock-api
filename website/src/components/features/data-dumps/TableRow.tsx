@@ -111,15 +111,17 @@ export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matc
         </Stack>
       }
     >
-      <TableCell>
+      <TableCell className="whitespace-normal">
         <span className="inline-flex flex-wrap items-center gap-2 font-medium text-foreground">
-          <ExpandableRowToggle label={table.name} />
-          {table.policy === "incremental" ? (
-            <Layers className="size-4 text-primary/80" />
-          ) : (
-            <File className="size-4 text-primary/80" />
-          )}
-          {table.name}
+          <span className="inline-flex min-w-0 items-center gap-2">
+            <ExpandableRowToggle label={table.name} />
+            {table.policy === "incremental" ? (
+              <Layers className="size-4 shrink-0 text-primary/80" />
+            ) : (
+              <File className="size-4 shrink-0 text-primary/80" />
+            )}
+            <span className="min-w-0 wrap-anywhere">{table.name}</span>
+          </span>
           <Badge variant="muted" size="sm" className="font-mono">
             {table.policy === "incremental" ? "hourly incremental" : "hourly snapshot"}
           </Badge>

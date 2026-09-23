@@ -157,7 +157,7 @@ function DataDumps() {
             // The raw text, not the trimmed `search`: trimming the field's own value would eat the space between words.
             value={searchParam ?? ""}
             onValueChange={(v) => setSearch(v || null)}
-            className="w-full sm:ms-auto sm:w-56"
+            className="w-full sm:ms-auto sm:w-64"
           />
         </Inline>
 
