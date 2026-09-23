@@ -164,8 +164,8 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
     const url = `${SITE_URL}/analytics/items/${slug}`;
     const usage = summary?.usage !== undefined ? ` and shows up in ${formatPercent(summary.usage)} of builds` : "";
     const description = summary
-      ? `${itemName} wins ${formatPercent(summary.winRate)} of Deadlock ranked matches (#${summary.rank} of ${summary.itemCount} items)${usage}. Best heroes, common pairings, and buy timing, updated daily.`
-      : `${itemName} win rate, best heroes, common pairings, and buy timing in Deadlock. Live stats from tracked ranked matches, updated daily.`;
+      ? `${itemName} wins ${formatPercent(summary.winRate)} of Deadlock matches (#${summary.rank} of ${summary.itemCount} items)${usage}. Best heroes, common pairings, and buy timing, updated daily.`
+      : `${itemName} win rate, best heroes, common pairings, and buy timing in Deadlock. Live stats from tracked matches, updated daily.`;
     return seo({
       title: `${itemName} Win Rate & Best Heroes | Deadlock`,
       description,
@@ -175,7 +175,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
         "@context": "https://schema.org",
         "@type": "Dataset",
         name: `${itemName} Win Rate & Best Heroes | Deadlock`,
-        description: `Win rate, purchase rate, buy timing, best heroes, and common pairings for the tier ${tier} ${slot} item ${itemName} in Deadlock, calculated from tracked ranked matches and updated daily.`,
+        description: `Win rate, purchase rate, buy timing, best heroes, and common pairings for the tier ${tier} ${slot} item ${itemName} in Deadlock, calculated from tracked matches and updated daily.`,
         url,
         keywords: ["Deadlock", itemName, "item", "win rate", "build"],
         creator: { "@type": "Organization", name: "Deadlock API", url: SITE_URL },
@@ -221,7 +221,7 @@ function ItemDetailPage() {
           In the current patch, players who buy {itemName} win{" "}
           <span className="font-semibold text-foreground">{formatPercent(summary.winRate)}</span> of their{" "}
           <span className="font-semibold text-foreground">{summary.matches.toLocaleString("en-US")}</span> tracked
-          ranked matches
+          matches
           {summary.usage !== undefined && (
             <>
               , and it shows up in <span className="font-semibold text-foreground">{formatPercent(summary.usage)}</span>{" "}

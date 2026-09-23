@@ -200,8 +200,8 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
     const { heroName, slug, cardImage, summary } = loaderData;
     const url = `${SITE_URL}/analytics/heroes/${slug}`;
     const description = summary
-      ? `${heroName} holds a ${formatPercent(summary.winRate)} win rate (#${summary.rank} of ${summary.heroCount} heroes) and a ${formatPercent(summary.pickRate)} pick rate in Deadlock ranked matches. Live matchups, synergies, and counters, updated daily.`
-      : `${heroName} win rate, pick rate, best items, and matchups in Deadlock. Live stats from tracked ranked matches, updated daily.`;
+      ? `${heroName} holds a ${formatPercent(summary.winRate)} win rate (#${summary.rank} of ${summary.heroCount} heroes) and a ${formatPercent(summary.pickRate)} pick rate in Deadlock matches. Live matchups, synergies, and counters, updated daily.`
+      : `${heroName} win rate, pick rate, best items, and matchups in Deadlock. Live stats from tracked matches, updated daily.`;
     return seo({
       title: `${heroName} Win Rate & Pick Rate | Deadlock`,
       description,
@@ -211,7 +211,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
         "@context": "https://schema.org",
         "@type": "Dataset",
         name: `${heroName} Win Rate & Pick Rate | Deadlock`,
-        description: `Win rate, pick rate, ban rate, and matchup statistics for ${heroName} in Deadlock, calculated from tracked ranked matches and updated daily.`,
+        description: `Win rate, pick rate, ban rate, and matchup statistics for ${heroName} in Deadlock, calculated from tracked matches and updated daily.`,
         url,
         keywords: ["Deadlock", heroName, "win rate", "pick rate", "matchups"],
         creator: { "@type": "Organization", name: "Deadlock API", url: SITE_URL },
@@ -279,8 +279,8 @@ function HeroDetailPage() {
               In the current patch, {heroName} holds a{" "}
               <span className="font-semibold text-foreground">{formatPercent(summary.winRate)}</span> win rate across{" "}
               <span className="font-semibold text-foreground">{summary.matches.toLocaleString("en-US")}</span> tracked
-              ranked matches, with a{" "}
-              <span className="font-semibold text-foreground">{formatPercent(summary.pickRate)}</span> pick rate
+              matches, with a <span className="font-semibold text-foreground">{formatPercent(summary.pickRate)}</span>{" "}
+              pick rate
               {summary.banRate !== undefined && (
                 <>
                   {" "}
@@ -290,7 +290,7 @@ function HeroDetailPage() {
               . Numbers are drawn from live match data and refreshed daily.
             </>
           ) : (
-            `Live win rate, pick rate, and matchup statistics for ${heroName} in Deadlock, drawn from tracked ranked matches and updated daily.`
+            `Live win rate, pick rate, and matchup statistics for ${heroName} in Deadlock, drawn from tracked matches and updated daily.`
           )
         }
       />

@@ -63,11 +63,12 @@ export function HeroWinRateOverTime({
 
   const first = weeks[0];
   const last = weeks[weeks.length - 1];
-  const delta = last.winRate - first.winRate;
+  // From the printed (rounded) rates, so "climbed 4.5 points from 45.7% to 50.2%" adds up for the reader.
+  const delta = Number(formatPercent(last.winRate).slice(0, -1)) - Number(formatPercent(first.winRate).slice(0, -1));
   // In percentage points: "-2.3%" from 64.6% to 62.3% reads as a relative change.
-  const points = `${(Math.abs(delta) * 100).toFixed(1)} points`;
+  const points = `${Math.abs(delta).toFixed(1)} points`;
   const movement =
-    Math.abs(delta) < 0.01 ? "has held steady" : delta > 0 ? `has climbed ${points}` : `has slipped ${points}`;
+    Math.abs(delta) < 1 ? "has held steady" : delta > 0 ? `has climbed ${points}` : `has slipped ${points}`;
 
   return (
     <Section

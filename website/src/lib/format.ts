@@ -73,11 +73,15 @@ export function formatShare(ratio: number): string {
   return ratio > 0 && ratio < 0.005 ? "<1%" : formatPercent(ratio, 0);
 }
 
-/** Formats a ratio as a signed percentage, deciding the sign after rounding so a tiny change never prints as "-0.0%". */
+/**
+ * Formats a ratio as a signed percentage, deciding the sign after rounding so a tiny change never prints as "-0.0%".
+ * Negative values take the minus sign (U+2212) that `Delta` prints, so the two never sit side by side as - and −.
+ */
 export function formatSignedPercent(ratio: number, digits = 1): string {
   const factor = 10 ** digits;
   const percent = Math.round(ratio * 100 * factor) / factor;
-  return `${percent > 0 ? "+" : ""}${percent.toFixed(digits)}%`;
+  const sign = percent > 0 ? "+" : percent < 0 ? "\u2212" : "";
+  return `${sign}${Math.abs(percent).toFixed(digits)}%`;
 }
 
 /** "Toxic Bullets'" rather than "Toxic Bullets's"; item names ending in s are mostly plurals. */
