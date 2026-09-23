@@ -171,20 +171,22 @@ export function HeroCombStatsTable({
                 {!hideIndex && <TableHead className="text-center">#</TableHead>}
                 <TableHead>Hero Combination</TableHead>
                 {columns.includes("winRate") && (
-                  <TableHead className="text-center">
+                  <TableHead className="text-center whitespace-normal">
                     Win Rate
                     <br />
                     (Confidence Ranked)
                   </TableHead>
                 )}
                 {columns.includes("pickRate") && (
-                  <TableHead className="text-center">
+                  <TableHead className="hidden text-center whitespace-normal sm:table-cell">
                     Pick Rate
                     <br />
                     (Normalized)
                   </TableHead>
                 )}
-                {columns.includes("totalMatches") && <TableHead className="text-center">Total Matches</TableHead>}
+                {columns.includes("totalMatches") && (
+                  <TableHead className="hidden text-center sm:table-cell">Total Matches</TableHead>
+                )}
               </TableRow>
             </TableHeader>
           )}
@@ -256,8 +258,10 @@ export function HeroCombStatsTable({
                     </Tooltip>
                   </TableCell>
                 )}
+                {/* Pick rate and matches are secondary (the win rate tooltip has the matches): on a phone they give
+                    their width to the heroes and the win rate. */}
                 {columns.includes("pickRate") && (
-                  <TableCell className="text-center">
+                  <TableCell className="hidden text-center sm:table-cell">
                     <Tooltip
                       content={
                         <>
@@ -301,7 +305,9 @@ export function HeroCombStatsTable({
                   </TableCell>
                 )}
                 {columns.includes("totalMatches") && (
-                  <TableCell className="text-center">{row.matches.toLocaleString("en-US")}</TableCell>
+                  <TableCell className="hidden text-center sm:table-cell">
+                    {row.matches.toLocaleString("en-US")}
+                  </TableCell>
                 )}
               </TableRow>
             ))}
