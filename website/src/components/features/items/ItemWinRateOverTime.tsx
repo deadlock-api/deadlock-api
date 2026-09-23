@@ -7,6 +7,7 @@ import { type WeekEntry, WeeklyTrendChart } from "~/components/patterns/charts/W
 import { Section } from "~/components/patterns/page/Section";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { day } from "~/dayjs";
+import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
 import { api } from "~/lib/api";
 import { formatPercent, possessive } from "~/lib/format";
 import { withoutOpenTimeBucket } from "~/lib/time-buckets";
@@ -25,6 +26,7 @@ export function ItemWinRateOverTime({
   itemRequest: AnalyticsApiItemStatsRequest;
   heroRequest: AnalyticsApiHeroStatsRequest;
 }) {
+  const period = useDefaultPeriodLabel();
   const weeklyItemRequest = { ...itemRequest, bucket: "start_time_week" as const };
   const weeklyHeroRequest = { ...heroRequest, bucket: "start_time_week" as const };
   const itemQuery = useQuery({
@@ -83,8 +85,8 @@ export function ItemWinRateOverTime({
         <>
           {possessive(itemName)} win rate <span className="font-semibold text-foreground">{movement}</span> from{" "}
           {formatPercent(first.winRate)} in the week of {first.label} to {formatPercent(last.winRate)} in the week of{" "}
-          {last.label}. The solid line is win rate, the dashed line how often it is bought; both cover the current
-          season week by week.
+          {last.label}. The solid line is win rate, the dashed line how often it is bought; both cover {period} week by
+          week.
         </>
       }
     >

@@ -10,6 +10,7 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
+import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
 import { type AbilityTrieNode, buildAbilityTrie, getSortedChildren } from "~/lib/ability-order-utils";
 import { formatPercent } from "~/lib/format";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
@@ -55,6 +56,7 @@ export function HeroSkillOrder({
   heroName: string;
   request: Omit<AnalyticsApiAbilityOrderStatsRequest, "heroId">;
 }) {
+  const period = useDefaultPeriodLabel();
   const orderQuery = useQuery(abilityOrderQueryOptions({ ...request, heroId }));
   const { data: heroes } = useQuery(heroesQueryOptions);
   const { data: abilities } = useQuery(abilitiesQueryOptions);
@@ -93,8 +95,8 @@ export function HeroSkillOrder({
           The most common {heroName} build opens{" "}
           <span className="font-semibold text-foreground">{opener.join(" → ")}</span> and follows this order for its
           first {path.steps.length} upgrades.{" "}
-          <span className="font-semibold text-foreground">{formatPercent(path.share, 0)}</span> of {heroName} players in
-          the current patch level up exactly this way, winning{" "}
+          <span className="font-semibold text-foreground">{formatPercent(path.share, 0)}</span> of {heroName} players in{" "}
+          {period} level up exactly this way, winning{" "}
           <span className="font-semibold text-foreground">{formatPercent(path.winRate)}</span> of{" "}
           {path.matches.toLocaleString("en-US")} matches. The number under each ability is how many players took it
           next.

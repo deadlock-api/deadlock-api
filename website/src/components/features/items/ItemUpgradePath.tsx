@@ -9,6 +9,7 @@ import { Card } from "~/components/ui/card";
 import { Heading } from "~/components/ui/heading";
 import { Stack } from "~/components/ui/stack";
 import { TextLink } from "~/components/ui/text-link";
+import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
 import { formatPercent } from "~/lib/format";
 import { itemSlug } from "~/lib/item-slug";
 import { filterShopableItems, itemUpgradesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
@@ -61,6 +62,7 @@ export function ItemUpgradePath({
   itemName: string;
   request: AnalyticsApiItemStatsRequest;
 }) {
+  const period = useDefaultPeriodLabel();
   const { data: allItems } = useQuery(itemUpgradesQueryOptions);
   const { data: stats } = useQuery(itemStatsQueryOptions(request));
 
@@ -94,10 +96,7 @@ export function ItemUpgradePath({
   );
 
   return (
-    <Section
-      title={`${itemName} Upgrade Path`}
-      description={`${itemName} ${summary}. Win rates are for the current patch.`}
-    >
+    <Section title={`${itemName} Upgrade Path`} description={`${itemName} ${summary}. Win rates are for ${period}.`}>
       <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
         {components.length > 0 && (
           <>

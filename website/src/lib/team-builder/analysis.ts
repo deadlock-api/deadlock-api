@@ -69,29 +69,34 @@ export interface DraftModel {
 
 /**
  * Fitted by `tools/analysis/team-builder`, one model per game mode, on stats windows of 14, 30 and
- * 56 days at once so the shrinkage holds whichever range the filter asks for.
+ * 56 days at once so the model holds whichever range the filter asks for. Statistics only: the
+ * shrinkage is an empirical-Bayes estimate of how far true rates spread beyond sampling noise, and
+ * the weights are the maximum-likelihood logistic regression on the four terms.
  *
  * Each term is a residual in log-odds — what it explains that the terms before it do not — which is
  * what keeps every weight positive instead of large opposing numbers cancelling out. Street Brawl
  * has no lanes, so its model stops at the counter term.
+ *
+ * Separate models per match mode or rank bracket were fitted too and predicted held-out games no
+ * better than these, read from the same filtered stats, so a rank filter changes the inputs only.
  */
 const MODELS: Record<GameMode, DraftModel> = {
   normal: {
-    shrinkage: [2598.6579886700933, 358.4017260781841, 9.892310322931293, 2273.8132480986283],
+    shrinkage: [244.38620740714072, 8579.428232819031, 11328.359117857448, 6404.744747949403],
     residual: [
       [],
-      [-0.05674818459652491],
-      [0.015431293083736548, -0.055119163030623794],
-      [-0.8891944972609316, -0.12380371682980615, -0.7425754038708353],
+      [-0.04492893398189185],
+      [0.019160101516201497, -0.048704047256212454],
+      [0.011925129578616134, -0.10279213280313876, -1.104937879869353],
     ],
-    weights: [6.349178219853301, 16.146715619589376, 36.58001804439864, 2.546237216569832],
-    intercept: 0.006113147717260851,
+    weights: [6.077628649458206, 19.900434650115848, 49.46985075864712, 3.60429309513025],
+    intercept: 0.001128315880342193,
   },
   street_brawl: {
-    shrinkage: [184.91084756299617, 2.16716063533213, 3.3008231408431983],
-    residual: [[], [-0.06805400659962195], [0.01647961217737887, -0.005413604374195742]],
-    weights: [4.055949548037143, 1.959517101974825, 7.289563897774962],
-    intercept: 0.005646332953986097,
+    shrinkage: [116.41092954064695, 6796.794596225387, 6687.550785428076],
+    residual: [[], [-0.020803992228173574], [0.010878782103314187, 0.013090036904419945]],
+    weights: [4.033544931425031, 8.65682254597997, 22.45675159198885],
+    intercept: 0.0059865184894002865,
   },
 };
 

@@ -7,6 +7,7 @@ import { Section } from "~/components/patterns/page/Section";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { day } from "~/dayjs";
+import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
 import { api } from "~/lib/api";
 import { getPickrateMultiplier } from "~/lib/constants";
 import { formatPercent, possessive } from "~/lib/format";
@@ -25,6 +26,7 @@ export function HeroWinRateOverTime({
   heroName: string;
   request: Omit<AnalyticsApiHeroStatsRequest, "gameMode"> & { gameMode?: GameMode };
 }) {
+  const period = useDefaultPeriodLabel();
   const weeklyRequest = { ...request, bucket: "start_time_week" as const };
   const { data, isPending } = useQuery({
     queryKey: queryKeys.analytics.heroStatsOverTime(weeklyRequest),
@@ -77,8 +79,7 @@ export function HeroWinRateOverTime({
         <>
           {possessive(heroName)} win rate <span className="font-semibold text-foreground">{movement}</span> from{" "}
           {formatPercent(first.winRate)} in the week of {first.label} to {formatPercent(last.winRate)} in the week of{" "}
-          {last.label}. The solid line is win rate, the dashed line pick rate; both cover the current season week by
-          week.
+          {last.label}. The solid line is win rate, the dashed line pick rate; both cover {period} week by week.
         </>
       }
     >

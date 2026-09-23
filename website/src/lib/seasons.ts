@@ -72,6 +72,14 @@ export function defaultDateRange(
   return season ? [season.startDate, season.endDate] : [PATCHES[0].startDate, PATCHES[0].endDate];
 }
 
+/** How copy names `defaultDateRange`: "this season", or "the current patch" (also the fallback without a season). */
+export function defaultPeriodLabel(
+  seasons: readonly SeasonInfo[],
+  preference: DateFilterPreference = "season",
+): "this season" | "the current patch" {
+  return preference === "season" && currentSeason(seasons) ? "this season" : "the current patch";
+}
+
 export function defaultPrevDateRange(
   seasons: readonly SeasonInfo[],
   preference: DateFilterPreference = "season",

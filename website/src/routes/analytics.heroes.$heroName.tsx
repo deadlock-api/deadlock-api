@@ -25,7 +25,13 @@ import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { findHeroBySlug, heroSlug } from "~/lib/hero-slug";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
-import { defaultDateRange, defaultPrevDateRange, type SeasonInfo, defaultUnixRange } from "~/lib/seasons";
+import {
+  defaultDateRange,
+  defaultPeriodLabel,
+  defaultPrevDateRange,
+  defaultUnixRange,
+  type SeasonInfo,
+} from "~/lib/seasons";
 import { SITE_URL, seo } from "~/lib/seo";
 import { closestNameBySlug } from "~/lib/slug";
 import {
@@ -251,6 +257,7 @@ function HeroDetailPage() {
   const { preferences } = Route.useRouteContext();
   const { heroId, heroName } = Route.useLoaderData();
   const { seasons } = useSeasons();
+  const period = defaultPeriodLabel(seasons, preferences.dateFilter);
   const [defaultStart, defaultEnd] = defaultDateRange(seasons, preferences.dateFilter);
   const [prevStart, prevEnd] = defaultPrevDateRange(seasons, preferences.dateFilter);
   const statsQuery = useQuery(heroStatsQueryOptions(currentStatsParams(seasons, preferences.dateFilter)));
@@ -276,7 +283,7 @@ function HeroDetailPage() {
         description={
           summary ? (
             <>
-              In the current patch, {heroName} holds a{" "}
+              {period === "this season" ? "This season" : "In the current patch"}, {heroName} holds a{" "}
               <span className="font-semibold text-foreground">{formatPercent(summary.winRate)}</span> win rate across{" "}
               <span className="font-semibold text-foreground">{summary.matches.toLocaleString("en-US")}</span> tracked
               matches, with a <span className="font-semibold text-foreground">{formatPercent(summary.pickRate)}</span>{" "}

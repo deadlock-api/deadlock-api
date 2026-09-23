@@ -9,6 +9,7 @@ import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { Section } from "~/components/patterns/page/Section";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
+import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
 import { api } from "~/lib/api";
 import { formatPercent } from "~/lib/format";
 import { queryKeys } from "~/queries/query-keys";
@@ -54,6 +55,7 @@ export function ItemWinRateByRank({
   itemName: string;
   request: AnalyticsApiItemStatsRequest;
 }) {
+  const period = useDefaultPeriodLabel();
   const { data: ranks } = useQuery(ranksQueryOptions);
   const { rows, isPending } = useQueries({
     queries: TIERS.map((tier) => {
@@ -104,7 +106,7 @@ export function ItemWinRateByRank({
           Buyers win most at <span className="font-semibold text-foreground">{best.name}</span> (
           {formatPercent(best.winRate)}) and least at{" "}
           <span className="font-semibold text-foreground">{worst.name}</span> ({formatPercent(worst.winRate)}). Each bar
-          is one rank tier in the current patch; hover for match count.
+          is one rank tier in {period}; hover for match count.
         </>
       }
     >

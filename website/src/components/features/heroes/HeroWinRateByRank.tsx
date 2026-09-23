@@ -8,6 +8,7 @@ import { Section } from "~/components/patterns/page/Section";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
+import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
 import { api } from "~/lib/api";
 import { getPickrateMultiplier } from "~/lib/constants";
 import { formatPercent } from "~/lib/format";
@@ -50,6 +51,7 @@ export function HeroWinRateByRank({
   heroName: string;
   request: Omit<AnalyticsApiHeroStatsRequest, "gameMode"> & { gameMode?: GameMode };
 }) {
+  const period = useDefaultPeriodLabel();
   const byRankRequest = { ...request, bucket: "avg_badge" as const };
   const { data, isPending } = useQuery({
     queryKey: queryKeys.analytics.heroStatsByRank(byRankRequest),
@@ -107,7 +109,7 @@ export function HeroWinRateByRank({
           {heroName} wins most at <span className="font-semibold text-foreground">{best.name}</span> (
           {formatPercent(best.winRate)}) and least at{" "}
           <span className="font-semibold text-foreground">{worst.name}</span> ({formatPercent(worst.winRate)}). Each bar
-          is one rank tier in the current patch; hover for pick rate and match count.
+          is one rank tier in {period}; hover for pick rate and match count.
         </>
       }
     >

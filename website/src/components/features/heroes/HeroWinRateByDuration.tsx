@@ -7,6 +7,7 @@ import { Section } from "~/components/patterns/page/Section";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
+import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
 import { api } from "~/lib/api";
 import { DURATION_BUCKETS } from "~/lib/constants";
 import { formatPercent, possessive } from "~/lib/format";
@@ -48,6 +49,7 @@ export function HeroWinRateByDuration({
   heroName: string;
   request: Omit<AnalyticsApiHeroStatsRequest, "gameMode"> & { gameMode?: GameMode };
 }) {
+  const period = useDefaultPeriodLabel();
   const { rows, isPending } = useQueries({
     queries: DURATION_BUCKETS.map((bucket) => {
       const params = { ...request, minDurationS: bucket.minS, maxDurationS: bucket.maxS, bucket: "no_bucket" as const };
@@ -101,7 +103,7 @@ export function HeroWinRateByDuration({
         <>
           <span className="font-semibold text-foreground">{verdict}</span>: {formatPercent(early.winRate)} in{" "}
           {early.label} games versus {formatPercent(late.winRate)} in {late.label} games. Each bar is one duration
-          bracket in the current patch; hover for how many of {possessive(heroName)} games end there.
+          bracket in {period}; hover for how many of {possessive(heroName)} games end there.
         </>
       }
     >

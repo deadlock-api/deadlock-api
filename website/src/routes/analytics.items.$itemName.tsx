@@ -25,7 +25,7 @@ import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { findItemBySlug, itemSlug } from "~/lib/item-slug";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
-import { type SeasonInfo, defaultUnixRange } from "~/lib/seasons";
+import { defaultPeriodLabel, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { SITE_URL, seo } from "~/lib/seo";
 import { closestNameBySlug } from "~/lib/slug";
 import { filterShopableItems, itemQueryOptions, itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
@@ -195,6 +195,7 @@ function ItemDetailPage() {
   const { preferences } = Route.useRouteContext();
   const { itemId, itemName, tier, slot, cost } = Route.useLoaderData();
   const { seasons } = useSeasons();
+  const period = defaultPeriodLabel(seasons, preferences.dateFilter);
   const itemRequest = currentItemStatsParams(seasons, preferences.dateFilter);
   const heroRequest = currentHeroStatsParams(seasons, preferences.dateFilter);
   const statsQuery = useQuery(itemStatsQueryOptions(itemRequest));
@@ -218,7 +219,7 @@ function ItemDetailPage() {
 
       {summary ? (
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          In the current patch, players who buy {itemName} win{" "}
+          {period === "this season" ? "This season" : "In the current patch"}, players who buy {itemName} win{" "}
           <span className="font-semibold text-foreground">{formatPercent(summary.winRate)}</span> of their{" "}
           <span className="font-semibold text-foreground">{summary.matches.toLocaleString("en-US")}</span> tracked
           matches
@@ -232,8 +233,8 @@ function ItemDetailPage() {
         </p>
       ) : (
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          Live win rate, purchase rate, and hero statistics for {itemName} in Deadlock, drawn from tracked ranked
-          matches and updated daily.
+          Live win rate, purchase rate, and hero statistics for {itemName} in Deadlock, drawn from tracked matches and
+          updated daily.
         </p>
       )}
 
