@@ -22,6 +22,7 @@ import { Button } from "~/components/ui/button";
 import { SearchInput } from "~/components/ui/search-input";
 import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { useItemById } from "~/hooks/useAssetById";
 import { formatPercent } from "~/lib/format";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { wilsonScoreInterval } from "~/lib/wilson";
@@ -50,12 +51,13 @@ function ItemChip({
   variant: "include" | "exclude";
   onRemove: (id: number) => void;
 }) {
+  const { item } = useItemById(id);
   return (
     <Button
       variant={variant === "include" ? "positive-soft" : "negative-soft"}
       size="xs"
       onClick={() => onRemove(id)}
-      aria-label={`Remove ${variant === "include" ? "included" : "excluded"} item`}
+      aria-label={`Remove ${item?.name ?? "item"} from ${variant === "include" ? "included" : "excluded"} items`}
       className="group"
     >
       <ItemImage itemId={id} className="size-4 shrink-0" />
