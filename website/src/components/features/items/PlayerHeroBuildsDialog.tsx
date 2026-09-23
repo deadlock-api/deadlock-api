@@ -7,6 +7,7 @@ import MatchHistoryCard from "~/components/domain/match/MatchHistoryCard";
 import { SeasonPatchDatePicker } from "~/components/domain/selectors/SeasonPatchDatePicker";
 import { AverageBuildCard } from "~/components/features/items/AverageBuildCard";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
@@ -14,7 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { OptionRow } from "~/components/ui/option-row";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { SearchInput } from "~/components/ui/search-input";
-import { Stack } from "~/components/ui/stack";
+import { Inline, Stack } from "~/components/ui/stack";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { day, type Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -84,7 +85,13 @@ export function PlayerHeroBuildsDialog({
     dateRange.endDate,
   );
 
-  const { data: matches, isLoading } = useQuery({
+  const {
+    data: matches,
+    isLoading,
+    isError,
+    isFetching,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.analytics.playerHeroBuilds(
       effectiveAccountId ?? 0,
       heroId,
@@ -142,27 +149,34 @@ export function PlayerHeroBuildsDialog({
             <HeroImage heroId={heroId} shape="rounded" ring="border" className="size-7 shrink-0" />
             <span>{effectiveName ?? "Player"}</span>
             <span className="text-sm font-normal text-muted-foreground">(recent builds)</span>
-            <PlayerSearch
-              onSelect={(profile) => setOverridePlayer({ accountId: profile.account_id, name: profile.personaname })}
-            />
-            <SeasonPatchDatePicker
-              value={dateRange}
-              onValueChange={({ startDate, endDate }) => setDateRange({ startDate, endDate })}
-              defaultTab="custom"
-            />
           </DialogTitle>
           <DialogDescription>
             {isLoading
               ? "Loading recent matches…"
-              : cards.length > 0
-                ? `Last ${cards.length} matches on this hero · ${wins}W ${losses}L · ${Math.round((wins / cards.length) * 100)}% WR`
-                : "No recent matches found for this player on this hero."}
+              : isError && !matches
+                ? "Could not load recent matches."
+                : cards.length > 0
+                  ? `Last ${cards.length} matches on this hero · ${wins}W ${losses}L · ${Math.round((wins / cards.length) * 100)}% WR`
+                  : "No recent matches found for this player on this hero."}
           </DialogDescription>
         </DialogHeader>
+        {/* Outside the title, which names the dialog: controls inside it were read out as part of its name. */}
+        <Inline gap={2}>
+          <PlayerSearch
+            onSelect={(profile) => setOverridePlayer({ accountId: profile.account_id, name: profile.personaname })}
+          />
+          <SeasonPatchDatePicker
+            value={dateRange}
+            onValueChange={({ startDate, endDate }) => setDateRange({ startDate, endDate })}
+            defaultTab="custom"
+          />
+        </Inline>
 
         <Stack gap={3} className="min-h-0 flex-1 overflow-y-auto pe-1 [&>*]:shrink-0">
           {isLoading ? (
             <LoadingState label="recent matches" align="center" />
+          ) : isError && !matches ? (
+            <ErrorState title="Could not load recent matches" onRetry={() => void refetch()} retrying={isFetching} />
           ) : (
             <>
               {averageBuild && <AverageBuildCard build={averageBuild} heroId={heroId} />}
