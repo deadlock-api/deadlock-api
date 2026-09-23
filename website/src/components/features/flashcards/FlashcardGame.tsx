@@ -127,10 +127,18 @@ function FlashcardGameReady<T extends FlashcardEntry>({
     };
   }, []);
 
+  // Answering disables the options and the next card replaces them, dropping focus to <body>; after an answer the next
+  // card's first option takes it back, so the deck can be played with the keyboard alone.
+  const answered = useRef(false);
+  const focusFirstOption = useCallback((element: HTMLButtonElement | null) => {
+    if (element && answered.current && document.activeElement === document.body) element.focus();
+  }, []);
+
   const handleChoice = useCallback(
     (id: number) => {
       if (!card || selected !== null) return;
       setSelected(id);
+      answered.current = true;
       const correct = id === card.answer.id;
       setStats((prev) => {
         const nextStreak = correct ? prev.streak + 1 : 0;
@@ -235,9 +243,10 @@ function FlashcardGameReady<T extends FlashcardEntry>({
             </div>
 
             <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
-              {card.options.map((option) => (
+              {card.options.map((option, index) => (
                 <AnswerOption
                   key={option.id}
+                  ref={index === 0 ? focusFirstOption : undefined}
                   state={
                     selected === null ? "idle" : revealedState(option.id === card.answer.id, option.id === selected)
                   }
