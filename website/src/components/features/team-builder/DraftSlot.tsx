@@ -57,9 +57,11 @@ function SwapHint({ heroId, gain, side, onApply }: { heroId: number; gain: numbe
       title={label}
       className="px-1 text-3xs font-semibold"
     >
-      <ArrowRightIcon className="size-2.5" />
+      {/* The pill fits its slot: a narrow slot (a phone, or both sides side by side) drops the arrow, then the
+          number, which the label and title still carry. Wider pills collided with the neighbouring slot's. */}
+      <ArrowRightIcon className="hidden size-2.5 @4xs:block" />
       <HeroImage heroId={heroId} shape="circle" className="size-4 shrink-0" />
-      {formatPoints(gain)}
+      <span className="hidden @5xs:inline">{formatPoints(gain)}</span>
     </Button>
   );
 }
@@ -135,7 +137,7 @@ export function DraftSlot({
   }
 
   return (
-    <Stack gap={1} className="group relative flex-1 text-center" {...dropTargetProps}>
+    <Stack gap={1} className="group @container relative flex-1 text-center" {...dropTargetProps}>
       {/* Wrapper sized to the portrait so the clear button anchors to the art, not the wider slot.
           It also keeps the two buttons siblings rather than nested, which is invalid HTML. */}
       <div className="relative mx-auto w-fit">

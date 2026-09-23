@@ -112,6 +112,9 @@ order is validated for colorblind separation between neighbours; do not reorder 
 Type scale: Tailwind's, plus `text-2xs` (11px), `text-3xs` (10px), `text-4xs` (9px) for dense data. The `eyebrow`
 utility is the small uppercase label above a value. Numbers that line up use `tabular-nums`.
 
+Container sizes: Tailwind's `@3xs` and up, plus `@5xs` (3.75rem) and `@4xs` (5rem) for the parts of one slot in a
+dense board, such as the swap hint in a draft slot that drops its arrow and then its number as the slot narrows.
+
 Radius: controls `rounded-md`, nested blocks `rounded-lg`, cards and panels `rounded-xl`, pills `rounded-full`.
 Spacing between page blocks comes from `PageShell`, never from margins on the blocks.
 

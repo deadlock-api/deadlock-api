@@ -230,6 +230,11 @@
   --shadow-2xl: var(--shadow-2xl);
   --shadow-glow-primary: var(--shadow-glow-primary);
   --shadow-active-underline: var(--shadow-active-underline);
+
+  /* Container sizes below Tailwind's @3xs (16rem), for the parts of one slot in a dense board (a draft slot).
+     Literal values: a container query cannot read a custom property, so these have no tier 1 or 2. */
+  --container-5xs: 3.75rem;
+  --container-4xs: 5rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
