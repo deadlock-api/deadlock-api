@@ -35,7 +35,7 @@ function ItemNameOption({ item }: { item: Upgrade }) {
 }
 
 function ItemEffectFlashcards() {
-  const { data: items, isLoading } = useQuery(itemUpgradesFullQueryOptions);
+  const { data: items, isLoading, isError, isFetching, refetch } = useQuery(itemUpgradesFullQueryOptions);
   const [direction, setDirection] = useState<Direction>("effects-to-name");
   const [excludeLegendary, setExcludeLegendary] = useState(false);
 
@@ -96,6 +96,9 @@ function ItemEffectFlashcards() {
         </div>
       }
       isLoading={isLoading}
+      isError={isError}
+      onRetry={() => void refetch()}
+      retrying={isFetching}
       storageKey="flashcards:item-effects:no-repeats"
       masteredLabel="All item effects mastered"
     />

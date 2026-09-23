@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AnswerOption, revealedState } from "~/components/domain/minigames/AnswerOption";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { useHydrated } from "~/hooks/useHydrated";
 import { readLocalStorage, writeLocalStorage } from "~/lib/local-storage";
@@ -68,6 +69,10 @@ export interface FlashcardGameProps<T extends FlashcardEntry> {
   /** Changing this value draws a fresh card (stats and progress are kept). */
   reshuffleKey?: string;
   isLoading: boolean;
+  /** The deck's data failed to load: an error with a retry, instead of an empty deck ("No cards available."). */
+  isError?: boolean;
+  onRetry?: () => void;
+  retrying?: boolean;
   storageKey: string;
   masteredLabel: string;
 }
@@ -83,6 +88,13 @@ export function FlashcardGame<T extends FlashcardEntry>(props: FlashcardGameProp
     return (
       <FlashcardPage title={props.title} subtitle={props.subtitle}>
         <LoadingState label="flashcards" />
+      </FlashcardPage>
+    );
+  }
+  if (props.isError && props.pool.length === 0) {
+    return (
+      <FlashcardPage title={props.title} subtitle={props.subtitle}>
+        <ErrorState title="Could not load the cards" onRetry={props.onRetry} retrying={props.retrying} />
       </FlashcardPage>
     );
   }

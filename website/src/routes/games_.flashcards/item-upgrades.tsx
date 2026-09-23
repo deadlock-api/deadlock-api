@@ -15,6 +15,7 @@ import {
   ResultMark,
 } from "~/components/features/flashcards/FlashcardChrome";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
@@ -199,7 +200,7 @@ function pickCard(pool: UpgradePathEntry[], excludeIds: Set<number>): UpgradePat
 }
 
 function ItemUpgradePathFlashcards() {
-  const { data: items, isLoading } = useQuery(itemUpgradesQueryOptions);
+  const { data: items, isLoading, isError, isFetching, refetch } = useQuery(itemUpgradesQueryOptions);
   // The first card is drawn at random, so the server and client would disagree on it.
   const hydrated = useHydrated();
 
@@ -212,6 +213,15 @@ function ItemUpgradePathFlashcards() {
     return (
       <FlashcardPage title={TITLE} subtitle={SUBTITLE}>
         <LoadingState label="flashcards" />
+      </FlashcardPage>
+    );
+  }
+
+  // A failed load would otherwise read as an empty deck.
+  if (isError && !items) {
+    return (
+      <FlashcardPage title={TITLE} subtitle={SUBTITLE}>
+        <ErrorState title="Could not load the cards" onRetry={() => void refetch()} retrying={isFetching} />
       </FlashcardPage>
     );
   }

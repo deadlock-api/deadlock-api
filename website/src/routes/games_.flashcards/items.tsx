@@ -22,7 +22,7 @@ function itemIconSrc(item: Upgrade): string {
 }
 
 function ItemFlashcards() {
-  const { data: items, isLoading } = useQuery(itemUpgradesQueryOptions);
+  const { data: items, isLoading, isError, isFetching, refetch } = useQuery(itemUpgradesQueryOptions);
 
   const pool = useMemo(() => {
     if (!items) return [];
@@ -38,6 +38,9 @@ function ItemFlashcards() {
         <img src={itemIconSrc(entry)} alt="Mystery item" className="size-full object-contain" draggable={false} />
       )}
       isLoading={isLoading}
+      isError={isError}
+      onRetry={() => void refetch()}
+      retrying={isFetching}
       storageKey="flashcards:items:no-repeats"
       masteredLabel="All items mastered"
     />

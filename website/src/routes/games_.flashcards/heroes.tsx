@@ -21,7 +21,7 @@ function heroIconSrc(hero: SlimHero): string {
 }
 
 function HeroFlashcards() {
-  const { data: heroes, isLoading } = useQuery(heroesQueryOptions);
+  const { data: heroes, isLoading, isError, isFetching, refetch } = useQuery(heroesQueryOptions);
 
   const pool = useMemo(() => {
     if (!heroes) return [];
@@ -37,6 +37,9 @@ function HeroFlashcards() {
         <img src={heroIconSrc(entry)} alt="Mystery hero" className="size-full object-contain" draggable={false} />
       )}
       isLoading={isLoading}
+      isError={isError}
+      onRetry={() => void refetch()}
+      retrying={isFetching}
       storageKey="flashcards:heroes:no-repeats"
       masteredLabel="All heroes mastered"
     />
