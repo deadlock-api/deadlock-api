@@ -41,18 +41,18 @@ export function PaginationControls({
     [onPageSizeChange],
   );
 
-  // What is typed, while it is typed: an empty field or a number on its way to a valid one ("1" of "15" on a
-  // 12-page table is fine, "15" is not yet) must not snap back to the current page under the cursor.
-  const [draft, setDraft] = useState<string | null>(null);
+  // What is typed, while it is typed: an empty field or a number on its way to a valid one ("2" on the way to "25"
+  // of 30 pages) must not snap back to the current page under the cursor. The draft belongs to the page it left the
+  // table on, so a page change from elsewhere (a filter reset, the back button) shows the new page instead.
+  const [draft, setDraft] = useState<{ text: string; page: number } | null>(null);
   const handlePageInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      setDraft(e.target.value);
       const pageNumber = parseInt(e.target.value, 10);
-      if (!Number.isNaN(pageNumber) && pageNumber > 0 && pageNumber <= totalPages) {
-        onPageChange(pageNumber - 1);
-      }
+      const valid = !Number.isNaN(pageNumber) && pageNumber > 0 && pageNumber <= totalPages;
+      setDraft({ text: e.target.value, page: valid ? pageNumber - 1 : page });
+      if (valid) onPageChange(pageNumber - 1);
     },
-    [onPageChange, totalPages],
+    [onPageChange, totalPages, page],
   );
 
   return (
@@ -96,7 +96,7 @@ export function PaginationControls({
             aria-label="Page number"
             max={totalPages}
             min={1}
-            value={draft ?? page + 1}
+            value={draft?.page === page ? draft.text : page + 1}
             onChange={handlePageInputChange}
             onBlur={() => setDraft(null)}
             onKeyDown={(e) => {

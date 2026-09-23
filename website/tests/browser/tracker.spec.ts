@@ -520,6 +520,11 @@ test("companion pagination resets for filter changes while preserving search and
   await matePage.fill("2");
   await page.goBack();
   await expect(matePage).toHaveValue("1");
+  // A cleared field stays empty while it is being edited and shows the current page again once it is left.
+  await matePage.fill("");
+  await expect(matePage).toHaveValue("");
+  await matePage.press("Tab");
+  await expect(matePage).toHaveValue("1");
 });
 
 test("shared-match history opens older matches and returns focus to their details", async ({ page }) => {
