@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useCallback, useMemo, useState } from "react";
 
 import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { DragScroll } from "~/components/ui/drag-scroll";
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -65,9 +66,12 @@ export default function AbilityOrderTree({
     excludeItemIds: excludeItemIds?.length ? excludeItemIds : undefined,
   };
 
-  const { data: abilityOrderData, isLoading: isLoadingOrder } = useQuery(
-    abilityOrderQueryOptions(abilityOrderStatsQuery),
-  );
+  const {
+    data: abilityOrderData,
+    isLoading: isLoadingOrder,
+    isError: isOrderError,
+    refetch: refetchOrder,
+  } = useQuery(abilityOrderQueryOptions(abilityOrderStatsQuery));
 
   const { data: heroData } = useQuery({
     queryKey: queryKeys.assets.hero(heroId),
@@ -154,6 +158,10 @@ export default function AbilityOrderTree({
 
   if (isLoadingOrder) {
     return <LoadingState label="ability orders" className="flex w-full items-center justify-center py-24" />;
+  }
+
+  if (isOrderError && !abilityOrderData) {
+    return <ErrorState title="Ability orders did not load" onRetry={() => void refetchOrder()} />;
   }
 
   if (!trie || trie.children.size === 0) {

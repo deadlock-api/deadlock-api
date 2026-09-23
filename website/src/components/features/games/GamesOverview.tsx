@@ -5,6 +5,7 @@ import { Fragment, lazy, Suspense, useState } from "react";
 import type { StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -43,7 +44,12 @@ interface GamesOverviewProps {
 
 export default function GamesOverview({ params, prevParams, onStatClick, isStreetBrawl = false }: GamesOverviewProps) {
   const [trendBucket, setTrendBucket] = useState<StatTrendBucket>("start_time_day");
-  const { data: currentData, isPending } = useQuery(gameStatsQueryOptions({ ...params, bucket: "no_bucket" }));
+  const {
+    data: currentData,
+    isPending,
+    isError,
+    refetch,
+  } = useQuery(gameStatsQueryOptions({ ...params, bucket: "no_bucket" }));
   const { data: prevData } = useQuery({
     ...gameStatsQueryOptions({ ...(prevParams as AnalyticsApiGameStatsRequest), bucket: "no_bucket" }),
     enabled: prevParams != null,
@@ -51,6 +57,10 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
 
   if (isPending) {
     return <LoadingState label="game stats" className="flex items-center justify-center py-16" />;
+  }
+
+  if (isError && !currentData) {
+    return <ErrorState title="Game stats did not load" onRetry={() => void refetch()} />;
   }
 
   const current = currentData?.[0];

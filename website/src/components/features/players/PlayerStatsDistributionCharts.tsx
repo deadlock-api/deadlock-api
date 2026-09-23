@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { CHART_COLOR, SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -44,7 +45,7 @@ export function PlayerStatsDistributionCharts({
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
-  const { data, isLoading } = useQuery(
+  const { data, isLoading, isError, refetch } = useQuery(
     playerStatsMetricsQueryOptions({
       heroIds: heroId != null ? String(heroId) : undefined,
       gameMode: gameMode ?? undefined,
@@ -67,6 +68,10 @@ export function PlayerStatsDistributionCharts({
 
   if (isLoading) {
     return <LoadingState label="player stat distributions" align="center" />;
+  }
+
+  if (isError && !data) {
+    return <ErrorState title="Player stat distributions did not load" onRetry={() => void refetch()} />;
   }
 
   const selectedMetric = selectedIndex != null ? PLAYER_METRICS[selectedIndex] : null;
