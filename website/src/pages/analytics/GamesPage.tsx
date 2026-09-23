@@ -4,7 +4,7 @@ import { lazy, Suspense } from "react";
 
 import { Filter } from "~/components/domain/filters";
 import GamesOverview from "~/components/features/games/GamesOverview";
-import { ALL_STAT_KEYS } from "~/components/features/games/stat-definitions";
+import { ALL_STAT_KEYS, getFilteredCategories } from "~/components/features/games/stat-definitions";
 import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigation/ResponsiveTabsList";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
@@ -30,10 +30,15 @@ export function Games() {
   const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange, defaultRange } = useDateRangeState();
   const [minDurationS, setMinDurationS] = useQueryState("min_duration_s", parseAsInteger);
   const [maxDurationS, setMaxDurationS] = useQueryState("max_duration_s", parseAsInteger);
-  const [stat, setStat] = useQueryState(
+  const [chosenStat, setStat] = useQueryState(
     "stat",
     parseAsStringLiteral(ALL_STAT_KEYS as unknown as readonly string[]).withDefault("avg_kills"),
   );
+  // Street Brawl hides some metrics (no mid boss, no economy breakdown): one chosen in another mode would plot a flat
+  // zero line under a picker that does not list it. The URL keeps the choice for when the mode changes back.
+  const stat = getFilteredCategories(isStreetBrawl).some((category) => category.stats.some((s) => s.key === chosenStat))
+    ? chosenStat
+    : "avg_kills";
   const [timeBucket, setTimeBucket] = useQueryState(
     "time_bucket",
     parseAsStringLiteral(["start_time_day", "start_time_week", "start_time_month"] as const).withDefault(

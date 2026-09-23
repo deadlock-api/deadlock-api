@@ -12,6 +12,7 @@ import { StringOption, StringSelector } from "~/components/patterns/filter-bar/S
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
+import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { combineQueryStates } from "~/components/patterns/states/QueryRenderer";
@@ -60,7 +61,9 @@ function HeatmapPage() {
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const [minGameTime, setMinGameTime] = useQueryState("min_game_time", parseAsInteger.withDefault(0));
   const [maxGameTime, setMaxGameTime] = useQueryState("max_game_time", parseAsInteger.withDefault(3600));
-  const [sensitivity, setOutlierSensitivity] = useQueryState("outlier", parseAsInteger.withDefault(9900));
+  const [outlier, setOutlierSensitivity] = useQueryState("outlier", parseAsInteger.withDefault(9900));
+  // The slider's range (80-100%): an edited `?outlier=5000` saturated half the map with the thumb stuck at its minimum.
+  const sensitivity = Math.min(10000, Math.max(8000, outlier));
   const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
 
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
@@ -152,6 +155,11 @@ function HeatmapPage() {
               if (mapQuery.isError) void mapQuery.refetch();
               if (killDeathQuery.isError) void killDeathQuery.refetch();
             }}
+          />
+        ) : killDeathQuery.data?.length === 0 ? (
+          <EmptyState
+            title="No kills or deaths for these filters"
+            description="Kill positions cover matches from the last two months only. Try a more recent date range or wider filters."
           />
         ) : mapQuery.data && killDeathQuery.data ? (
           is3D ? (
