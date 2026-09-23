@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { Section } from "~/components/patterns/page/Section";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -50,7 +51,7 @@ export function HeroWinRateByDuration({
   request: Omit<AnalyticsApiHeroStatsRequest, "gameMode"> & { gameMode?: GameMode };
 }) {
   const period = useDefaultPeriodLabel();
-  const { rows, isPending } = useQueries({
+  const { rows, isPending, failed } = useQueries({
     queries: DURATION_BUCKETS.map((bucket) => {
       const params = { ...request, minDurationS: bucket.minS, maxDurationS: bucket.maxS, bucket: "no_bucket" as const };
       return {
@@ -62,6 +63,8 @@ export function HeroWinRateByDuration({
     combine: (queries) => ({
       rows: queries.map((q) => q.data?.find((row) => row.hero_id === heroId)),
       isPending: queries.some((q) => q.isPending),
+      // A missing bracket would skew the shares and the early/late comparison, so any failure fails the section.
+      failed: queries.filter((q) => q.isError && !q.data),
     }),
   });
 
@@ -81,6 +84,17 @@ export function HeroWinRateByDuration({
     });
   }, [rows]);
 
+  if (failed.length > 0) {
+    return (
+      <Section title={`${heroName} Win Rate by Match Duration`}>
+        <ErrorState
+          title={`Could not load ${possessive(heroName)} win rate by match duration`}
+          retrying={failed.some((q) => q.isFetching)}
+          onRetry={() => failed.forEach((q) => void q.refetch())}
+        />
+      </Section>
+    );
+  }
   if (isPending) {
     return <LoadingState label="win rate by match duration" align="center" className="py-8" />;
   }

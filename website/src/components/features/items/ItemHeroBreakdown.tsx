@@ -4,9 +4,10 @@ import { useMemo } from "react";
 
 import { RankedEntityCard, RankedEntityGrid } from "~/components/domain/assets/RankedEntityGrid";
 import { Section } from "~/components/patterns/page/Section";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { KeyValue } from "~/components/ui/key-value";
-import { formatPercent, formatShare } from "~/lib/format";
+import { formatPercent, formatShare, possessive } from "~/lib/format";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import { filterShopableItems, itemUpgradesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
@@ -109,7 +110,20 @@ export function ItemHeroBreakdown({
     };
   }, [cohortQuery.data, heroStatsQuery.data, itemsQuery.data, itemId]);
 
-  if (cohortQuery.isError || heroStatsQuery.isError) return null;
+  // Checked before loading: without the item list the breakdown never resolves, so a failed one would spin forever.
+  // Both sections come from the same queries, so one error stands in for the pair.
+  const failed = [cohortQuery, heroStatsQuery, itemsQuery].filter((query) => query.isError && !query.data);
+  if (failed.length > 0) {
+    return (
+      <Section title={`Best Heroes for ${itemName}`}>
+        <ErrorState
+          title={`Could not load ${possessive(itemName)} hero breakdown`}
+          retrying={failed.some((query) => query.isFetching)}
+          onRetry={() => failed.forEach((query) => void query.refetch())}
+        />
+      </Section>
+    );
+  }
   if (!breakdown) return <LoadingState label={`${itemName} hero breakdown`} />;
 
   return (

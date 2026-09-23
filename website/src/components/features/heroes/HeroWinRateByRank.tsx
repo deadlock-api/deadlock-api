@@ -5,13 +5,14 @@ import { useMemo } from "react";
 import { RankTierTick } from "~/components/domain/rank/RankTierTick";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { Section } from "~/components/patterns/page/Section";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
 import { api } from "~/lib/api";
 import { getPickrateMultiplier } from "~/lib/constants";
-import { formatPercent } from "~/lib/format";
+import { formatPercent, possessive } from "~/lib/format";
 import type { GameMode } from "~/lib/game-mode";
 import { queryKeys } from "~/queries/query-keys";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -53,12 +54,14 @@ export function HeroWinRateByRank({
 }) {
   const period = useDefaultPeriodLabel();
   const byRankRequest = { ...request, bucket: "avg_badge" as const };
-  const { data, isPending } = useQuery({
+  const statsQuery = useQuery({
     queryKey: queryKeys.analytics.heroStatsByRank(byRankRequest),
     queryFn: async () => (await api.analytics_api.heroStats(byRankRequest)).data,
     staleTime: CACHE_DURATIONS.ONE_DAY,
   });
-  const { data: ranks } = useQuery(ranksQueryOptions);
+  const ranksQuery = useQuery(ranksQueryOptions);
+  const data = statsQuery.data;
+  const ranks = ranksQuery.data;
 
   const tiers = useMemo(() => {
     if (!data || !ranks) return [];
@@ -93,7 +96,20 @@ export function HeroWinRateByRank({
       });
   }, [data, ranks, heroId, request.gameMode]);
 
-  if (isPending) {
+  // Both are needed: without the rank list every tier is dropped.
+  const failed = [statsQuery, ranksQuery].filter((query) => query.isError && !query.data);
+  if (failed.length > 0) {
+    return (
+      <Section title={`${heroName} Win Rate by Rank`}>
+        <ErrorState
+          title={`Could not load ${possessive(heroName)} win rate by rank`}
+          retrying={failed.some((query) => query.isFetching)}
+          onRetry={() => failed.forEach((query) => void query.refetch())}
+        />
+      </Section>
+    );
+  }
+  if (statsQuery.isPending) {
     return <LoadingState label="win rate by rank" align="center" className="py-8" />;
   }
   if (tiers.length === 0) return null;

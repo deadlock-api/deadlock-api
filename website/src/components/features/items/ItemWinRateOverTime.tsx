@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { type WeekEntry, WeeklyTrendChart } from "~/components/patterns/charts/WeeklyTrendChart";
 import { Section } from "~/components/patterns/page/Section";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { day } from "~/dayjs";
 import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
@@ -67,6 +68,18 @@ export function ItemWinRateOverTime({
   }, [itemQuery.data, heroQuery.data, itemId, itemRequest.minUnixTimestamp]);
 
   if (itemQuery.isPending || heroQuery.isPending) return <ChartLoading label={`${itemName} win rate over time`} />;
+  const failed = [itemQuery, heroQuery].filter((query) => query.isError && !query.data);
+  if (failed.length > 0) {
+    return (
+      <Section title={`${itemName} Win Rate Over Time`}>
+        <ErrorState
+          title={`Could not load ${possessive(itemName)} win rate over time`}
+          retrying={failed.some((query) => query.isFetching)}
+          onRetry={() => failed.forEach((query) => void query.refetch())}
+        />
+      </Section>
+    );
+  }
   if (weeks.length < 2) return null;
 
   const first = weeks[0];

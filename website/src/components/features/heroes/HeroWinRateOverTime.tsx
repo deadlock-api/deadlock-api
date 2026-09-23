@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { type WeekEntry, WeeklyTrendChart } from "~/components/patterns/charts/WeeklyTrendChart";
 import { Section } from "~/components/patterns/page/Section";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { day } from "~/dayjs";
@@ -28,7 +29,7 @@ export function HeroWinRateOverTime({
 }) {
   const period = useDefaultPeriodLabel();
   const weeklyRequest = { ...request, bucket: "start_time_week" as const };
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError, isFetching, refetch } = useQuery({
     queryKey: queryKeys.analytics.heroStatsOverTime(weeklyRequest),
     queryFn: async () => (await api.analytics_api.heroStats(weeklyRequest)).data,
     staleTime: CACHE_DURATIONS.ONE_DAY,
@@ -60,6 +61,17 @@ export function HeroWinRateOverTime({
 
   if (isPending) {
     return <LoadingState label="win rate over time" align="center" className="py-8" />;
+  }
+  if (isError && !data) {
+    return (
+      <Section title={`${heroName} Win Rate Over Time`}>
+        <ErrorState
+          title={`Could not load ${possessive(heroName)} win rate over time`}
+          retrying={isFetching}
+          onRetry={() => void refetch()}
+        />
+      </Section>
+    );
   }
   if (weeks.length < 2) return null;
 

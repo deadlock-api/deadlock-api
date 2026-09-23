@@ -6,13 +6,14 @@ import { useMemo } from "react";
 import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { AbilityName } from "~/components/domain/assets/AbilityName";
 import { Section } from "~/components/patterns/page/Section";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
 import { type AbilityTrieNode, buildAbilityTrie, getSortedChildren } from "~/lib/ability-order-utils";
-import { formatPercent } from "~/lib/format";
+import { formatPercent, possessive } from "~/lib/format";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
 import { abilitiesQueryOptions, heroesQueryOptions } from "~/queries/asset-queries";
 
@@ -82,6 +83,17 @@ export function HeroSkillOrder({
 
   if (orderQuery.isPending) {
     return <LoadingState label="skill order" align="center" className="py-8" />;
+  }
+  if (orderQuery.isError && !orderQuery.data) {
+    return (
+      <Section title={`${heroName} Skill Order`}>
+        <ErrorState
+          title={`Could not load ${possessive(heroName)} skill order`}
+          retrying={orderQuery.isFetching}
+          onRetry={() => void orderQuery.refetch()}
+        />
+      </Section>
+    );
   }
   if (!path) return null;
 

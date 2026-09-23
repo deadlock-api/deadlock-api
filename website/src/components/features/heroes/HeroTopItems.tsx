@@ -5,6 +5,7 @@ import { useMemo } from "react";
 
 import { RankedEntityCard, RankedEntityGrid } from "~/components/domain/assets/RankedEntityGrid";
 import { Section } from "~/components/patterns/page/Section";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { KeyValue } from "~/components/ui/key-value";
@@ -63,7 +64,19 @@ export function HeroTopItems({
     [statsQuery.data, itemsQuery.data, heroMatches],
   );
 
-  if (statsQuery.isError) return null;
+  // Checked before loading: without the item list the ranking never resolves, so a failed one would spin forever.
+  const failed = [statsQuery, itemsQuery].filter((query) => query.isError && !query.data);
+  if (failed.length > 0) {
+    return (
+      <Section title={`Best ${heroName} Items`}>
+        <ErrorState
+          title={`Could not load the best ${heroName} items`}
+          retrying={failed.some((query) => query.isFetching)}
+          onRetry={() => failed.forEach((query) => void query.refetch())}
+        />
+      </Section>
+    );
+  }
   if (!topItems) return <LoadingState label="top items" />;
   if (topItems.length === 0) return null;
 

@@ -7,11 +7,12 @@ import { ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { Section } from "~/components/patterns/page/Section";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
 import { api } from "~/lib/api";
-import { formatPercent } from "~/lib/format";
+import { formatPercent, possessive } from "~/lib/format";
 import { queryKeys } from "~/queries/query-keys";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -57,7 +58,7 @@ export function ItemWinRateByRank({
 }) {
   const period = useDefaultPeriodLabel();
   const { data: ranks } = useQuery(ranksQueryOptions);
-  const { rows, isPending } = useQueries({
+  const { rows, isPending, failed } = useQueries({
     queries: TIERS.map((tier) => {
       const params = { ...request, minAverageBadge: tier * 10, maxAverageBadge: tier * 10 + 9 };
       return {
@@ -69,6 +70,8 @@ export function ItemWinRateByRank({
     combine: (queries) => ({
       rows: queries.map((q) => q.data?.find((row) => row.item_id === itemId)),
       isPending: queries.some((q) => q.isPending),
+      // A missing tier could hide the true best or worst, so any failure fails the section.
+      failed: queries.filter((q) => q.isError && !q.data),
     }),
   });
 
@@ -92,6 +95,17 @@ export function ItemWinRateByRank({
     [rows, ranks],
   );
 
+  if (failed.length > 0) {
+    return (
+      <Section title={`${itemName} Win Rate by Rank`}>
+        <ErrorState
+          title={`Could not load ${possessive(itemName)} win rate by rank`}
+          retrying={failed.some((q) => q.isFetching)}
+          onRetry={() => failed.forEach((q) => void q.refetch())}
+        />
+      </Section>
+    );
+  }
   if (isPending) return <ChartLoading label={`${itemName} win rate by rank`} />;
   if (tiers.length < 2) return null;
 

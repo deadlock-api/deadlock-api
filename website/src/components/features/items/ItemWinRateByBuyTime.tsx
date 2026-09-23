@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { Section } from "~/components/patterns/page/Section";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
@@ -79,7 +80,7 @@ export function ItemWinRateByBuyTime({
 }) {
   // No per-minute minimum: the API applies it to each minute, so rare minutes dropped out of the shares and the peak.
   const params = { ...request, bucket: "game_time_min" as const, minMatches: undefined };
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError, isFetching, refetch } = useQuery({
     queryKey: queryKeys.analytics.itemStats(params),
     queryFn: async () => (await api.analytics_api.itemStats(params)).data,
     staleTime: CACHE_DURATIONS.ONE_DAY,
@@ -88,6 +89,17 @@ export function ItemWinRateByBuyTime({
   const entries = useMemo(() => binByBuyMinute(data?.filter((row) => row.item_id === itemId) ?? []), [data, itemId]);
 
   if (isPending) return <ChartLoading label={`${itemName} win rate by purchase time`} />;
+  if (isError && !data) {
+    return (
+      <Section title={`When to Buy ${itemName}`}>
+        <ErrorState
+          title={`Could not load when ${itemName} is bought`}
+          retrying={isFetching}
+          onRetry={() => void refetch()}
+        />
+      </Section>
+    );
+  }
   if (entries.length < 2) return null;
 
   const early = entries[0];
