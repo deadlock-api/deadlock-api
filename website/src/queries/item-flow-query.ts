@@ -21,12 +21,24 @@ function sortLockedPath(params: AnalyticsApiItemFlowStatsRequest): AnalyticsApiI
   };
 }
 
+/**
+ * The generated client sends an array as a repeated key (`locked_item_ids=A&locked_item_ids=B`), which the API does
+ * not pair up positionally with `locked_columns`: two locked items came back as 807 matches instead of 58,849. The
+ * comma form it documents keeps each item with its column. Only the request changes; the cache key keeps the arrays.
+ */
+function commaSeparatedLocks(params: AnalyticsApiItemFlowStatsRequest): AnalyticsApiItemFlowStatsRequest {
+  if (!params.lockedItemIds?.length || !params.lockedColumns?.length) return params;
+  // One element that is already the comma list; the client writes it out as a single `key=a,b` pair.
+  const joined = (values: number[]) => [values.join(",")] as unknown as number[];
+  return { ...params, lockedItemIds: joined(params.lockedItemIds), lockedColumns: joined(params.lockedColumns) };
+}
+
 export function itemFlowQueryOptions(params: AnalyticsApiItemFlowStatsRequest) {
   const canonicalParams = sortLockedPath(params);
   return queryOptions({
     queryKey: queryKeys.analytics.itemFlowStats(canonicalParams),
     queryFn: async () => {
-      const response = await api.analytics_api.itemFlowStats(canonicalParams);
+      const response = await api.analytics_api.itemFlowStats(commaSeparatedLocks(canonicalParams));
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
