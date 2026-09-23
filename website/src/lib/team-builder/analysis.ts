@@ -687,7 +687,7 @@ export interface Recommendation {
   solo: number | undefined;
   winRate: number | undefined;
   matches: number;
-  /** Combined points this hero would add, used for the ranking. */
+  /** Points the pick moves the prediction by for its side (in the next open slot), used for the ranking. */
   score: number;
 }
 
@@ -701,6 +701,14 @@ export function recommendPicks(draft: Draft, index: StatsIndex, side: Side, cand
   const opposing = filled(draft[side === "ally" ? "enemy" : "ally"]);
   const drafted = new Set([...filled(draft.ally), ...filled(draft.enemy)]);
 
+  // Ranked by what the pick does to the prediction in the side's next open slot, like the swap chips: a weighted sum
+  // of the hero's own edges under-weighted synergy (it moves a mean over pairs) and counted unseen matchups as
+  // missing where the prediction counts them as zero, so the order disagreed with the win rates it led to.
+  const slot = draft[side].indexOf(null);
+  const sign = side === "ally" ? 1 : -1;
+  const baseline = slot === -1 ? undefined : predictDraft(draft, index);
+  const hypothetical: Draft = { ...draft, [side]: [...draft[side]] };
+
   return candidates
     .filter((heroId) => !drafted.has(heroId))
     .map((heroId) => {
@@ -708,12 +716,19 @@ export function recommendPicks(draft: Draft, index: StatsIndex, side: Side, cand
       const counter = mean(opposing.map((enemy) => index.counterEdge(heroId, enemy)));
       const solo = index.soloEdge(heroId);
       const sample = index.heroSample(heroId);
-      // Weighted like the prediction, so this order agrees with the gains the swap chips quote.
+      let predicted: number | undefined;
+      if (baseline !== undefined) {
+        hypothetical[side][slot] = heroId;
+        predicted = predictDraft(hypothetical, index);
+      }
       const { weights } = index.model;
       const score =
-        weights[0] * (index.heroEdge(heroId) * POINTS_PER_LOG_ODDS) +
-        weights[1] * (synergy ?? 0) +
-        weights[2] * (counter ?? 0);
+        predicted !== undefined && baseline !== undefined
+          ? (predicted - baseline) * sign
+          : // Without a prediction to move (no data, or a full side), the hero's own edges, weighted like the model.
+            weights[0] * (index.heroEdge(heroId) * POINTS_PER_LOG_ODDS) +
+            weights[1] * (synergy ?? 0) +
+            weights[2] * (counter ?? 0);
       return {
         heroId,
         synergy,
