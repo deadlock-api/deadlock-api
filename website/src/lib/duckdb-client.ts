@@ -4,7 +4,8 @@ export interface DuckDbHandle {
   db: AsyncDuckDB;
 }
 
-const registeredViews = new WeakMap<DuckDbHandle, Set<string>>();
+/** Per database, each view's name and the file list it was created from. */
+const registeredViews = new WeakMap<DuckDbHandle, Map<string, string>>();
 let dbPromise: Promise<DuckDbHandle> | null = null;
 
 export function prewarmDuckDb(): void {
@@ -32,7 +33,7 @@ export function initDuckDb(): Promise<DuckDbHandle> {
       await conn.close();
     }
     const handle: DuckDbHandle = { db };
-    registeredViews.set(handle, new Set());
+    registeredViews.set(handle, new Map());
     return handle;
   })();
   return dbPromise;
@@ -80,8 +81,13 @@ export async function ensureViews(
   tableMap: Map<string, string[]>,
   names: string[],
 ): Promise<string[]> {
-  const registered = registeredViews.get(handle) ?? new Set<string>();
-  const toCreate = names.filter((n) => tableMap.has(n) && !registered.has(n));
+  const registered = registeredViews.get(handle) ?? new Map<string, string>();
+  // The lake is re-exported hourly and the manifest refetched; a view over last hour's files would miss new rows or
+  // point at removed ones, so it is recreated whenever its file list changes.
+  const toCreate = names.filter((n) => {
+    const urls = tableMap.get(n);
+    return urls && urls.length > 0 && registered.get(n) !== urls.join("\n");
+  });
   if (toCreate.length === 0) return [];
   const conn = await handle.db.connect();
   try {
@@ -90,7 +96,7 @@ export async function ensureViews(
         const urls = tableMap.get(n);
         if (!urls || urls.length === 0) return;
         await conn.query(`CREATE OR REPLACE VIEW "${n}" AS SELECT * FROM ${readParquetExpr(urls)}`);
-        registered.add(n);
+        registered.set(n, urls.join("\n"));
       }),
     );
   } finally {
