@@ -114,16 +114,23 @@ export function DraftSlot({
 
   if (heroId === null) {
     return (
-      <DraftSlotTarget
-        side={side}
-        state={isOver ? "over" : "idle"}
-        onClick={onPick}
-        aria-label={`Add hero to ${TEAM_NAMES[side]} ${lane ? `${lane.name} lane` : `slot ${slot + 1}`}`}
-        {...dropTargetProps}
-        className={cn("mx-auto", box)}
-      >
-        <PlusIcon className="size-4" />
-      </DraftSlotTarget>
+      // The same rows as a filled slot (portrait, name, swap hint), so the first pick does not grow the board.
+      <Stack gap={1} className="flex-1">
+        <DraftSlotTarget
+          side={side}
+          state={isOver ? "over" : "idle"}
+          onClick={onPick}
+          aria-label={`Add hero to ${TEAM_NAMES[side]} ${lane ? `${lane.name} lane` : `slot ${slot + 1}`}`}
+          {...dropTargetProps}
+          className={cn("mx-auto", box)}
+        >
+          <PlusIcon className="size-4" />
+        </DraftSlotTarget>
+        <div aria-hidden="true" className="invisible text-2xs leading-tight">
+          &nbsp;
+        </div>
+        <div className="h-6" />
+      </Stack>
     );
   }
 

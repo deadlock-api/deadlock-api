@@ -187,10 +187,8 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
         <Stack gap={0} align="center">
           <div className="eyebrow">Predicted</div>
           {loading ? (
-            <div className="flex flex-col items-center gap-1.5 py-1">
-              <Skeleton className="h-9 w-28" />
-              <Skeleton className="h-3 w-20" />
-            </div>
+            // One line of `text-4xl`, so the number replaces it without moving the board.
+            <Skeleton className="h-10 w-28" />
           ) : (
             // Both sides, each in its own team colour, so the split reads without doing the
             // subtraction. The favoured side is simply the larger number.
@@ -214,7 +212,12 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
           )}
         </Stack>
 
-        {!loading && analysis.margin !== undefined && analysis.predicted !== undefined && (
+        {loading || analysis.margin === undefined || analysis.predicted === undefined ? (
+          // Holds the bar's height until there is a prediction, so the first one does not push the board down.
+          <div aria-hidden="true" className="invisible">
+            <IntervalBar predicted={(BAR_LO + BAR_HI) / 2} margin={0} />
+          </div>
+        ) : (
           <StatTooltip
             title="How firm is this number?"
             rows={[
