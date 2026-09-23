@@ -421,6 +421,15 @@ function DataTableSpecimens() {
             ))}
           </FilteredSelectPopover>
         </Variants>
+        <Variants label="FilteredSelectPopover: more than 12 options with textValue open on a search field">
+          <FilteredSelectPopover defaultValue={[]} emptyLabel="Select a number...">
+            {Array.from({ length: 30 }, (_, i) => (
+              <FilteredSelectOption key={i} value={i} textValue={`Option ${i + 1}`}>
+                Option {i + 1}
+              </FilteredSelectOption>
+            ))}
+          </FilteredSelectPopover>
+        </Variants>
       </Specimen>
     </>
   );
