@@ -93,8 +93,9 @@ export function CopyableUrl({
       {value ? (
         <code
           title={overflow === "truncate" ? value : undefined}
+          // A floor on its width, so the actions wrap onto a second line before the address shrinks to "ht…".
           className={cn(
-            "min-w-0 flex-1 font-mono text-xs text-foreground",
+            "max-w-full min-w-48 flex-1 font-mono text-xs text-foreground",
             overflow === "wrap" ? "break-all" : "truncate",
           )}
         >
