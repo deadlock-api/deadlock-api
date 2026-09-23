@@ -5,12 +5,11 @@ import { useCallback, useEffect, useMemo, useRef, useState, type RefCallback } f
 
 import { AnswerOption, revealedState } from "~/components/domain/minigames/AnswerOption";
 import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
-import { GameShell } from "~/components/features/deadlockdle/GameShell";
+import { GameShell, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { NextGameButton } from "~/components/features/deadlockdle/NextGameButton";
 import { ScoreSummary } from "~/components/features/deadlockdle/ScoreSummary";
 import { ShareButton } from "~/components/features/deadlockdle/ShareButton";
-import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Card, CardContent } from "~/components/ui/card";
 import { Stack } from "~/components/ui/stack";
 import { StepMeter, StepMeterStep } from "~/components/ui/step-meter";
@@ -164,7 +163,9 @@ function Trivia() {
   }, []);
 
   if (isLoading || questions.length === 0) {
-    return <LoadingState label="puzzle" />;
+    return (
+      <GameShellLoading title="Deadlock Trivia" subtitle="10 questions to test your Deadlock knowledge" date={date} />
+    );
   }
 
   return (

@@ -5,13 +5,12 @@ import { Volume2, VolumeX } from "lucide-react";
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PlayButton } from "~/components/domain/minigames/PlayButton";
-import { GameShell } from "~/components/features/deadlockdle/GameShell";
+import { GameShell, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
 import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
 import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuesses";
 import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
-import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { Field } from "~/components/ui/field";
 import { ProgressBar } from "~/components/ui/progress-bar";
@@ -394,7 +393,7 @@ function GuessSound() {
   const isLoading = heroesLoading || soundsLoading || abilitiesLoading;
 
   if (isLoading || !dailySound) {
-    return <LoadingState label="puzzle" />;
+    return <GameShellLoading title="Guess the Sound" subtitle="Listen to the sound and name the ability" date={date} />;
   }
 
   const formattedDuration = duration > 0 ? `${duration.toFixed(1)}s` : "--";

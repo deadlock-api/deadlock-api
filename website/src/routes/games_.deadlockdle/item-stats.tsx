@@ -4,11 +4,10 @@ import { useCallback, useMemo, type RefCallback } from "react";
 
 import { AnswerOption, type AnswerOptionState, revealedState } from "~/components/domain/minigames/AnswerOption";
 import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
-import { GameShell } from "~/components/features/deadlockdle/GameShell";
+import { GameShell, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { NextGameButton } from "~/components/features/deadlockdle/NextGameButton";
 import { ScoreSummary } from "~/components/features/deadlockdle/ScoreSummary";
 import { ShareButton } from "~/components/features/deadlockdle/ShareButton";
-import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Card, CardContent } from "~/components/ui/card";
 import { Field } from "~/components/ui/field";
 import { Stack } from "~/components/ui/stack";
@@ -169,7 +168,7 @@ function ItemStatsQuiz() {
   }, []);
 
   if (isLoading || dailyItems.length === 0) {
-    return <LoadingState label="puzzle" />;
+    return <GameShellLoading title="Item Stats Quiz" subtitle="Fill in the missing stats for each item" date={date} />;
   }
 
   return (

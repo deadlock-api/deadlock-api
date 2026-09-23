@@ -3,13 +3,12 @@ import type { Ability, Hero } from "deadlock_api_client";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
-import { GameShell } from "~/components/features/deadlockdle/GameShell";
+import { GameShell, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
 import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
 import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuesses";
 import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
-import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Stack } from "~/components/ui/stack";
 import { useAbilities, useHeroes } from "~/lib/deadlockdle/queries";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
@@ -144,7 +143,7 @@ function GuessAbility() {
   const isLoading = heroesLoading || abilitiesLoading;
 
   if (isLoading || !dailyEntry) {
-    return <LoadingState label="puzzle" />;
+    return <GameShellLoading title="Guess the Ability" subtitle="Name the ability from its icon" date={date} />;
   }
 
   const { ability, hero } = dailyEntry;

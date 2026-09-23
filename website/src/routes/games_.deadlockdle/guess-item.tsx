@@ -3,13 +3,12 @@ import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
 import { SilhouetteFrame } from "~/components/domain/minigames/SilhouetteFrame";
-import { GameShell } from "~/components/features/deadlockdle/GameShell";
+import { GameShell, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
 import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
 import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuesses";
 import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
-import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Stack } from "~/components/ui/stack";
 import { useItems } from "~/lib/deadlockdle/queries";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
@@ -120,7 +119,9 @@ function GuessItem() {
   }
 
   if (isLoading || !dailyItem) {
-    return <LoadingState label="puzzle" />;
+    return (
+      <GameShellLoading title="Guess the Item" subtitle="Identify the item from its blurred shop image" date={date} />
+    );
   }
 
   const itemImgSrc = dailyItem.shop_image_webp ?? dailyItem.shop_image ?? "";

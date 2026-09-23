@@ -80,7 +80,11 @@ export function FlashcardGame<T extends FlashcardEntry>(props: FlashcardGameProp
   // The first card is drawn at random, so the server and client would disagree on it.
   const hydrated = useHydrated();
   if (props.isLoading || !hydrated) {
-    return <LoadingState label="flashcards" />;
+    return (
+      <FlashcardPage title={props.title} subtitle={props.subtitle}>
+        <LoadingState label="flashcards" />
+      </FlashcardPage>
+    );
   }
   return <FlashcardGameReady {...props} />;
 }

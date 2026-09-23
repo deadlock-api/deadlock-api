@@ -3,13 +3,12 @@ import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
 import { SilhouetteFrame } from "~/components/domain/minigames/SilhouetteFrame";
-import { GameShell } from "~/components/features/deadlockdle/GameShell";
+import { GameShell, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
 import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
 import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuesses";
 import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
-import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Stack } from "~/components/ui/stack";
 import { useHeroes } from "~/lib/deadlockdle/queries";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
@@ -157,7 +156,7 @@ function GuessHero() {
   }
 
   if (isLoading || !dailyHero) {
-    return <LoadingState label="puzzle" />;
+    return <GameShellLoading title="Guess the Hero" subtitle="Identify the hero from their silhouette" date={date} />;
   }
 
   const heroCardSrc = dailyHero.images?.icon_hero_card_webp ?? dailyHero.images?.icon_hero_card ?? "";

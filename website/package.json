@@ -16,7 +16,8 @@
     "test:tracker": "tsx --test src/lib/steam.test.ts src/lib/steam-profile-batches.test.ts src/lib/tracker/*.test.ts src/lib/local-storage.test.ts",
     "test:tracker:browser": "playwright test",
     "bench:avg": "tsx scripts/playground/bench-average-build.ts",
-    "og": "node scripts/generate-og-images.mjs"
+    "og": "node scripts/generate-og-images.mjs",
+    "smoke": "node scripts/smoke-routes.mjs"
   },
   "dependencies": {
     "@codemirror/lang-sql": "^6.10.0",

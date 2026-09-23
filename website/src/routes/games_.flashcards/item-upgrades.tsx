@@ -163,6 +163,8 @@ function rankedDistractors(answer: UpgradePathEntry, pool: UpgradePathEntry[]): 
 
     for (const candidate of candidates) {
       if (distractors.length >= OPTION_COUNT - 1) return;
+      // Several items can share one component path (Sprint Boots alone builds more than one); offer it once.
+      if (usedAnswerKeys.has(candidate.answerKey)) continue;
       usedAnswerKeys.add(candidate.answerKey);
       distractors.push(entryToOption(candidate));
     }
@@ -207,12 +209,18 @@ function ItemUpgradePathFlashcards() {
   }, [items]);
 
   if (isLoading || !hydrated) {
-    return <LoadingState label="flashcards" />;
+    return (
+      <FlashcardPage title={TITLE} subtitle={SUBTITLE}>
+        <LoadingState label="flashcards" />
+      </FlashcardPage>
+    );
   }
 
   return <ItemUpgradePathFlashcardsReady pool={pool} />;
 }
 
+const TITLE = "Item Upgrade Paths";
+const SUBTITLE = "Match each upgraded item to its direct component path.";
 const NO_REPEATS_KEY = "flashcards:item-upgrades:no-repeats";
 
 function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) {
@@ -286,7 +294,7 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
   const exhausted = noRepeats && pool.length > 0 && seenIds.size >= pool.length;
 
   return (
-    <FlashcardPage title="Item Upgrade Paths" subtitle="Match each upgraded item to its direct component path.">
+    <FlashcardPage title={TITLE} subtitle={SUBTITLE}>
       <FlashcardStatStrip stats={stats} onReset={resetGame} />
 
       <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-xs tracking-wider uppercase">
