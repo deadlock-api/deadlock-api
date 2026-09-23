@@ -37,6 +37,7 @@ export function PlayerCell({
     name?: string | null;
     avatar?: string | null;
     loading?: boolean;
+    /** The account id after the name, from the `sm` breakpoint up. */
     showAccountId?: boolean;
     /** Links the name to the player's tracker page. Leave it off when the whole row is already the link. */
     linkToDetail?: boolean;
@@ -64,7 +65,11 @@ export function PlayerCell({
   );
 
   const idNode = showAccountId && accountId != null && (
-    <span data-slot="player-cell-id" className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
+    // Hidden on a phone, where it took the width of the stat column beside the name.
+    <span
+      data-slot="player-cell-id"
+      className="hidden shrink-0 font-mono text-xs text-muted-foreground tabular-nums sm:inline"
+    >
       {accountId}
     </span>
   );

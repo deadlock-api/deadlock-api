@@ -163,6 +163,8 @@ export function ScoreboardTable({
                 <SortBySelector
                   value={sortBy}
                   defaultValue="kills"
+                  // The name column gives way first; below this the picker shrank to an unreadable "S…".
+                  className="min-w-24"
                   onValueChange={(next) => sort({ sortBy: next, sortDirection })}
                 />
                 <SortButton
@@ -190,7 +192,8 @@ export function ScoreboardTable({
                     avatar={profile?.avatar}
                     loading={isLoadingProfiles && !profile}
                     showAccountId
-                    className="max-w-72"
+                    // Narrower on a phone, so a long name truncates instead of pushing the stat off-screen.
+                    className="max-w-28 sm:max-w-72"
                   />
                 </TableCell>
                 {sortBy !== "matches" && (
