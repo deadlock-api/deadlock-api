@@ -90,6 +90,9 @@ export default defineConfig({
           !/^\/(games|heroes|items|abilities|players|team-builder|leaderboard|badge-distribution|heatmap)(\/|$)/.test(
             path,
           ) &&
+          // They render their query string (a shared ?sql= query, the Steam sign-in return): a static copy without it
+          // failed hydration (React #418) and re-rendered the whole page on the client.
+          !/^\/(data-dumps|streamkit)(\/|$)/.test(path) &&
           // Tracker pages are patron-gated and per-user; prerendering them would bake gate HTML.
           path !== "/auth" &&
           path !== "/auth/patreon" &&

@@ -18,7 +18,8 @@
       "/games", "/games/*", "/heroes", "/heroes/*", "/items", "/items/*", "/abilities", "/abilities/*",
       "/team-builder", "/team-builder/*", "/leaderboard", "/leaderboard/*",
       "/badge-distribution", "/badge-distribution/*", "/heatmap", "/heatmap/*",
-      "/deadlockdle", "/deadlockdle/*", "/flashcards", "/flashcards/*"
+      "/deadlockdle", "/deadlockdle/*", "/flashcards", "/flashcards/*",
+      "/data-dumps", "/streamkit"
     ]
   },
   "routes": [
