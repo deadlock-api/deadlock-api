@@ -44,11 +44,16 @@ function DialogContent({
   children,
   size = "default",
   showCloseButton = true,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> &
   VariantProps<typeof dialogContentVariants> & {
     showCloseButton?: boolean;
   }) {
+  // Radix returns focus to its `DialogTrigger`. A dialog opened from state (a slot, a row, "Add items") has none, so
+  // focus fell to <body>; it goes back to whatever had it when the dialog opened, while that is still on the page.
+  const opener = React.useRef<HTMLElement | null>(null);
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
@@ -56,6 +61,17 @@ function DialogContent({
         data-slot="dialog-content"
         data-size={size}
         className={cn(dialogContentVariants({ size }), className)}
+        onOpenAutoFocus={(event) => {
+          opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          onOpenAutoFocus?.(event);
+        }}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event);
+          const element = opener.current;
+          if (event.defaultPrevented || !element?.isConnected || element === document.body) return;
+          event.preventDefault();
+          element.focus();
+        }}
         {...props}
       >
         {children}
