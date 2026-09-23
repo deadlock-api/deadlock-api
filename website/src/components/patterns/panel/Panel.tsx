@@ -108,6 +108,7 @@ export function PanelShowMore({
   defaultOpen = false,
   onOpenChange,
   total,
+  onClick,
   className,
   ...props
 }: PanelShowMoreProps) {
@@ -122,7 +123,10 @@ export function PanelShowMore({
       data-state={open ? "open" : "closed"}
       variant="row"
       aria-expanded={open}
-      onClick={() => setOpen(!open)}
+      onClick={(event) => {
+        onClick?.(event);
+        if (!event.defaultPrevented) setOpen(!open);
+      }}
       className={cn("justify-center gap-1.5 py-2 text-xs text-muted-foreground hover:text-foreground", className)}
       {...props}
     >

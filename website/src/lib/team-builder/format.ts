@@ -38,7 +38,8 @@ export function deltaClass(value: number | undefined): string {
 /** `deltaClass` as a paintable colour, for bars that cannot take a text class. */
 export function deltaBarColor(value: number | undefined): string {
   if (value === undefined || !Number.isFinite(value)) return "transparent";
-  return value >= 0 ? TONE_COLOR.positive : TONE_COLOR.negative;
+  // The same rounding as the printed number, so a bar never contradicts a "+0.0" beside it.
+  return TONE_COLOR[toneOf(Math.round(value * 10) / 10)];
 }
 
 /** Heat fill for matrix cells: positive above zero, negative below, opacity scaled by magnitude. */

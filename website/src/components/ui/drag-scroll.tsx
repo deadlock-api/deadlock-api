@@ -16,6 +16,7 @@ export function DragScroll({
   onPointerMove,
   onPointerUp,
   onPointerLeave,
+  onPointerCancel,
   onClickCapture,
   ...props
 }: React.ComponentProps<"div">) {
@@ -43,6 +44,11 @@ export function DragScroll({
         onPointerMove?.(event);
         const state = drag.current;
         if (!state?.active || !ref.current) return;
+        // The button came up somewhere this element did not hear about (a native drag of a link or image).
+        if ((event.buttons & 1) === 0) {
+          drag.current = null;
+          return;
+        }
         const delta = event.clientX - state.x;
         if (Math.abs(delta) > 3) state.moved = true;
         ref.current.scrollLeft = state.left - delta;
@@ -54,6 +60,10 @@ export function DragScroll({
       }}
       onPointerLeave={(event) => {
         onPointerLeave?.(event);
+        drag.current = null;
+      }}
+      onPointerCancel={(event) => {
+        onPointerCancel?.(event);
         drag.current = null;
       }}
       onClickCapture={(event) => {

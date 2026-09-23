@@ -22,6 +22,7 @@ export const BadgeImage = memo(function BadgeImage({
   ranks,
   size = "default",
   className,
+  onError,
   ...props
 }: BadgeImageProps & React.ComponentProps<"img">) {
   const badgeMap = useMemo(() => extractBadgeMap(ranks), [ranks]);
@@ -48,7 +49,10 @@ export const BadgeImage = memo(function BadgeImage({
         alt={altText}
         title={altText}
         className={cn("object-contain", look)}
-        onError={() => setFailedSrc(src)}
+        onError={(event) => {
+          onError?.(event);
+          setFailedSrc(src);
+        }}
         {...props}
       />
     </picture>

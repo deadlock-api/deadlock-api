@@ -84,7 +84,9 @@ export function ProgressBar({
   const maxVal = max || 1;
   const total = segmentTotal(children);
   const clamped = Math.max(Math.min(total || value || 0, maxVal), minVal);
-  const width = `${(((clamped - minVal) / (maxVal - minVal)) * 100).toFixed(2)}%`;
+  // An empty range (every row equal) has no scale; an unscaled value would divide by zero and fill the track.
+  const span = maxVal - minVal;
+  const width = `${(span > 0 ? ((clamped - minVal) / span) * 100 : 0).toFixed(2)}%`;
   const fill = cn("h-full transition-all duration-slow ease-standard", variant === "thin" && "rounded-full");
   const fallbackFill = variant === "thin" ? "bg-positive" : "bg-primary";
 
@@ -132,7 +134,8 @@ export function ProgressBarWithLabel({
   children?: ReactNode;
 }) {
   const reading = typeof value === "number" && Number.isFinite(value);
-  const percentage = Math.round((((value || 0) - (min || 0)) / ((max || 1) - (min || 0))) * 100);
+  const span = (max || 1) - (min || 0);
+  const percentage = span > 0 ? Math.round((((value || 0) - (min || 0)) / span) * 100) : 0;
   return (
     <div
       data-slot="progress-bar-with-label"

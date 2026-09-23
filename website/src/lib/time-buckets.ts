@@ -22,7 +22,8 @@ export function withoutOpenTimeBucket<T extends { bucket: number }>(rows: T[], i
   for (const { bucket } of rows) {
     if (seenBuckets.has(bucket)) continue;
     seenBuckets.add(bucket);
-    if (day.unix(bucket).add(1, unit).isBefore(now)) closedBuckets.add(bucket);
+    // Buckets start at UTC midnight; adding a month in local time would close them early west of UTC.
+    if (day.unix(bucket).utc().add(1, unit).isBefore(now)) closedBuckets.add(bucket);
   }
   return closedBuckets.size >= 2 ? rows.filter((row) => closedBuckets.has(row.bucket)) : rows;
 }

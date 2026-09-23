@@ -17,7 +17,7 @@ export function DivergingBar({
   /** The uncertainty around the value, as `[low, high]` on the same scale. The value then becomes a marker. */
   interval?: readonly [number, number];
 }) {
-  const at = (n: number) => 50 + Math.max(-1, Math.min(1, n / scale)) * 50;
+  const at = (n: number) => (scale > 0 ? 50 + Math.max(-1, Math.min(1, n / scale)) * 50 : 50);
   const t = value == null || !Number.isFinite(value) || scale <= 0 ? 0 : Math.max(-1, Math.min(1, value / scale));
   return (
     <div

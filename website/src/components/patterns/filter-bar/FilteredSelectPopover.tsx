@@ -23,13 +23,21 @@ interface FilteredSelectOptionProps extends Omit<React.ComponentProps<typeof Opt
 }
 
 /** One entry of a `FilteredSelectList` or `FilteredSelectPopover`; it must be a direct child. */
-export function FilteredSelectOption({ value, children, ...props }: FilteredSelectOptionProps) {
+export function FilteredSelectOption({ value, children, onClick, ...props }: FilteredSelectOptionProps) {
   const context = use(FilteredSelectContext);
   if (!context)
     throw new Error("FilteredSelectOption must be used inside a FilteredSelectList or FilteredSelectPopover");
   const selected = context.value.includes(value);
   return (
-    <OptionRow selected={selected} aria-pressed={selected} onClick={() => context.toggle(value)} {...props}>
+    <OptionRow
+      selected={selected}
+      aria-pressed={selected}
+      onClick={(event) => {
+        onClick?.(event);
+        if (!event.defaultPrevented) context.toggle(value);
+      }}
+      {...props}
+    >
       <span className="flex min-w-0 items-center gap-2">{children}</span>
     </OptionRow>
   );

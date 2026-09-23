@@ -74,5 +74,5 @@ export function formatStatValue(value: number, sortBy: string): string {
   if (Number.isInteger(value)) {
     return value.toLocaleString("en-US");
   }
-  return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return value.toLocaleString("en-US", { maximumFractionDigits: 2 });
 }

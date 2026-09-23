@@ -79,7 +79,8 @@ export function DateRangePicker({
   }, [startDate, endDate]);
 
   function selectLastDays(days: number) {
-    onDateRangeChange({ startDate: day().subtract(days, "day").startOf("day"), endDate: day().startOf("day") });
+    // Ends with today, like a range picked on the calendar; midnight would drop today's matches east of UTC.
+    onDateRangeChange({ startDate: day().subtract(days, "day").startOf("day"), endDate: day().endOf("day") });
   }
 
   const presets = DAY_PRESETS.map((n) => ({ value: String(n), label: `Last ${n} days` }));

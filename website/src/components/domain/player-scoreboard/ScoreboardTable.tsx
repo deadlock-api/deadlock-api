@@ -186,7 +186,7 @@ export function ScoreboardTable({
                 <TableCell>
                   <PlayerCell
                     accountId={accountId}
-                    name={profile?.personaname ?? (accountId == null ? `#${entry.rank}` : undefined)}
+                    name={profile?.personaname ?? (accountId == null ? `#${entry.rank + 1}` : undefined)}
                     avatar={profile?.avatar}
                     loading={isLoadingProfiles && !profile}
                     showAccountId
