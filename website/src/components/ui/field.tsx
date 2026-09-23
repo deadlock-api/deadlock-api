@@ -1,7 +1,7 @@
 import { TriangleAlertIcon } from "lucide-react";
 import { useId } from "react";
 
-import { FieldControlContext } from "~/components/ui/hooks/use-field-control";
+import { FieldControlContext, FieldLabelContext } from "~/components/ui/hooks/use-field-control";
 import { Label } from "~/components/ui/label";
 import { cn } from "~/lib/utils";
 
@@ -50,65 +50,67 @@ export function Field({
   const control = htmlFor ? { describedBy: message ? messageId : undefined, invalid: hasError } : null;
   return (
     <FieldControlContext value={control}>
-      <div
-        data-slot="field"
-        data-orientation={orientation}
-        data-invalid={hasError || undefined}
-        role={htmlFor ? undefined : "group"}
-        aria-labelledby={htmlFor ? undefined : labelId}
-        aria-describedby={!htmlFor && message ? messageId : undefined}
-        className={cn(
-          "flex min-w-0",
-          orientation === "vertical" ? "flex-col gap-1.5" : "items-center gap-2",
-          orientation === "horizontal" && hasFooter && "flex-wrap",
-          className,
-        )}
-        {...props}
-      >
-        <LabelTag
-          id={labelId}
-          htmlFor={htmlFor}
-          data-slot="field-label"
+      <FieldLabelContext value={htmlFor ? null : labelId}>
+        <div
+          data-slot="field"
+          data-orientation={orientation}
+          data-invalid={hasError || undefined}
+          role={htmlFor ? undefined : "group"}
+          aria-labelledby={htmlFor ? undefined : labelId}
+          aria-describedby={!htmlFor && message ? messageId : undefined}
           className={cn(
-            "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
-            labelDisplay === "hidden"
-              ? "sr-only"
-              : orientation === "vertical"
-                ? "flex items-center gap-1.5 eyebrow"
-                : "flex shrink-0 items-center gap-1.5 text-xs whitespace-nowrap text-muted-foreground",
+            "flex min-w-0",
+            orientation === "vertical" ? "flex-col gap-1.5" : "items-center gap-2",
+            orientation === "horizontal" && hasFooter && "flex-wrap",
+            className,
           )}
+          {...props}
         >
-          {icon}
-          {label}
-        </LabelTag>
-        {children}
-        {hasFooter && (
-          <div
-            data-slot="field-footer"
-            className="flex min-w-0 basis-full items-start justify-between gap-3 type-caption"
-          >
-            <p
-              id={messageId}
-              role={hasError ? "alert" : undefined}
-              data-slot={hasError ? "field-error" : "field-description"}
-              className={cn(
-                "min-w-0",
-                hasError
-                  ? "flex items-start gap-1 text-destructive [&_svg]:size-3.5 [&_svg]:shrink-0"
-                  : "text-muted-foreground",
-              )}
-            >
-              {hasError && <TriangleAlertIcon aria-hidden="true" />}
-              {message}
-            </p>
-            {counter && (
-              <span data-slot="field-counter" className="shrink-0 text-muted-foreground tabular-nums">
-                {counter}
-              </span>
+          <LabelTag
+            id={labelId}
+            htmlFor={htmlFor}
+            data-slot="field-label"
+            className={cn(
+              "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+              labelDisplay === "hidden"
+                ? "sr-only"
+                : orientation === "vertical"
+                  ? "flex items-center gap-1.5 eyebrow"
+                  : "flex shrink-0 items-center gap-1.5 text-xs whitespace-nowrap text-muted-foreground",
             )}
-          </div>
-        )}
-      </div>
+          >
+            {icon}
+            {label}
+          </LabelTag>
+          {children}
+          {hasFooter && (
+            <div
+              data-slot="field-footer"
+              className="flex min-w-0 basis-full items-start justify-between gap-3 type-caption"
+            >
+              <p
+                id={messageId}
+                role={hasError ? "alert" : undefined}
+                data-slot={hasError ? "field-error" : "field-description"}
+                className={cn(
+                  "min-w-0",
+                  hasError
+                    ? "flex items-start gap-1 text-destructive [&_svg]:size-3.5 [&_svg]:shrink-0"
+                    : "text-muted-foreground",
+                )}
+              >
+                {hasError && <TriangleAlertIcon aria-hidden="true" />}
+                {message}
+              </p>
+              {counter && (
+                <span data-slot="field-counter" className="shrink-0 text-muted-foreground tabular-nums">
+                  {counter}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </FieldLabelContext>
     </FieldControlContext>
   );
 }

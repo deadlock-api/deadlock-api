@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Terminal } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
-import { Suspense, lazy, useCallback, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useMemo, useRef, useState } from "react";
 
 import { LakeTableRow } from "~/components/features/data-dumps/TableRow";
 import {
@@ -57,10 +57,16 @@ function DataDumps() {
   const [sqlQueryParam, setSqlQueryParam] = useQueryState("sql", parseAsString);
   const [userOpened, setUserOpened] = useState(false);
   const playgroundOpen = userOpened || (sqlQueryParam !== null && sqlQueryParam.trim().length > 0);
+  // The playground unmounts as it closes, so its dialog cannot hand focus back to the button that opened it (Law 17).
+  const openerRef = useRef<HTMLElement | null>(null);
   const setPlaygroundOpen = useCallback(
     (next: boolean) => {
+      if (next && document.activeElement instanceof HTMLElement) openerRef.current = document.activeElement;
       setUserOpened(next);
-      if (!next) setSqlQueryParam(null);
+      if (!next) {
+        setSqlQueryParam(null);
+        requestAnimationFrame(() => openerRef.current?.focus());
+      }
     },
     [setSqlQueryParam],
   );

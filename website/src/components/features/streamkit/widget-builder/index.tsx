@@ -118,7 +118,8 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
             tone="muted"
             size="flush"
             radius="lg"
-            className="items-center justify-center p-4"
+            // A widget wider than the column scrolls instead of being clipped on both sides by the centring.
+            className="items-center-safe justify-center overflow-x-auto p-4"
             style={
               config.previewBackgroundImage
                 ? {

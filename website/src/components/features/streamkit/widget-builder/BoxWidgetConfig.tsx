@@ -120,7 +120,7 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
               <div className="flex grow flex-col gap-2">
                 <div className="flex gap-3">
                   <Select value={variable} onValueChange={(value) => updateVariable(index, value)}>
-                    <SelectTrigger className="w-1/2">
+                    <SelectTrigger className="w-1/2" aria-label={`Variable ${index + 1}`}>
                       <SelectValue placeholder="Select a variable" />
                     </SelectTrigger>
                     <SelectContent>
@@ -136,6 +136,7 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
                     value={config.labels[index]}
                     onChange={(e) => updateLabel(index, e.target.value)}
                     className="w-1/2"
+                    aria-label={`Label for variable ${index + 1}`}
                     placeholder="Label (optional)"
                   />
                 </div>
@@ -143,10 +144,15 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
                   type="text"
                   value={config.subtexts[index] ?? ""}
                   onChange={(e) => updateSubtext(index, e.target.value)}
+                  aria-label={`Second line for variable ${index + 1}`}
                   placeholder="Second line (optional), e.g. {rank_progress}"
                 />
               </div>
-              <Button variant="destructive" onClick={() => removeVariable(index)}>
+              <Button
+                variant="destructive"
+                onClick={() => removeVariable(index)}
+                aria-label={`Remove variable ${index + 1}`}
+              >
                 Remove
               </Button>
             </div>

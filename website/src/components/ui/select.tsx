@@ -2,6 +2,7 @@ import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { Select as SelectPrimitive } from "radix-ui";
 import * as React from "react";
 
+import { useFieldLabelledBy } from "~/components/ui/hooks/use-field-control";
 import {
   CONTROL_SURFACE,
   DISABLED_STATE,
@@ -28,12 +29,19 @@ function SelectTrigger({
   className,
   size = "default",
   children,
+  id: idProp,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
   size?: "sm" | "default";
 }) {
+  const ownId = React.useId();
+  const id = idProp ?? ownId;
+  // Inside a Field it reads "Theme, Dark": the Field names the group, which a combobox does not inherit.
+  const labelledBy = useFieldLabelledBy(id, props);
   return (
     <SelectPrimitive.Trigger
+      id={id}
+      aria-labelledby={labelledBy}
       data-slot="select-trigger"
       data-size={size}
       className={cn(
