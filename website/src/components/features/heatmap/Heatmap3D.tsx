@@ -139,7 +139,6 @@ function MapPlane({ mapImages }: { mapImages: { background: string; frame: strin
 
   useEffect(() => {
     let cancelled = false;
-    let compositeTexture: THREE.CanvasTexture | undefined;
     const loader = new THREE.ImageLoader();
     const load = (url: string) => loader.loadAsync(url);
 
@@ -164,7 +163,6 @@ function MapPlane({ mapImages }: { mapImages: { background: string; frame: strin
       const tex = new THREE.CanvasTexture(canvas);
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.needsUpdate = true;
-      compositeTexture = tex;
       setTexture(tex);
     };
     void loadAll().catch((error) => {
@@ -172,9 +170,12 @@ function MapPlane({ mapImages }: { mapImages: { background: string; frame: strin
     });
     return () => {
       cancelled = true;
-      compositeTexture?.dispose();
     };
   }, [mapImages.background, mapImages.frame, mapImages.mid]);
+
+  // Disposed once it is replaced or the plane unmounts, not when new images start loading: the old texture is still
+  // on screen until then, and three.js would silently re-upload a disposed one.
+  useEffect(() => () => texture?.dispose(), [texture]);
 
   if (!texture) return null;
 

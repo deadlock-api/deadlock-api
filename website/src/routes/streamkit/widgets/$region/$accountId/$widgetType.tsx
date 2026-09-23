@@ -35,6 +35,8 @@ const NUM_KEYS = new Set(["numMatches", "opacity"]);
 // The router's default search parser coerces "false"->false and "10"->10, so values reach the route
 // already typed. Normalize each flag explicitly here and let the component apply defaults, instead of
 // comparing against string literals (which never matched the coerced booleans).
+const THEMES: readonly Theme[] = ["dark", "glass", "light"];
+
 function validateWidgetSearch(search: Record<string, unknown>): WidgetSearch {
   const out: Record<string, string | number | boolean> = {};
   for (const [key, value] of Object.entries(search)) {
@@ -110,7 +112,8 @@ function Widget() {
       const variables = search.vars?.split(",");
       const labels = search.labels?.split(",") ?? variables?.map(snakeToPretty);
       const subtexts = search.subtexts?.split(",");
-      const theme = (search.theme ?? "dark") as Theme;
+      // An edited URL ("?theme=Dark") must not crash the overlay on stream: unknown themes fall back to dark.
+      const theme: Theme = THEMES.includes(search.theme as Theme) ? (search.theme as Theme) : "dark";
       const showHeader = search.showHeader ?? true;
       const showBranding = search.showBranding ?? true;
       const showOutline = search.showOutline ?? true;

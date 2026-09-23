@@ -156,6 +156,9 @@ export function ElementPicker({ onPick, onCancel }: ElementPickerProps) {
 
     const onMouseDown = (event: MouseEvent) => {
       if ((event.target as Element | null)?.closest("[data-feedback-ui]")) return;
+      // The press starts a pick, not a page action: no focus move, no menu opening on mousedown.
+      event.preventDefault();
+      event.stopPropagation();
       originRef.current = { x: event.clientX, y: event.clientY };
       draggedRef.current = false;
       baseRef.current = selectedRef.current;
@@ -212,10 +215,25 @@ export function ElementPicker({ onPick, onCancel }: ElementPickerProps) {
       event.preventDefault();
       event.stopPropagation();
     };
+    // Radix menus and selects open on pointerdown. Only stopped, not prevented: preventing it would cancel the
+    // mousedown and mouseup the pick itself is made of.
+    const stopPointerDown = (event: PointerEvent) => {
+      if ((event.target as Element | null)?.closest("[data-feedback-ui]")) return;
+      event.stopPropagation();
+    };
 
+    // Handled keys stop here, so Escape does not also close a page dialog and Enter does not press a focused link.
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onCancel();
-      if (event.key === "Enter" && selectedRef.current.length > 0) onPick(selectedRef.current);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        onCancel();
+      }
+      if (event.key === "Enter" && selectedRef.current.length > 0) {
+        event.preventDefault();
+        event.stopPropagation();
+        onPick(selectedRef.current);
+      }
     };
 
     const onViewportChange = () => {
@@ -227,6 +245,7 @@ export function ElementPicker({ onPick, onCancel }: ElementPickerProps) {
     document.addEventListener("mousemove", onMouseMove, true);
     document.addEventListener("mouseup", onMouseUp, true);
     document.addEventListener("click", swallow, true);
+    document.addEventListener("pointerdown", stopPointerDown, true);
     document.addEventListener("keydown", onKeyDown, true);
     window.addEventListener("scroll", onViewportChange, true);
     window.addEventListener("resize", onViewportChange);
@@ -241,6 +260,7 @@ export function ElementPicker({ onPick, onCancel }: ElementPickerProps) {
       document.removeEventListener("mousemove", onMouseMove, true);
       document.removeEventListener("mouseup", onMouseUp, true);
       document.removeEventListener("click", swallow, true);
+      document.removeEventListener("pointerdown", stopPointerDown, true);
       document.removeEventListener("keydown", onKeyDown, true);
       window.removeEventListener("scroll", onViewportChange, true);
       window.removeEventListener("resize", onViewportChange);

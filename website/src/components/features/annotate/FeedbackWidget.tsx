@@ -1,5 +1,5 @@
 import { Check, MessageSquarePlus, MousePointerClick, X } from "lucide-react";
-import { useCallback, useId, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ElementPicker } from "~/components/features/annotate/ElementPicker";
@@ -119,6 +119,18 @@ export function FeedbackWidget() {
 
   const focusComment = useCallback((element: HTMLTextAreaElement | null) => element?.focus(), []);
 
+  // Closing unmounts the panel with the focus in it; the launcher that replaces it takes the focus back (Law 17).
+  const restoreFocus = useRef(false);
+  const closePanel = useCallback(() => {
+    restoreFocus.current = true;
+    setOpen(false);
+  }, []);
+  const focusLauncher = useCallback((element: HTMLButtonElement | null) => {
+    if (!element || !restoreFocus.current) return;
+    restoreFocus.current = false;
+    element.focus();
+  }, []);
+
   // Deferred to the open handler: `localStorage` does not exist during SSR.
   const openPanel = useCallback(() => {
     setNickname((current) => current || (readLocalStorage(NICKNAME_STORAGE_KEY) ?? ""));
@@ -174,7 +186,7 @@ export function FeedbackWidget() {
       toast.success("Thanks! Your feedback was sent.");
       setComment("");
       setTargets([]);
-      setOpen(false);
+      closePanel();
     } catch (error) {
       toast.error(userFacingError(error));
     }
@@ -199,7 +211,7 @@ export function FeedbackWidget() {
           <Stack gap={1}>
             <Inline justify="between" wrap="nowrap">
               <Heading as="h2">Help improve this site</Heading>
-              <Button variant="ghost" size="icon-sm" onClick={() => setOpen(false)} aria-label="Close">
+              <Button variant="ghost" size="icon-sm" onClick={closePanel} aria-label="Close">
                 <X className="size-4" />
               </Button>
             </Inline>
@@ -235,7 +247,7 @@ export function FeedbackWidget() {
               value={comment}
               onChange={(event) => setComment(event.target.value.slice(0, MAX_COMMENT_LENGTH))}
               onKeyDown={(event) => {
-                if (event.key === "Escape") setOpen(false);
+                if (event.key === "Escape") closePanel();
               }}
               placeholder={targets.length > 0 ? TARGET_PROMPT : GENERAL_PROMPT}
               rows={5}
@@ -254,7 +266,14 @@ export function FeedbackWidget() {
           </Button>
         </Card>
       ) : (
-        <Button size="sm" elevation="raised" className="pointer-events-auto" onClick={openPanel} aria-label="Feedback">
+        <Button
+          ref={focusLauncher}
+          size="sm"
+          elevation="raised"
+          className="pointer-events-auto"
+          onClick={openPanel}
+          aria-label="Feedback"
+        >
           <MessageSquarePlus className="size-4" />
           <span className="hidden sm:inline">Feedback</span>
         </Button>

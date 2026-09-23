@@ -39,11 +39,7 @@ export const RawWidget: FC<RawWidgetProps> = ({
   fontColor = "#ffffff",
   refreshInterval = UPDATE_INTERVAL_MS,
 }) => {
-  const {
-    data,
-    isLoading: statsLoading,
-    error: statsError,
-  } = useQuery<Record<string, string>>({
+  const { data, isLoading: statsLoading } = useQuery<Record<string, string>>({
     queryKey: queryKeys.streamkit.stats(region, accountId, variable, extraArgs),
     queryFn: () => fetchStats(region, accountId, variable, extraArgs),
     staleTime: refreshInterval - 10000,
@@ -51,7 +47,8 @@ export const RawWidget: FC<RawWidgetProps> = ({
     refetchIntervalInBackground: true,
   });
 
-  const stat = statsError ? null : (data?.[variable] ?? null);
+  // A failed background refetch keeps the last value on stream; only a widget that never loaded shows nothing.
+  const stat = data?.[variable] ?? null;
 
   return (
     <div>

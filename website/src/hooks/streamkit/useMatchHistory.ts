@@ -27,6 +27,8 @@ const EMPTY_HEROES = new Map<number, string>();
 export const useMatchHistory = ({ accountId, numMatches = 10 }: UseMatchHistoryParams): UseMatchHistoryResult => {
   const { data: heroes = EMPTY_HEROES, isLoading: loadingHeroes } = useQuery({
     ...heroesQueryOptions,
+    // An OBS source never refocuses or remounts, so a failed first load would hide the strip for the whole stream.
+    refetchInterval: (query) => (query.state.status === "error" ? 60_000 : false),
     select: (heroesData) =>
       new Map(
         heroesData
