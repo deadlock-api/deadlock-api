@@ -993,12 +993,17 @@ export function ItemFlowGraph({
                         </>
                       }
                     />
-                    <KeyValue label="Path Frequency" value={`${(pathStats.pathFrequency * 100).toFixed(1)}%`} />
-                    <KeyValue label="Overall WR" value={`${(pathStats.baseWinRate * 100).toFixed(1)}%`} />
-                    <KeyValue
-                      label="Build length"
-                      value={`${locked.length} ${locked.length === 1 ? "item" : "items"}`}
-                    />
+                    {/* Without a locked path these read 100%, the headline again, 0 items and no cost. */}
+                    {locked.length > 0 && (
+                      <>
+                        <KeyValue label="Path Frequency" value={`${(pathStats.pathFrequency * 100).toFixed(1)}%`} />
+                        <KeyValue label="Overall WR" value={`${(pathStats.baseWinRate * 100).toFixed(1)}%`} />
+                        <KeyValue
+                          label="Build length"
+                          value={`${locked.length} ${locked.length === 1 ? "item" : "items"}`}
+                        />
+                      </>
+                    )}
                     <KeyValue
                       label="Avg KDA"
                       value={`${pathStats.avgKills.toFixed(1)} / ${pathStats.avgDeaths.toFixed(1)} / ${pathStats.avgAssists.toFixed(1)}`}
@@ -1009,10 +1014,12 @@ export function ItemFlowGraph({
                       label="Avg game length"
                       value={`${Math.floor(Math.round(pathStats.avgDurationS) / 60)}:${String(Math.round(pathStats.avgDurationS) % 60).padStart(2, "0")}`}
                     />
-                    <KeyValue
-                      label="Total Cost"
-                      value={pathStats.totalCost > 0 ? `${pathStats.totalCost.toLocaleString("en-US")} souls` : "—"}
-                    />
+                    {locked.length > 0 && (
+                      <KeyValue
+                        label="Total Cost"
+                        value={pathStats.totalCost > 0 ? `${pathStats.totalCost.toLocaleString("en-US")} souls` : "—"}
+                      />
+                    )}
                   </KeyValueList>
 
                   {locked.length === 0 && (
