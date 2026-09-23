@@ -84,7 +84,10 @@ export function ScoreboardTable({
     () =>
       new Fuse(enrichedEntries, {
         keys: ["personaname", "account_id"],
-        threshold: 0.4,
+        // A name contains the query anywhere, with a typo or two; 0.4 with position scoring let "mar" fill pages
+        // with "Gary", "MrXer" and "Parzelion".
+        threshold: 0.3,
+        ignoreLocation: true,
       }),
     [enrichedEntries],
   );

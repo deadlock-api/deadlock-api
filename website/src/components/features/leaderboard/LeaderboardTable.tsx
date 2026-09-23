@@ -46,7 +46,10 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
     () =>
       new Fuse(sortedEntries, {
         keys: ["account_name"],
-        threshold: 0.4,
+        // A name contains the query anywhere, with a typo or two; 0.4 with position scoring let "mar" fill pages
+        // with "Gary", "MrXer" and "Parzelion".
+        threshold: 0.3,
+        ignoreLocation: true,
       }),
     [sortedEntries],
   );
