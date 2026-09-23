@@ -29,14 +29,11 @@ export function ResponsiveTab({ value, disabled = false, className, children, ..
       </SelectItem>
     );
   }
+  // The hidden measuring copy must not repeat the real tab's id (Radix derives it from the value) or its
+  // aria-controls, or the panel would be labelled by an inert duplicate.
+  const measure = display === "measure" ? { id: undefined, "aria-controls": undefined, tabIndex: -1 } : {};
   return (
-    <TabsTrigger
-      value={value}
-      disabled={disabled}
-      tabIndex={display === "measure" ? -1 : undefined}
-      className={className}
-      {...props}
-    >
+    <TabsTrigger value={value} disabled={disabled} className={className} {...props} {...measure}>
       {children}
     </TabsTrigger>
   );

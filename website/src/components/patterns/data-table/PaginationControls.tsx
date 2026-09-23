@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type React from "react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -41,8 +41,12 @@ export function PaginationControls({
     [onPageSizeChange],
   );
 
+  // What is typed, while it is typed: an empty field or a number on its way to a valid one ("1" of "15" on a
+  // 12-page table is fine, "15" is not yet) must not snap back to the current page under the cursor.
+  const [draft, setDraft] = useState<string | null>(null);
   const handlePageInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
+      setDraft(e.target.value);
       const pageNumber = parseInt(e.target.value, 10);
       if (!Number.isNaN(pageNumber) && pageNumber > 0 && pageNumber <= totalPages) {
         onPageChange(pageNumber - 1);
@@ -92,8 +96,12 @@ export function PaginationControls({
             aria-label="Page number"
             max={totalPages}
             min={1}
-            value={page + 1}
+            value={draft ?? page + 1}
             onChange={handlePageInputChange}
+            onBlur={() => setDraft(null)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") setDraft(null);
+            }}
             size="sm"
             className={cn("text-center", compact ? "w-12 px-1" : "w-16")}
           />
