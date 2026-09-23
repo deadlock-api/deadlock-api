@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Lock, ShieldX } from "lucide-react";
+import { useState } from "react";
 
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -31,7 +32,9 @@ function GateCard({ icon, title, children }: { icon: React.ReactNode; title: str
 }
 
 export function TrackerGate({ accountId, children }: { accountId: number; children: React.ReactNode }) {
-  const { isAuthenticated, isActive, isLoading, isResolved, login, totalSlots } = usePatronAuth();
+  const { isAuthenticated, isActive, isLoading, isResolved, statusError, refreshStatus, login, totalSlots } =
+    usePatronAuth();
+  const [retryingStatus, setRetryingStatus] = useState(false);
   // An inactive membership can still hold prioritized account slots (e.g. a slot override).
   const hasSlots = isActive || totalSlots > 0;
 
@@ -46,6 +49,23 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
   // Until the status answers, a patron would see the sign-in gate flash before their profile.
   if (isLoading || !isResolved || (isAuthenticated && hasSlots && accountsQuery.isPending)) {
     return <LoadingState label="player tracker" align="center" />;
+  }
+
+  // An outage is not a sign-out: offer a retry rather than the sign-in gate.
+  if (statusError) {
+    return (
+      <div className="mx-auto w-full max-w-xl py-16">
+        <ErrorState
+          title="Could not check your sign-in"
+          description="The Patreon status is temporarily unavailable. Try again in a moment."
+          onRetry={() => {
+            setRetryingStatus(true);
+            void refreshStatus().finally(() => setRetryingStatus(false));
+          }}
+          retrying={retryingStatus}
+        />
+      </div>
+    );
   }
 
   if (!isAuthenticated || !hasSlots) {

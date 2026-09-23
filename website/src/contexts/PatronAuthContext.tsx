@@ -14,7 +14,7 @@ interface PatronAuthProviderProps {
 function deriveAuthState(
   data: PatronStatus | null | undefined,
   isQueryLoading: boolean,
-): Omit<PatronAuthState, "isLoggingOut" | "isResolved"> {
+): Omit<PatronAuthState, "isLoggingOut" | "isResolved" | "statusError"> {
   if (isQueryLoading || !data) {
     return {
       isAuthenticated: false,
@@ -36,22 +36,28 @@ function deriveAuthState(
 
 export function PatronAuthProvider({ children }: PatronAuthProviderProps) {
   const queryClient = useQueryClient();
-  const { data, isLoading: isQueryLoading, isFetched } = usePatronStatus();
+  const { data, isLoading: isQueryLoading, isFetched, isError } = usePatronStatus();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const authState = useMemo(
     () => ({
       ...deriveAuthState(data, isQueryLoading),
       isResolved: isFetched,
+      statusError: isError && !data,
       isLoggingOut,
     }),
-    [data, isQueryLoading, isFetched, isLoggingOut],
+    [data, isQueryLoading, isFetched, isError, isLoggingOut],
   );
 
   const login = useCallback(() => {
     // Signing in from the demo tracker leads to the real one.
     const { pathname } = window.location;
-    sessionStorage.setItem("patron_redirect_path", pathname === "/tracker/demo" ? "/tracker" : pathname);
+    // Where to come back to; storage can be blocked, and signing in must still work then (it lands on /patron).
+    try {
+      sessionStorage.setItem("patron_redirect_path", pathname === "/tracker/demo" ? "/tracker" : pathname);
+    } catch {
+      // Ignore: the callback falls back to /patron.
+    }
     window.location.href = `${API_ORIGIN}/v1/auth/patreon`;
   }, []);
 

@@ -11,6 +11,11 @@ export interface PatronAuthState {
    * status query starts from `null`; anything that acts on "signed out", such as a redirect, waits for this.
    */
   isResolved: boolean;
+  /**
+   * The status request failed for another reason than a missing session (401 reads as signed out). Pages must not
+   * treat it as signed out: an outage would send patrons to the demo or the sign-in prompt.
+   */
+  statusError: boolean;
   isLoggingOut: boolean;
 }
 

@@ -14,6 +14,20 @@ interface PatreonCallbackSearch {
   error_description?: string;
 }
 
+/**
+ * The page that started the sign-in, once. Storage can be blocked (the page then stayed on "Redirecting…"), and only a
+ * path on this site is followed.
+ */
+function takeRedirectPath(): string {
+  try {
+    const path = sessionStorage.getItem("patron_redirect_path");
+    sessionStorage.removeItem("patron_redirect_path");
+    return path?.startsWith("/") && !path.startsWith("//") ? path : "/patron";
+  } catch {
+    return "/patron";
+  }
+}
+
 export const Route = createFileRoute("/auth/patreon/callback")({
   head: () => {
     const base = seo({
@@ -42,8 +56,7 @@ function PatreonCallbackPage() {
     if (errorMessage) return;
     if (typeof window === "undefined") return;
 
-    const storedRedirectPath = sessionStorage.getItem("patron_redirect_path") || "/patron";
-    sessionStorage.removeItem("patron_redirect_path");
+    const storedRedirectPath = takeRedirectPath();
 
     const timeout = setTimeout(() => {
       navigate({ to: storedRedirectPath, replace: true });
@@ -57,9 +70,7 @@ function PatreonCallbackPage() {
       navigate({ to: "/patron" });
       return;
     }
-    const redirectPath = sessionStorage.getItem("patron_redirect_path") || "/patron";
-    sessionStorage.removeItem("patron_redirect_path");
-    navigate({ to: redirectPath });
+    navigate({ to: takeRedirectPath() });
   };
 
   return (
