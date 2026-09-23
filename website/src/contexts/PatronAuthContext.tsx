@@ -14,7 +14,7 @@ interface PatronAuthProviderProps {
 function deriveAuthState(
   data: PatronStatus | null | undefined,
   isQueryLoading: boolean,
-): Omit<PatronAuthState, "isLoggingOut"> {
+): Omit<PatronAuthState, "isLoggingOut" | "isResolved"> {
   if (isQueryLoading || !data) {
     return {
       isAuthenticated: false,
@@ -36,15 +36,16 @@ function deriveAuthState(
 
 export function PatronAuthProvider({ children }: PatronAuthProviderProps) {
   const queryClient = useQueryClient();
-  const { data, isLoading: isQueryLoading } = usePatronStatus();
+  const { data, isLoading: isQueryLoading, isFetched } = usePatronStatus();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const authState = useMemo(
     () => ({
       ...deriveAuthState(data, isQueryLoading),
+      isResolved: isFetched,
       isLoggingOut,
     }),
-    [data, isQueryLoading, isLoggingOut],
+    [data, isQueryLoading, isFetched, isLoggingOut],
   );
 
   const login = useCallback(() => {

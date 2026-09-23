@@ -31,7 +31,7 @@ function GateCard({ icon, title, children }: { icon: React.ReactNode; title: str
 }
 
 export function TrackerGate({ accountId, children }: { accountId: number; children: React.ReactNode }) {
-  const { isAuthenticated, isActive, isLoading, login, totalSlots } = usePatronAuth();
+  const { isAuthenticated, isActive, isLoading, isResolved, login, totalSlots } = usePatronAuth();
   // An inactive membership can still hold prioritized account slots (e.g. a slot override).
   const hasSlots = isActive || totalSlots > 0;
 
@@ -43,7 +43,8 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
   // Patreon OAuth is unavailable against localhost, so the gate would make the page untestable in dev.
   if (IS_DEV) return children;
 
-  if (isLoading || (isAuthenticated && hasSlots && accountsQuery.isPending)) {
+  // Until the status answers, a patron would see the sign-in gate flash before their profile.
+  if (isLoading || !isResolved || (isAuthenticated && hasSlots && accountsQuery.isPending)) {
     return <LoadingState label="player tracker" align="center" />;
   }
 

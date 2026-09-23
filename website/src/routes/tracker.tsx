@@ -36,7 +36,7 @@ function TrackerRoute() {
 }
 
 function MyAccountsCard() {
-  const { isAuthenticated, isActive, isLoading, totalSlots } = usePatronAuth();
+  const { isAuthenticated, isActive, isLoading, isResolved, totalSlots } = usePatronAuth();
 
   const accountsQuery = useQuery({ ...steamAccountsQueryOptions(), enabled: isAuthenticated });
   const activeAccounts = useMemo(
@@ -54,7 +54,8 @@ function MyAccountsCard() {
   }, [navigate, soleAccountId]);
 
   // Without a sign-in there are no accounts to list, so the visitor gets the demo profile and its sign-in prompt.
-  const signedOut = !isLoading && !isAuthenticated;
+  // Only once the status has answered: before that a signed-in patron also reads as signed out.
+  const signedOut = isResolved && !isAuthenticated;
   useEffect(() => {
     if (signedOut) navigate({ to: "/tracker/demo", replace: true });
   }, [navigate, signedOut]);
@@ -66,7 +67,11 @@ function MyAccountsCard() {
         <CardDescription>Prioritized Steam accounts on your Patreon subscription</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
-        {isLoading || signedOut || (isAuthenticated && accountsQuery.isPending) || soleAccountId !== undefined ? (
+        {isLoading ||
+        !isResolved ||
+        signedOut ||
+        (isAuthenticated && accountsQuery.isPending) ||
+        soleAccountId !== undefined ? (
           <div className="flex flex-col gap-2 px-3 py-1">
             <Skeleton className="h-8 w-full" />
             <Skeleton className="h-8 w-full" />
