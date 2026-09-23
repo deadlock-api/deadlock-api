@@ -11,6 +11,7 @@ import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { Inline, Stack } from "~/components/ui/stack";
 import { TextLink } from "~/components/ui/text-link";
+import { formatBlogDate } from "~/lib/blog-date";
 import { fetchBlogPost } from "~/lib/blog-fns";
 import { SITE_URL, getBlogOGImage, seo } from "~/lib/seo";
 
@@ -86,16 +87,6 @@ export const Route = createFileRoute("/blog/$slug")({
   component: BlogPostPage,
 });
 
-function formatDate(dateStr: string): string {
-  // Frontmatter dates are calendar days (YYYY-MM-DD); parse the parts so the day does not shift with the viewer's timezone.
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
 function PostNotFound() {
   return (
     <PageShell width="prose" density="content" className="items-center py-20">
@@ -154,7 +145,7 @@ function BlogPostPage() {
           description={
             <MetaList className="text-sm">
               <MetaItem icon={<Calendar />}>
-                <time dateTime={post.date}>{formatDate(post.date)}</time>
+                <time dateTime={post.date}>{formatBlogDate(post.date)}</time>
               </MetaItem>
               <MetaItem>{post.author}</MetaItem>
               <MetaItem icon={<Clock />}>{post.readingMinutes} min read</MetaItem>
@@ -193,7 +184,7 @@ function BlogPostPage() {
                   key={related.slug}
                   asChild
                   size="sm"
-                  eyebrow={<time dateTime={related.date}>{formatDate(related.date)}</time>}
+                  eyebrow={<time dateTime={related.date}>{formatBlogDate(related.date)}</time>}
                   title={related.title}
                   description={related.description}
                   clamp={2}

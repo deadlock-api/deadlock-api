@@ -63,6 +63,8 @@ export function DistributionChart({
 }) {
   const domainMin = curve[0]?.x ?? 0;
   const domainMax = curve[curve.length - 1]?.x ?? 1;
+  // A metric that is mostly zero has its median on the minimum; a repeated tick prints twice and collides as a key.
+  const ticks = [...new Set([domainMin, values.percentile50, domainMax])];
 
   return (
     <div style={{ height }}>
@@ -72,7 +74,7 @@ export function DistributionChart({
             type="number"
             dataKey="x"
             domain={["dataMin", "dataMax"]}
-            ticks={[domainMin, values.percentile50, domainMax]}
+            ticks={ticks}
             tickFormatter={(v) => fmt(v as number)}
             tick={CHART_TICK_SM}
             tickLine={false}

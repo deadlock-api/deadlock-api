@@ -3,6 +3,7 @@ import type { KillDeathStats } from "deadlock_api_client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ChartOverlay, ChartStage } from "~/components/patterns/charts/ChartOverlay";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { TooltipCard, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 
@@ -37,7 +38,9 @@ export default function HeatmapCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapCanvasRef = useRef<HTMLCanvasElement>(null);
   const heatCanvasRef = useRef<HTMLCanvasElement>(null);
-  const [mapImagesLoaded, setMapImagesLoaded] = useState(false);
+  const [mapImages, setMapImages] = useState<"loading" | "ready" | "error">("loading");
+  const [mapAttempt, setMapAttempt] = useState(0);
+  const mapImagesLoaded = mapImages === "ready";
   const compositeRef = useRef<HTMLCanvasElement | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
@@ -51,11 +54,13 @@ export default function HeatmapCanvas({
   const legendMax = heatGrid?.maxValue ?? 0;
 
   useEffect(() => {
+    let cancelled = false;
     const loadImage = (src: string): Promise<HTMLImageElement> =>
-      new Promise((resolve) => {
+      new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error(`Failed to load ${src}`));
         img.src = src;
       });
 
@@ -65,6 +70,7 @@ export default function HeatmapCanvas({
         loadImage(mapData.images.mid),
         loadImage(mapData.images.frame),
       ]);
+      if (cancelled) return;
       const size = Math.max(bg.naturalWidth, mid.naturalWidth, frame.naturalWidth);
       const canvas = document.createElement("canvas");
       canvas.width = size;
@@ -76,10 +82,16 @@ export default function HeatmapCanvas({
       ctx.globalCompositeOperation = "multiply";
       ctx.drawImage(frame, 0, 0, size, size);
       compositeRef.current = canvas;
-      setMapImagesLoaded(true);
+      setMapImages("ready");
     };
-    void loadAll();
-  }, [mapData.images.background, mapData.images.mid, mapData.images.frame]);
+    // Without the rejection an unreachable image would leave "Loading map…" up forever.
+    loadAll().catch(() => {
+      if (!cancelled) setMapImages("error");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [mapData.images.background, mapData.images.mid, mapData.images.frame, mapAttempt]);
 
   const renderHeatmap = useCallback(() => {
     const mapCanvas = mapCanvasRef.current;
@@ -222,7 +234,21 @@ export default function HeatmapCanvas({
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
         />
-        {!mapImagesLoaded && <LoadingState size="sm" text="Loading map…" label="map" className="absolute inset-0" />}
+        {mapImages === "loading" && (
+          <LoadingState size="sm" text="Loading map…" label="map" className="absolute inset-0" />
+        )}
+        {mapImages === "error" && (
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <ErrorState
+              title="The map images did not load"
+              description="The heatmap needs the map to draw on. Check your connection and try again."
+              onRetry={() => {
+                setMapImages("loading");
+                setMapAttempt((n) => n + 1);
+              }}
+            />
+          </div>
+        )}
         <ChartOverlay position="bottom-end">
           <HeatmapLegend viewMode={viewMode} maxValue={legendMax} />
         </ChartOverlay>

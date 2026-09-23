@@ -6,6 +6,7 @@ import { MetaItem, MetaList } from "~/components/patterns/content/MetaList";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Stack } from "~/components/ui/stack";
+import { formatBlogDate } from "~/lib/blog-date";
 import { fetchBlogPosts } from "~/lib/blog-fns";
 import { seo } from "~/lib/seo";
 
@@ -21,14 +22,6 @@ export const Route = createFileRoute("/blog/")({
   loader: () => fetchBlogPosts(),
   component: BlogIndex,
 });
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
 
 function BlogIndex() {
   const posts = Route.useLoaderData();
@@ -50,7 +43,7 @@ function BlogIndex() {
             as="h2"
             eyebrow={
               <MetaList>
-                <MetaItem icon={<Calendar />}>{formatDate(post.date)}</MetaItem>
+                <MetaItem icon={<Calendar />}>{formatBlogDate(post.date)}</MetaItem>
                 <MetaItem>{post.author}</MetaItem>
                 <MetaItem icon={<Clock />}>{post.readingMinutes} min read</MetaItem>
               </MetaList>

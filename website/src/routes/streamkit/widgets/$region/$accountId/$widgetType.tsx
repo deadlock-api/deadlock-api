@@ -159,7 +159,8 @@ function Widget() {
       const prefix = search.prefix ?? "";
       const suffix = search.suffix ?? "";
       const fontColor = (search.fontColor as Color) ?? "#FFFFFF";
-      const reserved = new Set(["variable", "fontColor"]);
+      // Display settings of the widget itself; everything else is an argument of the variable.
+      const reserved = new Set(["variable", "fontColor", "prefix", "suffix"]);
       const extraArgs = Object.fromEntries(
         Object.entries(search).filter(([key, value]) => !reserved.has(key) && typeof value === "string"),
       ) as Record<string, string>;
