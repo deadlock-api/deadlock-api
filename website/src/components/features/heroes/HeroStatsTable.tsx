@@ -653,6 +653,9 @@ export function HeroStatsTable({
                 <Segmented
                   size="sm"
                   width="hug"
+                  // One line, so the column widens to fit it: wrapped into a fifth of the table, the switch stacked its
+                  // three options and made the whole header row 60-80px tall.
+                  className="flex-nowrap"
                   aria-label="Pick rate column metric"
                   value={showPresence ? "presence" : showBanRate ? "banRate" : "pickRate"}
                   onValueChange={handlePickRateModeChange}
