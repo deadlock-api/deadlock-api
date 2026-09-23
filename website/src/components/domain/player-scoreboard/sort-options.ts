@@ -4,7 +4,12 @@ interface SortCategory {
   label: string;
   key: string;
   variants?: SortVariant[];
+  /** Only the player scoreboard can sort by it; the hero scoreboard API answers 400. */
+  playersOnly?: boolean;
 }
+
+/** Which scoreboard a sort is for: the hero one has no player rank. */
+export type ScoreboardScope = "players" | "heroes";
 
 export function buildSortByValue(key: string, variant?: SortVariant): string {
   if (!variant) return key;
@@ -36,7 +41,7 @@ const ALL_VARIANTS: SortVariant[] = ["avg", "max", "total"];
 
 export const SORT_CATEGORIES: SortCategory[] = [
   { label: "Matches", key: "matches" },
-  { label: "Rank", key: "rank" },
+  { label: "Rank", key: "rank", playersOnly: true },
   { label: "Wins", key: "wins" },
   { label: "Losses", key: "losses" },
   { label: "Winrate", key: "winrate" },
@@ -61,9 +66,18 @@ export const SORT_CATEGORIES: SortCategory[] = [
   { label: "Hero Crit Hits", key: "hero_bullets_hit_crit", variants: ALL_VARIANTS },
 ];
 
-export const ALL_SORT_BY_VALUES: string[] = SORT_CATEGORIES.flatMap((cat) =>
-  cat.variants ? cat.variants.map((v) => buildSortByValue(cat.key, v)) : [cat.key],
-);
+export function sortCategoriesFor(scope: ScoreboardScope): SortCategory[] {
+  return scope === "players" ? SORT_CATEGORIES : SORT_CATEGORIES.filter((cat) => !cat.playersOnly);
+}
+
+export function sortByValuesFor(scope: ScoreboardScope): string[] {
+  return sortCategoriesFor(scope).flatMap((cat) =>
+    cat.variants ? cat.variants.map((v) => buildSortByValue(cat.key, v)) : [cat.key],
+  );
+}
+
+export const ALL_SORT_BY_VALUES: string[] = sortByValuesFor("players");
+export const HERO_SORT_BY_VALUES: string[] = sortByValuesFor("heroes");
 
 const PERCENTAGE_STATS = new Set(["winrate"]);
 

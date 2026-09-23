@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import type { AnalyticsApiHeroScoreboardRequest } from "deadlock_api_client";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -15,5 +15,8 @@ export function heroScoreboardQueryOptions(params: AnalyticsApiHeroScoreboardReq
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
     refetchOnMount: "always",
+    // A new sort keeps the rows on screen while it loads, so the header and its sort control are not unmounted
+    // under the keyboard focus.
+    placeholderData: keepPreviousData,
   });
 }

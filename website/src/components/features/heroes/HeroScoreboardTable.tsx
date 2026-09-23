@@ -46,6 +46,7 @@ export function HeroScoreboardTable({ entries, sortBy, sortDirection, onSortChan
           <TableHead aria-sort={ariaSort(true, sortDirection)} className="text-end">
             <Inline gap={1} justify="end" wrap="nowrap">
               <SortBySelector
+                scope="heroes"
                 value={sortBy}
                 defaultValue="winrate"
                 onValueChange={(value) => onSortChange({ sortBy: value, sortDirection })}

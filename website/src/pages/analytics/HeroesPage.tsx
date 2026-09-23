@@ -4,7 +4,7 @@ import { ChartNoAxesCombined, GraduationCap, Table2 } from "lucide-react";
 import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense, useId, useState } from "react";
 
-import { ALL_SORT_BY_VALUES } from "~/components/domain/player-scoreboard/sort-options";
+import { HERO_SORT_BY_VALUES } from "~/components/domain/player-scoreboard/sort-options";
 import { HeroFiltersSection } from "~/components/features/heroes/HeroFiltersSection";
 import { HeroScoreboardTable } from "~/components/features/heroes/HeroScoreboardTable";
 import { HeroStatSelector } from "~/components/features/heroes/HeroStatSelectors";
@@ -76,7 +76,8 @@ export function HeroesPage() {
 
   const [scoreboardSortBy, setScoreboardSortBy] = useQueryState(
     "scoreboard_sort_by",
-    parseAsStringLiteral(ALL_SORT_BY_VALUES as [string, ...string[]]).withDefault("winrate"),
+    // Heroes only: a link or a stale URL with a player-only sort (rank) falls back to the default instead of a 400.
+    parseAsStringLiteral(HERO_SORT_BY_VALUES as [string, ...string[]]).withDefault("winrate"),
   );
   const [scoreboardSortDirection, setScoreboardSortDirection] = useQueryState(
     "scoreboard_sort_dir",
