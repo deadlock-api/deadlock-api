@@ -7,6 +7,7 @@ import { Section } from "~/components/patterns/page/Section";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { KeyValue } from "~/components/ui/key-value";
+import { buildComponentImplications } from "~/lib/build-transform";
 import { formatPercent, formatShare, possessive } from "~/lib/format";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import { filterShopableItems, itemUpgradesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
@@ -59,8 +60,9 @@ function pickTopHeroes(rows: readonly CohortRow[], itemId: number, heroMatches: 
 }
 
 /**
- * Items most often in the same build as `item`. Its own components and upgrades are skipped: buying
- * the item implies buying those, so they would trivially top the list.
+ * Items most often in the same build as `item`. Its components and upgrades are skipped, the whole tree of them (a T4's
+ * T1 component too, not just the T2 it builds from): buying the item implies buying those, so they would trivially
+ * top the list.
  */
 function pickPairedItems(rows: readonly CohortRow[], item: SlimUpgrade, items: readonly SlimUpgrade[]): PairedItem[] {
   const totals = new Map<number, { wins: number; matches: number }>();
@@ -72,12 +74,13 @@ function pickPairedItems(rows: readonly CohortRow[], item: SlimUpgrade, items: r
   }
   const own = totals.get(item.id);
   if (!own || own.matches === 0) return [];
-  const components = new Set(item.component_items ?? []);
+  const implied = buildComponentImplications([...items]);
+  const components = new Set(implied.get(item.id));
   return items
     .flatMap((other) => {
       const acc = totals.get(other.id);
       if (!acc || other.id === item.id) return [];
-      if (components.has(other.class_name) || other.component_items?.includes(item.class_name)) return [];
+      if (components.has(other.id) || implied.get(other.id)?.includes(item.id)) return [];
       return [{ item: other, winRate: acc.wins / acc.matches, pairRate: acc.matches / own.matches }];
     })
     .sort((a, b) => b.pairRate - a.pairRate)
