@@ -35,11 +35,12 @@ interface LaneSwapBannerProps {
 
 /**
  * The whole row is the apply control, so the moves get the space a separate button would take.
- * `suggestion.gain` belongs to `side`, so the enemy banner is signed and coloured against the reader.
+ * `suggestion.gain` belongs to `side` and is printed as it arrives, like the swap chips on the slots: an enemy
+ * banner signed against the reader showed "−1.0" in red beside enemy chips reading "+14.7" in green.
  */
 export function LaneSwapBanner({ suggestion, side, onApply }: LaneSwapBannerProps) {
   const ally = side === "ally";
-  const tone = ally ? "positive" : "negative";
+  const tone = "positive";
   const label = ally
     ? "Re-lane your picks: same six heroes, better lane split"
     : "Re-lane their picks: same six heroes, better lane split for them";
@@ -53,19 +54,12 @@ export function LaneSwapBanner({ suggestion, side, onApply }: LaneSwapBannerProp
     >
       <span className={cn("flex shrink-0 items-center gap-1 text-2xs font-semibold", TONE_TEXT[tone])}>
         <ArrowLeftRightIcon className="size-3" />
-        {formatPoints(ally ? suggestion.gain : -suggestion.gain)}
+        {formatPoints(suggestion.gain)}
       </span>
       {suggestion.moves.map((move) => (
         <Move key={move.heroId} {...move} />
       ))}
-      <span
-        className={cn(
-          "ms-auto shrink-0 text-3xs text-muted-foreground",
-          ally ? "group-hover:text-positive" : "group-hover:text-negative",
-        )}
-      >
-        Apply
-      </span>
+      <span className={cn("ms-auto shrink-0 text-3xs text-muted-foreground", "group-hover:text-positive")}>Apply</span>
     </Button>
   );
 }
