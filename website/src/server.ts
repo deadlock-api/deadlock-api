@@ -1,7 +1,11 @@
 import type { Register } from "@tanstack/react-router";
 import { createStartHandler, defaultStreamHandler, type RequestHandler } from "@tanstack/react-start/server";
 
+import headersFile from "../public/_headers?raw";
+import { headersFor, parseHeadersFile } from "./lib/static-headers";
+
 const handler = createStartHandler(defaultStreamHandler);
+const HEADER_RULES = parseHeadersFile(headersFile);
 
 function isHtmlResponse(res: Response): boolean {
   const ct = res.headers.get("content-type");
@@ -32,12 +36,16 @@ export default {
           hint.rel === "preload" && (hint.as === "style" || hint.as === "font") && hint.href.startsWith("/assets/"),
       },
     });
-    if (isHtmlResponse(res) && !res.headers.has("cache-control")) {
-      const headers = new Headers(res.headers);
+    // Worker responses skip `_headers` (it only covers static assets), so the security headers are added here.
+    const missing = [...headersFor(HEADER_RULES, url.pathname)].filter(([name]) => !res.headers.has(name));
+    const uncached = isHtmlResponse(res) && !res.headers.has("cache-control");
+    if (missing.length === 0 && !uncached) return res;
+    const headers = new Headers(res.headers);
+    for (const [name, value] of missing) headers.set(name, value);
+    if (uncached) {
       headers.set("Cache-Control", "private, max-age=0, must-revalidate");
       headers.append("Vary", "Cookie");
-      return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
     }
-    return res;
+    return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
   },
 } satisfies { fetch: RequestHandler<Register> };
