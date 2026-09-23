@@ -46,7 +46,7 @@ export function ResultModal({
   isArchive,
 }: ResultModalProps) {
   const countdown = useCountdown();
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLElement>(null);
   const isWin = status === "won";
   const tone = isWin ? "positive" : "negative";
   const dayNum = getDayNumber(date);
@@ -56,6 +56,9 @@ export function ResultModal({
     if (open) {
       const timer = setTimeout(() => {
         containerRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        // The last guess disables the input and drops focus to <body>; the result takes it, so Tab reaches Share and
+        // the next game from here instead of from the top of the page.
+        if (document.activeElement === document.body) containerRef.current?.focus({ preventScroll: true });
       }, 150);
       return () => clearTimeout(timer);
     }
@@ -64,8 +67,10 @@ export function ResultModal({
   return (
     <AnimatePresence>
       {open && (
-        <motion.div
+        <motion.section
           ref={containerRef}
+          tabIndex={-1}
+          aria-label={isWin ? "Puzzle solved" : "Puzzle failed"}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 8 }}
@@ -168,7 +173,7 @@ export function ResultModal({
               </motion.div>
             </MotionStack>
           </Card>
-        </motion.div>
+        </motion.section>
       )}
     </AnimatePresence>
   );
