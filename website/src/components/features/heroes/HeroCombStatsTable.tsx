@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Fragment, useMemo } from "react";
+import { useMemo } from "react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
@@ -202,13 +202,18 @@ export function HeroCombStatsTable({
             {limitedData.map((row, index) => (
               <TableRow key={row.hero_ids.join("-")}>
                 {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
-                <TableCell>
-                  <Inline wrap="nowrap">
+                {/* On a narrow screen the heroes fold onto more lines, so the rates stay in view. */}
+                <TableCell className="whitespace-normal">
+                  <Inline gap={1.5}>
                     {row.hero_ids.map((heroId, i) => (
-                      <Fragment key={heroId}>
-                        {i > 0 && <span className="text-2xl">+</span>}
+                      <Inline key={heroId} gap={1.5} wrap="nowrap">
+                        {i > 0 && (
+                          <span aria-hidden="true" className="text-lg text-muted-foreground">
+                            +
+                          </span>
+                        )}
                         <HeroCell heroId={heroId} />
-                      </Fragment>
+                      </Inline>
                     ))}
                   </Inline>
                 </TableCell>
@@ -240,7 +245,7 @@ export function HeroCombStatsTable({
                           max={maxWinrate}
                           value={row.wins / row.matches}
                           color="var(--primary)"
-                          label={`${Math.round((row.wins / row.matches) * 100).toFixed(0)}% `}
+                          label={`${Math.round((row.wins / row.matches) * 100)}%`}
                           delta={(() => {
                             const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
                             const prev = prevStatsMap?.get(key);
