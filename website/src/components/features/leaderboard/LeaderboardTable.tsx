@@ -78,12 +78,15 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
 
   const jumpToRank = useCallback(
     (rank: number) => {
-      const index = filteredEntries.findIndex((entry) => entry.rank === rank);
+      // A rank the search filtered out is still on the board: the search is cleared to show it.
+      const inResults = filteredEntries.findIndex((entry) => entry.rank === rank);
+      const index = inResults >= 0 ? inResults : sortedEntries.findIndex((entry) => entry.rank === rank);
       if (index < 0) return;
+      if (inResults < 0) setSearchQuery("");
       setCurrentPage(Math.floor(index / itemsPerPage));
       setHighlightedRank(rank);
     },
-    [filteredEntries, itemsPerPage, setCurrentPage],
+    [filteredEntries, sortedEntries, itemsPerPage, setCurrentPage, setSearchQuery],
   );
 
   const controls = (
