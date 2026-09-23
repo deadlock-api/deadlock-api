@@ -41,7 +41,8 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
       { key: "avg_kills", label: "Avg Kills", format: "decimal1" },
       { key: "avg_deaths", label: "Avg Deaths", format: "decimal1" },
       { key: "avg_assists", label: "Avg Assists", format: "decimal1" },
-      { key: "avg_kd_ratio", label: "Avg K/D Ratio", format: "decimal2" },
+      // The mean of every player's own K/D, which a few lopsided games pull well above kills / deaths.
+      { key: "avg_kd_ratio", label: "Avg Player K/D", format: "decimal2" },
       { key: "avg_accuracy", label: "Avg Accuracy", format: "percent" },
       { key: "avg_crit_rate", label: "Avg Crit Rate", format: "percent" },
     ],
