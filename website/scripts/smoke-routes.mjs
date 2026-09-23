@@ -27,8 +27,28 @@ const { values: args } = parseArgs({
     only: { type: "string", multiple: true },
     concurrency: { type: "string", default: "4" },
     "settle-ms": { type: "string", default: "1500" },
+    help: { type: "boolean", short: "h" },
   },
 });
+
+if (args.help) {
+  // The usage is the header comment above, minus its comment markers.
+  const header = fs.readFileSync(fileURLToPath(import.meta.url), "utf8").split("\n");
+  const usage = header
+    .slice(
+      1,
+      header.findIndex((line) => line.startsWith("import ")),
+    )
+    .map((line) => line.replace(/^\/\/ ?/, ""));
+  console.log(
+    [
+      ...usage,
+      "",
+      "Options: --base <url> --tz <zone> --width <px> --only <text>... --concurrency <n> --settle-ms <ms>",
+    ].join("\n"),
+  );
+  process.exit(0);
+}
 
 // Dynamic segments get one real example each; routes that need an account or a login are left out.
 const SAMPLE_PARAMS = {
