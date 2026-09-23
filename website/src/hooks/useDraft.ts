@@ -21,6 +21,10 @@ const parseAsTeam = (teamSize: number) =>
     serialize: (value: (number | null)[]) => value.map((id) => id ?? 0).join(","),
   });
 
+/** A side at exactly `teamSize` slots: the extra ones cut, missing ones empty. */
+const fitSide = (side: (number | null)[], teamSize: number) =>
+  side.length === teamSize ? side : [...side, ...emptySide(teamSize)].slice(0, teamSize);
+
 export interface DraftControls {
   draft: Draft;
   setSlot: (side: Side, slot: number, heroId: number | null) => void;
@@ -48,8 +52,12 @@ export function useDraft(gameMode: GameMode, onManualEdit?: () => void): DraftCo
     () => parseAsTeam(teamSize).withDefault(emptySide(teamSize)).withOptions({ limitUrlUpdates: DRAFT_URL_UPDATES }),
     [teamSize],
   );
-  const [ally, setAlly] = useQueryState("ally", parser);
-  const [enemy, setEnemy] = useQueryState("enemy", parser);
+  const [storedAlly, setAlly] = useQueryState("ally", parser);
+  const [storedEnemy, setEnemy] = useQueryState("enemy", parser);
+  // nuqs hands back a value exactly as it was set, not re-parsed at the current width: a 4v4 match imported while the
+  // page was still 6v6 kept two hidden slots, where "best next pick" then put a hero the board never showed.
+  const ally = useMemo(() => fitSide(storedAlly, teamSize), [storedAlly, teamSize]);
+  const enemy = useMemo(() => fitSide(storedEnemy, teamSize), [storedEnemy, teamSize]);
 
   const draft = useMemo<Draft>(() => ({ gameMode, ally, enemy }), [gameMode, ally, enemy]);
 
