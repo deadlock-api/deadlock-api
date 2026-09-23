@@ -52,7 +52,7 @@ The server entry is sourced from `@tanstack/react-start/dist/plugin/default-entr
 
 - `pnpm dev` — Vite dev server on :3000 (fast HMR, no Workers runtime).
 - `pnpm wrangler:dev` — runs `wrangler dev` against the built artifacts (workerd runtime, matches prod). Re-run `pnpm build` first if sources changed.
-- `pnpm smoke` — opens every route of the running dev server (or `--base <url>`) in Chrome and fails on uncaught errors, React errors (hydration mismatches, duplicate keys), failed same-origin requests, a missing or repeated `<h1>`, and sideways scrolling. Add `--tz America/Los_Angeles` to catch server/client timezone mismatches (the Worker renders in UTC), `--width 360` for phones, `--only <path part>` to narrow it, `--path "<path?query>"` for extra URLs (a filled draft, a filter state), `--cls 0.1` to also fail pages that shift their own layout while loading (it names the elements that moved).
+- `pnpm smoke` — opens every route of the running dev server (or `--base <url>`) in Chrome and fails on uncaught errors, React errors (hydration mismatches, duplicate keys), failed same-origin requests, a missing or repeated `<h1>`, and sideways scrolling. Add `--tz America/Los_Angeles` to catch server/client timezone mismatches (the Worker renders in UTC), `--width 360` for phones, `--only <path part>` to narrow it, `--path "<path?query>"` for extra URLs (a filled draft, a filter state), `--cls 0.1` to also fail pages that shift their own layout while loading (it names the elements that moved), `--a11y` to also fail controls without an accessible name, images without `alt` and duplicate ids.
 
 Verify SSR end-to-end:
 

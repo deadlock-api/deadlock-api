@@ -9,6 +9,7 @@
 //   pnpm smoke --base http://127.0.0.1:8787     against the built Worker
 //   pnpm smoke --cls 0.1                        also fails pages whose layout shift score (CLS) passes 0.1
 //   pnpm smoke --path "/analytics/team-builder?ally=2,0,0,0,0,0"   extra paths, query strings included
+//   pnpm smoke --a11y                           also fails controls without a name, images without alt, duplicate ids
 //
 // Uses the Playwright Chromium (`pnpm exec playwright install chromium`), or the installed Chrome as a fallback.
 // Exits 1 when any page has a finding.
@@ -29,6 +30,7 @@ const { values: args } = parseArgs({
     only: { type: "string", multiple: true },
     path: { type: "string", multiple: true },
     cls: { type: "string" },
+    a11y: { type: "boolean" },
     concurrency: { type: "string", default: "4" },
     "settle-ms": { type: "string", default: "1500" },
     help: { type: "boolean", short: "h" },
@@ -48,7 +50,8 @@ if (args.help) {
     [
       ...usage,
       "",
-      "Options: --base <url> --tz <zone> --width <px> --only <text>... --path <path>... --cls <score> --concurrency <n>",
+      "Options: --base <url> --tz <zone> --width <px> --only <text>... --path <path>... --cls <score> --a11y",
+      "         --concurrency <n>",
       "         --settle-ms <ms>",
     ].join("\n"),
   );
@@ -105,6 +108,58 @@ async function formatConsole(message) {
     return typeof next === "string" ? next : JSON.stringify(next);
   });
   return [filled, ...rest.filter((v) => typeof v === "string" && !v.includes("\n    at "))].join(" ");
+}
+
+/**
+ * Runs in the page. The checks a browser can answer without a rules engine: every control has an accessible name,
+ * every image says whether it is decorative, and ids are unique (labels and aria references break otherwise).
+ */
+function auditA11y() {
+  const problems = [];
+  const describe = (el) =>
+    `<${el.tagName.toLowerCase()}${el.dataset.slot ? ` data-slot=${el.dataset.slot}` : ""}${el.id ? ` id=${el.id}` : ""}> "${(el.textContent ?? "").trim().slice(0, 30)}"`;
+  const visible = (el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
+  const nameOf = (el) => {
+    const labelledBy = el.getAttribute("aria-labelledby");
+    if (labelledBy) {
+      return labelledBy
+        .split(/\s+/)
+        .map((id) => document.getElementById(id)?.textContent ?? "")
+        .join(" ")
+        .trim();
+    }
+    if (el.getAttribute("aria-label")?.trim()) return el.getAttribute("aria-label").trim();
+    if (el.labels?.length)
+      return [...el.labels]
+        .map((label) => label.textContent)
+        .join(" ")
+        .trim();
+    const text = [...el.querySelectorAll("*"), el]
+      .filter((node) => !node.closest("[aria-hidden=true]"))
+      .map((node) => (node.tagName === "IMG" ? (node.getAttribute("alt") ?? "") : ""))
+      .join(" ");
+    const own = (el.innerText ?? "").trim();
+    return (own || text.trim() || el.getAttribute("title") || el.getAttribute("placeholder") || "").trim();
+  };
+  const controls = document.querySelectorAll(
+    "a[href], button, input:not([type=hidden]), select, textarea, [role=button], [role=link], [role=tab], [role=radio], [role=checkbox], [role=switch], [role=combobox], [role=slider], [role=menuitem], [role=option]",
+  );
+  for (const el of controls) {
+    // Agentation is the third-party feedback toolbar `pnpm dev` mounts in place of our FeedbackWidget.
+    if (!visible(el) || el.closest("[aria-hidden=true], [inert], [data-agentation-root]")) continue;
+    if (!nameOf(el)) problems.push(`no accessible name: ${describe(el)}`);
+  }
+  for (const img of document.querySelectorAll("img")) {
+    const decorative =
+      img.closest("[aria-hidden=true], [data-agentation-root]") || img.getAttribute("role") === "presentation";
+    if (!img.hasAttribute("alt") && !decorative) {
+      problems.push(`img without alt: ${img.getAttribute("src")?.slice(0, 80)}`);
+    }
+  }
+  const seen = new Map();
+  for (const el of document.querySelectorAll("[id]")) seen.set(el.id, (seen.get(el.id) ?? 0) + 1);
+  for (const [id, count] of seen) if (count > 1) problems.push(`id "${id}" is used ${count} times`);
+  return [...new Set(problems)].slice(0, 12);
 }
 
 async function check(context, route) {
@@ -169,6 +224,10 @@ async function check(context, route) {
     .catch(() => null);
   if (layout && layout.h1 !== 1) findings.push(`${layout.h1} <h1> elements`);
   if (layout && layout.overflow > 0) findings.push(`page scrolls sideways by ${layout.overflow}px`);
+  if (args.a11y) {
+    const problems = await page.evaluate(auditA11y).catch(() => []);
+    for (const problem of problems) findings.push(`a11y: ${problem}`);
+  }
   if (args.cls) {
     const shifts = await page.evaluate(() => window.__smokeShifts ?? []).catch(() => []);
     const score = shifts.reduce((sum, shift) => sum + shift.value, 0);
