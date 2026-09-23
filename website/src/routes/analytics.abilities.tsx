@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { parseAsInteger, useQueryState } from "nuqs";
-import { Suspense, useMemo, useState } from "react";
+import { parseAsArrayOf, parseAsInteger, useQueryState, useQueryStates } from "nuqs";
+import { Suspense, useMemo } from "react";
 
 import { Filter } from "~/components/domain/filters";
 import AbilityOrderTree from "~/components/features/abilities/AbilityOrderTree";
@@ -59,18 +59,31 @@ function AbilitiesPage() {
   const { mode, setMode, gameMode, matchMode } = useModeState();
   const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(20));
-  const [itemSelections, setItemSelections] = useState<Map<number, TriState>>(new Map());
+  // In the URL like every other filter, so a shared or reloaded link and Back keep them. One update sets both lists.
+  const [items, setItems] = useQueryStates({
+    include_items: parseAsArrayOf(parseAsInteger).withDefault([]),
+    exclude_items: parseAsArrayOf(parseAsInteger).withDefault([]),
+  });
+  const itemSelections = useMemo(
+    () =>
+      new Map<number, TriState>([
+        ...items.include_items.map((id): [number, TriState] => [id, "included"]),
+        ...items.exclude_items.map((id): [number, TriState] => [id, "excluded"]),
+      ]),
+    [items],
+  );
+  const setItemSelections = (next: Map<number, TriState>) => {
+    const ids = (state: TriState) => [...next].filter(([, s]) => s === state).map(([id]) => id);
+    void setItems({
+      include_items: ids("included").length > 0 ? ids("included") : null,
+      exclude_items: ids("excluded").length > 0 ? ids("excluded") : null,
+    });
+  };
 
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
 
-  const includeItemIds = useMemo(
-    () => [...itemSelections.entries()].filter(([, s]) => s === "included").map(([id]) => id),
-    [itemSelections],
-  );
-  const excludeItemIds = useMemo(
-    () => [...itemSelections.entries()].filter(([, s]) => s === "excluded").map(([id]) => id),
-    [itemSelections],
-  );
+  const includeItemIds = items.include_items;
+  const excludeItemIds = items.exclude_items;
 
   return (
     <PageShell>
