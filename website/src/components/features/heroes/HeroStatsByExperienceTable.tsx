@@ -7,10 +7,11 @@ import { useMemo } from "react";
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Badge } from "~/components/ui/badge";
-import { Skeleton } from "~/components/ui/skeleton";
 import { SortButton, ariaSort } from "~/components/ui/sort-button";
+import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -75,8 +76,16 @@ export function HeroStatsByExperienceTable({
 }: HeroStatsByExperienceTableProps) {
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
 
-  const bucketData = useQueries({
-    combine: (queries) => queries.map((query) => query.data),
+  const buckets = useQueries({
+    combine: (queries) => ({
+      data: queries.map((query) => query.data),
+      settled: queries.every((query) => !query.isPending),
+      failed: queries.some((query) => query.isError),
+      refetching: queries.some((query) => query.isFetching),
+      refetch: () => {
+        for (const query of queries) if (query.isError) void query.refetch();
+      },
+    }),
     queries: EXPERIENCE_BUCKETS.map((bucket) => {
       const heroStatsByExperienceQuery = {
         minHeroMatches,
@@ -111,10 +120,11 @@ export function HeroStatsByExperienceTable({
     return map;
   }, [assetsHeroes]);
 
+  const bucketData = buckets.data;
   const anyLoaded = bucketData.some((data) => data != null);
-  const allLoading = !anyLoaded || isLoadingAssetsHeroes;
-  const bucketLoading = bucketData.map((data) => data == null);
-  const baselineLoading = bucketLoading[BASELINE_BUCKET];
+  // The table waits for every bucket: rows are sorted by the trend across all of them, so each late bucket reordered
+  // the whole table under the reader. A failed bucket shows as "-" with a retry above the table.
+  const allLoading = !buckets.settled || isLoadingAssetsHeroes;
 
   const isPercentStat = heroStat === "winrate";
 
@@ -215,6 +225,16 @@ export function HeroStatsByExperienceTable({
     return <LoadingState label="hero stats by experience" align="center" />;
   }
 
+  if (!anyLoaded) {
+    return (
+      <ErrorState
+        title="Could not load hero stats by experience"
+        onRetry={buckets.refetch}
+        retrying={buckets.refetching}
+      />
+    );
+  }
+
   const heroCells = new Map(
     heroRows.map((row) => [
       row.heroId,
@@ -225,32 +245,21 @@ export function HeroStatsByExperienceTable({
         {row.bucketValues.map((val, i) => (
           // eslint-disable-next-line react/no-array-index-key -- key is EXPERIENCE_BUCKETS[i].label, not raw index
           <TableCell key={EXPERIENCE_BUCKETS[i].label} className="text-center tabular-nums">
-            {bucketLoading[i] ? (
-              <Skeleton className="mx-auto h-4 w-12" />
-            ) : (
-              <div className="flex flex-col items-center gap-1">
-                <BucketTooltip
-                  entry={row.bucketEntries[i]}
-                  heroStat={heroStat}
+            <div className="flex flex-col items-center gap-1">
+              <BucketTooltip entry={row.bucketEntries[i]} heroStat={heroStat} bucketLabel={EXPERIENCE_BUCKETS[i].label}>
+                <span className="font-medium">{formatValue(val)}</span>
+              </BucketTooltip>
+              {i !== BASELINE_BUCKET && (
+                <DeltaTooltip
+                  baselineEntry={row.bucketEntries[BASELINE_BUCKET]}
+                  bucketEntry={row.bucketEntries[i]}
                   bucketLabel={EXPERIENCE_BUCKETS[i].label}
+                  heroStat={heroStat}
                 >
-                  <span className="font-medium">{formatValue(val)}</span>
-                </BucketTooltip>
-                {i !== BASELINE_BUCKET &&
-                  (baselineLoading ? (
-                    <Skeleton className="h-4 w-10" />
-                  ) : (
-                    <DeltaTooltip
-                      baselineEntry={row.bucketEntries[BASELINE_BUCKET]}
-                      bucketEntry={row.bucketEntries[i]}
-                      bucketLabel={EXPERIENCE_BUCKETS[i].label}
-                      heroStat={heroStat}
-                    >
-                      <DeltaBadge delta={row.bucketDeltas[i]} isPercent={isPercentStat} />
-                    </DeltaTooltip>
-                  ))}
-              </div>
-            )}
+                  <DeltaBadge delta={row.bucketDeltas[i]} isPercent={isPercentStat} />
+                </DeltaTooltip>
+              )}
+            </div>
           </TableCell>
         ))}
         <TableCell className="text-center">
@@ -263,72 +272,82 @@ export function HeroStatsByExperienceTable({
   );
 
   return (
-    <Table>
-      <TableHeader tone="muted">
-        <TableRow>
-          <TableHead className="w-10 text-center">#</TableHead>
-          <SortableHeader
-            label="Hero"
-            sortKey="name"
-            activeSortKey={sortKey}
-            sortDir={sortDir}
-            onSortChange={handleSort}
-            align="start"
-            className="min-w-40"
-            data-pinned
-          />
-          {EXPERIENCE_BUCKETS.map((bucket, i) => (
-            <TableHead
-              key={bucket.label}
-              className="text-center select-none"
-              aria-sort={ariaSort(sortKey === `value-${i}` || sortKey === `delta-${i}`, sortDir)}
-            >
-              <div className="flex flex-col items-center gap-1">
-                <SortButton
-                  active={sortKey === `value-${i}`}
-                  sortDir={sortDir}
-                  onClick={() => handleSort(`value-${i}`)}
-                >
-                  {bucket.label}
-                </SortButton>
-                <span className="text-3xs font-normal text-muted-foreground">{bucket.sublabel}</span>
-                {i !== BASELINE_BUCKET ? (
+    <Stack gap={3}>
+      {buckets.failed && (
+        <ErrorState
+          title="Some experience groups failed to load"
+          description="Their columns show no values. Try loading them again."
+          onRetry={buckets.refetch}
+          retrying={buckets.refetching}
+        />
+      )}
+      <Table>
+        <TableHeader tone="muted">
+          <TableRow>
+            <TableHead className="w-10 text-center">#</TableHead>
+            <SortableHeader
+              label="Hero"
+              sortKey="name"
+              activeSortKey={sortKey}
+              sortDir={sortDir}
+              onSortChange={handleSort}
+              align="start"
+              className="min-w-40"
+              data-pinned
+            />
+            {EXPERIENCE_BUCKETS.map((bucket, i) => (
+              <TableHead
+                key={bucket.label}
+                className="text-center select-none"
+                aria-sort={ariaSort(sortKey === `value-${i}` || sortKey === `delta-${i}`, sortDir)}
+              >
+                <div className="flex flex-col items-center gap-1">
                   <SortButton
-                    active={sortKey === `delta-${i}`}
+                    active={sortKey === `value-${i}`}
                     sortDir={sortDir}
-                    onClick={() => handleSort(`delta-${i}`)}
-                    className="text-3xs font-normal text-muted-foreground"
+                    onClick={() => handleSort(`value-${i}`)}
                   >
-                    {"Δ"} vs Beginner
+                    {bucket.label}
                   </SortButton>
-                ) : (
-                  <span className="text-3xs font-normal text-muted-foreground">baseline</span>
-                )}
-              </div>
-            </TableHead>
-          ))}
-          <SortableHeader
-            label="Trend"
-            sortKey="trend"
-            activeSortKey={sortKey}
-            sortDir={sortDir}
-            onSortChange={handleSort}
-          />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {sortedRows.length === 0 ? (
-          <TableEmptyRow colSpan={EXPERIENCE_BUCKETS.length + 3}>No hero stats for these filters.</TableEmptyRow>
-        ) : (
-          sortedRows.map((row, index) => (
-            <TableRow key={row.heroId}>
-              <TableCell className="text-center font-semibold text-muted-foreground">{index + 1}</TableCell>
-              {heroCells.get(row.heroId)}
-            </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+                  <span className="text-3xs font-normal text-muted-foreground">{bucket.sublabel}</span>
+                  {i !== BASELINE_BUCKET ? (
+                    <SortButton
+                      active={sortKey === `delta-${i}`}
+                      sortDir={sortDir}
+                      onClick={() => handleSort(`delta-${i}`)}
+                      className="text-3xs font-normal text-muted-foreground"
+                    >
+                      {"Δ"} vs Beginner
+                    </SortButton>
+                  ) : (
+                    <span className="text-3xs font-normal text-muted-foreground">baseline</span>
+                  )}
+                </div>
+              </TableHead>
+            ))}
+            <SortableHeader
+              label="Trend"
+              sortKey="trend"
+              activeSortKey={sortKey}
+              sortDir={sortDir}
+              onSortChange={handleSort}
+            />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sortedRows.length === 0 ? (
+            <TableEmptyRow colSpan={EXPERIENCE_BUCKETS.length + 3}>No hero stats for these filters.</TableEmptyRow>
+          ) : (
+            sortedRows.map((row, index) => (
+              <TableRow key={row.heroId}>
+                <TableCell className="text-center font-semibold text-muted-foreground">{index + 1}</TableCell>
+                {heroCells.get(row.heroId)}
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </Stack>
   );
 }
 
