@@ -4,7 +4,8 @@
  * small samples, which is exactly where build-path win rates land.
  */
 export function wilsonScoreInterval(wins: number, matches: number, z = 1.96): [number, number] {
-  if (matches === 0) return [0, 0];
+  // No games say nothing about the rate: the whole range, not a certain 0% that confidence filters took as "high".
+  if (matches === 0) return [0, 1];
 
   const phat = wins / matches;
   const zSquared = z * z;

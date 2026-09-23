@@ -49,7 +49,7 @@ import { formatCompactAxisTick, niceTicks } from "~/lib/chart-axis";
 import { MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { buildHeroTrendPoints, HERO_TREND_LABELS, isPercentageTrend, type HeroTrendBuckets } from "~/lib/hero-trends";
-import { withoutOpenTimeBucket } from "~/lib/time-buckets";
+import { wholeTimeBuckets } from "~/lib/time-buckets";
 import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS_WITH_BAN_RATE, hero_stats_transform } from "~/types/api_hero_stats";
 
@@ -204,7 +204,9 @@ export function HeroStatsOverTimeChart({
   const heroStatMap: HeroTrendBuckets = useMemo(() => {
     if (isBanRate) {
       if (!banData) return {};
-      const ratesByBucket = computeBanRatesByBucket(withoutOpenTimeBucket(banData, heroTimeInterval));
+      const ratesByBucket = computeBanRatesByBucket(
+        wholeTimeBuckets(banData, heroTimeInterval, { minUnixTimestamp, maxUnixTimestamp }),
+      );
       const map: Record<number, [number, number, number?][]> = {};
       for (const [bucket, heroRates] of ratesByBucket) {
         if (bucket < (minUnixTimestamp ?? 0)) continue;
@@ -220,7 +222,7 @@ export function HeroStatsOverTimeChart({
       // The API's daily rollups count the whole start day, so a bucket that begins before the range would mix in the
       // hours before a season or patch boundary.
       const firstBucket = minUnixTimestamp ?? 0;
-      for (const hero of withoutOpenTimeBucket(heroData, heroTimeInterval)) {
+      for (const hero of wholeTimeBuckets(heroData, heroTimeInterval, { minUnixTimestamp, maxUnixTimestamp })) {
         if (hero.bucket < firstBucket) continue;
         if (!map[hero.bucket]) map[hero.bucket] = [];
         const value = hero_stats_transform(hero, heroStat);
@@ -229,7 +231,16 @@ export function HeroStatsOverTimeChart({
       }
     }
     return map;
-  }, [heroStat, heroData, isBanRate, banData, minUnixTimestamp, heroTimeInterval, minMatchesPerBucket]);
+  }, [
+    heroStat,
+    heroData,
+    isBanRate,
+    banData,
+    minUnixTimestamp,
+    maxUnixTimestamp,
+    heroTimeInterval,
+    minMatchesPerBucket,
+  ]);
 
   const { heroIdMap, isLoadingHeroes, isErrorHeroes, refetchHeroes, isFetchingHeroes } = useHeroColorMap();
   const heroIdsWithData = useMemo(

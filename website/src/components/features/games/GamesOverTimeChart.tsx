@@ -16,7 +16,7 @@ import { Field } from "~/components/ui/field";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
 import { day } from "~/dayjs";
-import { completeTimeBuckets, withoutOpenTimeBucket } from "~/lib/time-buckets";
+import { wholeTimeBuckets } from "~/lib/time-buckets";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
 import {
@@ -59,10 +59,7 @@ export default function GamesOverTimeChart({
 
   const chartData = useMemo(() => {
     if (!data) return [];
-    // Buckets cut by either end of the range (a month that starts on the 20th) would dip like real drops in totals;
-    // only whole buckets are drawn, unless that leaves fewer than two points for a short range.
-    const complete = completeTimeBuckets(data, timeBucket, params);
-    return (complete.length >= 2 ? [...complete] : withoutOpenTimeBucket([...data], timeBucket))
+    return wholeTimeBuckets([...data], timeBucket, params)
       .sort((a, b) => a.bucket - b.bucket)
       .map((entry) => ({
         date: day.unix(entry.bucket).valueOf(),

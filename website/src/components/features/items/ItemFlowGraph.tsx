@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Workflow } from "lucide-react";
-import { parseAsArrayOf, parseAsInteger, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
+import { parseAsArrayOf, parseAsNumberLiteral, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ItemImage } from "~/components/domain/assets/ItemImage";
@@ -9,6 +9,7 @@ import { GraphNodeCard } from "~/components/domain/graph/GraphNodeCard";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -390,7 +391,11 @@ export function ItemFlowGraph({
 }: ItemFlowGraphProps) {
   // View controls persisted in the URL (shareable), prefixed `flow_` to avoid clashing with
   // the page's other filters.
-  const [perColumn, setPerColumn] = useQueryState("flow_top", parseAsInteger.withDefault(6));
+  // Only the offered sizes: `flow_top=-2` sliced the last two items off each stage, `0` showed none.
+  const [perColumn, setPerColumn] = useQueryState(
+    "flow_top",
+    parseAsNumberLiteral([4, 6, 8, 12] as const).withDefault(6),
+  );
   const [sortBy, setSortBy] = useQueryState(
     "flow_sort",
     parseAsStringLiteral(["pickrate", "winrate", "winrate_adj"] as const).withDefault("pickrate"),
@@ -423,6 +428,8 @@ export function ItemFlowGraph({
   const [locked, setLocked] = useQueryState("build_path", parseAsArrayOf(parseAsString).withDefault([]));
 
   const isStreetBrawl = gameMode === "street_brawl";
+  // Street Brawl has no adjusted win rate to show or pick; a kept `flow_sort=winrate_adj` ordered its cards by it.
+  const cardSort = isStreetBrawl && sortBy === "winrate_adj" ? "pickrate" : sortBy;
   const columnCount = isStreetBrawl ? STREET_BRAWL_ROUNDS : PHASE_COUNT;
 
   const [wrapperRef, containerWidth] = useContainerWidth();
@@ -442,7 +449,7 @@ export function ItemFlowGraph({
     return { lockedItemIds: ids, lockedItemColumns: cols };
   }, [locked]);
 
-  const { data, isLoading, isFetching } = useQuery(
+  const { data, isLoading, isFetching, isError, refetch } = useQuery(
     itemFlowQueryOptions({
       heroIds: heroId != null ? String(heroId) : undefined,
       gameMode,
@@ -529,9 +536,9 @@ export function ItemFlowGraph({
     const columnMeta: ColumnMeta[] = [];
     let maxRows = 0;
     const cmp =
-      sortBy === "winrate"
+      cardSort === "winrate"
         ? (a: Node, b: Node) => rawWr(b) - rawWr(a)
-        : sortBy === "winrate_adj"
+        : cardSort === "winrate_adj"
           ? (a: Node, b: Node) => b.adjusted_win_rate - a.adjusted_win_rate
           : (a: Node, b: Node) => b.matches - a.matches;
     // Drop items whose 95% CI is wider than the selected confidence threshold (locked items stay).
@@ -632,7 +639,15 @@ export function ItemFlowGraph({
     });
     const maxBottom = headerH + maxRows * (CARD_H + ROW_GAP);
 
-    const maxEdge = Math.max(1, ...data.edges.map((e) => e.matches));
+    // Scaled to the edges that are drawn: one hidden by a top-N, tier or confidence filter shrank every visible one.
+    const maxEdge = Math.max(
+      1,
+      ...data.edges
+        .filter(
+          (e) => placed.has(`${e.from_column}:${e.from_item_id}`) && placed.has(`${e.from_column + 1}:${e.to_item_id}`),
+        )
+        .map((e) => e.matches),
+    );
     const edges = data.edges
       .map((e) => {
         const from = placed.get(`${e.from_column}:${e.from_item_id}`);
@@ -664,7 +679,7 @@ export function ItemFlowGraph({
       width: graphWidth,
       height: maxBottom,
     };
-  }, [data, perColumn, sortBy, minConfidence, excludedTiers, itemMeta, containerWidth, lockedSet, lockedColumns]);
+  }, [data, perColumn, cardSort, minConfidence, excludedTiers, itemMeta, containerWidth, lockedSet, lockedColumns]);
 
   const highlight = useMemo(() => {
     if (!hoveredKey || !layout) return null;
@@ -771,7 +786,7 @@ export function ItemFlowGraph({
         <Segmented
           aria-label="Items per stage"
           value={String(perColumn)}
-          onValueChange={(v) => setPerColumn(Number(v))}
+          onValueChange={(v) => setPerColumn(Number(v) as 4 | 6 | 8 | 12)}
           width="hug"
         >
           {PER_COLUMN_OPTIONS.map((option) => (
@@ -786,6 +801,8 @@ export function ItemFlowGraph({
         <div className="min-w-0 flex-1" ref={wrapperRef}>
           {isLoading ? (
             <LoadingState label="item flow" align="center" />
+          ) : isError && !data ? (
+            <ErrorState title="The build flow did not load" retrying={isFetching} onRetry={() => void refetch()} />
           ) : !layout ? (
             <EmptyState
               variant="inline"
@@ -905,7 +922,9 @@ export function ItemFlowGraph({
               )}
             </PanelHeader>
             <PanelBody>
-              {!pathStats ? (
+              {!pathStats && isError ? (
+                <ErrorState variant="inline" title="The build path did not load" onRetry={() => void refetch()} />
+              ) : !pathStats ? (
                 <LoadingState size="sm" text="Loading build path…" label="build path" />
               ) : (
                 <Stack gap={3} className="text-xs">

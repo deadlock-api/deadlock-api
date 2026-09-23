@@ -45,3 +45,17 @@ export function completeTimeBuckets<T extends { bucket: number }>(
     return complete.get(bucket);
   });
 }
+
+/**
+ * Only buckets the range covers whole, for a trend chart: a bucket cut by either end of the range (a month starting on
+ * the 20th, a week ending on a patch day) would dip like a real drop. Falls back to dropping just the open bucket when
+ * fewer than two whole ones remain, so a short range still draws.
+ */
+export function wholeTimeBuckets<T extends { bucket: number }>(
+  rows: T[],
+  interval: string,
+  range: { minUnixTimestamp?: number | null; maxUnixTimestamp?: number | null },
+): T[] {
+  const complete = completeTimeBuckets(rows, interval, range);
+  return new Set(complete.map((row) => row.bucket)).size >= 2 ? complete : withoutOpenTimeBucket(rows, interval);
+}
