@@ -5,7 +5,7 @@ import { analyticsPageTitle, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
-import { defaultPrevUnixRange, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
+import { defaultPeriodLabel, defaultPrevUnixRange, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { seo } from "~/lib/seo";
 import type { SlimHero } from "~/queries/asset-queries";
 import type { RouterContext } from "~/router";
@@ -53,7 +53,8 @@ export const heroesPageOptions = {
         import("~/queries/hero-ban-stats-query"),
         import("~/queries/hero-stats-query"),
       ]);
-    const r = defaultHeroStatsRanges(await loadSeasons(queryClient), preferences.dateFilter);
+    const seasons = await loadSeasons(queryClient);
+    const r = defaultHeroStatsRanges(seasons, preferences.dateFilter);
     const common = {
       minHeroMatches: 0,
       minHeroMatchesTotal: 0,
@@ -105,17 +106,18 @@ export const heroesPageOptions = {
         ),
       ),
     ]);
-    return { leader: findWinRateLeader(stats, heroes) };
+    // The leader is measured over the default range, which is this season unless the visitor prefers patches.
+    return { leader: findWinRateLeader(stats, heroes), period: defaultPeriodLabel(seasons, preferences.dateFilter) };
   },
   head: ({
     loaderData,
     match,
   }: {
-    loaderData?: { leader: { name: string; winRate: number } | null };
+    loaderData?: { leader: { name: string; winRate: number } | null; period: string };
     match: { pathname: string };
   }) => {
     const leader = loaderData?.leader;
-    const lead = leader ? ` ${leader.name} leads the current patch at ${(leader.winRate * 100).toFixed(1)}%.` : "";
+    const lead = leader ? ` ${leader.name} leads ${loaderData.period} at ${(leader.winRate * 100).toFixed(1)}%.` : "";
     return seo({
       title: analyticsPageTitle(match.pathname, "Deadlock Hero Win Rates & Pick Rates: Live Match Data"),
       description: `Deadlock hero win rates, pick rates, matchups, and synergies for every hero.${lead} Filter by rank and patch. Updated daily from live match data.`,
