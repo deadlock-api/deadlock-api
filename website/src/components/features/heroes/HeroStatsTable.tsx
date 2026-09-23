@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 import type { AnalyticsApiHeroBanStatsRequest } from "deadlock_api_client";
@@ -16,6 +16,7 @@ import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
 import { ProgressBarSegment } from "~/components/ui/progress-bar";
@@ -169,6 +170,7 @@ export function HeroStatsTable({
     isError,
     refetch,
     isFetching,
+    isPlaceholderData: isRefetching,
   } = useQuery({
     queryKey: queryKeys.analytics.heroStats(heroStatsQuery),
     queryFn: async () => {
@@ -176,6 +178,9 @@ export function HeroStatsTable({
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_DAY,
+    // A filter change keeps the old rows, dimmed, until the new ones arrive: dropping to a loading state emptied the
+    // page and threw away the scroll position.
+    placeholderData: keepPreviousData,
   });
 
   const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
@@ -933,7 +938,7 @@ export function HeroStatsTable({
 
   if (groupByType && groupedData && groupStats) {
     return (
-      <div className="flex flex-col gap-4">
+      <StaleOverlay active={isRefetching} label="hero stats" className="flex flex-col gap-4">
         {groupStats.map((group) => {
           const heroesInGroup = groupedData.get(group.type) ?? [];
           if (!heroesInGroup.some((row) => matchesNameQuery(row.hero_id))) return null;
@@ -991,18 +996,18 @@ export function HeroStatsTable({
             </Panel>
           );
         })}
-      </div>
+      </StaleOverlay>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <StaleOverlay active={isRefetching} label="hero stats" className="flex flex-col gap-3">
       <Table>
         {!hideHeader && renderTableHeader(!hideIndex)}
         <TableBody>
           {limitedData?.map((row, index) => matchesNameQuery(row.hero_id) && renderHeroRow(row, index, !hideIndex))}
         </TableBody>
       </Table>
-    </div>
+    </StaleOverlay>
   );
 }
