@@ -459,33 +459,40 @@ export function ItemStatsTable({
     setExcludeItems(next);
   };
 
+  // The header and filters answer a click at once; the ~150 rows (a few hundred ms of style and layout on a phone)
+  // follow in a deferred render, marked busy until they catch up.
+  const rowSort = useDeferredValue(sort);
+  const rowTiers = useDeferredValue(itemTiers);
+  const rowSlots = useDeferredValue(itemSlots);
+  const rowsCatchingUp = rowSort !== sort || rowTiers !== itemTiers || rowSlots !== itemSlots;
+
   const processedData = useMemo(() => {
     if (!data) return [];
     return [...data].sort((a, b) => {
       let aValue: number;
       let bValue: number;
 
-      if (sort.field === "winRate") {
+      if (rowSort.field === "winRate") {
         aValue = a.wins / a.matches;
         bValue = b.wins / b.matches;
-      } else if (sort.field === "matches") {
+      } else if (rowSort.field === "matches") {
         aValue = a.matches;
         bValue = b.matches;
       } else {
         return 0;
       }
 
-      return sort.direction === "asc" ? aValue - bValue : bValue - aValue;
+      return rowSort.direction === "asc" ? aValue - bValue : bValue - aValue;
     });
-  }, [data, sort]);
+  }, [data, rowSort]);
 
   // Echo keystrokes before filtering and rendering the rows.
   const nameTerm = useDeferredValue(nameQuery).trim().toLowerCase();
 
   const visibleData = processedData.filter(
     (row) =>
-      (itemTiers.length === 0 || itemTiers.includes(row.itemTier)) &&
-      (itemSlots.length === 0 || !row.item || itemSlots.includes(row.item.item_slot_type)) &&
+      (rowTiers.length === 0 || rowTiers.includes(row.itemTier)) &&
+      (rowSlots.length === 0 || !row.item || rowSlots.includes(row.item.item_slot_type)) &&
       (!nameTerm || (row.item?.name ?? "").toLowerCase().includes(nameTerm)),
   );
 
@@ -503,7 +510,8 @@ export function ItemStatsTable({
   };
 
   return (
-    <Stack gap={4} aria-live="polite" aria-busy={isLoading}>
+    // Not a live region: it holds the whole table, which a screen reader would then read out on every sort.
+    <Stack gap={4} aria-busy={isLoading}>
       <ItemQuickSelectDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
@@ -595,7 +603,7 @@ export function ItemStatsTable({
                   </TableRow>
                 </TableHeader>
               )}
-              <TableBody>
+              <TableBody aria-busy={rowsCatchingUp || undefined}>
                 {visibleData.map((row, index) => (
                   <ItemStatsTableRow
                     key={row.item_id}
