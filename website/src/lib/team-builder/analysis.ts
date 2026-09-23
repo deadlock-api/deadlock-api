@@ -797,10 +797,11 @@ export interface LaneReassignment {
 /**
  * Best way to redistribute a side's own heroes across the three lanes.
  *
- * Only the lane term can change here — the same six heroes keep the same pairs, matchups and solo
- * rates however they are arranged — so the search scores lane edge alone rather than re-predicting
- * the whole draft. The two slots of a lane are interchangeable to `laneRows`, so the search walks
- * the 90 distinct lane splits rather than all 6! = 720 orderings, and still misses nothing.
+ * Each arrangement is scored by re-predicting the draft, like `searchSwaps`: the lane term is the only one that
+ * moves, but scoring it with a separate estimate (raw same-lane win rates) quoted gains the prediction did not
+ * deliver, +7.8 on the banner for +0.2 on the board, and now and then a "better" split that lowered it. The two
+ * slots of a lane are interchangeable to `laneRows`, so the search walks the 90 distinct lane splits rather than
+ * all 6! = 720 orderings, and still misses nothing.
  */
 export function suggestLaneAssignment(draft: Draft, index: StatsIndex, side: Side): LaneReassignment | undefined {
   const lanes = lanesOf(draft.gameMode);
@@ -808,28 +809,12 @@ export function suggestLaneAssignment(draft: Draft, index: StatsIndex, side: Sid
   const heroes = filled(current);
   if (lanes.length === 0 || heroes.length < TEAM_SIZE[draft.gameMode]) return undefined;
 
-  const opposing = draft[side === "ally" ? "enemy" : "ally"];
-  // The opposing side is fixed for the whole search, so a lane's edge depends only on which two of
-  // this side's heroes sit in it. That collapses the 90 arrangements onto 45 distinct evaluations.
-  const cache = new Map<string, number | undefined>();
-  const edgeOfLane = (laneIndex: number, duo: number[]) => {
-    const key = `${laneIndex}|${duoKey(duo)}`;
-    if (!cache.has(key)) {
-      const other = duoOf(opposing, laneIndex);
-      const [ally, enemy] = side === "ally" ? [duo, other] : [other, duo];
-      cache.set(key, toPoints(laneEstimate(index, lanes[laneIndex].id, ally, enemy).winRate));
-    }
-    return cache.get(key);
-  };
-
-  const laneEdgeOf = (slots: (number | null)[]) =>
-    mean(lanes.map((_, laneIndex) => edgeOfLane(laneIndex, duoOf(slots, laneIndex))));
+  const laneEdgeOf = (slots: (number | null)[]) => predictDraft({ ...draft, [side]: slots }, index);
 
   const baseline = laneEdgeOf(current);
   if (baseline === undefined) return undefined;
-  // `laneRows` measures every lane from the ally side, so a rearrangement that is good for the enemy
-  // shows up as a *drop* in that number. Without this flip the enemy row proposed the split that
-  // suits the ally, and applying one side's suggestion could leave the other with nothing to offer.
+  // The prediction is the ally's, so a rearrangement that is good for the enemy shows up as a *drop* in it.
+  // Without this flip the enemy row proposed the split that suits the ally.
   const sign = side === "ally" ? 1 : -1;
 
   let best: LaneReassignment | undefined;
@@ -837,8 +822,6 @@ export function suggestLaneAssignment(draft: Draft, index: StatsIndex, side: Sid
     if (remaining.length === 0) {
       const edge = laneEdgeOf(acc);
       if (edge === undefined) return;
-      // The lane term is a mean over three lanes and enters the prediction directly, so its
-      // improvement *is* the win-rate gain for whichever side is being optimised.
       const gain = (edge - baseline) * sign;
       if (gain > (best?.gain ?? 0.1)) {
         best = {
