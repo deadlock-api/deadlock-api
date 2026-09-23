@@ -19,6 +19,7 @@ import {
   getDayNumber,
   getModeSeed,
   getTodayDate,
+  puzzleShareUrl,
   resolvePuzzleDate,
   seededRandom,
   validatePuzzleDateSearch,
@@ -153,7 +154,7 @@ function Trivia() {
 
   const shareText = useMemo(() => {
     const dayNum = getDayNumber(date);
-    return `Deadlockdle #${dayNum} - Trivia ${state.score}/${QUESTION_COUNT}\nhttps://deadlock-api.com/games/deadlockdle`;
+    return `Deadlockdle #${dayNum} - Trivia ${state.score}/${QUESTION_COUNT}\n${puzzleShareUrl(date)}`;
   }, [date, state.score]);
 
   const resultsScrollRef = useCallback<RefCallback<HTMLDivElement>>((node) => {

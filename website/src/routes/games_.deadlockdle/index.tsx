@@ -18,6 +18,7 @@ import {
   getDayNumber,
   getTodayDate,
   isValidPuzzleDate,
+  puzzleShareUrl,
   resolvePuzzleDate,
   validatePuzzleDateSearch,
 } from "~/lib/deadlockdle/seed";
@@ -106,7 +107,7 @@ function buildShareText(date: string, statuses: Record<GameMode, DailyStatus>): 
     lines.push(`${emoji} ${game.shareLabel}${detail}`);
   }
 
-  lines.push("", "https://deadlock-api.com/games/deadlockdle");
+  lines.push("", puzzleShareUrl(date));
   return lines.join("\n");
 }
 

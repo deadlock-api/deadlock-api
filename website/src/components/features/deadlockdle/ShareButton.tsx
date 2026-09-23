@@ -1,5 +1,5 @@
 import { CopyButton } from "~/components/ui/copy-button";
-import { getDayNumber } from "~/lib/deadlockdle/seed";
+import { getDayNumber, puzzleShareUrl } from "~/lib/deadlockdle/seed";
 import type { GameMode, GameStatus } from "~/lib/deadlockdle/types";
 import { cn } from "~/lib/utils";
 
@@ -25,7 +25,7 @@ export function generateShareText(
   const grid = guesses
     .map((_, i) => (i === guesses.length - 1 && status === "won" ? "\u{1f7e9}" : "\u{1f7e5}"))
     .join("");
-  return `Deadlockdle #${dayNum} - ${label} ${score}\n${grid}\nhttps://deadlock-api.com/games/deadlockdle`;
+  return `Deadlockdle #${dayNum} - ${label} ${score}\n${grid}\n${puzzleShareUrl(date)}`;
 }
 
 /** Copies a result to the clipboard, in the games' terminal voice. */

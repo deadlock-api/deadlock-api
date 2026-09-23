@@ -17,8 +17,9 @@ import {
   getDayNumber,
   getModeSeed,
   getTodayDate,
-  seededRandom,
+  puzzleShareUrl,
   resolvePuzzleDate,
+  seededRandom,
   seededShuffle,
   validatePuzzleDateSearch,
 } from "~/lib/deadlockdle/seed";
@@ -323,7 +324,7 @@ function ItemStatsQuiz() {
             />
             <div className="flex flex-col items-center gap-3">
               <ShareButton
-                text={`Deadlockdle #${getDayNumber(state.date)} - Stats ${state.score}/${state.totalFields}\nhttps://deadlock-api.com/games/deadlockdle`}
+                text={`Deadlockdle #${getDayNumber(state.date)} - Stats ${state.score}/${state.totalFields}\n${puzzleShareUrl(date)}`}
               >
                 Share Result
               </ShareButton>

@@ -77,3 +77,9 @@ export interface PuzzleDateSearch {
 export function validatePuzzleDateSearch(search: Record<string, unknown>): PuzzleDateSearch {
   return typeof search.date === "string" && isValidPuzzleDate(search.date) ? { date: search.date } : {};
 }
+
+/** The link a shared result carries: today's hub, or the archive of the day the result is from. */
+export function puzzleShareUrl(date: string): string {
+  const hub = "https://deadlock-api.com/games/deadlockdle";
+  return date === getTodayDate() ? hub : `${hub}?date=${date}`;
+}
