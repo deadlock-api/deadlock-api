@@ -5,6 +5,8 @@ import { useMemo } from "react";
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
+import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
@@ -305,7 +307,7 @@ export function HeroMatchupDetailsStatsTable({
   onHeroSelected?: (heroId: number) => void;
   linkHeroes?: boolean;
 }) {
-  const { synergyRows, counterRows, isLoading } = useHeroMatchupRows(params);
+  const { synergyRows, counterRows, isLoading, isError, retry } = useHeroMatchupRows(params);
   const isSynergy = stat === HeroMatchupDetailsStatsTableStat.SYNERGY;
   const rows = isSynergy ? synergyRows : counterRows;
   const relWinrates = rows.map((row) => row.relWinrate);
@@ -314,6 +316,10 @@ export function HeroMatchupDetailsStatsTable({
 
   if (isLoading) {
     return <LoadingState label="hero matchups" align="center" />;
+  }
+
+  if (isError && rows.length === 0) {
+    return <ErrorState title="Hero matchups did not load" onRetry={() => void retry()} />;
   }
 
   return (
@@ -328,6 +334,9 @@ export function HeroMatchupDetailsStatsTable({
         </TableRow>
       </TableHeader>
       <TableBody>
+        {rows.length === 0 && (
+          <TableEmptyRow colSpan={3}>No matchups with enough matches for these filters</TableEmptyRow>
+        )}
         {rows.map((row, index) => (
           <TableRow
             key={row.heroId}

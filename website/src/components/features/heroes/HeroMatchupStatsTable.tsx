@@ -5,6 +5,8 @@ import { useMemo } from "react";
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
+import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Delta } from "~/components/ui/delta";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
@@ -245,7 +247,12 @@ export function HeroMatchupStatsTable({
     gameMode: gameMode,
     matchMode,
   };
-  const { data: heroData, isLoading: isLoadingHero } = useQuery({
+  const {
+    data: heroData,
+    isLoading: isLoadingHero,
+    isError: isHeroError,
+    refetch: refetchHero,
+  } = useQuery({
     queryKey: queryKeys.analytics.heroStats(heroStatsQuery),
     queryFn: async () => {
       const response = await api.analytics_api.heroStats(heroStatsQuery);
@@ -264,7 +271,12 @@ export function HeroMatchupStatsTable({
     gameMode: gameMode,
     matchMode,
   };
-  const { data: synergyData, isLoading: isLoadingSynergy } = useQuery({
+  const {
+    data: synergyData,
+    isLoading: isLoadingSynergy,
+    isError: isSynergyError,
+    refetch: refetchSynergy,
+  } = useQuery({
     queryKey: queryKeys.analytics.heroSynergyStats(synergyStatsQuery),
     queryFn: async () => {
       const response = await api.analytics_api.heroSynergiesStats(synergyStatsQuery);
@@ -283,7 +295,12 @@ export function HeroMatchupStatsTable({
     gameMode: gameMode,
     matchMode,
   };
-  const { data: counterData, isLoading: isLoadingCounter } = useQuery({
+  const {
+    data: counterData,
+    isLoading: isLoadingCounter,
+    isError: isCounterError,
+    refetch: refetchCounter,
+  } = useQuery({
     queryKey: queryKeys.analytics.heroCounterStats(counterStatsQuery),
     queryFn: async () => {
       const response = await api.analytics_api.heroCountersStats(counterStatsQuery);
@@ -418,6 +435,15 @@ export function HeroMatchupStatsTable({
     return <LoadingState label="hero matchups" align="center" />;
   }
 
+  if ((isHeroError || isSynergyError || isCounterError) && heroIds.length === 0) {
+    return (
+      <ErrorState
+        title="Hero matchups did not load"
+        onRetry={() => void Promise.all([refetchHero(), refetchSynergy(), refetchCounter()])}
+      />
+    );
+  }
+
   return (
     <Table>
       {!hideHeader && (
@@ -433,7 +459,10 @@ export function HeroMatchupStatsTable({
         </TableHeader>
       )}
       <TableBody>
-        {heroIds?.map((heroId, index) => (
+        {heroIds.length === 0 && (
+          <TableEmptyRow colSpan={6}>No matchups with enough matches for these filters</TableEmptyRow>
+        )}
+        {heroIds.map((heroId, index) => (
           <TableRow key={heroId}>
             <TableCell className="font-semibold">{index + 1}</TableCell>
             <TableCell data-pinned>

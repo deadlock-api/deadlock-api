@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Fragment, useMemo } from "react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
+import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
 import { Inline } from "~/components/ui/stack";
@@ -70,7 +72,12 @@ export function HeroCombStatsTable({
     gameMode: gameMode,
     matchMode,
   };
-  const { data: heroData, isLoading } = useQuery({
+  const {
+    data: heroData,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.analytics.heroCombStats(combStatsQuery),
     queryFn: async () => {
       const response = await api.analytics_api.heroCombStats(combStatsQuery);
@@ -154,6 +161,8 @@ export function HeroCombStatsTable({
       )}
       {isLoading ? (
         <LoadingState label="hero combinations" align="center" />
+      ) : isError && !heroData ? (
+        <ErrorState title="Hero combinations did not load" onRetry={() => void refetch()} />
       ) : (
         <Table>
           {!hideHeader && (
@@ -180,7 +189,17 @@ export function HeroCombStatsTable({
             </TableHeader>
           )}
           <TableBody>
-            {limitedData?.map((row, index) => (
+            {limitedData.length === 0 && (
+              <TableEmptyRow
+                colSpan={
+                  (hideIndex ? 1 : 2) +
+                  ["winRate", "pickRate", "totalMatches"].filter((column) => columns.includes(column)).length
+                }
+              >
+                No hero combinations with enough matches for these filters
+              </TableEmptyRow>
+            )}
+            {limitedData.map((row, index) => (
               <TableRow key={row.hero_ids.join("-")}>
                 {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
                 <TableCell>

@@ -59,12 +59,15 @@ export function HeroFiltersSection({
             label="Matches (range)"
             step={10}
           />
-          <Filter.MinMatches
-            value={minHeroMatchesTotal}
-            onValueChange={setMinHeroMatchesTotal}
-            label="Matches (total)"
-            step={10}
-          />
+          {/* By Experience buckets heroes by a player's own match count, which replaces the total threshold. */}
+          {tab !== "stats-by-experience" && (
+            <Filter.MinMatches
+              value={minHeroMatchesTotal}
+              onValueChange={setMinHeroMatchesTotal}
+              label="Matches (total)"
+              step={10}
+            />
+          )}
         </>
       ) : (
         <Filter.MinMatches

@@ -553,10 +553,20 @@ export function HeroStatsTable({
       const prevBanRate =
         prevTypeBans !== undefined && prevBanTotalMatches > 0 ? prevTypeBans / prevBanTotalMatches : undefined;
 
+      // A type's share of all picks and bans. Summing its pick share (types add up to 1) with its ban rate (bans per
+      // match, types add up to 2) would weigh the two on different scales.
+      const presenceShare = sumMatches + sumBans > 0 ? (totalMatches + typeBans) / (sumMatches + sumBans) : 0;
+      const prevPresenceShare =
+        prev && prevSumMatches > 0 && prevSumBans > 0
+          ? (prev.matches + (prevTypeBans ?? 0)) / (prevSumMatches + prevSumBans)
+          : undefined;
+
       return {
         type,
         winrate: totalMatches > 0 ? totalWins / totalMatches : 0,
         pickrate: sumMatches > 0 ? totalMatches / sumMatches : 0,
+        presenceShare,
+        prevPresenceShare,
         totalMatches,
         prevWinrate,
         prevPickrate,
@@ -956,11 +966,11 @@ export function HeroStatsTable({
                       <GroupStat label="Ban Rate:" value={group.banRate} delta={banRateDelta} invert />
                     ) : showPresence ? (
                       <GroupStat
-                        label="Presence:"
-                        value={group.pickrate + group.banRate}
+                        label="Presence Share:"
+                        value={group.presenceShare}
                         delta={
-                          group.prevPickrate !== undefined && group.prevBanRate !== undefined
-                            ? group.pickrate + group.banRate - (group.prevPickrate + group.prevBanRate)
+                          group.prevPresenceShare !== undefined
+                            ? group.presenceShare - group.prevPresenceShare
                             : undefined
                         }
                       />

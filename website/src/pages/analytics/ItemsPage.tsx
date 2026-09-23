@@ -64,15 +64,18 @@ export function ItemsPage() {
             }
           }}
         />
-        <Filter.TimeRange
-          value={[minBoughtAtS ?? undefined, maxBoughtAtS ?? undefined]}
-          onValueChange={([min, max]) => {
-            setMinBoughtAtS(min ?? null);
-            setMaxBoughtAtS(max ?? null);
-          }}
-          label="Time"
-          title="Purchase Time Window"
-        />
+        {/* Build Flow and Item Combos do not take a purchase window; a filter there would silently do nothing. */}
+        {(tab === "item-stats" || tab === "item-purchase-analysis") && (
+          <Filter.TimeRange
+            value={[minBoughtAtS ?? undefined, maxBoughtAtS ?? undefined]}
+            onValueChange={([min, max]) => {
+              setMinBoughtAtS(min ?? null);
+              setMaxBoughtAtS(max ?? null);
+            }}
+            label="Time"
+            title="Purchase Time Window"
+          />
+        )}
         <Filter.SeasonPatchDate
           value={{ startDate, endDate }}
           onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
