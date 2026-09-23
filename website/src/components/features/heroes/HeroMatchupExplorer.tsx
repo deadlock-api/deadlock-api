@@ -124,6 +124,8 @@ export function HeroMatchupExplorer({
   const { synergyRows, counterRows, heroStats, isLoading, isError, retry } = useHeroMatchupRows(params);
   const heroes = new Map(heroAssets.map((hero) => [hero.id, hero]));
   const heroName = heroes.get(params.heroId)?.name ?? "Your hero";
+  // An edited or stale ?hero_id= matched no hero and read as "no matchups for these filters".
+  const unknownHero = heroAssets.length > 0 && !heroes.has(params.heroId);
   // Picking a hero from a ranking replaces the tables (and the pressed button) while the new hero loads: focus moves to
   // the overview, which names the new hero, instead of falling back to the page body.
   const overviewRef = useRef<HTMLElement>(null);
@@ -165,7 +167,12 @@ export function HeroMatchupExplorer({
         ) : null}
       </FilterBar>
 
-      {isLoading ? (
+      {unknownHero ? (
+        <EmptyState
+          title="No hero with this ID"
+          description="The link names a hero that does not exist. Pick a hero above to see their matchups."
+        />
+      ) : isLoading ? (
         <LoadingState variant="skeleton" label="hero matchups" className="h-80" />
       ) : isError ? (
         <ErrorState
