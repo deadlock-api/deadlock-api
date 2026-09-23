@@ -167,9 +167,13 @@ function Trivia() {
 
   const resultsScrollRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
     if (node) {
+      // Reached by answering the last question, whose options unmount: the results take focus instead of <body>.
+      if (answered.current) node.focus({ preventScroll: true });
       setTimeout(() => node.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150);
     }
   }, []);
+  // The last answer is saved as completed at once; its reveal still plays before the results replace it.
+  const showResults = state.completed && !isRevealed;
 
   // A failed query leaves no puzzle to build, so without this the loader would spin forever.
   const loadError = puzzleLoadError(heroesQuery, itemsQuery, npcUnitsQuery, abilitiesQuery);
@@ -197,14 +201,14 @@ function Trivia() {
       subtitle="10 questions to test your Deadlock knowledge"
       totalAttempts={0}
       usedAttempts={0}
-      status={state.completed ? "won" : "playing"}
+      status={showResults ? "won" : "playing"}
       hideAttempts
       date={date}
     >
       <GuessFeedback type={feedbackType} triggerKey={shownIndex} />
 
       <AnimatePresence mode="wait">
-        {!state.completed && currentQ ? (
+        {!showResults && currentQ ? (
           <motion.div
             key={shownIndex}
             initial={{ opacity: 0, x: 20 }}
@@ -256,10 +260,11 @@ function Trivia() {
               ))}
             </StepMeter>
           </motion.div>
-        ) : state.completed ? (
+        ) : showResults ? (
           <motion.div
             key="results"
             ref={resultsScrollRef}
+            tabIndex={-1}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
