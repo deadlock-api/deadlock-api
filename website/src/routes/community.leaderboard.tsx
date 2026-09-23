@@ -1,4 +1,4 @@
-import { useQueries } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { LeaderboardRegionEnum } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, throttle, useQueryState } from "nuqs";
@@ -11,7 +11,7 @@ import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
-import { combineQueryStates } from "~/components/patterns/states/QueryRenderer";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { getDefaultRegion, REGION_LABELS } from "~/lib/region";
@@ -80,11 +80,10 @@ function LeaderboardPage() {
     [setRegionParam, setPage],
   );
 
-  const [leaderboardQuery] = useQueries({
-    queries: [leaderboardQueryOptions(region, heroId)],
-  });
-
-  const { isPending, isError, error } = combineQueryStates(leaderboardQuery);
+  // A region or hero change keeps the old table, dimmed, until the new one arrives, instead of emptying the page.
+  // `useQuery`, not `useQueries`: the latter starts a new observer for the new key, which has no previous data.
+  const leaderboardQuery = useQuery({ ...leaderboardQueryOptions(region, heroId), placeholderData: keepPreviousData });
+  const { isPending, isError, error } = leaderboardQuery;
 
   const handleHeroClick = useCallback(
     (id: number) => {
@@ -123,7 +122,9 @@ function LeaderboardPage() {
             onRetry={() => void leaderboardQuery.refetch()}
           />
         ) : leaderboardQuery.data ? (
-          <LeaderboardTable leaderboard={leaderboardQuery.data} onHeroClick={handleHeroClick} />
+          <StaleOverlay active={leaderboardQuery.isPlaceholderData} label="leaderboard">
+            <LeaderboardTable leaderboard={leaderboardQuery.data} onHeroClick={handleHeroClick} />
+          </StaleOverlay>
         ) : null}
       </div>
     </PageShell>
