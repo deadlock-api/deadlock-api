@@ -7,6 +7,8 @@
 //   pnpm smoke --tz America/Los_Angeles         catches server/client timezone mismatches (the Worker runs in UTC)
 //   pnpm smoke --width 360 --only analytics     phone width, only paths containing "analytics"
 //   pnpm smoke --base http://127.0.0.1:8787     against the built Worker
+//   pnpm smoke --cls 0.1                        also fails pages whose layout shift score (CLS) passes 0.1
+//   pnpm smoke --path "/analytics/team-builder?ally=2,0,0,0,0,0"   extra paths, query strings included
 //
 // Uses the Playwright Chromium (`pnpm exec playwright install chromium`), or the installed Chrome as a fallback.
 // Exits 1 when any page has a finding.
@@ -25,6 +27,8 @@ const { values: args } = parseArgs({
     tz: { type: "string" },
     width: { type: "string", default: "1440" },
     only: { type: "string", multiple: true },
+    path: { type: "string", multiple: true },
+    cls: { type: "string" },
     concurrency: { type: "string", default: "4" },
     "settle-ms": { type: "string", default: "1500" },
     help: { type: "boolean", short: "h" },
@@ -44,7 +48,8 @@ if (args.help) {
     [
       ...usage,
       "",
-      "Options: --base <url> --tz <zone> --width <px> --only <text>... --concurrency <n> --settle-ms <ms>",
+      "Options: --base <url> --tz <zone> --width <px> --only <text>... --path <path>... --cls <score> --concurrency <n>",
+      "         --settle-ms <ms>",
     ].join("\n"),
   );
   process.exit(0);
@@ -122,10 +127,27 @@ async function check(context, route) {
   });
   page.on("response", (response) => {
     const url = new URL(response.url());
-    if (url.origin === origin && response.status() >= 400 && url.pathname !== route) {
+    if (url.origin === origin && response.status() >= 400 && url.pathname !== new URL(route, origin).pathname) {
       findings.push(`${response.status()}: ${url.pathname}`);
     }
   });
+
+  if (args.cls) {
+    // Layout shifts the page makes on its own while loading (the ones right after input do not count).
+    await page.addInitScript(() => {
+      window.__smokeShifts = [];
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          if (entry.hadRecentInput) continue;
+          const source = entry.sources?.find((s) => s.node instanceof Element)?.node;
+          const where = source
+            ? `${source.tagName.toLowerCase()}${source.dataset?.slot ? `[data-slot=${source.dataset.slot}]` : ""}`
+            : "?";
+          window.__smokeShifts.push({ value: entry.value, where });
+        }
+      }).observe({ type: "layout-shift", buffered: true });
+    });
+  }
 
   let status = 0;
   try {
@@ -147,12 +169,22 @@ async function check(context, route) {
     .catch(() => null);
   if (layout && layout.h1 !== 1) findings.push(`${layout.h1} <h1> elements`);
   if (layout && layout.overflow > 0) findings.push(`page scrolls sideways by ${layout.overflow}px`);
+  if (args.cls) {
+    const shifts = await page.evaluate(() => window.__smokeShifts ?? []).catch(() => []);
+    const score = shifts.reduce((sum, shift) => sum + shift.value, 0);
+    if (score > Number(args.cls)) {
+      const worst = shifts.toSorted((a, b) => b.value - a.value).slice(0, 3);
+      findings.push(
+        `layout shift ${score.toFixed(3)} (largest: ${worst.map((w) => `${w.where} ${w.value.toFixed(3)}`).join(", ")})`,
+      );
+    }
+  }
 
   await page.close();
   return { route, finalPath, findings: [...new Set(findings)] };
 }
 
-const routes = routePaths();
+const routes = [...routePaths(), ...(args.path ?? [])];
 const browser = await launch();
 const context = await browser.newContext({
   viewport: { width: Number(args.width), height: 900 },
@@ -170,7 +202,7 @@ await Promise.all(
     for (let route = queue.shift(); route; route = queue.shift()) {
       const result = await check(context, route);
       results.push(result);
-      const target = result.finalPath === route ? "" : ` -> ${result.finalPath}`;
+      const target = result.finalPath === new URL(route, args.base).pathname ? "" : ` -> ${result.finalPath}`;
       console.log(`${result.findings.length ? "FAIL" : "ok  "} ${route}${target}`);
       for (const finding of result.findings) console.log(`       ${finding}`);
     }
