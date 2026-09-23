@@ -162,12 +162,15 @@ export function FilterCell({
             )}
             <span
               className={cn(
-                "flex min-w-0 items-center gap-1.5 text-sm font-medium whitespace-nowrap",
+                "flex min-w-0 items-center gap-1.5 text-sm font-medium",
+                compact && "whitespace-nowrap",
                 active ? "text-foreground" : "text-muted-foreground",
               )}
             >
               {icon}
-              <span className="truncate">{value ?? label}</span>
+              {/* A cell of the bar may wrap onto a second line: on a phone "Phantom…" or "Beta Seas…" hid which rank
+                  or patch is filtered. The one-line toolbar size keeps truncating. */}
+              <span className={compact ? "truncate" : "line-clamp-2 text-start"}>{value ?? label}</span>
               <ChevronDownIcon className="size-3.5 shrink-0 opacity-50" />
             </span>
             {inRoot && (
