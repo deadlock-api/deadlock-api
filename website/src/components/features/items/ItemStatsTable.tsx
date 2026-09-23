@@ -15,6 +15,7 @@ import type { StatTrendBucket } from "~/components/patterns/charts/StatTrendChar
 import { ExpandableRow, ExpandableRowToggle } from "~/components/patterns/data-table/ExpandableRow";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
+import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Badge } from "~/components/ui/badge";
@@ -621,6 +622,20 @@ export function ItemStatsTable({
               </TableBody>
             </Table>
           </div>
+          {/* A search or filter that leaves nothing would otherwise read as a table that failed to fill. */}
+          {visibleData.length === 0 && (
+            <EmptyState
+              variant="inline"
+              title={nameTerm ? `No items match "${nameQuery.trim()}"` : "No items match these filters"}
+              action={
+                nameTerm ? (
+                  <Button variant="outline" size="sm" onClick={() => setNameQuery("")}>
+                    Clear search
+                  </Button>
+                ) : undefined
+              }
+            />
+          )}
         </StaleOverlay>
       )}
     </Stack>

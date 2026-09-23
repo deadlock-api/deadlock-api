@@ -91,9 +91,10 @@ const BUCKET_CONFIG = {
     tickCount: 10,
   },
   game_time_normalized_percentage: {
-    label: "Minutes (Relative)",
+    // Buckets are a share of the match length (0-100%), not minutes.
+    label: "Match Progress",
     formatter: (v: number) => `${Math.round(v)}%`,
-    tooltipPrefix: "Minutes (Relative)",
+    tooltipPrefix: "Match progress",
     tickCount: 10,
   },
 } as const satisfies Partial<Record<BucketType, unknown>>;
@@ -248,7 +249,11 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
       .flat()
       .some((d) => d.winrate !== null && d.matches > 0);
 
-  const purchaseAxis = bucketType === "game_time_min" ? "purchase time" : "net worth at purchase";
+  const purchaseAxis = {
+    game_time_min: "purchase time",
+    game_time_normalized_percentage: "purchase time relative to match length",
+    net_worth_by_1000: "net worth at purchase",
+  }[bucketType];
   const seriesColor = (index: number) => SERIES_COLORS[index] ?? CHART_COLOR.neutral;
 
   return (
