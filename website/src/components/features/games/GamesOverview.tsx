@@ -114,10 +114,16 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                 const prevValue =
                   TOTAL_STATS.has(stat.key) && !compareTotals ? undefined : (prev?.[stat.key] as number | undefined);
                 // Rounded to the displayed tenth of a percent so the arrow and colour agree with the printed value.
+                // A rate changes in points (2% to 3% is +1.0 pp); a relative change of it (+50%) read as the new rate.
+                const inPoints = stat.format === "percent";
                 const delta =
-                  prevValue != null && prevValue !== 0
-                    ? Math.round(((value - prevValue) / Math.abs(prevValue)) * 1000) / 1000
-                    : null;
+                  prevValue == null
+                    ? null
+                    : inPoints
+                      ? Math.round((value - prevValue) * 1000) / 1000
+                      : prevValue !== 0
+                        ? Math.round(((value - prevValue) / Math.abs(prevValue)) * 1000) / 1000
+                        : null;
 
                 return (
                   <Fragment key={stat.key}>
@@ -151,6 +157,7 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                           {delta != null && (
                             <Delta
                               value={delta}
+                              unit={inPoints ? " pp" : undefined}
                               invert={stat.lowerIsBetter}
                               sign="arrow"
                               display="badge"
