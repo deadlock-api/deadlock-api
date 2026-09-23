@@ -11,6 +11,7 @@ import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Section } from "~/components/patterns/page/Section";
 import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
@@ -325,6 +326,11 @@ function HeroDetailPage() {
             sub={rankLabel(summary.banRateRank, summary.banHeroCount)}
           />
         </StatGroup>
+      )}
+
+      {/* Every section below reads these stats; without them the page would silently end after its header. */}
+      {!summary && statsQuery.isError && (
+        <ErrorState title={`${heroName}'s stats did not load`} onRetry={() => void statsQuery.refetch()} />
       )}
 
       {summary && (

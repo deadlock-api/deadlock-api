@@ -98,7 +98,8 @@ export function ItemWinRateByBuyTime({
       title={`When to Buy ${itemName}`}
       description={
         <>
-          Most players pick up {itemName} at <span className="font-semibold text-foreground">{peak.label}</span> (
+          {/* The largest bucket is often well under half of all purchases, so it is "most often", not "most players". */}
+          {itemName} is bought most often at <span className="font-semibold text-foreground">{peak.label}</span> (
           {formatPercent(peak.share, 0)} of purchases). Buyers at {early.label} win {formatPercent(early.winRate)},
           versus {formatPercent(late.winRate)} at {late.label}. An early buy partly reflects a team that is already
           ahead, so read this as when the item tends to pay off rather than proof that rushing it wins.

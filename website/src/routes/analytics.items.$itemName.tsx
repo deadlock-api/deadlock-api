@@ -12,6 +12,7 @@ import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Section } from "~/components/patterns/page/Section";
 import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -264,6 +265,14 @@ function ItemDetailPage() {
           <Stat label="Matches" value={summary.matches.toLocaleString("en-US")} />
           <Stat label="Avg Buy Time" value={clock(summary.avgBuyTimeS)} sub="into the match" />
         </StatGroup>
+      )}
+
+      {/* The summary and the sections below read these stats; a failure would otherwise leave only the header. */}
+      {!summary && (statsQuery.isError || heroStatsQuery.isError) && (
+        <ErrorState
+          title={`${itemName} stats did not load`}
+          onRetry={() => void Promise.all([statsQuery.refetch(), heroStatsQuery.refetch()])}
+        />
       )}
 
       {itemQuery.data && (itemQuery.data.tooltip_sections?.length ?? 0) > 0 && (
