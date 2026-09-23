@@ -8,12 +8,12 @@ import { SteamAvatar } from "~/components/domain/player/SteamAvatar";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { InlineStat } from "~/components/ui/inline-stat";
 import { TextLink } from "~/components/ui/text-link";
-import { day } from "~/dayjs";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { formatPlaytime, peakRank, summarize } from "~/lib/tracker/compute";
 import { steamProfileQueryOptions, trackerRankQueryOptions } from "~/queries/tracker-queries";
 
 import { RefreshControl } from "./RefreshControl";
+import { useTrackerTime } from "./useTrackerTime";
 
 export function PlayerHeader({
   accountId,
@@ -30,6 +30,7 @@ export function PlayerHeader({
   const { data: profile, isLoading: isLoadingProfile } = useQuery(steamProfileQueryOptions(accountId));
 
   const { data: rank } = useQuery(trackerRankQueryOptions(accountId));
+  const { toTime, fromNow } = useTrackerTime();
 
   const badgeInfo = useMemo(() => {
     if (!rank || rank.badge <= 0 || ranks.length === 0) return null;
@@ -81,9 +82,7 @@ export function PlayerHeader({
               <span className="flex flex-wrap items-center gap-x-1.5">
                 <span>
                   <span className="font-mono">{accountId}</span>
-                  {summary?.lastPlayedUnix != null && (
-                    <span> · last played {day.unix(summary.lastPlayedUnix).fromNow()}</span>
-                  )}
+                  {summary?.lastPlayedUnix != null && <span> · last played {fromNow(summary.lastPlayedUnix)}</span>}
                 </span>
                 <RefreshControl accountId={accountId} />
               </span>
@@ -109,7 +108,7 @@ export function PlayerHeader({
                 {peak && (
                   <div
                     className="text-xs whitespace-nowrap text-muted-foreground"
-                    title={`Peak reached ${day.unix(peak.time).format("MMM D, YYYY")}`}
+                    title={`Peak reached ${toTime(peak.time).format("MMM D, YYYY")}`}
                   >
                     Peak {peak.name}
                   </div>

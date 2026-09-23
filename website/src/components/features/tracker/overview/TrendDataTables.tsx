@@ -2,11 +2,11 @@ import { ArrowUpRight } from "lucide-react";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 
 import { RankDelta } from "~/components/features/tracker/shared/RankDelta";
+import { useTrackerTime } from "~/components/features/tracker/shared/useTrackerTime";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Button } from "~/components/ui/button";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip } from "~/components/ui/tooltip";
-import { day } from "~/dayjs";
 import type { Activity, RankHistoryPoint } from "~/lib/tracker/compute";
 
 const PAGE_SIZE = 50;
@@ -20,6 +20,7 @@ export function RankHistoryTable({
   rankName: (badge: number) => string;
   onOpenMatch: (matchId: number) => void;
 }) {
+  const { toTime } = useTrackerTime();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [focusedMatchId, setFocusedMatchId] = useState<number | null>(null);
   const keyboardHelpId = useId();
@@ -89,16 +90,16 @@ export function RankHistoryTable({
                     onFocus={() => setFocusedMatchId(point.matchId)}
                     onKeyDown={navigate}
                     onClick={() => onOpenMatch(point.matchId)}
-                    aria-label={`Open match ${point.matchId}, ${day.unix(point.time).format("MMM D, YYYY, HH:mm")}`}
+                    aria-label={`Open match ${point.matchId}, ${toTime(point.time).format("MMM D, YYYY, HH:mm")}`}
                   >
-                    <time dateTime={day.unix(point.time).toISOString()} className="text-start">
+                    <time dateTime={toTime(point.time).toISOString()} className="text-start">
                       <span className="block">
-                        {day.unix(point.time).format("MMM D")}
-                        <span className="hidden @xs/stats-dialog:inline">, {day.unix(point.time).format("YYYY")}</span>
+                        {toTime(point.time).format("MMM D")}
+                        <span className="hidden @xs/stats-dialog:inline">, {toTime(point.time).format("YYYY")}</span>
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        <span className="@xs/stats-dialog:hidden">{day.unix(point.time).format("YYYY")} · </span>
-                        {day.unix(point.time).format("HH:mm")}
+                        <span className="@xs/stats-dialog:hidden">{toTime(point.time).format("YYYY")} · </span>
+                        {toTime(point.time).format("HH:mm")}
                       </span>
                     </time>
                     <ArrowUpRight data-icon="inline-end" className="hidden @xs/stats-dialog:block" />
@@ -147,6 +148,7 @@ export function ActivityTable({
   activity: Activity;
   onSelectPeriod: (bucketStartUnix: number) => void;
 }) {
+  const { toTime } = useTrackerTime();
   return (
     <Table>
       <TableCaption>
@@ -173,14 +175,14 @@ export function ActivityTable({
                   className="h-auto justify-start px-0 py-1"
                   disabled={matches === 0}
                   onClick={() => onSelectPeriod(bucket.bucketStartUnix)}
-                  aria-label={`Show matches from ${activity.granularity === "week" ? "week of " : ""}${day.unix(bucket.bucketStartUnix).format(activity.granularity === "week" ? "MMM D, YYYY" : "MMMM YYYY")}`}
+                  aria-label={`Show matches from ${activity.granularity === "week" ? "week of " : ""}${toTime(bucket.bucketStartUnix).format(activity.granularity === "week" ? "MMM D, YYYY" : "MMMM YYYY")}`}
                 >
-                  <time dateTime={day.unix(bucket.bucketStartUnix).format("YYYY-MM-DD")} className="text-start">
+                  <time dateTime={toTime(bucket.bucketStartUnix).format("YYYY-MM-DD")} className="text-start">
                     <span className="block">
-                      {day.unix(bucket.bucketStartUnix).format(activity.granularity === "week" ? "MMM D" : "MMM")}
+                      {toTime(bucket.bucketStartUnix).format(activity.granularity === "week" ? "MMM D" : "MMM")}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {day.unix(bucket.bucketStartUnix).format("YYYY")}
+                      {toTime(bucket.bucketStartUnix).format("YYYY")}
                     </span>
                   </time>
                   <ArrowUpRight data-icon="inline-end" className="hidden @xs/stats-dialog:block" />

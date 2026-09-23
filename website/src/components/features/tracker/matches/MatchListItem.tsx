@@ -5,8 +5,8 @@ import { type KeyboardEventHandler, useEffect, useRef } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { RankDelta } from "~/components/features/tracker/shared/RankDelta";
+import { useTrackerTime } from "~/components/features/tracker/shared/useTrackerTime";
 import { Button } from "~/components/ui/button";
-import { day } from "~/dayjs";
 import { TONE_BG, TONE_TEXT } from "~/lib/tone";
 import {
   brawlRounds,
@@ -58,7 +58,8 @@ export function MatchListItem({
   const rounds = brawlRounds(entry);
   const unscored = unscoredOutcome(entry);
   const abandoned = entry.abandoned_time_s != null && entry.abandoned_time_s > 0;
-  const played = day.unix(entry.start_time);
+  const { toTime, now } = useTrackerTime();
+  const played = toTime(entry.start_time);
   const sortValue = sortValueLabel(entry, sortKey);
 
   const queryClient = useQueryClient();
@@ -125,7 +126,7 @@ export function MatchListItem({
             <span title={played.format("MMM D, YYYY HH:mm")}>
               {showTimeOfDay
                 ? played.format("HH:mm")
-                : played.format(played.isSame(day(), "year") ? "MMM D" : "MMM D, YYYY")}
+                : played.format(now && played.isSame(now, "year") ? "MMM D" : "MMM D, YYYY")}
             </span>
           </span>
         </div>

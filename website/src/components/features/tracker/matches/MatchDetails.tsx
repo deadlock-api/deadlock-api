@@ -9,6 +9,7 @@ import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { RankDelta } from "~/components/features/tracker/shared/RankDelta";
 import { SaveMatchButton } from "~/components/features/tracker/shared/SaveMatchButton";
 import { TrackerQueryPaused } from "~/components/features/tracker/shared/TrackerQueryPaused";
+import { useTrackerTime } from "~/components/features/tracker/shared/useTrackerTime";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -16,7 +17,6 @@ import { Button } from "~/components/ui/button";
 import { CopyButton } from "~/components/ui/copy-button";
 import { Spinner } from "~/components/ui/spinner";
 import { TextLink } from "~/components/ui/text-link";
-import { day } from "~/dayjs";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { TONE_TEXT } from "~/lib/tone";
 import {
@@ -84,6 +84,7 @@ function MatchHeader({
   heroName: string;
   records: HeldRecord[] | undefined;
 }) {
+  const { toTime } = useTrackerTime();
   const matchId = entry.match_id;
   const win = isWin(entry);
   const rounds = brawlRounds(entry);
@@ -131,7 +132,7 @@ function MatchHeader({
                 {entry.brawl_avg_round_time_s != null &&
                   entry.brawl_avg_round_time_s > 0 &&
                   ` (${formatMatchDuration(entry.brawl_avg_round_time_s)} a round)`}{" "}
-                · {day.unix(entry.start_time).format("ddd, MMM D, YYYY HH:mm")}
+                · {toTime(entry.start_time).format("ddd, MMM D, YYYY HH:mm")}
               </span>
               <span className="inline-flex items-center gap-0.5">
                 Match {matchId}

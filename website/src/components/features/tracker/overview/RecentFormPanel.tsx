@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
+import { useTrackerTime } from "~/components/features/tracker/shared/useTrackerTime";
 import { PanelWithDetails } from "~/components/patterns/panel/PanelWithDetails";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Button } from "~/components/ui/button";
@@ -14,7 +15,7 @@ import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { Tooltip } from "~/components/ui/tooltip";
-import { day } from "~/dayjs";
+import type { Dayjs } from "~/dayjs";
 import { TONE_TEXT } from "~/lib/tone";
 import { formatMatchDuration, isWin, type TrackerSummary } from "~/lib/tracker/compute";
 import {
@@ -54,9 +55,9 @@ function Change({
   return <Delta value={value} format="number" digits={precision} unit={unit} invert={lowerIsBetter} />;
 }
 
-function dateRange(entries: PlayerMatchHistoryEntry[]) {
+function dateRange(entries: PlayerMatchHistoryEntry[], toTime: (unix: number) => Dayjs) {
   if (entries.length === 0) return "No matches";
-  return `${day.unix(entries[entries.length - 1].start_time).format("MMM D, YYYY")} – ${day.unix(entries[0].start_time).format("MMM D, YYYY")}`;
+  return `${toTime(entries[entries.length - 1].start_time).format("MMM D, YYYY")} – ${toTime(entries[0].start_time).format("MMM D, YYYY")}`;
 }
 
 function ComparisonMetrics({ recent, previous }: { recent: TrackerSummary; previous: TrackerSummary }) {
@@ -116,6 +117,7 @@ function ResultGrid({
   entries: PlayerMatchHistoryEntry[];
   onOpenMatch: (matchId: number) => void;
 }) {
+  const { toTime } = useTrackerTime();
   const gridRef = useRef<HTMLFieldSetElement>(null);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const tabIndex = Math.min(focusedIndex, entries.length - 1);
@@ -130,7 +132,7 @@ function ResultGrid({
               <TooltipHeader
                 leading={<HeroImage heroId={entry.hero_id} shape="circle" title="" />}
                 title={<HeroName heroId={entry.hero_id} />}
-                subtitle={day.unix(entry.start_time).format("MMM D, YYYY · HH:mm")}
+                subtitle={toTime(entry.start_time).format("MMM D, YYYY · HH:mm")}
               />
               <TooltipStats>
                 <TooltipStat
@@ -183,7 +185,7 @@ function ResultGrid({
               );
               buttons[next]?.focus();
             }}
-            aria-label={`Open match ${entry.match_id}, ${isWin(entry) ? "win" : "loss"}, ${day.unix(entry.start_time).format("MMM D, YYYY")}`}
+            aria-label={`Open match ${entry.match_id}, ${isWin(entry) ? "win" : "loss"}, ${toTime(entry.start_time).format("MMM D, YYYY")}`}
             className="w-full px-0 font-semibold"
           >
             {isWin(entry) ? "W" : "L"}
@@ -212,6 +214,7 @@ export function RecentFormPanel({
     : "Uses the selected hero, mode and date range.";
   const meta = `Last ${recent.matches} ${recent.matches === 1 ? "match" : "matches"}`;
   const [open, setOpen] = useState(false);
+  const { toTime } = useTrackerTime();
 
   return (
     <PanelWithDetails
@@ -252,7 +255,7 @@ export function RecentFormPanel({
                   <Heading as="h3" size="xs">
                     Latest {recent.matches} matches
                   </Heading>
-                  <p className="text-3xs text-muted-foreground">{dateRange(entries)}</p>
+                  <p className="text-3xs text-muted-foreground">{dateRange(entries, toTime)}</p>
                   <p className="pt-1 text-xs tabular-nums">
                     {recent.wins} wins / {recent.losses} losses
                   </p>
@@ -261,7 +264,7 @@ export function RecentFormPanel({
                   <Heading as="h3" size="xs">
                     Previous {previous.matches} matches
                   </Heading>
-                  <p className="text-3xs text-muted-foreground">{dateRange(previousEntries)}</p>
+                  <p className="text-3xs text-muted-foreground">{dateRange(previousEntries, toTime)}</p>
                   <p className="pt-1 text-xs tabular-nums">
                     {previous.wins} wins / {previous.losses} losses
                   </p>

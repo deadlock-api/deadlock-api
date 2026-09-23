@@ -13,9 +13,10 @@ import {
 } from "react";
 
 import { RankDelta } from "~/components/features/tracker/shared/RankDelta";
+import { useTrackerTime } from "~/components/features/tracker/shared/useTrackerTime";
 import { PanelSection } from "~/components/patterns/panel/Panel";
 import { Button } from "~/components/ui/button";
-import { day } from "~/dayjs";
+import type { Dayjs } from "~/dayjs";
 import { TONE_TEXT } from "~/lib/tone";
 import { formatPlaytime, type MatchSortKey, type PlaySession } from "~/lib/tracker/compute";
 import { buildHistoryRows, historyStickyIndex } from "~/lib/tracker/history";
@@ -23,18 +24,20 @@ import { cn } from "~/lib/utils";
 
 import { MatchListItem } from "./MatchListItem";
 
-function sessionDateLabel(unix: number): string {
-  const date = day.unix(unix);
-  const today = day().startOf("day");
+/** Relative to `now`, or always with the year before hydration, when there is no `now` to compare with. */
+function sessionDateLabel(date: Dayjs, now: Dayjs | null): string {
+  if (!now) return date.format("ddd, MMM D, YYYY");
+  const today = now.startOf("day");
   if (date.isSame(today, "day")) return "Today";
   if (date.isSame(today.subtract(1, "day"), "day")) return "Yesterday";
   return date.format(date.isSame(today, "year") ? "ddd, MMM D" : "ddd, MMM D, YYYY");
 }
 
 function SessionHeader({ session }: { session: PlaySession }) {
+  const { toTime, now } = useTrackerTime();
   return (
     // The strip sticks to the top of the list while its session scrolls, so it has to be opaque.
-    <PanelSection title={sessionDateLabel(session.startUnix)} tone="opaque" className="px-3">
+    <PanelSection title={sessionDateLabel(toTime(session.startUnix), now)} tone="opaque" className="px-3">
       <span className="flex flex-1 items-center gap-2 tabular-nums">
         <span>
           <span className={cn("font-semibold", TONE_TEXT.positive)}>{session.wins}W</span>
@@ -48,7 +51,7 @@ function SessionHeader({ session }: { session: PlaySession }) {
         />
         <span
           className="ms-auto"
-          title={`${day.unix(session.startUnix).format("HH:mm")} – ${day.unix(session.endUnix).format("HH:mm")}`}
+          title={`${toTime(session.startUnix).format("HH:mm")} – ${toTime(session.endUnix).format("HH:mm")}`}
         >
           {formatPlaytime(session.totalTimeS)}
         </span>

@@ -3,6 +3,7 @@ import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { useId, useMemo, useState } from "react";
 
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
+import { useTrackerTime } from "~/components/features/tracker/shared/useTrackerTime";
 import { PaginationControls } from "~/components/patterns/data-table/PaginationControls";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
@@ -15,7 +16,6 @@ import { ProgressBar } from "~/components/ui/progress-bar";
 import { SearchInput } from "~/components/ui/search-input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip } from "~/components/ui/tooltip";
-import { day } from "~/dayjs";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { MODE_CONFIG } from "~/lib/game-mode";
 import {
@@ -59,6 +59,7 @@ function CompanionTable({
   onOpenMatch,
 }: CompanionTableProps) {
   const minimumMatchesId = useId();
+  const { toTime, fromNow } = useTrackerTime();
   const [minMatches, setMinMatches] = useState(2);
   const [searchQuery, setSearchQuery] = useState("");
   const [pagination, setPagination] = useState({ key: paginationKey, page: 0 });
@@ -208,8 +209,8 @@ function CompanionTable({
                   </div>
                 </TableCell>
                 <TableCell className="hidden text-end whitespace-nowrap text-muted-foreground @lg:table-cell">
-                  <Tooltip content={day.unix(row.lastPlayedUnix).format("MMM D, YYYY HH:mm")}>
-                    <span>{day.unix(row.lastPlayedUnix).fromNow()}</span>
+                  <Tooltip content={toTime(row.lastPlayedUnix).format("MMM D, YYYY HH:mm")}>
+                    <span>{fromNow(row.lastPlayedUnix)}</span>
                   </Tooltip>
                 </TableCell>
               </TableRow>

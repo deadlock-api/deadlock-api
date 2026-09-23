@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";
 import { CACHE_DURATIONS } from "~/constants/cache";
+import { useHydrated } from "~/hooks/useHydrated";
 import { refreshTrackerAccount, trackerAccountQueries } from "~/lib/tracker/refresh";
 import { trackerMatchHistoryQueryOptions } from "~/queries/tracker-queries";
 
@@ -28,6 +29,8 @@ export function RefreshControl({ accountId }: { accountId: number }) {
   const lastAttemptAt = Math.max(dataUpdatedAt, errorUpdatedAt);
   const dueAt = lastAttemptAt + REFRESH_INTERVAL_MS;
 
+  // The server's clock never matches the client's, so the countdown and cooldown wait for hydration.
+  const hydrated = useHydrated();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -40,9 +43,9 @@ export function RefreshControl({ accountId }: { accountId: number }) {
     return () => clearTimeout(timer);
   }, [lastAttemptAt, dueAt, queryClient, accountId, isFetching]);
 
-  const remaining = dueAt - now;
+  const remaining = hydrated ? dueAt - now : 0;
   // Failed attempts count against the cooldown too, so a flaky endpoint cannot be hammered.
-  const onCooldown = lastAttemptAt + MANUAL_REFRESH_COOLDOWN_MS > now;
+  const onCooldown = hydrated && lastAttemptAt + MANUAL_REFRESH_COOLDOWN_MS > now;
   return (
     <span className="inline-flex flex-wrap items-center gap-x-1 gap-y-0.5">
       <Button

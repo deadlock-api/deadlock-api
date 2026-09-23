@@ -10,6 +10,7 @@ import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
 import { FormDots } from "~/components/domain/match/FormDots";
 import { TrackerQueryPaused } from "~/components/features/tracker/shared/TrackerQueryPaused";
+import { useTrackerTime } from "~/components/features/tracker/shared/useTrackerTime";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
@@ -19,7 +20,6 @@ import { Button } from "~/components/ui/button";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { SwitchField } from "~/components/ui/switch-field";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { day } from "~/dayjs";
 import { benchmarkRankRange } from "~/lib/tracker/benchmarks";
 import { recentFormByHero, type ResultFilter } from "~/lib/tracker/compute";
 import { type HeroRow, type HeroSortKey, sortHeroRows, toHeroRow } from "~/lib/tracker/hero-performance";
@@ -41,7 +41,7 @@ interface HeroAverage {
 const COLUMNS: {
   key: HeroSortKey;
   label: string;
-  format: (row: HeroRow) => string;
+  format: (row: HeroRow, fromNow: (unix: number) => string) => string;
   className?: string;
 }[] = [
   { key: "matches", label: "Matches", format: (row) => row.matches.toLocaleString("en-US") },
@@ -72,7 +72,7 @@ const COLUMNS: {
   {
     key: "lastPlayed",
     label: "Last played",
-    format: (row) => day.unix(row.lastPlayed).fromNow(),
+    format: (row, fromNow) => fromNow(row.lastPlayed),
     className: "hidden @xl:table-cell",
   },
 ];
@@ -126,6 +126,7 @@ export function HeroesTab({
   const [sortDir, setSortDir] = useState(initialSortDir);
   const [showAllStats, setShowAllStats] = useState(false);
   const allStatsId = useId();
+  const { fromNow } = useTrackerTime();
   const sortColumn = COLUMNS.find((column) => column.key === sortKey);
 
   const params = useMemo(
@@ -328,7 +329,7 @@ export function HeroesTab({
                                     showAlways={showAllStats}
                                   />
                                 )}
-                                <span>{column.format(row)}</span>
+                                <span>{column.format(row, fromNow)}</span>
                                 <ProgressBar variant="thin" value={row.winrate} className="hidden w-16 @md:block" />
                               </div>
                             ) : column.key === "recentWinrate" ? (
@@ -345,10 +346,10 @@ export function HeroesTab({
                                     showAlways={showAllStats}
                                   />
                                 )}
-                                <span>{column.format(row)}</span>
+                                <span>{column.format(row, fromNow)}</span>
                               </div>
                             ) : (
-                              column.format(row)
+                              column.format(row, fromNow)
                             )}
                           </TableCell>
                         );

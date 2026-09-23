@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
 import { HeroesTab } from "~/components/features/tracker/heroes/HeroesTab";
+import { useTrackerTime } from "~/components/features/tracker/shared/useTrackerTime";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Badge } from "~/components/ui/badge";
@@ -17,7 +18,6 @@ import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
-import { day } from "~/dayjs";
 import { MODE_CONFIG } from "~/lib/game-mode";
 import {
   computeActivity,
@@ -72,6 +72,7 @@ export function OverviewTab({
   sessionContext: PlayerMatchHistoryEntry[];
   onFilterChange: (filters: TrackerFilterValues) => void;
 }) {
+  const { utc, toTime } = useTrackerTime();
   const data = useMemo(() => {
     const sorted = [...entries].sort((a, b) => b.start_time - a.start_time || b.match_id - a.match_id);
     return {
@@ -81,11 +82,11 @@ export function OverviewTab({
       records: computeRecords(sorted),
       splits: computeOutcomeSplits(sorted, filters.mode),
       sessions: computeSessionMomentum(sorted, sessionContext),
-      habits: computePlaytimeHabits(sorted),
+      habits: computePlaytimeHabits(sorted, utc),
       ranks: rankHistoryPoints(sorted),
-      activity: computeActivity(sorted),
+      activity: computeActivity(sorted, utc),
     };
-  }, [entries, sessionContext, filters.mode]);
+  }, [entries, sessionContext, filters.mode, utc]);
   const { sorted, summary: s, sessions, habits } = data;
   const [recentWindow, setRecentWindow] = useQueryState(
     "form_window",
@@ -152,8 +153,8 @@ export function OverviewTab({
         <div className="flex flex-wrap items-center gap-2 text-3xs text-muted-foreground">
           <span>
             <span className="sr-only">Dates of selected matches: </span>
-            {day.unix(sorted[sorted.length - 1].start_time).format("MMM D, YYYY")} –{" "}
-            {day.unix(sorted[0].start_time).format("MMM D, YYYY")}
+            {toTime(sorted[sorted.length - 1].start_time).format("MMM D, YYYY")} –{" "}
+            {toTime(sorted[0].start_time).format("MMM D, YYYY")}
           </span>
           <Badge variant="outline">
             {filters.mode === "normal_all" ? "Ranked + unranked" : MODE_CONFIG[filters.mode].label}

@@ -434,9 +434,9 @@ const MAX_WEEK_BUCKETS = 30;
  * Buckets matches per week, or per month once the span between the first and last match would
  * exceed the number of week-sized bars a chart can render legibly. Empty buckets between the
  * first and last match are filled in, so the timeline is continuous but cropped to the range
- * that actually has matches.
+ * that actually has matches. Periods are local calendar weeks or months, or UTC ones with `utc`.
  */
-export function computeActivity(entries: PlayerMatchHistoryEntry[]): Activity {
+export function computeActivity(entries: PlayerMatchHistoryEntry[], utc = false): Activity {
   if (entries.length === 0) return { granularity: "week", buckets: [] };
   let minTime = Number.POSITIVE_INFINITY;
   let maxTime = Number.NEGATIVE_INFINITY;
@@ -447,15 +447,16 @@ export function computeActivity(entries: PlayerMatchHistoryEntry[]): Activity {
   const spanWeeks = (maxTime - minTime) / (7 * 24 * 3600);
   const granularity: ActivityGranularity = spanWeeks > MAX_WEEK_BUCKETS ? "month" : "week";
 
+  const toTime = (unix: number) => (utc ? day.unix(unix).utc() : day.unix(unix));
   const buckets = new Map<number, ActivityBucket>();
-  let cursor = day.unix(minTime).startOf(granularity);
-  const last = day.unix(maxTime).startOf(granularity);
+  let cursor = toTime(minTime).startOf(granularity);
+  const last = toTime(maxTime).startOf(granularity);
   while (cursor.unix() <= last.unix()) {
     buckets.set(cursor.unix(), { bucketStartUnix: cursor.unix(), wins: 0, losses: 0, other: 0 });
     cursor = cursor.add(1, granularity);
   }
   for (const entry of entries) {
-    const bucket = buckets.get(day.unix(entry.start_time).startOf(granularity).unix());
+    const bucket = buckets.get(toTime(entry.start_time).startOf(granularity).unix());
     if (!bucket) continue;
     if (isWin(entry)) bucket.wins++;
     else if (isLoss(entry)) bucket.losses++;
@@ -722,7 +723,8 @@ export const PEAK_HOURS_WINDOW = 3;
 export const PLAYTIME_BUCKET_HOURS = 2;
 const PLAYTIME_BUCKETS_PER_DAY = 24 / PLAYTIME_BUCKET_HOURS;
 
-export function computePlaytimeHabits(entries: PlayerMatchHistoryEntry[]): PlaytimeHabits {
+/** Buckets by the viewer's local weekday and hour, or by UTC ones with `utc`. */
+export function computePlaytimeHabits(entries: PlayerMatchHistoryEntry[], utc = false): PlaytimeHabits {
   const cells: PlaytimeCell[] = [];
   for (let weekday = 0; weekday < 7; weekday++) {
     for (let bucket = 0; bucket < PLAYTIME_BUCKETS_PER_DAY; bucket++) {
@@ -732,7 +734,7 @@ export function computePlaytimeHabits(entries: PlayerMatchHistoryEntry[]): Playt
   const weekdays: WeekdayStats[] = Array.from({ length: 7 }, (_, weekday) => ({ weekday, matches: 0, wins: 0 }));
   const hours = new Array<number>(24).fill(0);
   for (const entry of entries) {
-    const started = day.unix(entry.start_time);
+    const started = utc ? day.unix(entry.start_time).utc() : day.unix(entry.start_time);
     const weekday = (started.day() + 6) % 7;
     const hour = started.hour();
     const win = isWin(entry) ? 1 : 0;
