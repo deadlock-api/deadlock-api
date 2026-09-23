@@ -353,6 +353,7 @@ function HeroDetailPage() {
               heroId={heroId}
               heroName={heroName}
               request={currentAbilityOrderParams(seasons, preferences.dateFilter)}
+              totalMatches={summary?.matches}
             />
           </Suspense>
         </ChunkErrorBoundary>

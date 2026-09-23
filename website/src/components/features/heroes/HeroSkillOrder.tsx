@@ -50,12 +50,17 @@ function mostCommonPath(root: AbilityTrieNode): { steps: Step[]; leaf: AbilityTr
 
 export function HeroSkillOrder({
   heroId,
+  totalMatches,
   heroName,
   request,
 }: {
   heroId: number;
   heroName: string;
   request: Omit<AnalyticsApiAbilityOrderStatsRequest, "heroId">;
+  /** The hero's matches over the same filters. The orders only cover sequences played at least `minMatches` times,
+   * which leaves out about half the hero's matches (most full sequences are unique), so their own total overstates
+   * every share. */
+  totalMatches?: number;
 }) {
   const period = useDefaultPeriodLabel();
   const orderQuery = useQuery(abilityOrderQueryOptions({ ...request, heroId }));
@@ -78,8 +83,9 @@ export function HeroSkillOrder({
     const root = buildAbilityTrie(orderQuery.data);
     const { steps, leaf } = mostCommonPath(root);
     if (steps.length < 4) return null;
-    return { steps, share: leaf.matches / root.matches, winRate: leaf.wins / leaf.matches, matches: leaf.matches };
-  }, [orderQuery.data]);
+    const players = Math.max(root.matches, totalMatches ?? 0);
+    return { steps, share: leaf.matches / players, winRate: leaf.wins / leaf.matches, matches: leaf.matches };
+  }, [orderQuery.data, totalMatches]);
 
   if (orderQuery.isPending) {
     return <LoadingState label="skill order" align="center" className="py-8" />;
