@@ -66,20 +66,6 @@ export const Route = createFileRoute("/blog/$slug")({
           },
           keywords: loaderData.tags.join(", "),
         },
-        {
-          "@context": "https://schema.org",
-          "@type": "BreadcrumbList",
-          itemListElement: [
-            { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-            { "@type": "ListItem", position: 2, name: "Blog", item: `${SITE_URL}/blog` },
-            {
-              "@type": "ListItem",
-              position: 3,
-              name: loaderData.title,
-              item: `${SITE_URL}/blog/${loaderData.slug}`,
-            },
-          ],
-        },
       ],
     });
   },
