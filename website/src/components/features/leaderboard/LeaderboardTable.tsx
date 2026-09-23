@@ -145,7 +145,9 @@ function LeaderboardTableRow({
   return (
     <TableRow ref={rowRef} data-state={isHighlighted ? "current" : undefined}>
       <TableCell className="text-end">{entry.rank}</TableCell>
-      <TableCell className="max-w-50 truncate" title={entry.account_name ?? undefined}>
+      {/* `w-full max-w-0` gives the name what the top heroes leave, so on a phone it truncates instead of pushing
+          them off-screen. */}
+      <TableCell className="w-full max-w-0 truncate" title={entry.account_name ?? undefined}>
         {entry.account_name}
       </TableCell>
       {shouldShowTopHeroesColumn && (
