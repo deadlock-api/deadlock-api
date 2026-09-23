@@ -188,15 +188,15 @@ export function ScoreboardTable({
               // oxlint-disable-next-line react/no-array-index-key
               <TableRow key={`${accountId ?? i}-${entry.rank}`}>
                 <TableCell className="text-end">{entry.rank + 1}</TableCell>
-                <TableCell>
+                {/* `w-full max-w-0` hands this column whatever the others leave, and the name truncates inside it. */}
+                <TableCell className="w-full max-w-0">
                   <PlayerCell
                     accountId={accountId}
                     name={profile?.personaname ?? (accountId == null ? `#${entry.rank + 1}` : undefined)}
                     avatar={profile?.avatar}
                     loading={isLoadingProfiles && !profile}
                     showAccountId
-                    // Narrower on a phone, so a long name truncates instead of pushing the stat off-screen.
-                    className="max-w-20 sm:max-w-72"
+                    className="sm:max-w-72"
                   />
                 </TableCell>
                 {sortBy !== "matches" && (
