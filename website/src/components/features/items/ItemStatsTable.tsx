@@ -254,7 +254,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
           <ExpandableRowToggle label={`purchase analysis for ${itemName}`} />
         </TableCell>
       )}
-      {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
+      {!hideIndex && <TableCell className="hidden text-center font-semibold @md:table-cell">{index + 1}</TableCell>}
       <TableCell data-pinned>
         <Stack gap={1}>
           <ItemCell item={row.item} linkToDetail className="max-w-44 sm:max-w-64" />
@@ -262,7 +262,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
         </Stack>
       </TableCell>
       {columns.includes("itemsTier") && (
-        <TableCell>
+        <TableCell className="hidden @md:table-cell">
           <div className="flex items-center gap-2">{row.item?.item_tier ?? "?"}</div>
         </TableCell>
       )}
@@ -311,7 +311,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
         </TableCell>
       )}
       {columns.includes("confidence") && (
-        <TableCell className="text-center">
+        <TableCell className="hidden text-center @md:table-cell">
           <div className="inline-flex">
             <ConfidenceTierBadge tier={row.confidenceTier} />
           </div>
@@ -545,74 +545,80 @@ export function ItemStatsTable({
         <LoadingState label="item statistics" align="center" />
       ) : (
         <StaleOverlay active={isRefetching} label="item statistics">
-          <Table aria-label="Item statistics" className="tabular-nums">
-            {!hideHeader && (
-              <TableHeader tone="muted">
-                <TableRow>
-                  {customDropdownContent && (
-                    <TableHead className="w-4 text-center">
-                      <span className="sr-only">Details</span>
+          {/* A size container, so a phone drops the rank, tier and confidence columns (row order is the rank, the tier
+              a filter above) and keeps the win rate, which the table is sorted by, on screen. */}
+          <div className="@container">
+            <Table aria-label="Item statistics" className="tabular-nums">
+              {!hideHeader && (
+                <TableHeader tone="muted">
+                  <TableRow>
+                    {customDropdownContent && (
+                      <TableHead className="w-4 text-center">
+                        <span className="sr-only">Details</span>
+                      </TableHead>
+                    )}
+                    {!hideIndex && <TableHead className="hidden text-center @md:table-cell">#</TableHead>}
+                    <TableHead data-pinned>Item</TableHead>
+                    {columns.includes("itemsTier") && <TableHead className="hidden @md:table-cell">Tier</TableHead>}
+                    {columns.includes("winRate") && (
+                      <SortableHeader
+                        label="Win Rate"
+                        sortKey="winRate"
+                        activeSortKey={sort.field}
+                        sortDir={sort.direction}
+                        onSortChange={toggleSort}
+                        className="text-start"
+                      />
+                    )}
+                    {columns.includes("matches") && (
+                      <SortableHeader
+                        // Relative to the most bought item, like the hero tables' normalized pick rate; the item page's
+                        // "Bought" is the share of players instead, so a bare "Pick Rate" read as a contradiction.
+                        label="Pick Rate (Normalized)"
+                        sortKey="matches"
+                        activeSortKey={sort.field}
+                        sortDir={sort.direction}
+                        onSortChange={toggleSort}
+                        className="text-start"
+                      />
+                    )}
+                    {columns.includes("confidence") && (
+                      <TableHead className="hidden text-center @md:table-cell">Confidence</TableHead>
+                    )}
+                    <TableHead className="text-center">
+                      <span className="icon-[mdi--filter-variant] inline-block size-4 align-middle text-muted-foreground" />
+                      <span className="sr-only">Filter</span>
                     </TableHead>
-                  )}
-                  {!hideIndex && <TableHead className="text-center">#</TableHead>}
-                  <TableHead data-pinned>Item</TableHead>
-                  {columns.includes("itemsTier") && <TableHead>Tier</TableHead>}
-                  {columns.includes("winRate") && (
-                    <SortableHeader
-                      label="Win Rate"
-                      sortKey="winRate"
-                      activeSortKey={sort.field}
-                      sortDir={sort.direction}
-                      onSortChange={toggleSort}
-                      className="text-start"
-                    />
-                  )}
-                  {columns.includes("matches") && (
-                    <SortableHeader
-                      // Relative to the most bought item, like the hero tables' normalized pick rate; the item page's
-                      // "Bought" is the share of players instead, so a bare "Pick Rate" read as a contradiction.
-                      label="Pick Rate (Normalized)"
-                      sortKey="matches"
-                      activeSortKey={sort.field}
-                      sortDir={sort.direction}
-                      onSortChange={toggleSort}
-                      className="text-start"
-                    />
-                  )}
-                  {columns.includes("confidence") && <TableHead className="text-center">Confidence</TableHead>}
-                  <TableHead className="text-center">
-                    <span className="icon-[mdi--filter-variant] inline-block size-4 align-middle text-muted-foreground" />
-                    <span className="sr-only">Filter</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-            )}
-            <TableBody>
-              {visibleData.map((row, index) => (
-                <ItemStatsTableRow
-                  key={row.item_id}
-                  row={row}
-                  index={hideIndex ? 0 : index}
-                  columns={columns}
-                  hideIndex={hideIndex}
-                  dimLowConfidence={false}
-                  minWinRate={minWinRate}
-                  maxWinRate={maxWinRate}
-                  minUsage={minUsage}
-                  maxUsage={maxUsage}
-                  trendParams={trendParams}
-                  trendBucket={trendBucket}
-                  onTrendBucketChange={setTrendBucket}
-                  isIncluded={includeItems.has(row.item_id)}
-                  isExcluded={excludeItems.has(row.item_id)}
-                  prevStatsMap={prevStatsMap}
-                  onItemInclude={addInclude}
-                  onItemExclude={addExclude}
-                  customDropdownContent={customDropdownContent}
-                />
-              ))}
-            </TableBody>
-          </Table>
+                  </TableRow>
+                </TableHeader>
+              )}
+              <TableBody>
+                {visibleData.map((row, index) => (
+                  <ItemStatsTableRow
+                    key={row.item_id}
+                    row={row}
+                    index={hideIndex ? 0 : index}
+                    columns={columns}
+                    hideIndex={hideIndex}
+                    dimLowConfidence={false}
+                    minWinRate={minWinRate}
+                    maxWinRate={maxWinRate}
+                    minUsage={minUsage}
+                    maxUsage={maxUsage}
+                    trendParams={trendParams}
+                    trendBucket={trendBucket}
+                    onTrendBucketChange={setTrendBucket}
+                    isIncluded={includeItems.has(row.item_id)}
+                    isExcluded={excludeItems.has(row.item_id)}
+                    prevStatsMap={prevStatsMap}
+                    onItemInclude={addInclude}
+                    onItemExclude={addExclude}
+                    customDropdownContent={customDropdownContent}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </StaleOverlay>
       )}
     </Stack>
