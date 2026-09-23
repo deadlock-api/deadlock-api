@@ -126,7 +126,9 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
               <CartesianGrid {...CHART_GRID} />
               <XAxis {...CHART_AXIS} dataKey="badge" tick={false} height={RANK_ICON_AXIS_HEIGHT} />
               <YAxis
-                domain={["dataMin", "auto"]}
+                // Bars grow from zero: from the smallest value, the lowest rank drew no bar and the rest were
+                // lengths relative to it.
+                domain={[0, "auto"]}
                 tickFormatter={(v) => (statDef ? formatAxisTick(v, statDef.format, span) : String(v))}
                 {...CHART_AXIS}
                 label={{

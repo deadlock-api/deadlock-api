@@ -223,7 +223,7 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
                 value: `${(analysis.predicted - analysis.margin).toFixed(1)}% to ${(analysis.predicted + analysis.margin).toFixed(1)}%`,
               },
               { label: "Confidence", value: CONFIDENCE_LABEL(analysis.margin) },
-              { label: "Widest term", value: `±${analysis.margin.toFixed(1)} pts` },
+              { label: "Margin", value: `±${analysis.margin.toFixed(1)} pts` },
             ]}
           >
             <TooltipTarget>
