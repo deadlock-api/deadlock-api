@@ -67,15 +67,17 @@ export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
     if (tpl) {
       url.searchParams.set("template", tpl);
     }
+    // Only the arguments the template's variables take: one left from a removed variable stayed in the URL.
+    const used = new Set(usedExtraArgs(tpl));
     for (const [key, value] of Object.entries(extraArgs)) {
-      if (value) url.searchParams.set(key, value);
+      if (value && used.has(key)) url.searchParams.set(key, value);
     }
     return url.toString();
   };
 
-  const usedExtraArgs = () => {
+  const usedExtraArgs = (tpl = template) => {
     const argSet: Set<string> = new Set();
-    for (const match of template.matchAll(/{([^}]+)}/g)) {
+    for (const match of tpl.matchAll(/{([^}]+)}/g)) {
       for (const arg of variables.find((v) => v.name === match[1])?.extra_args || []) {
         argSet.add(arg);
       }

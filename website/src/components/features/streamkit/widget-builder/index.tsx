@@ -65,7 +65,15 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
     staleTime: CACHE_DURATIONS.FOREVER,
   });
 
-  const widgetUrl = buildWidgetUrl(region, accountId, config);
+  // Only the arguments the chosen variables take: a `hero_name` left from a removed variable stayed in the URL.
+  const shownVariables = config.widgetType === "raw" ? [config.variable] : config.variables;
+  const usedArgs = new Set(
+    availableVariables.filter((v) => shownVariables.includes(v.name)).flatMap((v) => v.extra_args ?? []),
+  );
+  const widgetUrl = buildWidgetUrl(region, accountId, {
+    ...config,
+    extraArgs: Object.fromEntries(Object.entries(config.extraArgs).filter(([arg]) => usedArgs.has(arg))),
+  });
   const widgetPreview = buildWidgetPreview(region, accountId, config);
 
   return (
