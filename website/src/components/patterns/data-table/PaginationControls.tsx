@@ -71,7 +71,15 @@ export function PaginationControls({
       {children}
       <div className={cn("flex items-center gap-2", compact && "gap-1")}>
         <span className={cn("text-sm text-muted-foreground", compact && "text-xs")}>
-          {compact ? "Rows" : "Rows per page"}
+          {/* Short words and arrows below @md, so a phone fits the controls on one or two rows instead of five. */}
+          {compact ? (
+            "Rows"
+          ) : (
+            <>
+              <span className="@md:hidden">Rows</span>
+              <span className="hidden @md:inline">Rows per page</span>
+            </>
+          )}
         </span>
         <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
           <SelectTrigger size="sm" className={compact ? "w-16 gap-1 px-2" : "w-20"} aria-label="Rows per page">
@@ -89,7 +97,7 @@ export function PaginationControls({
         </Select>
       </div>
       <span className={cn("flex items-center text-sm text-muted-foreground", compact ? "gap-1 text-xs" : "gap-3")}>
-        {!compact && "Page"}
+        {!compact && <span className="hidden @md:inline">Page</span>}
         <span>
           <Input
             type="number"
@@ -117,7 +125,14 @@ export function PaginationControls({
           onClick={() => onPageChange(Math.max(0, page - 1))}
           disabled={page === 0}
         >
-          {compact ? <ChevronLeft aria-hidden="true" /> : "Previous"}
+          {compact ? (
+            <ChevronLeft aria-hidden="true" />
+          ) : (
+            <>
+              <ChevronLeft aria-hidden="true" className="@md:hidden" />
+              <span className="hidden @md:inline">Previous</span>
+            </>
+          )}
         </Button>
         <Button
           variant="outline"
@@ -127,7 +142,14 @@ export function PaginationControls({
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages - 1}
         >
-          {compact ? <ChevronRight aria-hidden="true" /> : "Next"}
+          {compact ? (
+            <ChevronRight aria-hidden="true" />
+          ) : (
+            <>
+              <ChevronRight aria-hidden="true" className="@md:hidden" />
+              <span className="hidden @md:inline">Next</span>
+            </>
+          )}
         </Button>
       </div>
     </div>
