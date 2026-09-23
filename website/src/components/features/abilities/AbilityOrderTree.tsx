@@ -110,6 +110,16 @@ export default function AbilityOrderTree({
     return buildAbilityTrie(rows);
   }, [abilityOrderData, gameMode]);
 
+  // The first node sits over the middle of a tree wider than a phone; start the scroll there, not at the left edge,
+  // where it showed half cut off.
+  // A new callback per tree, so React calls it again, with the element, whenever a new tree is drawn.
+  const centerScroll = useCallback(
+    (el: HTMLDivElement | null) => {
+      if (el && trie) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+    },
+    [trie],
+  );
+
   const onToggleExpand = useCallback((path: string) => {
     setExpandedPaths((prev) => {
       const next = new Set(prev);
@@ -175,7 +185,7 @@ export default function AbilityOrderTree({
   const displayedRoots = focusedRoot ? [focusedRoot] : rootChildren;
 
   return (
-    <DragScroll className="pb-4 text-center">
+    <DragScroll ref={centerScroll} className="pb-4 text-center">
       {gameMode === "street_brawl" && (
         <p className="pb-2 text-sm text-balance text-muted-foreground">
           In Street Brawl, you unlock multiple abilities at once per round. Since the order within each round doesn't
