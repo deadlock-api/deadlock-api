@@ -6,6 +6,10 @@ import { lazy, Suspense, useMemo } from "react";
 
 import { NotFound } from "~/components/app/NotFound";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
+import { HeroMatchupDetailsStatsTable } from "~/components/features/heroes/HeroMatchupDetailsStatsTable";
+import { HeroMatchupSummary } from "~/components/features/heroes/HeroMatchupSummary";
+import { HeroSkillOrder } from "~/components/features/heroes/HeroSkillOrder";
+import { HeroTopItems } from "~/components/features/heroes/HeroTopItems";
 import { LinkCard } from "~/components/patterns/content/LinkCard";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
@@ -44,24 +48,6 @@ import {
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
-
-const HeroMatchupDetailsStatsTable = lazy(() =>
-  import("~/components/features/heroes/HeroMatchupDetailsStatsTable").then((m) => ({
-    default: m.HeroMatchupDetailsStatsTable,
-  })),
-);
-
-const HeroMatchupSummary = lazy(() =>
-  import("~/components/features/heroes/HeroMatchupSummary").then((m) => ({ default: m.HeroMatchupSummary })),
-);
-
-const HeroSkillOrder = lazy(() =>
-  import("~/components/features/heroes/HeroSkillOrder").then((m) => ({ default: m.HeroSkillOrder })),
-);
-
-const HeroTopItems = lazy(() =>
-  import("~/components/features/heroes/HeroTopItems").then((m) => ({ default: m.HeroTopItems })),
-);
 
 const HeroWinRateByDuration = lazy(() =>
   import("~/components/features/heroes/HeroWinRateByDuration").then((m) => ({ default: m.HeroWinRateByDuration })),
@@ -334,34 +320,26 @@ function HeroDetailPage() {
       )}
 
       {summary && (
-        <ChunkErrorBoundary>
-          <Suspense fallback={<LoadingState />}>
-            <HeroTopItems
-              heroId={heroId}
-              heroName={heroName}
-              heroMatches={summary.matches}
-              request={currentItemStatsParams(seasons, preferences.dateFilter)}
-            />
-          </Suspense>
-        </ChunkErrorBoundary>
+        <HeroTopItems
+          heroId={heroId}
+          heroName={heroName}
+          heroMatches={summary.matches}
+          request={currentItemStatsParams(seasons, preferences.dateFilter)}
+        />
+      )}
+
+      {summary && (
+        <HeroSkillOrder
+          heroId={heroId}
+          heroName={heroName}
+          request={currentAbilityOrderParams(seasons, preferences.dateFilter)}
+          totalMatches={summary?.matches}
+        />
       )}
 
       {summary && (
         <ChunkErrorBoundary>
-          <Suspense fallback={<LoadingState />}>
-            <HeroSkillOrder
-              heroId={heroId}
-              heroName={heroName}
-              request={currentAbilityOrderParams(seasons, preferences.dateFilter)}
-              totalMatches={summary?.matches}
-            />
-          </Suspense>
-        </ChunkErrorBoundary>
-      )}
-
-      {summary && (
-        <ChunkErrorBoundary>
-          <Suspense fallback={<LoadingState />}>
+          <Suspense fallback={<LoadingState label="win rate over time" align="center" className="py-8" />}>
             <HeroWinRateOverTime
               heroId={heroId}
               heroName={heroName}
@@ -373,7 +351,7 @@ function HeroDetailPage() {
 
       {summary && (
         <ChunkErrorBoundary>
-          <Suspense fallback={<LoadingState />}>
+          <Suspense fallback={<LoadingState label="win rate by rank" align="center" className="py-8" />}>
             <HeroWinRateByRank
               heroId={heroId}
               heroName={heroName}
@@ -385,7 +363,7 @@ function HeroDetailPage() {
 
       {summary && (
         <ChunkErrorBoundary>
-          <Suspense fallback={<LoadingState />}>
+          <Suspense fallback={<LoadingState label="win rate by match duration" align="center" className="py-8" />}>
             <HeroWinRateByDuration
               heroId={heroId}
               heroName={heroName}
@@ -399,48 +377,44 @@ function HeroDetailPage() {
         title={`${heroName} Matchups & Synergies`}
         description={`Which heroes ${heroName} counters, which heroes counter ${heroName}, and the best teammates to pair with.`}
       >
-        <ChunkErrorBoundary>
-          <Suspense fallback={<LoadingState />}>
-            <HeroMatchupSummary
-              heroId={heroId}
-              heroName={heroName}
-              minRankId={DEFAULT_MIN_RANK}
-              maxRankId={DEFAULT_MAX_RANK}
-              minDate={defaultStart}
-              maxDate={defaultEnd}
-              gameMode={GAME_MODE}
-              matchMode={DEFAULT_MATCH_MODE}
-            />
-            <div className="grid gap-4 lg:grid-cols-2">
-              <HeroMatchupDetailsStatsTable
-                heroId={heroId}
-                stat={0}
-                minRankId={DEFAULT_MIN_RANK}
-                maxRankId={DEFAULT_MAX_RANK}
-                minDate={defaultStart}
-                maxDate={defaultEnd}
-                prevMinDate={prevStart}
-                prevMaxDate={prevEnd}
-                gameMode={GAME_MODE}
-                matchMode={DEFAULT_MATCH_MODE}
-                linkHeroes
-              />
-              <HeroMatchupDetailsStatsTable
-                heroId={heroId}
-                stat={1}
-                minRankId={DEFAULT_MIN_RANK}
-                maxRankId={DEFAULT_MAX_RANK}
-                minDate={defaultStart}
-                maxDate={defaultEnd}
-                prevMinDate={prevStart}
-                prevMaxDate={prevEnd}
-                gameMode={GAME_MODE}
-                matchMode={DEFAULT_MATCH_MODE}
-                linkHeroes
-              />
-            </div>
-          </Suspense>
-        </ChunkErrorBoundary>
+        <HeroMatchupSummary
+          heroId={heroId}
+          heroName={heroName}
+          minRankId={DEFAULT_MIN_RANK}
+          maxRankId={DEFAULT_MAX_RANK}
+          minDate={defaultStart}
+          maxDate={defaultEnd}
+          gameMode={GAME_MODE}
+          matchMode={DEFAULT_MATCH_MODE}
+        />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <HeroMatchupDetailsStatsTable
+            heroId={heroId}
+            stat={0}
+            minRankId={DEFAULT_MIN_RANK}
+            maxRankId={DEFAULT_MAX_RANK}
+            minDate={defaultStart}
+            maxDate={defaultEnd}
+            prevMinDate={prevStart}
+            prevMaxDate={prevEnd}
+            gameMode={GAME_MODE}
+            matchMode={DEFAULT_MATCH_MODE}
+            linkHeroes
+          />
+          <HeroMatchupDetailsStatsTable
+            heroId={heroId}
+            stat={1}
+            minRankId={DEFAULT_MIN_RANK}
+            maxRankId={DEFAULT_MAX_RANK}
+            minDate={defaultStart}
+            maxDate={defaultEnd}
+            prevMinDate={prevStart}
+            prevMaxDate={prevEnd}
+            gameMode={GAME_MODE}
+            matchMode={DEFAULT_MATCH_MODE}
+            linkHeroes
+          />
+        </div>
       </Section>
 
       <Section title={`More ${heroName} Stats`}>
