@@ -118,32 +118,37 @@ function renderUrl(entry: SitemapEntry): string {
   return `  <url>${parts.join("")}</url>`;
 }
 
-async function loadHeroEntries(): Promise<SitemapEntry[]> {
-  try {
-    const response = await api.heroes_api.listHeroes({ onlyActive: true });
-    return filterPlayableHeroes(response.data).map((hero) => ({
-      path: `/analytics/heroes/${heroSlug(hero.name)}`,
-      changefreq: "daily",
-      priority: 0.6,
-    }));
-  } catch (error) {
-    console.error("Failed to fetch heroes for sitemap", error);
-    return [];
+/**
+ * The sitemap is prerendered once per build and then served as a static file, so an API failure here would ship a
+ * sitemap without its ~200 hero and item pages until the next deploy. Retry, then fail the build loudly instead.
+ */
+async function withRetries<T>(what: string, load: () => Promise<T>, attempts = 3): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await load();
+    } catch (error) {
+      if (attempt >= attempts) throw new Error(`Sitemap: fetching ${what} failed ${attempts} times`, { cause: error });
+      await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+    }
   }
 }
 
+async function loadHeroEntries(): Promise<SitemapEntry[]> {
+  const response = await withRetries("heroes", () => api.heroes_api.listHeroes({ onlyActive: true }));
+  return filterPlayableHeroes(response.data).map((hero) => ({
+    path: `/analytics/heroes/${heroSlug(hero.name)}`,
+    changefreq: "daily",
+    priority: 0.6,
+  }));
+}
+
 async function loadItemEntries(): Promise<SitemapEntry[]> {
-  try {
-    const response = await api.items_api.getItemsByType({ type: "upgrade" });
-    return filterShopableItems(response.data as Upgrade[]).map((item) => ({
-      path: `/analytics/items/${itemSlug(item.name)}`,
-      changefreq: "daily",
-      priority: 0.6,
-    }));
-  } catch (error) {
-    console.error("Failed to fetch items for sitemap", error);
-    return [];
-  }
+  const response = await withRetries("items", () => api.items_api.getItemsByType({ type: "upgrade" }));
+  return filterShopableItems(response.data as Upgrade[]).map((item) => ({
+    path: `/analytics/items/${itemSlug(item.name)}`,
+    changefreq: "daily",
+    priority: 0.6,
+  }));
 }
 
 export async function buildSitemapXml(): Promise<string> {
