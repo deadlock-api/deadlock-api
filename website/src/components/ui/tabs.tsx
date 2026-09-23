@@ -32,7 +32,8 @@ function Tabs({ className, orientation = "horizontal", ...props }: React.Compone
  * - `line`: an underline, for sections of one piece of content.
  * - `nav`: a full-width underline with a bottom rule, for the top-level sections of a page.
  */
-const tabsListVariants = cva("inline-flex w-fit items-center justify-center text-muted-foreground", {
+// `justify-center-safe`: a list wider than its container scrolls from its first tab instead of cutting it off.
+const tabsListVariants = cva("inline-flex w-fit max-w-full items-center justify-center-safe text-muted-foreground", {
   variants: {
     variant: {
       default: "rounded-lg bg-muted p-1",
@@ -45,7 +46,9 @@ const tabsListVariants = cva("inline-flex w-fit items-center justify-center text
     },
   },
   compoundVariants: [
-    { orientation: "horizontal", variant: ["default", "line"], class: "h-9" },
+    // Tabs that do not fit scroll inside the list (the padding keeps focus rings and the underline inside it) rather
+    // than running out of their card, where a parent's clipping made the last ones unreachable.
+    { orientation: "horizontal", variant: ["default", "line"], class: "h-9 scrollbar-thin overflow-x-auto" },
     { orientation: "horizontal", variant: "nav", class: "h-11" },
   ],
   defaultVariants: {

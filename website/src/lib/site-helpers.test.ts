@@ -8,6 +8,7 @@ import { parsePreferencesCookie } from "./preferences";
 import { serializeJsonLd } from "./seo";
 import { headersFor, parseHeadersFile } from "./static-headers";
 import { parseSteamIdInput } from "./steam";
+import { joinWidgetList, splitWidgetList, withoutEmptyVariables } from "./streamkit-list";
 import { compactNumber } from "./team-builder/format";
 
 test("inline JSON-LD cannot close its script tag", () => {
@@ -83,4 +84,14 @@ test("the add-account form reads every common Steam ID form", () => {
   for (const input of ["0", "abc", "99999999999", "https://steamcommunity.com/id/gabelogannewell"]) {
     assert.ok("error" in parseSteamIdInput(input), input);
   }
+});
+
+test("widget lists keep commas inside an entry and read URLs from before the escaping", () => {
+  const labels = ["Place, EU", "W-L", "a\\b", ""];
+  assert.deepEqual(splitWidgetList(joinWidgetList(labels)), labels);
+  assert.deepEqual(splitWidgetList("Rank,Daily W-L,K/D"), ["Rank", "Daily W-L", "K/D"]);
+  assert.deepEqual(
+    withoutEmptyVariables({ variables: ["wins", "", "kd"], labels: ["W", "?", "KD"], subtexts: ["a"] }),
+    { variables: ["wins", "kd"], labels: ["W", "KD"], subtexts: ["a"] },
+  );
 });

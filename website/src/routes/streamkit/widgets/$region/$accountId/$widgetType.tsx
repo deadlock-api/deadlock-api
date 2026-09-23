@@ -6,6 +6,7 @@ import { BoxWidget } from "~/components/features/streamkit/widgets/box";
 import { RawWidget } from "~/components/features/streamkit/widgets/raw";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { API_ORIGIN } from "~/lib/constants";
+import { splitWidgetList, withoutEmptyVariables } from "~/lib/streamkit-list";
 import { snakeToPretty } from "~/lib/utils";
 import { queryKeys } from "~/queries/query-keys";
 import type { Color } from "~/types/general";
@@ -109,9 +110,16 @@ function Widget() {
 
   switch (widgetType) {
     case "box": {
-      const variables = search.vars?.split(",");
-      const labels = search.labels?.split(",") ?? variables?.map(snakeToPretty);
-      const subtexts = search.subtexts?.split(",");
+      const columns = search.vars
+        ? withoutEmptyVariables({
+            variables: splitWidgetList(search.vars),
+            labels: search.labels === undefined ? undefined : splitWidgetList(search.labels),
+            subtexts: search.subtexts === undefined ? undefined : splitWidgetList(search.subtexts),
+          })
+        : undefined;
+      const variables = columns?.variables;
+      const labels = columns?.labels ?? variables?.map(snakeToPretty);
+      const subtexts = columns?.subtexts;
       // An edited URL ("?theme=Dark") must not crash the overlay on stream: unknown themes fall back to dark.
       const theme: Theme = THEMES.includes(search.theme as Theme) ? (search.theme as Theme) : "dark";
       const showHeader = search.showHeader ?? true;

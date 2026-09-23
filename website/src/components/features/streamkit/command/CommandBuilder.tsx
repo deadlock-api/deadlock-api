@@ -87,7 +87,9 @@ export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
   const debouncedGeneratedUrl = generateUrl(accountId, region, debouncedTemplate);
 
   const insertVariable = (varName: string) => {
-    const cursorPos = (document.getElementById("template") as HTMLTextAreaElement)?.selectionStart || template.length;
+    // Position 0 is a real cursor (the start of the template), not "no cursor".
+    const cursorPos =
+      (document.getElementById("template") as HTMLTextAreaElement | null)?.selectionStart ?? template.length;
     const newTemplate = `${template.slice(0, cursorPos)}{${varName}}${template.slice(cursorPos)}`;
     setTemplate(newTemplate);
   };

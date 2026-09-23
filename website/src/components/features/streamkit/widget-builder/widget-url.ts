@@ -1,3 +1,5 @@
+import { joinWidgetList, withoutEmptyVariables } from "~/lib/streamkit-list";
+
 import type { WidgetConfig } from "./widget-config";
 
 export function buildWidgetUrl(region: string, accountId: string, config: WidgetConfig): string | null {
@@ -8,10 +10,11 @@ export function buildWidgetUrl(region: string, accountId: string, config: Widget
     if (value) url.searchParams.set(arg, value);
   }
   switch (config.widgetType) {
-    case "box":
-      if (config.variables.length > 0) url.searchParams.set("vars", config.variables.join(","));
-      if (config.labels.length > 0) url.searchParams.set("labels", config.labels.join(","));
-      if (config.subtexts.some(Boolean)) url.searchParams.set("subtexts", config.subtexts.join(","));
+    case "box": {
+      const { variables, labels = [], subtexts = [] } = withoutEmptyVariables(config);
+      if (variables.length > 0) url.searchParams.set("vars", joinWidgetList(variables));
+      if (labels.length > 0) url.searchParams.set("labels", joinWidgetList(labels));
+      if (subtexts.some(Boolean)) url.searchParams.set("subtexts", joinWidgetList(subtexts));
       url.searchParams.set("theme", config.theme);
       url.searchParams.set("showHeader", config.showHeader.toString());
       url.searchParams.set("showBranding", config.showBranding.toString());
@@ -21,6 +24,7 @@ export function buildWidgetUrl(region: string, accountId: string, config: Widget
       url.searchParams.set("numMatches", config.numMatches.toString());
       url.searchParams.set("opacity", config.opacity.toString());
       return url.toString();
+    }
     case "raw":
       url.searchParams.set("fontColor", config.fontColor);
       url.searchParams.set("variable", config.variable);

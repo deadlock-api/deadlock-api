@@ -112,15 +112,16 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
       </Stack>
 
       <Section as="h3" size="sm" title="Variables and Labels" className="gap-2">
-        <Stack gap={3}>
+        {/* A container, so each row stacks when the builder is narrow instead of pushing Remove out of view. */}
+        <Stack gap={3} className="@container">
           {config.variables.map((variable, index) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: variables can be duplicated so there's no natural unique key; list is only appended/removed from end
             // eslint-disable-next-line react/no-array-index-key -- variables can be duplicated
-            <div key={index} className="flex gap-3">
-              <div className="flex grow flex-col gap-2">
-                <div className="flex gap-3">
+            <div key={index} className="flex flex-col gap-2 @md:flex-row @md:gap-3">
+              <div className="flex min-w-0 grow flex-col gap-2">
+                <div className="flex flex-col gap-2 @sm:flex-row @sm:gap-3">
                   <Select value={variable} onValueChange={(value) => updateVariable(index, value)}>
-                    <SelectTrigger className="w-1/2" aria-label={`Variable ${index + 1}`}>
+                    <SelectTrigger className="w-full @sm:w-1/2" aria-label={`Variable ${index + 1}`}>
                       <SelectValue placeholder="Select a variable" />
                     </SelectTrigger>
                     <SelectContent>
@@ -135,7 +136,7 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
                     type="text"
                     value={config.labels[index]}
                     onChange={(e) => updateLabel(index, e.target.value)}
-                    className="w-1/2"
+                    className="w-full @sm:w-1/2"
                     aria-label={`Label for variable ${index + 1}`}
                     placeholder="Label (optional)"
                   />
@@ -150,6 +151,7 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
               </div>
               <Button
                 variant="destructive"
+                className="self-end @md:self-start"
                 onClick={() => removeVariable(index)}
                 aria-label={`Remove variable ${index + 1}`}
               >

@@ -78,8 +78,8 @@ function StreamKit() {
     isLoading: steamAccountLoading,
     error: steamAccountError,
   } = useQuery<string>({
-    queryKey: queryKeys.steam.name(region, steamId),
-    queryFn: () => fetchSteamName(region, steamId),
+    queryKey: queryKeys.steam.name(region, parseSteamIdToId3(steamId)),
+    queryFn: () => fetchSteamName(region, parseSteamIdToId3(steamId)),
   });
 
   const isAccountConnected = steamAccountName && !steamAccountLoading && !steamAccountError;
@@ -108,16 +108,17 @@ function StreamKit() {
                   </Text>
                 </Stack>
                 <Field
-                  label="Steam ID3"
+                  label="Steam ID"
                   htmlFor="steamid-input"
-                  description="Find it in your Steam profile URL or with a Steam ID finder tool."
+                  description="Your SteamID64 from your profile URL, your account ID, or [U:1:…] / STEAM_0:… from a Steam ID finder."
                 >
                   <Input
                     id="steamid-input"
-                    type="number"
+                    type="text"
+                    autoComplete="off"
+                    spellCheck={false}
                     value={steamId}
                     onChange={(e) => setSteamId(e.target.value)}
-                    spinners="hidden"
                     placeholder="e.g. 123456789"
                   />
                 </Field>
