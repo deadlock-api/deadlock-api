@@ -569,7 +569,9 @@ export function ItemStatsTable({
                   )}
                   {columns.includes("matches") && (
                     <SortableHeader
-                      label="Pick Rate"
+                      // Relative to the most bought item, like the hero tables' normalized pick rate; the item page's
+                      // "Bought" is the share of players instead, so a bare "Pick Rate" read as a contradiction.
+                      label="Pick Rate (Normalized)"
                       sortKey="matches"
                       activeSortKey={sort.field}
                       sortDir={sort.direction}

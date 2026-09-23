@@ -165,21 +165,6 @@ export function ItemStatsExplorer({
     placeholderData: keepPreviousData,
   });
 
-  const prevStatsMap = useMemo(() => {
-    if (!prevData) return undefined;
-    const prevSumMatches = prevData.reduce((acc, row) => acc + row.matches, 0);
-    const prevMaxMatches = Math.max(...prevData.map((item) => item.matches));
-    const map = new Map<number, { winrate: number; pickrate: number; normalizedPickrate: number }>();
-    for (const row of prevData) {
-      map.set(row.item_id, {
-        winrate: row.wins / row.matches,
-        pickrate: row.matches / prevSumMatches,
-        normalizedPickrate: row.matches / prevMaxMatches,
-      });
-    }
-    return map;
-  }, [prevData]);
-
   // Build lookup: item_id → class_name, and item_id → component class_names (upgrade-vs-sold detection)
   const upgradeChainLookup = useMemo(() => buildUpgradeChainLookup(assetsItems), [assetsItems]);
 
@@ -244,6 +229,23 @@ export function ItemStatsExplorer({
   const maxWinRate = useMemo(() => Math.max(...filteredData.map((item) => item.wins / item.matches)), [filteredData]);
   const minUsage = useMemo(() => Math.min(...filteredData.map((item) => item.matches)), [filteredData]);
   const maxUsage = useMemo(() => Math.max(...filteredData.map((item) => item.matches)), [filteredData]);
+  const prevStatsMap = useMemo(() => {
+    if (!prevData) return undefined;
+    const prevSumMatches = prevData.reduce((acc, row) => acc + row.matches, 0);
+    // On the same base as this period's bars (shop items only), or the pick rate delta compares two scales.
+    const prevMaxMatches = Math.max(
+      ...prevData.filter((item) => shopableItemIds.has(item.item_id)).map((item) => item.matches),
+    );
+    const map = new Map<number, { winrate: number; pickrate: number; normalizedPickrate: number }>();
+    for (const row of prevData) {
+      map.set(row.item_id, {
+        winrate: row.wins / row.matches,
+        pickrate: row.matches / prevSumMatches,
+        normalizedPickrate: row.matches / prevMaxMatches,
+      });
+    }
+    return map;
+  }, [prevData, shopableItemIds]);
 
   const sortedData = useMemo(
     () =>
