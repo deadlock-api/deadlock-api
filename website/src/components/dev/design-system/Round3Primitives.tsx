@@ -17,6 +17,7 @@ import { Pips } from "~/components/ui/pips";
 import { SplitBar } from "~/components/ui/rate-bar";
 import { SearchInput } from "~/components/ui/search-input";
 import { Separator } from "~/components/ui/separator";
+import { SkipLink } from "~/components/ui/skip-link";
 import { StatusDot } from "~/components/ui/status-dot";
 import { StepMeter, StepMeterStep, type StepState } from "~/components/ui/step-meter";
 import { SwitchField } from "~/components/ui/switch-field";
@@ -150,6 +151,13 @@ function FieldRowExamples() {
 export function Round3Primitives() {
   return (
     <>
+      <Specimen
+        name="SkipLink"
+        source="ui/skip-link"
+        note="The page's first focus stop, hidden until a keyboard user reaches it, then pinned to the top corner. The app shell renders one pointing at the main landmark; Tab into this box to see it."
+      >
+        <SkipLink href="#skip-link">Skip to content</SkipLink>
+      </Specimen>
       <Specimen
         name="TextLink"
         source="ui/text-link"

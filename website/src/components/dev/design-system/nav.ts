@@ -47,6 +47,7 @@ export const NAV: readonly NavChapter[] = [
           "CopyButton",
           "CopyButton label",
           "TextLink",
+          "SkipLink",
           "SortButton",
           "SortButton size",
           "ToggleGroup",

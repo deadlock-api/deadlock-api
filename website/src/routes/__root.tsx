@@ -14,6 +14,7 @@ import { Breadcrumbs } from "~/components/app/Breadcrumbs";
 import { ThemeProvider } from "~/components/app/ThemeProvider";
 import { FeedbackWidget } from "~/components/features/annotate/FeedbackWidget";
 import { AppBody, AppFrame, PageBackdrop } from "~/components/patterns/page/AppFrame";
+import { SkipLink } from "~/components/ui/skip-link";
 import { Toaster } from "~/components/ui/sonner";
 import { Stack } from "~/components/ui/stack";
 import { TooltipProvider } from "~/components/ui/tooltip";
@@ -171,9 +172,10 @@ function RootComponent() {
       <ThemeProvider>
         <NuqsAdapter defaultOptions={{ history: "push", limitUrlUpdates: debounce(300) }}>
           <TooltipProvider>
+            <SkipLink />
             <div className="flex min-h-screen">
               <AppSidebar />
-              <main className="min-w-0 flex-1 overflow-x-clip md:ps-64">
+              <main id="main-content" className="min-w-0 flex-1 overflow-x-clip md:ps-64">
                 <MobileMenuButton />
                 <PageBackdrop src="/logo/hexe.svg" fetchPriority="high" />
                 <AppFrame>
