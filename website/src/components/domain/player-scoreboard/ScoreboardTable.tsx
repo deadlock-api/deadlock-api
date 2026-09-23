@@ -142,7 +142,7 @@ export function ScoreboardTable({
       <Table density="compact" className="tabular-nums">
         <TableHeader tone="muted">
           <TableRow>
-            <TableHead className="w-12 text-end">#</TableHead>
+            <TableHead className="w-8 text-end sm:w-12">#</TableHead>
             <TableHead>Player</TableHead>
             {sortBy !== "matches" && (
               <SortableHeader
@@ -196,7 +196,7 @@ export function ScoreboardTable({
                     loading={isLoadingProfiles && !profile}
                     showAccountId
                     // Narrower on a phone, so a long name truncates instead of pushing the stat off-screen.
-                    className="max-w-28 sm:max-w-72"
+                    className="max-w-20 sm:max-w-72"
                   />
                 </TableCell>
                 {sortBy !== "matches" && (
