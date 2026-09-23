@@ -235,7 +235,8 @@ export default function Heatmap3D({ data, mapData, viewMode, sensitivity, onSens
         />
       </Canvas>
 
-      <ChartOverlay position="bottom-end">
+      {/* Top corner: on a phone the legend and the bottom-start controls ran into each other over the map. */}
+      <ChartOverlay position="top-end">
         <HeatmapLegend viewMode={viewMode} maxValue={legendMax} />
       </ChartOverlay>
 

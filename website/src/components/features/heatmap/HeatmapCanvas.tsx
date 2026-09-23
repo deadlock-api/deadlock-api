@@ -249,7 +249,8 @@ export default function HeatmapCanvas({
             />
           </div>
         )}
-        <ChartOverlay position="bottom-end">
+        {/* Top corner: on a phone the legend and the bottom-start controls ran into each other over the map. */}
+        <ChartOverlay position="top-end">
           <HeatmapLegend viewMode={viewMode} maxValue={legendMax} />
         </ChartOverlay>
         <ChartOverlay position="bottom-start">
