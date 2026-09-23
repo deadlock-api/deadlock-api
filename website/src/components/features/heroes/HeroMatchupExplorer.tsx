@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Swords } from "lucide-react";
+import { useRef } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroSelector } from "~/components/domain/selectors/HeroSelector";
@@ -123,6 +124,13 @@ export function HeroMatchupExplorer({
   const { synergyRows, counterRows, heroStats, isLoading, isError, retry } = useHeroMatchupRows(params);
   const heroes = new Map(heroAssets.map((hero) => [hero.id, hero]));
   const heroName = heroes.get(params.heroId)?.name ?? "Your hero";
+  // Picking a hero from a ranking replaces the tables (and the pressed button) while the new hero loads: focus moves to
+  // the overview, which names the new hero, instead of falling back to the page body.
+  const overviewRef = useRef<HTMLElement>(null);
+  const selectFromRanking = (heroId: number) => {
+    onHeroSelected(heroId);
+    overviewRef.current?.focus();
+  };
   const scale = Math.max(
     0.01,
     ...synergyRows.map((row) => Math.abs(row.relWinrate)),
@@ -132,6 +140,8 @@ export function HeroMatchupExplorer({
   return (
     <div className="flex flex-col gap-3">
       <FilterBar
+        ref={overviewRef}
+        tabIndex={-1}
         variant="toolbar"
         title={`${heroName}’s matchups`}
         icon={Swords}
@@ -166,19 +176,17 @@ export function HeroMatchupExplorer({
       ) : (
         <div className="grid items-start gap-3 xl:grid-cols-2">
           <MatchupRanking
-            key={`allies-${params.heroId}`}
             title="Allies"
             rows={synergyRows}
             heroes={heroes}
-            onSelect={onHeroSelected}
+            onSelect={selectFromRanking}
             scale={scale}
           />
           <MatchupRanking
-            key={`opponents-${params.heroId}`}
             title="Opponents"
             rows={counterRows}
             heroes={heroes}
-            onSelect={onHeroSelected}
+            onSelect={selectFromRanking}
             scale={scale}
           />
         </div>

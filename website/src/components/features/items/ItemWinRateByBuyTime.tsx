@@ -77,7 +77,8 @@ export function ItemWinRateByBuyTime({
   itemName: string;
   request: AnalyticsApiItemStatsRequest;
 }) {
-  const params = { ...request, bucket: "game_time_min" as const };
+  // No per-minute minimum: the API applies it to each minute, so rare minutes dropped out of the shares and the peak.
+  const params = { ...request, bucket: "game_time_min" as const, minMatches: undefined };
   const { data, isPending } = useQuery({
     queryKey: queryKeys.analytics.itemStats(params),
     queryFn: async () => (await api.analytics_api.itemStats(params)).data,
