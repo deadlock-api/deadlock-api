@@ -76,7 +76,8 @@ export function Breadcrumbs() {
   });
   const items = isNotFound ? [] : buildBreadcrumbs(pathname, labelsByPath);
 
-  if (items.length === 0) return null;
+  // The mobile menu button floats over the start of this row; without a trail the page title would sit under it.
+  if (items.length === 0) return <div aria-hidden="true" className="h-5 md:hidden" />;
 
   const structuredData = {
     "@context": "https://schema.org",
