@@ -167,7 +167,7 @@ export function HeroSelectorMultiple({
     >
       <FilteredSelectList value={selectedHeroes} onValueChange={onHeroesSelected}>
         {sortedHeroes.map((hero: SlimHero) => (
-          <FilteredSelectOption key={hero.id} value={hero.id}>
+          <FilteredSelectOption key={hero.id} value={hero.id} textValue={hero.name}>
             <HeroImage heroId={hero.id} className="size-5 shrink-0 object-contain" />
             <HeroName heroId={hero.id} className="truncate text-sm" />
           </FilteredSelectOption>

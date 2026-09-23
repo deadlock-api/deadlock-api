@@ -57,7 +57,7 @@ export function ItemSelectorMultiple({
     >
       {sortedItems.map((item: Upgrade) => (
         // The trigger draws these children in the chip of a chosen item too, so the text size is inherited.
-        <FilteredSelectOption key={item.id} value={item.id}>
+        <FilteredSelectOption key={item.id} value={item.id} textValue={item.name}>
           <ItemImage itemId={item.id} className="size-4 shrink-0 object-contain" />
           <ItemName itemId={item.id} className="truncate" />
         </FilteredSelectOption>

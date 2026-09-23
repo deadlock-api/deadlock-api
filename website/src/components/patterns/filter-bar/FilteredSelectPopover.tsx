@@ -1,11 +1,12 @@
 import { ChevronDownIcon } from "lucide-react";
-import { Children, createContext, isValidElement, type ReactNode, use } from "react";
+import { Children, createContext, isValidElement, type ReactNode, use, useState } from "react";
 
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { OptionRow } from "~/components/ui/option-row";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
+import { SearchInput } from "~/components/ui/search-input";
 import { Separator } from "~/components/ui/separator";
 import { cn } from "~/lib/utils";
 
@@ -20,10 +21,18 @@ interface FilteredSelectOptionProps extends Omit<React.ComponentProps<typeof Opt
   value: OptionValue;
   /** The row: an image and a name. A `FilteredSelectPopover` draws the same content in the chip of a chosen option. */
   children: ReactNode;
+  /** The option's name as text, for the search a long list shows. */
+  textValue?: string;
 }
 
 /** One entry of a `FilteredSelectList` or `FilteredSelectPopover`; it must be a direct child. */
-export function FilteredSelectOption({ value, children, onClick, ...props }: FilteredSelectOptionProps) {
+export function FilteredSelectOption({
+  value,
+  children,
+  onClick,
+  textValue: _textValue,
+  ...props
+}: FilteredSelectOptionProps) {
   const context = use(FilteredSelectContext);
   if (!context)
     throw new Error("FilteredSelectOption must be used inside a FilteredSelectList or FilteredSelectPopover");
@@ -53,6 +62,9 @@ interface SelectionProps<T extends OptionValue> {
 
 const NOTHING: never[] = [];
 
+/** Lists longer than this show a search field. */
+const SEARCH_FROM = 12;
+
 function useFilteredSelect<T extends OptionValue>({
   value: valueProp,
   defaultValue = NOTHING,
@@ -81,18 +93,38 @@ function SelectList<T extends OptionValue>({
 }: { state: ReturnType<typeof useFilteredSelect<T>> } & React.ComponentProps<"div">) {
   const { value, setValue, options, allValues, toggle } = state;
   const allSelected = allValues.length > 0 && value.length === allValues.length;
+  // A long list of named options opens on a search field (the popover focuses it first), not on "Select all", where a
+  // stray Enter selected every one of 173 items. While searching, "Select all" steps aside.
+  const [query, setQuery] = useState("");
+  const searchable = options.length > SEARCH_FROM && options.some((option) => option.props.textValue);
+  const term = query.trim().toLowerCase();
+  const shown = term ? options.filter((option) => option.props.textValue?.toLowerCase().includes(term)) : options;
   return (
     <div data-slot="filtered-select-list" className={cn("flex flex-col gap-0.5", className)} {...props}>
-      <OptionRow
-        selected={allSelected}
-        aria-pressed={allSelected}
-        hint={`${value.length}/${allValues.length}`}
-        onClick={() => setValue(allSelected ? [] : allValues)}
-      >
-        Select all
-      </OptionRow>
-      <Separator />
-      <FilteredSelectContext value={{ value, toggle }}>{options}</FilteredSelectContext>
+      {searchable && (
+        <SearchInput
+          size="sm"
+          aria-label="Search the options"
+          placeholder="Search…"
+          value={query}
+          onValueChange={setQuery}
+        />
+      )}
+      {!term && (
+        <>
+          <OptionRow
+            selected={allSelected}
+            aria-pressed={allSelected}
+            hint={`${value.length}/${allValues.length}`}
+            onClick={() => setValue(allSelected ? [] : allValues)}
+          >
+            Select all
+          </OptionRow>
+          <Separator />
+        </>
+      )}
+      <FilteredSelectContext value={{ value, toggle }}>{shown}</FilteredSelectContext>
+      {term && shown.length === 0 && <p className="px-2 py-3 text-center text-xs text-muted-foreground">No matches</p>}
     </div>
   );
 }
