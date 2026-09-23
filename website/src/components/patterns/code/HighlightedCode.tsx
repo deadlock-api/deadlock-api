@@ -68,7 +68,8 @@ export function HighlightedCode({
         className={cn(
           FOCUS_RING,
           "scrollbar-thin overflow-x-auto rounded-md font-mono leading-relaxed",
-          overflow === "wrap" && "break-all whitespace-pre-wrap",
+          // Breaks between words first, and inside one only when it is longer than the line (a URL), not "--trans/port".
+          overflow === "wrap" && "wrap-break-word whitespace-pre-wrap",
         )}
       >
         {html ? (
