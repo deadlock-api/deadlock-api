@@ -11,9 +11,10 @@ export function formatPoints(value: number | undefined, decimals = 1): string {
   return `${rounded >= 0 ? "+" : ""}${rounded.toFixed(decimals)}`;
 }
 
-/** A magnitude a few characters wide, e.g. `1.2k`. Whole thousands drop the tenth. */
+/** A magnitude a few characters wide, e.g. `1.2k`, `10k`, `1.5M`. A tenth that rounds to zero is dropped. */
 export function compactNumber(value: number): string {
-  return value >= 1000 ? `${(value / 1000).toFixed(value % 1000 === 0 ? 0 : 1)}k` : String(value);
+  if (value < 1000) return String(value);
+  return value.toLocaleString("en-US", { notation: "compact", maximumFractionDigits: 1 }).replace("K", "k");
 }
 
 /** A rate in `[0,1]` as a percentage, e.g. `52.6%`. */
