@@ -86,7 +86,9 @@ function Trivia() {
   const [state, saveState] = useStoredDailyState(storageKey, date, freshState, legacyGameStorageKey("trivia"));
 
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-  const [isRevealed, setIsRevealed] = useState(false);
+  // The question just answered, shown with its result until the advance; the stored state has already moved on.
+  const [revealing, setRevealing] = useState<number | null>(null);
+  const isRevealed = revealing !== null;
   const [feedbackType, setFeedbackType] = useState<"correct" | "wrong" | null>(null);
 
   const isLoading = heroesLoading || itemsLoading || npcsLoading || abilitiesLoading;
@@ -104,7 +106,8 @@ function Trivia() {
     return generateDailyQuestions(heroes, items, npcUnits, abilitiesWithHeroes, rng);
   }, [heroes, items, npcUnits, abilitiesWithHeroes, date]);
 
-  const currentQ = questions[state.currentQuestion] ?? null;
+  const shownIndex = revealing ?? state.currentQuestion;
+  const currentQ = questions[shownIndex] ?? null;
 
   useEffect(() => {
     return () => {
@@ -112,20 +115,13 @@ function Trivia() {
     };
   }, []);
 
-  // The day the page shows now, for the advance timer: one still pending at midnight must not save yesterday's quiz
-  // as the new day's state.
-  const currentDate = useRef(date);
-  useEffect(() => {
-    currentDate.current = date;
-  }, [date]);
-
   const handleAnswer = useCallback(
     (optionIndex: number) => {
-      if (state.completed || isRevealed || !currentQ) return;
+      if (state.completed || isRevealed || !currentQ || state.answers[state.currentQuestion] != null) return;
 
       const isCorrect = optionIndex === currentQ.correctIndex;
       setSelectedAnswer(optionIndex);
-      setIsRevealed(true);
+      setRevealing(state.currentQuestion);
       setFeedbackType(isCorrect ? "correct" : "wrong");
       setTimeout(() => setFeedbackType(null), 900);
 
@@ -135,25 +131,19 @@ function Trivia() {
 
       const isLastQuestion = state.currentQuestion >= QUESTION_COUNT - 1;
 
-      const newState: TriviaState = {
+      // The answer and the move to the next question are one write: saving the move only after the reveal let a
+      // reload in between show the answered question again and score it twice.
+      saveState({
         ...state,
         answers: newAnswers,
         score: newScore,
         completed: isLastQuestion,
-      };
-      saveState(newState);
+        currentQuestion: isLastQuestion ? state.currentQuestion : state.currentQuestion + 1,
+      });
 
       advanceTimerRef.current = setTimeout(() => {
         setSelectedAnswer(null);
-        setIsRevealed(false);
-
-        if (!isLastQuestion && currentDate.current === newState.date) {
-          const advancedState: TriviaState = {
-            ...newState,
-            currentQuestion: newState.currentQuestion + 1,
-          };
-          saveState(advancedState);
-        }
+        setRevealing(null);
       }, ADVANCE_DELAY_MS);
     },
     [state, isRevealed, currentQ, saveState],
@@ -186,12 +176,12 @@ function Trivia() {
       hideAttempts
       date={date}
     >
-      <GuessFeedback type={feedbackType} triggerKey={state.currentQuestion} />
+      <GuessFeedback type={feedbackType} triggerKey={shownIndex} />
 
       <AnimatePresence mode="wait">
         {!state.completed && currentQ ? (
           <motion.div
-            key={state.currentQuestion}
+            key={shownIndex}
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
@@ -199,7 +189,7 @@ function Trivia() {
             className="flex flex-col gap-5"
           >
             <Text as="p" variant="eyebrow" align="center" className="font-mono">
-              Question {state.currentQuestion + 1}/{QUESTION_COUNT}
+              Question {shownIndex + 1}/{QUESTION_COUNT}
             </Text>
 
             <div className="flex justify-center">
@@ -213,7 +203,7 @@ function Trivia() {
             <Stack gap={2.5} className="mx-auto w-full max-w-lg">
               {currentQ.options.map((option, i) => (
                 <AnswerOption
-                  key={`${state.currentQuestion}-opt-${option}`}
+                  key={`${shownIndex}-opt-${option}`}
                   state={isRevealed ? revealedState(i === currentQ.correctIndex, i === selectedAnswer) : "idle"}
                   onClick={() => handleAnswer(i)}
                   disabled={isRevealed}
@@ -223,15 +213,12 @@ function Trivia() {
               ))}
             </Stack>
 
-            <StepMeter
-              label={`Question ${state.currentQuestion + 1} of ${QUESTION_COUNT}`}
-              className="justify-center pt-2"
-            >
+            <StepMeter label={`Question ${shownIndex + 1} of ${QUESTION_COUNT}`} className="justify-center pt-2">
               {questions.map((q, i) => (
                 <StepMeterStep
                   key={q.question}
                   state={
-                    i === state.currentQuestion
+                    i === shownIndex
                       ? "current"
                       : state.answers[i] === null
                         ? "empty"
