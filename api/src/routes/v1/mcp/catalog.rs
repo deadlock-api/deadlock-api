@@ -21,7 +21,8 @@ pub(crate) const QUERY_TIMEOUT: Duration = Duration::from_secs(300);
 const REFRESH_INTERVAL: Duration = Duration::from_secs(300);
 const MAX_CONCURRENT_QUERIES: usize = 4;
 const MEMORY_LIMIT: &str = "6GB";
-const THREADS: i64 = 4;
+/// Remote parquet scans wait on R2, not the CPU: more threads mean more requests in flight.
+const THREADS: i64 = 16;
 const MAX_TEMP_DIRECTORY_SIZE: &str = "8GB";
 
 static IDENT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[A-Za-z_][A-Za-z0-9_]*$").unwrap());
