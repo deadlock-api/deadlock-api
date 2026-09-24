@@ -29,6 +29,7 @@ import {
   type UnscoredOutcome,
   unscoredOutcome,
 } from "~/lib/tracker/compute";
+import { isDemoMatch } from "~/lib/tracker/demo";
 import { computeFights } from "~/lib/tracker/fights";
 import { computeLaneMatchups } from "~/lib/tracker/lane-matchup";
 import { computeObjectiveEvents } from "~/lib/tracker/objectives";
@@ -154,12 +155,15 @@ function MatchHeader({
                 <Link2 data-icon="inline-start" />
                 Copy match link
               </CopyButton>
-              <TextLink asChild tone="muted" underline="hover" className="inline-flex min-h-6 items-center gap-1">
-                <Link to="/analytics/team-builder" search={{ match: matchId }}>
-                  <UsersRound className="size-3.5" />
-                  Team Builder
-                </Link>
-              </TextLink>
+              {/* The Team Builder loads drafts from the API, which has never seen a generated demo match. */}
+              {!isDemoMatch(matchId) && (
+                <TextLink asChild tone="muted" underline="hover" className="inline-flex min-h-6 items-center gap-1">
+                  <Link to="/analytics/team-builder" search={{ match: matchId }}>
+                    <UsersRound className="size-3.5" />
+                    Team Builder
+                  </Link>
+                </TextLink>
+              )}
             </div>
           </div>
         </div>

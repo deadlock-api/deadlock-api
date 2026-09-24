@@ -7,6 +7,7 @@ import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { seo } from "~/lib/seo";
 import { parseSteamIdToId3 } from "~/lib/steam";
+import { isDemoAccount } from "~/lib/tracker/demo";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 import { steamProfileQueryOptions } from "~/queries/tracker-queries";
@@ -18,6 +19,8 @@ export const Route = createFileRoute("/tracker_/players/$accountId")({
     if (!/^\d+$/.test(normalizedId)) throw notFound();
     const accountId = Number(normalizedId);
     if (!Number.isInteger(accountId) || accountId <= 0 || accountId > 4294967295) throw notFound();
+    // Generated players have no history of their own, and the demo profile is the one page that says it is made up.
+    if (isDemoAccount(accountId)) throw redirect({ to: "/tracker/demo", search: true });
     // Canonicalize alternate Steam ID formats to the numeric account ID.
     if (String(accountId) !== params.accountId) {
       throw redirect({ to: "/tracker/players/$accountId", params: { accountId: String(accountId) }, search: true });

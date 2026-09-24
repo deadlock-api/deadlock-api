@@ -29,6 +29,7 @@ import { LANES } from "~/lib/team-builder/lanes";
 import { TONE_TEXT } from "~/lib/tone";
 import { type BuildAbility, type BuildItem, playerBuild } from "~/lib/tracker/build";
 import { formatMatchDuration } from "~/lib/tracker/compute";
+import { isDemoAccount } from "~/lib/tracker/demo";
 import {
   type PlayerContext,
   playerContext,
@@ -524,7 +525,7 @@ export function Scoreboard({
                           >
                             <span className="min-w-0 truncate">{name}</span>
                           </Button>
-                          {!isTracked && IS_DEV && (
+                          {!isTracked && IS_DEV && !isDemoAccount(player.account_id) && (
                             <Link
                               to="/tracker/players/$accountId"
                               params={{ accountId: String(player.account_id) }}

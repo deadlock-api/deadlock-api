@@ -3,6 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { PlayerLink } from "~/components/domain/player/PlayerLink";
 import { SteamAvatar } from "~/components/domain/player/SteamAvatar";
 import { Skeleton } from "~/components/ui/skeleton";
+import { isDemoAccount } from "~/lib/tracker/demo";
 import { cn } from "~/lib/utils";
 
 const playerCellVariants = cva("flex min-w-0 items-center", {
@@ -38,7 +39,10 @@ export function PlayerCell({
     loading?: boolean;
     /** The account id after the name, from the `sm` breakpoint up. */
     showAccountId?: boolean;
-    /** Links the name to the player's tracker page. Leave it off when the whole row is already the link. */
+    /**
+     * Links the name to the player's tracker page. Leave it off when the whole row is already the link. Generated demo
+     * players have no page of their own, so their name stays plain text.
+     */
     linkToDetail?: boolean;
   }) {
   const resolvedSize = size ?? "default";
@@ -46,7 +50,7 @@ export function PlayerCell({
 
   const nameNode = loading ? (
     <Skeleton className="h-4 w-24" />
-  ) : linkToDetail && accountId != null ? (
+  ) : linkToDetail && accountId != null && !isDemoAccount(accountId) ? (
     <PlayerLink
       accountId={accountId}
       title={`Open ${label} in the player tracker`}
