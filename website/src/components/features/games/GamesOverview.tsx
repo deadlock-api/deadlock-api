@@ -14,7 +14,6 @@ import { Delta } from "~/components/ui/delta";
 import { Inline } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { Tooltip } from "~/components/ui/tooltip";
-import { day } from "~/dayjs";
 import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
@@ -110,14 +109,6 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
       label="game stats"
       className="grid grid-cols-1 gap-4 lg:grid-cols-2"
     >
-      {prevParams?.minUnixTimestamp != null && prevParams.maxUnixTimestamp != null && (
-        // UTC, like the Worker that renders it, so the server and the browser print the same dates.
-        <Text as="p" variant="caption" tone="muted" className="lg:col-span-2">
-          Arrows and the boxed team split compare with{" "}
-          {day.unix(prevParams.minUnixTimestamp).utc().format("MMM D, YYYY")} –{" "}
-          {day.unix(prevParams.maxUnixTimestamp).utc().format("MMM D, YYYY")}, the period before the one selected.
-        </Text>
-      )}
       {getFilteredCategories(isStreetBrawl).map((category) => {
         const Icon = CATEGORY_ICONS[category.label];
         // Fields the game stopped reporting still come back as an exact 0 average.
