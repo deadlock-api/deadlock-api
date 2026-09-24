@@ -209,7 +209,9 @@ function useAudioPlayer(url: string | null) {
   const [duration, setDuration] = useState(0);
   // The saved level loads after hydration: read during the first render, it differed from the server's default.
   const [level, saveLevel] = useStoredState<number>("deadlockdle:sound-volume", () => DEFAULT_VOLUME, {
-    accept: (saved) => typeof saved === "number" && saved >= 0 && saved <= 1,
+    // A saved 0 is an old mute (Mute used to store it): the next visit then played every clip in silence, and the
+    // play button collected rage clicks. Mute is no longer saved, so a 0 starts over at the default.
+    accept: (saved) => typeof saved === "number" && saved > 0 && saved <= 1,
   });
   // Muting keeps the level, so unmuting returns to it instead of to the default.
   const [muted, setMuted] = useState(false);
