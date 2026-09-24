@@ -10,7 +10,7 @@ import { formatDateRange } from "~/components/domain/filters/utils";
 import { CounterMatrix } from "~/components/features/team-builder/CounterMatrix";
 import { DetailDialog } from "~/components/features/team-builder/DetailDialog";
 import { DraftBoard } from "~/components/features/team-builder/DraftBoard";
-import { HeroPickerDialog, type PickerTarget } from "~/components/features/team-builder/HeroPickerDialog";
+import { HeroPicker, type PickerTarget } from "~/components/features/team-builder/HeroPicker";
 import { LaneCards } from "~/components/features/team-builder/LaneCards";
 import { MatchImportControl } from "~/components/features/team-builder/MatchImportControl";
 import { NextPickPanel } from "~/components/features/team-builder/NextPickPanel";
@@ -494,7 +494,7 @@ function TeamBuilderPage() {
         </>
       )}
 
-      <HeroPickerDialog
+      <HeroPicker
         target={pickerTarget}
         draft={draft}
         index={index}

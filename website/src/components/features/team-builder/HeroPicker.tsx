@@ -1,22 +1,19 @@
-import { XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { HeroGrid, HeroGridSearch, HeroGridTile } from "~/components/domain/selectors/HeroGrid";
 import { useHeroPicker } from "~/components/domain/selectors/useHeroPicker";
-import { PanelFooter } from "~/components/patterns/panel/Panel";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import { DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { Field } from "~/components/ui/field";
+import { Popover, PopoverAnchor, PopoverContent } from "~/components/ui/popover";
+import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
 import type { Draft, Recommendation, Side, StatsIndex } from "~/lib/team-builder/analysis";
 import { recommendPicks } from "~/lib/team-builder/analysis";
 import { formatRate } from "~/lib/team-builder/format";
 import { slotLane, TEAM_NAMES } from "~/lib/team-builder/lanes";
+import { cn } from "~/lib/utils";
 import type { SlimHero } from "~/queries/asset-queries";
 
-import { DetailDialog } from "./DetailDialog";
 import { draftSlotKey } from "./DraftSlot";
 import { Points } from "./Points";
 
@@ -45,7 +42,7 @@ export interface PickerTarget {
   slot: number;
 }
 
-interface HeroPickerDialogProps {
+interface HeroPickerProps {
   target: PickerTarget | null;
   draft: Draft;
   index: StatsIndex;
@@ -55,12 +52,57 @@ interface HeroPickerDialogProps {
   onClose: () => void;
 }
 
-export function HeroPickerDialog({ target, onClose, ...rest }: HeroPickerDialogProps) {
+const slotElement = (target: PickerTarget) =>
+  document.querySelector<HTMLElement>(`[data-draft-slot="${draftSlotKey(target)}"]`);
+
+/**
+ * The Team Builder's hero select: a popover on the slot being filled, like every other hero select, whose trigger is
+ * the slot's portrait. After a pick the page moves `target` to the next empty slot and the popover follows it there
+ * without closing: a dialog that remounted per slot flashed shut and open between picks.
+ */
+export function HeroPicker({ target, onClose, ...rest }: HeroPickerProps) {
+  // The anchor is whichever slot is being filled, measured when the popover positions itself.
+  const anchor = useMemo(
+    () => ({
+      current: {
+        getBoundingClientRect: () =>
+          (target ? slotElement(target)?.getBoundingClientRect() : undefined) ?? new DOMRect(),
+      },
+    }),
+    [target],
+  );
   return (
-    <DetailDialog value={target} onClose={onClose}>
-      {/* Remounting per target is what resets the search box and cursor — no effect needed. */}
-      {(open) => <PickerBody key={`${open.side}-${open.slot}`} target={open} {...rest} />}
-    </DetailDialog>
+    <Popover
+      open={target !== null}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <PopoverAnchor virtualRef={anchor} />
+      {target && (
+        <PopoverContent
+          // The popover points at the slot it fills; the slot's team and lane are in its name for a screen reader.
+          aria-label={`Pick a hero for ${TEAM_NAMES[target.side]}, ${slotLane(rest.draft.gameMode, target.slot)?.name ?? `slot ${target.slot + 1}`}`}
+          align="center"
+          collisionPadding={8}
+          className="flex max-h-(--radix-popover-content-available-height) w-80 max-w-(--radix-popover-content-available-width) flex-col p-0"
+          // Pressing another slot moves the picker there (the slot's own click retargets it) instead of closing it.
+          onInteractOutside={(event) => {
+            if (event.target instanceof Element && event.target.closest("[data-draft-slot]")) event.preventDefault();
+          }}
+          // A pick fills the slot, swapping its empty button for the hero's portrait; the focus goes to that portrait,
+          // rather than to the page with the button that is gone.
+          onCloseAutoFocus={(event) => {
+            const slot = slotElement(target);
+            if (!slot) return;
+            event.preventDefault();
+            slot.focus();
+          }}
+        >
+          <PickerBody target={target} {...rest} />
+        </PopoverContent>
+      )}
+    </Popover>
   );
 }
 
@@ -70,7 +112,7 @@ function PickerBody({
   index,
   heroes,
   onSelect,
-}: Omit<HeroPickerDialogProps, "target" | "onClose"> & { target: PickerTarget }) {
+}: Omit<HeroPickerProps, "target" | "onClose"> & { target: PickerTarget }) {
   const [sort, setSort] = useState<SortKey>("score");
 
   const recommendations = useMemo(
@@ -116,14 +158,15 @@ function PickerBody({
     heroes: roster,
     value: null,
     onValueChange: (heroId) => {
-      if (heroId !== null) onSelect(heroId);
+      if (heroId === null) return;
+      // The next slot starts from the whole roster.
+      picker.setSearch("");
+      onSelect(heroId);
     },
     disabledHeroIds: new Set(takenBy.keys()),
     // With nothing typed, the first tile is the best-ranked pick, so Enter takes it as the old list's cursor did.
     enterPicks: "always",
   });
-
-  const lane = slotLane(draft.gameMode, target.slot);
 
   // A sort whose every hero is n/a (no ally drafted yet, or no enemy) sorts nothing; it comes back with the first hero
   // it can be measured against.
@@ -132,50 +175,12 @@ function PickerBody({
   const activeSort = (sort === "synergy" && !showSynergy) || (sort === "counter" && !showCounter) ? "score" : sort;
 
   return (
-    <DialogContent
-      size="lg"
-      className="flex max-h-4/5 flex-col gap-0 p-0"
-      showCloseButton={false}
-      // A pick fills the slot, which swaps the empty slot's button that opened the picker for the hero's portrait;
-      // the focus goes to that portrait, rather than to the page with the button that is gone.
-      onCloseAutoFocus={(event) => {
-        const slot = document.querySelector<HTMLElement>(`[data-draft-slot="${draftSlotKey(target)}"]`);
-        if (!slot) return;
-        event.preventDefault();
-        slot.focus();
-      }}
-    >
-      {/* The close button sits in the header row rather than the dialog's corner, where it covered the badge. */}
-      {/* On a phone the search box takes a row of its own under the badge, rather than shrinking to a sliver. */}
-      <DialogHeader className="flex-row flex-wrap items-center gap-2.5 p-3.5">
-        <DialogTitle className="sr-only">Pick a hero</DialogTitle>
-        <DialogDescription className="sr-only">
-          Search the roster; every hero shows what it would add to the current draft. Enter picks the first hero, the
-          arrow keys move through the grid.
-        </DialogDescription>
-        <HeroGridSearch
-          picker={picker}
-          variant="ghost"
-          className="order-last basis-full @sm:order-none @sm:flex-1 @sm:basis-0"
-        />
-        {/* Grows on a phone, where it shares the first row with the close button alone. */}
-        <div className="flex-1 text-start @sm:flex-none">
-          <Badge variant="outline" className="text-2xs text-muted-foreground">
-            {TEAM_NAMES[target.side]} · {lane ? lane.name : `Slot ${target.slot + 1}`}
-          </Badge>
-        </div>
-        <DialogClose asChild>
-          <Button variant="ghost" size="icon-sm" aria-label="Close">
-            <XIcon />
-          </Button>
-        </DialogClose>
-      </DialogHeader>
-      <Separator />
-
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2 @sm:px-4">
-        {/* On a phone the four sorts share the row and wrap, rather than running off the dialog's edge. */}
-        <Field label="Sort by" orientation="horizontal" className="min-w-0 flex-1 @md:flex-none">
-          <Segmented size="sm" value={activeSort} onValueChange={setSort} className="@md:w-fit">
+    <>
+      {/* The search box first, like every hero select: it is where the focus lands, so typing and Enter pick. */}
+      <div className="flex flex-col gap-2 p-2">
+        <HeroGridSearch picker={picker} />
+        <Field label="Sort" orientation="horizontal">
+          <Segmented size="sm" value={activeSort} onValueChange={setSort}>
             <SegmentedItem value="score">{SORT_LABEL.score}</SegmentedItem>
             {showSynergy && <SegmentedItem value="synergy">{SORT_LABEL.synergy}</SegmentedItem>}
             {showCounter && <SegmentedItem value="counter">{SORT_LABEL.counter}</SegmentedItem>}
@@ -184,8 +189,7 @@ function PickerBody({
         </Field>
       </div>
       <Separator />
-
-      <div className="min-h-0 flex-1 overflow-y-auto p-2 @sm:p-3">
+      <div className={cn(SCROLLBAR_THIN, "min-h-0 flex-1 overflow-y-auto p-2")}>
         <HeroGrid picker={picker} aria-label="Heroes">
           {picker.matches.map((hero) => {
             const row = byId.get(hero.id);
@@ -202,12 +206,8 @@ function PickerBody({
           })}
         </HeroGrid>
       </div>
-
-      <PanelFooter className="flex justify-between gap-2 px-3 py-2.5 text-2xs @sm:px-4">
-        {/* Only where there is a keyboard to speak of: on a touch screen the hint names keys nobody has. */}
-        <span className="hidden pointer-fine:inline">Enter picks the first hero, arrow keys move</span>
-        <span>Numbers are against the heroes already drafted</span>
-      </PanelFooter>
-    </DialogContent>
+      <Separator />
+      <p className="px-3 py-2 text-2xs text-muted-foreground">Numbers are against the heroes already drafted.</p>
+    </>
   );
 }
