@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useLocation, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 
 import { BoxWidget } from "~/components/features/streamkit/widgets/box";
@@ -7,55 +7,16 @@ import { RawWidget } from "~/components/features/streamkit/widgets/raw";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { API_ORIGIN } from "~/lib/constants";
 import { splitWidgetList, withoutEmptyVariables } from "~/lib/streamkit-list";
+import { readWidgetFlag, readWidgetInt, readWidgetSearch } from "~/lib/streamkit-widget-search";
 import { snakeToPretty } from "~/lib/utils";
 import { queryKeys } from "~/queries/query-keys";
 import type { Color } from "~/types/general";
 import type { Region, Theme } from "~/types/streamkit/widget";
 
-type WidgetSearch = {
-  vars?: string;
-  labels?: string;
-  subtexts?: string;
-  theme?: string;
-  variable?: string;
-  prefix?: string;
-  suffix?: string;
-  fontColor?: string;
-  showHeader?: boolean;
-  showBranding?: boolean;
-  showOutline?: boolean;
-  showMatchHistory?: boolean;
-  matchHistoryShowsToday?: boolean;
-  numMatches?: number;
-  opacity?: number;
-};
-
-const BOOL_KEYS = new Set(["showHeader", "showBranding", "showOutline", "showMatchHistory", "matchHistoryShowsToday"]);
-const NUM_KEYS = new Set(["numMatches", "opacity"]);
-
-// The router's default search parser coerces "false"->false and "10"->10, so values reach the route
-// already typed. Normalize each flag explicitly here and let the component apply defaults, instead of
-// comparing against string literals (which never matched the coerced booleans).
+// Only these are known; anything else in the URL is not a theme, and the overlay on stream must not crash on it.
 const THEMES: readonly Theme[] = ["dark", "glass", "light"];
 
-function validateWidgetSearch(search: Record<string, unknown>): WidgetSearch {
-  const out: Record<string, string | number | boolean> = {};
-  for (const [key, value] of Object.entries(search)) {
-    if (value === undefined || value === null) continue;
-    if (BOOL_KEYS.has(key)) {
-      out[key] = value !== false && value !== "false";
-    } else if (NUM_KEYS.has(key)) {
-      const parsed = typeof value === "number" ? value : Number.parseInt(String(value), 10);
-      if (!Number.isNaN(parsed)) out[key] = parsed;
-    } else {
-      out[key] = String(value);
-    }
-  }
-  return out as WidgetSearch;
-}
-
 export const Route = createFileRoute("/streamkit/widgets/$region/$accountId/$widgetType")({
-  validateSearch: validateWidgetSearch,
   head: () => ({
     meta: [
       { title: "Deadlock Stats Widget" },
@@ -68,7 +29,11 @@ export const Route = createFileRoute("/streamkit/widgets/$region/$accountId/$wid
 
 function Widget() {
   const { region, accountId, widgetType } = Route.useParams();
-  const search = Route.useSearch();
+  const router = useRouter();
+  // The raw query string, not the router's parsed search: its JSON parsing mangles prefixes, suffixes and labels
+  // ("1.50 " became 1.5). The route has no validateSearch, so the router also leaves the URL as it was written.
+  const rawSearch = useLocation({ select: () => router.history.location.search });
+  const search = readWidgetSearch(rawSearch);
   const initialVersionRef = useRef<number | null>(null);
 
   const { data: fetchedVersion, error: versionError } = useQuery<number>({
@@ -124,13 +89,13 @@ function Widget() {
       const subtexts = columns?.subtexts;
       // An edited URL ("?theme=Dark") must not crash the overlay on stream: unknown themes fall back to dark.
       const theme: Theme = THEMES.includes(search.theme as Theme) ? (search.theme as Theme) : "dark";
-      const showHeader = search.showHeader ?? true;
-      const showBranding = search.showBranding ?? true;
-      const showOutline = search.showOutline ?? true;
-      const showMatchHistory = search.showMatchHistory ?? true;
-      const matchHistoryShowsToday = search.matchHistoryShowsToday ?? true;
-      const numMatches = Math.max(1, Math.min(20, search.numMatches ?? 10));
-      const opacity = Math.max(0, Math.min(100, search.opacity ?? 100));
+      const showHeader = readWidgetFlag(search.showHeader, true);
+      const showBranding = readWidgetFlag(search.showBranding, true);
+      const showOutline = readWidgetFlag(search.showOutline, true);
+      const showMatchHistory = readWidgetFlag(search.showMatchHistory, true);
+      const matchHistoryShowsToday = readWidgetFlag(search.matchHistoryShowsToday, true);
+      const numMatches = readWidgetInt(search.numMatches, 10, 1, 20);
+      const opacity = readWidgetInt(search.opacity, 100, 0, 100);
       const reserved = new Set([
         "vars",
         "labels",
@@ -144,9 +109,7 @@ function Widget() {
         "showMatchHistory",
         "opacity",
       ]);
-      const extraArgs = Object.fromEntries(
-        Object.entries(search).filter(([key, value]) => !reserved.has(key) && typeof value === "string"),
-      ) as Record<string, string>;
+      const extraArgs = Object.fromEntries(Object.entries(search).filter(([key]) => !reserved.has(key)));
 
       return (
         <BoxWidget
@@ -174,9 +137,7 @@ function Widget() {
       const fontColor = (search.fontColor as Color) ?? "#FFFFFF";
       // Display settings of the widget itself; everything else is an argument of the variable.
       const reserved = new Set(["variable", "fontColor", "prefix", "suffix"]);
-      const extraArgs = Object.fromEntries(
-        Object.entries(search).filter(([key, value]) => !reserved.has(key) && typeof value === "string"),
-      ) as Record<string, string>;
+      const extraArgs = Object.fromEntries(Object.entries(search).filter(([key]) => !reserved.has(key)));
       if (!variable) return <div className="text-red-500">Variable is required</div>;
       return (
         <RawWidget
