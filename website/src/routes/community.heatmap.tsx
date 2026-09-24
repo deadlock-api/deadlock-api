@@ -1,4 +1,4 @@
-import { useQueries } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { AnalyticsApiKillDeathStatsRequest } from "deadlock_api_client";
 import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
@@ -16,6 +16,7 @@ import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { combineQueryStates } from "~/components/patterns/states/QueryRenderer";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
@@ -82,9 +83,10 @@ function HeatmapPage() {
     maxGameTimeS: maxGameTime < 3600 ? maxGameTime : undefined,
   };
 
-  const [mapQuery, killDeathQuery] = useQueries({
-    queries: [mapQueryOptions, killDeathStatsQueryOptions(requestParams)],
-  });
+  const mapQuery = useQuery(mapQueryOptions);
+  // A filter change keeps the old map, dimmed, until the new positions arrive, instead of blanking the page.
+  // `useQuery`, not `useQueries`: the latter starts a new observer for the new key, which has no previous data.
+  const killDeathQuery = useQuery({ ...killDeathStatsQueryOptions(requestParams), placeholderData: keepPreviousData });
 
   const { isPending, isError, error } = combineQueryStates(mapQuery, killDeathQuery);
 
@@ -162,27 +164,29 @@ function HeatmapPage() {
             description="Kill positions cover matches from the last two months only. Try a more recent date range or wider filters."
           />
         ) : mapQuery.data && killDeathQuery.data ? (
-          is3D ? (
-            <ChunkErrorBoundary>
-              <Suspense fallback={<LoadingState label="3D heatmap" />}>
-                <Heatmap3D
-                  data={killDeathQuery.data}
-                  mapData={mapQuery.data}
-                  viewMode={viewMode}
-                  sensitivity={sensitivity / 10000}
-                  onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
-                />
-              </Suspense>
-            </ChunkErrorBoundary>
-          ) : (
-            <HeatmapCanvas
-              data={killDeathQuery.data}
-              mapData={mapQuery.data}
-              viewMode={viewMode}
-              sensitivity={sensitivity / 10000}
-              onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
-            />
-          )
+          <StaleOverlay active={killDeathQuery.isPlaceholderData} label="heatmap" className="size-full">
+            {is3D ? (
+              <ChunkErrorBoundary>
+                <Suspense fallback={<LoadingState label="3D heatmap" />}>
+                  <Heatmap3D
+                    data={killDeathQuery.data}
+                    mapData={mapQuery.data}
+                    viewMode={viewMode}
+                    sensitivity={sensitivity / 10000}
+                    onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
+                  />
+                </Suspense>
+              </ChunkErrorBoundary>
+            ) : (
+              <HeatmapCanvas
+                data={killDeathQuery.data}
+                mapData={mapQuery.data}
+                viewMode={viewMode}
+                sensitivity={sensitivity / 10000}
+                onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
+              />
+            )}
+          </StaleOverlay>
         ) : null}
       </div>
     </PageShell>
