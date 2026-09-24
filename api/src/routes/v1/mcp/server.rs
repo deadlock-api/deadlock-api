@@ -22,8 +22,10 @@ Read-only SQL access to hourly parquet snapshots of the Deadlock API database (h
 - Engine: DuckDB (DuckDB SQL dialect). The database is attached read-only: CREATE, INSERT, UPDATE, DELETE, DROP, SET and extension loading fail.
 - Results are capped at 1,024 rows and 50 KB per query; queries time out after 300 seconds.
 - Column comments carry the original ClickHouse type. Table comments say how the table is exported.
-- `match_player` holds hundreds of gigabytes: always filter on `match_id` / `account_id` / `start_time`, select only needed columns and use LIMIT. It is exported incrementally, so up to ~2% of rows can appear twice with different `created_at`; when it matters keep the newest `created_at` per (`match_id`, `account_id`).
-- Schema exploration: `SHOW TABLES`, `DESCRIBE match_player`, `SUMMARIZE heroes`, `duckdb_columns()`.
+- Only read queries run: SELECT, WITH, FROM, DESCRIBE, SHOW, SUMMARIZE.
+- `match_player` holds hundreds of gigabytes in parquet files split by `match_id` range. Filters on `match_id` or `start_time` skip whole files and are fast; a filter on `account_id` alone has to scan everything and is slow, so combine it with a `start_time` range. Select only needed columns and use LIMIT.
+- `match_player` is exported incrementally, so up to ~2% of rows can appear twice with different `created_at`. `match_player_latest` keeps only the newest row per (`match_id`, `account_id`); prefer it when counts matter.
+- Schema exploration: `SHOW TABLES`, `DESCRIBE match_player`, `SUMMARIZE match_salts`, `duckdb_columns()`.
 - DuckDB extras: `SELECT * EXCLUDE (col)`, `GROUP BY ALL`, `QUALIFY`, `arg_max(x, y)`, list/struct literals, `strftime`/`date_trunc`.";
 
 pub(super) struct McpServer {
@@ -282,6 +284,7 @@ fn describe_query_error(error: &QueryError) -> (String, String) {
             QueryError::NotReady => "NotReadyError",
             QueryError::Timeout => "TimeoutError",
             QueryError::Cancelled => "CancelledError",
+            QueryError::NotReadOnly => "PermissionError",
             QueryError::DuckDb(_) => "DuckDBError",
         };
         return (error.to_string(), error_type.to_owned());

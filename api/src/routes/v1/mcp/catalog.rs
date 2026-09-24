@@ -40,6 +40,8 @@ pub enum CatalogError {
     Join(#[from] tokio::task::JoinError),
     #[error("The data lake manifest lists no ready table")]
     Empty,
+    #[error("The data lake manifest has no DuckLake catalog")]
+    NoCatalog,
     #[error("Catalog mismatch: built {built:?}, expected {expected:?}")]
     Mismatch {
         built: Vec<String>,
@@ -55,6 +57,8 @@ pub(crate) enum QueryError {
     Timeout,
     #[error("Query execution was cancelled")]
     Cancelled,
+    #[error("Only read queries are allowed: SELECT, WITH, FROM, DESCRIBE, SHOW or SUMMARIZE")]
+    NotReadOnly,
     #[error(transparent)]
     DuckDb(#[from] duckdb::Error),
 }
@@ -71,7 +75,8 @@ pub(crate) struct TableInfo {
     pub(crate) columns: Vec<ColumnInfo>,
 }
 
-/// A read-only `DuckDB` database of views over one version of the parquet dump.
+/// A read-only `DuckDB` database of views over one version of the data lake's `DuckLake`
+/// catalog.
 pub(crate) struct Snapshot {
     /// `Connection` is `!Sync`; queries clone their own connection under the lock.
     conn: Mutex<Connection>,
@@ -101,8 +106,10 @@ pub(crate) struct QueryOutput {
 
 /// `DuckDB` views over the public data lake, rebuilt whenever its manifest changes.
 ///
-/// Each rebuild writes a fresh database file of views (like `catalog.py` did) and reopens
-/// it read-only, so user queries cannot create or modify anything.
+/// Each rebuild downloads the lake's `DuckLake` catalog, attaches it as `lake` and writes a
+/// fresh database file of annotated views over its tables, then reopens that read-only, so
+/// user queries cannot create or modify anything. The catalog's per-file column statistics
+/// let `DuckDB` skip every parquet file a `match_id` or `start_time` filter excludes.
 pub(crate) struct SnapshotCatalog {
     http: reqwest::Client,
     manifest_url: String,
@@ -166,9 +173,7 @@ impl SnapshotCatalog {
             interrupt.interrupt();
             return Err(QueryError::Timeout);
         };
-        joined
-            .map_err(|_| QueryError::Cancelled)?
-            .map_err(QueryError::DuckDb)
+        joined.map_err(|_| QueryError::Cancelled)?
     }
 
     /// Rebuilds the catalog if the lake's manifest changed. Returns whether a rebuild happened.
@@ -187,16 +192,33 @@ impl SnapshotCatalog {
         {
             return Ok(false);
         }
-        let snapshot = self.build(&manifest).await?;
+        let catalog = manifest.catalog.as_deref().ok_or(CatalogError::NoCatalog)?;
+        let lake = self
+            .http
+            .get(manifest.url(catalog))
+            .send()
+            .await?
+            .error_for_status()?
+            .bytes()
+            .await?;
+        let snapshot = self.build(&manifest, lake).await?;
         self.snapshot.store(Some(Arc::new(snapshot)));
         Ok(true)
     }
 
-    async fn build(&self, manifest: &Manifest) -> Result<Snapshot, CatalogError> {
-        let tables: BTreeMap<String, LakeTable> = manifest
+    async fn build(
+        &self,
+        manifest: &Manifest,
+        lake: bytes::Bytes,
+    ) -> Result<Snapshot, CatalogError> {
+        let tables: BTreeMap<String, TableMeta> = manifest
             .tables
             .iter()
-            .filter(|(name, t)| t.status == TableStatus::Ready && IDENT.is_match(name))
+            .filter(|(name, t)| {
+                t.status == TableStatus::Ready
+                    && IDENT.is_match(name)
+                    && !t.published_files().is_empty()
+            })
             .map(|(name, t)| {
                 let files = t.published_files();
                 let export = match t.policy {
@@ -204,8 +226,7 @@ impl SnapshotCatalog {
                         a row can appear twice with different `created_at`, the newest wins)",
                     PolicyKind::Snapshot => "hourly full snapshot",
                 };
-                let table = LakeTable {
-                    urls: files.iter().map(|f| manifest.url(&f.key)).collect(),
+                let table = TableMeta {
                     comment: format!(
                         "ClickHouse table default.{name}, {export}; {} parquet file(s), manifest v{}",
                         files.len(),
@@ -226,7 +247,6 @@ impl SnapshotCatalog {
                 };
                 (name.clone(), table)
             })
-            .filter(|(_, t)| !t.urls.is_empty())
             .collect();
         if tables.is_empty() {
             return Err(CatalogError::Empty);
@@ -240,13 +260,15 @@ impl SnapshotCatalog {
         let dir = self.work_dir.join(uuid::Uuid::new_v4().to_string());
         let db = Database {
             path: dir.join(format!("{DATABASE}.duckdb")),
+            lake_path: dir.join("lake").join("catalog.ducklake"),
             work_dir: self.work_dir.clone(),
             data_url: format!("{}/", manifest.public_url.trim_end_matches('/')),
         };
         let (conn, tables) = tokio::task::spawn_blocking({
             let dir = dir.clone();
             move || -> Result<_, CatalogError> {
-                std::fs::create_dir_all(&dir)?;
+                std::fs::create_dir_all(dir.join("lake"))?;
+                std::fs::write(&db.lake_path, &lake)?;
                 let tables = build_database(&db, &tables)?;
                 let conn = db.open(AccessMode::ReadOnly)?;
                 Ok((conn, tables))
@@ -262,15 +284,17 @@ impl SnapshotCatalog {
     }
 }
 
-/// One published table: its parquet URLs and the metadata the views are annotated with.
-struct LakeTable {
-    urls: Vec<String>,
+/// What the view of one published table is annotated with.
+#[derive(Clone)]
+struct TableMeta {
     comment: String,
     column_types: HashMap<String, String>,
 }
 
 struct Database {
     path: PathBuf,
+    /// The downloaded `DuckLake` catalog, attached as `lake` on every open.
+    lake_path: PathBuf,
     work_dir: PathBuf,
     data_url: String,
 }
@@ -280,9 +304,10 @@ impl Database {
         self.work_dir.join(name).to_string_lossy().into_owned()
     }
 
-    /// Opens the database with the resource limits. Read-only opens are additionally locked
-    /// down: the only file system access left is the lake's URL prefix plus `DuckDB`'s own
-    /// temp and secret directories, and no setting can be changed afterwards.
+    /// Opens the database with the resource limits and the `DuckLake` catalog attached as
+    /// `lake`. Read-only opens are additionally locked down: the only file system access
+    /// left is the lake's URL prefix, the catalog plus `DuckDB`'s own temp and secret
+    /// directories, and no setting can be changed afterwards.
     fn open(&self, access_mode: AccessMode) -> Result<Connection, CatalogError> {
         let read_only = matches!(access_mode, AccessMode::ReadOnly);
         let config = Config::default()
@@ -295,11 +320,12 @@ impl Database {
             .with("max_temp_directory_size", MAX_TEMP_DIRECTORY_SIZE)?;
         let conn = Connection::open_with_flags(&self.path, config)?;
         if !read_only {
-            conn.execute_batch("INSTALL httpfs; INSTALL icu;")?;
+            conn.execute_batch("INSTALL httpfs; INSTALL icu; INSTALL ducklake;")?;
         }
         conn.execute_batch(
             "LOAD httpfs;
              LOAD icu;
+             LOAD ducklake;
              SET autoinstall_known_extensions = false;
              SET autoload_known_extensions = false;
              SET http_retries = 5;
@@ -307,13 +333,23 @@ impl Database {
              SET http_retry_backoff = 2;
              SET parquet_metadata_cache = true;",
         )?;
+        conn.execute_batch(&format!(
+            "ATTACH {} AS lake (READ_ONLY);",
+            sql_str(&format!("ducklake:{}", self.lake_path.to_string_lossy()))
+        ))?;
         if read_only {
+            let lake_dir = self
+                .lake_path
+                .parent()
+                .map(|p| format!("{}/", p.to_string_lossy()))
+                .unwrap_or_default();
             conn.execute_batch(&format!(
-                "SET allowed_directories = [{}, {}, {}];
+                "SET allowed_directories = [{}, {}, {}, {}];
                  SET enable_external_access = false;
                  SET lock_configuration = true;",
                 sql_str(&format!("{}/", self.dir("tmp"))),
                 sql_str(&format!("{}/", self.dir("secrets"))),
+                sql_str(&lake_dir),
                 sql_str(&self.data_url),
             ))?;
         }
@@ -329,38 +365,39 @@ fn sql_ident(s: &str) -> String {
     format!("\"{}\"", s.replace('"', "\"\""))
 }
 
-/// Writes a database of views over the parquet files, with table and column comments,
-/// and returns the catalog metadata `list_tables`/`list_columns` serve.
+/// Writes a database of views over the tables and views of the attached `DuckLake` catalog,
+/// annotated with the manifest's table and column comments, and returns the catalog metadata
+/// `list_tables`/`list_columns` serve.
 fn build_database(
     db: &Database,
-    lake: &BTreeMap<String, LakeTable>,
+    manifest_tables: &BTreeMap<String, TableMeta>,
 ) -> Result<BTreeMap<String, TableInfo>, CatalogError> {
     let conn = db.open(AccessMode::ReadWrite)?;
-    for (name, table) in lake {
-        let list = table
-            .urls
-            .iter()
-            .map(|u| sql_str(u))
-            .collect::<Vec<_>>()
-            .join(", ");
-        let options = if table.urls.len() > 1 {
-            ", union_by_name => true"
-        } else {
-            ""
+    let lake: Vec<String> = conn
+        .prepare(
+            "SELECT table_name FROM duckdb_tables() WHERE database_name = 'lake'
+             UNION ALL
+             SELECT view_name FROM duckdb_views() WHERE database_name = 'lake' AND NOT internal
+             ORDER BY 1",
+        )?
+        .query_map([], |row| row.get(0))?
+        .collect::<Result<_, _>>()?;
+    let mut expected = Vec::new();
+    for name in lake.iter().filter(|n| IDENT.is_match(n)) {
+        let Some(meta) = table_meta(manifest_tables, name) else {
+            continue;
         };
         let view = sql_ident(name);
-        conn.execute_batch(&format!(
-            "CREATE VIEW {view} AS SELECT * FROM read_parquet([{list}]{options})"
-        ))?;
+        conn.execute_batch(&format!("CREATE VIEW {view} AS SELECT * FROM lake.{view}"))?;
         conn.execute_batch(&format!(
             "COMMENT ON VIEW {view} IS {}",
-            sql_str(&table.comment)
+            sql_str(&meta.comment)
         ))?;
         let mut describe = conn.prepare(&format!("DESCRIBE {view}"))?;
         let view_columns: Vec<String> = describe
             .query_map([], |row| row.get(0))?
             .collect::<Result<_, _>>()?;
-        for (column, ch_type) in &table.column_types {
+        for (column, ch_type) in &meta.column_types {
             if view_columns.contains(column) {
                 conn.execute_batch(&format!(
                     "COMMENT ON COLUMN {view}.{} IS {}",
@@ -369,10 +406,14 @@ fn build_database(
                 ))?;
             }
         }
+        expected.push(name.clone());
     }
 
     let mut tables: BTreeMap<String, TableInfo> = conn
-        .prepare("SELECT view_name, comment FROM duckdb_views() WHERE NOT internal")?
+        .prepare(&format!(
+            "SELECT view_name, comment FROM duckdb_views() WHERE database_name = {}",
+            sql_str(DATABASE)
+        ))?
         .query_map([], |row| {
             Ok((
                 row.get::<_, String>(0)?,
@@ -383,10 +424,11 @@ fn build_database(
             ))
         })?
         .collect::<Result<_, _>>()?;
-    let mut columns = conn.prepare(
+    let mut columns = conn.prepare(&format!(
         "SELECT table_name, column_name, data_type, is_nullable, comment
-         FROM duckdb_columns() WHERE NOT internal ORDER BY table_name, column_index",
-    )?;
+         FROM duckdb_columns() WHERE database_name = {} ORDER BY table_name, column_index",
+        sql_str(DATABASE)
+    ))?;
     for row in columns.query_map([], |row| {
         Ok((
             row.get::<_, String>(0)?,
@@ -404,8 +446,7 @@ fn build_database(
         }
     }
     let built: Vec<String> = tables.keys().cloned().collect();
-    let expected: Vec<String> = lake.keys().cloned().collect();
-    if built != expected || tables.values().any(|t| t.columns.is_empty()) {
+    if expected.is_empty() || built != expected || tables.values().any(|t| t.columns.is_empty()) {
         return Err(CatalogError::Mismatch { built, expected });
     }
     drop(columns);
@@ -413,7 +454,41 @@ fn build_database(
     Ok(tables)
 }
 
-pub(crate) fn run_query(conn: &Connection, sql: &str) -> duckdb::Result<QueryOutput> {
+/// Annotations for a relation of the catalog: a published table, or the `<table>_latest`
+/// view the catalog adds over an incremental table. `None` for anything else.
+fn table_meta(manifest_tables: &BTreeMap<String, TableMeta>, name: &str) -> Option<TableMeta> {
+    if let Some(meta) = manifest_tables.get(name) {
+        return Some(meta.clone());
+    }
+    let base = name.strip_suffix("_latest")?;
+    let meta = manifest_tables.get(base)?;
+    Some(TableMeta {
+        comment: format!(
+            "`{base}` with duplicates resolved: only the newest `created_at` row per \
+             (`match_id`, `account_id`) is kept. Filters on `match_id`, `account_id` and \
+             `start_time` are pushed below the deduplication."
+        ),
+        column_types: meta.column_types.clone(),
+    })
+}
+
+/// Whether every statement of `sql` only reads. `DuckDB`'s own parser decides: it
+/// serializes SELECT statements (which DESCRIBE, SHOW and SUMMARIZE are) and nothing else.
+/// Syntax errors pass, so preparing the query reports them. The read-only database already
+/// rejects writes; this keeps a query from detaching the catalog for everyone else.
+fn is_read_only(conn: &Connection, sql: &str) -> duckdb::Result<bool> {
+    let error_type: Option<String> = conn.query_row(
+        "SELECT json_extract_string(json_serialize_sql(?::VARCHAR), '$.error_type')",
+        [sql],
+        |row| row.get(0),
+    )?;
+    Ok(error_type.as_deref() != Some("not implemented"))
+}
+
+pub(crate) fn run_query(conn: &Connection, sql: &str) -> Result<QueryOutput, QueryError> {
+    if !is_read_only(conn, sql)? {
+        return Err(QueryError::NotReadOnly);
+    }
     let mut stmt = conn.prepare(sql)?;
     let mut batches = Vec::new();
     let mut remaining = MAX_ROWS;
@@ -438,18 +513,65 @@ pub(crate) fn run_query(conn: &Connection, sql: &str) -> duckdb::Result<QueryOut
 mod tests {
     use super::*;
 
-    #[test]
-    fn read_only_database_rejects_writes_and_settings() {
+    /// A database whose `DuckLake` catalog holds table `t` (data under `data/`) and view
+    /// `t_latest`, the way the data dump publishes them.
+    fn test_database() -> (Database, PathBuf) {
         let work_dir =
             std::env::temp_dir().join(format!("deadlock-mcp-test-{}", uuid::Uuid::new_v4()));
-        std::fs::create_dir_all(&work_dir).unwrap();
+        let data_dir = work_dir.join("data");
+        std::fs::create_dir_all(work_dir.join("lake")).unwrap();
         let db = Database {
             path: work_dir.join("deadlock.duckdb"),
+            lake_path: work_dir.join("lake").join("catalog.ducklake"),
             work_dir: work_dir.clone(),
-            data_url: "https://s3-cache.deadlock-api.com/db-snapshot/public/".to_owned(),
+            data_url: format!("{}/", data_dir.to_string_lossy()),
         };
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(&format!(
+            "INSTALL ducklake; LOAD ducklake;
+             ATTACH {} AS l (DATA_PATH {});
+             CREATE TABLE l.t AS SELECT 1 AS match_id, 2 AS account_id;
+             CREATE VIEW l.t_latest AS SELECT * FROM l.t;
+             DETACH l;",
+            sql_str(&format!("ducklake:{}", db.lake_path.to_string_lossy())),
+            sql_str(&db.data_url),
+        ))
+        .unwrap();
+        (db, work_dir)
+    }
+
+    #[test]
+    fn views_cover_the_catalog_tables_and_latest_views() {
+        let (db, work_dir) = test_database();
+        let meta = TableMeta {
+            comment: "table t".to_owned(),
+            column_types: HashMap::from([(
+                "match_id".to_owned(),
+                "ClickHouse type: UInt64".to_owned(),
+            )]),
+        };
+        let tables = build_database(&db, &BTreeMap::from([("t".to_owned(), meta)])).unwrap();
+        assert_eq!(tables.keys().collect::<Vec<_>>(), ["t", "t_latest"]);
+        assert_eq!(tables["t"].comment, "table t");
+        assert!(tables["t_latest"].comment.contains("newest"));
+        assert_eq!(
+            tables["t_latest"].columns[0].comment.as_deref(),
+            Some("ClickHouse type: UInt64")
+        );
+
+        let ro = db.open(AccessMode::ReadOnly).unwrap();
+        let out = run_query(&ro, "SELECT * FROM t_latest").unwrap();
+        assert_eq!(out.batches[0].num_rows(), 1);
+        drop(ro);
+        std::fs::remove_dir_all(&work_dir).unwrap();
+    }
+
+    #[test]
+    fn read_only_database_rejects_writes_and_settings() {
+        let (db, work_dir) = test_database();
         let rw = db.open(AccessMode::ReadWrite).unwrap();
-        rw.execute_batch("CREATE VIEW v AS SELECT 1 AS a").unwrap();
+        rw.execute_batch("CREATE VIEW v AS SELECT * FROM lake.t")
+            .unwrap();
         rw.close().unwrap();
 
         let ro = db.open(AccessMode::ReadOnly).unwrap();
@@ -460,15 +582,41 @@ mod tests {
         for sql in [
             "CREATE TABLE foo (a INT)",
             "CREATE VIEW w AS SELECT 2",
+            "INSERT INTO lake.t VALUES (3, 4)",
             "SET memory_limit = '100GB'",
             "SET enable_external_access = true",
             "INSTALL json",
+            "DETACH lake",
+            "/* x */ DETACH lake",
+            "SELECT 1; DETACH lake",
+            "USE lake",
+            "PRAGMA version",
             "SELECT * FROM read_csv('/etc/passwd')",
             "SELECT * FROM read_text('/proc/self/environ')",
             "SELECT * FROM read_csv('https://s3-cache.deadlock-api.com/other-bucket/x.csv')",
         ] {
             assert!(run_query(&ro, sql).is_err(), "{sql} should be rejected");
         }
+        for sql in [
+            "DESCRIBE v",
+            "SHOW TABLES",
+            "SUMMARIZE v",
+            "FROM v",
+            "SELECT FROM WHERE",
+        ] {
+            assert!(
+                !matches!(run_query(&ro, sql), Err(QueryError::NotReadOnly)),
+                "{sql} should pass the read-only check"
+            );
+        }
+        assert_eq!(
+            run_query(&ro, "SELECT count(*) FROM lake.t")
+                .unwrap()
+                .batches[0]
+                .num_rows(),
+            1,
+            "the catalog must still be attached"
+        );
         drop(ro);
         std::fs::remove_dir_all(&work_dir).unwrap();
     }
