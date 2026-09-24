@@ -45,7 +45,9 @@ export function BreadcrumbLink({
       data-slot="breadcrumb-link"
       className={cn(
         FOCUS_RING,
-        "flex shrink-0 items-center gap-1 rounded-sm transition-colors hover:text-foreground [&_svg]:size-3.5",
+        // The 14px home icon and the 20px line are under 24px; the pseudo-element extends the hit area without
+        // moving the trail.
+        "relative flex shrink-0 items-center gap-1 rounded-sm transition-colors after:absolute after:-inset-1.25 hover:text-foreground [&_svg]:size-3.5",
         className,
       )}
       {...props}

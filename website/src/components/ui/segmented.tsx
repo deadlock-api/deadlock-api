@@ -18,9 +18,10 @@ const segmentedItemVariants = cva(
   {
     variants: {
       size: {
-        sm: "h-6 px-2 text-2xs",
-        default: "h-7 px-2.5 text-xs",
-        lg: "h-8 px-3 text-sm",
+        // At least square, so a one-character item such as "5" is still a 24px target.
+        sm: "h-6 min-w-6 px-2 text-2xs",
+        default: "h-7 min-w-7 px-2.5 text-xs",
+        lg: "h-8 min-w-8 px-3 text-sm",
       },
     },
     defaultVariants: { size: "default" },
