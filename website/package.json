@@ -79,7 +79,7 @@
     "@jridgewell/trace-mapping": "^0.3.31",
     "@playwright/test": "^1.63.0",
     "@types/hast": "^3.0.5",
-    "@types/node": "^25.9.6",
+    "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/three": "^0.186.0",
