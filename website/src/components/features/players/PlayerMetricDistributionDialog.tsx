@@ -65,13 +65,7 @@ export function PlayerMetricDistributionDialog({
 
             {values && curve.length >= 3 ? (
               <>
-                <DistributionChart
-                  label={`${metric.label} distribution`}
-                  curve={curve}
-                  values={values}
-                  fmt={fmt}
-                  height={440}
-                />
+                <DistributionChart label={metric.label} curve={curve} values={values} fmt={fmt} height={440} />
                 <Inline justify="center" gap={6} className="gap-y-1 text-xs">
                   <InlineStat label="Average" value={fmt(values.avg)} />
                   <InlineStat label="Median" value={fmt(values.percentile50)} />

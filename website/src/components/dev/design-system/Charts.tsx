@@ -133,7 +133,7 @@ export function Charts() {
       <Specimen
         name="ChartSurface"
         source="patterns/charts/ChartSurface"
-        note="size: xs, sm, md, default, lg, xl (the main plot of a page), fill. variant: card, flush, bare. The loading skeleton takes the same size."
+        note="size: xs, sm, md, default, lg, xl (the main plot of a page), fill. variant: card, flush, bare. The loading skeleton takes the same size. announce: plot (the label names it) or label (the label summarises a small plot, which is hidden from screen readers; the bare one here)."
       >
         <Variants className="grid items-start md:grid-cols-2">
           <ChartSurface label="Win rate by rank" size="md">
@@ -165,8 +165,13 @@ export function Charts() {
             </BarChart>
           </ChartSurface>
           <div className="flex flex-col gap-3">
-            <ChartSurface label="Rolling win rate" size="sm" variant="bare">
-              <AreaChart data={WEEKS} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
+            <ChartSurface
+              label="Rolling win rate for Infernus by week, hovering around 50 percent"
+              announce="label"
+              size="sm"
+              variant="bare"
+            >
+              <AreaChart data={WEEKS} margin={{ top: 4, right: 4, bottom: 0, left: 4 }} accessibilityLayer={false}>
                 <CartesianGrid {...CHART_GRID} />
                 <XAxis dataKey="label" height={16} {...CHART_AXIS_SM} />
                 <YAxis hide domain={[0.44, 0.58]} />

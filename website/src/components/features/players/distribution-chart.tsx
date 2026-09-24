@@ -1,9 +1,10 @@
 import type { HashMapValue } from "deadlock_api_client";
 import { Area, AreaChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
+import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_COLOR, CHART_CURSOR_LINE, CHART_TICK_SM } from "~/components/patterns/charts/theme";
-import { TooltipCard } from "~/components/ui/tooltip";
+import { approxPercentile, formatPercentile, percentilePoints } from "~/lib/distribution-percentile";
 
 export interface CurvePoint {
   x: number;
@@ -17,17 +18,7 @@ export interface CurvePoint {
  * between those points into a continuous silhouette.
  */
 export function buildDistributionCurve(values: HashMapValue): CurvePoint[] {
-  const points: { p: number; v: number }[] = [
-    { p: 1, v: values.percentile1 },
-    { p: 5, v: values.percentile5 },
-    { p: 10, v: values.percentile10 },
-    { p: 25, v: values.percentile25 },
-    { p: 50, v: values.percentile50 },
-    { p: 75, v: values.percentile75 },
-    { p: 90, v: values.percentile90 },
-    { p: 95, v: values.percentile95 },
-    { p: 99, v: values.percentile99 },
-  ];
+  const points = percentilePoints(values);
   const curve: CurvePoint[] = [{ x: Math.min(0, values.percentile1), y: 0 }];
   for (let i = 0; i < points.length - 1; i++) {
     const width = points[i + 1].v - points[i].v;
@@ -39,12 +30,32 @@ export function buildDistributionCurve(values: HashMapValue): CurvePoint[] {
   return curve;
 }
 
-function DistributionTooltip({ payload, fmt }: { payload?: { payload: CurvePoint }[]; fmt: (v: number) => string }) {
+function DistributionTooltip({
+  payload,
+  label,
+  values,
+  fmt,
+}: {
+  payload?: { payload: CurvePoint }[];
+  label: string;
+  values: HashMapValue;
+  fmt: (v: number) => string;
+}) {
   if (!payload?.length) return null;
+  const { x } = payload[0].payload;
   return (
-    <TooltipCard className="px-2.5 py-1.5 text-xs">
-      <span className="tabular-nums">{fmt(payload[0].payload.x)}</span>
-    </TooltipCard>
+    <ChartReadings title={label}>
+      <ChartReading label="Value">{fmt(x)}</ChartReading>
+      <ChartReading label="Percentile">{formatPercentile(approxPercentile(values, x))}</ChartReading>
+    </ChartReadings>
+  );
+}
+
+/** What the plot shows, for a reader who cannot see it: the chart's name and the numbers its lines mark. */
+function distributionSummary(label: string, values: HashMapValue, fmt: (v: number) => string): string {
+  return (
+    `${label} distribution: average ${fmt(values.avg)}, median ${fmt(values.percentile50)}, ` +
+    `middle half of players (P25 to P75) ${fmt(values.percentile25)} to ${fmt(values.percentile75)}.`
   );
 }
 
@@ -55,6 +66,7 @@ export function DistributionChart({
   fmt,
   height,
 }: {
+  /** The metric's name, "Kills": it heads the tooltip and the chart's accessible summary. */
   label: string;
   curve: CurvePoint[];
   values: HashMapValue;
@@ -68,8 +80,9 @@ export function DistributionChart({
 
   return (
     <div style={{ height }}>
-      <ChartSurface label={label} size="fill" variant="bare">
-        <AreaChart data={curve} margin={{ top: 4, right: 16, bottom: 0, left: 16 }}>
+      {/* Read piecemeal, the tick labels ran together into "0.06.022.2"; the summary says what the lines mark. */}
+      <ChartSurface label={distributionSummary(label, values, fmt)} announce="label" size="fill" variant="bare">
+        <AreaChart data={curve} margin={{ top: 4, right: 16, bottom: 0, left: 16 }} accessibilityLayer={false}>
           <XAxis
             type="number"
             dataKey="x"
@@ -84,7 +97,12 @@ export function DistributionChart({
           <Tooltip
             cursor={CHART_CURSOR_LINE}
             content={(props) => (
-              <DistributionTooltip payload={props.payload as unknown as { payload: CurvePoint }[]} fmt={fmt} />
+              <DistributionTooltip
+                payload={props.payload as unknown as { payload: CurvePoint }[]}
+                label={label}
+                values={values}
+                fmt={fmt}
+              />
             )}
           />
           <ReferenceLine x={values.percentile25} stroke="var(--chart-axis)" strokeDasharray="2 2" strokeWidth={1} />

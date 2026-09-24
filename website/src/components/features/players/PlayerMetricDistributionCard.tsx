@@ -45,7 +45,7 @@ export function PlayerMetricDistributionCard({
       {!hasData || !values ? (
         <EmptyState variant="inline" title="No data" className="flex h-32 items-center justify-center py-0 text-xs" />
       ) : (
-        <DistributionChart label={`${def.label} distribution`} curve={curve} values={values} fmt={fmt} height={130} />
+        <DistributionChart label={def.label} curve={curve} values={values} fmt={fmt} height={130} />
       )}
     </Card>
   );

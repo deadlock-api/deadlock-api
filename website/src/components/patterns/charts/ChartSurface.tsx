@@ -51,6 +51,13 @@ interface ChartSurfaceProps
     VariantProps<typeof chartSurfaceVariants> {
   /** Describes the plot to assistive technology: "Win rate by rank". */
   label: string;
+  /**
+   * What assistive technology reads. `plot` (default): the label names the figure and the plot's own text (ticks,
+   * keyboard readings) stays reachable. `label`: the label is a full summary that stands in for the plot, whose tick
+   * text would otherwise be read as one run-together string; the plot is hidden from assistive technology, so it must
+   * not be focusable (`accessibilityLayer={false}`).
+   */
+  announce?: "plot" | "label";
   /** The plot's size in pixels, for ticks and tooltips that must adapt to it. */
   onResize?: ComponentProps<typeof ResponsiveContainer>["onResize"];
   children: ComponentProps<typeof ResponsiveContainer>["children"];
@@ -59,6 +66,7 @@ interface ChartSurfaceProps
 /** The frame every Recharts plot sits in: a labelled figure of a named height with a responsive container. */
 export function ChartSurface({
   label,
+  announce = "plot",
   size = "default",
   variant = "card",
   className,
@@ -69,13 +77,20 @@ export function ChartSurface({
   return (
     <figure
       data-slot="chart-surface"
-      aria-label={label}
+      aria-label={announce === "plot" ? label : undefined}
       className={cn(chartSurfaceVariants({ variant }), size === "fill" && "h-full", className)}
       {...props}
     >
+      {/* A caption names the figure and is read in browse mode too, where an aria-label on it may be skipped. */}
+      {announce === "label" && (
+        <figcaption data-slot="chart-surface-summary" className="sr-only">
+          {label}
+        </figcaption>
+      )}
       {/* The figure is the container the height steps query, so the height sits on its child. */}
       <div
         data-slot="chart-surface-plot"
+        aria-hidden={announce === "label" || undefined}
         className={cn(
           "min-w-0",
           size === "fill" ? "min-h-0" : chartSizeVariants({ size }),
