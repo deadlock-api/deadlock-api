@@ -179,6 +179,14 @@ restyle a primitive with a long `className`: if a look is needed twice, it is a 
 | A vertical list of links: the app navigation, the index of a long page | `navigation/SideNav`, `SideNavGroup`, `SideNavItem` (`variant`: default, highlight; `active`, `asChild`), `SideNavFooter`                                                                                                                                                          |
 | Code block                                                             | `code/HighlightedCode`                                                                                                                                                                                                                                                             |
 
+### Domain (`~/components/domain/*`)
+
+| Need                                       | Component                                                                                                                               |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| A player as the identity of a row          | `player/PlayerCell` (`size`: sm, default; `linkToDetail`, `showAccountId`, `loading`)                                                   |
+| A player's name as a link to the tracker   | `player/PlayerLink` (`accountId`; children = the name, "Player <id>" without)                                                           |
+| A name that may belong to several accounts | `player/PlayerNameLink` (`name`, `accountIds`): one account links through, several open a popover of the candidates, none is plain text |
+
 ### Charts (`~/components/patterns/charts/*`)
 
 | Need                                         | Component                                                                                                                                                                 |

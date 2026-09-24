@@ -1,8 +1,7 @@
-import { Link } from "@tanstack/react-router";
 import { cva, type VariantProps } from "class-variance-authority";
 
+import { PlayerLink } from "~/components/domain/player/PlayerLink";
 import { SteamAvatar } from "~/components/domain/player/SteamAvatar";
-import { FOCUS_RING } from "~/components/ui/recipes";
 import { Skeleton } from "~/components/ui/skeleton";
 import { cn } from "~/lib/utils";
 
@@ -48,16 +47,14 @@ export function PlayerCell({
   const nameNode = loading ? (
     <Skeleton className="h-4 w-24" />
   ) : linkToDetail && accountId != null ? (
-    <Link
-      to="/tracker/players/$accountId"
-      params={{ accountId: String(accountId) }}
+    <PlayerLink
+      accountId={accountId}
       title={`Open ${label} in the player tracker`}
       // Rows that hold this cell are often clickable themselves; the link must not trigger them.
       onClick={(event) => event.stopPropagation()}
-      className={cn(FOCUS_RING, "truncate rounded-sm hover:text-primary hover:underline")}
     >
       {label}
-    </Link>
+    </PlayerLink>
   ) : (
     <span title={label} className="truncate">
       {label}

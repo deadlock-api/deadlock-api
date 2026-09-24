@@ -273,6 +273,7 @@ export const NAV: readonly NavChapter[] = [
           "KdaLine",
           "FormDots",
           "PlayerCell",
+          "PlayerLink",
           "SteamAvatar",
           "ScoreboardTable",
           "SortBySelector",
