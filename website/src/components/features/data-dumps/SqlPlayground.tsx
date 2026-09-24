@@ -1,5 +1,5 @@
 import { sql } from "@codemirror/lang-sql";
-import CodeMirror, { EditorView } from "@uiw/react-codemirror";
+import CodeMirror, { EditorView, type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { Download, Play, Square } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -84,6 +84,9 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
   /** Why nothing ran or nothing is shown: "Query cancelled.", or an empty editor. */
   const [notice, setNotice] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const editorRef = useRef<ReactCodeMirrorRef>(null);
+  /** Until the editor has been focused its cursor sits at the start, so a table name goes at the end instead. */
+  const editorUsedRef = useRef(false);
 
   // Closing the playground stops whatever it is still running.
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -175,8 +178,26 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
   };
 
   const insertAtCursor = (snippet: string) => {
-    const next = query.length === 0 || query.endsWith(" ") ? `${query}${snippet}` : `${query} ${snippet}`;
-    onQueryChange(next);
+    const view = editorRef.current?.view;
+    if (!view) {
+      onQueryChange(query.length === 0 || /\s$/.test(query) ? `${query}${snippet}` : `${query} ${snippet}`);
+      return;
+    }
+    const { state } = view;
+    const end = state.doc.length;
+    const { from, to } = editorUsedRef.current ? state.selection.main : { from: end, to: end };
+    // A space keeps the name from running into the word before or after it.
+    const before = state.sliceDoc(Math.max(0, from - 1), from);
+    const after = state.sliceDoc(to, to + 1);
+    const lead = before && !/[\s(.]/.test(before) ? " " : "";
+    const trail = after && !/[\s),;.]/.test(after) ? " " : "";
+    const insert = `${lead}${snippet}${trail}`;
+    view.dispatch({
+      changes: { from, to, insert },
+      selection: { anchor: from + lead.length + snippet.length },
+      scrollIntoView: true,
+    });
+    view.focus();
   };
 
   const handleCsv = () => {
@@ -224,8 +245,18 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
               </Stack>
             )}
 
-            <Card tone="inset" size="flush" radius="md" onKeyDownCapture={onEditorKeyDown} className="min-h-0 flex-1">
+            <Card
+              tone="inset"
+              size="flush"
+              radius="md"
+              onKeyDownCapture={onEditorKeyDown}
+              onFocusCapture={() => {
+                editorUsedRef.current = true;
+              }}
+              className="min-h-0 flex-1"
+            >
               <CodeMirror
+                ref={editorRef}
                 value={query}
                 onChange={onQueryChange}
                 extensions={cmExtensions}
