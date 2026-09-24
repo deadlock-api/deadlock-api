@@ -12,7 +12,8 @@ export function buildWidgetUrl(region: string, accountId: string, config: Widget
   switch (config.widgetType) {
     case "box": {
       const { variables, labels = [], subtexts = [] } = withoutEmptyVariables(config);
-      if (variables.length > 0) url.searchParams.set("vars", joinWidgetList(variables));
+      // Always written: without it the widget shows its five defaults, so an empty list means "no stats".
+      url.searchParams.set("vars", joinWidgetList(variables));
       if (labels.length > 0) url.searchParams.set("labels", joinWidgetList(labels));
       if (subtexts.some(Boolean)) url.searchParams.set("subtexts", joinWidgetList(subtexts));
       url.searchParams.set("theme", config.theme);

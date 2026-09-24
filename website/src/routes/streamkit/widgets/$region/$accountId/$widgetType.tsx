@@ -110,13 +110,15 @@ function Widget() {
 
   switch (widgetType) {
     case "box": {
-      const columns = search.vars
-        ? withoutEmptyVariables({
-            variables: splitWidgetList(search.vars),
-            labels: search.labels === undefined ? undefined : splitWidgetList(search.labels),
-            subtexts: search.subtexts === undefined ? undefined : splitWidgetList(search.subtexts),
-          })
-        : undefined;
+      // An empty `vars=` is a widget with no stats; only a URL without `vars` falls back to the defaults.
+      const columns =
+        search.vars !== undefined
+          ? withoutEmptyVariables({
+              variables: splitWidgetList(search.vars),
+              labels: search.labels === undefined ? undefined : splitWidgetList(search.labels),
+              subtexts: search.subtexts === undefined ? undefined : splitWidgetList(search.subtexts),
+            })
+          : undefined;
       const variables = columns?.variables;
       const labels = columns?.labels ?? variables?.map(snakeToPretty);
       const subtexts = columns?.subtexts;

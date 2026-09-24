@@ -70,11 +70,13 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
   const usedArgs = new Set(
     availableVariables.filter((v) => shownVariables.includes(v.name)).flatMap((v) => v.extra_args ?? []),
   );
-  const widgetUrl = buildWidgetUrl(region, accountId, {
+  // The preview renders exactly what the URL carries, so it never shows a stat or an argument OBS would not get.
+  const widgetConfig = {
     ...config,
     extraArgs: Object.fromEntries(Object.entries(config.extraArgs).filter(([arg]) => usedArgs.has(arg))),
-  });
-  const widgetPreview = buildWidgetPreview(region, accountId, config);
+  };
+  const widgetUrl = buildWidgetUrl(region, accountId, widgetConfig);
+  const widgetPreview = buildWidgetPreview(region, accountId, widgetConfig);
 
   return (
     <Stack gap={6}>
