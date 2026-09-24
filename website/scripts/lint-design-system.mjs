@@ -126,11 +126,16 @@ const LAW_RULES = [
   {
     id: "law19-physical-direction",
     message:
-      "Law 19: physical direction; use logical utilities (ms/me/ps/pe/start/end/text-start/text-end/border-s/border-e/rounded-s/rounded-e)",
+      "Law 19: physical direction; use logical utilities (ms/me/ps/pe/inset-s/inset-e/text-start/text-end/border-s/border-e/rounded-s/rounded-e)",
     token: (raw, base) =>
       /^-?(?:(?:ml|mr|pl|pr|scroll-ml|scroll-mr|scroll-pl|scroll-pr)-.+|(?:left|right)-.+|text-(?:left|right)|border-[lr](?:-.+)?|rounded-(?:l|r|tl|tr|bl|br)(?:-.+)?|float-(?:left|right)|clear-(?:left|right))$/.test(
         base,
       ),
+  },
+  {
+    id: "law19-deprecated-inset",
+    message: "Law 19: `start-*` / `end-*` are deprecated since Tailwind 4.2; use inset-s-* / inset-e-*",
+    token: (raw, base) => /^-?(?:start|end)-(?:\d|px$|full$|auto$|\[|\()/.test(base),
   },
   {
     id: "law19-viewport-breakpoint",

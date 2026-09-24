@@ -84,7 +84,7 @@ export function HighlightedCode({
           size="icon-sm"
           text={code}
           title={copyLabel}
-          className="absolute end-1.5 top-1.5 bg-background/60 backdrop-blur"
+          className="absolute inset-e-1.5 top-1.5 bg-background/60 backdrop-blur"
         />
       )}
     </div>

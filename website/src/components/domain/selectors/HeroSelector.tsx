@@ -86,7 +86,7 @@ export function HeroSelector({
       {...props}
     >
       <div className="relative border-b p-2">
-        <SearchIcon className="absolute start-4 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+        <SearchIcon className="absolute inset-s-4 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
           aria-label="Search heroes"
           placeholder="Search heroes..."

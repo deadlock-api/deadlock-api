@@ -147,7 +147,7 @@ export function GraphNodeCard({
       {...props}
     >
       {(status || selected) && (
-        <div className="absolute end-1.5 top-1.5 flex items-center gap-1">
+        <div className="absolute inset-e-1.5 top-1.5 flex items-center gap-1">
           {selected && <PinIcon aria-hidden="true" className="size-3 text-primary" />}
           {status}
         </div>

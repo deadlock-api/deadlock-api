@@ -33,7 +33,7 @@ function DeadlockdleLayout() {
     <MotionConfig reducedMotion="user">
       {cursorEnabled && <TargetCursor />}
 
-      <div className="theme-terminal fixed end-3 top-3 z-50 md:end-4 md:top-4">
+      <div className="theme-terminal fixed inset-e-3 top-3 z-50 md:inset-e-4 md:top-4">
         <Button
           variant="outline"
           size="icon"
@@ -52,7 +52,7 @@ function DeadlockdleLayout() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 exit={{ scale: 0 }}
-                className="absolute -end-0.5 -top-0.5"
+                className="absolute -inset-e-0.5 -top-0.5"
               />
             )}
           </AnimatePresence>

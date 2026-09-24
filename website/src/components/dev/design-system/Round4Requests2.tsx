@@ -218,7 +218,7 @@ export function Round4Requests2() {
                 variant={variant}
                 scrim="dark"
                 size="xs"
-                className="absolute end-1 bottom-1"
+                className="absolute inset-e-1 bottom-1"
                 aria-label={`Add Basic Magazine to the build, ${variant}`}
               >
                 Add
@@ -262,7 +262,7 @@ export function Round4Requests2() {
           <StatusDot tone="primary" ring="surface" />
           <span className="relative inline-flex">
             <HeroImage heroId={HERO_IDS[0]} shape="circle" className="size-10" />
-            <StatusDot tone="primary" ring="surface" className="absolute end-0 bottom-0" />
+            <StatusDot tone="primary" ring="surface" className="absolute inset-e-0 bottom-0" />
           </span>
         </Variants>
       </Specimen>

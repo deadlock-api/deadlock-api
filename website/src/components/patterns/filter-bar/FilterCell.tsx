@@ -269,7 +269,7 @@ export function FilterToggleCell<T extends string>({
         <CellLabel active={active}>{label}</CellLabel>
       </span>
       {onReset && active && !disabled && (
-        <CellReset label={label} active={active} onReset={onReset} className="absolute end-0.5 top-0.5" />
+        <CellReset label={label} active={active} onReset={onReset} className="absolute inset-e-0.5 top-0.5" />
       )}
       <Segmented
         value={current}

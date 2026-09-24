@@ -64,7 +64,7 @@ export function PageBackdrop({ src, className, ...props }: Omit<React.ComponentP
       aria-hidden="true"
       // `page-backdrop` (effects.css) carries the tilt and the fade-out mask.
       className={cn(
-        "page-backdrop pointer-events-none fixed end-0 bottom-0 size-144 opacity-10 select-none",
+        "page-backdrop pointer-events-none fixed inset-e-0 bottom-0 size-144 opacity-10 select-none",
         className,
       )}
       {...props}

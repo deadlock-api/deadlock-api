@@ -50,7 +50,7 @@ const ItemCard = memo(function ItemCard({ item, included, excluded, onToggleIncl
         scrim="dark"
         size="icon-xs"
         aria-pressed={included}
-        className={cn(CORNER_TOGGLE, "start-1.5")}
+        className={cn(CORNER_TOGGLE, "inset-s-1.5")}
         onClick={() => onToggleInclude(item.id)}
         aria-label={included ? `Remove ${item.name} from included` : `Include ${item.name}`}
       >
@@ -61,7 +61,7 @@ const ItemCard = memo(function ItemCard({ item, included, excluded, onToggleIncl
         scrim="dark"
         size="icon-xs"
         aria-pressed={excluded}
-        className={cn(CORNER_TOGGLE, "end-1.5")}
+        className={cn(CORNER_TOGGLE, "inset-e-1.5")}
         onClick={() => onToggleExclude(item.id)}
         aria-label={excluded ? `Remove ${item.name} from excluded` : `Exclude ${item.name}`}
       >

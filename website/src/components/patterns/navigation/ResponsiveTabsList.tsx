@@ -104,7 +104,7 @@ export function ResponsiveTabsList({
         variant={variant}
         aria-hidden
         inert
-        className="pointer-events-none invisible absolute start-0 top-0 w-full scrollbar-none overflow-x-auto"
+        className="pointer-events-none invisible absolute inset-s-0 top-0 w-full scrollbar-none overflow-x-auto"
       >
         <DisplayContext value="measure">{tabs}</DisplayContext>
       </TabsList>

@@ -48,7 +48,7 @@ export function SelectionBox({
           shape="square"
           data-slot="selection-box-label"
           className={cn(
-            "absolute start-0 max-w-72 truncate font-mono",
+            "absolute inset-s-0 max-w-72 truncate font-mono",
             labelPosition === "below" ? "top-full" : "bottom-full",
           )}
         >

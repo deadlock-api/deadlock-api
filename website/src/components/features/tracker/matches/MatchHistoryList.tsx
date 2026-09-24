@@ -187,7 +187,7 @@ export function MatchHistoryList({
               ref={virtualizer.measureElement}
               aria-posinset={item.index + 1}
               aria-setsize={rows.length}
-              className={cn("start-0 top-0 w-full", sticky ? "sticky z-10" : "absolute")}
+              className={cn("inset-s-0 top-0 w-full", sticky ? "sticky z-10" : "absolute")}
               style={sticky ? undefined : { transform: `translateY(${item.start}px)` }}
             >
               {row.kind === "session" ? (

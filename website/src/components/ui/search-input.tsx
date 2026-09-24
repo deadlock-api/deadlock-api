@@ -52,7 +52,7 @@ export function SearchInput({
   const leadingClass = cn(
     "pointer-events-none absolute top-1/2 -translate-y-1/2 text-muted-foreground",
     size === "sm" ? "size-3.5" : "size-4",
-    variant === "ghost" ? "start-0" : size === "sm" ? "start-2.5" : "start-3",
+    variant === "ghost" ? "inset-s-0" : size === "sm" ? "inset-s-2.5" : "inset-s-3",
   );
   return (
     <div data-slot="search-input" data-size={size} data-variant={variant} className={cn("relative min-w-0", className)}>
@@ -77,7 +77,7 @@ export function SearchInput({
           variant="ghost"
           size="icon-xs"
           aria-label="Clear search"
-          className="absolute end-1 top-1/2 -translate-y-1/2 text-muted-foreground"
+          className="absolute inset-e-1 top-1/2 -translate-y-1/2 text-muted-foreground"
           onClick={() => {
             setValue("");
             inputRef.current?.focus();

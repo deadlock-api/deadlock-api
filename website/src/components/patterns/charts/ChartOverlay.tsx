@@ -35,10 +35,10 @@ export function ChartStage({ className, ...props }: React.ComponentProps<"div">)
 const chartOverlayVariants = cva("z-10 flex max-w-full flex-col gap-1.5", {
   variants: {
     position: {
-      "top-start": "start-3 top-3 items-start self-start",
-      "top-end": "end-3 top-3 items-end self-end",
-      "bottom-start": "start-3 bottom-3 items-start self-start",
-      "bottom-end": "end-3 bottom-3 items-end self-end",
+      "top-start": "inset-s-3 top-3 items-start self-start",
+      "top-end": "inset-e-3 top-3 items-end self-end",
+      "bottom-start": "inset-s-3 bottom-3 items-start self-start",
+      "bottom-end": "inset-e-3 bottom-3 items-end self-end",
     },
     /**
      * What the overlay does in a narrow plot. `over` always floats in its corner. `outside` floats from `@lg` of the

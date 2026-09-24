@@ -123,7 +123,7 @@ function BuildTimeline({ events, playerName }: { events: BuildEvent[]; playerNam
                 <span className="text-4xs leading-none tabular-nums">{formatMatchDuration(event.time)}</span>
                 <span aria-hidden="true" className="relative">
                   <EventImage event={event} />
-                  <CornerBadge corner="bottom-end" className="-end-1 -bottom-0.5 p-px">
+                  <CornerBadge corner="bottom-end" className="-inset-e-1 -bottom-0.5 p-px">
                     <Icon className="size-2.5" />
                   </CornerBadge>
                 </span>

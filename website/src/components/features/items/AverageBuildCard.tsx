@@ -59,11 +59,11 @@ function ItemIcon({ item, dim, badge }: { item: AverageBuildItem; dim?: boolean;
     >
       <div className="relative">
         <ItemImage itemId={item.itemId} emphasis={dim ? "dim" : "normal"} className="size-7" />
-        <CornerBadge corner="bottom-end" tone="scrim" className="end-0 bottom-0 z-10">
+        <CornerBadge corner="bottom-end" tone="scrim" className="inset-e-0 bottom-0 z-10">
           {badge ?? pct(item.frequency)}
         </CornerBadge>
         {item.sellOrder != null && (
-          <CornerBadge corner="top-start" className="start-0 top-0 z-10 text-negative">
+          <CornerBadge corner="top-start" className="inset-s-0 top-0 z-10 text-negative">
             {item.sellOrder}
           </CornerBadge>
         )}

@@ -93,7 +93,7 @@ const tabsTriggerVariants = cva(
       },
       orientation: {
         horizontal: "after:inset-x-0 after:h-0.5",
-        vertical: "w-full justify-start after:inset-y-0 after:-end-1 after:w-0.5",
+        vertical: "w-full justify-start after:inset-y-0 after:-inset-e-1 after:w-0.5",
       },
     },
     compoundVariants: [

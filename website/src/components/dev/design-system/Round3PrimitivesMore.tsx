@@ -279,7 +279,7 @@ export function Round3PrimitivesMore() {
             <p className="p-3 text-sm text-muted-foreground">
               Content under the widget: a map, a graph, a long table. It stays faintly visible through the blur.
             </p>
-            <Card tone="floating" size="xs" radius="lg" className="absolute end-2 bottom-2 w-40">
+            <Card tone="floating" size="xs" radius="lg" className="absolute inset-e-2 bottom-2 w-40">
               <CardContent className="flex flex-col gap-1 text-xs">
                 <span className="eyebrow">Legend</span>
                 <span>Floating widget</span>

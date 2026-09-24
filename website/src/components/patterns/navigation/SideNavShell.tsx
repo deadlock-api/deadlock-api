@@ -16,7 +16,7 @@ export function SideNavShell({ className, ...props }: React.ComponentProps<"asid
     <aside
       data-slot="side-nav-shell"
       className={cn(
-        "glass z-30 hidden border-e border-sidebar-border text-sidebar-foreground md:fixed md:inset-y-0 md:start-0 md:flex md:w-64 md:flex-col",
+        "glass z-30 hidden border-e border-sidebar-border text-sidebar-foreground md:fixed md:inset-y-0 md:inset-s-0 md:flex md:w-64 md:flex-col",
         className,
       )}
       {...props}
@@ -116,7 +116,7 @@ export function SideNavDrawer({
         aria-labelledby={titleId}
         // `mobile-navigation` (effects.css) carries the slide-in animation and locks page scroll while open.
         // ds-allow law4-outer-margin: m-0 resets the `margin: auto` a browser gives a modal dialog
-        className="mobile-navigation fixed inset-y-0 start-0 m-0 h-dvh max-h-none w-64 max-w-full border-e border-sidebar-border bg-background p-0 text-sidebar-foreground shadow-lg backdrop:bg-scrim"
+        className="mobile-navigation fixed inset-y-0 inset-s-0 m-0 h-dvh max-h-none w-64 max-w-full border-e border-sidebar-border bg-background p-0 text-sidebar-foreground shadow-lg backdrop:bg-scrim"
       >
         <h2 id={titleId} className="sr-only">
           {title}

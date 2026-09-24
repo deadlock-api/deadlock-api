@@ -20,7 +20,7 @@ export const MatchItem = ({ match, heroImage }: MatchItemProps) => {
           isWin ? "text-emerald-500" : "text-red-500",
         )}
       />
-      <div className={cn("absolute start-0 end-0 bottom-0 h-[3px]", isWin ? "bg-emerald-500" : "bg-red-500")} />
+      <div className={cn("absolute inset-s-0 inset-e-0 bottom-0 h-[3px]", isWin ? "bg-emerald-500" : "bg-red-500")} />
     </div>
   );
 };

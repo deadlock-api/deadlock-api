@@ -86,7 +86,11 @@ export function MatchListItem({
     >
       <span
         aria-hidden
-        className={cn("absolute inset-y-0 start-0", selected ? "w-1" : "w-0.5", TONE_BG[win ? "positive" : "negative"])}
+        className={cn(
+          "absolute inset-y-0 inset-s-0",
+          selected ? "w-1" : "w-0.5",
+          TONE_BG[win ? "positive" : "negative"],
+        )}
       />
       <span aria-hidden="true" className="shrink-0">
         <HeroImage heroId={entry.hero_id} shape="circle" className="size-7" />

@@ -177,7 +177,7 @@ export function DraftSlot({
           onClick={onClear}
           aria-label={`Remove ${hero?.name ?? "hero"}`}
           // Hover-revealed on pointer devices only: there is no hover to reveal it on a phone.
-          className="absolute -end-0.5 -top-0.5 text-muted-foreground hover:text-destructive md:hidden md:group-focus-within:flex md:group-hover:flex"
+          className="absolute -inset-e-0.5 -top-0.5 text-muted-foreground hover:text-destructive md:hidden md:group-focus-within:flex md:group-hover:flex"
         >
           <XIcon />
         </Button>

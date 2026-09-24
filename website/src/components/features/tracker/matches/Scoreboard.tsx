@@ -170,7 +170,7 @@ function ItemChip({ item }: { item: BuildItem }) {
       <span className="relative">
         <ItemImage item={item.upgrade} className="size-5" title="" />
         {item.imbuedInto && (
-          <StatusDot color="var(--chart-6)" ring="surface" className="absolute -end-0.5 -bottom-0.5" />
+          <StatusDot color="var(--chart-6)" ring="surface" className="absolute -inset-e-0.5 -bottom-0.5" />
         )}
         {item.stacks != null && <StackBadge stacks={item.stacks} />}
       </span>

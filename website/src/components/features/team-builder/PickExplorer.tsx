@@ -195,7 +195,7 @@ export function PickExplorer({ recommendations, onPick }: PickExplorerProps) {
             {yTicks.map((tick) => (
               <span
                 key={`yl${tick.value}`}
-                className="pointer-events-none absolute start-1 text-3xs text-muted-foreground tabular-nums"
+                className="pointer-events-none absolute inset-s-1 text-3xs text-muted-foreground tabular-nums"
                 style={{ top: tick.at - 6 }}
               >
                 {formatPoints(tick.value)}

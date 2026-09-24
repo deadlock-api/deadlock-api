@@ -245,7 +245,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.18, ease: "easeOut" }}
-                    className="absolute end-2 top-2"
+                    className="absolute inset-e-2 top-2"
                   >
                     <ResultMark correct={verdict === "correct"} />
                   </motion.div>

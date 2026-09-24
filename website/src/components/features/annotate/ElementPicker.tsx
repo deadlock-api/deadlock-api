@@ -297,7 +297,7 @@ export function ElementPicker({ onPick, onCancel }: ElementPickerProps) {
         />
       )}
 
-      <Card tone="floating" size="xs" className="fixed start-1/2 top-4 -translate-x-1/2 items-center gap-1 px-4 py-2">
+      <Card tone="floating" size="xs" className="fixed inset-s-1/2 top-4 -translate-x-1/2 items-center gap-1 px-4 py-2">
         <Inline gap={2} wrap="nowrap" className="text-sm">
           Click or drag a box around what your feedback is about
           <Kbd>Esc</Kbd>

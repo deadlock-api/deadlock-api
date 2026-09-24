@@ -7,9 +7,9 @@ const cornerBadgeVariants = cva(
   {
     variants: {
       corner: {
-        "top-end": "-end-1.5 -top-1.5",
-        "bottom-end": "-end-1.5 -bottom-1",
-        "top-start": "-start-1.5 -top-1.5",
+        "top-end": "-inset-e-1.5 -top-1.5",
+        "bottom-end": "-inset-e-1.5 -bottom-1",
+        "top-start": "-inset-s-1.5 -top-1.5",
       },
       tone: {
         surface: "bg-background text-foreground",

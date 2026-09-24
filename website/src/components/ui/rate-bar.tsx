@@ -46,7 +46,7 @@ export function DivergingBar({
           style={{ insetInlineStart: t >= 0 ? "50%" : `${50 + t * 50}%`, width: `${Math.abs(t) * 50}%` }}
         />
       )}
-      <span className="absolute start-1/2 -top-0.5 h-2.5 w-px bg-foreground/40" />
+      <span className="absolute inset-s-1/2 -top-0.5 h-2.5 w-px bg-foreground/40" />
     </div>
   );
 }
@@ -76,7 +76,7 @@ export function SplitBar({
     >
       <div className="h-full opacity-70" style={{ width: `${share * 100}%`, backgroundColor: leftColor }} />
       <div className="h-full flex-1 opacity-70" style={{ backgroundColor: rightColor }} />
-      <span className="absolute start-1/2 -top-0.5 h-2.5 w-px bg-foreground/60" />
+      <span className="absolute inset-s-1/2 -top-0.5 h-2.5 w-px bg-foreground/60" />
     </div>
   );
 }

@@ -19,7 +19,7 @@ export function SkipLink({
         FOCUS_RING,
         "sr-only rounded-md bg-primary text-sm font-medium text-primary-foreground shadow-lg",
         // `not-sr-only` also clears the padding, so it is set again for the focused state.
-        "focus-visible:not-sr-only focus-visible:fixed focus-visible:start-2 focus-visible:top-2 focus-visible:z-50 focus-visible:px-3 focus-visible:py-2",
+        "focus-visible:not-sr-only focus-visible:fixed focus-visible:inset-s-2 focus-visible:top-2 focus-visible:z-50 focus-visible:px-3 focus-visible:py-2",
         className,
       )}
       {...props}

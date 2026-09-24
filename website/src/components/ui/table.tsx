@@ -122,7 +122,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "text-start align-middle font-medium whitespace-nowrap text-foreground data-pinned:sticky data-pinned:start-0 data-pinned:z-10 data-pinned:bg-muted [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-0.5",
+        "text-start align-middle font-medium whitespace-nowrap text-foreground data-pinned:sticky data-pinned:inset-s-0 data-pinned:z-10 data-pinned:bg-muted [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-0.5",
         HEAD_DENSITY[density],
         className,
       )}
@@ -137,7 +137,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "align-middle whitespace-nowrap data-pinned:sticky data-pinned:start-0 data-pinned:z-10 data-pinned:bg-card [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-0.5",
+        "align-middle whitespace-nowrap data-pinned:sticky data-pinned:inset-s-0 data-pinned:z-10 data-pinned:bg-card [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-0.5",
         CELL_DENSITY[density],
         className,
       )}

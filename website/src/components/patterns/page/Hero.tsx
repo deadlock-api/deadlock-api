@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "~/lib/utils";
 
 const heroGlowVariants = cva(
-  "pointer-events-none absolute start-1/2 -z-10 -translate-x-1/2 rounded-full bg-primary/8 blur-3xl rtl:translate-x-1/2",
+  "pointer-events-none absolute inset-s-1/2 -z-10 -translate-x-1/2 rounded-full bg-primary/8 blur-3xl rtl:translate-x-1/2",
   {
     variants: {
       size: {
