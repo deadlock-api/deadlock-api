@@ -5,7 +5,7 @@ import { TrackerContent } from "~/components/features/tracker/TrackerContent";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 import type { DateRange } from "~/lib/date-filter-preference";
 import { prefetchSafe } from "~/lib/prefetch-safe";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { DEMO_ACCOUNT_ID } from "~/lib/tracker/demo";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/tracker_/demo")({
   },
   head: () =>
     seo({
-      title: "Player Tracker Demo | Deadlock",
+      title: pageTitle("Deadlock Player Tracker Demo"),
       description:
         "Try the Deadlock player tracker on a sample profile: match history, rank progression, hero breakdowns, performance trends, and teammate & opponent analytics.",
       path: "/tracker/demo",

@@ -31,7 +31,7 @@ import {
   type TriviaQuestion,
 } from "~/lib/deadlockdle/trivia-questions";
 import { useCountdown } from "~/lib/deadlockdle/use-countdown";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { useStoredDailyState } from "~/lib/use-stored-state";
 import { filterPlayableHeroes } from "~/queries/asset-queries";
 
@@ -40,7 +40,7 @@ export const Route = createFileRoute("/games_/deadlockdle/trivia")({
   validateSearch: validatePuzzleDateSearch,
   head: () =>
     seo({
-      title: "Deadlock Trivia - Deadlockdle | Deadlock API",
+      title: pageTitle("Deadlock Trivia - Deadlockdle"),
       description:
         "Test your Deadlock knowledge with 10 daily trivia questions about heroes, items, and game mechanics.",
       path: "/games/deadlockdle/trivia",

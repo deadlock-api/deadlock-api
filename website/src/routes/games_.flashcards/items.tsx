@@ -4,14 +4,14 @@ import type { Upgrade } from "deadlock_api_client";
 import { useMemo } from "react";
 
 import { FlashcardGame } from "~/components/features/flashcards/FlashcardGame";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { filterShopableItems, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/flashcards/items")({
   component: ItemFlashcards,
   head: () =>
     seo({
-      title: "Item Flashcards - Learn Items by Icon | Deadlock API",
+      title: pageTitle("Item Flashcards - Learn Items by Icon"),
       description: "Memorize Deadlock shop items by their icon. Multiple-choice flashcard drill with instant feedback.",
       path: "/games/flashcards/items",
     }),

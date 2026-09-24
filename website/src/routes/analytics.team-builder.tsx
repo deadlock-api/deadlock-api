@@ -29,7 +29,7 @@ import { useDraft, DRAFT_URL_UPDATES } from "~/hooks/useDraft";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { type Mode, MODE_CONFIG } from "~/lib/game-mode";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import {
   analyzeDraft,
   filled,
@@ -63,7 +63,7 @@ export const Route = createFileRoute("/analytics/team-builder")({
   component: TeamBuilderPage,
   head: () =>
     seo({
-      title: "Deadlock Team Builder: Draft a 6v6 or Street Brawl 4v4 and Read the Win Rate",
+      title: pageTitle("Deadlock Team Builder & Draft Win Predictor"),
       description:
         "Draft a full Deadlock 6v6 with its three lanes, or a 4v4 Street Brawl, and see the predicted win rate broken down into lane matchups, pair synergy, counter picks and solo hero strength.",
       path: "/analytics/team-builder",

@@ -15,7 +15,7 @@ import { useModeState } from "~/hooks/useModeState";
 import { DEFAULT_MATCH_MODE, getEffectiveRankRange } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultUnixRange } from "~/lib/seasons";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
 import { loadSeasons } from "~/queries/asset-queries";
 
@@ -46,7 +46,7 @@ export const Route = createFileRoute("/analytics/abilities")({
   },
   head: () =>
     seo({
-      title: "Deadlock Ability Stats: Skill Build Win Rates & Upgrade Paths",
+      title: pageTitle("Deadlock Ability Builds & Upgrade Win Rates"),
       description:
         "Deadlock ability upgrade path analytics: which skill orders win the most? Win rates by ability level order for every hero, filtered by rank and patch.",
       path: "/analytics/abilities",

@@ -29,7 +29,7 @@ import { Inline, Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Text } from "~/components/ui/text";
 import { prewarmDuckDb } from "~/lib/duckdb-client";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 
 const SqlPlayground = lazy(() =>
   import("~/components/features/data-dumps/SqlPlayground").then((m) => ({ default: m.SqlPlayground })),
@@ -39,7 +39,7 @@ export const Route = createFileRoute("/data-dumps")({
   component: DataDumps,
   head: () =>
     seo({
-      title: "MCP & Data Lake | Deadlock API",
+      title: pageTitle("MCP & Data Lake"),
       description:
         "Query the hourly-updated public data lake through a read-only MCP server, DuckDB, or download the Parquet files for offline analysis and research.",
       path: "/data-dumps",

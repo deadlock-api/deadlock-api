@@ -3,14 +3,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 
 import { FlashcardGame } from "~/components/features/flashcards/FlashcardGame";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { filterPlayableHeroes, heroesQueryOptions, type SlimHero } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/flashcards/heroes")({
   component: HeroFlashcards,
   head: () =>
     seo({
-      title: "Hero Flashcards - Learn Heroes by Icon | Deadlock API",
+      title: pageTitle("Hero Flashcards - Learn Heroes by Icon"),
       description: "Memorize Deadlock heroes by their icon. Multiple-choice flashcard drill with instant feedback.",
       path: "/games/flashcards/heroes",
     }),

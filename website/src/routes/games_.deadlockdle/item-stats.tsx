@@ -26,7 +26,7 @@ import {
 } from "~/lib/deadlockdle/seed";
 import { gameStorageKey, legacyGameStorageKey } from "~/lib/deadlockdle/storage";
 import { useCountdown } from "~/lib/deadlockdle/use-countdown";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { useStoredDailyState } from "~/lib/use-stored-state";
 import { filterShopableItems } from "~/queries/asset-queries";
 
@@ -35,7 +35,7 @@ export const Route = createFileRoute("/games_/deadlockdle/item-stats")({
   validateSearch: validatePuzzleDateSearch,
   head: () =>
     seo({
-      title: "Item Stats Quiz - Deadlockdle | Deadlock API",
+      title: pageTitle("Item Stats Quiz - Deadlockdle"),
       description:
         "How well do you know Deadlock items? Name the activation, tier and slot of five items in this daily quiz.",
       path: "/games/deadlockdle/item-stats",

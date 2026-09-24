@@ -6,12 +6,12 @@ import { PageShell } from "~/components/patterns/page/PageShell";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 import { usePatronAuth } from "~/hooks/usePatronAuth";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 
 export const Route = createFileRoute("/patron")({
   head: () =>
     seo({
-      title: "Prioritized Fetching | Deadlock API",
+      title: pageTitle("Prioritized Fetching"),
       description: "Get priority data fetching for your Steam accounts. Your matches and stats updated faster.",
       path: "/patron",
     }),

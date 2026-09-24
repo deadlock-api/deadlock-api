@@ -13,14 +13,14 @@ import { Stack } from "~/components/ui/stack";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 import { usePatronAuth } from "~/hooks/usePatronAuth";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { steamAccountsQueryOptions } from "~/queries/patron-queries";
 
 export const Route = createFileRoute("/tracker")({
   component: TrackerRoute,
   head: () =>
     seo({
-      title: "Player Tracker | Deadlock",
+      title: pageTitle("Deadlock Player Tracker"),
       description:
         "Track your Deadlock matches: full match history, rank progression, hero breakdowns, and mate & opponent analytics for your prioritized Steam accounts.",
       path: "/tracker",

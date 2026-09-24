@@ -8,14 +8,14 @@ import { PageShell } from "~/components/patterns/page/PageShell";
 import { Stack } from "~/components/ui/stack";
 import { formatBlogDate } from "~/lib/blog-date";
 import { fetchBlogPosts } from "~/lib/blog-fns";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 
 import { TagBadge } from "./-tag-badge";
 
 export const Route = createFileRoute("/blog/")({
   head: () =>
     seo({
-      title: "Blog - Deadlock API",
+      title: pageTitle("Blog"),
       description: "Updates, patch analyses, meta insights, and development news from the Deadlock API team.",
       path: "/blog",
     }),

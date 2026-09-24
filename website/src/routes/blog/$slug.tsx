@@ -13,7 +13,7 @@ import { Inline, Stack } from "~/components/ui/stack";
 import { TextLink } from "~/components/ui/text-link";
 import { formatBlogDate } from "~/lib/blog-date";
 import { fetchBlogPost } from "~/lib/blog-fns";
-import { SITE_URL, getBlogOGImage, seo } from "~/lib/seo";
+import { getBlogOGImage, pageTitle, seo, SITE_URL } from "~/lib/seo";
 
 import { TagBadge } from "./-tag-badge";
 
@@ -26,13 +26,13 @@ export const Route = createFileRoute("/blog/$slug")({
   head: ({ loaderData }) => {
     if (!loaderData) {
       return seo({
-        title: "Post Not Found - Deadlock API Blog",
+        title: pageTitle("Post Not Found"),
         description: "The requested blog post could not be found.",
         path: "/blog",
       });
     }
     return seo({
-      title: `${loaderData.title} - Deadlock API Blog`,
+      title: pageTitle(loaderData.title),
       description: loaderData.description,
       path: `/blog/${loaderData.slug}`,
       ogImage: `${SITE_URL}${getBlogOGImage(loaderData.slug)}`,

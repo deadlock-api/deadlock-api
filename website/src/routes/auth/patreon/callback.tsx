@@ -7,7 +7,7 @@ import { PageShell } from "~/components/patterns/page/PageShell";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Inline } from "~/components/ui/stack";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 
 interface PatreonCallbackSearch {
   error?: string;
@@ -31,7 +31,7 @@ function takeRedirectPath(): string {
 export const Route = createFileRoute("/auth/patreon/callback")({
   head: () => {
     const base = seo({
-      title: "Patreon Login | Deadlock API",
+      title: pageTitle("Patreon Login"),
       description: "Complete your Patreon authentication",
       path: "/auth/patreon/callback",
     });

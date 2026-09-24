@@ -8,13 +8,13 @@ import { enter, fadeUp, stagger } from "~/components/features/deadlockdle/motion
 import { Hero } from "~/components/patterns/page/Hero";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 
 export const Route = createFileRoute("/games_/flashcards/")({
   component: FlashcardsHub,
   head: () => {
     const s = seo({
-      title: "Flashcards - Learn Deadlock Heroes and Items | Deadlock API",
+      title: pageTitle("Flashcards - Learn Deadlock Heroes and Items"),
       description:
         "Practice identifying Deadlock heroes, items, and item upgrade paths with multiple-choice flashcards.",
       path: "/games/flashcards",

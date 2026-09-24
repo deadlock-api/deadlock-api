@@ -25,7 +25,7 @@ import { Text } from "~/components/ui/text";
 import { useSteamAuthCallback } from "~/hooks/useSteamAuthCallback";
 import { API_ORIGIN } from "~/lib/constants";
 import { REGION_LABELS } from "~/lib/region";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { parseSteamIdToId3, steamId64ToSteamId3 } from "~/lib/steam";
 import { generateSteamAuthUrl } from "~/lib/steam-auth";
 import { queryKeys } from "~/queries/query-keys";
@@ -35,7 +35,7 @@ const regions = ["Europe", "Asia", "NAmerica", "SAmerica", "Oceania"] as const;
 export const Route = createFileRoute("/streamkit/")({
   head: () =>
     seo({
-      title: "Stream Toolkit & OBS Widgets | Deadlock API",
+      title: pageTitle("Stream Toolkit & OBS Widgets"),
       description:
         "Build chat commands and OBS widgets for your Deadlock stream. Show live stats, match history, and more.",
       path: "/streamkit",

@@ -20,7 +20,7 @@ import { useAbilities, useHeroes, useSounds, puzzleLoadError } from "~/lib/deadl
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { hasDisplayName } from "~/lib/deadlockdle/trivia-questions";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { useStoredState } from "~/lib/use-stored-state";
 import { filterPlayableHeroes } from "~/queries/asset-queries";
 
@@ -29,7 +29,7 @@ export const Route = createFileRoute("/games_/deadlockdle/guess-sound")({
   validateSearch: validatePuzzleDateSearch,
   head: () =>
     seo({
-      title: "Guess the Sound - Deadlockdle | Deadlock API",
+      title: pageTitle("Guess the Sound - Deadlockdle"),
       description: "Can you identify the Deadlock ability from its sound? Listen and guess.",
       path: "/games/deadlockdle/guess-sound",
     }),

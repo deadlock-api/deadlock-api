@@ -14,7 +14,7 @@ import { useHeroes, puzzleLoadError } from "~/lib/deadlockdle/queries";
 import { redactName } from "~/lib/deadlockdle/redact";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { snakeToPretty } from "~/lib/utils";
 import { filterPlayableHeroes } from "~/queries/asset-queries";
 
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/games_/deadlockdle/guess-hero")({
   validateSearch: validatePuzzleDateSearch,
   head: () =>
     seo({
-      title: "Guess the Hero - Deadlockdle | Deadlock API",
+      title: pageTitle("Guess the Hero - Deadlockdle"),
       description: "Can you identify the Deadlock hero from their silhouette? Daily puzzle with progressive hints.",
       path: "/games/deadlockdle/guess-hero",
     }),

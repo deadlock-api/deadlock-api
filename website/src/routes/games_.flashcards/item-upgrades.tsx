@@ -21,7 +21,7 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { useHydrated } from "~/hooks/useHydrated";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { filterShopableItems, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 
 const OPTION_COUNT = 4;
@@ -51,7 +51,7 @@ export const Route = createFileRoute("/games_/flashcards/item-upgrades")({
   component: ItemUpgradePathFlashcards,
   head: () => {
     const s = seo({
-      title: "Item Upgrade Path Flashcards - Learn Item Components | Deadlock API",
+      title: pageTitle("Item Upgrade Flashcards - Learn Components"),
       description: "Study Deadlock item upgrade paths by matching upgraded items to their component items.",
       path: "/games/flashcards/item-upgrades",
     });

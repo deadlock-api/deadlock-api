@@ -5,7 +5,7 @@ import { TrackerGate } from "~/components/features/tracker/shared/TrackerGate";
 import { TrackerContent } from "~/components/features/tracker/TrackerContent";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 import { prefetchSafe } from "~/lib/prefetch-safe";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { parseSteamIdToId3 } from "~/lib/steam";
 import { isDemoAccount } from "~/lib/tracker/demo";
 import { heroesQueryOptions } from "~/queries/asset-queries";
@@ -35,7 +35,7 @@ export const Route = createFileRoute("/tracker_/players/$accountId")({
   head: ({ loaderData }) => {
     const name = loaderData?.personaname ?? (loaderData ? `Player ${loaderData.accountId}` : undefined);
     const base = seo({
-      title: name ? `${name} | Player Tracker | Deadlock` : "Player Tracker | Deadlock",
+      title: pageTitle(name ? `${name} - Player Tracker` : "Deadlock Player Tracker"),
       description: name
         ? `Full Deadlock match history, rank progression, hero breakdowns, and mate & opponent analytics for ${name}.`
         : "Full Deadlock match history, rank progression, hero breakdowns, and mate & opponent analytics for prioritized players.",

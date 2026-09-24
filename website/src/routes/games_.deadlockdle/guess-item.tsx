@@ -13,7 +13,7 @@ import { Stack } from "~/components/ui/stack";
 import { useItems, puzzleLoadError } from "~/lib/deadlockdle/queries";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { filterShopableItems } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/deadlockdle/guess-item")({
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/games_/deadlockdle/guess-item")({
   validateSearch: validatePuzzleDateSearch,
   head: () =>
     seo({
-      title: "Guess the Item - Deadlockdle | Deadlock API",
+      title: pageTitle("Guess the Item - Deadlockdle"),
       description: "Can you identify the Deadlock item from a blurred image? Daily puzzle with progressive hints.",
       path: "/games/deadlockdle/guess-item",
     }),

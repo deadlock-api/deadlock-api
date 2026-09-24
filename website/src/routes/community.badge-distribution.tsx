@@ -23,7 +23,7 @@ import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultUnixRange } from "~/lib/seasons";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { loadSeasons } from "~/queries/asset-queries";
 import { badgeDistributionQueryOptions } from "~/queries/badge-distribution-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -68,7 +68,7 @@ export const Route = createFileRoute("/community/badge-distribution")({
     const year = new Date().getFullYear();
     const median = loaderData?.medianRank ? ` Half of all players sit at ${loaderData.medianRank} or below.` : "";
     return seo({
-      title: `Deadlock Rank Distribution ${year}: Badge Stats & Percentiles`,
+      title: pageTitle(`Deadlock Rank Distribution ${year} & Percentiles`),
       description: `See the Deadlock rank distribution across all badges and subtiers.${median} Find out what percentage of players are at each rank on the competitive ladder.`,
       path: "/community/badge-distribution",
       jsonLd: {

@@ -24,14 +24,14 @@ import {
 } from "~/lib/deadlockdle/seed";
 import { readCurrentStreak } from "~/lib/deadlockdle/storage";
 import type { GameMode } from "~/lib/deadlockdle/types";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 
 export const Route = createFileRoute("/games_/deadlockdle/")({
   component: DeadlockdleHub,
   validateSearch: validatePuzzleDateSearch,
   head: () => {
     const s = seo({
-      title: "Deadlockdle - Daily Deadlock Minigames | Deadlock API",
+      title: pageTitle("Deadlockdle - Daily Deadlock Minigames"),
       description: "Test your Deadlock knowledge with daily puzzles. Guess heroes, items, sounds, abilities, and more.",
       path: "/games/deadlockdle",
     });

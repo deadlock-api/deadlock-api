@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
 import { useIngestUpload } from "~/hooks/useIngestUpload";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 
 const WINDOWS_INSTALL_COMMAND =
   "irm https://raw.githubusercontent.com/deadlock-api/deadlock-api-ingest/master/install-windows.ps1 | iex";
@@ -42,7 +42,7 @@ export const Route = createFileRoute("/ingest-cache")({
   component: IngestCache,
   head: () =>
     seo({
-      title: "Community Data Ingestion | Deadlock API",
+      title: pageTitle("Community Data Ingestion"),
       description: "Upload match replay data from your Steam cache to help expand the Deadlock API database.",
       path: "/ingest-cache",
     }),

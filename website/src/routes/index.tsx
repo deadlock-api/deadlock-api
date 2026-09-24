@@ -35,12 +35,12 @@ import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
 import { API_ORIGIN } from "~/lib/constants";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 
 export const Route = createFileRoute("/")({
   head: () =>
     seo({
-      title: "Deadlock Stats Tracker: Win Rates, Ranks & Leaderboards",
+      title: pageTitle("Deadlock Stats Tracker: Win Rates & Ranks"),
       description:
         "Deadlock stats tracker with hero win rates, pick rates, item analytics, rank distribution, and leaderboards. Free community tool with live data from Valve's servers.",
       path: "/",

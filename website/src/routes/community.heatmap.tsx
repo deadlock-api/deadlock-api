@@ -23,7 +23,7 @@ import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { loadSeasons } from "~/queries/asset-queries";
 import { killDeathStatsQueryOptions, mapQueryOptions } from "~/queries/heatmap-queries";
 
@@ -45,7 +45,7 @@ export const Route = createFileRoute("/community/heatmap")({
   },
   head: () =>
     seo({
-      title: "Deadlock Map Heatmaps: Player Position & Kill Density",
+      title: pageTitle("Deadlock Map Heatmaps: Kills & Positions"),
       description:
         "Interactive Deadlock map heatmaps showing player positions, kill density, and zone control across ranked matches.",
       path: "/community/heatmap",

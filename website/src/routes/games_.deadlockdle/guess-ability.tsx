@@ -14,7 +14,7 @@ import { useAbilities, useHeroes, puzzleLoadError } from "~/lib/deadlockdle/quer
 import { redactName } from "~/lib/deadlockdle/redact";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { filterPlayableHeroes } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/deadlockdle/guess-ability")({
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/games_/deadlockdle/guess-ability")({
   validateSearch: validatePuzzleDateSearch,
   head: () =>
     seo({
-      title: "Guess the Ability - Deadlockdle | Deadlock API",
+      title: pageTitle("Guess the Ability - Deadlockdle"),
       description: "Can you name the ability from its icon? Daily puzzle with progressive hints.",
       path: "/games/deadlockdle/guess-ability",
     }),

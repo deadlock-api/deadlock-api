@@ -28,7 +28,7 @@ import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
 import { rankRangeLabel } from "~/lib/rank-utils";
 import { defaultPeriodLabel, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
-import { SITE_URL, seo } from "~/lib/seo";
+import { pageTitle, seo, SITE_URL } from "~/lib/seo";
 import { closestNameBySlug, slugify } from "~/lib/slug";
 import { filterShopableItems, itemQueryOptions, itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
@@ -169,7 +169,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
   head: ({ loaderData }) => {
     if (!loaderData) {
       return seo({
-        title: "Item Not Found | Deadlock",
+        title: pageTitle("Item Not Found"),
         description: "The requested Deadlock item could not be found.",
         path: "/analytics/items",
       });
@@ -181,7 +181,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       ? `${itemName} wins ${formatPercent(summary.winRate)} of ${rankRange} Deadlock matches (#${summary.rank} of ${summary.itemCount} items)${usage}. Best heroes, common pairings, and buy timing, updated daily.`
       : `${itemName} win rate, best heroes, common pairings, and buy timing in Deadlock. Live stats from tracked matches, updated daily.`;
     return seo({
-      title: `${itemName} Win Rate & Best Heroes | Deadlock`,
+      title: pageTitle(`${itemName} Win Rate & Best Heroes`),
       description,
       path: `/analytics/items/${slug}`,
       ogImage: image ?? undefined,
@@ -189,7 +189,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       jsonLd: {
         "@context": "https://schema.org",
         "@type": "Dataset",
-        name: `${itemName} Win Rate & Best Heroes | Deadlock`,
+        name: `Deadlock ${itemName} Win Rate & Best Heroes`,
         description: `Win rate, purchase rate, buy timing, best heroes, and common pairings for the tier ${tier} ${slot} item ${itemName} in Deadlock, calculated from tracked ${rankRange} matches and updated daily.`,
         url,
         keywords: ["Deadlock", itemName, "item", "win rate", "build"],

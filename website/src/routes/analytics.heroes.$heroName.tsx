@@ -38,7 +38,7 @@ import {
   defaultUnixRange,
   type SeasonInfo,
 } from "~/lib/seasons";
-import { SITE_URL, seo } from "~/lib/seo";
+import { pageTitle, seo, SITE_URL } from "~/lib/seo";
 import { closestNameBySlug, slugify } from "~/lib/slug";
 import {
   filterPlayableHeroes,
@@ -202,7 +202,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
   head: ({ loaderData }) => {
     if (!loaderData) {
       return seo({
-        title: "Hero Not Found | Deadlock",
+        title: pageTitle("Hero Not Found"),
         description: "The requested Deadlock hero could not be found.",
         path: "/analytics/heroes",
       });
@@ -213,7 +213,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       ? `${heroName} holds a ${formatPercent(summary.winRate)} win rate (#${summary.rank} of ${summary.heroCount} heroes) and a ${formatPercent(summary.pickRate)} pick rate in ${rankRange} Deadlock matches. Live matchups, synergies, and counters, updated daily.`
       : `${heroName} win rate, pick rate, best items, and matchups in Deadlock. Live stats from tracked matches, updated daily.`;
     return seo({
-      title: `${heroName} Win Rate & Pick Rate | Deadlock`,
+      title: pageTitle(`${heroName} Win Rate & Pick Rate`),
       description,
       path: `/analytics/heroes/${slug}`,
       ogImage: cardImage ?? undefined,
@@ -221,7 +221,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       jsonLd: {
         "@context": "https://schema.org",
         "@type": "Dataset",
-        name: `${heroName} Win Rate & Pick Rate | Deadlock`,
+        name: `Deadlock ${heroName} Win Rate & Pick Rate`,
         description: `Win rate, pick rate, ban rate, and matchup statistics for ${heroName} in Deadlock, calculated from tracked ${rankRange} matches and updated daily.`,
         url,
         keywords: ["Deadlock", heroName, "win rate", "pick rate", "matchups"],

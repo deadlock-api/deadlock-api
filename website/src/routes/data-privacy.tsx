@@ -25,13 +25,13 @@ import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
 import { useSteamAuthCallback } from "~/hooks/useSteamAuthCallback";
 import { sendDataPrivacyRequest } from "~/lib/data-privacy-api";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { cleanupCallbackUrl, redirectToSteamAuth } from "~/lib/steam-auth";
 
 export const Route = createFileRoute("/data-privacy")({
   head: () =>
     seo({
-      title: "Data Privacy & GDPR | Deadlock API",
+      title: pageTitle("Data Privacy & GDPR"),
       description:
         "Manage your data privacy settings. Request data deletion or re-enable tracking via Steam authentication.",
       path: "/data-privacy",

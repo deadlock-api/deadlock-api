@@ -7,7 +7,7 @@ import { FlashcardGame } from "~/components/features/flashcards/FlashcardGame";
 import { ItemEffectCard } from "~/components/features/items/ItemEffectCard";
 import { CheckboxField } from "~/components/ui/checkbox-field";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { filterShopableItems, itemUpgradesFullQueryOptions } from "~/queries/asset-queries";
 
 type Direction = "effects-to-name" | "name-to-effects";
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/games_/flashcards/item-effects")({
   component: ItemEffectFlashcards,
   head: () =>
     seo({
-      title: "Item Effect Flashcards - Learn What Items Do | Deadlock API",
+      title: pageTitle("Item Effect Flashcards - Learn What Items Do"),
       description:
         "Learn what Deadlock shop items do. Identify items from their stats and effects, or match a named item to its effects.",
       path: "/games/flashcards/item-effects",

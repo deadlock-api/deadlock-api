@@ -16,7 +16,7 @@ import { SegmentedItem } from "~/components/ui/segmented";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { getDefaultRegion, REGION_LABELS } from "~/lib/region";
 import { fetchDefaultRegion } from "~/lib/region-fns";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { leaderboardQueryOptions } from "~/queries/leaderboard-queries";
 
 export const Route = createFileRoute("/community/leaderboard")({
@@ -34,7 +34,7 @@ export const Route = createFileRoute("/community/leaderboard")({
   },
   head: () =>
     seo({
-      title: "Deadlock Leaderboard: Top Ranked Players by Region",
+      title: pageTitle("Deadlock Leaderboard: Top Players by Region"),
       description:
         "Browse the Deadlock ranked leaderboard across all regions. Filter by hero, search for any player, jump to any rank, and open a player's match history in the tracker.",
       path: "/community/leaderboard",
