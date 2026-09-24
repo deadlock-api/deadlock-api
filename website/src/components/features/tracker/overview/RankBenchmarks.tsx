@@ -279,8 +279,9 @@ function BenchmarkMetric({
           </>
         }
       >
-        <div className="flex w-full items-center justify-between gap-2">
-          <span className="truncate text-2xs text-muted-foreground">{labels[def.key] ?? def.label}</span>
+        {/* The label wraps instead of truncating: two tiles a row leave "Objective dmg / min" no room on a phone. */}
+        <div className="flex w-full items-start justify-between gap-2">
+          <span className="min-w-0 text-2xs text-muted-foreground">{labels[def.key] ?? def.label}</span>
           {relativePercent != null &&
             (relativePercent === 0 || neutral ? (
               <span className="text-3xs text-muted-foreground tabular-nums">

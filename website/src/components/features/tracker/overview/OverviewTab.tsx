@@ -170,7 +170,7 @@ export function OverviewTab({
         </div>
       </div>
 
-      <StatGroup variant="joined" size="sm" className="grid-cols-2 @xs/overview:grid-cols-3 @3xl/overview:grid-cols-6">
+      <StatGroup variant="joined" size="sm" className="grid-cols-2 @md/overview:grid-cols-3 @3xl/overview:grid-cols-6">
         {headline.map(({ label, value, detail, accent }) => (
           <Stat key={label} label={label} value={value} sub={detail} tone={accent ? "positive" : undefined} />
         ))}
