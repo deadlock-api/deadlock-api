@@ -11,6 +11,7 @@ import {
 import { Round3Patterns } from "~/components/dev/design-system/Round3Patterns";
 import { Round3PatternsMore } from "~/components/dev/design-system/Round3PatternsMore";
 import { Chapter, Specimen, Variants } from "~/components/dev/design-system/Specimen";
+import { TierListSpecimens } from "~/components/dev/design-system/TierListSpecimens";
 import { HighlightedCode } from "~/components/patterns/code/HighlightedCode";
 import { PaginationControls } from "~/components/patterns/data-table/PaginationControls";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
@@ -464,6 +465,7 @@ export function Patterns() {
       </Specimen>
       <Round3Patterns />
       <Round3PatternsMore />
+      <TierListSpecimens />
     </Chapter>
   );
 }

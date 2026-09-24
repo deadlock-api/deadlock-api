@@ -41,6 +41,11 @@ const COLOR_GROUPS: { name: string; note: string; tokens: string[] }[] = [
     ],
   },
   {
+    name: "Tier grades",
+    note: "S to D on a tier list. The letter in tier-foreground sits on the fill, so the hue only repeats it.",
+    tokens: ["tier-s", "tier-a", "tier-b", "tier-c", "tier-d", "tier-foreground"],
+  },
+  {
     name: "Game and third-party",
     note: "Item categories as colored in the client; brand colors of services we link to.",
     tokens: ["item-weapon", "item-vitality", "item-spirit", "steam-bg", "steam-border", "discord"],

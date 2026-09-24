@@ -16,6 +16,8 @@
   --red-400: #f85149;
   --teal-500: #0ea5a0;
   --amber-400: #fbbf24;
+  --orange-400: #fb923c;
+  --green-400: #4ade80;
   --amber-500: #f59e0b;
   --sky-400: #38bdf8;
   --sky-600: #0284c7;
@@ -94,6 +96,15 @@
   --lane-yellow: #facc15;
   --lane-blue: #22d3ee;
   --lane-purple: #a78bfa;
+
+  /* Tier list grades, best to worst, in the order tier lists conventionally use. The letter printed on the fill in
+     --tier-foreground carries the meaning; the hue only repeats it. */
+  --tier-s: var(--red-500);
+  --tier-a: var(--orange-400);
+  --tier-b: var(--amber-400);
+  --tier-c: var(--green-400);
+  --tier-d: var(--sky-400);
+  --tier-foreground: var(--ink-950);
 
   /* Sidebar */
   --sidebar: var(--ink-950);
@@ -184,6 +195,13 @@
   --color-lane-yellow: var(--lane-yellow);
   --color-lane-blue: var(--lane-blue);
   --color-lane-purple: var(--lane-purple);
+
+  --color-tier-s: var(--tier-s);
+  --color-tier-a: var(--tier-a);
+  --color-tier-b: var(--tier-b);
+  --color-tier-c: var(--tier-c);
+  --color-tier-d: var(--tier-d);
+  --color-tier-foreground: var(--tier-foreground);
 
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);

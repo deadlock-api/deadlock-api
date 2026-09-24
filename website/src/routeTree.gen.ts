@@ -78,6 +78,7 @@ import { Route as AnalyticsHeroesMatchupDetailsRouteImport } from './routes/anal
 import { Route as AnalyticsHeroesMatchupsRouteImport } from './routes/analytics.heroes.matchups'
 import { Route as AnalyticsHeroesOverTimeRouteImport } from './routes/analytics.heroes.over-time'
 import { Route as AnalyticsHeroesScoreboardRouteImport } from './routes/analytics.heroes.scoreboard'
+import { Route as AnalyticsHeroesTierListRouteImport } from './routes/analytics.heroes.tier-list'
 import { Route as AnalyticsItemsIndexRouteImport } from './routes/analytics.items.index'
 import { Route as AnalyticsItemsItemNameRouteImport } from './routes/analytics.items.$itemName'
 import { Route as AnalyticsItemsBuildFlowRouteImport } from './routes/analytics.items.build-flow'
@@ -452,6 +453,11 @@ const AnalyticsHeroesScoreboardRoute =
     path: '/scoreboard',
     getParentRoute: () => AnalyticsHeroesRoute,
   } as any)
+const AnalyticsHeroesTierListRoute = AnalyticsHeroesTierListRouteImport.update({
+  id: '/tier-list',
+  path: '/tier-list',
+  getParentRoute: () => AnalyticsHeroesRoute,
+} as any)
 const AnalyticsItemsIndexRoute = AnalyticsItemsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -646,6 +652,7 @@ export interface FileRoutesByFullPath {
   '/analytics/heroes/matchups': typeof AnalyticsHeroesMatchupsRoute
   '/analytics/heroes/over-time': typeof AnalyticsHeroesOverTimeRoute
   '/analytics/heroes/scoreboard': typeof AnalyticsHeroesScoreboardRoute
+  '/analytics/heroes/tier-list': typeof AnalyticsHeroesTierListRoute
   '/analytics/items/$itemName': typeof AnalyticsItemsItemNameRoute
   '/analytics/items/build-flow': typeof AnalyticsItemsBuildFlowRoute
   '/analytics/items/combos': typeof AnalyticsItemsCombosRoute
@@ -730,6 +737,7 @@ export interface FileRoutesByTo {
   '/analytics/heroes/matchups': typeof AnalyticsHeroesMatchupsRoute
   '/analytics/heroes/over-time': typeof AnalyticsHeroesOverTimeRoute
   '/analytics/heroes/scoreboard': typeof AnalyticsHeroesScoreboardRoute
+  '/analytics/heroes/tier-list': typeof AnalyticsHeroesTierListRoute
   '/analytics/items/$itemName': typeof AnalyticsItemsItemNameRoute
   '/analytics/items/build-flow': typeof AnalyticsItemsBuildFlowRoute
   '/analytics/items/combos': typeof AnalyticsItemsCombosRoute
@@ -825,6 +833,7 @@ export interface FileRoutesById {
   '/analytics/heroes/matchups': typeof AnalyticsHeroesMatchupsRoute
   '/analytics/heroes/over-time': typeof AnalyticsHeroesOverTimeRoute
   '/analytics/heroes/scoreboard': typeof AnalyticsHeroesScoreboardRoute
+  '/analytics/heroes/tier-list': typeof AnalyticsHeroesTierListRoute
   '/analytics/items/$itemName': typeof AnalyticsItemsItemNameRoute
   '/analytics/items/build-flow': typeof AnalyticsItemsBuildFlowRoute
   '/analytics/items/combos': typeof AnalyticsItemsCombosRoute
@@ -921,6 +930,7 @@ export interface FileRouteTypes {
     | '/analytics/heroes/matchups'
     | '/analytics/heroes/over-time'
     | '/analytics/heroes/scoreboard'
+    | '/analytics/heroes/tier-list'
     | '/analytics/items/$itemName'
     | '/analytics/items/build-flow'
     | '/analytics/items/combos'
@@ -1005,6 +1015,7 @@ export interface FileRouteTypes {
     | '/analytics/heroes/matchups'
     | '/analytics/heroes/over-time'
     | '/analytics/heroes/scoreboard'
+    | '/analytics/heroes/tier-list'
     | '/analytics/items/$itemName'
     | '/analytics/items/build-flow'
     | '/analytics/items/combos'
@@ -1099,6 +1110,7 @@ export interface FileRouteTypes {
     | '/analytics/heroes/matchups'
     | '/analytics/heroes/over-time'
     | '/analytics/heroes/scoreboard'
+    | '/analytics/heroes/tier-list'
     | '/analytics/items/$itemName'
     | '/analytics/items/build-flow'
     | '/analytics/items/combos'
@@ -1657,6 +1669,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnalyticsHeroesScoreboardRouteImport
       parentRoute: typeof AnalyticsHeroesRoute
     }
+    '/analytics/heroes/tier-list': {
+      id: '/analytics/heroes/tier-list'
+      path: '/tier-list'
+      fullPath: '/analytics/heroes/tier-list'
+      preLoaderRoute: typeof AnalyticsHeroesTierListRouteImport
+      parentRoute: typeof AnalyticsHeroesRoute
+    }
     '/analytics/items/': {
       id: '/analytics/items/'
       path: '/'
@@ -1918,6 +1937,7 @@ interface AnalyticsHeroesRouteChildren {
   AnalyticsHeroesMatchupsRoute: typeof AnalyticsHeroesMatchupsRoute
   AnalyticsHeroesOverTimeRoute: typeof AnalyticsHeroesOverTimeRoute
   AnalyticsHeroesScoreboardRoute: typeof AnalyticsHeroesScoreboardRoute
+  AnalyticsHeroesTierListRoute: typeof AnalyticsHeroesTierListRoute
   AnalyticsHeroesIndexRoute: typeof AnalyticsHeroesIndexRoute
 }
 
@@ -1931,6 +1951,7 @@ const AnalyticsHeroesRouteChildren: AnalyticsHeroesRouteChildren = {
   AnalyticsHeroesMatchupsRoute: AnalyticsHeroesMatchupsRoute,
   AnalyticsHeroesOverTimeRoute: AnalyticsHeroesOverTimeRoute,
   AnalyticsHeroesScoreboardRoute: AnalyticsHeroesScoreboardRoute,
+  AnalyticsHeroesTierListRoute: AnalyticsHeroesTierListRoute,
   AnalyticsHeroesIndexRoute: AnalyticsHeroesIndexRoute,
 }
 
