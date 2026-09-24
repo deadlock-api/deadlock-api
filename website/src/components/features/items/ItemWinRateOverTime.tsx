@@ -98,8 +98,8 @@ export function ItemWinRateOverTime({
         <>
           {possessive(itemName)} win rate <span className="font-semibold text-foreground">{movement}</span> from{" "}
           {formatPercent(first.winRate)} in the week of {first.label} to {formatPercent(last.winRate)} in the week of{" "}
-          {last.label}. The solid line is win rate, the dashed line how often it is bought; both cover {period} week by
-          week.
+          {last.label}. The upper line is win rate against a dashed 50% mark, the lower one how often it is bought; both
+          cover {period} week by week.
         </>
       }
     >

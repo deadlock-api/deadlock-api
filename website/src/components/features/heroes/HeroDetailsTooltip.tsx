@@ -41,8 +41,11 @@ export function HeroDetailsTooltip({
   sumMatches,
   pickrateLabel,
   pickrateMultiplier,
+  heroName,
 }: {
   row: HeroDetailsRow;
+  /** Names the button: a table of them all read "Show hero details". */
+  heroName?: string;
   sumMatches: number;
   pickrateLabel?: string;
   pickrateMultiplier?: number;
@@ -65,7 +68,12 @@ export function HeroDetailsTooltip({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon-xs" aria-label="Show hero details" className="text-muted-foreground">
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          aria-label={heroName ? `Show ${heroName} details` : "Show hero details"}
+          className="text-muted-foreground"
+        >
           <Info className="size-4" />
         </Button>
       </PopoverTrigger>

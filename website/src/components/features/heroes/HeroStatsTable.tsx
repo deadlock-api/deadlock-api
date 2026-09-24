@@ -921,7 +921,12 @@ export function HeroStatsTable({
       )}
       {columns.includes("details") && (
         <TableCell className="text-center">
-          <HeroDetailsTooltip row={row} sumMatches={sumMatches} pickrateMultiplier={pickrateMultiplier} />
+          <HeroDetailsTooltip
+            row={row}
+            heroName={heroNameMap.get(row.hero_id)}
+            sumMatches={sumMatches}
+            pickrateMultiplier={pickrateMultiplier}
+          />
         </TableCell>
       )}
     </>
