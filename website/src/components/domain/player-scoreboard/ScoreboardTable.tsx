@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import type { PlayerEntry } from "deadlock_api_client";
 import Fuse from "fuse.js";
 import { useDeferredValue, useMemo } from "react";
@@ -11,13 +12,35 @@ import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { SearchInput } from "~/components/ui/search-input";
 import { ariaSort, SortButton } from "~/components/ui/sort-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { TextLink } from "~/components/ui/text-link";
 import { usePaginationQueryState } from "~/hooks/usePaginationQueryState";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { extractBadgeMap } from "~/lib/leaderboard";
+import { parseSteamIdInput } from "~/lib/steam";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
 import { formatStatValue } from "./sort-options";
 import { SortBySelector } from "./SortBySelector";
+
+/**
+ * The search only sees the players on this board, so "no results" is about the board, not about the player. A query
+ * that is a Steam id offers that player's tracker page instead.
+ */
+function NotOnBoard({ query, boardSize }: { query: string; boardSize: number }) {
+  const parsed = parseSteamIdInput(query);
+  return (
+    <span className="flex flex-col items-center gap-1">
+      <span>{`No match in the top ${boardSize.toLocaleString("en-US")} players for this sort.`}</span>
+      {"steamId3" in parsed && (
+        <TextLink asChild>
+          <Link to="/tracker/players/$accountId" params={{ accountId: String(parsed.steamId3) }}>
+            {`Open player ${parsed.steamId3} in the tracker`}
+          </Link>
+        </TextLink>
+      )}
+    </span>
+  );
+}
 
 export type ScoreboardSort = { sortBy: string; sortDirection: "desc" | "asc" };
 
@@ -83,7 +106,7 @@ export function ScoreboardTable({
   const fuse = useMemo(
     () =>
       new Fuse(enrichedEntries, {
-        keys: ["personaname", "account_id"],
+        keys: ["personaname"],
         // A name contains the query anywhere, with a typo or two; 0.4 with position scoring let "mar" fill pages
         // with "Gary", "MrXer" and "Parzelion".
         threshold: 0.3,
@@ -95,10 +118,16 @@ export function ScoreboardTable({
   // Echo keystrokes before searching and rendering the result rows.
   const deferredSearchQuery = useDeferredValue(searchQuery);
 
-  const filteredEntries = useMemo(
-    () => (deferredSearchQuery ? fuse.search(deferredSearchQuery).map((r) => r.item) : enrichedEntries),
-    [deferredSearchQuery, enrichedEntries, fuse],
-  );
+  // An account id is matched as a number, not fuzzily: "725757673" found "757536738" a typo or two away.
+  const filteredEntries = useMemo(() => {
+    if (!deferredSearchQuery) return enrichedEntries;
+    const parsed = parseSteamIdInput(deferredSearchQuery);
+    if ("steamId3" in parsed) {
+      const query = deferredSearchQuery.trim();
+      return enrichedEntries.filter((entry) => entry.account_id === parsed.steamId3 || entry.personaname === query);
+    }
+    return fuse.search(deferredSearchQuery).map((r) => r.item);
+  }, [deferredSearchQuery, enrichedEntries, fuse]);
 
   const totalPages = Math.max(1, Math.ceil(filteredEntries.length / itemsPerPage));
   // A filter change can leave the URL's page past the end of the new board.
@@ -166,8 +195,9 @@ export function ScoreboardTable({
                 <SortBySelector
                   value={sortBy}
                   defaultValue="kills"
-                  // The name column gives way first; below this the picker shrank to an unreadable "S…".
-                  className="min-w-24"
+                  // The name column gives way first; below this the picker shrank to an unreadable "S…", and from
+                  // `sm` up there is room for "Avg Player Damage".
+                  className="min-w-24 sm:min-w-44"
                   onValueChange={(next) => sort({ sortBy: next, sortDirection })}
                 />
                 <SortButton
@@ -209,7 +239,11 @@ export function ScoreboardTable({
               </TableRow>
             );
           })}
-          {paginatedEntries.length === 0 && <TableEmptyRow colSpan={sortBy === "matches" ? 3 : 4} />}
+          {paginatedEntries.length === 0 && (
+            <TableEmptyRow colSpan={sortBy === "matches" ? 3 : 4}>
+              {deferredSearchQuery ? <NotOnBoard query={deferredSearchQuery} boardSize={entries.length} /> : undefined}
+            </TableEmptyRow>
+          )}
         </TableBody>
       </Table>
       {controls}

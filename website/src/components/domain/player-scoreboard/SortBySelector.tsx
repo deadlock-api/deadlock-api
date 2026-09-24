@@ -63,7 +63,9 @@ export function SortBySelector({
     }
   };
 
-  const displayValue = currentCategory?.label ?? key;
+  // The variant is half the choice: "Player Damage" alone did not say average, best game or total.
+  const label = currentCategory?.label ?? key;
+  const displayValue = variant === "avg" ? `Avg ${label}` : variant === "max" ? `Max ${label}` : label;
 
   return (
     <FilterCell
