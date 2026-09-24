@@ -10,16 +10,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
+import { useHydrated } from "~/hooks/useHydrated";
 import { readLocalStorage, writeLocalStorage } from "~/lib/local-storage";
 
 const STORAGE_KEY = "tracker-feedback-notice-dismissed";
 
 export function FeedbackNoticeDialog() {
-  const [open, setOpen] = useState(() => {
-    // `localStorage` does not exist during SSR; the dialog opens on hydration.
-    if (typeof window === "undefined") return false;
-    return readLocalStorage(STORAGE_KEY) !== "true";
-  });
+  // Storage exists only in the browser, so the notice opens on the render after hydration: opened by the first one,
+  // the client's markup differed from the server's.
+  const hydrated = useHydrated();
+  const [closed, setClosed] = useState(false);
+  const open = hydrated && !closed && readLocalStorage(STORAGE_KEY) !== "true";
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
   // Spotlights the feedback launcher (rendered by the root layout) while the notice is open.
@@ -33,7 +34,7 @@ export function FeedbackNoticeDialog() {
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen && dontShowAgain) writeLocalStorage(STORAGE_KEY, "true");
-    setOpen(nextOpen);
+    setClosed(!nextOpen);
   };
 
   return (

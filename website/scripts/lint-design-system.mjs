@@ -365,6 +365,39 @@ for (const file of walk(SRC)) {
   });
 }
 
+// Law 15: the first render must match the server's HTML. A state initializer or a memo runs during that render, so one that reads
+// storage or a browser global starts the client on a value the server never had: the text differs and React throws
+// the server markup away. Read it after hydration instead (`useStoredState`, `useHydrated`, or an Effect).
+const BROWSER_READ =
+  /\b(?:localStorage|sessionStorage|readLocalStorage|readStoredJson|matchMedia|navigator\.|window\.|document\.)/;
+for (const file of walk(SRC)) {
+  const rel = path.relative(ROOT, file);
+  if (EXEMPT.some((re) => re.test(rel)) || /\.test\.tsx?$/.test(rel)) continue;
+  const lines = fs.readFileSync(file, "utf8").split("\n");
+  lines.forEach((line, i) => {
+    if (!/\buse(?:State|Reducer|Memo)\b(?:<[^>]*>)?\(\s*\(\)\s*=>/.test(line)) return;
+    // The initializer's body: this line and the next few, up to the line that closes the call.
+    for (let j = i; j < Math.min(lines.length, i + 8); j++) {
+      const body = j === i ? line.slice(line.search(/\buse(?:State|Reducer|Memo)\b/)) : lines[j];
+      if (!/^\s*(?:\/\/|\*)/.test(body) && BROWSER_READ.test(body)) {
+        const allowedHere = [i - 1, i].some((k) => /ds-allow\s+law15-browser-initial-state:\s*\S/.test(lines[k] ?? ""));
+        if (!allowedHere)
+          findings.push({
+            rel,
+            line: j + 1,
+            rule: "law15-browser-initial-state",
+            text: body.trim().slice(0, 80),
+            message:
+              "Law 15: a state initializer reads a browser API, so hydration starts from a value the server never rendered; read it after hydration (useStoredState, useHydrated, an Effect)",
+          });
+        break;
+      }
+      // The call ends on this line: a one-line initializer, or the closing `});` / `}, [deps]);` of a longer one.
+      if (/\);\s*$/.test(lines[j])) break;
+    }
+  });
+}
+
 // Everything in the design system is shown on the dev page: a component nobody can see gets reinvented.
 const SHOWCASE = "src/components/dev/design-system";
 const showcaseSource = walk(path.join(ROOT, SHOWCASE))

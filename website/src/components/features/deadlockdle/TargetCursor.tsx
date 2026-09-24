@@ -2,6 +2,8 @@ import { gsap } from "gsap";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
+import { useHydrated } from "~/hooks/useHydrated";
+
 interface TargetCursorProps {
   targetSelector?: string;
   spinDuration?: number;
@@ -35,6 +37,13 @@ const CORNER_BORDERS: React.CSSProperties[] = [
  * Spins continuously and snaps its corner brackets to frame any element
  * with the `cursor-target` class on hover.
  */
+function isTouchDevice(): boolean {
+  const hasTouchScreen = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+  const isSmallScreen = window.innerWidth <= 768;
+  const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
+  return (hasTouchScreen && isSmallScreen) || mobileRegex.test(navigator.userAgent.toLowerCase());
+}
+
 export function TargetCursor({
   targetSelector = ".cursor-target",
   spinDuration = 2,
@@ -52,13 +61,10 @@ export function TargetCursor({
   const strengthRef = useRef({ current: 0 });
   const targetCornerPositionsRef = useRef<{ x: number; y: number }[] | null>(null);
 
-  const isMobile = useMemo(() => {
-    if (typeof window === "undefined") return false;
-    const hasTouchScreen = "ontouchstart" in window || navigator.maxTouchPoints > 0;
-    const isSmallScreen = window.innerWidth <= 768;
-    const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
-    return (hasTouchScreen && isSmallScreen) || mobileRegex.test(navigator.userAgent.toLowerCase());
-  }, []);
+  // After hydration: the server has no device to ask, and a phone that dropped the cursor during hydration threw the
+  // server markup away.
+  const hydrated = useHydrated();
+  const isMobile = useMemo(() => hydrated && isTouchDevice(), [hydrated]);
 
   const moveCursor = useCallback((x: number, y: number) => {
     if (!cursorRef.current) return;
