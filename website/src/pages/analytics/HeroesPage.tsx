@@ -9,7 +9,6 @@ import { HeroFiltersSection } from "~/components/features/heroes/HeroFiltersSect
 import { HeroScoreboardTable } from "~/components/features/heroes/HeroScoreboardTable";
 import { HeroStatSelector } from "~/components/features/heroes/HeroStatSelectors";
 import { HeroStatsTable } from "~/components/features/heroes/HeroStatsTable";
-import { HeroTierList } from "~/components/features/heroes/HeroTierList";
 import { HeroTrendControls } from "~/components/features/heroes/HeroTrendControls";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigation/ResponsiveTabsList";
@@ -124,15 +123,14 @@ export function HeroesPage() {
           value={filters.tab ?? undefined}
           onValueChange={(value) => filters.setTab(value as HeroTab)}
         >
-          <ResponsiveTab value="stats">Overall</ResponsiveTab>
-          <ResponsiveTab value="tier-list">Tier List</ResponsiveTab>
+          <ResponsiveTab value="stats">Overall Stats</ResponsiveTab>
           <ResponsiveTab value="stats-over-time">Over Time</ResponsiveTab>
-          <ResponsiveTab value="stats-by-duration">By Length</ResponsiveTab>
+          <ResponsiveTab value="stats-by-duration">By Duration</ResponsiveTab>
           <ResponsiveTab value="stats-by-rank">By Rank</ResponsiveTab>
           <ResponsiveTab value="stats-by-experience">By Experience</ResponsiveTab>
           <ResponsiveTab value="hero-combs">Combos</ResponsiveTab>
           <ResponsiveTab value="matchups">Matchups</ResponsiveTab>
-          <ResponsiveTab value="hero-matchup-details">Head to Head</ResponsiveTab>
+          <ResponsiveTab value="hero-matchup-details">Matchup Details</ResponsiveTab>
           <ResponsiveTab value="hero-scoreboard">Scoreboard</ResponsiveTab>
         </ResponsiveTabsList>
 
@@ -169,21 +167,6 @@ export function HeroesPage() {
               maxDate={filters.endDate || undefined}
               prevMinDate={filters.prevStartDate}
               prevMaxDate={filters.prevEndDate}
-              gameMode={filters.gameMode}
-              matchMode={filters.matchMode}
-            />
-          </Section>
-        </TabsContent>
-
-        <TabsContent value="tier-list">
-          <Section titleDisplay="hidden" title="Hero Tier List">
-            <HeroTierList
-              minRankId={filters.effectiveMinRankId}
-              maxRankId={filters.effectiveMaxRankId}
-              minHeroMatches={filters.minHeroMatches}
-              minHeroMatchesTotal={filters.minHeroMatchesTotal}
-              minDate={filters.startDate || undefined}
-              maxDate={filters.endDate || undefined}
               gameMode={filters.gameMode}
               matchMode={filters.matchMode}
             />

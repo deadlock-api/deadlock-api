@@ -52,8 +52,7 @@ const ANALYTICS_VIEW_ENTRIES: SitemapEntry[] = Object.entries(ANALYTICS_TABS).fl
     .map((view) => ({
       path: `/analytics/${section}/${view}`,
       changefreq: "daily" as const,
-      // "deadlock tier list" is one of the searches the site is found by.
-      priority: view === "tier-list" ? 0.9 : 0.7,
+      priority: 0.7,
     })),
 );
 

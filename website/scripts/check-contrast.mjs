@@ -194,11 +194,6 @@ for (const [token, fill] of [
 ]) {
   variant(token, fill, UI_MIN);
 }
-// Tier list grades: the letter on its fill, and the fill as a mark against the row's card.
-for (const tier of ["s", "a", "b", "c", "d"]) {
-  variant("tier-foreground", `tier-${tier}`);
-  variant(`tier-${tier}`, "card", UI_MIN);
-}
 variant("muted-foreground", "secondary");
 variant("foreground", "primary/15 over secondary");
 variant("foreground", "primary/10 over card");

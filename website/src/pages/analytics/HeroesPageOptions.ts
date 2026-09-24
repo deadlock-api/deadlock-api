@@ -4,8 +4,6 @@ import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
-import { heroSlug } from "~/lib/hero-slug";
-import { computeHeroTiers, type Tier } from "~/lib/hero-tiers";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultPeriodLabel, defaultPrevUnixRange, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { pageTitle, seo } from "~/lib/seo";
@@ -43,59 +41,10 @@ function findWinRateLeader(
   return best;
 }
 
-interface TierListHero {
-  name: string;
-  slug: string;
-  tier: Tier;
-}
-
-/** The tier list of the default filters, best first, for the page's ItemList and description. */
-function tierListHeroes(
-  stats: readonly AnalyticsHeroStats[] | undefined,
-  heroes: readonly SlimHero[] | undefined,
-): TierListHero[] | null {
-  if (!stats || !heroes) return null;
-  const names = new Map(heroes.flatMap((hero) => (hero.name ? [[hero.id, hero.name] as const] : [])));
-  const { entries } = computeHeroTiers(
-    stats
-      .filter((row) => names.has(row.hero_id))
-      .map((row) => ({ heroId: row.hero_id, wins: row.wins, matches: row.matches })),
-  );
-  return entries.map(({ heroId, tier }) => {
-    const name = names.get(heroId)!;
-    return { name, slug: heroSlug(name), tier };
-  });
-}
-
-const DESCRIPTION_MAX_LENGTH = 155;
-
-/** "S tier: Haze, Seven and Paradox." with as many names as fit after the description, "…, Seven and more." if not all. */
-function sTierSentence(description: string, tiers: readonly TierListHero[]): string {
-  const names = tiers.filter((hero) => hero.tier === "S").map((hero) => hero.name);
-  for (let count = names.length; count > 0; count--) {
-    const shown = names.slice(0, count);
-    const list =
-      count < names.length
-        ? `${shown.join(", ")} and more`
-        : shown.length > 1
-          ? `${shown.slice(0, -1).join(", ")} and ${shown.at(-1)}`
-          : shown[0];
-    const sentence = ` S tier: ${list}.`;
-    if (description.length + sentence.length <= DESCRIPTION_MAX_LENGTH) return sentence;
-  }
-  return "";
-}
-
 export const heroesPageOptions = {
   beforeLoad: redirectAnalyticsTab,
   component: lazyRouteComponent(() => import("./HeroesPage"), "HeroesPage"),
-  loader: async ({
-    context: { queryClient, preferences },
-    location,
-  }: {
-    context: RouterContext;
-    location: { pathname: string };
-  }) => {
+  loader: async ({ context: { queryClient, preferences } }: { context: RouterContext }) => {
     // Shared route options are not automatically split by the router plugin.
     // Import query code only when this loader runs, rather than on every page.
     const [{ heroesQueryOptions, loadSeasons }, { heroBanStatsQueryOptions }, { heroStatsQueryOptions }] =
@@ -158,23 +107,13 @@ export const heroesPageOptions = {
       ),
     ]);
     // The leader is measured over the default range, which is this season unless the visitor prefers patches.
-    const onTierList = analyticsTabFromPath("heroes", location.pathname) === "tier-list";
-    return {
-      leader: findWinRateLeader(stats, heroes),
-      period: defaultPeriodLabel(seasons, preferences.dateFilter),
-      // Only the tier list page carries its heroes in the loader data, for the ItemList below.
-      tiers: onTierList ? tierListHeroes(stats, heroes) : null,
-    };
+    return { leader: findWinRateLeader(stats, heroes), period: defaultPeriodLabel(seasons, preferences.dateFilter) };
   },
   head: ({
     loaderData,
     match,
   }: {
-    loaderData?: {
-      leader: { name: string; winRate: number } | null;
-      period: string;
-      tiers: TierListHero[] | null;
-    };
+    loaderData?: { leader: { name: string; winRate: number } | null; period: string };
     match: { pathname: string };
   }) => {
     const tab = analyticsTabFromPath("heroes", match.pathname);
@@ -182,41 +121,21 @@ export const heroesPageOptions = {
     // The leader is the overall table's headline; the other views are about something else.
     const leader = tab === "stats" ? loaderData?.leader : null;
     const lead = leader ? ` ${leader.name} leads ${loaderData?.period} at ${(leader.winRate * 100).toFixed(1)}%.` : "";
-    const tiers = tab === "tier-list" ? loaderData?.tiers : null;
-    const path = match.pathname.replace(/\/$/, "");
-    const dataset = {
-      "@context": "https://schema.org",
-      "@type": "Dataset",
-      name: view.title,
-      description: view.description,
-      url: `https://deadlock-api.com${path}`,
-      keywords: ["Deadlock", "tier list", "hero win rates", "pick rates", "ban rates", "matchups", "hero meta"],
-      creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
-      isAccessibleForFree: true,
-      license: "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE",
-    };
     return seo({
       title: pageTitle(view.title),
-      description: view.description + (tiers ? sTierSentence(view.description, tiers) : lead),
-      path,
-      jsonLd: tiers?.length
-        ? [
-            dataset,
-            {
-              "@context": "https://schema.org",
-              "@type": "ItemList",
-              name: `${view.heading}, ${loaderData?.period}`,
-              itemListOrder: "https://schema.org/ItemListOrderDescending",
-              numberOfItems: tiers.length,
-              itemListElement: tiers.map((hero, index) => ({
-                "@type": "ListItem",
-                position: index + 1,
-                name: `${hero.name} (${hero.tier} tier)`,
-                url: `https://deadlock-api.com/analytics/heroes/${hero.slug}`,
-              })),
-            },
-          ]
-        : dataset,
+      description: view.description + lead,
+      path: match.pathname.replace(/\/$/, ""),
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        name: view.title,
+        description: view.description,
+        url: `https://deadlock-api.com${match.pathname.replace(/\/$/, "")}`,
+        keywords: ["Deadlock", "hero win rates", "pick rates", "ban rates", "matchups", "hero meta"],
+        creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
+        isAccessibleForFree: true,
+        license: "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE",
+      },
     });
   },
 };

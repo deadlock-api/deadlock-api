@@ -10,7 +10,6 @@ import { HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
 
 export const STATS_TABS: readonly HeroTab[] = [
   "stats",
-  "tier-list",
   "stats-over-time",
   "stats-by-duration",
   "stats-by-rank",
