@@ -107,8 +107,8 @@ function BadgeDistributionPage() {
   };
 
   const handleDurationChange = ([min, max]: MatchTimeRange) => {
-    setMinDurationS(min ?? null);
-    setMaxDurationS(max ?? null);
+    void setMinDurationS(min ?? null);
+    void setMaxDurationS(max ?? null);
   };
 
   const [ranks, badgeDistributionQuery] = useQueries({

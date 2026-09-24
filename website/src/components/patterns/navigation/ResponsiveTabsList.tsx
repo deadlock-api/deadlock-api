@@ -68,7 +68,7 @@ export function ResponsiveTabsList({
     const check = () => setOverflows(el.scrollWidth > el.clientWidth);
     check();
 
-    document.fonts?.ready.then(check);
+    void document.fonts?.ready.then(check);
 
     const ro = new ResizeObserver(check);
     ro.observe(el);

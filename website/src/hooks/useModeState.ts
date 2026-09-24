@@ -23,7 +23,7 @@ export function useModeState() {
 
   const setMode = (next: Mode, options?: Options) => {
     // One choice updates both parameters together, without the app's per-key debounce splitting browser history.
-    setModeParams(
+    void setModeParams(
       { game_mode: MODE_CONFIG[next].gameMode, match_mode: MODE_CONFIG[next].matchMode },
       { ...options, limitUrlUpdates: options?.limitUrlUpdates ?? throttle(50) },
     );

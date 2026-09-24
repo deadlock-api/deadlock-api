@@ -18,12 +18,12 @@ export function useHeroCombFilters(defaultCombsToShow = HERO_COMBS_TO_SHOW[0]) {
 
   // A hero cannot be both required and forbidden; the newer choice wins.
   const setIncludeHeroes = (heroIds: number[]) => {
-    setIncludeHeroIds(heroIds);
-    setExcludeHeroIds((prev) => prev.filter((heroId) => !heroIds.includes(heroId)));
+    void setIncludeHeroIds(heroIds);
+    void setExcludeHeroIds((prev) => prev.filter((heroId) => !heroIds.includes(heroId)));
   };
   const setExcludeHeroes = (heroIds: number[]) => {
-    setExcludeHeroIds(heroIds);
-    setIncludeHeroIds((prev) => prev.filter((heroId) => !heroIds.includes(heroId)));
+    void setExcludeHeroIds(heroIds);
+    void setIncludeHeroIds((prev) => prev.filter((heroId) => !heroIds.includes(heroId)));
   };
 
   return {

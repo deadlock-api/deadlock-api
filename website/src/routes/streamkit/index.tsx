@@ -53,12 +53,12 @@ function StreamKit() {
     if (!steamId64) return;
 
     const id3 = steamId64ToSteamId3(steamId64);
-    setSteamId(id3.toString());
+    void setSteamId(id3.toString());
 
     const newParams = new URLSearchParams();
     newParams.set("steamid", id3.toString());
     if (region) newParams.set("region", region);
-    navigate({ to: "/streamkit", search: Object.fromEntries(newParams), replace: true });
+    void navigate({ to: "/streamkit", search: Object.fromEntries(newParams), replace: true });
   }, [steamId64, setSteamId, region, navigate]);
 
   const fetchSteamName = async (r: string, id: string) => {

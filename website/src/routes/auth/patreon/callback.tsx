@@ -59,7 +59,7 @@ function PatreonCallbackPage() {
     const storedRedirectPath = takeRedirectPath();
 
     const timeout = setTimeout(() => {
-      navigate({ to: storedRedirectPath, replace: true });
+      void navigate({ to: storedRedirectPath, replace: true });
     }, 1500);
 
     return () => clearTimeout(timeout);
@@ -67,10 +67,10 @@ function PatreonCallbackPage() {
 
   const handleGoBack = () => {
     if (typeof window === "undefined") {
-      navigate({ to: "/patron" });
+      void navigate({ to: "/patron" });
       return;
     }
-    navigate({ to: takeRedirectPath() });
+    void navigate({ to: takeRedirectPath() });
   };
 
   return (

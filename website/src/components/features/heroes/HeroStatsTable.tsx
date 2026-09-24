@@ -133,18 +133,18 @@ export function HeroStatsTable({
 
   const handleSort = (key: SortKey) => {
     if (key === activeSortKey) {
-      setSortDir((d) => (d === "desc" ? "asc" : "desc"));
+      void setSortDir((d) => (d === "desc" ? "asc" : "desc"));
     } else {
-      setActiveSortKey(key);
-      setSortDir("desc");
+      void setActiveSortKey(key);
+      void setSortDir("desc");
     }
   };
 
   // Picking the column's metric is asking to rank heroes by it, so the table sorts by that column right away.
   const handlePickRateModeChange = (mode: PickRateMode) => {
-    setPickRateMode(mode);
-    setActiveSortKey("pickRate");
-    if (activeSortKey !== "pickRate") setSortDir("desc");
+    void setPickRateMode(mode);
+    void setActiveSortKey("pickRate");
+    if (activeSortKey !== "pickRate") void setSortDir("desc");
   };
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);

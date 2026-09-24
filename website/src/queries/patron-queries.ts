@@ -79,7 +79,7 @@ export function useAddSteamAccount() {
   return useMutation({
     mutationFn: addSteamAccount,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.patron.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.patron.all });
     },
   });
 }
@@ -90,7 +90,7 @@ export function useDeleteSteamAccount() {
   return useMutation({
     mutationFn: deleteSteamAccount,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.patron.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.patron.all });
     },
   });
 }
@@ -102,7 +102,7 @@ export function useReplaceSteamAccount() {
     mutationFn: ({ accountId, steamId3 }: { accountId: string; steamId3: number }) =>
       replaceSteamAccount(accountId, steamId3),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.patron.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.patron.all });
     },
   });
 }
@@ -113,7 +113,7 @@ export function useReactivateSteamAccount() {
   return useMutation({
     mutationFn: reactivateSteamAccount,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.patron.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.patron.all });
     },
   });
 }

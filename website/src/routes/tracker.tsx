@@ -59,7 +59,7 @@ function MyAccountsCard() {
   const soleAccountId = activeAccounts.length === 1 ? activeAccounts[0].steam_id3 : undefined;
   useEffect(() => {
     if (soleAccountId === undefined) return;
-    navigate({ to: "/tracker/players/$accountId", params: { accountId: String(soleAccountId) }, replace: true });
+    void navigate({ to: "/tracker/players/$accountId", params: { accountId: String(soleAccountId) }, replace: true });
   }, [navigate, soleAccountId]);
 
   // Without a sign-in there are no accounts to list, so the visitor gets the demo profile and its sign-in prompt.
@@ -67,7 +67,7 @@ function MyAccountsCard() {
   // request says nothing about the session.
   const signedOut = isResolved && !statusError && !isAuthenticated;
   useEffect(() => {
-    if (signedOut) navigate({ to: "/tracker/demo", replace: true });
+    if (signedOut) void navigate({ to: "/tracker/demo", replace: true });
   }, [navigate, signedOut]);
 
   return (

@@ -62,8 +62,8 @@ export function ItemsPage() {
           onValueChange={(next) => {
             if (next.mode !== mode) setMode(next.mode);
             if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
-              setMinRankId(next.rank[0]);
-              setMaxRankId(next.rank[1]);
+              void setMinRankId(next.rank[0]);
+              void setMaxRankId(next.rank[1]);
             }
           }}
         />
@@ -72,8 +72,8 @@ export function ItemsPage() {
           <Filter.TimeRange
             value={[minBoughtAtS ?? undefined, maxBoughtAtS ?? undefined]}
             onValueChange={([min, max]) => {
-              setMinBoughtAtS(min ?? null);
-              setMaxBoughtAtS(max ?? null);
+              void setMinBoughtAtS(min ?? null);
+              void setMaxBoughtAtS(max ?? null);
             }}
             label="Time"
             title="Purchase Time Window"

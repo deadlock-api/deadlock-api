@@ -201,7 +201,7 @@ export function RankBenchmarks({
             value={selection}
             onValueChange={(value) => {
               const next = RANK_SELECTIONS.find((option) => option === value);
-              if (next) setSelection(next);
+              if (next) void setSelection(next);
             }}
           >
             <SelectTrigger size="sm" className="min-w-40 gap-2" aria-label="Benchmark rank range">

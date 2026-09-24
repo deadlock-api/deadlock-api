@@ -39,7 +39,7 @@ export function RefreshControl({ accountId }: { accountId: number }) {
 
   useEffect(() => {
     if (lastAttemptAt === 0 || isFetching) return;
-    const timer = setTimeout(() => refreshTrackerAccount(queryClient, accountId), Math.max(0, dueAt - Date.now()));
+    const timer = setTimeout(() => void refreshTrackerAccount(queryClient, accountId), Math.max(0, dueAt - Date.now()));
     return () => clearTimeout(timer);
   }, [lastAttemptAt, dueAt, queryClient, accountId, isFetching]);
 

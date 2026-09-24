@@ -427,7 +427,7 @@ export function ItemFlowGraph({
       if (set.has(tier)) set.delete(tier);
       else set.add(tier);
       next.set(column, set);
-      setXTiersRaw(serializeExcludedTiers(next) || null);
+      void setXTiersRaw(serializeExcludedTiers(next) || null);
     },
     [excludedTiers, setXTiersRaw],
   );
@@ -494,7 +494,7 @@ export function ItemFlowGraph({
 
   const toggleLock = useCallback(
     (key: string) => {
-      setLocked((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+      void setLocked((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
     },
     [setLocked],
   );

@@ -84,8 +84,8 @@ export function HeroFiltersSection({
         onValueChange={(next) => {
           if (next.mode !== mode) setMode(next.mode);
           if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
-            setMinRankId(next.rank[0]);
-            setMaxRankId(next.rank[1]);
+            void setMinRankId(next.rank[0]);
+            void setMaxRankId(next.rank[1]);
           }
         }}
         hideRankRange={tab === "stats-by-rank"}

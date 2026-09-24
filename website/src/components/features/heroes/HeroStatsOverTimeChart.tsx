@@ -260,7 +260,7 @@ export function HeroStatsOverTimeChart({
   const { allHeroIds, effectiveVisibleSet, setVisibleHeroes } = useChartHeroVisibility(heroIdMap, {
     heroIdFilter: heroIdsWithData,
     value: selectedHeroIds,
-    onValueChange: setSelectedHeroIds,
+    onValueChange: (ids) => void setSelectedHeroIds(ids),
   });
   const visibleHeroIds = useMemo(
     () => allHeroIds.filter((id) => effectiveVisibleSet.has(id)),

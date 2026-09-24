@@ -157,7 +157,7 @@ export function SeasonPatchDatePicker({
       active={isActive}
       onReset={() => {
         emit(defaultStart, defaultEnd, "reset");
-        setQueryTab(null);
+        void setQueryTab(null);
       }}
       icon={<CalendarIcon className="size-3.5 shrink-0" />}
       className={className}

@@ -144,7 +144,7 @@ function DeadlockdleHub() {
 
   function goToDate(target: string) {
     if (!isValidPuzzleDate(target)) return;
-    navigate({ to: "/games/deadlockdle", search: target === today ? {} : { date: target } });
+    void navigate({ to: "/games/deadlockdle", search: target === today ? {} : { date: target } });
   }
 
   const allFinished = useMemo(

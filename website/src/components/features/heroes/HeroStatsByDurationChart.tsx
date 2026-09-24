@@ -128,7 +128,7 @@ export function HeroStatsByDurationChart({
   const { allHeroIds, effectiveVisibleSet, setVisibleHeroes } = useChartHeroVisibility(heroIdMap, {
     heroIdFilter: heroIdsWithData,
     value: selectedHeroIds,
-    onValueChange: setSelectedHeroIds,
+    onValueChange: (ids) => void setSelectedHeroIds(ids),
   });
   const selectedIds = allHeroIds.filter((id) => effectiveVisibleSet.has(id));
   const pickerHeroes = Object.entries(heroIdMap)

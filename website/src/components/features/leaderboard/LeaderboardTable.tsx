@@ -83,8 +83,8 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
       const inResults = filteredEntries.findIndex((entry) => entry.rank === rank);
       const index = inResults >= 0 ? inResults : sortedEntries.findIndex((entry) => entry.rank === rank);
       if (index < 0) return;
-      if (inResults < 0) setSearchQuery("");
-      setCurrentPage(Math.floor(index / itemsPerPage));
+      if (inResults < 0) void setSearchQuery("");
+      void setCurrentPage(Math.floor(index / itemsPerPage));
       setHighlightedRank(rank);
     },
     [filteredEntries, sortedEntries, itemsPerPage, setCurrentPage, setSearchQuery],

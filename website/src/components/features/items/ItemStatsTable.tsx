@@ -413,8 +413,8 @@ export function ItemStatsTable({
 
   const sort: SortState = useMemo(() => ({ field: sortField, direction: sortDirection }), [sortField, sortDirection]);
   const setSort = (newSort: SortState) => {
-    setSortField(newSort.field);
-    setSortDirection(newSort.direction);
+    void setSortField(newSort.field);
+    void setSortDirection(newSort.direction);
   };
 
   const [itemTiers, setItemTiers] = useQueryState(
@@ -439,8 +439,8 @@ export function ItemStatsTable({
   const [nameQuery, setNameQuery] = useState("");
 
   const handleApply = (nextInclude: Set<number>, nextExclude: Set<number>) => {
-    setIncludeItems(nextInclude);
-    setExcludeItems(nextExclude);
+    void setIncludeItems(nextInclude);
+    void setExcludeItems(nextExclude);
   };
 
   // Functional updates keep both callbacks stable, so a click re-renders one memoized row instead of the whole table.
@@ -453,28 +453,28 @@ export function ItemStatsTable({
   const toggleInclude = useCallback(
     (id: number) => {
       lastToggled.current = id;
-      setIncludeItems((prev) => toggled(prev, id));
-      setExcludeItems((prev) => (prev.has(id) ? new Set([...prev].filter((other) => other !== id)) : prev));
+      void setIncludeItems((prev) => toggled(prev, id));
+      void setExcludeItems((prev) => (prev.has(id) ? new Set([...prev].filter((other) => other !== id)) : prev));
     },
     [setIncludeItems, setExcludeItems],
   );
   const toggleExclude = useCallback(
     (id: number) => {
       lastToggled.current = id;
-      setExcludeItems((prev) => toggled(prev, id));
-      setIncludeItems((prev) => (prev.has(id) ? new Set([...prev].filter((other) => other !== id)) : prev));
+      void setExcludeItems((prev) => toggled(prev, id));
+      void setIncludeItems((prev) => (prev.has(id) ? new Set([...prev].filter((other) => other !== id)) : prev));
     },
     [setIncludeItems, setExcludeItems],
   );
   const removeInclude = (id: number) => {
     const next = new Set(includeItems);
     next.delete(id);
-    setIncludeItems(next);
+    void setIncludeItems(next);
   };
   const removeExclude = (id: number) => {
     const next = new Set(excludeItems);
     next.delete(id);
-    setExcludeItems(next);
+    void setExcludeItems(next);
   };
 
   // The header and filters answer a click at once; the ~150 rows (a few hundred ms of style and layout on a phone)

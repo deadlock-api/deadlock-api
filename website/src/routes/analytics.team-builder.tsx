@@ -369,8 +369,8 @@ function TeamBuilderPage() {
           onValueChange={(next) => {
             if (next.mode !== mode) changeMode(next.mode);
             if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
-              setMinRankId(next.rank[0]);
-              setMaxRankId(next.rank[1]);
+              void setMinRankId(next.rank[0]);
+              void setMaxRankId(next.rank[1]);
             }
           }}
         />

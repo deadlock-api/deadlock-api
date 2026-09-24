@@ -39,7 +39,7 @@ export function useTrackerFilters(defaultDateRange?: DateRange) {
     const datesChanged =
       (next.minUnixTimestamp ?? null) !== (minUnixTimestamp ?? null) ||
       (next.maxUnixTimestamp ?? null) !== (maxUnixTimestamp ?? null);
-    setFilterQuery(
+    void setFilterQuery(
       {
         hero: next.heroId,
         result: next.result,

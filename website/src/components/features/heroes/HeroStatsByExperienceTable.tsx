@@ -207,10 +207,10 @@ export function HeroStatsByExperienceTable({
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
-      setSortAsc((prev) => !prev);
+      void setSortAsc((prev) => !prev);
     } else {
-      setSortKey(key);
-      setSortAsc(false);
+      void setSortKey(key);
+      void setSortAsc(false);
     }
   };
 

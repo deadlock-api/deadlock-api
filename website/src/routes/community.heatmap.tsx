@@ -104,8 +104,8 @@ function HeatmapPage() {
 
   const handleModeWithRankChange = ({ mode: nextMode, rank: [min, max] }: ModeWithRank) => {
     setMode(nextMode);
-    setMinRankId(min);
-    setMaxRankId(max);
+    void setMinRankId(min);
+    void setMaxRankId(max);
   };
 
   return (
@@ -152,8 +152,8 @@ function HeatmapPage() {
         <Filter.TimeRange
           value={[minGameTime || undefined, maxGameTime < 3600 ? maxGameTime : undefined]}
           onValueChange={([min, max]) => {
-            setMinGameTime(min ?? 0);
-            setMaxGameTime(max ?? 3600);
+            void setMinGameTime(min ?? 0);
+            void setMaxGameTime(max ?? 3600);
           }}
           label="Match Time"
           title="Kill/Death Time Window"

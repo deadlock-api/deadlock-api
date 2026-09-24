@@ -116,13 +116,13 @@ export function ScoreboardTable({
     [filteredEntries, currentPage, itemsPerPage],
   );
   const handleItemsPerPageChange = (perPage: number) => {
-    setItemsPerPage(perPage);
-    setCurrentPage(0);
+    void setItemsPerPage(perPage);
+    void setCurrentPage(0);
   };
 
   const handleSearchChange = (query: string) => {
-    setSearchQuery(query);
-    setCurrentPage(0);
+    void setSearchQuery(query);
+    void setCurrentPage(0);
   };
 
   const controls = (

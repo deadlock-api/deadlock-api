@@ -65,7 +65,7 @@ function DataDumps() {
       if (next && document.activeElement instanceof HTMLElement) openerRef.current = document.activeElement;
       setPlaygroundOpenState(next);
       if (!next) {
-        setSqlQueryParam(null);
+        void setSqlQueryParam(null);
         requestAnimationFrame(() => openerRef.current?.focus());
       }
     },
@@ -75,7 +75,7 @@ function DataDumps() {
   // Not set shows the example query; an editor the user emptied stays empty ("").
   const sqlQuery = sqlQueryParam ?? SQL_PLAYGROUND_DEFAULT_QUERY;
   const onSqlQueryChange = (q: string) => {
-    setSqlQueryParam(q);
+    void setSqlQueryParam(q);
   };
 
   const manifest = useQuery({

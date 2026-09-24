@@ -180,7 +180,7 @@ function DataPrivacy() {
       cleanupCallbackUrl();
     };
 
-    processCallback();
+    void processCallback();
   }, [steamId64, openIdParams]);
 
   const handleSteamAuth = (action: "deletion" | "tracking") => {

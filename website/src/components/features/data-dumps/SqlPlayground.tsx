@@ -108,7 +108,7 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
     if (!open || initStartedRef.current) return;
     initStartedRef.current = true;
     setInitState("loading");
-    (async () => {
+    void (async () => {
       try {
         const h = await initDuckDb();
         setHandle(h);

@@ -82,8 +82,8 @@ export function TrackerContent({
   }, [expandedMatchId, tab]);
   const openMatch = (matchId: number) => {
     requestedMatchFocus.current = matchId;
-    setExpandedMatchId(matchId);
-    setTab("matches");
+    void setExpandedMatchId(matchId);
+    void setTab("matches");
     if (expandedMatchId === matchId && tab === "matches") {
       requestedMatchFocus.current = null;
       focusMatchDetails(sectionRef.current, matchId);
@@ -196,7 +196,7 @@ export function TrackerContent({
               variant="outline"
               size="sm"
               onClick={() => {
-                setExpandedMatchId(null);
+                void setExpandedMatchId(null);
                 sectionRef.current?.focus({ preventScroll: true });
               }}
             >
@@ -220,8 +220,8 @@ export function TrackerContent({
               variant="outline"
               size="sm"
               onClick={() => {
-                setExpandedMatchId(null);
-                setTab("matches", { history: "push" });
+                void setExpandedMatchId(null);
+                void setTab("matches", { history: "push" });
               }}
             >
               <ArrowLeft data-icon="inline-start" />
@@ -289,9 +289,9 @@ export function TrackerContent({
             entries={formEntries}
             result={result}
             onSelectHero={(id) => {
-              setHeroId(id);
-              setExpandedMatchId(null);
-              setTab("matches", { history: "push" });
+              void setHeroId(id);
+              void setExpandedMatchId(null);
+              void setTab("matches", { history: "push" });
             }}
           />
         )}

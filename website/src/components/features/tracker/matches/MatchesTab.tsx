@@ -186,7 +186,7 @@ export function MatchesTab({
   }, [selectedId]);
 
   const selectMatch = (matchId: number) => {
-    setSelectedMatchId(matchId);
+    void setSelectedMatchId(matchId);
     // Enter on an already selected row still opens its details after browsing the list with arrow keys.
     if (matchId === selectedId) {
       detailsRef.current?.focus({ preventScroll: true });
@@ -194,7 +194,7 @@ export function MatchesTab({
     }
   };
   const showOverview = () => {
-    setSelectedMatchId(null);
+    void setSelectedMatchId(null);
     if (selectedId == null) detailsRef.current?.focus({ preventScroll: true });
     detailsRef.current?.scrollIntoView({ block: "start" });
   };
@@ -203,7 +203,7 @@ export function MatchesTab({
     const next = sortedEntries[selectedIndex + offset];
     if (!next) return;
     navigationDirection.current = offset;
-    setSelectedMatchId(next.match_id);
+    void setSelectedMatchId(next.match_id);
   };
 
   const handleItemKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
@@ -225,11 +225,11 @@ export function MatchesTab({
       return;
     }
     focusSelectedItem.current = true;
-    setSelectedMatchId(next.match_id);
+    void setSelectedMatchId(next.match_id);
   };
 
   const changeSort = (next: { sort?: MatchSortKey; dir?: SortDir }) => {
-    setSort(next);
+    void setSort(next);
   };
   const reverseSortLabel =
     sortKey === "played"
