@@ -14,6 +14,7 @@ import { LinkCard } from "~/components/patterns/content/LinkCard";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Section } from "~/components/patterns/page/Section";
+import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -394,33 +395,39 @@ function HeroDetailPage() {
           gameMode={GAME_MODE}
           matchMode={DEFAULT_MATCH_MODE}
         />
-        <div className="grid gap-4 lg:grid-cols-2">
-          <HeroMatchupDetailsStatsTable
-            heroId={heroId}
-            stat={0}
-            minRankId={DEFAULT_MIN_RANK}
-            maxRankId={DEFAULT_MAX_RANK}
-            minDate={defaultStart}
-            maxDate={defaultEnd}
-            prevMinDate={prevStart}
-            prevMaxDate={prevEnd}
-            gameMode={GAME_MODE}
-            matchMode={DEFAULT_MATCH_MODE}
-            linkHeroes
-          />
-          <HeroMatchupDetailsStatsTable
-            heroId={heroId}
-            stat={1}
-            minRankId={DEFAULT_MIN_RANK}
-            maxRankId={DEFAULT_MAX_RANK}
-            minDate={defaultStart}
-            maxDate={defaultEnd}
-            prevMinDate={prevStart}
-            prevMaxDate={prevEnd}
-            gameMode={GAME_MODE}
-            matchMode={DEFAULT_MATCH_MODE}
-            linkHeroes
-          />
+        <div className="grid items-start gap-4 lg:grid-cols-2">
+          <Panel>
+            <PanelHeader title={`${heroName} with Teammates`} description="Win rate change, best first" />
+            <HeroMatchupDetailsStatsTable
+              heroId={heroId}
+              stat={0}
+              minRankId={DEFAULT_MIN_RANK}
+              maxRankId={DEFAULT_MAX_RANK}
+              minDate={defaultStart}
+              maxDate={defaultEnd}
+              prevMinDate={prevStart}
+              prevMaxDate={prevEnd}
+              gameMode={GAME_MODE}
+              matchMode={DEFAULT_MATCH_MODE}
+              linkHeroes
+            />
+          </Panel>
+          <Panel>
+            <PanelHeader title={`${heroName} against Enemies`} description="Win rate change, best first" />
+            <HeroMatchupDetailsStatsTable
+              heroId={heroId}
+              stat={1}
+              minRankId={DEFAULT_MIN_RANK}
+              maxRankId={DEFAULT_MAX_RANK}
+              minDate={defaultStart}
+              maxDate={defaultEnd}
+              prevMinDate={prevStart}
+              prevMaxDate={prevEnd}
+              gameMode={GAME_MODE}
+              matchMode={DEFAULT_MATCH_MODE}
+              linkHeroes
+            />
+          </Panel>
         </div>
       </Section>
 

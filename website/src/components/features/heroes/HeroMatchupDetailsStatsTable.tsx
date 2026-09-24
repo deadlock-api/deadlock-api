@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
+import { PanelShowMore } from "~/components/patterns/panel/Panel";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
@@ -300,6 +301,10 @@ export function useHeroMatchupRows({
   };
 }
 
+/** Rows shown before "Show all": the full list of every hero ran to 37 rows per table. */
+const COLLAPSED_ROWS = 10;
+
+/** The rows of one side of the matchups, the last rows of a `Panel`: the first ten, then a "Show all" row. */
 export function HeroMatchupDetailsStatsTable({
   stat,
   onHeroSelected,
@@ -316,89 +321,96 @@ export function HeroMatchupDetailsStatsTable({
   const relWinrates = rows.map((row) => row.relWinrate);
   const minRelWinrate = rows.length ? Math.min(...relWinrates) : 0;
   const maxRelWinrate = rows.length ? Math.max(...relWinrates) : 0;
+  const [expanded, setExpanded] = useState(false);
+  const visibleRows = expanded ? rows : rows.slice(0, COLLAPSED_ROWS);
 
   if (isLoading) {
-    return <LoadingState label="hero matchups" align="center" />;
+    return <LoadingState label="hero matchups" align="center" className="py-8" />;
   }
 
   if (isError && rows.length === 0) {
-    return <ErrorState title="Hero matchups did not load" onRetry={() => void retry()} />;
+    return (
+      <ErrorState variant="inline" title="Hero matchups did not load" onRetry={() => void retry()} className="p-4" />
+    );
   }
 
   return (
-    <Table>
-      <TableHeader tone="muted">
-        <TableRow>
-          <TableHead className="text-center">#</TableHead>
-          <TableHead data-pinned>Hero</TableHead>
-          <TableHead className="whitespace-normal">
-            {isSynergy ? "Combination (Win Rate Change)" : "Against (Win Rate Change)"}
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.length === 0 && (
-          <TableEmptyRow colSpan={3}>No matchups with enough matches for these filters</TableEmptyRow>
-        )}
-        {rows.map((row, index) => (
-          <TableRow
-            key={row.heroId}
-            data-interactive={onHeroSelected ? true : undefined}
-            onClick={() => onHeroSelected?.(row.heroId)}
-          >
-            <TableCell>{index + 1}</TableCell>
-            <TableCell data-pinned>
-              {onHeroSelected ? (
-                <Inline wrap="nowrap">
-                  <HeroImage heroId={row.heroId} />
-                  <Button
-                    variant="link"
-                    size="inline"
-                    className="font-normal text-foreground"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onHeroSelected(row.heroId);
-                    }}
-                  >
-                    <HeroName heroId={row.heroId} />
-                  </Button>
-                </Inline>
-              ) : (
-                <HeroCell heroId={row.heroId} linkToDetail={linkHeroes} />
-              )}
-            </TableCell>
-            <TableCell>
-              <Tooltip
-                content={
-                  <>
-                    <TooltipStats variant="plain">
-                      <TooltipStat label="Matches" value={row.matches.toLocaleString("en-US")} />
-                      <TooltipStat label="Wins" value={row.wins.toLocaleString("en-US")} />
-                      <TooltipStat label="Win rate change" value={<Delta value={row.relWinrate} digits={2} />} />
-                    </TooltipStats>
-                    {row.prevRelWinrate !== undefined && (
-                      <TooltipStats>
-                        <TooltipStat label="Previous" value={<Delta value={row.prevRelWinrate} digits={2} />} />
-                      </TooltipStats>
-                    )}
-                  </>
-                }
-              >
-                <TooltipTarget display="block">
-                  <ProgressBarWithLabel
-                    min={minRelWinrate}
-                    max={maxRelWinrate}
-                    value={row.relWinrate}
-                    color={isSynergy ? "var(--primary)" : "var(--chart-4)"}
-                    label={formatSignedPercent(row.relWinrate)}
-                    delta={row.prevRelWinrate !== undefined ? row.relWinrate - row.prevRelWinrate : undefined}
-                  />
-                </TooltipTarget>
-              </Tooltip>
-            </TableCell>
+    <>
+      <Table>
+        <TableHeader tone="muted">
+          <TableRow>
+            <TableHead className="text-center">#</TableHead>
+            <TableHead data-pinned>Hero</TableHead>
+            <TableHead className="whitespace-normal">
+              Win Rate Change
+            </TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {rows.length === 0 && (
+            <TableEmptyRow colSpan={3}>No matchups with enough matches for these filters</TableEmptyRow>
+          )}
+          {visibleRows.map((row, index) => (
+            <TableRow
+              key={row.heroId}
+              data-interactive={onHeroSelected ? true : undefined}
+              onClick={() => onHeroSelected?.(row.heroId)}
+            >
+              <TableCell>{index + 1}</TableCell>
+              <TableCell data-pinned>
+                {onHeroSelected ? (
+                  <Inline wrap="nowrap">
+                    <HeroImage heroId={row.heroId} />
+                    <Button
+                      variant="link"
+                      size="inline"
+                      className="font-normal text-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onHeroSelected(row.heroId);
+                      }}
+                    >
+                      <HeroName heroId={row.heroId} />
+                    </Button>
+                  </Inline>
+                ) : (
+                  <HeroCell heroId={row.heroId} linkToDetail={linkHeroes} />
+                )}
+              </TableCell>
+              <TableCell>
+                <Tooltip
+                  content={
+                    <>
+                      <TooltipStats variant="plain">
+                        <TooltipStat label="Matches" value={row.matches.toLocaleString("en-US")} />
+                        <TooltipStat label="Wins" value={row.wins.toLocaleString("en-US")} />
+                        <TooltipStat label="Win rate change" value={<Delta value={row.relWinrate} digits={2} />} />
+                      </TooltipStats>
+                      {row.prevRelWinrate !== undefined && (
+                        <TooltipStats>
+                          <TooltipStat label="Previous" value={<Delta value={row.prevRelWinrate} digits={2} />} />
+                        </TooltipStats>
+                      )}
+                    </>
+                  }
+                >
+                  <TooltipTarget display="block">
+                    <ProgressBarWithLabel
+                      min={minRelWinrate}
+                      max={maxRelWinrate}
+                      value={row.relWinrate}
+                      color={isSynergy ? "var(--primary)" : "var(--chart-4)"}
+                      label={formatSignedPercent(row.relWinrate)}
+                      delta={row.prevRelWinrate !== undefined ? row.relWinrate - row.prevRelWinrate : undefined}
+                    />
+                  </TooltipTarget>
+                </Tooltip>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      {rows.length > COLLAPSED_ROWS && <PanelShowMore open={expanded} total={rows.length} onOpenChange={setExpanded} />}
+    </>
   );
 }
