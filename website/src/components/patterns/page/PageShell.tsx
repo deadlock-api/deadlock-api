@@ -23,7 +23,9 @@ const pageShellVariants = cva("flex min-w-0 flex-col", {
      * - `viewport` is exactly one screen, for a page whose main block is a canvas or a map. `--page-height` is the
      *   screen minus the gutter of the `AppFrame`, which sets it.
      */
-    height: { auto: "", fill: "flex-1", viewport: "h-(--page-height)" },
+    // Below md, `viewport` is a floor: a phone's screen is too short for filters plus a map or chart, and a fixed
+    // height let them spill out of the panel. The page grows and scrolls instead.
+    height: { auto: "", fill: "flex-1", viewport: "min-h-(--page-height) md:h-(--page-height)" },
     /** `center` puts a short message in the middle of the page, with its text centred. */
     align: { start: "", center: "items-center justify-center text-center" },
   },

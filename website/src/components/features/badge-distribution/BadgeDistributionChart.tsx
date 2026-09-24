@@ -1,7 +1,7 @@
 import type { Rank } from "deadlock_api_client";
 import type { BadgeDistribution } from "deadlock_api_client";
 import { useMemo, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Label, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
 import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/RankTierIcons";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
@@ -200,9 +200,9 @@ export default function BadgeDistributionChart({
             domain={[0, valueTicks[valueTicks.length - 1]]}
             tickFormatter={(value: number) => compactNumber.format(value)}
             textAnchor="end"
-          >
-            <Label {...CHART_Y_LABEL} value={BADGE_DISTRIBUTION_METRIC_LABEL[metric]} />
-          </YAxis>
+            // As the `label` prop, not a <Label> child: only a prop title gets room from the auto-sized axis.
+            label={{ ...CHART_Y_LABEL, value: BADGE_DISTRIBUTION_METRIC_LABEL[metric] }}
+          />
           {medianBadge !== undefined && (
             <ReferenceLine
               x={medianBadge}
