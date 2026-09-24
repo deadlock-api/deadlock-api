@@ -3,6 +3,7 @@ import Fuse from "fuse.js";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
+import { PaginationStatus } from "~/components/patterns/data-table/PaginationControls";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { Button } from "~/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -105,6 +106,13 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
   return (
     <div>
       {controls}
+      <PaginationStatus
+        page={currentPage}
+        totalPages={totalPages}
+        total={filteredEntries.length}
+        noun="player"
+        query={deferredSearchQuery}
+      />
       <Table density="compact" className="tabular-nums">
         <TableHeader tone="muted">
           <TableRow>

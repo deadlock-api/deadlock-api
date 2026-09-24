@@ -4,7 +4,7 @@ import { useId, useMemo, useState } from "react";
 
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
 import { useTrackerTime } from "~/components/features/tracker/shared/useTrackerTime";
-import { PaginationControls } from "~/components/patterns/data-table/PaginationControls";
+import { PaginationControls, PaginationStatus } from "~/components/patterns/data-table/PaginationControls";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
@@ -144,6 +144,13 @@ function CompanionTable({
           />
         </Field>
       </PaginationControls>
+      <PaginationStatus
+        page={visiblePage}
+        totalPages={totalPages}
+        total={filteredRows.length}
+        noun="player"
+        query={searchQuery}
+      />
       <Table density="compact" aria-label={label}>
         <TableHeader tone="muted">
           <TableRow>

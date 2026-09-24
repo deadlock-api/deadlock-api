@@ -155,3 +155,45 @@ export function PaginationControls({
     </div>
   );
 }
+
+interface PaginationStatusProps extends Omit<React.ComponentProps<"output">, "children"> {
+  /** Zero-based, as `PaginationControls` takes it. */
+  page: number;
+  totalPages: number;
+  /** Rows after search and filters, across every page. */
+  total: number;
+  /** One row: "player". */
+  noun: string;
+  /** More than one; `noun` + "s" by default. */
+  nounPlural?: string;
+  /** The search the rows are filtered by, named when nothing matches it. */
+  query?: string;
+}
+
+/**
+ * Says what a paginated table shows now, "1,204 players, page 2 of 49", to assistive technology only: the table and
+ * the controls already show it to the eye. A polite live region, so a search or a page change is announced rather
+ * than swapping the rows in silence. Render it once per table, not inside a `PaginationControls` that is repeated
+ * below the rows.
+ */
+export function PaginationStatus({
+  page,
+  totalPages,
+  total,
+  noun,
+  nounPlural = `${noun}s`,
+  query = "",
+  className,
+  ...props
+}: PaginationStatusProps) {
+  const term = query.trim();
+  const count = `${total.toLocaleString("en-US")} ${total === 1 ? noun : nounPlural}`;
+  let text: string;
+  if (total === 0) text = term ? `No ${nounPlural} match “${term}”` : `No ${nounPlural}`;
+  else text = `${term ? `${count} match “${term}”` : count}, page ${page + 1} of ${Math.max(1, totalPages)}`;
+  return (
+    <output data-slot="pagination-status" aria-live="polite" className={cn("sr-only", className)} {...props}>
+      {text}
+    </output>
+  );
+}

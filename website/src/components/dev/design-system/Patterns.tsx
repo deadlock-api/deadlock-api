@@ -12,7 +12,7 @@ import { Round3Patterns } from "~/components/dev/design-system/Round3Patterns";
 import { Round3PatternsMore } from "~/components/dev/design-system/Round3PatternsMore";
 import { Chapter, Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { HighlightedCode } from "~/components/patterns/code/HighlightedCode";
-import { PaginationControls } from "~/components/patterns/data-table/PaginationControls";
+import { PaginationControls, PaginationStatus } from "~/components/patterns/data-table/PaginationControls";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { DateRangePicker } from "~/components/patterns/filter-bar/DateRangePicker";
@@ -345,6 +345,18 @@ export function Patterns() {
             onPageSizeChange={setPerPage}
             totalPages={3}
           />
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="PaginationStatus"
+        source="patterns/data-table/PaginationControls"
+        note="A polite live region, for screen readers only, that says what the table shows after a search or a page change. One per table; shown here with not-sr-only."
+      >
+        <Variants label="rows, a search, no match" className="flex-col items-start text-sm">
+          <PaginationStatus page={1} totalPages={49} total={1204} noun="player" className="not-sr-only" />
+          <PaginationStatus page={0} totalPages={1} total={3} noun="player" query="mar" className="not-sr-only" />
+          <PaginationStatus page={0} totalPages={1} total={0} noun="player" query="xyz" className="not-sr-only" />
         </Variants>
       </Specimen>
 

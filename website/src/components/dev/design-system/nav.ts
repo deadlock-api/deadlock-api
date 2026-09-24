@@ -171,6 +171,7 @@ export const NAV: readonly NavChapter[] = [
         items: [
           "Data table",
           "PaginationControls",
+          "PaginationStatus",
           "ExpandableRow",
           "ResultGrid",
           "HeatGrid",
