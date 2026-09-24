@@ -5,6 +5,7 @@ import { Cell, Pie, PieChart } from "recharts";
 
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
+import { SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -13,6 +14,8 @@ import { Stat, StatGroup } from "~/components/ui/stat";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
 import { formatPercent, formatSouls, SOUL_SOURCE_GROUPS } from "./economy-definitions";
+
+const OTHER_COLOR = SERIES_COLORS[5];
 import { formatStatValue } from "./stat-definitions";
 
 interface EconomySoulSourcesProps {
@@ -41,11 +44,19 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
         share: 0,
       };
     });
-    const total = rows.reduce((sum, r) => sum + r.value, 0);
+    const tracked = rows.reduce((sum, r) => sum + r.value, 0);
+    // The five sources leave out passive income and anything the match data does not break out: about a ninth of
+    // net worth. Without the remainder, every share read too high ("Lane Creeps 50.1%").
+    const other = Math.max(0, ((stats.avg_net_worth as number) ?? 0) - tracked);
+    rows.sort((a, b) => b.value - a.value);
+    if (other > 0) {
+      rows.push({ key: "other", label: "Passive & other", color: OTHER_COLOR, value: other, orbShare: 0, share: 0 });
+    }
+    const total = tracked + other;
     for (const row of rows) {
       row.share = total > 0 ? row.value / total : 0;
     }
-    return rows.sort((a, b) => b.value - a.value);
+    return rows;
   }, [stats]);
 
   if (isPending) {
@@ -60,7 +71,8 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
     return <EmptyState variant="inline" title="No data available." />;
   }
 
-  const totalFromSources = breakdown.reduce((sum, r) => sum + r.value, 0);
+  const totalIncome = breakdown.reduce((sum, r) => sum + r.value, 0);
+  const totalFromSources = breakdown.reduce((sum, r) => sum + (r.key === "other" ? 0 : r.value), 0);
   const totalOrbs = SOUL_SOURCE_GROUPS.reduce((sum, g) => sum + (g.orbKey ? ((stats[g.orbKey] as number) ?? 0) : 0), 0);
   const orbSecured = totalFromSources > 0 ? totalOrbs / totalFromSources : 0;
   const durationS = (stats.avg_duration_s as number) ?? 0;
@@ -115,7 +127,7 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
           </ChartSurface>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
             <span className="eyebrow">Soul Income</span>
-            <span className="text-2xl font-bold tabular-nums">{formatSouls(totalFromSources)}</span>
+            <span className="text-2xl font-bold tabular-nums">{formatSouls(totalIncome)}</span>
             <span className="text-xs text-muted-foreground">per player</span>
           </div>
         </div>
