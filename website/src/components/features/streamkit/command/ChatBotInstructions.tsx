@@ -10,9 +10,9 @@ interface ChatBotInstructionsProps {
 
 export function ChatBotInstructions({ generatedUrl }: ChatBotInstructionsProps) {
   const chatBots = [
-    { name: "StreamElements", command: `$(customapi ${generatedUrl || "https://your-command-url"})` },
-    { name: "Fossabot", command: `$(customapi ${generatedUrl || "https://your-command-url"})` },
-    { name: "Nightbot", command: `$(urlfetch ${generatedUrl || "https://your-command-url"})` },
+    { name: "StreamElements", command: `$(customapi ${generatedUrl})` },
+    { name: "Fossabot", command: `$(customapi ${generatedUrl})` },
+    { name: "Nightbot", command: `$(urlfetch ${generatedUrl})` },
   ];
 
   return (
@@ -21,20 +21,27 @@ export function ChatBotInstructions({ generatedUrl }: ChatBotInstructionsProps) 
         <Text as="p" tone="muted">
           Use the generated URL in your favorite chat bot to create dynamic commands:
         </Text>
-        <Tabs defaultValue={chatBots[0].name}>
-          <TabsList>
-            {chatBots.map(({ name }) => (
-              <TabsTrigger key={name} value={name}>
-                {name}
-              </TabsTrigger>
+        {/* No command to copy until the template makes a URL: a half-built one would answer chat with "{foo}". */}
+        {!generatedUrl ? (
+          <Text as="p" tone="muted">
+            The commands appear here once the template above is complete.
+          </Text>
+        ) : (
+          <Tabs defaultValue={chatBots[0].name}>
+            <TabsList>
+              {chatBots.map(({ name }) => (
+                <TabsTrigger key={name} value={name}>
+                  {name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {chatBots.map(({ name, command }) => (
+              <TabsContent key={name} value={name}>
+                <CopyableCode code={command} copyLabel="Copy command" />
+              </TabsContent>
             ))}
-          </TabsList>
-          {chatBots.map(({ name, command }) => (
-            <TabsContent key={name} value={name}>
-              <CopyableCode code={command} copyLabel="Copy command" />
-            </TabsContent>
-          ))}
-        </Tabs>
+          </Tabs>
+        )}
       </Stack>
     </Disclosure>
   );

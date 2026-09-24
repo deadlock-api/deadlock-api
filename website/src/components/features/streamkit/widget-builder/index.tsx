@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useSearch } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useReducer } from "react";
 
 import { UrlDisplay } from "~/components/features/streamkit/command/UrlDisplay";
@@ -34,9 +34,10 @@ interface WidgetBuilderProps {
 
 export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
   const search = useSearch({ strict: false }) as { "widget-type"?: string };
+  const navigate = useNavigate();
 
   const [config, updateConfig] = useReducer(widgetConfigReducer, {
-    widgetType: search["widget-type"] ?? widgetTypes[0],
+    widgetType: widgetTypes.includes(search["widget-type"] ?? "") ? (search["widget-type"] as string) : widgetTypes[0],
     theme: "dark" as Theme,
     variables: DEFAULT_VARIABLES,
     variable: "wins_losses_today",
@@ -82,7 +83,19 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
     <Stack gap={6}>
       <div className="grid grid-cols-2 gap-4">
         <Field label="Type">
-          <Select value={config.widgetType} onValueChange={(v) => updateConfig({ widgetType: v })}>
+          <Select
+            value={config.widgetType}
+            onValueChange={(v) => {
+              updateConfig({ widgetType: v });
+              // The type is kept in the page URL, so a reload or a shared link opens the same builder.
+              void navigate({
+                to: ".",
+                search: (prev) => ({ ...prev, "widget-type": v }),
+                replace: true,
+                resetScroll: false,
+              });
+            }}
+          >
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>

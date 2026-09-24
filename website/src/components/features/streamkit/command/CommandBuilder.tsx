@@ -1,9 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { API_ORIGIN } from "~/lib/constants";
-import { useDebouncedState } from "~/lib/utils";
+import {
+  checkCommandTemplate,
+  commandTemplateArgs,
+  insertCommandVariable,
+  isCommandTemplateValid,
+} from "~/lib/streamkit-command";
+import { snakeToPretty, useDebouncedState } from "~/lib/utils";
 import { queryKeys } from "~/queries/query-keys";
 import type { CommandBuilderProps, Variable } from "~/types/streamkit/command";
 
@@ -41,9 +49,19 @@ async function fetchPreview(url: string): Promise<string> {
   }
 }
 
+const TEMPLATE_URL_SYNC_MS = 500;
+
 export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
-  const [template, debouncedTemplate, setTemplate] = useDebouncedState("", 500);
+  const navigate = useNavigate();
+  // The template lives in the page URL too, so a reload or a shared link keeps it.
+  const urlTemplate = useSearch({ strict: false, select: (search) => (search as { template?: unknown }).template });
+  const [template, debouncedTemplate, setTemplate] = useDebouncedState(
+    urlTemplate == null ? "" : String(urlTemplate),
+    TEMPLATE_URL_SYNC_MS,
+  );
+  const [edited, setEdited] = useState(false);
   const [extraArgs, setExtraArgs] = useState<{ [key: string]: string }>({});
+  const templateRef = useRef<HTMLTextAreaElement>(null);
 
   const { data, error } = useQuery<Variable[]>({
     queryKey: queryKeys.streamkit.availableVariables(),
@@ -51,49 +69,75 @@ export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
     staleTime: CACHE_DURATIONS.FOREVER,
   });
 
-  const variables = useMemo(() => {
-    if (error) return [];
-    return data?.filter((v) => !v.name.endsWith("_img")) ?? [];
-  }, [data, error]);
+  const allVariables = error ? [] : data;
+  const variables = allVariables?.filter((v) => !v.name.endsWith("_img")) ?? [];
 
-  const generateUrl = (steamId: string, r: string, tpl: string) => {
-    if (!steamId || !r) {
+  useEffect(() => {
+    // External sync: the page URL follows the template once typing pauses.
+    const current = urlTemplate == null ? "" : String(urlTemplate);
+    if (debouncedTemplate === current) return;
+    void navigate({
+      to: ".",
+      search: (prev) => ({ ...prev, template: debouncedTemplate || undefined }),
+      replace: true,
+      resetScroll: false,
+    });
+  }, [debouncedTemplate, urlTemplate, navigate]);
+
+  // Only a template that resolves in full makes a URL: an empty one, `{foo}` or `{hero_kd}` without a hero would
+  // answer chat with nothing or with the braces themselves.
+  const generateUrl = (tpl: string) => {
+    if (!accountId || !region || !isCommandTemplateValid(checkCommandTemplate(tpl, allVariables, extraArgs))) {
       return "";
     }
-    const baseUrl = `${API_ORIGIN}/v1/commands`;
-    const url = new URL(`${baseUrl}/resolve`);
-    url.searchParams.set("region", r);
-    url.searchParams.set("account_id", steamId);
-    if (tpl) {
-      url.searchParams.set("template", tpl);
-    }
+    const url = new URL(`${API_ORIGIN}/v1/commands/resolve`);
+    url.searchParams.set("region", region);
+    url.searchParams.set("account_id", accountId);
+    url.searchParams.set("template", tpl);
     // Only the arguments the template's variables take: one left from a removed variable stayed in the URL.
-    const used = new Set(usedExtraArgs(tpl));
-    for (const [key, value] of Object.entries(extraArgs)) {
-      if (value && used.has(key)) url.searchParams.set(key, value);
+    for (const arg of commandTemplateArgs(tpl, variables)) {
+      if (extraArgs[arg]) url.searchParams.set(arg, extraArgs[arg]);
     }
     return url.toString();
   };
 
-  const usedExtraArgs = (tpl = template) => {
-    const argSet: Set<string> = new Set();
-    for (const match of tpl.matchAll(/{([^}]+)}/g)) {
-      for (const arg of variables.find((v) => v.name === match[1])?.extra_args || []) {
-        argSet.add(arg);
-      }
-    }
-    return Array.from(argSet);
+  const check = checkCommandTemplate(template, allVariables, extraArgs);
+  const usedArgs = commandTemplateArgs(template, variables);
+  const generatedUrl = generateUrl(template);
+  const debouncedGeneratedUrl = generateUrl(debouncedTemplate);
+
+  const templateError = check.empty
+    ? edited
+      ? "The template is empty. Type a reply or add a variable below."
+      : null
+    : check.unknown.length > 0
+      ? `Unknown ${check.unknown.length === 1 ? "variable" : "variables"} ${check.unknown.map((name) => `{${name}}`).join(", ")}: the bot would send ${check.unknown.length === 1 ? "it" : "them"} as typed. Pick variables from the list below.`
+      : null;
+  const argErrors = Object.fromEntries(
+    check.missing.map(({ arg, variables: needing }) => [
+      arg,
+      `${needing.map((name) => `{${name}}`).join(", ")} ${needing.length === 1 ? "needs" : "need"} ${arg === "hero_name" ? "a hero" : `a ${snakeToPretty(arg)}`}.`,
+    ]),
+  );
+
+  const changeTemplate = (value: string) => {
+    setEdited(true);
+    setTemplate(value);
   };
 
-  const generatedUrl = generateUrl(accountId, region, template);
-  const debouncedGeneratedUrl = generateUrl(accountId, region, debouncedTemplate);
-
   const insertVariable = (varName: string) => {
-    // Position 0 is a real cursor (the start of the template), not "no cursor".
-    const cursorPos =
-      (document.getElementById("template") as HTMLTextAreaElement | null)?.selectionStart ?? template.length;
-    const newTemplate = `${template.slice(0, cursorPos)}{${varName}}${template.slice(cursorPos)}`;
-    setTemplate(newTemplate);
+    const textarea = templateRef.current;
+    // The selection survives the click on the variable button, so the token goes where the caret was.
+    const next = insertCommandVariable(
+      template,
+      varName,
+      textarea?.selectionStart ?? template.length,
+      textarea?.selectionEnd ?? template.length,
+    );
+    flushSync(() => changeTemplate(next.template));
+    // Back to the template with the caret after the token, so the next click (or typing) continues from there.
+    textarea?.focus();
+    textarea?.setSelectionRange(next.caret, next.caret);
   };
 
   const {
@@ -103,6 +147,7 @@ export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
   } = useQuery<string>({
     queryKey: queryKeys.streamkit.preview(debouncedGeneratedUrl),
     queryFn: () => fetchPreview(debouncedGeneratedUrl),
+    enabled: debouncedGeneratedUrl !== "",
     staleTime: 60 * 1000,
   });
 
@@ -116,13 +161,31 @@ export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
     setExtraArgs({ ...extraArgs, [arg]: value });
   };
 
+  const invalid = !isCommandTemplateValid(check);
+
   return (
     <div className="flex flex-col gap-6">
-      <TemplateInput template={template} setTemplate={setTemplate} />
+      <TemplateInput ref={templateRef} template={template} onTemplateChange={changeTemplate} error={templateError} />
       <VariablesList variables={variables} onVariableClick={insertVariable} />
-      <ExtraArguments extraArgs={extraArgs} usedArgs={usedExtraArgs()} onExtraArgChange={handleExtraArgChange} />
-      <UrlDisplay generatedUrl={generatedUrl} />
-      <CommandPreview preview={previewData || null} previewError={previewError} loading={previewLoading} />
+      <ExtraArguments
+        extraArgs={extraArgs}
+        usedArgs={usedArgs}
+        onExtraArgChange={handleExtraArgChange}
+        errors={argErrors}
+      />
+      <UrlDisplay
+        generatedUrl={generatedUrl}
+        placeholder={
+          invalid && !check.empty
+            ? "No URL until the template above is fixed."
+            : "No URL available yet. Write a template to generate one."
+        }
+      />
+      <CommandPreview
+        preview={debouncedGeneratedUrl ? previewData || null : null}
+        previewError={debouncedGeneratedUrl ? previewError : null}
+        loading={debouncedGeneratedUrl !== "" && previewLoading}
+      />
       <ChatBotInstructions generatedUrl={generatedUrl} />
     </div>
   );
