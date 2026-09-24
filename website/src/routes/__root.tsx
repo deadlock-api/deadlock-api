@@ -19,6 +19,7 @@ import { Toaster } from "~/components/ui/sonner";
 import { Stack } from "~/components/ui/stack";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import { getAnalytics } from "~/lib/analytics";
+import { ANALYTICS_TABS } from "~/lib/analytics-tabs";
 import { installChunkReloadHandlers, isChunkLoadError, reloadOnceForStaleChunk } from "~/lib/chunk-reload";
 import { readPreferences } from "~/lib/preferences.isomorphic";
 import { seo } from "~/lib/seo";
@@ -68,8 +69,14 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         import("~/queries/ranks-query").then(({ ranksQueryOptions }) => queryClient.ensureQueryData(ranksQueryOptions)),
       );
     }
+    // Not the hero stat views: they show no items, and the list embedded 200 KB into each of their pages. A hero's
+    // own page (its best items) and the item and ability pages still get it.
+    const heroSegment = /^\/analytics\/heroes(?:\/([^/]+))?\/?$/.exec(pathname)?.[1] ?? null;
+    const isHeroStatView =
+      /^\/analytics\/heroes(?:\/|$)/.test(pathname) &&
+      (heroSegment === null || (Object.values(ANALYTICS_TABS.heroes) as string[]).includes(heroSegment));
     if (
-      /^\/analytics\/(heroes|items|abilities)(?:\/|$)/.test(pathname) ||
+      (/^\/analytics\/(heroes|items|abilities)(?:\/|$)/.test(pathname) && !isHeroStatView) ||
       pathname === "/games/flashcards/items" ||
       pathname === "/games/flashcards/item-upgrades"
     ) {
