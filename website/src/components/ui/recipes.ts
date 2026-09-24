@@ -15,9 +15,14 @@ export const INVALID_STATE = "aria-invalid:border-destructive aria-invalid:ring-
 
 export const DISABLED_STATE = "disabled:pointer-events-none disabled:opacity-50";
 
-/** The chosen option of a Segmented or ToggleGroup, and any other `data-state="on"` choice. */
-export const SELECTED_STATE =
-  "data-[state=on]:bg-primary/15 data-[state=on]:text-foreground data-[state=on]:ring-1 data-[state=on]:ring-primary/40 data-[state=on]:ring-inset";
+/**
+ * The chosen option of a Segmented (a radio, `data-state="checked"`) or a ToggleGroup (`data-state="on"`), and any
+ * other choice that marks itself either way.
+ */
+export const SELECTED_STATE = [
+  "data-[state=on]:bg-primary/15 data-[state=on]:text-foreground data-[state=on]:ring-1 data-[state=on]:ring-primary/40 data-[state=on]:ring-inset",
+  "data-[state=checked]:bg-primary/15 data-[state=checked]:text-foreground data-[state=checked]:ring-1 data-[state=checked]:ring-primary/40 data-[state=checked]:ring-inset",
+].join(" ");
 
 /** The box of a text control: Input, Textarea and the Select trigger. */
 export const CONTROL_SURFACE =

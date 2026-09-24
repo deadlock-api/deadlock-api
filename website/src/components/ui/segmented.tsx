@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui";
+import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
 import { createContext, use } from "react";
 
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
@@ -33,8 +33,8 @@ type SegmentedSize = NonNullable<VariantProps<typeof segmentedItemVariants>["siz
 const SegmentedSizeContext = createContext<SegmentedSize>("default");
 
 interface SegmentedProps<T extends string> extends Omit<
-  React.ComponentProps<typeof ToggleGroupPrimitive.Root>,
-  "type" | "value" | "defaultValue" | "onValueChange"
+  React.ComponentProps<typeof RadioGroupPrimitive.Root>,
+  "value" | "defaultValue" | "onValueChange"
 > {
   value?: T | "";
   defaultValue?: T;
@@ -47,6 +47,8 @@ interface SegmentedProps<T extends string> extends Omit<
 /**
  * A single choice from a few short options, all visible at once; the children are `SegmentedItem`s. For on/off
  * toggles of independent items use ToggleGroup.
+ *
+ * It is a WAI-ARIA radio group: Tab lands on the chosen item, and the arrow keys move and choose at once.
  */
 function Segmented<T extends string>({
   value,
@@ -65,15 +67,13 @@ function Segmented<T extends string>({
   });
   return (
     <SegmentedSizeContext value={size}>
-      <ToggleGroupPrimitive.Root
+      <RadioGroupPrimitive.Root
         data-slot="segmented"
         data-size={size}
         data-width={width}
         {...props}
-        type="single"
         value={current}
-        // Radix reports "" when the active item is clicked again; a segmented control has no empty state.
-        onValueChange={(next) => next && setCurrent(next as T)}
+        onValueChange={(next) => setCurrent(next as T)}
         className={cn(
           "flex-wrap gap-0.5 rounded-lg border bg-secondary p-0.5",
           width === "fill" ? "flex w-full" : "inline-flex w-fit",
@@ -81,16 +81,16 @@ function Segmented<T extends string>({
         )}
       >
         {children}
-      </ToggleGroupPrimitive.Root>
+      </RadioGroupPrimitive.Root>
     </SegmentedSizeContext>
   );
 }
 
 /** One option. An icon-only item needs an `aria-label`. */
-function SegmentedItem({ className, ...props }: React.ComponentProps<typeof ToggleGroupPrimitive.Item>) {
+function SegmentedItem({ className, ...props }: React.ComponentProps<typeof RadioGroupPrimitive.Item>) {
   const size = use(SegmentedSizeContext);
   return (
-    <ToggleGroupPrimitive.Item
+    <RadioGroupPrimitive.Item
       data-slot="segmented-item"
       className={cn(segmentedItemVariants({ size }), className)}
       {...props}

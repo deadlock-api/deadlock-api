@@ -204,7 +204,7 @@ export function Primitives() {
       <Specimen
         name="Segmented"
         source="ui/segmented"
-        note="One choice from a few short options, all visible at once. Replaces hand-rolled tab bars and single-select toggle groups."
+        note="One choice from a few short options, all visible at once. Replaces hand-rolled tab bars and single-select toggle groups. A radio group: Tab lands on the chosen item, the arrow keys move and choose."
       >
         <Variants label="size">
           {(["sm", "default", "lg"] as const).map((size) => (
