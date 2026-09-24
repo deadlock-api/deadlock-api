@@ -9,6 +9,7 @@ import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { useKnownHeroId } from "~/hooks/useAssetById";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { DEFAULT_MATCH_MODE, getEffectiveRankRange } from "~/lib/game-mode";
@@ -53,7 +54,8 @@ export const Route = createFileRoute("/analytics/abilities")({
 });
 
 function AbilitiesPage() {
-  const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(DEFAULT_HERO_ID));
+  const [heroIdParam, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(DEFAULT_HERO_ID));
+  const heroId = useKnownHeroId(heroIdParam) ?? DEFAULT_HERO_ID;
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const { mode, setMode, gameMode, matchMode } = useModeState();

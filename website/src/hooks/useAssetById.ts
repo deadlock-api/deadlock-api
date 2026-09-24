@@ -37,3 +37,15 @@ export function useItemById(itemId: number): { item: Upgrade | undefined; isLoad
   const { data: item, isLoading } = useAssetById(itemUpgradesQueryOptions, itemId);
   return { item, isLoading };
 }
+
+/**
+ * The hero id when it names a hero, otherwise null: a hand-edited `?hero=9999` showed "Any" in the filter while the
+ * requests still carried it and matched nothing. While the hero list loads, the id is trusted.
+ */
+export function useKnownHeroId(heroId: number | null): number | null {
+  const { data: known } = useQuery({
+    ...heroesQueryOptions,
+    select: (heroes: SlimHero[]) => heroId == null || heroes.some((hero) => hero.id === heroId),
+  });
+  return known === false ? null : heroId;
+}

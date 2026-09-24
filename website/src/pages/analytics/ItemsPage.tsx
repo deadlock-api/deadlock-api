@@ -11,6 +11,7 @@ import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBound
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { useAnalyticsTab } from "~/hooks/useAnalyticsTab";
+import { useKnownHeroId } from "~/hooks/useAssetById";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { DEFAULT_MODE, getEffectiveRankRange } from "~/lib/game-mode";
@@ -34,7 +35,8 @@ export function ItemsPage() {
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const [minBoughtAtS, setMinBoughtAtS] = useQueryState("min_bought_at", parseAsInteger);
   const [maxBoughtAtS, setMaxBoughtAtS] = useQueryState("max_bought_at", parseAsInteger);
-  const [hero, setHero] = useQueryState("hero", parseAsInteger);
+  const [heroParam, setHero] = useQueryState("hero", parseAsInteger);
+  const hero = useKnownHeroId(heroParam);
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(10));
   const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange, defaultRange } = useDateRangeState();
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
