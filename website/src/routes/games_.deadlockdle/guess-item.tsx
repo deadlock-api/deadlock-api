@@ -9,6 +9,7 @@ import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
 import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
 import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuesses";
 import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
+import { useGuessFeedback } from "~/components/features/deadlockdle/use-guess-feedback";
 import { Stack } from "~/components/ui/stack";
 import { useItems, puzzleLoadError } from "~/lib/deadlockdle/queries";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
@@ -79,7 +80,7 @@ function GuessItem() {
   );
 
   const [shakeKey, setShakeKey] = useState(0);
-  const [feedbackType, setFeedbackType] = useState<"correct" | "wrong" | null>(null);
+  const [feedbackType, showFeedback] = useGuessFeedback();
 
   const shopableItems = useMemo(() => (items ? filterShopableItems(items) : []), [items]);
 
@@ -122,8 +123,7 @@ function GuessItem() {
     if (!dailyItem || isFinished) return;
     const correct = name.toLowerCase() === dailyItem.name.toLowerCase();
     submitGuess(name, correct);
-    setFeedbackType(correct ? "correct" : "wrong");
-    setTimeout(() => setFeedbackType(null), 900);
+    showFeedback(correct ? "correct" : "wrong");
     if (!correct) {
       setShakeKey((k) => k + 1);
     }

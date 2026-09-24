@@ -11,6 +11,7 @@ import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { NextGameButton } from "~/components/features/deadlockdle/NextGameButton";
 import { ScoreSummary } from "~/components/features/deadlockdle/ScoreSummary";
 import { ShareButton } from "~/components/features/deadlockdle/ShareButton";
+import { useGuessFeedback } from "~/components/features/deadlockdle/use-guess-feedback";
 import { Card, CardContent } from "~/components/ui/card";
 import { Stack } from "~/components/ui/stack";
 import { StepMeter, StepMeterStep } from "~/components/ui/step-meter";
@@ -92,7 +93,7 @@ function Trivia() {
   // The question just answered, shown with its result until "Next question"; the stored state has already moved on.
   const [revealing, setRevealing] = useState<number | null>(null);
   const isRevealed = revealing !== null;
-  const [feedbackType, setFeedbackType] = useState<"correct" | "wrong" | null>(null);
+  const [feedbackType, showFeedback] = useGuessFeedback();
 
   const isLoading = heroesLoading || itemsLoading || npcsLoading || abilitiesLoading;
 
@@ -131,8 +132,7 @@ function Trivia() {
       setSelectedAnswer(optionIndex);
       setRevealing(state.currentQuestion);
       answered.current = true;
-      setFeedbackType(isCorrect ? "correct" : "wrong");
-      setTimeout(() => setFeedbackType(null), 900);
+      showFeedback(isCorrect ? "correct" : "wrong");
 
       const newAnswers = [...state.answers];
       newAnswers[state.currentQuestion] = optionIndex;
@@ -150,7 +150,7 @@ function Trivia() {
         currentQuestion: isLastQuestion ? state.currentQuestion : state.currentQuestion + 1,
       });
     },
-    [state, isRevealed, currentQ, saveState],
+    [state, isRevealed, currentQ, saveState, showFeedback],
   );
 
   const advance = useCallback(() => {

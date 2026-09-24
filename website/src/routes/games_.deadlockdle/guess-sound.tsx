@@ -11,6 +11,7 @@ import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
 import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
 import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuesses";
 import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
+import { useGuessFeedback } from "~/components/features/deadlockdle/use-guess-feedback";
 import { Button } from "~/components/ui/button";
 import { Field } from "~/components/ui/field";
 import { ProgressBar } from "~/components/ui/progress-bar";
@@ -316,7 +317,7 @@ function GuessSound() {
   );
 
   const [shakeKey, setShakeKey] = useState(0);
-  const [feedbackType, setFeedbackType] = useState<"correct" | "wrong" | null>(null);
+  const [feedbackType, showFeedback] = useGuessFeedback();
 
   const playableHeroes = useMemo(() => (heroes ? filterPlayableHeroes(heroes) : []), [heroes]);
 
@@ -410,8 +411,7 @@ function GuessSound() {
     if (!dailySound || isFinished) return;
     const correct = name.toLowerCase() === dailySound.abilityName.toLowerCase();
     submitGuess(name, correct);
-    setFeedbackType(correct ? "correct" : "wrong");
-    setTimeout(() => setFeedbackType(null), 900);
+    showFeedback(correct ? "correct" : "wrong");
     if (!correct) {
       setShakeKey((k) => k + 1);
     }

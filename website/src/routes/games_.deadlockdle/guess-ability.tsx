@@ -9,6 +9,7 @@ import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
 import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
 import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuesses";
 import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
+import { useGuessFeedback } from "~/components/features/deadlockdle/use-guess-feedback";
 import { Stack } from "~/components/ui/stack";
 import { useAbilities, useHeroes, puzzleLoadError } from "~/lib/deadlockdle/queries";
 import { redactName } from "~/lib/deadlockdle/redact";
@@ -79,7 +80,7 @@ function GuessAbility() {
   );
 
   const [shakeKey, setShakeKey] = useState(0);
-  const [feedbackType, setFeedbackType] = useState<"correct" | "wrong" | null>(null);
+  const [feedbackType, showFeedback] = useGuessFeedback();
 
   const playableHeroes = useMemo(() => (heroes ? filterPlayableHeroes(heroes) : []), [heroes]);
 
@@ -137,8 +138,7 @@ function GuessAbility() {
     if (!dailyEntry || isFinished) return;
     const correct = name.toLowerCase() === dailyEntry.ability.name.toLowerCase();
     submitGuess(name, correct);
-    setFeedbackType(correct ? "correct" : "wrong");
-    setTimeout(() => setFeedbackType(null), 900);
+    showFeedback(correct ? "correct" : "wrong");
     if (!correct) {
       setShakeKey((k) => k + 1);
     }
