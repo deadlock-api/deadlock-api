@@ -92,10 +92,10 @@ export function DraftSlot({
 }: DraftSlotProps) {
   const { hero } = useHeroById(heroId ?? -1);
   const [isOver, setIsOver] = useState(false);
-  // The portrait is an <img> with an explicit height, so a slot narrower than the art leaves
-  // preflight's `max-width: 100%` clamping width alone and the hero renders as an oval. The 44px
-  // floor is also the touch-target minimum.
-  const box = "size-11 sm:size-13 2xl:size-15";
+  // The box takes the slot's width up to the portrait size and keeps itself square, so a row of slots
+  // narrower than the portraits shrinks them to fit instead of overlapping each other and the card edge.
+  // The portrait fills the box, so it stays round at any width.
+  const box = "aspect-square h-auto w-full max-w-11 sm:max-w-13 2xl:max-w-15";
 
   // Both filled and empty slots take a drop: dropping on an empty one moves a hero to another lane,
   // dropping on a filled one swaps the two.
@@ -117,7 +117,7 @@ export function DraftSlot({
   if (heroId === null) {
     return (
       // The same rows as a filled slot (portrait, name, swap hint), so the first pick does not grow the board.
-      <Stack gap={1} className="flex-1">
+      <Stack gap={1} className="min-w-0 flex-1">
         <DraftSlotTarget
           side={side}
           state={isOver ? "over" : "idle"}
@@ -137,10 +137,10 @@ export function DraftSlot({
   }
 
   return (
-    <Stack gap={1} className="group @container relative flex-1 text-center" {...dropTargetProps}>
+    <Stack gap={1} className="group @container relative min-w-0 flex-1 text-center" {...dropTargetProps}>
       {/* Wrapper sized to the portrait so the clear button anchors to the art, not the wider slot.
           It also keeps the two buttons siblings rather than nested, which is invalid HTML. */}
-      <div className="relative mx-auto w-fit">
+      <div className={cn("relative mx-auto", box)}>
         <DraggablePortrait
           dragging={isDragging}
           onDragStart={(event) => {
@@ -151,12 +151,13 @@ export function DraftSlot({
           onDragEnd={onDragEnd}
           onClick={onPick}
           title={`${hero?.name ?? "Hero"}, click to replace or drag to another slot`}
+          className="size-full"
         >
           <HeroImage
             heroId={heroId}
             shape="circle"
             ringColor={isOver ? "var(--foreground)" : undefined}
-            className={cn("shrink-0", box)}
+            className="size-full"
           />
         </DraggablePortrait>
         <Button

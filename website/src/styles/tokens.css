@@ -235,6 +235,9 @@
      Literal values: a container query cannot read a custom property, so these have no tier 1 or 2. */
   --container-5xs: 3.75rem;
   --container-4xs: 5rem;
+  /* Room for two draft slots side by side at the touch-target size (2 x 2.75rem + the gap): a narrower lane card
+     stacks its pair. */
+  --container-slot-pair: 6rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

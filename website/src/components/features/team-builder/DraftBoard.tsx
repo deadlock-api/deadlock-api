@@ -157,9 +157,10 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
           lane, which is what the slot ordering encodes. */
           <div className="grid grid-cols-3 gap-2">
             {lanes.map((lane, laneIndex) => (
-              <Card key={lane.id} tone="glass" size="xs" accent={lane.color} className="gap-1 p-1.5">
+              <Card key={lane.id} tone="glass" size="xs" accent={lane.color} className="@container gap-1 p-1.5">
                 <div className={cn("text-center text-3xs font-semibold", lane.textClass)}>{lane.name}</div>
-                <div className="flex items-start justify-center gap-1.5">
+                {/* A phone leaves a lane card too narrow for two full-size slots side by side, so they stack. */}
+                <div className="flex flex-col justify-center gap-1.5 @slot-pair:flex-row @slot-pair:items-start">
                   {slotsOfLane(laneIndex).map((slot) => renderSlot(side, slot, lane))}
                 </div>
               </Card>
