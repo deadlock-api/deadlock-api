@@ -125,9 +125,13 @@ export function dateRangeLabel(
   const patch = startDate && patches.find((candidate) => patchMatches(candidate, startDate, endDate));
   if (patch) return patch.name;
   if (!startDate && !endDate) return "All Time";
-  if (startDate && endDate) return `${startDate.format("MMM D")} - ${endDate.format("MMM D")}`;
-  if (startDate) return `since ${startDate.format("MMM D")}`;
-  return `until ${endDate!.format("MMM D")}`;
+  // The year only when it is not this one: "Jan 1 - Feb 1" for a range in 2030 read as this January.
+  const thisYear = day().year();
+  const withYear = [startDate, endDate].some((date) => date && date.year() !== thisYear);
+  const format = (date: Dayjs) => date.format(withYear ? "MMM D, YYYY" : "MMM D");
+  if (startDate && endDate) return `${format(startDate)} - ${format(endDate)}`;
+  if (startDate) return `since ${format(startDate)}`;
+  return `until ${format(endDate!)}`;
 }
 
 export function computePreviousPeriod(
