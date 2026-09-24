@@ -93,6 +93,8 @@ export function PlayerHeader({
               <InlineStat value={summary.matches.toLocaleString("en-US")} label="recorded matches" />
               <InlineStat value={`${(summary.winrate * 100).toFixed(1)}%`} label="win rate" />
               <InlineStat value={formatPlaytime(summary.totalTimeS)} label="played" />
+              {/* Visible, not only in the label: the filtered overview below shows different totals. */}
+              <span className="text-muted-foreground">· all time</span>
             </section>
           )}
         </div>
