@@ -75,7 +75,13 @@ export function ParquetPreview({ urls }: { urls: string | string[] }) {
           </Button>
         </Inline>
       </Inline>
-      <ResultGrid columns={data.columns} rows={data.rows} formatCell={formatCell} nullLabel="—" label="Sample rows" />
+      <ResultGrid
+        columns={data.columns}
+        rows={data.rows}
+        formatCell={(v, j) => formatCell(v, data.columns[j]?.cell)}
+        nullLabel="—"
+        label="Sample rows"
+      />
     </Stack>
   );
 }

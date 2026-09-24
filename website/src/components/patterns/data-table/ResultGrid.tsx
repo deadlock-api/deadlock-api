@@ -40,7 +40,8 @@ export function ResultGrid({
   columns: readonly ResultGridColumn[];
   rows: readonly (readonly unknown[])[];
   density?: "dense" | "compact";
-  formatCell?: (value: unknown) => string;
+  /** The text of a non-null cell; `columnIndex` lets a caller format by the column's type. */
+  formatCell?: (value: unknown, columnIndex: number) => string;
   nullLabel?: string;
   /** Names the table for assistive technology: "Query result". */
   label?: string;
@@ -83,7 +84,7 @@ export function ResultGrid({
             <TableRow key={i} className="odd:bg-subtle">
               {row.map((cell, j) => {
                 const isNull = cell === null || cell === undefined;
-                const text = isNull ? nullLabel : formatCell(cell);
+                const text = isNull ? nullLabel : formatCell(cell, j);
                 return (
                   <TableCell
                     // oxlint-disable-next-line react/no-array-index-key -- column order is stable

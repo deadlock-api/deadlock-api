@@ -1,4 +1,5 @@
 import { day } from "~/dayjs";
+import { type CellType, formatDuckDbValue } from "~/lib/duckdb-format";
 
 export const LAKE_URL = "https://data.deadlock-api.com";
 export const MANIFEST_URL = `${LAKE_URL}/v1/manifest.json`;
@@ -29,18 +30,9 @@ export function formatRows(n: number): string {
   return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(n);
 }
 
-export function formatCell(v: unknown, nullDisplay = "—"): string {
-  if (v === null || v === undefined) return nullDisplay;
-  if (typeof v === "bigint") return v.toString();
-  if (v instanceof Date) return v.toISOString();
-  if (typeof v === "object") {
-    try {
-      return JSON.stringify(v, (_, val) => (typeof val === "bigint" ? val.toString() : val));
-    } catch {
-      return String(v);
-    }
-  }
-  return String(v);
+/** A cell of a DuckDB result, printed by its column's type: the grid and the CSV share it. */
+export function formatCell(v: unknown, cell?: CellType, nullDisplay = "—"): string {
+  return formatDuckDbValue(v, cell, nullDisplay);
 }
 
 function escapeCsvField(s: string): string {
@@ -48,9 +40,11 @@ function escapeCsvField(s: string): string {
   return s;
 }
 
-export function toCsv(columns: { name: string }[], rows: unknown[][]): string {
+export function toCsv(columns: { name: string; cell?: CellType }[], rows: unknown[][]): string {
   const header = columns.map((c) => escapeCsvField(c.name)).join(",");
-  const body = rows.map((r) => r.map((c) => escapeCsvField(formatCell(c, ""))).join(",")).join("\n");
+  const body = rows
+    .map((r) => r.map((c, j) => escapeCsvField(formatCell(c, columns[j]?.cell, ""))).join(","))
+    .join("\n");
   return body ? `${header}\n${body}` : header;
 }
 

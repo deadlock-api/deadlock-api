@@ -302,7 +302,7 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
                 columns={result.columns}
                 rows={result.rows}
                 density="compact"
-                formatCell={formatCell}
+                formatCell={(v, j) => formatCell(v, result.columns[j]?.cell)}
                 nullLabel="—"
                 label="Query result"
                 className="min-h-0 flex-1 overflow-auto"
