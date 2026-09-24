@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import type { HeroScoreboardSortByEnum } from "deadlock_api_client";
 import { ChartNoAxesCombined, GraduationCap, Table2 } from "lucide-react";
-import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
-import { lazy, Suspense, useId, useState } from "react";
+import { parseAsBoolean, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
+import { lazy, Suspense, useId } from "react";
 
 import { HERO_SORT_BY_VALUES } from "~/components/domain/player-scoreboard/sort-options";
 import { HeroFiltersSection } from "~/components/features/heroes/HeroFiltersSection";
@@ -72,7 +72,11 @@ export function HeroesPage() {
   const filters = useHeroFilters();
   const [groupByType, setGroupByType] = useQueryState("group_by_type", parseAsBoolean.withDefault(false));
   const groupByTypeId = useId();
-  const [heroNameQuery, setHeroNameQuery] = useState("");
+  // In the URL like the table's other controls; replace, so each keystroke is not a history entry.
+  const [heroNameQuery, setHeroNameQuery] = useQueryState(
+    "hero_q",
+    parseAsString.withDefault("").withOptions({ history: "replace" }),
+  );
 
   const [scoreboardSortBy, setScoreboardSortBy] = useQueryState(
     "scoreboard_sort_by",
@@ -165,7 +169,7 @@ export function HeroesPage() {
               columns={["winRate", "pickRate", "zScore", "residual", "details"]}
               groupByType={groupByType}
               nameQuery={heroNameQuery}
-              onClearNameQuery={() => setHeroNameQuery("")}
+              onClearNameQuery={() => void setHeroNameQuery(null)}
               showMatchCounts
               minRankId={filters.effectiveMinRankId}
               maxRankId={filters.effectiveMaxRankId}
