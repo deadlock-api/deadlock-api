@@ -2,7 +2,7 @@ import type { Upgrade } from "deadlock_api_client";
 import type { AnalyticsApiItemStatsRequest, ItemStats } from "deadlock_api_client";
 import { Table2 } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { memo, type ReactNode, useCallback, useDeferredValue, useMemo, useState } from "react";
+import { memo, type ReactNode, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import { ItemCell } from "~/components/domain/assets/ItemCell";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
@@ -26,6 +26,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { useItemById } from "~/hooks/useAssetById";
 import { formatPercent } from "~/lib/format";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
+import { cn } from "~/lib/utils";
 import { wilsonScoreInterval } from "~/lib/wilson";
 
 // Parsers for sort field and direction using nuqs string literal parser
@@ -43,6 +44,12 @@ interface SortState {
 
 const DEFAULT_SORT_STATE: SortState = { field: "winRate", direction: "desc" };
 
+function toggled(set: Set<number>, id: number) {
+  const next = new Set(set);
+  if (!next.delete(id)) next.add(id);
+  return next;
+}
+
 function ItemChip({
   id,
   variant,
@@ -58,6 +65,7 @@ function ItemChip({
       variant={variant === "include" ? "positive-soft" : "negative-soft"}
       size="xs"
       onClick={() => onRemove(id)}
+      data-item-id={id}
       aria-label={`Remove ${item?.name ?? "item"} from ${variant === "include" ? "included" : "excluded"} items`}
       className="group"
     >
@@ -322,31 +330,33 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
       )}
       <TableCell width={130}>
         <div className="flex items-center justify-center gap-2">
+          {/* Toggles rather than buttons that disable themselves: a disabled button drops the keyboard focus to the
+              page, and pressing it again is the quickest way to take the item back out of the filter. */}
           <Button
             variant="positive-soft"
             size="icon-xs"
-            disabled={isIncluded}
+            aria-pressed={isIncluded}
             aria-label={`Include ${itemName} in filter`}
-            title={`Include ${itemName} in filter`}
+            title={isIncluded ? `Stop including ${itemName}` : `Include ${itemName} in filter`}
             onClick={(e) => {
               e.stopPropagation();
               onItemInclude(row.item_id);
             }}
           >
-            <span className="icon-[mdi--plus] size-4" />
+            <span className={cn(isIncluded ? "icon-[mdi--check]" : "icon-[mdi--plus]", "size-4")} />
           </Button>
           <Button
             variant="negative-soft"
             size="icon-xs"
-            disabled={isExcluded}
+            aria-pressed={isExcluded}
             aria-label={`Exclude ${itemName} from filter`}
-            title={`Exclude ${itemName} from filter`}
+            title={isExcluded ? `Stop excluding ${itemName}` : `Exclude ${itemName} from filter`}
             onClick={(e) => {
               e.stopPropagation();
               onItemExclude(row.item_id);
             }}
           >
-            <span className="icon-[mdi--minus] size-4" />
+            <span className={cn(isExcluded ? "icon-[mdi--close]" : "icon-[mdi--minus]", "size-4")} />
           </Button>
         </div>
       </TableCell>
@@ -434,16 +444,24 @@ export function ItemStatsTable({
   };
 
   // Functional updates keep both callbacks stable, so a click re-renders one memoized row instead of the whole table.
-  const addInclude = useCallback(
+  // An exclusion (or an inclusion the item fails) can take the row, and with it the focused toggle, off the table once
+  // the new stats arrive. Focus then moves to the item's chip in the toolbar instead of falling to the page.
+  const chipsRef = useRef<HTMLDivElement>(null);
+  const lastToggled = useRef<number | null>(null);
+
+  // Pressing an item's include (or exclude) toggle again takes it back out of that list.
+  const toggleInclude = useCallback(
     (id: number) => {
-      setIncludeItems((prev) => new Set(prev).add(id));
+      lastToggled.current = id;
+      setIncludeItems((prev) => toggled(prev, id));
       setExcludeItems((prev) => (prev.has(id) ? new Set([...prev].filter((other) => other !== id)) : prev));
     },
     [setIncludeItems, setExcludeItems],
   );
-  const addExclude = useCallback(
+  const toggleExclude = useCallback(
     (id: number) => {
-      setExcludeItems((prev) => new Set(prev).add(id));
+      lastToggled.current = id;
+      setExcludeItems((prev) => toggled(prev, id));
       setIncludeItems((prev) => (prev.has(id) ? new Set([...prev].filter((other) => other !== id)) : prev));
     },
     [setIncludeItems, setExcludeItems],
@@ -505,6 +523,14 @@ export function ItemStatsTable({
       (!nameTerm || (row.item?.name ?? "").toLowerCase().includes(nameTerm)),
   );
 
+  useEffect(() => {
+    const id = lastToggled.current;
+    if (id === null || visibleData.some((row) => row.item_id === id)) return;
+    lastToggled.current = null;
+    if (document.activeElement !== document.body) return;
+    chipsRef.current?.querySelector<HTMLElement>(`[data-item-id="${id}"]`)?.focus();
+  });
+
   const toggleSort = (field: SortField) => {
     let newSort: SortState;
     if (sort.field === field) {
@@ -530,7 +556,7 @@ export function ItemStatsTable({
         onApply={handleApply}
       />
       <FilterBar variant="toolbar" title="Overall stats" icon={Table2} aria-label="Item table controls">
-        <div className="flex min-w-0 flex-wrap items-center gap-1">
+        <div ref={chipsRef} className="flex min-w-0 flex-wrap items-center gap-1">
           {Array.from(includeItems).map((id) => (
             <ItemChip key={`inc-${id}`} id={id} variant="include" onRemove={removeInclude} />
           ))}
@@ -649,8 +675,8 @@ export function ItemStatsTable({
                     isIncluded={includeItems.has(row.item_id)}
                     isExcluded={excludeItems.has(row.item_id)}
                     prevStatsMap={prevStatsMap}
-                    onItemInclude={addInclude}
-                    onItemExclude={addExclude}
+                    onItemInclude={toggleInclude}
+                    onItemExclude={toggleExclude}
                     customDropdownContent={customDropdownContent}
                   />
                 ))}

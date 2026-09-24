@@ -32,8 +32,11 @@ const buttonVariants = cva(
         soft: "border border-primary/30 bg-primary/10 text-primary hover:bg-primary/15",
         subtle: "border border-hairline bg-subtle text-muted-foreground hover:bg-subtle-hover hover:text-foreground",
         "destructive-soft": "border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15",
-        "positive-soft": "border border-positive/30 bg-positive/10 text-positive hover:bg-positive/20",
-        "negative-soft": "border border-negative/30 bg-negative/10 text-negative hover:bg-negative/15",
+        /** Also a toggle: `aria-pressed` gives the pressed one a solid edge and a stronger fill. */
+        "positive-soft":
+          "border border-positive/30 bg-positive/10 text-positive hover:bg-positive/20 aria-pressed:border-positive aria-pressed:bg-positive/25",
+        "negative-soft":
+          "border border-negative/30 bg-negative/10 text-negative hover:bg-negative/15 aria-pressed:border-negative aria-pressed:bg-negative/25",
         /** "Sign in through Steam" only: Valve's brand surface, the same in both themes. */
         steam: "border border-steam-border bg-steam-bg font-semibold text-foreground hover:bg-steam-bg-hover",
         /** A name inside a clickable row: no box of its own, it keeps the surrounding type and only recolors. */

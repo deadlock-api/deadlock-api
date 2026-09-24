@@ -139,6 +139,15 @@ export function Primitives() {
           <Button disabled>
             <Spinner size="sm" /> Saving
           </Button>
+          <Button variant="positive-soft" size="xs" aria-pressed={false}>
+            Include
+          </Button>
+          <Button variant="positive-soft" size="xs" aria-pressed>
+            Included
+          </Button>
+          <Button variant="negative-soft" size="xs" aria-pressed>
+            Excluded
+          </Button>
           <Button asChild variant="soft">
             <Link to="/">Link as button</Link>
           </Button>
