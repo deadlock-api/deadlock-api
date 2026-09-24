@@ -75,6 +75,25 @@ export function formatShare(ratio: number): string {
 }
 
 /**
+ * Decimals that keep two significant digits of a small percentage (0.0886% -> 3, 0.00029% -> 5) and one decimal from
+ * 1% up, capped at six.
+ */
+export function fineShareDigits(ratio: number): number {
+  const percent = Math.abs(ratio * 100);
+  if (!(percent > 0) || percent >= 1) return 1;
+  return Math.min(6, 1 - Math.floor(Math.log10(percent)));
+}
+
+/**
+ * Formats a share that is often far below 1%, such as one item pair out of millions, e.g. `0.00029%`, `0.089%` or
+ * `16.2%`. A nonzero share below the six-decimal floor prints as "<0.000001%" rather than as zero.
+ */
+export function formatFineShare(ratio: number): string {
+  if (ratio > 0 && ratio < 0.000_000_005) return "<0.000001%";
+  return formatPercent(ratio, fineShareDigits(ratio));
+}
+
+/**
  * Formats a ratio as a signed percentage, deciding the sign after rounding so a tiny change never prints as "-0.0%".
  * Negative values take the minus sign (U+2212) that `Delta` prints, so the two never sit side by side as - and −.
  */

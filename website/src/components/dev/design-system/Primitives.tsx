@@ -460,6 +460,14 @@ export function Primitives() {
           <div className="flex w-56 flex-col gap-3">
             <ProgressBarWithLabel value={0.524} min={0.4} max={0.6} label="52.4%" delta={0.012} />
             <ProgressBarWithLabel value={0.081} max={0.2} color="var(--chart-4)" label="8.1%" delta={-0.004} />
+            <ProgressBarWithLabel
+              value={0.000886}
+              max={0.0055}
+              color="var(--chart-4)"
+              label="0.089%"
+              delta={0.00012}
+              deltaDigits={3}
+            />
           </div>
         </Variants>
       </Specimen>

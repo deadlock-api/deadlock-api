@@ -120,6 +120,7 @@ export function ProgressBarWithLabel({
   label,
   delta,
   deltaFormat = "percent",
+  deltaDigits = 1,
   className,
   children,
   ...props
@@ -131,6 +132,8 @@ export function ProgressBarWithLabel({
   label?: ReactNode;
   delta?: number;
   deltaFormat?: React.ComponentProps<typeof Delta>["format"];
+  /** Decimals of the delta; a share far below 1% needs more than one to show its change. */
+  deltaDigits?: number;
   /** `ProgressBarSegment` elements, for a stacked bar. */
   children?: ReactNode;
 }) {
@@ -152,7 +155,7 @@ export function ProgressBarWithLabel({
         <span className="text-start text-sm text-muted-foreground">
           {label || (reading ? `${percentage}%` : <NoValue />)}
         </span>
-        {delta !== undefined && <Delta value={delta} format={deltaFormat} className="text-xs" />}
+        {delta !== undefined && <Delta value={delta} format={deltaFormat} digits={deltaDigits} className="text-xs" />}
       </div>
     </div>
   );

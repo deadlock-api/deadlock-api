@@ -13,11 +13,30 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
+import { fineShareDigits, formatFineShare } from "~/lib/format";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { shrunkWinRate } from "~/lib/shrinkage";
 import { queryKeys } from "~/queries/query-keys";
 
 import { useHeroCombFilters } from "./useHeroCombFilters";
+
+const combKey = (heroIds: number[]) => [...heroIds].sort((a, b) => a - b).join("-");
+
+/**
+ * The combinations the table can list for these filters. The API filters whole teams, so a combination may still be
+ * missing an included hero, or repeat one.
+ */
+function listableCombs<Row extends { hero_ids: number[] }>(
+  rows: Row[] | undefined,
+  combSize: number,
+  includeHeroIds: number[],
+  excludeHeroIds: number[],
+) {
+  return (rows || [])
+    .filter((row) => new Set(row.hero_ids).size === combSize)
+    .filter((row) => includeHeroIds.every((heroId) => row.hero_ids.includes(heroId)))
+    .filter((row) => !excludeHeroIds.some((heroId) => row.hero_ids.includes(heroId)));
+}
 
 export function HeroCombStatsTable({
   columns,
@@ -108,32 +127,25 @@ export function HeroCombStatsTable({
     enabled: hasPreviousInterval,
   });
 
+  // A combination's share is its matches out of the matches of every listable combination, not only the rows shown,
+  // so it keeps its meaning whatever "Show" is set to.
   const prevStatsMap = useMemo(() => {
     if (!prevHeroData) return undefined;
-    const prevSumMatches = prevHeroData.reduce((acc, row) => acc + row.matches, 0);
-    const prevMaxMatches = Math.max(...prevHeroData.map((row) => row.matches));
-    const map = new Map<string, { winrate: number; pickrate: number; normalizedPickrate: number }>();
-    for (const row of prevHeroData) {
-      const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
-      map.set(key, {
+    const prevRows = listableCombs(prevHeroData, combSizeFilter, includeHeroIds, excludeHeroIds);
+    const prevSumMatches = prevRows.reduce((acc, row) => acc + row.matches, 0);
+    const map = new Map<string, { winrate: number; share: number }>();
+    for (const row of prevRows) {
+      map.set(combKey(row.hero_ids), {
         winrate: row.wins / row.matches,
-        pickrate: row.matches / prevSumMatches,
-        normalizedPickrate: row.matches / prevMaxMatches,
+        share: row.matches / prevSumMatches,
       });
     }
     return map;
-  }, [prevHeroData]);
+  }, [prevHeroData, combSizeFilter, includeHeroIds, excludeHeroIds]);
 
-  const sumMatches = useMemo(() => heroData?.reduce((acc, row) => acc + row.matches, 0) || 0, [heroData]);
-  const minMatches = useMemo(() => Math.min(...(heroData || []).map((item) => item.matches)), [heroData]);
-  const maxMatches = useMemo(() => Math.max(...(heroData || []).map((item) => item.matches)), [heroData]);
   const sortedData = useMemo(
     () =>
-      [...(heroData || [])]
-        .filter((row) => new Set(row.hero_ids).size === combSizeFilter)
-        // The API filters whole teams, so a combination may still be missing an included hero.
-        .filter((row) => includeHeroIds.every((heroId) => row.hero_ids.includes(heroId)))
-        .filter((row) => !excludeHeroIds.some((heroId) => row.hero_ids.includes(heroId)))
+      listableCombs(heroData, combSizeFilter, includeHeroIds, excludeHeroIds)
         // A raw win-rate sort would put every 100% combination with a dozen matches above
         // the ones proven over thousands.
         .map((row) => ({ row, score: shrunkWinRate(row.wins, row.matches) }))
@@ -141,7 +153,13 @@ export function HeroCombStatsTable({
         .map(({ row }) => row),
     [heroData, combSizeFilter, includeHeroIds, excludeHeroIds],
   );
-  const limitedData = useMemo(() => sortedData?.slice(0, combsToShow), [combsToShow, sortedData]);
+  const sumMatches = useMemo(() => sortedData.reduce((acc, row) => acc + row.matches, 0), [sortedData]);
+  const limitedData = useMemo(() => sortedData.slice(0, combsToShow), [combsToShow, sortedData]);
+  // The bars run from zero to the largest share shown, so a rare combination draws a short bar, not an empty one.
+  const maxShare = useMemo(
+    () => limitedData.reduce((max, row) => Math.max(max, row.matches / sumMatches), 0),
+    [limitedData, sumMatches],
+  );
   const minWinrate = useMemo(
     () => limitedData.reduce((min, row) => Math.min(min, row.wins / row.matches), 1),
     [limitedData],
@@ -179,9 +197,9 @@ export function HeroCombStatsTable({
                 )}
                 {columns.includes("pickRate") && (
                   <TableHead className="hidden text-center whitespace-normal sm:table-cell">
-                    Pick Rate
+                    Share of
                     <br />
-                    (Normalized)
+                    Combo Matches
                   </TableHead>
                 )}
                 {columns.includes("totalMatches") && (
@@ -230,8 +248,7 @@ export function HeroCombStatsTable({
                             <TooltipStat label="Win rate" value={`${((row.wins / row.matches) * 100).toFixed(2)}%`} />
                           </TooltipStats>
                           {(() => {
-                            const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
-                            const prev = prevStatsMap?.get(key);
+                            const prev = prevStatsMap?.get(combKey(row.hero_ids));
                             return prev !== undefined ? (
                               <TooltipStats>
                                 <TooltipStat label="Previous" value={`${(prev.winrate * 100).toFixed(2)}%`} />
@@ -249,8 +266,7 @@ export function HeroCombStatsTable({
                           color="var(--primary)"
                           label={`${Math.round((row.wins / row.matches) * 100)}%`}
                           delta={(() => {
-                            const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
-                            const prev = prevStatsMap?.get(key);
+                            const prev = prevStatsMap?.get(combKey(row.hero_ids));
                             return prev !== undefined ? row.wins / row.matches - prev.winrate : undefined;
                           })()}
                         />
@@ -258,52 +274,48 @@ export function HeroCombStatsTable({
                     </Tooltip>
                   </TableCell>
                 )}
-                {/* Pick rate and matches are secondary (the win rate tooltip has the matches): on a phone they give
+                {/* The share (matches of this combination out of the matches of every listed combination) and the matches
+                    are secondary (the win rate tooltip has the matches): on a phone they give
                     their width to the heroes and the win rate. */}
-                {columns.includes("pickRate") && (
-                  <TableCell className="hidden text-center sm:table-cell">
-                    <Tooltip
-                      content={
-                        <>
-                          <TooltipStats variant="plain">
-                            <TooltipStat
-                              label="Matches"
-                              value={`${row.matches.toLocaleString("en-US")} / ${sumMatches.toLocaleString("en-US")}`}
-                            />
-                            <TooltipStat
-                              label="Pick rate"
-                              value={`${((row.matches / sumMatches) * 100).toFixed(4)}%`}
-                            />
-                          </TooltipStats>
-                          {(() => {
-                            const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
-                            const prev = prevStatsMap?.get(key);
-                            return prev !== undefined ? (
-                              <TooltipStats>
-                                <TooltipStat label="Previous" value={`${(prev.pickrate * 100).toFixed(4)}%`} />
+                {columns.includes("pickRate") &&
+                  (() => {
+                    const share = row.matches / sumMatches;
+                    const prev = prevStatsMap?.get(combKey(row.hero_ids));
+                    return (
+                      <TableCell className="hidden text-center sm:table-cell">
+                        <Tooltip
+                          content={
+                            <>
+                              <TooltipStats variant="plain">
+                                <TooltipStat
+                                  label="Matches"
+                                  value={`${row.matches.toLocaleString("en-US")} of ${sumMatches.toLocaleString("en-US")}`}
+                                />
+                                <TooltipStat label="Share" value={formatFineShare(share)} />
                               </TooltipStats>
-                            ) : null;
-                          })()}
-                        </>
-                      }
-                    >
-                      <TooltipTarget display="block">
-                        <ProgressBarWithLabel
-                          min={minMatches}
-                          max={maxMatches}
-                          value={row.matches}
-                          color="var(--chart-4)"
-                          label={`${Math.round((row.matches / maxMatches) * 100).toFixed(0)}%`}
-                          delta={(() => {
-                            const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
-                            const prev = prevStatsMap?.get(key);
-                            return prev !== undefined ? row.matches / maxMatches - prev.normalizedPickrate : undefined;
-                          })()}
-                        />
-                      </TooltipTarget>
-                    </Tooltip>
-                  </TableCell>
-                )}
+                              {prev !== undefined && (
+                                <TooltipStats>
+                                  <TooltipStat label="Previous" value={formatFineShare(prev.share)} />
+                                </TooltipStats>
+                              )}
+                            </>
+                          }
+                        >
+                          <TooltipTarget display="block">
+                            <ProgressBarWithLabel
+                              min={0}
+                              max={maxShare}
+                              value={share}
+                              color="var(--chart-4)"
+                              label={formatFineShare(share)}
+                              delta={prev !== undefined ? share - prev.share : undefined}
+                              deltaDigits={fineShareDigits(share)}
+                            />
+                          </TooltipTarget>
+                        </Tooltip>
+                      </TableCell>
+                    );
+                  })()}
                 {columns.includes("totalMatches") && (
                   <TableCell className="hidden text-center sm:table-cell">
                     {row.matches.toLocaleString("en-US")}

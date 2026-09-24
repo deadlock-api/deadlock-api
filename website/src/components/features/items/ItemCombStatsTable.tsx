@@ -10,6 +10,7 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
+import { fineShareDigits, formatFineShare } from "~/lib/format";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { shrunkWinRate } from "~/lib/shrinkage";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
@@ -138,18 +139,13 @@ export function ItemCombStatsTable({
   );
   const limitedData = useMemo(() => sortedData.slice(0, combsToShow), [combsToShow, sortedData]);
 
-  // Normalized against the displayed rows, not the full fetched set: with hundreds of
-  // purchasable items, the full set spans everything from once-in-a-blue-moon pairs to
-  // near-universal starter-item pairs bought in nearly every match, so normalizing pick
-  // rate against its max/sum would crush every displayed (win-rate-sorted) row toward 0%.
-  const sumMatches = useMemo(() => limitedData.reduce((acc, row) => acc + row.matches, 0), [limitedData]);
-  const minMatchesVal = useMemo(
-    () => limitedData.reduce((min, row) => Math.min(min, row.matches), Infinity),
-    [limitedData],
-  );
-  const maxMatchesVal = useMemo(
-    () => limitedData.reduce((max, row) => Math.max(max, row.matches), -Infinity),
-    [limitedData],
+  // A combination's share is its matches out of the matches of every listable combination, not only the rows shown,
+  // so it keeps its meaning whatever "Show" is set to. Shares of item pairs are small (hundreds of items pair up), so
+  // the bars run from zero to the largest share shown: a rare combination draws a short bar, not an empty one.
+  const sumMatches = useMemo(() => filteredData.reduce((acc, row) => acc + row.matches, 0), [filteredData]);
+  const maxShare = useMemo(
+    () => limitedData.reduce((max, row) => Math.max(max, row.matches / sumMatches), 0),
+    [limitedData, sumMatches],
   );
   const minWinrate = useMemo(
     () => limitedData.reduce((min, row) => Math.min(min, row.wins / row.matches), 1),
@@ -160,27 +156,21 @@ export function ItemCombStatsTable({
     [limitedData],
   );
 
-  // Keep raw counts so changing the display limit does not rebuild this full-data lookup.
+  // The previous interval's shares are taken over its own listable combinations, the same basis as the current ones,
+  // so intervals of different length compare fairly.
   const prevStatsMap = useMemo(() => {
     if (!prevItemCombData) return undefined;
-    const map = new Map<string, { winrate: number; matches: number }>();
-    for (const row of prevItemCombData) {
+    const prevRows = prevItemCombData.filter((row) => row.item_ids.every((id) => shopableItemIds.has(id)));
+    const prevSumMatches = prevRows.reduce((acc, row) => acc + row.matches, 0);
+    const map = new Map<string, { winrate: number; share: number }>();
+    for (const row of prevRows) {
       map.set(combKey(row.item_ids), {
         winrate: row.wins / row.matches,
-        matches: row.matches,
+        share: row.matches / prevSumMatches,
       });
     }
     return map;
-  }, [prevItemCombData]);
-  // The previous interval is normalized against the same displayed rows so both
-  // periods share a scale; comparing raw counts across intervals of different
-  // length produced deltas of several thousand percent.
-  const prevMatchesOfDisplayed = useMemo(
-    () => limitedData.map((row) => prevStatsMap?.get(combKey(row.item_ids))?.matches ?? 0),
-    [limitedData, prevStatsMap],
-  );
-  const prevSumMatches = useMemo(() => prevMatchesOfDisplayed.reduce((acc, m) => acc + m, 0), [prevMatchesOfDisplayed]);
-  const prevMaxMatches = useMemo(() => Math.max(...prevMatchesOfDisplayed, 0), [prevMatchesOfDisplayed]);
+  }, [prevItemCombData, shopableItemIds]);
 
   return (
     <>
@@ -202,9 +192,9 @@ export function ItemCombStatsTable({
                 )}
                 {columns.includes("pickRate") && (
                   <TableHead className="text-center">
-                    Pick Rate
+                    Share of
                     <br />
-                    (Normalized)
+                    Combo Matches
                   </TableHead>
                 )}
                 {columns.includes("totalMatches") && <TableHead className="text-center">Total Matches</TableHead>}
@@ -214,6 +204,7 @@ export function ItemCombStatsTable({
           <TableBody>
             {limitedData.map((row, index) => {
               const prev = prevStatsMap?.get(combKey(row.item_ids));
+              const share = row.matches / sumMatches;
               return (
                 <TableRow key={row.item_ids.join("-")}>
                   {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
@@ -253,21 +244,15 @@ export function ItemCombStatsTable({
                       <Tooltip
                         content={
                           <>
-                            <TooltipHeader title="Pick rate" />
+                            <TooltipHeader title="Share of combo matches" />
                             <TooltipStats>
                               <TooltipStat
                                 label="Matches"
-                                value={`${row.matches.toLocaleString("en-US")} / ${sumMatches.toLocaleString("en-US")}`}
+                                value={`${row.matches.toLocaleString("en-US")} of ${sumMatches.toLocaleString("en-US")}`}
                               />
-                              <TooltipStat
-                                label="Pick rate"
-                                value={`${((row.matches / sumMatches) * 100).toFixed(4)}%`}
-                              />
+                              <TooltipStat label="Share" value={formatFineShare(share)} />
                               {prev !== undefined && (
-                                <TooltipStat
-                                  label="Previous"
-                                  value={`${((prev.matches / prevSumMatches) * 100).toFixed(4)}%`}
-                                />
+                                <TooltipStat label="Previous" value={formatFineShare(prev.share)} />
                               )}
                             </TooltipStats>
                           </>
@@ -275,16 +260,13 @@ export function ItemCombStatsTable({
                       >
                         <TooltipTarget display="block">
                           <ProgressBarWithLabel
-                            min={minMatchesVal}
-                            max={maxMatchesVal}
-                            value={row.matches}
+                            min={0}
+                            max={maxShare}
+                            value={share}
                             color="var(--chart-4)"
-                            label={`${Math.round((row.matches / maxMatchesVal) * 100).toFixed(0)}%`}
-                            delta={
-                              prev !== undefined
-                                ? row.matches / maxMatchesVal - prev.matches / prevMaxMatches
-                                : undefined
-                            }
+                            label={formatFineShare(share)}
+                            delta={prev !== undefined ? share - prev.share : undefined}
+                            deltaDigits={fineShareDigits(share)}
                           />
                         </TooltipTarget>
                       </Tooltip>
