@@ -1,15 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats, HeroCounterStats, HeroSynergyStats } from "deadlock_api_client";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
+import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Delta } from "~/components/ui/delta";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
+import type { SortDir } from "~/components/ui/sort-button";
 import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
@@ -19,6 +22,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { formatSignedPercent } from "~/lib/format";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
+import { heroesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
 import type { Color } from "~/types/general";
 
@@ -98,10 +102,28 @@ function buildCounterMap(
   return counterMap;
 }
 
-function getMinMax(entries: Record<number, { rel_winrate: number }>): { min: number; max: number } {
-  const values = Object.values(entries).map((e) => e.rel_winrate);
-  if (values.length === 0) return { min: 0, max: 0 };
-  return { min: Math.min(...values), max: Math.max(...values) };
+const SORT_KEYS = ["hero", "bestCombination", "worstCombination", "bestAgainst", "worstAgainst"] as const;
+type SortKey = (typeof SORT_KEYS)[number];
+const parseAsSortKey = parseAsStringLiteral(SORT_KEYS);
+const parseAsSortDir = parseAsStringLiteral(["asc", "desc"] as const);
+
+/**
+ * The direction a column sorts in when it is first picked: names A to Z, and every matchup column with its biggest
+ * effect first. For the "worst" columns that is the most negative value, so they start ascending.
+ */
+const FIRST_DIR: Record<SortKey, SortDir> = {
+  hero: "asc",
+  bestCombination: "desc",
+  worstCombination: "asc",
+  bestAgainst: "desc",
+  worstAgainst: "asc",
+};
+
+/** The largest effect in a column, in either direction. Bars run from 0 to it, so a bigger effect is a longer bar. */
+function getMaxMagnitude(entries: Record<number, { rel_winrate: number }>): number {
+  let max = 0;
+  for (const entry of Object.values(entries)) max = Math.max(max, Math.abs(entry.rel_winrate));
+  return max;
 }
 
 function MatchupTooltip({
@@ -152,8 +174,7 @@ function MatchupCell({
   partnerId,
   relWinrate,
   prevRelWinrate,
-  min,
-  max,
+  maxMagnitude,
   color,
   separator,
   matchesPlayed,
@@ -163,8 +184,7 @@ function MatchupCell({
   partnerId?: number;
   relWinrate?: number;
   prevRelWinrate: number | undefined;
-  min: number;
-  max: number;
+  maxMagnitude: number;
   color: Color;
   separator: string;
   matchesPlayed?: number;
@@ -193,9 +213,9 @@ function MatchupCell({
         >
           <TooltipTarget display="block" className="w-full">
             <ProgressBarWithLabel
-              min={min}
-              max={max}
-              value={relWinrate}
+              min={0}
+              max={maxMagnitude}
+              value={Math.abs(relWinrate)}
               color={color}
               label={formatSignedPercent(relWinrate)}
               delta={prevRelWinrate !== undefined ? relWinrate - prevRelWinrate : undefined}
@@ -370,6 +390,23 @@ export function HeroMatchupStatsTable({
     enabled: hasPreviousInterval,
   });
 
+  const { data: heroes } = useQuery(heroesQueryOptions);
+  const heroNameMap = useMemo(() => new Map((heroes ?? []).map((hero) => [hero.id, hero.name])), [heroes]);
+
+  const [activeSortKey, setActiveSortKey] = useQueryState(
+    "matchup_sort_key",
+    parseAsSortKey.withDefault("bestCombination"),
+  );
+  const [sortDir, setSortDir] = useQueryState("matchup_sort_dir", parseAsSortDir.withDefault("desc"));
+  const handleSort = (key: SortKey) => {
+    if (key === activeSortKey) {
+      void setSortDir((d) => (d === "desc" ? "asc" : "desc"));
+    } else {
+      void setActiveSortKey(key);
+      void setSortDir(FIRST_DIR[key]);
+    }
+  };
+
   const isLoading = isLoadingSynergy || isLoadingCounter || isLoadingHero;
 
   const heroStatsMap = useMemo(() => buildHeroStatsMap(heroData), [heroData]);
@@ -415,10 +452,10 @@ export function HeroMatchupStatsTable({
   const heroBestAgainst = useMemo(() => pickTopFromMap(counterMap, "best"), [counterMap]);
   const heroWorstAgainst = useMemo(() => pickTopFromMap(counterMap, "worst"), [counterMap]);
 
-  const bestSynergyRange = useMemo(() => getMinMax(heroBestSynergies), [heroBestSynergies]);
-  const worstSynergyRange = useMemo(() => getMinMax(heroWorstSynergies), [heroWorstSynergies]);
-  const bestAgainstRange = useMemo(() => getMinMax(heroBestAgainst), [heroBestAgainst]);
-  const worstAgainstRange = useMemo(() => getMinMax(heroWorstAgainst), [heroWorstAgainst]);
+  const bestSynergyScale = useMemo(() => getMaxMagnitude(heroBestSynergies), [heroBestSynergies]);
+  const worstSynergyScale = useMemo(() => getMaxMagnitude(heroWorstSynergies), [heroWorstSynergies]);
+  const bestAgainstScale = useMemo(() => getMaxMagnitude(heroBestAgainst), [heroBestAgainst]);
+  const worstAgainstScale = useMemo(() => getMaxMagnitude(heroWorstAgainst), [heroWorstAgainst]);
 
   const heroIds = useMemo(() => {
     const allHeroIds = new Set<number>();
@@ -430,6 +467,45 @@ export function HeroMatchupStatsTable({
     }
     return Array.from(allHeroIds);
   }, [heroBestSynergies, heroBestAgainst]);
+
+  const sortedHeroIds = useMemo(() => {
+    const valueOf = (heroId: number): number | undefined => {
+      switch (activeSortKey) {
+        case "bestCombination":
+          return heroBestSynergies[heroId]?.rel_winrate;
+        case "worstCombination":
+          return heroWorstSynergies[heroId]?.rel_winrate;
+        case "bestAgainst":
+          return heroBestAgainst[heroId]?.rel_winrate;
+        case "worstAgainst":
+          return heroWorstAgainst[heroId]?.rel_winrate;
+        case "hero":
+          return undefined;
+      }
+    };
+    const dir = sortDir === "asc" ? 1 : -1;
+    const nameOf = (heroId: number) => heroNameMap.get(heroId) ?? "";
+    return [...heroIds].sort((a, b) => {
+      if (activeSortKey === "hero") return nameOf(a).localeCompare(nameOf(b)) * dir;
+      const va = valueOf(a);
+      const vb = valueOf(b);
+      // A hero without a matchup in this column sits at the bottom whichever way it is sorted.
+      if (va == null || vb == null) {
+        if (va == null && vb == null) return nameOf(a).localeCompare(nameOf(b));
+        return va == null ? 1 : -1;
+      }
+      return (va - vb) * dir || nameOf(a).localeCompare(nameOf(b));
+    });
+  }, [
+    heroIds,
+    activeSortKey,
+    sortDir,
+    heroNameMap,
+    heroBestSynergies,
+    heroWorstSynergies,
+    heroBestAgainst,
+    heroWorstAgainst,
+  ]);
 
   if (isLoading) {
     return <LoadingState label="hero matchups" align="center" />;
@@ -450,11 +526,51 @@ export function HeroMatchupStatsTable({
         <TableHeader tone="muted">
           <TableRow>
             <TableHead>#</TableHead>
-            <TableHead data-pinned>Hero</TableHead>
-            <TableHead title="Win Rate Increase/Decrease">Best Combination</TableHead>
-            <TableHead title="Win Rate Increase/Decrease">Worst Combination</TableHead>
-            <TableHead title="Win Rate Increase/Decrease">Best Against</TableHead>
-            <TableHead title="Win Rate Increase/Decrease">Worst Against</TableHead>
+            <SortableHeader
+              label="Hero"
+              sortKey="hero"
+              activeSortKey={activeSortKey}
+              sortDir={sortDir}
+              onSortChange={handleSort}
+              align="start"
+              data-pinned
+            />
+            <SortableHeader
+              label="Best Combination"
+              sortKey="bestCombination"
+              activeSortKey={activeSortKey}
+              sortDir={sortDir}
+              onSortChange={handleSort}
+              align="start"
+              title="Win rate change with the best teammate"
+            />
+            <SortableHeader
+              label="Worst Combination"
+              sortKey="worstCombination"
+              activeSortKey={activeSortKey}
+              sortDir={sortDir}
+              onSortChange={handleSort}
+              align="start"
+              title="Win rate change with the worst teammate"
+            />
+            <SortableHeader
+              label="Best Against"
+              sortKey="bestAgainst"
+              activeSortKey={activeSortKey}
+              sortDir={sortDir}
+              onSortChange={handleSort}
+              align="start"
+              title="Win rate change against the easiest enemy"
+            />
+            <SortableHeader
+              label="Worst Against"
+              sortKey="worstAgainst"
+              activeSortKey={activeSortKey}
+              sortDir={sortDir}
+              onSortChange={handleSort}
+              align="start"
+              title="Win rate change against the hardest enemy"
+            />
           </TableRow>
         </TableHeader>
       )}
@@ -462,7 +578,7 @@ export function HeroMatchupStatsTable({
         {heroIds.length === 0 && (
           <TableEmptyRow colSpan={6}>No matchups with enough matches for these filters</TableEmptyRow>
         )}
-        {heroIds.map((heroId, index) => (
+        {sortedHeroIds.map((heroId, index) => (
           <TableRow key={heroId}>
             <TableCell className="font-semibold">{index + 1}</TableCell>
             <TableCell data-pinned>
@@ -473,8 +589,7 @@ export function HeroMatchupStatsTable({
               partnerId={heroBestSynergies[heroId]?.hero_id2}
               relWinrate={heroBestSynergies[heroId]?.rel_winrate}
               prevRelWinrate={prevSynergyRelWinrateMap[heroId]?.[heroBestSynergies[heroId]?.hero_id2]}
-              min={bestSynergyRange.min}
-              max={bestSynergyRange.max}
+              maxMagnitude={bestSynergyScale}
               color="var(--primary)"
               separator="+"
               matchesPlayed={heroBestSynergies[heroId]?.matches_played}
@@ -485,8 +600,7 @@ export function HeroMatchupStatsTable({
               partnerId={heroWorstSynergies[heroId]?.hero_id2}
               relWinrate={heroWorstSynergies[heroId]?.rel_winrate}
               prevRelWinrate={prevSynergyRelWinrateMap[heroId]?.[heroWorstSynergies[heroId]?.hero_id2]}
-              min={worstSynergyRange.min}
-              max={worstSynergyRange.max}
+              maxMagnitude={worstSynergyScale}
               color="var(--primary)"
               separator="+"
               matchesPlayed={heroWorstSynergies[heroId]?.matches_played}
@@ -497,8 +611,7 @@ export function HeroMatchupStatsTable({
               partnerId={heroBestAgainst[heroId]?.enemy_hero_id}
               relWinrate={heroBestAgainst[heroId]?.rel_winrate}
               prevRelWinrate={prevCounterRelWinrateMap[heroId]?.[heroBestAgainst[heroId]?.enemy_hero_id]}
-              min={bestAgainstRange.min}
-              max={bestAgainstRange.max}
+              maxMagnitude={bestAgainstScale}
               color="var(--chart-4)"
               separator="vs"
               matchesPlayed={heroBestAgainst[heroId]?.matches_played}
@@ -509,8 +622,7 @@ export function HeroMatchupStatsTable({
               partnerId={heroWorstAgainst[heroId]?.enemy_hero_id}
               relWinrate={heroWorstAgainst[heroId]?.rel_winrate}
               prevRelWinrate={prevCounterRelWinrateMap[heroId]?.[heroWorstAgainst[heroId]?.enemy_hero_id]}
-              min={worstAgainstRange.min}
-              max={worstAgainstRange.max}
+              maxMagnitude={worstAgainstScale}
               color="var(--chart-4)"
               separator="vs"
               matchesPlayed={heroWorstAgainst[heroId]?.matches_played}
