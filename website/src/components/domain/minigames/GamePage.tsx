@@ -51,6 +51,7 @@ export function GamePage({
           <Link
             to={hub}
             search={hubSearch}
+            activeOptions={{ exact: true }}
             className="cursor-target inline-flex items-center gap-1.5 font-mono tracking-wider uppercase transition-colors hover:text-primary"
           >
             <ArrowLeft className="size-3" />

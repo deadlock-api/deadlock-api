@@ -99,7 +99,7 @@ export function Breadcrumbs() {
       <Breadcrumb className="ps-8 md:ps-0">
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <Link to="/" aria-label="Home">
+            <Link to="/" aria-label="Home" activeOptions={{ exact: true }}>
               <Home />
             </Link>
           </BreadcrumbLink>
@@ -111,9 +111,11 @@ export function Breadcrumbs() {
               {isLast ? (
                 <BreadcrumbPage>{item.label}</BreadcrumbPage>
               ) : (
+                // Exact: an ancestor is where the reader came from, not the current page.
                 <BreadcrumbLink asChild>
                   <Link
                     to={item.path}
+                    activeOptions={{ exact: true }}
                     search={item.path === "/games/deadlockdle" && puzzleDate ? { date: puzzleDate } : undefined}
                   >
                     {item.label}

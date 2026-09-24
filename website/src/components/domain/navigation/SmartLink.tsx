@@ -16,7 +16,8 @@ export function SmartLink({ href, external, children, ...rest }: SmartLinkProps)
     );
   }
   return (
-    <Link data-slot="smart-link" to={href} preload="intent" {...rest}>
+    // Exact: a link to a section is not `aria-current="page"` on every page below it.
+    <Link data-slot="smart-link" to={href} preload="intent" activeOptions={{ exact: true }} {...rest}>
       {children}
     </Link>
   );

@@ -23,9 +23,16 @@ function isActive(pathname: string, to: string) {
 
 function NavItem({ link }: { link: NavLink }) {
   const active = useLocation({ select: (location) => isActive(location.pathname, link.to) });
+  const exact = useLocation({ select: (location) => (location.pathname.replace(/\/$/, "") || "/") === link.to });
   const Icon = link.icon;
   return (
-    <SideNavItem asChild active={active} variant={link.special ? "highlight" : "default"}>
+    // The entry of the section a page is in is current, but only the page's own entry is that page.
+    <SideNavItem
+      asChild
+      active={active}
+      aria-current={active ? (exact ? "page" : "true") : undefined}
+      variant={link.special ? "highlight" : "default"}
+    >
       <SmartLink href={link.to}>
         <Icon />
         <span className="truncate">{link.label}</span>
