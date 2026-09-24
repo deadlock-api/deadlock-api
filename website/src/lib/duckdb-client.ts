@@ -41,15 +41,20 @@ export function initDuckDb(): Promise<DuckDbHandle> {
   return dbPromise;
 }
 
-export function parseTableRefs(query: string): string[] {
-  const seen = new Set<string>();
-  const re = /\b(?:FROM|JOIN)\s+["`]?(\w+)["`]?/gi;
-  let m: RegExpExecArray | null = re.exec(query);
-  while (m !== null) {
-    seen.add(m[1]);
-    m = re.exec(query);
+/**
+ * The known tables a query mentions anywhere, not only right after FROM or JOIN: `FROM a, b`, subqueries and CTEs
+ * all count. Identifiers are case-insensitive as in DuckDB. A table named in a string or a comment is registered
+ * too, which costs one view and does no harm.
+ */
+export function findTableNames(query: string, known: Iterable<string>): string[] {
+  const byLowerName = new Map<string, string>();
+  for (const name of known) byLowerName.set(name.toLowerCase(), name);
+  const found = new Set<string>();
+  for (const [token] of query.matchAll(/\w+/g)) {
+    const name = byLowerName.get(token.toLowerCase());
+    if (name) found.add(name);
   }
-  return [...seen];
+  return [...found];
 }
 
 export interface QueryColumn {

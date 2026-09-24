@@ -17,8 +17,8 @@ import {
   type QueryColumn,
   QueryCancelledError,
   ensureViews,
+  findTableNames,
   initDuckDb,
-  parseTableRefs,
   runDuckDbQuery,
 } from "~/lib/duckdb-client";
 
@@ -134,8 +134,7 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
     setStatus(null);
     const start = performance.now();
     try {
-      const knownRefs = parseTableRefs(query).filter((r) => tableMap.has(r));
-      const created = await ensureViews(handle, tableMap, knownRefs);
+      const created = await ensureViews(handle, tableMap, findTableNames(query, tableMap.keys()));
       if (created.length > 0) {
         setStatus(`Registered ${created.length} table${created.length === 1 ? "" : "s"}…`);
       }
