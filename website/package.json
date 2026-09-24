@@ -19,7 +19,8 @@
     "check": "pnpm typecheck && pnpm lint && pnpm test:unit",
     "bench:avg": "tsx scripts/playground/bench-average-build.ts",
     "og": "node scripts/generate-og-images.mjs",
-    "smoke": "node scripts/smoke-routes.mjs"
+    "smoke": "node scripts/smoke-routes.mjs",
+    "check:startup": "wrangler check startup"
   },
   "dependencies": {
     "@codemirror/lang-sql": "^6.10.0",

@@ -18,3 +18,6 @@ experiments/
 # Browser regression artifacts
 test-results/
 playwright-report/
+
+# `pnpm check:startup` writes its CPU profile here
+worker-startup.cpuprofile
