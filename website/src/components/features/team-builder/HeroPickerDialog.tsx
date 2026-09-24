@@ -1,10 +1,12 @@
+import { XIcon } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { PanelFooter, PanelSection } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Badge } from "~/components/ui/badge";
-import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
+import { Button } from "~/components/ui/button";
+import { DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { OptionRow } from "~/components/ui/option-row";
 import { SearchInput } from "~/components/ui/search-input";
 import { Separator } from "~/components/ui/separator";
@@ -144,9 +146,22 @@ function PickerBody({
 
   const lane = slotLane(draft.gameMode, target.slot);
 
+  // A delta column whose every row is n/a (no ally drafted yet, or no enemy) only takes room from the names,
+  // which a phone then cut to a letter or two. It comes back with the first hero it can be measured against.
+  const showSynergy = recommendations.some((r) => r.synergy !== undefined);
+  const showCounter = recommendations.some((r) => r.counter !== undefined);
+  // A phone's dialog gets narrower number columns and edges, and on the smallest screens no portrait, so the
+  // hero's name keeps room to be read rather than cut to a letter.
+  const deltaColumn = "w-14 @md:w-20";
+  const rateColumn = showSynergy || showCounter ? "w-14 @sm:w-18" : "w-18";
+  const edge = "px-3 @sm:px-4";
+  const portrait = "hidden size-7.5 shrink-0 @xs:block";
+
   return (
     <DialogContent size="lg" className="flex max-h-4/5 flex-col gap-0 p-0" showCloseButton={false}>
-      <DialogHeader className="flex-row items-center gap-2.5 p-3.5">
+      {/* The close button sits in the header row rather than the dialog's corner, where it covered the badge. */}
+      {/* On a phone the search box takes a row of its own under the badge, rather than shrinking to a sliver. */}
+      <DialogHeader className="flex-row flex-wrap items-center gap-2.5 p-3.5">
         <DialogTitle className="sr-only">Pick a hero</DialogTitle>
         <DialogDescription className="sr-only">
           Search the roster; every row shows what the hero would add to the current draft.
@@ -159,25 +174,37 @@ function PickerBody({
           onKeyDown={handleKeyDown}
           placeholder="Search heroes…"
           aria-label="Search heroes"
-          className="flex-1"
+          className="order-last basis-full @sm:order-none @sm:flex-1 @sm:basis-0"
         />
-        <Badge variant="outline" className="text-2xs text-muted-foreground">
-          {TEAM_NAMES[target.side]} · {lane ? lane.name : `Slot ${target.slot + 1}`}
-        </Badge>
+        {/* Grows on a phone, where it shares the first row with the close button alone. */}
+        <div className="flex-1 text-start @sm:flex-none">
+          <Badge variant="outline" className="text-2xs text-muted-foreground">
+            {TEAM_NAMES[target.side]} · {lane ? lane.name : `Slot ${target.slot + 1}`}
+          </Badge>
+        </div>
+        <DialogClose asChild>
+          <Button variant="ghost" size="icon-sm" aria-label="Close">
+            <XIcon />
+          </Button>
+        </DialogClose>
       </DialogHeader>
       <Separator />
 
-      <div className="flex px-4 py-2 eyebrow">
+      <div className={cn("flex py-2 eyebrow", edge)}>
         <SortHeader column="score" sort={sort} onSortChange={setSort} align="start" className="flex-1">
           Hero
         </SortHeader>
-        <SortHeader column="synergy" sort={sort} onSortChange={setSort} className="w-20">
-          Synergy
-        </SortHeader>
-        <SortHeader column="counter" sort={sort} onSortChange={setSort} className="w-20">
-          Vs. enemy
-        </SortHeader>
-        <SortHeader column="winRate" sort={sort} onSortChange={setSort} className="w-18">
+        {showSynergy && (
+          <SortHeader column="synergy" sort={sort} onSortChange={setSort} className={deltaColumn}>
+            Synergy
+          </SortHeader>
+        )}
+        {showCounter && (
+          <SortHeader column="counter" sort={sort} onSortChange={setSort} className={deltaColumn}>
+            Vs. enemy
+          </SortHeader>
+        )}
+        <SortHeader column="winRate" sort={sort} onSortChange={setSort} className={rateColumn}>
           Win rate
         </SortHeader>
       </div>
@@ -194,14 +221,14 @@ function PickerBody({
             active={i === cursor}
             onMouseEnter={() => setCursor(i)}
             onClick={() => onSelect(row.heroId)}
-            className="px-4 py-2.5"
-            leading={<HeroImage heroId={row.heroId} shape="circle" className="size-7.5 shrink-0" />}
+            className={cn(edge, "py-2.5")}
+            leading={<HeroImage heroId={row.heroId} shape="circle" className={portrait} />}
             // One element, so the row's own gap between trailing parts cannot shift the columns off the header's.
             trailing={
               <span className="flex items-center">
-                <Points value={row.synergy} align="end" className="w-20 font-semibold" />
-                <Points value={row.counter} align="end" className="w-20 font-semibold" />
-                <span className="w-18 text-end tabular-nums">{formatRate(row.winRate)}</span>
+                {showSynergy && <Points value={row.synergy} align="end" className={cn(deltaColumn, "font-semibold")} />}
+                {showCounter && <Points value={row.counter} align="end" className={cn(deltaColumn, "font-semibold")} />}
+                <span className={cn(rateColumn, "text-end tabular-nums")}>{formatRate(row.winRate)}</span>
               </span>
             }
           >
@@ -217,8 +244,8 @@ function PickerBody({
                 key={heroId}
                 selected={false}
                 disabled
-                className="px-4 py-2.5"
-                leading={<HeroImage heroId={heroId} shape="circle" className="size-7.5 shrink-0" />}
+                className={cn(edge, "py-2.5")}
+                leading={<HeroImage heroId={heroId} shape="circle" className={portrait} />}
                 trailing={<span className="text-2xs text-muted-foreground">{takenBy.get(heroId)}</span>}
               >
                 {namesById.get(heroId) ?? "Unknown"}
@@ -228,8 +255,9 @@ function PickerBody({
         )}
       </div>
 
-      <PanelFooter className="flex justify-between gap-2 px-4 py-2.5 text-2xs">
-        <span>Arrow keys to move, Enter to pick</span>
+      <PanelFooter className={cn("flex justify-between gap-2 py-2.5 text-2xs", edge)}>
+        {/* Only where there is a keyboard to speak of: on a touch screen the hint names keys nobody has. */}
+        <span className="hidden pointer-fine:inline">Arrow keys to move, Enter to pick</span>
         <span>Deltas are against the heroes already drafted</span>
       </PanelFooter>
     </DialogContent>
