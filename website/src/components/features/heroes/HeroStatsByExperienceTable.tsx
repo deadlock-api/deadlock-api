@@ -25,11 +25,12 @@ import { heroesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
 
-const EXPERIENCE_BUCKETS = [
-  { label: "Beginner", sublabel: "1-25 matches", min: 1, max: 25 },
-  { label: "Intermediate", sublabel: "25-100 matches", min: 25, max: 100 },
-  { label: "Experienced", sublabel: "100-500 matches", min: 100, max: 500 },
-] as const;
+// The API counts both ends in, so the buckets must not share one; the last is open, or players past it are dropped.
+const EXPERIENCE_BUCKETS: { label: string; sublabel: string; min: number; max?: number }[] = [
+  { label: "Beginner", sublabel: "1-24 matches", min: 1, max: 24 },
+  { label: "Intermediate", sublabel: "25-99 matches", min: 25, max: 99 },
+  { label: "Experienced", sublabel: "100+ matches", min: 100 },
+];
 
 const MIN_MATCHES_PER_BUCKET = 10;
 
