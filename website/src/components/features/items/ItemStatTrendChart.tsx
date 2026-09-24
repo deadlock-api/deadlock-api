@@ -6,15 +6,9 @@ import StatTrendChart, { type StatTrendBucket } from "~/components/patterns/char
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
+import { ITEM_TABLE_TRENDS, type ItemTableTrend } from "~/lib/item-table-trends";
 import { completeTimeBuckets } from "~/lib/time-buckets";
 import { queryKeys } from "~/queries/query-keys";
-
-export const ITEM_TABLE_TRENDS = {
-  winRate: { label: "Win Rate", format: "percent" },
-  pickRate: { label: "Pick Rate", format: "percent" },
-} as const;
-
-export type ItemTableTrend = keyof typeof ITEM_TABLE_TRENDS;
 
 export interface ItemStatTrendChartProps {
   params: AnalyticsApiItemStatsRequest;

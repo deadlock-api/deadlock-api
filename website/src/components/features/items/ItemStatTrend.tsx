@@ -3,8 +3,9 @@ import { lazy, Suspense, type ComponentProps } from "react";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
 import { Tooltip, TooltipTarget } from "~/components/ui/tooltip";
+import { ITEM_TABLE_TRENDS } from "~/lib/item-table-trends";
 
-import { ITEM_TABLE_TRENDS, type ItemStatTrendChartProps } from "./ItemStatTrendChart";
+import type { ItemStatTrendChartProps } from "./ItemStatTrendChart";
 
 const ItemStatTrendChart = lazy(() => import("./ItemStatTrendChart"));
 
