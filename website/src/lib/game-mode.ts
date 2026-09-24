@@ -55,6 +55,10 @@ export function getEffectiveRankRange(
   if (!MODE_CONFIG[mode].supportsRank) {
     return { effectiveMinRankId: undefined, effectiveMaxRankId: undefined };
   }
+  // A hand-edited URL can carry the pair backwards; the API answers that with nothing at all.
+  if (minRankId != null && maxRankId != null && minRankId > maxRankId) {
+    return { effectiveMinRankId: maxRankId, effectiveMaxRankId: minRankId };
+  }
   return {
     effectiveMinRankId: minRankId ?? undefined,
     effectiveMaxRankId: maxRankId ?? undefined,
