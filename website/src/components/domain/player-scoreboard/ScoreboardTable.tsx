@@ -226,7 +226,6 @@ export function ScoreboardTable({
                     avatar={profile?.avatar}
                     loading={isLoadingProfiles && !profile}
                     showAccountId
-                    linkToDetail
                     className="sm:max-w-72"
                   />
                 </TableCell>
