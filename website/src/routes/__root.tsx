@@ -169,7 +169,17 @@ function RootComponent() {
   const isWidgetEmbed = pathname.startsWith("/streamkit/widgets/");
 
   React.useEffect(() => {
-    if (!isWidgetEmbed) void getAnalytics();
+    if (isWidgetEmbed) return;
+    // PostHog is ~90 KB gzip; started right after hydration it competed with the route's chunks and API calls. Idle
+    // time, at most 2s later, still records a quick visit. An experiment that needs its flags starts it at once.
+    const start = () => void getAnalytics();
+    // Safari has no requestIdleCallback.
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(start, { timeout: 2000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = setTimeout(start, 1000);
+    return () => clearTimeout(id);
   }, [isWidgetEmbed]);
 
   if (isWidgetEmbed) {
