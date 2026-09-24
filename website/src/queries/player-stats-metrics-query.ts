@@ -17,6 +17,5 @@ export function playerStatsMetricsQueryOptions(params: AnalyticsApiPlayerStatsMe
       return demo ? (await import("~/lib/tracker/demo-data")).demoPlayerMetrics(metrics) : metrics;
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
-    refetchOnMount: "always",
   });
 }

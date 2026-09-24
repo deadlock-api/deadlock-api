@@ -14,7 +14,6 @@ export function playerScoreboardQueryOptions(params: AnalyticsApiPlayerScoreboar
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
-    refetchOnMount: "always",
     // A new sort keeps the rows on screen while it loads, so the header and its sort control are not unmounted
     // under the keyboard focus.
     placeholderData: keepPreviousData,

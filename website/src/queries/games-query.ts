@@ -14,6 +14,5 @@ export function gameStatsQueryOptions(gameStatsQuery: AnalyticsApiGameStatsReque
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
-    refetchOnMount: "always",
   });
 }

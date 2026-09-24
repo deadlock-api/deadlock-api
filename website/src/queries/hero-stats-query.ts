@@ -14,6 +14,5 @@ export function heroStatsQueryOptions(params: AnalyticsApiHeroStatsRequest) {
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
-    refetchOnMount: "always",
   });
 }

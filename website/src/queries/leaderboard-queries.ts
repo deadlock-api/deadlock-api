@@ -13,9 +13,12 @@ export function leaderboardQueryOptions(region: LeaderboardRegionEnum, heroId?: 
       const response = heroId
         ? await api.leaderboard_api.leaderboardHero({ region, heroId })
         : await api.leaderboard_api.leaderboard({ region });
-      return response.data;
+      // The candidate account ids were 555 KB of the 630 KB the page embedded in its HTML, and nothing shows them.
+      return {
+        ...response.data,
+        entries: response.data.entries.map(({ possible_account_ids: _unused, ...entry }) => entry),
+      };
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
-    refetchOnMount: "always",
   });
 }

@@ -14,6 +14,5 @@ export function badgeDistributionQueryOptions(filter: AnalyticsApiBadgeDistribut
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
-    refetchOnMount: "always",
   });
 }

@@ -42,7 +42,6 @@ export function itemFlowQueryOptions(params: AnalyticsApiItemFlowStatsRequest) {
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
-    refetchOnMount: "always",
     placeholderData: keepPreviousData,
   });
 }
