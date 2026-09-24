@@ -4,7 +4,7 @@
 //! tables, fresh snapshots for the small ones, a bounded amount of partition rebuilds
 //! (compaction), a `DuckLake` catalog, and finally a conditional write of `manifest.json`,
 //! the only state there is. Any failure leaves the manifest untouched and the next tick
-//! resumes from it; objects nobody references are swept a day later.
+//! resumes from it; objects nobody references are swept a day after they drop out of it.
 
 use core::time::Duration;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
@@ -209,6 +209,8 @@ impl DataDump {
             e_tag,
         } = manifest::load(&self.store, &manifest_key, &self.config.public_url).await?;
         manifest.public_url = self.config.public_url.trim_end_matches('/').to_owned();
+        let previously_referenced: HashSet<String> =
+            manifest.referenced_keys().map(str::to_owned).collect();
 
         // The policies filter protected accounts out of the INVOKER views for the dump user.
         update_row_policy(&self.pg, &self.ch_admin).await?;
@@ -274,6 +276,11 @@ impl DataDump {
             }
         }
 
+        manifest.retire_unreferenced(
+            &previously_referenced,
+            Utc::now(),
+            chrono::Duration::from_std(SWEEP_GRACE).unwrap_or(chrono::Duration::hours(24)),
+        );
         manifest.version = next_version;
         manifest.generated_at = Some(Utc::now());
         manifest::publish(&self.store, &manifest_key, &manifest, e_tag.as_deref()).await?;
@@ -289,18 +296,34 @@ impl DataDump {
         );
         self.clear_forced(forced_done).await;
 
+        self.sweep(&manifest).await?;
+
+        first_error.map_or(Ok(()), Err)
+    }
+
+    /// Deletes data files a day after they left the manifest, and superseded catalogs.
+    async fn sweep(&self, manifest: &Manifest) -> Result<(), DumpError> {
         let referenced: HashSet<String> = manifest.referenced_keys().map(str::to_owned).collect();
-        sweep::sweep(&self.store, &self.key("tables/"), &referenced, SWEEP_GRACE).await?;
+        sweep::sweep(
+            &self.store,
+            &self.key("tables/"),
+            &referenced,
+            &manifest.retired,
+            SWEEP_GRACE,
+        )
+        .await?;
+        // A catalog is uploaded in the tick that retires its predecessor, so its upload time
+        // is the predecessor's retirement time.
         let catalogs: HashSet<String> = manifest.catalog.iter().cloned().collect();
         sweep::sweep(
             &self.store,
             &self.key("catalog/"),
             &catalogs,
+            &BTreeMap::new(),
             CATALOG_RETENTION,
         )
         .await?;
-
-        first_error.map_or(Ok(()), Err)
+        Ok(())
     }
 
     async fn clear_forced(&self, done: Vec<(&'static str, u64)>) {

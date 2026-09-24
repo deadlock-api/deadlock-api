@@ -4,7 +4,7 @@
 //! `If-Match` precondition on the `ETag` it was read with, so two API replicas can never
 //! publish on top of each other even if the redis lease is lost.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
@@ -33,6 +33,11 @@ pub(crate) struct Manifest {
     pub(crate) duckdb_version: Option<String>,
     pub(crate) last_fold_at: Option<DateTime<Utc>>,
     pub(crate) tables: BTreeMap<String, TableState>,
+    /// Data objects that dropped out of `tables`, with the time they did. The sweep keeps
+    /// them for a grace period counted from then, so readers of an older manifest or
+    /// catalog (the MCP server, `DuckLake` clients) never hit a deleted file.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub(crate) retired: BTreeMap<String, DateTime<Utc>>,
 }
 
 impl Manifest {
@@ -46,6 +51,7 @@ impl Manifest {
             duckdb_version: None,
             last_fold_at: None,
             tables: BTreeMap::new(),
+            retired: BTreeMap::new(),
         }
     }
 
@@ -58,6 +64,24 @@ impl Manifest {
         self.tables
             .values()
             .flat_map(|t| t.files.iter().map(|f| f.key.as_str()))
+    }
+
+    /// Records every key of `previous` this manifest no longer references as retired at
+    /// `now`, and forgets retirements older than `grace`: the sweep has deleted those
+    /// objects, and would anyway, since an object is never newer than its retirement.
+    pub(crate) fn retire_unreferenced(
+        &mut self,
+        previous: &HashSet<String>,
+        now: DateTime<Utc>,
+        grace: chrono::Duration,
+    ) {
+        let current: HashSet<String> = self.referenced_keys().map(str::to_owned).collect();
+        let newly_retired: Vec<String> = previous.difference(&current).cloned().collect();
+        self.retired
+            .retain(|k, at| !current.contains(k) && now - *at < grace);
+        for key in newly_retired {
+            self.retired.entry(key).or_insert(now);
+        }
     }
 }
 
@@ -312,5 +336,60 @@ mod tests {
             manifest.url("v1/x.parquet"),
             "https://data.example.com/v1/x.parquet"
         );
+    }
+
+    fn snapshot_file(key: &str) -> FileEntry {
+        FileEntry {
+            key: key.to_owned(),
+            kind: FileKind::Snapshot,
+            generation: 0,
+            partition: None,
+            lo: None,
+            hi: None,
+            rows: 1,
+            bytes: 1,
+            rows_by_partition: BTreeMap::new(),
+            built_at: Utc::now(),
+        }
+    }
+
+    #[test]
+    fn dropped_files_are_retired_when_they_leave_the_manifest() {
+        let grace = chrono::Duration::hours(24);
+        let t0 = Utc::now();
+        let mut manifest = Manifest::empty("https://data.example.com");
+        let mut table = TableState::new(PolicyKind::Snapshot, Vec::new());
+        table.files.push(snapshot_file("a"));
+        manifest.tables.insert("t".to_owned(), table);
+
+        let previous = HashSet::from(["a".to_owned(), "b".to_owned()]);
+        manifest.retire_unreferenced(&previous, t0, grace);
+        assert_eq!(manifest.retired, BTreeMap::from([("b".to_owned(), t0)]));
+
+        // Still unreferenced an hour later: the original retirement time is kept.
+        let t1 = t0 + chrono::Duration::hours(1);
+        manifest.retire_unreferenced(&HashSet::from(["a".to_owned()]), t1, grace);
+        assert_eq!(manifest.retired, BTreeMap::from([("b".to_owned(), t0)]));
+
+        // Past the grace period the entry is forgotten.
+        let t2 = t0 + grace;
+        manifest.retire_unreferenced(&HashSet::from(["a".to_owned()]), t2, grace);
+        assert!(manifest.retired.is_empty());
+
+        let json = serde_json::to_string(&manifest).unwrap();
+        assert!(!json.contains("retired"));
+    }
+
+    #[test]
+    fn a_referenced_key_is_never_retired() {
+        let t0 = Utc::now();
+        let mut manifest = Manifest::empty("https://data.example.com");
+        manifest.retired.insert("a".to_owned(), t0);
+        let mut table = TableState::new(PolicyKind::Snapshot, Vec::new());
+        table.files.push(snapshot_file("a"));
+        manifest.tables.insert("t".to_owned(), table);
+
+        manifest.retire_unreferenced(&HashSet::new(), t0, chrono::Duration::hours(24));
+        assert!(manifest.retired.is_empty());
     }
 }
