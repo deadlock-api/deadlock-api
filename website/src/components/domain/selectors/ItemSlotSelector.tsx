@@ -1,7 +1,7 @@
 import type { ItemSlotType } from "deadlock_api_client";
 
 import { Field } from "~/components/ui/field";
-import { soloSelection } from "~/components/ui/hooks/solo-selection";
+import { anyPressed, anyValue } from "~/components/ui/hooks/any-selection";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 
@@ -10,7 +10,7 @@ export const ITEM_SLOTS = ["weapon", "vitality", "spirit"] as const satisfies re
 const SLOT_LABELS: Record<ItemSlotType, string> = { weapon: "Weapon", vitality: "Vitality", spirit: "Spirit" };
 const ALL_SLOTS: ItemSlotType[] = [...ITEM_SLOTS];
 
-/** Which shop slots to show: every pressed slot is kept. With all slots on, pressing one shows only that slot. */
+/** Which shop slots to show: the pressed ones, or every slot while none is pressed. */
 export function ItemSlotSelector({
   value: valueProp,
   defaultValue = ALL_SLOTS,
@@ -34,8 +34,8 @@ export function ItemSlotSelector({
         type="multiple"
         variant="outline"
         disabled={disabled}
-        value={value}
-        onValueChange={(slots) => setValue(soloSelection(ITEM_SLOTS, value, slots as ItemSlotType[]))}
+        value={anyPressed(ITEM_SLOTS, value)}
+        onValueChange={(slots) => setValue(anyValue(ITEM_SLOTS, slots as ItemSlotType[]))}
       >
         {ITEM_SLOTS.map((slot) => (
           <ToggleGroupItem key={slot} value={slot}>

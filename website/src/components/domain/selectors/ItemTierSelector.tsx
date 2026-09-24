@@ -1,11 +1,11 @@
 import { Field } from "~/components/ui/field";
-import { soloSelection } from "~/components/ui/hooks/solo-selection";
+import { anyPressed, anyValue } from "~/components/ui/hooks/any-selection";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 
 const TIERS = [1, 2, 3, 4];
 
-/** Which shop tiers to show: every pressed tier is kept. With all tiers on, pressing one shows only that tier. */
+/** Which shop tiers to show: the pressed ones, or every tier while none is pressed. */
 export function ItemTierSelector({
   value: valueProp,
   defaultValue = TIERS,
@@ -29,8 +29,8 @@ export function ItemTierSelector({
         type="multiple"
         variant="outline"
         disabled={disabled}
-        value={value.map(String)}
-        onValueChange={(tiers) => setValue(soloSelection(TIERS, value, tiers.map(Number)))}
+        value={anyPressed(TIERS, value).map(String)}
+        onValueChange={(tiers) => setValue(anyValue(TIERS, tiers.map(Number)))}
       >
         {TIERS.map((tier) => (
           <ToggleGroupItem key={tier} value={String(tier)} aria-label={`Tier ${tier}`}>
