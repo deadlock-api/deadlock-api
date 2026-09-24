@@ -68,8 +68,10 @@ function useModalDialog() {
 }
 
 /**
- * The same navigation below `md`: a floating menu button that opens a drawer sliding in from the leading edge.
- * A click on the backdrop or on any link inside closes it; a `SideNavHeader` inside gets a close button.
+ * The same navigation below `md`: an app bar fixed along the top of the viewport, holding the menu button that opens
+ * a drawer sliding in from the leading edge. The bar has its own glass fill, so rows scrolling under it are covered by
+ * the bar rather than by a floating button; the `AppFrame` reserves its height (`--app-bar-height`). A click on the
+ * backdrop or on any link inside closes the drawer; a `SideNavHeader` inside gets a close button.
  */
 export function SideNavDrawer({
   title = "Navigation",
@@ -87,12 +89,18 @@ export function SideNavDrawer({
   const context = useMemo(() => ({ close }), [close]);
 
   return (
-    <div data-slot="side-nav-drawer" className={cn("md:hidden", className)} {...props}>
+    <div
+      data-slot="side-nav-drawer"
+      className={cn(
+        "fixed inset-x-0 top-0 z-40 flex h-app-bar items-center border-b border-sidebar-border bg-background/70 px-3 backdrop-blur-md md:hidden",
+        className,
+      )}
+      {...props}
+    >
       <Button
         variant="ghost"
         size="icon"
         onClick={show}
-        className="glass fixed start-3 top-3 z-40 border border-sidebar-border"
         aria-label={triggerLabel}
         aria-haspopup="dialog"
         aria-expanded={open}

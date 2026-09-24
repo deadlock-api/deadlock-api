@@ -125,6 +125,11 @@
   --duration-slow: 300ms;
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 
+  /* App chrome on phones (below md): the bar along the top that holds the menu button, and the room kept under the
+     page for the floating feedback button. The AppFrame's gutter reserves both, so neither covers content. */
+  --app-bar-height: 3.25rem;
+  --floating-control-clearance: 4rem;
+
   /* Overflow cue: how far the fade at the edge of a scrolling list or table reaches (`scroll-fade-*`). */
   --scroll-fade-size: 3rem;
 
@@ -229,6 +234,10 @@
   --font-game: "New Rocker", system-ui;
 
   --blur-hairline: 1px;
+
+  /* App chrome on phones: `h-app-bar`, `pb-floating-clearance` */
+  --spacing-app-bar: var(--app-bar-height);
+  --spacing-floating-clearance: var(--floating-control-clearance);
   --ease-standard: var(--ease-standard);
   --default-transition-duration: var(--duration-fast);
   --default-transition-timing-function: var(--ease-standard);

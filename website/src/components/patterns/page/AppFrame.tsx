@@ -74,17 +74,22 @@ export function PageBackdrop({ src, className, ...props }: Omit<React.ComponentP
 
 /**
  * The glass panel every page is drawn on, and the viewport-high gutter around it. The panel is a flex column, so a
- * `PageShell height="fill"` inside it can take the height that is left.
+ * `PageShell height="fill"` inside it can take the height that is left. Below md the gutter also reserves the app
+ * bar at the top (`SideNavDrawer`) and room at the bottom for the floating feedback button, so the first and the last
+ * rows of a page can scroll clear of both.
  */
 export function AppFrame({ className, children, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="app-frame"
       // `--page-height` is what a `PageShell height="viewport"` may take: the screen minus this gutter, the panel's
-      // border and padding, and the breadcrumb row (1.25rem) with its gap above the page. Only the gutter came off
-      // before, so every one-screen page scrolled by 70px.
+      // border and padding, and the breadcrumb row (1.25rem) with its gap above the page; below md, also the app bar
+      // and the room kept for the floating feedback button.
       className={cn(
         "flex min-h-dvh w-full min-w-0 justify-center p-2 [--page-height:calc(100dvh-5.375rem)] sm:[--page-height:calc(100dvh-6.375rem)]",
+        "max-md:pt-[calc(var(--app-bar-height)+var(--spacing)*2)] max-md:pb-floating-clearance",
+        "max-sm:[--page-height:calc(100dvh-5.375rem-var(--app-bar-height)-var(--floating-control-clearance))]",
+        "sm:max-md:[--page-height:calc(100dvh-6.375rem-var(--app-bar-height)-var(--floating-control-clearance))]",
         className,
       )}
       {...props}

@@ -78,8 +78,7 @@ export function Breadcrumbs() {
   });
   const items = isNotFound ? [] : buildBreadcrumbs(pathname, labelsByPath);
 
-  // The mobile menu button floats over the start of this row; without a trail the page title would sit under it.
-  if (items.length === 0) return <div aria-hidden="true" className="h-5 md:hidden" />;
+  if (items.length === 0) return null;
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -101,7 +100,7 @@ export function Breadcrumbs() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(structuredData) }} />
-      <Breadcrumb className="ps-8 md:ps-0">
+      <Breadcrumb>
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
             <Link to="/" aria-label="Home" activeOptions={{ exact: true }}>

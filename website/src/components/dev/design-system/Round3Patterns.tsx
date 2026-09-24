@@ -62,7 +62,7 @@ function PageChromeSpecimens() {
       <Specimen
         name="AppBody, PageBackdrop and AppFrame"
         source="patterns/page/AppFrame"
-        note="The three layers under every page: the body with its background image and shade, the tilted brand mark, and the glass panel pages are drawn on. Used once, in the root route."
+        note="The three layers under every page: the body with its background image and shade, the tilted brand mark, and the glass panel pages are drawn on. Used once, in the root route. Below md the frame's gutter reserves the app bar at the top (--app-bar-height) and room for the floating feedback button at the bottom (--floating-control-clearance); narrow the window to see it."
       >
         <Variants label="composed (the body is rendered as a div here)" className="block">
           <Viewport className="h-80">
@@ -219,7 +219,7 @@ function NavigationSpecimens() {
       <Specimen
         name="SideNavShell"
         source="patterns/navigation/SideNavShell"
-        note="The app navigation's two containers: SideNavShell is the fixed desktop column (md and up), SideNavDrawer the menu button and sliding native dialog below md. Both take the same children: SideNavHeader with a SideNavBrand, a SideNav, SideNavFooters."
+        note="The app navigation's two containers: SideNavShell is the fixed desktop column (md and up), SideNavDrawer below md: an app bar with its own glass fill fixed along the top, holding the menu button that opens a sliding native dialog. Rows scroll under the bar instead of under a floating button. Both take the same children: SideNavHeader with a SideNavBrand, a SideNav, SideNavFooters."
       >
         <Variants label="SideNavShell (shown from md up, as on the real page)" className="block">
           <Viewport>
