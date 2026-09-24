@@ -14,6 +14,7 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
+import { DragScroll } from "~/components/ui/drag-scroll";
 import { Field } from "~/components/ui/field";
 import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { OptionRow } from "~/components/ui/option-row";
@@ -34,9 +35,11 @@ import { itemFlowQueryOptions } from "~/queries/item-flow-query";
 
 const SLOT_ACCENTS = ["weapon", "vitality", "spirit"] as const;
 
-const CARD_W = 200;
+// Cards grow with the room there is, from a width that still fits an item name up to one that fits long names whole.
+const CARD_W_MIN = 200;
+const CARD_W_MAX = 260;
 const CARD_H = 94;
-const MIN_COL_SPACING = CARD_W + 24;
+const COL_GAP = 24;
 const ROW_GAP = 10;
 const HEADER_H = 48;
 const TIER_H = 24;
@@ -257,6 +260,7 @@ const StageLockPicker = memo(function StageLockPicker({
 
 const ItemFlowCard = memo(function ItemFlowCard({
   node,
+  width,
   meta,
   dimmed,
   showRaw,
@@ -265,6 +269,7 @@ const ItemFlowCard = memo(function ItemFlowCard({
   onLock,
 }: {
   node: PlacedNode;
+  width: number;
   meta?: { slot?: string; cost: number; tier: number };
   dimmed: boolean;
   showRaw: boolean;
@@ -344,7 +349,7 @@ const ItemFlowCard = memo(function ItemFlowCard({
     >
       <GraphNodeCard
         className="absolute"
-        style={{ left: node.x, top: node.y, width: CARD_W, height: CARD_H }}
+        style={{ left: node.x, top: node.y, width, height: CARD_H }}
         accent={accent}
         selected={node.locked}
         dimmed={dimmed}
@@ -520,8 +525,10 @@ export function ItemFlowGraph({
     if (columns.length === 0) return null;
 
     const W = containerWidth || 1000;
-    const colSpacing = columns.length > 1 ? Math.max(MIN_COL_SPACING, (W - CARD_W) / (columns.length - 1)) : 0;
-    const graphWidth = columns.length > 1 ? colSpacing * (columns.length - 1) + CARD_W : CARD_W;
+    const n = columns.length;
+    const cardWidth = Math.min(CARD_W_MAX, Math.max(CARD_W_MIN, (W - COL_GAP * (n - 1)) / n));
+    const colSpacing = n > 1 ? Math.max(cardWidth + COL_GAP, (W - cardWidth) / (n - 1)) : 0;
+    const graphWidth = n > 1 ? colSpacing * (n - 1) + cardWidth : cardWidth;
 
     type Node = (typeof data.nodes)[number];
     const rawWr = (n: Node) => (n.matches > 0 ? n.wins / n.matches : 0);
@@ -665,7 +672,7 @@ export function ItemFlowGraph({
           id: `${e.from_column}:${e.from_item_id}->${e.to_item_id}`,
           fromKey: from.key,
           toKey: to.key,
-          x1: from.x + CARD_W,
+          x1: from.x + cardWidth,
           y1: from.y + CARD_H / 2,
           x2: to.x,
           y2: to.y + CARD_H / 2,
@@ -679,6 +686,7 @@ export function ItemFlowGraph({
     return {
       columns,
       colSpacing,
+      cardWidth,
       placed: [...placed.values()],
       columnMeta,
       edges,
@@ -803,238 +811,245 @@ export function ItemFlowGraph({
         </Segmented>
       </FilterBar>
 
-      <div className="flex flex-col gap-4 lg:flex-row">
-        <div className="min-w-0 flex-1" ref={wrapperRef}>
-          {isLoading ? (
-            <LoadingState label="item flow" align="center" />
-          ) : isError && !data ? (
-            <ErrorState title="The build flow did not load" retrying={isFetching} onRetry={() => void refetch()} />
-          ) : !layout ? (
-            <EmptyState
-              variant="inline"
-              title={`No item flow data available for the selected filters${locked.length > 0 ? " and build path" : ""}.`}
-            />
-          ) : (
-            <div className="relative">
-              {isFetching && (
-                <LoadingState
-                  label="item flow"
-                  className="pointer-events-none absolute inset-0 z-10 flex items-start justify-center pt-24"
-                />
-              )}
-              <div className="overflow-x-auto pb-4">
-                <div className="relative" style={{ width: layout.width, height: layout.height }}>
-                  {/* Column headers: phase + reached% + lock picker */}
-                  {layout.columnMeta.map((meta) => {
-                    const { title, sub } = phaseLabel(meta.column, isStreetBrawl);
-                    const reached = data
-                      ? (data.reached_per_column[meta.column] ?? 0) / (data.baseline.matches || 1)
-                      : 1;
-                    return (
-                      <Stack
-                        key={meta.column}
-                        gap={1.5}
-                        className="absolute"
-                        style={{ left: meta.x, top: 0, width: CARD_W }}
-                      >
-                        <div>
-                          <div className="text-center text-sm font-semibold">{title}</div>
-                          <div className="text-center text-3xs text-muted-foreground">{sub}</div>
-                          <div
-                            className={cn(
-                              "text-center text-3xs",
-                              reached < 0.8 ? "text-warning" : "text-muted-foreground",
-                            )}
-                            title="Share of games that reached this stage (lower = more survivorship-selected, e.g. long games only)"
-                          >
-                            {(reached * 100).toFixed(0)}% of games reached
-                          </div>
-                        </div>
-                        {meta.availableTiers.length > 1 && (
-                          <div className="flex justify-center gap-0.5">
-                            {meta.availableTiers.map((t) => {
-                              const off = excludedTiers.get(meta.column)?.has(t) ?? false;
-                              return (
-                                <Button
-                                  key={t}
-                                  variant={off ? "subtle" : "soft"}
-                                  size="xs"
-                                  aria-pressed={!off}
-                                  onClick={() => toggleTier(meta.column, t)}
-                                  title={`${off ? "Show" : "Hide"} tier ${t} items in this stage`}
-                                >
-                                  T{t}
-                                </Button>
-                              );
-                            })}
-                          </div>
-                        )}
-                        <StageLockPicker candidates={meta.candidates} column={meta.column} onLock={toggleLock} />
-                      </Stack>
-                    );
-                  })}
-
-                  {/* Links */}
-                  <svg
-                    className="pointer-events-none absolute inset-0"
-                    width={layout.width}
-                    height={layout.height}
-                    aria-hidden="true"
-                  >
-                    {layout.edges.map((e) => {
-                      const mx = (e.x1 + e.x2) / 2;
-                      const active = !isFetching && (!highlight || highlight.edges.has(e.id));
+      {/* The summary sits beside the graph only when the graph still has room for four stages next to it. */}
+      <div className="@container">
+        <div className="flex flex-col gap-4 @6xl:flex-row">
+          <div className="min-w-0 flex-1" ref={wrapperRef}>
+            {isLoading ? (
+              <LoadingState label="item flow" align="center" />
+            ) : isError && !data ? (
+              <ErrorState title="The build flow did not load" retrying={isFetching} onRetry={() => void refetch()} />
+            ) : !layout ? (
+              <EmptyState
+                variant="inline"
+                title={`No item flow data available for the selected filters${locked.length > 0 ? " and build path" : ""}.`}
+              />
+            ) : (
+              <div className="relative">
+                {isFetching && (
+                  <LoadingState
+                    label="item flow"
+                    className="pointer-events-none absolute inset-0 z-10 flex items-start justify-center pt-24"
+                  />
+                )}
+                <DragScroll className="pb-4">
+                  <div className="relative" style={{ width: layout.width, height: layout.height }}>
+                    {/* Column headers: phase + reached% + lock picker */}
+                    {layout.columnMeta.map((meta) => {
+                      const { title, sub } = phaseLabel(meta.column, isStreetBrawl);
+                      const reached = data
+                        ? (data.reached_per_column[meta.column] ?? 0) / (data.baseline.matches || 1)
+                        : 1;
                       return (
-                        <path
-                          key={e.id}
-                          d={`M ${e.x1} ${e.y1} C ${mx} ${e.y1}, ${mx} ${e.y2}, ${e.x2} ${e.y2}`}
-                          fill="none"
-                          stroke={TONE_COLOR[e.winRate >= 0.5 ? "positive" : "negative"]}
-                          strokeWidth={e.width}
-                          strokeOpacity={active ? (highlight ? 0.65 : 0.22) : 0.05}
-                        />
+                        <Stack
+                          key={meta.column}
+                          gap={1.5}
+                          className="absolute"
+                          style={{ left: meta.x, top: 0, width: layout.cardWidth }}
+                        >
+                          <div>
+                            <div className="text-center text-sm font-semibold">{title}</div>
+                            <div className="text-center text-3xs text-muted-foreground">{sub}</div>
+                            <div
+                              className={cn(
+                                "text-center text-3xs",
+                                reached < 0.8 ? "text-warning" : "text-muted-foreground",
+                              )}
+                              title="Share of games that reached this stage (lower = more survivorship-selected, e.g. long games only)"
+                            >
+                              {(reached * 100).toFixed(0)}% of games reached
+                            </div>
+                          </div>
+                          {meta.availableTiers.length > 1 && (
+                            <div className="flex justify-center gap-0.5">
+                              {meta.availableTiers.map((t) => {
+                                const off = excludedTiers.get(meta.column)?.has(t) ?? false;
+                                return (
+                                  <Button
+                                    key={t}
+                                    variant={off ? "subtle" : "soft"}
+                                    size="xs"
+                                    aria-pressed={!off}
+                                    onClick={() => toggleTier(meta.column, t)}
+                                    title={`${off ? "Show" : "Hide"} tier ${t} items in this stage`}
+                                  >
+                                    T{t}
+                                  </Button>
+                                );
+                              })}
+                            </div>
+                          )}
+                          <StageLockPicker candidates={meta.candidates} column={meta.column} onLock={toggleLock} />
+                        </Stack>
                       );
                     })}
-                  </svg>
 
-                  {/* Nodes */}
-                  <TooltipProvider delayDuration={150}>
-                    {layout.placed.map((node) => (
-                      <ItemFlowCard
-                        key={node.key}
-                        node={node}
-                        meta={itemMeta.get(node.itemId)}
-                        dimmed={isFetching || (highlight != null && !highlight.nodes.has(node.key))}
-                        showRaw={wrMode === "raw" || isStreetBrawl}
-                        isStreetBrawl={isStreetBrawl}
-                        onHover={setHoveredKey}
-                        onLock={toggleLock}
-                      />
-                    ))}
-                  </TooltipProvider>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <aside className="w-full shrink-0 self-start lg:w-64">
-          <Panel>
-            <PanelHeader title="Build Path Summary" size="sm">
-              {locked.length > 0 && (
-                <Button variant="ghost" size="xs" onClick={() => setLocked([])}>
-                  Clear
-                </Button>
-              )}
-            </PanelHeader>
-            <PanelBody>
-              {!pathStats && isError ? (
-                <ErrorState variant="inline" title="The build path did not load" onRetry={() => void refetch()} />
-              ) : !pathStats ? (
-                <LoadingState size="sm" text="Loading build path…" label="build path" />
-              ) : (
-                <Stack gap={3} className="text-xs">
-                  <div className="flex items-end justify-between">
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      Win Rate
-                      {(() => {
-                        const c = confidenceLevel(pathStats.wrLow, pathStats.wrHigh);
+                    {/* Links */}
+                    <svg
+                      className="pointer-events-none absolute inset-0"
+                      width={layout.width}
+                      height={layout.height}
+                      aria-hidden="true"
+                    >
+                      {layout.edges.map((e) => {
+                        const mx = (e.x1 + e.x2) / 2;
+                        const active = !isFetching && (!highlight || highlight.edges.has(e.id));
                         return (
-                          <span
-                            className={cn(c.icon, "size-4", c.color)}
-                            title={`Confidence: ${c.label} (${pathStats.matches.toLocaleString("en-US")} matches)`}
+                          <path
+                            key={e.id}
+                            d={`M ${e.x1} ${e.y1} C ${mx} ${e.y1}, ${mx} ${e.y2}, ${e.x2} ${e.y2}`}
+                            fill="none"
+                            stroke={TONE_COLOR[e.winRate >= 0.5 ? "positive" : "negative"]}
+                            strokeWidth={e.width}
+                            strokeOpacity={active ? (highlight ? 0.65 : 0.22) : 0.05}
                           />
                         );
-                      })()}
-                    </div>
-                    <div className="text-end">
-                      <span
-                        className={cn(
-                          "text-lg font-bold tabular-nums",
-                          // Compare the printed tenth of a percent, so 49.99% shows as an even 50.0%, not a red one.
-                          TONE_TEXT[toneOf(Math.round(pathStats.winRate * 1000), 500)],
-                        )}
-                      >
-                        {(pathStats.winRate * 100).toFixed(1)}%
-                      </span>
-                      <div className="text-3xs text-muted-foreground tabular-nums">
-                        95% CI {(pathStats.wrLow * 100).toFixed(1)}–{(pathStats.wrHigh * 100).toFixed(1)}%
-                      </div>
-                      {locked.length > 0 && (
-                        <div
-                          className="text-3xs text-muted-foreground"
-                          title="Difference vs the unlocked population. Not a controlled comparison: players who commit to a build may differ in skill/lead."
-                        >
-                          {Math.round((pathStats.winRate - pathStats.baseWinRate) * 1000) === 0 ? (
-                            "+0.0 pts"
-                          ) : (
-                            <Delta
-                              value={(pathStats.winRate - pathStats.baseWinRate) * 100}
-                              format="number"
-                              unit=" pts"
-                            />
-                          )}{" "}
-                          vs baseline*
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                      })}
+                    </svg>
 
-                  <KeyValueList variant="plain">
-                    <KeyValue label="Matches" value={pathStats.matches.toLocaleString("en-US")} />
-                    <KeyValue label="Players" value={pathStats.players.toLocaleString("en-US")} />
-                    <KeyValue
-                      label="W / L"
-                      value={
-                        <>
-                          <span className="text-positive">{pathStats.wins.toLocaleString("en-US")}</span>
-                          {" / "}
-                          <span className="text-negative">{pathStats.losses.toLocaleString("en-US")}</span>
-                        </>
-                      }
-                    />
-                    {/* Without a locked path these read 100%, the headline again, 0 items and no cost. */}
-                    {locked.length > 0 && (
-                      <>
-                        <KeyValue label="Path Frequency" value={`${(pathStats.pathFrequency * 100).toFixed(1)}%`} />
-                        <KeyValue label="Overall WR" value={`${(pathStats.baseWinRate * 100).toFixed(1)}%`} />
-                        <KeyValue
-                          label="Build length"
-                          value={`${locked.length} ${locked.length === 1 ? "item" : "items"}`}
+                    {/* Nodes */}
+                    <TooltipProvider delayDuration={150}>
+                      {layout.placed.map((node) => (
+                        <ItemFlowCard
+                          key={node.key}
+                          node={node}
+                          width={layout.cardWidth}
+                          meta={itemMeta.get(node.itemId)}
+                          dimmed={isFetching || (highlight != null && !highlight.nodes.has(node.key))}
+                          showRaw={wrMode === "raw" || isStreetBrawl}
+                          isStreetBrawl={isStreetBrawl}
+                          onHover={setHoveredKey}
+                          onLock={toggleLock}
                         />
-                      </>
-                    )}
-                    <KeyValue
-                      label="Avg KDA"
-                      value={`${pathStats.avgKills.toFixed(1)} / ${pathStats.avgDeaths.toFixed(1)} / ${pathStats.avgAssists.toFixed(1)}`}
-                    />
-                    <KeyValue label="KDA Ratio" value={pathStats.kdaRatio.toFixed(2)} />
-                    <KeyValue label="Avg net worth" value={Math.round(pathStats.avgNetWorth).toLocaleString("en-US")} />
-                    <KeyValue
-                      label="Avg game length"
-                      value={`${Math.floor(Math.round(pathStats.avgDurationS) / 60)}:${String(Math.round(pathStats.avgDurationS) % 60).padStart(2, "0")}`}
-                    />
-                    {locked.length > 0 && (
-                      <KeyValue
-                        label="Total Cost"
-                        value={pathStats.totalCost > 0 ? `${pathStats.totalCost.toLocaleString("en-US")} souls` : "—"}
-                      />
-                    )}
-                  </KeyValueList>
+                      ))}
+                    </TooltipProvider>
+                  </div>
+                </DragScroll>
+              </div>
+            )}
+          </div>
 
-                  {locked.length === 0 && (
-                    <Stack gap={2}>
-                      <Separator />
-                      <p className="text-2xs text-muted-foreground">
-                        Click items in the graph to lock a build path and see its combined stats.
-                      </p>
-                    </Stack>
-                  )}
-                </Stack>
-              )}
-            </PanelBody>
-          </Panel>
-        </aside>
+          <aside className="w-full shrink-0 self-start @6xl:w-64">
+            <Panel>
+              <PanelHeader title="Build Path Summary" size="sm">
+                {locked.length > 0 && (
+                  <Button variant="ghost" size="xs" onClick={() => setLocked([])}>
+                    Clear
+                  </Button>
+                )}
+              </PanelHeader>
+              <PanelBody>
+                {!pathStats && isError ? (
+                  <ErrorState variant="inline" title="The build path did not load" onRetry={() => void refetch()} />
+                ) : !pathStats ? (
+                  <LoadingState size="sm" text="Loading build path…" label="build path" />
+                ) : (
+                  <Stack gap={3} className="text-xs">
+                    <div className="flex items-end justify-between">
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        Win Rate
+                        {(() => {
+                          const c = confidenceLevel(pathStats.wrLow, pathStats.wrHigh);
+                          return (
+                            <span
+                              className={cn(c.icon, "size-4", c.color)}
+                              title={`Confidence: ${c.label} (${pathStats.matches.toLocaleString("en-US")} matches)`}
+                            />
+                          );
+                        })()}
+                      </div>
+                      <div className="text-end">
+                        <span
+                          className={cn(
+                            "text-lg font-bold tabular-nums",
+                            // Compare the printed tenth of a percent, so 49.99% shows as an even 50.0%, not a red one.
+                            TONE_TEXT[toneOf(Math.round(pathStats.winRate * 1000), 500)],
+                          )}
+                        >
+                          {(pathStats.winRate * 100).toFixed(1)}%
+                        </span>
+                        <div className="text-3xs text-muted-foreground tabular-nums">
+                          95% CI {(pathStats.wrLow * 100).toFixed(1)}–{(pathStats.wrHigh * 100).toFixed(1)}%
+                        </div>
+                        {locked.length > 0 && (
+                          <div
+                            className="text-3xs text-muted-foreground"
+                            title="Difference vs the unlocked population. Not a controlled comparison: players who commit to a build may differ in skill/lead."
+                          >
+                            {Math.round((pathStats.winRate - pathStats.baseWinRate) * 1000) === 0 ? (
+                              "+0.0 pts"
+                            ) : (
+                              <Delta
+                                value={(pathStats.winRate - pathStats.baseWinRate) * 100}
+                                format="number"
+                                unit=" pts"
+                              />
+                            )}{" "}
+                            vs baseline*
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <KeyValueList variant="plain">
+                      <KeyValue label="Matches" value={pathStats.matches.toLocaleString("en-US")} />
+                      <KeyValue label="Players" value={pathStats.players.toLocaleString("en-US")} />
+                      <KeyValue
+                        label="W / L"
+                        value={
+                          <>
+                            <span className="text-positive">{pathStats.wins.toLocaleString("en-US")}</span>
+                            {" / "}
+                            <span className="text-negative">{pathStats.losses.toLocaleString("en-US")}</span>
+                          </>
+                        }
+                      />
+                      {/* Without a locked path these read 100%, the headline again, 0 items and no cost. */}
+                      {locked.length > 0 && (
+                        <>
+                          <KeyValue label="Path Frequency" value={`${(pathStats.pathFrequency * 100).toFixed(1)}%`} />
+                          <KeyValue label="Overall WR" value={`${(pathStats.baseWinRate * 100).toFixed(1)}%`} />
+                          <KeyValue
+                            label="Build length"
+                            value={`${locked.length} ${locked.length === 1 ? "item" : "items"}`}
+                          />
+                        </>
+                      )}
+                      <KeyValue
+                        label="Avg KDA"
+                        value={`${pathStats.avgKills.toFixed(1)} / ${pathStats.avgDeaths.toFixed(1)} / ${pathStats.avgAssists.toFixed(1)}`}
+                      />
+                      <KeyValue label="KDA Ratio" value={pathStats.kdaRatio.toFixed(2)} />
+                      <KeyValue
+                        label="Avg net worth"
+                        value={Math.round(pathStats.avgNetWorth).toLocaleString("en-US")}
+                      />
+                      <KeyValue
+                        label="Avg game length"
+                        value={`${Math.floor(Math.round(pathStats.avgDurationS) / 60)}:${String(Math.round(pathStats.avgDurationS) % 60).padStart(2, "0")}`}
+                      />
+                      {locked.length > 0 && (
+                        <KeyValue
+                          label="Total Cost"
+                          value={pathStats.totalCost > 0 ? `${pathStats.totalCost.toLocaleString("en-US")} souls` : "—"}
+                        />
+                      )}
+                    </KeyValueList>
+
+                    {locked.length === 0 && (
+                      <Stack gap={2}>
+                        <Separator />
+                        <p className="text-2xs text-muted-foreground">
+                          Click items in the graph to lock a build path and see its combined stats.
+                        </p>
+                      </Stack>
+                    )}
+                  </Stack>
+                )}
+              </PanelBody>
+            </Panel>
+          </aside>
+        </div>
       </div>
     </Stack>
   );
