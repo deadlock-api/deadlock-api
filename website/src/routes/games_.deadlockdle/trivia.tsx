@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { Ability } from "deadlock_api_client";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useRef, useState, type RefCallback } from "react";
+import { useCallback, useMemo, useRef, useState, type RefCallback } from "react";
 
 import { AnswerOption, revealedState } from "~/components/domain/minigames/AnswerOption";
 import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
+import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
 import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { NextGameButton } from "~/components/features/deadlockdle/NextGameButton";
@@ -48,7 +49,6 @@ export const Route = createFileRoute("/games_/deadlockdle/trivia")({
 });
 
 const QUESTION_COUNT = 10;
-const ADVANCE_DELAY_MS = 1200;
 
 interface TriviaState {
   date: string;
@@ -85,12 +85,11 @@ function Trivia() {
   const isArchive = date !== getTodayDate();
   const storageKey = gameStorageKey("trivia", date);
   const countdown = useCountdown(date);
-  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [state, saveState] = useStoredDailyState(storageKey, date, freshState, legacyGameStorageKey("trivia"));
 
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-  // The question just answered, shown with its result until the advance; the stored state has already moved on.
+  // The question just answered, shown with its result until "Next question"; the stored state has already moved on.
   const [revealing, setRevealing] = useState<number | null>(null);
   const isRevealed = revealing !== null;
   const [feedbackType, setFeedbackType] = useState<"correct" | "wrong" | null>(null);
@@ -111,19 +110,18 @@ function Trivia() {
   }, [heroes, items, npcUnits, abilitiesWithHeroes, date]);
 
   const shownIndex = revealing ?? state.currentQuestion;
-  // Answering disables the options and the next question replaces them, which drops focus to <body>; after an answer
-  // the next question's first option takes it back, so the quiz can be played with the keyboard alone.
+  // The player sets the pace: after an answer "Next question" takes focus, and the next question's text takes it once
+  // the answered one is gone, so it is read before its options. Nothing moves before the first answer.
   const answered = useRef(false);
-  const focusFirstOption = useCallback((element: HTMLButtonElement | null) => {
-    if (element && answered.current && document.activeElement === document.body) element.focus();
+  const focusNextButton = useCallback((element: HTMLButtonElement | null) => {
+    element?.focus({ preventScroll: true });
+  }, []);
+  const focusQuestion = useCallback((element: HTMLParagraphElement | null) => {
+    if (element && answered.current && (document.activeElement === document.body || document.activeElement === null)) {
+      element.focus();
+    }
   }, []);
   const currentQ = questions[shownIndex] ?? null;
-
-  useEffect(() => {
-    return () => {
-      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
-    };
-  }, []);
 
   const handleAnswer = useCallback(
     (optionIndex: number) => {
@@ -151,14 +149,14 @@ function Trivia() {
         completed: isLastQuestion,
         currentQuestion: isLastQuestion ? state.currentQuestion : state.currentQuestion + 1,
       });
-
-      advanceTimerRef.current = setTimeout(() => {
-        setSelectedAnswer(null);
-        setRevealing(null);
-      }, ADVANCE_DELAY_MS);
     },
     [state, isRevealed, currentQ, saveState],
   );
+
+  const advance = useCallback(() => {
+    setSelectedAnswer(null);
+    setRevealing(null);
+  }, []);
 
   const shareText = useMemo(() => {
     const dayNum = getDayNumber(date);
@@ -205,7 +203,15 @@ function Trivia() {
       hideAttempts
       date={date}
     >
-      <GuessFeedback type={feedbackType} triggerKey={shownIndex} />
+      <GuessFeedback
+        type={feedbackType}
+        triggerKey={shownIndex}
+        message={
+          feedbackType === "wrong" && currentQ
+            ? `Wrong. The answer was ${currentQ.options[currentQ.correctIndex]}.`
+            : undefined
+        }
+      />
 
       <AnimatePresence mode="wait">
         {!showResults && currentQ ? (
@@ -227,21 +233,30 @@ function Trivia() {
               </TerminalBadge>
             </div>
 
-            <p className="px-2 text-center text-lg font-semibold tracking-tight">{currentQ.question}</p>
+            <p ref={focusQuestion} tabIndex={-1} className="px-2 text-center text-lg font-semibold tracking-tight">
+              {currentQ.question}
+            </p>
 
             <Stack gap={2.5} className="mx-auto w-full max-w-lg">
               {currentQ.options.map((option, i) => (
                 <AnswerOption
                   key={`${shownIndex}-opt-${option}`}
-                  ref={i === 0 ? focusFirstOption : undefined}
                   state={isRevealed ? revealedState(i === currentQ.correctIndex, i === selectedAnswer) : "idle"}
                   onClick={() => handleAnswer(i)}
-                  disabled={isRevealed}
+                  aria-disabled={isRevealed || undefined}
                 >
                   {option}
                 </AnswerOption>
               ))}
             </Stack>
+
+            {isRevealed && (
+              <div className="flex justify-center">
+                <TerminalButton ref={focusNextButton} variant="soft" onClick={advance}>
+                  {state.completed ? "See results" : "Next question"}
+                </TerminalButton>
+              </div>
+            )}
 
             <StepMeter label={`Question ${shownIndex + 1} of ${QUESTION_COUNT}`} className="justify-center pt-2">
               {questions.map((q, i) => (

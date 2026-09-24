@@ -8,13 +8,18 @@ interface GuessFeedbackProps {
   type: "correct" | "wrong" | null;
   /** Monotonically increasing key to distinguish consecutive same-type flashes */
   triggerKey?: number;
+  /**
+   * What a screen reader hears for this guess, in one polite message: "Correct!" / "Wrong guess" by default. A game
+   * says what the flash cannot, such as the right answer.
+   */
+  message?: string;
 }
 
 /**
  * Full-area flash overlay for guess feedback.
  * Renders a brief positive/negative wash + text flash, then auto-fades.
  */
-export function GuessFeedback({ type, triggerKey = 0 }: GuessFeedbackProps) {
+export function GuessFeedback({ type, triggerKey = 0, message }: GuessFeedbackProps) {
   const glow = (percent: number) =>
     `color-mix(in srgb, var(${type === "correct" ? "--positive" : "--negative"}) ${percent}%, transparent)`;
 
@@ -22,7 +27,9 @@ export function GuessFeedback({ type, triggerKey = 0 }: GuessFeedbackProps) {
     <>
       {/* The flash is visual only; this says the same to a screen reader. It empties between guesses, so a second
           wrong guess in a row is announced again. */}
-      <output className="sr-only">{type === "correct" ? "Correct!" : type === "wrong" ? "Wrong guess" : ""}</output>
+      <output className="sr-only">
+        {type === null ? "" : (message ?? (type === "correct" ? "Correct!" : "Wrong guess"))}
+      </output>
       <AnimatePresence>
         {type && (
           <motion.div
