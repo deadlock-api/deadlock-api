@@ -217,6 +217,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       description,
       path: `/analytics/heroes/${slug}`,
       ogImage: cardImage ?? undefined,
+      ogImageKind: cardImage ? "thumbnail" : "card",
       jsonLd: {
         "@context": "https://schema.org",
         "@type": "Dataset",

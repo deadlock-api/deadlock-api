@@ -97,9 +97,11 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         // ds-allow color-literal: a meta tag cannot read CSS variables; mirrors --primary
         { name: "theme-color", content: "#fa4454" },
         { property: "og:site_name", content: "Deadlock API" },
-        { name: "twitter:card", content: "summary_large_image" },
         { property: "twitter:domain", content: "deadlock-api.com" },
-        ...defaultSeo.meta.filter((tag) => !("title" in tag)),
+        // No image size here: a page cannot remove a parent's tag, and a hero page's card art is not 1200x630.
+        ...defaultSeo.meta.filter(
+          (tag) => !("title" in tag) && !("property" in tag && tag.property.startsWith("og:image:")),
+        ),
       ],
       links: [
         { rel: "stylesheet", href: appCss, fetchPriority: "high" },

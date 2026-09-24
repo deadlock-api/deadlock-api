@@ -7,6 +7,11 @@ interface SeoOptions {
   description: string;
   path: string;
   ogImage?: string;
+  /**
+   * `card` is a 1200x630 share image (the /og/ set). `thumbnail` is game art of another size, such as a hero card:
+   * previews show it as a small image beside the text instead of stretching it across the card.
+   */
+  ogImageKind?: "card" | "thumbnail";
   ogType?: string;
   publishedTime?: string;
   jsonLd?: JsonLd;
@@ -41,7 +46,16 @@ const OG_IMAGES: Record<string, string> = {
   "/games/deadlockdle": "/og/v2/default.png",
 };
 
-export function seo({ title, description, path, ogImage, ogType, publishedTime, jsonLd }: SeoOptions): SeoResult {
+export function seo({
+  title,
+  description,
+  path,
+  ogImage,
+  ogImageKind = "card",
+  ogType,
+  publishedTime,
+  jsonLd,
+}: SeoOptions): SeoResult {
   const url = `${SITE_URL}${path}`;
   const sectionImage = Object.entries(OG_IMAGES).find(([route]) => path.startsWith(`${route}/`))?.[1];
   const image = ogImage ?? `${SITE_URL}${OG_IMAGES[path] ?? sectionImage ?? "/og/v2/default.png"}`;
@@ -54,8 +68,13 @@ export function seo({ title, description, path, ogImage, ogType, publishedTime, 
     { property: "og:url", content: url },
     { property: "og:type", content: ogType ?? "website" },
     { property: "og:image", content: image },
-    { property: "og:image:width", content: "1200" },
-    { property: "og:image:height", content: "630" },
+    ...(ogImageKind === "card"
+      ? [
+          { property: "og:image:width", content: "1200" },
+          { property: "og:image:height", content: "630" },
+        ]
+      : []),
+    { name: "twitter:card", content: ogImageKind === "card" ? "summary_large_image" : "summary" },
     { name: "twitter:title", content: title },
     { name: "twitter:description", content: description },
     { name: "twitter:image", content: image },
