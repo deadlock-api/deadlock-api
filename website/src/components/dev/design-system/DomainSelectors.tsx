@@ -7,7 +7,15 @@ import { ChartHeroSelector } from "~/components/domain/selectors/ChartHeroSelect
 import type { HeroTriState, PickableHero } from "~/components/domain/selectors/hero-picker";
 import { HeroGrid, HeroGridSearch, HeroGridTile } from "~/components/domain/selectors/HeroGrid";
 import { HeroSelector } from "~/components/domain/selectors/HeroSelector";
-import { ItemSelectorMultiple } from "~/components/domain/selectors/ItemSelector";
+import type { ItemSlotTab } from "~/components/domain/selectors/item-picker";
+import {
+  ItemGrid,
+  ItemGridSearch,
+  ItemGridTier,
+  ItemGridTile,
+  ItemSlotTabs,
+} from "~/components/domain/selectors/ItemGrid";
+import { ItemSelector } from "~/components/domain/selectors/ItemSelector";
 import { ItemSlotSelector } from "~/components/domain/selectors/ItemSlotSelector";
 import { ItemTierSelector } from "~/components/domain/selectors/ItemTierSelector";
 import { MatchTimeRangeSelector } from "~/components/domain/selectors/MatchTimeRangeSelector";
@@ -15,11 +23,13 @@ import { ModeSelector } from "~/components/domain/selectors/ModeSelector";
 import { RankRangeSelector } from "~/components/domain/selectors/RankRangeSelector";
 import { SeasonPatchDatePicker } from "~/components/domain/selectors/SeasonPatchDatePicker";
 import { type HeroSelectionProps, useHeroPicker } from "~/components/domain/selectors/useHeroPicker";
-import { Field } from "~/components/ui/field";
+import { type ItemSelectionProps, useItemPicker, useShopItems } from "~/components/domain/selectors/useItemPicker";
+import type { PickerTriState } from "~/components/patterns/picker/picker";
+import { Separator } from "~/components/ui/separator";
 import type { Dayjs } from "~/dayjs";
 import { PATCHES } from "~/lib/constants";
 import type { Mode } from "~/lib/game-mode";
-import { heroesQueryOptions } from "~/queries/asset-queries";
+import { heroesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
 
 type TimeRange = [number | undefined, number | undefined];
 
@@ -57,6 +67,47 @@ function HeroGridDemo({
   );
 }
 
+/** One `useItemPicker` drawn as the item popover draws it; `meta` puts a made-up win rate under every name. */
+function ItemGridDemo({
+  items,
+  disabledItemIds,
+  defaultSlot,
+  meta = "none",
+  ...selection
+}: ItemSelectionProps & {
+  items: readonly SlimUpgrade[];
+  disabledItemIds?: ReadonlySet<number>;
+  defaultSlot?: ItemSlotTab;
+  meta?: "none" | "rate";
+}) {
+  const picker = useItemPicker({ ...selection, items, disabledItemIds, defaultSlot });
+  return (
+    <div className="flex flex-col">
+      <div className="p-2">
+        <ItemGridSearch picker={picker} />
+      </div>
+      <Separator />
+      <ItemSlotTabs picker={picker}>
+        <ItemGrid picker={picker}>
+          {picker.groups.map((group) => (
+            <ItemGridTier key={group.tier} tier={group.tier} cost={group.cost}>
+              {group.items.map((item) => (
+                <ItemGridTile
+                  key={item.id}
+                  item={item}
+                  title={picker.isDisabled(item.id) ? `${item.name}: no data for these filters` : undefined}
+                >
+                  {meta === "rate" ? `${48 + ((item.id * 7) % 50) / 10}%` : undefined}
+                </ItemGridTile>
+              ))}
+            </ItemGridTier>
+          ))}
+        </ItemGrid>
+      </ItemSlotTabs>
+    </div>
+  );
+}
+
 export function DomainSelectors() {
   const { data: heroes = [] } = useQuery({
     ...heroesQueryOptions,
@@ -78,7 +129,16 @@ export function DomainSelectors() {
   );
   const [gridHero, setGridHero] = useState<number | null>(null);
   const [chartHeroes, setChartHeroes] = useState<number[]>([]);
+  const { items: shopItems } = useShopItems();
   const [items, setItems] = useState<number[]>([1548066885, 968099481]);
+  const [oneItem, setOneItem] = useState<number | null>(null);
+  const [itemStates, setItemStates] = useState<Map<number, PickerTriState>>(
+    () =>
+      new Map([
+        [1548066885, "included"],
+        [968099481, "excluded"],
+      ]),
+  );
   const [slots, setSlots] = useState<ItemSlotType[]>(["weapon"]);
   const [itemTiers, setItemTiers] = useState<number[]>([1, 2]);
   const [mode, setMode] = useState<Mode>("normal_all");
@@ -116,7 +176,7 @@ export function DomainSelectors() {
       <Specimen
         name="HeroGrid"
         source="domain/selectors/HeroGrid · domain/selectors/useHeroPicker"
-        note="The portrait grid every hero picker draws: HeroGrid + one HeroGridTile per hero of picker.matches, with HeroGridSearch above. Behaviour lives in useHeroPicker (search, selection mode, keyboard cursor). Five a row always; the portraits shrink in a narrow container. A tile's state is a ring plus a corner mark (check, plus, minus), and a tri-state tile's name says it. Children put a line under the name (the Team Builder's sort value); disabledHeroIds are shown but cannot be picked, with the reason in title. Keyboard: WAI-ARIA grid, one tab stop, arrows move, Enter or Space picks; in the search box Enter picks the first match and ArrowDown enters the grid."
+        note="The portrait grid every hero picker draws, a PickerGrid over heroes: HeroGrid + one HeroGridTile per hero of picker.matches, with HeroGridSearch above. Behaviour lives in useHeroPicker (search, selection mode, keyboard cursor). Five a row always; the portraits shrink in a narrow container. A tile's state is a ring plus a corner mark (check, plus, minus), and a tri-state tile's name says it. Children put a line under the name (the Team Builder's sort value); disabledHeroIds are shown but cannot be picked, with the reason in title. Keyboard: WAI-ARIA grid, one tab stop, arrows move, Enter or Space picks; in the search box Enter picks the first match and ArrowDown enters the grid."
         className="grid gap-4 sm:grid-cols-2"
       >
         <Variants label="single, with search" className="block max-w-80">
@@ -167,17 +227,47 @@ export function DomainSelectors() {
       </Specimen>
 
       <Specimen
-        name="ItemSelectorMultiple"
+        name="ItemSelector"
         source="domain/selectors/ItemSelector"
-        note="Any number of shop items as chips with a searchable list, sorted by tier. Wrap it in a Field for its label."
+        note="The one item filter: a FilterCell whose popover is a search box, the shop's slot tabs (All, Weapon, Vitality, Spirit, each with the count of its chosen items) and the tab's items grouped by tier (ItemGrid). Only items on sale. selection: single (closes on a pick; allowNull adds Any item), multiple (a list), tri-state (a map of item to included / excluded; the trigger reads +2 / -1). A list or tri-state popover lists every chosen item under the grid, whichever tab it is on, with Clear. Typing a search moves to All; clearing it returns to the tab it left. size sm for a toolbar. In a filter bar, use Filter.Item."
       >
-        <Variants className="items-start">
-          <Field label="Items">
-            <ItemSelectorMultiple value={items} onValueChange={setItems} />
-          </Field>
-          <Field label="Nothing chosen">
-            <ItemSelectorMultiple value={[]} onValueChange={setItems} />
-          </Field>
+        <Variants>
+          <ItemSelector value={oneItem} onValueChange={setOneItem} allowNull />
+          <ItemSelector selection="multiple" value={items} onValueChange={setItems} />
+          <ItemSelector selection="multiple" emptyLabel="None" defaultValue={[]} />
+          <ItemSelector selection="tri-state" value={itemStates} onValueChange={setItemStates} />
+          <ItemSelector selection="tri-state" size="sm" label="Toolbar" defaultValue={itemStates} />
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="ItemGrid"
+        source="domain/selectors/ItemGrid · domain/selectors/useItemPicker · domain/selectors/item-picker"
+        note="The item shop every item picker draws: ItemGridSearch, ItemSlotTabs around an ItemGrid, one ItemGridTier (Tier 1 · 800 souls, the cost from the items) per group of picker.groups, one ItemGridTile per item. A PickerGrid (size lg: icon and name on two lines, five a row). Behaviour lives in useItemPicker (usePicker plus the slot tab; items keep their order within a tier, so a list sorted by a stat stays sorted). Children of a tile are a line under the name (Build Flow's win rate); disabledItemIds are shown but cannot be picked."
+        className="grid gap-4 sm:grid-cols-2"
+      >
+        <Variants label="tri-state, Weapon tab" className="block max-w-96">
+          <ItemGridDemo
+            items={shopItems}
+            selection="tri-state"
+            defaultValue={
+              new Map<number, PickerTriState>([
+                [1548066885, "included"],
+                [968099481, "excluded"],
+              ])
+            }
+          />
+        </Variants>
+        <Variants label="single, All tab, a line under each name, disabled items" className="block max-w-96">
+          <ItemGridDemo
+            items={shopItems.slice(0, 24)}
+            defaultSlot="all"
+            meta="rate"
+            disabledItemIds={new Set(shopItems.slice(20, 24).map((item) => item.id))}
+          />
+        </Variants>
+        <Variants label="Nothing to pick" className="block max-w-96">
+          <ItemGridDemo items={[]} />
         </Variants>
       </Specimen>
 

@@ -6,6 +6,14 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
 import { GraphNodeCard } from "~/components/domain/graph/GraphNodeCard";
+import {
+  ItemGrid,
+  ItemGridSearch,
+  ItemGridTier,
+  ItemGridTile,
+  ItemSlotTabs,
+} from "~/components/domain/selectors/ItemGrid";
+import { useItemPicker } from "~/components/domain/selectors/useItemPicker";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -18,7 +26,6 @@ import { DragScroll } from "~/components/ui/drag-scroll";
 import { Field } from "~/components/ui/field";
 import { Heading } from "~/components/ui/heading";
 import { KeyValue, KeyValueList } from "~/components/ui/key-value";
-import { OptionRow } from "~/components/ui/option-row";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
@@ -207,6 +214,57 @@ function useContainerWidth() {
   return [ref, width] as const;
 }
 
+/** The stage's candidates as a single-choice item picker: slot tabs, tiers, and each item's win rate under its name. */
+function StageLockPickerBody({ candidates, onPick }: { candidates: Candidate[]; onPick: (itemId: number) => void }) {
+  const { data: upgrades } = useQuery(itemUpgradesQueryOptions);
+  const items = useMemo(() => {
+    const byId = new Map((upgrades ?? []).map((item) => [item.id, item]));
+    return candidates.flatMap((c) => byId.get(c.id) ?? []);
+  }, [upgrades, candidates]);
+  const stats = useMemo(() => new Map(candidates.map((c) => [c.id, c])), [candidates]);
+  const picker = useItemPicker({
+    items,
+    value: null,
+    onValueChange: (itemId) => {
+      if (itemId !== null) onPick(itemId);
+    },
+    // Few enough items that every slot fits one list, by tier, the most bought first.
+    defaultSlot: "all",
+  });
+  return (
+    <>
+      <div className="p-2">
+        <ItemGridSearch picker={picker} />
+      </div>
+      <Separator />
+      <ItemSlotTabs picker={picker}>
+        <ItemGrid picker={picker} aria-label="Items bought at this stage">
+          {picker.groups.map((group) => (
+            <ItemGridTier key={group.tier} tier={group.tier} cost={group.cost}>
+              {group.items.map((item) => {
+                const c = stats.get(item.id);
+                return (
+                  <ItemGridTile
+                    key={item.id}
+                    item={item}
+                    title={
+                      c
+                        ? `${item.name}: ${(c.winRate * 100).toFixed(1)}% win rate, ${(c.pickRate * 100).toFixed(1)}% bought`
+                        : undefined
+                    }
+                  >
+                    {c && <span className={TONE_TEXT[toneOf(c.winRate, 0.5)]}>{(c.winRate * 100).toFixed(1)}% WR</span>}
+                  </ItemGridTile>
+                );
+              })}
+            </ItemGridTier>
+          ))}
+        </ItemGrid>
+      </ItemSlotTabs>
+    </>
+  );
+}
+
 const StageLockPicker = memo(function StageLockPicker({
   candidates,
   column,
@@ -228,34 +286,21 @@ const StageLockPicker = memo(function StageLockPicker({
           Lock item
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="center" className="max-h-80 w-64 overflow-y-auto p-1">
+      <PopoverContent
+        align="center"
+        aria-label={`Lock item, ${stage}`}
+        className="w-96 max-w-(--radix-popover-content-available-width) p-0"
+      >
         {candidates.length === 0 ? (
-          <div className="p-2 text-xs text-muted-foreground">No more items in this phase.</div>
+          <EmptyState variant="inline" title="No more items in this stage." className="py-4" />
         ) : (
-          candidates.map((c) => (
-            <OptionRow
-              key={c.id}
-              selected={false}
-              onClick={() => {
-                onLock(`${column}:${c.id}`);
-                setOpen(false);
-              }}
-              className="text-xs"
-              leading={<ItemImage itemId={c.id} className="size-5 shrink-0" />}
-              trailing={
-                <>
-                  <span className={cn("w-9 text-end text-3xs tabular-nums", TONE_TEXT[toneOf(c.winRate, 0.5)])}>
-                    {(c.winRate * 100).toFixed(1)}%
-                  </span>
-                  <span className="w-9 text-end text-3xs text-chart-4 tabular-nums">
-                    {(c.pickRate * 100).toFixed(1)}%
-                  </span>
-                </>
-              }
-            >
-              <ItemName itemId={c.id} />
-            </OptionRow>
-          ))
+          <StageLockPickerBody
+            candidates={candidates}
+            onPick={(itemId) => {
+              onLock(`${column}:${itemId}`);
+              setOpen(false);
+            }}
+          />
         )}
       </PopoverContent>
     </Popover>

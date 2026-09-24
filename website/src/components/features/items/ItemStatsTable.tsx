@@ -5,16 +5,15 @@ import { parseAsArrayOf, parseAsInteger, parseAsStringLiteral, useQueryState } f
 import { memo, type ReactNode, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import { ItemCell } from "~/components/domain/assets/ItemCell";
-import { ItemImage } from "~/components/domain/assets/ItemImage";
-import { ItemName } from "~/components/domain/assets/ItemName";
+import { ItemSelector } from "~/components/domain/selectors/ItemSelector";
 import { ITEM_SLOTS, ItemSlotSelector } from "~/components/domain/selectors/ItemSlotSelector";
 import { ItemTierSelector } from "~/components/domain/selectors/ItemTierSelector";
-import { ItemQuickSelectDialog } from "~/components/features/items/ItemQuickSelectDialog";
 import { ItemStatTrend } from "~/components/features/items/ItemStatTrend";
 import type { StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
 import { ExpandableRow, ExpandableRowToggle } from "~/components/patterns/data-table/ExpandableRow";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
+import type { TriState } from "~/components/patterns/filter-bar/TriStateSelector";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
@@ -24,7 +23,6 @@ import { SearchInput } from "~/components/ui/search-input";
 import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
-import { useItemById } from "~/hooks/useAssetById";
 import { formatPercent } from "~/lib/format";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { cn } from "~/lib/utils";
@@ -49,32 +47,6 @@ function toggled(set: Set<number>, id: number) {
   const next = new Set(set);
   if (!next.delete(id)) next.add(id);
   return next;
-}
-
-function ItemChip({
-  id,
-  variant,
-  onRemove,
-}: {
-  id: number;
-  variant: "include" | "exclude";
-  onRemove: (id: number) => void;
-}) {
-  const { item } = useItemById(id);
-  return (
-    <Button
-      variant={variant === "include" ? "positive-soft" : "negative-soft"}
-      size="xs"
-      onClick={() => onRemove(id)}
-      data-item-id={id}
-      aria-label={`Remove ${item?.name ?? "item"} from ${variant === "include" ? "included" : "excluded"} items`}
-      className="group"
-    >
-      <ItemImage itemId={id} className="size-4 shrink-0" />
-      <ItemName itemId={id} className="text-xs text-foreground" />
-      <span className="icon-[mdi--close] size-3 text-muted-foreground group-hover:text-foreground" />
-    </Button>
-  );
 }
 
 export interface ItemStatsTableProps {
@@ -473,18 +445,28 @@ export function ItemStatsTable({
     "exclude_items",
     parseAsSetOf(parseAsInteger).withDefault(new Set()),
   );
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [nameQuery, setNameQuery] = useState("");
 
-  const handleApply = (nextInclude: Set<number>, nextExclude: Set<number>) => {
-    void setIncludeItems(nextInclude);
-    void setExcludeItems(nextExclude);
+  // The toolbar's item filter holds both lists as one include / exclude map; the rows' toggles below edit the same
+  // two URL lists.
+  const itemStates = useMemo(
+    () =>
+      new Map<number, TriState>([
+        ...[...includeItems].map((id): [number, TriState] => [id, "included"]),
+        ...[...excludeItems].map((id): [number, TriState] => [id, "excluded"]),
+      ]),
+    [includeItems, excludeItems],
+  );
+  const setItemStates = (next: Map<number, TriState>) => {
+    const ids = (state: TriState) => new Set([...next].filter(([, s]) => s === state).map(([id]) => id));
+    void setIncludeItems(ids("included"));
+    void setExcludeItems(ids("excluded"));
   };
 
   // Functional updates keep both callbacks stable, so a click re-renders one memoized row instead of the whole table.
   // An exclusion (or an inclusion the item fails) can take the row, and with it the focused toggle, off the table once
-  // the new stats arrive. Focus then moves to the item's chip in the toolbar instead of falling to the page.
-  const chipsRef = useRef<HTMLDivElement>(null);
+  // the new stats arrive. Focus then moves to the item filter in the toolbar instead of falling to the page.
+  const itemFilterRef = useRef<HTMLDivElement>(null);
   const lastToggled = useRef<number | null>(null);
 
   // Pressing an item's include (or exclude) toggle again takes it back out of that list.
@@ -504,16 +486,6 @@ export function ItemStatsTable({
     },
     [setIncludeItems, setExcludeItems],
   );
-  const removeInclude = (id: number) => {
-    const next = new Set(includeItems);
-    next.delete(id);
-    void setIncludeItems(next);
-  };
-  const removeExclude = (id: number) => {
-    const next = new Set(excludeItems);
-    next.delete(id);
-    void setExcludeItems(next);
-  };
 
   // The header and filters answer a click at once; the ~150 rows (a few hundred ms of style and layout on a phone)
   // follow in a deferred render, marked busy until they catch up.
@@ -566,7 +538,7 @@ export function ItemStatsTable({
     if (id === null || visibleData.some((row) => row.item_id === id)) return;
     lastToggled.current = null;
     if (document.activeElement !== document.body) return;
-    chipsRef.current?.querySelector<HTMLElement>(`[data-item-id="${id}"]`)?.focus();
+    itemFilterRef.current?.querySelector<HTMLElement>('[data-slot="popover-trigger"]')?.focus();
   });
 
   const toggleSort = (field: SortField) => {
@@ -586,26 +558,14 @@ export function ItemStatsTable({
   return (
     // Not a live region: it holds the whole table, which a screen reader would then read out on every sort.
     <Stack gap={4} aria-busy={isLoading}>
-      <ItemQuickSelectDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        initialInclude={includeItems}
-        initialExclude={excludeItems}
-        onApply={handleApply}
-      />
       <FilterBar variant="toolbar" title="Overall stats" icon={Table2} aria-label="Item table controls">
-        <div ref={chipsRef} className="flex min-w-0 flex-wrap items-center gap-1">
-          {Array.from(includeItems).map((id) => (
-            <ItemChip key={`inc-${id}`} id={id} variant="include" onRemove={removeInclude} />
-          ))}
-          {Array.from(excludeItems).map((id) => (
-            <ItemChip key={`exc-${id}`} id={id} variant="exclude" onRemove={removeExclude} />
-          ))}
-          <Button variant="subtle" size="xs" shape="pill" onClick={() => setDialogOpen(true)}>
-            <span className="icon-[mdi--plus] size-3" />
-            Add Items
-          </Button>
-        </div>
+        <ItemSelector
+          ref={itemFilterRef}
+          selection="tri-state"
+          size="sm"
+          value={itemStates}
+          onValueChange={setItemStates}
+        />
         {!hideItemTierFilter && (
           <>
             <SearchInput

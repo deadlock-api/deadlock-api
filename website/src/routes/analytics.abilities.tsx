@@ -116,7 +116,7 @@ function AbilitiesPage() {
           }}
         />
         <Filter.MinMatches value={minMatches} onValueChange={setMinMatches} min={0} defaultValue={20} />
-        <Filter.ItemsTriState value={itemSelections} onValueChange={setItemSelections} />
+        <Filter.Item selection="tri-state" value={itemSelections} onValueChange={setItemSelections} />
         <Filter.SeasonPatchDate
           value={{ startDate, endDate }}
           onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}

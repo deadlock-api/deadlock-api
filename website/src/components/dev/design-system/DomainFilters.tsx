@@ -28,7 +28,7 @@ export function DomainFilters() {
       source="domain/filters"
       note="Filter.Root is FilterBar; the members are the game's filters, each a FilterCell. Pages own the URL state and pass value and onValueChange. Filter.ModeWithRank hides the rank range in Brawl, which is never ranked."
     >
-      <Variants label="Hero · ModeWithRank · MinMatches · ItemsTriState · SeasonPatchDate · MatchDuration">
+      <Variants label="Hero · ModeWithRank · MinMatches · Item (tri-state) · SeasonPatchDate · MatchDuration">
         <Filter.Root>
           <Filter.Hero value={hero} onValueChange={setHero} allowNull />
           <Filter.ModeWithRank
@@ -39,7 +39,7 @@ export function DomainFilters() {
             }}
           />
           <Filter.MinMatches value={minMatches} onValueChange={setMinMatches} defaultValue={20} />
-          <Filter.ItemsTriState value={itemStates} onValueChange={setItemStates} />
+          <Filter.Item selection="tri-state" value={itemStates} onValueChange={setItemStates} />
           <Filter.SeasonPatchDate
             value={{ startDate: dates[0], endDate: dates[1] }}
             onValueChange={({ startDate, endDate }) => setDates([startDate, endDate])}

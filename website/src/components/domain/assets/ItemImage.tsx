@@ -1,12 +1,11 @@
-import type { Upgrade } from "deadlock_api_client";
-
 import { AssetImage } from "~/components/domain/assets/AssetImage";
 import { useItemById } from "~/hooks/useAssetById";
 import { cn } from "~/lib/utils";
+import type { SlimUpgrade } from "~/queries/asset-queries";
 
 export type ItemSource =
   | { itemId: number; item?: never; loading?: never }
-  | { item: Upgrade | undefined; loading?: boolean; itemId?: never };
+  | { item: SlimUpgrade | undefined; loading?: boolean; itemId?: never };
 
 type ItemImageLook = Omit<
   React.ComponentProps<typeof AssetImage>,
@@ -33,7 +32,7 @@ function ItemImageView({
   className,
   title,
   ...props
-}: ItemImageLook & { item: Upgrade | undefined; loading?: boolean }) {
+}: ItemImageLook & { item: SlimUpgrade | undefined; loading?: boolean }) {
   return (
     <AssetImage
       asset={

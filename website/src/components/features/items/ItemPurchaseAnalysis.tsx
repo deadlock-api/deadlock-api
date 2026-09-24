@@ -3,10 +3,9 @@ import { ChartNoAxesCombined } from "lucide-react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
-import { ItemSelectorMultiple } from "~/components/domain/selectors/ItemSelector";
+import { ItemSelector } from "~/components/domain/selectors/ItemSelector";
 import { ItemBuyTimingChart } from "~/components/features/items/ItemBuyTimingChart";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
-import { Field } from "~/components/ui/field";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
@@ -74,9 +73,13 @@ export function ItemPurchaseAnalysis({
           icon={ChartNoAxesCombined}
           aria-label="Purchase analysis controls"
         >
-          <Field label="Items" orientation="horizontal">
-            <ItemSelectorMultiple value={Array.from(itemIds)} onValueChange={(i) => setItemIds(new Set(i))} />
-          </Field>
+          <ItemSelector
+            selection="multiple"
+            size="sm"
+            emptyLabel="None"
+            value={Array.from(itemIds)}
+            onValueChange={(ids) => setItemIds(new Set(ids))}
+          />
         </FilterBar>
         <ItemBuyTimingChart itemIds={Array.from(itemIds)} baseQueryOptions={queryStatOptions} />
       </div>
