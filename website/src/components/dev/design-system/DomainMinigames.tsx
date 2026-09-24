@@ -1,4 +1,4 @@
-import { BrainIcon, CopyIcon, CrosshairIcon, PackageIcon, SwordsIcon } from "lucide-react";
+import { BrainIcon, CopyIcon, CrosshairIcon, FlameIcon, PackageIcon, SwordsIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
@@ -97,7 +97,7 @@ export function DomainMinigames() {
       <Specimen
         name="GameTile"
         source="domain/minigames/GameTile"
-        note="A game on a hub page, linking to it. tone and badge carry the state of today's run: untouched, in progress, completed, failed."
+        note="A game on a hub page, linking to it. tone and badge carry the state of today's run: untouched, in progress, completed, failed, plus the mode's streak. cta is Play until the run is over, then View result."
         className="theme-terminal grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
       >
         <GameTile
@@ -124,10 +124,16 @@ export function DomainMinigames() {
           description="Tier, slot and type of five items."
           icon={PackageIcon}
           tone="positive"
+          cta="View result"
           badge={
-            <TerminalBadge variant="positive" size="sm">
-              Completed
-            </TerminalBadge>
+            <>
+              <TerminalBadge variant="positive" size="sm">
+                Completed
+              </TerminalBadge>
+              <TerminalBadge variant="outline" size="sm">
+                <FlameIcon aria-hidden="true" />3 day streak
+              </TerminalBadge>
+            </>
           }
         />
         <GameTile
@@ -136,6 +142,7 @@ export function DomainMinigames() {
           description="Which ability makes this sound?"
           icon={CrosshairIcon}
           tone="negative"
+          cta="View result"
           badge={
             <TerminalBadge variant="negative" size="sm">
               Failed

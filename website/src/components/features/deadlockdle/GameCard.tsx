@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import { Flame, type LucideIcon } from "lucide-react";
 
 import { GameTile } from "~/components/domain/minigames/GameTile";
 import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
@@ -17,6 +17,8 @@ interface GameCardProps {
   date: string;
   /** Today's progress, read from storage by the page once hydrated. */
   status?: DailyStatus;
+  /** The mode's current win streak in days, read with the status; shown from 1. */
+  streak?: number;
 }
 
 /** The fields the hub reads from any game's saved state (guess games, trivia, item stats). */
@@ -75,8 +77,9 @@ const STATUS_TONE = {
   lost: "negative",
 } as const;
 
-export function GameCard({ title, description, icon, path, date, status = "untouched" }: GameCardProps) {
+export function GameCard({ title, description, icon, path, date, status = "untouched", streak = 0 }: GameCardProps) {
   const badge = STATUS_BADGE[status];
+  const finished = status === "won" || status === "lost";
 
   return (
     <GameTile
@@ -86,11 +89,22 @@ export function GameCard({ title, description, icon, path, date, status = "untou
       description={description}
       icon={icon}
       tone={STATUS_TONE[status]}
+      cta={finished ? "View result" : "Play"}
       badge={
-        badge && (
-          <TerminalBadge variant={badge.variant} size="sm">
-            {badge.label}
-          </TerminalBadge>
+        (badge || streak > 0) && (
+          <>
+            {badge && (
+              <TerminalBadge variant={badge.variant} size="sm">
+                {badge.label}
+              </TerminalBadge>
+            )}
+            {streak > 0 && (
+              <TerminalBadge variant="outline" size="sm">
+                <Flame aria-hidden="true" />
+                {streak === 1 ? "1 day streak" : `${streak} day streak`}
+              </TerminalBadge>
+            )}
+          </>
         )
       }
     />

@@ -4,7 +4,7 @@ import { day } from "~/dayjs";
 import { useStoredDailyState, useStoredState } from "~/lib/use-stored-state";
 
 import { getTodayDate, resolvePuzzleDate } from "./seed";
-import { gameStorageKey, legacyGameStorageKey } from "./storage";
+import { gameStorageKey, legacyGameStorageKey, streakStorageKey } from "./storage";
 import type { DailyGameState, GameMode, GameStatus, StreakState } from "./types";
 
 const DEFAULT_GAME_STATE: DailyGameState = {
@@ -38,7 +38,7 @@ export function useDailyGame(mode: GameMode, maxAttempts: number, date?: string)
   const puzzleDate = resolvePuzzleDate(date);
   const isArchive = puzzleDate !== getTodayDate();
   const gameKey = gameStorageKey(mode, puzzleDate);
-  const streakKey = `deadlockdle:${mode}:streak`;
+  const streakKey = streakStorageKey(mode);
 
   const [gameState, saveGameState] = useStoredDailyState(
     gameKey,

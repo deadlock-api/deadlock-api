@@ -1,6 +1,8 @@
+import { day } from "~/dayjs";
 import { readLocalStorage } from "~/lib/local-storage";
 
-import type { GameMode } from "./types";
+import { getTodayDate } from "./seed";
+import type { GameMode, StreakState } from "./types";
 
 /** Every puzzle day has its own slot, so a day finished as "today" still reads as finished once it is in the past. */
 export function gameStorageKey(mode: GameMode, date: string): string {
@@ -28,4 +30,32 @@ export function readStoredGame(mode: GameMode, date: string): Record<string, unk
     }
   }
   return null;
+}
+
+/** A guess mode's streak record, across days (the quizzes keep none). */
+export function streakStorageKey(mode: GameMode): string {
+  return `deadlockdle:${mode}:streak`;
+}
+
+/**
+ * The streak the player still holds on `today`: the saved count only survives while its last finished day is today or
+ * yesterday. A missed day breaks it, but storage only learns that the next time the mode is finished.
+ */
+export function liveStreak(state: Partial<StreakState> | null, today: string): number {
+  const count = state?.currentStreak;
+  const last = state?.lastPlayedDate;
+  if (typeof count !== "number" || count <= 0 || typeof last !== "string") return 0;
+  const yesterday = day(today).subtract(1, "day").format("YYYY-MM-DD");
+  return last === today || last === yesterday ? count : 0;
+}
+
+/** The mode's live streak from storage; 0 during SSR, for modes without one and when storage is unreadable. */
+export function readCurrentStreak(mode: GameMode, today: string = getTodayDate()): number {
+  const raw = readLocalStorage(streakStorageKey(mode));
+  if (!raw) return 0;
+  try {
+    return liveStreak(JSON.parse(raw) as Partial<StreakState> | null, today);
+  } catch {
+    return 0;
+  }
 }

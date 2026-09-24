@@ -22,6 +22,7 @@ import {
   resolvePuzzleDate,
   validatePuzzleDateSearch,
 } from "~/lib/deadlockdle/seed";
+import { readCurrentStreak } from "~/lib/deadlockdle/storage";
 import type { GameMode } from "~/lib/deadlockdle/types";
 import { seo } from "~/lib/seo";
 
@@ -129,6 +130,14 @@ function DeadlockdleHub() {
     }
     return result;
   }, [date, hydrated]);
+  const streaks = useMemo(() => {
+    if (!hydrated) return null;
+    const result = {} as Record<GameMode, number>;
+    for (const game of GAMES) {
+      result[game.mode] = readCurrentStreak(game.mode);
+    }
+    return result;
+  }, [hydrated]);
 
   const prevDate = day(date).subtract(1, "day").format("YYYY-MM-DD");
   const nextDate = day(date).add(1, "day").format("YYYY-MM-DD");
@@ -209,7 +218,12 @@ function DeadlockdleHub() {
         >
           {GAMES.map((game) => (
             <motion.div key={game.mode} variants={fadeUp}>
-              <GameCard {...game} date={date} status={statuses?.[game.mode] ?? "untouched"} />
+              <GameCard
+                {...game}
+                date={date}
+                status={statuses?.[game.mode] ?? "untouched"}
+                streak={streaks?.[game.mode] ?? 0}
+              />
             </motion.div>
           ))}
         </motion.div>

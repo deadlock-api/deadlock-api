@@ -13,10 +13,22 @@ interface GameTileProps extends Omit<React.ComponentProps<"a">, "title" | "href"
   tone?: React.ComponentProps<typeof LinkCard>["tone"];
   /** The state of today's run, on the trailing edge of the footer. */
   badge?: React.ReactNode;
+  /** The action the link takes: "Play" by default, "View result" once the run is over. */
+  cta?: React.ReactNode;
 }
 
 /** A game on a hub page. */
-export function GameTile({ to, search, title, description, icon: Icon, tone, badge, ...props }: GameTileProps) {
+export function GameTile({
+  to,
+  search,
+  title,
+  description,
+  icon: Icon,
+  tone,
+  badge,
+  cta = "Play",
+  ...props
+}: GameTileProps) {
   return (
     <LinkCard
       asChild
@@ -30,7 +42,7 @@ export function GameTile({ to, search, title, description, icon: Icon, tone, bad
           <Icon />
         </IconTile>
       }
-      cta="Play"
+      cta={cta}
       footer={badge}
       {...props}
     >
