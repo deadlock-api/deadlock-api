@@ -102,6 +102,7 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
               disabled={!config.showMatchHistory || config.matchHistoryShowsToday}
               value={[config.numMatches]}
               onValueChange={([v]) => updateConfig({ numMatches: v })}
+              getValueText={(v) => `${v} matches`}
               className="w-32"
             />
             <Text variant="label" tone="default" className="font-medium">
@@ -181,6 +182,7 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
               max={100}
               value={[config.opacity]}
               onValueChange={([v]) => updateConfig({ opacity: v })}
+              getValueText={(v) => `${v}%`}
               className="w-full"
             />
             <Text tone="muted" numeric="tabular" className="min-w-10">

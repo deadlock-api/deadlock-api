@@ -180,6 +180,7 @@ export function Round3PatternsCharts() {
                   max={100}
                   value={[opacity]}
                   onValueChange={([next]) => setOpacity(next)}
+                  getValueText={(next) => `${next}%`}
                   className="w-20"
                 />
                 <span className="w-7 tabular-nums">{opacity}%</span>

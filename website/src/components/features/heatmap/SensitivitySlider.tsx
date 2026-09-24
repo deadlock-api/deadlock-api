@@ -23,6 +23,7 @@ export function SensitivitySlider({ value, onChange }: { value: number; onChange
           step={1}
           value={[Math.round(value * 1000)]}
           onValueChange={([next]) => onChange(next / 1000)}
+          getValueText={(next) => `${(next / 10).toFixed(1)}%`}
           className="w-20"
         />
         <span className="w-12 text-3xs text-muted-foreground tabular-nums">{(value * 100).toFixed(1)}%</span>

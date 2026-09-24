@@ -310,6 +310,7 @@ export default function Heatmap3D({
               max={100}
               value={[Math.round(opacity * 100)]}
               onValueChange={([next]) => setOpacity(next / 100)}
+              getValueText={(next) => `${next}%`}
               className="w-20"
             />
             <span className="w-7 text-3xs text-muted-foreground tabular-nums">{Math.round(opacity * 100)}%</span>

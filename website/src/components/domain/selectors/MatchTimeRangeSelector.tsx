@@ -96,8 +96,8 @@ export function MatchTimeRangeSelector({
         <div className="pt-6 pb-2">
           <Slider
             thumbLabels={[`Minimum ${title.toLowerCase()}`, `Maximum ${title.toLowerCase()}`]}
-            defaultValue={[0, max]}
             value={draftValue}
+            getValueText={(seconds) => (seconds === max ? "End of Game" : formatTime(seconds))}
             min={0}
             max={max}
             step={STEP}

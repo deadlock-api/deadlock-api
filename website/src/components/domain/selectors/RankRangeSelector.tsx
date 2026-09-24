@@ -187,6 +187,7 @@ export function RankRangeSelector({
         <div className="pt-2 pb-2">
           <Slider
             thumbLabels={["Minimum rank", "Maximum rank"]}
+            getValueText={(index) => options[index]?.label ?? String(index)}
             value={draftValue}
             min={0}
             max={options.length - 1}

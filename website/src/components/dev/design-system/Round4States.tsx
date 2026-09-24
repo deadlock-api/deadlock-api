@@ -219,6 +219,18 @@ function SliderStates() {
       <Variants label="range, each thumb named" className="w-72 flex-col items-stretch">
         <Slider thumbLabels={["Minimum rank", "Maximum rank"]} defaultValue={[20, 80]} />
       </Variants>
+      <Variants
+        label="getValueText: announced as the screen shows it (35 minutes, not 35)"
+        className="w-72 flex-col items-stretch"
+      >
+        <Slider
+          thumbLabels={["Shortest match", "Longest match"]}
+          defaultValue={[15, 35]}
+          min={0}
+          max={60}
+          getValueText={(minutes) => `${minutes} minutes`}
+        />
+      </Variants>
     </>
   );
 }
