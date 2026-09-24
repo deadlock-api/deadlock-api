@@ -4,6 +4,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use chrono::{DateTime, Duration, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::context::AppState;
@@ -15,14 +16,14 @@ use crate::services::patreon::steam_accounts_repository::{
 };
 
 /// Request body for adding a Steam account
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub(crate) struct AddSteamAccountRequest {
     /// Steam ID3 (32-bit unsigned integer format)
     steam_id3: i64,
 }
 
 /// Response for a Steam account
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub(crate) struct SteamAccountResponse {
     id: Uuid,
     steam_id3: i64,
@@ -31,7 +32,7 @@ pub(crate) struct SteamAccountResponse {
 }
 
 /// Response for a Steam account in the list endpoint (includes `is_in_cooldown`)
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub(crate) struct SteamAccountListItem {
     id: Uuid,
     steam_id3: i64,
@@ -41,7 +42,7 @@ pub(crate) struct SteamAccountListItem {
 }
 
 /// Summary of the patron's Steam account slots
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub(crate) struct SlotsSummary {
     total_slots: i32,
     used_slots: i32,
@@ -50,7 +51,7 @@ pub(crate) struct SlotsSummary {
 }
 
 /// Response for listing Steam accounts
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub(crate) struct ListSteamAccountsResponse {
     accounts: Vec<SteamAccountListItem>,
     summary: SlotsSummary,
@@ -64,6 +65,29 @@ pub(crate) struct ListSteamAccountsResponse {
 /// - `SteamID3` must be a valid 32-bit unsigned integer (0 to 4,294,967,295)
 /// - Total active accounts + accounts in cooldown must not exceed `slot_limit`
 /// - The specific `steam_id3` must not be in cooldown (deleted within 24 hours)
+#[utoipa::path(
+    post,
+    path = "/steam-accounts",
+    request_body = AddSteamAccountRequest,
+    security(("api_key_header" = []), ("api_key_query" = [])),
+    responses(
+        (status = CREATED, body = SteamAccountResponse),
+        (status = BAD_REQUEST, description = "Invalid `steam_id3` or no free slot left"),
+        (status = UNAUTHORIZED, description = "Missing API key, or the key is not linked to a patron"),
+    ),
+    tags = ["Internal"],
+    summary = "Add Prioritized Steam Account",
+    description = "
+Adds a Steam account to the patron's prioritized fetching list. Matches of prioritized accounts are fetched first.
+
+Re-adding an account that was removed earlier restores that entry.
+
+### Authentication
+Requires an API key linked to an active Patreon membership, sent as `X-API-Key` header,
+`api_key` query parameter or `Authorization: Bearer <key>`. A `patron_session` from the
+website login works as well.
+"
+)]
 #[expect(clippy::too_many_lines)]
 pub(crate) async fn add_steam_account(
     State(app_state): State<AppState>,
@@ -222,6 +246,25 @@ pub(crate) async fn add_steam_account(
 ///
 /// Lists all Steam accounts for the authenticated patron, including soft-deleted ones in cooldown.
 /// Returns account details with `is_in_cooldown` status and a summary of slot usage.
+#[utoipa::path(
+    get,
+    path = "/steam-accounts",
+    security(("api_key_header" = []), ("api_key_query" = [])),
+    responses(
+        (status = OK, body = ListSteamAccountsResponse),
+        (status = UNAUTHORIZED, description = "Missing API key, or the key is not linked to a patron"),
+    ),
+    tags = ["Internal"],
+    summary = "List Prioritized Steam Accounts",
+    description = "
+Lists the patron's prioritized Steam accounts, including removed ones still in their 24 hour cooldown, and a summary of slot usage.
+
+### Authentication
+Requires an API key linked to an active Patreon membership, sent as `X-API-Key` header,
+`api_key` query parameter or `Authorization: Bearer <key>`. A `patron_session` from the
+website login works as well.
+"
+)]
 pub(crate) async fn list_steam_accounts(
     State(app_state): State<AppState>,
     session: PatronSession,
@@ -307,8 +350,44 @@ pub(crate) async fn list_steam_accounts(
     Ok(Json(response))
 }
 
+/// Resolves the `{account_id}` path segment to the id of one of the patron's entries.
+///
+/// The segment is either the entry's UUID or the account's `steam_id3`. A `steam_id3` can have
+/// several entries (one active and older removed ones); the active one wins, otherwise the most
+/// recently removed one.
+async fn resolve_account_id(
+    repo: &SteamAccountsRepository,
+    patron_id: Uuid,
+    account: &str,
+) -> Result<Uuid, APIError> {
+    if let Ok(id) = Uuid::parse_str(account) {
+        return Ok(id);
+    }
+    let steam_id3 = account.parse::<u32>().map_err(|_| {
+        APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "Invalid account: must be a steam_id3 or an account entry id",
+        )
+    })?;
+    let accounts = repo.get_accounts_for_patron(patron_id).await.map_err(|e| {
+        tracing::error!("Failed to get accounts for patron: {e}");
+        APIError::internal("Failed to fetch Steam accounts")
+    })?;
+    accounts
+        .into_iter()
+        .filter(|a| a.steam_id3 == i64::from(steam_id3))
+        .max_by_key(|a| (a.deleted_at.is_none(), a.deleted_at))
+        .map(|a| a.id)
+        .ok_or_else(|| {
+            APIError::status_msg(
+                StatusCode::NOT_FOUND,
+                "Account not found or does not belong to you",
+            )
+        })
+}
+
 /// Response for deleting a Steam account
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub(crate) struct DeleteSteamAccountResponse {
     message: String,
 }
@@ -317,12 +396,34 @@ pub(crate) struct DeleteSteamAccountResponse {
 ///
 /// Soft-deletes a Steam account from the patron's prioritized list.
 /// The slot will be in cooldown for 24 hours before it can be reused.
+#[utoipa::path(
+    delete,
+    path = "/steam-accounts/{account_id}",
+    params(("account_id" = String, Path, description = "The account's `steam_id3`, or the `id` of its entry as returned by the list endpoint")),
+    security(("api_key_header" = []), ("api_key_query" = [])),
+    responses(
+        (status = OK, body = DeleteSteamAccountResponse),
+        (status = UNAUTHORIZED, description = "Missing API key, or the key is not linked to a patron"),
+        (status = NOT_FOUND, description = "Account not found or does not belong to the patron"),
+    ),
+    tags = ["Internal"],
+    summary = "Remove Prioritized Steam Account",
+    description = "
+Removes a Steam account from the patron's prioritized fetching list. `account_id` is the `steam_id3` or the entry `id`. Its slot stays in a 24 hour cooldown before it can be reused.
+
+### Authentication
+Requires an API key linked to an active Patreon membership, sent as `X-API-Key` header,
+`api_key` query parameter or `Authorization: Bearer <key>`. A `patron_session` from the
+website login works as well.
+"
+)]
 pub(crate) async fn delete_steam_account(
     State(app_state): State<AppState>,
     session: PatronSession,
-    Path(account_id): Path<Uuid>,
+    Path(account): Path<String>,
 ) -> Result<impl IntoResponse, APIError> {
     let repo = SteamAccountsRepository::new(app_state.pg_client.clone());
+    let account_id = resolve_account_id(&repo, session.patron_id, &account).await?;
 
     // Soft delete the account (sets deleted_at to NOW())
     // This also verifies the account belongs to the authenticated patron
@@ -344,7 +445,7 @@ pub(crate) async fn delete_steam_account(
 }
 
 /// Request body for replacing a Steam account
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub(crate) struct ReplaceSteamAccountRequest {
     /// New Steam ID3 (32-bit unsigned integer format)
     steam_id3: i64,
@@ -354,10 +455,33 @@ pub(crate) struct ReplaceSteamAccountRequest {
 ///
 /// Replaces a soft-deleted Steam account after the 24-hour cooldown has passed.
 /// Hard-deletes the old record and inserts a new one with the provided `steam_id3`.
+#[utoipa::path(
+    put,
+    path = "/steam-accounts/{account_id}",
+    params(("account_id" = String, Path, description = "The account's `steam_id3`, or the `id` of its entry as returned by the list endpoint")),
+    request_body = ReplaceSteamAccountRequest,
+    security(("api_key_header" = []), ("api_key_query" = [])),
+    responses(
+        (status = OK, body = SteamAccountResponse),
+        (status = BAD_REQUEST, description = "Invalid `steam_id3`, the account is still active, or its cooldown has not passed"),
+        (status = UNAUTHORIZED, description = "Missing API key, or the key is not linked to a patron"),
+        (status = NOT_FOUND, description = "Account not found or does not belong to the patron"),
+    ),
+    tags = ["Internal"],
+    summary = "Replace Prioritized Steam Account",
+    description = "
+Swaps a removed Steam account whose 24 hour cooldown has passed for a new `steam_id3`. `account_id` is the removed account's `steam_id3` or its entry `id`.
+
+### Authentication
+Requires an API key linked to an active Patreon membership, sent as `X-API-Key` header,
+`api_key` query parameter or `Authorization: Bearer <key>`. A `patron_session` from the
+website login works as well.
+"
+)]
 pub(crate) async fn replace_steam_account(
     State(app_state): State<AppState>,
     session: PatronSession,
-    Path(account_id): Path<Uuid>,
+    Path(account): Path<String>,
     Json(request): Json<ReplaceSteamAccountRequest>,
 ) -> Result<impl IntoResponse, APIError> {
     // Step 1: Validate SteamID3 is a valid 32-bit unsigned integer
@@ -369,6 +493,7 @@ pub(crate) async fn replace_steam_account(
     }
 
     let repo = SteamAccountsRepository::new(app_state.pg_client.clone());
+    let account_id = resolve_account_id(&repo, session.patron_id, &account).await?;
 
     // Step 2: Get the account and verify it belongs to the patron
     let account = repo
@@ -437,10 +562,32 @@ pub(crate) async fn replace_steam_account(
 /// - Account must belong to the authenticated patron
 /// - Account must currently be soft-deleted (`deleted_at` IS NOT NULL)
 /// - Reactivation must not exceed the patron's current `slot_limit`
+#[utoipa::path(
+    post,
+    path = "/steam-accounts/{account_id}/reactivate",
+    params(("account_id" = String, Path, description = "The account's `steam_id3`, or the `id` of its entry as returned by the list endpoint")),
+    security(("api_key_header" = []), ("api_key_query" = [])),
+    responses(
+        (status = OK, body = SteamAccountResponse),
+        (status = BAD_REQUEST, description = "The account is already active, or no free slot left"),
+        (status = UNAUTHORIZED, description = "Missing API key, or the key is not linked to a patron"),
+        (status = NOT_FOUND, description = "Account not found or does not belong to the patron"),
+    ),
+    tags = ["Internal"],
+    summary = "Reactivate Prioritized Steam Account",
+    description = "
+Restores a previously removed Steam account to the patron's prioritized fetching list. `account_id` is the `steam_id3` or the entry `id`.
+
+### Authentication
+Requires an API key linked to an active Patreon membership, sent as `X-API-Key` header,
+`api_key` query parameter or `Authorization: Bearer <key>`. A `patron_session` from the
+website login works as well.
+"
+)]
 pub(crate) async fn reactivate_steam_account(
     State(app_state): State<AppState>,
     session: PatronSession,
-    Path(account_id): Path<Uuid>,
+    Path(account): Path<String>,
 ) -> Result<impl IntoResponse, APIError> {
     // Fetch patron record to get current slot_override (JWT may have stale slot_limit)
     let patron_repo = PatronRepository::new(
@@ -466,6 +613,7 @@ pub(crate) async fn reactivate_steam_account(
     let slot_limit = patron.slot_limit();
 
     let repo = SteamAccountsRepository::new(app_state.pg_client.clone());
+    let account_id = resolve_account_id(&repo, session.patron_id, &account).await?;
 
     // Step 1: Get the account and verify it belongs to the patron
     let account = repo

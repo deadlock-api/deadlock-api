@@ -33,13 +33,9 @@ impl FromRequestParts<AppState> for PatronSession {
         let token = extract_token_from_cookie(&parts.headers)
             .or_else(|| extract_token_from_auth_header(&parts.headers));
 
-        if let Some(token) = token {
-            // Validate the JWT token
-            let claims =
-                validate_session_token(&token, &state.config.jwt_secret).map_err(|_| {
-                    APIError::status_msg(StatusCode::UNAUTHORIZED, "Invalid or expired token")
-                })?;
-
+        if let Some(token) = &token
+            && let Ok(claims) = validate_session_token(token, &state.config.jwt_secret)
+        {
             return Ok(PatronSession {
                 patron_id: claims.patron_id,
             });
@@ -60,7 +56,11 @@ impl FromRequestParts<AppState> for PatronSession {
 
         Err(APIError::status_msg(
             StatusCode::UNAUTHORIZED,
-            "Missing authentication token",
+            if token.is_some() || api_key.is_some() {
+                "Invalid or expired token"
+            } else {
+                "Missing authentication token"
+            },
         ))
     }
 }
