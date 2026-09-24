@@ -18,6 +18,7 @@ import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { TierBadge, type TierGrade } from "~/components/patterns/tier-list/TierList";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { Stack } from "~/components/ui/stack";
@@ -29,6 +30,7 @@ import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { formatPercent } from "~/lib/format";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { findHeroBySlug, heroSlug } from "~/lib/hero-slug";
+import { computeHeroTiers } from "~/lib/hero-tiers";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
 import { rankRangeLabel } from "~/lib/rank-utils";
@@ -274,6 +276,19 @@ function HeroDetailPage() {
     return { ...base, banRate, banRateRank, banHeroCount: banRates?.size };
   }, [statsQuery.data, banQuery.data, heroId]);
 
+  // The same grading as the tier list, over the same rows, so the badge agrees with the list it links to.
+  const { data: heroAssets } = useQuery(heroesQueryOptions);
+  const tier = useMemo(() => {
+    if (!statsQuery.data || !heroAssets) return undefined;
+    const known = new Set(heroAssets.map((hero) => hero.id));
+    const { entries } = computeHeroTiers(
+      statsQuery.data
+        .filter((row) => known.has(row.hero_id))
+        .map((row) => ({ heroId: row.hero_id, wins: row.wins, matches: row.matches })),
+    );
+    return entries.find((entry) => entry.heroId === heroId)?.tier;
+  }, [statsQuery.data, heroAssets, heroId]);
+
   const rankLabel = (rank: number | undefined, total?: number) =>
     summary && rank !== undefined ? `#${rank} of ${total ?? summary.heroCount} heroes` : undefined;
 
@@ -282,6 +297,16 @@ function HeroDetailPage() {
       <PageHeader
         media={<HeroImage heroId={heroId} className="size-12" />}
         title={<>{heroName}: Deadlock Win Rate &amp; Pick Rate</>}
+        actions={
+          tier && (
+            <Button asChild variant="outline" size="sm">
+              <Link to="/analytics/heroes/tier-list" search={RANK_SEARCH} preload="intent">
+                <TierBadge tier={tier.toLowerCase() as TierGrade} size="sm" />
+                on the tier list
+              </Link>
+            </Button>
+          )
+        }
         description={
           summary ? (
             <>

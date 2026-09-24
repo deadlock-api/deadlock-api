@@ -1,6 +1,6 @@
 import { Specimen } from "~/components/dev/design-system/Specimen";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
-import { TierEmpty, TierItem, TierList, TierRow, TierTile } from "~/components/patterns/tier-list/TierList";
+import { TierBadge, TierEmpty, TierItem, TierList, TierRow, TierTile } from "~/components/patterns/tier-list/TierList";
 import { Tooltip } from "~/components/ui/tooltip";
 
 const ROWS = [
@@ -56,6 +56,20 @@ export function TierListSpecimens() {
             </TierItem>
           </TierRow>
         </TierList>
+      </Specimen>
+      <Specimen
+        name="TierBadge"
+        source="patterns/tier-list/TierList"
+        note="One grade outside a list, such as a hero's tier in the hero page header. tier: s, a, b, c, d; size: sm, default. The letter carries the grade; screen readers hear it as 'S tier'. Without props it is a B."
+      >
+        <div className="flex items-center gap-2">
+          <TierBadge tier="s" />
+          <TierBadge tier="a" />
+          <TierBadge />
+          <TierBadge tier="c" />
+          <TierBadge tier="d" />
+          <TierBadge tier="a" size="sm" />
+        </div>
       </Specimen>
     </>
   );

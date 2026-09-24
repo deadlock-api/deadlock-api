@@ -112,3 +112,38 @@ export function TierTile({
     />
   );
 }
+
+const tierBadgeVariants = cva(
+  "inline-flex shrink-0 items-center justify-center rounded-md leading-none font-bold text-tier-foreground",
+  {
+    variants: {
+      tier: { s: "bg-tier-s", a: "bg-tier-a", b: "bg-tier-b", c: "bg-tier-c", d: "bg-tier-d" },
+      size: { sm: "size-5 text-xs", default: "size-6 text-sm" },
+    },
+    defaultVariants: { tier: "b", size: "default" },
+  },
+);
+
+/**
+ * A grade on its own, outside a list: the letter on its tier color, for a page that names where one entry stands (a
+ * hero's tier on the hero page). Screen readers hear "S tier".
+ */
+export function TierBadge({
+  tier = "b",
+  size,
+  className,
+  ...props
+}: Omit<React.ComponentProps<"span">, "children"> & VariantProps<typeof tierBadgeVariants>) {
+  const grade = tier ?? "b";
+  return (
+    <span
+      data-slot="tier-badge"
+      data-tier={grade}
+      className={cn(tierBadgeVariants({ tier: grade, size }), className)}
+      {...props}
+    >
+      <span aria-hidden="true">{grade.toUpperCase()}</span>
+      <span className="sr-only">{`${grade.toUpperCase()} tier`}</span>
+    </span>
+  );
+}
