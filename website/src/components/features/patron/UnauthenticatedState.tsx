@@ -1,6 +1,9 @@
+import { Link } from "@tanstack/react-router";
 import { ArrowRight, LogIn } from "lucide-react";
 
 import { CalloutCard } from "~/components/patterns/content/CalloutCard";
+import { Disclosure } from "~/components/patterns/content/Disclosure";
+import { Step, Steps } from "~/components/patterns/content/Steps";
 import {
   ComparisonCell,
   ComparisonColumn,
@@ -11,10 +14,15 @@ import {
 import { Hero, HeroActions } from "~/components/patterns/page/Hero";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
+import { Section } from "~/components/patterns/page/Section";
 import { Button } from "~/components/ui/button";
 import { IconTile } from "~/components/ui/icon-tile";
+import { Stack } from "~/components/ui/stack";
 import { TableBody } from "~/components/ui/table";
 import { Text } from "~/components/ui/text";
+import { TextLink } from "~/components/ui/text-link";
+
+const PATREON_URL = "https://www.patreon.com/c/manuelhexe";
 
 /** One feature the free tier also has. A patron-only feature is a `ComparisonRow` with an empty free cell. */
 function FreeAndPatronRow({ label }: { label: string }) {
@@ -54,14 +62,14 @@ export function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
             Sign in with Patreon
           </Button>
           <Button size="lg" variant="outline" asChild>
-            <a href="https://www.patreon.com/c/manuelhexe" target="_blank" rel="noopener noreferrer">
+            <a href={PATREON_URL} target="_blank" rel="noopener noreferrer">
               Become a Patron
               <ArrowRight />
             </a>
           </Button>
         </HeroActions>
         <Text as="p" variant="caption" tone="muted" className="text-center">
-          Starting at $1.50/month, every cent goes to infrastructure
+          Starting at $1.50/month for one prioritized account, every cent goes to infrastructure
         </Text>
       </Hero>
 
@@ -76,11 +84,56 @@ export function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
           <PatronOnlyRow label="Dedicated queue with reserved resources" />
           <PatronOnlyRow label="Faster data updates" />
           <PatronOnlyRow label="Full match history from first to last game" />
-          <PatronOnlyRow label="Up to 50 prioritized accounts" />
-          <PatronOnlyRow label="Swap accounts anytime" />
+          <PatronOnlyRow label="Player Tracker for your prioritized accounts" />
+          <PatronOnlyRow label="1 prioritized account per $1.50/month, up to 50" />
+          <PatronOnlyRow label="Swap accounts (a freed slot reopens after 24h)" />
           <PatronOnlyRow label="Accurate rank data from Steam" />
         </TableBody>
       </ComparisonTable>
+
+      <Section title="How it works" className="mx-auto w-full max-w-2xl">
+        <Steps>
+          <Step title="Subscribe on Patreon at any tier.">
+            <TextLink href={PATREON_URL} external className="self-start">
+              Deadlock API on Patreon
+            </TextLink>
+          </Step>
+          <Step title="Come back here and sign in with Patreon, so we can see your pledge." />
+          <Step title="Add your Steam account. Its matches are fetched in the patron queue from then on, and you can open its Player Tracker.">
+            <TextLink asChild className="self-start">
+              <Link to="/tracker/demo">See a demo tracker profile</Link>
+            </TextLink>
+          </Step>
+        </Steps>
+      </Section>
+
+      <Section title="Questions" className="mx-auto w-full max-w-2xl">
+        <Stack gap={2}>
+          <Disclosure variant="bordered" title="How many accounts do I get?" name="patron-faq">
+            <Text as="p" tone="muted">
+              One for every $1.50 of your monthly pledge, rounded to the nearest whole account: $1.50 gets 1, $3 gets 2,
+              $15 gets 10. It tops out at 50 accounts, which is $75/month. Any pledge gets at least one.
+            </Text>
+          </Disclosure>
+          <Disclosure variant="bordered" title="What is the Player Tracker?" name="patron-faq">
+            <Text as="p" tone="muted">
+              A profile for each of your prioritized accounts: full match history, rank progression, hero breakdowns,
+              and the players you queue with and against. The demo profile linked above shows what it looks like.
+            </Text>
+          </Disclosure>
+          <Disclosure variant="bordered" title="Can I change which accounts are prioritized?" name="patron-faq">
+            <Text as="p" tone="muted">
+              Yes. Remove an account on this page and add another. The removed account&apos;s slot opens again after 24
+              hours.
+            </Text>
+          </Disclosure>
+          <Disclosure variant="bordered" title="Where does the money go?" name="patron-faq">
+            <Text as="p" tone="muted">
+              Every cent goes to infrastructure: the servers behind the API and this site.
+            </Text>
+          </Disclosure>
+        </Stack>
+      </Section>
     </PageShell>
   );
 }
@@ -100,7 +153,7 @@ export function NotSubscribedState() {
         description="Subscribe on Patreon to unlock dedicated queue access with reserved resources. Your match data and stats will be fetched faster and more reliably, and upstreamed to Statlocker, Tracklock, Lockblaze, or your favorite stat tracking site."
         action={
           <Button size="lg" asChild>
-            <a href="https://www.patreon.com/c/manuelhexe" target="_blank" rel="noopener noreferrer">
+            <a href={PATREON_URL} target="_blank" rel="noopener noreferrer">
               Subscribe on Patreon
               <ArrowRight />
             </a>
