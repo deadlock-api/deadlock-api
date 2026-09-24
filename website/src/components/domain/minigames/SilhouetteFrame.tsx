@@ -1,3 +1,5 @@
+import { useId } from "react";
+
 import { cn } from "~/lib/utils";
 
 interface SilhouetteFrameProps extends React.ComponentProps<"div"> {
@@ -11,7 +13,8 @@ interface SilhouetteFrameProps extends React.ComponentProps<"div"> {
 
 /**
  * Mystery art: the image is hidden behind a solid brand silhouette, and comes back to itself as the round is solved.
- * The children are the art; the frame owns the filter and its transition.
+ * The children are the art; the frame owns the filter. The art needs a transparent background, or its silhouette is
+ * its bounding box.
  */
 export function SilhouetteFrame({
   state = "hidden",
@@ -24,6 +27,8 @@ export function SilhouetteFrame({
 }: SilhouetteFrameProps) {
   const shown = state === "revealed" ? 1 : Math.max(0, Math.min(1, reveal ?? 0));
   const silhouetted = shown < 1;
+  // `url(#…)` takes the id as written, and React's ids carry characters a CSS url would need escaped.
+  const filterId = `silhouette-${useId().replace(/[^\w-]/g, "")}`;
   return (
     <div
       data-slot="silhouette-frame"
@@ -32,25 +37,27 @@ export function SilhouetteFrame({
       role="img"
       aria-label={label ?? (state === "revealed" ? undefined : "Hidden art")}
       className={cn(
-        "relative isolate inline-flex overflow-hidden transition-[filter,opacity] duration-slow motion-reduce:transition-none",
+        "relative isolate inline-flex overflow-hidden",
         "[&_img]:transition-[filter,opacity] [&_img]:duration-slow",
         className,
       )}
-      style={{
-        // A brightness of 0 collapses the art to black; the brand fill is then laid over it through the mask.
-        filter: silhouetted ? `brightness(${shown}) contrast(${1 + (1 - shown)})` : undefined,
-        ...style,
-      }}
+      style={style}
       {...props}
     >
       {silhouetted && (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-10 bg-primary mix-blend-color"
-          style={{ opacity: 1 - shown }}
-        />
+        // The fill takes the art's own outline (its alpha), so transparent pixels stay transparent; a filter or
+        // overlay on the whole box painted the box itself, one solid square.
+        <svg aria-hidden="true" width="0" height="0" className="absolute">
+          <filter id={filterId} colorInterpolationFilters="sRGB">
+            <feFlood style={{ floodColor: "var(--color-primary)" }} />
+            <feComposite in2="SourceAlpha" operator="in" result="shape" />
+            <feComposite in="SourceGraphic" in2="shape" operator="arithmetic" k2={shown} k3={1 - shown} />
+          </filter>
+        </svg>
       )}
-      {children}
+      <span className="inline-flex size-full" style={{ filter: silhouetted ? `url(#${filterId})` : undefined }}>
+        {children}
+      </span>
     </div>
   );
 }
