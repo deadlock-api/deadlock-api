@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
+import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -19,6 +21,11 @@ import { shrunkWinRate } from "~/lib/shrinkage";
 import { queryKeys } from "~/queries/query-keys";
 
 import { useHeroCombFilters } from "./useHeroCombFilters";
+
+const SORT_KEYS = ["winRate", "share", "matches"] as const;
+type SortKey = (typeof SORT_KEYS)[number];
+const parseAsSortKey = parseAsStringLiteral(SORT_KEYS);
+const parseAsSortDir = parseAsStringLiteral(["desc", "asc"] as const);
 
 const combKey = (heroIds: number[]) => [...heroIds].sort((a, b) => a - b).join("-");
 
@@ -143,15 +150,30 @@ export function HeroCombStatsTable({
     return map;
   }, [prevHeroData, combSizeFilter, includeHeroIds, excludeHeroIds]);
 
+  const [sortKey, setSortKey] = useQueryState("combo_sort", parseAsSortKey.withDefault("winRate"));
+  const [sortDir, setSortDir] = useQueryState("combo_sort_dir", parseAsSortDir.withDefault("desc"));
+  const handleSort = (key: SortKey) => {
+    if (key === sortKey) {
+      void setSortDir((dir) => (dir === "desc" ? "asc" : "desc"));
+    } else {
+      void setSortKey(key);
+      void setSortDir("desc");
+    }
+  };
+
+  // Sorted before the "Show" cut, so sorting by matches shows the most played combinations, not a reordered top 50.
   const sortedData = useMemo(
     () =>
       listableCombs(heroData, combSizeFilter, includeHeroIds, excludeHeroIds)
-        // A raw win-rate sort would put every 100% combination with a dozen matches above
-        // the ones proven over thousands.
-        .map((row) => ({ row, score: shrunkWinRate(row.wins, row.matches) }))
-        .sort((a, b) => b.score - a.score)
+        .map((row) => ({
+          row,
+          // A raw win-rate sort would put every 100% combination with a dozen matches above
+          // the ones proven over thousands. Share and match count order the same.
+          score: sortKey === "winRate" ? shrunkWinRate(row.wins, row.matches) : row.matches,
+        }))
+        .sort((a, b) => (sortDir === "desc" ? b.score - a.score : a.score - b.score))
         .map(({ row }) => row),
-    [heroData, combSizeFilter, includeHeroIds, excludeHeroIds],
+    [heroData, combSizeFilter, includeHeroIds, excludeHeroIds, sortKey, sortDir],
   );
   const sumMatches = useMemo(() => sortedData.reduce((acc, row) => acc + row.matches, 0), [sortedData]);
   const limitedData = useMemo(() => sortedData.slice(0, combsToShow), [combsToShow, sortedData]);
@@ -189,21 +211,35 @@ export function HeroCombStatsTable({
                 {!hideIndex && <TableHead className="text-center">#</TableHead>}
                 <TableHead>Hero Combination</TableHead>
                 {columns.includes("winRate") && (
-                  <TableHead className="text-center whitespace-normal">
-                    Win Rate
-                    <br />
-                    (Confidence Ranked)
-                  </TableHead>
+                  <SortableHeader
+                    label="Win Rate"
+                    sortKey="winRate"
+                    activeSortKey={sortKey}
+                    sortDir={sortDir}
+                    onSortChange={handleSort}
+                    className="whitespace-normal"
+                    description="Sorted by a confidence-adjusted win rate: a combination with few matches is pulled toward the average, so a lucky 100% over a dozen games does not outrank one proven over thousands."
+                  />
                 )}
                 {columns.includes("pickRate") && (
-                  <TableHead className="hidden text-center whitespace-normal sm:table-cell">
-                    Share of
-                    <br />
-                    Combo Matches
-                  </TableHead>
+                  <SortableHeader
+                    label="Share of Combo Matches"
+                    sortKey="share"
+                    activeSortKey={sortKey}
+                    sortDir={sortDir}
+                    onSortChange={handleSort}
+                    className="hidden whitespace-normal sm:table-cell"
+                  />
                 )}
                 {columns.includes("totalMatches") && (
-                  <TableHead className="hidden text-center sm:table-cell">Total Matches</TableHead>
+                  <SortableHeader
+                    label="Total Matches"
+                    sortKey="matches"
+                    activeSortKey={sortKey}
+                    sortDir={sortDir}
+                    onSortChange={handleSort}
+                    className="hidden sm:table-cell"
+                  />
                 )}
               </TableRow>
             </TableHeader>
