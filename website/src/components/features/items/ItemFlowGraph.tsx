@@ -16,6 +16,7 @@ import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
 import { DragScroll } from "~/components/ui/drag-scroll";
 import { Field } from "~/components/ui/field";
+import { Heading } from "~/components/ui/heading";
 import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { OptionRow } from "~/components/ui/option-row";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
@@ -209,17 +210,20 @@ function useContainerWidth() {
 const StageLockPicker = memo(function StageLockPicker({
   candidates,
   column,
+  stage,
   onLock,
 }: {
   candidates: Candidate[];
   column: number;
+  /** The stage's name, so each column's button says which stage it locks ("Lock item, 0–9m"). */
+  stage: string;
   onLock: (key: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="xs" className="w-full text-muted-foreground">
+        <Button variant="outline" size="xs" className="w-full text-muted-foreground" aria-label={`Lock item, ${stage}`}>
           <Plus />
           Lock item
         </Button>
@@ -848,7 +852,9 @@ export function ItemFlowGraph({
                           style={{ left: meta.x, top: 0, width: layout.cardWidth }}
                         >
                           <div>
-                            <div className="text-center text-sm font-semibold">{title}</div>
+                            <Heading as="h3" size="sm" className="text-center">
+                              {title}
+                            </Heading>
                             <div className="text-center text-3xs text-muted-foreground">{sub}</div>
                             <div
                               className={cn(
@@ -872,6 +878,7 @@ export function ItemFlowGraph({
                                     aria-pressed={!off}
                                     onClick={() => toggleTier(meta.column, t)}
                                     title={`${off ? "Show" : "Hide"} tier ${t} items in this stage`}
+                                    aria-label={`T${t}, tier ${t} items at ${title}`}
                                   >
                                     T{t}
                                   </Button>
@@ -879,7 +886,12 @@ export function ItemFlowGraph({
                               })}
                             </div>
                           )}
-                          <StageLockPicker candidates={meta.candidates} column={meta.column} onLock={toggleLock} />
+                          <StageLockPicker
+                            candidates={meta.candidates}
+                            column={meta.column}
+                            stage={title}
+                            onLock={toggleLock}
+                          />
                         </Stack>
                       );
                     })}
