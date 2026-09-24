@@ -1,12 +1,54 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
+import { useCallback } from "react";
 
 import { FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
-/** A vertical list of links: the app's main navigation, or the index of a long page. */
-export function SideNav({ className, ...props }: React.ComponentProps<"nav">) {
-  return <nav data-slot="side-nav" className={cn("flex flex-col gap-4", className)} {...props} />;
+/**
+ * Scrolls a list that overflows until its active item is on screen, on mount and whenever the active item changes.
+ * The last groups sat below the fold of a 900px screen, so a page there opened with its own entry out of sight.
+ */
+function keepActiveItemInView(list: HTMLElement): () => void {
+  const reveal = () => {
+    const item = list.querySelector<HTMLElement>("[data-slot=side-nav-item][data-active]");
+    if (!item || list.scrollHeight <= list.clientHeight) return;
+    const box = list.getBoundingClientRect();
+    const itemBox = item.getBoundingClientRect();
+    if (itemBox.top < box.top) list.scrollTop -= box.top - itemBox.top + itemBox.height;
+    else if (itemBox.bottom > box.bottom) list.scrollTop += itemBox.bottom - box.bottom + itemBox.height;
+  };
+  const observer = new MutationObserver(reveal);
+  observer.observe(list, { subtree: true, attributes: true, attributeFilter: ["data-active"] });
+  // A drawer mounts its list before it has a size; the first layout it gets is when the reveal can measure.
+  const resize = new ResizeObserver(reveal);
+  resize.observe(list);
+  return () => {
+    observer.disconnect();
+    resize.disconnect();
+  };
+}
+
+/**
+ * A vertical list of links: the app's main navigation, or the index of a long page. When it scrolls, the active item
+ * is kept in view.
+ */
+export function SideNav({ className, ref, ...props }: React.ComponentProps<"nav">) {
+  const composedRef = useCallback(
+    (node: HTMLElement | null) => {
+      if (typeof ref === "function") ref(node);
+      else if (ref) ref.current = node;
+      if (!node) return;
+      const stop = keepActiveItemInView(node);
+      return () => {
+        stop();
+        if (typeof ref === "function") ref(null);
+        else if (ref) ref.current = null;
+      };
+    },
+    [ref],
+  );
+  return <nav ref={composedRef} data-slot="side-nav" className={cn("flex flex-col gap-4", className)} {...props} />;
 }
 
 export function SideNavGroup({
