@@ -1,6 +1,6 @@
 import { sql } from "@codemirror/lang-sql";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
-import { Download, Play } from "lucide-react";
+import { Download, Play, Square } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ResultGrid } from "~/components/patterns/data-table/ResultGrid";
@@ -15,6 +15,7 @@ import { TextLink } from "~/components/ui/text-link";
 import {
   type DuckDbHandle,
   type QueryColumn,
+  QueryCancelledError,
   ensureViews,
   initDuckDb,
   parseTableRefs,
@@ -80,6 +81,11 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
   const [queryError, setQueryError] = useState<string | null>(null);
   const [duration, setDuration] = useState<number | null>(null);
   const [handle, setHandle] = useState<DuckDbHandle | null>(null);
+  const [cancelled, setCancelled] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Closing the playground stops whatever it is still running.
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const tableMap = useMemo(() => new Map(tables.map((t) => [t.name, t.urls])), [tables]);
 
@@ -111,9 +117,12 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
   }, [open]);
 
   const runQuery = useCallback(async () => {
-    if (!handle) return;
+    if (!handle || abortRef.current) return;
+    const controller = new AbortController();
+    abortRef.current = controller;
     setRunning(true);
     setQueryError(null);
+    setCancelled(false);
     setStatus(null);
     const start = performance.now();
     try {
@@ -123,20 +132,27 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
         setStatus(`Registered ${created.length} table${created.length === 1 ? "" : "s"}…`);
       }
       setStatus("Running query…");
-      const { columns, rows: allRows } = await runDuckDbQuery(handle, query);
-      const truncated = allRows.length > RESULT_ROW_LIMIT;
-      const rows = truncated ? allRows.slice(0, RESULT_ROW_LIMIT) : allRows;
+      const { columns, rows, truncated } = await runDuckDbQuery(handle, query, {
+        maxRows: RESULT_ROW_LIMIT,
+        signal: controller.signal,
+      });
       setResult({ columns, rows, truncated });
       setDuration(performance.now() - start);
       setStatus(null);
     } catch (e) {
-      setQueryError(e instanceof Error ? e.message : "Query failed");
+      if (e instanceof QueryCancelledError) setCancelled(true);
+      else setQueryError(e instanceof Error ? e.message : "Query failed");
       setResult(null);
       setDuration(null);
       setStatus(null);
     }
+    abortRef.current = null;
     setRunning(false);
   }, [handle, query, tableMap]);
+
+  const cancelQuery = () => {
+    abortRef.current?.abort();
+  };
 
   const cmExtensions = useMemo(
     () => [sql({ schema: cmSchema, upperCaseKeywords: true }), EditorView.lineWrapping],
@@ -223,30 +239,50 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
             </Card>
 
             <Inline justify="between" wrap="nowrap">
-              <Button onClick={runQuery} disabled={initState !== "ready" || running} size="sm" className="gap-1.5">
-                {running ? <Spinner size="sm" /> : <Play className="size-3.5" />}
-                {running ? "Running…" : "Run query"}
-              </Button>
-              <Text variant="caption" tone="muted" numeric="tabular">
-                {status && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Spinner size="xs" />
-                    {status}
-                  </span>
-                )}
-                {!status && duration != null && !queryError && (
-                  <>
-                    {result?.rows.length ?? 0} row{result?.rows.length === 1 ? "" : "s"}
-                    {result?.truncated && ` (truncated to ${RESULT_ROW_LIMIT})`} · {Math.round(duration)} ms
-                  </>
-                )}
-              </Text>
+              {/* One button that turns into Cancel, so the focus stays on it while the query runs. */}
+              {running ? (
+                <Button variant="outline" onClick={cancelQuery} size="sm" className="gap-1.5">
+                  <Square className="size-3.5" />
+                  Cancel
+                </Button>
+              ) : (
+                <Button onClick={runQuery} disabled={initState !== "ready"} size="sm" className="gap-1.5">
+                  <Play className="size-3.5" />
+                  Run query
+                </Button>
+              )}
+              <output>
+                <Text variant="caption" tone="muted" numeric="tabular">
+                  {status && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Spinner size="xs" />
+                      {status}
+                    </span>
+                  )}
+                  {!status && duration != null && !queryError && (
+                    <>
+                      {result?.truncated
+                        ? `First ${RESULT_ROW_LIMIT} rows`
+                        : `${result?.rows.length ?? 0} row${result?.rows.length === 1 ? "" : "s"}`}{" "}
+                      · {Math.round(duration)} ms
+                    </>
+                  )}
+                  {!status && cancelled && "Query cancelled"}
+                </Text>
+              </output>
             </Inline>
           </Stack>
 
           <Stack gap={2} className="min-h-0">
             <Inline justify="between" wrap="nowrap">
-              <Text variant="eyebrow">Results</Text>
+              <Inline gap={2}>
+                <Text variant="eyebrow">Results</Text>
+                {result?.truncated && !queryError && (
+                  <Text variant="caption" tone="muted">
+                    Showing the first {RESULT_ROW_LIMIT} rows · add a LIMIT or aggregate to see the rest
+                  </Text>
+                )}
+              </Inline>
               {result && !queryError && (
                 <Button
                   type="button"
@@ -285,7 +321,7 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
                     align="center"
                     className="flex h-full items-center justify-center p-6"
                   >
-                    {RESULT_PLACEHOLDER[initState]}
+                    {cancelled ? "Query cancelled." : RESULT_PLACEHOLDER[initState]}
                   </Text>
                 )}
               </Card>

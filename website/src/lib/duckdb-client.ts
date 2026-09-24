@@ -58,20 +58,63 @@ export interface QueryColumn {
 export interface QueryRows {
   columns: QueryColumn[];
   rows: unknown[][];
+  /** More rows exist than `maxRows`; they were never read. */
+  truncated: boolean;
 }
 
-export async function runDuckDbQuery(handle: DuckDbHandle, sql: string): Promise<QueryRows> {
+export interface RunQueryOptions {
+  /** Rows to read at most. The rest of the result is never materialized, so a 15M-row table costs one batch. */
+  maxRows?: number;
+  /** Aborting cancels the query inside DuckDB and rejects with `QueryCancelledError`. */
+  signal?: AbortSignal;
+}
+
+export class QueryCancelledError extends Error {
+  constructor() {
+    super("Query cancelled");
+    this.name = "QueryCancelledError";
+  }
+}
+
+export async function runDuckDbQuery(
+  handle: DuckDbHandle,
+  sql: string,
+  { maxRows = Number.POSITIVE_INFINITY, signal }: RunQueryOptions = {},
+): Promise<QueryRows> {
+  if (signal?.aborted) throw new QueryCancelledError();
   const conn = await handle.db.connect();
+  // The worker polls a pending query in small steps, so a cancel queued between two polls stops it.
+  const onAbort = () => {
+    conn.cancelSent().catch(() => undefined);
+  };
+  signal?.addEventListener("abort", onAbort, { once: true });
   try {
-    const arrowResult = await conn.query(sql);
-    const columns: QueryColumn[] = arrowResult.schema.fields.map((f) => ({
-      name: f.name,
-      type: String(f.type ?? "unknown"),
-    }));
-    const rowObjects = arrowResult.toArray() as Array<Record<string, unknown>>;
-    const rows = rowObjects.map((r) => columns.map((c) => r[c.name]));
-    return { columns, rows };
+    // A streamed result is produced batch by batch as it is read: stopping after `maxRows` leaves the rest unread.
+    const reader = await conn.send(sql, true);
+    // Opening reads the schema message, so an empty result still has its columns.
+    await reader.open();
+    const fields = reader.schema.fields;
+    const columns: QueryColumn[] = fields.map((f) => ({ name: f.name, type: String(f.type ?? "unknown") }));
+    const rows: unknown[][] = [];
+    let truncated = false;
+    batches: for await (const batch of reader) {
+      if (signal?.aborted) throw new QueryCancelledError();
+      const vectors = fields.map((_, j) => batch.getChildAt(j));
+      for (let i = 0; i < batch.numRows; i++) {
+        if (rows.length >= maxRows) {
+          truncated = true;
+          break batches;
+        }
+        rows.push(vectors.map((v) => v?.get(i) ?? null));
+      }
+    }
+    if (signal?.aborted) throw new QueryCancelledError();
+    return { columns, rows, truncated };
+  } catch (e) {
+    if (signal?.aborted) throw new QueryCancelledError();
+    throw e;
   } finally {
+    signal?.removeEventListener("abort", onAbort);
     await conn.close();
   }
 }
