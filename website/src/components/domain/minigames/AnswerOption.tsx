@@ -9,12 +9,12 @@ import { cn } from "~/lib/utils";
 const answerOptionVariants = cva(
   [
     FOCUS_RING_BORDER,
-    "cursor-target flex items-center border font-mono transition-colors duration-fast disabled:cursor-default",
+    "cursor-target flex items-center border font-mono transition-colors duration-fast disabled:cursor-default aria-disabled:cursor-default",
   ],
   {
     variants: {
       state: {
-        idle: "border-border bg-card/60 text-foreground enabled:hover:border-primary/50 enabled:hover:bg-primary/5 enabled:hover:text-primary",
+        idle: "border-border bg-card/60 text-foreground enabled:not-aria-disabled:hover:border-primary/50 enabled:not-aria-disabled:hover:bg-primary/5 enabled:not-aria-disabled:hover:text-primary",
         selected: "border-primary/60 bg-primary/15 text-primary",
         correct: "border-positive/60 bg-positive/10 text-positive",
         wrong: "border-negative/60 bg-negative/10 text-negative",
@@ -60,7 +60,12 @@ interface AnswerOptionProps
   shortcut?: string;
 }
 
-/** One answer of a quiz, in every game. The result is carried by a mark as well as by color. */
+/**
+ * One answer of a quiz, in every game. The result is carried by a mark as well as by color.
+ *
+ * While an answer is revealed the options take `aria-disabled` rather than `disabled`: they stay focusable, so focus
+ * stays on the answer just picked instead of falling to <body>, and a click or Enter on them does nothing.
+ */
 export function AnswerOption({
   state = "idle",
   variant = "row",
@@ -69,8 +74,10 @@ export function AnswerOption({
   children,
   disabled,
   shortcut,
+  onClick,
   ...props
 }: AnswerOptionProps) {
+  const locked = disabled || props["aria-disabled"] === true || props["aria-disabled"] === "true";
   return (
     // ds-allow raw-button: quiz answer tile, a bespoke hit area whose content ranges from a name to an item card
     <motion.button
@@ -78,10 +85,11 @@ export function AnswerOption({
       data-slot="answer-option"
       data-state={state}
       disabled={disabled}
-      whileTap={disabled ? undefined : { scale: 0.97, transition: { duration: 0 } }}
+      whileTap={locked ? undefined : { scale: 0.97, transition: { duration: 0 } }}
       transition={{ type: "spring", stiffness: 400, damping: 17 }}
       className={cn(answerOptionVariants({ state, variant, tone }), className)}
       aria-keyshortcuts={shortcut}
+      onClick={locked ? undefined : onClick}
       {...props}
     >
       {shortcut ? (

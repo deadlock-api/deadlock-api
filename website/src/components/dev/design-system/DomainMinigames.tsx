@@ -21,7 +21,7 @@ export function DomainMinigames() {
       <Specimen
         name="AnswerOption"
         source="domain/minigames/AnswerOption"
-        note="One answer of a quiz, in every game. row is a full-width answer with a trailing result mark; tile is one of a few short choices on a line. After the reveal, revealedState() maps each option to correct, wrong or dimmed. shortcut draws the key that picks it as a keycap in front of the text (fine pointers only) and sets aria-keyshortcuts; the game listens for the key."
+        note="One answer of a quiz, in every game. row is a full-width answer with a trailing result mark; tile is one of a few short choices on a line. After the reveal, revealedState() maps each option to correct, wrong or dimmed. shortcut draws the key that picks it as a keycap in front of the text (fine pointers only) and sets aria-keyshortcuts; the game listens for the key. During a reveal the options take aria-disabled rather than disabled: they stay focusable, so focus stays on the answer just picked, and ignore clicks and Enter."
         className="theme-terminal"
       >
         <Variants label="row · idle, selected, correct, wrong, dimmed" className="max-w-lg flex-col items-stretch">
@@ -57,7 +57,7 @@ export function DomainMinigames() {
               key={option}
               state={picked === null ? "idle" : revealedState(i === QUIZ_ANSWER, i === picked)}
               onClick={() => setPicked(i)}
-              disabled={picked !== null}
+              aria-disabled={picked !== null || undefined}
             >
               {option}
             </AnswerOption>

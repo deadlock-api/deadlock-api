@@ -10,6 +10,7 @@ import { useHydrated } from "~/hooks/useHydrated";
 import { cn } from "~/lib/utils";
 
 import {
+  AnswerAnnouncement,
   FlashcardMastered,
   FlashcardPage,
   FlashcardStatStrip,
@@ -19,6 +20,7 @@ import {
 } from "./FlashcardChrome";
 import { useAnswerKeys } from "./use-answer-keys";
 import { useFlashcardProgress } from "./use-flashcard-progress";
+import { useNextCardFocus } from "./use-next-card-focus";
 
 const OPTION_COUNT = 4;
 const CORRECT_FEEDBACK_MS = 500;
@@ -142,18 +144,13 @@ function FlashcardGameReady<T extends FlashcardEntry>({
     };
   }, []);
 
-  // Answering disables the options and the next card replaces them, dropping focus to <body>; after an answer the next
-  // card's first option takes it back, so the deck can be played with the keyboard alone.
-  const answered = useRef(false);
-  const focusFirstOption = useCallback((element: HTMLButtonElement | null) => {
-    if (element && answered.current && document.activeElement === document.body) element.focus();
-  }, []);
+  const { markAnswered, focusFirstOption } = useNextCardFocus();
 
   const handleChoice = useCallback(
     (id: number) => {
       if (!card || selected !== null) return;
       setSelected(id);
-      answered.current = true;
+      markAnswered();
       const correct = id === card.answer.id;
       const nextSeen = recordAnswer(card.answer.id, correct);
       advanceTimer.current = window.setTimeout(
@@ -166,7 +163,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
         correct ? CORRECT_FEEDBACK_MS : WRONG_FEEDBACK_MS,
       );
     },
-    [card, selected, pool, noRepeats, recordAnswer],
+    [card, selected, pool, noRepeats, recordAnswer, markAnswered],
   );
 
   const pickByKey = useCallback(
@@ -203,10 +200,12 @@ function FlashcardGameReady<T extends FlashcardEntry>({
   const masteredInPool = pool.reduce((count, entry) => count + Number(seenIds.has(entry.id)), 0);
   // The last card keeps its verdict on screen before "mastered" replaces it.
   const exhausted = noRepeats && pool.length > 0 && masteredInPool >= pool.length && selected === null;
+  const verdict = card === null || selected === null ? null : selected === card.answer.id ? "correct" : "wrong";
 
   return (
     <FlashcardPage title={title} subtitle={subtitle}>
       <FlashcardStatStrip stats={stats} onReset={resetStats} />
+      <AnswerAnnouncement verdict={verdict} answer={card?.answer.name ?? ""} />
 
       <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-xs tracking-wider uppercase">
         <NoRepeatsToggle
@@ -236,10 +235,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
             className="flex flex-col items-center gap-6"
           >
             <div className={cn("relative", promptClassName)}>
-              <PromptFrame
-                verdict={selected === null ? null : selected === card.answer.id ? "correct" : "wrong"}
-                className="size-full"
-              >
+              <PromptFrame verdict={verdict} className="size-full">
                 {renderPrompt(card.answer)}
               </PromptFrame>
               <AnimatePresence>
@@ -251,7 +247,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
                     transition={{ duration: 0.18, ease: "easeOut" }}
                     className="absolute end-2 top-2"
                   >
-                    <ResultMark correct={selected === card.answer.id} />
+                    <ResultMark correct={verdict === "correct"} />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -267,7 +263,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
                   }
                   onClick={() => handleChoice(option.id)}
                   shortcut={String(index + 1)}
-                  disabled={selected !== null}
+                  aria-disabled={selected !== null || undefined}
                 >
                   {renderOption(option)}
                 </AnswerOption>

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AnswerOption, revealedState } from "~/components/domain/minigames/AnswerOption";
 import {
+  AnswerAnnouncement,
   FlashcardMastered,
   FlashcardPage,
   FlashcardStatStrip,
@@ -15,6 +16,7 @@ import {
 } from "~/components/features/flashcards/FlashcardChrome";
 import { useAnswerKeys } from "~/components/features/flashcards/use-answer-keys";
 import { useFlashcardProgress } from "~/components/features/flashcards/use-flashcard-progress";
+import { useNextCardFocus } from "~/components/features/flashcards/use-next-card-focus";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -239,6 +241,7 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
   const [dealt, setDealt] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const advanceTimer = useRef<number | null>(null);
+  const { markAnswered, focusFirstOption } = useNextCardFocus();
 
   // The first card waits for the saved progress, so "No repeats" never opens on a card already mastered.
   if (loaded && !dealt) {
@@ -278,6 +281,7 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
       if (!card || selected !== null) return;
 
       setSelected(key);
+      markAnswered();
       const correct = key === card.answer.answerKey;
 
       const nextSeen = recordAnswer(card.answer.id, correct);
@@ -291,7 +295,7 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
         correct ? CORRECT_FEEDBACK_MS : WRONG_FEEDBACK_MS,
       );
     },
-    [card, selected, noRepeats, recordAnswer, pool],
+    [card, selected, noRepeats, recordAnswer, pool, markAnswered],
   );
 
   const pickByKey = useCallback(
@@ -308,10 +312,12 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
   const masteredInPool = pool.reduce((count, entry) => count + Number(seenIds.has(entry.id)), 0);
   // The last card keeps its verdict on screen before "mastered" replaces it.
   const exhausted = noRepeats && pool.length > 0 && masteredInPool >= pool.length && selected === null;
+  const verdict = card === null || selected === null ? null : selected === card.answer.answerKey ? "correct" : "wrong";
 
   return (
     <FlashcardPage title={TITLE} subtitle={SUBTITLE}>
       <FlashcardStatStrip stats={stats} onReset={resetGame} />
+      <AnswerAnnouncement verdict={verdict} answer={card?.answer.answerLabel ?? ""} />
 
       <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-xs tracking-wider uppercase">
         <NoRepeatsToggle
@@ -339,10 +345,7 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
             transition={{ duration: 0.18, ease: "easeOut" }}
             className="flex flex-col items-center gap-6"
           >
-            <PromptFrame
-              verdict={selected === null ? null : selected === card.answer.answerKey ? "correct" : "wrong"}
-              className="w-full max-w-xl flex-row items-center gap-4 p-4"
-            >
+            <PromptFrame verdict={verdict} className="w-full max-w-xl flex-row items-center gap-4 p-4">
               <img
                 src={itemImageSrc(card.answer.target)}
                 alt={card.answer.target.name}
@@ -376,7 +379,7 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.18, ease: "easeOut" }}
                   >
-                    <ResultMark correct={selected === card.answer.answerKey} />
+                    <ResultMark correct={verdict === "correct"} />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -386,6 +389,7 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
               {card.options.map((option, index) => (
                 <AnswerOption
                   key={option.key}
+                  ref={index === 0 ? focusFirstOption : undefined}
                   state={
                     selected === null
                       ? "idle"
@@ -393,7 +397,7 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
                   }
                   onClick={() => handleChoice(option.key)}
                   shortcut={String(index + 1)}
-                  disabled={selected !== null}
+                  aria-disabled={selected !== null || undefined}
                   className="min-h-20 px-3"
                 >
                   <ComponentPath option={option} />

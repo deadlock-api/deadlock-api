@@ -137,3 +137,15 @@ export function PromptFrame({
 }: Omit<React.ComponentProps<typeof Card>, "tone" | "size"> & { verdict: "correct" | "wrong" | null }) {
   return <Card tone={verdict ? VERDICT_TONE[verdict] : "card"} size="flush" className={className} {...props} />;
 }
+
+/**
+ * Says the verdict of the card just answered to a screen reader, with the right answer when the pick was wrong. It is
+ * mounted with the deck and empties between cards, so every verdict is read, two wrong answers in a row included.
+ */
+export function AnswerAnnouncement({ verdict, answer }: { verdict: "correct" | "wrong" | null; answer: string }) {
+  return (
+    <output className="sr-only">
+      {verdict === "correct" ? `Correct: ${answer}.` : verdict === "wrong" ? `Wrong. The answer was ${answer}.` : ""}
+    </output>
+  );
+}
