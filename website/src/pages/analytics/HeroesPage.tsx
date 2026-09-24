@@ -124,15 +124,15 @@ export function HeroesPage() {
           value={filters.tab ?? undefined}
           onValueChange={(value) => filters.setTab(value as HeroTab)}
         >
-          <ResponsiveTab value="stats">Overall Stats</ResponsiveTab>
+          <ResponsiveTab value="stats">Overall</ResponsiveTab>
           <ResponsiveTab value="tier-list">Tier List</ResponsiveTab>
           <ResponsiveTab value="stats-over-time">Over Time</ResponsiveTab>
-          <ResponsiveTab value="stats-by-duration">By Duration</ResponsiveTab>
+          <ResponsiveTab value="stats-by-duration">By Length</ResponsiveTab>
           <ResponsiveTab value="stats-by-rank">By Rank</ResponsiveTab>
           <ResponsiveTab value="stats-by-experience">By Experience</ResponsiveTab>
           <ResponsiveTab value="hero-combs">Combos</ResponsiveTab>
           <ResponsiveTab value="matchups">Matchups</ResponsiveTab>
-          <ResponsiveTab value="hero-matchup-details">Matchup Details</ResponsiveTab>
+          <ResponsiveTab value="hero-matchup-details">Head to Head</ResponsiveTab>
           <ResponsiveTab value="hero-scoreboard">Scoreboard</ResponsiveTab>
         </ResponsiveTabsList>
 
