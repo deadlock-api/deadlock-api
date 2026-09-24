@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
-import { Cell, Pie, PieChart } from "recharts";
+import { Pie, PieChart } from "recharts";
 
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
@@ -109,7 +109,8 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
           <ChartSurface label="Soul income by source" size="fill" variant="bare">
             <PieChart>
               <Pie
-                data={breakdown}
+                // Recharts colours each sector from its data point's `fill`.
+                data={breakdown.map((row) => ({ ...row, fill: row.color }))}
                 dataKey="value"
                 nameKey="label"
                 innerRadius="62%"
@@ -118,11 +119,7 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
                 stroke="none"
                 isAnimationActive={false}
                 tabIndex={-1}
-              >
-                {breakdown.map((entry) => (
-                  <Cell key={entry.key} fill={entry.color} />
-                ))}
-              </Pie>
+              />
             </PieChart>
           </ChartSurface>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">

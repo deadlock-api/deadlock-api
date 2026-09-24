@@ -35,7 +35,7 @@ export function MatchImportControl({
   const [invalid, setInvalid] = useState(false);
 
   // A pasted match link works as well as the bare ID: the last run of digits is the match.
-  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+  const submit = (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const parsed = Number(draft.match(/\d+/g)?.at(-1));
     const valid = Number.isSafeInteger(parsed) && parsed > 0;

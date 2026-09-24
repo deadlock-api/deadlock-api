@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AbilityOrderStatsGameModeEnum } from "deadlock_api_client";
-import { motion, MotionConfig } from "framer-motion";
+import { motion, MotionConfig, stagger } from "framer-motion";
 import { useCallback, useMemo, useState } from "react";
 
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -200,7 +200,7 @@ export default function AbilityOrderTree({
           animate="show"
           variants={{
             hidden: {},
-            show: { transition: { staggerChildren: 0.06 } },
+            show: { transition: { delayChildren: stagger(0.06) } },
           }}
         >
           {displayedRoots.map((child, i) => {

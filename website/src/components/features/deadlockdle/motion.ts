@@ -1,4 +1,4 @@
-import type { Transition, Variants } from "framer-motion";
+import { stagger as staggerDelay, type Transition, type Variants } from "framer-motion";
 
 /**
  * framer-motion animates in JavaScript and takes seconds as numbers, so it cannot read `var(--duration-*)`. These
@@ -12,7 +12,7 @@ export const enter: Transition = { duration: DURATION.slow, ease: "easeOut" };
 /** The parent of a group whose children arrive one after the other; each child takes `fadeUp`. */
 export const stagger: Variants = {
   hidden: {},
-  show: { transition: { staggerChildren: DURATION.fast / 2, delayChildren: DURATION.fast } },
+  show: { transition: { delayChildren: staggerDelay(DURATION.fast / 2, { startDelay: DURATION.fast }) } },
 };
 
 export const fadeUp: Variants = {

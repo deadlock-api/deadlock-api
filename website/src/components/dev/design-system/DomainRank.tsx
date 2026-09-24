@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Bar, BarChart, CartesianGrid, Cell, Customized, ReferenceLine, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts";
 
 import { Specimen } from "~/components/dev/design-system/Specimen";
 import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/RankTierIcons";
@@ -47,28 +47,34 @@ export function DomainRank() {
       name: rank?.name ?? `Tier ${tier}`,
       image: rank?.images.large_webp ?? rank?.images.large ?? undefined,
       color: rank?.color ?? CHART_COLOR.fallback,
+      // Recharts colours each bar from its data point's `fill`.
+      fill: rank?.color ?? CHART_COLOR.fallback,
     };
   });
-  const namedTiers = tiers.slice(0, 5).map(({ tier, winRate, name, color }) => ({ tier, winRate, name, color }));
+  const namedTiers = tiers
+    .slice(0, 5)
+    .map(({ tier, winRate, name, color, fill }) => ({ tier, winRate, name, color, fill }));
+  const playersByBadge = PLAYERS_BY_BADGE.map(({ badge, tier, players }) => ({
+    badge,
+    tier,
+    players,
+    fill: rankByTier.get(tier)?.color ?? CHART_COLOR.fallback,
+  }));
 
   return (
     <>
       <Specimen
         name="RankTierIcons"
         source="domain/rank/RankTierIcons"
-        note="For a chart with one bar per badge (tier * 10 + subtier): draws each tier's badge once, centred under its subtier bars. Render it through <Customized> and give the XAxis a height of RANK_ICON_AXIS_HEIGHT."
+        note="For a chart with one bar per badge (tier * 10 + subtier): draws each tier's badge once, centred under its subtier bars. Render it as a direct child of the chart and give the XAxis a height of RANK_ICON_AXIS_HEIGHT."
       >
         <ChartSurface label="Players by rank badge" size="md">
-          <BarChart data={PLAYERS_BY_BADGE} margin={CHART_MARGIN}>
+          <BarChart data={playersByBadge} margin={CHART_MARGIN}>
             <CartesianGrid {...CHART_GRID} />
             <XAxis {...CHART_X_AXIS} dataKey="badge" tick={false} height={RANK_ICON_AXIS_HEIGHT} />
             <YAxis {...CHART_Y_AXIS} />
-            <Bar dataKey="players" radius={2} isAnimationActive={false}>
-              {PLAYERS_BY_BADGE.map((entry) => (
-                <Cell key={entry.badge} fill={rankByTier.get(entry.tier)?.color ?? CHART_COLOR.fallback} />
-              ))}
-            </Bar>
-            <Customized component={<RankTierIcons tiers={TIER_SPANS} ranks={rankByTier} />} />
+            <Bar dataKey="players" radius={2} isAnimationActive={false} />
+            <RankTierIcons tiers={TIER_SPANS} ranks={rankByTier} />
           </BarChart>
         </ChartSurface>
       </Specimen>
@@ -90,11 +96,11 @@ export function DomainRank() {
               tickFormatter={percent}
             />
             <ReferenceLine y={0.5} {...CHART_BASELINE} />
-            <Bar dataKey={(entry: (typeof tiers)[number]) => [0.5, entry.winRate]} radius={4} isAnimationActive={false}>
-              {tiers.map((entry) => (
-                <Cell key={entry.tier} fill={entry.color} />
-              ))}
-            </Bar>
+            <Bar
+              dataKey={(entry: (typeof tiers)[number]) => [0.5, entry.winRate]}
+              radius={4}
+              isAnimationActive={false}
+            />
           </BarChart>
         </ChartSurface>
         <ChartSurface label="Win rate by rank tier, RankTierTick without badge images" size="md">
@@ -118,11 +124,7 @@ export function DomainRank() {
               dataKey={(entry: (typeof namedTiers)[number]) => [0.5, entry.winRate]}
               radius={4}
               isAnimationActive={false}
-            >
-              {namedTiers.map((entry) => (
-                <Cell key={entry.tier} fill={entry.color} />
-              ))}
-            </Bar>
+            />
           </BarChart>
         </ChartSurface>
       </Specimen>

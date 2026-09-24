@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
 import { useSeasons } from "~/hooks/useSeasons";
 import { PATCHES, type PatchInfo } from "~/lib/constants";
-import type { DateFilterAction, DateRange } from "~/lib/date-filter-preference";
+import type { DateFilterAction } from "~/lib/date-filter-preference";
 import {
   type SeasonInfo,
   computePreviousPeriod,
@@ -48,8 +48,6 @@ interface SeasonPatchDatePickerProps extends Omit<
   defaultValue?: DateValue;
   onValueChange?: (value: SeasonPatchDatePickerValue) => void;
   defaultTab?: PickerTab;
-  /** @deprecated Pass `defaultValue`. */
-  resetRange?: DateRange;
 }
 
 function inferTabFromValue({
@@ -96,7 +94,6 @@ export function SeasonPatchDatePicker({
   defaultValue,
   onValueChange,
   defaultTab = "season",
-  resetRange,
   className,
   ...props
 }: SeasonPatchDatePickerProps) {
@@ -146,7 +143,7 @@ export function SeasonPatchDatePicker({
 
   const [defaultStart, defaultEnd] = defaultValue
     ? [defaultValue.startDate, defaultValue.endDate]
-    : (resetRange ?? defaultDateRange(seasons));
+    : defaultDateRange(seasons);
   const isActive =
     value.startDate?.valueOf() !== defaultStart?.valueOf() || value.endDate?.valueOf() !== defaultEnd?.valueOf();
 

@@ -1,7 +1,7 @@
 import type { Rank } from "deadlock_api_client";
 import type { BadgeDistribution } from "deadlock_api_client";
 import { useMemo, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, Customized, Label, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Label, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
 import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/RankTierIcons";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
@@ -38,6 +38,8 @@ interface ChartEntry {
   badge: number;
   tier: number;
   value: number;
+  /** The bar's colour; Recharts reads it from the data point. */
+  fill: string;
   isSpacer?: boolean;
 }
 
@@ -73,15 +75,16 @@ export default function BadgeDistributionChart({
     const result: ChartEntry[] = [];
     for (let tier = minTier; tier <= maxTier; tier++) {
       if (tier > minTier) {
-        result.push({ badge: tier * 10, tier, value: 0, isSpacer: true });
+        result.push({ badge: tier * 10, tier, value: 0, fill: "transparent", isSpacer: true });
       }
+      const fill = tierData.get(tier)?.color ?? "var(--color-accent)";
       for (let sub = 1; sub <= 6; sub++) {
         const badge = tier * 10 + sub;
-        result.push({ badge, tier, value: valuePerBadge.get(badge) ?? 0 });
+        result.push({ badge, tier, value: valuePerBadge.get(badge) ?? 0, fill });
       }
     }
     return result;
-  }, [badgeDistributionData, valuePerBadge]);
+  }, [badgeDistributionData, valuePerBadge, tierData]);
 
   const shares = useMemo(() => {
     const total = chartData.reduce((sum, entry) => sum + entry.value, 0);
@@ -143,14 +146,7 @@ export default function BadgeDistributionChart({
       >
         <BarChart accessibilityLayer data={chartData}>
           <CartesianGrid {...CHART_GRID} />
-          <Bar dataKey="value" fill="var(--color-accent)" radius={4}>
-            {chartData.map((entry) => (
-              <Cell
-                key={`cell-${entry.badge}`}
-                fill={entry.isSpacer ? "transparent" : (tierData.get(entry.tier)?.color ?? "var(--color-accent)")}
-              />
-            ))}
-          </Bar>
+          <Bar dataKey="value" fill="var(--color-accent)" radius={4} />
           <Tooltip
             cursor={false}
             isAnimationActive={false}
@@ -214,7 +210,7 @@ export default function BadgeDistributionChart({
               label={{ value: "Median", position: "insideTopLeft", ...CHART_TICK }}
             />
           )}
-          <Customized component={<RankTierIcons tiers={tierCenters} ranks={tierData} />} />
+          <RankTierIcons tiers={tierCenters} ranks={tierData} />
         </BarChart>
       </ChartSurface>
     </div>

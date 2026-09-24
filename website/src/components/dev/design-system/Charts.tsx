@@ -4,7 +4,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   Line,
   LineChart,
   ReferenceLine,
@@ -41,7 +40,11 @@ const WEEKS = Array.from({ length: 10 }, (_, week) => ({
   ...Object.fromEntries(SERIES.map((name, i) => [name, 0.5 + Math.sin((week + i * 2) / 2.2) * 0.03 + i * 0.006])),
 }));
 const BY_RANK = ["Initiate", "Seeker", "Alchemist", "Arcanist", "Ritualist", "Emissary", "Archon", "Oracle"].map(
-  (rank, i) => ({ rank, winRate: 0.47 + i * 0.009 + (i % 3) * 0.004 }),
+  (rank, i) => {
+    const winRate = 0.47 + i * 0.009 + (i % 3) * 0.004;
+    // Recharts colours each bar from its data point's `fill`.
+    return { rank, winRate, fill: TONE_COLOR[toneOf(winRate, 0.5)] };
+  },
 );
 const percent = (v: number) => `${Math.round(v * 100)}%`;
 
@@ -158,11 +161,7 @@ export function Charts() {
                 dataKey={(entry: (typeof BY_RANK)[number]) => [0.5, entry.winRate]}
                 radius={4}
                 isAnimationActive={false}
-              >
-                {BY_RANK.map((entry) => (
-                  <Cell key={entry.rank} fill={TONE_COLOR[toneOf(entry.winRate, 0.5)]} />
-                ))}
-              </Bar>
+              />
             </BarChart>
           </ChartSurface>
           <div className="flex flex-col gap-3">

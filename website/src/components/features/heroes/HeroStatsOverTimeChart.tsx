@@ -13,7 +13,6 @@ import {
 } from "react";
 import {
   CartesianGrid,
-  Customized,
   type DotItemDotProps,
   Line,
   LineChart,
@@ -560,7 +559,7 @@ export function HeroStatsOverTimeChart({
                         />
                       )}
                     />
-                    <Customized component={<YScaleProbe scaleRef={yScaleRef} />} />
+                    <YScaleProbe scaleRef={yScaleRef} />
                     {chartSeries}
                   </LineChart>
                 </ChartSurface>

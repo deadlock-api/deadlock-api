@@ -15,11 +15,10 @@ interface TierSpan {
 
 /**
  * Each rank tier's badge, drawn under its subtier bars in the x axis band, where it can't hide a short bar. Give the
- * chart's `<XAxis>` a height of `RANK_ICON_AXIS_HEIGHT` to make room. Render it through `<Customized>`
- * in a chart whose x axis is keyed by badge (`tier * 10 + subtier`); it reads the axis scale from the chart context,
- * since recharts 3 no longer hands axis maps to customized components as props.
+ * chart's `<XAxis>` a height of `RANK_ICON_AXIS_HEIGHT` to make room. Render it as a direct child of a chart whose
+ * x axis is keyed by badge (`tier * 10 + subtier`); it reads the axis scale and plot area from the chart context.
  */
-// Law 6 does not apply: Recharts renders this through `<Customized>` and supplies its props, so it spreads none.
+// Law 6 does not apply: it draws an SVG layer inside a Recharts chart from the chart context, so it spreads no props.
 export function RankTierIcons({ tiers, ranks }: { tiers: TierSpan[]; ranks: ReadonlyMap<number, Rank> }) {
   const scale = useXAxisScale();
   const plot = usePlotArea();

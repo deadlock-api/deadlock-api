@@ -20,8 +20,6 @@ interface PanelWithDetailsProps extends Omit<React.ComponentProps<typeof Panel>,
   description?: ReactNode;
   /** Controls on the trailing edge of the header, in the panel and in the dialog. */
   actions?: ReactNode;
-  /** @deprecated Text is `description`, controls are `actions`. */
-  meta?: ReactNode;
   /** A footnote beside the "Show more" button. */
   footer?: ReactNode;
   /**
@@ -43,7 +41,6 @@ export function PanelWithDetails({
   icon,
   description,
   actions,
-  meta,
   footer,
   details,
   dialogSize = "full",
@@ -58,8 +55,7 @@ export function PanelWithDetails({
     onValueChange: onOpenChange,
   });
 
-  const controls = actions ?? meta;
-  const trailing = controls && <div className="ms-auto flex flex-wrap items-center gap-2">{controls}</div>;
+  const trailing = actions && <div className="ms-auto flex flex-wrap items-center gap-2">{actions}</div>;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

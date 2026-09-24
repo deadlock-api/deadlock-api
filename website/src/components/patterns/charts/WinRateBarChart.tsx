@@ -1,5 +1,5 @@
 import { cloneElement, type ComponentProps, type ReactElement } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
@@ -55,9 +55,14 @@ export function WinRateBarChart<T>({
 }: WinRateBarChartProps<T>) {
   const rate = (entry: T) => entry[valueKey] as number;
   const domain = winRateDomain([baseline, ...data.map(rate)]);
+  // Recharts colours each bar from its data point's `fill`.
+  const bars = data.map((entry) => ({
+    ...entry,
+    fill: colorKey ? (entry[colorKey] as string) : TONE_COLOR[toneOf(rate(entry), baseline)],
+  }));
   return (
     <ChartSurface label={label} {...surfaceProps}>
-      <BarChart data={data as T[]} margin={CHART_MARGIN}>
+      <BarChart data={bars} margin={CHART_MARGIN}>
         <CartesianGrid {...CHART_GRID} />
         <XAxis
           {...CHART_X_AXIS}
@@ -79,14 +84,7 @@ export function WinRateBarChart<T>({
             active && payload?.length ? cloneElement(tooltip, { entry: payload[0].payload as T }) : null
           }
         />
-        <Bar dataKey={(entry: T) => [baseline, rate(entry)]} radius={4}>
-          {data.map((entry) => (
-            <Cell
-              key={String(entry[xKey])}
-              fill={colorKey ? (entry[colorKey] as string) : TONE_COLOR[toneOf(rate(entry), baseline)]}
-            />
-          ))}
-        </Bar>
+        <Bar dataKey={(entry: T) => [baseline, rate(entry)]} radius={4} />
       </BarChart>
     </ChartSurface>
   );

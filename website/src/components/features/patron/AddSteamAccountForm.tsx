@@ -87,7 +87,7 @@ export function AddSteamAccountForm() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const result = parseSteamIdInput(steamIdInput);

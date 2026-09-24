@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Rank } from "deadlock_api_client";
 import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, Customized, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 
 import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/RankTierIcons";
 import { ChartLoading, ChartError, ChartEmpty } from "~/components/patterns/charts/ChartStates";
@@ -29,7 +29,8 @@ interface ChartEntry {
   label: string;
   /** `null` on the gaps between tiers, so they neither draw a bar nor pull the y axis down to zero. */
   value: number | null;
-  color: string;
+  /** The bar's colour; Recharts reads it from the data point. */
+  fill: string;
   isSpacer?: boolean;
 }
 
@@ -70,7 +71,7 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
           tier: lastTier,
           label: "",
           value: null,
-          color: "transparent",
+          fill: "transparent",
           isSpacer: true,
         });
       }
@@ -79,8 +80,8 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
         badge: entry.bucket,
         tier,
         label: rank ? `${rank.name} ${subtier}` : `${entry.bucket}`,
-        value: entry[stat as keyof typeof entry] as number,
-        color: rank?.color ?? "var(--color-accent)",
+        value: entry[stat as keyof typeof entry],
+        fill: rank?.color ?? "var(--color-accent)",
       });
 
       lastTier = tier;
@@ -157,12 +158,8 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
                   );
                 }}
               />
-              <Bar dataKey="value" radius={4} isAnimationActive={false}>
-                {chartData.map((entry) => (
-                  <Cell key={entry.badge} fill={entry.isSpacer ? "transparent" : entry.color} />
-                ))}
-              </Bar>
-              <Customized component={<RankTierIcons tiers={tierCenters} ranks={tierData} />} />
+              <Bar dataKey="value" radius={4} isAnimationActive={false} />
+              <RankTierIcons tiers={tierCenters} ranks={tierData} />
             </BarChart>
           </ChartSurface>
         )}
