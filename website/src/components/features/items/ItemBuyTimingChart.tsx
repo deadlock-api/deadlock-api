@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client";
-import { Fragment, useMemo, useState } from "react";
+import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
+import { Fragment, useMemo } from "react";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
@@ -192,9 +193,16 @@ interface ItemBuyTimingChartProps {
 }
 
 export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches }: ItemBuyTimingChartProps) {
-  const [showFineGrainedIntervals, setShowFineGrainedIntervals] = useState(false);
-  const [useWilsonInterval, setUseWilsonInterval] = useState(true);
-  const [bucketType, setBucketType] = useState<keyof typeof BUCKET_CONFIG>("net_worth_by_1000");
+  // In the URL like the page's filters, so a reload or a shared link keeps the chart as it was set.
+  const [showFineGrainedIntervals, setShowFineGrainedIntervals] = useQueryState(
+    "buy_fine",
+    parseAsBoolean.withDefault(false),
+  );
+  const [useWilsonInterval, setUseWilsonInterval] = useQueryState("buy_wilson", parseAsBoolean.withDefault(true));
+  const [bucketType, setBucketType] = useQueryState(
+    "buy_bucket",
+    parseAsStringLiteral(Object.keys(BUCKET_CONFIG) as (keyof typeof BUCKET_CONFIG)[]).withDefault("net_worth_by_1000"),
+  );
 
   const baseMinAvgThreshold = rowTotalMatches && rowTotalMatches > 200 ? MIN_AVG_THRESHOLD : MIN_AVG_THRESHOLD * 1.5;
   const minAvgThreshold = showFineGrainedIntervals ? baseMinAvgThreshold / 2 : baseMinAvgThreshold;
