@@ -59,7 +59,7 @@ jobs:
       run:
         working-directory: api
     steps:
-      - uses: useblacksmith/checkout@0647fdbab2614a5eb86d2971070e325060d91056 # v1.7.0
+      - uses: useblacksmith/checkout@25227e61ff9dafe400e22fa487b673eac4e4409a # v1.8.1
         with:
           lfs: true
       - name: Install system dependencies
@@ -101,7 +101,7 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
     steps:
-      - uses: useblacksmith/checkout@0647fdbab2614a5eb86d2971070e325060d91056 # v1.7.0
+      - uses: useblacksmith/checkout@25227e61ff9dafe400e22fa487b673eac4e4409a # v1.8.1
         with:
           lfs: true
       - name: Login to Docker Hub
