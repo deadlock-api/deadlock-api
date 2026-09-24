@@ -174,7 +174,7 @@ export function HeroesPage() {
         </TabsContent>
 
         <TabsContent value="stats-over-time">
-          <div className="flex flex-col gap-3">
+          <Section titleDisplay="hidden" title="Hero Stats Over Time" className="gap-3">
             <HeroTrendControls
               stat={filters.heroStat}
               interval={filters.heroTimeInterval}
@@ -197,7 +197,7 @@ export function HeroesPage() {
                 />
               </Suspense>
             </ChunkErrorBoundary>
-          </div>
+          </Section>
         </TabsContent>
 
         <TabsContent value="stats-by-duration">

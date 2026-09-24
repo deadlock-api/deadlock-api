@@ -11,7 +11,10 @@ interface FilterBarProps extends Omit<React.ComponentProps<"section">, "title"> 
    *   chart or table.
    */
   variant?: "cells" | "toolbar";
-  /** Names the toolbar. Drawn when the toolbar is wide enough; always available to assistive technology. */
+  /**
+   * Names the toolbar. Drawn when the toolbar is wide enough, and the name of the toolbar's region when it has no
+   * `aria-label`. It is not a heading: the Section or Panel around the toolbar is, and a second one repeated it.
+   */
   title?: string;
   icon?: LucideIcon;
 }
@@ -38,9 +41,9 @@ export function FilterBar({
         {...props}
       >
         {title && (
-          <div className="sr-only @lg:not-sr-only @lg:me-auto @lg:flex @lg:items-center @lg:gap-2">
+          <div data-slot="filter-bar-title" className="hidden @lg:me-auto @lg:flex @lg:items-center @lg:gap-2">
             {Icon && <Icon className="size-4 text-primary" aria-hidden="true" />}
-            <h2 className="text-sm font-semibold">{title}</h2>
+            <span className="text-sm font-semibold">{title}</span>
           </div>
         )}
         {children}

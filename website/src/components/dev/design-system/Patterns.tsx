@@ -201,7 +201,7 @@ export function Patterns() {
       <Specimen
         name="FilterBar toolbar"
         source="patterns/filter-bar/FilterBar"
-        note='variant="toolbar": the controls of one chart or table, as compact Fields that wrap.'
+        note='variant="toolbar": the controls of one chart or table, as compact Fields that wrap. Its title names the region and shows from @lg; it is not a heading, the Section or Panel around it is.'
       >
         <Variants className="block">
           <FilterBar variant="toolbar" title="Trend" icon={Swords}>

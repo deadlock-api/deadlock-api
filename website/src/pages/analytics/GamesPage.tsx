@@ -8,6 +8,7 @@ import { ALL_STAT_KEYS, getFilteredCategories } from "~/components/features/game
 import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigation/ResponsiveTabsList";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
+import { Section } from "~/components/patterns/page/Section";
 import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
@@ -137,34 +138,45 @@ export function Games() {
         </TabsContent>
 
         <TabsContent value="over-time">
-          <ChunkErrorBoundary>
-            <Suspense fallback={<LoadingState />}>
-              <GamesOverTimeChart
-                params={baseParams}
-                stat={stat}
-                onStatChange={setStat}
-                timeBucket={timeBucket as GameStatsBucketEnum}
-                onTimeBucketChange={(b) => setTimeBucket(b as typeof timeBucket)}
-                isStreetBrawl={isStreetBrawl}
-              />
-            </Suspense>
-          </ChunkErrorBoundary>
+          <Section titleDisplay="hidden" title="Match Trends Over Time">
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingState />}>
+                <GamesOverTimeChart
+                  params={baseParams}
+                  stat={stat}
+                  onStatChange={setStat}
+                  timeBucket={timeBucket as GameStatsBucketEnum}
+                  onTimeBucketChange={(b) => setTimeBucket(b as typeof timeBucket)}
+                  isStreetBrawl={isStreetBrawl}
+                />
+              </Suspense>
+            </ChunkErrorBoundary>
+          </Section>
         </TabsContent>
 
         <TabsContent value="by-rank">
-          <ChunkErrorBoundary>
-            <Suspense fallback={<LoadingState />}>
-              <GamesByRankChart params={baseParams} stat={stat} onStatChange={setStat} isStreetBrawl={isStreetBrawl} />
-            </Suspense>
-          </ChunkErrorBoundary>
+          <Section titleDisplay="hidden" title="Match Stats by Rank">
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingState />}>
+                <GamesByRankChart
+                  params={baseParams}
+                  stat={stat}
+                  onStatChange={setStat}
+                  isStreetBrawl={isStreetBrawl}
+                />
+              </Suspense>
+            </ChunkErrorBoundary>
+          </Section>
         </TabsContent>
 
         <TabsContent value="economy">
-          <ChunkErrorBoundary>
-            <Suspense fallback={<LoadingState />}>
-              <EconomyTab params={baseParams} isStreetBrawl={isStreetBrawl} />
-            </Suspense>
-          </ChunkErrorBoundary>
+          <Section titleDisplay="hidden" title="Soul Economy">
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingState />}>
+                <EconomyTab params={baseParams} isStreetBrawl={isStreetBrawl} />
+              </Suspense>
+            </ChunkErrorBoundary>
+          </Section>
         </TabsContent>
       </Tabs>
     </PageShell>
