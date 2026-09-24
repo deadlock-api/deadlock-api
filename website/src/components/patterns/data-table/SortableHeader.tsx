@@ -1,4 +1,5 @@
 import { Info } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { ariaSort, SortButton, type SortDir } from "~/components/ui/sort-button";
@@ -44,6 +45,9 @@ export function SortableHeader<Key extends string>({
   children?: React.ReactNode;
 }) {
   const isActive = activeSortKey === sortKey;
+  // A toggletip: hover and focus open it like a tooltip, and a click or tap toggles it, which a plain tooltip
+  // swallowed (a press closed it, and a touch never opened it).
+  const [infoOpen, setInfoOpen] = useState(false);
   const sortButton = (
     <SortButton
       active={isActive}
@@ -69,11 +73,14 @@ export function SortableHeader<Key extends string>({
       ) : (
         <span data-slot="sortable-header-described" className="inline-flex items-center">
           {sortButton}
-          <Tooltip content={description}>
+          <Tooltip content={description} open={infoOpen} onOpenChange={setInfoOpen}>
             <Button
               type="button"
               variant="ghost"
               size="icon-xs"
+              aria-expanded={infoOpen}
+              onPointerDown={(event) => event.preventDefault()}
+              onClick={() => setInfoOpen((open) => !open)}
               aria-label={typeof label === "string" ? `About ${label}` : "About this column"}
               className="text-muted-foreground"
             >
