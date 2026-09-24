@@ -20,6 +20,7 @@ import { useAbilities, useHeroes, useSounds, puzzleLoadError } from "~/lib/deadl
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { hasDisplayName } from "~/lib/deadlockdle/trivia-questions";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
+import { useStoredState } from "~/lib/deadlockdle/use-stored-state";
 import { seo } from "~/lib/seo";
 import { filterPlayableHeroes } from "~/queries/asset-queries";
 
@@ -199,20 +200,20 @@ function startProgressLoop(
   animRef.current = requestAnimationFrame(tick);
 }
 
+const DEFAULT_VOLUME = 0.7;
+
 function useAudioPlayer(url: string | null) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(() => {
-    if (typeof window === "undefined") return 0.7;
-    try {
-      const saved = localStorage.getItem("deadlockdle:sound-volume");
-      return saved ? Number.parseFloat(saved) : 0.7;
-    } catch {
-      return 0.7;
-    }
+  // The saved level loads after hydration: read during the first render, it differed from the server's default.
+  const [level, saveLevel] = useStoredState<number>("deadlockdle:sound-volume", () => DEFAULT_VOLUME, {
+    accept: (saved) => typeof saved === "number" && saved >= 0 && saved <= 1,
   });
+  // Muting keeps the level, so unmuting returns to it instead of to the default.
+  const [muted, setMuted] = useState(false);
+  const volume = muted ? 0 : level;
   const animRef = useRef<number>(0);
   const [prevUrl, setPrevUrl] = useState(url);
 
@@ -229,15 +230,23 @@ function useAudioPlayer(url: string | null) {
     }
   }, [volume]);
 
-  const changeVolume = useCallback((newVolume: number) => {
-    const clamped = Math.max(0, Math.min(1, newVolume));
-    setVolume(clamped);
-    try {
-      localStorage.setItem("deadlockdle:sound-volume", String(clamped));
-    } catch {
-      /* ignore */
+  const changeVolume = useCallback(
+    (newVolume: number) => {
+      setMuted(false);
+      saveLevel(Math.max(0, Math.min(1, newVolume)));
+    },
+    [saveLevel],
+  );
+
+  const toggleMute = useCallback(() => {
+    if (!muted && level > 0) {
+      setMuted(true);
+      return;
     }
-  }, []);
+    setMuted(false);
+    // A level of 0 (saved by an older mute, or dragged there) has nothing to return to.
+    if (level === 0) saveLevel(DEFAULT_VOLUME);
+  }, [muted, level, saveLevel]);
 
   const stopProgressLoop = useCallback(() => {
     cancelAnimationFrame(animRef.current);
@@ -283,6 +292,7 @@ function useAudioPlayer(url: string | null) {
     duration,
     volume,
     changeVolume,
+    toggleMute,
     play,
     handleEnded,
     handleLoadedMetadata,
@@ -337,8 +347,18 @@ function GuessSound() {
     return seededPick(allSounds, rng);
   }, [allSounds, date]);
 
-  const { audioRef, isPlaying, progress, duration, volume, changeVolume, play, handleEnded, handleLoadedMetadata } =
-    useAudioPlayer(dailySound?.url ?? null);
+  const {
+    audioRef,
+    isPlaying,
+    progress,
+    duration,
+    volume,
+    changeVolume,
+    toggleMute,
+    play,
+    handleEnded,
+    handleLoadedMetadata,
+  } = useAudioPlayer(dailySound?.url ?? null);
 
   const hints = useMemo(() => {
     if (!dailySound) return [];
@@ -472,7 +492,7 @@ function GuessSound() {
           <Button
             variant="ghost"
             size="icon-xs"
-            onClick={() => changeVolume(isMuted ? 0.7 : 0)}
+            onClick={toggleMute}
             aria-label={isMuted ? "Unmute" : "Mute"}
             className="cursor-target text-muted-foreground"
           >
