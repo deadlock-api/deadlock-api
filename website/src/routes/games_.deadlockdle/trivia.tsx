@@ -84,7 +84,7 @@ function Trivia() {
   const date = resolvePuzzleDate(dateParam);
   const isArchive = date !== getTodayDate();
   const storageKey = gameStorageKey("trivia", date);
-  const countdown = useCountdown();
+  const countdown = useCountdown(date);
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [state, saveState] = useStoredDailyState(storageKey, date, freshState, legacyGameStorageKey("trivia"));
@@ -274,7 +274,7 @@ function Trivia() {
               score={`${state.score}/${QUESTION_COUNT}`}
               scoreLabel={state.score >= 8 ? "Excellent" : state.score >= 5 ? "Not Bad" : "Keep Studying"}
               grade={state.score >= 8 ? "good" : state.score >= 5 ? "fair" : "poor"}
-              countdown={isArchive ? undefined : { label: "Next Trivia", value: countdown }}
+              countdown={isArchive ? undefined : { label: "Next Trivia", value: countdown ?? "Out now" }}
             />
 
             <Stack gap={1}>

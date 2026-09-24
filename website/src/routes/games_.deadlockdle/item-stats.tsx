@@ -95,7 +95,7 @@ function ItemStatsQuiz() {
   const date = resolvePuzzleDate(dateParam);
   const isArchive = date !== getTodayDate();
   const storageKey = gameStorageKey("item-stats", date);
-  const countdown = useCountdown();
+  const countdown = useCountdown(date);
 
   const [state, saveState] = useStoredDailyState(storageKey, date, freshState, legacyGameStorageKey("item-stats"));
 
@@ -341,7 +341,7 @@ function ItemStatsQuiz() {
               score={`${state.score}/${state.totalFields}`}
               scoreLabel="Correct Answers"
               grade={state.score >= TOTAL_FIELDS * 0.8 ? "good" : state.score >= TOTAL_FIELDS * 0.5 ? "fair" : "poor"}
-              countdown={isArchive ? undefined : { label: "Next Quiz", value: countdown }}
+              countdown={isArchive ? undefined : { label: "Next Quiz", value: countdown ?? "Out now" }}
             />
             <div className="flex flex-col items-center gap-3">
               <ShareButton

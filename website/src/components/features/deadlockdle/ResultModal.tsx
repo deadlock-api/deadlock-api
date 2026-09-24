@@ -1,8 +1,10 @@
+import { Link } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { Clock, Target, Trophy } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
+import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { IconTile } from "~/components/ui/icon-tile";
 import { Inline, Stack } from "~/components/ui/stack";
@@ -45,7 +47,7 @@ export function ResultModal({
   streakState,
   isArchive,
 }: ResultModalProps) {
-  const countdown = useCountdown();
+  const countdown = useCountdown(date);
   const containerRef = useRef<HTMLElement>(null);
   const isWin = status === "won";
   const tone = isWin ? "positive" : "negative";
@@ -154,9 +156,15 @@ export function ResultModal({
                         <Clock className="size-3.5" />
                         Next Puzzle
                       </Text>
-                      <Text className="font-mono font-bold tracking-widest" tone="default">
-                        {countdown}
-                      </Text>
+                      {countdown === null ? (
+                        <Button asChild variant="soft" size="sm" className="font-mono">
+                          <Link to="/games/deadlockdle">Out now</Link>
+                        </Button>
+                      ) : (
+                        <Text className="font-mono font-bold tracking-widest" tone="default">
+                          {countdown}
+                        </Text>
+                      )}
                     </CardContent>
                   </Card>
                 </motion.div>
