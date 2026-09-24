@@ -315,7 +315,11 @@ export function Primitives() {
             <Stat label="Win rate" value="52.4%" tone="positive" sub={<Delta value={0.012} />} />
             <Stat label="Pick rate" value="8.1%" sub={<Delta value={-0.004} />} />
             <Stat label="Matches" value="1,204,118" sub="last 30 days" />
-            <Stat label="Avg. deaths" value="6.3" sub={<Delta value={0.4} format="number" invert />} />
+            <Stat
+              label="Avg. deaths"
+              value="6.3"
+              sub={<Delta value={0.4} format="number" polarity="lower-is-better" />}
+            />
           </StatGroup>
         </Variants>
         <Variants label='variant="joined" size="sm"' className="block">
@@ -341,13 +345,14 @@ export function Primitives() {
       <Specimen
         name="Delta"
         source="ui/delta · lib/tone"
-        note="A signed change, colored by direction. invert when a rise is bad news. For other good/bad values use toneOf() with TONE_TEXT."
+        note="A signed change, colored by direction. polarity lower-is-better when a rise is bad news, neutral when it is neither. For other good/bad values use toneOf() with TONE_TEXT."
       >
         <Variants>
           <Delta value={0.031} />
           <Delta value={-0.012} />
           <Delta value={1.4} format="number" />
-          <Delta value={0.6} format="number" invert />
+          <Delta value={0.6} format="number" polarity="lower-is-better" />
+          <Delta value={0.6} format="number" polarity="neutral" />
           <span className="text-xs text-muted-foreground">zero renders nothing:</span>
           <Delta value={0.0001} />
         </Variants>

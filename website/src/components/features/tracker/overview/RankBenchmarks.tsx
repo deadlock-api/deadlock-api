@@ -293,7 +293,7 @@ function BenchmarkMetric({
                 format="number"
                 digits={0}
                 unit="%"
-                invert={def.key === "deaths"}
+                polarity={def.key === "deaths" ? "lower-is-better" : "higher-is-better"}
                 className="text-3xs"
               />
             ))}

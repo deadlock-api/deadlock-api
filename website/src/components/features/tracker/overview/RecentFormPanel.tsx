@@ -52,7 +52,15 @@ function Change({
   lowerIsBetter?: boolean;
 }) {
   if (Number(value.toFixed(precision)) === 0) return <span className="text-muted-foreground">No change</span>;
-  return <Delta value={value} format="number" digits={precision} unit={unit} invert={lowerIsBetter} />;
+  return (
+    <Delta
+      value={value}
+      format="number"
+      digits={precision}
+      unit={unit}
+      polarity={lowerIsBetter ? "lower-is-better" : "higher-is-better"}
+    />
+  );
 }
 
 function dateRange(entries: PlayerMatchHistoryEntry[], toTime: (unix: number) => Dayjs) {

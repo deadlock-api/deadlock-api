@@ -14,6 +14,7 @@ import { Delta } from "~/components/ui/delta";
 import { Inline } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { Tooltip } from "~/components/ui/tooltip";
+import { day } from "~/dayjs";
 import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
@@ -92,7 +93,8 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
             <span className="text-info">{((current.team1_wins / teamWinTotal) * 100).toFixed(2)}%</span>
           </Inline>
           {prev && prevTeamWinTotal > 0 && (
-            <Badge variant="muted" shape="square">
+            <Badge variant="muted" shape="square" title="Previous period">
+              <span className="sr-only">Previous period </span>
               <span className="text-primary">{((prev.team0_wins / prevTeamWinTotal) * 100).toFixed(2)}%</span>
               <span>:</span>
               <span className="text-info">{((prev.team1_wins / prevTeamWinTotal) * 100).toFixed(2)}%</span>
@@ -108,6 +110,14 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
       label="game stats"
       className="grid grid-cols-1 gap-4 lg:grid-cols-2"
     >
+      {prevParams?.minUnixTimestamp != null && prevParams.maxUnixTimestamp != null && (
+        // UTC, like the Worker that renders it, so the server and the browser print the same dates.
+        <Text as="p" variant="caption" tone="muted" className="lg:col-span-2">
+          Arrows and the boxed team split compare with{" "}
+          {day.unix(prevParams.minUnixTimestamp).utc().format("MMM D, YYYY")} –{" "}
+          {day.unix(prevParams.maxUnixTimestamp).utc().format("MMM D, YYYY")}, the period before the one selected.
+        </Text>
+      )}
       {getFilteredCategories(isStreetBrawl).map((category) => {
         const Icon = CATEGORY_ICONS[category.label];
         // Fields the game stopped reporting still come back as an exact 0 average.
@@ -169,7 +179,7 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                             <Delta
                               value={delta}
                               unit={inPoints ? " pp" : undefined}
-                              invert={stat.lowerIsBetter}
+                              polarity={stat.polarity ?? "neutral"}
                               sign="arrow"
                               display="badge"
                               className="min-w-13 font-normal"

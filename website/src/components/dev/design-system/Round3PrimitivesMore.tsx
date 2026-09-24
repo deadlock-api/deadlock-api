@@ -522,7 +522,7 @@ export function Round3PrimitivesMore() {
         <Variants label='sign="arrow"' className="gap-4 text-sm">
           <Delta value={0.031} sign="arrow" />
           <Delta value={-0.012} sign="arrow" />
-          <Delta value={0.4} format="number" sign="arrow" invert />
+          <Delta value={0.4} format="number" sign="arrow" polarity="lower-is-better" />
         </Variants>
         <Variants label='display="badge"' className="gap-4">
           <Delta value={0.031} display="badge" />

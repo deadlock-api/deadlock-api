@@ -9,8 +9,11 @@ export interface StatDefinition {
   key: keyof AnalyticsGameStats;
   label: string;
   format: StatFormat;
-  /** A fall is the good news (abandons), so the change badge colours a drop positive. */
-  lowerIsBetter?: boolean;
+  /**
+   * What a change means for the game: more players is good news, more abandons bad news. Most figures only describe
+   * how games are played (an average of kills rises with the deaths it causes), so they default to neutral.
+   */
+  polarity?: "higher-is-better" | "lower-is-better" | "neutral";
 }
 
 export interface StatCategory {
@@ -22,10 +25,10 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
   {
     label: "Match Flow",
     stats: [
-      { key: "total_matches", label: "Total Matches", format: "integer" },
-      { key: "total_players", label: "Total Players", format: "integer" },
+      { key: "total_matches", label: "Total Matches", format: "integer", polarity: "higher-is-better" },
+      { key: "total_players", label: "Total Players", format: "integer", polarity: "higher-is-better" },
       { key: "avg_duration_s", label: "Avg Duration", format: "duration" },
-      { key: "abandon_rate", label: "Abandon Rate", format: "percent", lowerIsBetter: true },
+      { key: "abandon_rate", label: "Abandon Rate", format: "percent", polarity: "lower-is-better" },
       { key: "mid_boss_kill_rate", label: "Mid Boss Kill Rate", format: "percent" },
       { key: "avg_first_mid_boss_time_s", label: "Avg First Mid Boss", format: "duration" },
       {

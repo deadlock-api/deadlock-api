@@ -69,18 +69,18 @@ function GroupStat({
   label,
   value,
   delta,
-  invert,
+  polarity,
 }: {
   label: string;
   value: number;
   delta?: number;
-  invert?: boolean;
+  polarity?: React.ComponentProps<typeof Delta>["polarity"];
 }) {
   return (
     <div className="flex items-center gap-1.5">
       <span className="text-muted-foreground">{label}</span>
       <span className="font-semibold">{(value * 100).toFixed(1)}%</span>
-      {delta !== undefined && <Delta value={delta} invert={invert} className="text-xs" />}
+      {delta !== undefined && <Delta value={delta} polarity={polarity} className="text-xs" />}
     </div>
   );
 }
@@ -972,11 +972,21 @@ export function HeroStatsTable({
                     <GroupStat label="Win Rate:" value={group.winrate} delta={winrateDelta} />
                   )}
                   {columns.includes("banRate") && (
-                    <GroupStat label="Ban Rate:" value={group.banRate} delta={banRateDelta} invert />
+                    <GroupStat
+                      label="Ban Rate:"
+                      value={group.banRate}
+                      delta={banRateDelta}
+                      polarity="lower-is-better"
+                    />
                   )}
                   {columns.includes("pickRate") &&
                     (showBanRate ? (
-                      <GroupStat label="Ban Rate:" value={group.banRate} delta={banRateDelta} invert />
+                      <GroupStat
+                        label="Ban Rate:"
+                        value={group.banRate}
+                        delta={banRateDelta}
+                        polarity="lower-is-better"
+                      />
                     ) : showPresence ? (
                       <GroupStat
                         label="Presence Share:"

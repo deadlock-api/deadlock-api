@@ -12,8 +12,11 @@ interface DeltaProps extends Omit<React.ComponentProps<"span">, "children"> {
   digits?: number;
   /** Replaces the `%` of the percent format, or follows a number: `" pp"`, `" ranks"`. */
   unit?: string;
-  /** Set when a rise is bad news, such as deaths or time to first item. */
-  invert?: boolean;
+  /**
+   * What a rise means: good news (the default), bad news (deaths, time to first item), or neither, for a figure that
+   * only describes (a game-wide average of kills); a neutral change keeps its arrow and loses its color.
+   */
+  polarity?: "higher-is-better" | "lower-is-better" | "neutral";
   /** `arrow` draws an arrow instead of the plus or minus glyph, which reads faster in dense rows. */
   sign?: "glyph" | "arrow";
   /** `badge` draws it as a square Badge in the tone's color, for table cells and stat rows. */
@@ -26,7 +29,7 @@ export function Delta({
   format = "percent",
   digits = 1,
   unit,
-  invert = false,
+  polarity = "higher-is-better",
   sign = "glyph",
   display = "text",
   className,
@@ -38,7 +41,7 @@ export function Delta({
   // Round first so a change too small to display is hidden rather than shown as "-0.0%".
   const rounded = Math.round((format === "percent" ? value * 100 : value) * scale) / scale;
   if (rounded === 0) return null;
-  const tone = toneOf(invert ? -rounded : rounded);
+  const tone = polarity === "neutral" ? "muted" : toneOf(polarity === "lower-is-better" ? -rounded : rounded);
   const Arrow = rounded > 0 ? ArrowUp : ArrowDown;
   const content = (
     <>
