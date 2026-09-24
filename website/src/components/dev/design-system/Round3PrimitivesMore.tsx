@@ -460,7 +460,7 @@ export function Round3PrimitivesMore() {
       <Specimen
         name="Segmented items"
         source="ui/segmented"
-        note='The options are SegmentedItem children. width="fill" shares the container between them, "hug" is as wide as the labels. value / defaultValue / onValueChange; an icon-only item needs an aria-label.'
+        note='The options are SegmentedItem children. width="fill" shares the container between them, "hug" is as wide as the labels. An item is never narrower than its label: a row without room wraps. value / defaultValue / onValueChange; an icon-only item needs an aria-label.'
       >
         <Variants label='width="hug", uncontrolled (defaultValue), a disabled item'>
           <Segmented defaultValue="week" width="hug" aria-label="Interval">
@@ -484,6 +484,17 @@ export function Round3PrimitivesMore() {
             <Segmented value={region} onValueChange={setRegion} aria-label="Region">
               <SegmentedItem value="eu">Europe</SegmentedItem>
               <SegmentedItem value="na">North America</SegmentedItem>
+            </Segmented>
+          </div>
+        </Variants>
+        <Variants label="more labels than fit (a phone): the row wraps, every label stays whole">
+          <div className="w-full max-w-64">
+            <Segmented defaultValue="eu" size="lg" aria-label="Region on a phone">
+              <SegmentedItem value="eu">Europe</SegmentedItem>
+              <SegmentedItem value="asia">Asia</SegmentedItem>
+              <SegmentedItem value="na">North America</SegmentedItem>
+              <SegmentedItem value="sa">South America</SegmentedItem>
+              <SegmentedItem value="oc">Oceania</SegmentedItem>
             </Segmented>
           </div>
         </Variants>

@@ -8,7 +8,9 @@ import { cn } from "~/lib/utils";
 
 const segmentedItemVariants = cva(
   [
-    "inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md font-medium whitespace-nowrap text-muted-foreground transition-colors",
+    // Equal shares of the row while the labels fit; never narrower than its label, so a row that runs out of room
+    // wraps (the group is `flex-wrap`) instead of drawing "North America" over "South America".
+    "inline-flex min-w-fit grow cursor-pointer items-center justify-center gap-1.5 rounded-md font-medium whitespace-nowrap text-muted-foreground transition-colors",
     FOCUS_RING,
     DISABLED_STATE,
     "hover:bg-accent hover:text-foreground",
@@ -18,10 +20,11 @@ const segmentedItemVariants = cva(
   {
     variants: {
       size: {
-        // At least square, so a one-character item such as "5" is still a 24px target.
-        sm: "h-6 min-w-6 px-2 text-2xs",
-        default: "h-7 min-w-7 px-2.5 text-xs",
-        lg: "h-8 min-w-8 px-3 text-sm",
+        // The basis is the equal share's starting point and keeps an item at least square, so a one-character item
+        // such as "5" is still a 24px target.
+        sm: "h-6 basis-6 px-2 text-2xs",
+        default: "h-7 basis-7 px-2.5 text-xs",
+        lg: "h-8 basis-8 px-3 text-sm",
       },
     },
     defaultVariants: { size: "default" },
