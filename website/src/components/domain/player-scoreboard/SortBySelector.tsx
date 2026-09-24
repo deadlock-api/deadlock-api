@@ -7,6 +7,7 @@ import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 
 import {
   buildSortByValue,
+  sortByLabel,
   parseSortByValue,
   type ScoreboardScope,
   sortCategoriesFor,
@@ -64,8 +65,7 @@ export function SortBySelector({
   };
 
   // The variant is half the choice: "Player Damage" alone did not say average, best game or total.
-  const label = currentCategory?.label ?? key;
-  const displayValue = variant === "avg" ? `Avg ${label}` : variant === "max" ? `Max ${label}` : label;
+  const displayValue = sortByLabel(value);
 
   return (
     <FilterCell

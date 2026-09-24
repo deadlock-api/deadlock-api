@@ -1,11 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import type { HeroScoreboardSortByEnum } from "deadlock_api_client";
-import { ChartNoAxesCombined, GraduationCap, Table2 } from "lucide-react";
+import { ChartNoAxesCombined, GraduationCap, Swords, Table2, Trophy, UsersRound } from "lucide-react";
 import { parseAsBoolean, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense, useId } from "react";
 
 import { HERO_SORT_BY_VALUES } from "~/components/domain/player-scoreboard/sort-options";
+import { SortBySelector } from "~/components/domain/player-scoreboard/SortBySelector";
+import { HeroCombFilters } from "~/components/features/heroes/HeroCombFilters";
 import { HeroFiltersSection } from "~/components/features/heroes/HeroFiltersSection";
+import { HeroLaneFilter } from "~/components/features/heroes/HeroLaneFilter";
 import { HeroScoreboardTable } from "~/components/features/heroes/HeroScoreboardTable";
 import { HeroStatSelector } from "~/components/features/heroes/HeroStatSelectors";
 import { HeroStatsTable } from "~/components/features/heroes/HeroStatsTable";
@@ -330,6 +333,9 @@ export function HeroesPage() {
 
         <TabsContent value="matchups">
           <Section titleDisplay="hidden" title="Hero Matchups">
+            <FilterBar variant="toolbar" title="Matchups" icon={Swords} aria-label="Matchup table controls">
+              <HeroLaneFilter value={filters.sameLaneFilter} onValueChange={(v) => void filters.setSameLaneFilter(v)} />
+            </FilterBar>
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
                 <HeroMatchupStatsTable
@@ -351,6 +357,9 @@ export function HeroesPage() {
 
         <TabsContent value="hero-combs">
           <Section titleDisplay="hidden" title="Hero Combos">
+            <FilterBar variant="toolbar" title="Combinations" icon={UsersRound} aria-label="Combination table controls">
+              <HeroCombFilters />
+            </FilterBar>
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
                 <HeroCombStatsTable
@@ -386,6 +395,7 @@ export function HeroesPage() {
                     void filters.setHeroId(heroId);
                   }}
                   sameLaneFilter={filters.sameLaneFilter}
+                  onSameLaneFilterChange={(v) => void filters.setSameLaneFilter(v)}
                   minHeroMatches={filters.minMatches}
                   gameMode={filters.gameMode}
                   matchMode={filters.matchMode}
@@ -397,6 +407,15 @@ export function HeroesPage() {
 
         <TabsContent value="hero-scoreboard">
           <Section titleDisplay="hidden" title="Hero Scoreboard">
+            <FilterBar variant="toolbar" title="Scoreboard" icon={Trophy} aria-label="Scoreboard controls">
+              <SortBySelector
+                scope="heroes"
+                size="sm"
+                value={scoreboardSortBy}
+                defaultValue="winrate"
+                onValueChange={(value) => void setScoreboardSortBy(value)}
+              />
+            </FilterBar>
             <QueryRenderer
               query={heroScoreboardQuery}
               loadingFallback={<LoadingState label="hero scoreboard" align="center" />}

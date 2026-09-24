@@ -2,12 +2,9 @@ import type { HeroEntry } from "deadlock_api_client";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import type { ScoreboardSort } from "~/components/domain/player-scoreboard/ScoreboardTable";
-import { formatStatValue } from "~/components/domain/player-scoreboard/sort-options";
-import { SortBySelector } from "~/components/domain/player-scoreboard/SortBySelector";
+import { formatStatValue, sortByLabel } from "~/components/domain/player-scoreboard/sort-options";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
-import { SortButton, ariaSort } from "~/components/ui/sort-button";
-import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 
 export interface HeroScoreboardTableProps {
@@ -43,23 +40,15 @@ export function HeroScoreboardTable({ entries, sortBy, sortDirection, onSortChan
               onSortChange={handleMatchesClick}
             />
           )}
-          <TableHead aria-sort={ariaSort(true, sortDirection)} className="text-end">
-            <Inline gap={1} justify="end" wrap="nowrap">
-              <SortBySelector
-                scope="heroes"
-                value={sortBy}
-                defaultValue="winrate"
-                onValueChange={(value) => onSortChange({ sortBy: value, sortDirection })}
-              />
-              <SortButton
-                active
-                sortDir={sortDirection}
-                onClick={() => onSortChange({ sortBy, sortDirection: flip() })}
-                className="text-muted-foreground"
-                aria-label="Toggle sort direction"
-              />
-            </Inline>
-          </TableHead>
+          {/* The stat is picked in the scoreboard's toolbar; its column header flips the direction. */}
+          <SortableHeader
+            label={sortByLabel(sortBy)}
+            sortKey={sortBy}
+            activeSortKey={sortBy}
+            sortDir={sortDirection}
+            align="end"
+            onSortChange={() => onSortChange({ sortBy, sortDirection: flip() })}
+          />
         </TableRow>
       </TableHeader>
       <TableBody>

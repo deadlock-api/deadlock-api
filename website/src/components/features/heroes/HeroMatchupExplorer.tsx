@@ -22,6 +22,8 @@ import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions, type SlimHero } from "~/queries/asset-queries";
 
+import { HeroLaneFilter } from "./HeroLaneFilter";
+
 const SMALL_SAMPLE_THRESHOLD = 100;
 const number = (value: number) => value.toLocaleString("en-US");
 const points = (value: number) => formatSignedPercent(value).replace("%", " pp");
@@ -118,8 +120,12 @@ function MatchupRanking({
 
 export function HeroMatchupExplorer({
   onHeroSelected,
+  onSameLaneFilterChange,
   ...params
-}: HeroMatchupParams & { onHeroSelected: (heroId: number) => void }) {
+}: HeroMatchupParams & {
+  onHeroSelected: (heroId: number) => void;
+  onSameLaneFilterChange: (sameLane: boolean) => void;
+}) {
   const { data: heroAssets = [] } = useQuery(heroesQueryOptions);
   const { synergyRows, counterRows, heroStats, isLoading, isError, retry } = useHeroMatchupRows(params);
   const heroes = new Map(heroAssets.map((hero) => [hero.id, hero]));
@@ -157,6 +163,7 @@ export function HeroMatchupExplorer({
             if (id != null) onHeroSelected(id);
           }}
         />
+        <HeroLaneFilter value={params.sameLaneFilter ?? true} onValueChange={onSameLaneFilterChange} />
         {!isLoading && !isError && heroStats?.matches ? (
           <p className="flex flex-wrap items-baseline gap-x-2 text-xs text-muted-foreground">
             <strong className="text-base font-semibold text-foreground tabular-nums">

@@ -90,3 +90,10 @@ export function formatStatValue(value: number, sortBy: string): string {
   }
   return value.toLocaleString("en-US", { maximumFractionDigits: 2 });
 }
+
+/** The name of a sort as a column shows it: "Avg Player Damage", "Max Kills", "Winrate". */
+export function sortByLabel(sortBy: string): string {
+  const { key, variant } = parseSortByValue(sortBy);
+  const label = SORT_CATEGORIES.find((cat) => cat.key === key)?.label ?? key;
+  return variant === "avg" ? `Avg ${label}` : variant === "max" ? `Max ${label}` : label;
+}

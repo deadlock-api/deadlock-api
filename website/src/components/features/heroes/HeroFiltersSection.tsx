@@ -1,7 +1,4 @@
 import { Filter } from "~/components/domain/filters";
-import { HeroCombFilters } from "~/components/features/heroes/HeroCombFilters";
-import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
-import { SegmentedItem } from "~/components/ui/segmented";
 import { STATS_TABS, type useHeroFilters } from "~/hooks/useHeroFilters";
 import { DEFAULT_MODE } from "~/lib/game-mode";
 
@@ -24,8 +21,6 @@ type HeroFiltersProps = Pick<
   | "endDate"
   | "handleDateChange"
   | "defaultRange"
-  | "sameLaneFilter"
-  | "setSameLaneFilter"
 >;
 
 export function HeroFiltersSection({
@@ -46,8 +41,6 @@ export function HeroFiltersSection({
   endDate,
   handleDateChange,
   defaultRange,
-  sameLaneFilter,
-  setSameLaneFilter,
 }: HeroFiltersProps) {
   return (
     <Filter.Root>
@@ -95,18 +88,6 @@ export function HeroFiltersSection({
         onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
         defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
       />
-      {tab === "hero-combs" && <HeroCombFilters />}
-      {(tab === "matchups" || tab === "hero-matchup-details") && (
-        <FilterToggleCell
-          label="Lane"
-          value={sameLaneFilter ? "same" : "any"}
-          defaultValue="same"
-          onValueChange={(v) => setSameLaneFilter(v === "same")}
-        >
-          <SegmentedItem value="same">Same lane</SegmentedItem>
-          <SegmentedItem value="any">Any lane</SegmentedItem>
-        </FilterToggleCell>
-      )}
     </Filter.Root>
   );
 }
