@@ -25,8 +25,8 @@ import {
 } from "~/lib/deadlockdle/seed";
 import { gameStorageKey, legacyGameStorageKey } from "~/lib/deadlockdle/storage";
 import { useCountdown } from "~/lib/deadlockdle/use-countdown";
-import { useStoredDailyState } from "~/lib/deadlockdle/use-stored-state";
 import { seo } from "~/lib/seo";
+import { useStoredDailyState } from "~/lib/use-stored-state";
 import { filterShopableItems } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/deadlockdle/item-stats")({

@@ -30,7 +30,7 @@ interface StoredStateOptions<T> {
 /**
  * State persisted under `key`. The server render and hydration use `fresh()`, since storage only exists in the
  * browser; the saved value loads on the render after, and again whenever `key` or `scope` changes. `save` updates the
- * state and persists it.
+ * state and persists it. `loaded` turns true once the state holds what storage had (or `fresh()` if it had nothing).
  */
 export function useStoredState<T>(
   key: string,
@@ -41,6 +41,7 @@ export function useStoredState<T>(
   const source = hydrated ? `${key}@${scope}` : `ssr@${scope}`;
   const [state, setState] = useState<T>(fresh);
   const [loadedFrom, setLoadedFrom] = useState<string | null>(null);
+  const loaded = hydrated && loadedFrom === source;
 
   if (loadedFrom !== source) {
     setLoadedFrom(source);
@@ -58,7 +59,7 @@ export function useStoredState<T>(
     [key],
   );
 
-  return [state, save] as const;
+  return [state, save, loaded] as const;
 }
 
 /**

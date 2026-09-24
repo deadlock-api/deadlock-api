@@ -7,11 +7,9 @@ import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { useHydrated } from "~/hooks/useHydrated";
-import { readLocalStorage, writeLocalStorage } from "~/lib/local-storage";
 import { cn } from "~/lib/utils";
 
 import {
-  EMPTY_FLASHCARD_STATS,
   FlashcardMastered,
   FlashcardPage,
   FlashcardStatStrip,
@@ -20,6 +18,7 @@ import {
   ResultMark,
 } from "./FlashcardChrome";
 import { useAnswerKeys } from "./use-answer-keys";
+import { useFlashcardProgress } from "./use-flashcard-progress";
 
 const OPTION_COUNT = 4;
 const CORRECT_FEEDBACK_MS = 500;
@@ -74,7 +73,8 @@ export interface FlashcardGameProps<T extends FlashcardEntry> {
   isError?: boolean;
   onRetry?: () => void;
   retrying?: boolean;
-  storageKey: string;
+  /** Names the deck's saved settings and progress (`flashcards:<deck>:*` in storage). */
+  deck: string;
   masteredLabel: string;
 }
 
@@ -111,27 +111,29 @@ function FlashcardGameReady<T extends FlashcardEntry>({
   promptClassName = "size-40 sm:size-52",
   controls,
   reshuffleKey,
-  storageKey,
+  deck,
   masteredLabel,
 }: FlashcardGameProps<T>) {
-  const [card, setCard] = useState<Card<T> | null>(() => (pool.length > 0 ? pickCard(pool, new Set()) : null));
+  const { noRepeats, setNoRepeats, stats, seenIds, recordAnswer, resetProgress, loaded } = useFlashcardProgress(deck);
+  const [card, setCard] = useState<Card<T> | null>(null);
+  const [dealt, setDealt] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
-  const [stats, setStats] = useState(EMPTY_FLASHCARD_STATS);
-  const [seenIds, setSeenIds] = useState<Set<number>>(new Set());
-  const [noRepeats, setNoRepeats] = useState(() => readLocalStorage(storageKey) === "true");
   const advanceTimer = useRef<number | null>(null);
-  const noRepeatsRef = useRef(noRepeats);
   const prevReshuffleKey = useRef(reshuffleKey);
+
+  // The first card waits for the saved progress, so "No repeats" never opens on a card already mastered.
+  if (loaded && !dealt) {
+    setDealt(true);
+    setCard(pickCard(pool, noRepeats ? seenIds : new Set()));
+  }
 
   const updateNoRepeats = useCallback(
     (value: boolean) => {
-      noRepeatsRef.current = value;
       setNoRepeats(value);
-      writeLocalStorage(storageKey, String(value));
       // Allowing repeats again after the pool was mastered: deal a card rather than stay on "mastered".
       if (!value && card === null && pool.length > 0) setCard(pickCard(pool, new Set()));
     },
-    [storageKey, card, pool],
+    [setNoRepeats, card, pool],
   );
 
   useEffect(() => {
@@ -153,29 +155,18 @@ function FlashcardGameReady<T extends FlashcardEntry>({
       setSelected(id);
       answered.current = true;
       const correct = id === card.answer.id;
-      setStats((prev) => {
-        const nextStreak = correct ? prev.streak + 1 : 0;
-        return {
-          correct: prev.correct + (correct ? 1 : 0),
-          seen: prev.seen + 1,
-          streak: nextStreak,
-          bestStreak: Math.max(prev.bestStreak, nextStreak),
-        };
-      });
-      const nextSeen = new Set(seenIds);
-      if (correct) nextSeen.add(card.answer.id);
+      const nextSeen = recordAnswer(card.answer.id, correct);
       advanceTimer.current = window.setTimeout(
         () => {
           setSelected(null);
-          setSeenIds(nextSeen);
           // Without no-repeats only the card just seen is skipped, unless it is the only one.
-          const exclude = noRepeatsRef.current ? nextSeen : new Set<number>(pool.length > 1 ? [card.answer.id] : []);
+          const exclude = noRepeats ? nextSeen : new Set<number>(pool.length > 1 ? [card.answer.id] : []);
           setCard(pickCard(pool, exclude));
         },
         correct ? CORRECT_FEEDBACK_MS : WRONG_FEEDBACK_MS,
       );
     },
-    [card, selected, pool, seenIds],
+    [card, selected, pool, noRepeats, recordAnswer],
   );
 
   const pickByKey = useCallback(
@@ -190,9 +181,9 @@ function FlashcardGameReady<T extends FlashcardEntry>({
   const redraw = useCallback(() => {
     if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current);
     setSelected(null);
-    const exclude = noRepeatsRef.current ? seenIds : new Set<number>(card && pool.length > 1 ? [card.answer.id] : []);
+    const exclude = noRepeats ? seenIds : new Set<number>(card && pool.length > 1 ? [card.answer.id] : []);
     setCard(pickCard(pool, exclude));
-  }, [pool, seenIds, card]);
+  }, [pool, noRepeats, seenIds, card]);
 
   useEffect(() => {
     if (prevReshuffleKey.current === reshuffleKey) return;
@@ -202,16 +193,16 @@ function FlashcardGameReady<T extends FlashcardEntry>({
 
   const resetStats = useCallback(() => {
     if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current);
-    setStats(EMPTY_FLASHCARD_STATS);
+    resetProgress();
     setSelected(null);
-    setSeenIds(new Set());
-    setCard(pool.length > 0 ? pickCard(pool, new Set()) : null);
-  }, [pool]);
+    setCard(pickCard(pool, new Set()));
+  }, [pool, resetProgress]);
 
   const empty = pool.length === 0;
   // A filter can shrink the pool below cards already mastered; only the ones still in it count.
   const masteredInPool = pool.reduce((count, entry) => count + Number(seenIds.has(entry.id)), 0);
-  const exhausted = noRepeats && pool.length > 0 && masteredInPool >= pool.length;
+  // The last card keeps its verdict on screen before "mastered" replaces it.
+  const exhausted = noRepeats && pool.length > 0 && masteredInPool >= pool.length && selected === null;
 
   return (
     <FlashcardPage title={title} subtitle={subtitle}>
@@ -228,7 +219,9 @@ function FlashcardGameReady<T extends FlashcardEntry>({
         {controls}
       </div>
 
-      {empty ? (
+      {!dealt ? (
+        <LoadingState label="flashcards" />
+      ) : empty ? (
         <EmptyState title="No cards available." />
       ) : exhausted || !card ? (
         <FlashcardMastered label={masteredLabel} stats={stats} onReset={resetStats} />

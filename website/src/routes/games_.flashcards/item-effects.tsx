@@ -99,7 +99,7 @@ function ItemEffectFlashcards() {
       isError={isError}
       onRetry={() => void refetch()}
       retrying={isFetching}
-      storageKey="flashcards:item-effects:no-repeats"
+      deck="item-effects"
       masteredLabel="All item effects mastered"
     />
   );

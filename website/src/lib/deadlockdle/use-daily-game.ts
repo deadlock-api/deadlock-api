@@ -1,11 +1,11 @@
 import { useCallback } from "react";
 
 import { day } from "~/dayjs";
+import { useStoredDailyState, useStoredState } from "~/lib/use-stored-state";
 
 import { getTodayDate, resolvePuzzleDate } from "./seed";
 import { gameStorageKey, legacyGameStorageKey } from "./storage";
 import type { DailyGameState, GameMode, GameStatus, StreakState } from "./types";
-import { useStoredDailyState, useStoredState } from "./use-stored-state";
 
 const DEFAULT_GAME_STATE: DailyGameState = {
   date: "",

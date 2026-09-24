@@ -6,8 +6,8 @@ import { useCallback } from "react";
 import { TargetCursor } from "~/components/features/deadlockdle/TargetCursor";
 import { Button } from "~/components/ui/button";
 import { StatusDot } from "~/components/ui/status-dot";
-import { useStoredState } from "~/lib/deadlockdle/use-stored-state";
 import { NEW_ROCKER_PRELOAD } from "~/lib/fonts";
+import { useStoredState } from "~/lib/use-stored-state";
 
 const CURSOR_STORAGE_KEY = "deadlockdle:custom-cursor";
 

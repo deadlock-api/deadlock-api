@@ -41,7 +41,7 @@ function ItemFlashcards() {
       isError={isError}
       onRetry={() => void refetch()}
       retrying={isFetching}
-      storageKey="flashcards:items:no-repeats"
+      deck="items"
       masteredLabel="All items mastered"
     />
   );

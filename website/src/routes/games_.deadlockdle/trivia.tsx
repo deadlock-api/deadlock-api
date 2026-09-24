@@ -31,8 +31,8 @@ import {
   type TriviaQuestion,
 } from "~/lib/deadlockdle/trivia-questions";
 import { useCountdown } from "~/lib/deadlockdle/use-countdown";
-import { useStoredDailyState } from "~/lib/deadlockdle/use-stored-state";
 import { seo } from "~/lib/seo";
+import { useStoredDailyState } from "~/lib/use-stored-state";
 import { filterPlayableHeroes } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/deadlockdle/trivia")({

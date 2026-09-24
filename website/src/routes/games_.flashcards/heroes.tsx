@@ -40,7 +40,7 @@ function HeroFlashcards() {
       isError={isError}
       onRetry={() => void refetch()}
       retrying={isFetching}
-      storageKey="flashcards:heroes:no-repeats"
+      deck="heroes"
       masteredLabel="All heroes mastered"
     />
   );

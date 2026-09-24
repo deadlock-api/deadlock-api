@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AnswerOption, revealedState } from "~/components/domain/minigames/AnswerOption";
 import {
-  EMPTY_FLASHCARD_STATS,
   FlashcardMastered,
   FlashcardPage,
   FlashcardStatStrip,
@@ -15,13 +14,13 @@ import {
   ResultMark,
 } from "~/components/features/flashcards/FlashcardChrome";
 import { useAnswerKeys } from "~/components/features/flashcards/use-answer-keys";
+import { useFlashcardProgress } from "~/components/features/flashcards/use-flashcard-progress";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { useHydrated } from "~/hooks/useHydrated";
-import { readLocalStorage, writeLocalStorage } from "~/lib/local-storage";
 import { seo } from "~/lib/seo";
 import { filterShopableItems, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 
@@ -232,16 +231,20 @@ function ItemUpgradePathFlashcards() {
 
 const TITLE = "Item Upgrade Paths";
 const SUBTITLE = "Match each upgraded item to its direct component path.";
-const NO_REPEATS_KEY = "flashcards:item-upgrades:no-repeats";
 
 function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) {
-  const [card, setCard] = useState<UpgradePathCard | null>(() => (pool.length > 0 ? pickCard(pool, new Set()) : null));
+  const { noRepeats, setNoRepeats, stats, seenIds, recordAnswer, resetProgress, loaded } =
+    useFlashcardProgress("item-upgrades");
+  const [card, setCard] = useState<UpgradePathCard | null>(null);
+  const [dealt, setDealt] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
-  const [stats, setStats] = useState(EMPTY_FLASHCARD_STATS);
-  const [seenIds, setSeenIds] = useState<Set<number>>(new Set());
-  const [noRepeats, setNoRepeats] = useState(() => readLocalStorage(NO_REPEATS_KEY) === "true");
   const advanceTimer = useRef<number | null>(null);
-  const noRepeatsRef = useRef(noRepeats);
+
+  // The first card waits for the saved progress, so "No repeats" never opens on a card already mastered.
+  if (loaded && !dealt) {
+    setDealt(true);
+    setCard(pickCard(pool, noRepeats ? seenIds : new Set()));
+  }
 
   const clearAdvanceTimer = useCallback(() => {
     if (advanceTimer.current !== null) {
@@ -252,21 +255,23 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
 
   const resetGame = useCallback(() => {
     clearAdvanceTimer();
-    setStats(EMPTY_FLASHCARD_STATS);
+    resetProgress();
     setSelected(null);
-    setSeenIds(new Set());
-    setCard(pool.length > 0 ? pickCard(pool, new Set()) : null);
-  }, [clearAdvanceTimer, pool]);
+    setCard(pickCard(pool, new Set()));
+  }, [clearAdvanceTimer, resetProgress, pool]);
 
   useEffect(() => {
     return () => clearAdvanceTimer();
   }, [clearAdvanceTimer]);
 
-  const updateNoRepeats = useCallback((value: boolean) => {
-    noRepeatsRef.current = value;
-    setNoRepeats(value);
-    writeLocalStorage(NO_REPEATS_KEY, String(value));
-  }, []);
+  const updateNoRepeats = useCallback(
+    (value: boolean) => {
+      setNoRepeats(value);
+      // Allowing repeats again after the pool was mastered: deal a card rather than stay on "mastered".
+      if (!value && card === null && pool.length > 0) setCard(pickCard(pool, new Set()));
+    },
+    [setNoRepeats, card, pool],
+  );
 
   const handleChoice = useCallback(
     (key: string) => {
@@ -275,30 +280,18 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
       setSelected(key);
       const correct = key === card.answer.answerKey;
 
-      setStats((prev) => {
-        const nextStreak = correct ? prev.streak + 1 : 0;
-        return {
-          correct: prev.correct + (correct ? 1 : 0),
-          seen: prev.seen + 1,
-          streak: nextStreak,
-          bestStreak: Math.max(prev.bestStreak, nextStreak),
-        };
-      });
-
-      const nextSeen = new Set(seenIds);
-      if (correct) nextSeen.add(card.answer.id);
+      const nextSeen = recordAnswer(card.answer.id, correct);
 
       advanceTimer.current = window.setTimeout(
         () => {
           setSelected(null);
-          setSeenIds(nextSeen);
-          const exclude = noRepeatsRef.current ? nextSeen : new Set<number>([card.answer.id]);
+          const exclude = noRepeats ? nextSeen : new Set<number>([card.answer.id]);
           setCard(pickCard(pool, exclude));
         },
         correct ? CORRECT_FEEDBACK_MS : WRONG_FEEDBACK_MS,
       );
     },
-    [card, selected, seenIds, pool],
+    [card, selected, noRepeats, recordAnswer, pool],
   );
 
   const pickByKey = useCallback(
@@ -311,7 +304,10 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
   useAnswerKeys(card?.options.length ?? 0, pickByKey, selected === null);
 
   const empty = pool.length === 0;
-  const exhausted = noRepeats && pool.length > 0 && seenIds.size >= pool.length;
+  // A patch can drop paths already mastered; only the ones still in the deck count.
+  const masteredInPool = pool.reduce((count, entry) => count + Number(seenIds.has(entry.id)), 0);
+  // The last card keeps its verdict on screen before "mastered" replaces it.
+  const exhausted = noRepeats && pool.length > 0 && masteredInPool >= pool.length && selected === null;
 
   return (
     <FlashcardPage title={TITLE} subtitle={SUBTITLE}>
@@ -322,12 +318,14 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
           id="flashcard-upgrade-no-repeats"
           checked={noRepeats}
           onCheckedChange={updateNoRepeats}
-          mastered={seenIds.size}
+          mastered={masteredInPool}
           total={pool.length}
         />
       </div>
 
-      {empty ? (
+      {!dealt ? (
+        <LoadingState label="flashcards" />
+      ) : empty ? (
         <EmptyState title="No upgrade paths found." />
       ) : exhausted || !card ? (
         <FlashcardMastered label="All upgrade paths mastered" stats={stats} onReset={resetGame} />
