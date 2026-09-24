@@ -29,11 +29,11 @@ import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { wilsonScoreInterval } from "~/lib/wilson";
 
 // Parsers for sort field and direction using nuqs string literal parser
-const parseAsSortField = parseAsStringLiteral(["winRate", "matches"] as const);
+const parseAsSortField = parseAsStringLiteral(["winRate", "matches", "name", "tier"] as const);
 const parseAsSortDirection = parseAsStringLiteral(["asc", "desc"] as const);
 
 // Infer types from parsers
-type SortField = "winRate" | "matches";
+type SortField = "winRate" | "matches" | "name" | "tier";
 type SortDirection = "asc" | "desc";
 
 interface SortState {
@@ -472,6 +472,15 @@ export function ItemStatsTable({
       let aValue: number;
       let bValue: number;
 
+      if (rowSort.field === "name") {
+        const byName = (a.item?.name ?? "").localeCompare(b.item?.name ?? "");
+        return rowSort.direction === "asc" ? byName : -byName;
+      }
+      if (rowSort.field === "tier") {
+        // Within a tier, the stronger item first, whichever way the tiers run.
+        const byTier = rowSort.direction === "asc" ? a.itemTier - b.itemTier : b.itemTier - a.itemTier;
+        return byTier || b.wins / b.matches - a.wins / a.matches;
+      }
       if (rowSort.field === "winRate") {
         aValue = a.wins / a.matches;
         bValue = b.wins / b.matches;
@@ -504,7 +513,8 @@ export function ItemStatsTable({
         direction: sort.direction === "asc" ? "desc" : "asc",
       };
     } else {
-      newSort = { field, direction: "desc" };
+      // Names and tiers read from the top down (A first, tier 1 first); numbers from the largest.
+      newSort = { field, direction: field === "name" || field === "tier" ? "asc" : "desc" };
     }
     setSort(newSort);
   };
@@ -569,8 +579,25 @@ export function ItemStatsTable({
                       </TableHead>
                     )}
                     {!hideIndex && <TableHead className="hidden text-center @md:table-cell">#</TableHead>}
-                    <TableHead data-pinned>Item</TableHead>
-                    {columns.includes("itemsTier") && <TableHead className="hidden @md:table-cell">Tier</TableHead>}
+                    <SortableHeader
+                      label="Item"
+                      sortKey="name"
+                      activeSortKey={sort.field}
+                      sortDir={sort.direction}
+                      onSortChange={toggleSort}
+                      className="text-start"
+                      data-pinned
+                    />
+                    {columns.includes("itemsTier") && (
+                      <SortableHeader
+                        label="Tier"
+                        sortKey="tier"
+                        activeSortKey={sort.field}
+                        sortDir={sort.direction}
+                        onSortChange={toggleSort}
+                        className="hidden text-start @md:table-cell"
+                      />
+                    )}
                     {columns.includes("winRate") && (
                       <SortableHeader
                         label="Win Rate"
