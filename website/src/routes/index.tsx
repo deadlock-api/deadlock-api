@@ -123,7 +123,7 @@ const services = [
 const analyticsLinks = [
   {
     title: "Hero Analytics",
-    description: "Win rates, matchups, synergies, and performance trends across patches for every hero.",
+    description: "A tier list, win rates, matchups, synergies, and trends across patches for every hero.",
     href: "/analytics/heroes",
     icon: Swords,
   },
