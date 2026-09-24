@@ -54,6 +54,8 @@ function buildBreadcrumbs(pathname: string, labelsByPath: Map<string, string>): 
   return items;
 }
 
+const REDIRECTING_SECTIONS = new Set(["/analytics", "/community"]);
+
 export function Breadcrumbs() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   // Archive puzzles carry ?date=; the hub crumb keeps it so players land back on the day they were replaying.
@@ -84,12 +86,15 @@ export function Breadcrumbs() {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: "https://deadlock-api.com/" },
-      ...items.map((item, i) => ({
-        "@type": "ListItem",
-        position: i + 2,
-        name: item.label,
-        item: `https://deadlock-api.com${item.path}`,
-      })),
+      // Section paths that only redirect to their first page are left out: a crawler should not be sent to a 301.
+      ...items
+        .filter((item) => !REDIRECTING_SECTIONS.has(item.path))
+        .map((item, i) => ({
+          "@type": "ListItem",
+          position: i + 2,
+          name: item.label,
+          item: `https://deadlock-api.com${item.path}`,
+        })),
     ],
   };
 
