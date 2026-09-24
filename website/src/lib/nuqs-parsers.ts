@@ -43,5 +43,8 @@ export function parseAsSetOf<T>(parser: SingleParser<T>) {
     serialize: (value: Set<T>) => {
       return arrayParser.serialize(Array.from(value));
     },
+    // By members, not identity: an emptied set then equals its `new Set()` default and leaves the URL, instead of
+    // staying behind as `?include_items=`.
+    eq: (a: Set<T>, b: Set<T>) => a.size === b.size && [...a].every((member) => b.has(member)),
   });
 }

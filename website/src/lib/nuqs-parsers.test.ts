@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { parseAsDayjs, parseAsDayjsRange } from "./nuqs-parsers";
+import { parseAsInteger } from "nuqs";
+
+import { parseAsDayjs, parseAsDayjsRange, parseAsSetOf } from "./nuqs-parsers";
 
 test("date URL values reject invalid Dayjs objects rather than propagating Invalid Date", () => {
   for (const value of ["", "not-a-date", "Infinity", "2026-09-11Tinvalid"]) {
@@ -43,4 +45,11 @@ test("valid ranges retain exact boundaries and compare instants across offsets",
   const sameInstant = parseAsDayjsRange.parse("2026-09-11T19:00:00+02:00_2026-09-11T17:00:00Z");
   assert.ok(sameInstant);
   assert.equal(sameInstant[0]?.valueOf(), sameInstant[1]?.valueOf());
+});
+
+test("sets compare by their members, so an emptied set equals its empty default", () => {
+  const parser = parseAsSetOf(parseAsInteger);
+  assert.equal(parser.eq(new Set(), new Set()), true);
+  assert.equal(parser.eq(new Set([1, 2]), new Set([2, 1])), true);
+  assert.equal(parser.eq(new Set([1]), new Set([2])), false);
 });
