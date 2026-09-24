@@ -15,7 +15,7 @@ async function failedQuery(data?: number[]) {
     },
   };
   if (data) client.setQueryData(options.queryKey, data);
-  await assert.rejects(client.fetchQuery(options));
+  await assert.rejects(client.query(options));
   return new QueryObserver(client, options).getCurrentResult();
 }
 

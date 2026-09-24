@@ -119,7 +119,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
   component: ItemDetailPage,
   loader: async ({ context: { queryClient, preferences }, params }) => {
     const [items, seasons] = await Promise.all([
-      queryClient.ensureQueryData(itemUpgradesQueryOptions),
+      queryClient.query({ ...itemUpgradesQueryOptions, staleTime: "static" }),
       loadSeasons(queryClient),
     ]);
     const shopable = filterShopableItems(items);
@@ -138,13 +138,19 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
     }
     const [stats, heroStats, ranks] = await Promise.all([
       prefetchSafe(
-        queryClient.ensureQueryData(itemStatsQueryOptions(currentItemStatsParams(seasons, preferences.dateFilter))),
+        queryClient.query({
+          ...itemStatsQueryOptions(currentItemStatsParams(seasons, preferences.dateFilter)),
+          staleTime: "static",
+        }),
       ),
       prefetchSafe(
-        queryClient.ensureQueryData(heroStatsQueryOptions(currentHeroStatsParams(seasons, preferences.dateFilter))),
+        queryClient.query({
+          ...heroStatsQueryOptions(currentHeroStatsParams(seasons, preferences.dateFilter)),
+          staleTime: "static",
+        }),
       ),
-      prefetchSafe(queryClient.ensureQueryData(ranksQueryOptions)),
-      prefetchSafe(queryClient.ensureQueryData(itemQueryOptions(item.id))),
+      prefetchSafe(queryClient.query({ ...ranksQueryOptions, staleTime: "static" })),
+      prefetchSafe(queryClient.query({ ...itemQueryOptions(item.id), staleTime: "static" })),
     ]);
     const summary = summarizeItemStats(stats, heroStats, item.id);
     return {

@@ -54,13 +54,14 @@ export const Route = createFileRoute("/community/badge-distribution")({
     const range = defaultUnixRange(await loadSeasons(queryClient), preferences.dateFilter);
     const [distribution, ranks] = await Promise.all([
       prefetchSafe(
-        queryClient.ensureQueryData(
-          badgeDistributionQueryOptions({
+        queryClient.query({
+          ...badgeDistributionQueryOptions({
             ...range,
           }),
-        ),
+          staleTime: "static",
+        }),
       ),
-      prefetchSafe(queryClient.ensureQueryData(ranksQueryOptions)),
+      prefetchSafe(queryClient.query({ ...ranksQueryOptions, staleTime: "static" })),
     ]);
     return { medianRank: findMedianRankName(distribution, ranks) };
   },

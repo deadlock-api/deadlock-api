@@ -270,7 +270,7 @@ function TeamBuilderPage() {
   // The URL already carries the draft, so a reload restores the picks; refetching the match only
   // repopulates the header, player names and badges. Only an explicit load overwrites the board.
   const applyMatch = async (matchId: number, allyTeam: 0 | 1) => {
-    const metadata = await queryClient.fetchQuery(matchMetadataQueryOptions(matchId));
+    const metadata = await queryClient.query(matchMetadataQueryOptions(matchId));
     draftFromMatch(parseImportedMatch(metadata, allyTeam));
   };
 
@@ -280,7 +280,7 @@ function TeamBuilderPage() {
     setImportError(null);
     setImporting(true);
     try {
-      adoptMatch(matchId, await queryClient.fetchQuery(matchMetadataQueryOptions(matchId)));
+      adoptMatch(matchId, await queryClient.query(matchMetadataQueryOptions(matchId)));
     } catch (error) {
       // A transport failure carries a status and an unreadable message; anything the query threw
       // itself already reads as a sentence and is kept.
@@ -326,11 +326,11 @@ function TeamBuilderPage() {
     setImporting(true);
     let seeded = false;
     try {
-      const matches = await queryClient.fetchQuery(recentMatchesQueryOptions);
+      const matches = await queryClient.query(recentMatchesQueryOptions);
 
       const match = matches[Math.floor(Math.random() * matches.length)];
       if (match) {
-        adoptMatch(match.match_id, await queryClient.fetchQuery(matchMetadataQueryOptions(match.match_id)));
+        adoptMatch(match.match_id, await queryClient.query(matchMetadataQueryOptions(match.match_id)));
         seeded = true;
       }
     } catch {

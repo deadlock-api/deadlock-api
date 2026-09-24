@@ -65,16 +65,17 @@ export const itemsPageOptions = {
       matchMode: DEFAULT_MATCH_MODE,
     };
     const [stats, , items] = await Promise.all([
-      prefetchSafe(queryClient.ensureQueryData(itemStatsQueryOptions({ ...common, ...range }))),
+      prefetchSafe(queryClient.query({ ...itemStatsQueryOptions({ ...common, ...range }), staleTime: "static" })),
       prefetchSafe(
-        queryClient.ensureQueryData(
-          itemStatsQueryOptions({
+        queryClient.query({
+          ...itemStatsQueryOptions({
             ...common,
             ...prevRange,
           }),
-        ),
+          staleTime: "static",
+        }),
       ),
-      prefetchSafe(queryClient.ensureQueryData(itemUpgradesQueryOptions)),
+      prefetchSafe(queryClient.query({ ...itemUpgradesQueryOptions, staleTime: "static" })),
     ]);
     // The description names the patch-wide leader, which a hero-filtered table would misrepresent.
     return { leader: deps.heroId === null ? findWinRateLeader(stats, items) : null };

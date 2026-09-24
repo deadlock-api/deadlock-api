@@ -44,7 +44,10 @@ export const Route = createFileRoute("/community/heatmap")({
   // Kill/death stats are ~2 MB and only feed a client-side canvas, so they are
   // fetched after hydration instead of being dehydrated into the HTML.
   loader: async ({ context: { queryClient } }) => {
-    await Promise.all([prefetchSafe(queryClient.ensureQueryData(mapQueryOptions)), loadSeasons(queryClient)]);
+    await Promise.all([
+      prefetchSafe(queryClient.query({ ...mapQueryOptions, staleTime: "static" })),
+      loadSeasons(queryClient),
+    ]);
   },
   head: () =>
     seo({

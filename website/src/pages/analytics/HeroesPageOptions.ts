@@ -65,45 +65,49 @@ export const heroesPageOptions = {
     };
     const [stats, heroes] = await Promise.all([
       prefetchSafe(
-        queryClient.ensureQueryData(
-          heroStatsQueryOptions({
+        queryClient.query({
+          ...heroStatsQueryOptions({
             ...common,
             minUnixTimestamp: r.minUnixTimestamp,
             maxUnixTimestamp: r.maxUnixTimestamp,
           }),
-        ),
+          staleTime: "static",
+        }),
       ),
-      prefetchSafe(queryClient.ensureQueryData(heroesQueryOptions)),
+      prefetchSafe(queryClient.query({ ...heroesQueryOptions, staleTime: "static" })),
       prefetchSafe(
-        queryClient.ensureQueryData(
-          heroStatsQueryOptions({
+        queryClient.query({
+          ...heroStatsQueryOptions({
             ...common,
             minUnixTimestamp: r.prevMinUnixTimestamp,
             maxUnixTimestamp: r.prevMaxUnixTimestamp,
           }),
-        ),
+          staleTime: "static",
+        }),
       ),
       prefetchSafe(
-        queryClient.ensureQueryData(
-          heroBanStatsQueryOptions({
+        queryClient.query({
+          ...heroBanStatsQueryOptions({
             matchMode: DEFAULT_MATCH_MODE,
             minAverageBadge: DEFAULT_MIN_RANK,
             maxAverageBadge: DEFAULT_MAX_RANK,
             minUnixTimestamp: r.minUnixTimestamp,
             maxUnixTimestamp: r.maxUnixTimestamp,
           }),
-        ),
+          staleTime: "static",
+        }),
       ),
       prefetchSafe(
-        queryClient.ensureQueryData(
-          heroBanStatsQueryOptions({
+        queryClient.query({
+          ...heroBanStatsQueryOptions({
             matchMode: DEFAULT_MATCH_MODE,
             minAverageBadge: DEFAULT_MIN_RANK,
             maxAverageBadge: DEFAULT_MAX_RANK,
             minUnixTimestamp: r.prevMinUnixTimestamp,
             maxUnixTimestamp: r.prevMaxUnixTimestamp,
           }),
-        ),
+          staleTime: "static",
+        }),
       ),
     ]);
     // The leader is measured over the default range, which is this season unless the visitor prefers patches.

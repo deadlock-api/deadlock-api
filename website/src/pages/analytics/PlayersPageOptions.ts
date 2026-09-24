@@ -35,8 +35,8 @@ export const playersPageOptions = {
       ]);
     const range = defaultUnixRange(await loadSeasons(queryClient), preferences.dateFilter);
     const scoreboard = await prefetchSafe(
-      queryClient.ensureQueryData(
-        playerScoreboardQueryOptions({
+      queryClient.query({
+        ...playerScoreboardQueryOptions({
           sortBy: "kills" as PlayerScoreboardSortByEnum,
           sortDirection: "desc",
           gameMode: "normal",
@@ -49,12 +49,13 @@ export const playersPageOptions = {
           start: 0,
           limit: MAX_ENTRIES,
         }),
-      ),
+        staleTime: "static",
+      }),
     );
     const accountIds = (scoreboard ?? []).map((e) => e.account_id).filter((id): id is number => id != null);
     await Promise.all(
       steamProfileBatches(accountIds).map((batch) =>
-        prefetchSafe(queryClient.ensureQueryData(steamProfilesQueryOptions(batch))),
+        prefetchSafe(queryClient.query({ ...steamProfilesQueryOptions(batch), staleTime: "static" })),
       ),
     );
   },

@@ -109,8 +109,9 @@ export const rankedSeasonsQueryOptions = queryOptions({
 
 /** Loader-side counterpart of `useSeasons`. Falls back to no seasons if the endpoint is unavailable. */
 export async function loadSeasons(queryClient: QueryClient): Promise<SeasonInfo[]> {
-  const seasons = await prefetchSafe(queryClient.ensureQueryData(rankedSeasonsQueryOptions));
-  return toSeasons(seasons ?? []);
+  // `query()` applies `select`, so this already is `toSeasons` of the cached response.
+  const seasons = await prefetchSafe(queryClient.query({ ...rankedSeasonsQueryOptions, staleTime: "static" }));
+  return seasons ?? [];
 }
 
 export function filterPlayableHeroes<T extends SlimHero>(heroes: T[]): T[] {

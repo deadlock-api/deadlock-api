@@ -26,9 +26,9 @@ export const Route = createFileRoute("/tracker_/players/$accountId")({
       throw redirect({ to: "/tracker/players/$accountId", params: { accountId: String(accountId) }, search: true });
     }
     const [profile] = await Promise.all([
-      prefetchSafe(queryClient.ensureQueryData(steamProfileQueryOptions(accountId))),
-      prefetchSafe(queryClient.ensureQueryData(heroesQueryOptions)),
-      prefetchSafe(queryClient.ensureQueryData(ranksQueryOptions)),
+      prefetchSafe(queryClient.query({ ...steamProfileQueryOptions(accountId), staleTime: "static" })),
+      prefetchSafe(queryClient.query({ ...heroesQueryOptions, staleTime: "static" })),
+      prefetchSafe(queryClient.query({ ...ranksQueryOptions, staleTime: "static" })),
     ]);
     return { accountId, personaname: profile?.personaname, breadcrumb: profile?.personaname ?? String(accountId) };
   },

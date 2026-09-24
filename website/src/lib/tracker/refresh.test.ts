@@ -57,7 +57,7 @@ test("account refresh fetches active breakdowns immediately and leaves inactive 
     },
   });
   const inactiveKey = queryKeys.players.enemyStats({ accountId: 1 });
-  await client.fetchQuery({
+  await client.query({
     queryKey: inactiveKey,
     queryFn: async () => {
       calls.inactive++;

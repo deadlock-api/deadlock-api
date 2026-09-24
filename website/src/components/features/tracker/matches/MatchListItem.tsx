@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { noop, useQueryClient } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { Bookmark, CircleDashed, Gavel, LogOut, Trophy } from "lucide-react";
 import { type KeyboardEventHandler, useEffect, useRef } from "react";
@@ -68,7 +68,7 @@ export function MatchListItem({
   const schedulePrefetch = () => {
     clearTimeout(prefetchTimer.current);
     prefetchTimer.current = setTimeout(() => {
-      void queryClient.prefetchQuery(trackerMatchMetadataQueryOptions(entry.match_id));
+      void queryClient.query(trackerMatchMetadataQueryOptions(entry.match_id)).catch(noop);
     }, PREFETCH_HOVER_MS);
   };
 

@@ -31,8 +31,8 @@ export const Route = createFileRoute("/analytics/abilities")({
   loader: async ({ context: { queryClient, preferences }, deps }) => {
     const range = defaultUnixRange(await loadSeasons(queryClient), preferences.dateFilter);
     await prefetchSafe(
-      queryClient.ensureQueryData(
-        abilityOrderQueryOptions({
+      queryClient.query({
+        ...abilityOrderQueryOptions({
           heroId: deps.heroId,
           gameMode: "normal",
           matchMode: DEFAULT_MATCH_MODE,
@@ -41,7 +41,8 @@ export const Route = createFileRoute("/analytics/abilities")({
           ...range,
           minMatches: 20,
         }),
-      ),
+        staleTime: "static",
+      }),
     );
   },
   head: () =>

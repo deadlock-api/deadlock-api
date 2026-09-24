@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { noop, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
 import { ArrowDown, ArrowUp, Bookmark, ChevronLeft, ChevronRight, Home } from "lucide-react";
 import { parseAsInteger, parseAsStringLiteral, useQueryState, useQueryStates } from "nuqs";
@@ -115,7 +115,7 @@ export function MatchesTab({
     if (selectedId == null || !canPreload || (previousMatchId == null && nextMatchId == null)) return;
     const preload = () => {
       for (const matchId of [previousMatchId, nextMatchId]) {
-        if (matchId != null) void queryClient.prefetchQuery(trackerMatchMetadataQueryOptions(matchId));
+        if (matchId != null) void queryClient.query(trackerMatchMetadataQueryOptions(matchId)).catch(noop);
       }
     };
     // Give the loaded match time to render; changing selection cancels work that has not started yet.

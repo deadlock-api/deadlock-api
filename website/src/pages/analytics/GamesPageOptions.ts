@@ -29,15 +29,18 @@ export const gamesPageOptions = {
       maxAverageBadge: 116,
     };
     await Promise.all([
-      prefetchSafe(queryClient.ensureQueryData(gameStatsQueryOptions({ ...baseParams, bucket: "no_bucket" }))),
       prefetchSafe(
-        queryClient.ensureQueryData(
-          gameStatsQueryOptions({
+        queryClient.query({ ...gameStatsQueryOptions({ ...baseParams, bucket: "no_bucket" }), staleTime: "static" }),
+      ),
+      prefetchSafe(
+        queryClient.query({
+          ...gameStatsQueryOptions({
             ...baseParams,
             ...prevRange,
             bucket: "no_bucket",
           }),
-        ),
+          staleTime: "static",
+        }),
       ),
     ]);
   },

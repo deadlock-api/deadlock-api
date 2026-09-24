@@ -29,7 +29,9 @@ export const Route = createFileRoute("/community/leaderboard")({
   loader: async ({ context: { queryClient }, deps }) => {
     // Resolve the default on the server so the client hydrates with the same region.
     const defaultRegion = typeof window === "undefined" ? await fetchDefaultRegion() : getDefaultRegion();
-    await prefetchSafe(queryClient.ensureQueryData(leaderboardQueryOptions(defaultRegion, deps.heroId)));
+    await prefetchSafe(
+      queryClient.query({ ...leaderboardQueryOptions(defaultRegion, deps.heroId), staleTime: "static" }),
+    );
     return { defaultRegion };
   },
   head: () =>

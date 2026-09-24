@@ -20,11 +20,11 @@ export const Route = createFileRoute("/tracker_/demo")({
   // The whole overview is prefetched so the server-rendered page carries the tracker itself, not a skeleton.
   loader: async ({ context: { queryClient } }) => {
     await Promise.all([
-      prefetchSafe(queryClient.ensureQueryData(trackerMatchHistoryQueryOptions(DEMO_ACCOUNT_ID))),
-      prefetchSafe(queryClient.ensureQueryData(trackerRankQueryOptions(DEMO_ACCOUNT_ID))),
-      prefetchSafe(queryClient.ensureQueryData(steamProfileQueryOptions(DEMO_ACCOUNT_ID))),
-      prefetchSafe(queryClient.ensureQueryData(heroesQueryOptions)),
-      prefetchSafe(queryClient.ensureQueryData(ranksQueryOptions)),
+      prefetchSafe(queryClient.query({ ...trackerMatchHistoryQueryOptions(DEMO_ACCOUNT_ID), staleTime: "static" })),
+      prefetchSafe(queryClient.query({ ...trackerRankQueryOptions(DEMO_ACCOUNT_ID), staleTime: "static" })),
+      prefetchSafe(queryClient.query({ ...steamProfileQueryOptions(DEMO_ACCOUNT_ID), staleTime: "static" })),
+      prefetchSafe(queryClient.query({ ...heroesQueryOptions, staleTime: "static" })),
+      prefetchSafe(queryClient.query({ ...ranksQueryOptions, staleTime: "static" })),
     ]);
     return { breadcrumb: "Demo profile" };
   },

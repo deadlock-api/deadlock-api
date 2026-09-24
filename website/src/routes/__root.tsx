@@ -54,7 +54,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     ) {
       preloads.push(
         import("~/queries/asset-queries").then(({ heroesQueryOptions }) =>
-          queryClient.ensureQueryData(heroesQueryOptions),
+          queryClient.query({ ...heroesQueryOptions, staleTime: "static" }),
         ),
       );
     }
@@ -66,7 +66,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       pathname === "/community/heatmap"
     ) {
       preloads.push(
-        import("~/queries/ranks-query").then(({ ranksQueryOptions }) => queryClient.ensureQueryData(ranksQueryOptions)),
+        import("~/queries/ranks-query").then(({ ranksQueryOptions }) =>
+          queryClient.query({ ...ranksQueryOptions, staleTime: "static" }),
+        ),
       );
     }
     // Not the hero stat views: they show no items, and the list embedded 200 KB into each of their pages. A hero's
@@ -82,7 +84,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     ) {
       preloads.push(
         import("~/queries/asset-queries").then(({ itemUpgradesQueryOptions }) =>
-          queryClient.ensureQueryData(itemUpgradesQueryOptions),
+          queryClient.query({ ...itemUpgradesQueryOptions, staleTime: "static" }),
         ),
       );
     }

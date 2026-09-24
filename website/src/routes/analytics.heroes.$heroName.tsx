@@ -150,7 +150,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
   component: HeroDetailPage,
   loader: async ({ context: { queryClient, preferences }, params }) => {
     const [heroes, seasons] = await Promise.all([
-      queryClient.ensureQueryData(heroesQueryOptions),
+      queryClient.query({ ...heroesQueryOptions, staleTime: "static" }),
       loadSeasons(queryClient),
     ]);
     const playable = filterPlayableHeroes(heroes);
@@ -169,18 +169,25 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
     }
     const [stats, ranks] = await Promise.all([
       prefetchSafe(
-        queryClient.ensureQueryData(heroStatsQueryOptions(currentStatsParams(seasons, preferences.dateFilter))),
+        queryClient.query({
+          ...heroStatsQueryOptions(currentStatsParams(seasons, preferences.dateFilter)),
+          staleTime: "static",
+        }),
       ),
-      prefetchSafe(queryClient.ensureQueryData(ranksQueryOptions)),
+      prefetchSafe(queryClient.query({ ...ranksQueryOptions, staleTime: "static" })),
       prefetchSafe(
-        queryClient.ensureQueryData(heroBanStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter))),
+        queryClient.query({
+          ...heroBanStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter)),
+          staleTime: "static",
+        }),
       ),
       prefetchSafe(
-        queryClient.ensureQueryData(
-          itemStatsQueryOptions({ ...currentItemStatsParams(seasons, preferences.dateFilter), heroId: hero.id }),
-        ),
+        queryClient.query({
+          ...itemStatsQueryOptions({ ...currentItemStatsParams(seasons, preferences.dateFilter), heroId: hero.id }),
+          staleTime: "static",
+        }),
       ),
-      prefetchSafe(queryClient.ensureQueryData(itemUpgradesQueryOptions)),
+      prefetchSafe(queryClient.query({ ...itemUpgradesQueryOptions, staleTime: "static" })),
     ]);
     const cardImage = hero.images.hero_card_critical_webp ?? hero.images.icon_hero_card_webp ?? null;
     const summary = summarizeHeroStats(stats, hero.id);
