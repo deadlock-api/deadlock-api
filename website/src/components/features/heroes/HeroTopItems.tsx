@@ -50,11 +50,14 @@ export function HeroTopItems({
   heroName,
   heroMatches,
   request,
+  rankRange,
 }: {
   heroId: number;
   heroName: string;
   heroMatches: number;
   request: Omit<AnalyticsApiItemStatsRequest, "heroId">;
+  /** The request's rank range in words, such as "Phantom 1+". */
+  rankRange: string;
 }) {
   const statsQuery = useQuery(itemStatsQueryOptions({ ...request, heroId }));
   const itemsQuery = useQuery(itemUpgradesQueryOptions);
@@ -83,7 +86,7 @@ export function HeroTopItems({
   return (
     <Section
       title={`Best ${heroName} Items`}
-      description={`The items that most reliably win on ${heroName}, ranked by the lower bound of their win rate's confidence interval so a handful of lucky matches can't carry an item to the top.`}
+      description={`The items that most reliably win on ${heroName} in ${rankRange} matches, ranked by the lower bound of their win rate's confidence interval so a handful of lucky matches can't carry an item to the top.`}
     >
       <RankedEntityGrid>
         {topItems.map(({ item, winRate, usage, matches }, index) => (
@@ -99,7 +102,11 @@ export function HeroTopItems({
         ))}
       </RankedEntityGrid>
       <Button asChild variant="link" size="inline" className="self-start">
-        <Link to="/analytics/items" search={{ hero: heroId }} preload="intent">
+        <Link
+          to="/analytics/items"
+          search={{ hero: heroId, min_rank: request.minAverageBadge, max_rank: request.maxAverageBadge }}
+          preload="intent"
+        >
           All {heroName} item stats
         </Link>
       </Button>

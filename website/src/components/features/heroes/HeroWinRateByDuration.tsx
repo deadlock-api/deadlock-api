@@ -45,10 +45,13 @@ export function HeroWinRateByDuration({
   heroId,
   heroName,
   request,
+  rankRange,
 }: {
   heroId: number;
   heroName: string;
   request: Omit<AnalyticsApiHeroStatsRequest, "gameMode"> & { gameMode?: GameMode };
+  /** The request's rank range in words, such as "Phantom 1+". */
+  rankRange: string;
 }) {
   const period = useDefaultPeriodLabel();
   const { rows, isPending, failed } = useQueries({
@@ -117,7 +120,7 @@ export function HeroWinRateByDuration({
         <>
           <span className="font-semibold text-foreground">{verdict}</span>: {formatPercent(early.winRate)} in{" "}
           {early.label} games versus {formatPercent(late.winRate)} in {late.label} games. Each bar is one duration
-          bracket in {period}; hover for how many of {possessive(heroName)} games end there.
+          bracket of {rankRange} matches in {period}; hover for how many of {possessive(heroName)} games end there.
         </>
       }
     >

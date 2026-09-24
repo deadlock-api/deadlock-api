@@ -26,12 +26,14 @@ import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { findItemBySlug, itemSlug } from "~/lib/item-slug";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
+import { rankRangeLabel } from "~/lib/rank-utils";
 import { defaultPeriodLabel, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { SITE_URL, seo } from "~/lib/seo";
 import { closestNameBySlug, slugify } from "~/lib/slug";
 import { filterShopableItems, itemQueryOptions, itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
+import { ranksQueryOptions } from "~/queries/ranks-query";
 
 const ItemWinRateOverTime = lazy(() =>
   import("~/components/features/items/ItemWinRateOverTime").then((m) => ({ default: m.ItemWinRateOverTime })),
@@ -48,6 +50,8 @@ const ItemWinRateByBuyTime = lazy(() =>
 const DEFAULT_MIN_RANK = 91;
 const DEFAULT_MAX_RANK = 116;
 const GAME_MODE = "normal" as const;
+/** The rank range as the items page reads it from the URL, so a link lands on the numbers this page quotes. */
+const RANK_SEARCH = { min_rank: DEFAULT_MIN_RANK, max_rank: DEFAULT_MAX_RANK };
 
 const SLOT_LABEL = { weapon: "Weapon", spirit: "Spirit", vitality: "Vitality" } as const;
 
@@ -132,13 +136,14 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       }
       throw notFound({ data: { suggestion: closestNameBySlug(shopable, params.itemName)?.name } });
     }
-    const [stats, heroStats] = await Promise.all([
+    const [stats, heroStats, ranks] = await Promise.all([
       prefetchSafe(
         queryClient.ensureQueryData(itemStatsQueryOptions(currentItemStatsParams(seasons, preferences.dateFilter))),
       ),
       prefetchSafe(
         queryClient.ensureQueryData(heroStatsQueryOptions(currentHeroStatsParams(seasons, preferences.dateFilter))),
       ),
+      prefetchSafe(queryClient.ensureQueryData(ranksQueryOptions)),
       prefetchSafe(queryClient.ensureQueryData(itemQueryOptions(item.id))),
     ]);
     const summary = summarizeItemStats(stats, heroStats, item.id);
@@ -151,6 +156,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       slot: SLOT_LABEL[item.item_slot_type],
       cost: item.cost ?? null,
       breadcrumb: item.name,
+      rankRange: rankRangeLabel(ranks, DEFAULT_MIN_RANK, DEFAULT_MAX_RANK),
       summary: summary && {
         winRate: summary.winRate,
         rank: summary.winRateRank,
@@ -168,11 +174,11 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
         path: "/analytics/items",
       });
     }
-    const { itemName, slug, image, tier, slot, summary } = loaderData;
+    const { itemName, slug, image, tier, slot, rankRange, summary } = loaderData;
     const url = `${SITE_URL}/analytics/items/${slug}`;
     const usage = summary?.usage !== undefined ? ` and shows up in ${formatPercent(summary.usage)} of builds` : "";
     const description = summary
-      ? `${itemName} wins ${formatPercent(summary.winRate)} of Deadlock matches (#${summary.rank} of ${summary.itemCount} items)${usage}. Best heroes, common pairings, and buy timing, updated daily.`
+      ? `${itemName} wins ${formatPercent(summary.winRate)} of ${rankRange} Deadlock matches (#${summary.rank} of ${summary.itemCount} items)${usage}. Best heroes, common pairings, and buy timing, updated daily.`
       : `${itemName} win rate, best heroes, common pairings, and buy timing in Deadlock. Live stats from tracked matches, updated daily.`;
     return seo({
       title: `${itemName} Win Rate & Best Heroes | Deadlock`,
@@ -183,7 +189,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
         "@context": "https://schema.org",
         "@type": "Dataset",
         name: `${itemName} Win Rate & Best Heroes | Deadlock`,
-        description: `Win rate, purchase rate, buy timing, best heroes, and common pairings for the tier ${tier} ${slot} item ${itemName} in Deadlock, calculated from tracked matches and updated daily.`,
+        description: `Win rate, purchase rate, buy timing, best heroes, and common pairings for the tier ${tier} ${slot} item ${itemName} in Deadlock, calculated from tracked ${rankRange} matches and updated daily.`,
         url,
         keywords: ["Deadlock", itemName, "item", "win rate", "build"],
         creator: { "@type": "Organization", name: "Deadlock API", url: SITE_URL },
@@ -201,7 +207,7 @@ function clock(seconds: number): string {
 
 function ItemDetailPage() {
   const { preferences } = Route.useRouteContext();
-  const { itemId, itemName, tier, slot, cost } = Route.useLoaderData();
+  const { itemId, itemName, tier, slot, cost, rankRange } = Route.useLoaderData();
   const { seasons } = useSeasons();
   const period = defaultPeriodLabel(seasons, preferences.dateFilter);
   const itemRequest = currentItemStatsParams(seasons, preferences.dateFilter);
@@ -227,7 +233,8 @@ function ItemDetailPage() {
 
       {summary ? (
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          {period === "this season" ? "This season" : "In the current patch"}, players who buy {itemName} win{" "}
+          {period === "this season" ? "This season" : "In the current patch"}, in{" "}
+          <span className="font-semibold text-foreground">{rankRange}</span> matches, players who buy {itemName} win{" "}
           <span className="font-semibold text-foreground">{formatPercent(summary.winRate)}</span> of their{" "}
           <span className="font-semibold text-foreground">{summary.matches.toLocaleString("en-US")}</span> tracked
           matches
@@ -241,8 +248,8 @@ function ItemDetailPage() {
         </p>
       ) : (
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          Live win rate, purchase rate, and hero statistics for {itemName} in Deadlock, drawn from tracked matches and
-          updated daily.
+          Live win rate, purchase rate, and hero statistics for {itemName} in Deadlock, drawn from tracked {rankRange}{" "}
+          matches and updated daily.
         </p>
       )}
 
@@ -279,7 +286,7 @@ function ItemDetailPage() {
         </Section>
       )}
 
-      <ItemUpgradePath itemId={itemId} itemName={itemName} request={itemRequest} />
+      <ItemUpgradePath itemId={itemId} itemName={itemName} request={itemRequest} rankRange={rankRange} />
 
       <ItemHeroBreakdown itemId={itemId} itemName={itemName} itemRequest={itemRequest} heroRequest={heroRequest} />
 
@@ -290,6 +297,7 @@ function ItemDetailPage() {
             itemName={itemName}
             itemRequest={itemRequest}
             heroRequest={heroRequest}
+            rankRange={rankRange}
           />
         </Suspense>
       </ChunkErrorBoundary>
@@ -315,12 +323,12 @@ function ItemDetailPage() {
         <Inline asChild gap={4} className="text-sm">
           <nav aria-label="Related pages">
             <Button asChild variant="link" size="inline">
-              <Link to="/analytics/items" search={{ include_items: itemId }} preload="intent">
+              <Link to="/analytics/items" search={{ include_items: itemId, ...RANK_SEARCH }} preload="intent">
                 Builds with {itemName}
               </Link>
             </Button>
             <Button asChild variant="link" size="inline">
-              <Link to="/analytics/items" preload="intent">
+              <Link to="/analytics/items" search={RANK_SEARCH} preload="intent">
                 All item win rates
               </Link>
             </Button>

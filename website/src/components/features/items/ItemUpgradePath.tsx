@@ -57,10 +57,13 @@ export function ItemUpgradePath({
   itemId,
   itemName,
   request,
+  rankRange,
 }: {
   itemId: number;
   itemName: string;
   request: AnalyticsApiItemStatsRequest;
+  /** The request's rank range in words, such as "Phantom 1+". */
+  rankRange: string;
 }) {
   const period = useDefaultPeriodLabel();
   const { data: allItems } = useQuery(itemUpgradesQueryOptions);
@@ -96,7 +99,10 @@ export function ItemUpgradePath({
   );
 
   return (
-    <Section title={`${itemName} Upgrade Path`} description={`${itemName} ${summary}. Win rates are for ${period}.`}>
+    <Section
+      title={`${itemName} Upgrade Path`}
+      description={`${itemName} ${summary}. Win rates are for ${rankRange} matches in ${period}.`}
+    >
       <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
         {components.length > 0 && (
           <>

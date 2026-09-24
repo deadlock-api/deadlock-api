@@ -22,10 +22,13 @@ export function HeroWinRateOverTime({
   heroId,
   heroName,
   request,
+  rankRange,
 }: {
   heroId: number;
   heroName: string;
   request: Omit<AnalyticsApiHeroStatsRequest, "gameMode"> & { gameMode?: GameMode };
+  /** The request's rank range in words, such as "Phantom 1+". */
+  rankRange: string;
 }) {
   const period = useDefaultPeriodLabel();
   const weeklyRequest = { ...request, bucket: "start_time_week" as const };
@@ -92,7 +95,7 @@ export function HeroWinRateOverTime({
           {possessive(heroName)} win rate <span className="font-semibold text-foreground">{movement}</span> from{" "}
           {formatPercent(first.winRate)} in the week of {first.label} to {formatPercent(last.winRate)} in the week of{" "}
           {last.label}. The upper line is win rate against a dashed 50% mark, the lower one pick rate; both cover{" "}
-          {period} week by week.
+          {rankRange} matches in {period}, week by week.
         </>
       }
     >

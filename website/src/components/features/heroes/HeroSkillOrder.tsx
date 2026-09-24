@@ -53,10 +53,13 @@ export function HeroSkillOrder({
   totalMatches,
   heroName,
   request,
+  rankRange,
 }: {
   heroId: number;
   heroName: string;
   request: Omit<AnalyticsApiAbilityOrderStatsRequest, "heroId">;
+  /** The request's rank range in words, such as "Phantom 1+". */
+  rankRange: string;
   /** The hero's matches over the same filters. The orders only cover sequences played at least `minMatches` times,
    * which leaves out about half the hero's matches (most full sequences are unique), so their own total overstates
    * every share. */
@@ -113,8 +116,8 @@ export function HeroSkillOrder({
           The most common {heroName} build opens{" "}
           <span className="font-semibold text-foreground">{opener.join(" → ")}</span> and follows this order for its
           first {path.steps.length} upgrades.{" "}
-          <span className="font-semibold text-foreground">{formatPercent(path.share, 0)}</span> of {heroName} players in{" "}
-          {period} level up exactly this way, winning{" "}
+          <span className="font-semibold text-foreground">{formatPercent(path.share, 0)}</span> of {rankRange}{" "}
+          {heroName} players in {period} level up exactly this way, winning{" "}
           <span className="font-semibold text-foreground">{formatPercent(path.winRate)}</span> of{" "}
           {path.matches.toLocaleString("en-US")} matches. The number under each ability is how many players took it
           next.
@@ -145,7 +148,11 @@ export function HeroSkillOrder({
         })}
       </ol>
       <Button asChild variant="link" size="inline" className="self-start">
-        <Link to="/analytics/abilities" search={{ hero_id: heroId }} preload="intent">
+        <Link
+          to="/analytics/abilities"
+          search={{ hero_id: heroId, min_rank: request.minAverageBadge, max_rank: request.maxAverageBadge }}
+          preload="intent"
+        >
           Explore all {heroName} skill orders
         </Link>
       </Button>

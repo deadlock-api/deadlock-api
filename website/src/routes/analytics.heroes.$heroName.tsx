@@ -30,6 +30,7 @@ import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { findHeroBySlug, heroSlug } from "~/lib/hero-slug";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
+import { rankRangeLabel } from "~/lib/rank-utils";
 import {
   defaultDateRange,
   defaultPeriodLabel,
@@ -48,6 +49,7 @@ import {
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
+import { ranksQueryOptions } from "~/queries/ranks-query";
 
 const HeroWinRateByDuration = lazy(() =>
   import("~/components/features/heroes/HeroWinRateByDuration").then((m) => ({ default: m.HeroWinRateByDuration })),
@@ -64,6 +66,8 @@ const HeroWinRateByRank = lazy(() =>
 const DEFAULT_MIN_RANK = 91;
 const DEFAULT_MAX_RANK = 116;
 const GAME_MODE = "normal" as const;
+/** The rank range as the analytics pages read it from the URL, so a link lands on the numbers this page quotes. */
+const RANK_SEARCH = { min_rank: DEFAULT_MIN_RANK, max_rank: DEFAULT_MAX_RANK };
 
 function currentStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
@@ -162,10 +166,11 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       }
       throw notFound({ data: { suggestion: closestNameBySlug(playable, params.heroName)?.name } });
     }
-    const [stats] = await Promise.all([
+    const [stats, ranks] = await Promise.all([
       prefetchSafe(
         queryClient.ensureQueryData(heroStatsQueryOptions(currentStatsParams(seasons, preferences.dateFilter))),
       ),
+      prefetchSafe(queryClient.ensureQueryData(ranksQueryOptions)),
       prefetchSafe(
         queryClient.ensureQueryData(heroBanStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter))),
       ),
@@ -184,6 +189,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       slug: params.heroName,
       cardImage,
       breadcrumb: hero.name,
+      rankRange: rankRangeLabel(ranks, DEFAULT_MIN_RANK, DEFAULT_MAX_RANK),
       summary: summary && {
         winRate: summary.winRate,
         pickRate: summary.pickRate,
@@ -201,10 +207,10 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
         path: "/analytics/heroes",
       });
     }
-    const { heroName, slug, cardImage, summary } = loaderData;
+    const { heroName, slug, cardImage, rankRange, summary } = loaderData;
     const url = `${SITE_URL}/analytics/heroes/${slug}`;
     const description = summary
-      ? `${heroName} holds a ${formatPercent(summary.winRate)} win rate (#${summary.rank} of ${summary.heroCount} heroes) and a ${formatPercent(summary.pickRate)} pick rate in Deadlock matches. Live matchups, synergies, and counters, updated daily.`
+      ? `${heroName} holds a ${formatPercent(summary.winRate)} win rate (#${summary.rank} of ${summary.heroCount} heroes) and a ${formatPercent(summary.pickRate)} pick rate in ${rankRange} Deadlock matches. Live matchups, synergies, and counters, updated daily.`
       : `${heroName} win rate, pick rate, best items, and matchups in Deadlock. Live stats from tracked matches, updated daily.`;
     return seo({
       title: `${heroName} Win Rate & Pick Rate | Deadlock`,
@@ -215,7 +221,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
         "@context": "https://schema.org",
         "@type": "Dataset",
         name: `${heroName} Win Rate & Pick Rate | Deadlock`,
-        description: `Win rate, pick rate, ban rate, and matchup statistics for ${heroName} in Deadlock, calculated from tracked matches and updated daily.`,
+        description: `Win rate, pick rate, ban rate, and matchup statistics for ${heroName} in Deadlock, calculated from tracked ${rankRange} matches and updated daily.`,
         url,
         keywords: ["Deadlock", heroName, "win rate", "pick rate", "matchups"],
         creator: { "@type": "Organization", name: "Deadlock API", url: SITE_URL },
@@ -253,7 +259,7 @@ function HeroLinkCard({
 
 function HeroDetailPage() {
   const { preferences } = Route.useRouteContext();
-  const { heroId, heroName } = Route.useLoaderData();
+  const { heroId, heroName, rankRange } = Route.useLoaderData();
   const { seasons } = useSeasons();
   const period = defaultPeriodLabel(seasons, preferences.dateFilter);
   const [defaultStart, defaultEnd] = defaultDateRange(seasons, preferences.dateFilter);
@@ -282,7 +288,8 @@ function HeroDetailPage() {
         description={
           summary ? (
             <>
-              {period === "this season" ? "This season" : "In the current patch"}, {heroName} holds a{" "}
+              {period === "this season" ? "This season" : "In the current patch"}, in{" "}
+              <span className="font-semibold text-foreground">{rankRange}</span> matches, {heroName} holds a{" "}
               <span className="font-semibold text-foreground">{formatPercent(summary.winRate)}</span> win rate across{" "}
               <span className="font-semibold text-foreground">{summary.matches.toLocaleString("en-US")}</span> tracked
               matches, with a <span className="font-semibold text-foreground">{formatPercent(summary.pickRate)}</span>{" "}
@@ -296,7 +303,7 @@ function HeroDetailPage() {
               . Numbers are drawn from live match data and refreshed daily.
             </>
           ) : (
-            `Live win rate, pick rate, and matchup statistics for ${heroName} in Deadlock, drawn from tracked matches and updated daily.`
+            `Live win rate, pick rate, and matchup statistics for ${heroName} in Deadlock, drawn from tracked ${rankRange} matches and updated daily.`
           )
         }
       />
@@ -324,6 +331,7 @@ function HeroDetailPage() {
           heroId={heroId}
           heroName={heroName}
           heroMatches={summary.matches}
+          rankRange={rankRange}
           request={currentItemStatsParams(seasons, preferences.dateFilter)}
         />
       )}
@@ -333,6 +341,7 @@ function HeroDetailPage() {
           heroId={heroId}
           heroName={heroName}
           request={currentAbilityOrderParams(seasons, preferences.dateFilter)}
+          rankRange={rankRange}
           totalMatches={summary?.matches}
         />
       )}
@@ -344,6 +353,7 @@ function HeroDetailPage() {
               heroId={heroId}
               heroName={heroName}
               request={currentStatsParams(seasons, preferences.dateFilter)}
+              rankRange={rankRange}
             />
           </Suspense>
         </ChunkErrorBoundary>
@@ -368,6 +378,7 @@ function HeroDetailPage() {
               heroId={heroId}
               heroName={heroName}
               request={currentStatsParams(seasons, preferences.dateFilter)}
+              rankRange={rankRange}
             />
           </Suspense>
         </ChunkErrorBoundary>
@@ -375,7 +386,7 @@ function HeroDetailPage() {
 
       <Section
         title={`${heroName} Matchups & Synergies`}
-        description={`Which heroes ${heroName} counters, which heroes counter ${heroName}, and the best teammates to pair with.`}
+        description={`Which heroes ${heroName} counters, which heroes counter ${heroName}, and the best teammates to pair with, in ${rankRange} matches.`}
       >
         <HeroMatchupSummary
           heroId={heroId}
@@ -421,14 +432,14 @@ function HeroDetailPage() {
         <nav aria-label={`More ${heroName} stats`} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <HeroLinkCard
             to="/analytics/items"
-            search={{ hero: heroId }}
+            search={{ hero: heroId, ...RANK_SEARCH }}
             icon={ShoppingBag}
             title="Item Builds"
             description={`Win rates, buy timings, and combos for every item on ${heroName}.`}
           />
           <HeroLinkCard
             to="/analytics/abilities"
-            search={{ hero_id: heroId }}
+            search={{ hero_id: heroId, ...RANK_SEARCH }}
             icon={ListOrdered}
             title="Ability Builds"
             description={`The most common ${heroName} skill orders and how often they win.`}
@@ -442,14 +453,14 @@ function HeroDetailPage() {
           />
           <HeroLinkCard
             to="/analytics/players"
-            search={{ hero: heroId }}
+            search={{ hero: heroId, ...RANK_SEARCH }}
             icon={Users}
             title="Player Scoreboard"
             description={`Who racks up the most kills, souls, and damage on ${heroName}.`}
           />
           <HeroLinkCard
             to="/community/heatmap"
-            search={{ hero_id: heroId }}
+            search={{ hero_id: heroId, ...RANK_SEARCH }}
             icon={Map}
             title="Kill Heatmap"
             description={`Where ${heroName} gets kills and dies across the map.`}
@@ -461,7 +472,7 @@ function HeroDetailPage() {
         <Separator />
         <nav aria-label="Related pages" className="flex flex-wrap gap-4 text-sm">
           <Button asChild variant="link" className="h-auto p-0">
-            <Link to="/analytics/heroes" preload="intent">
+            <Link to="/analytics/heroes" search={RANK_SEARCH} preload="intent">
               All hero win rates
             </Link>
           </Button>
