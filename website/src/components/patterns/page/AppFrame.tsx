@@ -80,8 +80,13 @@ export function AppFrame({ className, children, ...props }: React.ComponentProps
   return (
     <div
       data-slot="app-frame"
-      // `--page-height` is what a `PageShell height="viewport"` may take: the screen minus this gutter.
-      className={cn("flex min-h-dvh w-full min-w-0 justify-center p-2 [--page-height:calc(100dvh-2rem)]", className)}
+      // `--page-height` is what a `PageShell height="viewport"` may take: the screen minus this gutter, the panel's
+      // border and padding, and the breadcrumb row (1.25rem) with its gap above the page. Only the gutter came off
+      // before, so every one-screen page scrolled by 70px.
+      className={cn(
+        "flex min-h-dvh w-full min-w-0 justify-center p-2 [--page-height:calc(100dvh-5.375rem)] sm:[--page-height:calc(100dvh-6.375rem)]",
+        className,
+      )}
       {...props}
     >
       <div
