@@ -36,7 +36,7 @@ export const Route = createFileRoute("/community/leaderboard")({
     seo({
       title: pageTitle("Deadlock Leaderboard: Top Players by Region"),
       description:
-        "Browse the Deadlock ranked leaderboard across all regions. Filter by hero, search for any player, jump to any rank, and open a player's match history in the tracker.",
+        "Browse the Deadlock ranked leaderboard across all regions. Filter by hero, search for any player and jump to any rank.",
       path: "/community/leaderboard",
       jsonLd: {
         "@context": "https://schema.org",

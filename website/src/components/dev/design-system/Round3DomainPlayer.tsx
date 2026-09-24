@@ -2,7 +2,7 @@ import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { FormDots } from "~/components/domain/match/FormDots";
 import { KdaLine } from "~/components/domain/match/KdaLine";
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
-import { PlayerLink, PlayerNameLink } from "~/components/domain/player/PlayerLink";
+import { PlayerLink } from "~/components/domain/player/PlayerLink";
 import { SteamAvatar } from "~/components/domain/player/SteamAvatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 
@@ -59,7 +59,7 @@ export function Round3DomainPlayer() {
       <Specimen
         name="PlayerLink"
         source="domain/player/PlayerLink"
-        note="A name as a link to the player's tracker page: the surrounding color until hover or focus, then primary and underlined. PlayerNameLink takes every account a name may belong to: one links straight through, several open a popover listing the candidates with their Steam name and avatar, none stays plain text (the leaderboard)."
+        note="A name as a link to the player's tracker page: the surrounding color until hover or focus, then primary and underlined."
       >
         <Variants label="PlayerLink: with a name, without one, truncated">
           <PlayerLink accountId={ACCOUNT_ID}>Manuel</PlayerLink>
@@ -67,16 +67,6 @@ export function Round3DomainPlayer() {
           <PlayerLink accountId={ACCOUNT_ID} className="max-w-32">
             A very long persona name that does not fit
           </PlayerLink>
-        </Variants>
-        <Variants label="PlayerNameLink: one account, three accounts, no account, truncated">
-          <PlayerNameLink name="Manuel" accountIds={[ACCOUNT_ID]} />
-          <PlayerNameLink name="Manuel" accountIds={[ACCOUNT_ID, 12345678, 87654321]} />
-          <PlayerNameLink name="Manuel" />
-          <PlayerNameLink
-            name="A very long persona name that does not fit"
-            accountIds={[ACCOUNT_ID, 12345678]}
-            className="max-w-40"
-          />
         </Variants>
       </Specimen>
 

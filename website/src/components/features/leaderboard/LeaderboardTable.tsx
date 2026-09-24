@@ -3,7 +3,6 @@ import Fuse from "fuse.js";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
-import { PlayerNameLink } from "~/components/domain/player/PlayerLink";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { Button } from "~/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -148,8 +147,8 @@ function LeaderboardTableRow({
       <TableCell className="text-end">{entry.rank}</TableCell>
       {/* `w-full max-w-0` gives the name what the top heroes leave, so on a phone it truncates instead of pushing
           them off-screen. */}
-      <TableCell className="w-full max-w-0">
-        <PlayerNameLink name={entry.account_name} accountIds={entry.possible_account_ids} />
+      <TableCell className="w-full max-w-0 truncate" title={entry.account_name ?? undefined}>
+        {entry.account_name}
       </TableCell>
       {shouldShowTopHeroesColumn && (
         <TableCell>
