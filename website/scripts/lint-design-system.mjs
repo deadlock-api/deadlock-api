@@ -178,19 +178,19 @@ const RULES = [
   {
     id: "raw-heading",
     message: "raw heading; use PageHeader, Section, PanelHeader, CardTitle, DialogTitle or Heading",
-    pattern: /<h[1-6][\s>]/g,
+    pattern: /<h[1-6](?:[\s>]|$)/g,
     skip: insideSystem,
   },
   {
     id: "raw-control",
     message: "raw form control; use Input, Textarea, Select, Checkbox, Switch or Slider",
-    pattern: /<(?:input|select|textarea)[\s>]/g,
+    pattern: /<(?:input|select|textarea)(?:[\s>]|$)/g,
     skip: insideSystem,
   },
   {
     id: "raw-table",
     message: "raw <table>; use Table from ~/components/ui/table",
-    pattern: /<table[\s>]/g,
+    pattern: /<table(?:[\s>]|$)/g,
     skip: insideSystem,
   },
   {
