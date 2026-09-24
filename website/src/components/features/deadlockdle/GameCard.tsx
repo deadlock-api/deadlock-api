@@ -34,7 +34,7 @@ interface StoredGame {
 
 function readGame(mode: GameMode, date: string): StoredGame | null {
   if (typeof window === "undefined") return null;
-  return readStoredGame(mode, date) as StoredGame | null;
+  return readStoredGame(mode, date);
 }
 
 export function getDailyStatus(mode: GameMode, date: string = getTodayDate()): DailyStatus {

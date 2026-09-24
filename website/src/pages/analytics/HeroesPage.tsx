@@ -93,7 +93,7 @@ export function HeroesPage() {
   const heroScoreboardQuery = useQuery({
     ...heroScoreboardQueryOptions({
       sortBy: scoreboardSortBy as HeroScoreboardSortByEnum,
-      sortDirection: scoreboardSortDirection as "desc" | "asc",
+      sortDirection: scoreboardSortDirection,
       gameMode: filters.gameMode,
       matchMode: filters.matchMode,
       minMatches: filters.minMatches,
@@ -212,7 +212,7 @@ export function HeroesPage() {
                 <HeroStatSelector
                   label="Stat"
                   value={filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat}
-                  onChange={(val) => filters.setHeroStat(val as typeof filters.heroStat)}
+                  onChange={(val) => filters.setHeroStat(val)}
                   options={HERO_STATS}
                 />
               </Field>
@@ -306,7 +306,7 @@ export function HeroesPage() {
                 <HeroStatSelector
                   label="Stat"
                   value={filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat}
-                  onChange={(val) => filters.setHeroStat(val as typeof filters.heroStat)}
+                  onChange={(val) => filters.setHeroStat(val)}
                   options={HERO_STATS}
                 />
               </Field>

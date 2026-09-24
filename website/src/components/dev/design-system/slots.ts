@@ -9,14 +9,14 @@ const elements = new Map<string, HTMLElement>();
 const listeners = new Set<() => void>();
 
 export const slotStore = {
-  register(id: string, element: HTMLElement | null) {
+  register: (id: string, element: HTMLElement | null) => {
     if ((elements.get(id) ?? null) === element) return;
     if (element) elements.set(id, element);
     else elements.delete(id);
     for (const listener of listeners) listener();
   },
   get: (id: string) => elements.get(id) ?? null,
-  subscribe(listener: () => void) {
+  subscribe: (listener: () => void) => {
     listeners.add(listener);
     return () => {
       listeners.delete(listener);

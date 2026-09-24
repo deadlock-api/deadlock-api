@@ -226,10 +226,10 @@ test("preloads only adjacent matches after current details load and reuses their
 
   releaseCurrent();
   await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
-  await expect.poll(() => [...requested].sort()).toEqual([2997, 2998, 2999]);
+  await expect.poll(() => [...requested].sort((a, b) => a - b)).toEqual([2997, 2998, 2999]);
   await page.getByRole("button", { name: "Next match in list", exact: true }).click();
   await expect(page).toHaveURL(/match=2997/);
-  await expect.poll(() => [...requested].sort()).toEqual([2996, 2997, 2998, 2999]);
+  await expect.poll(() => [...requested].sort((a, b) => a - b)).toEqual([2996, 2997, 2998, 2999]);
   expect(requested.filter((id) => id === 2997)).toHaveLength(1);
 });
 
@@ -268,7 +268,7 @@ test("changing matches cancels adjacent requests that have not started", async (
   await expect(picker).toBeVisible();
   expect(requested).toEqual([CURRENT_MATCH, 2997]);
   await page.evaluate(() => window.dispatchEvent(new Event("test:flush-idle")));
-  await expect.poll(() => [...requested].sort()).toEqual([2996, 2997, 2998]);
+  await expect.poll(() => [...requested].sort((a, b) => a - b)).toEqual([2996, 2997, 2998]);
 });
 
 for (const missing of ["no record", "no players"]) {
@@ -295,7 +295,7 @@ for (const missing of ["no record", "no players"]) {
     available = true;
     await page.getByRole("button", { name: "Check again", exact: true }).click();
     await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
-    await expect.poll(() => [...requested].sort()).toEqual([2997, 2998, 2998, 2999]);
+    await expect.poll(() => [...requested].sort((a, b) => a - b)).toEqual([2997, 2998, 2998, 2999]);
   });
 }
 
@@ -308,7 +308,7 @@ test("the first match preloads only its available neighbor", async ({ page }) =>
   });
   await page.goto(TRACKER_URL.replace(`match=${CURRENT_MATCH}`, "match=3000"));
   await expect(page.getByRole("button", { name: "Previous match in list", exact: true })).toBeDisabled();
-  await expect.poll(() => [...requested].sort()).toEqual([2999, 3000]);
+  await expect.poll(() => [...requested].sort((a, b) => a - b)).toEqual([2999, 3000]);
 });
 
 test("saved markers persist across reload and clear when a saved match is removed", async ({ page }) => {
@@ -345,6 +345,7 @@ test("saved markers synchronize when another tab removes the bookmark", async ({
 
 test("a failed browser-storage write does not show a match as saved", async ({ page }) => {
   await page.addInitScript((key) => {
+    // oxlint-disable-next-line typescript/unbound-method -- called below with the storage as `this`.
     const setItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function (name, value) {
       if (name === key) throw new DOMException("Storage is full", "QuotaExceededError");
@@ -721,7 +722,7 @@ test("large histories open deep links and support keyboard jumps with bounded re
   await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
   const list = page.getByRole("navigation", { name: "Match history", exact: true });
   await expect.poll(() => list.locator("[data-match-id]").count()).toBeLessThan(100);
-  await expect.poll(() => [...requested].sort()).toEqual([5001, 5002]);
+  await expect.poll(() => [...requested].sort((a, b) => a - b)).toEqual([5001, 5002]);
   const oldest = list.locator('[data-match-id="5001"]');
   await oldest.focus();
   await page.keyboard.press("Home");
@@ -778,7 +779,7 @@ test("an offline match stays usable and loads automatically after reconnecting",
     return route.continue();
   });
   await page.goto(TRACKER_URL);
-  await expect.poll(() => [...requested].sort()).toEqual([2997, 2998, 2999]);
+  await expect.poll(() => [...requested].sort((a, b) => a - b)).toEqual([2997, 2998, 2999]);
   await context.setOffline(true);
   await page.locator('[data-match-id="2990"]').click();
   await expect(page).toHaveURL(/match=2990/);
@@ -795,7 +796,7 @@ test("an offline match stays usable and loads automatically after reconnecting",
   await context.setOffline(false);
   await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
   await expect(page.getByText("Waiting for connection", { exact: true })).toHaveCount(0);
-  await expect.poll(() => [...requested].sort()).toEqual([2989, 2990, 2991, 2997, 2998, 2999]);
+  await expect.poll(() => [...requested].sort((a, b) => a - b)).toEqual([2989, 2990, 2991, 2997, 2998, 2999]);
 });
 
 test("a paused refresh retains loaded history and resumes when the connection returns", async ({ page, context }) => {
@@ -864,7 +865,7 @@ test("client HTTP errors allow a manual retry without repeating failed requests"
   available = true;
   await page.getByRole("button", { name: "Check again", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "Player shown on match timeline" })).toBeVisible();
-  await expect.poll(() => [...requested].sort()).toEqual([2997, 2998, 2998, 2999]);
+  await expect.poll(() => [...requested].sort((a, b) => a - b)).toEqual([2997, 2998, 2998, 2999]);
 });
 
 test("failed build assets can be retried while scoreboard stats remain available", async ({ page }) => {

@@ -63,7 +63,7 @@ export default function GamesOverTimeChart({
       .sort((a, b) => a.bucket - b.bucket)
       .map((entry) => ({
         date: day.unix(entry.bucket).valueOf(),
-        value: entry[stat as keyof typeof entry] as number,
+        value: entry[stat as keyof typeof entry],
         matches: entry.total_matches,
       }));
   }, [data, stat, timeBucket, params]);

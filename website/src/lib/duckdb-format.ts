@@ -130,6 +130,7 @@ function formatOther(v: unknown): string {
     try {
       return JSON.stringify(v, (_, val) => (typeof val === "bigint" ? val.toString() : val));
     } catch {
+      // oxlint-disable-next-line typescript/no-base-to-string -- last resort for a value JSON cannot hold (a cycle)
       return String(v);
     }
   }

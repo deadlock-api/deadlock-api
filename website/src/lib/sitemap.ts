@@ -162,7 +162,7 @@ export async function buildSitemapXml(): Promise<string> {
   const blogIndex: SitemapEntry = {
     path: "/blog",
     lastmod: blogEntries
-      .map((post) => post.lastmod)
+      .flatMap((post) => post.lastmod ?? [])
       .sort()
       .at(-1),
     changefreq: "weekly",

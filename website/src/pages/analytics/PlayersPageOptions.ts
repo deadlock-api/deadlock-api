@@ -1,5 +1,4 @@
 import { lazyRouteComponent } from "@tanstack/react-router";
-import type { PlayerScoreboardSortByEnum } from "deadlock_api_client";
 
 import { analyticsView, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
@@ -37,7 +36,7 @@ export const playersPageOptions = {
     const scoreboard = await prefetchSafe(
       queryClient.query({
         ...playerScoreboardQueryOptions({
-          sortBy: "kills" as PlayerScoreboardSortByEnum,
+          sortBy: "kills",
           sortDirection: "desc",
           gameMode: "normal",
           matchMode: DEFAULT_MATCH_MODE,

@@ -7,6 +7,8 @@ import { cn } from "~/lib/utils";
 const CHIP_WRAP = "shrink whitespace-normal";
 
 function formatProperty(prop: ItemProperty): string | null {
+  // The API sends some values as numbers, although the generated client types them as strings.
+  // oxlint-disable-next-line typescript/no-unnecessary-type-conversion -- see above
   const raw = String(prop.value ?? "").trim();
   if (raw === "" || raw === prop.disable_value) return null;
   const postfix = (prop.postfix ?? "").trim();

@@ -25,7 +25,8 @@ export function HeroTrendTooltip({
       return String(a.name).localeCompare(String(b.name));
     });
   if (!entries.length) return null;
-  const showMatches = stat !== "matches" && entries.some((item) => item.payload?.[`${item.dataKey}_matches`] != null);
+  const showMatches =
+    stat !== "matches" && entries.some((item) => item.payload?.[`${String(item.dataKey)}_matches`] != null);
   const date = day.utc(Number(label)).format(hourly ? "MMM D, YYYY · HH:mm [UTC]" : "MMM D, YYYY [UTC]");
 
   return (
@@ -39,7 +40,7 @@ export function HeroTrendTooltip({
       label={`Hero values for ${date}`}
     >
       {entries.map((item) => {
-        const matches = item.payload?.[`${item.dataKey}_matches`];
+        const matches = item.payload?.[`${String(item.dataKey)}_matches`];
         return (
           <ChartReading
             key={String(item.dataKey)}

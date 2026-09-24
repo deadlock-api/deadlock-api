@@ -102,7 +102,7 @@ function GuessHero() {
 
     const startingStatEntries = Object.entries(dailyHero.starting_stats) as [
       string,
-      { value: unknown; display_stat_name: string },
+      { value: number; display_stat_name: string },
     ][];
     const statEntry = startingStatEntries.find(([key]) => key === "max_health");
     const statHint = statEntry

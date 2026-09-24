@@ -265,7 +265,7 @@ test("comparison shows percentage-point changes and exports only selected heroes
   await page.getByRole("button", { name: "Export CSV" }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("hero-trends-winrate-day.csv");
-  const csv = await readFile((await download.path())!, "utf8");
+  const csv = await readFile(await download.path(), "utf8");
   expect(csv).toContain('"Dynamo","winrate","65","100","start_time_day"');
   expect(csv).not.toContain("Infernus");
   expect(csv.split("\r\n")).toHaveLength(3);

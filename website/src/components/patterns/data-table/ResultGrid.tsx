@@ -16,9 +16,11 @@ function defaultFormat(value: unknown): string {
     try {
       return JSON.stringify(value, (_, v) => (typeof v === "bigint" ? v.toString() : v));
     } catch {
+      // oxlint-disable-next-line typescript/no-base-to-string -- last resort for a value JSON cannot hold (a cycle)
       return String(value);
     }
   }
+  // oxlint-disable-next-line typescript/no-base-to-string -- only primitives and functions reach here
   return String(value);
 }
 

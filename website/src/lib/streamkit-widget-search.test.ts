@@ -3,7 +3,6 @@ import { test } from "node:test";
 
 import type { WidgetConfig } from "~/components/features/streamkit/widget-builder/widget-config";
 import { widgetSearchParams } from "~/components/features/streamkit/widget-builder/widget-url";
-import type { Color } from "~/types/general";
 
 import { splitWidgetList } from "./streamkit-list";
 import { readWidgetFlag, readWidgetInt, readWidgetSearch } from "./streamkit-widget-search";
@@ -15,7 +14,7 @@ const base: WidgetConfig = {
   variable: "wins_losses_today",
   prefix: "",
   suffix: "",
-  fontColor: "#ffffff" as Color,
+  fontColor: "#ffffff",
   labels: [],
   subtexts: [],
   extraArgs: {},
@@ -27,7 +26,7 @@ const base: WidgetConfig = {
   numMatches: 10,
   opacity: 100,
   previewBackgroundImage: true,
-  previewBackgroundColor: "#f3f4f6" as Color,
+  previewBackgroundColor: "#f3f4f6",
 };
 
 function roundTrip(config: WidgetConfig): Record<string, string> {

@@ -267,7 +267,7 @@ export function HeroStatsTable({
     const map = new Map<number, HeroType>();
     for (const hero of heroes) {
       if (hero.hero_type) {
-        map.set(hero.id, hero.hero_type as HeroType);
+        map.set(hero.id, hero.hero_type);
       }
     }
     return map;

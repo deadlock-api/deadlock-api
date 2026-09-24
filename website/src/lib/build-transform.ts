@@ -315,7 +315,7 @@ export function buildPlayerBuildCards(
         matchId: match.match_id,
         timeAgo: timeAgo(match.start_time),
         startTime: match.start_time,
-        result: (isWin ? "win" : "loss") as "win" | "loss",
+        result: isWin ? "win" : "loss",
         durationSeconds: match.duration_s,
         heroId,
         accountId: player.account_id,

@@ -16,7 +16,7 @@ import { heroesQueryOptions, type SlimHero } from "~/queries/asset-queries";
 function useHeroes() {
   const { data: sortedHeroes = [], isLoading } = useQuery({
     ...heroesQueryOptions,
-    select: (heroes) => heroes.filter((h) => h.in_development !== true).sort((a, b) => a.name.localeCompare(b.name)),
+    select: (heroes) => heroes.filter((h) => !h.in_development).sort((a, b) => a.name.localeCompare(b.name)),
   });
 
   return { sortedHeroes, isLoading };

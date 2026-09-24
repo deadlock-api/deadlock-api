@@ -32,11 +32,11 @@ const fetchStats = async (r: Region, id: string, v: string, args: Record<string,
 export const RawWidget: FC<RawWidgetProps> = ({
   region,
   accountId,
-  variable = "wins_losses_today",
+  variable,
   prefix = "",
   suffix = "",
   extraArgs = EMPTY_EXTRA_ARGS,
-  fontColor = "#ffffff",
+  fontColor,
   refreshInterval = UPDATE_INTERVAL_MS,
 }) => {
   const { data, isLoading: statsLoading } = useQuery<Record<string, string>>({

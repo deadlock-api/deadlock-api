@@ -122,9 +122,8 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
 
             <div className={cn(isWide && "@2xl:grid @2xl:grid-cols-2")}>
               {stats.map((stat) => {
-                const value = current[stat.key] as number;
-                const prevValue =
-                  TOTAL_STATS.has(stat.key) && !compareTotals ? undefined : (prev?.[stat.key] as number | undefined);
+                const value = current[stat.key];
+                const prevValue = TOTAL_STATS.has(stat.key) && !compareTotals ? undefined : prev?.[stat.key];
                 // Rounded to the displayed tenth of a percent so the arrow and colour agree with the printed value.
                 // A rate changes in points (2% to 3% is +1.0 pp); a relative change of it (+50%) read as the new rate.
                 const inPoints = stat.format === "percent";

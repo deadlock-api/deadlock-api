@@ -1,4 +1,4 @@
-import type { AnalyticsApiGameStatsRequest, GameStatsBucketEnum } from "deadlock_api_client";
+import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense } from "react";
 
@@ -145,7 +145,7 @@ export function Games() {
                   params={baseParams}
                   stat={stat}
                   onStatChange={setStat}
-                  timeBucket={timeBucket as GameStatsBucketEnum}
+                  timeBucket={timeBucket}
                   onTimeBucketChange={(b) => setTimeBucket(b as typeof timeBucket)}
                   isStreetBrawl={isStreetBrawl}
                 />

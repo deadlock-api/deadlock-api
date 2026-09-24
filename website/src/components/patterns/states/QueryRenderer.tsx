@@ -33,7 +33,7 @@ export function QueryRenderer<T>({
   return children(query.data);
 }
 
-export function combineQueryStates(...queries: UseQueryResult<unknown>[]) {
+export function combineQueryStates(...queries: UseQueryResult[]) {
   return {
     isPending: queries.some((q) => q.isPending),
     isError: queries.some((q) => q.isError),

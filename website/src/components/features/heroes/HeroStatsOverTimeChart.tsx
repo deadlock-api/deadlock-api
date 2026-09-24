@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { HeroBanStatsBucketEnum, HeroStatsBucketEnum } from "deadlock_api_client";
+import type { HeroStatsBucketEnum } from "deadlock_api_client";
 import { parseAsArrayOf, parseAsInteger, useQueryState } from "nuqs";
 import {
   type CSSProperties,
@@ -76,13 +76,13 @@ function HeroTrendDot({ cx, cy, stroke, dataKey }: DotItemDotProps) {
   if (cx == null || cy == null) return null;
   return (
     <circle
-      className={`recharts-line-dot hero-dot-${dataKey}`}
+      className={`recharts-line-dot hero-dot-${String(dataKey)}`}
       cx={cx}
       cy={cy}
       r={2.5}
       fill={stroke}
       stroke="none"
-      opacity={`var(--hero-opacity-${dataKey}, 1)`}
+      opacity={`var(--hero-opacity-${String(dataKey)}, 1)`}
     />
   );
 }
@@ -176,7 +176,7 @@ export function HeroStatsOverTimeChart({
   });
 
   const banStatsOverTimeQuery = {
-    bucket: heroTimeInterval as HeroBanStatsBucketEnum,
+    bucket: heroTimeInterval,
     minAverageBadge: minRankId,
     maxAverageBadge: maxRankId,
     minUnixTimestamp: minUnixTimestamp ?? 0,

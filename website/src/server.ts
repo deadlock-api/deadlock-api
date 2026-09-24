@@ -14,7 +14,7 @@ function isHtmlResponse(res: Response): boolean {
 
 export default {
   async fetch(...args) {
-    const request = args[0] as Request;
+    const request = args[0];
     const url = new URL(request.url);
     let changed = false;
     if (url.hostname === "www.deadlock-api.com") {

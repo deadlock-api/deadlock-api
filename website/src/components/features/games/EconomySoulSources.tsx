@@ -32,8 +32,8 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
   const breakdown = useMemo(() => {
     if (!stats) return [];
     const rows = SOUL_SOURCE_GROUPS.map((group) => {
-      const base = (stats[group.baseKey] as number) ?? 0;
-      const orb = group.orbKey ? ((stats[group.orbKey] as number) ?? 0) : 0;
+      const base = stats[group.baseKey] ?? 0;
+      const orb = group.orbKey ? (stats[group.orbKey] ?? 0) : 0;
       const value = base + orb;
       return {
         key: group.key,
@@ -47,7 +47,7 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
     const tracked = rows.reduce((sum, r) => sum + r.value, 0);
     // The five sources leave out passive income and anything the match data does not break out: about a ninth of
     // net worth. Without the remainder, every share read too high ("Lane Creeps 50.1%").
-    const other = Math.max(0, ((stats.avg_net_worth as number) ?? 0) - tracked);
+    const other = Math.max(0, (stats.avg_net_worth ?? 0) - tracked);
     rows.sort((a, b) => b.value - a.value);
     if (other > 0) {
       rows.push({ key: "other", label: "Passive & other", color: OTHER_COLOR, value: other, orbShare: 0, share: 0 });
@@ -73,10 +73,10 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
 
   const totalIncome = breakdown.reduce((sum, r) => sum + r.value, 0);
   const totalFromSources = breakdown.reduce((sum, r) => sum + (r.key === "other" ? 0 : r.value), 0);
-  const totalOrbs = SOUL_SOURCE_GROUPS.reduce((sum, g) => sum + (g.orbKey ? ((stats[g.orbKey] as number) ?? 0) : 0), 0);
+  const totalOrbs = SOUL_SOURCE_GROUPS.reduce((sum, g) => sum + (g.orbKey ? (stats[g.orbKey] ?? 0) : 0), 0);
   const orbSecured = totalFromSources > 0 ? totalOrbs / totalFromSources : 0;
-  const durationS = (stats.avg_duration_s as number) ?? 0;
-  const netWorth = (stats.avg_net_worth as number) ?? 0;
+  const durationS = stats.avg_duration_s ?? 0;
+  const netWorth = stats.avg_net_worth ?? 0;
   const soulsPerMin = durationS > 0 ? netWorth / (durationS / 60) : 0;
 
   const tiles = [
@@ -86,12 +86,12 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
     { label: "Orb-Secured", value: formatPercent(orbSecured), hint: "Share of soul income secured from soul orbs" },
     {
       label: "Denied to Enemies",
-      value: formatSouls((stats.avg_gold_denied as number) ?? 0),
+      value: formatSouls(stats.avg_gold_denied ?? 0),
       hint: "Souls you shot away so the enemy couldn't secure them",
     },
     {
       label: "Lost on Death",
-      value: formatSouls((stats.avg_gold_death_loss as number) ?? 0),
+      value: formatSouls(stats.avg_gold_death_loss ?? 0),
       hint: "Souls dropped to the enemy when you died",
     },
   ];

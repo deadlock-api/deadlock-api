@@ -52,8 +52,8 @@ export const SOUL_SOURCE_GROUPS: SoulSourceGroup[] = [
 ];
 
 export function groupSouls(stats: AnalyticsGameStats, group: SoulSourceGroup): number {
-  const base = (stats[group.baseKey] as number) ?? 0;
-  const orb = group.orbKey ? ((stats[group.orbKey] as number) ?? 0) : 0;
+  const base = stats[group.baseKey] ?? 0;
+  const orb = group.orbKey ? (stats[group.orbKey] ?? 0) : 0;
   return base + orb;
 }
 

@@ -62,7 +62,7 @@ function parseFrontmatter(raw: string): { meta: RawFrontmatter; content: string 
     }
   }
 
-  return { meta: meta as RawFrontmatter, content };
+  return { meta: meta, content };
 }
 
 // Markdown sources are kept in content/blog/.
@@ -148,13 +148,13 @@ function rehypeBlogFigures() {
       const img = node.children.length === 1 ? node.children[0] : null;
       if (!img || img.type !== "element" || img.tagName !== "img") return;
       const { title, ...props } = img.properties;
-      const svg = inlineSvg(String(props.src ?? ""), String(props.alt ?? ""));
+      const svg = inlineSvg(props.src ?? "", props.alt ?? "");
       img.properties = {
         ...props,
         loading: first ? "eager" : "lazy",
         fetchPriority: first ? "high" : undefined,
         // The real size reserves the image's own aspect ratio while it loads; a forced 4:3 squashed every chart.
-        ...imageSize(String(props.src ?? "")),
+        ...imageSize(props.src ?? ""),
         className: ["w-full", "min-w-xl", "h-auto"],
       };
       first = false;

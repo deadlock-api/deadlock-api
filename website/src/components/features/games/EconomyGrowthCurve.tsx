@@ -77,8 +77,8 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
         };
         for (const group of SOUL_SOURCE_GROUPS) {
           const fields = CURVE_FIELDS[group.key];
-          const base = (point[fields.base] as number) ?? 0;
-          const orb = fields.orb ? ((point[fields.orb] as number) ?? 0) : 0;
+          const base = point[fields.base] ?? 0;
+          const orb = fields.orb ? (point[fields.orb] ?? 0) : 0;
           curvePoint[group.key] = base + orb;
         }
         return curvePoint;

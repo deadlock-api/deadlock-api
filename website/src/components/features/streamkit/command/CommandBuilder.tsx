@@ -51,12 +51,18 @@ async function fetchPreview(url: string): Promise<string> {
 
 const TEMPLATE_URL_SYNC_MS = 500;
 
+/** The router parses search values as JSON, so a template of digits comes back as a number; read it back as typed. */
+function templateFromSearch(value: unknown): string {
+  if (value == null) return "";
+  return typeof value === "string" ? value : JSON.stringify(value);
+}
+
 export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
   const navigate = useNavigate();
   // The template lives in the page URL too, so a reload or a shared link keeps it.
   const urlTemplate = useSearch({ strict: false, select: (search) => (search as { template?: unknown }).template });
   const [template, debouncedTemplate, setTemplate] = useDebouncedState(
-    urlTemplate == null ? "" : String(urlTemplate),
+    templateFromSearch(urlTemplate),
     TEMPLATE_URL_SYNC_MS,
   );
   const [edited, setEdited] = useState(false);
@@ -74,7 +80,7 @@ export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
 
   useEffect(() => {
     // External sync: the page URL follows the template once typing pauses.
-    const current = urlTemplate == null ? "" : String(urlTemplate);
+    const current = templateFromSearch(urlTemplate);
     if (debouncedTemplate === current) return;
     void navigate({
       to: ".",

@@ -80,7 +80,7 @@ export interface FlashcardGameProps<T extends FlashcardEntry> {
   masteredLabel: string;
 }
 
-function renderNameOption<T extends FlashcardEntry>(entry: T): ReactNode {
+function renderNameOption(entry: FlashcardEntry): ReactNode {
   return <span className="truncate tracking-wide uppercase">{entry.name}</span>;
 }
 

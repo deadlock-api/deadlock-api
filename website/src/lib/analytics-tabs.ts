@@ -27,7 +27,8 @@ export type AnalyticsSection = keyof typeof ANALYTICS_TABS;
 export type AnalyticsTab<S extends AnalyticsSection> = keyof (typeof ANALYTICS_TABS)[S] & string;
 
 export function analyticsTabPath<S extends AnalyticsSection>(section: S, tab: AnalyticsTab<S>): string {
-  const suffix = ANALYTICS_TABS[section][tab];
+  const suffixes: Readonly<Record<string, string>> = ANALYTICS_TABS[section];
+  const suffix = suffixes[tab];
   return `/analytics/${section}${suffix ? `/${suffix}` : ""}`;
 }
 
@@ -214,6 +215,6 @@ export const ANALYTICS_VIEWS: { [S in AnalyticsSection]: Record<AnalyticsTab<S>,
 };
 
 /** The copy of the view a section path shows; unknown paths fall back to the section's first view. */
-export function analyticsView<S extends AnalyticsSection>(section: S, pathname: string): AnalyticsViewCopy {
+export function analyticsView(section: AnalyticsSection, pathname: string): AnalyticsViewCopy {
   return ANALYTICS_VIEWS[section][analyticsTabFromPath(section, pathname)];
 }

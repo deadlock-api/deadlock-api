@@ -29,7 +29,7 @@ export default function GameStatTrendChart({
         .sort((a, b) => a.bucket - b.bucket)
         .map((entry) => ({
           date: entry.bucket * 1000,
-          value: entry[stat.key] as number,
+          value: entry[stat.key],
           matches: stat.key === "total_matches" ? undefined : entry.total_matches,
         })),
     [data, stat.key, bucket, params.minUnixTimestamp, params.maxUnixTimestamp],

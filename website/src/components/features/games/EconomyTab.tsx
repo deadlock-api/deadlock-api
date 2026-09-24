@@ -1,8 +1,4 @@
-import type {
-  AnalyticsApiGameStatsRequest,
-  AnalyticsApiPlayerPerformanceCurveRequest,
-  PlayerPerformanceCurveGameModeEnum,
-} from "deadlock_api_client";
+import type { AnalyticsApiGameStatsRequest, AnalyticsApiPlayerPerformanceCurveRequest } from "deadlock_api_client";
 import { Coins, type LucideIcon, TrendingUp, Trophy } from "lucide-react";
 
 import { Panel, PanelBody, PanelFooter, PanelHeader } from "~/components/patterns/panel/Panel";
@@ -48,7 +44,7 @@ export default function EconomyTab({ params, isStreetBrawl = false }: EconomyTab
   }
 
   const perfParams: AnalyticsApiPlayerPerformanceCurveRequest = {
-    gameMode: params.gameMode as PlayerPerformanceCurveGameModeEnum | undefined,
+    gameMode: params.gameMode,
     matchMode: params.matchMode,
     minUnixTimestamp: params.minUnixTimestamp,
     maxUnixTimestamp: params.maxUnixTimestamp,

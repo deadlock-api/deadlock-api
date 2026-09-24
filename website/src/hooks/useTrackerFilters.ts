@@ -7,7 +7,7 @@ import { useModeState } from "~/hooks/useModeState";
 import type { DateRange } from "~/lib/date-filter-preference";
 import { MODE_CONFIG, parseAsGameMode, parseAsMatchMode } from "~/lib/game-mode";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
-import type { ResultFilter, TrackerFilterValues } from "~/lib/tracker/compute";
+import type { TrackerFilterValues } from "~/lib/tracker/compute";
 
 export const TRACKER_TABS = ["matches", "heroes", "mates"] as const;
 export type TrackerTab = (typeof TRACKER_TABS)[number];
@@ -65,7 +65,7 @@ export function useTrackerFilters(defaultDateRange?: DateRange) {
       heroId,
       minUnixTimestamp,
       maxUnixTimestamp,
-      result: result as ResultFilter,
+      result: result,
     }),
     [mode, heroId, minUnixTimestamp, maxUnixTimestamp, result],
   );

@@ -97,12 +97,7 @@ function GuessItem() {
     const slot = formatSlotType(dailyItem.item_slot_type);
     const activation = dailyItem.is_active_item ? "Active" : "Passive";
 
-    const propertyHint = getPropertyHint(
-      dailyItem.properties as Record<
-        string,
-        { value?: unknown; label?: string | null; postfix?: string | null }
-      > | null,
-    );
+    const propertyHint = getPropertyHint(dailyItem.properties);
 
     return [
       { label: "SLOT", value: slot },

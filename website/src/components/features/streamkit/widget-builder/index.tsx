@@ -16,7 +16,6 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import { DEFAULT_LABELS, DEFAULT_SUBTEXTS, DEFAULT_VARIABLES } from "~/constants/streamkit/widget";
 import { API_ORIGIN } from "~/lib/constants";
 import { queryKeys } from "~/queries/query-keys";
-import type { Color } from "~/types/general";
 import type { Variable } from "~/types/streamkit/command";
 import type { Theme } from "~/types/streamkit/widget";
 
@@ -38,13 +37,13 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
 
   const [config, updateConfig] = useReducer(widgetConfigReducer, {
     widgetType: widgetTypes.includes(search["widget-type"] ?? "") ? (search["widget-type"] as string) : widgetTypes[0],
-    theme: "dark" as Theme,
+    theme: "dark",
     variables: DEFAULT_VARIABLES,
     variable: "wins_losses_today",
     prefix: "Score: ",
     suffix: "",
     // ds-allow color-literal: default of a viewer-chosen overlay color; a color input needs hex
-    fontColor: "#ffffff" as Color,
+    fontColor: "#ffffff",
     labels: DEFAULT_LABELS,
     subtexts: DEFAULT_SUBTEXTS,
     extraArgs: {},
@@ -57,7 +56,7 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
     opacity: 100,
     previewBackgroundImage: true,
     // ds-allow color-literal: default of the user-picked preview backdrop; a color input needs hex
-    previewBackgroundColor: "#f3f4f6" as PreviewBackgroundColor,
+    previewBackgroundColor: "#f3f4f6",
   });
 
   const { data: availableVariables = [] } = useQuery<Variable[]>({

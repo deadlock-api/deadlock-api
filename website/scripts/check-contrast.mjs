@@ -52,7 +52,13 @@ function oklchToLinear(l, c, hue) {
 function parseColor(value) {
   const hex = /^#([0-9a-f]{3,8})$/i.exec(value);
   if (hex) {
-    const d = hex[1].length <= 4 ? [...hex[1]].map((c) => c + c).join("") : hex[1];
+    const d =
+      hex[1].length <= 4
+        ? hex[1]
+            .split("")
+            .map((c) => c + c)
+            .join("")
+        : hex[1];
     const parts = [0, 2, 4, 6].map((i) => Number.parseInt(d.slice(i, i + 2), 16));
     return { rgb: parts.slice(0, 3), alpha: d.length === 8 ? parts[3] / 255 : 1, clipped: false };
   }

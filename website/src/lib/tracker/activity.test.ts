@@ -42,12 +42,12 @@ test("activity drill-down includes exactly one local week across daylight-saving
       const selected = filtersForActivityPeriod(filters, start.unix(), "week");
       assert.equal(selected.minUnixTimestamp, start.unix());
       assert.equal(selected.maxUnixTimestamp, start.add(1, "week").unix() - 1);
-      assert.equal((selected.maxUnixTimestamp! - selected.minUnixTimestamp! + 1) / 3600, hours);
+      assert.equal((selected.maxUnixTimestamp - selected.minUnixTimestamp + 1) / 3600, hours);
       const entries = [
         match(1, start.unix() - 1),
         match(2, start.unix()),
-        match(3, selected.maxUnixTimestamp!),
-        match(4, selected.maxUnixTimestamp! + 1),
+        match(3, selected.maxUnixTimestamp),
+        match(4, selected.maxUnixTimestamp + 1),
       ];
       assert.deepEqual(
         filterMatches(entries, selected).map((entry) => entry.match_id),

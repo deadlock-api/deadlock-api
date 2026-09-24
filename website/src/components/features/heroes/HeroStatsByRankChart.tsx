@@ -74,7 +74,7 @@ function formatStatLabel(stat: ByRankStat): string {
 }
 
 function tickFormatter(stat: ByRankStat): (v: number) => string {
-  const format = (v: number) => Number(v).toLocaleString("en-US", { maximumFractionDigits: 2 });
+  const format = (v: number) => v.toLocaleString("en-US", { maximumFractionDigits: 2 });
   if (stat === "winrate" || stat === "pickrate" || stat === "ban_rate") return (v) => `${format(v)}%`;
   return format;
 }

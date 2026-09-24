@@ -220,12 +220,8 @@ function ManifestUrlBar({ onOpenPlayground }: { onOpenPlayground: () => void }) 
         variant="outline"
         size="sm"
         onClick={onOpenPlayground}
-        onMouseEnter={() => {
-          void prewarmDuckDb();
-        }}
-        onFocus={() => {
-          void prewarmDuckDb();
-        }}
+        onMouseEnter={prewarmDuckDb}
+        onFocus={prewarmDuckDb}
         className="shrink-0 text-xs"
         title="Open SQL Playground"
       >

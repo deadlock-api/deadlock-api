@@ -122,9 +122,9 @@ function ItemQuickSelectDialogBody({
       grouped.set(slotKey, new Map(TIERS.map((t) => [t, [] as Upgrade[]])));
     }
     for (const item of filtered) {
-      const slotMap = grouped.get(item.item_slot_type as SlotKey);
+      const slotMap = grouped.get(item.item_slot_type);
       if (!slotMap) continue;
-      const tierList = slotMap.get(item.item_tier as number);
+      const tierList = slotMap.get(item.item_tier);
       if (!tierList) continue;
       tierList.push(item);
     }

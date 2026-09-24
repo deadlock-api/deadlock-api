@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import type { HashMapValue } from "deadlock_api_client";
 import { Coins, Flame, HeartPulse, type LucideIcon, Swords, Wheat } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -133,7 +132,7 @@ export function PlayerStatsDistributionCharts({
                       <PlayerMetricDistributionCard
                         key={def.key}
                         def={def}
-                        values={data?.[def.key] as HashMapValue | undefined}
+                        values={data?.[def.key]}
                         onExpand={() => setSelectedIndex(PLAYER_METRICS.indexOf(def))}
                       />
                     ))}
@@ -147,7 +146,7 @@ export function PlayerStatsDistributionCharts({
 
       <PlayerMetricDistributionDialog
         metric={selectedMetric}
-        values={selectedMetric ? (data?.[selectedMetric.key] as HashMapValue | undefined) : undefined}
+        values={selectedMetric ? data?.[selectedMetric.key] : undefined}
         onClose={() => setSelectedIndex(null)}
         onPrev={() => step(-1)}
         onNext={() => step(1)}

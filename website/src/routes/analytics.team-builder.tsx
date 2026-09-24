@@ -382,7 +382,7 @@ function TeamBuilderPage() {
         <MatchImportControl
           matchId={importedMatchId}
           isLoading={importQuery.isFetching || importing}
-          error={importError ?? (importQuery.error as Error | null)?.message}
+          error={importError ?? importQuery.error?.message}
           onLoad={(id) => void loadMatch(id)}
           onFlipSides={() => void flipSides()}
           onClear={clearDraft}

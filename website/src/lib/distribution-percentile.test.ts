@@ -1,24 +1,21 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import type { HashMapValue } from "deadlock_api_client";
-
 import { approxPercentile, formatPercentile } from "./distribution-percentile";
 
-const summary = (v: number[]) =>
-  ({
-    avg: 0,
-    std: 0,
-    percentile1: v[0],
-    percentile5: v[1],
-    percentile10: v[2],
-    percentile25: v[3],
-    percentile50: v[4],
-    percentile75: v[5],
-    percentile90: v[6],
-    percentile95: v[7],
-    percentile99: v[8],
-  }) as HashMapValue;
+const summary = (v: number[]) => ({
+  avg: 0,
+  std: 0,
+  percentile1: v[0],
+  percentile5: v[1],
+  percentile10: v[2],
+  percentile25: v[3],
+  percentile50: v[4],
+  percentile75: v[5],
+  percentile90: v[6],
+  percentile95: v[7],
+  percentile99: v[8],
+});
 
 const kills = summary([0, 1, 2, 3, 5, 7, 9, 11, 15]);
 

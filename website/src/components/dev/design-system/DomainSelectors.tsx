@@ -23,7 +23,7 @@ type TimeRange = [number | undefined, number | undefined];
 export function DomainSelectors() {
   const { data: heroes = [] } = useQuery({
     ...heroesQueryOptions,
-    select: (all) => all.filter((hero) => hero.in_development !== true).sort((a, b) => a.name.localeCompare(b.name)),
+    select: (all) => all.filter((hero) => !hero.in_development).sort((a, b) => a.name.localeCompare(b.name)),
   });
   const roster = heroes.slice(0, 15);
   const rosterIds = roster.map((hero) => hero.id);

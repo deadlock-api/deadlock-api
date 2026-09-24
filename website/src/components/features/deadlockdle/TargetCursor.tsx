@@ -239,7 +239,7 @@ export function TargetCursor({
           resumeTimeout = null;
         }, 50);
 
-        cleanupTarget(target!);
+        cleanupTarget(target);
       };
 
       currentLeaveHandler = leaveHandler;

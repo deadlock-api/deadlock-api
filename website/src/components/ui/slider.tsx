@@ -9,6 +9,7 @@ function Slider({
   className,
   defaultValue,
   value,
+  // oxlint-disable-next-line typescript/unbound-method -- Radix declares this callback prop with method syntax; it never uses `this`.
   onValueChange,
   min = 0,
   max = 100,

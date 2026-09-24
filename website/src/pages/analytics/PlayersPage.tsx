@@ -60,7 +60,7 @@ export function PlayersPage() {
   const scoreboardQuery = useQuery(
     playerScoreboardQueryOptions({
       sortBy: sortBy as PlayerScoreboardSortByEnum,
-      sortDirection: sortDirection as "desc" | "asc",
+      sortDirection: sortDirection,
       gameMode,
       matchMode,
       heroId: heroId ?? undefined,

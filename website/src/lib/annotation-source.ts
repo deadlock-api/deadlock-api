@@ -57,7 +57,7 @@ export function annotatedAncestor(node: Element | null): HTMLElement | null {
 function componentName(type: unknown): string | undefined {
   // Both a plain function component and a memo/forwardRef object carry it.
   if (typeof type !== "function" && typeof type !== "object") return undefined;
-  const name = (type as { dlName?: unknown } | null)?.dlName;
+  const name = type !== null && "dlName" in type ? type.dlName : undefined;
   return typeof name === "string" ? name : undefined;
 }
 
