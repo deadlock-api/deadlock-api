@@ -23,6 +23,7 @@ import { Button } from "~/components/ui/button";
 import { SearchInput } from "~/components/ui/search-input";
 import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import { useItemById } from "~/hooks/useAssetById";
 import { formatPercent } from "~/lib/format";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
@@ -194,7 +195,17 @@ export function getDisplayItemStats(data: ItemStats[] | undefined, assetsItems: 
 
 // Confidence tier is 1-5
 // 1 is the worst, 5 is the best, from "Very low" to "Very high"
-function ConfidenceTierBadge({ tier }: { tier: number }) {
+const CONFIDENCE_NAMES: Record<number, string> = {
+  1: "Very low",
+  2: "Low",
+  3: "Moderate",
+  4: "High",
+  5: "Very high",
+};
+
+/** The confidence mark of an item row; its tooltip says what the mark rests on. */
+function ConfidenceTierBadge({ row }: { row: DisplayItemStats }) {
+  const tier = row.confidenceTier;
   const getConfidenceLabel = (t: number) => {
     switch (t) {
       case 1:
@@ -221,7 +232,34 @@ function ConfidenceTierBadge({ tier }: { tier: number }) {
 
   const variant = tier === 1 ? "negative" : tier === 2 || tier === 3 ? "warning" : tier >= 4 ? "positive" : "muted";
 
-  return <Badge variant={variant}>{getConfidenceLabel(tier)}</Badge>;
+  const name = CONFIDENCE_NAMES[tier] ?? "Unknown";
+  const percent = (value: number) => `${(value * 100).toFixed(1)}%`;
+
+  return (
+    <Tooltip
+      content={
+        <>
+          <TooltipHeader title={`${name} confidence`} />
+          <TooltipStats>
+            <TooltipStat label="Win rate" value={percent(row.winRate)} />
+            <TooltipStat
+              label="95% range"
+              value={`${percent(row.confidenceLower)} to ${percent(row.confidenceUpper)}`}
+            />
+            <TooltipStat label="Matches" value={row.matches.toLocaleString("en-US")} />
+          </TooltipStats>
+          <p className="max-w-64 text-xs text-muted-foreground">
+            How far the true win rate could sit from the one shown, given the matches behind it: the narrower the range
+            compared with the most bought item's, the higher the confidence.
+          </p>
+        </>
+      }
+    >
+      <TooltipTarget aria-label={`${name} confidence`}>
+        <Badge variant={variant}>{getConfidenceLabel(tier)}</Badge>
+      </TooltipTarget>
+    </Tooltip>
+  );
 }
 
 const ItemStatsTableRow = memo(function ItemStatsTableRow({
@@ -324,7 +362,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
       {columns.includes("confidence") && (
         <TableCell className="hidden text-center @md:table-cell">
           <div className="inline-flex">
-            <ConfidenceTierBadge tier={row.confidenceTier} />
+            <ConfidenceTierBadge row={row} />
           </div>
         </TableCell>
       )}
