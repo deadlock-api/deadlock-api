@@ -1,4 +1,4 @@
-import { HeroSelectorMultiple } from "~/components/domain/selectors/HeroSelector";
+import { HeroSelectorTriState } from "~/components/domain/selectors/HeroSelector";
 import { Field } from "~/components/ui/field";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 
@@ -6,16 +6,8 @@ import { HERO_COMB_SIZES, HERO_COMBS_TO_SHOW, useHeroCombFilters } from "./useHe
 
 /** The combination table's own controls, for its toolbar: size, how many to show, heroes to include or leave out. */
 export function HeroCombFilters() {
-  const {
-    combSize,
-    setCombSize,
-    combsToShow,
-    setCombsToShow,
-    includeHeroIds,
-    setIncludeHeroes,
-    excludeHeroIds,
-    setExcludeHeroes,
-  } = useHeroCombFilters();
+  const { combSize, setCombSize, combsToShow, setCombsToShow, heroSelections, setHeroSelections } =
+    useHeroCombFilters();
 
   return (
     <>
@@ -37,20 +29,7 @@ export function HeroCombFilters() {
           ))}
         </Segmented>
       </Field>
-      <HeroSelectorMultiple
-        size="sm"
-        label="Include"
-        emptyLabel="Any"
-        value={includeHeroIds}
-        onValueChange={setIncludeHeroes}
-      />
-      <HeroSelectorMultiple
-        size="sm"
-        label="Exclude"
-        emptyLabel="None"
-        value={excludeHeroIds}
-        onValueChange={setExcludeHeroes}
-      />
+      <HeroSelectorTriState size="sm" value={heroSelections} onValueChange={setHeroSelections} />
     </>
   );
 }

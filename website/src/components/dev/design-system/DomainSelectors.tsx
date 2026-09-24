@@ -4,7 +4,12 @@ import { useState } from "react";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { ChartHeroSelector } from "~/components/domain/selectors/ChartHeroSelector";
-import { HeroSelectionGrid, HeroSelector, HeroSelectorMultiple } from "~/components/domain/selectors/HeroSelector";
+import {
+  HeroSelectionGrid,
+  HeroSelector,
+  HeroSelectorMultiple,
+  HeroSelectorTriState,
+} from "~/components/domain/selectors/HeroSelector";
 import { ItemSelectorMultiple } from "~/components/domain/selectors/ItemSelector";
 import { ItemSlotSelector } from "~/components/domain/selectors/ItemSlotSelector";
 import { ItemTierSelector } from "~/components/domain/selectors/ItemTierSelector";
@@ -78,6 +83,25 @@ export function DomainSelectors() {
         <Variants>
           <HeroSelectorMultiple label="Include" emptyLabel="Any" value={included} onValueChange={setIncluded} />
           <HeroSelectorMultiple label="Exclude" emptyLabel="None" value={excluded} onValueChange={setExcluded} />
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="HeroSelectorTriState"
+        source="domain/selectors/HeroSelector"
+        note="One list of heroes, each included, excluded or left alone (TriStateSelector over the roster): the hero filter of hero combinations. The trigger reads +2 / -1 and shows the first chosen hero; size sm for a toolbar."
+      >
+        <Variants>
+          <HeroSelectorTriState />
+          <HeroSelectorTriState
+            size="sm"
+            defaultValue={
+              new Map([
+                [1, "included"],
+                [2, "excluded"],
+              ])
+            }
+          />
         </Variants>
       </Specimen>
 

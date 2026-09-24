@@ -6,6 +6,7 @@ import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
 import { FilterCell } from "~/components/patterns/filter-bar/FilterCell";
 import { FilteredSelectList, FilteredSelectOption } from "~/components/patterns/filter-bar/FilteredSelectPopover";
+import { type TriState, TriStateItem, TriStateSelector } from "~/components/patterns/filter-bar/TriStateSelector";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { Input } from "~/components/ui/input";
 import { OptionRow } from "~/components/ui/option-row";
@@ -174,6 +175,53 @@ export function HeroSelectorMultiple({
         ))}
       </FilteredSelectList>
     </FilterCell>
+  );
+}
+
+const NO_HERO_STATES: Map<number, TriState> = new Map();
+
+/**
+ * One list of heroes, each included, excluded or left alone: one control where an include and an exclude list were two
+ * that could disagree. The trigger reads "+2 / -1" and shows the first chosen hero.
+ */
+export function HeroSelectorTriState({
+  label = "Heroes",
+  value: valueProp,
+  defaultValue = NO_HERO_STATES,
+  onValueChange,
+  ...props
+}: Omit<
+  React.ComponentProps<typeof TriStateSelector>,
+  "value" | "defaultValue" | "onValueChange" | "children" | "label" | "icon" | "width"
+> & {
+  label?: string;
+  /** Hero id to included / excluded; a hero that is neither has no key. */
+  value?: Map<number, TriState>;
+  defaultValue?: Map<number, TriState>;
+  onValueChange?: (value: Map<number, TriState>) => void;
+}) {
+  const [value, setValue] = useControllableState({ value: valueProp, defaultValue, onValueChange });
+  const { sortedHeroes, isLoading } = useHeroes();
+  if (isLoading) return null;
+  const firstChosen = sortedHeroes.find((hero) => value.has(hero.id));
+
+  return (
+    <TriStateSelector
+      label={label}
+      value={value}
+      onValueChange={setValue}
+      icon={firstChosen && <HeroImage heroId={firstChosen.id} className="size-4 shrink-0 object-contain" />}
+      {...props}
+    >
+      {sortedHeroes.map((hero: SlimHero) => (
+        <TriStateItem
+          key={hero.id}
+          value={hero.id}
+          label={hero.name}
+          icon={<HeroImage heroId={hero.id} className="size-5 shrink-0 object-contain" />}
+        />
+      ))}
+    </TriStateSelector>
   );
 }
 

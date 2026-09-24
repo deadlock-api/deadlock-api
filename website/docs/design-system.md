@@ -187,13 +187,14 @@ restyle a primitive with a long `className`: if a look is needed twice, it is a 
 
 ### Domain (`~/components/domain/*`)
 
-| Need                                     | Component                                                                                                                                                                                                                             |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A player as the identity of a row        | `player/PlayerCell` (`size`: sm, default; `linkToDetail`, `showAccountId`, `loading`)                                                                                                                                                 |
-| A player's name as a link to the tracker | `player/PlayerLink` (`accountId`; children = the name, "Player <id>" without)                                                                                                                                                         |
-| Hero, item or ability art                | `assets/HeroImage`, `assets/ItemImage`, `assets/AbilityImage` over `assets/AssetImage` (`emphasis`: normal, dim; `palette`: full, grayscale, the art without the colors that would answer a quiz)                                     |
-| A game on a minigame hub                 | `minigames/GameTile` (`tone`, `badge` for the run's state and streak, `cta`: "Play" by default, "View result" once the run is over)                                                                                                   |
-| One answer of a quiz                     | `minigames/AnswerOption` (`state`: idle, selected, correct, wrong, dimmed via `revealedState()`; `variant`: row, tile; `shortcut`). While the answer is revealed it takes `aria-disabled`, not `disabled`, so focus stays on the pick |
+| Need                                      | Component                                                                                                                                                                                                                             |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A player as the identity of a row         | `player/PlayerCell` (`size`: sm, default; `linkToDetail`, `showAccountId`, `loading`)                                                                                                                                                 |
+| A player's name as a link to the tracker  | `player/PlayerLink` (`accountId`; children = the name, "Player <id>" without)                                                                                                                                                         |
+| Hero, item or ability art                 | `assets/HeroImage`, `assets/ItemImage`, `assets/AbilityImage` over `assets/AssetImage` (`emphasis`: normal, dim; `palette`: full, grayscale, the art without the colors that would answer a quiz)                                     |
+| Heroes to include or exclude, in one list | `selectors/HeroSelectorTriState` (`value`: hero id to included / excluded; `size`: sm for a toolbar), a `TriStateSelector` over the roster                                                                                            |
+| A game on a minigame hub                  | `minigames/GameTile` (`tone`, `badge` for the run's state and streak, `cta`: "Play" by default, "View result" once the run is over)                                                                                                   |
+| One answer of a quiz                      | `minigames/AnswerOption` (`state`: idle, selected, correct, wrong, dimmed via `revealedState()`; `variant`: row, tile; `shortcut`). While the answer is revealed it takes `aria-disabled`, not `disabled`, so focus stays on the pick |
 
 ### Charts (`~/components/patterns/charts/*`)
 
