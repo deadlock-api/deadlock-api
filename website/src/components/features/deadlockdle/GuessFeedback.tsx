@@ -10,9 +10,20 @@ interface GuessFeedbackProps {
   triggerKey?: number;
   /**
    * What a screen reader hears for this guess, in one polite message: "Correct!" / "Wrong guess" by default. A game
-   * says what the flash cannot, such as the right answer.
+   * says what the flash cannot, such as the right answer or the hint the guess revealed (`wrongGuessMessage`).
    */
   message?: string;
+}
+
+/** A wrong guess in a daily puzzle: how many attempts are left and the hint it revealed, if any. */
+export function wrongGuessMessage(attemptsLeft: number, hint?: { label: string; value: unknown }): string {
+  const attempts =
+    attemptsLeft <= 0 ? "No attempts left." : `${attemptsLeft} ${attemptsLeft === 1 ? "attempt" : "attempts"} left.`;
+  const hintText =
+    attemptsLeft > 0 && hint && typeof hint.value === "string"
+      ? ` New hint, ${hint.label.toLowerCase()}: ${hint.value}`
+      : "";
+  return `Wrong guess. ${attempts}${hintText}`;
 }
 
 /**

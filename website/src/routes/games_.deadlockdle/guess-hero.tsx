@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import { SilhouetteFrame } from "~/components/domain/minigames/SilhouetteFrame";
 import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
-import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
+import { GuessFeedback, wrongGuessMessage } from "~/components/features/deadlockdle/GuessFeedback";
 import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
 import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
 import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuesses";
@@ -186,7 +186,15 @@ function GuessHero() {
       status={gameState.status}
       date={date}
     >
-      <GuessFeedback type={feedbackType} triggerKey={shakeKey} />
+      <GuessFeedback
+        type={feedbackType}
+        triggerKey={shakeKey}
+        message={
+          feedbackType === "wrong"
+            ? wrongGuessMessage(MAX_ATTEMPTS - gameState.guesses.length, hints[gameState.hintsRevealed - 1])
+            : undefined
+        }
+      />
       <WarpFilters />
 
       <motion.div

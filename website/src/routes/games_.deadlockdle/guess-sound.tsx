@@ -6,7 +6,7 @@ import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } fro
 
 import { PlayButton } from "~/components/domain/minigames/PlayButton";
 import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
-import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
+import { GuessFeedback, wrongGuessMessage } from "~/components/features/deadlockdle/GuessFeedback";
 import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
 import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
 import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuesses";
@@ -449,7 +449,15 @@ function GuessSound() {
       status={gameState.status}
       date={date}
     >
-      <GuessFeedback type={feedbackType} triggerKey={shakeKey} />
+      <GuessFeedback
+        type={feedbackType}
+        triggerKey={shakeKey}
+        message={
+          feedbackType === "wrong"
+            ? wrongGuessMessage(MAX_ATTEMPTS - gameState.guesses.length, hints[gameState.hintsRevealed - 1])
+            : undefined
+        }
+      />
 
       {/* Outside the shaking wrapper: its key changes on every wrong guess, which would swap in a new, paused
           element while the old one keeps playing and the progress bar freezes. */}
