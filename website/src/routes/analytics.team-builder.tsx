@@ -43,6 +43,7 @@ import {
   suggestLaneAssignment,
 } from "~/lib/team-builder/analysis";
 import { lanesOf, TEAM_SIZE } from "~/lib/team-builder/lanes";
+import { nextEmptySlot } from "~/lib/team-builder/next-slot";
 import { filterPlayableHeroes, heroesQueryOptions } from "~/queries/asset-queries";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { laneMatchupStatsQueryOptions } from "~/queries/lane-matchup-query";
@@ -339,10 +340,11 @@ function TeamBuilderPage() {
     if (!seeded) randomHeroes();
   };
 
+  // The picker stays open on the next empty slot, so a whole draft is a run of picks; it closes when the board is full.
   const pickInto = (heroId: number) => {
     if (!pickerTarget) return;
     setSlot(pickerTarget.side, pickerTarget.slot, heroId);
-    setPickerTarget(null);
+    setPickerTarget(nextEmptySlot(draft, pickerTarget.side, pickerTarget.slot));
   };
 
   const openNextSlot = (side: Side) => {
