@@ -68,7 +68,9 @@ function CellLabel({
   className?: string;
 }) {
   return (
-    <span data-slot="filter-cell-label" className={cn("truncate eyebrow", active && "text-primary", className)}>
+    // Wraps onto a second line like the value does: a half-width cell on a phone cut "Matches (range)" and
+    // "Matches (total)" to the same "Matches (…".
+    <span data-slot="filter-cell-label" className={cn("line-clamp-2 eyebrow", active && "text-primary", className)}>
       {children}
     </span>
   );
