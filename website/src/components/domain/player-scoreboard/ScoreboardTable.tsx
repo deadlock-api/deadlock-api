@@ -1,18 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import type { PlayerEntry } from "deadlock_api_client";
 import Fuse from "fuse.js";
 import { useDeferredValue, useMemo } from "react";
 
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
-import { PaginationControls } from "~/components/patterns/data-table/PaginationControls";
+import { PaginationControls, PaginationStatus } from "~/components/patterns/data-table/PaginationControls";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { SearchInput } from "~/components/ui/search-input";
 import { ariaSort, SortButton } from "~/components/ui/sort-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { TextLink } from "~/components/ui/text-link";
 import { usePaginationQueryState } from "~/hooks/usePaginationQueryState";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { extractBadgeMap } from "~/lib/leaderboard";
@@ -21,26 +19,6 @@ import { ranksQueryOptions } from "~/queries/ranks-query";
 
 import { formatStatValue } from "./sort-options";
 import { SortBySelector } from "./SortBySelector";
-
-/**
- * The search only sees the players on this board, so "no results" is about the board, not about the player. A query
- * that is a Steam id offers that player's tracker page instead.
- */
-function NotOnBoard({ query, boardSize }: { query: string; boardSize: number }) {
-  const parsed = parseSteamIdInput(query);
-  return (
-    <span className="flex flex-col items-center gap-1">
-      <span>{`No match in the top ${boardSize.toLocaleString("en-US")} players for this sort.`}</span>
-      {"steamId3" in parsed && (
-        <TextLink asChild>
-          <Link to="/tracker/players/$accountId" params={{ accountId: String(parsed.steamId3) }}>
-            {`Open player ${parsed.steamId3} in the tracker`}
-          </Link>
-        </TextLink>
-      )}
-    </span>
-  );
-}
 
 export type ScoreboardSort = { sortBy: string; sortDirection: "desc" | "asc" };
 
@@ -168,6 +146,13 @@ export function ScoreboardTable({
   return (
     <div className={className} {...props}>
       {controls}
+      <PaginationStatus
+        page={currentPage}
+        totalPages={totalPages}
+        total={filteredEntries.length}
+        noun="player"
+        query={deferredSearchQuery}
+      />
       <Table density="compact" className="tabular-nums">
         <TableHeader tone="muted">
           <TableRow>
@@ -240,7 +225,10 @@ export function ScoreboardTable({
           })}
           {paginatedEntries.length === 0 && (
             <TableEmptyRow colSpan={sortBy === "matches" ? 3 : 4}>
-              {deferredSearchQuery ? <NotOnBoard query={deferredSearchQuery} boardSize={entries.length} /> : undefined}
+              {/* The search only sees the players on this board, so "no results" is about the board, not the player. */}
+              {deferredSearchQuery
+                ? `No match in the top ${entries.length.toLocaleString("en-US")} players for this sort.`
+                : undefined}
             </TableEmptyRow>
           )}
         </TableBody>
