@@ -5,13 +5,15 @@ import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/Chart
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
-  CHART_AXIS,
   CHART_BASELINE,
   CHART_COLOR,
   CHART_CURSOR_LINE,
   CHART_GRID,
   CHART_MARGIN,
+  CHART_X_AXIS,
+  CHART_Y_AXIS,
 } from "~/components/patterns/charts/theme";
+import { useSharedAxisWidth } from "~/components/patterns/charts/useSharedAxisWidth";
 import { Card, CardContent } from "~/components/ui/card";
 import { percentTicks, winRateDomain } from "~/lib/chart-axis";
 import { formatPercent } from "~/lib/format";
@@ -44,14 +46,19 @@ export function WeeklyTrendChart({
   const shareAxis: [number, number] = [0, Math.ceil(maxShare / shareStep) * shareStep];
 
   const syncId = useId();
-  const percentAxis = { tickFormatter: (v: number) => `${Math.round(v * 100)}%`, width: 44, ...CHART_AXIS };
+  const { ref: plotsRef, width: axisWidth } = useSharedAxisWidth<HTMLDivElement>();
+  const percentAxis = {
+    ...CHART_Y_AXIS,
+    tickFormatter: (v: number) => `${Math.round(v * 100)}%`,
+    width: axisWidth,
+  };
 
   // Two measures on different scales get a plot each, stacked on a shared week axis: a second y-axis would let
   // the reader compare heights that mean nothing.
   return (
     // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the tags it suggests (fieldset, details, optgroup) are none of them a chart
     <Card size="xs" role="group" aria-label={label} {...props}>
-      <CardContent className="flex flex-col gap-1">
+      <CardContent ref={plotsRef} className="flex flex-col gap-1">
         <ChartLegend>
           <ChartLegendItem color={WIN_RATE_COLOR} shape="line">
             Win rate
@@ -63,7 +70,7 @@ export function WeeklyTrendChart({
         <ChartSurface label="Win rate by week" size="md" variant="bare">
           <LineChart data={weeks} syncId={syncId} margin={CHART_MARGIN}>
             <CartesianGrid {...CHART_GRID} />
-            <XAxis dataKey="label" {...CHART_AXIS} tick={false} height={4} />
+            <XAxis dataKey="label" {...CHART_X_AXIS} tick={false} height={4} />
             <YAxis domain={winRateAxis} ticks={percentTicks(winRateAxis)} {...percentAxis} />
             <ReferenceLine y={0.5} {...CHART_BASELINE} />
             <Tooltip
@@ -96,7 +103,7 @@ export function WeeklyTrendChart({
         <ChartSurface label={`${shareLabel} by week`} size="sm" variant="bare">
           <LineChart data={weeks} syncId={syncId} margin={CHART_MARGIN}>
             <CartesianGrid {...CHART_GRID} />
-            <XAxis dataKey="label" {...CHART_AXIS} />
+            <XAxis dataKey="label" {...CHART_X_AXIS} />
             <YAxis domain={shareAxis} ticks={[shareAxis[0], shareAxis[1]]} {...percentAxis} />
             {/* The readings live in the plot above; here the synced cursor alone marks the week. */}
             <Tooltip isAnimationActive={false} cursor={CHART_CURSOR_LINE} content={() => null} />

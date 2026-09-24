@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { Area, AreaChart, ReferenceLine, XAxis, YAxis } from "recharts";
 
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_AXIS_SM, CHART_COLOR, SERIES_COLORS } from "~/components/patterns/charts/theme";
+import { CHART_COLOR, CHART_X_AXIS_SM, SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { buildGaussianComparison } from "~/lib/tracker/gaussian";
 
@@ -45,13 +45,12 @@ export function MetricGaussian({
       >
         <AreaChart data={curve.points} margin={{ top: 4, right: 12, bottom: 0, left: 12 }} accessibilityLayer={false}>
           <XAxis
-            {...CHART_AXIS_SM}
+            {...CHART_X_AXIS_SM}
             type="number"
             dataKey="x"
             domain={[curve.min, curve.max]}
             ticks={[curve.min, (curve.min + curve.max) / 2, curve.max]}
             tickFormatter={format}
-            height={16}
             minTickGap={20}
           />
           <YAxis hide domain={[0, "auto"]} />

@@ -9,7 +9,7 @@ import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartR
 import { ChartLoading, ChartError, ChartEmpty } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
-import { CHART_AXIS, CHART_GRID } from "~/components/patterns/charts/theme";
+import { CHART_GRID, CHART_X_AXIS, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
 import { TrendIntervalField } from "~/components/patterns/charts/TrendControls";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Field } from "~/components/ui/field";
@@ -120,14 +120,13 @@ export default function GamesOverTimeChart({
                   scale="time"
                   domain={["dataMin", "dataMax"]}
                   tickFormatter={(ts) => day.utc(ts).format("MMM D")}
-                  {...CHART_AXIS}
+                  {...CHART_X_AXIS}
                   minTickGap={28}
                 />
                 <YAxis
                   domain={["dataMin", "auto"]}
                   tickFormatter={(v) => (statDef ? formatAxisTick(v, statDef.format, span) : String(v))}
-                  {...CHART_AXIS}
-                  width={64}
+                  {...CHART_Y_AXIS}
                 />
                 <Tooltip
                   wrapperStyle={{ pointerEvents: "auto" }}

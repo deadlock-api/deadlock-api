@@ -22,14 +22,15 @@ import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartR
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
-  CHART_AXIS,
-  CHART_AXIS_SM,
   CHART_BASELINE,
   CHART_COLOR,
   CHART_CURSOR_BAND,
   CHART_CURSOR_LINE,
   CHART_GRID,
   CHART_MARGIN,
+  CHART_X_AXIS,
+  CHART_X_AXIS_SM,
+  CHART_Y_AXIS,
   SERIES_COLORS,
 } from "~/components/patterns/charts/theme";
 import { TONE_COLOR, toneOf } from "~/lib/tone";
@@ -97,8 +98,8 @@ export function Charts() {
           <ChartSurface label="Win rate over time for four heroes" variant="flush">
             <LineChart data={WEEKS} margin={CHART_MARGIN}>
               <CartesianGrid {...CHART_GRID} />
-              <XAxis dataKey="label" {...CHART_AXIS} />
-              <YAxis domain={[0.44, 0.58]} tickFormatter={percent} width={44} {...CHART_AXIS} />
+              <XAxis dataKey="label" {...CHART_X_AXIS} />
+              <YAxis domain={[0.44, 0.58]} tickFormatter={percent} {...CHART_Y_AXIS} />
               <ReferenceLine y={0.5} {...CHART_BASELINE} />
               <Tooltip
                 isAnimationActive={false}
@@ -139,8 +140,8 @@ export function Charts() {
           <ChartSurface label="Win rate by rank" size="md">
             <BarChart data={BY_RANK} margin={CHART_MARGIN}>
               <CartesianGrid {...CHART_GRID} />
-              <XAxis dataKey="rank" {...CHART_AXIS} interval={0} tickFormatter={(rank: string) => rank.slice(0, 3)} />
-              <YAxis domain={[0.44, 0.56]} tickFormatter={percent} width={44} {...CHART_AXIS} />
+              <XAxis dataKey="rank" {...CHART_X_AXIS} interval={0} tickFormatter={(rank: string) => rank.slice(0, 3)} />
+              <YAxis domain={[0.44, 0.56]} tickFormatter={percent} {...CHART_Y_AXIS} />
               <ReferenceLine y={0.5} {...CHART_BASELINE} />
               <Tooltip
                 isAnimationActive={false}
@@ -173,7 +174,7 @@ export function Charts() {
             >
               <AreaChart data={WEEKS} margin={{ top: 4, right: 4, bottom: 0, left: 4 }} accessibilityLayer={false}>
                 <CartesianGrid {...CHART_GRID} />
-                <XAxis dataKey="label" height={16} {...CHART_AXIS_SM} />
+                <XAxis dataKey="label" {...CHART_X_AXIS_SM} />
                 <YAxis hide domain={[0.44, 0.58]} />
                 <ReferenceLine y={0.5} {...CHART_BASELINE} />
                 <Area

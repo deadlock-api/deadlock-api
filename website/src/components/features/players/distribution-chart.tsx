@@ -3,7 +3,7 @@ import { Area, AreaChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts"
 
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_COLOR, CHART_CURSOR_LINE, CHART_TICK_SM } from "~/components/patterns/charts/theme";
+import { CHART_COLOR, CHART_CURSOR_LINE, CHART_X_AXIS_SM } from "~/components/patterns/charts/theme";
 import { approxPercentile, formatPercentile, percentilePoints } from "~/lib/distribution-percentile";
 
 export interface CurvePoint {
@@ -89,8 +89,7 @@ export function DistributionChart({
             domain={["dataMin", "dataMax"]}
             ticks={ticks}
             tickFormatter={(v) => fmt(v as number)}
-            tick={CHART_TICK_SM}
-            tickLine={false}
+            {...CHART_X_AXIS_SM}
             axisLine={{ stroke: "var(--chart-grid)" }}
           />
           <YAxis type="number" domain={[0, "dataMax"]} hide />

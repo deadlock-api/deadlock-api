@@ -5,7 +5,14 @@ import { Specimen } from "~/components/dev/design-system/Specimen";
 import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/RankTierIcons";
 import { RankTierTick } from "~/components/domain/rank/RankTierTick";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_AXIS, CHART_BASELINE, CHART_COLOR, CHART_GRID, CHART_MARGIN } from "~/components/patterns/charts/theme";
+import {
+  CHART_BASELINE,
+  CHART_COLOR,
+  CHART_GRID,
+  CHART_MARGIN,
+  CHART_X_AXIS,
+  CHART_Y_AXIS,
+} from "~/components/patterns/charts/theme";
 import { percentTicks, winRateDomain } from "~/lib/chart-axis";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -54,8 +61,8 @@ export function DomainRank() {
         <ChartSurface label="Players by rank badge" size="md">
           <BarChart data={PLAYERS_BY_BADGE} margin={CHART_MARGIN}>
             <CartesianGrid {...CHART_GRID} />
-            <XAxis {...CHART_AXIS} dataKey="badge" tick={false} height={RANK_ICON_AXIS_HEIGHT} />
-            <YAxis {...CHART_AXIS} width={44} />
+            <XAxis {...CHART_X_AXIS} dataKey="badge" tick={false} height={RANK_ICON_AXIS_HEIGHT} />
+            <YAxis {...CHART_Y_AXIS} />
             <Bar dataKey="players" radius={2} isAnimationActive={false}>
               {PLAYERS_BY_BADGE.map((entry) => (
                 <Cell key={entry.badge} fill={rankByTier.get(entry.tier)?.color ?? CHART_COLOR.fallback} />
@@ -75,13 +82,12 @@ export function DomainRank() {
         <ChartSurface label="Win rate by rank tier, RankTierTick sized from the chart" size="md">
           <BarChart data={tiers} margin={CHART_MARGIN}>
             <CartesianGrid {...CHART_GRID} />
-            <XAxis {...CHART_AXIS} dataKey="tier" interval={0} height={48} tick={<RankTierTick tiers={tiers} />} />
+            <XAxis {...CHART_X_AXIS} dataKey="tier" interval={0} height={48} tick={<RankTierTick tiers={tiers} />} />
             <YAxis
-              {...CHART_AXIS}
+              {...CHART_Y_AXIS}
               domain={WIN_RATE_AXIS}
               ticks={percentTicks(WIN_RATE_AXIS)}
               tickFormatter={percent}
-              width={44}
             />
             <ReferenceLine y={0.5} {...CHART_BASELINE} />
             <Bar dataKey={(entry: (typeof tiers)[number]) => [0.5, entry.winRate]} radius={4} isAnimationActive={false}>
@@ -94,13 +100,18 @@ export function DomainRank() {
         <ChartSurface label="Win rate by rank tier, RankTierTick without badge images" size="md">
           <BarChart data={namedTiers} margin={CHART_MARGIN}>
             <CartesianGrid {...CHART_GRID} />
-            <XAxis {...CHART_AXIS} dataKey="tier" interval={0} height={32} tick={<RankTierTick tiers={namedTiers} />} />
+            <XAxis
+              {...CHART_X_AXIS}
+              dataKey="tier"
+              interval={0}
+              height={32}
+              tick={<RankTierTick tiers={namedTiers} />}
+            />
             <YAxis
-              {...CHART_AXIS}
+              {...CHART_Y_AXIS}
               domain={WIN_RATE_AXIS}
               ticks={percentTicks(WIN_RATE_AXIS)}
               tickFormatter={percent}
-              width={44}
             />
             <ReferenceLine y={0.5} {...CHART_BASELINE} />
             <Bar

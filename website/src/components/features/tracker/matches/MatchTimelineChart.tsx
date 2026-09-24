@@ -14,7 +14,7 @@ import {
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_AXIS, CHART_COLOR, CHART_CURSOR_LINE } from "~/components/patterns/charts/theme";
+import { CHART_COLOR, CHART_CURSOR_LINE, CHART_X_AXIS, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
 import { IconTile } from "~/components/ui/icon-tile";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { Tooltip as HoverTooltip } from "~/components/ui/tooltip";
@@ -391,7 +391,7 @@ export function MatchTimelineChart({
         </defs>
         <CartesianGrid stroke="var(--chart-grid)" strokeWidth={1} horizontal={lead != null} />
         <XAxis
-          {...CHART_AXIS}
+          {...CHART_X_AXIS}
           dataKey="time"
           type="number"
           domain={[0, durationS]}
@@ -402,7 +402,7 @@ export function MatchTimelineChart({
           height={X_AXIS_PX}
         />
         <YAxis
-          {...CHART_AXIS}
+          {...CHART_Y_AXIS}
           dataKey="lead"
           type="number"
           domain={domain}

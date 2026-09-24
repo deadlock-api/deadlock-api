@@ -9,12 +9,15 @@ import { ChartLegend, ChartLegendItem, ChartSwatch } from "~/components/patterns
 import { ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
-  CHART_AXIS,
   CHART_COLOR,
   CHART_CURSOR_LINE,
   CHART_GRID,
   CHART_MARGIN,
   CHART_TICK,
+  CHART_X_AXIS,
+  CHART_X_LABEL,
+  CHART_Y_AXIS,
+  CHART_Y_LABEL,
   SERIES_COLORS,
 } from "~/components/patterns/charts/theme";
 import { PanelBody } from "~/components/patterns/panel/Panel";
@@ -336,21 +339,21 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
                 </ChartLegend>
               )}
               <ChartSurface label={`Item win rate by ${purchaseAxis} chart`} size="lg" variant="flush">
-                <LineChart margin={{ ...CHART_MARGIN, right: 16, bottom: 16, left: 12 }}>
+                <LineChart margin={{ ...CHART_MARGIN, right: 16 }}>
                   <CartesianGrid {...CHART_GRID} />
                   <XAxis
-                    {...CHART_AXIS}
+                    {...CHART_X_AXIS}
                     dataKey="displayBucket"
                     domain={dataRange}
                     type="number"
                     tickCount={config.tickCount}
                     tickFormatter={config.formatter}
-                    label={{ ...CHART_TICK, value: config.label, position: "insideBottom", offset: -8 }}
+                    label={{ ...CHART_X_LABEL, ...CHART_TICK, value: config.label }}
                   />
                   <YAxis
-                    {...CHART_AXIS}
+                    {...CHART_Y_AXIS}
                     domain={[(min: number) => Math.max(0, min - 10), (max: number) => Math.min(100, max + 10)]}
-                    label={{ ...CHART_TICK, value: "Win Rate (%)", angle: -90, position: "insideLeft" }}
+                    label={{ ...CHART_Y_LABEL, ...CHART_TICK, value: "Win Rate (%)" }}
                     tickFormatter={(v) => `${v?.toFixed(0)}%`}
                     tickCount={10}
                   />

@@ -3,11 +3,12 @@ import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, Tooltip, XAxis, YAxi
 
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
-  CHART_AXIS,
   CHART_BASELINE,
   CHART_CURSOR_BAND,
   CHART_GRID,
   CHART_MARGIN,
+  CHART_X_AXIS,
+  CHART_Y_AXIS,
 } from "~/components/patterns/charts/theme";
 import { percentTicks, winRateDomain } from "~/lib/chart-axis";
 import { TONE_COLOR, toneOf } from "~/lib/tone";
@@ -59,18 +60,17 @@ export function WinRateBarChart<T>({
       <BarChart data={data as T[]} margin={CHART_MARGIN}>
         <CartesianGrid {...CHART_GRID} />
         <XAxis
-          {...CHART_AXIS}
+          {...CHART_X_AXIS}
           dataKey={(entry: T) => entry[xKey]}
           interval={0}
-          height={xAxisHeight}
+          height={xAxisHeight ?? CHART_X_AXIS.height}
           {...(xTick && { tick: xTick })}
         />
         <YAxis
-          {...CHART_AXIS}
+          {...CHART_Y_AXIS}
           domain={domain}
           ticks={percentTicks(domain)}
           tickFormatter={(value: number) => `${Math.round(value * 100)}%`}
-          width={44}
         />
         <ReferenceLine y={baseline} {...CHART_BASELINE} />
         <Tooltip

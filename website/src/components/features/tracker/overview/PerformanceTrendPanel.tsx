@@ -6,11 +6,11 @@ import { Area, AreaChart, CartesianGrid, ReferenceLine, Tooltip, XAxis, YAxis } 
 
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
-  CHART_AXIS_SM,
   CHART_BASELINE,
   CHART_COLOR,
   CHART_CURSOR_LINE,
   CHART_GRID,
+  CHART_X_AXIS_SM,
   SERIES_COLORS,
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
@@ -134,11 +134,10 @@ export function PerformanceTrendPanel({
             >
               <CartesianGrid {...CHART_GRID} />
               <XAxis
-                {...CHART_AXIS_SM}
+                {...CHART_X_AXIS_SM}
                 dataKey="time"
                 tickFormatter={(time: number) => day.unix(time).format("MMM D")}
                 minTickGap={35}
-                height={18}
               />
               <YAxis domain={metric === "winrate" ? [0, 1] : [0, "auto"]} hide />
               {metric === "winrate" && <ReferenceLine y={0.5} {...CHART_BASELINE} />}

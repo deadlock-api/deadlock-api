@@ -10,7 +10,7 @@ import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartR
 import { ChartSidebarLayout } from "~/components/patterns/charts/ChartSidebarLayout";
 import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_AXIS, CHART_COLOR, CHART_GRID } from "~/components/patterns/charts/theme";
+import { CHART_COLOR, CHART_GRID, CHART_X_AXIS, CHART_X_LABEL, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
@@ -204,19 +204,18 @@ export function HeroStatsByDurationChart({
                 size="xl"
                 label={`Hero ${heroStat.replace(/_/g, " ")} by match duration chart`}
               >
-                <LineChart data={formattedData} margin={{ top: 16, right: 12, bottom: 20, left: 0 }}>
+                <LineChart data={formattedData} margin={{ top: 16, right: 12, bottom: 8, left: 0 }}>
                   <CartesianGrid {...CHART_GRID} verticalCoordinatesGenerator={() => []} />
                   <XAxis
-                    {...CHART_AXIS}
+                    {...CHART_X_AXIS}
                     dataKey="label"
                     padding={{ left: 16, right: 16 }}
-                    label={{ value: "Match Duration", position: "insideBottom", offset: -10 }}
+                    label={{ ...CHART_X_LABEL, value: "Match Duration" }}
                   />
                   <YAxis
-                    {...CHART_AXIS}
+                    {...CHART_Y_AXIS}
                     domain={[yTicks[0], yTicks[yTicks.length - 1]]}
                     ticks={yTicks}
-                    width={64}
                     tickFormatter={(value: number) => {
                       const text = formatCompactAxisTick(value, yTicks.length > 1 ? yTicks[1] - yTicks[0] : 0);
                       return heroStat === "winrate" ? `${text}%` : text;

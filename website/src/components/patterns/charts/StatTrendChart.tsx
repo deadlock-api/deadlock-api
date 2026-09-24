@@ -4,7 +4,7 @@ import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts"
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { chartSizeVariants, ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_AXIS, CHART_COLOR, CHART_GRID, CHART_MARGIN } from "~/components/patterns/charts/theme";
+import { CHART_COLOR, CHART_GRID, CHART_MARGIN, CHART_X_AXIS, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { day } from "~/dayjs";
 import { formatAxisTick, formatStatValue, type StatFormat, type StatTrendPoint, valueSpan } from "~/lib/stat-format";
@@ -92,16 +92,15 @@ export default function StatTrendChart({
                 scale="time"
                 domain={["dataMin", "dataMax"]}
                 tickFormatter={(ts) => day.utc(ts).format(bucketDef.tickFormat)}
-                {...CHART_AXIS}
+                {...CHART_X_AXIS}
                 tickMargin={8}
                 minTickGap={28}
               />
               <YAxis
                 domain={["dataMin", "auto"]}
                 tickFormatter={(v) => formatAxisTick(v, stat.format, span)}
-                {...CHART_AXIS}
+                {...CHART_Y_AXIS}
                 tickMargin={6}
-                width={56}
               />
               <Tooltip
                 wrapperStyle={{ pointerEvents: "auto" }}

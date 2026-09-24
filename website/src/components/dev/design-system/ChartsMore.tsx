@@ -9,10 +9,11 @@ import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
 import StatTrendChart, { type StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
 import {
-  CHART_AXIS,
   CHART_BASELINE,
   CHART_GRID,
   CHART_MARGIN,
+  CHART_X_AXIS,
+  CHART_Y_AXIS,
   SERIES_COLORS,
 } from "~/components/patterns/charts/theme";
 import { TrendIntervalField } from "~/components/patterns/charts/TrendControls";
@@ -162,8 +163,8 @@ export function ChartsMore() {
             <ChartSurface label="Win rate over time for the selected heroes" size="md" variant="flush">
               <LineChart data={HERO_WEEKS} margin={CHART_MARGIN}>
                 <CartesianGrid {...CHART_GRID} />
-                <XAxis dataKey="label" {...CHART_AXIS} />
-                <YAxis domain={[0.44, 0.58]} tickFormatter={percent} width={44} {...CHART_AXIS} />
+                <XAxis dataKey="label" {...CHART_X_AXIS} />
+                <YAxis domain={[0.44, 0.58]} tickFormatter={percent} {...CHART_Y_AXIS} />
                 <ReferenceLine y={0.5} {...CHART_BASELINE} />
                 {HEROES.map(
                   (hero, i) =>

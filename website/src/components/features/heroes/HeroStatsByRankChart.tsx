@@ -10,7 +10,14 @@ import { ChartLegend, ChartLegendItem, ChartSwatch } from "~/components/patterns
 import { ChartSidebarLayout } from "~/components/patterns/charts/ChartSidebarLayout";
 import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_AXIS, CHART_COLOR, CHART_GRID } from "~/components/patterns/charts/theme";
+import {
+  CHART_COLOR,
+  CHART_GRID,
+  CHART_X_AXIS,
+  CHART_X_LABEL,
+  CHART_Y_AXIS,
+  CHART_Y_LABEL,
+} from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -406,24 +413,24 @@ export function HeroStatsByRankChart({
                 size="xl"
                 label={`Hero ${formatStatLabel(xStat)} vs ${formatStatLabel(yStat)} by rank chart`}
               >
-                <ScatterChart margin={{ top: 20, right: 30, bottom: 30, left: 20 }}>
+                <ScatterChart margin={{ top: 20, right: 30, bottom: 8, left: 0 }}>
                   <CartesianGrid {...CHART_GRID} vertical />
                   <XAxis
-                    {...CHART_AXIS}
+                    {...CHART_X_AXIS}
                     type="number"
                     dataKey="xValue"
                     name={formatStatLabel(xStat)}
                     domain={[xTicks[0], xTicks[xTicks.length - 1]]}
                     ticks={xTicks}
-                    label={{ value: formatStatLabel(xStat), position: "insideBottom", offset: -10 }}
+                    label={{ ...CHART_X_LABEL, value: formatStatLabel(xStat) }}
                     tickFormatter={tickFormatter(xStat)}
                   />
                   <YAxis
-                    {...CHART_AXIS}
+                    {...CHART_Y_AXIS}
                     type="number"
                     dataKey="yValue"
                     name={formatStatLabel(yStat)}
-                    label={{ value: formatStatLabel(yStat), angle: -90, position: "insideLeft", offset: -10 }}
+                    label={{ ...CHART_Y_LABEL, value: formatStatLabel(yStat) }}
                     domain={[yTicks[0], yTicks[yTicks.length - 1]]}
                     ticks={yTicks}
                     tickFormatter={tickFormatter(yStat)}

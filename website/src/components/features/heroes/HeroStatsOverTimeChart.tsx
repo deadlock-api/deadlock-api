@@ -36,7 +36,13 @@ import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/Chart
 import { ChartSidebarLayout } from "~/components/patterns/charts/ChartSidebarLayout";
 import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_AXIS, CHART_BASELINE, CHART_COLOR, CHART_GRID } from "~/components/patterns/charts/theme";
+import {
+  CHART_BASELINE,
+  CHART_COLOR,
+  CHART_GRID,
+  CHART_X_AXIS,
+  CHART_Y_AXIS,
+} from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Badge } from "~/components/ui/badge";
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -371,7 +377,7 @@ export function HeroStatsOverTimeChart({
       <>
         <CartesianGrid {...CHART_GRID} verticalCoordinatesGenerator={noVerticalGridCoordinates} />
         <XAxis
-          {...CHART_AXIS}
+          {...CHART_X_AXIS}
           dataKey="date"
           type="number"
           scale="time"
@@ -383,10 +389,9 @@ export function HeroStatsOverTimeChart({
           minTickGap={isHourly ? 60 : 32}
         />
         <YAxis
-          {...CHART_AXIS}
+          {...CHART_Y_AXIS}
           domain={[yTicks[0], yTicks[yTicks.length - 1]]}
           ticks={yTicks}
-          width={58}
           tickFormatter={(value: number) => {
             const text = formatCompactAxisTick(value, yTicks[1] - yTicks[0]);
             return isPercentStat ? `${text}%` : text;

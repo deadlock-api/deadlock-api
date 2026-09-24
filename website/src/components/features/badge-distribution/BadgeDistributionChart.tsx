@@ -5,7 +5,14 @@ import { Bar, BarChart, CartesianGrid, Cell, Customized, Label, ReferenceLine, T
 
 import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/RankTierIcons";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_AXIS, CHART_BASELINE, CHART_GRID, CHART_TICK } from "~/components/patterns/charts/theme";
+import {
+  CHART_BASELINE,
+  CHART_GRID,
+  CHART_TICK,
+  CHART_X_AXIS,
+  CHART_Y_AXIS,
+  CHART_Y_LABEL,
+} from "~/components/patterns/charts/theme";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { niceTicks } from "~/lib/chart-axis";
 import { extractBadgeMap } from "~/lib/leaderboard";
@@ -181,31 +188,24 @@ export default function BadgeDistributionChart({
             }}
           />
           <XAxis
-            {...CHART_AXIS}
+            {...CHART_X_AXIS}
             dataKey="badge"
             minTickGap={0}
             ticks={ticks}
             textAnchor="middle"
             tickFormatter={xAxisTickFormatter}
             dx={7}
-            height={RANK_ICON_AXIS_HEIGHT + 32}
             tickMargin={RANK_ICON_AXIS_HEIGHT + 8}
           />
           <YAxis
-            {...CHART_AXIS}
+            {...CHART_Y_AXIS}
             dataKey="value"
             ticks={valueTicks}
             domain={[0, valueTicks[valueTicks.length - 1]]}
             tickFormatter={(value: number) => compactNumber.format(value)}
             textAnchor="end"
-            width={64}
           >
-            <Label
-              value={BADGE_DISTRIBUTION_METRIC_LABEL[metric]}
-              angle={-90}
-              position="insideLeft"
-              textAnchor="middle"
-            />
+            <Label {...CHART_Y_LABEL} value={BADGE_DISTRIBUTION_METRIC_LABEL[metric]} />
           </YAxis>
           {medianBadge !== undefined && (
             <ReferenceLine

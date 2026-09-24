@@ -2,7 +2,13 @@ import { useId } from "react";
 import { Area, AreaChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_AXIS_SM, CHART_BASELINE, CHART_COLOR, CHART_CURSOR_LINE } from "~/components/patterns/charts/theme";
+import {
+  CHART_BASELINE,
+  CHART_COLOR,
+  CHART_CURSOR_LINE,
+  CHART_X_AXIS_SM,
+  CHART_Y_AXIS_SM,
+} from "~/components/patterns/charts/theme";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import type { LaneSoulPoint } from "~/lib/team-builder/analysis";
 import { compactNumber, deltaBarColor, deltaClass, formatCount } from "~/lib/team-builder/format";
@@ -68,23 +74,21 @@ export function LaneSoulCurve({ points }: { points: LaneSoulPoint[] }) {
         </defs>
 
         <XAxis
-          {...CHART_AXIS_SM}
+          {...CHART_X_AXIS_SM}
           dataKey="timeS"
           type="number"
           domain={[points[0].timeS, points[points.length - 1].timeS]}
           ticks={points.map((p) => p.timeS)}
           tickFormatter={minuteLabel}
-          height={16}
           interval="preserveStartEnd"
           minTickGap={2}
         />
         <YAxis
-          {...CHART_AXIS_SM}
+          {...CHART_Y_AXIS_SM}
           orientation="right"
           domain={[-bound, bound]}
           ticks={[-bound, 0, bound]}
           tickFormatter={axisSouls}
-          width={32}
         />
         <ReferenceLine y={0} {...CHART_BASELINE} />
 

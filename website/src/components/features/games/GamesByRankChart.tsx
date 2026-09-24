@@ -7,7 +7,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Customized, Tooltip, XAxis, YAxis }
 import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/RankTierIcons";
 import { ChartLoading, ChartError, ChartEmpty } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_AXIS, CHART_GRID } from "~/components/patterns/charts/theme";
+import { CHART_GRID, CHART_X_AXIS, CHART_Y_AXIS, CHART_Y_LABEL } from "~/components/patterns/charts/theme";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { gameStatsQueryOptions } from "~/queries/games-query";
@@ -122,21 +122,16 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
           <ChartEmpty label="game rank data" />
         ) : (
           <ChartSurface label={`${statDef?.label ?? stat} by rank chart`}>
-            <BarChart data={chartData} margin={{ top: 16, right: 20, bottom: 12, left: 40 }}>
+            <BarChart data={chartData} margin={{ top: 16, right: 20, bottom: 12, left: 0 }}>
               <CartesianGrid {...CHART_GRID} />
-              <XAxis {...CHART_AXIS} dataKey="badge" tick={false} height={RANK_ICON_AXIS_HEIGHT} />
+              <XAxis {...CHART_X_AXIS} dataKey="badge" tick={false} height={RANK_ICON_AXIS_HEIGHT} />
               <YAxis
                 // Bars grow from zero: from the smallest value, the lowest rank drew no bar and the rest were
                 // lengths relative to it.
                 domain={[0, "auto"]}
                 tickFormatter={(v) => (statDef ? formatAxisTick(v, statDef.format, span) : String(v))}
-                {...CHART_AXIS}
-                label={{
-                  value: statDef?.label ?? stat,
-                  angle: -90,
-                  position: "insideLeft",
-                  offset: -25,
-                }}
+                {...CHART_Y_AXIS}
+                label={{ ...CHART_Y_LABEL, value: statDef?.label ?? stat }}
               />
               <Tooltip
                 cursor={false}

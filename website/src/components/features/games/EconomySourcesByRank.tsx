@@ -7,7 +7,7 @@ import { RankTierTick } from "~/components/domain/rank/RankTierTick";
 import { ChartLegend, ChartLegendItem, ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_AXIS, CHART_CURSOR_BAND, CHART_GRID } from "~/components/patterns/charts/theme";
+import { CHART_CURSOR_BAND, CHART_GRID, CHART_X_AXIS, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { gameStatsQueryOptions } from "~/queries/games-query";
@@ -112,14 +112,14 @@ export default function EconomySourcesByRank({ params }: EconomySourcesByRankPro
             <BarChart data={chartData} margin={{ top: 16, right: 16, bottom: 24, left: 8 }}>
               <CartesianGrid {...CHART_GRID} />
               <XAxis
-                {...CHART_AXIS}
+                {...CHART_X_AXIS}
                 dataKey="tier"
                 interval={0}
                 height={44}
                 tick={<RankTierTick tiers={chartData} />}
               />
               <YAxis
-                {...CHART_AXIS}
+                {...CHART_Y_AXIS}
                 allowDecimals={mode !== "share"}
                 domain={mode === "share" ? [0, 100] : [0, "auto"]}
                 ticks={mode === "share" ? [0, 25, 50, 75, 100] : undefined}

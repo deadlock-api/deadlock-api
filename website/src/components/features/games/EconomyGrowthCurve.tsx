@@ -7,7 +7,15 @@ import { ChartLegend, ChartLegendItem, ChartSwatch } from "~/components/patterns
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_AXIS, CHART_CURSOR_LINE, CHART_GRID, CHART_TICK } from "~/components/patterns/charts/theme";
+import {
+  CHART_CURSOR_LINE,
+  CHART_GRID,
+  CHART_TICK,
+  CHART_X_AXIS,
+  CHART_X_LABEL,
+  CHART_Y_AXIS,
+  CHART_Y_LABEL,
+} from "~/components/patterns/charts/theme";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { TooltipCard, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance-curve-query";
@@ -90,14 +98,13 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
   ));
   const progressAxis = (
     <XAxis
-      {...CHART_AXIS}
+      {...CHART_X_AXIS}
       dataKey="t"
       type="number"
       domain={[0, 100]}
       ticks={[0, 33, 66, 100]}
       tickFormatter={(v: number) => `${v}%`}
-      height={40}
-      label={{ value: "Game Progress", position: "insideBottom", offset: -6 }}
+      label={{ ...CHART_X_LABEL, value: "Game Progress" }}
     />
   );
 
@@ -124,14 +131,14 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
           <ChartEmpty label="net worth growth" />
         ) : mode === "total" ? (
           <ChartSurface label="Net worth growth over the match" variant="bare">
-            <ComposedChart data={chartData} margin={{ top: 24, right: 24, bottom: 36, left: 12 }}>
+            <ComposedChart data={chartData} margin={{ top: 24, right: 24, bottom: 8, left: 0 }}>
               {phaseBands}
               <CartesianGrid {...CHART_GRID} />
               {progressAxis}
               <YAxis
-                {...CHART_AXIS}
+                {...CHART_Y_AXIS}
                 tickFormatter={(v: number) => formatSoulsCompact(v)}
-                label={{ value: "Avg Net Worth", angle: -90, position: "insideLeft", offset: -2 }}
+                label={{ ...CHART_Y_LABEL, value: "Avg Net Worth" }}
               />
               <Tooltip
                 cursor={CHART_CURSOR_LINE}
@@ -176,14 +183,14 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
           </ChartSurface>
         ) : (
           <ChartSurface label="Net worth by source over the match" variant="bare">
-            <LineChart data={chartData} margin={{ top: 24, right: 24, bottom: 36, left: 12 }}>
+            <LineChart data={chartData} margin={{ top: 24, right: 24, bottom: 8, left: 0 }}>
               {phaseBands}
               <CartesianGrid {...CHART_GRID} />
               {progressAxis}
               <YAxis
-                {...CHART_AXIS}
+                {...CHART_Y_AXIS}
                 tickFormatter={(v: number) => formatSoulsCompact(v)}
-                label={{ value: "Avg Souls", angle: -90, position: "insideLeft", offset: -2 }}
+                label={{ ...CHART_Y_LABEL, value: "Avg Souls" }}
               />
               <Tooltip
                 cursor={CHART_CURSOR_LINE}

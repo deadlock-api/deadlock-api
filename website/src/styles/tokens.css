@@ -27,6 +27,11 @@
   --series-violet: #9085e9;
   --series-forest: #008300;
   --series-magenta: #d55181;
+
+  /* Dense data type sizes, below Tailwind's text-xs (12px). In rem, so they follow the reader's font size. */
+  --type-2xs: 0.6875rem;
+  --type-3xs: 0.625rem;
+  --type-4xs: 0.5625rem;
 }
 
 /* Tier 2: semantic tokens. What a color is for. */
@@ -85,6 +90,9 @@
   --chart-share: var(--sky-600);
   --chart-grid: var(--ink-700);
   --chart-axis: var(--ink-400);
+  /* Tick and axis label size; `-sm` for plots under 100px tall. Auto-sized axes grow with it. */
+  --chart-tick: var(--type-2xs);
+  --chart-tick-sm: var(--type-4xs);
 
   /* Game identity: item categories, as colored in the game client */
   --item-weapon: rgb(229 138 0);
@@ -225,11 +233,11 @@
   --default-transition-timing-function: var(--ease-standard);
 
   /* Dense data type, below Tailwind's text-xs (12px) */
-  --text-2xs: 0.6875rem;
+  --text-2xs: var(--type-2xs);
   --text-2xs--line-height: 1rem;
-  --text-3xs: 0.625rem;
+  --text-3xs: var(--type-3xs);
   --text-3xs--line-height: 0.875rem;
-  --text-4xs: 0.5625rem;
+  --text-4xs: var(--type-4xs);
   --text-4xs--line-height: 0.75rem;
 
   --shadow-2xs: var(--shadow-2xs);

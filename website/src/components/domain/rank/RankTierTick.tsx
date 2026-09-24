@@ -1,5 +1,7 @@
 import { useChartWidth } from "recharts";
 
+import { CHART_TICK } from "~/components/patterns/charts/theme";
+
 interface RankTickTier {
   tier: number;
   name: string;
@@ -33,7 +35,7 @@ export function RankTierTick({
       <title>{entry.name}</title>
     </image>
   ) : (
-    <text x={x} y={y + 16} textAnchor="middle" fontSize={11} fill="currentColor">
+    <text x={x} y={y + 16} textAnchor="middle" fontSize={CHART_TICK.fontSize} fill="currentColor">
       {entry.name}
     </text>
   );
