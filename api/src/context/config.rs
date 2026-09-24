@@ -238,8 +238,6 @@ pub(crate) struct Config {
     pub(crate) patron_encryption_key: String,
 
     #[serde(default)]
-    pub(crate) game_server_secret: String,
-    #[serde(default)]
     pub(crate) mcp_snapshot: McpSnapshotConfig,
     #[serde(default)]
     pub(crate) data_dump: DataDumpConfig,

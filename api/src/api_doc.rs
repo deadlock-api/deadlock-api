@@ -136,10 +136,7 @@ const TAG_GROUPS: &[(&str, &[&str])] = &[
         ],
     ),
     ("Game Info", &["Info", "Patches"]),
-    (
-        "Developer",
-        &["GraphQL", "SQL", "Servers", "Commands", "Internal"],
-    ),
+    ("Developer", &["GraphQL", "SQL", "Commands", "Internal"]),
 ];
 
 impl Modify for TagGroupsAddon {

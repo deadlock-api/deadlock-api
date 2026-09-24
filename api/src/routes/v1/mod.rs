@@ -18,7 +18,6 @@ pub(crate) mod mcp;
 mod patches;
 mod patron;
 pub mod players;
-pub(crate) mod servers;
 pub mod sql;
 
 pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
@@ -37,7 +36,6 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
         .nest("/commands", commands::router())
         .nest("/info", info::router())
         .nest("/sql", sql::router())
-        .nest("/servers", servers::router())
         .nest("/assets", assets::router())
         .nest("/feedback", feedback::router())
         .merge(graphql::router())
