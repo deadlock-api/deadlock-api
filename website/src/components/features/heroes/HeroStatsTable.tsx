@@ -45,6 +45,8 @@ import { heroSlug } from "~/lib/hero-slug";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
 
+const COMPACT_MATCHES = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
+
 const HERO_TYPE_CONFIG: Record<string, { label: string; color: string; icon: LucideIcon }> = {
   assassin: { label: "Assassin", color: "var(--chart-6)", icon: Skull },
   brawler: { label: "Brawler", color: "var(--chart-1)", icon: Swords },
@@ -743,8 +745,14 @@ export function HeroStatsTable({
             <HeroCell heroId={row.hero_id} linkToDetail />
           )}
           {showMatchCounts && (
-            <p className="hidden text-xs text-muted-foreground tabular-nums @md/table:block">
-              {row.matches.toLocaleString("en-US")} matches
+            // In a narrow table the sample size stays, shortened ("19K"): without it a phone lost how much a win
+            // rate rests on.
+            <p className="text-2xs text-muted-foreground tabular-nums @md/table:text-xs">
+              <span className="@md/table:hidden">
+                {COMPACT_MATCHES.format(row.matches)}
+                <span className="sr-only"> matches</span>
+              </span>
+              <span className="hidden @md/table:inline">{row.matches.toLocaleString("en-US")} matches</span>
             </p>
           )}
         </Stack>
