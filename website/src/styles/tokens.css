@@ -125,6 +125,9 @@
   --duration-slow: 300ms;
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 
+  /* Overflow cue: how far the fade at the edge of a scrolling list or table reaches (`scroll-fade-*`). */
+  --scroll-fade-size: 3rem;
+
   /* Shadows: higher opacity than Tailwind's defaults, for a near-black page */
   --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.1);
   --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.15);

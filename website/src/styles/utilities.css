@@ -148,3 +148,84 @@
 @utility glyph-ink {
   filter: var(--glyph-filter);
 }
+
+/* Overflow cues. A list or table that scrolls fades out at an edge while there is more content past it, so a list cut
+   off at a group boundary no longer looks finished. Pure CSS: a scroll-driven animation moves the two fade lengths,
+   and a box that does not scroll has an inactive timeline, so both stay 0 and nothing is masked. Browsers without
+   scroll-driven animations show no fade, as before. It follows the scroll position, not time, so reduced motion
+   leaves it on. */
+@property --scroll-fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --scroll-fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@keyframes scroll-fade-start {
+  from {
+    --scroll-fade-start: 0px;
+  }
+  to {
+    --scroll-fade-start: var(--scroll-fade-size);
+  }
+}
+@keyframes scroll-fade-end {
+  from {
+    --scroll-fade-end: var(--scroll-fade-size);
+  }
+  to {
+    --scroll-fade-end: 0px;
+  }
+}
+
+/* Top and bottom edge of a vertical scroller (the sidebar navigation). */
+@utility scroll-fade-y {
+  @supports (animation-timeline: scroll()) {
+    mask-image: linear-gradient(
+      to bottom,
+      transparent,
+      black var(--scroll-fade-start),
+      black calc(100% - var(--scroll-fade-end)),
+      transparent
+    );
+    animation:
+      scroll-fade-start linear both,
+      scroll-fade-end linear both;
+    animation-timeline: scroll(self block), scroll(self block);
+    animation-range:
+      0 var(--scroll-fade-size),
+      calc(100% - var(--scroll-fade-size)) 100%;
+  }
+}
+
+/* Start and end edge of a horizontal scroller (a wide table). A pinned first column stays whole: with one inside,
+   only the end edge fades. */
+@utility scroll-fade-x {
+  @supports (animation-timeline: scroll()) {
+    --scroll-fade-direction: to right;
+    --scroll-fade-start-stop: var(--scroll-fade-start);
+    mask-image: linear-gradient(
+      var(--scroll-fade-direction),
+      transparent,
+      black var(--scroll-fade-start-stop),
+      black calc(100% - var(--scroll-fade-end)),
+      transparent
+    );
+    animation:
+      scroll-fade-start linear both,
+      scroll-fade-end linear both;
+    animation-timeline: scroll(self inline), scroll(self inline);
+    animation-range:
+      0 var(--scroll-fade-size),
+      calc(100% - var(--scroll-fade-size)) 100%;
+    &:dir(rtl) {
+      --scroll-fade-direction: to left;
+    }
+    &:has([data-pinned]) {
+      --scroll-fade-start-stop: 0px;
+    }
+  }
+}

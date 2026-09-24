@@ -65,7 +65,7 @@ src/styles/
   tailwind.css      entry: imports only
   tokens.css        tier 1 primitives -> tier 2 semantic tokens -> tier 3 Tailwind theme
   base.css          element defaults, reduced motion
-  utilities.css     glass, scrollbars, eyebrow
+  utilities.css     glass, scrollbars, scroll fades (scroll-fade-x / -y), eyebrow
   effects.css       keyframes and one-off brand effects
   vendor.css        overrides for Radix and Recharts markup
 
@@ -180,7 +180,7 @@ restyle a primitive with a long `className`: if a look is needed twice, it is a 
 | Failed                                                                 | `states/ErrorState` with `onRetry` (`variant`: alert, inline). A failure never looks like an empty result.                                                                                                                                                                         |
 | Lazy chunk boundary                                                    | `states/ChunkErrorBoundary`                                                                                                                                                                                                                                                        |
 | Page-level tabs that collapse to a select                              | `navigation/ResponsiveTabsList`                                                                                                                                                                                                                                                    |
-| A vertical list of links: the app navigation, the index of a long page | `navigation/SideNav`, `SideNavGroup`, `SideNavItem` (`variant`: default, highlight; `active`, `asChild`), `SideNavFooter`                                                                                                                                                          |
+| A vertical list of links: the app navigation, the index of a long page | `navigation/SideNav`, `SideNavGroup`, `SideNavItem` (`variant`: default, highlight; `active`, `asChild`), `SideNavFooter`. Scrolling, it keeps the active item in view and fades an edge with more links past it (`scroll-fade-y`)                                                 |
 | Code block                                                             | `code/HighlightedCode`                                                                                                                                                                                                                                                             |
 
 ### Domain (`~/components/domain/*`)

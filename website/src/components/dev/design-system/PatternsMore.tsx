@@ -92,7 +92,7 @@ export function SideNavSpecimen() {
       <Specimen
         name="SideNav"
         source="patterns/navigation/SideNav"
-        note="A vertical list of links: the app sidebar, or the index of a long page such as this one. Router links go through asChild; active sets aria-current."
+        note="A vertical list of links: the app sidebar, or the index of a long page such as this one. Router links go through asChild; active sets aria-current. When it scrolls, the active item is kept in view and an edge with more links past it fades out (scroll-fade-y)."
       >
         <Variants className="items-start gap-6">
           <div className="flex w-60 flex-col gap-1.5">
@@ -127,6 +127,26 @@ export function SideNavSpecimen() {
                   Support us
                 </Button>
               </SideNavFooter>
+            </div>
+          </div>
+          <div className="flex w-60 flex-col gap-1.5">
+            <span className="eyebrow">overflowing: the edges fade while more is past them</span>
+            <div className="flex h-48 flex-col overflow-hidden rounded-lg border border-sidebar-border bg-sidebar">
+              <SideNav aria-label="Scrolling SideNav example" className="flex-1 overflow-y-auto p-2">
+                {["Analytics", "Community", "Tools"].map((group) => (
+                  <SideNavGroup key={group} label={group}>
+                    <SideNavItem {...item(`${group}-heroes`)}>
+                      <Swords /> Heroes
+                    </SideNavItem>
+                    <SideNavItem {...item(`${group}-players`)}>
+                      <Users /> Players
+                    </SideNavItem>
+                    <SideNavItem {...item(`${group}-games`)}>
+                      <BarChart3 /> Games
+                    </SideNavItem>
+                  </SideNavGroup>
+                ))}
+              </SideNav>
             </div>
           </div>
         </Variants>

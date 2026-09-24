@@ -31,7 +31,8 @@ function keepActiveItemInView(list: HTMLElement): () => void {
 
 /**
  * A vertical list of links: the app's main navigation, or the index of a long page. When it scrolls, the active item
- * is kept in view.
+ * is kept in view, and an edge with more links past it fades out (`scroll-fade-y`), so a list cut off at a group
+ * boundary does not look finished.
  */
 export function SideNav({ className, ref, ...props }: React.ComponentProps<"nav">) {
   const composedRef = useCallback(
@@ -48,7 +49,14 @@ export function SideNav({ className, ref, ...props }: React.ComponentProps<"nav"
     },
     [ref],
   );
-  return <nav ref={composedRef} data-slot="side-nav" className={cn("flex flex-col gap-4", className)} {...props} />;
+  return (
+    <nav
+      ref={composedRef}
+      data-slot="side-nav"
+      className={cn("flex scroll-fade-y flex-col gap-4", className)}
+      {...props}
+    />
+  );
 }
 
 export function SideNavGroup({
