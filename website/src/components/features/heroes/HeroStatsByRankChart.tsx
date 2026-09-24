@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
+import { parseAsArrayOf, parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { CartesianGrid, Scatter, ScatterChart, type ScatterProps, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -14,7 +15,7 @@ import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
-import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
+import { CHART_HEROES_QUERY_KEY, useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { BANS_PER_MATCH } from "~/lib/ban-rate";
@@ -323,8 +324,11 @@ export function HeroStatsByRankChart({
     [heroDataByHero],
   );
 
+  const [selectedHeroIds, setSelectedHeroIds] = useQueryState(CHART_HEROES_QUERY_KEY, parseAsArrayOf(parseAsInteger));
   const { allHeroIds, effectiveVisibleSet, setVisibleHeroes } = useChartHeroVisibility(heroIdMap, {
     heroIdFilter: heroIdsWithData,
+    value: selectedHeroIds,
+    onValueChange: setSelectedHeroIds,
   });
 
   const selectedIds = allHeroIds.filter((id) => effectiveVisibleSet.has(id));

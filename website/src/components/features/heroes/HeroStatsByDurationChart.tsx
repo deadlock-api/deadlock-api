@@ -1,4 +1,5 @@
 import { useQueries } from "@tanstack/react-query";
+import { parseAsArrayOf, parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -13,7 +14,7 @@ import { CHART_AXIS, CHART_COLOR, CHART_GRID } from "~/components/patterns/chart
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
-import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
+import { CHART_HEROES_QUERY_KEY, useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { formatCompactAxisTick, niceTicks } from "~/lib/chart-axis";
@@ -123,8 +124,11 @@ export function HeroStatsByDurationChart({
     ],
     [formattedData],
   );
+  const [selectedHeroIds, setSelectedHeroIds] = useQueryState(CHART_HEROES_QUERY_KEY, parseAsArrayOf(parseAsInteger));
   const { allHeroIds, effectiveVisibleSet, setVisibleHeroes } = useChartHeroVisibility(heroIdMap, {
     heroIdFilter: heroIdsWithData,
+    value: selectedHeroIds,
+    onValueChange: setSelectedHeroIds,
   });
   const selectedIds = allHeroIds.filter((id) => effectiveVisibleSet.has(id));
   const pickerHeroes = Object.entries(heroIdMap)

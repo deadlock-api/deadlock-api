@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
-import type { LegendPayload } from "recharts";
 
+import { resolveVisibleHeroIds } from "~/lib/hero-trends";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 
 /**
@@ -29,73 +29,45 @@ export function useHeroColorMap() {
   };
 }
 
+/** URL key for the heroes chosen in the hero charts, shared by over-time, by-duration and by-rank. */
+export const CHART_HEROES_QUERY_KEY = "trend_heroes";
+
 /**
- * Manages hero visibility toggling for chart legends.
- * Returns the full hero list, the visible-set, and a Recharts legend click handler.
- *
- * Recharts v3 ignores any explicit `payload` prop on <Legend> and instead derives
- * the legend from the rendered <Line> components in the chart. To make every hero
- * appear in the legend (even when hidden), render a <Line> for every id in
- * `allHeroIds` and toggle its `hide` prop based on `effectiveVisibleSet`.
+ * Manages which heroes a chart shows. Controlled with `value` + `onValueChange` (e.g. from the URL,
+ * where `null` means "nothing chosen, use the default"), uncontrolled with an optional `defaultValue`.
+ * `onValueChange` fires in both modes. Returns the full hero list sorted by name, the visible set and
+ * a setter for the chart's hero picker.
  */
 export function useChartHeroVisibility(
   heroIdMap: Record<number, { name: string; color: string }>,
   options: {
     heroIdFilter?: number[];
-    visibleHeroIds?: number[] | null;
-    onVisibleHeroesChange?: (ids: number[]) => void;
+    value?: number[] | null;
+    defaultValue?: number[] | null;
+    onValueChange?: (ids: number[]) => void;
   } = {},
 ) {
-  const { heroIdFilter, visibleHeroIds, onVisibleHeroesChange } = options;
+  const { heroIdFilter, value, defaultValue = null, onValueChange } = options;
   const allHeroIds = useMemo(() => {
     const ids = heroIdFilter ? [...heroIdFilter] : Object.keys(heroIdMap).map(Number);
     return ids.sort((a, b) => (heroIdMap[a]?.name ?? "").localeCompare(heroIdMap[b]?.name ?? ""));
   }, [heroIdMap, heroIdFilter]);
 
-  // Resolve the default after assets/data arrive. A roster without hero 2 still needs a visible line.
-  const defaultHeroSet = useMemo(() => new Set(allHeroIds.includes(2) ? [2] : allHeroIds.slice(0, 1)), [allHeroIds]);
-  const [visibleHeroSet, setVisibleHeroSet] = useState<Set<number> | null>(null);
+  const isControlled = value !== undefined;
+  const [uncontrolledValue, setUncontrolledValue] = useState<number[] | null>(defaultValue);
+  const requested = isControlled ? value : uncontrolledValue;
+  // Resolved after assets/data arrive, so the default and the unknown-id filter see the real roster.
   const effectiveVisibleSet = useMemo(
-    () =>
-      onVisibleHeroesChange
-        ? visibleHeroIds == null
-          ? defaultHeroSet
-          : new Set(visibleHeroIds)
-        : (visibleHeroSet ?? defaultHeroSet),
-    [onVisibleHeroesChange, visibleHeroIds, visibleHeroSet, defaultHeroSet],
+    () => new Set(resolveVisibleHeroIds(allHeroIds, requested)),
+    [allHeroIds, requested],
   );
   const setVisibleHeroes = useCallback(
     (ids: number[]) => {
-      if (onVisibleHeroesChange) onVisibleHeroesChange(ids);
-      else setVisibleHeroSet(new Set(ids));
+      if (!isControlled) setUncontrolledValue(ids);
+      onValueChange?.(ids);
     },
-    [onVisibleHeroesChange],
+    [isControlled, onValueChange],
   );
 
-  const handleLegendClick = useCallback(
-    (entry: LegendPayload) => {
-      if (entry.dataKey == null || typeof entry.dataKey === "function") return;
-      const heroId = Number(entry.dataKey);
-      if (Number.isNaN(heroId)) return;
-      if (onVisibleHeroesChange) {
-        const next = new Set(effectiveVisibleSet);
-        if (next.has(heroId)) next.delete(heroId);
-        else next.add(heroId);
-        onVisibleHeroesChange([...next]);
-        return;
-      }
-      setVisibleHeroSet((prev) => {
-        const next = new Set(prev ?? defaultHeroSet);
-        if (next.has(heroId)) {
-          next.delete(heroId);
-        } else {
-          next.add(heroId);
-        }
-        return next;
-      });
-    },
-    [defaultHeroSet, effectiveVisibleSet, onVisibleHeroesChange],
-  );
-
-  return { allHeroIds, effectiveVisibleSet, handleLegendClick, setVisibleHeroes };
+  return { allHeroIds, effectiveVisibleSet, setVisibleHeroes };
 }

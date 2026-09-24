@@ -41,7 +41,7 @@ import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Badge } from "~/components/ui/badge";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { type Dayjs, day } from "~/dayjs";
-import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
+import { CHART_HEROES_QUERY_KEY, useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { BANS_PER_MATCH, computeBanRatesByBucket } from "~/lib/ban-rate";
@@ -250,11 +250,11 @@ export function HeroStatsOverTimeChart({
     () => [...new Set(Object.values(heroStatMap).flatMap((points) => points.map(([heroId]) => heroId)))],
     [heroStatMap],
   );
-  const [selectedHeroIds, setSelectedHeroIds] = useQueryState("trend_heroes", parseAsArrayOf(parseAsInteger));
+  const [selectedHeroIds, setSelectedHeroIds] = useQueryState(CHART_HEROES_QUERY_KEY, parseAsArrayOf(parseAsInteger));
   const { allHeroIds, effectiveVisibleSet, setVisibleHeroes } = useChartHeroVisibility(heroIdMap, {
     heroIdFilter: heroIdsWithData,
-    visibleHeroIds: selectedHeroIds,
-    onVisibleHeroesChange: setSelectedHeroIds,
+    value: selectedHeroIds,
+    onValueChange: setSelectedHeroIds,
   });
   const visibleHeroIds = useMemo(
     () => allHeroIds.filter((id) => effectiveVisibleSet.has(id)),

@@ -96,3 +96,17 @@ export function heroTrendsCsv(
   }
   return rows.map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\r\n");
 }
+
+/**
+ * Picks the heroes to show from a requested selection. `null` (nothing chosen yet) falls back to the
+ * default: hero 2 when the roster has it, else the first hero. Ids outside the roster (unknown in the
+ * URL, or without data under the current filters) are dropped; when that leaves nothing of a non-empty
+ * request, the default applies instead of an empty chart. An explicit empty selection stays empty.
+ */
+export function resolveVisibleHeroIds(allHeroIds: readonly number[], requested: readonly number[] | null): number[] {
+  const fallback = allHeroIds.includes(2) ? [2] : allHeroIds.slice(0, 1);
+  if (requested == null) return fallback;
+  const known = new Set(allHeroIds);
+  const kept = [...new Set(requested)].filter((id) => known.has(id));
+  return kept.length === 0 && requested.length > 0 ? fallback : kept;
+}
