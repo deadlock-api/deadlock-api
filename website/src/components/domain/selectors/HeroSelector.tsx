@@ -1,292 +1,131 @@
-import { useQuery } from "@tanstack/react-query";
-import { SearchIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
-import { HeroName } from "~/components/domain/assets/HeroName";
-import { FilterCell } from "~/components/patterns/filter-bar/FilterCell";
-import { FilteredSelectList, FilteredSelectOption } from "~/components/patterns/filter-bar/FilteredSelectPopover";
-import { type TriState, TriStateItem, TriStateSelector } from "~/components/patterns/filter-bar/TriStateSelector";
-import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
-import { Input } from "~/components/ui/input";
+import { type HeroTriState, multipleSummary, triStateSummary } from "~/components/domain/selectors/hero-picker";
+import { HeroGrid, HeroGridSearch, HeroGridTile } from "~/components/domain/selectors/HeroGrid";
+import { type HeroSelectionProps, useHeroPicker, useHeroRoster } from "~/components/domain/selectors/useHeroPicker";
+import { FilterCell, type FilterCellPassthroughProps } from "~/components/patterns/filter-bar/FilterCell";
 import { OptionRow } from "~/components/ui/option-row";
-import { FOCUS_RING } from "~/components/ui/recipes";
+import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
-import { heroesQueryOptions, type SlimHero } from "~/queries/asset-queries";
 
-function useHeroes() {
-  const { data: sortedHeroes = [], isLoading } = useQuery({
-    ...heroesQueryOptions,
-    select: (heroes) => heroes.filter((h) => !h.in_development).sort((a, b) => a.name.localeCompare(b.name)),
-  });
-
-  return { sortedHeroes, isLoading };
-}
-
-export function HeroSelector({
-  value: valueProp,
-  defaultValue,
-  onValueChange,
-  allowNull,
-  className,
-  ...props
-}: Omit<
-  React.ComponentProps<typeof FilterCell>,
-  "label" | "value" | "defaultValue" | "active" | "onReset" | "icon" | "children"
-> & {
-  /** `null` is "any hero". */
-  value?: number | null;
-  /** The hero it starts on when uncontrolled, and the one the reset returns to. */
-  defaultValue?: number | null;
-  onValueChange?: (heroId: number | null) => void;
-  allowNull?: boolean;
-}) {
-  const [selectedHero, setSelectedHero] = useControllableState<number | null>({
-    value: valueProp,
-    defaultValue: defaultValue ?? null,
-    onValueChange,
-  });
-  const { sortedHeroes } = useHeroes();
-  const [search, setSearch] = useState("");
-  // A hero is one choice, so picking it (or Any) closes the editor like a select would.
-  const [open, setOpen] = useState(false);
-
-  const currentHero = selectedHero ? sortedHeroes.find((h: SlimHero) => h.id === selectedHero) : undefined;
-
-  const filteredHeroes = useMemo(() => {
-    if (!search) return sortedHeroes;
-    const lower = search.toLowerCase();
-    return sortedHeroes.filter((h: SlimHero) => h.name.toLowerCase().includes(lower));
-  }, [sortedHeroes, search]);
-
-  const isActive = (selectedHero ?? null) !== (defaultValue ?? null);
-
-  const icon = currentHero ? (
-    <HeroImage heroId={currentHero.id} className="size-4 shrink-0 object-contain" />
-  ) : undefined;
-
-  const displayValue = currentHero ? currentHero.name : "Any";
-
-  const select = (heroId: number | null) => {
-    setSelectedHero(heroId);
-    setSearch("");
-    setOpen(false);
-  };
-
-  return (
-    <FilterCell
-      label="Hero"
-      value={displayValue}
-      active={isActive}
-      onReset={allowNull || defaultValue != null ? () => select(defaultValue ?? null) : undefined}
-      icon={icon}
-      className={className}
-      contentClassName="w-80 p-0"
-      open={open}
-      onOpenChange={setOpen}
-      {...props}
-    >
-      <div className="relative border-b p-2">
-        <SearchIcon className="absolute inset-s-4 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          aria-label="Search heroes"
-          placeholder="Search heroes..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          // Enter takes the first match, so typing "kel" and Enter picks Kelvin without tabbing into the grid.
-          onKeyDown={(e) => {
-            if (e.key !== "Enter" || !search || filteredHeroes.length === 0) return;
-            e.preventDefault();
-            select(filteredHeroes[0].id);
-          }}
-          size="sm"
-          className="ps-7 text-sm"
-        />
-      </div>
-      <div className="flex max-h-80 flex-col gap-1 overflow-y-auto p-2">
-        {allowNull && !search && (
-          <OptionRow selected={selectedHero == null} onClick={() => select(null)}>
-            Any Hero
-          </OptionRow>
-        )}
-        <HeroSelectionGrid
-          heroes={filteredHeroes}
-          value={selectedHero == null ? [] : [selectedHero]}
-          onValueChange={(ids) => select(ids.find((id) => id !== selectedHero) ?? selectedHero)}
-        />
-        {filteredHeroes.length === 0 && (
-          <p className="px-2 py-4 text-center text-xs text-muted-foreground">No hero matches.</p>
-        )}
-      </div>
-    </FilterCell>
-  );
-}
-
-const NO_HEROES: number[] = [];
-
-export function HeroSelectorMultiple({
-  label = "Heroes",
-  emptyLabel = "Any",
-  value: valueProp,
-  defaultValue = NO_HEROES,
-  onValueChange,
-  className,
-  ...props
-}: Omit<
-  React.ComponentProps<typeof FilterCell>,
-  "label" | "value" | "defaultValue" | "active" | "onReset" | "children"
-> & {
+type HeroSelectorProps = Omit<FilterCellPassthroughProps, "icon"> & {
+  /** The cell's label: "Hero" for one hero, "Heroes" otherwise. */
   label?: string;
-  emptyLabel?: string;
-  value?: number[];
-  defaultValue?: number[];
-  onValueChange?: (heroIds: number[]) => void;
-}) {
-  const [selectedHeroes, onHeroesSelected] = useControllableState({
-    value: valueProp,
-    defaultValue,
-    onValueChange,
-  });
-  const { sortedHeroes, isLoading } = useHeroes();
-
-  if (isLoading) {
-    return null;
-  }
-
-  const count = selectedHeroes.length;
-  const value = count === 0 ? emptyLabel : count === 1 ? "1 hero" : `${count} heroes`;
-
-  return (
-    <FilterCell
-      label={label}
-      value={value}
-      active={count > 0}
-      onReset={() => onHeroesSelected([])}
-      className={className}
-      contentClassName="max-h-100 w-56 overflow-y-auto p-2"
-      {...props}
-    >
-      <FilteredSelectList value={selectedHeroes} onValueChange={onHeroesSelected}>
-        {sortedHeroes.map((hero: SlimHero) => (
-          <FilteredSelectOption key={hero.id} value={hero.id} textValue={hero.name}>
-            <HeroImage heroId={hero.id} className="size-5 shrink-0 object-contain" />
-            <HeroName heroId={hero.id} className="truncate text-sm" />
-          </FilteredSelectOption>
-        ))}
-      </FilteredSelectList>
-    </FilterCell>
+} & (
+    | (Extract<HeroSelectionProps, { selection?: "single" }> & {
+        /** Adds "Any hero" above the grid: the value `null`. */
+        allowNull?: boolean;
+        emptyLabel?: never;
+      })
+    | (Extract<HeroSelectionProps, { selection: "multiple" }> & {
+        allowNull?: never;
+        /** The cell's value with no hero chosen. */
+        emptyLabel?: string;
+      })
+    | (Extract<HeroSelectionProps, { selection: "tri-state" }> & { allowNull?: never; emptyLabel?: never })
   );
-}
-
-const NO_HERO_STATES: Map<number, TriState> = new Map();
 
 /**
- * One list of heroes, each included, excluded or left alone: one control where an include and an exclude list were two
- * that could disagree. The trigger reads "+2 / -1" and shows the first chosen hero.
+ * The one hero filter: a `FilterCell` whose popover holds a search box over the portrait grid (`HeroGrid`).
+ * `selection` picks what it holds: `single` (one hero, closes on a pick; `allowNull` adds "Any hero"), `multiple`
+ * (a list of heroes) or `tri-state` (each hero included, excluded or neither, as a map). A `defaultValue` is what the
+ * reset returns to and what counts as inactive. In a filter bar use `Filter.Hero`; in a toolbar pass `size="sm"`.
  */
-export function HeroSelectorTriState({
-  label = "Heroes",
-  value: valueProp,
-  defaultValue = NO_HERO_STATES,
-  onValueChange,
-  ...props
-}: Omit<
-  React.ComponentProps<typeof TriStateSelector>,
-  "value" | "defaultValue" | "onValueChange" | "children" | "label" | "icon" | "width"
-> & {
-  label?: string;
-  /** Hero id to included / excluded; a hero that is neither has no key. */
-  value?: Map<number, TriState>;
-  defaultValue?: Map<number, TriState>;
-  onValueChange?: (value: Map<number, TriState>) => void;
-}) {
-  const [value, setValue] = useControllableState({ value: valueProp, defaultValue, onValueChange });
-  const { sortedHeroes, isLoading } = useHeroes();
-  if (isLoading) return null;
-  const firstChosen = sortedHeroes.find((hero) => value.has(hero.id));
-
-  return (
-    <TriStateSelector
-      label={label}
-      value={value}
-      onValueChange={setValue}
-      icon={firstChosen && <HeroImage heroId={firstChosen.id} className="size-4 shrink-0 object-contain" />}
-      {...props}
-    >
-      {sortedHeroes.map((hero: SlimHero) => (
-        <TriStateItem
-          key={hero.id}
-          value={hero.id}
-          label={hero.name}
-          icon={<HeroImage heroId={hero.id} className="size-5 shrink-0 object-contain" />}
-        />
-      ))}
-    </TriStateSelector>
-  );
-}
-
-/** Shared portrait grid for single-hero filters and multi-hero chart selection. */
-export function HeroSelectionGrid({
-  heroes,
-  value: valueProp,
-  defaultValue = NO_HEROES,
-  onValueChange,
-  disabledHeroIds,
-  onHeroHighlight,
-  size = "default",
-  className,
-  ...props
-}: Omit<React.ComponentProps<"div">, "defaultValue" | "children"> & {
-  heroes: readonly { id: number; name: string }[];
-  /** The pressed portraits. A press toggles its hero in or out of the list. */
-  value?: readonly number[];
-  defaultValue?: readonly number[];
-  onValueChange?: (heroIds: number[]) => void;
-  disabledHeroIds?: ReadonlySet<number>;
-  onHeroHighlight?: (id: number | null) => void;
-  /** `sm` packs the portraits for a chart sidebar. */
-  size?: "sm" | "default";
-}) {
-  const [selectedHeroes, setSelectedHeroes] = useControllableState<readonly number[]>({
-    value: valueProp,
+export function HeroSelector(props: HeroSelectorProps) {
+  const {
+    selection = "single",
+    value: _value,
     defaultValue,
-    onValueChange: onValueChange as ((heroIds: readonly number[]) => void) | undefined,
-  });
-  const toggle = (id: number) =>
-    setSelectedHeroes(selectedHeroes.includes(id) ? selectedHeroes.filter((h) => h !== id) : [...selectedHeroes, id]);
-  const small = size === "sm";
+    onValueChange,
+    allowNull,
+    emptyLabel,
+    label = selection === "single" ? "Hero" : "Heroes",
+    contentClassName,
+    ...cellProps
+  } = props;
+  const { heroes } = useHeroRoster();
+  const [open, setOpen] = useState(false);
+  const picker = useHeroPicker({
+    selection,
+    value: props.value,
+    defaultValue,
+    heroes,
+    // A hero is one choice, so picking it closes the editor like a select would; lists stay open for the next pick.
+    onValueChange: (next: unknown) => {
+      (onValueChange as ((value: unknown) => void) | undefined)?.(next);
+      if (selection === "single") {
+        picker.setSearch("");
+        setOpen(false);
+      }
+    },
+  } as unknown as Parameters<typeof useHeroPicker>[0]);
+
+  let display: string;
+  let active: boolean;
+  let firstHero: number | undefined;
+  let reset: (() => void) | undefined;
+  if (selection === "single") {
+    const heroId = picker.value as number | null;
+    const hero = heroes.find((h) => h.id === heroId);
+    firstHero = hero?.id;
+    display = hero?.name ?? "Any";
+    const initial = (defaultValue as number | null | undefined) ?? null;
+    active = heroId !== initial;
+    reset = allowNull || initial != null ? () => picker.setSelection(initial) : undefined;
+  } else if (selection === "multiple") {
+    const ids = picker.value as readonly number[];
+    firstHero = heroes.find((h) => ids.includes(h.id))?.id;
+    display = multipleSummary(ids.length, emptyLabel);
+    active = ids.length > 0;
+    reset = () => picker.setSelection([]);
+  } else {
+    const states = picker.value as ReadonlyMap<number, HeroTriState>;
+    firstHero = heroes.find((h) => states.has(h.id))?.id;
+    display = triStateSummary(states);
+    active = states.size > 0;
+    reset = () => picker.setSelection(new Map());
+  }
+
   return (
-    <div
-      data-slot="hero-selection-grid"
-      data-size={small ? "sm" : "default"}
-      className={cn("grid grid-cols-5 gap-1", className)}
-      {...props}
+    <FilterCell
+      label={label}
+      value={display}
+      active={active}
+      onReset={reset}
+      icon={
+        firstHero !== undefined ? (
+          <HeroImage heroId={firstHero} className="size-4 shrink-0 object-contain" />
+        ) : undefined
+      }
+      contentClassName={cn("w-80 max-w-(--radix-popover-content-available-width) p-0", contentClassName)}
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) picker.setSearch("");
+      }}
+      {...cellProps}
     >
-      {heroes.map((hero) => (
-        // ds-allow raw-button: hero portrait tile, a bespoke hit area in a selection grid
-        <button
-          key={hero.id}
-          type="button"
-          title={disabledHeroIds?.has(hero.id) ? `${hero.name}: no data for these filters` : hero.name}
-          aria-label={hero.name}
-          aria-pressed={selectedHeroes.includes(hero.id)}
-          disabled={disabledHeroIds?.has(hero.id)}
-          className={cn(
-            FOCUS_RING,
-            "flex cursor-pointer flex-col items-center gap-1 rounded-md p-1.5 hover:bg-accent disabled:cursor-default disabled:opacity-40",
-            small && "gap-0.5 p-1",
-            selectedHeroes.includes(hero.id) && "bg-primary/15 ring-1 ring-primary/40 ring-inset",
-          )}
-          onClick={() => toggle(hero.id)}
-          onMouseEnter={onHeroHighlight ? () => onHeroHighlight(hero.id) : undefined}
-          onMouseLeave={onHeroHighlight ? () => onHeroHighlight(null) : undefined}
-          onFocus={onHeroHighlight ? () => onHeroHighlight(hero.id) : undefined}
-          onBlur={onHeroHighlight ? () => onHeroHighlight(null) : undefined}
-        >
-          <HeroImage heroId={hero.id} className={cn("size-9 shrink-0 object-contain", small && "size-8")} />
-          <span className="w-full truncate text-center text-3xs leading-tight text-muted-foreground">{hero.name}</span>
-        </button>
-      ))}
-    </div>
+      <div className="border-b p-2">
+        <HeroGridSearch picker={picker} />
+      </div>
+      <div className={cn(SCROLLBAR_THIN, "flex max-h-80 flex-col gap-1 overflow-y-auto p-2")}>
+        {allowNull && !picker.search && (
+          <OptionRow selected={picker.value == null} onClick={() => picker.setSelection(null)}>
+            Any hero
+          </OptionRow>
+        )}
+        <HeroGrid picker={picker} aria-label={label}>
+          {picker.matches.map((hero) => (
+            <HeroGridTile key={hero.id} hero={hero} />
+          ))}
+        </HeroGrid>
+      </div>
+      {selection === "tri-state" && (
+        <p className="border-t px-3 py-2 text-2xs text-muted-foreground">
+          Press a hero once to include it, again to exclude it, a third time to clear it.
+        </p>
+      )}
+    </FilterCell>
   );
 }

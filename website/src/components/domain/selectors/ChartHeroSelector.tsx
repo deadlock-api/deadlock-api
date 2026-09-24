@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 
-import { HeroSelectionGrid } from "~/components/domain/selectors/HeroSelector";
+import { HeroGrid, HeroGridTile } from "~/components/domain/selectors/HeroGrid";
+import { useHeroPicker } from "~/components/domain/selectors/useHeroPicker";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Heading } from "~/components/ui/heading";
-import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
@@ -28,17 +28,22 @@ export function ChartHeroSelector({
   onValueChange?: (heroIds: number[]) => void;
   onHeroHighlight?: (id: number | null) => void;
 }) {
-  const [selectedHeroIds, onSelectionChange] = useControllableState<readonly number[]>({
-    value: valueProp,
-    defaultValue,
-    onValueChange: onValueChange as ((heroIds: readonly number[]) => void) | undefined,
-  });
   const availableSet = useMemo(() => new Set(availableHeroIds), [availableHeroIds]);
-  const visibleCount = selectedHeroIds.filter((id) => availableSet.has(id)).length;
-  const disabledIds = useMemo(
+  const disabledHeroIds = useMemo(
     () => new Set(heroes.filter((hero) => !availableSet.has(hero.id)).map((hero) => hero.id)),
     [heroes, availableSet],
   );
+  const picker = useHeroPicker({
+    selection: "multiple",
+    heroes,
+    value: valueProp,
+    defaultValue,
+    onValueChange,
+    disabledHeroIds,
+  });
+  const selectedHeroIds = picker.value as readonly number[];
+  const visibleCount = selectedHeroIds.filter((id) => availableSet.has(id)).length;
+  const highlight = (heroId: number | null) => onHeroHighlight?.(heroId);
 
   return (
     <Card asChild size="sm" className={cn("min-h-0 gap-2", className)}>
@@ -55,7 +60,7 @@ export function ChartHeroSelector({
               variant="ghost"
               size="sm"
               disabled={visibleCount === availableHeroIds.length}
-              onClick={() => onSelectionChange([...availableHeroIds])}
+              onClick={() => picker.setSelection([...availableHeroIds])}
             >
               Show all
             </Button>
@@ -63,7 +68,7 @@ export function ChartHeroSelector({
               variant="ghost"
               size="sm"
               disabled={selectedHeroIds.length === 0}
-              onClick={() => onSelectionChange([])}
+              onClick={() => picker.setSelection([])}
               aria-label="Clear selection"
             >
               Clear
@@ -77,15 +82,19 @@ export function ChartHeroSelector({
               "max-h-64 min-h-0 [scrollbar-gutter:stable] overflow-y-auto overscroll-contain pe-1 lg:max-h-none lg:flex-1",
             )}
           >
-            <HeroSelectionGrid
-              size="sm"
-              heroes={heroes}
-              value={selectedHeroIds}
-              disabledHeroIds={disabledIds}
-              onHeroHighlight={onHeroHighlight}
-              onValueChange={onSelectionChange}
-              className="grid-cols-[repeat(auto-fill,minmax(3.5rem,1fr))] gap-1 lg:grid-cols-4"
-            />
+            <HeroGrid picker={picker} size="sm" aria-label="Heroes to draw">
+              {picker.matches.map((hero) => (
+                <HeroGridTile
+                  key={hero.id}
+                  hero={hero}
+                  title={availableSet.has(hero.id) ? undefined : `${hero.name}: no data for these filters`}
+                  onMouseEnter={() => highlight(hero.id)}
+                  onMouseLeave={() => highlight(null)}
+                  onFocus={() => highlight(hero.id)}
+                  onBlur={() => highlight(null)}
+                />
+              ))}
+            </HeroGrid>
           </div>
         </CardContent>
       </section>

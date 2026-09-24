@@ -256,8 +256,7 @@ export const NAV: readonly NavChapter[] = [
         title: "Selectors",
         items: [
           "HeroSelector",
-          "HeroSelectorMultiple",
-          "HeroSelectionGrid",
+          "HeroGrid",
           "ChartHeroSelector",
           "ItemSelectorMultiple",
           "ItemSlotSelector and ItemTierSelector",

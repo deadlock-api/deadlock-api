@@ -4,12 +4,9 @@ import { useState } from "react";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { ChartHeroSelector } from "~/components/domain/selectors/ChartHeroSelector";
-import {
-  HeroSelectionGrid,
-  HeroSelector,
-  HeroSelectorMultiple,
-  HeroSelectorTriState,
-} from "~/components/domain/selectors/HeroSelector";
+import type { HeroTriState, PickableHero } from "~/components/domain/selectors/hero-picker";
+import { HeroGrid, HeroGridSearch, HeroGridTile } from "~/components/domain/selectors/HeroGrid";
+import { HeroSelector } from "~/components/domain/selectors/HeroSelector";
 import { ItemSelectorMultiple } from "~/components/domain/selectors/ItemSelector";
 import { ItemSlotSelector } from "~/components/domain/selectors/ItemSlotSelector";
 import { ItemTierSelector } from "~/components/domain/selectors/ItemTierSelector";
@@ -17,6 +14,7 @@ import { MatchTimeRangeSelector } from "~/components/domain/selectors/MatchTimeR
 import { ModeSelector } from "~/components/domain/selectors/ModeSelector";
 import { RankRangeSelector } from "~/components/domain/selectors/RankRangeSelector";
 import { SeasonPatchDatePicker } from "~/components/domain/selectors/SeasonPatchDatePicker";
+import { type HeroSelectionProps, useHeroPicker } from "~/components/domain/selectors/useHeroPicker";
 import { Field } from "~/components/ui/field";
 import type { Dayjs } from "~/dayjs";
 import { PATCHES } from "~/lib/constants";
@@ -24,6 +22,40 @@ import type { Mode } from "~/lib/game-mode";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 
 type TimeRange = [number | undefined, number | undefined];
+
+/** One `useHeroPicker` drawn by a search box, a `HeroGrid` and its tiles; `meta` puts a line under every name. */
+function HeroGridDemo({
+  heroes,
+  disabledHeroIds,
+  size = "default",
+  search = "none",
+  meta = "none",
+  ...selection
+}: HeroSelectionProps & {
+  heroes: readonly PickableHero[];
+  disabledHeroIds?: ReadonlySet<number>;
+  size?: "sm" | "default";
+  search?: "none" | "shown";
+  meta?: "none" | "rate";
+}) {
+  const picker = useHeroPicker({ ...selection, heroes, disabledHeroIds });
+  return (
+    <div className="flex flex-col gap-2">
+      {search === "shown" && <HeroGridSearch picker={picker} />}
+      <HeroGrid picker={picker} size={size}>
+        {picker.matches.map((hero) => (
+          <HeroGridTile
+            key={hero.id}
+            hero={hero}
+            title={picker.isDisabled(hero.id) ? `${hero.name}: no data for these filters` : undefined}
+          >
+            {meta === "rate" ? `${48 + ((hero.id * 7) % 50) / 10}%` : undefined}
+          </HeroGridTile>
+        ))}
+      </HeroGrid>
+    </div>
+  );
+}
 
 export function DomainSelectors() {
   const { data: heroes = [] } = useQuery({
@@ -36,10 +68,15 @@ export function DomainSelectors() {
 
   const [anyHero, setAnyHero] = useState<number | null>(null);
   const [requiredHero, setRequiredHero] = useState<number | null>(1);
-  const [included, setIncluded] = useState<number[]>([]);
-  const [excluded, setExcluded] = useState<number[]>([2, 7]);
+  const [chosen, setChosen] = useState<number[]>([2, 7]);
+  const [heroStates, setHeroStates] = useState<Map<number, HeroTriState>>(
+    () =>
+      new Map([
+        [1, "included"],
+        [2, "excluded"],
+      ]),
+  );
   const [gridHero, setGridHero] = useState<number | null>(null);
-  const [highlighted, setHighlighted] = useState<number | null>(null);
   const [chartHeroes, setChartHeroes] = useState<number[]>([]);
   const [items, setItems] = useState<number[]>([1548066885, 968099481]);
   const [slots, setSlots] = useState<ItemSlotType[]>(["weapon"]);
@@ -54,14 +91,12 @@ export function DomainSelectors() {
     endDate: PATCHES[0].endDate,
   });
 
-  const selectGridHero = (ids: number[]) => setGridHero(ids.find((id) => id !== gridHero) ?? gridHero);
-
   return (
     <>
       <Specimen
         name="HeroSelector"
         source="domain/selectors/HeroSelector"
-        note="One hero, as a FilterCell with a searchable portrait grid. allowNull adds Any Hero; a defaultValue makes the cell active (and resettable) whenever another hero is picked. In a filter bar, use Filter.Hero."
+        note="The one hero filter: a FilterCell whose popover is a search box over the HeroGrid. selection: single (closes on a pick; allowNull adds Any hero; a defaultValue makes the cell active and resettable whenever another hero is picked), multiple (a list), tri-state (a map of hero to included / excluded; the trigger reads +2 / -1). size sm for a toolbar. In a filter bar, use Filter.Hero."
       >
         <Variants>
           <HeroSelector value={anyHero} onValueChange={setAnyHero} allowNull />
@@ -72,61 +107,48 @@ export function DomainSelectors() {
               if (id != null) setRequiredHero(id);
             }}
           />
+          <HeroSelector selection="multiple" value={chosen} onValueChange={setChosen} />
+          <HeroSelector selection="tri-state" value={heroStates} onValueChange={setHeroStates} />
+          <HeroSelector selection="tri-state" size="sm" label="Toolbar" defaultValue={heroStates} />
         </Variants>
       </Specimen>
 
       <Specimen
-        name="HeroSelectorMultiple"
-        source="domain/selectors/HeroSelector"
-        note="Any number of heroes, as a FilterCell with a checklist: the include and exclude lists of hero combinations."
+        name="HeroGrid"
+        source="domain/selectors/HeroGrid · domain/selectors/useHeroPicker"
+        note="The portrait grid every hero picker draws: HeroGrid + one HeroGridTile per hero of picker.matches, with HeroGridSearch above. Behaviour lives in useHeroPicker (search, selection mode, keyboard cursor). Five a row always; the portraits shrink in a narrow container. A tile's state is a ring plus a corner mark (check, plus, minus), and a tri-state tile's name says it. Children put a line under the name (the Team Builder's sort value); disabledHeroIds are shown but cannot be picked, with the reason in title. Keyboard: WAI-ARIA grid, one tab stop, arrows move, Enter or Space picks; in the search box Enter picks the first match and ArrowDown enters the grid."
+        className="grid gap-4 sm:grid-cols-2"
       >
-        <Variants>
-          <HeroSelectorMultiple label="Include" emptyLabel="Any" value={included} onValueChange={setIncluded} />
-          <HeroSelectorMultiple label="Exclude" emptyLabel="None" value={excluded} onValueChange={setExcluded} />
+        <Variants label="single, with search" className="block max-w-80">
+          <HeroGridDemo heroes={roster} search="shown" value={gridHero} onValueChange={setGridHero} />
         </Variants>
-      </Specimen>
-
-      <Specimen
-        name="HeroSelectorTriState"
-        source="domain/selectors/HeroSelector"
-        note="One list of heroes, each included, excluded or left alone (TriStateSelector over the roster): the hero filter of hero combinations. The trigger reads +2 / -1 and shows the first chosen hero; size sm for a toolbar."
-      >
-        <Variants>
-          <HeroSelectorTriState />
-          <HeroSelectorTriState
-            size="sm"
+        <Variants label="multiple" className="block max-w-80">
+          <HeroGridDemo heroes={roster.slice(0, 10)} selection="multiple" defaultValue={rosterIds.slice(1, 4)} />
+        </Variants>
+        <Variants label="tri-state: neither, included, excluded" className="block max-w-80">
+          <HeroGridDemo
+            heroes={roster.slice(0, 10)}
+            selection="tri-state"
             defaultValue={
-              new Map([
-                [1, "included"],
-                [2, "excluded"],
+              new Map<number, HeroTriState>([
+                [rosterIds[1], "included"],
+                [rosterIds[2], "excluded"],
               ])
             }
           />
         </Variants>
-      </Specimen>
-
-      <Specimen
-        name="HeroSelectionGrid"
-        source="domain/selectors/HeroSelector"
-        note="The portrait grid inside HeroSelector and ChartHeroSelector. Use it directly only for a new kind of hero picker; disabledHeroIds marks heroes without data, onHeroHighlight reports hover and focus."
-        className="grid gap-4 sm:grid-cols-2"
-      >
-        <Variants label={`Default · highlighted: ${highlighted ?? "none"}`} className="block max-w-80">
-          <HeroSelectionGrid
+        <Variants label='size="sm", disabled heroes, a line under each name' className="block max-w-64">
+          <HeroGridDemo
             heroes={roster.slice(0, 10)}
-            value={gridHero == null ? [] : [gridHero]}
-            onValueChange={selectGridHero}
-            onHeroHighlight={setHighlighted}
-          />
-        </Variants>
-        <Variants label='size="sm", with disabled heroes' className="block max-w-80">
-          <HeroSelectionGrid
             size="sm"
-            heroes={roster.slice(0, 10)}
-            value={gridHero == null ? [] : [gridHero]}
-            onValueChange={selectGridHero}
+            meta="rate"
+            selection="multiple"
+            defaultValue={rosterIds.slice(0, 2)}
             disabledHeroIds={new Set(rosterIds.slice(7, 10))}
           />
+        </Variants>
+        <Variants label="Nothing matches" className="block max-w-80">
+          <HeroGridDemo heroes={[]} />
         </Variants>
       </Specimen>
 

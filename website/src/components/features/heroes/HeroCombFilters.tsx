@@ -1,4 +1,4 @@
-import { HeroSelectorTriState } from "~/components/domain/selectors/HeroSelector";
+import { HeroSelector } from "~/components/domain/selectors/HeroSelector";
 import { Field } from "~/components/ui/field";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 
@@ -29,7 +29,7 @@ export function HeroCombFilters() {
           ))}
         </Segmented>
       </Field>
-      <HeroSelectorTriState size="sm" value={heroSelections} onValueChange={setHeroSelections} />
+      <HeroSelector selection="tri-state" size="sm" value={heroSelections} onValueChange={setHeroSelections} />
     </>
   );
 }
