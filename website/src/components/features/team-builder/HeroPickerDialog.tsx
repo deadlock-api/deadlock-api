@@ -1,5 +1,5 @@
 import { XIcon } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useId, useMemo, useState } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { PanelFooter, PanelSection } from "~/components/patterns/panel/Panel";
@@ -19,6 +19,7 @@ import { cn } from "~/lib/utils";
 import type { SlimHero } from "~/queries/asset-queries";
 
 import { DetailDialog } from "./DetailDialog";
+import { draftSlotKey } from "./DraftSlot";
 import { Points } from "./Points";
 
 /** Every key is a numeric field of `Recommendation`, which is what lets the sort read it directly. */
@@ -87,7 +88,8 @@ function PickerBody({
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortKey>("score");
   const [rawCursor, setCursor] = useState(0);
-  const listRef = useRef<HTMLDivElement>(null);
+  const listId = useId();
+  const optionId = (heroId: number) => `${listId}-${heroId}`;
 
   const namesById = useMemo(() => new Map(heroes.map((h) => [h.id, h.name])), [heroes]);
 
@@ -137,7 +139,7 @@ function PickerBody({
       event.preventDefault();
       const next = Math.max(0, Math.min(rows.length - 1, cursor + (event.key === "ArrowDown" ? 1 : -1)));
       setCursor(next);
-      listRef.current?.children[next]?.scrollIntoView({ block: "nearest" });
+      if (rows[next]) document.getElementById(optionId(rows[next].heroId))?.scrollIntoView({ block: "nearest" });
     } else if (event.key === "Enter" && rows[cursor]) {
       event.preventDefault();
       onSelect(rows[cursor].heroId);
@@ -158,7 +160,19 @@ function PickerBody({
   const portrait = "hidden size-7.5 shrink-0 @xs:block";
 
   return (
-    <DialogContent size="lg" className="flex max-h-4/5 flex-col gap-0 p-0" showCloseButton={false}>
+    <DialogContent
+      size="lg"
+      className="flex max-h-4/5 flex-col gap-0 p-0"
+      showCloseButton={false}
+      // A pick fills the slot, which swaps the empty slot's button that opened the picker for the hero's portrait;
+      // the focus goes to that portrait, rather than to the page with the button that is gone.
+      onCloseAutoFocus={(event) => {
+        const slot = document.querySelector<HTMLElement>(`[data-draft-slot="${draftSlotKey(target)}"]`);
+        if (!slot) return;
+        event.preventDefault();
+        slot.focus();
+      }}
+    >
       {/* The close button sits in the header row rather than the dialog's corner, where it covered the badge. */}
       {/* On a phone the search box takes a row of its own under the badge, rather than shrinking to a sliver. */}
       <DialogHeader className="flex-row flex-wrap items-center gap-2.5 p-3.5">
@@ -174,6 +188,13 @@ function PickerBody({
           onKeyDown={handleKeyDown}
           placeholder="Search heroes…"
           aria-label="Search heroes"
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- SearchInput already renders a native text input; this is the WAI-ARIA combobox pattern
+          role="combobox"
+          aria-expanded
+          aria-controls={listId}
+          aria-autocomplete="list"
+          aria-activedescendant={rows[cursor] ? optionId(rows[cursor].heroId) : undefined}
+          autoComplete="off"
           className="order-last basis-full @sm:order-none @sm:flex-1 @sm:basis-0"
         />
         {/* Grows on a phone, where it shares the first row with the close button alone. */}
@@ -210,49 +231,69 @@ function PickerBody({
       </div>
       <Separator />
 
-      <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {rows.length === 0 && takenRows.length === 0 && (
           <EmptyState variant="inline" title={`No hero matches “${search}”.`} className="py-10" />
         )}
-        {rows.map((row, i) => (
-          <OptionRow
-            key={row.heroId}
-            selected={false}
-            active={i === cursor}
-            onMouseEnter={() => setCursor(i)}
-            onClick={() => onSelect(row.heroId)}
-            className={cn(edge, "py-2.5")}
-            leading={<HeroImage heroId={row.heroId} shape="circle" className={portrait} />}
-            // One element, so the row's own gap between trailing parts cannot shift the columns off the header's.
-            trailing={
-              <span className="flex items-center">
-                {showSynergy && <Points value={row.synergy} align="end" className={cn(deltaColumn, "font-semibold")} />}
-                {showCounter && <Points value={row.counter} align="end" className={cn(deltaColumn, "font-semibold")} />}
-                <span className={cn(rateColumn, "text-end tabular-nums")}>{formatRate(row.winRate)}</span>
-              </span>
-            }
-          >
-            {namesById.get(row.heroId) ?? "Unknown"}
-          </OptionRow>
-        ))}
+        {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the popup list of a custom combobox; a native select or datalist cannot carry it */}
+        <div role="listbox" id={listId} aria-label="Heroes">
+          {rows.map((row, i) => (
+            <OptionRow
+              key={row.heroId}
+              id={optionId(row.heroId)}
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- an option of the ARIA listbox above; a native option only exists inside a native select
+              role="option"
+              aria-selected={i === cursor}
+              // The search box keeps the focus and owns the cursor; the rows are reached with the arrow keys.
+              tabIndex={-1}
+              selected={false}
+              active={i === cursor}
+              onMouseEnter={() => setCursor(i)}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => onSelect(row.heroId)}
+              className={cn(edge, "py-2.5")}
+              leading={<HeroImage heroId={row.heroId} shape="circle" className={portrait} aria-hidden />}
+              // One element, so the row's own gap between trailing parts cannot shift the columns off the header's.
+              trailing={
+                <span className="flex items-center">
+                  {showSynergy && (
+                    <Points value={row.synergy} align="end" className={cn(deltaColumn, "font-semibold")} />
+                  )}
+                  {showCounter && (
+                    <Points value={row.counter} align="end" className={cn(deltaColumn, "font-semibold")} />
+                  )}
+                  <span className={cn(rateColumn, "text-end tabular-nums")}>{formatRate(row.winRate)}</span>
+                </span>
+              }
+            >
+              {namesById.get(row.heroId) ?? "Unknown"}
+            </OptionRow>
+          ))}
 
-        {takenRows.length > 0 && (
-          <>
-            <PanelSection title="Already drafted" />
-            {takenRows.map((heroId) => (
-              <OptionRow
-                key={heroId}
-                selected={false}
-                disabled
-                className={cn(edge, "py-2.5")}
-                leading={<HeroImage heroId={heroId} shape="circle" className={portrait} />}
-                trailing={<span className="text-2xs text-muted-foreground">{takenBy.get(heroId)}</span>}
-              >
-                {namesById.get(heroId) ?? "Unknown"}
-              </OptionRow>
-            ))}
-          </>
-        )}
+          {takenRows.length > 0 && (
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a group of options inside an ARIA listbox; optgroup only exists inside a native select
+            <div role="group" aria-labelledby={`${listId}-taken`}>
+              <PanelSection id={`${listId}-taken`} title="Already drafted" />
+              {takenRows.map((heroId) => (
+                <OptionRow
+                  key={heroId}
+                  id={optionId(heroId)}
+                  // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- an option of the ARIA listbox above; a native option only exists inside a native select
+                  role="option"
+                  aria-selected={false}
+                  aria-disabled
+                  tabIndex={-1}
+                  selected={false}
+                  className={cn(edge, "py-2.5")}
+                  leading={<HeroImage heroId={heroId} shape="circle" className={portrait} aria-hidden />}
+                  trailing={<span className="text-2xs text-muted-foreground">{takenBy.get(heroId)}</span>}
+                >
+                  {namesById.get(heroId) ?? "Unknown"}
+                </OptionRow>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <PanelFooter className={cn("flex justify-between gap-2 py-2.5 text-2xs", edge)}>

@@ -68,6 +68,14 @@ function SwapHint({ heroId, gain, side, onApply }: { heroId: number; gain: numbe
 
 const MIME = "application/x-deadlock-draft-slot";
 
+/**
+ * Names a slot's pick button, which is a different element once the slot is filled. The hero picker finds the slot
+ * by it to hand the focus back after a pick, when the button that opened the picker is gone.
+ */
+export function draftSlotKey({ side, slot }: SlotRef) {
+  return `${side}-${slot}`;
+}
+
 function readSlotRef(event: React.DragEvent): SlotRef | null {
   const [side, slot] = event.dataTransfer.getData(MIME).split(":");
   if (side !== "ally" && side !== "enemy") return null;
@@ -122,6 +130,7 @@ export function DraftSlot({
           side={side}
           state={isOver ? "over" : "idle"}
           onClick={onPick}
+          data-draft-slot={draftSlotKey({ side, slot })}
           aria-label={`Add hero to ${TEAM_NAMES[side]} ${lane ? `${lane.name} lane` : `slot ${slot + 1}`}`}
           {...dropTargetProps}
           className={cn("mx-auto", box)}
@@ -150,6 +159,7 @@ export function DraftSlot({
           }}
           onDragEnd={onDragEnd}
           onClick={onPick}
+          data-draft-slot={draftSlotKey({ side, slot })}
           title={`${hero?.name ?? "Hero"}, click to replace or drag to another slot`}
           className="size-full"
         >
