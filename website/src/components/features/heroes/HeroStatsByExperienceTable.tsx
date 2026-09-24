@@ -293,7 +293,7 @@ export function HeroStatsByExperienceTable({
               sortDir={sortDir}
               onSortChange={handleSort}
               align="start"
-              className="min-w-40"
+              className="@md/table:min-w-40"
               data-pinned
             />
             {EXPERIENCE_BUCKETS.map((bucket, i) => (

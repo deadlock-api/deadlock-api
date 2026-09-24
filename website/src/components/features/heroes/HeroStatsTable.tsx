@@ -629,7 +629,8 @@ export function HeroStatsTable({
         <TableHead
           // "desc" is the default direction of every column; for names it means A to Z.
           aria-sort={ariaSort(activeSortKey === "hero", sortDir === "desc" ? "asc" : "desc")}
-          className="w-1/100 min-w-40"
+          // A phone keeps the pinned column to the hero itself, so a swipe shows more than one stat column.
+          className="w-1/100 @md/table:min-w-40"
           data-pinned
         >
           <SortButton
@@ -753,7 +754,9 @@ export function HeroStatsTable({
             <HeroCell heroId={row.hero_id} linkToDetail />
           )}
           {showMatchCounts && (
-            <p className="text-xs text-muted-foreground tabular-nums">{row.matches.toLocaleString("en-US")} matches</p>
+            <p className="hidden text-xs text-muted-foreground tabular-nums @md/table:block">
+              {row.matches.toLocaleString("en-US")} matches
+            </p>
           )}
         </Stack>
       </TableCell>

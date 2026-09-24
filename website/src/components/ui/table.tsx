@@ -14,6 +14,10 @@ const CELL_DENSITY: Record<TableDensity, string> = { default: "p-2", compact: "p
 /**
  * `density` sets the row height of every cell at once: `default` for short lists, `compact` (about 40px rows) for
  * data tables, `dense` for tables inside panels and dialogs.
+ *
+ * A table wider than its container scrolls sideways inside it, and the edge with more columns past it fades out
+ * (`scroll-fade-x`; with a pinned column only the end edge). A table with a pinned column is also the `table`
+ * container, so its pinned cell can give up width in a narrow one (`@md/table:min-w-40`, `hidden @md/table:block`).
  */
 function Table({
   className,
@@ -22,7 +26,10 @@ function Table({
 }: React.ComponentProps<"table"> & { density?: TableDensity }) {
   return (
     <TableDensityContext value={density}>
-      <div data-slot="table-container" className="relative w-full scrollbar-thin overflow-x-auto">
+      <div
+        data-slot="table-container"
+        className="relative w-full scroll-fade-x scrollbar-thin overflow-x-auto has-data-pinned:@container/table"
+      >
         <table
           data-slot="table"
           data-density={density}

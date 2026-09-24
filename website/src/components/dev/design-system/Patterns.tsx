@@ -39,6 +39,7 @@ import { SearchInput } from "~/components/ui/search-input";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { type SortDir } from "~/components/ui/sort-button";
+import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
@@ -69,6 +70,7 @@ export function Patterns() {
   const [sortKey, setSortKey] = useState<Key>("winRate");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [density, setDensity] = useState<"default" | "compact" | "dense">("compact");
+  const [tableWidth, setTableWidth] = useState<"full" | "narrow">("full");
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState("");
@@ -231,14 +233,20 @@ export function Patterns() {
       <Specimen
         name="Data table"
         source="ui/table · patterns/data-table/*"
-        note='SortableHeader carries aria-sort; size="sm" drops the idle arrows for dense tables, sortLabel names the button when the visible label is not enough, and label takes a node. data-pinned pins the identity column while the rest scrolls. Tones come from toneOf().'
+        note='SortableHeader carries aria-sort; size="sm" drops the idle arrows for dense tables, sortLabel names the button when the visible label is not enough, and label takes a node. data-pinned pins the identity column while the rest scrolls; a table wider than its container fades the edge with more columns past it (only the end edge with a pinned column), and a pinned table is the "table" container, so its pinned cell can shrink with @md/table: variants. Tones come from toneOf().'
       >
-        <Segmented size="sm" width="hug" aria-label="Density" value={density} onValueChange={setDensity}>
-          <SegmentedItem value="default">default</SegmentedItem>
-          <SegmentedItem value="compact">compact</SegmentedItem>
-          <SegmentedItem value="dense">dense</SegmentedItem>
-        </Segmented>
-        <div className="overflow-hidden rounded-xl border bg-card">
+        <Inline gap={2}>
+          <Segmented size="sm" width="hug" aria-label="Density" value={density} onValueChange={setDensity}>
+            <SegmentedItem value="default">default</SegmentedItem>
+            <SegmentedItem value="compact">compact</SegmentedItem>
+            <SegmentedItem value="dense">dense</SegmentedItem>
+          </Segmented>
+          <Segmented size="sm" width="hug" aria-label="Width" value={tableWidth} onValueChange={setTableWidth}>
+            <SegmentedItem value="full">full width</SegmentedItem>
+            <SegmentedItem value="narrow">narrow: scrolls, end edge fades</SegmentedItem>
+          </Segmented>
+        </Inline>
+        <div className={`overflow-hidden rounded-xl border bg-card ${tableWidth === "narrow" ? "max-w-60" : ""}`}>
           <Table density={density}>
             <TableHeader className="bg-muted">
               <TableRow>
