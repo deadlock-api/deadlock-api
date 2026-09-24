@@ -167,13 +167,8 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
   },
   notFoundComponent: ItemNotFound,
   head: ({ loaderData }) => {
-    if (!loaderData) {
-      return seo({
-        title: pageTitle("Item Not Found"),
-        description: "The requested Deadlock item could not be found.",
-        path: "/analytics/items",
-      });
-    }
+    // The not-found page sets its own title and noindex; a second title and a canonical to the section came first.
+    if (!loaderData) return {};
     const { itemName, slug, image, tier, slot, rankRange, summary } = loaderData;
     const url = `${SITE_URL}/analytics/items/${slug}`;
     const usage = summary?.usage !== undefined ? ` and shows up in ${formatPercent(summary.usage)} of builds` : "";

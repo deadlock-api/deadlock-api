@@ -200,13 +200,8 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
   },
   notFoundComponent: HeroNotFound,
   head: ({ loaderData }) => {
-    if (!loaderData) {
-      return seo({
-        title: pageTitle("Hero Not Found"),
-        description: "The requested Deadlock hero could not be found.",
-        path: "/analytics/heroes",
-      });
-    }
+    // The not-found page sets its own title and noindex; a second title and a canonical to the section came first.
+    if (!loaderData) return {};
     const { heroName, slug, cardImage, rankRange, summary } = loaderData;
     const url = `${SITE_URL}/analytics/heroes/${slug}`;
     const description = summary

@@ -24,13 +24,8 @@ export const Route = createFileRoute("/blog/$slug")({
     return { ...post, breadcrumb: post.title };
   },
   head: ({ loaderData }) => {
-    if (!loaderData) {
-      return seo({
-        title: pageTitle("Post Not Found"),
-        description: "The requested blog post could not be found.",
-        path: "/blog",
-      });
-    }
+    // The not-found page sets its own title and noindex; a second title and a canonical to the section came first.
+    if (!loaderData) return {};
     return seo({
       title: pageTitle(loaderData.title),
       description: loaderData.description,
