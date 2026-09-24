@@ -27,13 +27,14 @@ const DOCKER_INSTALL_COMMAND = `docker run -d --restart unless-stopped \\
   -v ~/.steam/steam/appcache/httpcache:/root/.steam/steam/appcache/httpcache \\
   ghcr.io/deadlock-api/deadlock-api-ingest:latest`;
 
-function InstallCommand({ intro, code }: { intro: string; code: string }) {
+function InstallCommand({ intro, code, children }: { intro: string; code: string; children?: React.ReactNode }) {
   return (
     <Stack gap={2}>
       <Text as="p" tone="muted">
         {intro}
       </Text>
       <CopyableCode language="bash" code={code} copyLabel="Copy command" />
+      {children}
     </Stack>
   );
 }
@@ -85,7 +86,18 @@ function IngestCache() {
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="windows">
-                <InstallCommand intro="Run in PowerShell:" code={WINDOWS_INSTALL_COMMAND} />
+                <InstallCommand
+                  intro="Run in PowerShell as Administrator (right-click PowerShell, then Run as administrator):"
+                  code={WINDOWS_INSTALL_COMMAND}
+                >
+                  <Text as="p" variant="caption" tone="muted">
+                    Auto-start needs Administrator rights: the installer registers a scheduled task that starts the
+                    service when you sign in, and it turns auto-start on if you don&apos;t answer within 10 seconds. In
+                    a normal PowerShell window, press N when it asks about auto-start and let it create desktop
+                    shortcuts to start the service yourself. Otherwise it stops with &quot;Administrator privileges are
+                    required&quot;.
+                  </Text>
+                </InstallCommand>
               </TabsContent>
               <TabsContent value="linux">
                 <InstallCommand intro="Run in a terminal:" code={LINUX_INSTALL_COMMAND} />
@@ -97,7 +109,7 @@ function IngestCache() {
             <BulletList orientation="horizontal">
               <BulletItem>Privacy-focused: only match IDs are submitted</BulletItem>
               <BulletItem>Lightweight background service</BulletItem>
-              <BulletItem>No admin rights required</BulletItem>
+              <BulletItem>No root needed on Linux</BulletItem>
             </BulletList>
             <TextLink
               href="https://github.com/deadlock-api/deadlock-api-ingest"
