@@ -145,7 +145,7 @@ function HeatmapPage() {
         />
       </Filter.Root>
 
-      <div className="flex min-h-0 flex-1 items-center justify-center">
+      <div className="flex min-h-72 flex-1 items-center justify-center">
         {isPending ? (
           <LoadingState label="heatmap" />
         ) : isError ? (
