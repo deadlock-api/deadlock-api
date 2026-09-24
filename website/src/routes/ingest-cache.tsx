@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AlertCircle, CheckCircle2, FolderOpen, Terminal, Upload } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2, FolderOpen, FolderSearch, Terminal, Upload } from "lucide-react";
 
 import { DirectoryGuide } from "~/components/features/ingest-cache/DirectoryGuide";
 import { CopyableCode } from "~/components/patterns/code/CopyableCode";
@@ -156,10 +156,20 @@ function IngestCache() {
               {state.isLoading ? (
                 <Stack align="center">
                   <Spinner size="lg" />
-                  <Stack gap={1} align="center">
-                    <span className="font-semibold">Scanning directory...</span>
-                    <Text>{state.saltsFound} salts found</Text>
-                  </Stack>
+                  {state.phase === "uploading" ? (
+                    <Stack gap={1} align="center">
+                      <span className="font-semibold">Uploading...</span>
+                      <Text numeric="tabular">
+                        {state.uploadHandled.toLocaleString("en-US")} of {state.uploadTotal.toLocaleString("en-US")}{" "}
+                        matches
+                      </Text>
+                    </Stack>
+                  ) : (
+                    <Stack gap={1} align="center">
+                      <span className="font-semibold">Scanning directory...</span>
+                      <Text numeric="tabular">{state.saltsFound.toLocaleString("en-US")} salts found</Text>
+                    </Stack>
+                  )}
                 </Stack>
               ) : state.isDragging ? (
                 <Stack align="center" className="pointer-events-none">
@@ -191,9 +201,13 @@ function IngestCache() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {state.dialog.type === "success" ? (
-                <CheckCircle2 className="size-5 text-positive" />
+                <CheckCircle2 aria-hidden="true" className="size-5 text-positive" />
+              ) : state.dialog.type === "partial" ? (
+                <AlertTriangle aria-hidden="true" className="size-5 text-warning" />
+              ) : state.dialog.type === "empty" ? (
+                <FolderSearch aria-hidden="true" className="size-5 text-muted-foreground" />
               ) : (
-                <AlertCircle className="size-5 text-destructive" />
+                <AlertCircle aria-hidden="true" className="size-5 text-destructive" />
               )}
               {state.dialog.title}
             </DialogTitle>

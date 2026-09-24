@@ -3,17 +3,23 @@ import { useReducer, useRef } from "react";
 import { API_ORIGIN } from "~/lib/constants";
 import type { Salts } from "~/lib/ingest-cache-scanner";
 import { scanDirHandle, scanEntry, scanFileList } from "~/lib/ingest-cache-scanner";
+import { type BatchResult, dedupeSalts, type UploadSummary, uploadInBatches } from "~/lib/ingest-salts";
 
 interface DialogState {
   open: boolean;
   title: string;
   description: string;
-  type: "success" | "error";
+  /** `partial`: some batches were sent, some failed. `empty`: the folder held no match data, nothing was sent. */
+  type: "success" | "partial" | "error" | "empty";
 }
 
 interface IngestState {
   isLoading: boolean;
+  phase: "scanning" | "uploading";
   saltsFound: number;
+  /** Matches to send after removing duplicates, and how many of them are sent or failed so far. */
+  uploadTotal: number;
+  uploadHandled: number;
   isDragging: boolean;
   dialog: DialogState;
 }
@@ -21,6 +27,8 @@ interface IngestState {
 type IngestAction =
   | { type: "SCAN_START" }
   | { type: "SCAN_PROGRESS" }
+  | { type: "UPLOAD_START"; total: number }
+  | { type: "UPLOAD_PROGRESS"; handled: number }
   | { type: "SCAN_DONE" }
   | { type: "SET_DRAGGING"; value: boolean }
   | { type: "SHOW_DIALOG"; dialog: Omit<DialogState, "open"> }
@@ -29,9 +37,13 @@ type IngestAction =
 function ingestReducer(state: IngestState, action: IngestAction): IngestState {
   switch (action.type) {
     case "SCAN_START":
-      return { ...state, isLoading: true, saltsFound: 0 };
+      return { ...state, isLoading: true, phase: "scanning", saltsFound: 0, uploadTotal: 0, uploadHandled: 0 };
     case "SCAN_PROGRESS":
       return { ...state, saltsFound: state.saltsFound + 1 };
+    case "UPLOAD_START":
+      return { ...state, phase: "uploading", uploadTotal: action.total, uploadHandled: 0 };
+    case "UPLOAD_PROGRESS":
+      return { ...state, uploadHandled: action.handled };
     case "SCAN_DONE":
       return { ...state, isLoading: false };
     case "SET_DRAGGING":
@@ -47,10 +59,56 @@ function ingestReducer(state: IngestState, action: IngestAction): IngestState {
 
 const initialState: IngestState = {
   isLoading: false,
+  phase: "scanning",
   saltsFound: 0,
+  uploadTotal: 0,
+  uploadHandled: 0,
   isDragging: false,
   dialog: { open: false, title: "", description: "", type: "success" },
 };
+
+const count = new Intl.NumberFormat("en-US");
+
+function matches(n: number) {
+  return `${count.format(n)} ${n === 1 ? "match" : "matches"}`;
+}
+
+async function sendBatch(batch: Salts[]): Promise<BatchResult> {
+  const response = await fetch(`${API_ORIGIN}/v1/matches/salts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(batch),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    return { ok: false, error: body.message ?? body.error ?? `HTTP ${response.status}` };
+  }
+  return { ok: true, ingested: typeof body.salts_ingested === "number" ? body.salts_ingested : null };
+}
+
+function resultDialog(summary: UploadSummary): Omit<DialogState, "open"> {
+  const total = summary.sent + summary.failed;
+  const newOnes = `${matches(summary.ingested)} ${summary.ingested === 1 ? "was" : "were"} new to the database.`;
+  if (summary.failed === 0) {
+    return {
+      title: "Success!",
+      description: `Uploaded ${matches(summary.sent)}. ${newOnes}`,
+      type: "success",
+    };
+  }
+  if (summary.sent === 0) {
+    return {
+      title: "Upload failed",
+      description: `None of the ${matches(total)} could be uploaded (${summary.error}). Please try again later.`,
+      type: "error",
+    };
+  }
+  return {
+    title: "Partly uploaded",
+    description: `Uploaded ${count.format(summary.sent)} of ${matches(total)}; ${newOnes} The other ${count.format(summary.failed)} failed (${summary.error}). Select the folder again to retry them.`,
+    type: "partial",
+  };
+}
 
 export function useIngestUpload() {
   const [state, dispatch] = useReducer(ingestReducer, initialState);
@@ -63,31 +121,28 @@ export function useIngestUpload() {
 
   const incrementSalts = () => dispatch({ type: "SCAN_PROGRESS" });
 
-  const runScanAndUpload = async (scanFn: () => Promise<Set<Salts>>) => {
+  const runScanAndUpload = async (scanFn: () => Promise<Iterable<Salts>>) => {
     dispatch({ type: "SCAN_START" });
     isLoadingRef.current = true;
     try {
-      const salts = Array.from(await scanFn());
+      const salts = dedupeSalts(await scanFn());
 
-      const response = await fetch(`${API_ORIGIN}/v1/matches/salts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(salts),
-      });
-
-      if (response.ok) {
+      if (salts.length === 0) {
         dispatch({
           type: "SHOW_DIALOG",
           dialog: {
-            title: "Success!",
-            description: `${salts.length} salts uploaded successfully!`,
-            type: "success",
+            title: "No match data found",
+            description:
+              "No Deadlock match data found in this folder — did you pick the right one? It is Steam's appcache/httpcache folder; the guide below shows where it is. Nothing was uploaded.",
+            type: "empty",
           },
         });
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        const detail = errorData.message ?? errorData.error ?? `HTTP ${response.status}`;
-        showError("Upload Failed", `Failed to upload salts: ${detail}`);
+        dispatch({ type: "UPLOAD_START", total: salts.length });
+        const summary = await uploadInBatches(salts, sendBatch, (handled) =>
+          dispatch({ type: "UPLOAD_PROGRESS", handled }),
+        );
+        dispatch({ type: "SHOW_DIALOG", dialog: resultDialog(summary) });
       }
     } catch (error) {
       showError(
