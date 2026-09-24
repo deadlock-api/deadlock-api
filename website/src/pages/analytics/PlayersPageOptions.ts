@@ -9,6 +9,8 @@ import { seo } from "~/lib/seo";
 import type { RouterContext } from "~/router";
 
 export const MAX_ENTRIES = 1000;
+/** Without a floor, a win rate or per-match sort fills the board with players who played once and won. */
+export const DEFAULT_MIN_MATCHES = 10;
 
 export const playersPageOptions = {
   beforeLoad: redirectAnalyticsTab,
@@ -40,7 +42,7 @@ export const playersPageOptions = {
           gameMode: "normal",
           matchMode: DEFAULT_MATCH_MODE,
           heroId: deps.heroId,
-          minMatches: 0,
+          minMatches: DEFAULT_MIN_MATCHES,
           minAverageBadge: 0,
           maxAverageBadge: 116,
           ...range,

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PlayerScoreboardSortByEnum } from "deadlock_api_client";
-import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
+import { parseAsInteger, parseAsStringLiteral, throttle, useQueryState } from "nuqs";
 import { lazy, Suspense } from "react";
 
 import { Filter } from "~/components/domain/filters";
@@ -22,7 +22,10 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { playerScoreboardQueryOptions } from "~/queries/player-scoreboard-query";
 
-import { MAX_ENTRIES } from "./PlayersPageOptions";
+import { DEFAULT_MIN_MATCHES, MAX_ENTRIES } from "./PlayersPageOptions";
+
+/** A filter or sort change and the page reset land in one throttled URL update, so one history entry. */
+const together = { limitUrlUpdates: throttle(50) };
 
 const PlayerStatsDistributionCharts = lazy(() =>
   import("~/components/features/players/PlayerStatsDistributionCharts").then((m) => ({
@@ -42,10 +45,13 @@ export function PlayersPage() {
   );
   const { mode, setMode, gameMode, matchMode } = useModeState();
   const [heroId, setHeroId] = useQueryState("hero", parseAsInteger);
-  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(0));
+  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(DEFAULT_MIN_MATCHES));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
+  // Another board starts on its first page: a kept `page=5` opened a new sort at rank 101.
+  const [, setPage] = useQueryState("page", parseAsInteger);
+  const firstPage = () => void setPage(null, together);
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
 
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
@@ -85,16 +91,35 @@ export function PlayersPage() {
               setMinRankId(next.rank[0]);
               setMaxRankId(next.rank[1]);
             }
+            firstPage();
           }}
         />
-        <Filter.Hero value={heroId} onValueChange={setHeroId} allowNull />
+        <Filter.Hero
+          value={heroId}
+          onValueChange={(id) => {
+            void setHeroId(id, together);
+            firstPage();
+          }}
+          allowNull
+        />
         <Filter.SeasonPatchDate
           value={{ startDate, endDate }}
-          onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
+          onValueChange={(next) => {
+            handleDateChange(next.startDate, next.endDate, next.action);
+            firstPage();
+          }}
           defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
         />
         {tab === "scoreboard" && (
-          <Filter.MinMatches value={minMatches} onValueChange={setMinMatches} min={0} defaultValue={0} />
+          <Filter.MinMatches
+            value={minMatches}
+            onValueChange={(n) => {
+              void setMinMatches(n, together);
+              firstPage();
+            }}
+            min={0}
+            defaultValue={DEFAULT_MIN_MATCHES}
+          />
         )}
       </Filter.Root>
 
@@ -128,8 +153,9 @@ export function PlayersPage() {
                   sortBy={sortBy}
                   sortDirection={sortDirection}
                   onSortChange={(next) => {
-                    if (next.sortBy !== sortBy) setSortBy(next.sortBy);
-                    if (next.sortDirection !== sortDirection) setSortDirection(next.sortDirection);
+                    if (next.sortBy !== sortBy) void setSortBy(next.sortBy, together);
+                    if (next.sortDirection !== sortDirection) void setSortDirection(next.sortDirection, together);
+                    firstPage();
                   }}
                 />
               )}
