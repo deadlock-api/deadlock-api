@@ -166,6 +166,7 @@ export const NAV: readonly NavChapter[] = [
           "FilterCell states",
         ],
       },
+      { title: "Picker", items: ["PickerGrid"] },
       {
         title: "Data table",
         items: [

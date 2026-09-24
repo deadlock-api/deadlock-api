@@ -8,6 +8,7 @@ import {
   QueryRendererSpecimen,
   SideNavSpecimen,
 } from "~/components/dev/design-system/PatternsMore";
+import { PatternsPicker } from "~/components/dev/design-system/PatternsPicker";
 import { Round3Patterns } from "~/components/dev/design-system/Round3Patterns";
 import { Round3PatternsMore } from "~/components/dev/design-system/Round3PatternsMore";
 import { Chapter, Specimen, Variants } from "~/components/dev/design-system/Specimen";
@@ -228,6 +229,8 @@ export function Patterns() {
       </Specimen>
 
       <FilteredSelectPopoverSpecimen />
+
+      <PatternsPicker />
 
       <Specimen
         name="Data table"
