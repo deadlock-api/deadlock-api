@@ -10,6 +10,8 @@
 //   pnpm smoke --cls 0.1                        also fails pages whose layout shift score (CLS) passes 0.1
 //   pnpm smoke --path "/analytics/team-builder?ally=2,0,0,0,0,0"   extra paths, query strings included
 //   pnpm smoke --a11y                           also fails controls without a name, images without alt, duplicate ids
+//   pnpm smoke --html-kb 400                    also fails pages whose server HTML passes 400 KB, naming the largest
+//                                               inline script (usually the query data embedded for hydration)
 //
 // Uses the Playwright Chromium (`pnpm exec playwright install chromium`), or the installed Chrome as a fallback.
 // Exits 1 when any page has a finding.
@@ -31,6 +33,7 @@ const { values: args } = parseArgs({
     path: { type: "string", multiple: true },
     cls: { type: "string" },
     a11y: { type: "boolean" },
+    "html-kb": { type: "string" },
     concurrency: { type: "string", default: "4" },
     "settle-ms": { type: "string", default: "1500" },
     help: { type: "boolean", short: "h" },
@@ -50,7 +53,7 @@ if (args.help) {
     [
       ...usage,
       "",
-      "Options: --base <url> --tz <zone> --width <px> --only <text>... --path <path>... --cls <score> --a11y",
+      "Options: --base <url> --tz <zone> --width <px> --only <text>... --path <path>... --cls <score> --a11y --html-kb <kb>",
       "         --concurrency <n>",
       "         --settle-ms <ms>",
     ].join("\n"),
@@ -208,6 +211,16 @@ async function check(context, route) {
   try {
     const response = await page.goto(args.base + route, { waitUntil: "networkidle", timeout: 60_000 });
     status = response?.status() ?? 0;
+    if (args["html-kb"] && response) {
+      // The document as the server sent it, before any script ran: what a first visit downloads and parses.
+      const html = await response.text();
+      const kb = Buffer.byteLength(html) / 1024;
+      if (kb > Number(args["html-kb"])) {
+        const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map((m) => Buffer.byteLength(m[1]));
+        const largest = Math.max(0, ...scripts) / 1024;
+        findings.push(`server HTML is ${kb.toFixed(0)} KB (largest inline script ${largest.toFixed(0)} KB)`);
+      }
+    }
   } catch (error) {
     findings.push(`navigation: ${error.message.split("\n")[0]}`);
   }
