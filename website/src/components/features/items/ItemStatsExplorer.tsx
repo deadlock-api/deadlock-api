@@ -3,10 +3,9 @@ import type { ItemStats } from "deadlock_api_client";
 import type { AnalyticsApiItemStatsRequest, MatchesApiBulkMetadataRequest } from "deadlock_api_client";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { parseAsInteger, useQueryState } from "nuqs";
-import { useCallback, useDeferredValue, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useDeferredValue, useMemo, useState } from "react";
 
 import MatchHistoryCard from "~/components/domain/match/MatchHistoryCard";
-import { ItemBuyTimingChart } from "~/components/features/items/ItemBuyTimingChart";
 import {
   getDisplayItemStats,
   ItemStatsTable,
@@ -36,6 +35,11 @@ import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } f
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { queryKeys } from "~/queries/query-keys";
 import { ranksQueryOptions } from "~/queries/ranks-query";
+
+// Recharts (~90 KB gzip) is only needed once a row is opened.
+const ItemBuyTimingChart = lazy(() =>
+  import("~/components/features/items/ItemBuyTimingChart").then((m) => ({ default: m.ItemBuyTimingChart })),
+);
 
 const TABLE_COLUMNS = ["winRate", "matches", "itemsTier", "confidence"];
 
@@ -266,7 +270,9 @@ export function ItemStatsExplorer({
   const rowQueryOptions = useDeferredValue(queryStatOptions);
   const renderBuyTiming = useCallback<NonNullable<ItemStatsTableProps["customDropdownContent"]>>(
     ({ itemId, rowTotal }) => (
-      <ItemBuyTimingChart itemIds={[itemId]} baseQueryOptions={rowQueryOptions} rowTotalMatches={rowTotal} />
+      <Suspense fallback={<LoadingState label="buy timing" size="sm" align="center" />}>
+        <ItemBuyTimingChart itemIds={[itemId]} baseQueryOptions={rowQueryOptions} rowTotalMatches={rowTotal} />
+      </Suspense>
     ),
     [rowQueryOptions],
   );

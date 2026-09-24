@@ -1,14 +1,18 @@
 import { CalendarIcon, XIcon } from "lucide-react";
-import { useCallback, useMemo } from "react";
+import { lazy, Suspense, useCallback, useMemo } from "react";
 import type { DateRange } from "react-day-picker";
 
 import { Button } from "~/components/ui/button";
-import { Calendar } from "~/components/ui/calendar";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
+import { Skeleton } from "~/components/ui/skeleton";
 import type { Dayjs } from "~/dayjs";
 import { day } from "~/dayjs";
 import { cn } from "~/lib/utils";
+
+// The calendar (react-day-picker and date-fns, ~20 KB gzip) only shows once someone opens a custom range; statically
+// imported, it rode along in the filters chunk of every filtered page.
+const Calendar = lazy(() => import("~/components/ui/calendar").then((m) => ({ default: m.Calendar })));
 
 interface DateRangeValue {
   startDate?: Dayjs;
@@ -104,15 +108,17 @@ export function DateRangePicker({
           </Button>
         )}
       </div>
-      <Calendar
-        mode="range"
-        defaultMonth={startDate?.toDate()}
-        selected={dateRange}
-        onSelect={handleDateRangeSelect}
-        numberOfMonths={1}
-        weekStartsOn={1}
-        className="mx-auto p-0"
-      />
+      <Suspense fallback={<Skeleton className="mx-auto h-72 w-64" />}>
+        <Calendar
+          mode="range"
+          defaultMonth={startDate?.toDate()}
+          selected={dateRange}
+          onSelect={handleDateRangeSelect}
+          numberOfMonths={1}
+          weekStartsOn={1}
+          className="mx-auto p-0"
+        />
+      </Suspense>
       <Segmented value="" onValueChange={(v) => selectLastDays(Number(v))} aria-label="Presets" className="flex-nowrap">
         {presets.map((preset) => (
           <SegmentedItem key={preset.value} value={preset.value}>
