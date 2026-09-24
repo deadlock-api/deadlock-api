@@ -1,6 +1,6 @@
 import { useCallback, useRef } from "react";
 
-import { FOCUS_RING } from "~/components/ui/recipes";
+import { FOCUS_RING, SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 /**
@@ -39,7 +39,7 @@ export function DragScroll({
       // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scroll container must be reachable by keyboard
       tabIndex={0}
       ref={setRefs}
-      className={cn(FOCUS_RING, "cursor-grab scrollbar-thin overflow-x-auto active:cursor-grabbing", className)}
+      className={cn(FOCUS_RING, SCROLLBAR_THIN, "cursor-grab overflow-x-auto active:cursor-grabbing", className)}
       onPointerDown={(event) => {
         onPointerDown?.(event);
         if (event.button !== 0 || !ref.current) return;

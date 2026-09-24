@@ -20,6 +20,11 @@ const COLOR_GROUPS: { name: string; note: string; tokens: string[] }[] = [
     tokens: ["foreground", "muted-foreground", "primary", "primary-foreground", "ring"],
   },
   {
+    name: "Scrollbars",
+    note: "The thumb of SCROLLBAR_THIN on a transparent track: quiet at rest, active while its region is hovered or focused.",
+    tokens: ["scrollbar", "scrollbar-active"],
+  },
+  {
     name: "Status",
     note: "Positive is teal, not green, so the pair survives red-green colorblindness.",
     tokens: ["positive", "negative", "warning", "info", "destructive"],

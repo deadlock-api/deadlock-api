@@ -190,7 +190,7 @@ export function FilteredSelectPopover<T extends OptionValue = number>({
           <ChevronDownIcon aria-hidden="true" className="text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="max-h-96 w-56 scrollbar-thin overflow-y-auto p-2">
+      <PopoverContent className="max-h-96 w-56 overflow-y-auto p-2">
         <SelectList state={state} />
       </PopoverContent>
     </Popover>

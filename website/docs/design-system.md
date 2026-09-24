@@ -65,7 +65,7 @@ src/styles/
   tailwind.css      entry: imports only
   tokens.css        tier 1 primitives -> tier 2 semantic tokens -> tier 3 Tailwind theme
   base.css          element defaults, reduced motion
-  utilities.css     glass, scrollbars, scroll fades (scroll-fade-x / -y), eyebrow
+  utilities.css     glass, scrollbar fallback for browsers without scrollbar-color, scroll fades (scroll-fade-x / -y), eyebrow
   effects.css       keyframes and one-off brand effects
   vendor.css        overrides for Radix and Recharts markup
 
@@ -236,6 +236,9 @@ reference). Missing observations are gaps, not zeros. See `docs/compact-data-ui.
 - Color is never the only signal: tones ship with a sign, an arrow or a label.
 - Focus is always visible: a focusable element starts its class list with `FOCUS_RING` (or `FOCUS_RING_BORDER` on a
   bordered control) from `ui/recipes.ts`; never remove `focus-visible` styles from a primitive.
+- A scroll region takes `SCROLLBAR_THIN` from `ui/recipes.ts` (Tailwind's `scrollbar-thin` with the `--scrollbar` /
+  `--scrollbar-active` thumb tokens); popper content takes `POPPER_SCROLLBAR`. `scrollbar-none` hides one that has its
+  own affordance. A bare `scrollbar-thin` has no token colour and is flagged outside the system.
 - Sortable headers carry `aria-sort`; icon buttons carry `aria-label`; charts carry a `label`.
 
 ## Adding or changing a component

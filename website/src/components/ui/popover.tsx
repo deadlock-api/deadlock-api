@@ -2,7 +2,7 @@ import { Popover as PopoverPrimitive } from "radix-ui";
 import * as React from "react";
 
 import { FieldLabelContext } from "~/components/ui/hooks/use-field-control";
-import { FOCUS_RING, POPPER_MOTION } from "~/components/ui/recipes";
+import { FOCUS_RING, POPPER_MOTION, POPPER_SCROLLBAR } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 /** The id of the mounted trigger, which names the popover when it is given no name of its own. */
@@ -80,6 +80,7 @@ function PopoverContent({
           className={cn(
             FOCUS_RING,
             POPPER_MOTION,
+            POPPER_SCROLLBAR,
             "z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-md border bg-popover p-4 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
             className,
           )}

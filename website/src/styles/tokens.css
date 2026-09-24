@@ -65,6 +65,9 @@
   --border: var(--ink-700);
   --input: var(--ink-700);
   --ring: var(--red-500);
+  /* Scrollbar thumb on a transparent track: quiet at rest, full strength while its region is hovered or focused. */
+  --scrollbar: color-mix(in oklch, var(--muted-foreground) 55%, transparent);
+  --scrollbar-active: var(--muted-foreground);
 
   /* Status. Positive is teal rather than green so that the positive/negative pair stays distinguishable for
      red-green colorblind readers; both are checked for contrast against --card. */
@@ -175,6 +178,8 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-scrollbar: var(--scrollbar);
+  --color-scrollbar-active: var(--scrollbar-active);
 
   --color-positive: var(--positive);
   --color-negative: var(--negative);

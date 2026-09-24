@@ -40,6 +40,19 @@ export const SVG_SLOT = "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not
 export const POPPER_MOTION =
   "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95";
 
+/**
+ * A thin scrollbar: a token-coloured thumb (`--scrollbar`) on a transparent track, at full strength while the region
+ * is hovered or holds focus. Built on Tailwind's scrollbar-thin / scrollbar-thumb-* / scrollbar-track-*.
+ */
+export const SCROLLBAR_THIN =
+  "scrollbar-thin scrollbar-thumb-scrollbar scrollbar-track-transparent hover:scrollbar-thumb-scrollbar-active focus-within:scrollbar-thumb-scrollbar-active";
+
+/**
+ * Content positioned by Radix Popper (popovers, the select list): every scroll area inside it is thin. The colour
+ * needs setting once on the root, since scrollbar-color is inherited.
+ */
+export const POPPER_SCROLLBAR = `${SCROLLBAR_THIN} **:scrollbar-thin`;
+
 export const DIALOG_OVERLAY =
   "fixed inset-0 z-50 bg-scrim data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0";
 

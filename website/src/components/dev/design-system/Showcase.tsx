@@ -15,6 +15,7 @@ import { PageShell } from "~/components/patterns/page/PageShell";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Heading } from "~/components/ui/heading";
+import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { SearchInput } from "~/components/ui/search-input";
 import {
   Select,
@@ -156,7 +157,7 @@ function Sidebar({ active }: { active: string }) {
       </Inline>
       <SideNav
         aria-label="Design system"
-        className="min-h-0 scrollbar-thin gap-1 overflow-y-auto overscroll-contain pe-1"
+        className={`min-h-0 ${SCROLLBAR_THIN} gap-1 overflow-y-auto overscroll-contain pe-1`}
       >
         {chapters.map((chapter) => {
           const chapterItems = chapter.groups.flatMap((group) => group.items);

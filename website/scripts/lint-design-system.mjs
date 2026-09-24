@@ -221,7 +221,7 @@ const DRAWING_UTILITY =
 // Utilities that start like a drawing utility but only affect layout or behaviour.
 // `cursor-target` is the hook the mini-games' custom cursor looks for, not a style.
 const NOT_DRAWING =
-  /^(?:border-(?:collapse|separate|spacing.*)|outline-hidden|transition-none|cursor-target|scrollbar-(?:thin|none))$/;
+  /^(?:border-(?:collapse|separate|spacing.*)|outline-hidden|transition-none|cursor-target|scrollbar-none)$/;
 const CLASS_STRING = /(["'`])((?:(?!\1)[^\\\n]|\\.)*)\1/g;
 const VARIANT_PREFIX = /^(?:\[[^\]]*\]|[@a-z0-9-]+(?:\[[^\]]*\])?(?:\/[a-z0-9-]+)?):/i;
 

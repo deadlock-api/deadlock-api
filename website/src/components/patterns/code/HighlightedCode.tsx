@@ -8,7 +8,7 @@ import sql from "highlight.js/lib/languages/sql";
 import { useMemo } from "react";
 
 import { CopyButton } from "~/components/ui/copy-button";
-import { FOCUS_RING } from "~/components/ui/recipes";
+import { FOCUS_RING, SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 hljs.registerLanguage("bash", bash);
@@ -67,7 +67,8 @@ export function HighlightedCode({
         tabIndex={overflow === "scroll" ? 0 : undefined}
         className={cn(
           FOCUS_RING,
-          "scrollbar-thin overflow-x-auto rounded-md font-mono leading-relaxed",
+          SCROLLBAR_THIN,
+          "overflow-x-auto rounded-md font-mono leading-relaxed",
           // Breaks between words first, and inside one only when it is longer than the line (a URL), not "--trans/port".
           overflow === "wrap" && "wrap-break-word whitespace-pre-wrap",
         )}

@@ -16,6 +16,7 @@ import { RankDelta } from "~/components/features/tracker/shared/RankDelta";
 import { useTrackerTime } from "~/components/features/tracker/shared/useTrackerTime";
 import { PanelSection } from "~/components/patterns/panel/Panel";
 import { Button } from "~/components/ui/button";
+import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import type { Dayjs } from "~/dayjs";
 import { TONE_TEXT } from "~/lib/tone";
 import { formatPlaytime, type MatchSortKey, type PlaySession } from "~/lib/tracker/compute";
@@ -161,7 +162,7 @@ export function MatchHistoryList({
     <nav
       ref={listRef}
       tabIndex={-1}
-      className="relative min-h-0 flex-1 scroll-pt-7 scrollbar-thin overflow-y-auto overscroll-contain"
+      className={cn(SCROLLBAR_THIN, "relative min-h-0 flex-1 scroll-pt-7 overflow-y-auto overscroll-contain")}
       aria-label="Match history"
       aria-describedby={keyboardHelpId}
       onFocusCapture={(event) => {

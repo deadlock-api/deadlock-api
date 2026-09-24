@@ -1,7 +1,7 @@
 import { HighlightedCode, type HighlightLanguage } from "~/components/patterns/code/HighlightedCode";
 import { Card } from "~/components/ui/card";
 import { CopyButton } from "~/components/ui/copy-button";
-import { FOCUS_RING } from "~/components/ui/recipes";
+import { FOCUS_RING, SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 type CardRootProps = Omit<
@@ -45,7 +45,8 @@ export function CopyableCode({
           tabIndex={0}
           className={cn(
             FOCUS_RING,
-            "min-w-0 flex-1 scrollbar-thin self-center overflow-x-auto rounded-sm font-mono text-xs whitespace-pre text-foreground",
+            SCROLLBAR_THIN,
+            "min-w-0 flex-1 self-center overflow-x-auto rounded-sm font-mono text-xs whitespace-pre text-foreground",
           )}
         >
           {code}

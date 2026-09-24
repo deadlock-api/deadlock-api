@@ -5,6 +5,7 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Heading } from "~/components/ui/heading";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
+import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 const NO_HEROES: readonly number[] = [];
@@ -70,7 +71,12 @@ export function ChartHeroSelector({
           </div>
         </CardContent>
         <CardContent className="flex min-h-0 flex-1 flex-col">
-          <div className="max-h-64 min-h-0 scrollbar-thin [scrollbar-gutter:stable] overflow-y-auto overscroll-contain pe-1 lg:max-h-none lg:flex-1">
+          <div
+            className={cn(
+              SCROLLBAR_THIN,
+              "max-h-64 min-h-0 [scrollbar-gutter:stable] overflow-y-auto overscroll-contain pe-1 lg:max-h-none lg:flex-1",
+            )}
+          >
             <HeroSelectionGrid
               size="sm"
               heroes={heroes}

@@ -2,7 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Tabs as TabsPrimitive } from "radix-ui";
 import * as React from "react";
 
-import { DISABLED_STATE, FOCUS_RING, FOCUS_RING_BORDER, SVG_SLOT } from "~/components/ui/recipes";
+import { DISABLED_STATE, FOCUS_RING, FOCUS_RING_BORDER, SCROLLBAR_THIN, SVG_SLOT } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 type TabsOrientation = NonNullable<React.ComponentProps<typeof TabsPrimitive.Root>["orientation"]>;
@@ -48,7 +48,7 @@ const tabsListVariants = cva("inline-flex w-fit max-w-full items-center justify-
   compoundVariants: [
     // Tabs that do not fit scroll inside the list (the padding keeps focus rings and the underline inside it) rather
     // than running out of their card, where a parent's clipping made the last ones unreachable.
-    { orientation: "horizontal", variant: ["default", "line"], class: "h-9 scrollbar-thin overflow-x-auto" },
+    { orientation: "horizontal", variant: ["default", "line"], class: `h-9 ${SCROLLBAR_THIN} overflow-x-auto` },
     { orientation: "horizontal", variant: "nav", class: "h-11" },
   ],
   defaultVariants: {

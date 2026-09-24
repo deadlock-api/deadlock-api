@@ -9,6 +9,7 @@ import {
   FOCUS_RING_BORDER,
   INVALID_STATE,
   POPPER_MOTION,
+  POPPER_SCROLLBAR,
   SVG_SLOT,
 } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
@@ -78,6 +79,7 @@ function SelectContent({
         data-slot="select-content"
         className={cn(
           POPPER_MOTION,
+          POPPER_SCROLLBAR,
           "relative z-50 max-h-(--radix-select-content-available-height) min-w-32 origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
           position === "popper" &&
             "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",

@@ -5,40 +5,31 @@
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--hairline);
   }
+}
 
-  .scrollbar-none {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .scrollbar-none::-webkit-scrollbar {
-    display: none;
-  }
-
-  .scrollbar-thin {
-    --scrollbar-thumb: color-mix(in oklch, var(--muted-foreground) 55%, transparent);
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-  }
-  .scrollbar-thin:hover,
-  .scrollbar-thin:focus-within {
-    --scrollbar-thumb: var(--muted-foreground);
-  }
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: var(--scrollbar-thumb);
-    border-radius: 9999px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background-color: var(--muted-foreground);
-  }
-  .scrollbar-thin::-webkit-scrollbar-corner {
-    background: transparent;
+/* Scrollbars come from Tailwind's built-in scrollbar-thin / scrollbar-none and the SCROLLBAR_THIN recipe
+   (ui/recipes.ts), which colours them through scrollbar-color. A browser without scrollbar-color (older Safari) still
+   reads the ::-webkit-scrollbar pseudo-elements, so it gets the same thin, token-coloured thumb from these. */
+@layer utilities {
+  @supports not (scrollbar-color: auto) {
+    .scrollbar-thin::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-track,
+    .scrollbar-thin::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+      background-color: var(--scrollbar);
+      border-radius: 9999px;
+    }
+    .scrollbar-thin:is(:hover, :focus-within)::-webkit-scrollbar-thumb {
+      background-color: var(--scrollbar-active);
+    }
+    .scrollbar-none::-webkit-scrollbar {
+      display: none;
+    }
   }
 }
 

@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
 type TableDensity = "default" | "compact" | "dense";
@@ -28,7 +29,7 @@ function Table({
     <TableDensityContext value={density}>
       <div
         data-slot="table-container"
-        className="relative w-full scroll-fade-x scrollbar-thin overflow-x-auto has-data-pinned:@container/table"
+        className={cn(SCROLLBAR_THIN, "relative w-full scroll-fade-x overflow-x-auto has-data-pinned:@container/table")}
       >
         <table
           data-slot="table"

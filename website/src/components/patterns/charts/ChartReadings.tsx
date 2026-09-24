@@ -3,7 +3,7 @@ import { Children, createContext, type ReactNode, useContext } from "react";
 
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { NoValue } from "~/components/ui/no-value";
-import { FOCUS_RING } from "~/components/ui/recipes";
+import { FOCUS_RING, SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { TooltipCard } from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
 
@@ -108,7 +108,8 @@ export function ChartReadings({
         tabIndex={0}
         className={cn(
           FOCUS_RING,
-          "max-h-44 scrollbar-thin overflow-y-auto overscroll-contain rounded-sm focus-visible:ring-inset",
+          SCROLLBAR_THIN,
+          "max-h-44 overflow-y-auto overscroll-contain rounded-sm focus-visible:ring-inset",
         )}
       >
         {children && (
