@@ -14,6 +14,11 @@ interface AssetImageProps extends Omit<React.ComponentProps<"img">, "src" | "alt
   loading?: boolean;
   /** `dim` quiets art that is context rather than the subject: a slot that is not this build's pick. */
   emphasis?: "normal" | "dim";
+  /**
+   * `grayscale` drains the art of its own colors while they would give an answer away (an item's slot color in a quiz);
+   * back to `full`, they return.
+   */
+  palette?: "full" | "grayscale";
   /** Sizes and shapes the box that stands in for the image while it loads and when there is no art. */
   placeholderClassName?: string;
 }
@@ -22,6 +27,7 @@ export function AssetImage({
   asset,
   loading = false,
   emphasis = "normal",
+  palette = "full",
   className,
   placeholderClassName,
   ...props
@@ -51,8 +57,14 @@ export function AssetImage({
         alt={asset.alt}
         title={asset.title ?? asset.alt}
         data-emphasis={emphasis}
+        data-palette={palette}
         {...props}
-        className={cn(emphasis === "dim" && "opacity-40 saturate-50", className)}
+        className={cn(
+          "transition-[filter] duration-slow ease-standard motion-reduce:transition-none",
+          emphasis === "dim" && "opacity-40 saturate-50",
+          palette === "grayscale" && "grayscale",
+          className,
+        )}
       />
     </picture>
   );

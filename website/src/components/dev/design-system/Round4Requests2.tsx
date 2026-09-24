@@ -362,6 +362,21 @@ export function Round4Requests2() {
       </Specimen>
 
       <Specimen
+        name="AssetImage palette"
+        source="domain/assets/AssetImage"
+        note="`grayscale` takes the art's own colors away while they would answer a question, like the slot color behind an item in the Item Stats Quiz; switching back to `full` fades them in."
+      >
+        <Variants>
+          {[1, 2, 3].map((itemId) => (
+            <ItemImage key={itemId} itemId={itemId} className="size-12" />
+          ))}
+          {[1, 2, 3].map((itemId) => (
+            <ItemImage key={`gray-${itemId}`} itemId={itemId} palette="grayscale" className="size-12" />
+          ))}
+        </Variants>
+      </Specimen>
+
+      <Specimen
         name="DraftSlot"
         source="domain/draft/DraftSlot"
         note="The two halves of a draft board slot: the round drop target of an empty slot, and the portrait of a filled one that can be picked up. `over` turns the dashed outline solid, so the drop target does not read by color alone."

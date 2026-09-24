@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useMemo, useRef, type RefCallback } from "react";
 
+import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { AnswerOption, type AnswerOptionState, revealedState } from "~/components/domain/minigames/AnswerOption";
 import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
 import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
@@ -35,11 +36,13 @@ export const Route = createFileRoute("/games_/deadlockdle/item-stats")({
   head: () =>
     seo({
       title: "Item Stats Quiz - Deadlockdle | Deadlock API",
-      description: "How well do you know Deadlock items? Fill in the missing stats in this daily quiz.",
+      description:
+        "How well do you know Deadlock items? Name the activation, tier and slot of five items in this daily quiz.",
       path: "/games/deadlockdle/item-stats",
     }),
 });
 
+const SUBTITLE = "Name each item's activation, tier and slot";
 const ITEMS_COUNT = 5;
 const FIELDS_PER_ITEM = 3;
 const TOTAL_FIELDS = ITEMS_COUNT * FIELDS_PER_ITEM;
@@ -180,7 +183,7 @@ function ItemStatsQuiz() {
     return (
       <GameShellError
         title="Item Stats Quiz"
-        subtitle="Fill in the missing stats for each item"
+        subtitle={SUBTITLE}
         date={date}
         onRetry={loadError.retry}
         retrying={loadError.retrying}
@@ -189,13 +192,13 @@ function ItemStatsQuiz() {
   }
 
   if (isLoading || dailyItems.length === 0) {
-    return <GameShellLoading title="Item Stats Quiz" subtitle="Fill in the missing stats for each item" date={date} />;
+    return <GameShellLoading title="Item Stats Quiz" subtitle={SUBTITLE} date={date} />;
   }
 
   return (
     <GameShell
       title="Item Stats Quiz"
-      subtitle="Fill in the missing stats for each item"
+      subtitle={SUBTITLE}
       totalAttempts={0}
       usedAttempts={0}
       status={state.submitted ? "won" : "playing"}
@@ -207,7 +210,6 @@ function ItemStatsQuiz() {
           const answer = state.answers[item.id] ?? {};
           const result = fieldResults?.[item.id];
           const revealed = result != null;
-          const imgSrc = item.shop_image_webp ?? item.shop_image ?? "";
 
           return (
             <motion.div
@@ -224,11 +226,13 @@ function ItemStatsQuiz() {
                 <CardContent className="flex flex-col gap-4">
                   <div className="flex items-center gap-3">
                     <Card tone="inset" size="flush" className="size-16 shrink-0 items-center justify-center">
-                      <picture>
-                        {item.shop_image_webp && <source srcSet={item.shop_image_webp} type="image/webp" />}
-                        {item.shop_image && <source srcSet={item.shop_image} type="image/png" />}
-                        <img src={imgSrc} alt={item.name} className="h-12 w-12 object-contain" draggable={false} />
-                      </picture>
+                      {/* The shop art's background is the slot color, which would answer the Slot question. */}
+                      <ItemImage
+                        item={item}
+                        palette={revealed ? "full" : "grayscale"}
+                        className="size-12 object-contain"
+                        draggable={false}
+                      />
                     </Card>
                     <div>
                       <p className="text-sm font-bold tracking-tight">{item.name}</p>

@@ -182,11 +182,12 @@ restyle a primitive with a long `className`: if a look is needed twice, it is a 
 
 ### Domain (`~/components/domain/*`)
 
-| Need                                       | Component                                                                                                                               |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| A player as the identity of a row          | `player/PlayerCell` (`size`: sm, default; `linkToDetail`, `showAccountId`, `loading`)                                                   |
-| A player's name as a link to the tracker   | `player/PlayerLink` (`accountId`; children = the name, "Player <id>" without)                                                           |
-| A name that may belong to several accounts | `player/PlayerNameLink` (`name`, `accountIds`): one account links through, several open a popover of the candidates, none is plain text |
+| Need                                       | Component                                                                                                                                                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A player as the identity of a row          | `player/PlayerCell` (`size`: sm, default; `linkToDetail`, `showAccountId`, `loading`)                                                                                                             |
+| A player's name as a link to the tracker   | `player/PlayerLink` (`accountId`; children = the name, "Player <id>" without)                                                                                                                     |
+| A name that may belong to several accounts | `player/PlayerNameLink` (`name`, `accountIds`): one account links through, several open a popover of the candidates, none is plain text                                                           |
+| Hero, item or ability art                  | `assets/HeroImage`, `assets/ItemImage`, `assets/AbilityImage` over `assets/AssetImage` (`emphasis`: normal, dim; `palette`: full, grayscale, the art without the colors that would answer a quiz) |
 
 ### Charts (`~/components/patterns/charts/*`)
 
