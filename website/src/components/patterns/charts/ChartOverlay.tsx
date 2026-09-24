@@ -2,6 +2,25 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "~/lib/utils";
 
+/**
+ * The box around a `ChartStage` whose overlays leave the plot when it is narrow. Its children are, in order, the
+ * top overlays, the stage and the bottom overlays, each overlay with `narrow="outside"`: from `@lg` they float over
+ * the stage as usual; below it they stack above and below it, so a legend or a slider never covers a map that fills
+ * a phone's width. The stage (or the one box that holds it) takes the height the overlays leave.
+ */
+export function ChartStageFrame({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="chart-stage-frame"
+      className={cn(
+        "@container/chart-stage relative flex size-full min-w-0 flex-col gap-2 *:not-data-[slot=chart-overlay]:min-h-0 *:not-data-[slot=chart-overlay]:flex-1",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
 /** The rounded, clipped box around a canvas, a map or a WebGL scene that carries `ChartOverlay`s. */
 export function ChartStage({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -13,32 +32,43 @@ export function ChartStage({ className, ...props }: React.ComponentProps<"div">)
   );
 }
 
-const chartOverlayVariants = cva("absolute z-10 flex max-w-full flex-col gap-1.5", {
+const chartOverlayVariants = cva("z-10 flex max-w-full flex-col gap-1.5", {
   variants: {
     position: {
-      "top-start": "start-3 top-3 items-start",
-      "top-end": "end-3 top-3 items-end",
-      "bottom-start": "start-3 bottom-3 items-start",
-      "bottom-end": "end-3 bottom-3 items-end",
+      "top-start": "start-3 top-3 items-start self-start",
+      "top-end": "end-3 top-3 items-end self-end",
+      "bottom-start": "start-3 bottom-3 items-start self-start",
+      "bottom-end": "end-3 bottom-3 items-end self-end",
+    },
+    /**
+     * What the overlay does in a narrow plot. `over` always floats in its corner. `outside` floats from `@lg` of the
+     * enclosing `ChartStageFrame` and below it sits in the frame's flow, above or below the stage.
+     */
+    narrow: {
+      over: "absolute",
+      outside: "static @lg/chart-stage:absolute",
     },
   },
-  defaultVariants: { position: "bottom-end" },
+  defaultVariants: { position: "bottom-end", narrow: "over" },
 });
 
 /**
  * A stack of controls or keys floating in a corner of a plot. It is an overlay, so it is absolute by nature: its
- * parent is a `ChartStage` (or any `relative` box) and `position` names the corner. Put
+ * parent is a `ChartStage` (or any `relative` box) and `position` names the corner; in a `ChartStageFrame`,
+ * `narrow="outside"` moves it out of a plot too narrow to share. Put
  * each control in a `ChartOverlayItem`; a bare line of text is a hint such as "Drag to rotate".
  */
 export function ChartOverlay({
-  position,
+  position = "bottom-end",
+  narrow = "over",
   className,
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof chartOverlayVariants>) {
   return (
     <div
       data-slot="chart-overlay"
-      className={cn(chartOverlayVariants({ position }), "text-3xs text-muted-foreground", className)}
+      data-narrow={narrow}
+      className={cn(chartOverlayVariants({ position, narrow }), "text-3xs text-muted-foreground", className)}
       {...props}
     />
   );

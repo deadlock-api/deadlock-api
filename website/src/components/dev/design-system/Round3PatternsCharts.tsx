@@ -8,7 +8,7 @@ import {
   ChartLegendItem,
   ChartSwatch,
 } from "~/components/patterns/charts/ChartLegend";
-import { ChartOverlay, ChartOverlayItem, ChartStage } from "~/components/patterns/charts/ChartOverlay";
+import { ChartOverlay, ChartOverlayItem, ChartStage, ChartStageFrame } from "~/components/patterns/charts/ChartOverlay";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
@@ -198,6 +198,38 @@ export function Round3PatternsCharts() {
             </ChartOverlayItem>
           </ChartOverlay>
         </ChartStage>
+      </Specimen>
+
+      <Specimen
+        name="ChartStageFrame"
+        source="patterns/charts/ChartOverlay"
+        note='Holds the top overlays, the stage and the bottom overlays. With narrow="outside" an overlay floats over the stage from @lg of the frame and below it stacks above or below the stage, so a map that fills a phone stays uncovered. The stage takes the height left.'
+      >
+        {(["h-64 w-72", "h-64 w-full"] as const).map((box) => (
+          <Variants
+            key={box}
+            label={box === "h-64 w-72" ? "narrow frame: overlays outside" : "wide frame: overlays float"}
+            className="block"
+          >
+            <div className={box}>
+              <ChartStageFrame>
+                <ChartOverlay position="top-end" narrow="outside">
+                  <ChartOverlayItem>
+                    <ChartGradientLegend
+                      min="0"
+                      max="1,240"
+                      stops={["var(--chart-1)", "var(--chart-4)", "var(--chart-6)"]}
+                    />
+                  </ChartOverlayItem>
+                </ChartOverlay>
+                <ChartStage className="bg-muted" />
+                <ChartOverlay position="bottom-start" narrow="outside">
+                  <ChartOverlayItem>A slider pill</ChartOverlayItem>
+                </ChartOverlay>
+              </ChartStageFrame>
+            </div>
+          </Variants>
+        ))}
       </Specimen>
     </>
   );

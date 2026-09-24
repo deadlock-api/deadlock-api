@@ -216,6 +216,7 @@ export const NAV: readonly NavChapter[] = [
           "ChartReadings rows",
           "Chart states",
           "ChartOverlay",
+          "ChartStageFrame",
           "ChartRegion",
         ],
       },

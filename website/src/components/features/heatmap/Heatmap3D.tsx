@@ -4,7 +4,7 @@ import type { KillDeathStats, MapData } from "deadlock_api_client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
-import { ChartOverlay, ChartOverlayItem, ChartStage } from "~/components/patterns/charts/ChartOverlay";
+import { ChartOverlay, ChartOverlayItem, ChartStage, ChartStageFrame } from "~/components/patterns/charts/ChartOverlay";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Field } from "~/components/ui/field";
@@ -222,53 +222,56 @@ export default function Heatmap3D({ data, mapData, viewMode, sensitivity, onSens
   }, [rawGrids, viewMode, sensitivity]);
 
   return (
-    <ChartStage>
-      <Canvas
-        frameloop="demand"
-        camera={{ position: [0, 3.5, 3.5], fov: 50, near: 0.1, far: 100 }}
-        gl={{ antialias: true, alpha: true }}
-      >
-        {/* ds-allow color-literal: WebGL clear color, three.js cannot resolve CSS variables */}
-        <color attach="background" args={["#050810"]} />
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[5, 8, 5]} intensity={1} />
-        <directionalLight position={[-3, 5, -3]} intensity={0.3} />
-
-        <BasePlane />
-        {/* A retry remounts the plane, which loads the images again. */}
-        <MapPlane key={mapAttempt} mapImages={mapData.images} onStatusChange={setMapStatus} />
-        <HeatBars grid={grid} opacity={opacity} />
-
-        <OrbitControls
-          enablePan
-          enableZoom
-          enableRotate
-          minDistance={1.5}
-          maxDistance={10}
-          maxPolarAngle={Math.PI / 2.05}
-          target={[0, 0, 0]}
-        />
-      </Canvas>
-
-      {mapStatus === "loading" && (
-        <LoadingState size="sm" text="Loading map…" label="map" className="absolute inset-0" />
-      )}
-      {mapStatus === "error" && (
-        <div className="absolute inset-0 flex items-center justify-center p-4">
-          <ErrorState
-            title="The map images did not load"
-            description="The heatmap needs the map to draw on. Check your connection and try again."
-            onRetry={() => setMapAttempt((n) => n + 1)}
-          />
-        </div>
-      )}
-
-      {/* Top corner: on a phone the legend and the bottom-start controls ran into each other over the map. */}
-      <ChartOverlay position="top-end">
+    // On a phone the map fills the width, so the legend and the sliders leave it instead of covering it.
+    <ChartStageFrame>
+      <ChartOverlay position="top-end" narrow="outside">
         <HeatmapLegend viewMode={viewMode} maxValue={legendMax} />
       </ChartOverlay>
+      <ChartStage>
+        <Canvas
+          frameloop="demand"
+          camera={{ position: [0, 3.5, 3.5], fov: 50, near: 0.1, far: 100 }}
+          gl={{ antialias: true, alpha: true }}
+        >
+          {/* ds-allow color-literal: WebGL clear color, three.js cannot resolve CSS variables */}
+          <color attach="background" args={["#050810"]} />
+          <ambientLight intensity={0.6} />
+          <directionalLight position={[5, 8, 5]} intensity={1} />
+          <directionalLight position={[-3, 5, -3]} intensity={0.3} />
 
-      <ChartOverlay position="bottom-start">
+          <BasePlane />
+          {/* A retry remounts the plane, which loads the images again. */}
+          <MapPlane key={mapAttempt} mapImages={mapData.images} onStatusChange={setMapStatus} />
+          <HeatBars grid={grid} opacity={opacity} />
+
+          <OrbitControls
+            enablePan
+            enableZoom
+            enableRotate
+            minDistance={1.5}
+            maxDistance={10}
+            maxPolarAngle={Math.PI / 2.05}
+            target={[0, 0, 0]}
+          />
+        </Canvas>
+
+        {mapStatus === "loading" && (
+          <LoadingState size="sm" text="Loading map…" label="map" className="absolute inset-0" />
+        )}
+        {mapStatus === "error" && (
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <ErrorState
+              title="The map images did not load"
+              description="The heatmap needs the map to draw on. Check your connection and try again."
+              onRetry={() => setMapAttempt((n) => n + 1)}
+            />
+          </div>
+        )}
+
+        <ChartOverlay position="top-start">Drag to rotate · Scroll to zoom · Right-click to pan</ChartOverlay>
+      </ChartStage>
+
+      <ChartOverlay position="bottom-start" narrow="outside">
         <ChartOverlayItem>
           <Field orientation="horizontal" label={<span className="text-3xs">Opacity</span>}>
             <Slider
@@ -284,8 +287,6 @@ export default function Heatmap3D({ data, mapData, viewMode, sensitivity, onSens
         </ChartOverlayItem>
         <SensitivitySlider value={sensitivity} onChange={onSensitivityChange} />
       </ChartOverlay>
-
-      <ChartOverlay position="top-start">Drag to rotate · Scroll to zoom · Right-click to pan</ChartOverlay>
-    </ChartStage>
+    </ChartStageFrame>
   );
 }

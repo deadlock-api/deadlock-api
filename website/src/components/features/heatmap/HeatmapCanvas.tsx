@@ -2,7 +2,7 @@ import type { MapData } from "deadlock_api_client";
 import type { KillDeathStats } from "deadlock_api_client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { ChartOverlay, ChartStage } from "~/components/patterns/charts/ChartOverlay";
+import { ChartOverlay, ChartStage, ChartStageFrame } from "~/components/patterns/charts/ChartOverlay";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { TooltipCard, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
@@ -225,58 +225,61 @@ export default function HeatmapCanvas({
   const handleMouseLeave = useCallback(() => setTooltip(null), []);
 
   return (
-    // The tooltip sits outside the stage, which clips what leaves it.
-    <div ref={containerRef} className="relative size-full">
-      <ChartStage className="flex items-center justify-center">
-        {/* No area until the first draw sizes them (the style never changes, so React leaves the drawn size alone):
+    // On a phone the map fills the width, so the legend and the slider leave it (above and below) instead of
+    // covering its top and its bottom lane.
+    <ChartStageFrame>
+      <ChartOverlay position="top-end" narrow="outside">
+        <HeatmapLegend viewMode={viewMode} maxValue={legendMax} />
+      </ChartOverlay>
+      {/* The tooltip sits outside the stage, which clips what leaves it. */}
+      <div ref={containerRef} className="relative min-w-0">
+        <ChartStage className="flex items-center justify-center">
+          {/* No area until the first draw sizes them (the style never changes, so React leaves the drawn size alone):
             at the browser's default 300×150 they would jump across the stage when sized. */}
-        <canvas ref={mapCanvasRef} aria-hidden="true" className="absolute" style={UNSIZED} />
-        <canvas
-          ref={heatCanvasRef}
-          aria-hidden="true"
-          className="absolute"
-          style={UNSIZED}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-        />
-        {mapImages === "loading" && (
-          <LoadingState size="sm" text="Loading map…" label="map" className="absolute inset-0" />
+          <canvas ref={mapCanvasRef} aria-hidden="true" className="absolute" style={UNSIZED} />
+          <canvas
+            ref={heatCanvasRef}
+            aria-hidden="true"
+            className="absolute"
+            style={UNSIZED}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+          />
+          {mapImages === "loading" && (
+            <LoadingState size="sm" text="Loading map…" label="map" className="absolute inset-0" />
+          )}
+          {mapImages === "error" && (
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+              <ErrorState
+                title="The map images did not load"
+                description="The heatmap needs the map to draw on. Check your connection and try again."
+                onRetry={() => {
+                  setMapImages("loading");
+                  setMapAttempt((n) => n + 1);
+                }}
+              />
+            </div>
+          )}
+        </ChartStage>
+        {tooltip && (
+          <TooltipCard
+            className="pointer-events-none absolute z-50"
+            style={{
+              left: tooltip.x,
+              top: tooltip.y,
+            }}
+          >
+            <TooltipStats variant="plain">
+              <TooltipStat label="Kills" value={tooltip.kills.toLocaleString("en-US")} className="text-negative" />
+              <TooltipStat label="Deaths" value={tooltip.deaths.toLocaleString("en-US")} className="text-info" />
+              {tooltip.deaths > 0 && <TooltipStat label="K/D" value={(tooltip.kills / tooltip.deaths).toFixed(2)} />}
+            </TooltipStats>
+          </TooltipCard>
         )}
-        {mapImages === "error" && (
-          <div className="absolute inset-0 flex items-center justify-center p-4">
-            <ErrorState
-              title="The map images did not load"
-              description="The heatmap needs the map to draw on. Check your connection and try again."
-              onRetry={() => {
-                setMapImages("loading");
-                setMapAttempt((n) => n + 1);
-              }}
-            />
-          </div>
-        )}
-        {/* Top corner: on a phone the legend and the bottom-start controls ran into each other over the map. */}
-        <ChartOverlay position="top-end">
-          <HeatmapLegend viewMode={viewMode} maxValue={legendMax} />
-        </ChartOverlay>
-        <ChartOverlay position="bottom-start">
-          <SensitivitySlider value={sensitivity} onChange={onSensitivityChange} />
-        </ChartOverlay>
-      </ChartStage>
-      {tooltip && (
-        <TooltipCard
-          className="pointer-events-none absolute z-50"
-          style={{
-            left: tooltip.x,
-            top: tooltip.y,
-          }}
-        >
-          <TooltipStats variant="plain">
-            <TooltipStat label="Kills" value={tooltip.kills.toLocaleString("en-US")} className="text-negative" />
-            <TooltipStat label="Deaths" value={tooltip.deaths.toLocaleString("en-US")} className="text-info" />
-            {tooltip.deaths > 0 && <TooltipStat label="K/D" value={(tooltip.kills / tooltip.deaths).toFixed(2)} />}
-          </TooltipStats>
-        </TooltipCard>
-      )}
-    </div>
+      </div>
+      <ChartOverlay position="bottom-start" narrow="outside">
+        <SensitivitySlider value={sensitivity} onChange={onSensitivityChange} />
+      </ChartOverlay>
+    </ChartStageFrame>
   );
 }
