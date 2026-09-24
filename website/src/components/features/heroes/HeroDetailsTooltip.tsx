@@ -77,7 +77,7 @@ export function HeroDetailsTooltip({
           <Info className="size-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent side="left" className="p-3">
+      <PopoverContent side="left" aria-label={heroName ? `${heroName} details` : "Hero details"} className="p-3">
         <Stack gap={2}>
           <DetailGroup title="General">
             <TooltipStat label="Matches" value={row.matches.toLocaleString("en-US")} />

@@ -201,6 +201,8 @@ export function FilterCell({
         )}
       </div>
       <PopoverContent
+        // The trigger reads "Rank Phantom 1+"; the editor is named by the filter alone.
+        aria-label={label}
         align={align}
         sideOffset={6}
         className={cn("p-2", inRoot && "min-w-(--radix-popover-trigger-width)", contentClassName)}
