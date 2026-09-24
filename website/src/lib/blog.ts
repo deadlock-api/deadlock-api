@@ -131,7 +131,7 @@ function inlineSvg(src: string, alt: string): string | null {
     .replace(/<metadata>[\s\S]*?<\/metadata>\s*/, "")
     .replace(/<svg\b([^>]*)>/, (_, attrs: string) => {
       const kept = attrs.replace(/\s(?:width|height)="[^"]*"/g, "");
-      return `<svg${kept} class="w-full h-auto rounded-lg border border-border" role="img" aria-label="${escapedAlt}">`;
+      return `<svg${kept} class="w-full min-w-xl h-auto rounded-lg border border-border" role="img" aria-label="${escapedAlt}">`;
     });
 }
 
@@ -155,14 +155,28 @@ function rehypeBlogFigures() {
         fetchPriority: first ? "high" : undefined,
         // The real size reserves the image's own aspect ratio while it loads; a forced 4:3 squashed every chart.
         ...imageSize(String(props.src ?? "")),
-        className: ["w-full", "h-auto"],
+        className: ["w-full", "min-w-xl", "h-auto"],
       };
       first = false;
       const figure: Element = {
         type: "element",
         tagName: "figure",
         properties: {},
-        children: [svg ? { type: "raw", value: svg } : img],
+        // Charts keep their drawn width (36rem, the figures' own) on a narrow screen and scroll sideways inside the
+        // figure: shrunk to a phone's width, their axis labels and legends came out 4 to 6 px tall.
+        children: [
+          {
+            type: "element",
+            tagName: "div",
+            properties: {
+              className: ["overflow-x-auto"],
+              tabIndex: 0,
+              role: "region",
+              ariaLabel: `Chart: ${props.alt ?? ""}`,
+            },
+            children: [svg ? { type: "raw", value: svg } : img],
+          },
+        ],
       };
       if (typeof title === "string" && title) {
         figure.children.push({
