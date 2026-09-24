@@ -4,7 +4,7 @@ import { cn } from "~/lib/utils";
 
 /**
  * The box around a `ChartStage` whose overlays leave the plot when it is narrow. Its children are, in order, the
- * top overlays, the stage and the bottom overlays, each overlay with `narrow="outside"`: from `@lg` they float over
+ * top overlays, the stage and the bottom overlays, each overlay with `narrow="outside"`: from `@3xl` they float over
  * the stage as usual; below it they stack above and below it, so a legend or a slider never covers a map that fills
  * a phone's width. The stage (or the one box that holds it) takes the height the overlays leave.
  */
@@ -41,12 +41,13 @@ const chartOverlayVariants = cva("z-10 flex max-w-full flex-col gap-1.5", {
       "bottom-end": "inset-e-3 bottom-3 items-end self-end",
     },
     /**
-     * What the overlay does in a narrow plot. `over` always floats in its corner. `outside` floats from `@lg` of the
+     * What the overlay does in a narrow plot. `over` always floats in its corner. `outside` floats from `@3xl` of the
      * enclosing `ChartStageFrame` and below it sits in the frame's flow, above or below the stage.
      */
     narrow: {
       over: "absolute",
-      outside: "static @lg/chart-stage:absolute",
+      // A square map in a frame narrower than 48rem fills its width, so a floating key or slider covered its lanes.
+      outside: "static @3xl/chart-stage:absolute",
     },
   },
   defaultVariants: { position: "bottom-end", narrow: "over" },
