@@ -34,13 +34,15 @@ export const Route = createFileRoute("/tracker_/players/$accountId")({
   },
   head: ({ loaderData }) => {
     const name = loaderData?.personaname ?? (loaderData ? `Player ${loaderData.accountId}` : undefined);
-    return seo({
+    const base = seo({
       title: name ? `${name} | Player Tracker | Deadlock` : "Player Tracker | Deadlock",
       description: name
         ? `Full Deadlock match history, rank progression, hero breakdowns, and mate & opponent analytics for ${name}.`
         : "Full Deadlock match history, rank progression, hero breakdowns, and mate & opponent analytics for prioritized players.",
       path: loaderData ? `/tracker/players/${loaderData.accountId}` : "/tracker",
     });
+    // A profile opens only for the patron who owns the account; a crawler would index a sign-in gate under the name.
+    return { ...base, meta: [...base.meta, { name: "robots", content: "noindex, follow" }] };
   },
 });
 
