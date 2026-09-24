@@ -19,6 +19,7 @@ import { useAnalyticsTab } from "~/hooks/useAnalyticsTab";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import { ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { playerScoreboardQueryOptions } from "~/queries/player-scoreboard-query";
 
@@ -75,7 +76,7 @@ export function PlayersPage() {
 
   return (
     <PageShell>
-      <PageHeader title="Player Analytics" description="Player performance and stat distributions">
+      <PageHeader title={ANALYTICS_VIEWS.players[tab].heading} description={ANALYTICS_VIEWS.players[tab].summary}>
         <p>
           Compare top player performances and view percentile distributions across a range of performance metrics.
           Filter by hero, rank, and patch.

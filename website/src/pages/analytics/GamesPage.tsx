@@ -15,6 +15,7 @@ import { useAnalyticsTab } from "~/hooks/useAnalyticsTab";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import { ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 
 const GamesOverTimeChart = lazy(() => import("~/components/features/games/GamesOverTimeChart"));
@@ -75,7 +76,7 @@ export function Games() {
 
   return (
     <PageShell>
-      <PageHeader title="Deadlock Game Stats" description="Aggregate match statistics and trends">
+      <PageHeader title={ANALYTICS_VIEWS.games[tab].heading} description={ANALYTICS_VIEWS.games[tab].summary}>
         <p>
           Track Deadlock match trends including average kills, deaths, game duration, and more. View stats over time,
           compare across ranks, and spot meta shifts as patches roll out.

@@ -1,12 +1,12 @@
 import { lazyRouteComponent } from "@tanstack/react-router";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 
-import { analyticsPageTitle, redirectAnalyticsTab } from "~/lib/analytics-tabs";
+import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultPeriodLabel, defaultPrevUnixRange, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import type { SlimHero } from "~/queries/asset-queries";
 import type { RouterContext } from "~/router";
 
@@ -116,18 +116,20 @@ export const heroesPageOptions = {
     loaderData?: { leader: { name: string; winRate: number } | null; period: string };
     match: { pathname: string };
   }) => {
-    const leader = loaderData?.leader;
-    const lead = leader ? ` ${leader.name} leads ${loaderData.period} at ${(leader.winRate * 100).toFixed(1)}%.` : "";
+    const tab = analyticsTabFromPath("heroes", match.pathname);
+    const view = ANALYTICS_VIEWS.heroes[tab];
+    // The leader is the overall table's headline; the other views are about something else.
+    const leader = tab === "stats" ? loaderData?.leader : null;
+    const lead = leader ? ` ${leader.name} leads ${loaderData?.period} at ${(leader.winRate * 100).toFixed(1)}%.` : "";
     return seo({
-      title: analyticsPageTitle(match.pathname, "Deadlock Hero Win Rates & Pick Rates: Live Match Data"),
-      description: `Deadlock hero win rates, pick rates, matchups, and synergies for every hero.${lead} Filter by rank and patch. Updated daily from live match data.`,
+      title: pageTitle(view.title),
+      description: view.description + lead,
       path: match.pathname.replace(/\/$/, ""),
       jsonLd: {
         "@context": "https://schema.org",
         "@type": "Dataset",
-        name: "Deadlock Hero Win Rates & Pick Rates",
-        description:
-          "Win rates, pick rates, ban rates, and matchup data for every Deadlock hero, calculated from tracked ranked matches and updated daily. Filterable by rank, patch, and game mode.",
+        name: view.title,
+        description: view.description,
         url: `https://deadlock-api.com${match.pathname.replace(/\/$/, "")}`,
         keywords: ["Deadlock", "hero win rates", "pick rates", "ban rates", "matchups", "hero meta"],
         creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },

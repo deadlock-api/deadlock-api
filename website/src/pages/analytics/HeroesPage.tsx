@@ -27,6 +27,7 @@ import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { type HeroTab, useHeroFilters } from "~/hooks/useHeroFilters";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import { ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { MODE_CONFIG } from "~/lib/game-mode";
 import { heroScoreboardQueryOptions } from "~/queries/hero-scoreboard-query";
 import { BY_RANK_STATS } from "~/types/api_hero_stats";
@@ -104,24 +105,11 @@ export function HeroesPage() {
     enabled: filters.tab === "hero-scoreboard",
   });
 
+  const view = ANALYTICS_VIEWS.heroes[filters.tab];
+
   return (
     <PageShell>
-      <PageHeader
-        title={
-          filters.tab === "hero-matchup-details"
-            ? "Hero matchup explorer"
-            : filters.tab === "stats-over-time"
-              ? "Hero performance over time"
-              : "Deadlock Hero Win Rates"
-        }
-        description={
-          filters.tab === "hero-matchup-details"
-            ? "Discover the allies and opponents that change your game."
-            : filters.tab === "stats-over-time"
-              ? "Compare hero trends across ranks, patches, and game modes."
-              : "Compare hero performance across ranks, patches, and game modes."
-        }
-      />
+      <PageHeader title={view.heading} description={view.summary} />
 
       <HeroFiltersSection {...filters} />
 

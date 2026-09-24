@@ -1,11 +1,11 @@
 import { lazyRouteComponent } from "@tanstack/react-router";
 import type { PlayerScoreboardSortByEnum } from "deadlock_api_client";
 
-import { analyticsPageTitle, redirectAnalyticsTab } from "~/lib/analytics-tabs";
+import { analyticsView, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultUnixRange } from "~/lib/seasons";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import type { RouterContext } from "~/router";
 
 export const MAX_ENTRIES = 1000;
@@ -58,10 +58,12 @@ export const playersPageOptions = {
       ),
     );
   },
-  head: ({ match }: { match: { pathname: string } }) =>
-    seo({
-      title: analyticsPageTitle(match.pathname, "Deadlock Player Analytics: Scoreboard & Stat Distributions"),
-      description: "Top player scores and stat distributions across the Deadlock community.",
+  head: ({ match }: { match: { pathname: string } }) => {
+    const view = analyticsView("players", match.pathname);
+    return seo({
+      title: pageTitle(view.title),
+      description: view.description,
       path: match.pathname.replace(/\/$/, ""),
-    }),
+    });
+  },
 };

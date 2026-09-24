@@ -14,6 +14,7 @@ import { useAnalyticsTab } from "~/hooks/useAnalyticsTab";
 import { useKnownHeroId } from "~/hooks/useAssetById";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
+import { ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { DEFAULT_MODE, getEffectiveRankRange } from "~/lib/game-mode";
 
 const ItemPurchaseAnalysis = lazy(() =>
@@ -45,7 +46,7 @@ export function ItemsPage() {
 
   return (
     <PageShell>
-      <PageHeader title="Deadlock Item Stats" description="Win rates, purchase timing, and item combination analytics">
+      <PageHeader title={ANALYTICS_VIEWS.items[tab].heading} description={ANALYTICS_VIEWS.items[tab].summary}>
         <p>
           Analyze item win rates with statistical confidence intervals, optimal purchase timing, and the best item
           combinations for Deadlock. Filter by hero, rank, and patch to build smarter and climb the ladder. Statistics

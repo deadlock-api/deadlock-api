@@ -1,10 +1,10 @@
 import { lazyRouteComponent } from "@tanstack/react-router";
 
-import { analyticsPageTitle, redirectAnalyticsTab } from "~/lib/analytics-tabs";
+import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultPrevUnixRange, defaultUnixRange } from "~/lib/seasons";
-import { seo } from "~/lib/seo";
+import { pageTitle, seo } from "~/lib/seo";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import type { RouterContext } from "~/router";
 
@@ -86,20 +86,20 @@ export const itemsPageOptions = {
     loaderData?: { leader: { name: string; winRate: number } | null };
     match: { pathname: string };
   }) => {
-    const leader = loaderData?.leader;
-    const lead = leader
-      ? ` ${leader.name} is the most reliably strong item this patch at a ${(leader.winRate * 100).toFixed(1)}% win rate.`
-      : "";
+    const tab = analyticsTabFromPath("items", match.pathname);
+    const view = ANALYTICS_VIEWS.items[tab];
+    // The leader is the win-rate table's headline; the other views are about something else.
+    const leader = tab === "item-stats" ? loaderData?.leader : null;
+    const lead = leader ? ` Most reliable this patch: ${leader.name}, ${(leader.winRate * 100).toFixed(1)}%.` : "";
     return seo({
-      title: analyticsPageTitle(match.pathname, "Deadlock Item Stats: Build Win Rates, Buy Timings & Combos"),
-      description: `Deadlock item win rates with statistical confidence intervals, optimal purchase timing, and item combo analytics.${lead} Filter by hero, rank, and patch.`,
+      title: pageTitle(view.title),
+      description: view.description + lead,
       path: match.pathname.replace(/\/$/, ""),
       jsonLd: {
         "@context": "https://schema.org",
         "@type": "Dataset",
-        name: "Deadlock Item Stats: Build Win Rates, Buy Timings & Combos",
-        description:
-          "Item win rates, optimal purchase timing, and build statistics for Deadlock, calculated from tracked ranked matches. Filterable by hero, rank, and patch.",
+        name: view.title,
+        description: view.description,
         url: `https://deadlock-api.com${match.pathname.replace(/\/$/, "")}`,
         keywords: ["Deadlock", "item win rates", "build stats", "item combos"],
         creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
