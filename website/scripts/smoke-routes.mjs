@@ -141,7 +141,8 @@ function auditA11y() {
       .filter((node) => !node.closest("[aria-hidden=true]"))
       .map((node) => (node.tagName === "IMG" ? (node.getAttribute("alt") ?? "") : ""))
       .join(" ");
-    const own = (el.innerText ?? "").trim();
+    // innerText is empty for content that is not rendered, such as a link inside a closed <details>.
+    const own = (el.innerText || el.textContent || "").trim();
     return (own || text.trim() || el.getAttribute("title") || el.getAttribute("placeholder") || "").trim();
   };
   const controls = document.querySelectorAll(
