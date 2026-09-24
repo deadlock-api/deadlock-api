@@ -2,7 +2,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 import type { AnalyticsApiHeroBanStatsRequest } from "deadlock_api_client";
-import { Crosshair, Info, Skull, Sparkles, Swords, type LucideIcon } from "lucide-react";
+import { Crosshair, Skull, Sparkles, Swords, type LucideIcon } from "lucide-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 
@@ -25,7 +25,6 @@ import { SortButton, ariaSort } from "~/components/ui/sort-button";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { TextLink } from "~/components/ui/text-link";
-import { Tooltip } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -692,19 +691,14 @@ export function HeroStatsTable({
             sortDir={sortDir}
             onSortChange={handleSort}
             className="w-19/100 text-center"
-          >
-            <Tooltip
-              content={
-                <>
-                  Combines win rate, pick rate, and ban rate using z-scores (standard deviations from the mean).
-                  Weights: {Z_SCORE_WR_WEIGHT * 100}% win rate, {Z_SCORE_PR_WEIGHT * 100}% pick rate,{" "}
-                  {Z_SCORE_BR_WEIGHT * 100}% ban rate. Positive = above average, negative = below average.
-                </>
-              }
-            >
-              <Info className="size-3.5 text-muted-foreground" />
-            </Tooltip>
-          </SortableHeader>
+            description={
+              <>
+                Combines win rate, pick rate, and ban rate using z-scores (standard deviations from the mean). Weights:{" "}
+                {Z_SCORE_WR_WEIGHT * 100}% win rate, {Z_SCORE_PR_WEIGHT * 100}% pick rate, {Z_SCORE_BR_WEIGHT * 100}%
+                ban rate. Positive = above average, negative = below average.
+              </>
+            }
+          />
         )}
         {columns.includes("residual") && (
           <SortableHeader
@@ -714,20 +708,15 @@ export function HeroStatsTable({
             sortDir={sortDir}
             onSortChange={handleSort}
             className="w-19/100 text-center"
-          >
-            <Tooltip
-              content={
-                <>
-                  How much a hero over- or underperforms relative to their draft prevalence. Uses LOESS smoothing
-                  (locally weighted regression) on log(presence) vs win rate, where presence = pick rate + ban rate.
-                  Weighted by sample size. Positive = overperforming, negative = underperforming for how often they
-                  appear in the draft.
-                </>
-              }
-            >
-              <Info className="size-3.5 text-muted-foreground" />
-            </Tooltip>
-          </SortableHeader>
+            description={
+              <>
+                How much a hero over- or underperforms relative to their draft prevalence. Uses LOESS smoothing (locally
+                weighted regression) on log(presence) vs win rate, where presence = pick rate + ban rate. Weighted by
+                sample size. Positive = overperforming, negative = underperforming for how often they appear in the
+                draft.
+              </>
+            }
+          />
         )}
         {columns.includes("details") && <TableHead className="w-1/20 text-center">Details</TableHead>}
       </TableRow>

@@ -232,7 +232,7 @@ export function Patterns() {
       <Specimen
         name="Data table"
         source="ui/table · patterns/data-table/*"
-        note='SortableHeader carries aria-sort; size="sm" drops the idle arrows for dense tables, sortLabel names the button when the visible label is not enough, and label takes a node. data-pinned pins the identity column while the rest scrolls; a table wider than its container fades the edge with more columns past it (only the end edge with a pinned column), and a pinned table is the "table" container, so its pinned cell can shrink with @md/table: variants. Tones come from toneOf().'
+        note='SortableHeader carries aria-sort; size="sm" drops the idle arrows for dense tables, sortLabel names the button when the visible label is not enough, label takes a node, and description explains the column behind a focusable info button ("About Win rate"). data-pinned pins the identity column while the rest scrolls; a table wider than its container fades the edge with more columns past it (only the end edge with a pinned column), and a pinned table is the "table" container, so its pinned cell can shrink with @md/table: variants. Tones come from toneOf().'
       >
         <Inline gap={2}>
           <Segmented size="sm" width="hug" aria-label="Density" value={density} onValueChange={setDensity}>
@@ -261,6 +261,7 @@ export function Patterns() {
                 <SortableHeader
                   label="Win rate"
                   align="end"
+                  description="Share of this hero's matches that ended in a win."
                   sortKey="winRate"
                   activeSortKey={sortKey}
                   sortDir={sortDir}
