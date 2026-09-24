@@ -65,6 +65,30 @@ function LaneMatchupMatrix({ row, index }: { row: LaneRow; index: StatsIndex }) 
   );
 }
 
+/**
+ * What the lane's rate rests on. The two sources count different things: the duos' own games are the
+ * direct measure, while the 1v1 fallback reports its thinnest matchup, a number that is usually far
+ * larger and says much less about this exact lane. Each is worded so the count cannot be misread.
+ */
+function LaneSampleLabel({ row }: { row: LaneRow }) {
+  const count = formatCount(row.matches);
+  return row.source === "duo" ? (
+    <span
+      className="text-3xs text-muted-foreground tabular-nums"
+      title={`${count} games with these two duos laning against each other`}
+    >
+      {count} lane games
+    </span>
+  ) : (
+    <span
+      className="truncate text-3xs text-muted-foreground tabular-nums"
+      title={`Too few games of these two duos against each other, so this is the average of the four 1v1 lane matchups. The thinnest of them has ${count} games.`}
+    >
+      Estimate from 1v1s (min {count})
+    </span>
+  );
+}
+
 export function LaneCards({
   lanes,
   index,
@@ -98,9 +122,7 @@ export function LaneCards({
                   reader who does not separate these hues can use. */}
               <Inline align="baseline" justify="between" wrap="nowrap">
                 <span className={cn("text-2xs font-semibold", row.lane.textClass)}>{row.lane.name} lane</span>
-                {!loading && row.matches > 0 && (
-                  <span className="text-3xs text-muted-foreground tabular-nums">{formatCount(row.matches)} games</span>
-                )}
+                {!loading && row.matches > 0 && <LaneSampleLabel row={row} />}
               </Inline>
 
               <div className="flex items-center gap-2">

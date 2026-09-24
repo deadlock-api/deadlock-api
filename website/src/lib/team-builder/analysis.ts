@@ -308,6 +308,9 @@ export interface MatchupCell {
   matches: number;
 }
 
+/** `duo`: the two duos' own games against each other. `matchups`: the mean of the four 1v1 lane matchups. */
+export type LaneSource = "duo" | "matchups";
+
 export interface LaneRow {
   lane: LaneInfo;
   ally: number[];
@@ -315,7 +318,14 @@ export interface LaneRow {
   complete: boolean;
   winRate: number | undefined;
   edge: number | undefined;
+  /**
+   * Games behind `winRate`. For a `duo` source it is the games these two duos laned against each
+   * other; for `matchups` it is the thinnest of the four 1v1 lane matchups the rate is averaged from,
+   * which is a different (and much larger, much weaker) number, so the two must never share a label.
+   */
   matches: number;
+  /** Where `winRate` comes from; `undefined` when there is none. */
+  source: LaneSource | undefined;
   /** Same-lane hero-versus-hero cells, ally rows by enemy columns. */
   duel: MatchupCell[][];
 }
@@ -466,8 +476,8 @@ function laneEstimate(
   laneId: number,
   ally: number[],
   enemy: number[],
-): { winRate: number | undefined; matches: number } {
-  if (ally.length !== 2 || enemy.length !== 2) return { winRate: undefined, matches: 0 };
+): { winRate: number | undefined; matches: number; source: LaneSource | undefined } {
+  if (ally.length !== 2 || enemy.length !== 2) return { winRate: undefined, matches: 0, source: undefined };
 
   const known: Sample[] = [];
   for (const hero of ally) {
@@ -485,12 +495,14 @@ function laneEstimate(
     return {
       winRate: (duo.wins + LANE_DUO_PRIOR_MATCHES * prior) / (duo.matches + LANE_DUO_PRIOR_MATCHES),
       matches: duo.matches,
+      source: "duo",
     };
   }
 
-  if (individual === undefined) return { winRate: undefined, matches: 0 };
+  if (individual === undefined) return { winRate: undefined, matches: 0, source: undefined };
   return {
     winRate: individual,
+    source: "matchups",
     // The estimate is only as strong as its thinnest cell, so that is what gets reported.
     matches: Math.min(...known.map((s) => s.matches)),
   };
@@ -544,6 +556,7 @@ export function laneRows(draft: Draft, index: StatsIndex): LaneRow[] {
       winRate: estimate.winRate,
       edge: toPoints(estimate.winRate),
       matches: estimate.matches,
+      source: estimate.source,
     };
   });
 }
