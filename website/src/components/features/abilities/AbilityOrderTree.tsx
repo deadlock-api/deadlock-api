@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AbilityOrderStatsGameModeEnum } from "deadlock_api_client";
-import { motion } from "framer-motion";
+import { motion, MotionConfig } from "framer-motion";
 import { useCallback, useMemo, useState } from "react";
 
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -185,47 +185,50 @@ export default function AbilityOrderTree({
   const displayedRoots = focusedRoot ? [focusedRoot] : rootChildren;
 
   return (
-    <DragScroll ref={centerScroll} className="pb-4 text-center">
-      {gameMode === "street_brawl" && (
-        <p className="pb-2 text-sm text-balance text-muted-foreground">
-          In Street Brawl, you unlock multiple abilities at once per round. Since the order within each round doesn't
-          matter, paths that only differ in that order are shown as one.
-        </p>
-      )}
-      <motion.div
-        className="inline-flex min-w-max items-start gap-0.5 p-4"
-        initial="hidden"
-        animate="show"
-        variants={{
-          hidden: {},
-          show: { transition: { staggerChildren: 0.06 } },
-        }}
-      >
-        {displayedRoots.map((child, i) => {
-          const childPath = String(child.abilityId);
-          return (
-            <div key={child.abilityId} className="flex flex-col items-center">
-              <AbilityOrderNode
-                node={child}
-                parentMatches={trie.matches}
-                rootMatches={trie.matches}
-                abilitySlotMap={abilitySlotMap}
-                defaultDepth={defaultDepth}
-                expandedPaths={expandedPaths}
-                onToggleExpand={onToggleExpand}
-                focusedPaths={focusedPaths}
-                onToggleFocus={onToggleFocus}
-                currentPath={childPath}
-                ancestorAbilityIds={[]}
-                totalPointsSpent={0}
-                isStreetBrawl={gameMode === "street_brawl"}
-                siblingCount={rootChildren.length}
-                index={i}
-              />
-            </div>
-          );
-        })}
-      </motion.div>
-    </DragScroll>
+    // `user`: the tree's entrance and expand animations follow the reduced-motion setting, like the games' Motion.
+    <MotionConfig reducedMotion="user">
+      <DragScroll ref={centerScroll} className="pb-4 text-center">
+        {gameMode === "street_brawl" && (
+          <p className="pb-2 text-sm text-balance text-muted-foreground">
+            In Street Brawl, you unlock multiple abilities at once per round. Since the order within each round doesn't
+            matter, paths that only differ in that order are shown as one.
+          </p>
+        )}
+        <motion.div
+          className="inline-flex min-w-max items-start gap-0.5 p-4"
+          initial="hidden"
+          animate="show"
+          variants={{
+            hidden: {},
+            show: { transition: { staggerChildren: 0.06 } },
+          }}
+        >
+          {displayedRoots.map((child, i) => {
+            const childPath = String(child.abilityId);
+            return (
+              <div key={child.abilityId} className="flex flex-col items-center">
+                <AbilityOrderNode
+                  node={child}
+                  parentMatches={trie.matches}
+                  rootMatches={trie.matches}
+                  abilitySlotMap={abilitySlotMap}
+                  defaultDepth={defaultDepth}
+                  expandedPaths={expandedPaths}
+                  onToggleExpand={onToggleExpand}
+                  focusedPaths={focusedPaths}
+                  onToggleFocus={onToggleFocus}
+                  currentPath={childPath}
+                  ancestorAbilityIds={[]}
+                  totalPointsSpent={0}
+                  isStreetBrawl={gameMode === "street_brawl"}
+                  siblingCount={rootChildren.length}
+                  index={i}
+                />
+              </div>
+            );
+          })}
+        </motion.div>
+      </DragScroll>
+    </MotionConfig>
   );
 }
