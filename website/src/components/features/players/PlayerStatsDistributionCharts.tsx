@@ -4,10 +4,11 @@ import { Coins, Flame, HeartPulse, type LucideIcon, Swords, Wheat } from "lucide
 import { useMemo, useState } from "react";
 
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
-import { CHART_COLOR, SERIES_COLORS } from "~/components/patterns/charts/theme";
-import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
+import { CHART_COLOR } from "~/components/patterns/charts/theme";
+import { Disclosure } from "~/components/patterns/content/Disclosure";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { Text } from "~/components/ui/text";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
@@ -17,13 +18,16 @@ import { playerStatsMetricsQueryOptions } from "~/queries/player-stats-metrics-q
 import { PlayerMetricDistributionCard } from "./PlayerMetricDistributionCard";
 import { PlayerMetricDistributionDialog } from "./PlayerMetricDistributionDialog";
 
-const CATEGORY_CONFIG: Record<PlayerMetricCategory, { icon: LucideIcon; color: string }> = {
-  Combat: { icon: Swords, color: SERIES_COLORS[0] },
-  Farming: { icon: Wheat, color: SERIES_COLORS[2] },
-  Economy: { icon: Coins, color: SERIES_COLORS[3] },
-  Damage: { icon: Flame, color: SERIES_COLORS[4] },
-  Healing: { icon: HeartPulse, color: SERIES_COLORS[1] },
+const CATEGORY_ICON: Record<PlayerMetricCategory, LucideIcon> = {
+  Combat: Swords,
+  Farming: Wheat,
+  Economy: Coins,
+  Damage: Flame,
+  Healing: HeartPulse,
 };
+
+/** Open on arrival. Every chart at once ran to 6,600px on a phone; the rest open on demand. */
+const DEFAULT_OPEN: PlayerMetricCategory[] = ["Combat"];
 
 export function PlayerStatsDistributionCharts({
   heroId,
@@ -44,6 +48,14 @@ export function PlayerStatsDistributionCharts({
 }) {
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [openCategories, setOpenCategories] = useState<ReadonlySet<PlayerMetricCategory>>(() => new Set(DEFAULT_OPEN));
+  const setCategoryOpen = (category: PlayerMetricCategory, open: boolean) =>
+    setOpenCategories((current) => {
+      const next = new Set(current);
+      if (open) next.add(category);
+      else next.delete(category);
+      return next;
+    });
 
   const { data, isLoading, isError, refetch } = useQuery(
     playerStatsMetricsQueryOptions({
@@ -92,24 +104,46 @@ export function PlayerStatsDistributionCharts({
         </ChartLegendItem>
       </ChartLegend>
 
-      {groupedMetrics.map(({ category, metrics }) => {
-        const config = CATEGORY_CONFIG[category];
-        return (
-          <Panel key={category}>
-            <PanelHeader title={category} icon={config.icon} accent={config.color} />
-            <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-4">
-              {metrics.map((def) => (
-                <PlayerMetricDistributionCard
-                  key={def.key}
-                  def={def}
-                  values={data?.[def.key] as HashMapValue | undefined}
-                  onExpand={() => setSelectedIndex(PLAYER_METRICS.indexOf(def))}
-                />
-              ))}
-            </div>
-          </Panel>
-        );
-      })}
+      <div className="flex flex-col gap-3">
+        {groupedMetrics.map(({ category, metrics }) => {
+          const Icon = CATEGORY_ICON[category];
+          const open = openCategories.has(category);
+          return (
+            <Disclosure
+              key={category}
+              variant="bordered"
+              size="lg"
+              icon={<Icon aria-hidden="true" className="text-muted-foreground" />}
+              title={
+                <>
+                  {category}{" "}
+                  <Text variant="meta" tone="muted" numeric="tabular">
+                    {metrics.length} stats
+                  </Text>
+                </>
+              }
+              open={open}
+              onOpenChange={(next) => setCategoryOpen(category, next)}
+            >
+              {/* Rendered only when open: a chart in a closed <details> would measure itself at zero size. */}
+              {open && (
+                <div className="@container">
+                  <div className="grid grid-cols-1 gap-3 @[18rem]:grid-cols-2 @[52rem]:grid-cols-4">
+                    {metrics.map((def) => (
+                      <PlayerMetricDistributionCard
+                        key={def.key}
+                        def={def}
+                        values={data?.[def.key] as HashMapValue | undefined}
+                        onExpand={() => setSelectedIndex(PLAYER_METRICS.indexOf(def))}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Disclosure>
+          );
+        })}
+      </div>
 
       <PlayerMetricDistributionDialog
         metric={selectedMetric}

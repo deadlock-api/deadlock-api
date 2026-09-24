@@ -23,10 +23,11 @@ export function PlayerMetricDistributionCard({
   const hasData = values != null && curve.length >= 3;
 
   return (
-    <Card tone="inset" size="xs" className="gap-1.5 p-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-sm text-foreground">{def.label}</span>
-        <div className="flex shrink-0 items-center gap-1.5">
+    // Two to a row on a phone leaves a card about 140px wide: the name then takes its own line above the average.
+    <Card tone="inset" size="xs" className="@container gap-1.5 p-3">
+      <div className="flex flex-col gap-0.5 @[12rem]:flex-row @[12rem]:items-center @[12rem]:justify-between @[12rem]:gap-2">
+        <span className="min-w-0 text-sm text-foreground @[12rem]:truncate">{def.label}</span>
+        <div className="flex shrink-0 items-center justify-between gap-1.5">
           <span className="text-sm font-semibold text-foreground">{values ? fmt(values.avg) : "-"}</span>
           {hasData && (
             <Button
