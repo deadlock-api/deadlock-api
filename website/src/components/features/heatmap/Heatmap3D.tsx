@@ -1,7 +1,7 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
 import type { KillDeathStats, MapData } from "deadlock_api_client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { ChartOverlay, ChartOverlayItem, ChartStage, ChartStageFrame } from "~/components/patterns/charts/ChartOverlay";
@@ -10,7 +10,15 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Field } from "~/components/ui/field";
 import { Slider } from "~/components/ui/slider";
 
-import { buildHeatGrids, GRID_RES, interpolateColor, normalizeHeatGrids, sampleBilinear } from "./heatmap-grid";
+import {
+  buildHeatGrids,
+  GRID_RES,
+  heatmapName,
+  interpolateColor,
+  normalizeHeatGrids,
+  sampleBilinear,
+  summarizeHeatmap,
+} from "./heatmap-grid";
 import { HeatmapLegend } from "./HeatmapLegend";
 import { SensitivitySlider } from "./SensitivitySlider";
 
@@ -22,6 +30,8 @@ interface Heatmap3DProps {
   viewMode: ViewMode;
   sensitivity: number;
   onSensitivityChange: (value: number) => void;
+  /** The filters the events are drawn from, in words, for the map's accessible name: "The Hidden King, Haze". */
+  scope?: string;
 }
 
 const HEAT_THRESHOLD = 0.005;
@@ -208,7 +218,15 @@ function BasePlane() {
   );
 }
 
-export default function Heatmap3D({ data, mapData, viewMode, sensitivity, onSensitivityChange }: Heatmap3DProps) {
+export default function Heatmap3D({
+  data,
+  mapData,
+  viewMode,
+  sensitivity,
+  onSensitivityChange,
+  scope,
+}: Heatmap3DProps) {
+  const summaryId = useId();
   const radius = mapData.radius ?? 10752;
   const [opacity, setOpacity] = useState(0.85);
   const [mapStatus, setMapStatus] = useState<"loading" | "ready" | "error">("loading");
@@ -220,6 +238,10 @@ export default function Heatmap3D({ data, mapData, viewMode, sensitivity, onSens
     const result = normalizeHeatGrids(rawGrids, viewMode, sensitivity);
     return { grid: result.grid, legendMax: result.maxValue };
   }, [rawGrids, viewMode, sensitivity]);
+  const summary = useMemo(
+    () => (rawGrids ? summarizeHeatmap(data, rawGrids, viewMode) : "Nothing to plot."),
+    [data, rawGrids, viewMode],
+  );
 
   return (
     // On a phone the map fills the width, so the legend and the sliders leave it instead of covering it.
@@ -228,7 +250,12 @@ export default function Heatmap3D({ data, mapData, viewMode, sensitivity, onSens
         <HeatmapLegend viewMode={viewMode} maxValue={legendMax} />
       </ChartOverlay>
       <ChartStage>
+        {/* The WebGL scene stands for the whole map: named, and described by the sentence under it. */}
         <Canvas
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a WebGL scene, not an image file an <img> could show
+          role="img"
+          aria-label={`3D ${heatmapName(viewMode, scope)}`}
+          aria-describedby={summaryId}
           frameloop="demand"
           camera={{ position: [0, 3.5, 3.5], fov: 50, near: 0.1, far: 100 }}
           gl={{ antialias: true, alpha: true }}
@@ -254,6 +281,9 @@ export default function Heatmap3D({ data, mapData, viewMode, sensitivity, onSens
             target={[0, 0, 0]}
           />
         </Canvas>
+        <p id={summaryId} className="sr-only">
+          {summary}
+        </p>
 
         {mapStatus === "loading" && (
           <LoadingState size="sm" text="Loading map…" label="map" className="absolute inset-0" />

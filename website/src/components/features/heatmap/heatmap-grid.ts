@@ -160,3 +160,52 @@ export function buildColorLUT(): Uint8Array {
 }
 
 export const COLOR_LUT = buildColorLUT();
+
+const ROWS = ["top", "middle", "bottom"] as const;
+const COLUMNS = ["left", "center", "right"] as const;
+
+/** Which ninth of the map, as it is drawn, a grid cell falls in: "top left", "center", "bottom center". */
+function regionOf(index: number): string {
+  const row = ROWS[Math.min(2, Math.floor(((Math.floor(index / GRID_RES) + 0.5) / GRID_RES) * 3))];
+  const column = COLUMNS[Math.min(2, Math.floor((((index % GRID_RES) + 0.5) / GRID_RES) * 3))];
+  if (row === "middle") return column === "center" ? "center" : `middle ${column}`;
+  return `${row} ${column}`;
+}
+
+/**
+ * The heatmap in one sentence, for the readers who cannot see the canvas: the kills and deaths it plots and where on
+ * the map the view's hottest spot is (kills and deaths together for the K/D view).
+ */
+export function summarizeHeatmap(
+  data: KillDeathStats[],
+  { killsRaw, deathsRaw }: ReturnType<typeof buildHeatGrids>,
+  viewMode: "kills" | "deaths" | "kd",
+): string {
+  let kills = 0;
+  let deaths = 0;
+  for (const point of data) {
+    kills += point.kills;
+    deaths += point.deaths;
+  }
+  let hottest = -1;
+  let hottestValue = 0;
+  for (let i = 0; i < killsRaw.length; i++) {
+    const value =
+      viewMode === "kills" ? killsRaw[i] : viewMode === "deaths" ? deathsRaw[i] : killsRaw[i] + deathsRaw[i];
+    if (value > hottestValue) {
+      hottestValue = value;
+      hottest = i;
+    }
+  }
+  const plotted = `${kills.toLocaleString("en-US")} kills and ${deaths.toLocaleString("en-US")} deaths plotted`;
+  if (hottest < 0) return `${plotted}.`;
+  const what = viewMode === "kills" ? "kills" : viewMode === "deaths" ? "deaths" : "fighting";
+  return `${plotted}; the most ${what} ${what === "fighting" ? "happens" : "happen"} near the ${regionOf(hottest)} of the map.`;
+}
+
+const VIEW_NAMES = { kills: "Kill", deaths: "Death", kd: "K/D" } as const;
+
+/** The accessible name of a heatmap view: "Kill heatmap, The Hidden King, Haze". */
+export function heatmapName(viewMode: "kills" | "deaths" | "kd", scope?: string): string {
+  return `${VIEW_NAMES[viewMode]} heatmap of the map${scope ? `, ${scope}` : ""}`;
+}

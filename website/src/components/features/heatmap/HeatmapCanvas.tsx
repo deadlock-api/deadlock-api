@@ -1,13 +1,21 @@
 import type { MapData } from "deadlock_api_client";
 import type { KillDeathStats } from "deadlock_api_client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { ChartOverlay, ChartStage, ChartStageFrame } from "~/components/patterns/charts/ChartOverlay";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { TooltipCard, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 
-import { buildHeatGrids, COLOR_LUT, GRID_RES, normalizeHeatGrids, sampleBilinear } from "./heatmap-grid";
+import {
+  buildHeatGrids,
+  COLOR_LUT,
+  GRID_RES,
+  heatmapName,
+  normalizeHeatGrids,
+  sampleBilinear,
+  summarizeHeatmap,
+} from "./heatmap-grid";
 import { HeatmapLegend } from "./HeatmapLegend";
 import { SensitivitySlider } from "./SensitivitySlider";
 
@@ -28,6 +36,8 @@ interface HeatmapCanvasProps {
   viewMode: ViewMode;
   sensitivity: number;
   onSensitivityChange: (value: number) => void;
+  /** The filters the events are drawn from, in words, for the map's accessible name: "The Hidden King, Haze". */
+  scope?: string;
 }
 
 export default function HeatmapCanvas({
@@ -36,7 +46,9 @@ export default function HeatmapCanvas({
   viewMode,
   sensitivity,
   onSensitivityChange,
+  scope,
 }: HeatmapCanvasProps) {
+  const summaryId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapCanvasRef = useRef<HTMLCanvasElement>(null);
   const heatCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -54,6 +66,10 @@ export default function HeatmapCanvas({
     [rawGrids, viewMode, sensitivity],
   );
   const legendMax = heatGrid?.maxValue ?? 0;
+  const summary = useMemo(
+    () => (rawGrids ? summarizeHeatmap(data, rawGrids, viewMode) : "Nothing to plot."),
+    [data, rawGrids, viewMode],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -237,14 +253,21 @@ export default function HeatmapCanvas({
           {/* No area until the first draw sizes them (the style never changes, so React leaves the drawn size alone):
             at the browser's default 300×150 they would jump across the stage when sized. */}
           <canvas ref={mapCanvasRef} aria-hidden="true" className="absolute" style={UNSIZED} />
+          {/* The heat layer stands for the whole map: named, and described by the sentence under it. */}
           <canvas
             ref={heatCanvasRef}
-            aria-hidden="true"
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a drawn canvas, not an image file an <img> could show
+            role="img"
+            aria-label={heatmapName(viewMode, scope)}
+            aria-describedby={summaryId}
             className="absolute"
             style={UNSIZED}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
           />
+          <p id={summaryId} className="sr-only">
+            {summary}
+          </p>
           {mapImages === "loading" && (
             <LoadingState size="sm" text="Loading map…" label="map" className="absolute inset-0" />
           )}

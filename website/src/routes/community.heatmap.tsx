@@ -18,6 +18,7 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { combineQueryStates } from "~/components/patterns/states/QueryRenderer";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { SegmentedItem } from "~/components/ui/segmented";
+import { useHeroById } from "~/hooks/useAssetById";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -30,6 +31,8 @@ import { killDeathStatsQueryOptions, mapQueryOptions } from "~/queries/heatmap-q
 const Heatmap3D = lazy(() => import("~/components/features/heatmap/Heatmap3D"));
 
 const VIEW_MODES = ["kills", "deaths", "kd"] as const;
+const TEAM_NAMES = ["The Hidden King", "The Archmother"] as const;
+
 const VIEW_MODE_LABELS: Record<(typeof VIEW_MODES)[number], string> = {
   kills: "Kills",
   deaths: "Deaths",
@@ -83,6 +86,12 @@ function HeatmapPage() {
     maxGameTimeS: maxGameTime < 3600 ? maxGameTime : undefined,
   };
 
+  const { hero } = useHeroById(heroId ?? -1);
+  // The map's accessible name says whose events it draws.
+  const scope = [TEAM_NAMES[team] ?? `Team ${team}`, heroId ? (hero?.name ?? `hero ${heroId}`) : "all heroes"].join(
+    ", ",
+  );
+
   const mapQuery = useQuery(mapQueryOptions);
   // A filter change keeps the old map, dimmed, until the new positions arrive, instead of blanking the page.
   // `useQuery`, not `useQueries`: the latter starts a new observer for the new key, which has no previous data.
@@ -107,8 +116,11 @@ function HeatmapPage() {
           defaultValue="0"
           onValueChange={(next) => setTeam(Number(next))}
         >
-          <StringOption value="0">The Hidden King</StringOption>
-          <StringOption value="1">The Archmother</StringOption>
+          {TEAM_NAMES.map((name, index) => (
+            <StringOption key={name} value={String(index)}>
+              {name}
+            </StringOption>
+          ))}
         </StringSelector>
         {/* Three segments stay under the auto-wide threshold, but these labels do not fit a default cell. */}
         <FilterToggleCell label="Show" width="wide" value={viewMode} defaultValue="kills" onValueChange={setViewMode}>
@@ -174,6 +186,7 @@ function HeatmapPage() {
                     viewMode={viewMode}
                     sensitivity={sensitivity / 10000}
                     onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
+                    scope={scope}
                   />
                 </Suspense>
               </ChunkErrorBoundary>
@@ -184,6 +197,7 @@ function HeatmapPage() {
                 viewMode={viewMode}
                 sensitivity={sensitivity / 10000}
                 onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
+                scope={scope}
               />
             )}
           </StaleOverlay>
