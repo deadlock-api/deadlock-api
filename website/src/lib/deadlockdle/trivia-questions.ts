@@ -59,15 +59,27 @@ type QuestionGenerator = (
   rng: () => number,
 ) => TriviaQuestion | null;
 
-/** Format NPC class_name into readable form: "npc_boss_tier1" -> "Boss Tier 1" */
-function formatNpcName(className: string): string {
-  return className
-    .replace(/^npc_/i, "")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .replace(/(\d+)/g, " $1")
-    .replace(/\s+/g, " ")
-    .trim();
+/**
+ * The names players know NPCs by. A title-cased class name read "Alt Npc Boss Tier 3"; units missing here (map
+ * variants, props, the base trooper class) are left out of the questions.
+ */
+const NPC_NAMES: Record<string, string> = {
+  trooper_normal: "a Trooper",
+  npc_boss_tier1: "a Guardian",
+  npc_boss_tier2: "a Walker",
+  npc_boss_tier3: "the Patron",
+  npc_barrack_boss: "a Base Guardian",
+  neutral_trooper_weak: "a Tier 1 Denizen",
+  neutral_trooper_normal: "a Tier 2 Denizen",
+  neutral_trooper_strong: "a Tier 3 Denizen",
+  neutral_sinners_sacrifice: "the Sinner's Sacrifice",
+};
+
+function namedNpcs(npcs: NpcUnit[]): (NpcUnit & { displayName: string })[] {
+  return npcs.flatMap((npc) => {
+    const displayName = NPC_NAMES[npc.class_name];
+    return displayName ? [{ ...npc, displayName }] : [];
+  });
 }
 
 function capitalize(s: string): string {
@@ -510,30 +522,28 @@ const whichItemIsTierQuestion: QuestionGenerator = (_heroes, items, _npcs, _abil
 // ----- NPC QUESTIONS -----
 
 const npcHealthQuestion: QuestionGenerator = (_heroes, _items, npcs, _abilities, rng) => {
-  const healthyNpcs = npcs.filter((n) => n.max_health != null && n.max_health > 0);
+  const healthyNpcs = namedNpcs(npcs).filter((n) => n.max_health != null && n.max_health > 0);
   if (healthyNpcs.length === 0) return null;
 
   const npc = seededPick(healthyNpcs, rng);
   if (npc.max_health == null) return null;
-  const displayName = formatNpcName(npc.class_name);
   const wrong = generateNumericOptions(npc.max_health, rng, 3, [0.6, 0.8, 1.3, 1.5]);
   const { options, correctIndex } = buildOptions(String(npc.max_health), wrong, rng);
 
-  return { question: `What is the max health of ${displayName}?`, options, correctIndex, category: "NPC" };
+  return { question: `What is the max health of ${npc.displayName}?`, options, correctIndex, category: "NPC" };
 };
 
 /** "How many souls does {npc} reward?" */
 const npcGoldRewardQuestion: QuestionGenerator = (_heroes, _items, npcs, _abilities, rng) => {
-  const rewardNpcs = npcs.filter((n) => n.gold_reward != null && n.gold_reward > 0);
+  const rewardNpcs = namedNpcs(npcs).filter((n) => n.gold_reward != null && n.gold_reward > 0);
   if (rewardNpcs.length === 0) return null;
 
   const npc = seededPick(rewardNpcs, rng);
   if (npc.gold_reward == null) return null;
-  const displayName = formatNpcName(npc.class_name);
   const wrong = generateNumericOptions(npc.gold_reward, rng, 3, [0.5, 0.75, 1.3, 1.6]);
   const { options, correctIndex } = buildOptions(String(npc.gold_reward), wrong, rng);
 
-  return { question: `How many souls does ${displayName} reward?`, options, correctIndex, category: "NPC" };
+  return { question: `How many souls does ${npc.displayName} reward?`, options, correctIndex, category: "NPC" };
 };
 
 // ============================================================
