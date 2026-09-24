@@ -8,6 +8,7 @@ import { RouteError } from "./components/app/RouteError";
 import { isChunkLoadError, reloadOnceForStaleChunk } from "./lib/chunk-reload";
 import { ApiError } from "./lib/http";
 import type { Preferences } from "./lib/preferences";
+import { parseSearch, stringifySearch } from "./lib/search-params";
 import { routeTree } from "./routeTree.gen";
 
 export interface RouterContext {
@@ -53,6 +54,8 @@ export function getRouter() {
     },
     defaultNotFoundComponent: () => <NotFound />,
     scrollRestoration: true,
+    parseSearch,
+    stringifySearch,
     context: { queryClient, preferences: {} } satisfies RouterContext,
   });
 
