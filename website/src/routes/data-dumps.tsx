@@ -55,14 +55,15 @@ async function fetchManifest(): Promise<Manifest> {
 function DataDumps() {
   const [searchParam, setSearch] = useQueryState("q", parseAsString);
   const [sqlQueryParam, setSqlQueryParam] = useQueryState("sql", parseAsString);
-  const [userOpened, setUserOpened] = useState(false);
-  const playgroundOpen = userOpened || (sqlQueryParam !== null && sqlQueryParam.trim().length > 0);
+  // A shared `?sql=` link opens the playground; after that the dialog owns its open state, so emptying the editor
+  // (which empties the param) never closes it.
+  const [playgroundOpen, setPlaygroundOpenState] = useState(() => sqlQueryParam !== null);
   // The playground unmounts as it closes, so its dialog cannot hand focus back to the button that opened it (Law 17).
   const openerRef = useRef<HTMLElement | null>(null);
   const setPlaygroundOpen = useCallback(
     (next: boolean) => {
       if (next && document.activeElement instanceof HTMLElement) openerRef.current = document.activeElement;
-      setUserOpened(next);
+      setPlaygroundOpenState(next);
       if (!next) {
         setSqlQueryParam(null);
         requestAnimationFrame(() => openerRef.current?.focus());
@@ -71,9 +72,10 @@ function DataDumps() {
     [setSqlQueryParam],
   );
   const search = (searchParam ?? "").trim();
+  // Not set shows the example query; an editor the user emptied stays empty ("").
   const sqlQuery = sqlQueryParam ?? SQL_PLAYGROUND_DEFAULT_QUERY;
   const onSqlQueryChange = (q: string) => {
-    setSqlQueryParam(q.length === 0 ? null : q);
+    setSqlQueryParam(q);
   };
 
   const manifest = useQuery({

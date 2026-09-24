@@ -81,7 +81,8 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
   const [queryError, setQueryError] = useState<string | null>(null);
   const [duration, setDuration] = useState<number | null>(null);
   const [handle, setHandle] = useState<DuckDbHandle | null>(null);
-  const [cancelled, setCancelled] = useState(false);
+  /** Why nothing ran or nothing is shown: "Query cancelled.", or an empty editor. */
+  const [notice, setNotice] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   // Closing the playground stops whatever it is still running.
@@ -118,11 +119,18 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
 
   const runQuery = useCallback(async () => {
     if (!handle || abortRef.current) return;
+    if (query.trim().length === 0) {
+      setResult(null);
+      setQueryError(null);
+      setDuration(null);
+      setNotice("The editor is empty. Write a query to run.");
+      return;
+    }
     const controller = new AbortController();
     abortRef.current = controller;
     setRunning(true);
     setQueryError(null);
-    setCancelled(false);
+    setNotice(null);
     setStatus(null);
     const start = performance.now();
     try {
@@ -140,7 +148,7 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
       setDuration(performance.now() - start);
       setStatus(null);
     } catch (e) {
-      if (e instanceof QueryCancelledError) setCancelled(true);
+      if (e instanceof QueryCancelledError) setNotice("Query cancelled.");
       else setQueryError(e instanceof Error ? e.message : "Query failed");
       setResult(null);
       setDuration(null);
@@ -267,7 +275,7 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
                       · {Math.round(duration)} ms
                     </>
                   )}
-                  {!status && cancelled && "Query cancelled"}
+                  {!status && notice}
                 </Text>
               </output>
             </Inline>
@@ -321,7 +329,7 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
                     align="center"
                     className="flex h-full items-center justify-center p-6"
                   >
-                    {cancelled ? "Query cancelled." : RESULT_PLACEHOLDER[initState]}
+                    {notice ?? RESULT_PLACEHOLDER[initState]}
                   </Text>
                 )}
               </Card>
