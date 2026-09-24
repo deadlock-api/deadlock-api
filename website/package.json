@@ -90,6 +90,7 @@
     "oxc-transform-react": "^0.151.0",
     "oxfmt": "^0.70.0",
     "oxlint": "^1.85.0",
+    "oxlint-tsgolint": "^7.0.2002",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.0",

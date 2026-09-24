@@ -7,6 +7,9 @@
       "specifier": "eslint-plugin-react-hooks",
     },
   ],
+  "options": {
+    "typeAware": true,
+  },
   "categories": {
     "correctness": "error",
     "suspicious": "warn",
@@ -25,6 +28,33 @@
     "react-hooks/exhaustive-deps": "warn",
     "import/no-unassigned-import": "off",
     "eslint/no-shadow": "off",
+
+    // Type-aware rules (oxlint-tsgolint, enabled by `options.typeAware`). The categories above already turn on
+    // the type-aware rules in `correctness` (errors) and `suspicious` (warnings); these are set explicitly.
+    "typescript/no-floating-promises": [
+      "error",
+      {
+        // node:test's test()/describe() return a promise the runner awaits itself.
+        "allowForKnownSafeCalls": [
+          { "from": "package", "package": "node:test", "name": ["test", "describe", "it", "suite"] },
+        ],
+      },
+    ],
+    // `onChange={setFilter}` with a nuqs setter (returns a Promise) or an async handler is the React idiom:
+    // React ignores the return value. Every other void-return context (arguments, properties, returns) is
+    // still checked. Async JSX handlers must catch their own errors.
+    "typescript/no-misused-promises": ["error", { "checksVoidReturn": { "attributes": false } }],
+    "typescript/await-thenable": "error",
+    "typescript/no-deprecated": "error",
+    "typescript/switch-exhaustiveness-check": [
+      "error",
+      // A `default:` branch is an explicit choice, not a missed case.
+      { "considerDefaultExhaustiveForUnions": true },
+    ],
+    // `as` on API/JSON payloads and DOM lookups is idiomatic here; 200+ hits, no bugs among them.
+    "typescript/no-unsafe-type-assertion": "off",
+    // Flags every useEffect that returns a cleanup on one path and bails early with `return;` on another.
+    "typescript/consistent-return": "off",
 
     // Recommended rules (from LintRulePreset.Recommended)
     "react-hooks-js/component-hook-factories": "error",
