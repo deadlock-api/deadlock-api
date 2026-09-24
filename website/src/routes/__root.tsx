@@ -190,7 +190,9 @@ function RootComponent() {
               <AppSidebar />
               <main id="main-content" className="min-w-0 flex-1 overflow-x-clip md:ps-64">
                 <MobileMenuButton />
-                <PageBackdrop src="/logo/hexe.svg" fetchPriority="high" />
+                {/* Low priority: a 10% opacity decoration, it was preloaded ahead of the CSS and the font and became every page's
+                    largest contentful paint. */}
+                <PageBackdrop src="/logo/hexe.svg" fetchPriority="low" />
                 <AppFrame>
                   <Stack gap={4} className="flex-1">
                     <Breadcrumbs />

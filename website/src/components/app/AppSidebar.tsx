@@ -49,8 +49,6 @@ function SidebarContent() {
           <SmartLink href="/">
             <img
               src="https://deadlock-api.com/favicon.webp"
-              loading="lazy"
-              fetchPriority="low"
               alt="Deadlock API Logo"
               width={32}
               height={32}
