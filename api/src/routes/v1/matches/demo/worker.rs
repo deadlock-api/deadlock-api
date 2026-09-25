@@ -7,6 +7,7 @@
 
 use core::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::time::Instant;
 
 use object_store::aws::AmazonS3;
 use object_store::path::Path;
@@ -19,6 +20,7 @@ use super::format::ArtifactStream;
 use super::job::{JobRecord, JobStatus, store as store_job};
 use super::{OutputFormat, download, format};
 use crate::error::APIResult;
+use crate::utils::compression::is_zstd;
 
 /// Max jobs waiting in the channel before submits get a 429.
 const MAX_QUEUE_DEPTH: usize = 32;
@@ -142,7 +144,9 @@ async fn run_job(mut redis: MultiplexedConnection, r2: &AmazonS3, public_url: &s
         return;
     }
 
-    match process(r2, public_url, &job).await {
+    let started = Instant::now();
+    let mut timings = PhaseTimings::default();
+    match process(r2, public_url, &job, &mut timings).await {
         Ok(result_url) => {
             record.status = JobStatus::Done;
             record.result_url = Some(result_url);
@@ -158,8 +162,24 @@ async fn run_job(mut redis: MultiplexedConnection, r2: &AmazonS3, public_url: &s
     info!(
         job_id = %job.job_id,
         match_id = job.match_id,
+        format = job.format.extension(),
         status = ?record.status,
         duration_secs = completed_at.saturating_sub(running_since),
+        duration_ms = millis(started),
+        queue_wait_secs = running_since.saturating_sub(job.enqueued_at),
+        phase = timings.phase,
+        download_ms = timings.download_ms,
+        compressed_bytes = timings.compressed_bytes,
+        demo_compression = timings.demo_compression,
+        decompress_ms = timings.decompress_ms,
+        demo_bytes = timings.demo_bytes,
+        parse_ms = timings.parse_ms,
+        query_ms = timings.query_ms,
+        upload_wait_ms = timings.upload_wait_ms,
+        upload_tail_ms = timings.upload_tail_ms,
+        artifact_bytes = timings.artifact_bytes,
+        upload_parts = timings.upload_parts,
+        error = record.error.as_deref(),
         "Finished demo query job"
     );
 
@@ -168,29 +188,94 @@ async fn run_job(mut redis: MultiplexedConnection, r2: &AmazonS3, public_url: &s
     }
 }
 
-async fn process(r2: &AmazonS3, public_url: &str, job: &QueryJob) -> APIResult<String> {
+/// Per-phase wall time and sizes of one job, logged on `Finished demo query job` so job
+/// duration can be broken down from the logs. Serialization and upload overlap, so
+/// `query_ms` includes any time the pipeline was throttled by the upload (`upload_wait_ms`),
+/// and only `upload_tail_ms` is upload time spent after the last chunk was produced.
+#[derive(Default)]
+struct PhaseTimings {
+    /// Phase the job was in when it ended; for a failed job, the phase that failed.
+    phase: &'static str,
+    download_ms: u64,
+    compressed_bytes: u64,
+    demo_compression: &'static str,
+    decompress_ms: u64,
+    demo_bytes: u64,
+    /// Schema discovery, full demo parse and query planning (`demofusion::query`).
+    parse_ms: u64,
+    /// SQL execution and serialization, until the last artifact chunk is produced.
+    query_ms: u64,
+    /// Time spent blocked waiting for in-flight upload parts to drain.
+    upload_wait_ms: u64,
+    /// Completing the multipart upload after the last chunk.
+    upload_tail_ms: u64,
+    artifact_bytes: u64,
+    upload_parts: u64,
+}
+
+fn millis(since: Instant) -> u64 {
+    u64::try_from(since.elapsed().as_millis()).unwrap_or(u64::MAX)
+}
+
+async fn process(
+    r2: &AmazonS3,
+    public_url: &str,
+    job: &QueryJob,
+    timings: &mut PhaseTimings,
+) -> APIResult<String> {
+    timings.phase = "download";
+    let t = Instant::now();
     let compressed = download::download_demo(&job.demo_url).await?;
+    timings.download_ms = millis(t);
+    timings.compressed_bytes = compressed.len() as u64;
+    timings.demo_compression = if is_zstd(&compressed) {
+        "zstd"
+    } else {
+        "bzip2"
+    };
+
+    timings.phase = "decompress";
+    let t = Instant::now();
     let demo = format::decompress(compressed).await?;
+    timings.decompress_ms = millis(t);
+    timings.demo_bytes = demo.len() as u64;
+
+    timings.phase = "parse";
+    let t = Instant::now();
     let artifact = format::run_and_stream(demo, &job.sql, job.format, UPLOAD_CHUNK_SIZE).await?;
+    timings.parse_ms = millis(t);
 
     let object_key = format!("{}.{}", job.job_id, job.format.object_extension());
-    upload(r2, &object_key, artifact).await?;
+    upload(r2, &object_key, artifact, timings).await?;
 
+    timings.phase = "done";
     Ok(format!("{public_url}/{object_key}"))
 }
 
 /// Upload the artifact as a multipart as it is serialized, applying backpressure so at most
 /// [`UPLOAD_CONCURRENCY`] parts are in flight. On failure the multipart is aborted so R2
 /// does not retain orphaned parts.
-async fn upload(r2: &AmazonS3, object_key: &str, mut artifact: ArtifactStream) -> APIResult<()> {
+async fn upload(
+    r2: &AmazonS3,
+    object_key: &str,
+    mut artifact: ArtifactStream,
+    timings: &mut PhaseTimings,
+) -> APIResult<()> {
+    timings.phase = "query";
+    let started = Instant::now();
     let upload = r2.put_multipart(&Path::from(object_key)).await?;
     let mut writer = WriteMultipart::new_with_chunk_size(upload, UPLOAD_CHUNK_SIZE);
 
     while let Some(chunk) = artifact.chunks.recv().await {
+        let t = Instant::now();
         if let Err(e) = writer.wait_for_capacity(UPLOAD_CONCURRENCY).await {
+            timings.phase = "upload";
             let _ = writer.abort().await;
             return Err(e.into());
         }
+        timings.upload_wait_ms += millis(t);
+        timings.artifact_bytes += chunk.len() as u64;
+        timings.upload_parts += 1;
         writer.put(chunk);
     }
 
@@ -200,7 +285,11 @@ async fn upload(r2: &AmazonS3, object_key: &str, mut artifact: ArtifactStream) -
         let _ = writer.abort().await;
         return Err(e);
     }
+    timings.query_ms = millis(started);
 
+    timings.phase = "upload";
+    let t = Instant::now();
     writer.finish().await?;
+    timings.upload_tail_ms = millis(t);
     Ok(())
 }
