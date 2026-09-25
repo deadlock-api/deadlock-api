@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { Ability } from "deadlock_api_client";
 import { motion } from "framer-motion";
 import { Volume2, VolumeX } from "lucide-react";
-import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type RefObject, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { PlayButton } from "~/components/domain/minigames/PlayButton";
 import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
@@ -17,6 +17,7 @@ import { Field } from "~/components/ui/field";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { Slider } from "~/components/ui/slider";
 import { Stack } from "~/components/ui/stack";
+import { Text } from "~/components/ui/text";
 import { useAbilities, useHeroes, useSounds, puzzleLoadError } from "~/lib/deadlockdle/queries";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { hasDisplayName } from "~/lib/deadlockdle/trivia-questions";
@@ -203,9 +204,43 @@ function startProgressLoop(
 
 const DEFAULT_VOLUME = 0.7;
 
+/**
+ * The clip is fetched whole and handed to the audio element as a blob URL. Streamed straight from the bucket, iOS
+ * Safari could leave `play()` pending forever on its ranged requests: no sound, no `ended`, no error, and the button
+ * stuck on "playing". A failed fetch falls back to the bucket URL, so the element can still try on its own.
+ */
+function useClipSource(url: string | null): string | undefined {
+  const [clip, setClip] = useState<{ url: string; src: string } | null>(null);
+
+  useEffect(() => {
+    if (!url) return;
+    const controller = new AbortController();
+    let objectUrl: string | null = null;
+    const load = async () => {
+      const res = await fetch(url, { signal: controller.signal });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      if (controller.signal.aborted) return;
+      objectUrl = URL.createObjectURL(blob);
+      setClip({ url, src: objectUrl });
+    };
+    load().catch(() => {
+      if (!controller.signal.aborted) setClip({ url, src: url });
+    });
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [url]);
+
+  return clip && clip.url === url ? clip.src : undefined;
+}
+
 function useAudioPlayer(url: string | null) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const src = useClipSource(url);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [playFailed, setPlayFailed] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   // The saved level loads after hydration: read during the first render, it differed from the server's default.
@@ -223,6 +258,7 @@ function useAudioPlayer(url: string | null) {
   if (prevUrl !== url) {
     setPrevUrl(url);
     setIsPlaying(false);
+    setPlayFailed(false);
     setProgress(0);
     setDuration(0);
   }
@@ -256,26 +292,43 @@ function useAudioPlayer(url: string | null) {
   }, []);
 
   // The clips last a second or two, so every press plays from the start: a press while playing means "again".
+  // The button follows the element's own events rather than the press, so a clip that never starts cannot leave it
+  // on "playing".
   const play = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    stopProgressLoop();
+    setPlayFailed(false);
     audio.volume = volume;
-    audio.currentTime = 0;
-    setIsPlaying(true);
-    startProgressLoop(audioRef, animRef, setProgress);
-    audio.play().catch(() => {
-      setIsPlaying(false);
-      stopProgressLoop();
+    if (audio.readyState > HTMLMediaElement.HAVE_NOTHING) audio.currentTime = 0;
+    audio.play().catch((error: unknown) => {
+      // A press during a replay aborts the previous play() call; that is not a failure.
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setPlayFailed(true);
     });
-  }, [volume, stopProgressLoop]);
+  }, [volume]);
 
-  const handleEnded = useCallback(() => {
+  const handlePlaying = useCallback(() => {
+    setIsPlaying(true);
+    setPlayFailed(false);
+    stopProgressLoop();
+    startProgressLoop(audioRef, animRef, setProgress);
+  }, [stopProgressLoop]);
+
+  const handleStopped = useCallback(() => {
     setIsPlaying(false);
-    setProgress(0);
     stopProgressLoop();
   }, [stopProgressLoop]);
+
+  const handleEnded = useCallback(() => {
+    handleStopped();
+    setProgress(0);
+  }, [handleStopped]);
+
+  const handleError = useCallback(() => {
+    handleStopped();
+    setPlayFailed(true);
+  }, [handleStopped]);
 
   const handleLoadedMetadata = useCallback(() => {
     if (audioRef.current) {
@@ -290,15 +343,22 @@ function useAudioPlayer(url: string | null) {
 
   return {
     audioRef,
+    src,
     isPlaying,
+    playFailed,
     progress,
     duration,
     volume,
     changeVolume,
     toggleMute,
     play,
-    handleEnded,
-    handleLoadedMetadata,
+    audioEvents: {
+      onPlaying: handlePlaying,
+      onPause: handleStopped,
+      onEnded: handleEnded,
+      onError: handleError,
+      onLoadedMetadata: handleLoadedMetadata,
+    },
   };
 }
 
@@ -317,6 +377,7 @@ function GuessSound() {
   );
 
   const [shakeKey, setShakeKey] = useState(0);
+  const playErrorId = useId();
   const [feedbackType, showFeedback] = useGuessFeedback();
 
   const playableHeroes = useMemo(() => (heroes ? filterPlayableHeroes(heroes) : []), [heroes]);
@@ -352,15 +413,16 @@ function GuessSound() {
 
   const {
     audioRef,
+    src: clipSrc,
     isPlaying,
+    playFailed,
     progress,
     duration,
     volume,
     changeVolume,
     toggleMute,
     play,
-    handleEnded,
-    handleLoadedMetadata,
+    audioEvents,
   } = useAudioPlayer(dailySound?.url ?? null);
 
   const hints = useMemo(() => {
@@ -462,14 +524,7 @@ function GuessSound() {
       {/* Outside the shaking wrapper: its key changes on every wrong guess, which would swap in a new, paused
           element while the old one keeps playing and the progress bar freezes. */}
       {/* eslint-disable-next-line jsx-a11y/media-has-caption -- Game sound effect used as puzzle content */}
-      <audio
-        ref={audioRef}
-        src={dailySound.url}
-        preload="auto"
-        aria-label="Ability sound clip"
-        onEnded={handleEnded}
-        onLoadedMetadata={handleLoadedMetadata}
-      >
+      <audio ref={audioRef} src={clipSrc} preload="auto" aria-label="Ability sound clip" {...audioEvents}>
         <track kind="captions" />
       </audio>
 
@@ -484,8 +539,18 @@ function GuessSound() {
           label="sound"
           playingAction="replay"
           onClick={play}
+          // Until the clip is fetched there is nothing to play; the fetch is a few kilobytes.
+          disabled={!clipSrc}
+          aria-busy={!clipSrc}
+          aria-describedby={playFailed ? playErrorId : undefined}
           className="cursor-target size-16 sm:size-20 md:size-24"
         />
+
+        {playFailed && (
+          <Text as="p" id={playErrorId} variant="caption" tone="negative" align="center">
+            The sound didn&apos;t play. Check that your device isn&apos;t muted and tap play again.
+          </Text>
+        )}
 
         <Stack gap={1.5} className="w-full max-w-xs">
           <ProgressBar value={progress} />
