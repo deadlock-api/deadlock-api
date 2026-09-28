@@ -160,8 +160,9 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             <PerformanceTrendPanel players={players} histories={histories} />
           </Grid>
           {showSharedHeroes && <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />}
-          <ItemPreferencesPanel players={players} filters={filters} />
           <PercentileComparison players={players} filters={filters} />
+          {/* Last on the page: it hides itself when nobody has items, and nothing below it moves. */}
+          <ItemPreferencesPanel players={players} filters={filters} />
         </>
       )}
     </Stack>

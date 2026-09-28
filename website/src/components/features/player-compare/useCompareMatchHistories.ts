@@ -4,7 +4,7 @@ import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { useCallback } from "react";
 
 import { type MatchMode, modeFromParams } from "~/lib/game-mode";
-import { filterMatches } from "~/lib/tracker/compute";
+import { filterMatches, rankHistoryPoints } from "~/lib/tracker/compute";
 import type { CompareFilters } from "~/queries/player-compare-queries";
 import { trackerMatchHistoryQueryOptions } from "~/queries/tracker-queries";
 
@@ -15,6 +15,8 @@ export interface CompareMatchHistory {
    * the player, not to one hero. Undefined while loading or after a failure.
    */
   matches: PlayerMatchHistoryEntry[] | undefined;
+  /** Divisions gained (or lost) from the first to the last ranked match in range; null without two of them. */
+  rankClimb: number | null;
   isPending: boolean;
   isError: boolean;
   /** The failure is the API refusing a protected (private) account: retrying will not help. */
@@ -45,11 +47,14 @@ export function useCompareMatchHistories(
       const ordered = ids === "" ? [] : ids.split(",").map(Number);
       return ordered.map((accountId, index) => {
         const query = queries[index];
+        const matches = query?.data
+          ? filterMatches(query.data, { mode, heroId: null, minUnixTimestamp, maxUnixTimestamp, result: "all" })
+          : undefined;
+        const ranked = matches ? rankHistoryPoints(matches) : [];
         return {
           accountId,
-          matches: query?.data
-            ? filterMatches(query.data, { mode, heroId: null, minUnixTimestamp, maxUnixTimestamp, result: "all" })
-            : undefined,
+          matches,
+          rankClimb: ranked.length >= 2 ? ranked.at(-1)!.linear - ranked[0].linear : null,
           isPending: query?.isPending ?? true,
           isError: (query?.isError ?? false) && !query?.data,
           isPrivate: isAxiosError(query?.error) && query.error.response?.status === 403,

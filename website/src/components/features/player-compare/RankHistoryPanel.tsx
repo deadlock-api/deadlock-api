@@ -80,7 +80,7 @@ export function RankHistoryPanel({
             title="No ranks in this mode"
             description={`${mode === "street_brawl" ? "Street Brawl" : "Unranked"} matches do not move a player's rank. Switch the mode to Ranked or All to see how the ranks moved.`}
           />
-        ) : histories.some((history) => history.isError) ? (
+        ) : histories.length > 0 && histories.every((history) => history.isError) ? (
           <ChartError
             label={LABEL}
             onRetry={() => {

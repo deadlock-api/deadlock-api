@@ -11,6 +11,7 @@ import type {
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
+import { FAVORITE_MIN_MATCHES } from "~/lib/compare-items";
 import type { CompareFilterSearch } from "~/lib/compare-share";
 import {
   DEFAULT_MATCH_MODE,
@@ -162,8 +163,10 @@ export function compareItemStatsParams(accountId: number, filters: CompareFilter
     accountId,
     gameMode: filters.gameMode,
     matchMode: filters.matchMode,
-    heroId: filters.heroId ?? undefined,
+    heroIds: filters.heroId != null ? String(filters.heroId) : undefined,
     minUnixTimestamp: filters.minUnixTimestamp ?? 0,
     maxUnixTimestamp: filters.maxUnixTimestamp,
+    // The API keeps items bought in 20+ matches by default; the panel draws its own, lower line.
+    minMatches: FAVORITE_MIN_MATCHES,
   };
 }

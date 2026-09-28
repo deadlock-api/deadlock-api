@@ -136,7 +136,8 @@ export function TogetherAgainstPanel({
   const nameOf = (accountId: number) => byId.get(accountId)?.name ?? `Player ${accountId}`;
   const neverMetLine = `Never met: ${neverMet.map((pair) => `${nameOf(pair.a)} & ${nameOf(pair.b)}`).join(", ")}`;
   // Only there when it has something to show: it sits last in its column, so appearing once loaded moves nothing.
-  if (loading || met.length === 0) return null;
+  // A failed history still shows, with its retry.
+  if (loading || (met.length === 0 && failed.length === 0)) return null;
 
   return (
     <Panel>
@@ -145,7 +146,7 @@ export function TogetherAgainstPanel({
         const player = byId.get(history.accountId);
         return player ? <HistoryError key={history.accountId} player={player} history={history} /> : null;
       })}
-      {
+      {met.length > 0 && (
         <Table density="dense" className="tabular-nums">
           <TableHeader tone="muted">
             <TableRow>
@@ -164,7 +165,7 @@ export function TogetherAgainstPanel({
             })}
           </TableBody>
         </Table>
-      }
+      )}
       {neverMet.length > 0 && (
         // Two lines at most: with five players the list runs long; the full list is in the title.
         <PanelFooter className="line-clamp-2" title={neverMetLine}>

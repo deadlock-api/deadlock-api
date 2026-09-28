@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { HeroStats, PlayerMatchHistoryEntry } from "deadlock_api_client";
+import type { HeroStats } from "deadlock_api_client";
 import { CrownIcon, XIcon } from "lucide-react";
 import { useRef } from "react";
 
@@ -25,7 +25,7 @@ import { formatPercent } from "~/lib/format";
 import { MAX_COMPARE_PLAYERS, scoreComparison } from "~/lib/player-compare";
 import { formatPlayerMetricValue } from "~/lib/player-metrics";
 import { badgeLabel } from "~/lib/rank-utils";
-import { rankHistoryPoints, recentForm } from "~/lib/tracker/compute";
+import { recentForm } from "~/lib/tracker/compute";
 import type { CompareFilters } from "~/queries/player-compare-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -35,13 +35,6 @@ import type { CompareMatchHistory } from "./useCompareMatchHistories";
 
 const TOP_HEROES = 3;
 
-/** Divisions gained (or lost) from the first to the last ranked match of a history; null without two of them. */
-function rankClimb(matches: readonly PlayerMatchHistoryEntry[]): number | null {
-  const points = rankHistoryPoints([...matches]);
-  const first = points[0];
-  const last = points.at(-1);
-  return first && last && points.length >= 2 ? last.linear - first.linear : null;
-}
 const FORM_LENGTH = 10;
 
 /** A player's most played heroes on the filters, most played first. */
@@ -117,7 +110,7 @@ export function PlayerCards({
             const aggregate = player.aggregate;
             const leads = settled && leaders.includes(index);
             const history = histories[index];
-            const climb = history?.matches ? rankClimb(history.matches) : null;
+            const climb = history?.rankClimb ?? null;
             // On the hero's filter, the last matches on that hero.
             const form = history?.matches
               ? recentForm(
@@ -154,18 +147,16 @@ export function PlayerCards({
                                       {badgeLabel(ranks, aggregate.rankBadge)}
                                     </span>
                                     {/* Who is climbing: the rank's move over the page's dates, in divisions. */}
-                                    <Delta
-                                      value={climb}
-                                      format="number"
-                                      digits={0}
-                                      sign="arrow"
-                                      unit=""
-                                      title={
-                                        climb == null
-                                          ? undefined
-                                          : `${climb > 0 ? "+" : ""}${climb} divisions on these dates`
-                                      }
-                                    />
+                                    {climb != null && (
+                                      <Delta
+                                        value={climb}
+                                        format="number"
+                                        digits={0}
+                                        sign="arrow"
+                                        unit=""
+                                        title={`${climb > 0 ? "+" : ""}${climb} divisions on these dates`}
+                                      />
+                                    )}
                                   </span>
                                 </Inline>
                               ) : aggregate?.rankBadge === undefined ? (

@@ -76,7 +76,7 @@ export function PerformanceTrendPanel({
       </PanelHeader>
       <PanelBody size="sm">
         <Stack gap={2}>
-          {histories.some((history) => history.isError) ? (
+          {histories.length > 0 && histories.every((history) => history.isError) ? (
             <ChartError
               label={LABEL}
               onRetry={() => {
