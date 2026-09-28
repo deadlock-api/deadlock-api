@@ -1,6 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Crosshair, Ear, HelpCircle, Puzzle, ShoppingBag, Swords } from "lucide-react";
+import {
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Crosshair,
+  Ear,
+  HelpCircle,
+  Puzzle,
+  ShoppingBag,
+  Swords,
+} from "lucide-react";
 import { useMemo } from "react";
 
 import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
@@ -94,6 +104,15 @@ const GAMES: {
     icon: HelpCircle,
     path: "/games/deadlockdle/trivia",
     shareLabel: "Trivia",
+  },
+  {
+    mode: "higher-lower",
+    title: "Higher or Lower",
+    description:
+      "Guess if a hidden stat is higher or lower than the one shown. 10 rounds of last week's win rates, matchups, souls and ability orders.",
+    icon: ArrowUpDown,
+    path: "/games/deadlockdle/higher-lower",
+    shareLabel: "Higher or Lower",
   },
 ];
 

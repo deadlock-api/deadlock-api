@@ -8,7 +8,7 @@ import { cn } from "~/lib/utils";
 
 const buttonVariants = cva(
   [
-    "inline-flex shrink-0 items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap transition-all",
+    "inline-flex shrink-0 items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow,opacity,transform]",
     FOCUS_RING_BORDER,
     // Pressed is a nudge rather than a color, so it reads the same on every variant and next to a color-blind eye.
     "active:translate-y-px aria-disabled:active:translate-y-0",
@@ -72,6 +72,8 @@ const buttonVariants = cva(
         /** `sm` with the inset of its icon: for a list of rows whose content (an avatar, a name) brings its own edge. */
         "sm-tight": "h-8 gap-1.5 px-1.5 text-sm",
         lg: "h-10 px-6 text-sm has-[>svg]:px-4",
+        /** The primary action of a screen used by thumb: 44px high, the touch target a main action needs. */
+        touch: "h-11 px-6 text-sm has-[>svg]:px-4",
         icon: "size-9 text-sm",
         "icon-xs": "size-6 text-sm [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-8 text-sm",

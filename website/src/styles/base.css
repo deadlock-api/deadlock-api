@@ -16,6 +16,13 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+
+  /* A tabindex="-1" element is not a control: a page moves focus to it (a new question, a results panel) so a screen
+     reader reads on from there. It draws no focus ring, which on a whole panel read as an error frame; every control
+     keeps its own. */
+  [tabindex="-1"]:focus {
+    outline: none;
+  }
 }
 
 /* Users who ask the OS to reduce motion get no transitions or animations. Durations that come from the motion
@@ -40,5 +47,13 @@
       scroll-padding-top: calc(var(--app-bar-height) + var(--spacing) * 2);
       scroll-padding-bottom: var(--floating-control-clearance);
     }
+  }
+}
+
+/* A scrollbar that appears, when a page grows past the viewport, must never shift the layout sideways: the gutter is
+   always reserved. */
+@layer base {
+  html {
+    scrollbar-gutter: stable;
   }
 }

@@ -48,7 +48,9 @@ export function GuessFeedback({ type, triggerKey = 0, message }: GuessFeedbackPr
             initial={{ opacity: 1 }}
             animate={{ opacity: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="pointer-events-none fixed inset-0 z-50"
+            // Clipped: the label scales past the viewport, and Chrome counts a fixed box's overflow as page height,
+            // so without it a scrollbar flashed in for the length of the animation.
+            className="pointer-events-none fixed inset-0 z-50 overflow-hidden"
           >
             <StateFlash state={type} />
             {/* Center label */}

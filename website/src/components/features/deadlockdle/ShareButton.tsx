@@ -10,6 +10,7 @@ const MODE_LABELS: Record<GameMode, string> = {
   "guess-ability": "Ability",
   "item-stats": "Stats",
   trivia: "Trivia",
+  "higher-lower": "Higher or Lower",
 };
 
 export function generateShareText(
