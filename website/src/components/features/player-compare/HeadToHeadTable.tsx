@@ -66,7 +66,7 @@ export function HeadToHeadTable({
                   {player.profileLoading ? (
                     <Skeleton className="h-4 w-20" />
                   ) : (
-                    <span className="max-w-20 truncate @md/table:max-w-32" title={player.name}>
+                    <span className="max-w-14 truncate @md/table:max-w-32" title={player.name}>
                       {player.name}
                     </span>
                   )}
@@ -88,7 +88,9 @@ export function HeadToHeadTable({
             <TableBody key={group}>
               <TableRow>
                 <TableHead scope="rowgroup" data-pinned>
-                  <Text variant="label">{group}</Text>
+                  <Text variant="label" as="div" className="max-w-24 @md/table:max-w-none">
+                    {group}
+                  </Text>
                 </TableHead>
                 {players.map((player, index) => (
                   <TableCell key={player.accountId} className="text-end">
@@ -105,11 +107,11 @@ export function HeadToHeadTable({
                 const winners = winnersOf(stat);
                 return (
                   <TableRow key={stat.key}>
-                    <TableCell
-                      data-pinned
-                      className="whitespace-normal text-muted-foreground @md/table:whitespace-nowrap"
-                    >
-                      {stat.label}
+                    <TableCell data-pinned className="text-muted-foreground">
+                      {/* A table cell ignores max-width: the label's own box wraps it in a narrow table. */}
+                      <span className="block max-w-24 whitespace-normal @md/table:max-w-none @md/table:whitespace-nowrap">
+                        {stat.label}
+                      </span>
                       {stat.polarity === "lower" && <span className="sr-only"> (lower is better)</span>}
                     </TableCell>
                     {players.map((player, index) => {

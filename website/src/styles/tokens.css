@@ -273,6 +273,8 @@
   /* Room for two draft slots side by side at the touch-target size (2 x 2.75rem + the gap): a narrower lane card
      stacks its pair. */
   --container-slot-pair: 6rem;
+  /* The width at which a player card fits three headline stats in a row rather than two. */
+  --container-stat-trio: 14rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { HeroStats } from "deadlock_api_client";
+import type { HeroStats, PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { CrownIcon, XIcon } from "lucide-react";
 import { useRef } from "react";
 
@@ -11,6 +11,7 @@ import { PlayerSearch } from "~/components/domain/player/PlayerSearch";
 import { SteamAvatar } from "~/components/domain/player/SteamAvatar";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
+import { Delta } from "~/components/ui/delta";
 import { Grid } from "~/components/ui/grid";
 import { useReorder } from "~/components/ui/hooks/use-reorder";
 import { NoValue } from "~/components/ui/no-value";
@@ -24,7 +25,7 @@ import { formatPercent } from "~/lib/format";
 import { MAX_COMPARE_PLAYERS, scoreComparison } from "~/lib/player-compare";
 import { formatPlayerMetricValue } from "~/lib/player-metrics";
 import { badgeLabel } from "~/lib/rank-utils";
-import { recentForm } from "~/lib/tracker/compute";
+import { rankHistoryPoints, recentForm } from "~/lib/tracker/compute";
 import type { CompareFilters } from "~/queries/player-compare-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -33,6 +34,14 @@ import type { ComparedPlayer } from "./types";
 import type { CompareMatchHistory } from "./useCompareMatchHistories";
 
 const TOP_HEROES = 3;
+
+/** Divisions gained (or lost) from the first to the last ranked match of a history; null without two of them. */
+function rankClimb(matches: readonly PlayerMatchHistoryEntry[]): number | null {
+  const points = rankHistoryPoints([...matches]);
+  const first = points[0];
+  const last = points.at(-1);
+  return first && last && points.length >= 2 ? last.linear - first.linear : null;
+}
 const FORM_LENGTH = 10;
 
 /** A player's most played heroes on the filters, most played first. */
@@ -102,12 +111,13 @@ export function PlayerCards({
 
   return (
     <>
-      <Grid columns={{ base: 1, sm: 2, lg: Math.min(slots, 3) as 2 | 3, xl: slots }} gap={3} asChild>
+      <Grid columns={{ base: 1, sm: 2, lg: Math.min(slots, 3) as 2 | 3, xl: slots }} gap={2} asChild>
         <ul ref={listRef}>
           {players.map((player, index) => {
             const aggregate = player.aggregate;
             const leads = settled && leaders.includes(index);
             const history = histories[index];
+            const climb = history?.matches ? rankClimb(history.matches) : null;
             // On the hero's filter, the last matches on that hero.
             const form = history?.matches
               ? recentForm(
@@ -132,16 +142,30 @@ export function PlayerCards({
                               <PlayerLink accountId={player.accountId}>{player.name}</PlayerLink>
                             </Text>
                           )}
-                          {/* Rank and playstyle on one line; the playstyle wraps under it when the card is narrow. */}
-                          <Inline gap={1.5} className="min-w-0">
-                            <Text variant="caption" tone="muted" className="truncate">
+                          {/* The rank (with its move on these dates), then the playstyle. */}
+                          <Stack gap={0} className="min-w-0">
+                            <Text variant="caption" tone="muted">
                               {aggregate?.rankBadge ? (
-                                <Inline gap={1} wrap="nowrap" asChild>
+                                // The move wraps under the rank in a narrow card rather than being cut off.
+                                <Inline gap={1} asChild>
                                   <span>
                                     <BadgeImage badge={aggregate.rankBadge} ranks={ranks} size="inline" alt="" />
-                                    <span className="sr-only @3xs:not-sr-only">
+                                    <span className="sr-only @stat-trio:not-sr-only @stat-trio:whitespace-nowrap">
                                       {badgeLabel(ranks, aggregate.rankBadge)}
                                     </span>
+                                    {/* Who is climbing: the rank's move over the page's dates, in divisions. */}
+                                    <Delta
+                                      value={climb}
+                                      format="number"
+                                      digits={0}
+                                      sign="arrow"
+                                      unit=""
+                                      title={
+                                        climb == null
+                                          ? undefined
+                                          : `${climb > 0 ? "+" : ""}${climb} divisions on these dates`
+                                      }
+                                    />
                                   </span>
                                 </Inline>
                               ) : aggregate?.rankBadge === undefined ? (
@@ -155,7 +179,7 @@ export function PlayerCards({
                                 {player.playstyle}
                               </Text>
                             )}
-                          </Inline>
+                          </Stack>
                         </Stack>
                         <Inline gap={0.5} wrap="nowrap">
                           {players.length >= 2 && (
@@ -184,7 +208,7 @@ export function PlayerCards({
                       {aggregate === null ? (
                         <Text tone="muted">No matches on these filters</Text>
                       ) : (
-                        <StatGroup variant="plain" size="sm" className="grid-cols-2 gap-2 @3xs:grid-cols-3">
+                        <StatGroup variant="plain" size="sm" className="grid-cols-2 gap-2 @stat-trio:grid-cols-3">
                           <Stat
                             label={settled && players.length >= 2 ? `Won of ${scored.length}` : "Stats won"}
                             value={
@@ -211,7 +235,7 @@ export function PlayerCards({
                           />
                           {/* A narrow card leaves the KDA to the table below. */}
                           <Stat
-                            className="hidden @3xs:flex"
+                            className="hidden @stat-trio:flex"
                             label="KDA"
                             value={
                               aggregate ? (
