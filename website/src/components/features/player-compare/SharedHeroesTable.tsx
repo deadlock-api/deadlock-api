@@ -25,10 +25,13 @@ export function SharedHeroesTable({
   players,
   rows,
   loading,
+  className,
 }: {
   players: ComparedPlayer[];
   rows: readonly HeroStats[];
   loading: boolean;
+  /** Layout from the parent (grid placement). */
+  className?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const accountIds = players.map((player) => player.accountId);
@@ -39,7 +42,7 @@ export function SharedHeroesTable({
   if (!pending && heroes.length === 0) return null;
 
   return (
-    <Panel>
+    <Panel className={className}>
       <PanelHeader size="sm" title="Shared heroes" />
       {/* A player just added has no rows yet: the old answer's "nothing in common" is not a verdict. */}
       {pending ? (
