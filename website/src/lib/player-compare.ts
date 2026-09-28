@@ -133,8 +133,8 @@ export type StatPolarity = "higher" | "lower" | "none";
 
 export type CompareStatKey = keyof PlayerAggregate;
 
-/** The sections of the head-to-head table, in order. */
-export const COMPARE_STAT_GROUPS = ["Overview", "Combat", "Economy", "Objectives & support"] as const;
+/** The sections of the head-to-head table, in order. Activity is the sample (never won); the rest are scored. */
+export const COMPARE_STAT_GROUPS = ["Activity", "Results", "Combat", "Economy", "Objectives & support"] as const;
 export type CompareStatGroup = (typeof COMPARE_STAT_GROUPS)[number];
 
 export interface CompareStat {
@@ -148,14 +148,14 @@ export interface CompareStat {
 
 /** Every stat of a comparison, in table order: grouped, and within a group the ones people quote first. */
 export const COMPARE_STATS: readonly CompareStat[] = [
-  { key: "matches", label: "Matches", format: "integer", polarity: "none", group: "Overview" },
-  { key: "heroesPlayed", label: "Heroes played", format: "integer", polarity: "none", group: "Overview" },
-  { key: "timePlayed", label: "Time played", format: "hours", polarity: "none", group: "Overview" },
-  { key: "avgMatchSeconds", label: "Average match", format: "duration", polarity: "none", group: "Overview" },
-  { key: "rankBadge", label: "Current rank", format: "rank", polarity: "higher", group: "Overview" },
-  { key: "winRate", label: "Win rate", format: "percent", polarity: "higher", group: "Overview" },
-  { key: "mvpRate", label: "MVP rate", format: "percent", polarity: "higher", group: "Overview" },
-  { key: "top3Rate", label: "Top 3 rate", format: "percent", polarity: "higher", group: "Overview" },
+  { key: "matches", label: "Matches", format: "integer", polarity: "none", group: "Activity" },
+  { key: "heroesPlayed", label: "Heroes played", format: "integer", polarity: "none", group: "Activity" },
+  { key: "timePlayed", label: "Time played", format: "hours", polarity: "none", group: "Activity" },
+  { key: "avgMatchSeconds", label: "Average match", format: "duration", polarity: "none", group: "Activity" },
+  { key: "rankBadge", label: "Current rank", format: "rank", polarity: "higher", group: "Results" },
+  { key: "winRate", label: "Win rate", format: "percent", polarity: "higher", group: "Results" },
+  { key: "mvpRate", label: "MVP rate", format: "percent", polarity: "higher", group: "Results" },
+  { key: "top3Rate", label: "Top 3 rate", format: "percent", polarity: "higher", group: "Results" },
   { key: "kda", label: "KDA", format: "decimal2", polarity: "higher", group: "Combat" },
   { key: "kills", label: "Kills / match", format: "decimal1", polarity: "higher", group: "Combat" },
   { key: "deaths", label: "Deaths / match", format: "decimal1", polarity: "lower", group: "Combat" },
