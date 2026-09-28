@@ -13,19 +13,28 @@ import type { ComparedPlayer } from "./types";
 export function PlayerColumnHead({
   player,
   crownSlot = true,
+  align = "end",
 }: {
   player: ComparedPlayer;
+  /** `start`: the name from the column's start edge, where it has the column's width to itself before it truncates. */
+  align?: "start" | "end";
   /** The column's values are `RowValue`s, which keep a crown's slot after them: the name keeps one too. */
   crownSlot?: boolean;
 }) {
   return (
-    <TableHead className="text-end">
-      <Inline gap={1} wrap="nowrap" justify="end">
+    <TableHead className={align === "end" ? "text-end" : undefined}>
+      <Inline gap={1} wrap="nowrap" justify={align}>
         <StatusDot color={player.color} />
         {player.profileLoading ? (
           <Skeleton className="h-4 w-20" />
         ) : (
-          <span className="max-w-14 truncate @md/table:max-w-24 @2xl/table:max-w-none" title={player.name}>
+          <span
+            className={cn(
+              "max-w-14 truncate",
+              align === "end" ? "@md/table:max-w-24 @2xl/table:max-w-none" : "@md/table:max-w-none",
+            )}
+            title={player.name}
+          >
             {player.name}
           </span>
         )}
