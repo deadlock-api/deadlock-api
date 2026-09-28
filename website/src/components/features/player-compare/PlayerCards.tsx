@@ -313,7 +313,7 @@ export function PlayerCards({
 
                           {/* Without matches on the filters there are no heroes or results to show. */}
                           {aggregate !== null && (
-                            <Inline gap={3} justify="between" align="end">
+                            <Inline gap={3} justify="between" align="start">
                               {/* On one hero's filter every player's most played is that hero. */}
                               {filters.heroId == null && (
                                 <Stack gap={1}>
@@ -342,15 +342,17 @@ export function PlayerCards({
                                 <Text variant="caption" tone="muted">
                                   Last {FORM_LENGTH}
                                 </Text>
-                                {history?.isError ? (
-                                  <NoValue label="Match history unavailable" />
-                                ) : form === undefined ? (
-                                  <Skeleton className="h-3 w-24" />
-                                ) : form.length === 0 ? (
-                                  <NoValue label="No matches" />
-                                ) : (
-                                  <FormDots form={form} />
-                                )}
+                                <Inline wrap="nowrap" justify="end" className="h-7">
+                                  {history?.isError ? (
+                                    <NoValue label="Match history unavailable" />
+                                  ) : form === undefined ? (
+                                    <Skeleton className="h-3 w-24" />
+                                  ) : form.length === 0 ? (
+                                    <NoValue label="No matches" />
+                                  ) : (
+                                    <FormDots form={form} />
+                                  )}
+                                </Inline>
                               </Stack>
                             </Inline>
                           )}
