@@ -5,14 +5,13 @@ import { compareFilterSearch } from "~/lib/compare-share";
 import { MODE_CONFIG } from "~/lib/game-mode";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import {
-  aggregateHeroStats,
   COMPARE_STATS,
   compareColorIndexes,
   compareStatWinners,
   type CompareStatKey,
-  type PlayerAggregate,
   parseCompareIds,
   scoreComparison,
+  settledAggregates,
 } from "~/lib/player-compare";
 import { formatPlayerMetricValue } from "~/lib/player-metrics";
 import { defaultUnixRange } from "~/lib/seasons";
@@ -124,16 +123,11 @@ export async function loadCompareCardData(search: URLSearchParams): Promise<Comp
   const badges = accountIds.map(
     (accountId) => playerRanks?.find((rank) => rank.account_id === accountId)?.badge || null,
   );
-  const aggregates: (PlayerAggregate | null)[] = accountIds.map((accountId, index) => {
-    const aggregate = aggregateHeroStats(rows, accountId);
-    if (!aggregate) return null;
-    return {
-      ...aggregate,
-      rankBadge: badges[index],
-      healingPerMin: metrics[index]?.healing_per_min?.avg ?? null,
-      healPreventedPerMatch: metrics[index]?.heal_prevented?.avg ?? null,
-    };
-  });
+  const aggregates = settledAggregates(
+    accountIds,
+    rows,
+    accountIds.map((_, index) => ({ badge: badges[index], metrics: metrics[index] })),
+  );
   const { scored, tally, leaders } = scoreComparison(aggregates);
 
   // The page's colors: each player's by account id, not by column.

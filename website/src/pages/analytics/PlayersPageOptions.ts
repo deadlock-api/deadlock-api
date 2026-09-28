@@ -3,7 +3,7 @@ import { lazyRouteComponent } from "@tanstack/react-router";
 import { analyticsView, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { compareCardUrl, compareFilterSearch, type CompareFilterSearch, compareShareParams } from "~/lib/compare-share";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
-import { parseCompareIds, SCORED_STAT_COUNT } from "~/lib/player-compare";
+import { comparisonVerdict, parseCompareIds, SCORED_STAT_COUNT, settledAggregates } from "~/lib/player-compare";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultUnixRange } from "~/lib/seasons";
 import { pageTitle, seo, SITE_URL } from "~/lib/seo";
@@ -99,11 +99,13 @@ export const comparePageOptions = {
       compareQueries,
       { steamProfileQueryOptions, trackerHeroStatsQueryOptions },
       { playerScoreboardQueryOptions },
+      { playerStatsMetricsQueryOptions },
     ] = await Promise.all([
       import("~/queries/asset-queries"),
       import("~/queries/player-compare-queries"),
       import("~/queries/tracker-queries"),
       import("~/queries/player-scoreboard-query"),
+      import("~/queries/player-stats-metrics-query"),
     ]);
     const { filters } = await compareQueries.resolveCompareFilters(deps.filters, async () =>
       defaultUnixRange(await loadSeasons(queryClient), preferences.dateFilter),
@@ -117,10 +119,10 @@ export const comparePageOptions = {
           staleTime: "static",
         }),
       );
-      return { names: [], range: undefined };
+      return { names: [], range: undefined, verdict: null };
     }
-    // One profile query a player, as the page reads them.
-    const [profileList] = await Promise.all([
+    // One profile query a player, as the page reads them; the metrics too, which the head's verdict scores on.
+    const [profileList, ranks, rows, metrics] = await Promise.all([
       Promise.all(
         accountIds.map((id) =>
           prefetchSafe(queryClient.query({ ...steamProfileQueryOptions(id), staleTime: "static" })),
@@ -133,11 +135,37 @@ export const comparePageOptions = {
           staleTime: "static",
         }),
       ),
+      Promise.all(
+        accountIds.map((id) =>
+          prefetchSafe(
+            queryClient.query({
+              ...playerStatsMetricsQueryOptions(compareQueries.compareMetricsParams(filters, id)),
+              staleTime: "static",
+            }),
+          ),
+        ),
+      ),
     ]);
+    const names = accountIds.map((id, index) => profileList[index]?.personaname ?? `Player ${id}`);
+    // Scored as the share card scores it; without the stats there is no verdict rather than a wrong one.
+    const verdict = rows
+      ? comparisonVerdict(
+          names,
+          settledAggregates(
+            accountIds,
+            rows,
+            accountIds.map((id, index) => ({
+              badge: ranks?.find((rank) => rank.account_id === id)?.badge,
+              metrics: metrics[index],
+            })),
+          ),
+        )
+      : null;
 
     // For the page head: a shared link previews as "A vs B", not as the generic tab.
     return {
-      names: accountIds.map((id, index) => profileList[index]?.personaname ?? `Player ${id}`),
+      names,
+      verdict,
       // The dates the page shows, so the preview card counts the same matches when the URL names none (the page
       // falls back to the reader's date preference, the card on its own would fall back to the season).
       range: { minUnixTimestamp: filters.minUnixTimestamp, maxUnixTimestamp: filters.maxUnixTimestamp },
@@ -151,6 +179,8 @@ export const comparePageOptions = {
     loaderData?: {
       names: string[];
       range: { minUnixTimestamp?: number; maxUnixTimestamp?: number } | undefined;
+      /** "A wins 10 of 19 stats against B (5).", when two players have matches. */
+      verdict: string | null;
     };
   }) => {
     const view = analyticsView("players", match.pathname);
@@ -161,7 +191,9 @@ export const comparePageOptions = {
       title: names.length > 0 ? pageTitle(`${names.join(" vs ")}: Deadlock Player Comparison`) : pageTitle(view.title),
       description:
         names.length > 1
-          ? `${names.join(" vs ")}: who wins which stat in Deadlock. Head to head on up to ${SCORED_STAT_COUNT} stats, ranked against everyone.`
+          ? loaderData?.verdict
+            ? `${loaderData.verdict} Deadlock head to head: win rate, KDA, souls, damage and more, ranked against everyone.`
+            : `${names.join(" vs ")}: who wins which stat in Deadlock. Head to head on up to ${SCORED_STAT_COUNT} stats, ranked against everyone.`
           : view.description,
       path,
       // Canonical stays the bare page (one indexed page, not one per pairing); a shared link previews as itself.

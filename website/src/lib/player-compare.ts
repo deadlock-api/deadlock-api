@@ -353,3 +353,56 @@ export function scoreComparison(aggregates: readonly (PlayerAggregate | null | u
       : [];
   return { stats, scored, tally, leaders, settled };
 }
+
+/** The numbers besides the hero stats that a scored comparison reads, per player (a failed lookup is null). */
+export interface CompareExtras {
+  /** The current badge, 0 or null when unranked or unknown. */
+  badge: number | null | undefined;
+  metrics: Record<string, { avg?: number } | undefined> | null | undefined;
+}
+
+/**
+ * Every player's aggregate with the rank and the metrics filled in, as the share card and the page head score them:
+ * nothing is left loading (a missing value is null), so the tally is final. Null for a player without matches.
+ */
+export function settledAggregates(
+  accountIds: readonly number[],
+  rows: readonly HeroStats[],
+  extras: readonly CompareExtras[],
+): (PlayerAggregate | null)[] {
+  return accountIds.map((accountId, index) => {
+    const aggregate = aggregateHeroStats(rows, accountId);
+    if (!aggregate) return null;
+    const { badge, metrics } = extras[index] ?? { badge: null, metrics: null };
+    return {
+      ...aggregate,
+      rankBadge: badge || null,
+      healingPerMin: metrics?.healing_per_min?.avg ?? null,
+      healPreventedPerMatch: metrics?.heal_prevented?.avg ?? null,
+    };
+  });
+}
+
+/**
+ * The comparison's result in one sentence, for a link preview: "PAINT CAT wins 10 of 19 stats against 根性 (5) and
+ * Queasy (4)." Null until two players have matches to score, or when nobody won a stat.
+ */
+export function comparisonVerdict(
+  names: readonly string[],
+  aggregates: readonly (PlayerAggregate | null)[],
+): string | null {
+  const { scored, tally, leaders } = scoreComparison(aggregates);
+  if (leaders.length === 0) return null;
+  const listed = (items: string[]) =>
+    items.length <= 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+  const others = names.flatMap((name, index) =>
+    aggregates[index] !== null && !leaders.includes(index) ? [`${name} (${tally[index]})`] : [],
+  );
+  const lead = tally[leaders[0]];
+  const leaderNames = listed(leaders.map((index) => names[index]));
+  const head =
+    leaders.length === 1
+      ? `${leaderNames} wins ${lead} of ${scored.length} stats`
+      : `${leaderNames} tie at ${lead} of ${scored.length} stats each`;
+  return others.length > 0 ? `${head} against ${listed(others)}.` : `${head}.`;
+}

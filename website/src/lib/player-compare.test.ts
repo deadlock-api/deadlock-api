@@ -7,6 +7,7 @@ import {
   aggregateHeroStats,
   compareColorIndexes,
   compareStatWinners,
+  comparisonVerdict,
   MAX_COMPARE_PLAYERS,
   type PlayerAggregate,
   parseCompareIds,
@@ -253,4 +254,15 @@ test("canonicalCardParams: one spelling per card, whatever else the URL carries"
   );
   assert.equal(params.toString(), "players=3%2C1%2C2&hero=7&date_range=2026-01-01_2026-02-01");
   assert.equal(canonicalCardParams(new URLSearchParams("players=")).toString(), "");
+});
+
+test("comparisonVerdict names the leader and everyone's count", () => {
+  const strong = { ...aggregateHeroStats([row({ matches_played: 10, wins: 8, kills: 90 })], 1)!, rankBadge: 100 };
+  const weak = {
+    ...aggregateHeroStats([row({ account_id: 2, matches_played: 10, wins: 2, kills: 10 })], 2)!,
+    rankBadge: 50,
+  };
+  const verdict = comparisonVerdict(["A", "B", "C"], [strong, weak, null]);
+  assert.match(verdict ?? "", /^A wins \d+ of \d+ stats against B \(\d+\)\.$/);
+  assert.equal(comparisonVerdict(["A", "B"], [strong, null]), null);
 });
