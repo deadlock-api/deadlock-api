@@ -214,8 +214,9 @@ export function PlayerCards({
                             <StatGroup
                               variant="plain"
                               size="sm"
-                              // Each stat as wide as its value, spread across the card: a crowned "12/19" keeps its "/19".
-                              className="grid-cols-2 justify-between gap-2 @stat-trio:grid-cols-[repeat(3,auto)] @md:grid-cols-[repeat(5,auto)]"
+                              // Equal columns, so a stat sits at the same place on every card; one never narrower than its
+                              // value, so a crowned "12/19" keeps its "/19".
+                              className="grid-cols-2 gap-2 @stat-trio:grid-cols-[minmax(max-content,1.5fr)_repeat(2,minmax(max-content,1fr))] @md:grid-cols-[minmax(max-content,1.5fr)_repeat(4,minmax(max-content,1fr))]"
                             >
                               {!contest ? (
                                 // Nothing to win alone: the sample size instead.
