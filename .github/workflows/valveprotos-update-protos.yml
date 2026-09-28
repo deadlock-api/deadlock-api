@@ -1,7 +1,8 @@
 name: Update Protos
 
-# Pulls the latest protos from SteamDatabase/Protobufs into valveprotos/protos.
-# Migrated from the standalone valveprotos-rs repository.
+# Pulls the latest protos from SteamDatabase/Protobufs into valveprotos/protos
+# and opens (or updates) a PR with the changes. Migrated from the standalone
+# valveprotos-rs repository.
 
 on:
   schedule:
@@ -10,14 +11,11 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   update-protos:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        # fetch-protos reads and writes paths relative to the crate root.
-        working-directory: valveprotos
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -31,11 +29,22 @@ jobs:
           rustup component add rustfmt
 
       - name: Run fetch-protos
+        # fetch-protos reads and writes paths relative to the crate root.
+        working-directory: valveprotos
         run: cargo run --locked -p valveprotos --features requests --bin fetch-protos
 
-      - name: Commit and push changes
-        uses: stefanzweifel/git-auto-commit-action@v6
+      - name: Open or update PR
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
-          commit_message: "valveprotos: update protos"
-          file_pattern: 'valveprotos/protos'
-          branch: master
+          # PRs opened with GITHUB_TOKEN don't trigger other workflows, so the PR's
+          # CI only runs when a PAT / app token is provided as PROTOS_PR_TOKEN.
+          token: ${{ secrets.PROTOS_PR_TOKEN || github.token }}
+          add-paths: valveprotos/protos
+          branch: valveprotos/update-protos
+          delete-branch: true
+          commit-message: "valveprotos: update protos"
+          title: "valveprotos: update protos"
+          body: |
+            Latest protos from [SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs), fetched by the scheduled `Update Protos` workflow.
+
+            Merging this rebuilds and deploys api, tools and live-events, since they depend on valveprotos.
