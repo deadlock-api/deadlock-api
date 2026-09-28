@@ -196,3 +196,43 @@ export function recentSharedMatches(histories: readonly SharedMatchHistory[], li
     return { matchId: entry.match_id, startTime: entry.start_time, teams };
   });
 }
+
+/** A hero pairing two players queued as: each one's hero, and how the team did. */
+export interface DuoHeroes {
+  aHero: number;
+  bHero: number;
+  matches: number;
+  wins: number;
+}
+
+/** A pairing played fewer times than this is not a habit. */
+export const MIN_DUO_HEROES_MATCHES = 3;
+
+/**
+ * The hero pairings two players played most on the same team, most played first (then the better record), at most
+ * `limit`, each played at least `minMatches` times.
+ */
+export function duoHeroPairs(
+  aMatches: readonly SharedMatchEntry[],
+  bMatches: readonly SharedMatchEntry[],
+  limit = 3,
+  minMatches = MIN_DUO_HEROES_MATCHES,
+): DuoHeroes[] {
+  const bById = new Map(bMatches.map((entry) => [entry.match_id, entry]));
+  const byPair = new Map<string, DuoHeroes>();
+  const seen = new Set<number>();
+  for (const entry of aMatches) {
+    const other = bById.get(entry.match_id);
+    if (!other || other.player_team !== entry.player_team || seen.has(entry.match_id)) continue;
+    seen.add(entry.match_id);
+    const key = `${entry.hero_id}-${other.hero_id}`;
+    const pair = byPair.get(key) ?? { aHero: entry.hero_id, bHero: other.hero_id, matches: 0, wins: 0 };
+    pair.matches += 1;
+    if (entry.match_result === entry.player_team) pair.wins += 1;
+    byPair.set(key, pair);
+  }
+  return [...byPair.values()]
+    .filter((pair) => pair.matches >= minMatches)
+    .sort((x, y) => y.matches - x.matches || y.wins / y.matches - x.wins / x.matches)
+    .slice(0, limit);
+}

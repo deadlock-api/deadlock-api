@@ -12,6 +12,9 @@ import { day } from "~/dayjs";
 import { useHydrated } from "~/hooks/useHydrated";
 import { formatPercent } from "~/lib/format";
 import {
+  duoHeroPairs,
+  type DuoHeroes,
+  MIN_DUO_HEROES_MATCHES,
   pairMatchCount,
   type PlayerPair,
   pairSynergy,
@@ -26,6 +29,9 @@ import { toneOf } from "~/lib/tone";
 
 import type { ComparedPlayer } from "./types";
 import type { CompareMatchHistory } from "./useCompareMatchHistories";
+
+/** The duo heroes column: only where the table is wide enough to spare it. */
+const DUO_COLUMN = "hidden text-end @2xl/table:table-cell";
 
 function plural(count: number, noun: string): string {
   return `${formatStatValue(count, "integer")} ${count === 1 ? noun : `${noun}es`}`;
@@ -64,11 +70,14 @@ function PairRow({
   pair,
   a,
   b,
+  duos,
   lastMetLabel,
 }: {
   pair: PlayerPair;
   a: ComparedPlayer;
   b: ComparedPlayer;
+  /** The pair's most played hero pairings as teammates. */
+  duos: readonly DuoHeroes[];
   lastMetLabel: (unix: number) => string;
 }) {
   const { together, against } = pair;
@@ -96,7 +105,8 @@ function PairRow({
         <TableCell colSpan={3}>
           <Text tone="muted">Never met</Text>
         </TableCell>
-        {/* The last-met column, which a narrow table hides: the row spans what the header spans. */}
+        {/* The columns a narrow table hides: the row spans what the header spans. */}
+        <TableCell className={DUO_COLUMN} />
         <TableCell className="hidden @md/table:table-cell" />
       </TableRow>
     );
@@ -131,6 +141,24 @@ function PairRow({
             )}
             <span className="sr-only"> win rate together compared with apart</span>
           </>
+        )}
+      </TableCell>
+      <TableCell className={DUO_COLUMN}>
+        {duos.length === 0 ? (
+          <NoValue label="No hero pairing played three times" />
+        ) : (
+          <Stack gap={0.5} align="end">
+            {duos.map((duo) => (
+              <Inline key={`${duo.aHero}-${duo.bHero}`} gap={1} wrap="nowrap" justify="end">
+                <HeroImage heroId={duo.aHero} shape="circle" className="size-5" />
+                <HeroImage heroId={duo.bHero} shape="circle" className="size-5" />
+                <Text variant="caption" tone="muted" numeric="tabular" className="whitespace-nowrap">
+                  {plural(duo.matches, "match")} ·{" "}
+                  <Text tone={toneOf(duo.wins / duo.matches, 0.5)}>{formatPercent(duo.wins / duo.matches, 0)} WR</Text>
+                </Text>
+              </Inline>
+            ))}
+          </Stack>
         )}
       </TableCell>
       <TableCell className="text-end">
@@ -233,6 +261,9 @@ function PairRowSkeleton({ a, b }: { a: ComparedPlayer; b: ComparedPlayer }) {
           <Skeleton className="ms-auto h-4 w-16" />
         </TableCell>
       ))}
+      <TableCell className={DUO_COLUMN}>
+        <Skeleton className="ms-auto h-4 w-24" />
+      </TableCell>
       <TableCell className="hidden text-end @md/table:table-cell">
         <Skeleton className="ms-auto h-4 w-20" />
       </TableCell>
@@ -287,6 +318,7 @@ export function TogetherAgainstPanel({
               <TableHead data-pinned>Players</TableHead>
               <TableHead className="text-end">Together</TableHead>
               <TableHead className="text-end">Synergy</TableHead>
+              <TableHead className={DUO_COLUMN}>Duo heroes</TableHead>
               <TableHead className="text-end">Against</TableHead>
               <TableHead className="hidden text-end @md/table:table-cell">Last met</TableHead>
             </TableRow>
@@ -298,7 +330,22 @@ export function TogetherAgainstPanel({
                   const a = byId.get(pair.a);
                   const b = byId.get(pair.b);
                   if (!a || !b) return null;
-                  return <PairRow key={`${pair.a}-${pair.b}`} pair={pair} a={a} b={b} lastMetLabel={lastMetLabel} />;
+                  const aHistory = histories.find((history) => history.accountId === pair.a);
+                  const bHistory = histories.find((history) => history.accountId === pair.b);
+                  const duos =
+                    pair.together.matches >= MIN_DUO_HEROES_MATCHES && aHistory?.matches && bHistory?.matches
+                      ? duoHeroPairs(aHistory.matches, bHistory.matches)
+                      : [];
+                  return (
+                    <PairRow
+                      key={`${pair.a}-${pair.b}`}
+                      pair={pair}
+                      a={a}
+                      b={b}
+                      duos={duos}
+                      lastMetLabel={lastMetLabel}
+                    />
+                  );
                 })}
           </TableBody>
         </Table>

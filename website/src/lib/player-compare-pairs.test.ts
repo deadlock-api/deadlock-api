@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  duoHeroPairs,
   MIN_SYNERGY_MATCHES,
   type PairMatchEntry,
   pairMatchCount,
@@ -191,4 +192,24 @@ test("pairSynergy needs enough matches together and some apart", () => {
     { accountId: 2, matches: [...many, entry(2, 0, 0)] },
   ]);
   assert.equal(pairSynergy(onlyTogether), null);
+});
+
+test("duoHeroPairs counts same-team hero pairings, most played first", () => {
+  const shared = (matchId: number, team: number, winner: number, heroId: number): SharedMatchEntry => ({
+    ...entry(matchId, team, winner),
+    hero_id: heroId,
+    player_kills: 0,
+    player_deaths: 0,
+    player_assists: 0,
+  });
+  const a = [1, 2, 3, 4, 5, 6].map((id) => shared(id, 0, id <= 2 ? 0 : 1, id <= 4 ? 7 : 8));
+  const b = [
+    ...[1, 2, 3, 4].map((id) => shared(id, 0, id <= 2 ? 0 : 1, 12)),
+    shared(5, 1, 1, 12), // against: not a duo
+    shared(6, 0, 1, 15),
+  ];
+  const pairs = duoHeroPairs(a, b, 3, 1);
+  assert.deepEqual(pairs[0], { aHero: 7, bHero: 12, matches: 4, wins: 2 });
+  assert.equal(pairs.length, 2);
+  assert.equal(duoHeroPairs(a, b).length, 1);
 });
