@@ -193,14 +193,23 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   );
 }
 
-function TableCell({ className, ...props }: React.ComponentProps<"td">) {
+/** A cell's own verdict, tinted faintly behind its value: a won or lost match, a gain or a loss. */
+const CELL_TONE = { default: "", positive: "bg-positive/10", negative: "bg-negative/10" } as const;
+
+function TableCell({
+  tone = "default",
+  className,
+  ...props
+}: React.ComponentProps<"td"> & { tone?: keyof typeof CELL_TONE }) {
   const density = React.use(TableDensityContext);
   return (
     <td
       data-slot="table-cell"
+      data-tone={tone}
       className={cn(
         "align-middle whitespace-nowrap data-pinned:sticky data-pinned:inset-s-0 data-pinned:z-10 data-pinned:bg-card [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-0.5 [tr:nth-child(even)>&]:data-pinned:bg-table-stripe",
         CELL_DENSITY[density],
+        CELL_TONE[tone],
         className,
       )}
       {...props}

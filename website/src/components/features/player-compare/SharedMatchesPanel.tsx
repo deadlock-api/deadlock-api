@@ -22,14 +22,22 @@ function compactSouls(value: number): string {
   return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : formatStatValue(value, "integer");
 }
 
+/** Up to a week back a match reads "3 days ago"; older ones read as their date, which says more than "a month ago". */
+const RELATIVE_DAYS = 7;
+
 /**
- * "3 days ago" once hydrated; before that the absolute UTC date, which the server and the first client render agree
- * on (the Worker renders in UTC and its clock never matches the viewer's).
+ * "3 days ago" or "Aug 28" once hydrated; before that the absolute UTC date, which the server and the first client
+ * render agree on (the Worker renders in UTC and its clock never matches the viewer's).
  */
-function useLastMetLabel(): (unix: number) => string {
+function useMatchDateLabel(): (unix: number) => string {
   const hydrated = useHydrated();
   const now = hydrated ? day() : null;
-  return (unix) => (now ? day.unix(unix).from(now) : day.unix(unix).utc().format("MMM D, YYYY"));
+  return (unix) => {
+    const date = day.unix(unix);
+    if (!now) return date.utc().format("MMM D, YYYY");
+    if (now.diff(date, "day") < RELATIVE_DAYS) return date.from(now);
+    return date.format(date.year() === now.year() ? "MMM D" : "MMM D, YYYY");
+  };
 }
 
 function HistoryError({ player, history }: { player: ComparedPlayer; history: CompareMatchHistory }) {
@@ -48,11 +56,11 @@ function HistoryError({ player, history }: { player: ComparedPlayer; history: Co
 function SharedMatchesTable({
   matches,
   players,
-  lastMetLabel,
+  dateLabel,
 }: {
   matches: readonly SharedMatch[];
   players: ComparedPlayer[];
-  lastMetLabel: (unix: number) => string;
+  dateLabel: (unix: number) => string;
 }) {
   // Only the players who appear in these matches get a column.
   const inAny = new Set(
@@ -75,7 +83,7 @@ function SharedMatchesTable({
           <TableRow key={match.matchId}>
             <TableCell data-pinned>
               <Text tone="muted" className="whitespace-nowrap">
-                {lastMetLabel(match.startTime)}
+                {dateLabel(match.startTime)}
               </Text>
             </TableCell>
             {columns.map((player) => {
@@ -121,7 +129,7 @@ function SharedMatchesTable({
   );
 }
 
-const COLLAPSED_ROWS = 7;
+const COLLAPSED_ROWS = 9;
 
 /**
  * Every match two or more of the compared players shared on the filters, newest first: the first few, and the rest
@@ -139,7 +147,7 @@ export function SharedMatchesPanel({
   className?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const lastMetLabel = useLastMetLabel();
+  const dateLabel = useMatchDateLabel();
   const byId = new Map(players.map((player) => [player.accountId, player]));
   const failed = histories.filter((history) => history.isError);
   const loading = histories.some((history) => history.isPending && !history.isError);
@@ -161,7 +169,7 @@ export function SharedMatchesPanel({
         </Stack>
       ) : matches.length > 0 ? (
         <>
-          <SharedMatchesTable matches={shown} players={players} lastMetLabel={lastMetLabel} />
+          <SharedMatchesTable matches={shown} players={players} dateLabel={dateLabel} />
           {matches.length > COLLAPSED_ROWS && (
             <PanelShowMore open={expanded} onOpenChange={setExpanded} total={matches.length} />
           )}

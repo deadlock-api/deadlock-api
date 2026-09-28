@@ -313,7 +313,7 @@ export function Patterns() {
                   <TableCell className={`text-end tabular-nums ${TONE_TEXT[toneOf(row.winRate, 0.5)]}`}>
                     {pct(row.winRate)}
                   </TableCell>
-                  <TableCell className="text-end">
+                  <TableCell className="text-end" tone={row.delta >= 0 ? "positive" : "negative"}>
                     <Delta value={row.delta} />
                   </TableCell>
                   <TableCell className="text-end tabular-nums">{pct(row.pickRate)}</TableCell>

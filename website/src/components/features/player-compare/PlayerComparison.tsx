@@ -25,8 +25,8 @@ import { RankHistoryPanel } from "./RankHistoryPanel";
 import { RecordsPanel } from "./RecordsPanel";
 import { ShareComparison } from "./ShareComparison";
 import { SharedHeroesTable } from "./SharedHeroesTable";
+import { SharedMatchesPanel } from "./SharedMatchesPanel";
 import { TimelinePanel } from "./TimelinePanel";
-import { TogetherAgainstPanel } from "./TogetherAgainstPanel";
 import type { ComparedPlayer } from "./types";
 import { useCompareMatchHistories } from "./useCompareMatchHistories";
 import { useCompareMetrics } from "./useCompareMetrics";
@@ -124,7 +124,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
   const layout = players.length >= 4 ? WIDE_LAYOUT : LAYOUT;
   // On one hero's filter every shared hero is that hero.
   const showSharedHeroes = filters.heroId == null && accountIds.length >= 2;
-  // Once the histories are in and no two players met, together & against is one line: it goes under heroes and items
+  // Once the histories are in and no two players met, shared matches is one line: it goes under heroes and items
   // across the page rather than taking a tall, empty third column beside them.
   const nobodyMet =
     histories.every((history) => !history.isPending && !history.isError) &&
@@ -181,9 +181,9 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             <ActivityPanel players={players} histories={histories} by="hour" />
             <ActivityPanel players={players} histories={histories} by="weekday" />
           </Grid>
-          {/* Heroes, items and together & against. Up to three players: heroes beside items, together & against under
+          {/* Heroes, items and shared matches. Up to three players: heroes beside items, shared matches under
               both, and very wide all three in a row. Four or five players: each takes the full width, which their
-              columns need. On one hero's filter there are no shared heroes: items beside together & against. */}
+              columns need. On one hero's filter there are no shared heroes: items beside shared matches. */}
           <Grid
             gap={4}
             className={
@@ -202,7 +202,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
               }
             />
             {accountIds.length >= 2 && (
-              <TogetherAgainstPanel
+              <SharedMatchesPanel
                 players={players}
                 histories={histories}
                 className={
