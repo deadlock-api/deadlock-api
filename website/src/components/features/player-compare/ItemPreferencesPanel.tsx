@@ -20,6 +20,8 @@ import { type CompareFilters, compareItemStatsParams } from "~/queries/player-co
 import type { ComparedPlayer } from "./types";
 
 /** Columns by the panel's width: one per player once each has room for an item name. */
+const NARROW_ITEM_COUNT = 5;
+
 const COLUMNS = {
   2: { base: 1, sm: 2 },
   3: { base: 1, lg: 3 },
@@ -100,8 +102,14 @@ function PlayerItems({
           <ul aria-label={`${possessive(player.name)} favorite items`}>
             {column.state === "loading"
               ? Array.from({ length: FAVORITE_ITEM_COUNT }, (_, index) => <ItemRowSkeleton key={index} />)
-              : column.items.map((entry) => (
-                  <ItemRow key={entry.itemId} entry={entry} item={itemsById.get(entry.itemId)} />
+              : column.items.map((entry, index) => (
+                  <ItemRow
+                    key={entry.itemId}
+                    entry={entry}
+                    item={itemsById.get(entry.itemId)}
+                    // A narrow panel (a phone, the columns stacked) keeps each player's top five.
+                    className={index >= NARROW_ITEM_COUNT ? "hidden @md:list-item" : undefined}
+                  />
                 ))}
           </ul>
         </Stack>
@@ -110,12 +118,20 @@ function PlayerItems({
   );
 }
 
-function ItemRow({ entry, item }: { entry: FavoriteItem; item: SlimUpgrade | undefined }) {
+function ItemRow({
+  entry,
+  item,
+  className,
+}: {
+  entry: FavoriteItem;
+  item: SlimUpgrade | undefined;
+  className?: string;
+}) {
   const name = item?.name ?? "Unknown item";
   // Judged as printed: a 50.4% win rate reads "50%" and is not colored as a win.
   const tone = toneOf(Math.round(entry.winRate * 100), 50);
   return (
-    <li>
+    <li className={className}>
       <Tooltip
         content={
           <>
