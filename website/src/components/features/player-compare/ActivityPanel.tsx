@@ -60,10 +60,10 @@ export function ActivityPanel({
   const pending = !hydrated || histories.some((history) => history.isPending);
   const allFailed = histories.length > 0 && histories.every((history) => history.isError);
   const settled = !histories.some((history) => history.isPending);
-  if (settled && !allFailed && histories.every((history) => (history.matches?.length ?? 0) === 0)) return null;
+  if (settled && !allFailed && histories.every((history) => (history.heroMatches?.length ?? 0) === 0)) return null;
 
   const keys = players.map((player) => String(player.accountId));
-  const totals = histories.map((history) => history.matches?.length ?? 0);
+  const totals = histories.map((history) => history.heroMatches?.length ?? 0);
   const point = (label: string, title: string, counts: { matches: number; wins: number }[]): Point => ({
     label,
     title,
@@ -79,7 +79,7 @@ export function ActivityPanel({
     : by === "hour"
       ? (() => {
           const byHour = histories.map((history) =>
-            matchesByHour(history.matches ?? [], (unix) => day.unix(unix).hour()),
+            matchesByHour(history.heroMatches ?? [], (unix) => day.unix(unix).hour()),
           );
           return Array.from({ length: 24 }, (_, hour) =>
             point(
@@ -91,7 +91,7 @@ export function ActivityPanel({
         })()
       : (() => {
           const byWeekday = histories.map((history) =>
-            matchesByWeekday(history.matches ?? [], (unix) => (day.unix(unix).day() + 6) % 7),
+            matchesByWeekday(history.heroMatches ?? [], (unix) => (day.unix(unix).day() + 6) % 7),
           );
           return WEEKDAYS.map((label, weekday) =>
             point(

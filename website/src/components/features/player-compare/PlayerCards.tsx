@@ -114,14 +114,7 @@ export function PlayerCards({
             const history = histories[index];
             const climb = history?.rankClimb ?? null;
             // On the hero's filter, the last matches on that hero.
-            const form = history?.matches
-              ? recentForm(
-                  filters.heroId == null
-                    ? history.matches
-                    : history.matches.filter((match) => match.hero_id === filters.heroId),
-                  FORM_LENGTH,
-                )
-              : undefined;
+            const form = history?.heroMatches ? recentForm(history.heroMatches, FORM_LENGTH) : undefined;
             return (
               // The card is what moves: dragging its handle carries the whole card, and the others make room.
               <ReorderItem key={player.accountId} asChild {...reorder.boxProps(index)}>

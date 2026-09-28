@@ -15,6 +15,11 @@ export interface CompareMatchHistory {
    * the player, not to one hero. Undefined while loading or after a failure.
    */
   matches: PlayerMatchHistoryEntry[] | undefined;
+  /**
+   * The same matches on the page's hero only (all of them without a hero filter): what a player's own records,
+   * match lengths and hours read, as the head-to-head does.
+   */
+  heroMatches: PlayerMatchHistoryEntry[] | undefined;
   /** Divisions gained (or lost) from the first to the last ranked match in range; null without two of them. */
   rankClimb: number | null;
   isPending: boolean;
@@ -37,7 +42,7 @@ export function useCompareMatchHistories(
     filters.gameMode === "street_brawl" ? "street_brawl" : "normal",
     filters.matchMode as MatchMode,
   );
-  const { minUnixTimestamp, maxUnixTimestamp } = filters;
+  const { minUnixTimestamp, maxUnixTimestamp, heroId } = filters;
   const ids = accountIds.join(",");
   // One stable `combine` per players and filters: TanStack keeps its result while no query changes, so the filtering
   // (about 9k matches a player) runs once per answer rather than on every render, and what reads the histories stays
@@ -54,6 +59,7 @@ export function useCompareMatchHistories(
         return {
           accountId,
           matches,
+          heroMatches: heroId == null ? matches : matches?.filter((match) => match.hero_id === heroId),
           rankClimb: ranked.length >= 2 ? ranked.at(-1)!.linear - ranked[0].linear : null,
           isPending: query?.isPending ?? true,
           isError: (query?.isError ?? false) && !query?.data,
@@ -62,7 +68,7 @@ export function useCompareMatchHistories(
         };
       });
     },
-    [ids, mode, minUnixTimestamp, maxUnixTimestamp],
+    [ids, mode, minUnixTimestamp, maxUnixTimestamp, heroId],
   );
   return useQueries({
     queries: accountIds.map((accountId) => trackerMatchHistoryQueryOptions(accountId)),

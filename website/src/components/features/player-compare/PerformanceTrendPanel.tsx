@@ -72,10 +72,19 @@ export function PerformanceTrendPanel({
   const settled = !histories.some((history) => history.isPending);
   const allFailed = histories.length > 0 && histories.every((history) => history.isError);
   // A long range sums blocks of weeks, so the lines stay readable (about 26 points at most).
-  const starts = histories.flatMap((history) => (history.matches ?? []).map((match) => match.start_time));
-  const bucket = starts.length > 0 ? trendBucketWeeks(Math.min(...starts), Math.max(...starts)) : 1;
+  // The span of every player's matches, in a loop: spreading tens of thousands of start times would overflow the stack.
+  let firstStart = Infinity;
+  let lastStart = -Infinity;
+  for (const history of histories) {
+    for (const match of history.heroMatches ?? []) {
+      if (match.start_time < firstStart) firstStart = match.start_time;
+      if (match.start_time > lastStart) lastStart = match.start_time;
+    }
+  }
+  const bucket = firstStart <= lastStart ? trendBucketWeeks(firstStart, lastStart) : 1;
   // Summed once per render and shared with the chart: up to five histories of thousands of matches.
-  const weeksByPlayer = histories.map((history) => weeklyTotals(history.matches ?? [], bucket));
+  // On the page's hero, as the head-to-head.
+  const weeksByPlayer = histories.map((history) => weeklyTotals(history.heroMatches ?? [], bucket));
   const plottable = mergeWeeklyTrend(
     histories.map((history, index) => ({ key: String(history.accountId), weeks: weeksByPlayer[index] })),
     "winRate",

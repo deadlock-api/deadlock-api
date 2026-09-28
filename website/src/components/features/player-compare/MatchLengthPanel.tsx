@@ -48,7 +48,7 @@ export function MatchLengthPanel({
   const pending = histories.some((history) => history.isPending);
   const allFailed = histories.length > 0 && histories.every((history) => history.isError);
   const keys = players.map((player) => String(player.accountId));
-  const byPlayer = histories.map((history) => winRateByDuration(history.matches ?? []));
+  const byPlayer = histories.map((history) => winRateByDuration(history.heroMatches ?? []));
   const rows: Row[] = DURATION_BRACKETS.map((bracket, index) => ({
     label: bracket.label,
     results: Object.fromEntries(keys.map((key, at) => [key, byPlayer[at][index]])),

@@ -131,7 +131,7 @@ export function RecordsPanel({
   className?: string;
 }) {
   const records = histories.map((history) =>
-    history.matches && history.matches.length > 0 ? playerRecords(history.matches) : null,
+    history.heroMatches && history.heroMatches.length > 0 ? playerRecords(history.heroMatches) : null,
   );
   const settled = histories.every((history) => !history.isPending);
   // Nothing to show once loaded: nobody has a match on the filters (failures show in together & against).
