@@ -5,7 +5,14 @@ import { ChartReading, ChartReadingList } from "~/components/patterns/charts/Cha
 import { ChartReveal, ChartRevealBack, ChartRevealFront } from "~/components/patterns/charts/ChartReveal";
 import { ChartEmpty, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { chartSizeVariants, ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_COLOR, CHART_TICK, CHART_X_AXIS } from "~/components/patterns/charts/theme";
+import {
+  CHART_AREA_NEUTRAL,
+  CHART_CUSTOM_TICK_DY,
+  CHART_MARGIN_SM,
+  CHART_MEDIAN_LINE,
+  CHART_TICK,
+  CHART_X_AXIS_CUSTOM_TICK,
+} from "~/components/patterns/charts/theme";
 import { PanelBody } from "~/components/patterns/panel/Panel";
 import { Grid } from "~/components/ui/grid";
 import { Stack } from "~/components/ui/stack";
@@ -182,7 +189,7 @@ function MetricCurve({
     <ChartReveal aria-label={`${label}: where each player ranks`}>
       <ChartRevealFront>
         <ChartSurface label={summary} announce="label" size="sm" variant="bare">
-          <AreaChart data={curve} margin={{ top: 4, right: 12, bottom: 0, left: 12 }} accessibilityLayer={false}>
+          <AreaChart data={curve} margin={CHART_MARGIN_SM} accessibilityLayer={false}>
             <XAxis
               type="number"
               dataKey="x"
@@ -190,13 +197,8 @@ function MetricCurve({
               allowDataOverflow
               ticks={landmarks.map((landmark) => landmark.x)}
               interval={0}
-              {...CHART_X_AXIS}
-              // The outer labels align inward, so a label on the plot's edge is not cut in half. A custom tick draws no
-              // text the axis can measure, so the axis takes a fixed height.
-              height={28}
-              // A short mark on the axis at each labelled point.
-              tickLine={{ stroke: "var(--chart-axis)" }}
-              tickSize={4}
+              // The outer labels align inward, so a label on the plot's edge is not cut in half.
+              {...CHART_X_AXIS_CUSTOM_TICK}
               tick={({
                 x,
                 y,
@@ -211,26 +213,17 @@ function MetricCurve({
                 <text
                   x={x}
                   y={y}
-                  dy={14}
+                  dy={CHART_CUSTOM_TICK_DY}
                   textAnchor={index === 0 ? "start" : index === landmarks.length - 1 ? "end" : "middle"}
                   style={CHART_TICK}
                 >
                   {tickLabel.get(payload.value) ?? ""}
                 </text>
               )}
-              axisLine={{ stroke: "var(--chart-grid)" }}
             />
             <YAxis type="number" domain={[0, visibleMax * 1.1 || "dataMax"]} allowDataOverflow hide />
-            <Area
-              type="monotone"
-              dataKey="y"
-              stroke={CHART_COLOR.neutral}
-              strokeWidth={1}
-              fill={CHART_COLOR.neutral}
-              fillOpacity={0.15}
-              isAnimationActive={false}
-            />
-            <ReferenceLine x={values.percentile50} stroke="var(--chart-axis)" strokeDasharray="2 2" strokeWidth={1} />
+            <Area type="monotone" dataKey="y" {...CHART_AREA_NEUTRAL} isAnimationActive={false} />
+            <ReferenceLine x={values.percentile50} {...CHART_MEDIAN_LINE} />
             {marks.map(({ player, avg }) => (
               <ReferenceLine key={player.accountId} x={clamp(avg)} stroke={player.color} strokeWidth={2} />
             ))}

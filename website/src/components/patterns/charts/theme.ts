@@ -67,3 +67,35 @@ export const CHART_COLOR = {
 } as const;
 
 export const CHART_MARGIN = { top: 8, right: 8, bottom: 8, left: 0 } as const;
+
+/**
+ * Small multiples (distribution strips): a little air above the curve and room at the sides for a line drawn on
+ * the plot's edge and for edge tick labels that align inward.
+ */
+export const CHART_MARGIN_SM = { top: 4, right: 12, bottom: 0, left: 12 } as const;
+
+/**
+ * An x-axis whose ticks are a custom element (such as labels aligned inward at the plot's edges): the element draws
+ * text the axis cannot measure, so the axis takes a fixed height, and a short mark at each labelled point. Spread
+ * it in place of `CHART_X_AXIS` and offset the tick text by `CHART_CUSTOM_TICK_DY`.
+ */
+export const CHART_X_AXIS_CUSTOM_TICK = {
+  ...CHART_X_AXIS,
+  height: 28,
+  tickLine: { stroke: "var(--chart-axis)" },
+  tickSize: 4,
+  axisLine: { stroke: "var(--chart-grid)" },
+} as const;
+/** How far below the tick mark a custom tick's text sits, in px from the axis line. */
+export const CHART_CUSTOM_TICK_DY = 14;
+
+/** The median of a population, drawn on its distribution: finer than the baseline dash. */
+export const CHART_MEDIAN_LINE = { stroke: "var(--chart-axis)", strokeDasharray: "2 2", strokeWidth: 1 } as const;
+
+/** A population's distribution under the players drawn on it: a faint neutral area with a thin edge. */
+export const CHART_AREA_NEUTRAL = {
+  stroke: CHART_COLOR.neutral,
+  strokeWidth: 1,
+  fill: CHART_COLOR.neutral,
+  fillOpacity: 0.15,
+} as const;
