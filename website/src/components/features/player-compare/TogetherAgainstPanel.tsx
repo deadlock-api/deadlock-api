@@ -1,6 +1,7 @@
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { Panel, PanelFooter, PanelHeader } from "~/components/patterns/panel/Panel";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
+import { Delta } from "~/components/ui/delta";
 import { NoValue } from "~/components/ui/no-value";
 import { Inline, Stack } from "~/components/ui/stack";
 import { StatusDot } from "~/components/ui/status-dot";
@@ -11,6 +12,7 @@ import { useHydrated } from "~/hooks/useHydrated";
 import { formatPercent } from "~/lib/format";
 import {
   type PlayerPair,
+  pairSynergy,
   playerPairs,
   recentSharedMatches,
   type SharedMatch,
@@ -70,6 +72,7 @@ function PairRow({
   const { together, against } = pair;
   const togetherLosses = together.matches - together.wins;
   const winRate = together.matches > 0 ? together.wins / together.matches : null;
+  const synergy = pairSynergy(pair);
   return (
     <TableRow>
       <TableCell data-pinned>
@@ -94,6 +97,22 @@ function PairRow({
           </Stack>
         ) : (
           <NoValue label="Never on the same team" />
+        )}
+      </TableCell>
+      <TableCell className="text-end">
+        {/* Win rate together minus the average of each one's win rate apart, in points. */}
+        {synergy == null ? (
+          <NoValue label="Too few matches together" />
+        ) : (
+          <>
+            {/* Delta draws nothing for a change that rounds to zero; an even duo still reads as one. */}
+            {Math.round(synergy * 100) === 0 ? (
+              <Text tone="muted">±0 pts</Text>
+            ) : (
+              <Delta value={synergy} digits={0} unit=" pts" />
+            )}
+            <span className="sr-only"> win rate together compared with apart</span>
+          </>
         )}
       </TableCell>
       <TableCell className="text-end">
@@ -222,6 +241,7 @@ export function TogetherAgainstPanel({
             <TableRow>
               <TableHead data-pinned>Players</TableHead>
               <TableHead className="text-end">Together</TableHead>
+              <TableHead className="text-end">Synergy</TableHead>
               <TableHead className="text-end">Against</TableHead>
               <TableHead className="hidden text-end @md/table:table-cell">Last met</TableHead>
             </TableRow>

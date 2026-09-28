@@ -21,6 +21,8 @@ export interface PlayerPair {
   together: { matches: number; wins: number };
   /** Matches on opposite teams, and how many of them each side won. */
   against: { matches: number; aWins: number; bWins: number };
+  /** Each player's matches without the other (not together, not against), and how many they won. */
+  apart: { aMatches: number; aWins: number; bMatches: number; bWins: number };
   /** Unix start time of the newest shared match, together or against; null when they never met. */
   lastMet: number | null;
   /** Every shared match, newest first. */
@@ -71,15 +73,43 @@ function pairRecord(
       else if (other.match_result === other.player_team) against.bWins += 1;
     }
   }
+  const apart = { aMatches: 0, aWins: 0, bMatches: 0, bWins: 0 };
+  for (const entry of aMatches) {
+    if (bById.has(entry.match_id)) continue;
+    apart.aMatches += 1;
+    if (entry.match_result === entry.player_team) apart.aWins += 1;
+  }
+  const aIds = new Set(aMatches.map((entry) => entry.match_id));
+  for (const entry of bMatches) {
+    if (aIds.has(entry.match_id)) continue;
+    apart.bMatches += 1;
+    if (entry.match_result === entry.player_team) apart.bWins += 1;
+  }
   shared.sort((x, y) => y.startTime - x.startTime);
   return {
     a,
     b,
     together,
     against,
+    apart,
     lastMet: shared[0]?.startTime ?? null,
     matchIds: shared.map((match) => match.matchId),
   };
+}
+
+/** Fewer matches together than this and the duo's synergy is noise. */
+export const MIN_SYNERGY_MATCHES = 5;
+
+/**
+ * How much better (or worse) a duo wins together than apart: their win rate as teammates minus the average of each
+ * one's win rate in the matches without the other. Null under `MIN_SYNERGY_MATCHES` together, or when either has no
+ * match apart.
+ */
+export function pairSynergy(pair: PlayerPair): number | null {
+  const { together, apart } = pair;
+  if (together.matches < MIN_SYNERGY_MATCHES || apart.aMatches === 0 || apart.bMatches === 0) return null;
+  const apartRate = (apart.aWins / apart.aMatches + apart.bWins / apart.bMatches) / 2;
+  return together.wins / together.matches - apartRate;
 }
 
 /**

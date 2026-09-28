@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  MIN_SYNERGY_MATCHES,
   type PairMatchEntry,
   pairMatchCount,
+  pairSynergy,
   playerPairs,
   recentSharedMatches,
   type SharedMatchEntry,
@@ -163,4 +165,30 @@ test("recentSharedMatches skips loading histories and counts a duplicated entry 
     match.teams.map((team) => team.players.length),
     [2],
   );
+});
+
+test("pairSynergy: together's win rate against the average of each one's win rate apart", () => {
+  const together = Array.from({ length: MIN_SYNERGY_MATCHES * 2 }, (_, i) => entry(100 + i, 0, i < 8 ? 0 : 1));
+  // Apart: player 1 wins 1 of 2, player 2 wins 1 of 4.
+  const [pair] = playerPairs([
+    { accountId: 1, matches: [...together, entry(1, 0, 0), entry(2, 0, 1)] },
+    { accountId: 2, matches: [...together, entry(3, 0, 0), entry(4, 0, 1), entry(5, 0, 1), entry(6, 0, 1)] },
+  ]);
+  assert.deepEqual(pair.apart, { aMatches: 2, aWins: 1, bMatches: 4, bWins: 1 });
+  assert.ok(Math.abs((pairSynergy(pair) ?? 0) - (0.8 - (0.5 + 0.25) / 2)) < 1e-9);
+});
+
+test("pairSynergy needs enough matches together and some apart", () => {
+  const few = Array.from({ length: MIN_SYNERGY_MATCHES - 1 }, (_, i) => entry(100 + i, 0, 0));
+  const [short] = playerPairs([
+    { accountId: 1, matches: [...few, entry(1, 0, 0)] },
+    { accountId: 2, matches: [...few, entry(2, 0, 0)] },
+  ]);
+  assert.equal(pairSynergy(short), null);
+  const many = Array.from({ length: MIN_SYNERGY_MATCHES }, (_, i) => entry(100 + i, 0, 0));
+  const [onlyTogether] = playerPairs([
+    { accountId: 1, matches: many },
+    { accountId: 2, matches: [...many, entry(2, 0, 0)] },
+  ]);
+  assert.equal(pairSynergy(onlyTogether), null);
 });
