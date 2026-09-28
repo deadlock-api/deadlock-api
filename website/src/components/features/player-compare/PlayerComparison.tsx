@@ -158,16 +158,15 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
           >
             <HeadToHeadTable players={players} />
             {/* Its own width decides: stacked under a wide table, the side panels pair up rather than stretch. */}
-            {/* Paired: the share card and the radar side by side, the records across both under them. Stacked: the
-                records come last, since they only appear once loaded (and with shared matches), and move nothing. */}
+            {/* Under a wide table (four or five players) the share card and the radar pair up side by side. */}
             <Grid columns={{ base: 1, xl: 2 }} gap={4} className="items-start">
               <ShareComparison filters={filters} />
               <PlaystyleRadarPanel players={players} filters={filters} />
-              {accountIds.length >= 2 && (
-                <TogetherAgainstPanel players={players} histories={histories} className="@4xl:col-span-2" />
-              )}
             </Grid>
           </Grid>
+          {/* Across the page under the pair: the records and the shared matches read best wide, and the side column
+              stays as short as the table. */}
+          {accountIds.length >= 2 && <TogetherAgainstPanel players={players} histories={histories} />}
           {/* Over time, side by side: the climb and the form. */}
           <Grid columns={{ base: 1, xl: 2 }} gap={4} className="items-start">
             <RankHistoryPanel players={players} filters={filters} histories={histories} />
