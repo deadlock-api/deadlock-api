@@ -40,7 +40,7 @@ const shortDate = (unix: number) => day.unix(unix).utc().format("MMM D");
 const longDate = (unix: number) => day.unix(unix).utc().format("MMM D, YYYY");
 
 const METRICS: Record<TrendMetric, { short: string; label: string; format: (value: number) => string }> = {
-  winRate: { short: "Win %", label: "Win rate", format: (value) => formatPercent(value) },
+  winRate: { short: "Win rate", label: "Win rate", format: (value) => formatPercent(value) },
   kda: { short: "KDA", label: "KDA", format: (value) => value.toFixed(2) },
   kills: { short: "Kills", label: "Kills per match", format: (value) => value.toFixed(1) },
   deaths: { short: "Deaths", label: "Deaths per match", format: (value) => value.toFixed(1) },
@@ -49,7 +49,7 @@ const METRICS: Record<TrendMetric, { short: string; label: string; format: (valu
     label: "Souls per minute",
     format: (value) => Math.round(value).toLocaleString("en-US"),
   },
-  lastHitsPerMin: { short: "LH/min", label: "Last hits per minute", format: (value) => value.toFixed(1) },
+  lastHitsPerMin: { short: "Last hits/min", label: "Last hits per minute", format: (value) => value.toFixed(1) },
 };
 
 /** Every compared player's weekly win rate, KDA, kills, deaths or farm across the page's dates, one line each. */

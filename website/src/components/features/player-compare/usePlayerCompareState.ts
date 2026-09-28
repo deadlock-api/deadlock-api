@@ -17,7 +17,7 @@ export function usePlayerCompareState() {
       write([...accountIds, accountId]);
     },
     remove: (accountId: number) => write(accountIds.filter((id) => id !== accountId)),
-    /** The player at `from` goes to `to`: the order sets each player's color and column, and the link keeps it. */
+    /** The player at `from` goes to `to`: the order sets the columns (the color stays the player's); the link keeps it. */
     move: (from: number, to: number) => {
       write(moveItem(accountIds, from, to));
     },

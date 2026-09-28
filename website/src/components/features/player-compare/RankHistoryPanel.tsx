@@ -61,42 +61,44 @@ export function RankHistoryPanel({
 
   return (
     <Panel>
-      <PanelHeader size="sm" title="Rank over time" icon={Medal}>
-        {showsRank && (
-          <ChartLegend label="Players">
-            {players.map((player) => (
-              <ChartLegendItem key={player.accountId} color={player.color} shape="line" title={player.name}>
-                <span className="max-w-32 truncate">{player.name}</span>
-              </ChartLegendItem>
-            ))}
-          </ChartLegend>
-        )}
-      </PanelHeader>
+      <PanelHeader size="sm" title="Rank over time" icon={Medal} />
       <PanelBody size="sm">
-        {!showsRank ? (
-          <EmptyState
-            variant="plain"
-            icon={Medal}
-            title="No ranks in this mode"
-            description={`${mode === "street_brawl" ? "Street Brawl" : "Unranked"} matches do not move a player's rank. Switch the mode to Ranked or All to see how the ranks moved.`}
-          />
-        ) : histories.length > 0 && histories.every((history) => history.isError) ? (
-          <ChartError
-            label={LABEL}
-            onRetry={() => {
-              for (const history of histories) if (history.isError) history.refetch();
-            }}
-          />
-        ) : histories.some((history) => history.isPending) ? (
-          <ChartLoading label={LABEL} size="md" />
-        ) : (
-          <RankHistoryChart
-            players={players}
-            ranks={ranks}
-            filters={filters}
-            daysByPlayer={histories.map((history) => dailyRanks(history.matches ?? []))}
-          />
-        )}
+        {/* The legend under the plot, as on the weekly trend beside it, so the pair lines up. */}
+        <Stack gap={2}>
+          {!showsRank ? (
+            <EmptyState
+              variant="plain"
+              icon={Medal}
+              title="No ranks in this mode"
+              description={`${mode === "street_brawl" ? "Street Brawl" : "Unranked"} matches do not move a player's rank. Switch the mode to Ranked or All to see how the ranks moved.`}
+            />
+          ) : histories.length > 0 && histories.every((history) => history.isError) ? (
+            <ChartError
+              label={LABEL}
+              onRetry={() => {
+                for (const history of histories) if (history.isError) history.refetch();
+              }}
+            />
+          ) : histories.some((history) => history.isPending) ? (
+            <ChartLoading label={LABEL} size="md" />
+          ) : (
+            <RankHistoryChart
+              players={players}
+              ranks={ranks}
+              filters={filters}
+              daysByPlayer={histories.map((history) => dailyRanks(history.matches ?? []))}
+            />
+          )}
+          {showsRank && (
+            <ChartLegend label="Players">
+              {players.map((player) => (
+                <ChartLegendItem key={player.accountId} color={player.color} shape="line" title={player.name}>
+                  <span className="max-w-32 truncate">{player.name}</span>
+                </ChartLegendItem>
+              ))}
+            </ChartLegend>
+          )}
+        </Stack>
       </PanelBody>
     </Panel>
   );

@@ -5,6 +5,16 @@ import type { PlayerMetricFormat } from "~/lib/player-metrics";
 /** How many players one comparison holds. */
 export const MAX_COMPARE_PLAYERS = 5;
 
+/**
+ * Each player's series color index: their place among the players sorted by account id. A player keeps their color
+ * when the columns are reordered (the order is the reader's, the color is the player's), and the colors in use are
+ * always the first ones of the palette, in its validated order.
+ */
+export function compareColorIndexes(accountIds: readonly number[]): number[] {
+  const sorted = [...accountIds].sort((a, b) => a - b);
+  return accountIds.map((accountId) => sorted.indexOf(accountId));
+}
+
 /** Account ids are SteamID3 numbers, unsigned 32-bit; the API rejects a whole request carrying a larger one. */
 const MAX_ACCOUNT_ID = 2 ** 32 - 1;
 

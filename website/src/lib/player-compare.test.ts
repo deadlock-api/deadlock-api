@@ -5,6 +5,7 @@ import type { HeroStats } from "deadlock_api_client";
 
 import {
   aggregateHeroStats,
+  compareColorIndexes,
   compareStatWinners,
   MAX_COMPARE_PLAYERS,
   type PlayerAggregate,
@@ -218,4 +219,9 @@ test("compareStatWinners: values printed alike share the win", () => {
     }),
     [0],
   );
+});
+
+test("compareColorIndexes: a player keeps their color when the columns move", () => {
+  assert.deepEqual(compareColorIndexes([30, 10, 20]), [2, 0, 1]);
+  assert.deepEqual(compareColorIndexes([10, 30, 20]), [0, 2, 1]);
 });

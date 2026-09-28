@@ -8,7 +8,7 @@ const WEEK = 7 * DAY;
 const MONDAY_OFFSET = 4 * DAY;
 
 /** Fewer matches than this in a week and the week is a gap: one or two matches say little about a week. */
-export const MIN_WEEK_MATCHES = 3;
+export const MIN_WEEK_MATCHES = 5;
 
 export const TREND_METRICS = ["winRate", "kda", "kills", "deaths", "soulsPerMin", "lastHitsPerMin"] as const;
 export type TrendMetric = (typeof TREND_METRICS)[number];

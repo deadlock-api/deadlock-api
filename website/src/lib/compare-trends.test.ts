@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
-import { mergeWeeklyTrend, utcWeek, weeklyTotals, weekTicks, weekValue } from "./compare-trends";
+import { MIN_WEEK_MATCHES, mergeWeeklyTrend, utcWeek, weeklyTotals, weekTicks, weekValue } from "./compare-trends";
 
 const DAY = 86_400;
 const WEEK = 7 * DAY;
@@ -70,7 +70,8 @@ test("weekValue: KDA without deaths is kills plus assists, per-minute rates need
 });
 
 test("mergeWeeklyTrend fills every week, with gaps for thin or missing weeks, and marks lone points", () => {
-  const three = (week: number) => [match(week), match(week + 1), match(week + 2)];
+  // Enough matches for a week to count.
+  const three = (week: number) => Array.from({ length: MIN_WEEK_MATCHES }, (_, i) => match(week + i));
   const a = weeklyTotals([...three(MONDAY), ...three(MONDAY + WEEK), ...three(MONDAY + 4 * WEEK)]);
   const b = weeklyTotals([match(MONDAY + 2 * WEEK), match(MONDAY + 2 * WEEK + 1), ...three(MONDAY + 3 * WEEK)]);
   const rows = mergeWeeklyTrend(

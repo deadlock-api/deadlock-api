@@ -139,16 +139,17 @@ export function PlayerCards({
                           <Stack gap={0} className="min-w-0">
                             <Text variant="caption" tone="muted">
                               {aggregate?.rankBadge ? (
-                                // The move wraps under the rank in a narrow card rather than being cut off.
-                                <Inline gap={1} asChild>
+                                // One line: the rank's name gives way (truncates) before the move is cut off.
+                                <Inline gap={1} wrap="nowrap" asChild>
                                   <span>
                                     <BadgeImage badge={aggregate.rankBadge} ranks={ranks} size="inline" alt="" />
-                                    <span className="sr-only @stat-trio:not-sr-only @stat-trio:whitespace-nowrap">
+                                    <span className="sr-only @stat-trio:not-sr-only @stat-trio:truncate">
                                       {badgeLabel(ranks, aggregate.rankBadge)}
                                     </span>
                                     {/* Who is climbing: the rank's move over the page's dates, in divisions. */}
                                     {climb != null && (
                                       <Delta
+                                        className="shrink-0"
                                         value={climb}
                                         format="number"
                                         digits={0}
@@ -214,7 +215,7 @@ export function PlayerCards({
                             />
                           ) : (
                             <Stat
-                              label={settled && players.length >= 2 ? `Won of ${scored.length}` : "Stats won"}
+                              label="Stats won"
                               value={
                                 !settled || aggregate === undefined ? (
                                   <Skeleton className="h-6 w-10" />
@@ -225,6 +226,7 @@ export function PlayerCards({
                                     <span>
                                       {leads && <CrownIcon aria-hidden="true" className="size-4" />}
                                       {tally[index]}
+                                      <span className="text-muted-foreground">/{scored.length}</span>
                                       {leads && (
                                         <span className="sr-only">, {leaders.length > 1 ? "tied lead" : "leads"}</span>
                                       )}

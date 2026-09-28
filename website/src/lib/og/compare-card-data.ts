@@ -7,6 +7,7 @@ import { extractBadgeMap } from "~/lib/leaderboard";
 import {
   aggregateHeroStats,
   COMPARE_STATS,
+  compareColorIndexes,
   compareStatWinners,
   type CompareStatKey,
   type PlayerAggregate,
@@ -117,6 +118,8 @@ export async function loadCompareCardData(search: URLSearchParams): Promise<Comp
   });
   const { scored, tally, leaders } = scoreComparison(aggregates);
 
+  // The page's colors: each player's by account id, not by column.
+  const colorIndexes = compareColorIndexes(accountIds);
   const players = accountIds.map((accountId, index): CompareCardPlayer => {
     const aggregate = aggregates[index];
     const rank = aggregate?.rankBadge ? badgeMap.get(aggregate.rankBadge) : undefined;
@@ -124,7 +127,7 @@ export async function loadCompareCardData(search: URLSearchParams): Promise<Comp
     return {
       name: profile?.personaname ?? `Player ${accountId}`,
       avatar: profile?.avatarfull || profile?.avatar,
-      color: OG_SERIES[index % OG_SERIES.length],
+      color: OG_SERIES[colorIndexes[index] % OG_SERIES.length],
       rankName: rank ? `${rank.name} ${rank.subtier}` : undefined,
       // The tier's badge straight from the assets CDN; the per-subrank images are served through the API.
       rankImage: aggregate?.rankBadge

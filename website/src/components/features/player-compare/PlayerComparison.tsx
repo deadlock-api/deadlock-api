@@ -4,10 +4,9 @@ import { GitCompareArrows } from "lucide-react";
 import { SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
-import { Box } from "~/components/ui/box";
 import { Grid } from "~/components/ui/grid";
 import { Stack } from "~/components/ui/stack";
-import { aggregateHeroStats } from "~/lib/player-compare";
+import { aggregateHeroStats, compareColorIndexes } from "~/lib/player-compare";
 import { playstyleLabel, playstylePercentiles } from "~/lib/playstyle";
 import { cn } from "~/lib/utils";
 import {
@@ -73,6 +72,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
   // Placeholder rows belong to the previous request: a player missing from them may just have been added, so they
   // are still loading rather than without matches.
   const settled = heroStats.isSuccess && !heroStats.isPlaceholderData;
+  const colorIndexes = compareColorIndexes(accountIds);
   const players: ComparedPlayer[] = accountIds.map((accountId, index) => {
     const profile = profileQueries[index]?.data ?? undefined;
     const known = settled || rows.some((row) => row.account_id === accountId);
@@ -88,7 +88,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
       name: profile?.personaname ?? `Player ${accountId}`,
       avatar: profile?.avatarfull || profile?.avatar,
       profileLoading: (profileQueries[index]?.isPending ?? true) && !profile,
-      color: SERIES_COLORS[index % SERIES_COLORS.length],
+      color: SERIES_COLORS[colorIndexes[index] % SERIES_COLORS.length],
       playstyle: playstyleLabel(playstylePercentiles(population.data, metrics[index]?.data))?.label,
       aggregate: aggregate && {
         ...aggregate,
@@ -144,14 +144,14 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
           >
             <HeadToHeadTable players={players} />
             {/* Its own width decides: stacked under a wide table, the side panels pair up rather than stretch. */}
-            {/* Paired, the radar spans both rows beside the share card and the records; stacked, the records come
-                last, since they only appear once loaded and with shared matches, and so move nothing below them. */}
+            {/* Paired: the share card and the radar side by side, the records across both under them. Stacked: the
+                records come last, since they only appear once loaded (and with shared matches), and move nothing. */}
             <Grid columns={{ base: 1, xl: 2 }} gap={4} className="items-start">
               <ShareComparison filters={filters} />
-              <Box className="@4xl:row-span-2">
-                <PlaystyleRadarPanel players={players} filters={filters} />
-              </Box>
-              {accountIds.length >= 2 && <TogetherAgainstPanel players={players} histories={histories} />}
+              <PlaystyleRadarPanel players={players} filters={filters} />
+              {accountIds.length >= 2 && (
+                <TogetherAgainstPanel players={players} histories={histories} className="@4xl:col-span-2" />
+              )}
             </Grid>
           </Grid>
           {/* Over time, side by side: the climb and the form. */}

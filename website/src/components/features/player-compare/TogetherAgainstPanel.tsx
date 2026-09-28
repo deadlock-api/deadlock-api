@@ -123,10 +123,13 @@ function PairRow({
 export function TogetherAgainstPanel({
   players,
   histories,
+  className,
 }: {
   players: ComparedPlayer[];
   /** The players' match histories on the filters, in the players' order (`useCompareMatchHistories`). */
   histories: readonly CompareMatchHistory[];
+  /** Layout from the parent (grid placement). */
+  className?: string;
 }) {
   const lastMetLabel = useLastMetLabel();
   const byId = new Map(players.map((player) => [player.accountId, player]));
@@ -140,7 +143,7 @@ export function TogetherAgainstPanel({
   if (loading || (met.length === 0 && failed.length === 0)) return null;
 
   return (
-    <Panel>
+    <Panel className={className}>
       <PanelHeader size="sm" title="Together & against" />
       {failed.map((history) => {
         const player = byId.get(history.accountId);
@@ -168,8 +171,9 @@ export function TogetherAgainstPanel({
       )}
       {neverMet.length > 0 && (
         // Two lines at most: with five players the list runs long; the full list is in the title.
-        <PanelFooter className="line-clamp-2" title={neverMetLine}>
-          {neverMetLine}
+        <PanelFooter title={neverMetLine}>
+          {/* Clamped inside the footer's padding, so a third line never peeks out. */}
+          <span className="line-clamp-2">{neverMetLine}</span>
         </PanelFooter>
       )}
     </Panel>

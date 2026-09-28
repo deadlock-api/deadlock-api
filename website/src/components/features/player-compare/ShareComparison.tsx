@@ -42,6 +42,8 @@ export function ShareComparison({
           onClick={copyLink}
           // The header's button is the keyboard's way to copy; the card is a second, pointer-sized target for it.
           tabIndex={-1}
+          // Wide columns do not blow the card up past the size it is read at.
+          className="mx-auto max-w-md"
         />
       </PanelBody>
     </Panel>
