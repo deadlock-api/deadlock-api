@@ -209,7 +209,8 @@ function ItemRow({
           <Inline gap={2} wrap="nowrap">
             <ItemImage item={item} title="" className="shrink-0" />
             <Stack gap={0} className="flex-1">
-              <Text wrap="truncate">{name}</Text>
+              {/* Two lines before an ellipsis: a narrow column still names the item. */}
+              <Text wrap="clamp-2">{name}</Text>
               <Text variant="caption" tone="muted" numeric="tabular" wrap="truncate">
                 {/* Short, so the win rate survives a narrow column; the tooltip spells it out. */}
                 {formatShare(entry.share)}

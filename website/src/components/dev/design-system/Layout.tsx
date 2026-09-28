@@ -109,8 +109,9 @@ export function Layout() {
             </Text>
           ))}
         </Variants>
-        <Variants label="wrap: truncate, numeric: tabular" className="max-w-60">
+        <Variants label="wrap: truncate, clamp-2, numeric: tabular" className="max-w-60">
           <Text wrap="truncate">A hero name that is far too long for the column it sits in</Text>
+          <Text wrap="clamp-2">An item name that is too long for one line of its column but fits in two of them</Text>
           <Text numeric="tabular" align="end">
             1,204,118
           </Text>
