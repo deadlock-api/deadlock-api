@@ -33,35 +33,29 @@ import { useCompareMetrics } from "./useCompareMetrics";
 import { usePlayerCompareState } from "./usePlayerCompareState";
 
 /**
- * The top grid's classes for up to three players. Narrow: one column. From @4xl two columns: the stat table spans three
- * rows beside the share card, the playstyle and match length; then records beside the weekly trend, and rank over time
- * across both. From @8xl a 3x3 grid: the table spans all three rows on the left, and each row pairs share / records,
- * playstyle / match length, trend / rank at one height. The source follows the 3x3 grid's reading order; `order`
- * rearranges the narrower layouts.
+ * The top grid for up to three players. Narrow: one column. From @4xl two columns: the share card over the stat table on
+ * the left, records, playstyle and match length stacked on the right, both ending level; then the weekly trend beside
+ * rank over time, and the match timeline across both. From @8xl three columns: the share card and the table on the left spanning three rows, and on the
+ * right records / playstyle, match length / trend, rank over time / match timeline, the right stack dissolving into the
+ * grid (`contents`) so each row's pair shares a height; the two chart rows share what the left column leaves them.
  */
 const LAYOUT = {
-  // The playstyle keeps its own height beside the table; the share card and match length above and below it share the
-  // rest, the card and the plot scaling to it.
-  grid: "@4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @4xl:grid-rows-[1fr_auto_1fr] @8xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)] @8xl:grid-rows-none",
-  table: "order-1 @4xl:row-span-3 @8xl:order-none",
-  share: "order-2 @8xl:order-none",
-  records: "order-5 @8xl:order-none",
-  radar: "order-3 @8xl:order-none",
-  length: "order-4 @8xl:order-none",
-  trend: "order-6 @8xl:order-none",
-  rank: "order-7 @4xl:col-span-2 @8xl:order-none @8xl:col-span-1",
+  grid: "@4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @8xl:grid-cols-3 @8xl:grid-rows-[auto_1fr_1fr]",
+  left: "@8xl:row-span-3",
+  right: "@8xl:contents",
+  // Below three columns the timeline takes a row of its own, after the trend and rank pair.
+  timeline: "@4xl:col-span-2 @8xl:col-span-1",
 };
 
-/** Four or five players: the table spans the width until @7xl, then two columns, the 3x3 grid from @9xl. */
+/**
+ * Four or five players: the table needs the whole width until @7xl (the right stack goes under it), then two columns,
+ * the three-column grid from @9xl.
+ */
 const WIDE_LAYOUT = {
-  grid: "@4xl:grid-cols-2 @7xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @7xl:grid-rows-[1fr_auto_1fr] @9xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)] @9xl:grid-rows-none",
-  table: "order-1 @4xl:col-span-2 @7xl:col-span-1 @7xl:row-span-3 @9xl:order-none",
-  share: "order-2 @9xl:order-none",
-  records: "order-5 @9xl:order-none",
-  radar: "order-3 @9xl:order-none",
-  length: "order-4 @9xl:order-none",
-  trend: "order-6 @9xl:order-none",
-  rank: "order-7 @7xl:col-span-2 @9xl:order-none @9xl:col-span-1",
+  grid: "@4xl:grid-cols-2 @7xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @9xl:grid-cols-3 @9xl:grid-rows-[auto_1fr_1fr]",
+  left: "@4xl:col-span-2 @7xl:col-span-1 @9xl:row-span-3",
+  right: "@4xl:col-span-2 @7xl:col-span-1 @9xl:contents",
+  timeline: "@4xl:col-span-2 @9xl:col-span-1",
 };
 
 /** The compare tab: pick up to five players, then see who wins which stat on the page's filters. */
@@ -167,26 +161,23 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
           />
           {/* One grid, so every edge lines up; see LAYOUT for the arrangement at each width. */}
           <Grid gap={4} className={layout.grid}>
-            <HeadToHeadTable players={players} className={layout.table} />
-            <ShareComparison filters={filters} className={layout.share} />
-            <RecordsPanel
-              players={players}
-              histories={histories}
-              heroFiltered={filters.heroId != null}
-              className={layout.records}
-            />
-            <PlaystyleRadarPanel players={players} metrics={metrics} className={layout.radar} />
-            <MatchLengthPanel players={players} histories={histories} className={layout.length} />
-            <PerformanceTrendPanel players={players} histories={histories} className={layout.trend} />
-            <RankHistoryPanel players={players} filters={filters} histories={histories} className={layout.rank} />
+            <Stack gap={4} className={layout.left}>
+              {/* Tall enough for the card to read; it scales to the panel's width and height. */}
+              <ShareComparison filters={filters} className="min-h-56" />
+              <HeadToHeadTable players={players} className="flex-1" />
+            </Stack>
+            <Stack gap={4} className={layout.right}>
+              <RecordsPanel players={players} histories={histories} heroFiltered={filters.heroId != null} />
+              <PlaystyleRadarPanel players={players} metrics={metrics} />
+              <MatchLengthPanel players={players} histories={histories} className="flex-1" />
+            </Stack>
+            <PerformanceTrendPanel players={players} histories={histories} />
+            <RankHistoryPanel players={players} filters={filters} histories={histories} />
+            <TimelinePanel players={players} filters={filters} className={layout.timeline} />
           </Grid>
           <PercentileComparison players={players} metrics={metrics} />
-          {/* How a match goes for each, then when they play: the timeline, the hours and the weekdays at one height. */}
-          <Grid
-            gap={4}
-            className="@4xl:grid-cols-[minmax(0,3fr)_minmax(0,3fr)_minmax(0,2fr)] @8xl:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1fr)]"
-          >
-            <TimelinePanel players={players} filters={filters} />
+          {/* When they play: the hours beside the weekdays, at one height. */}
+          <Grid gap={4} className="@4xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <ActivityPanel players={players} histories={histories} by="hour" />
             <ActivityPanel players={players} histories={histories} by="weekday" />
           </Grid>

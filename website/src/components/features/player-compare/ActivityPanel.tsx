@@ -116,7 +116,7 @@ export function ActivityPanel({
               }}
             />
           ) : pending ? (
-            <ChartLoading label={title} size="grow" />
+            <ChartLoading label={title} size="md" />
           ) : (
             <ShareChart
               players={players}
@@ -176,7 +176,7 @@ function ShareChart({
   const domain: [number, number] = [0, top];
   const yTicks = [0, top / 2, top];
   return (
-    <ChartSurface label={summary} announce="label" size="grow" variant="flush">
+    <ChartSurface label={summary} announce="label" size="md" variant="flush">
       <LineChart data={points} margin={CHART_MARGIN} accessibilityLayer={false}>
         <CartesianGrid {...CHART_GRID} />
         <XAxis {...CHART_X_AXIS} dataKey="label" ticks={ticks} interval="preserveStartEnd" minTickGap={16} />

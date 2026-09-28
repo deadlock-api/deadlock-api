@@ -7,7 +7,7 @@ import { CartesianGrid, Line, LineChart, ReferenceLine, Tooltip, XAxis, YAxis } 
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
-import { ChartSurface, chartSizeVariants } from "~/components/patterns/charts/ChartSurface";
+import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
   CHART_CURSOR_LINE,
   CHART_GRID,
@@ -145,7 +145,6 @@ export function TimelinePanel({
       : ""
   }`;
 
-  // A fixed plot height: it sets its row's height, which the activity panels beside it grow into.
   return (
     <Panel className={className}>
       <PanelHeader size="sm" title="Match timeline" icon={Hourglass}>
@@ -167,11 +166,11 @@ export function TimelinePanel({
               }}
             />
           ) : pending ? (
-            <ChartLoading label={LABEL} size="md" />
+            <ChartLoading label={LABEL} size="grow" />
           ) : rows.length === 0 ? (
-            <ChartEmpty label={LABEL} className={chartSizeVariants({ size: "md" })} />
+            <ChartEmpty label={LABEL} className="min-h-32 flex-1" />
           ) : (
-            <ChartSurface label={summary} announce="label" size="md" variant="flush">
+            <ChartSurface label={summary} announce="label" size="grow" variant="flush">
               <LineChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false}>
                 <CartesianGrid {...CHART_GRID} />
                 <XAxis
