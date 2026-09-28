@@ -179,7 +179,7 @@ function ShareChart({
     <ChartSurface label={summary} announce="label" size="md" variant="flush">
       <LineChart data={points} margin={CHART_MARGIN} accessibilityLayer={false}>
         <CartesianGrid {...CHART_GRID} />
-        <XAxis {...CHART_X_AXIS} dataKey="label" ticks={ticks} interval={ticks ? 0 : "preserveStartEnd"} />
+        <XAxis {...CHART_X_AXIS} dataKey="label" ticks={ticks} interval="preserveStartEnd" minTickGap={16} />
         <YAxis
           {...CHART_Y_AXIS}
           type="number"

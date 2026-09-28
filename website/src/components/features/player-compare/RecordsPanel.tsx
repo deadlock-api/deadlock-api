@@ -166,7 +166,7 @@ export function RecordsPanel({
                   return (
                     <TableCell key={player.accountId} className="text-end">
                       {history?.isPending ? (
-                        <Skeleton className="ms-auto h-4 w-12" />
+                        <Skeleton className="ms-auto h-5 w-12" />
                       ) : !record || value == null ? (
                         <NoValue />
                       ) : (
