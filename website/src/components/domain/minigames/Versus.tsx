@@ -13,9 +13,9 @@ import { cn } from "~/lib/utils";
  * one row down to 320px; the art and the value shrink with the board's own width, not the viewport's. When both values
  * belong to someone else (a hero's win rate against two enemies), a `VersusSubject` comes first and spans the board.
  *
- * The sides share the board's rows (CSS subgrid): art, name, value, and a fourth row once any side holds
- * `VersusActions`. So the two values line up even when one name wraps to two lines and the other does not, and the side
- * without actions keeps the value in the same place as the side with them. Place it in a non-wrapping column (`Stack`):
+ * The sides share the board's rows (CSS subgrid): art, name, and value (or `VersusActions`, the value between its
+ * answers). So the two values line up even when one name wraps to two lines and the other does not. Place it in a
+ * non-wrapping column (`Stack`):
  * Chrome under-measures a subgrid's height inside a wrapping flex column, and the board overlaps what follows.
  */
 function Versus({ className, ...props }: React.ComponentProps<"div">) {
@@ -31,9 +31,8 @@ function Versus({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-/** The rows a side spans on the board: art, name, value, plus actions when the board has any. */
-const SIDE_ROWS =
-  "grid grid-cols-1 grid-rows-subgrid row-span-3 justify-items-center gap-3 group-has-data-[slot=versus-actions]/versus:row-span-4";
+/** The rows a side spans on the board: art, name, value. */
+const SIDE_ROWS = "grid grid-cols-1 grid-rows-subgrid row-span-3 justify-items-center gap-3";
 
 /**
  * Whose numbers the two sides are: `VersusArt`, `VersusName` and a line saying what is measured. It spans the board
@@ -115,15 +114,22 @@ function VersusChoice({ className, ...props }: Omit<React.ComponentProps<typeof 
 }
 
 /**
- * The answers inside a side, under its value: two `AnswerOption variant="choice"` (Higher / Lower). Stacked while the
- * side is narrow, side by side once the board is 42rem wide. Keep them after the reveal with their result states; the
- * choice buttons reserve their mark, so nothing moves.
+ * The judged value between its answers, in the value's row: `AnswerOption variant="icon"` (Lower), the side's
+ * `VersusValue`, `AnswerOption variant="icon"` (Higher). One line once the board is 32rem wide; narrower, a side has no
+ * room for both squares beside the value, so the value goes on top and the answers share the line under it. Keep the
+ * answers after the reveal with their result states; their size never changes, so nothing moves.
  */
 function VersusActions({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="versus-actions"
-      className={cn("flex w-full flex-col gap-2 justify-self-stretch @2xl/versus:flex-row", className)}
+      className={cn(
+        "flex w-full flex-wrap items-center justify-center gap-1",
+        "*:data-[slot=versus-value]:order-first *:data-[slot=versus-value]:basis-full",
+        "*:data-[slot=answer-option]:w-auto *:data-[slot=answer-option]:max-w-20 *:data-[slot=answer-option]:flex-1",
+        "@lg/versus:flex-nowrap @lg/versus:gap-3 @lg/versus:*:data-[slot=answer-option]:w-11 @lg/versus:*:data-[slot=answer-option]:flex-none @lg/versus:*:data-[slot=versus-value]:order-none @lg/versus:*:data-[slot=versus-value]:basis-auto",
+        className,
+      )}
       {...props}
     />
   );
@@ -271,7 +277,7 @@ function VersusDivider({ className, children = "VS", ...props }: React.Component
       data-slot="versus-divider"
       variant="outline"
       size="sm"
-      className={cn("row-span-3 group-has-data-[slot=versus-actions]/versus:row-span-4", className)}
+      className={cn("row-span-3", className)}
       {...props}
     >
       {children}

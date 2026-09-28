@@ -115,8 +115,8 @@ function choicesFor(round: HigherLowerRound): Choice[] {
     ];
   }
   return [
-    { guess: "higher", label: "Higher", icon: ArrowUp, key: "H" },
     { guess: "lower", label: "Lower", icon: ArrowDown, key: "L" },
+    { guess: "higher", label: "Higher", icon: ArrowUp, key: "H" },
   ];
 }
 
@@ -251,7 +251,6 @@ function HigherLower() {
   const shownIndex = revealing ?? state.currentQuestion;
   const round = rounds[shownIndex] ?? null;
   const picked = state.answers[shownIndex] ?? null;
-  const pickedCorrect = round != null && picked != null && picked === correctGuess(round);
   // The run of correct answers up to the round on screen: the ones before it, and this one too once it is answered.
   const streak = currentStreak(rounds, state.answers, isRevealed ? shownIndex : shownIndex - 1);
 
@@ -369,7 +368,7 @@ function HigherLower() {
       hideAttempts
       date={date}
     >
-      {/* Read once, here; the visible sentence under the board is aria-hidden. */}
+      {/* The only place the outcome is read out; nothing visible repeats it. */}
       <GuessFeedback
         type={feedbackType}
         triggerKey={shownIndex}
@@ -473,58 +472,38 @@ function HigherLower() {
                       <ContenderArt contender={round.right} />
                     </VersusArt>
                     <VersusName>{round.right.name}</VersusName>
-                    <VersusValue
-                      state={isRevealed ? "revealed" : "hidden"}
-                      countTo={{
-                        value: round.right.value,
-                        format: (n) => formatValue(n, round.format),
-                        from: round.left.value,
-                      }}
-                    >
-                      {formatValue(round.right.value, round.format)}
-                    </VersusValue>
                     <VersusActions>
-                      {choicesFor(round).map(({ guess, label, icon: Icon, key }) => (
-                        <AnswerOption
-                          key={guess}
-                          variant="choice"
-                          shortcut={key}
-                          state={isRevealed ? revealedState(guess === correctGuess(round), guess === picked) : "idle"}
-                          onClick={() => handleGuess(guess)}
-                          aria-disabled={isRevealed || undefined}
-                        >
-                          {Icon && <Icon aria-hidden="true" className="size-4 shrink-0" />}
-                          {label}
-                        </AnswerOption>
+                      {choicesFor(round).map(({ guess, label, icon: Icon, key }, i) => (
+                        <Fragment key={guess}>
+                          {i === 1 && (
+                            <VersusValue
+                              state={isRevealed ? "revealed" : "hidden"}
+                              countTo={{
+                                value: round.right.value,
+                                format: (n) => formatValue(n, round.format),
+                                from: round.left.value,
+                              }}
+                            >
+                              {formatValue(round.right.value, round.format)}
+                            </VersusValue>
+                          )}
+                          <AnswerOption
+                            variant="icon"
+                            aria-label={label}
+                            shortcut={key}
+                            state={isRevealed ? revealedState(guess === correctGuess(round), guess === picked) : "idle"}
+                            onClick={() => handleGuess(guess)}
+                            aria-disabled={isRevealed || undefined}
+                          >
+                            {Icon && <Icon aria-hidden="true" />}
+                          </AnswerOption>
+                        </Fragment>
                       ))}
                     </VersusActions>
                   </VersusSide>
                 </Versus>
               )}
             </Stack>
-
-            {/* Laid out before the answer, the hint and both outcomes in one cell, so the reveal moves nothing.
-                GuessFeedback reads the outcome out; this copy is for the eyes. */}
-            <p aria-hidden="true" className="grid px-2 text-center text-sm text-balance">
-              {/* Before the answer: how to answer. On a touch screen nothing else says the hero cards are buttons. */}
-              <Text tone="muted" className={cn("col-start-1 row-start-1", isRevealed && "invisible")}>
-                {round.kind === "head-to-head"
-                  ? "Pick the hero you think wins"
-                  : `Higher or lower than ${formatValue(round.left.value, round.format)}?`}
-              </Text>
-              <span className={cn("col-start-1 row-start-1", !(isRevealed && pickedCorrect) && "invisible")}>
-                <Text tone="positive" className="font-semibold">
-                  Correct.
-                </Text>{" "}
-                {sentence}
-              </span>
-              <span className={cn("col-start-1 row-start-1", !(isRevealed && !pickedCorrect) && "invisible")}>
-                <Text tone="negative" className="font-semibold">
-                  Wrong.
-                </Text>{" "}
-                {sentence}
-              </span>
-            </p>
 
             <Inline
               justify="center"

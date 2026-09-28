@@ -56,7 +56,7 @@ export function DomainMinigames() {
   const [picked, setPicked] = useState<number | null>(null);
   const [guess, setGuess] = useState<number | null>(null);
   const [matchPick, setMatchPick] = useState<number | null>(null);
-  const [hlGuess, setHlGuess] = useState<number | null>(null);
+  const [hlGuess, setHlGuess] = useState<string | null>(null);
   const [h2hPick, setH2hPick] = useState<number | null>(null);
 
   return (
@@ -64,7 +64,7 @@ export function DomainMinigames() {
       <Specimen
         name="AnswerOption"
         source="domain/minigames/AnswerOption"
-        note="One answer of a quiz, in every game. row is a full-width answer with a trailing result mark; tile is one of a few short choices on a line; choice is one of two big main actions (inside a Versus board under 28rem it tightens and drops the keycap); card makes a whole card the answer (see VersusChoice). row and choice reserve the slot of the mark in every state, so the reveal never changes their width, height or wrap. After the reveal, revealedState() maps each option to correct, wrong or dimmed. shortcut draws the key that picks it as a keycap in front of the text (fine pointers only) and sets aria-keyshortcuts; the game listens for the key. During a reveal the options take aria-disabled rather than disabled: they stay focusable, so focus stays on the answer just picked, and ignore clicks and Enter."
+        note="One answer of a quiz, in every game. row is a full-width answer with a trailing result mark; tile is one of a few short choices on a line; choice is one of two big main actions; icon is a 44px square with only an icon and an aria-label (no keycap; the result mark replaces the icon on reveal), for Higher / Lower in VersusActions; card makes a whole card the answer (see VersusChoice). row and choice reserve the slot of the mark in every state, so the reveal never changes their width, height or wrap. After the reveal, revealedState() maps each option to correct, wrong or dimmed. shortcut draws the key that picks it as a keycap in front of the text (fine pointers only) and sets aria-keyshortcuts; the game listens for the key. During a reveal the options take aria-disabled rather than disabled: they stay focusable, so focus stays on the answer just picked, and ignore clicks and Enter."
         className="theme-terminal"
       >
         <Variants label="row · idle, selected, correct, wrong, dimmed" className="max-w-lg flex-col items-stretch">
@@ -149,7 +149,7 @@ export function DomainMinigames() {
       <Specimen
         name="Versus"
         source="domain/minigames/Versus"
-        note="Two contenders side by side for a game that compares them: VersusSide, VersusDivider, VersusSide. Each side is VersusArt, VersusName, VersusValue (and VersusActions); the sides share the board's rows through CSS subgrid, so the values line up even when only one name wraps. VersusSide emphasis: none, target (the side being judged, primary tone). outcome after the reveal: higher (full contrast, an up arrow in the corner and the word Higher for screen readers), lower (muted value); once set it wins over emphasis. VersusValue state: shown, hidden (a muted placeholder, ? by default; screen readers hear Hidden), revealed (pops in). children is the formatted value in every state and is laid out invisibly under the placeholder, so the value's box has its final size before the reveal. countTo counts a revealed value up (0.6s; the final value at once under reduced motion). The art box shrinks with the board (2.5rem to 5rem); the image inside takes versusArtImageVariants({ fit }): fill, or icon (three quarters, letterboxed). The class goes on the image rather than a child selector on VersusArt, so the image's own default size is replaced by cn() instead of overridden by variant order."
+        note="Two contenders side by side for a game that compares them: VersusSide, VersusDivider, VersusSide. Each side is VersusArt, VersusName, VersusValue, or VersusActions holding the value between two icon answers (one line from a 32rem board, the answers under the value when narrower); the sides share the board's rows through CSS subgrid, so the values line up even when only one name wraps. VersusSide emphasis: none, target (the side being judged, primary tone). outcome after the reveal: higher (full contrast, an up arrow in the corner and the word Higher for screen readers), lower (muted value); once set it wins over emphasis. VersusValue state: shown, hidden (a muted placeholder, ? by default; screen readers hear Hidden), revealed (pops in). children is the formatted value in every state and is laid out invisibly under the placeholder, so the value's box has its final size before the reveal. countTo counts a revealed value up (0.6s; the final value at once under reduced motion). The art box shrinks with the board (2.5rem to 5rem); the image inside takes versusArtImageVariants({ fit }): fill, or icon (three quarters, letterboxed). The class goes on the image rather than a child selector on VersusArt, so the image's own default size is replaced by cn() instead of overridden by variant order."
         className="theme-terminal"
       >
         <Variants
@@ -223,7 +223,7 @@ export function DomainMinigames() {
           </Versus>
         </Variants>
         <Variants
-          label="Live: VersusSubject + VersusActions inside the judged side, count-up on reveal"
+          label="Live: VersusSubject + VersusActions (Lower, value, Higher on one line), count-up on reveal"
           className="max-w-xl flex-col flex-nowrap items-stretch"
         >
           <Versus data-demo="higher-lower">
@@ -249,25 +249,28 @@ export function DomainMinigames() {
                 <SwordsIcon className={versusArtImageVariants({ fit: "icon" })} strokeWidth={1.5} />
               </VersusArt>
               <VersusName>Ava</VersusName>
-              <VersusValue
-                state={hlGuess === null ? "hidden" : "revealed"}
-                countTo={{ value: 0.6, format: formatPercent }}
-              >
-                {formatPercent(0.6)}
-              </VersusValue>
               <VersusActions>
-                {HIGHER_LOWER.map(({ label, icon: Icon, correct }, i) => (
-                  <AnswerOption
-                    key={label}
-                    variant="choice"
-                    shortcut={label[0]}
-                    state={hlGuess === null ? "idle" : revealedState(!correct, i === hlGuess)}
-                    onClick={() => setHlGuess(i)}
-                    aria-disabled={hlGuess !== null || undefined}
-                  >
-                    <Icon aria-hidden="true" className="size-4" />
-                    {label}
-                  </AnswerOption>
+                {[HIGHER_LOWER[1], HIGHER_LOWER[0]].map(({ label, icon: Icon, correct }, i) => (
+                  <Fragment key={label}>
+                    {i === 1 && (
+                      <VersusValue
+                        state={hlGuess === null ? "hidden" : "revealed"}
+                        countTo={{ value: 0.6, format: formatPercent }}
+                      >
+                        {formatPercent(0.6)}
+                      </VersusValue>
+                    )}
+                    <AnswerOption
+                      variant="icon"
+                      aria-label={label}
+                      shortcut={label[0]}
+                      state={hlGuess === null ? "idle" : revealedState(!correct, label === hlGuess)}
+                      onClick={() => setHlGuess(label)}
+                      aria-disabled={hlGuess !== null || undefined}
+                    >
+                      <Icon aria-hidden="true" />
+                    </AnswerOption>
+                  </Fragment>
                 ))}
               </VersusActions>
             </VersusSide>
