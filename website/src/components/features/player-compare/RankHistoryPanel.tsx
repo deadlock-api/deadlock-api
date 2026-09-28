@@ -69,7 +69,8 @@ export function RankHistoryPanel({
 
   return (
     <Panel>
-      <PanelHeader size="sm" title="Rank over time" icon={Medal} />
+      {/* As tall as the weekly trend's header beside it (which holds a select), so the two plots start level. */}
+      <PanelHeader size="sm" title="Rank over time" icon={Medal} className="min-h-11" />
       <PanelBody size="sm">
         {/* The legend under the plot, as on the weekly trend beside it, so the pair lines up. */}
         <Stack gap={2}>
