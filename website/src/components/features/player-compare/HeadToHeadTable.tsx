@@ -86,7 +86,7 @@ export function HeadToHeadTable({
           const groupScored = groupStats.some((stat) => stat.polarity !== "none");
           return (
             <TableBody key={group}>
-              <TableRow>
+              <TableRow tone="section">
                 <TableHead scope="rowgroup" data-pinned>
                   <Text variant="label" as="div" className="max-w-24 @md/table:max-w-none">
                     {group}

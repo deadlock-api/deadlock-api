@@ -297,6 +297,14 @@ export function Patterns() {
             </TableHeader>
             <TableBody>
               {visible.length === 0 && <TableEmptyRow colSpan={5} />}
+              {visible.length > 0 && (
+                <TableRow tone="section">
+                  <TableHead scope="rowgroup" data-pinned>
+                    Section row (tone=&quot;section&quot;)
+                  </TableHead>
+                  <TableCell colSpan={4} />
+                </TableRow>
+              )}
               {visible.map((row) => (
                 <TableRow key={row.hero}>
                   <TableCell data-pinned className="font-medium">

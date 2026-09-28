@@ -145,15 +145,24 @@ function TableFooter({
   );
 }
 
-function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
+/** `section`: the heading row of a group of rows, filled across its whole width like its pinned header cell. */
+const ROW_TONE = { default: "", section: "bg-muted even:bg-muted hover:bg-muted" } as const;
+
+function TableRow({
+  tone = "default",
+  className,
+  ...props
+}: React.ComponentProps<"tr"> & { tone?: keyof typeof ROW_TONE }) {
   return (
     <tr
       data-slot="table-row"
+      data-tone={tone}
       className={cn(
         // `data-plain` drops the rule and the hover fill; `data-static` drops the hover fill and keeps the rule.
         // Even rows carry a faint translucent stripe, the same on a card or on glass; hover and the states come later
         // in the cascade and paint over it. A pinned cell draws the opaque twin of it (`table-stripe`).
         "border-b transition-colors even:bg-subtle hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-interactive:cursor-pointer data-plain:border-0 data-plain:hover:bg-transparent data-static:hover:bg-transparent data-[state=current]:bg-accent data-[state=current]:font-medium data-[state=selected]:bg-muted",
+        ROW_TONE[tone],
         className,
       )}
       {...props}
