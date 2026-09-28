@@ -18,7 +18,6 @@ on:
       - 'rustfmt.toml'
       - 'valveprotos/**'
       - 'haste/**'
-      - 'dungers/**'
       - '.github/workflows/rust-ci-checks.yml'
   pull_request:
     branches:
@@ -33,7 +32,6 @@ on:
       - 'rustfmt.toml'
       - 'valveprotos/**'
       - 'haste/**'
-      - 'dungers/**'
       - '.github/workflows/rust-ci-checks.yml'
 
 permissions:
@@ -111,7 +109,7 @@ jobs:
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
           filters: |
-            change: [ 'tools/${{ matrix.component }}/**', 'tools/common/**', 'tools/Dockerfile', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'valveprotos/**', 'haste/**', 'dungers/**', '.sqlx/**' ]
+            change: [ 'tools/${{ matrix.component }}/**', 'tools/common/**', 'tools/Dockerfile', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'valveprotos/**', 'haste/**', '.sqlx/**' ]
       - name: Check if component should build
         id: should_deploy
         run: |

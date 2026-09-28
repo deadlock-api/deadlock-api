@@ -14,7 +14,6 @@ on:
       - 'rustfmt.toml'
       - 'valveprotos/**'
       - 'haste/**'
-      - 'dungers/**'
       - '.github/workflows/rust-ci-checks.yml'
   pull_request:
     branches:
@@ -29,7 +28,6 @@ on:
       - 'rustfmt.toml'
       - 'valveprotos/**'
       - 'haste/**'
-      - 'dungers/**'
       - '.github/workflows/rust-ci-checks.yml'
   workflow_dispatch:
     inputs:

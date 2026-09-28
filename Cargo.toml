@@ -1,8 +1,6 @@
 [workspace]
 members = [
     "api",
-    "dungers",
-    "dungers/crates/*",
     "haste",
     "haste/crates/*",
     "live-events",
@@ -33,10 +31,10 @@ haste = { path = "haste", features = ["async"] }
 haste_broadcast = { path = "haste/crates/haste_broadcast" }
 haste_core = { path = "haste/crates/haste_core" }
 haste_vartype = { path = "haste/crates/haste_vartype" }
-dungers = { path = "dungers" }
-dungers_bitbuf = { path = "dungers/crates/dungers_bitbuf" }
-dungers_charsor = { path = "dungers/crates/dungers_charsor" }
-dungers_varint = { path = "dungers/crates/dungers_varint" }
+dungers = { path = "haste/crates/dungers" }
+dungers_bitbuf = { path = "haste/crates/dungers_bitbuf" }
+dungers_charsor = { path = "haste/crates/dungers_charsor" }
+dungers_varint = { path = "haste/crates/dungers_varint" }
 
 anyhow = "1.0.104"
 async-compression = "0.4.48"

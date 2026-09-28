@@ -1,8 +1,8 @@
 name: Crates CI
 
-# Checks for the library crates imported into the workspace (valveprotos,
-# haste, dungers). Their consumers (api, tools, live-events) are checked by
-# their own workflows, which also trigger on changes to these crates.
+# Checks for the library crates imported into the workspace (valveprotos, and
+# haste with its dungers crates). Their consumers (api, tools, live-events) are
+# checked by their own workflows, which also trigger on changes to these crates.
 
 on:
   push:
@@ -11,7 +11,6 @@ on:
     paths:
       - 'valveprotos/**'
       - 'haste/**'
-      - 'dungers/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
@@ -24,7 +23,6 @@ on:
     paths:
       - 'valveprotos/**'
       - 'haste/**'
-      - 'dungers/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
@@ -55,21 +53,11 @@ jobs:
     uses: ./.github/workflows/rust-ci-checks.yml
     with:
       working-directory: haste
-      packages: haste haste_core haste_broadcast haste_vartype
+      packages: haste haste_core haste_broadcast haste_vartype dungers dungers_bitbuf dungers_charsor dungers_varint
       clippy-args: --all-features
       typos: false
       lint-extra-apt-packages: clang mold
       rust-cache-shared-key: haste-build-cache
-
-  dungers:
-    uses: ./.github/workflows/rust-ci-checks.yml
-    with:
-      working-directory: dungers
-      packages: dungers dungers_bitbuf dungers_charsor dungers_varint
-      clippy-args: --all-features
-      typos: false
-      lint-extra-apt-packages: clang mold
-      rust-cache-shared-key: dungers-build-cache
 
   test:
     name: Test

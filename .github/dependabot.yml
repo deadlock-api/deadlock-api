@@ -10,7 +10,7 @@ updates:
           - "*"
     rebase-strategy: auto
 
-  # Root cargo workspace: api, tools, live-events, valveprotos, haste, dungers.
+  # Root cargo workspace: api, tools, live-events, valveprotos, haste.
   - package-ecosystem: cargo
     directory: /
     schedule:

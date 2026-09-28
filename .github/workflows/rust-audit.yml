@@ -1,7 +1,7 @@
 name: Rust Audit
 
-# One audit for the whole cargo workspace (api, tools, live-events, valveprotos,
-# haste and dungers share the root Cargo.lock). Ignores live in .cargo/audit.toml.
+# One audit for the whole cargo workspace (api, tools, live-events, valveprotos
+# and haste share the root Cargo.lock). Ignores live in .cargo/audit.toml.
 
 on:
   push:
