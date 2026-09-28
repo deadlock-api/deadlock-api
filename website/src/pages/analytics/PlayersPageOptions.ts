@@ -135,16 +135,26 @@ export const comparePageOptions = {
           staleTime: "static",
         }),
       ),
-      Promise.all(
-        accountIds.map((id) =>
-          prefetchSafe(
-            queryClient.query({
-              ...playerStatsMetricsQueryOptions(compareQueries.compareMetricsParams(filters, id)),
-              staleTime: "static",
-            }),
+      // The link preview's verdict needs them, and only a crawler reads the server's head: in the browser a navigation
+      // (a player added, a filter changed) does not wait on them, and the page shows its placeholders instead.
+      typeof window === "undefined"
+        ? Promise.all(
+            accountIds.map((id) =>
+              prefetchSafe(
+                queryClient.query({
+                  ...playerStatsMetricsQueryOptions(compareQueries.compareMetricsParams(filters, id)),
+                  staleTime: "static",
+                }),
+              ),
+            ),
+          )
+        : Promise.resolve(
+            accountIds.map((id) =>
+              queryClient.getQueryData(
+                playerStatsMetricsQueryOptions(compareQueries.compareMetricsParams(filters, id)).queryKey,
+              ),
+            ),
           ),
-        ),
-      ),
     ]);
     const names = accountIds.map((id, index) => profileList[index]?.personaname ?? `Player ${id}`);
     // Scored as the share card scores it; without the stats there is no verdict rather than a wrong one.
