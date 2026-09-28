@@ -101,3 +101,50 @@ export function winRateByDuration(
     return { bracket: bracket.key, matches, wins, winRate: matches >= minMatches ? wins / matches : null };
   });
 }
+
+export interface HourBucket {
+  hour: number;
+  matches: number;
+  wins: number;
+}
+
+/**
+ * A match history by the hour of day each match started, 0 to 23. `hourOf` maps a unix start time to its hour: the
+ * viewer's local clock in the browser, UTC where the server renders.
+ */
+export function matchesByHour(
+  entries: readonly PlayerMatchHistoryEntry[],
+  hourOf: (unix: number) => number = (unix) => Math.floor((unix % 86_400) / 3600),
+): HourBucket[] {
+  const hours = Array.from({ length: 24 }, (_, hour) => ({ hour, matches: 0, wins: 0 }));
+  for (const entry of entries) {
+    const bucket = hours[hourOf(entry.start_time)];
+    if (!bucket) continue;
+    bucket.matches++;
+    if (isWin(entry)) bucket.wins++;
+  }
+  return hours;
+}
+
+export interface WeekdayBucket {
+  /** 0 Monday … 6 Sunday. */
+  weekday: number;
+  matches: number;
+  wins: number;
+}
+
+/** A match history by the weekday each match started, Monday first; `weekdayOf` returns 0 for Monday. */
+export function matchesByWeekday(
+  entries: readonly PlayerMatchHistoryEntry[],
+  // The unix epoch fell on a Thursday (3 with Monday as 0).
+  weekdayOf: (unix: number) => number = (unix) => (Math.floor(unix / 86_400) + 3) % 7,
+): WeekdayBucket[] {
+  const days = Array.from({ length: 7 }, (_, weekday) => ({ weekday, matches: 0, wins: 0 }));
+  for (const entry of entries) {
+    const bucket = days[weekdayOf(entry.start_time)];
+    if (!bucket) continue;
+    bucket.matches++;
+    if (isWin(entry)) bucket.wins++;
+  }
+  return days;
+}

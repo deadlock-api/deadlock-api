@@ -11,6 +11,7 @@ import { playstyleLabel, playstylePercentiles } from "~/lib/playstyle";
 import { type CompareFilters, compareHeroStatsParams, playerRanksQueryOptions } from "~/queries/player-compare-queries";
 import { steamProfileQueryOptions, trackerHeroStatsQueryOptions } from "~/queries/tracker-queries";
 
+import { ActivityPanel } from "./ActivityPanel";
 import { AddPlayerControls } from "./AddPlayerControls";
 import { HeadToHeadTable } from "./HeadToHeadTable";
 import { ItemPreferencesPanel } from "./ItemPreferencesPanel";
@@ -165,6 +166,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             <PerformanceTrendPanel players={players} histories={histories} className={layout.trend} />
           </Grid>
           <PercentileComparison players={players} metrics={metrics} />
+          <ActivityPanel players={players} histories={histories} />
           {/* Heroes and items side by side. */}
           <Grid columns={{ base: 1, xl: showSharedHeroes ? 2 : 1 }} gap={4}>
             {showSharedHeroes && <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />}

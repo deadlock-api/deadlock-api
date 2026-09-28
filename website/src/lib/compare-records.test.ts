@@ -3,7 +3,14 @@ import { test } from "node:test";
 
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
-import { MIN_BRACKET_MATCHES, playerRecords, RECORD_MIN_DURATION_S, winRateByDuration } from "./compare-records";
+import {
+  matchesByHour,
+  matchesByWeekday,
+  MIN_BRACKET_MATCHES,
+  playerRecords,
+  RECORD_MIN_DURATION_S,
+  winRateByDuration,
+} from "./compare-records";
 
 const DAY = 86_400;
 
@@ -85,4 +92,25 @@ test("winRateByDuration puts a bracket's upper edge in the next bracket", () => 
   const brackets = winRateByDuration([match(0, { match_duration_s: 25 * 60 })], 1);
   assert.equal(brackets[0].matches, 0);
   assert.equal(brackets[1].matches, 1);
+});
+
+test("matchesByHour buckets start times by hour, UTC by default", () => {
+  const hours = matchesByHour([
+    match(3 * 3600 + 59),
+    match(DAY + 3 * 3600, { match_result: 1 }),
+    match(23 * 3600 + 3599),
+  ]);
+  assert.equal(hours.length, 24);
+  assert.deepEqual(hours[3], { hour: 3, matches: 2, wins: 1 });
+  assert.equal(hours[23].matches, 1);
+  const shifted = matchesByHour([match(0)], () => 5);
+  assert.equal(shifted[5].matches, 1);
+});
+
+test("matchesByWeekday starts the week on Monday, UTC by default", () => {
+  // 1970-01-05 was a Monday.
+  // The epoch itself, 1970-01-01, was a Thursday.
+  const days = matchesByWeekday([match(4 * DAY + 10), match(0)]);
+  assert.equal(days[0].matches, 1);
+  assert.equal(days[3].matches, 1);
 });
