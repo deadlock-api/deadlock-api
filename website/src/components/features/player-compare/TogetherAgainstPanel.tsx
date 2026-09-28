@@ -20,12 +20,12 @@ import {
   playerPairs,
   recentSharedMatches,
   type SharedMatch,
-  type SharedMatchTeam,
   splitPairs,
 } from "~/lib/player-compare-pairs";
 import { formatStatValue } from "~/lib/stat-format";
 import { toneOf } from "~/lib/tone";
 
+import { PlayerColumnHead } from "./CompareTableParts";
 import type { ComparedPlayer } from "./types";
 import type { CompareMatchHistory } from "./useCompareMatchHistories";
 
@@ -197,64 +197,76 @@ function PairRow({
   );
 }
 
-function SharedTeam({ team, byId }: { team: SharedMatchTeam; byId: ReadonlyMap<number, ComparedPlayer> }) {
-  return (
-    <Inline gap={2} className="gap-y-1">
-      <Text variant="caption" tone={team.won ? "positive" : "negative"} className="font-semibold">
-        <span aria-hidden="true">{team.won ? "W" : "L"}</span>
-        <span className="sr-only">{team.won ? "Won:" : "Lost:"}</span>
-      </Text>
-      {team.players.map((entry) => {
-        const player = byId.get(entry.accountId);
-        return (
-          <Inline key={entry.accountId} gap={1} wrap="nowrap" title={player?.name}>
-            {player && <StatusDot color={player.color} />}
-            <span className="sr-only">{player?.name ?? `Player ${entry.accountId}`} as</span>
-            <HeroImage heroId={entry.heroId} shape="circle" title="" className="size-5" />
-            <Text variant="caption" numeric="tabular" className="whitespace-nowrap">
-              {entry.kills}/{entry.deaths}/{entry.assists}{" "}
-              <Text variant="caption" tone="muted">
-                {compactSouls(entry.netWorth)}
-                <span className="sr-only"> souls</span>
-              </Text>
-            </Text>
-          </Inline>
-        );
-      })}
-    </Inline>
-  );
-}
-
-function SharedMatchRow({
-  match,
-  byId,
+/**
+ * The newest matches two or more of the players shared, one row each: when and how long, then a column per player (in
+ * the page's order) with their result, hero, K/D/A and souls, so every value lines up down the column. A player who
+ * was not in the match leaves the cell empty; the W and L tell who was on which side.
+ */
+function SharedMatchesTable({
+  matches,
+  players,
   lastMetLabel,
 }: {
-  match: SharedMatch;
-  byId: ReadonlyMap<number, ComparedPlayer>;
+  matches: readonly SharedMatch[];
+  players: ComparedPlayer[];
   lastMetLabel: (unix: number) => string;
 }) {
-  const [first, second] = match.teams;
+  // Only the players who appear in these matches get a column.
+  const inAny = new Set(
+    matches.flatMap((match) => match.teams.flatMap((team) => team.players.map((p) => p.accountId))),
+  );
+  const columns = players.filter((player) => inAny.has(player.accountId));
   return (
-    // Not a link: the site has no public match page (the tracker's scoreboard is for signed-in patrons).
-    <Inline gap={3} asChild className="gap-y-1 px-3 py-1.5">
-      <li>
-        <Text variant="caption" tone="muted" className="w-32 shrink-0 whitespace-nowrap">
-          {lastMetLabel(match.startTime)} · {Math.round(match.durationS / 60)}m<span className="sr-only"> long</span>
-        </Text>
-        <Inline gap={3} className="gap-y-1">
-          <SharedTeam team={first} byId={byId} />
-          {second && (
-            <>
-              <Text variant="caption" tone="muted">
-                vs
+    // Not links: the site has no public match page (the tracker's scoreboard is for signed-in patrons).
+    <Table density="dense" className="tabular-nums" aria-label="Recent shared matches">
+      <TableHeader tone="muted">
+        <TableRow>
+          <TableHead data-pinned>Match</TableHead>
+          {columns.map((player) => (
+            <PlayerColumnHead key={player.accountId} player={player} />
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {matches.map((match) => (
+          <TableRow key={match.matchId}>
+            <TableCell data-pinned>
+              <Text tone="muted" className="whitespace-nowrap">
+                {lastMetLabel(match.startTime)} · {Math.round(match.durationS / 60)}m
               </Text>
-              <SharedTeam team={second} byId={byId} />
-            </>
-          )}
-        </Inline>
-      </li>
-    </Inline>
+            </TableCell>
+            {columns.map((player) => {
+              const team = match.teams.find((candidate) =>
+                candidate.players.some((entry) => entry.accountId === player.accountId),
+              );
+              const entry = team?.players.find((candidate) => candidate.accountId === player.accountId);
+              return (
+                <TableCell key={player.accountId} className="text-end">
+                  {team && entry ? (
+                    <Inline gap={1.5} wrap="nowrap" justify="end">
+                      <Text tone={team.won ? "positive" : "negative"} className="font-semibold">
+                        <span aria-hidden="true">{team.won ? "W" : "L"}</span>
+                        <span className="sr-only">{team.won ? "Won" : "Lost"} as</span>
+                      </Text>
+                      <HeroImage heroId={entry.heroId} shape="circle" className="size-5" />
+                      <Text className="w-20 text-end whitespace-nowrap">
+                        {entry.kills}/{entry.deaths}/{entry.assists}
+                      </Text>
+                      <Text tone="muted" className="w-12 text-end whitespace-nowrap">
+                        {compactSouls(entry.netWorth)}
+                        <span className="sr-only"> souls</span>
+                      </Text>
+                    </Inline>
+                  ) : (
+                    <NoValue label="Not in this match" />
+                  )}
+                </TableCell>
+              );
+            })}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }
 
@@ -379,13 +391,7 @@ export function TogetherAgainstPanel({
       {recent.length > 0 && (
         <>
           <PanelHeader size="sm" title="Recent shared matches" />
-          <Stack gap={0} asChild>
-            <ul aria-label="Recent shared matches">
-              {recent.map((match) => (
-                <SharedMatchRow key={match.matchId} match={match} byId={byId} lastMetLabel={lastMetLabel} />
-              ))}
-            </ul>
-          </Stack>
+          <SharedMatchesTable matches={recent} players={players} lastMetLabel={lastMetLabel} />
         </>
       )}
     </Panel>
