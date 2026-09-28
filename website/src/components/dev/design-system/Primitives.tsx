@@ -84,7 +84,7 @@ const BUTTON_VARIANTS = [
   "negative-soft",
   "toggle",
 ] as const;
-const BUTTON_SIZES = ["xs", "sm", "default", "lg"] as const;
+const BUTTON_SIZES = ["xs", "sm", "sm-tight", "default", "lg"] as const;
 const ICON_SIZES = ["icon-xs", "icon-sm", "icon", "icon-lg"] as const;
 const BADGE_VARIANTS = [
   "default",

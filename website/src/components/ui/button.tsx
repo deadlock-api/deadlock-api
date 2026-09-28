@@ -69,6 +69,8 @@ const buttonVariants = cva(
         default: "h-9 px-4 py-2 text-sm has-[>svg]:px-3",
         xs: "h-6 gap-1 px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-8 gap-1.5 px-3 text-sm has-[>svg]:px-2.5",
+        /** `sm` with the inset of its icon: for a list of rows whose content (an avatar, a name) brings its own edge. */
+        "sm-tight": "h-8 gap-1.5 px-1.5 text-sm",
         lg: "h-10 px-6 text-sm has-[>svg]:px-4",
         icon: "size-9 text-sm",
         "icon-xs": "size-6 text-sm [&_svg:not([class*='size-'])]:size-3",
@@ -98,6 +100,7 @@ const SPINNER_SIZE: Partial<Record<NonNullable<VariantProps<typeof buttonVariant
   xs: "xs",
   "icon-xs": "xs",
   sm: "sm",
+  "sm-tight": "sm",
   "icon-sm": "sm",
   inline: "sm",
 };

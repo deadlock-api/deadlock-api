@@ -119,8 +119,8 @@ function SuggestionGroup({
               <li key={accountId}>
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="w-full justify-start px-1.5"
+                  size="sm-tight"
+                  className="w-full justify-start"
                   aria-label={`Add ${name}, ${games} ${relation}`}
                   onClick={() => onAdd(accountId)}
                 >
