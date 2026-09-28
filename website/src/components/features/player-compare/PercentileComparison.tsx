@@ -1,5 +1,3 @@
-import { keepPreviousData, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { HashMapValue } from "deadlock_api_client";
 import { ZoomIn } from "lucide-react";
 import { useState } from "react";
 
@@ -8,47 +6,25 @@ import { Panel, PanelBody, PanelHeader, PanelShowMore } from "~/components/patte
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Button } from "~/components/ui/button";
 import { Inline } from "~/components/ui/stack";
-import { type CompareFilters, compareMetricsParams, lastAnswerForAccount } from "~/queries/player-compare-queries";
-import { playerStatsMetricsQueryOptions } from "~/queries/player-stats-metrics-query";
 
 import { DistributionMarkers, METRIC_COUNT } from "./DistributionMarkers";
+import type { ComparedPlayer } from "./types";
+import type { CompareMetrics } from "./useCompareMetrics";
 
 /** The stats people measure a player by, shown before "Show all". */
 const COLLAPSED_METRICS = 10;
-import type { ComparedPlayer } from "./types";
 
 /**
  * Where each player sits among all players on the same filters: the population's curve for every stat, each
  * player's average marked on it.
  */
-export function PercentileComparison({ players, filters }: { players: ComparedPlayer[]; filters: CompareFilters }) {
+export function PercentileComparison({ players, metrics }: { players: ComparedPlayer[]; metrics: CompareMetrics }) {
   const [zoom, setZoom] = useState(true);
   const [expanded, setExpanded] = useState(false);
-  const population = useQuery({
-    ...playerStatsMetricsQueryOptions(compareMetricsParams(filters)),
-    placeholderData: keepPreviousData,
-  });
-  const client = useQueryClient();
-  const own = useQueries({
-    queries: players.map((player) => ({
-      ...playerStatsMetricsQueryOptions(compareMetricsParams(filters, player.accountId)),
-      placeholderData: lastAnswerForAccount<Record<string, HashMapValue>>(
-        client,
-        "api-player-stats-metrics",
-        player.accountId,
-      ),
-    })),
-  });
-  const failed = population.isError || own.some((query) => query.isError && !query.data);
+  const failed = metrics.populationFailed || metrics.failed.some(Boolean);
   // The curves draw once the field and one player are in; a player still loading just has no marker yet, so adding
   // a player does not blank every chart.
-  const loading = population.isPending || own.every((query) => query.isPending);
-  const retry = () => {
-    if (population.isError) void population.refetch();
-    for (const query of own) if (query.isError) void query.refetch();
-  };
-
-  const averages = own.map((query) => query.data);
+  const loading = metrics.populationPending || metrics.pending.every(Boolean);
 
   return (
     <Panel>
@@ -84,15 +60,15 @@ export function PercentileComparison({ players, filters }: { players: ComparedPl
           <ErrorState
             variant="inline"
             title="Some percentiles could not be loaded."
-            onRetry={retry}
-            retrying={population.isFetching || own.some((query) => query.isFetching)}
+            onRetry={metrics.retry}
+            retrying={metrics.retrying}
           />
         </PanelBody>
       )}
       <DistributionMarkers
         players={players}
-        population={population.data}
-        averages={averages}
+        population={metrics.population}
+        averages={metrics.own}
         loading={loading}
         zoom={zoom}
         limit={expanded ? undefined : COLLAPSED_METRICS}

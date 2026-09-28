@@ -1,5 +1,4 @@
-import { keepPreviousData, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { HashMapValue } from "deadlock_api_client";
+import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 import { GitCompareArrows } from "lucide-react";
 
 import { SERIES_COLORS } from "~/components/patterns/charts/theme";
@@ -10,14 +9,7 @@ import { Stack } from "~/components/ui/stack";
 import { aggregateHeroStats, compareColorIndexes } from "~/lib/player-compare";
 import { playstyleLabel, playstylePercentiles } from "~/lib/playstyle";
 import { cn } from "~/lib/utils";
-import {
-  type CompareFilters,
-  compareHeroStatsParams,
-  compareMetricsParams,
-  lastAnswerForAccount,
-  playerRanksQueryOptions,
-} from "~/queries/player-compare-queries";
-import { playerStatsMetricsQueryOptions } from "~/queries/player-stats-metrics-query";
+import { type CompareFilters, compareHeroStatsParams, playerRanksQueryOptions } from "~/queries/player-compare-queries";
 import { steamProfileQueryOptions, trackerHeroStatsQueryOptions } from "~/queries/tracker-queries";
 
 import { AddPlayerControls } from "./AddPlayerControls";
@@ -35,6 +27,7 @@ import { SharedHeroesTable } from "./SharedHeroesTable";
 import { TogetherAgainstPanel } from "./TogetherAgainstPanel";
 import type { ComparedPlayer } from "./types";
 import { useCompareMatchHistories } from "./useCompareMatchHistories";
+import { useCompareMetrics } from "./useCompareMetrics";
 import { usePlayerCompareState } from "./usePlayerCompareState";
 
 /** The compare tab: pick up to five players, then see who wins which stat on the page's filters. */
@@ -42,7 +35,6 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
   const { accountIds, add, remove, move } = usePlayerCompareState();
   // One query a player, shared with the tracker: adding or reordering players never refetches (and blanks) the names
   // already on screen.
-  const client = useQueryClient();
   const profileQueries = useQueries({ queries: accountIds.map((accountId) => steamProfileQueryOptions(accountId)) });
   const hasPlayers = accountIds.length > 0;
 
@@ -58,26 +50,11 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
     placeholderData: keepPreviousData,
   });
 
-  // The same requests as the curves below, so they share the cache: healing and heal prevented come from here.
-  const population = useQuery({
-    ...playerStatsMetricsQueryOptions(compareMetricsParams(filters)),
-    placeholderData: keepPreviousData,
-  });
-  const metrics = useQueries({
-    queries: accountIds.map((accountId) => ({
-      ...playerStatsMetricsQueryOptions(compareMetricsParams(filters, accountId)),
-      placeholderData: lastAnswerForAccount<Record<string, HashMapValue>>(
-        client,
-        "api-player-stats-metrics",
-        accountId,
-      ),
-    })),
-  });
+  const metrics = useCompareMetrics(accountIds, filters);
   /** A player's average of one metric: undefined while it loads, null when it failed or has no value. */
   const metricAverage = (index: number, key: string) => {
-    const query = metrics[index];
-    if (!query || query.isPending) return undefined;
-    return query.data?.[key]?.avg ?? null;
+    if (metrics.pending[index] ?? true) return undefined;
+    return metrics.own[index]?.[key]?.avg ?? null;
   };
 
   const histories = useCompareMatchHistories(accountIds, filters);
@@ -104,7 +81,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
       avatar: profile?.avatarfull || profile?.avatar,
       profileLoading: (profileQueries[index]?.isPending ?? true) && !profile,
       color: SERIES_COLORS[colorIndexes[index] % SERIES_COLORS.length],
-      playstyle: playstyleLabel(playstylePercentiles(population.data, metrics[index]?.data))?.label,
+      playstyle: playstyleLabel(playstylePercentiles(metrics.population, metrics.own[index]))?.label,
       rankBadge: badge === undefined ? undefined : badge || null,
       aggregate: aggregate && {
         ...aggregate,
@@ -163,7 +140,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             {/* Under a wide table (four or five players) the share card and the radar pair up side by side. */}
             <Grid columns={{ base: 1, xl: 2 }} gap={4} className="items-start">
               <ShareComparison filters={filters} />
-              <PlaystyleRadarPanel players={players} filters={filters} />
+              <PlaystyleRadarPanel players={players} metrics={metrics} />
             </Grid>
           </Grid>
           {/* Over time, side by side: the climb and the form. */}
@@ -177,7 +154,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             <RecordsPanel players={players} histories={histories} />
             <MatchLengthPanel players={players} histories={histories} />
           </Grid>
-          <PercentileComparison players={players} filters={filters} />
+          <PercentileComparison players={players} metrics={metrics} />
           {/* Heroes and items side by side. */}
           <Grid columns={{ base: 1, xl: showSharedHeroes ? 2 : 1 }} gap={4} className="items-start">
             {showSharedHeroes && <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />}

@@ -1,4 +1,3 @@
-import { keepPreviousData, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { HashMapValue } from "deadlock_api_client";
 
 import { ChartLegend, ChartLegendItem, ChartLegendToggle } from "~/components/patterns/charts/ChartLegend";
@@ -21,10 +20,9 @@ import {
   type PlaystylePercentiles,
   playstylePercentiles,
 } from "~/lib/playstyle";
-import { type CompareFilters, compareMetricsParams, lastAnswerForAccount } from "~/queries/player-compare-queries";
-import { playerStatsMetricsQueryOptions } from "~/queries/player-stats-metrics-query";
 
 import type { ComparedPlayer } from "./types";
+import type { CompareMetrics } from "./useCompareMetrics";
 
 const CHART_SIZE = "md";
 
@@ -82,37 +80,18 @@ function AxisReadings({ entry, players }: { entry?: AxisRow; players: RadarPlaye
  * How each player plays, as percentiles among all players on the same filters: one axis per side of the game, 50 the
  * median, higher always better. Each player gets a playstyle label from their strongest axes.
  */
-export function PlaystyleRadarPanel({ players, filters }: { players: ComparedPlayer[]; filters: CompareFilters }) {
-  const population = useQuery({
-    ...playerStatsMetricsQueryOptions(compareMetricsParams(filters)),
-    placeholderData: keepPreviousData,
-  });
-  const client = useQueryClient();
-  const own = useQueries({
-    queries: players.map((player) => ({
-      ...playerStatsMetricsQueryOptions(compareMetricsParams(filters, player.accountId)),
-      placeholderData: lastAnswerForAccount<Record<string, HashMapValue>>(
-        client,
-        "api-player-stats-metrics",
-        player.accountId,
-      ),
-    })),
-  });
+export function PlaystyleRadarPanel({ players, metrics }: { players: ComparedPlayer[]; metrics: CompareMetrics }) {
   const { highlighted, toggleProps } = useSeriesHighlight();
 
   // A player whose numbers failed (a private account) drops out of the chart; the others still draw.
-  const failedPlayers = players.filter((_, index) => own[index]?.isError && !own[index]?.data);
-  const failed = population.isError || (players.length > 0 && failedPlayers.length === players.length);
+  const failedPlayers = players.filter((_, index) => metrics.failed[index]);
+  const failed = metrics.populationFailed || (players.length > 0 && failedPlayers.length === players.length);
   // Drawn once the field and one player are in; a player still loading joins when their numbers arrive.
-  const loading = population.isPending || own.every((query) => query.isPending);
-  const retry = () => {
-    if (population.isError) void population.refetch();
-    for (const query of own) if (query.isError) void query.refetch();
-  };
+  const loading = metrics.populationPending || metrics.pending.every(Boolean);
 
   const ranked: RadarPlayer[] = players.flatMap((player, index) => {
-    const data = own[index]?.data;
-    const percentiles = playstylePercentiles(population.data, data);
+    const data = metrics.own[index];
+    const percentiles = playstylePercentiles(metrics.population, data);
     if (!data || Object.keys(percentiles).length === 0) return [];
     return [
       { player, key: `p${player.accountId}` as const, percentiles, playstyle: playstyleLabel(percentiles), own: data },
@@ -150,8 +129,8 @@ export function PlaystyleRadarPanel({ players, filters }: { players: ComparedPla
           <ErrorState
             variant="inline"
             title="Some percentiles could not be loaded."
-            onRetry={retry}
-            retrying={population.isFetching || own.some((query) => query.isFetching)}
+            onRetry={metrics.retry}
+            retrying={metrics.retrying}
           />
         ) : loading ? (
           <ChartLoading label="Playstyle percentiles" size={CHART_SIZE} />
@@ -163,8 +142,8 @@ export function PlaystyleRadarPanel({ players, filters }: { players: ComparedPla
               <ErrorState
                 variant="inline"
                 title={`No playstyle for ${failedPlayers.map((player) => player.name).join(", ")}: their numbers did not load.`}
-                onRetry={retry}
-                retrying={own.some((query) => query.isFetching)}
+                onRetry={metrics.retry}
+                retrying={metrics.retrying}
               />
             )}
             <Grid columns={{ base: 1, sm: 2 }} gap={3} className="items-center">
