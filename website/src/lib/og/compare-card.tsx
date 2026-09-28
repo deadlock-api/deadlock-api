@@ -1,4 +1,4 @@
-import { CARD_HEIGHT, CARD_WIDTH, fitText, LOGO, SITE_LABEL } from "./card-kit";
+import { breakAtWidth, CARD_HEIGHT, CARD_WIDTH, fitText, LOGO, SITE_LABEL } from "./card-kit";
 import type { CompareCardData, CompareCardPlayer } from "./compare-card-data";
 import { OG } from "./palette";
 
@@ -171,6 +171,8 @@ function Side({
   solo: boolean;
   scoredCount: number;
 }) {
+  // Whole on one line where it fits, else on two (at a space, or inside a word) before it gives up letters.
+  const sideName = panelName(player.name, 420, 50, 2);
   return (
     <div
       style={{
@@ -193,9 +195,22 @@ function Side({
           <LeaderTag player={player} tied={tied} fontSize={24} />
         </div>
       </div>
-      <span style={{ fontSize: 50, fontWeight: 900, color: OG.foreground, lineHeight: 1.1, whiteSpace: "nowrap" }}>
-        {fitText(player.name, 420, 50)}
-      </span>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+        {sideName.lines.map((line) => (
+          <span
+            key={line}
+            style={{
+              fontSize: sideName.fontSize,
+              fontWeight: 900,
+              color: OG.foreground,
+              lineHeight: 1.1,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {line}
+          </span>
+        ))}
+      </div>
       <div
         style={{
           display: "flex",
@@ -355,7 +370,7 @@ function HeadToHead({ data }: { data: CompareCardData }) {
  * avatar, `lines` name lines, rank 34, score, label 28, two stat lines and 12 of gaps.
  */
 const PANEL_SIZES = {
-  3: { avatar: 128, name: 44, lines: 1, score: 104, gap: 28, stat: 34, kda: true },
+  3: { avatar: 128, name: 44, lines: 2, score: 104, gap: 28, stat: 34, kda: true },
   4: { avatar: 112, name: 36, lines: 2, score: 96, gap: 20, stat: 32, kda: true },
   5: { avatar: 128, name: 32, lines: 2, score: 100, gap: 14, stat: 34, kda: false },
 } as const;
@@ -367,12 +382,12 @@ const MIN_NAME = 26;
 /**
  * A name broken into at most `lines` lines at its spaces, each cut to `width`: "Bananas Only" stands on two lines in a
  * narrow panel instead of losing half of itself to an ellipsis. Of the possible breaks, the one that keeps the most of
- * the name wins, then the most even one.
+ * the name wins, then the most even one; a name no space can break whole breaks inside a word.
  */
-function nameLines(name: string, width: number, fontSize: number, lines: number): string[] {
+function nameLines(name: string, width: number, fontSize: number, lines: number, insideWords = true): string[] {
   const whole = fitText(name, width, fontSize);
   const words = name.trim().split(/\s+/);
-  if (lines <= 1 || whole === name || words.length < 2) return [whole];
+  if (lines <= 1 || whole === name) return [whole];
   let best = [whole];
   let bestKept = -1;
   let bestSpread = Infinity;
@@ -387,6 +402,13 @@ function nameLines(name: string, width: number, fontSize: number, lines: number)
       bestSpread = spread;
     }
   }
+  // No space breaks it whole: break inside a word, where the first line runs out.
+  if (insideWords && best.some((line) => line.endsWith("…"))) {
+    const [head, rest] = breakAtWidth(name.trim(), width, fontSize);
+    const cut = [head, fitText(rest, width, fontSize)];
+    const kept = head.length + (cut[1] === rest ? rest.length : cut[1].length - 1);
+    if (kept > bestKept) best = cut;
+  }
   return best;
 }
 
@@ -396,6 +418,11 @@ function panelName(name: string, width: number, size: number, lines: number): { 
   for (let fontSize = size; fontSize >= MIN_NAME; fontSize -= 2) {
     const one = nameLines(name, width, fontSize, 1);
     if (whole(one)) return { lines: one, fontSize };
+  }
+  // Two lines broken at a space at any size before one broken inside a word.
+  for (let fontSize = size; fontSize >= MIN_NAME; fontSize -= 2) {
+    const two = nameLines(name, width, fontSize, lines, false);
+    if (whole(two)) return { lines: two, fontSize };
   }
   for (let fontSize = size; fontSize >= MIN_NAME; fontSize -= 2) {
     const two = nameLines(name, width, fontSize, lines);

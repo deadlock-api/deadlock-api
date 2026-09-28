@@ -28,3 +28,19 @@ export function fitText(text: string, widthPx: number, fontSize: number): string
   while (count < glyphs.length && used + widths[count] <= widthPx) used += widths[count++];
   return `${glyphs.slice(0, Math.max(1, count)).join("").trimEnd()}…`;
 }
+
+/**
+ * `text` split where `widthPx` runs out at `fontSize`, between graphemes: the head fills the first line, the rest goes
+ * on the next. For a name with no space where it could break ("xXDeadlockGodXx"), rather than losing its end.
+ */
+export function breakAtWidth(text: string, widthPx: number, fontSize: number): [string, string] {
+  const glyphs = Array.from(new Intl.Segmenter().segment(text), (part) => part.segment);
+  let used = 0;
+  let count = 0;
+  while (count < glyphs.length && used + glyphWidth(glyphs[count]) * fontSize <= widthPx) {
+    used += glyphWidth(glyphs[count]) * fontSize;
+    count += 1;
+  }
+  const head = Math.max(1, count);
+  return [glyphs.slice(0, head).join("").trimEnd(), glyphs.slice(head).join("").trimStart()];
+}
