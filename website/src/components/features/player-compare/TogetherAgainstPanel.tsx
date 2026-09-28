@@ -256,13 +256,17 @@ function PairRowSkeleton({ a, b }: { a: ComparedPlayer; b: ComparedPlayer }) {
           <PlayerName player={b} />
         </Stack>
       </TableCell>
-      {[0, 1, 2].map((cell) => (
+      {/* In the header's order: together, synergy, duo heroes, against. */}
+      {[0, 1].map((cell) => (
         <TableCell key={cell} className="text-end">
           <Skeleton className="ms-auto h-4 w-16" />
         </TableCell>
       ))}
       <TableCell className={DUO_COLUMN}>
         <Skeleton className="ms-auto h-4 w-24" />
+      </TableCell>
+      <TableCell className="text-end">
+        <Skeleton className="ms-auto h-4 w-16" />
       </TableCell>
       <TableCell className="hidden text-end @md/table:table-cell">
         <Skeleton className="ms-auto h-4 w-20" />
