@@ -1,4 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
+import { isAxiosError } from "axios";
 
 import { day } from "~/dayjs";
 import { compareFilterSearch } from "~/lib/compare-share";
@@ -84,8 +85,11 @@ async function resolveFilters(search: URLSearchParams, client: QueryClient) {
 
 /** A request the card can draw without: its failure leaves a gap rather than failing the image. */
 function settle<T>(promise: Promise<T>, failed: { any: boolean }): Promise<T | undefined> {
-  return promise.catch(() => {
-    failed.any = true;
+  return promise.catch((error: unknown) => {
+    // A refusal (a private account's metrics, a missing profile) is the answer and will be again: only a server or
+    // network failure makes the card worth drawing again soon.
+    const status = isAxiosError(error) ? error.response?.status : undefined;
+    if (status === undefined || status >= 500) failed.any = true;
     return undefined;
   });
 }
