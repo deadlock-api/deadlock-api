@@ -6,6 +6,7 @@ import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/Chart
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
+import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
 import {
   CHART_BASELINE,
   CHART_CURSOR_LINE,
@@ -17,7 +18,7 @@ import {
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { NoValue } from "~/components/ui/no-value";
-import { Segmented, SegmentedItem } from "~/components/ui/segmented";
+import { SelectItem } from "~/components/ui/select";
 import { Stack } from "~/components/ui/stack";
 import { day } from "~/dayjs";
 import { formatCompactAxisTick, niceTicks, percentTicks, winRateDomain } from "~/lib/chart-axis";
@@ -66,13 +67,20 @@ export function PerformanceTrendPanel({
   return (
     <Panel>
       <PanelHeader size="sm" title="Weekly trend" icon={ChartNoAxesCombined}>
-        <Segmented width="hug" aria-label="Trend metric" value={metric} onValueChange={setMetric}>
+        {/* One line, like the rank chart's header beside it, so the two plots start level. */}
+        <MetricSelect
+          value={metric}
+          valueLabel={METRICS[metric].label}
+          onValueChange={(next) => setMetric(next as TrendMetric)}
+          label="Trend metric"
+          className="w-auto @sm:min-w-40"
+        >
           {TREND_METRICS.map((key) => (
-            <SegmentedItem key={key} value={key} aria-label={METRICS[key].label}>
-              {METRICS[key].short}
-            </SegmentedItem>
+            <SelectItem key={key} value={key}>
+              {METRICS[key].label}
+            </SelectItem>
           ))}
-        </Segmented>
+        </MetricSelect>
       </PanelHeader>
       <PanelBody size="sm">
         <Stack gap={2}>
