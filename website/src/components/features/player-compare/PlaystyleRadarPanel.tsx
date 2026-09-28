@@ -9,6 +9,7 @@ import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Grid } from "~/components/ui/grid";
 import { NoValue } from "~/components/ui/no-value";
+import { Skeleton } from "~/components/ui/skeleton";
 import { Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { rankShareLabel } from "~/lib/player-compare";
@@ -142,7 +143,24 @@ export function PlaystyleRadarPanel({
             retrying={metrics.retrying}
           />
         ) : loading ? (
-          <ChartLoading label="Playstyle percentiles" size={CHART_SIZE} />
+          // The loaded panel's shape: the plot and a legend line a player, so nothing grows when the numbers land.
+          <Grid columns={{ base: 1, sm: 2 }} gap={3} className="items-center">
+            <ChartLoading label="Playstyle percentiles" size={CHART_SIZE} />
+            <ChartLegend label="Players" orientation="vertical">
+              {players.map((player) => (
+                <ChartLegendItem key={player.accountId} color={player.color} shape="line">
+                  <Stack gap={0} className="min-w-0 py-1">
+                    <Text variant="label" tone="default" wrap="truncate" title={player.name}>
+                      {player.name}
+                    </Text>
+                    <Text variant="caption" tone="muted">
+                      <Skeleton className="inline-block h-3 w-32 align-middle" />
+                    </Text>
+                  </Stack>
+                </ChartLegendItem>
+              ))}
+            </ChartLegend>
+          </Grid>
         ) : ranked.length === 0 ? (
           <ChartEmpty label="playstyle data" />
         ) : (

@@ -198,11 +198,10 @@ export function PlayerCards({
                                   "Unranked"
                                 )}
                               </Text>
-                              {player.playstyle && (
-                                <Text variant="caption" tone="default" wrap="truncate">
-                                  {player.playstyle}
-                                </Text>
-                              )}
+                              {/* The line is always there, so the card does not grow when the playstyle arrives. */}
+                              <Text variant="caption" tone="default" wrap="truncate">
+                                {player.playstyle ?? "\u00a0"}
+                              </Text>
                             </Stack>
                           </Stack>
                         </Inline>
