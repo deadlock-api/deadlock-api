@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE patrons\n            SET tier_id = $1,\n                pledge_amount_cents = $2,\n                is_active = $3,\n                last_verified_at = $4,\n                updated_at = $4\n            WHERE id = $5\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4",
+        "Bool",
+        "Timestamptz",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "60efbee94cb01cd38f67be94c50393eec8583fd2386c1d7ed57a8eafd83e4d2d"
+}

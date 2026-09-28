@@ -6,13 +6,31 @@ on:
       - master
     paths:
       - 'api/**'
+      - '.sqlx/**'
       - '.github/workflows/api-ci.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'rustfmt.toml'
+      - 'valveprotos/**'
+      - 'haste/**'
+      - 'dungers/**'
+      - '.github/workflows/rust-ci-checks.yml'
   pull_request:
     branches:
       - master
     paths:
       - 'api/**'
+      - '.sqlx/**'
       - '.github/workflows/api-ci.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'rustfmt.toml'
+      - 'valveprotos/**'
+      - 'haste/**'
+      - 'dungers/**'
+      - '.github/workflows/rust-ci-checks.yml'
   workflow_dispatch:
     inputs:
       tag:
@@ -42,6 +60,7 @@ jobs:
     uses: ./.github/workflows/rust-ci-checks.yml
     with:
       working-directory: api
+      packages: deadlock-api-rust
       lint-runs-on: blacksmith-4vcpu-ubuntu-2404
       lint-extra-apt-packages: clang mold
       lint-install-rust-toolchain: true
@@ -55,9 +74,6 @@ jobs:
     name: Test
     timeout-minutes: 40
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    defaults:
-      run:
-        working-directory: api
     steps:
       - uses: useblacksmith/checkout@25227e61ff9dafe400e22fa487b673eac4e4409a # v1.8.1
         with:
@@ -74,12 +90,11 @@ jobs:
           # Dedicated key: the test profile's artifacts differ from the clippy
           # job's, so they must not share a (immutable) cache key.
           shared-key: "api-test-cache-${{ runner.os }}-${{ runner.arch }}"
-          workspaces: "api -> target"
           # PR runs restore master's cache but don't save their own copy, so
           # ref-scoped duplicates don't evict master's entries from the quota.
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Tests
-        run: cargo test --locked
+        run: cargo test --locked -p deadlock-api-rust
         env:
           # Read credentials for the R2 bucket holding versioned game assets.
           # Used by the integration tests to validate hero/rank IDs against
@@ -122,7 +137,9 @@ jobs:
       - name: Build and push Docker image
         uses: useblacksmith/build-push-action@9b0579bbec7a6cad2f171596c57e7ac1e7658850 # v2.3.0
         with:
-          context: api
+          # Build context is the repo root: api is a member of the root cargo workspace.
+          context: .
+          file: api/Dockerfile
           tags: ${{ env.IMAGE_NAME }}:build-${{ github.sha }}
           push: true
 

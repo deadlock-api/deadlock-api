@@ -1,0 +1,37 @@
+name: Rust Audit
+
+# One audit for the whole cargo workspace (api, tools, live-events, valveprotos,
+# haste and dungers share the root Cargo.lock). Ignores live in .cargo/audit.toml.
+
+on:
+  push:
+    paths:
+      - '**/Cargo.toml'
+      - 'Cargo.lock'
+      - '.cargo/audit.toml'
+  pull_request:
+    paths:
+      - '**/Cargo.toml'
+      - 'Cargo.lock'
+      - '.cargo/audit.toml'
+  schedule:
+    - cron: '0 0 * * *'
+
+permissions:
+  contents: read
+  issues: write
+  checks: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: install
+        run: |
+          rustup override set stable
+          rustup update stable
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+      - name: Run cargo audit
+        run: cargo audit

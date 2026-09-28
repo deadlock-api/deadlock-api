@@ -8,6 +8,14 @@ Monorepo for the [Deadlock API](https://deadlock-api.com) project.
 - **[`website/`](website/)** - React frontend (Vite + React Router) for the Deadlock API website
 - **[`tools/`](tools/)** - Rust microservices for data ingestion, scraping, and pipeline processing
 - **[`live-events/`](live-events/)** - Rust service for live match event streaming via SSE
+- **[`valveprotos/`](valveprotos/)** - Rust bindings for the Steam and Deadlock protobufs (formerly `valveprotos-rs`)
+- **[`haste/`](haste/)** - Source 2 demo and broadcast parser (formerly `deadlock-api/haste`)
+- **[`dungers/`](dungers/)** - bit buffer, varint and char cursor primitives used by haste (formerly `deadlock-api/dungers`)
+
+All Rust crates are members of one cargo workspace (`Cargo.toml` at the repo root), sharing a
+single `Cargo.lock` and `target/`. Build or run any of them from the root with `cargo <cmd> -p <package>`.
+Docker images for the Rust services are built with the repo root as context, e.g.
+`docker build -f api/Dockerfile .`.
 
 ## Getting Started
 
@@ -34,8 +42,8 @@ pnpm dev
 ### Tools
 
 ```bash
+# Set up tools/.env with your credentials
 cd tools
-# Set up .env with your credentials
 cargo run -p <service-name>
 ```
 

@@ -248,7 +248,7 @@ impl Entity {
                     // hash all parts.
                     field_key = fxhash::add_u64_to_hash(
                         field_key,
-                        fxhash::add_u64_to_hash(0, fp.data[i] as u64),
+                        fxhash::add_u64_to_hash(0, u64::from(fp.data[i])),
                     );
                 } else {
                     // Fixed-size array children are identical clones that all share the array's
@@ -262,7 +262,7 @@ impl Entity {
                     field_key = if fixed_array {
                         fxhash::add_u64_to_hash(
                             field_key,
-                            fxhash::add_u64_to_hash(0, fp.data[i] as u64),
+                            fxhash::add_u64_to_hash(0, u64::from(fp.data[i])),
                         )
                     } else {
                         fxhash::add_u64_to_hash(field_key, field.var_name.hash)

@@ -8,6 +8,7 @@ ENV RUSTC_WRAPPER=sccache SCCACHE_DIR=/sccache
 WORKDIR /app
 
 FROM chef AS planner
+# Build context is the repo root (one cargo workspace).
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
@@ -18,12 +19,12 @@ COPY --from=planner /app/recipe.json recipe.json
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
-    cargo chef cook --release --recipe-path recipe.json
+    cargo chef cook --release --package deadlock-live-events --recipe-path recipe.json
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
-    cargo build --release --bin ${EXE_NAME}
+    cargo build --release --locked --package deadlock-live-events --bin ${EXE_NAME}
 
 # We do not need the Rust toolchain to run the binary!
 FROM debian:trixie-slim AS runtime

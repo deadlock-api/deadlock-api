@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO protected_user_accounts (steam_id)\n        VALUES ($1)\n        ON CONFLICT (steam_id) DO NOTHING\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f64041de10212986a844811122bcca1b13c97c43d465a9e35d4752854ad13d15"
+}

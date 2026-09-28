@@ -203,7 +203,7 @@ impl<'client, C: HttpClient + 'client> BroadcasHttpClient<'client, C> {
     // call within the
     // `void CDemoStreamHttp::SendSync( int nResync )`
     async fn get_sync(&self) -> Result<SyncResponse, BroadcastHttpClientError<C::Error>> {
-        let url = format!("{}/sync", &self.base_url);
+        let url = format!("{}/sync", self.base_url);
         serde_json::from_slice(&self.get(&url).await?).map_err(BroadcastHttpClientError::JsonError)
     }
 
@@ -215,7 +215,7 @@ impl<'client, C: HttpClient + 'client> BroadcasHttpClient<'client, C> {
         signup_fragment: i32,
     ) -> Result<Bytes, BroadcastHttpClientError<C::Error>> {
         assert!(signup_fragment >= 0);
-        let url = format!("{}/{}/start", &self.base_url, signup_fragment);
+        let url = format!("{}/{signup_fragment}/start", self.base_url);
         self.get(&url).await
     }
 
@@ -414,13 +414,11 @@ impl<'client, C: HttpClient + 'client> BroadcastHttp<'client, C> {
                     StreamBuffer::Last(ref mut value) => {
                         use bytes::Buf;
 
-                        *value = Some(
-                            packet
+                        *value = Some(packet
                                 // NOTE: clone is not cloning underlying bytes, but just increases
                                 // ref count.
                                 .clone()
-                                .reader(),
-                        );
+                                .reader());
                     }
                     StreamBuffer::Seekable(ref mut cursor) => {
                         cursor

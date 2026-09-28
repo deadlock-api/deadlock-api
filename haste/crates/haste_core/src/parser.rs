@@ -3,7 +3,6 @@ use anyhow::bail;
 use core::future::Future;
 use prost::Message;
 use std::io;
-#[cfg(not(feature = "async"))]
 use std::io::SeekFrom;
 use valveprotos::common::{
     CDemoFullPacket, CDemoPacket, CDemoStringTables, CsvcMsgCreateStringTable,
@@ -13,7 +12,6 @@ use valveprotos::common::{
 use crate::bitreader::BitReader;
 use crate::demofile::{DEMO_RECORD_BUFFER_SIZE, DemoHeaderError};
 use crate::demostream::CmdHeader;
-#[cfg(not(feature = "async"))]
 use crate::demostream::{DemoStream, SeekableDemoStream};
 use crate::entities::{DeltaHeader, Entity, EntityContainer};
 use crate::entityclasses::EntityClasses;
@@ -109,7 +107,6 @@ impl Context {
     }
 }
 
-#[cfg(not(feature = "async"))]
 pub trait Visitor {
     type Error: core::error::Error + Send + Sync + 'static;
 
@@ -173,7 +170,7 @@ pub trait Visitor {
 /// [`AsyncStreamingParser`]. The `on_*` callbacks return `Send + Sync` futures so the parser can be
 /// driven from a spawned task.
 #[cfg(feature = "async")]
-pub trait Visitor {
+pub trait AsyncVisitor {
     type Error: core::error::Error + Send + Sync + 'static;
 
     /// Decides whether the entity backed by the serializer identified by
@@ -236,7 +233,7 @@ pub trait Visitor {
 }
 
 /// `ControlFlow` indicates the desired behavior of the run loop.
-#[cfg(not(feature = "async"))]
+#[derive(Clone, Copy)]
 enum ControlFlow {
     /// indicates that the command should be handled by the parser.
     Handle,
@@ -249,7 +246,6 @@ enum ControlFlow {
 }
 
 // TODO: maybe rename to DemoPlayer (or DemoRunner?)
-#[cfg(not(feature = "async"))]
 pub struct Parser<D: DemoStream, V: Visitor> {
     demo_stream: D,
     buf: Vec<u8>,
@@ -262,7 +258,6 @@ pub struct Parser<D: DemoStream, V: Visitor> {
     skip_entity_packets: bool,
 }
 
-#[cfg(not(feature = "async"))]
 impl<D: DemoStream, V: Visitor> Parser<D, V> {
     pub fn from_stream_with_visitor(demo_stream: D, visitor: V) -> Result<Self, DemoHeaderError> {
         Ok(Self {
@@ -322,7 +317,6 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
 
     pub fn run_to_end(&mut self) -> anyhow::Result<()> {
         self.run(|_notnotself, _cmd_header| Ok(ControlFlow::Handle))
-            
     }
 
     // important initialization messages:
@@ -423,7 +417,7 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
 
                 c if c == SvcMessages::SvcPacketEntities as u32 && !self.skip_entity_packets => {
                     let msg = CsvcMsgPacketEntities::decode(buf)?;
-                    self.handle_svc_packet_entities(msg)?;
+                    self.handle_svc_packet_entities(&msg)?;
                 }
 
                 c if c == SvcMessages::SvcServerInfo as u32 => {
@@ -519,10 +513,7 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
 
     // NOTE: handle_msg_packet_entities is partially based on
     // ReadPacketEntities in engine/client.cpp
-    fn handle_svc_packet_entities(
-        &mut self,
-        msg: CsvcMsgPacketEntities,
-    ) -> anyhow::Result<()> {
+    fn handle_svc_packet_entities(&mut self, msg: &CsvcMsgPacketEntities) -> anyhow::Result<()> {
         let Some(entity_classes) = self.ctx.entity_classes.as_ref() else {
             bail!("entity classes are not available");
         };
@@ -554,25 +545,19 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
                         let Some(entity) = self.ctx.entities.get(&index) else {
                             bail!("entity not found")
                         };
-                        self.visitor
-                            .on_entity(&self.ctx, delta_header, entity)
-                            ?;
+                        self.visitor.on_entity(&self.ctx, delta_header, entity)?;
                     }
                 }
                 DeltaHeader::DELETE => {
                     let entity = self.ctx.entities.handle_delete(entity_index);
                     if let Some(entity) = entity {
-                        self.visitor
-                            .on_entity(&self.ctx, delta_header, &entity)
-                            ?;
+                        self.visitor.on_entity(&self.ctx, delta_header, &entity)?;
                     }
                 }
                 DeltaHeader::LEAVE => {
                     let entity = self.ctx.entities.handle_leave(entity_index);
                     if let Some(entity) = entity {
-                        self.visitor
-                            .on_entity(&self.ctx, delta_header, &entity)
-                            ?;
+                        self.visitor.on_entity(&self.ctx, delta_header, &entity)?;
                     }
                 }
                 DeltaHeader::UPDATE => {
@@ -584,9 +569,7 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
                     let Some(entity) = self.ctx.entities.get(&entity_index) else {
                         continue;
                     };
-                    self.visitor
-                        .on_entity(&self.ctx, delta_header, entity)
-                        ?;
+                    self.visitor.on_entity(&self.ctx, delta_header, entity)?;
                 }
                 _ => {}
             }
@@ -651,7 +634,6 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
     }
 }
 
-#[cfg(not(feature = "async"))]
 impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
     /// like [`run`](Parser::run) but the handler can return `None` to break out of the loop,
     /// unreading the current cmd header and restoring the previous tick.
@@ -713,58 +695,54 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
         // everything? it does not seem like it: string tables must be handled.
         let mut did_handle_last_full_packet = false;
 
-        self.run_seekable(
-            |notnotself: &mut Parser<D, V>, cmd_header: &CmdHeader| {
-                if cmd_header.tick > target_tick {
-                    return Ok(None);
+        self.run_seekable(|notnotself: &mut Parser<D, V>, cmd_header: &CmdHeader| {
+            if cmd_header.tick > target_tick {
+                return Ok(None);
+            }
+
+            // init string tables, flattened serializers and entity classes
+            if !did_handle_first_sync_tick {
+                did_handle_first_sync_tick = cmd_header.cmd == EDemoCommands::DemSyncTick;
+                return Ok(Some(ControlFlow::Handle));
+            }
+
+            let is_full_packet = cmd_header.cmd == EDemoCommands::DemFullPacket;
+            let distance_to_target_tick = target_tick - notnotself.ctx.tick;
+            // TODO: what if there's no full packet ahead? maybe dem file is
+            // corrupted or something... scan for full packets before enterint
+            // the "run"?
+            let has_full_packet_ahead =
+                distance_to_target_tick > notnotself.ctx.full_packet_interval + 100;
+            if is_full_packet {
+                let cmd_body = notnotself.demo_stream.read_cmd(cmd_header)?;
+                notnotself
+                    .visitor
+                    .on_cmd(&notnotself.ctx, cmd_header, cmd_body)?;
+
+                let mut cmd = D::decode_cmd_full_packet(cmd_body)?;
+                if has_full_packet_ahead {
+                    // NOTE: clarity seem to ignore "intermediary" full packet's
+                    // packet
+                    //
+                    // TODO: verify that is okay to ignore "intermediary" full
+                    // packet's packet
+                    cmd.packet = None;
                 }
+                notnotself.handle_cmd_full_packet(cmd)?;
+                // NOTE: there's absolutely no reason to check if tick changed because it changed.
+                notnotself.visitor.on_tick_end(&notnotself.ctx)?;
 
-                // init string tables, flattened serializers and entity classes
-                if !did_handle_first_sync_tick {
-                    did_handle_first_sync_tick = cmd_header.cmd == EDemoCommands::DemSyncTick;
-                    return Ok(Some(ControlFlow::Handle));
-                }
+                did_handle_last_full_packet = !has_full_packet_ahead;
 
-                let is_full_packet = cmd_header.cmd == EDemoCommands::DemFullPacket;
-                let distance_to_target_tick = target_tick - notnotself.ctx.tick;
-                // TODO: what if there's no full packet ahead? maybe dem file is
-                // corrupted or something... scan for full packets before enterint
-                // the "run"?
-                let has_full_packet_ahead =
-                    distance_to_target_tick > notnotself.ctx.full_packet_interval + 100;
-                if is_full_packet {
-                    let cmd_body = notnotself.demo_stream.read_cmd(cmd_header)?;
-                    notnotself
-                        .visitor
-                        .on_cmd(&notnotself.ctx, cmd_header, cmd_body)
-                        ?;
+                return Ok(Some(ControlFlow::Ignore));
+            }
 
-                    let mut cmd = D::decode_cmd_full_packet(cmd_body)?;
-                    if has_full_packet_ahead {
-                        // NOTE: clarity seem to ignore "intermediary" full packet's
-                        // packet
-                        //
-                        // TODO: verify that is okay to ignore "intermediary" full
-                        // packet's packet
-                        cmd.packet = None;
-                    }
-                    notnotself.handle_cmd_full_packet(cmd)?;
-                    // NOTE: there's absolutely no reason to check if tick changed because it changed.
-                    notnotself.visitor.on_tick_end(&notnotself.ctx)?;
-
-                    did_handle_last_full_packet = !has_full_packet_ahead;
-
-                    return Ok(Some(ControlFlow::Ignore));
-                }
-
-                if did_handle_last_full_packet {
-                    Ok(Some(ControlFlow::Handle))
-                } else {
-                    Ok(Some(ControlFlow::Skip))
-                }
-            },
-        )
-        
+            if did_handle_last_full_packet {
+                Ok(Some(ControlFlow::Handle))
+            } else {
+                Ok(Some(ControlFlow::Skip))
+            }
+        })
     }
 
     /// Header-only scan of the whole demo, returning the tick of every
@@ -821,40 +799,38 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
             self.skip_entity_packets = true;
         }
 
-        let result = self.run_seekable(
-            |s: &mut Parser<D, V>, cmd_header: &CmdHeader| {
-                if cmd_header.cmd == EDemoCommands::DemFullPacket {
-                    let this_ordinal = fp_seen;
-                    fp_seen += 1;
-                    if this_ordinal < ordinal {
-                        // A full packet before ours: skip its snapshot, ours supersedes it.
-                        return Ok(Some(ControlFlow::Skip));
-                    }
-                    if this_ordinal == ordinal {
-                        // Our full packet: start collecting and apply it.
-                        collecting = true;
-                        s.visitor.set_collecting(true);
-                        s.skip_entity_packets = false;
-                        return Ok(Some(ControlFlow::Handle));
-                    }
-                    // The next full packet begins the following segment — stop here.
-                    return Ok(None);
+        let result = self.run_seekable(|s: &mut Parser<D, V>, cmd_header: &CmdHeader| {
+            if cmd_header.cmd == EDemoCommands::DemFullPacket {
+                let this_ordinal = fp_seen;
+                fp_seen += 1;
+                if this_ordinal < ordinal {
+                    // A full packet before ours: skip its snapshot, ours supersedes it.
+                    return Ok(Some(ControlFlow::Skip));
                 }
-
-                if collecting {
+                if this_ordinal == ordinal {
+                    // Our full packet: start collecting and apply it.
+                    collecting = true;
+                    s.visitor.set_collecting(true);
+                    s.skip_entity_packets = false;
                     return Ok(Some(ControlFlow::Handle));
                 }
+                // The next full packet begins the following segment — stop here.
+                return Ok(None);
+            }
 
-                // Warm-up (entity decode suppressed): handle init/signon so state is established;
-                // skip the per-tick delta packets, whose state our full packet will restate.
-                match cmd_header.cmd {
-                    EDemoCommands::DemSendTables
-                    | EDemoCommands::DemClassInfo
-                    | EDemoCommands::DemSignonPacket => Ok(Some(ControlFlow::Handle)),
-                    _ => Ok(Some(ControlFlow::Skip)),
-                }
-            },
-        );
+            if collecting {
+                return Ok(Some(ControlFlow::Handle));
+            }
+
+            // Warm-up (entity decode suppressed): handle init/signon so state is established;
+            // skip the per-tick delta packets, whose state our full packet will restate.
+            match cmd_header.cmd {
+                EDemoCommands::DemSendTables
+                | EDemoCommands::DemClassInfo
+                | EDemoCommands::DemSignonPacket => Ok(Some(ControlFlow::Handle)),
+                _ => Ok(Some(ControlFlow::Skip)),
+            }
+        });
 
         self.skip_entity_packets = false;
         result
@@ -865,7 +841,7 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
 use crate::async_demostream::AsyncDemoStream;
 
 #[cfg(feature = "async")]
-pub struct AsyncStreamingParser<D: AsyncDemoStream, V: Visitor> {
+pub struct AsyncStreamingParser<D: AsyncDemoStream, V: AsyncVisitor> {
     demo_stream: D,
     buf: Vec<u8>,
     visitor: V,
@@ -874,7 +850,7 @@ pub struct AsyncStreamingParser<D: AsyncDemoStream, V: Visitor> {
 }
 
 #[cfg(feature = "async")]
-impl<D: AsyncDemoStream, V: Visitor> AsyncStreamingParser<D, V> {
+impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
     pub fn from_stream_with_visitor(demo_stream: D, visitor: V) -> Result<Self, DemoHeaderError> {
         Ok(Self {
             demo_stream,

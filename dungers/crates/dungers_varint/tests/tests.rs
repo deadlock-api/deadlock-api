@@ -12,7 +12,7 @@ pub fn test_uvarint64() {
     let mut values = Vec::new();
 
     let increment = 1 << (u64::BITS - 8);
-    values.extend((0..256).map(|i| u64::MIN + i * increment));
+    values.extend((0..256).map(|i| i * increment));
 
     values.push(u64::MAX);
 

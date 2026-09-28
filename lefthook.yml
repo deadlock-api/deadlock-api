@@ -1,29 +1,28 @@
 pre-commit:
   parallel: true
   commands:
-    api-fmt:
-      root: "api/"
-      glob: "api/**/*.rs"
+    rust-fmt:
+      glob: "*.rs"
       run: cargo fmt --all && git add -u {staged_files}
-      fail_text: "Rust formatting failed in api/"
-
-    tools-fmt:
-      root: "tools/"
-      glob: "tools/**/*.rs"
-      run: cargo fmt --all && git add -u {staged_files}
-      fail_text: "Rust formatting failed in tools/"
+      fail_text: "Rust formatting failed"
 
     api-machete:
       root: "api/"
-      glob: "api/{Cargo.toml,Cargo.lock,src/**}"
+      glob: "api/{Cargo.toml,src/**}"
       run: cargo machete
       fail_text: "Unused dependencies in api/. Run 'cargo machete --fix' to fix."
 
     tools-machete:
       root: "tools/"
-      glob: "tools/{Cargo.toml,Cargo.lock,**/Cargo.toml,**/*.rs}"
+      glob: "tools/{**/Cargo.toml,**/*.rs}"
       run: cargo machete
       fail_text: "Unused dependencies in tools/. Run 'cargo machete --fix' to fix."
+
+    live-events-machete:
+      root: "live-events/"
+      glob: "live-events/{Cargo.toml,src/**}"
+      run: cargo machete
+      fail_text: "Unused dependencies in live-events/. Run 'cargo machete --fix' to fix."
 
     api-typos:
       root: "api/"
@@ -37,18 +36,6 @@ pre-commit:
       run: pnpm fmt && git add -u {staged_files}
       fail_text: "Website formatting failed"
 
-    live-events-fmt:
-      root: "live-events/"
-      glob: "live-events/**/*.rs"
-      run: cargo fmt --all && git add -u {staged_files}
-      fail_text: "Rust formatting failed in live-events/"
-
-    live-events-machete:
-      root: "live-events/"
-      glob: "live-events/{Cargo.toml,Cargo.lock,src/**}"
-      run: cargo machete
-      fail_text: "Unused dependencies in live-events/. Run 'cargo machete --fix' to fix."
-
     website-lint:
       root: "website/"
       glob: "website/**/*.{ts,tsx,js,jsx}"
@@ -58,23 +45,10 @@ pre-commit:
 pre-push:
   parallel: true
   commands:
-    api-clippy:
-      root: "api/"
-      glob: "api/**/*.rs"
-      run: cargo clippy --all-targets --locked -- -D warnings
-      fail_text: "Clippy warnings in api/"
-
-    tools-clippy:
-      root: "tools/"
-      glob: "tools/**/*.rs"
-      run: cargo clippy --all-targets --locked --all-features -- -D warnings
-      fail_text: "Clippy warnings in tools/"
-
-    live-events-clippy:
-      root: "live-events/"
-      glob: "live-events/**/*.rs"
-      run: cargo clippy --all-targets --locked -- -D warnings
-      fail_text: "Clippy warnings in live-events/"
+    rust-clippy:
+      glob: "{*.rs,**/Cargo.toml,Cargo.lock}"
+      run: SQLX_OFFLINE=true cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      fail_text: "Clippy warnings in the cargo workspace"
 
     website-build:
       root: "website/"

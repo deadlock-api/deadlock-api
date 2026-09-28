@@ -11,11 +11,12 @@ WORKDIR /app
 # the target.cfg rustflags from cargo config. Use the short-name form so it
 # works for build scripts linked via gcc as well as the final target.
 ENV RUSTFLAGS="-Clink-arg=-fuse-ld=mold -Ctarget-cpu=znver2"
+# Build context is the repo root (one cargo workspace).
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/app/target,sharing=locked \
-    cargo build --release --locked --bin ${EXE_NAME} \
+    cargo build --release --locked --package deadlock-api-rust --bin ${EXE_NAME} \
     && cp /app/target/release/${EXE_NAME} /usr/local/bin/${EXE_NAME}
 
 # We do not need the Rust toolchain to run the binary!

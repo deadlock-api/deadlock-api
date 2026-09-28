@@ -1,12 +1,30 @@
 name: Rust CI Checks
 
+# Reusable checks for one component of the root cargo workspace. Cargo runs
+# from the repo root, scoped to the component with `packages`, so each
+# component's workflow gates its own deploy.
+
 on:
   workflow_call:
     inputs:
       working-directory:
-        description: "Workspace subdirectory to run checks in."
+        description: "Component directory, used for machete and typos."
         required: true
         type: string
+      packages:
+        description: "Space-separated cargo packages of the component (passed as -p)."
+        required: true
+        type: string
+      clippy-args:
+        description: "Extra arguments for cargo clippy (e.g. '--all-features')."
+        required: false
+        type: string
+        default: ""
+      typos:
+        description: "Whether to run typos on <working-directory>/src."
+        required: false
+        type: boolean
+        default: true
       lint-runs-on:
         description: "Runner label for the lint job."
         required: false
@@ -34,14 +52,11 @@ jobs:
   fmt:
     name: Format
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ${{ inputs.working-directory }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: rustup component add rustfmt
       - name: Rustfmt Check
-        run: cargo fmt --all -- --check
+        run: cargo fmt $(printf -- '-p %s ' ${{ inputs.packages }}) -- --check
 
   deps:
     name: Dependencies
@@ -59,6 +74,7 @@ jobs:
 
   typos:
     name: Typos
+    if: inputs.typos
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -74,9 +90,8 @@ jobs:
   lint:
     name: Lint
     runs-on: ${{ inputs.lint-runs-on }}
-    defaults:
-      run:
-        working-directory: ${{ inputs.working-directory }}
+    env:
+      SQLX_OFFLINE: "true"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install system dependencies
@@ -90,10 +105,9 @@ jobs:
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: "${{ inputs.rust-cache-shared-key }}-${{ runner.os }}-${{ runner.arch }}"
-          workspaces: "${{ inputs.working-directory }} -> target"
           # PR runs restore master's cache but don't save their own copy, so
           # ref-scoped duplicates don't evict master's entries from the quota.
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - run: rustup component add clippy
       - name: Cargo Clippy
-        run: cargo clippy --all-targets --locked -- -D warnings
+        run: cargo clippy $(printf -- '-p %s ' ${{ inputs.packages }}) --all-targets --locked ${{ inputs.clippy-args }} -- -D warnings

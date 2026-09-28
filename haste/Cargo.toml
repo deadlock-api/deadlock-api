@@ -1,37 +1,3 @@
-[workspace]
-resolver = "2"
-members = [
-    "crates/*",
-]
-
-[workspace.package]
-edition = "2024"
-
-[workspace.dependencies]
-# internal
-haste_broadcast = { path = "crates/haste_broadcast", default-features = false }
-haste_core = { path = "crates/haste_core" }
-haste_vartype = { path = "crates/haste_vartype" }
-# external
-anyhow = "1.0.102"
-bytes = "1.11.1"
-dungers = { git = "https://github.com/deadlock-api/dungers.git", rev = "5e1e2aac76a027987911de3ef3d23ecfd992a7fb" }
-dyn-clone = "1.0.20"
-expect-test = "1.5.1"
-hashbrown = { version = "0.16.1", default-features = false }
-http = "1.4.0"
-log = "0.4.29"
-nohash = "0.2.0"
-prost = "0.14.3"
-reqwest = { version = "0.13.2", default-features = false }
-serde = "1.0.228"
-serde_json = "1.0.149"
-snap = "1.1.1"
-thiserror = "2.0.18"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "4f4a3cb1b0c6f19af59a722acb79ecccd01f61f6", features = ["gc-client", "serde", "user-msgs"] }
-tokio = { version = "1.50.0", default-features = false }
-sync-unsafe-cell = "0.1.1"
-
 [package]
 name = "haste"
 version = "0.0.0"

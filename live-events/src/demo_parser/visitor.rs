@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use axum::response::sse::Event;
 use haste::demostream::CmdHeader;
 use haste::entities::{DeltaHeader, Entity};
-use haste::parser::{Context, Visitor};
+use haste::parser::{AsyncVisitor, Context};
 use haste::stringtables::StringTableItem;
 use prost::Message;
 use tokio::sync::mpsc::UnboundedSender;
@@ -48,7 +48,7 @@ impl SendingVisitor {
     }
 }
 
-impl Visitor for SendingVisitor {
+impl AsyncVisitor for SendingVisitor {
     type Error = DemoParseError;
 
     fn on_entity(

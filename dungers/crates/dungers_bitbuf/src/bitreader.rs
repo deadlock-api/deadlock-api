@@ -19,7 +19,7 @@ impl<'a> BitReader<'a> {
     pub fn new(data: &'a [u8]) -> Self {
         Self {
             num_bits: data.len() << 3,
-            #[allow(unsafe_code)]
+            #[allow(unsafe_code, clippy::transmute_ptr_to_ptr)]
             data: unsafe {
                 // SAFETY: it is okay to transmute u8s into u64s here, even if slice of slice does
                 // not contain enough (8 / size_of::<u64>()).
@@ -30,7 +30,7 @@ impl<'a> BitReader<'a> {
                 // BUT! "unsafe" `unchecked` methods may allow out of bounds reads - that is ub. in
                 // debug builds assertions will yell at you loudly if something is not right, but
                 // those assertions will not be present in release builds.
-                std::mem::transmute::<&[u8], &[u64]>(data)
+                core::mem::transmute::<&[u8], &[u64]>(data)
             },
             cur_bit: 0,
         }

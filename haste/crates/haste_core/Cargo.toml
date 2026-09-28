@@ -19,7 +19,7 @@ nohash.workspace = true
 prost.workspace = true
 snap.workspace = true
 thiserror.workspace = true
-valveprotos.workspace = true
+valveprotos = { workspace = true, features = ["gc-client", "serde", "user-msgs"] }
 
 bytes = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["io-util", "sync"], optional = true }

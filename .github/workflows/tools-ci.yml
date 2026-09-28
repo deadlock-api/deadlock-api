@@ -10,13 +10,31 @@ on:
       - master
     paths:
       - 'tools/**'
+      - '.sqlx/**'
       - '.github/workflows/tools-ci.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'rustfmt.toml'
+      - 'valveprotos/**'
+      - 'haste/**'
+      - 'dungers/**'
+      - '.github/workflows/rust-ci-checks.yml'
   pull_request:
     branches:
       - master
     paths:
       - 'tools/**'
+      - '.sqlx/**'
       - '.github/workflows/tools-ci.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'rustfmt.toml'
+      - 'valveprotos/**'
+      - 'haste/**'
+      - 'dungers/**'
+      - '.github/workflows/rust-ci-checks.yml'
 
 permissions:
   contents: read
@@ -28,58 +46,19 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  fmt:
-    name: Format
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: tools
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Install pinned Rust toolchain
-        run: rustup component add rustfmt
-      - name: Rustfmt Check
-        uses: actions-rust-lang/rustfmt@4066006ec54a31931b9b1fddfd38f2fdf2d27143 # v1.1.2
-        with:
-          manifest-path: tools/Cargo.toml
-
-  deps:
-    name: Dependencies
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: tools
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Install pinned Rust toolchain
-        run: rustup show active-toolchain
-      - name: Machete
-        uses: bnjbvr/cargo-machete@ac30a525c0a8d163a92d727b3ff079ee3f6ecb08
-        with:
-          manifest-path: tools/Cargo.toml
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: tools
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Install Protocol Buffers compiler
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          shared-key: "tools-build-cache-${{ runner.os }}-${{ runner.arch }}"
-          workspaces: "tools -> target"
-          # PR runs restore master's cache but don't save their own copy, so
-          # ref-scoped duplicates don't evict master's entries from the quota.
-          save-if: ${{ github.ref == 'refs/heads/master' }}
-      - name: Install pinned Rust toolchain
-        run: rustup component add clippy
-      - name: Cargo Clippy
-        run: cargo clippy --all-targets --locked --all-features -- -D warnings
+  checks:
+    uses: ./.github/workflows/rust-ci-checks.yml
+    with:
+      working-directory: tools
+      packages: >-
+        active-matches-scraper builds-fetcher common demo-analyzer friends-rank-fetcher
+        history-fetcher hltv-scraper ingest-worker matchdata-downloader salt-scraper
+        steam-profile-fetcher update-assets-tables
+      clippy-args: --all-features
+      # tools never ran typos
+      typos: false
+      lint-extra-apt-packages: clang mold
+      rust-cache-shared-key: tools-build-cache
 
   build-base:
     runs-on: blacksmith-4vcpu-ubuntu-2404
@@ -100,7 +79,9 @@ jobs:
         id: build-base
         uses: useblacksmith/build-push-action@9b0579bbec7a6cad2f171596c57e7ac1e7658850 # v2.3.0
         with:
-          context: tools
+          # Build context is the repo root: tools are members of the root cargo workspace.
+          context: .
+          file: tools/Dockerfile
           platforms: linux/amd64
           push: true
           tags: ghcr.io/${{ github.repository }}/tools-base:latest
@@ -130,7 +111,7 @@ jobs:
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
           filters: |
-            change: [ 'tools/${{ matrix.component }}/**', 'tools/common/**', 'tools/Cargo.toml', 'tools/Cargo.lock', 'tools/Dockerfile' ]
+            change: [ 'tools/${{ matrix.component }}/**', 'tools/common/**', 'tools/Dockerfile', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'valveprotos/**', 'haste/**', 'dungers/**', '.sqlx/**' ]
       - name: Check if component should build
         id: should_deploy
         run: |

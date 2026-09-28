@@ -9,6 +9,10 @@ links = "valveprotos"
 [lib]
 path = "lib.rs"
 
+# Only referenced by the generated code include!d from OUT_DIR.
+[package.metadata.cargo-machete]
+ignored = ["prost", "prost-wkt"]
+
 [dependencies]
 prost = "0.14.4"
 prost-reflect = { version = "0.16", features = ["derive"], optional = true }

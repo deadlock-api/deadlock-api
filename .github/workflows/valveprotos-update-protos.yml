@@ -1,0 +1,41 @@
+name: Update Protos
+
+# Pulls the latest protos from SteamDatabase/Protobufs into valveprotos/protos.
+# Migrated from the standalone valveprotos-rs repository.
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-protos:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # fetch-protos reads and writes paths relative to the crate root.
+        working-directory: valveprotos
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Protocol Buffers compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
+
+      - name: Update Rust toolchain to stable
+        run: |
+          rustup override set stable
+          rustup update stable
+          rustup component add rustfmt
+
+      - name: Run fetch-protos
+        run: cargo run --locked -p valveprotos --features requests --bin fetch-protos
+
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@v6
+        with:
+          commit_message: "valveprotos: update protos"
+          file_pattern: 'valveprotos/protos'
+          branch: master

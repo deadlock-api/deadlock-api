@@ -1,0 +1,23 @@
+# Build context for every Rust image is the repo root (single cargo workspace),
+# so keep it to what cargo needs.
+**/target/
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules/
+.git/
+.github/
+.cargo/
+.idea/
+.vscode/
+.claude/
+.asset-index/
+.assets-build/
+.playwright-mcp/
+website/
+scripts/
+live-events/docker-compose.yaml
+tools/docker-compose.yaml
+api/docker-compose.yaml
+**/*.rs.bk
+**/*.pdb

@@ -19,7 +19,7 @@ opentelemetry-appender-tracing = { version = "0.32", features = ["experimental_m
 tracing-opentelemetry = "0.33"
 redis = { version = "1.6.0", default-features = false, features = ["tokio-comp"] }
 clickhouse = { version = "0.15.2", features = ["chrono", "uuid", "zstd"] }
-sqlx = { version = "0.9.0", features = ["chrono", "derive", "postgres", "runtime-tokio", "uuid"] }
+sqlx = { version = "0.9.0", features = ["chrono", "derive", "postgres", "runtime-tokio", "sqlx-toml", "uuid"] }
 uuid = { version = "1.26.0", features = ["serde", "v4"] }
 cached = { version = "3.1", features = ["async"] }
 axum = "0.8.9"
@@ -39,7 +39,7 @@ axum-prometheus = "0.10.1"
 itertools = "0.15.0"
 futures = "0.3.34"
 snap = "1.1.2"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "4f4a3cb1b0c6f19af59a722acb79ecccd01f61f6", features = ["gc-client", "serde", "user-msgs", "reflect"] }
+valveprotos = { workspace = true, features = ["gc-client", "serde", "user-msgs", "reflect"] }
 prost = "0.14.4"
 base64 = "0.23.1"
 tryhard = "0.5.2"
@@ -85,8 +85,8 @@ datafusion = { version = "55", default-features = false, features = [
     "crypto_expressions",
     "encoding_expressions",
 ] }
-haste_core = { git = "https://github.com/deadlock-api/haste.git", rev = "bfb292d4798031350861ad297aa26753267a1ea6" }
-haste_broadcast = { git = "https://github.com/deadlock-api/haste.git", rev = "bfb292d4798031350861ad297aa26753267a1ea6" }
+haste_core = { workspace = true }
+haste_broadcast = { workspace = true }
 rayon = "1"
 tokio-util = { version = "0.7.19", features = ["io"] }
 image = { version = "0.25.10", default-features = false, features = ["png", "webp"] }
@@ -107,18 +107,3 @@ proptest-derive = "0.8"
 rstest = "0.26.1"
 insta = { version = "1", features = ["json"] }
 
-[profile.dev]
-debug = "line-tables-only"
-split-debuginfo = "unpacked"
-
-[profile.dev.package."*"]
-debug = false
-
-# DuckDB is unusably slow without optimizations, even for tests.
-[profile.dev.package.libduckdb-sys]
-opt-level = 3
-
-[profile.test.package.clickhouse-sql-parser]
-opt-level = 3
-[profile.test.package.antlr4rust]
-opt-level = 3

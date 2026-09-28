@@ -53,8 +53,6 @@ impl InstanceBaseline {
     }
 
     /// clear clears underlying storage, but this has no effect on the allocated capacity.
-    // Only used by the blocking `Parser::reset`, which is not compiled under the `async` feature.
-    #[cfg_attr(feature = "async", allow(dead_code))]
     pub(crate) fn clear(&mut self) {
         self.data.clear();
     }

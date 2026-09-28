@@ -1,7 +1,9 @@
 services:
   api:
     image: ghcr.io/deadlock-api/deadlock-api:latest
-    build: .
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
     env_file: .env
     ports:
       - "3000:3000"

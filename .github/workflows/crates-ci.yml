@@ -1,0 +1,87 @@
+name: Crates CI
+
+# Checks for the library crates imported into the workspace (valveprotos,
+# haste, dungers). Their consumers (api, tools, live-events) are checked by
+# their own workflows, which also trigger on changes to these crates.
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'valveprotos/**'
+      - 'haste/**'
+      - 'dungers/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'rustfmt.toml'
+      - '.github/workflows/crates-ci.yml'
+      - '.github/workflows/rust-ci-checks.yml'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'valveprotos/**'
+      - 'haste/**'
+      - 'dungers/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'rustfmt.toml'
+      - '.github/workflows/crates-ci.yml'
+      - '.github/workflows/rust-ci-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  valveprotos:
+    uses: ./.github/workflows/rust-ci-checks.yml
+    with:
+      working-directory: valveprotos
+      packages: valveprotos
+      clippy-args: --all-features
+      typos: false
+      lint-extra-apt-packages: clang mold
+      rust-cache-shared-key: valveprotos-build-cache
+
+  haste:
+    uses: ./.github/workflows/rust-ci-checks.yml
+    with:
+      working-directory: haste
+      packages: haste haste_core haste_broadcast haste_vartype
+      clippy-args: --all-features
+      typos: false
+      lint-extra-apt-packages: clang mold
+      rust-cache-shared-key: haste-build-cache
+
+  dungers:
+    uses: ./.github/workflows/rust-ci-checks.yml
+    with:
+      working-directory: dungers
+      packages: dungers dungers_bitbuf dungers_charsor dungers_varint
+      clippy-args: --all-features
+      typos: false
+      lint-extra-apt-packages: clang mold
+      rust-cache-shared-key: dungers-build-cache
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: "crates-test-cache-${{ runner.os }}-${{ runner.arch }}"
+          save-if: ${{ github.ref == 'refs/heads/master' }}
+      - name: Tests
+        run: cargo test --locked -p valveprotos -p haste -p haste_core -p haste_broadcast -p haste_vartype -p dungers -p dungers_bitbuf -p dungers_charsor -p dungers_varint --all-features

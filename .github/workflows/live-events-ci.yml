@@ -7,12 +7,28 @@ on:
     paths:
       - 'live-events/**'
       - '.github/workflows/live-events-ci.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'rustfmt.toml'
+      - 'valveprotos/**'
+      - 'haste/**'
+      - 'dungers/**'
+      - '.github/workflows/rust-ci-checks.yml'
   pull_request:
     branches:
       - master
     paths:
       - 'live-events/**'
       - '.github/workflows/live-events-ci.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'rustfmt.toml'
+      - 'valveprotos/**'
+      - 'haste/**'
+      - 'dungers/**'
+      - '.github/workflows/rust-ci-checks.yml'
   workflow_dispatch:
     inputs:
       tag:
@@ -38,6 +54,9 @@ jobs:
     uses: ./.github/workflows/rust-ci-checks.yml
     with:
       working-directory: live-events
+      packages: deadlock-live-events
+      # .cargo/config.toml links with clang + mold
+      lint-extra-apt-packages: clang mold
       rust-cache-shared-key: live-events-build-cache
 
   deploy:
@@ -83,7 +102,9 @@ jobs:
       - name: Build and push Docker image
         uses: useblacksmith/build-push-action@9b0579bbec7a6cad2f171596c57e7ac1e7658850 # v2.3.0
         with:
-          context: live-events
+          # Build context is the repo root: live-events is a member of the root cargo workspace.
+          context: .
+          file: live-events/Dockerfile
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}-${{ matrix.platform }}
           platforms: ${{ matrix.docker_platform }}

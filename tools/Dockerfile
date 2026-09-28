@@ -9,11 +9,12 @@ WORKDIR /app
 # the target.cfg rustflags from cargo config. Use the short-name form so it
 # works for build scripts linked via gcc as well as the final target.
 ENV RUSTFLAGS="-Clink-arg=-fuse-ld=mold -Ctarget-cpu=znver2"
+# Build context is the repo root (one cargo workspace); build only the packages under tools/.
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/app/target,sharing=locked \
-    cargo build --release --all-features \
+    cargo build --release --locked $(for m in tools/*/Cargo.toml; do sed -n 's/^name = "\(.*\)"/-p \1/p' "$m"; done) \
     && mkdir -p /tmp/release-bin \
     && find /app/target/release -maxdepth 1 -type f -executable -exec cp {} /tmp/release-bin/ \;
 

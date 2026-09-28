@@ -61,6 +61,7 @@ pub(crate) async fn fetch_leaderboard_raw(
     let msg = CMsgClientToGcGetLeaderboard {
         leaderboard_region: Some(region as i32),
         hero_id,
+        leaderboard_id: None,
     };
     steam_client
         .call_steam_proxy_raw(SteamProxyQuery {

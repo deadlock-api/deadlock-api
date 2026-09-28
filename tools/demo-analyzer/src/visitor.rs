@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use haste::entities::{DeltaHeader, Entity, ehandle_to_index};
 use haste::fxhash;
-use haste::parser::{Context, Visitor};
+use haste::parser::{AsyncVisitor, Context};
 use prost::Message;
 use tracing::debug;
 use valveprotos::deadlock::{CCitadelUserMsgBannedHeroes, CitadelUserMessageIds};
@@ -94,7 +94,7 @@ impl DemoAnalyzerVisitor {
     }
 }
 
-impl Visitor for DemoAnalyzerVisitor {
+impl AsyncVisitor for DemoAnalyzerVisitor {
     type Error = VisitorError;
 
     fn on_entity(

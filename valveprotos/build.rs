@@ -197,10 +197,7 @@ fn compile_deadlock_protos(externs: &[ExternDefs]) -> io::Result<()> {
     // as DEP_VALVEPROTOS_DESCRIPTORS.
     #[cfg(feature = "reflect")]
     {
-        println!(
-            "cargo::metadata=descriptors={}",
-            descriptor_file.display()
-        );
+        println!("cargo::metadata=descriptors={}", descriptor_file.display());
     }
 
     Ok(())

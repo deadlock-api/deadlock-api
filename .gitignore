@@ -11,3 +11,6 @@ scripts/.gh_token
 __pycache__
 **/playground/**/data/
 website/scripts/playground/fixtures/
+
+# Cargo workspace build output
+/target

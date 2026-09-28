@@ -1,0 +1,4 @@
+# tools enable sqlx's `time` feature; in the shared workspace build it unifies with
+# our `chrono`, so pin the query!() macros to chrono types.
+[macros.preferred-crates]
+date-time = "chrono"

@@ -1,7 +1,9 @@
 services:
   api:
     image: ghcr.io/deadlock-api/deadlock-live-events:latest
-    build: .
+    build:
+      context: ..
+      dockerfile: live-events/Dockerfile
     restart: unless-stopped
     env_file: .env
     ports:
