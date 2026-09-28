@@ -44,6 +44,9 @@ test("playerRecords finds each best match, the earlier one on a tie", () => {
   assert.equal(records.mostSouls?.value, 50_000);
   assert.equal(records.activeDays, 3);
   assert.equal(records.matches, 3);
+  // The assists match: (4 + 20) / 2.
+  assert.equal(records.bestKda?.value, 12);
+  assert.equal(records.deathless, 0);
 });
 
 test("playerRecords leaves short matches out of the per-minute record", () => {

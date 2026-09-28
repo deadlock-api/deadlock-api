@@ -18,6 +18,10 @@ export interface PlayerRecords {
   mostSouls: RecordMatch | null;
   bestSoulsPerMin: RecordMatch | null;
   mostLastHits: RecordMatch | null;
+  /** The best single-match (kills + assists) / deaths, deaths counted as at least one. */
+  bestKda: RecordMatch | null;
+  /** Matches without a death. */
+  deathless: number;
   longestWinStreak: number;
   /** Positive = an ongoing win streak, negative = an ongoing loss streak, 0 without matches. */
   currentStreak: number;
@@ -49,7 +53,11 @@ function best(
 export function playerRecords(entries: readonly PlayerMatchHistoryEntry[]): PlayerRecords {
   const streaks = computeStreaks(entries as PlayerMatchHistoryEntry[]);
   const days = new Set<number>();
-  for (const entry of entries) days.add(Math.floor(entry.start_time / 86_400));
+  let deathless = 0;
+  for (const entry of entries) {
+    days.add(Math.floor(entry.start_time / 86_400));
+    if (entry.player_deaths === 0) deathless++;
+  }
   return {
     matches: entries.length,
     mostKills: best(entries, (entry) => entry.player_kills),
@@ -57,6 +65,8 @@ export function playerRecords(entries: readonly PlayerMatchHistoryEntry[]): Play
     mostSouls: best(entries, (entry) => entry.net_worth),
     bestSoulsPerMin: best(entries, soulsPerMinute, (entry) => entry.match_duration_s >= RECORD_MIN_DURATION_S),
     mostLastHits: best(entries, (entry) => entry.last_hits),
+    bestKda: best(entries, (entry) => (entry.player_kills + entry.player_assists) / Math.max(1, entry.player_deaths)),
+    deathless,
     longestWinStreak: streaks.longestWin,
     currentStreak: streaks.current,
     activeDays: days.size,

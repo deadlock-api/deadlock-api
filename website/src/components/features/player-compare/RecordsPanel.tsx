@@ -66,6 +66,20 @@ const ROWS: RecordRow[] = [
     match: (records) => records.mostLastHits,
   },
   {
+    key: "bestKda",
+    label: "Best KDA",
+    // Judged in the shown tenths, so a tie as printed is a tie.
+    value: (records) => (records.bestKda ? Number(records.bestKda.value.toFixed(1)) : null),
+    format: (value) => value.toFixed(1),
+    match: (records) => records.bestKda,
+  },
+  {
+    key: "deathless",
+    label: "Deathless matches",
+    value: (records) => records.deathless,
+    format: integer,
+  },
+  {
     key: "longestWinStreak",
     label: "Longest win streak",
     value: (records) => records.longestWinStreak,
