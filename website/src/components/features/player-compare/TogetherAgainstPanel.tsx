@@ -1,8 +1,9 @@
 import { HeroImage } from "~/components/domain/assets/HeroImage";
-import { Panel, PanelFooter, PanelHeader } from "~/components/patterns/panel/Panel";
+import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Delta } from "~/components/ui/delta";
 import { NoValue } from "~/components/ui/no-value";
+import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
 import { StatusDot } from "~/components/ui/status-dot";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -200,10 +201,33 @@ function SharedMatchRow({
   );
 }
 
+/** A pair's row while the match histories load: the names, and a placeholder where each record goes. */
+function PairRowSkeleton({ a, b }: { a: ComparedPlayer; b: ComparedPlayer }) {
+  return (
+    <TableRow aria-hidden="true">
+      <TableCell data-pinned>
+        <Stack gap={0.5} className="max-w-40 @md/table:max-w-none">
+          <PlayerName player={a} />
+          <PlayerName player={b} />
+        </Stack>
+      </TableCell>
+      {[0, 1, 2].map((cell) => (
+        <TableCell key={cell} className="text-end">
+          <Skeleton className="ms-auto h-4 w-16" />
+        </TableCell>
+      ))}
+      <TableCell className="hidden text-end @md/table:table-cell">
+        <Skeleton className="ms-auto h-4 w-20" />
+      </TableCell>
+    </TableRow>
+  );
+}
+
 /**
  * Every pair of compared players: the matches they played on the same team with that team's record, the matches
  * they played against each other with the head-to-head, and when they last met; then the newest matches two or more of
- * them shared, newest first. Pairs that never met share one line.
+ * them shared, newest first. Pairs that never met come last, their records empty. While the histories load, every
+ * pair holds its row, so the panel keeps its place (and its column beside heroes and items) from the first render.
  */
 export function TogetherAgainstPanel({
   players,
@@ -221,12 +245,9 @@ export function TogetherAgainstPanel({
   const failed = histories.filter((history) => history.isError);
   const loading = histories.some((history) => history.isPending && !history.isError);
   const { met, neverMet } = splitPairs(playerPairs(histories));
+  const pairs = [...met, ...neverMet];
   const recent = recentSharedMatches(histories);
-  const nameOf = (accountId: number) => byId.get(accountId)?.name ?? `Player ${accountId}`;
-  const neverMetLine = `Never met: ${neverMet.map((pair) => `${nameOf(pair.a)} & ${nameOf(pair.b)}`).join(", ")}`;
-  // Only there when it has something to show: it sits last on the page, so appearing once loaded moves nothing.
-  // A failed history still shows, with its retry.
-  if (loading || (met.length === 0 && failed.length === 0)) return null;
+  const loadingPairs = players.flatMap((a, i) => players.slice(i + 1).map((b) => [a, b] as const));
 
   return (
     <Panel className={className}>
@@ -235,8 +256,8 @@ export function TogetherAgainstPanel({
         const player = byId.get(history.accountId);
         return player ? <HistoryError key={history.accountId} player={player} history={history} /> : null;
       })}
-      {met.length > 0 && (
-        <Table density="dense" className="tabular-nums">
+      {(loading || pairs.length > 0) && (
+        <Table density="dense" className="tabular-nums" aria-busy={loading || undefined}>
           <TableHeader tone="muted">
             <TableRow>
               <TableHead data-pinned>Players</TableHead>
@@ -247,12 +268,14 @@ export function TogetherAgainstPanel({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {met.map((pair) => {
-              const a = byId.get(pair.a);
-              const b = byId.get(pair.b);
-              if (!a || !b) return null;
-              return <PairRow key={`${pair.a}-${pair.b}`} pair={pair} a={a} b={b} lastMetLabel={lastMetLabel} />;
-            })}
+            {loading
+              ? loadingPairs.map(([a, b]) => <PairRowSkeleton key={`${a.accountId}-${b.accountId}`} a={a} b={b} />)
+              : pairs.map((pair) => {
+                  const a = byId.get(pair.a);
+                  const b = byId.get(pair.b);
+                  if (!a || !b) return null;
+                  return <PairRow key={`${pair.a}-${pair.b}`} pair={pair} a={a} b={b} lastMetLabel={lastMetLabel} />;
+                })}
           </TableBody>
         </Table>
       )}
@@ -267,13 +290,6 @@ export function TogetherAgainstPanel({
             </ul>
           </Stack>
         </>
-      )}
-      {neverMet.length > 0 && (
-        // Two lines at most: with five players the list runs long; the full list is in the title.
-        <PanelFooter title={neverMetLine}>
-          {/* Clamped inside the footer's padding, so a third line never peeks out. */}
-          <span className="line-clamp-2">{neverMetLine}</span>
-        </PanelFooter>
       )}
     </Panel>
   );
