@@ -93,7 +93,7 @@ export function HeadToHeadTable({
                         <Text variant="caption" tone="muted">
                           {groupTally[index]} won
                         </Text>
-                        <span aria-hidden="true" className="hidden size-3.5 shrink-0 @md/table:block" />
+                        <span aria-hidden="true" className="hidden size-3.5 shrink-0 @xl/table:block" />
                       </Inline>
                     )}
                   </TableCell>
@@ -164,9 +164,9 @@ export function HeadToHeadTable({
                           {tally[index]} of {scored.length}
                         </Text>
                         {leads ? (
-                          <CrownIcon aria-hidden="true" className="size-3.5 shrink-0" />
+                          <CrownIcon aria-hidden="true" className="hidden size-3.5 shrink-0 @xl/table:block" />
                         ) : (
-                          <span aria-hidden="true" className="size-3.5 shrink-0" />
+                          <span aria-hidden="true" className="hidden size-3.5 shrink-0 @xl/table:block" />
                         )}
                         {leads && <span className="sr-only">, the most</span>}
                       </Inline>

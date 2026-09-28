@@ -25,12 +25,12 @@ export function PlayerColumnHead({
         {player.profileLoading ? (
           <Skeleton className="h-4 w-20" />
         ) : (
-          <span className="max-w-14 truncate @md/table:max-w-32 @xl/table:max-w-none" title={player.name}>
+          <span className="max-w-14 truncate @md/table:max-w-24 @2xl/table:max-w-none" title={player.name}>
             {player.name}
           </span>
         )}
         {/* The crown's slot every value keeps (RowValue), so the name ends where the values do. */}
-        {crownSlot && <span aria-hidden="true" className="hidden size-3.5 shrink-0 @md/table:block" />}
+        {crownSlot && <span aria-hidden="true" className="hidden size-3.5 shrink-0 @xl/table:block" />}
       </Inline>
     </TableHead>
   );
@@ -61,9 +61,9 @@ export function RowValue({
         {children}
       </Text>
       {won ? (
-        <CrownIcon aria-hidden="true" className="hidden size-3.5 shrink-0 @md/table:block" />
+        <CrownIcon aria-hidden="true" className="hidden size-3.5 shrink-0 @xl/table:block" />
       ) : (
-        <span aria-hidden="true" className="hidden size-3.5 shrink-0 @md/table:block" />
+        <span aria-hidden="true" className="hidden size-3.5 shrink-0 @xl/table:block" />
       )}
       {won && <span className="sr-only">, best</span>}
     </Inline>

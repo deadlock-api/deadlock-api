@@ -61,7 +61,7 @@ export function SharedHeroesTable({
                   <TableHead key={player.accountId} className="text-end">
                     <Inline gap={1.5} wrap="nowrap" justify="end">
                       <StatusDot color={player.color} />
-                      <span className="max-w-32 truncate @xl/table:max-w-none" title={player.name}>
+                      <span className="max-w-20 truncate @xl/table:max-w-none" title={player.name}>
                         {player.name}
                       </span>
                     </Inline>
@@ -117,9 +117,13 @@ export function SharedHeroesTable({
                           <TooltipTarget>
                             <Stack gap={0} align="end" asChild>
                               <span>
+                                {/* A narrow table keeps the count and drops the word, so every player's column fits. */}
                                 <Text>
-                                  {formatStatValue(stats.matches, "integer")}{" "}
-                                  {stats.matches === 1 ? "match" : "matches"}
+                                  {formatStatValue(stats.matches, "integer")}
+                                  <span className="sr-only @xl/table:not-sr-only">
+                                    {" "}
+                                    {stats.matches === 1 ? "match" : "matches"}
+                                  </span>
                                 </Text>
                                 {/* The win rate in the good / bad tone, judged as printed, like the other panels; fixed widths,
                                     so the win rates and the KDAs each line up down the column. */}
@@ -128,14 +132,14 @@ export function SharedHeroesTable({
                                     <Text
                                       variant="caption"
                                       tone={toneOf(Math.round(stats.winRate * 100), 50)}
-                                      className="w-16 shrink-0 text-end whitespace-nowrap"
+                                      className="whitespace-nowrap @xl/table:w-16 @xl/table:shrink-0 @xl/table:text-end"
                                     >
                                       {formatPercent(stats.winRate, 0)} WR
                                     </Text>
                                     <Text
                                       variant="caption"
                                       tone="muted"
-                                      className="w-18 shrink-0 text-end whitespace-nowrap"
+                                      className="hidden whitespace-nowrap @xl/table:inline @xl/table:w-18 @xl/table:shrink-0 @xl/table:text-end"
                                     >
                                       {formatStatValue(stats.kda, "decimal2")} KDA
                                     </Text>
