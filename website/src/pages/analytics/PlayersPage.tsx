@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { PlayerScoreboardSortByEnum } from "deadlock_api_client";
 import { Trophy } from "lucide-react";
 import { parseAsInteger, parseAsStringLiteral, throttle, useQueryState } from "nuqs";
-import { lazy, Suspense, useState } from "react";
+import { type ComponentType, lazy, Suspense, useState } from "react";
 
 import { Filter } from "~/components/domain/filters";
 import { ScoreboardTable } from "~/components/domain/player-scoreboard/ScoreboardTable";
@@ -26,6 +26,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { MAX_COMPARE_PLAYERS } from "~/lib/player-compare";
+import type { CompareFilters } from "~/queries/player-compare-queries";
 import { playerScoreboardQueryOptions } from "~/queries/player-scoreboard-query";
 
 import { DEFAULT_MIN_MATCHES, MAX_ENTRIES } from "./PlayersPageOptions";
@@ -33,7 +34,7 @@ import { DEFAULT_MIN_MATCHES, MAX_ENTRIES } from "./PlayersPageOptions";
 /** A filter or sort change and the page reset land in one throttled URL update, so one history entry. */
 const together = { limitUrlUpdates: throttle(50) };
 
-const PlayerComparison = lazy(() =>
+const LazyPlayerComparison = lazy(() =>
   import("~/components/features/player-compare/PlayerComparison").then((m) => ({
     default: m.PlayerComparison,
   })),
@@ -45,7 +46,16 @@ const PlayerStatsDistributionCharts = lazy(() =>
   })),
 );
 
-export function PlayersPage() {
+/**
+ * The players analytics page with its three tabs. `Comparison` is the compare tab's content: lazy by default, so the
+ * scoreboard does not carry it; the compare route passes it in statically (`PlayersComparePage`), since a lazy
+ * component that suspends while the page hydrates would flash its fallback over the server's HTML.
+ */
+export function PlayersPage({
+  Comparison = LazyPlayerComparison,
+}: {
+  Comparison?: ComponentType<{ filters: CompareFilters }>;
+} = {}) {
   const [tab, setTab] = useAnalyticsTab("players");
   // Players picked on the scoreboard for a comparison; they stay picked across sorts and pages.
   const [picked, setPicked] = useState<number[]>([]);
@@ -219,7 +229,7 @@ export function PlayersPage() {
           <Section titleDisplay="hidden" title="Compare Players">
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
-                <PlayerComparison
+                <Comparison
                   filters={{
                     gameMode,
                     matchMode,

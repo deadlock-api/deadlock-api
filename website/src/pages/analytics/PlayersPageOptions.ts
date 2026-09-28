@@ -83,6 +83,7 @@ function searchAccountIds(value: unknown): number[] {
  */
 export const comparePageOptions = {
   ...playersPageOptions,
+  component: lazyRouteComponent(() => import("./PlayersComparePage"), "PlayersComparePage"),
   loaderDeps: ({ search }: { search: Record<string, unknown> }) => ({
     accountIds: searchAccountIds(search.players),
     filters: compareFilterSearch(search),
