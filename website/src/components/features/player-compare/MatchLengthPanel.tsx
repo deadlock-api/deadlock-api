@@ -151,6 +151,8 @@ export function MatchLengthPanel({
                       fill={player.color}
                       radius={2}
                       maxBarSize={20}
+                      // A win rate of exactly 50% is a sliver on the even line, not an empty slot like a missing one.
+                      minPointSize={2}
                       isAnimationActive={false}
                     />
                   );
