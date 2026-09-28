@@ -20,6 +20,7 @@ import { steamProfileQueryOptions, trackerHeroStatsQueryOptions } from "~/querie
 
 import { AddPlayerControls } from "./AddPlayerControls";
 import { HeadToHeadTable } from "./HeadToHeadTable";
+import { ItemPreferencesPanel } from "./ItemPreferencesPanel";
 import { PercentileComparison } from "./PercentileComparison";
 import { PerformanceTrendPanel } from "./PerformanceTrendPanel";
 import { PlayerCards } from "./PlayerCards";
@@ -156,6 +157,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             <PerformanceTrendPanel players={players} histories={histories} />
           </Grid>
           {showSharedHeroes && <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />}
+          <ItemPreferencesPanel players={players} filters={filters} />
           <PercentileComparison players={players} filters={filters} />
         </>
       )}

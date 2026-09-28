@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import type {
+  AnalyticsApiItemStatsRequest,
   AnalyticsApiPlayerScoreboardRequest,
   AnalyticsApiPlayerStatsMetricsRequest,
   PlayerHeroStatsGameModeEnum,
@@ -150,4 +151,19 @@ export function playerRanksQueryOptions(accountIds: readonly number[]) {
     },
     staleTime: CACHE_DURATIONS.FIVE_MINUTES,
   });
+}
+
+/**
+ * One player's item purchases on the comparison's filters, for `itemStatsQueryOptions`. One request per player:
+ * `accountIds` would pool the players into one row per item.
+ */
+export function compareItemStatsParams(accountId: number, filters: CompareFilters): AnalyticsApiItemStatsRequest {
+  return {
+    accountId,
+    gameMode: filters.gameMode,
+    matchMode: filters.matchMode,
+    heroId: filters.heroId ?? undefined,
+    minUnixTimestamp: filters.minUnixTimestamp ?? 0,
+    maxUnixTimestamp: filters.maxUnixTimestamp,
+  };
 }
