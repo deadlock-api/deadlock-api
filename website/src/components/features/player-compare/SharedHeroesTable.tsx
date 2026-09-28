@@ -121,13 +121,26 @@ export function SharedHeroesTable({
                                   {formatStatValue(stats.matches, "integer")}{" "}
                                   {stats.matches === 1 ? "match" : "matches"}
                                 </Text>
-                                <Text variant="caption" tone="muted">
-                                  {/* The win rate in the good / bad tone, judged as printed, like the other panels. */}
-                                  <Text variant="caption" tone={toneOf(Math.round(stats.winRate * 100), 50)}>
-                                    {formatPercent(stats.winRate, 0)} WR
-                                  </Text>{" "}
-                                  · {formatStatValue(stats.kda, "decimal2")} KDA
-                                </Text>
+                                {/* The win rate in the good / bad tone, judged as printed, like the other panels; fixed widths,
+                                    so the win rates and the KDAs each line up down the column. */}
+                                <Inline gap={1} wrap="nowrap" justify="end" asChild>
+                                  <span>
+                                    <Text
+                                      variant="caption"
+                                      tone={toneOf(Math.round(stats.winRate * 100), 50)}
+                                      className="w-16 shrink-0 text-end whitespace-nowrap"
+                                    >
+                                      {formatPercent(stats.winRate, 0)} WR
+                                    </Text>
+                                    <Text
+                                      variant="caption"
+                                      tone="muted"
+                                      className="w-18 shrink-0 text-end whitespace-nowrap"
+                                    >
+                                      {formatStatValue(stats.kda, "decimal2")} KDA
+                                    </Text>
+                                  </span>
+                                </Inline>
                               </span>
                             </Stack>
                           </TooltipTarget>
