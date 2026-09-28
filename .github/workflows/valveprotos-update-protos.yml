@@ -1,9 +1,8 @@
 name: Update Protos
 
-# Pulls the latest protos from SteamDatabase/Protobufs into valveprotos/protos.
-# If a protos PR is already open, the update is added as a new commit to it;
-# otherwise a fresh branch is cut from master and a PR is opened. Migrated from
-# the standalone valveprotos-rs repository.
+# Pulls the latest protos from SteamDatabase/Protobufs into valveprotos/protos
+# and opens a PR with the changes, or refreshes the already open one (same
+# branch). Migrated from the standalone valveprotos-rs repository.
 
 on:
   schedule:
@@ -18,33 +17,11 @@ concurrency:
   group: update-protos
   cancel-in-progress: false
 
-env:
-  BRANCH: valveprotos/update-protos
-  # Pushes and PRs made with GITHUB_TOKEN don't trigger other workflows, so the
-  # PR's CI only runs when a PAT / app token is provided as PROTOS_PR_TOKEN.
-  GH_TOKEN: ${{ secrets.PROTOS_PR_TOKEN || github.token }}
-
 jobs:
   update-protos:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          token: ${{ secrets.PROTOS_PR_TOKEN || github.token }}
-
-      - name: Check out the open protos PR, if any
-        id: pr
-        run: |
-          pr=$(gh pr list --head "$BRANCH" --base master --state open --json number --jq '.[0].number // empty')
-          echo "number=$pr" >> "$GITHUB_OUTPUT"
-          if [ -n "$pr" ]; then
-            echo "Adding to PR #$pr"
-            git fetch --depth=1 origin "$BRANCH"
-            git checkout -B "$BRANCH" FETCH_HEAD
-          else
-            echo "No open protos PR; starting from master"
-            git checkout -B "$BRANCH"
-          fi
 
       - name: Install Protocol Buffers compiler
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
@@ -61,26 +38,20 @@ jobs:
         working-directory: valveprotos
         run: cargo run --locked -p valveprotos --all-features --bin fetch-protos
 
-      - name: Commit and push, open a PR if none is open
-        env:
-          PR: ${{ steps.pr.outputs.number }}
-        run: |
-          git add -A valveprotos/protos
-          if git diff --cached --quiet; then
-            echo "Protos are up to date"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "valveprotos: update protos"
-          if [ -n "$PR" ]; then
-            git push origin "$BRANCH"
-          else
-            # A leftover branch from a merged or closed PR is replaced.
-            git push --force origin "$BRANCH"
-            gh pr create --base master --head "$BRANCH" \
-              --title "valveprotos: update protos" \
-              --body "Latest protos from [SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs), fetched by the scheduled \`Update Protos\` workflow. Later updates are added to this PR as new commits while it is open.
+      - name: Open or update PR
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          # PRs opened with GITHUB_TOKEN don't trigger other workflows, so the PR's
+          # CI only runs when a PAT / app token is provided as PROTOS_PR_TOKEN.
+          token: ${{ secrets.PROTOS_PR_TOKEN || github.token }}
+          add-paths: valveprotos/protos
+          branch: valveprotos/update-protos
+          delete-branch: true
+          commit-message: "valveprotos: update protos"
+          committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          title: "valveprotos: update protos"
+          body: |
+            Latest protos from [SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs), fetched by the scheduled `Update Protos` workflow. While this PR is open, later runs refresh it with the newest protos.
 
-          Merging this rebuilds and deploys api, tools and live-events, since they depend on valveprotos."
-          fi
+            Merging this rebuilds and deploys api, tools and live-events, since they depend on valveprotos.
