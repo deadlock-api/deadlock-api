@@ -92,14 +92,17 @@ export function TimelinePanel({
       placeholderData: keepPreviousData,
     })),
   });
-  // Everyone's curve, the zero line every lead is measured from.
+  // Everyone's curve, the zero line every lead is measured from. A timeout is not retried: the averages stand in.
   const field = useQuery({
     ...playerPerformanceCurveQueryOptions(curveParams(filters)),
     placeholderData: keepPreviousData,
+    retry: false,
   });
-  const pending = field.isPending || own.some((query) => query.isPending);
-  const failed =
-    (field.isError && !field.data) || (own.length > 0 && own.every((query) => query.isError && !query.data));
+  const pending = own.some((query) => query.isPending);
+  const failed = own.length > 0 && own.every((query) => query.isError && !query.data);
+  // Leads need the field, which is slow to compute cold and can time out on a long date range: until it is in (or when
+  // it fails) the players' own averages are drawn instead.
+  const relative = field.data !== undefined;
 
   const selected = METRICS[metric];
   const keys = players.map((player) => String(player.accountId));
@@ -122,16 +125,17 @@ export function TimelinePanel({
       );
       return { time, lead, value };
     });
-  const leads = rows.flatMap((row) => Object.values(row.lead).filter((lead): lead is number => lead != null));
+  const plotted = (row: Row, key: string) => (relative ? row.lead[key] : row.value[key]);
+  const leads = rows.flatMap((row) => keys.flatMap((key) => plotted(row, key) ?? []));
   const ticks = niceTicks(Math.min(0, ...leads), Math.max(0, ...leads, selected.digits === 0 ? 1 : 0.1));
   const step = ticks.length > 1 ? ticks[1] - ticks[0] : 1;
   const tenMinutes = rows.find((row) => row.time === 720) ?? rows.find((row) => row.time >= 600);
-  const summary = `${selected.label} by game minute, as the lead over the average player on the same filters.${
+  const summary = `${selected.label} by game minute${relative ? ", as the lead over the average player on the same filters" : ""}.${
     tenMinutes
       ? ` At ${minuteLabel(tenMinutes.time)}: ${players
           .map((player, index) => {
-            const lead = tenMinutes.lead[keys[index]];
-            return `${player.name} ${lead == null ? "no data" : formatLead(lead, selected.digits)}`;
+            const shown = plotted(tenMinutes, keys[index]);
+            return `${player.name} ${shown == null ? "no data" : relative ? formatLead(shown, selected.digits) : formatValue(shown, selected.digits)}`;
           })
           .join(", ")}.`
       : ""
@@ -141,13 +145,7 @@ export function TimelinePanel({
   return (
     <Panel className={className}>
       <PanelHeader size="sm" title="Match timeline" icon={Hourglass}>
-        <Segmented
-          size="sm"
-          width="hug"
-          aria-label="Timeline metric"
-          value={metric}
-          onValueChange={(next) => setMetric(next as TimelineMetric)}
-        >
+        <Segmented size="sm" width="hug" aria-label="Timeline metric" value={metric} onValueChange={setMetric}>
           {(Object.keys(METRICS) as TimelineMetric[]).map((key) => (
             <SegmentedItem key={key} value={key}>
               {METRICS[key].label}
@@ -186,9 +184,11 @@ export function TimelinePanel({
                   domain={[ticks[0], ticks.at(-1) ?? 1]}
                   ticks={ticks}
                   interval={0}
-                  tickFormatter={(value: number) => (value > 0 ? "+" : "") + formatCompactAxisTick(value, step)}
+                  tickFormatter={(value: number) =>
+                    (relative && value > 0 ? "+" : "") + formatCompactAxisTick(value, step)
+                  }
                 />
-                <ReferenceLine y={0} {...CHART_MEDIAN_LINE} />
+                {relative && <ReferenceLine y={0} {...CHART_MEDIAN_LINE} />}
                 <Tooltip
                   cursor={CHART_CURSOR_LINE}
                   isAnimationActive={false}
@@ -198,8 +198,8 @@ export function TimelinePanel({
                     return (
                       <ChartReadings
                         title={`At ${minuteLabel(row.time)}`}
-                        valueLabel="Lead"
-                        extraLabel={selected.label}
+                        valueLabel={relative ? "Lead" : selected.label}
+                        extraLabel={relative ? selected.label : undefined}
                         label={`${selected.label} at ${minuteLabel(row.time)}, against the average player`}
                       >
                         {players.map((player, index) => {
@@ -210,19 +210,33 @@ export function TimelinePanel({
                               key={player.accountId}
                               label={player.name}
                               color={player.color}
-                              extra={value == null ? undefined : formatValue(value, selected.digits)}
+                              extra={!relative || value == null ? undefined : formatValue(value, selected.digits)}
                             >
-                              {lead == null ? <NoValue /> : formatLead(lead, selected.digits)}
+                              {!relative ? (
+                                value == null ? (
+                                  <NoValue />
+                                ) : (
+                                  formatValue(value, selected.digits)
+                                )
+                              ) : lead == null ? (
+                                <NoValue />
+                              ) : (
+                                formatLead(lead, selected.digits)
+                              )}
                             </ChartReading>
                           );
                         })}
-                        <ChartReading
-                          label="Average player"
-                          color="var(--chart-axis)"
-                          extra={row.value[FIELD] == null ? undefined : formatValue(row.value[FIELD], selected.digits)}
-                        >
-                          ±0
-                        </ChartReading>
+                        {relative && (
+                          <ChartReading
+                            label="Average player"
+                            color="var(--chart-axis)"
+                            extra={
+                              row.value[FIELD] == null ? undefined : formatValue(row.value[FIELD], selected.digits)
+                            }
+                          >
+                            ±0
+                          </ChartReading>
+                        )}
                       </ChartReadings>
                     );
                   }}
@@ -231,7 +245,7 @@ export function TimelinePanel({
                   <Line
                     key={keys[index]}
                     name={player.name}
-                    dataKey={(row: Row) => row.lead[keys[index]]}
+                    dataKey={(row: Row) => plotted(row, keys[index])}
                     type="monotone"
                     stroke={player.color}
                     strokeWidth={2}
@@ -249,9 +263,11 @@ export function TimelinePanel({
                 <span className="max-w-full truncate">{player.name}</span>
               </ChartLegendItem>
             ))}
-            <ChartLegendItem color="var(--chart-axis)" shape="dashed">
-              Average player
-            </ChartLegendItem>
+            {relative && (
+              <ChartLegendItem color="var(--chart-axis)" shape="dashed">
+                Average player
+              </ChartLegendItem>
+            )}
           </ChartLegend>
         </Stack>
       </PanelBody>
