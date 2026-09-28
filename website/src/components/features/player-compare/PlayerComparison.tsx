@@ -30,33 +30,33 @@ import { useCompareMetrics } from "./useCompareMetrics";
 import { usePlayerCompareState } from "./usePlayerCompareState";
 
 /**
- * The top grid's classes for up to three players. Narrow: one column. From @4xl two columns: the stat table spans two
- * rows beside the share card and the playstyle, then records beside match length, rank beside the weekly trend. From
- * @8xl a 3x3 grid: the table spans all three rows on the left, and each row pairs share / records, playstyle / match
- * length, trend / rank, so every row's two panels share a height. `order` sets the reading order in each layout.
+ * The top grid's classes for up to three players. Narrow: one column. From @4xl two columns: the stat table spans three
+ * rows beside the share card, the playstyle and match length; then records beside the weekly trend, and rank over time
+ * across both. From @8xl a 3x3 grid: the table spans all three rows on the left, and each row pairs share / records,
+ * playstyle / match length, trend / rank at one height. `order` sets the reading order in each layout.
  */
 const LAYOUT = {
-  // The share card keeps its own height beside the table; the playstyle under it takes the rest.
-  grid: "@4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @4xl:grid-rows-[auto_1fr] @8xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)] @8xl:grid-rows-none",
-  table: "order-1 @4xl:row-span-2 @8xl:row-span-3",
+  // The share card and match length keep their own heights beside the table; the playstyle between them takes the rest.
+  grid: "@4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @4xl:grid-rows-[auto_1fr_auto] @8xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)] @8xl:grid-rows-none",
+  table: "order-1 @4xl:row-span-3",
   share: "order-2",
   radar: "order-3 @8xl:order-4",
-  records: "order-4 @8xl:order-3",
-  length: "order-5",
-  rank: "order-6 @8xl:order-7",
-  trend: "order-7 @8xl:order-6",
+  length: "order-4 @8xl:order-5",
+  records: "order-5 @8xl:order-3",
+  trend: "order-6",
+  rank: "order-7 @4xl:col-span-2 @8xl:col-span-1",
 };
 
 /** Four or five players: the table spans the width until @7xl, then two columns, the 3x3 grid from @9xl. */
 const WIDE_LAYOUT = {
-  grid: "@4xl:grid-cols-2 @7xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @7xl:grid-rows-[auto_1fr] @9xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)] @9xl:grid-rows-none",
-  table: "order-1 @4xl:col-span-2 @7xl:col-span-1 @7xl:row-span-2 @9xl:row-span-3",
+  grid: "@4xl:grid-cols-2 @7xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @7xl:grid-rows-[auto_1fr_auto] @9xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)] @9xl:grid-rows-none",
+  table: "order-1 @4xl:col-span-2 @7xl:col-span-1 @7xl:row-span-3",
   share: "order-2",
   radar: "order-3 @9xl:order-4",
-  records: "order-4 @9xl:order-3",
-  length: "order-5",
-  rank: "order-6 @9xl:order-7",
-  trend: "order-7 @9xl:order-6",
+  length: "order-4 @9xl:order-5",
+  records: "order-5 @9xl:order-3",
+  trend: "order-6",
+  rank: "order-7 @7xl:col-span-2 @9xl:col-span-1",
 };
 
 /** The compare tab: pick up to five players, then see who wins which stat on the page's filters. */
