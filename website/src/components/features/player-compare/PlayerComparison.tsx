@@ -4,6 +4,7 @@ import { GitCompareArrows } from "lucide-react";
 import { SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
+import { Grid } from "~/components/ui/grid";
 import { Stack } from "~/components/ui/stack";
 import { aggregateHeroStats } from "~/lib/player-compare";
 import { playstyleLabel, playstylePercentiles } from "~/lib/playstyle";
@@ -128,32 +129,32 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             onRemove={remove}
             onMove={move}
           />
-          {/* Wide: the stat table on the left, the share card and the profile charts beside it. Narrow: stacked. */}
-          {/* Four or five columns of values need the whole width until the page is very wide. */}
-          <div
+          {/* Wide: the stat table on the left, the share card and the profile charts beside it. Four or five columns
+              of values need the whole width until the page is very wide. Narrow: stacked. */}
+          <Grid
+            gap={4}
             className={cn(
-              "grid items-start gap-4",
+              "items-start",
               players.length >= 4
                 ? "@7xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
                 : "@4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]",
             )}
           >
             <HeadToHeadTable players={players} />
-            {/* Stacked under a wide table, the side panels pair up rather than stretch across the page. */}
-            <div className={cn("grid items-start gap-4", players.length >= 4 && "@4xl:grid-cols-2 @7xl:grid-cols-1")}>
+            {/* Its own width decides: stacked under a wide table, the side panels pair up rather than stretch. */}
+            <Grid columns={{ base: 1, xl: 2 }} gap={4} className="items-start">
               <Stack gap={4}>
                 <ShareComparison filters={filters} />
                 {accountIds.length >= 2 && <TogetherAgainstPanel players={players} histories={histories} />}
               </Stack>
               <PlaystyleRadarPanel players={players} filters={filters} />
-            </div>
-          </div>
-          {/* Wide: the climb and the heroes in common side by side, so the page stays short. */}
+            </Grid>
+          </Grid>
           {/* Over time, side by side: the climb and the form. */}
-          <div className="grid items-start gap-4 @4xl:grid-cols-2">
+          <Grid columns={{ base: 1, xl: 2 }} gap={4} className="items-start">
             <RankHistoryPanel players={players} filters={filters} histories={histories} />
             <PerformanceTrendPanel players={players} histories={histories} />
-          </div>
+          </Grid>
           {showSharedHeroes && <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />}
           <PercentileComparison players={players} filters={filters} />
         </>
