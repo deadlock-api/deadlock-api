@@ -1,32 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * Copies text, or an image, and reports `copied` for `resetAfter` milliseconds, so a control can confirm the copy.
- * `copy` resolves to whether the clipboard accepted it; it never throws. An image is a PNG blob, or the promise of
- * one: call `copy` straight from the click with the pending download, since Safari only allows a clipboard write
- * that starts inside the user's gesture.
+ * Copies text and reports the outcome for `resetAfter` milliseconds, so a control can confirm the copy (`copied`) or
+ * say it did not work (`failed`: no clipboard access). `copy` resolves to whether the clipboard accepted the text; it
+ * never throws.
  */
 export function useCopyToClipboard(resetAfter = 2000) {
-  const [copied, setCopied] = useState(false);
+  const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
   const resetTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(resetTimer.current), []);
 
   const copy = useCallback(
-    async (content: string | Blob | Promise<Blob>) => {
+    async (text: string) => {
       clearTimeout(resetTimer.current);
-      setCopied(false);
+      setStatus("idle");
+      let ok = true;
       try {
-        if (typeof content === "string") await navigator.clipboard.writeText(content);
-        else await navigator.clipboard.write([new ClipboardItem({ "image/png": content })]);
+        await navigator.clipboard.writeText(text);
       } catch {
-        return false;
+        ok = false;
       }
-      setCopied(true);
-      resetTimer.current = setTimeout(() => setCopied(false), resetAfter);
-      return true;
+      setStatus(ok ? "copied" : "failed");
+      resetTimer.current = setTimeout(() => setStatus("idle"), resetAfter);
+      return ok;
     },
     [resetAfter],
   );
 
-  return { copied, copy };
+  return { copied: status === "copied", failed: status === "failed", copy };
 }

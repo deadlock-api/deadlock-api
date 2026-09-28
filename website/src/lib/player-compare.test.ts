@@ -5,7 +5,9 @@ import type { HeroStats } from "deadlock_api_client";
 
 import {
   aggregateHeroStats,
+  compareStatWinners,
   MAX_COMPARE_PLAYERS,
+  type PlayerAggregate,
   parseCompareIds,
   rankShareLabel,
   sharedHeroes,
@@ -187,4 +189,33 @@ test("compareShareParams keeps the comparison and pins the dates", async () => {
   assert.equal(compareShareParams("players=5&date_range=a_").get("date_range"), "a_");
   const fromObject = compareShareParams({ players: 5, date_range: "a_b", tab: "x" });
   assert.equal(fromObject.toString(), "players=5&date_range=a_b");
+});
+
+test("compareStatWinners: values printed alike share the win", () => {
+  const withValue = (key: "winRate" | "kills", value: number) => ({ [key]: value }) as unknown as PlayerAggregate;
+  // 0.1235 and 0.123 both print "12.3%"; 1.45 and 1.4 both print "1.4".
+  assert.deepEqual(
+    compareStatWinners([withValue("winRate", 247 / 2000), withValue("winRate", 0.123)], {
+      key: "winRate",
+      format: "percent",
+      polarity: "higher",
+    }),
+    [],
+  );
+  assert.deepEqual(
+    compareStatWinners([withValue("kills", 29 / 20), withValue("kills", 1.4)], {
+      key: "kills",
+      format: "decimal1",
+      polarity: "higher",
+    }),
+    [],
+  );
+  assert.deepEqual(
+    compareStatWinners([withValue("kills", 1.5), withValue("kills", 1.4)], {
+      key: "kills",
+      format: "decimal1",
+      polarity: "higher",
+    }),
+    [0],
+  );
 });

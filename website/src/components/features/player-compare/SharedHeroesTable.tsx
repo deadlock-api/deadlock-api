@@ -36,8 +36,9 @@ export function SharedHeroesTable({
 
   return (
     <Panel>
-      <PanelHeader size="sm" title="Shared heroes" description="Heroes at least two of them have played" />
-      {loading ? (
+      <PanelHeader size="sm" title="Shared heroes" />
+      {/* A player just added has no rows yet: the old answer's "nothing in common" is not a verdict. */}
+      {loading || (heroes.length === 0 && players.some((player) => player.aggregate === undefined)) ? (
         <Stack gap={2} className="p-2">
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-8 w-full" />

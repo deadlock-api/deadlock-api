@@ -27,7 +27,7 @@ export function ReorderHandle({
         aria-describedby={hint}
         className={cn(
           FOCUS_RING,
-          "group/handle inline-flex max-w-full min-w-0 cursor-grab touch-none items-center gap-0.5 rounded-sm select-none active:cursor-grabbing data-dragging:opacity-50 data-over:ring-2 data-over:ring-primary",
+          "group/handle inline-flex min-h-6 max-w-full min-w-6 cursor-grab touch-none items-center justify-center gap-0.5 rounded-sm select-none active:cursor-grabbing data-dragging:opacity-50 data-over:ring-2 data-over:ring-primary",
           className,
         )}
         {...props}

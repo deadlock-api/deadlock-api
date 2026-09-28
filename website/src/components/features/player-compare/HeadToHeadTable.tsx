@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Rank } from "deadlock_api_client";
-import { Fragment } from "react";
+import { CrownIcon } from "lucide-react";
 
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
@@ -26,7 +26,7 @@ function StatValue({ stat, value, ranks }: { stat: CompareStat; value: number | 
       <span>
         <BadgeImage badge={value} ranks={ranks} size="inline" alt="" />
         {/* A narrow table keeps the badge and gives the name's room to the other players' columns. */}
-        <span className="sr-only @md/table:not-sr-only">{badgeLabel(ranks, value)}</span>
+        <span className="sr-only whitespace-nowrap @md/table:not-sr-only">{badgeLabel(ranks, value)}</span>
       </span>
     </Inline>
   );
@@ -54,11 +54,7 @@ export function HeadToHeadTable({
 
   return (
     <Panel {...props}>
-      <PanelHeader
-        size="sm"
-        title="Head to head"
-        description="The best value of each stat is highlighted; ties share the win"
-      />
+      <PanelHeader size="sm" title="Head to head" />
       <Table density="dense" className="tabular-nums">
         <TableHeader tone="muted">
           <TableRow>
@@ -79,70 +75,72 @@ export function HeadToHeadTable({
             ))}
           </TableRow>
         </TableHeader>
-        <TableBody>
-          {COMPARE_STAT_GROUPS.map((group) => {
-            const groupStats = shown.filter((stat) => stat.group === group);
-            if (groupStats.length === 0) return null;
-            // Each player's wins in this group, so a reader sees where a lead comes from.
-            const groupTally = players.map(
-              (_, index) => groupStats.filter((stat) => winnersOf(stat).includes(index)).length,
-            );
-            const groupScored = groupStats.some((stat) => stat.polarity !== "none");
-            return (
-              <Fragment key={group}>
-                <TableRow>
-                  <TableHead scope="rowgroup" data-pinned>
-                    <Text variant="label">{group}</Text>
-                  </TableHead>
-                  {players.map((player, index) => (
-                    <TableCell key={player.accountId} className="text-end">
-                      {scoring && groupScored && (
-                        <Text variant="caption" tone="muted">
-                          {groupTally[index]} won
-                        </Text>
-                      )}
+        {/* A body per group, so each group's `rowgroup` header names only its own rows. */}
+        {COMPARE_STAT_GROUPS.map((group) => {
+          const groupStats = shown.filter((stat) => stat.group === group);
+          if (groupStats.length === 0) return null;
+          // Each player's wins in this group, so a reader sees where a lead comes from.
+          const groupTally = players.map(
+            (_, index) => groupStats.filter((stat) => winnersOf(stat).includes(index)).length,
+          );
+          const groupScored = groupStats.some((stat) => stat.polarity !== "none");
+          return (
+            <TableBody key={group}>
+              <TableRow>
+                <TableHead scope="rowgroup" data-pinned>
+                  <Text variant="label">{group}</Text>
+                </TableHead>
+                {players.map((player, index) => (
+                  <TableCell key={player.accountId} className="text-end">
+                    {scoring && groupScored && groupTally[index] > 0 && (
+                      <Text variant="caption" tone="muted">
+                        {groupTally[index]} won
+                      </Text>
+                    )}
+                  </TableCell>
+                ))}
+              </TableRow>
+              {groupStats.map((stat) => {
+                const values = aggregates.map((aggregate) => aggregate?.[stat.key]);
+                const winners = winnersOf(stat);
+                return (
+                  <TableRow key={stat.key}>
+                    <TableCell
+                      data-pinned
+                      className="whitespace-normal text-muted-foreground @md/table:whitespace-nowrap"
+                    >
+                      {stat.label}
+                      {stat.polarity === "lower" && <span className="sr-only"> (lower is better)</span>}
                     </TableCell>
-                  ))}
-                </TableRow>
-                {groupStats.map((stat) => {
-                  const values = aggregates.map((aggregate) => aggregate?.[stat.key]);
-                  const winners = winnersOf(stat);
-                  return (
-                    <TableRow key={stat.key}>
-                      <TableCell
-                        data-pinned
-                        className="whitespace-normal text-muted-foreground @md/table:whitespace-nowrap"
-                      >
-                        {stat.label}
-                        {stat.polarity === "lower" && <span className="sr-only"> (lower is better)</span>}
-                      </TableCell>
-                      {players.map((player, index) => {
-                        const won = winners.includes(index);
-                        const value = values[index];
-                        return (
-                          <TableCell key={player.accountId} className="text-end">
-                            {player.aggregate === null ? (
-                              <Text tone="muted">No matches</Text>
-                            ) : value === undefined ? (
-                              <Skeleton className="ms-auto h-4 w-12" />
-                            ) : (
-                              <Inline gap={1} wrap="nowrap" justify="end">
-                                <Text tone={won ? "primary" : undefined} className={won ? "font-semibold" : undefined}>
-                                  <StatValue stat={stat} value={value} ranks={ranks} />
-                                </Text>
-                                {won && <span className="sr-only">, best</span>}
-                              </Inline>
-                            )}
-                          </TableCell>
-                        );
-                      })}
-                    </TableRow>
-                  );
-                })}
-              </Fragment>
-            );
-          })}
-        </TableBody>
+                    {players.map((player, index) => {
+                      const won = winners.includes(index);
+                      const value = values[index];
+                      return (
+                        <TableCell key={player.accountId} className="text-end">
+                          {player.aggregate === null ? (
+                            <Text tone="muted">No matches</Text>
+                          ) : value === undefined ? (
+                            <Skeleton className="ms-auto h-4 w-12" />
+                          ) : (
+                            <Inline gap={1} wrap="nowrap" justify="end">
+                              {/* The best value: a crown and full ink, the rest muted. No hue: every hue is also some
+                                  player's color. */}
+                              {won && <CrownIcon aria-hidden="true" className="size-3.5 shrink-0" />}
+                              <Text tone={won ? "default" : "muted"} className={won ? "font-semibold" : undefined}>
+                                <StatValue stat={stat} value={value} ranks={ranks} />
+                              </Text>
+                              {won && <span className="sr-only">, best</span>}
+                            </Inline>
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          );
+        })}
         {/* The result of the table: how many of the scored rows each player won. */}
         <TableFooter tone="highlight">
           <TableRow>
@@ -157,7 +155,8 @@ export function HeadToHeadTable({
                     <NoValue label="Add an opponent to score" />
                   ) : (
                     <Inline gap={1} wrap="nowrap" justify="end">
-                      <Text tone={leads ? "primary" : undefined} className={leads ? "font-bold" : undefined}>
+                      {leads && <CrownIcon aria-hidden="true" className="size-3.5 shrink-0" />}
+                      <Text className={leads ? "font-bold" : undefined}>
                         {tally[index]} of {scored.length}
                       </Text>
                       {leads && <span className="sr-only">, the most</span>}

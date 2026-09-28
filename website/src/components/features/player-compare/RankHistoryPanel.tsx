@@ -24,7 +24,6 @@ import {
   dailyRanks,
   dayTicks,
   mergeRankSeries,
-  RANK_GAP_DAYS,
   rankAxis,
   rankDayExtent,
   type RankRow,
@@ -36,21 +35,26 @@ import type { CompareFilters } from "~/queries/player-compare-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
 import type { ComparedPlayer } from "./types";
-import { useCompareMatchHistories } from "./useCompareMatchHistories";
+import type { CompareMatchHistory } from "./useCompareMatchHistories";
 
 const LABEL = "rank over time";
 const shortDate = (unix: number) => day.unix(unix).utc().format("MMM D");
 const longDate = (unix: number) => day.unix(unix).utc().format("MMM D, YYYY");
 
 /** Every compared player's rank across the page's dates, one step line each, one point per day. */
-export function RankHistoryPanel({ players, filters }: { players: ComparedPlayer[]; filters: CompareFilters }) {
+export function RankHistoryPanel({
+  players,
+  filters,
+  histories,
+}: {
+  players: ComparedPlayer[];
+  filters: CompareFilters;
+  /** The players' match histories on the filters, in the players' order (`useCompareMatchHistories`). */
+  histories: readonly CompareMatchHistory[];
+}) {
   const mode = modeFromParams(
     filters.gameMode === "street_brawl" ? "street_brawl" : "normal",
     filters.matchMode as MatchMode,
-  );
-  const histories = useCompareMatchHistories(
-    players.map((player) => player.accountId),
-    filters,
   );
   const { data: ranks } = useQuery(ranksQueryOptions);
   const showsRank = mode === "normal_all" || mode === "normal_ranked";
@@ -84,7 +88,7 @@ export function RankHistoryPanel({ players, filters }: { players: ComparedPlayer
             }}
           />
         ) : histories.some((history) => history.isPending) ? (
-          <ChartLoading label={LABEL} />
+          <ChartLoading label={LABEL} size="md" />
         ) : (
           <RankHistoryChart
             players={players}
@@ -142,7 +146,7 @@ function RankHistoryChart({
 
   return (
     <Stack gap={2}>
-      <ChartSurface label={summary} announce="label" variant="flush">
+      <ChartSurface label={summary} announce="label" size="md" variant="flush">
         <LineChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false}>
           <CartesianGrid {...CHART_GRID} />
           <XAxis
@@ -217,10 +221,8 @@ function RankHistoryChart({
           })}
         </LineChart>
       </ChartSurface>
-      <p className="text-xs text-muted-foreground">
-        {unrankedNote ? `${unrankedNote} ` : ""}
-        {`One point per day, the rank after its last ranked match. A line breaks after ${RANK_GAP_DAYS} days without one.`}
-      </p>
+      {/* Who is missing from the chart, rather than a line that is not there. */}
+      {unrankedNote && <p className="text-xs text-muted-foreground">{unrankedNote}</p>}
     </Stack>
   );
 }

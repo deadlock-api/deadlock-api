@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useId, useMemo } from "react";
 
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
@@ -50,8 +50,10 @@ function useQuickAddSuggestions(accountIds: readonly number[], filters: CompareF
   const first = accountIds[0];
   const enabled = first !== undefined;
   const params = compareCompanionParams(first ?? 0, filters);
-  const mateQuery = useQuery({ ...trackerMateStatsQueryOptions(params), enabled });
-  const enemyQuery = useQuery({ ...trackerEnemyStatsQueryOptions(params), enabled });
+  // Another first player (a reorder, a removal) keeps the old suggestions up until the new ones arrive, so the slot
+  // does not collapse to a skeleton and back.
+  const mateQuery = useQuery({ ...trackerMateStatsQueryOptions(params), enabled, placeholderData: keepPreviousData });
+  const enemyQuery = useQuery({ ...trackerEnemyStatsQueryOptions(params), enabled, placeholderData: keepPreviousData });
 
   const suggestions = useMemo(() => {
     const exclude = new Set(accountIds);

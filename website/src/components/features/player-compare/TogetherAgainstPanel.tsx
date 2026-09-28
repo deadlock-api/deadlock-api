@@ -1,8 +1,6 @@
 import { Panel, PanelFooter, PanelHeader } from "~/components/patterns/panel/Panel";
-import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { NoValue } from "~/components/ui/no-value";
-import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
 import { StatusDot } from "~/components/ui/status-dot";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -13,10 +11,9 @@ import { formatPercent } from "~/lib/format";
 import { type PlayerPair, playerPairs, splitPairs } from "~/lib/player-compare-pairs";
 import { formatStatValue } from "~/lib/stat-format";
 import { toneOf } from "~/lib/tone";
-import type { CompareFilters } from "~/queries/player-compare-queries";
 
 import type { ComparedPlayer } from "./types";
-import { type CompareMatchHistory, useCompareMatchHistories } from "./useCompareMatchHistories";
+import type { CompareMatchHistory } from "./useCompareMatchHistories";
 
 function plural(count: number, noun: string): string {
   return `${formatStatValue(count, "integer")} ${count === 1 ? noun : `${noun}es`}`;
@@ -123,35 +120,32 @@ function PairRow({
  * Every pair of compared players: the matches they played on the same team with that team's record, the matches
  * they played against each other with the head-to-head, and when they last met. Pairs that never met share one line.
  */
-export function TogetherAgainstPanel({ players, filters }: { players: ComparedPlayer[]; filters: CompareFilters }) {
+export function TogetherAgainstPanel({
+  players,
+  histories,
+}: {
+  players: ComparedPlayer[];
+  /** The players' match histories on the filters, in the players' order (`useCompareMatchHistories`). */
+  histories: readonly CompareMatchHistory[];
+}) {
   const lastMetLabel = useLastMetLabel();
-  const histories = useCompareMatchHistories(
-    players.map((player) => player.accountId),
-    filters,
-  );
   const byId = new Map(players.map((player) => [player.accountId, player]));
   const failed = histories.filter((history) => history.isError);
   const loading = histories.some((history) => history.isPending && !history.isError);
   const { met, neverMet } = splitPairs(playerPairs(histories));
   const nameOf = (accountId: number) => byId.get(accountId)?.name ?? `Player ${accountId}`;
+  const neverMetLine = `Never met: ${neverMet.map((pair) => `${nameOf(pair.a)} & ${nameOf(pair.b)}`).join(", ")}`;
+  // Only there when it has something to show: it sits last in its column, so appearing once loaded moves nothing.
+  if (loading || met.length === 0) return null;
 
   return (
-    <Panel aria-busy={loading || undefined}>
-      <PanelHeader size="sm" title="Together & against" description="Shared matches on these filters" />
+    <Panel>
+      <PanelHeader size="sm" title="Together & against" />
       {failed.map((history) => {
         const player = byId.get(history.accountId);
         return player ? <HistoryError key={history.accountId} player={player} history={history} /> : null;
       })}
-      {loading ? (
-        <Stack gap={2} className="p-2">
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-8 w-full" />
-        </Stack>
-      ) : met.length === 0 ? (
-        failed.length < players.length - 1 && (
-          <EmptyState variant="plain" title="None of them have played in the same match on these filters." />
-        )
-      ) : (
+      {
         <Table density="dense" className="tabular-nums">
           <TableHeader tone="muted">
             <TableRow>
@@ -170,10 +164,11 @@ export function TogetherAgainstPanel({ players, filters }: { players: ComparedPl
             })}
           </TableBody>
         </Table>
-      )}
-      {!loading && met.length > 0 && neverMet.length > 0 && (
-        <PanelFooter>
-          Never met: {neverMet.map((pair) => `${nameOf(pair.a)} & ${nameOf(pair.b)}`).join(", ")}
+      }
+      {neverMet.length > 0 && (
+        // Two lines at most: with five players the list runs long; the full list is in the title.
+        <PanelFooter className="line-clamp-2" title={neverMetLine}>
+          {neverMetLine}
         </PanelFooter>
       )}
     </Panel>

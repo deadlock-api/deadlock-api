@@ -9,7 +9,6 @@ import { FormDots } from "~/components/domain/match/FormDots";
 import { PlayerLink } from "~/components/domain/player/PlayerLink";
 import { PlayerSearch } from "~/components/domain/player/PlayerSearch";
 import { SteamAvatar } from "~/components/domain/player/SteamAvatar";
-import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Grid } from "~/components/ui/grid";
@@ -89,6 +88,16 @@ export function PlayerCards({
     }
     onRemove(players[index].accountId);
   };
+  /** Adds a suggested player; the suggestion goes away, so focus moves to the slot's search (to the last card's remove
+   * button once the slot fills up), which is there before and after the change. */
+  const addFromSlot = (accountId: number) => {
+    const target =
+      players.length + 1 >= MAX_COMPARE_PLAYERS
+        ? listRef.current?.querySelector<HTMLElement>(`[data-remove-player="${players.at(-1)?.accountId}"]`)
+        : listRef.current?.querySelector<HTMLElement>("[data-add-slot] button");
+    target?.focus();
+    onAdd(accountId);
+  };
   const slots = Math.min(MAX_COMPARE_PLAYERS, players.length + (hasSlot ? 1 : 0)) as 2 | 3 | 4 | 5;
 
   return (
@@ -109,11 +118,11 @@ export function PlayerCards({
                 )
               : undefined;
             return (
-              <Card key={player.accountId} asChild size="sm" accent={player.color} className="min-w-0">
+              <Card key={player.accountId} asChild size="sm" accent={player.color} className="@container min-w-0">
                 <li>
                   <CardContent>
-                    <Stack gap={3}>
-                      <Inline gap={3} wrap="nowrap" align="start">
+                    <Stack gap={2}>
+                      <Inline gap={2} wrap="nowrap" align="start">
                         <SteamAvatar src={player.avatar} loading={player.profileLoading} size="lg" shape="rounded" />
                         <Stack gap={0.5} className="min-w-0 flex-1">
                           {player.profileLoading ? (
@@ -123,25 +132,30 @@ export function PlayerCards({
                               <PlayerLink accountId={player.accountId}>{player.name}</PlayerLink>
                             </Text>
                           )}
-                          <Text variant="caption" tone="muted" className="truncate">
-                            {aggregate?.rankBadge ? (
-                              <Inline gap={1} wrap="nowrap" asChild>
-                                <span>
-                                  <BadgeImage badge={aggregate.rankBadge} ranks={ranks} size="inline" alt="" />
-                                  {badgeLabel(ranks, aggregate.rankBadge)}
-                                </span>
-                              </Inline>
-                            ) : aggregate?.rankBadge === undefined ? (
-                              <Skeleton className="h-4 w-20" />
-                            ) : (
-                              "Unranked"
+                          {/* Rank and playstyle on one line; the playstyle wraps under it when the card is narrow. */}
+                          <Inline gap={1.5} className="min-w-0">
+                            <Text variant="caption" tone="muted" className="truncate">
+                              {aggregate?.rankBadge ? (
+                                <Inline gap={1} wrap="nowrap" asChild>
+                                  <span>
+                                    <BadgeImage badge={aggregate.rankBadge} ranks={ranks} size="inline" alt="" />
+                                    <span className="sr-only @3xs:not-sr-only">
+                                      {badgeLabel(ranks, aggregate.rankBadge)}
+                                    </span>
+                                  </span>
+                                </Inline>
+                              ) : aggregate?.rankBadge === undefined ? (
+                                <Skeleton className="h-4 w-20" />
+                              ) : (
+                                "Unranked"
+                              )}
+                            </Text>
+                            {player.playstyle && (
+                              <Text variant="caption" tone="default" wrap="truncate">
+                                {player.playstyle}
+                              </Text>
                             )}
-                          </Text>
-                          {player.playstyle && (
-                            <Badge variant="muted" className="w-fit">
-                              {player.playstyle}
-                            </Badge>
-                          )}
+                          </Inline>
                         </Stack>
                         <Inline gap={0.5} wrap="nowrap">
                           {players.length >= 2 && (
@@ -170,38 +184,53 @@ export function PlayerCards({
                       {aggregate === null ? (
                         <Text tone="muted">No matches on these filters</Text>
                       ) : (
-                        <StatGroup variant="plain" className="grid-cols-2">
+                        <StatGroup variant="plain" size="sm" className="grid-cols-2 gap-2 @3xs:grid-cols-3">
                           <Stat
-                            label="Stats won"
+                            label={settled && players.length >= 2 ? `Won of ${scored.length}` : "Stats won"}
                             value={
                               !settled || aggregate === undefined ? (
-                                <Skeleton className="h-7 w-12" />
+                                <Skeleton className="h-6 w-10" />
                               ) : players.length < 2 ? (
                                 <NoValue label="Add an opponent to score" />
                               ) : (
-                                <span className={leads ? "text-primary" : undefined}>{tally[index]}</span>
+                                <Inline gap={1} wrap="nowrap" asChild>
+                                  <span>
+                                    {leads && <CrownIcon aria-hidden="true" className="size-4" />}
+                                    {tally[index]}
+                                    {leads && (
+                                      <span className="sr-only">, {leaders.length > 1 ? "tied lead" : "leads"}</span>
+                                    )}
+                                  </span>
+                                </Inline>
                               )
-                            }
-                            sub={
-                              leads ? (
-                                <Badge variant="soft">
-                                  <CrownIcon aria-hidden="true" />
-                                  {leaders.length > 1 ? "Tied lead" : "Leads"}
-                                </Badge>
-                              ) : settled && players.length >= 2 ? (
-                                `of ${scored.length}`
-                              ) : undefined
                             }
                           />
                           <Stat
                             label="Win rate"
-                            value={aggregate ? formatPercent(aggregate.winRate, 1) : <Skeleton className="h-7 w-16" />}
-                            sub={
-                              aggregate &&
-                              `${formatPlayerMetricValue(aggregate.matches, "integer")} matches · ${formatPlayerMetricValue(aggregate.kda, "decimal2")} KDA`
+                            value={aggregate ? formatPercent(aggregate.winRate, 1) : <Skeleton className="h-6 w-14" />}
+                          />
+                          {/* A narrow card leaves the KDA to the table below. */}
+                          <Stat
+                            className="hidden @3xs:flex"
+                            label="KDA"
+                            value={
+                              aggregate ? (
+                                formatPlayerMetricValue(aggregate.kda, "decimal2")
+                              ) : (
+                                <Skeleton className="h-6 w-12" />
+                              )
                             }
                           />
                         </StatGroup>
+                      )}
+                      {aggregate && (
+                        <Text variant="caption" tone="muted" numeric="tabular" wrap="truncate">
+                          {formatPlayerMetricValue(aggregate.matches, "integer")} matches ·{" "}
+                          {[aggregate.kills, aggregate.deaths, aggregate.assists]
+                            .map((value) => formatPlayerMetricValue(value, "decimal1"))
+                            .join(" / ")}{" "}
+                          K/D/A
+                        </Text>
                       )}
 
                       <Inline gap={3} justify="between" align="end">
@@ -267,7 +296,7 @@ export function PlayerCards({
           })}
           {hasSlot && (
             <Card asChild size="sm" tone="outline" className="min-w-0 justify-center">
-              <li>
+              <li data-add-slot="">
                 <CardContent>
                   <Stack gap={2} align="center">
                     <Text variant="label">
@@ -284,7 +313,7 @@ export function PlayerCards({
                     <QuickAddSuggestions
                       accountIds={players.map((player) => player.accountId)}
                       filters={filters}
-                      onAdd={onAdd}
+                      onAdd={addFromSlot}
                     />
                   </Stack>
                 </CardContent>

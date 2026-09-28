@@ -188,15 +188,22 @@ export function statWinners(values: readonly (number | null | undefined)[], pola
   return present.filter((entry) => entry.value === best).map((entry) => entry.index);
 }
 
-/** Decimals a stat is shown with; ranks and durations are whole numbers. */
-const SHOWN_DECIMALS: Record<CompareStat["format"], number> = {
-  integer: 0,
-  duration: 0,
-  rank: 0,
-  percent: 3,
-  decimal1: 1,
-  decimal2: 2,
-};
+/**
+ * A value as the table prints it, back as a number: the same rounding as `formatStatValue` (`toFixed` for decimals and
+ * percentages, `Math.round` for whole numbers), so 1.45 and 1.4, both printed "1.4", compare equal.
+ */
+function shownValue(value: number, format: CompareStat["format"]): number {
+  switch (format) {
+    case "percent":
+      return Number((value * 100).toFixed(1));
+    case "decimal1":
+      return Number(value.toFixed(1));
+    case "decimal2":
+      return Number(value.toFixed(2));
+    default:
+      return Math.round(value);
+  }
+}
 
 /**
  * The winners of one stat, judged on the values as the table prints them: two players both shown with a 4.25 KDA
@@ -206,11 +213,10 @@ export function compareStatWinners(
   aggregates: readonly (PlayerAggregate | null | undefined)[],
   stat: Pick<CompareStat, "key" | "format" | "polarity">,
 ): number[] {
-  const factor = 10 ** SHOWN_DECIMALS[stat.format];
   return statWinners(
     aggregates.map((aggregate) => {
       const value = aggregate?.[stat.key];
-      return value == null ? value : Math.round(value * factor) / factor;
+      return value == null || !Number.isFinite(value) ? value : shownValue(value, stat.format);
     }),
     stat.polarity,
   );

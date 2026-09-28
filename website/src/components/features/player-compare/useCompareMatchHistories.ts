@@ -1,6 +1,7 @@
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, type UseQueryResult } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
+import { useCallback } from "react";
 
 import { type MatchMode, modeFromParams } from "~/lib/game-mode";
 import { filterMatches } from "~/lib/tracker/compute";
@@ -34,24 +35,32 @@ export function useCompareMatchHistories(
     filters.gameMode === "street_brawl" ? "street_brawl" : "normal",
     filters.matchMode as MatchMode,
   );
-  const queries = useQueries({ queries: accountIds.map((accountId) => trackerMatchHistoryQueryOptions(accountId)) });
-  return accountIds.map((accountId, index) => {
-    const query = queries[index];
-    return {
-      accountId,
-      matches: query?.data
-        ? filterMatches(query.data, {
-            mode,
-            heroId: null,
-            minUnixTimestamp: filters.minUnixTimestamp,
-            maxUnixTimestamp: filters.maxUnixTimestamp,
-            result: "all",
-          })
-        : undefined,
-      isPending: query?.isPending ?? true,
-      isError: (query?.isError ?? false) && !query?.data,
-      isPrivate: isAxiosError(query?.error) && query.error.response?.status === 403,
-      refetch: () => void query?.refetch(),
-    };
+  const { minUnixTimestamp, maxUnixTimestamp } = filters;
+  const ids = accountIds.join(",");
+  // One stable `combine` per players and filters: TanStack keeps its result while no query changes, so the filtering
+  // (about 9k matches a player) runs once per answer rather than on every render, and what reads the histories stays
+  // memoized too.
+  const combine = useCallback(
+    (queries: UseQueryResult<PlayerMatchHistoryEntry[]>[]): CompareMatchHistory[] => {
+      const ordered = ids === "" ? [] : ids.split(",").map(Number);
+      return ordered.map((accountId, index) => {
+        const query = queries[index];
+        return {
+          accountId,
+          matches: query?.data
+            ? filterMatches(query.data, { mode, heroId: null, minUnixTimestamp, maxUnixTimestamp, result: "all" })
+            : undefined,
+          isPending: query?.isPending ?? true,
+          isError: (query?.isError ?? false) && !query?.data,
+          isPrivate: isAxiosError(query?.error) && query.error.response?.status === 403,
+          refetch: () => void query?.refetch(),
+        };
+      });
+    },
+    [ids, mode, minUnixTimestamp, maxUnixTimestamp],
+  );
+  return useQueries({
+    queries: accountIds.map((accountId) => trackerMatchHistoryQueryOptions(accountId)),
+    combine,
   });
 }

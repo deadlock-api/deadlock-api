@@ -35,8 +35,8 @@
 
 /* The small uppercase label above a value: filter cells, stat tiles, table group headers. */
 @utility eyebrow {
-  font-size: var(--text-3xs);
-  line-height: var(--text-3xs--line-height);
+  font-size: var(--text-xs);
+  line-height: 1rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;

@@ -97,26 +97,18 @@ export const comparePageOptions = {
     const [
       { loadSeasons },
       compareQueries,
-      { trackerHeroStatsQueryOptions },
+      { steamProfileQueryOptions, trackerHeroStatsQueryOptions },
       { playerScoreboardQueryOptions },
-      { steamProfileBatches, steamProfilesQueryOptions },
     ] = await Promise.all([
       import("~/queries/asset-queries"),
       import("~/queries/player-compare-queries"),
       import("~/queries/tracker-queries"),
       import("~/queries/player-scoreboard-query"),
-      import("~/queries/steam-queries"),
     ]);
     const { filters } = await compareQueries.resolveCompareFilters(deps.filters, async () =>
       defaultUnixRange(await loadSeasons(queryClient), preferences.dateFilter),
     );
     const accountIds = parseCompareIds(deps.accountIds);
-    const warmProfiles = (ids: number[]) =>
-      Promise.all(
-        steamProfileBatches(ids).map((batch) =>
-          prefetchSafe(queryClient.query({ ...steamProfilesQueryOptions(batch), staleTime: "static" })),
-        ),
-      );
     if (accountIds.length === 0) {
       // The "Add top player" button's pick.
       await prefetchSafe(
@@ -127,8 +119,13 @@ export const comparePageOptions = {
       );
       return { names: [], range: undefined };
     }
-    const [profileBatches] = await Promise.all([
-      warmProfiles(accountIds),
+    // One profile query a player, as the page reads them.
+    const [profileList] = await Promise.all([
+      Promise.all(
+        accountIds.map((id) =>
+          prefetchSafe(queryClient.query({ ...steamProfileQueryOptions(id), staleTime: "static" })),
+        ),
+      ),
       prefetchSafe(queryClient.query({ ...compareQueries.playerRanksQueryOptions(accountIds), staleTime: "static" })),
       prefetchSafe(
         queryClient.query({
@@ -137,13 +134,10 @@ export const comparePageOptions = {
         }),
       ),
     ]);
-    const profiles = Object.assign({}, ...profileBatches.map((batch) => batch ?? {})) as Record<
-      number,
-      { personaname: string }
-    >;
+
     // For the page head: a shared link previews as "A vs B", not as the generic tab.
     return {
-      names: accountIds.map((id) => profiles[id]?.personaname ?? `Player ${id}`),
+      names: accountIds.map((id, index) => profileList[index]?.personaname ?? `Player ${id}`),
       // The dates the page shows, so the preview card counts the same matches when the URL names none (the page
       // falls back to the reader's date preference, the card on its own would fall back to the season).
       range: { minUnixTimestamp: filters.minUnixTimestamp, maxUnixTimestamp: filters.maxUnixTimestamp },

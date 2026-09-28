@@ -26,7 +26,7 @@ import { playerStatsMetricsQueryOptions } from "~/queries/player-stats-metrics-q
 
 import type { ComparedPlayer } from "./types";
 
-const CHART_SIZE = "square";
+const CHART_SIZE = "md";
 
 interface RadarPlayer {
   player: ComparedPlayer;
@@ -89,8 +89,11 @@ export function PlaystyleRadarPanel({ players, filters }: { players: ComparedPla
   });
   const { highlighted, toggleProps } = useSeriesHighlight();
 
-  const failed = population.isError || own.some((query) => query.isError && !query.data);
-  const loading = population.isPending || own.some((query) => query.isPending);
+  // A player whose numbers failed (a private account) drops out of the chart; the others still draw.
+  const failedPlayers = players.filter((_, index) => own[index]?.isError && !own[index]?.data);
+  const failed = population.isError || (players.length > 0 && failedPlayers.length === players.length);
+  // Drawn once the field and one player are in; a player still loading joins when their numbers arrive.
+  const loading = population.isPending || own.every((query) => query.isPending);
   const retry = () => {
     if (population.isError) void population.refetch();
     for (const query of own) if (query.isError) void query.refetch();
@@ -124,7 +127,7 @@ export function PlaystyleRadarPanel({ players, filters }: { players: ComparedPla
 
   return (
     <Panel>
-      <PanelHeader size="sm" title="Playstyle" description="Percentile among all players">
+      <PanelHeader size="sm" title="Playstyle">
         <ChartLegend label="Reference">
           <ChartLegendItem color="var(--chart-axis)" shape="dashed">
             Median player
@@ -144,38 +147,53 @@ export function PlaystyleRadarPanel({ players, filters }: { players: ComparedPla
         ) : ranked.length === 0 ? (
           <ChartEmpty label="playstyle data" />
         ) : (
-          <Grid columns={{ base: 1, lg: 2 }} gap={3} className="items-center">
-            <RadarChart
-              label={summary}
-              announce="label"
-              size={CHART_SIZE}
-              variant="bare"
-              data={rows}
-              axisKey="axis"
-              domain={[0, 100]}
-              baseline={50}
-              highlighted={highlighted}
-              tooltip={<AxisReadings players={ranked} />}
-            >
-              {ranked.map(({ player, key }) => (
-                <RadarSeries key={key} dataKey={key} name={player.name} color={player.color} />
-              ))}
-            </RadarChart>
-            <ChartLegend label="Players: hover, focus or press one to single it out" orientation="vertical">
-              {ranked.map((entry) => (
-                <ChartLegendToggle key={entry.key} color={entry.player.color} shape="line" {...toggleProps(entry.key)}>
-                  <Stack gap={0} className="min-w-0 py-1">
-                    <Text variant="label" tone="default" wrap="truncate" title={entry.player.name}>
-                      {entry.player.name}
-                    </Text>
-                    <Text variant="caption" tone="muted" wrap="truncate">
-                      {playstyleLine(entry) ?? "Not enough data for a playstyle"}
-                    </Text>
-                  </Stack>
-                </ChartLegendToggle>
-              ))}
-            </ChartLegend>
-          </Grid>
+          <Stack gap={3}>
+            {failedPlayers.length > 0 && (
+              <ErrorState
+                variant="inline"
+                title={`No playstyle for ${failedPlayers.map((player) => player.name).join(", ")}: their numbers did not load.`}
+                onRetry={retry}
+                retrying={own.some((query) => query.isFetching)}
+              />
+            )}
+            <Grid columns={{ base: 1, sm: 2 }} gap={3} className="items-center">
+              <RadarChart
+                label={summary}
+                announce="label"
+                size={CHART_SIZE}
+                variant="bare"
+                data={rows}
+                axisKey="axis"
+                domain={[0, 100]}
+                baseline={50}
+                highlighted={highlighted}
+                tooltip={<AxisReadings players={ranked} />}
+              >
+                {ranked.map(({ player, key }) => (
+                  <RadarSeries key={key} dataKey={key} name={player.name} color={player.color} />
+                ))}
+              </RadarChart>
+              <ChartLegend label="Players: hover, focus or press one to single it out" orientation="vertical">
+                {ranked.map((entry) => (
+                  <ChartLegendToggle
+                    key={entry.key}
+                    color={entry.player.color}
+                    shape="line"
+                    {...toggleProps(entry.key)}
+                  >
+                    <Stack gap={0} className="min-w-0 py-1">
+                      <Text variant="label" tone="default" wrap="truncate" title={entry.player.name}>
+                        {entry.player.name}
+                      </Text>
+                      <Text variant="caption" tone="muted" wrap="truncate">
+                        {playstyleLine(entry) ?? "Not enough data for a playstyle"}
+                      </Text>
+                    </Stack>
+                  </ChartLegendToggle>
+                ))}
+              </ChartLegend>
+            </Grid>
+          </Stack>
         )}
       </PanelBody>
     </Panel>

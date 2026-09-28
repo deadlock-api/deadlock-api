@@ -5,9 +5,9 @@ import { SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Stack } from "~/components/ui/stack";
-import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { aggregateHeroStats, MAX_COMPARE_PLAYERS, SCORED_STAT_COUNT } from "~/lib/player-compare";
 import { playstyleLabel, playstylePercentiles } from "~/lib/playstyle";
+import { cn } from "~/lib/utils";
 import {
   type CompareFilters,
   compareHeroStatsParams,
@@ -15,7 +15,7 @@ import {
   playerRanksQueryOptions,
 } from "~/queries/player-compare-queries";
 import { playerStatsMetricsQueryOptions } from "~/queries/player-stats-metrics-query";
-import { trackerHeroStatsQueryOptions } from "~/queries/tracker-queries";
+import { steamProfileQueryOptions, trackerHeroStatsQueryOptions } from "~/queries/tracker-queries";
 
 import { AddPlayerControls } from "./AddPlayerControls";
 import { HeadToHeadTable } from "./HeadToHeadTable";
@@ -33,7 +33,9 @@ import { usePlayerCompareState } from "./usePlayerCompareState";
 /** The compare tab: pick up to five players, then see who wins which stat on the page's filters. */
 export function PlayerComparison({ filters }: { filters: CompareFilters }) {
   const { accountIds, add, remove, move } = usePlayerCompareState();
-  const { profiles, isLoading: profilesLoading } = useSteamProfiles(accountIds);
+  // One query a player, shared with the tracker: adding or reordering players never refetches (and blanks) the names
+  // already on screen.
+  const profileQueries = useQueries({ queries: accountIds.map((accountId) => steamProfileQueryOptions(accountId)) });
   const hasPlayers = accountIds.length > 0;
 
   const ranks = useQuery({
@@ -68,7 +70,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
   // are still loading rather than without matches.
   const settled = heroStats.isSuccess && !heroStats.isPlaceholderData;
   const players: ComparedPlayer[] = accountIds.map((accountId, index) => {
-    const profile = profiles[accountId];
+    const profile = profileQueries[index]?.data ?? undefined;
     const known = settled || rows.some((row) => row.account_id === accountId);
     // A failed lookup, or a player the answer left out (a protected account), is "unavailable" (null), not a
     // skeleton that never resolves.
@@ -81,7 +83,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
       accountId,
       name: profile?.personaname ?? `Player ${accountId}`,
       avatar: profile?.avatarfull || profile?.avatar,
-      profileLoading: profilesLoading && !profile,
+      profileLoading: (profileQueries[index]?.isPending ?? true) && !profile,
       color: SERIES_COLORS[index % SERIES_COLORS.length],
       playstyle: playstyleLabel(playstylePercentiles(population.data, metrics[index]?.data))?.label,
       aggregate: aggregate && {
@@ -93,6 +95,9 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
       },
     };
   });
+
+  // On one hero's filter every shared hero is that hero.
+  const showSharedHeroes = filters.heroId == null && accountIds.length >= 2;
 
   return (
     <Stack gap={4} className="@container">
@@ -124,21 +129,31 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             onMove={move}
           />
           {/* Wide: the stat table on the left, the share card and the profile charts beside it. Narrow: stacked. */}
-          <div className="grid items-start gap-4 @4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-            <Stack gap={4}>
-              <HeadToHeadTable players={players} />
-              {accountIds.length >= 2 && <TogetherAgainstPanel players={players} filters={filters} />}
-            </Stack>
-            <Stack gap={4}>
-              <ShareComparison filters={filters} names={players.map((player) => player.name)} />
+          {/* Four or five columns of values need the whole width until the page is very wide. */}
+          <div
+            className={cn(
+              "grid items-start gap-4",
+              players.length >= 4
+                ? "@7xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
+                : "@4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]",
+            )}
+          >
+            <HeadToHeadTable players={players} />
+            {/* Stacked under a wide table, the side panels pair up rather than stretch across the page. */}
+            <div className={cn("grid items-start gap-4", players.length >= 4 && "@4xl:grid-cols-2 @7xl:grid-cols-1")}>
+              <Stack gap={4}>
+                <ShareComparison filters={filters} />
+                {accountIds.length >= 2 && <TogetherAgainstPanel players={players} histories={histories} />}
+              </Stack>
               <PlaystyleRadarPanel players={players} filters={filters} />
-            </Stack>
+            </div>
           </div>
-          <RankHistoryPanel players={players} filters={filters} />
+          {/* Wide: the climb and the heroes in common side by side, so the page stays short. */}
+          <div className={cn("grid items-start gap-4", showSharedHeroes && "@4xl:grid-cols-2")}>
+            <RankHistoryPanel players={players} filters={filters} histories={histories} />
+            {showSharedHeroes && <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />}
+          </div>
           <PercentileComparison players={players} filters={filters} />
-          {filters.heroId == null && accountIds.length >= 2 && (
-            <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />
-          )}
         </>
       )}
     </Stack>
