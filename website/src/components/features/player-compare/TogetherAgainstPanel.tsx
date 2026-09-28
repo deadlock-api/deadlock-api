@@ -12,6 +12,7 @@ import { day } from "~/dayjs";
 import { useHydrated } from "~/hooks/useHydrated";
 import { formatPercent } from "~/lib/format";
 import {
+  pairMatchCount,
   type PlayerPair,
   pairSynergy,
   playerPairs,
@@ -74,19 +75,33 @@ function PairRow({
   const togetherLosses = together.matches - together.wins;
   const winRate = together.matches > 0 ? together.wins / together.matches : null;
   const synergy = pairSynergy(pair);
+  const names = (
+    <TableCell data-pinned>
+      <Stack gap={0.5} className="max-w-40 @md/table:max-w-none">
+        <PlayerName player={a} />
+        <PlayerName player={b} />
+        {pair.lastMet != null && (
+          <Text variant="caption" tone="muted" className="@md/table:hidden">
+            Met {lastMetLabel(pair.lastMet)}
+          </Text>
+        )}
+      </Stack>
+    </TableCell>
+  );
+  // A pair that never met has no records: one line says so rather than a dash in every column.
+  if (pairMatchCount(pair) === 0) {
+    return (
+      <TableRow>
+        {names}
+        <TableCell colSpan={4}>
+          <Text tone="muted">Never met</Text>
+        </TableCell>
+      </TableRow>
+    );
+  }
   return (
     <TableRow>
-      <TableCell data-pinned>
-        <Stack gap={0.5} className="max-w-40 @md/table:max-w-none">
-          <PlayerName player={a} />
-          <PlayerName player={b} />
-          {pair.lastMet != null && (
-            <Text variant="caption" tone="muted" className="@md/table:hidden">
-              Met {lastMetLabel(pair.lastMet)}
-            </Text>
-          )}
-        </Stack>
-      </TableCell>
+      {names}
       <TableCell className="text-end">
         {together.matches > 0 ? (
           <Stack gap={0} align="end">
