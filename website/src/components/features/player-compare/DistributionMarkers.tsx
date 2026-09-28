@@ -36,10 +36,33 @@ const LEAD_KEYS = [
   "crit_shot_rate",
   "boss_damage_per_min",
 ];
+/**
+ * The head-to-head's names for the same stats, so one stat reads the same across the page. These are averages of each
+ * match, which the per-match units say; the KDA especially is the average of the match KDAs, not the table's pooled
+ * (kills + assists) / deaths, so it gets its own name.
+ */
+const COMPARE_LABELS: Record<string, string> = {
+  kills: "Kills / match",
+  deaths: "Deaths / match",
+  assists: "Assists / match",
+  kda: "Avg match KDA",
+  kd: "Avg match K/D",
+  net_worth: "Souls / match",
+  net_worth_per_min: "Souls / min",
+  player_damage: "Hero damage / match",
+  player_damage_per_min: "Hero damage / min",
+  crit_shot_rate: "Headshot rate",
+  last_hits: "Last hits / match",
+  denies: "Denies / match",
+  boss_damage: "Obj. damage / match",
+  boss_damage_per_min: "Obj. damage / min",
+  heal_prevented: "Heal prevented / match",
+};
+
 const METRICS = [
   ...LEAD_KEYS.flatMap((key) => PLAYER_METRICS.filter((metric) => metric.key === key)),
   ...PLAYER_METRICS.filter((metric) => !LEAD_KEYS.includes(metric.key)),
-];
+].map((metric) => ({ ...metric, label: COMPARE_LABELS[metric.key] ?? metric.label }));
 
 export const METRIC_COUNT = METRICS.length;
 

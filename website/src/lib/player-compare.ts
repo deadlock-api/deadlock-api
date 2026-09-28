@@ -190,7 +190,7 @@ export const COMPARE_STATS: readonly CompareStat[] = [
   },
   {
     key: "healPreventedPerMatch",
-    label: "Heal prevented",
+    label: "Heal prevented / match",
     format: "integer",
     polarity: "higher",
     group: "Objectives & support",
