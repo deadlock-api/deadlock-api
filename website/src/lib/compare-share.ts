@@ -1,5 +1,6 @@
 import { day } from "~/dayjs";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { parseCompareIds } from "~/lib/player-compare";
 import { SITE_URL } from "~/lib/seo";
 
 /** The URL params a comparison's filters come from. */
@@ -43,6 +44,21 @@ export function compareShareParams(
     const { minUnixTimestamp: min, maxUnixTimestamp: max } = range;
     const end = max != null ? day.unix(max).endOf("second") : day.utc().endOf("day");
     params.set("date_range", parseAsDayjsRange.serialize([min ? day.unix(min) : undefined, end]));
+  }
+  return params;
+}
+
+/**
+ * The params of a share card in one spelling: valid players each once, the filters in a fixed order, nothing else. The
+ * card's cache key, so `utm_*` tags, a duplicated id or a reordered query all hit the same drawn card.
+ */
+export function canonicalCardParams(search: URLSearchParams): URLSearchParams {
+  const params = new URLSearchParams();
+  const players = parseCompareIds((search.get("players") ?? "").split(",").map(Number));
+  if (players.length > 0) params.set("players", players.join(","));
+  for (const key of COMPARE_FILTER_KEYS) {
+    const value = search.get(key);
+    if (value) params.set(key, value);
   }
   return params;
 }

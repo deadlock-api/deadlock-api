@@ -225,3 +225,12 @@ test("compareColorIndexes: a player keeps their color when the columns move", ()
   assert.deepEqual(compareColorIndexes([30, 10, 20]), [2, 0, 1]);
   assert.deepEqual(compareColorIndexes([10, 30, 20]), [0, 2, 1]);
 });
+
+test("canonicalCardParams: one spelling per card, whatever else the URL carries", async () => {
+  const { canonicalCardParams } = await import("./compare-share");
+  const params = canonicalCardParams(
+    new URLSearchParams("utm_source=discord&date_range=2026-01-01_2026-02-01&players=3,1,3,abc,2&hero=7"),
+  );
+  assert.equal(params.toString(), "players=3%2C1%2C2&hero=7&date_range=2026-01-01_2026-02-01");
+  assert.equal(canonicalCardParams(new URLSearchParams("players=")).toString(), "");
+});

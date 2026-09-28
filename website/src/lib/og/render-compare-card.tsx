@@ -75,8 +75,10 @@ export async function renderCompareCard(search: URLSearchParams): Promise<Respon
   const data = loaded && (await withInlineImages(loaded));
   const card = data ? <CompareCard data={data} /> : <ComparePromoCard logo={await inlineImage(LOGO)} />;
   // A shared link pins its dates, so its card stays true: a week, so a link posted again unfurls from cache at once. A
-  // promo card standing in for players whose data failed to load is only kept until the API is likely back.
-  const draw = (element: React.ReactElement, extraFonts: boolean, maxAge = players && !data ? RETRY_AGE : CARD_AGE) =>
+  // promo card standing in for players whose data failed to load, or a card missing a rank or a name, is only kept
+  // until the API is likely back.
+  const failed = (players && !data) || data?.partial;
+  const draw = (element: React.ReactElement, extraFonts: boolean, maxAge = failed ? RETRY_AGE : CARD_AGE) =>
     ImageResponse.async(element, {
       width: CARD_WIDTH,
       height: CARD_HEIGHT,

@@ -59,6 +59,8 @@ export interface CompareCardData {
   logo?: string;
   /** The filters in words: "Bebop", "Ranked", "This season". */
   context: string[];
+  /** A request the card could draw without failed (a rank, a name, a metric): the card is drawn but not kept long. */
+  partial: boolean;
 }
 
 /** The page's filters (the current season for dates), and the dates as the card names them. */
@@ -69,18 +71,24 @@ async function resolveFilters(search: URLSearchParams, client: QueryClient) {
   const { filters, mode, range } = await resolveCompareFilters(compareFilterSearch(search), async () =>
     defaultUnixRange(seasons, "season"),
   );
-  // An open end is the day the card is drawn, written as that day.
+  // An open end is the day the card is drawn, written as that day; the years only when the dates span two of them.
+  const end = range?.[1] ?? day();
   const dateLabel = range
     ? range[0]
-      ? `${range[0].format("MMM D")} – ${(range[1] ?? day()).format("MMM D")}`
-      : `Until ${(range[1] ?? day()).format("MMM D")}`
+      ? range[0].year() === end.year()
+        ? `${range[0].format("MMM D")} – ${end.format("MMM D")}`
+        : `${range[0].format("MMM D, YYYY")} – ${end.format("MMM D, YYYY")}`
+      : `Until ${end.format("MMM D")}`
     : "This season";
   return { filters, mode, dateLabel };
 }
 
 /** A request the card can draw without: its failure leaves a gap rather than failing the image. */
-function settle<T>(promise: Promise<T>): Promise<T | undefined> {
-  return promise.catch(() => undefined);
+function settle<T>(promise: Promise<T>, failed: { any: boolean }): Promise<T | undefined> {
+  return promise.catch(() => {
+    failed.any = true;
+    return undefined;
+  });
 }
 
 /** Everything a comparison card draws, loaded server side with the page's own queries. Null without players. */
@@ -88,32 +96,40 @@ export async function loadCompareCardData(search: URLSearchParams): Promise<Comp
   const accountIds = parseCompareIds((search.get("players") ?? "").split(",").map(Number));
   if (accountIds.length === 0) return null;
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const failed = { any: false };
   // What doesn't depend on the filters starts now; the filters may first wait for the seasons.
   const independent = Promise.all([
-    settle(client.query(steamProfilesQueryOptions(sortedIds(accountIds)))),
-    settle(client.query(playerRanksQueryOptions(accountIds))),
-    settle(client.query(ranksQueryOptions)),
-    settle(client.query(heroesQueryOptions)),
+    settle(client.query(steamProfilesQueryOptions(sortedIds(accountIds))), failed),
+    settle(client.query(playerRanksQueryOptions(accountIds)), failed),
+    settle(client.query(ranksQueryOptions), failed),
+    settle(client.query(heroesQueryOptions), failed),
   ]);
   const { filters, mode, dateLabel } = await resolveFilters(search, client);
 
   const [rows, metrics, [profiles, playerRanks, ranks, heroes]] = await Promise.all([
-    settle(client.query(trackerHeroStatsQueryOptions(compareHeroStatsParams(accountIds, filters)))),
+    // Not settled: without the stats every player would read "no matches", a wrong card. The failure reaches the
+    // renderer, which draws the promo card and keeps it only briefly.
+    client.query(trackerHeroStatsQueryOptions(compareHeroStatsParams(accountIds, filters))),
     Promise.all(
-      accountIds.map((id) => settle(client.query(playerStatsMetricsQueryOptions(compareMetricsParams(filters, id))))),
+      accountIds.map((id) =>
+        settle(client.query(playerStatsMetricsQueryOptions(compareMetricsParams(filters, id))), failed),
+      ),
     ),
     independent,
   ]);
   const badgeMap = extractBadgeMap(ranks ?? []);
 
+  // The current rank is the player's, whatever the filters: shown even without matches, as on the page. A failed lookup
+  // is no value rather than loading: the card cannot wait. Unranked (badge 0) has no rank.
+  const badges = accountIds.map(
+    (accountId) => playerRanks?.find((rank) => rank.account_id === accountId)?.badge || null,
+  );
   const aggregates: (PlayerAggregate | null)[] = accountIds.map((accountId, index) => {
-    const aggregate = aggregateHeroStats(rows ?? [], accountId);
+    const aggregate = aggregateHeroStats(rows, accountId);
     if (!aggregate) return null;
-    const badge = playerRanks?.find((rank) => rank.account_id === accountId)?.badge;
     return {
       ...aggregate,
-      // A failed lookup is no value rather than loading: the card cannot wait.
-      rankBadge: badge || null,
+      rankBadge: badges[index],
       healingPerMin: metrics[index]?.healing_per_min?.avg ?? null,
       healPreventedPerMatch: metrics[index]?.heal_prevented?.avg ?? null,
     };
@@ -124,7 +140,8 @@ export async function loadCompareCardData(search: URLSearchParams): Promise<Comp
   const colorIndexes = compareColorIndexes(accountIds);
   const players = accountIds.map((accountId, index): CompareCardPlayer => {
     const aggregate = aggregates[index];
-    const rank = aggregate?.rankBadge ? badgeMap.get(aggregate.rankBadge) : undefined;
+    const badge = badges[index];
+    const rank = badge ? badgeMap.get(badge) : undefined;
     const profile = profiles?.[accountId];
     return {
       name: profile?.personaname ?? `Player ${accountId}`,
@@ -132,8 +149,8 @@ export async function loadCompareCardData(search: URLSearchParams): Promise<Comp
       color: OG_SERIES[colorIndexes[index] % OG_SERIES.length],
       rankName: rank ? `${rank.name} ${rank.subtier}` : undefined,
       // The tier's badge straight from the assets CDN; the per-subrank images are served through the API.
-      rankImage: aggregate?.rankBadge
-        ? (ranks?.find((entry) => entry.tier === Math.floor(aggregate.rankBadge! / 10))?.images.large ?? undefined)
+      rankImage: badge
+        ? (ranks?.find((entry) => entry.tier === Math.floor(badge / 10))?.images.large ?? undefined)
         : undefined,
       hasMatches: aggregate != null,
       scored: aggregate != null && aggregates.filter((entry) => entry !== null).length >= 2,
@@ -156,5 +173,6 @@ export async function loadCompareCardData(search: URLSearchParams): Promise<Comp
     players,
     scoredCount: scored.length,
     context: [hero?.name ?? "All heroes", ...(mode === "normal_all" ? [] : [MODE_CONFIG[mode].label]), dateLabel],
+    partial: failed.any,
   };
 }
