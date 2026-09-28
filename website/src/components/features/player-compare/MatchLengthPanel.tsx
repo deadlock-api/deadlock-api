@@ -16,7 +16,6 @@ import {
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { NoValue } from "~/components/ui/no-value";
 import { Stack } from "~/components/ui/stack";
-import { percentTicks } from "~/lib/chart-axis";
 import { type BracketResult, DURATION_BRACKETS, MIN_BRACKET_MATCHES, winRateByDuration } from "~/lib/compare-records";
 import { formatPercent } from "~/lib/format";
 
@@ -61,6 +60,11 @@ export function MatchLengthPanel({
   // Symmetric around 50%, so a bar's length reads as its distance from an even record either way.
   const reach = Math.max(0.1, Math.ceil(Math.max(0, ...values.map((value) => Math.abs(value - 0.5))) * 10) / 10);
   const domain: [number, number] = [Math.max(0, 0.5 - reach), Math.min(1, 0.5 + reach)];
+  // Ticks step out from 50%, so the even line is labelled and the two sides mirror each other.
+  const step = [0.05, 0.1, 0.2, 0.25].find((candidate) => reach / candidate <= 2 + 1e-9) ?? 0.25;
+  const ticks = Array.from({ length: Math.floor(reach / step + 1e-9) * 2 + 1 }, (_, index) =>
+    Number((0.5 + (index - Math.floor(reach / step + 1e-9)) * step).toFixed(4)),
+  );
   const summary = `Win rate by match length, brackets with ${MIN_BRACKET_MATCHES} or more matches. ${players
     .map(
       (player, index) =>
@@ -97,7 +101,7 @@ export function MatchLengthPanel({
                   {...CHART_Y_AXIS}
                   type="number"
                   domain={domain}
-                  ticks={percentTicks(domain)}
+                  ticks={ticks}
                   interval={0}
                   tickFormatter={(value: number) => formatPercent(value, 0)}
                 />
