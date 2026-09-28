@@ -11,19 +11,29 @@ export const MAX_COMPARE_PLAYERS = 5;
  */
 const COMPARE_PALETTE = [0, 1, 2, 3, 5] as const;
 
+/** murmur3's finalizer: every input bit moves every output bit, so neighbouring ids (alt accounts) land apart. */
+function mix32(value: number): number {
+  let h = value >>> 0;
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85eb_ca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2_ae35);
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+
 /**
- * Each player's series color index, one of `COMPARE_PALETTE`. A player's color comes
- * from their account id, so it follows the player: moving the columns, adding a player or removing another keeps it.
- * Two players whose ids want the same color are settled in the URL's order (a newly added player comes last), so the
- * players already on screen keep theirs and the newcomer takes the next free one.
+ * Each player's series color index, one of `COMPARE_PALETTE`. A player's color comes from their account id, so it
+ * follows the player: adding a player never recolors the others, and moving or removing one keeps every color unless
+ * two of the players' ids want the same one. Such a pair is settled in the URL's order (a newly added player comes
+ * last, so the players already on screen keep theirs and the newcomer takes the next free one); moving the pair swaps
+ * them, and removing the first hands its color to the second.
  */
 export function compareColorIndexes(accountIds: readonly number[]): number[] {
   const slots = COMPARE_PALETTE.length;
   const taken = new Set<number>();
   return accountIds.map((accountId) => {
-    // Knuth's multiplicative hash spreads neighbouring ids (alt accounts made together) over the slots.
-    let slot = Math.imul(accountId, 2_654_435_761) >>> 0;
-    slot %= slots;
+    let slot = mix32(accountId) % slots;
     while (taken.has(slot) && taken.size < slots) slot = (slot + 1) % slots;
     taken.add(slot);
     return COMPARE_PALETTE[slot];

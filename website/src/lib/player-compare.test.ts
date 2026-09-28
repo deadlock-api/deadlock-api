@@ -233,14 +233,14 @@ test("compareColorIndexes: a player keeps their color when players are added, re
     for (const [id, color] of some) assert.equal(five.get(id), color, `player ${id} with ${count} players`);
   }
   // Moving a column keeps every color (these ids want different ones).
-  const three = ids.slice(0, 3);
+  const three = [ids[2], ids[3], ids[0]];
   const moved = colorOf([three[2], three[0], three[1]]);
   for (const id of three) assert.equal(moved.get(id), five.get(id));
 });
 
 test("compareColorIndexes: players wanting the same color get different ones, the first come keeps it", () => {
-  // Both ids want the first color.
-  const [first, second] = [957_234_943, 185_598_645];
+  // Both ids want the same color.
+  const [first, second] = [1_045_169_707, 957_234_943];
   assert.equal(compareColorIndexes([first])[0], compareColorIndexes([second])[0]);
   const both = compareColorIndexes([first, second]);
   assert.equal(both[0], compareColorIndexes([first])[0]);
