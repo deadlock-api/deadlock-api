@@ -291,8 +291,9 @@ function RankByMatchChart({
             {...CHART_X_AXIS}
             dataKey="match"
             type="number"
-            domain={[1, last.match]}
-            ticks={niceTicks(1, last.match).filter((tick) => tick >= 1 && tick <= last.match)}
+            // A lone ranked match still gets an axis to sit on.
+            domain={[1, Math.max(2, last.match)]}
+            ticks={niceTicks(1, Math.max(2, last.match)).filter((tick) => tick >= 1 && tick <= Math.max(2, last.match))}
             tickFormatter={(match: number) => formatStatValue(match, "integer")}
             minTickGap={24}
           />
@@ -331,8 +332,10 @@ function RankByMatchChart({
               );
             }}
           />
-          {players.map((player) => {
+          {players.map((player, index) => {
             const key = String(player.accountId);
+            // One ranked match is a point, not a line: drawn as a dot so it is not invisible.
+            const lone = (pointsByPlayer[index]?.length ?? 0) === 1;
             return (
               <Line
                 key={key}
@@ -341,7 +344,24 @@ function RankByMatchChart({
                 type="stepAfter"
                 stroke={player.color}
                 strokeWidth={2}
-                dot={false}
+                dot={
+                  lone
+                    ? ({ cx, cy, index: at }: { cx?: number; cy?: number; index?: number }) =>
+                        at === 0 && cx != null && cy != null ? (
+                          <circle
+                            key={at}
+                            cx={cx}
+                            cy={cy}
+                            r={4}
+                            fill={player.color}
+                            stroke="var(--card)"
+                            strokeWidth={2}
+                          />
+                        ) : (
+                          <g key={at} />
+                        )
+                    : false
+                }
                 isAnimationActive={false}
                 activeDot={{ r: 4, stroke: "var(--card)", strokeWidth: 2 }}
               />
