@@ -15,7 +15,6 @@ import {
   duoHeroPairs,
   type DuoHeroes,
   MIN_DUO_HEROES_MATCHES,
-  pairMatchCount,
   type PlayerPair,
   pairSynergy,
   playerPairs,
@@ -97,20 +96,6 @@ function PairRow({
       </Stack>
     </TableCell>
   );
-  // A pair that never met has no records: one line says so rather than a dash in every column.
-  if (pairMatchCount(pair) === 0) {
-    return (
-      <TableRow>
-        {names}
-        <TableCell colSpan={3}>
-          <Text tone="muted">Never met</Text>
-        </TableCell>
-        {/* The columns a narrow table hides: the row spans what the header spans. */}
-        <TableCell className={DUO_COLUMN} />
-        <TableCell className="hidden @md/table:table-cell" />
-      </TableRow>
-    );
-  }
   return (
     <TableRow>
       {names}
@@ -298,6 +283,7 @@ export function TogetherAgainstPanel({
   const loading = histories.some((history) => history.isPending && !history.isError);
   const { met, neverMet } = splitPairs(playerPairs(histories));
   const pairs = [...met, ...neverMet];
+  const nameOf = (accountId: number) => byId.get(accountId)?.name ?? `Player ${accountId}`;
   const recent = recentSharedMatches(histories);
   const loadingPairs = players.flatMap((a, i) => players.slice(i + 1).map((b) => [a, b] as const));
 
@@ -330,7 +316,7 @@ export function TogetherAgainstPanel({
           <TableBody>
             {loading
               ? loadingPairs.map(([a, b]) => <PairRowSkeleton key={`${a.accountId}-${b.accountId}`} a={a} b={b} />)
-              : pairs.map((pair) => {
+              : met.map((pair) => {
                   const a = byId.get(pair.a);
                   const b = byId.get(pair.b);
                   if (!a || !b) return null;
@@ -351,6 +337,21 @@ export function TogetherAgainstPanel({
                     />
                   );
                 })}
+            {/* The pairs that never met share one row: with five players most pairs can be strangers. */}
+            {!loading && neverMet.length > 0 && (
+              <TableRow>
+                <TableCell data-pinned>
+                  <Text tone="muted">Never met</Text>
+                </TableCell>
+                <TableCell colSpan={3}>
+                  <Text tone="muted" className="whitespace-normal">
+                    {neverMet.map((pair) => `${nameOf(pair.a)} & ${nameOf(pair.b)}`).join(", ")}
+                  </Text>
+                </TableCell>
+                <TableCell className={DUO_COLUMN} />
+                <TableCell className="hidden @md/table:table-cell" />
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       )}
