@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 import type { HashMapValue } from "deadlock_api_client";
 
 import { ChartLegend, ChartLegendItem, ChartLegendToggle } from "~/components/patterns/charts/ChartLegend";
@@ -83,9 +83,15 @@ function AxisReadings({ entry, players }: { entry?: AxisRow; players: RadarPlaye
  * median, higher always better. Each player gets a playstyle label from their strongest axes.
  */
 export function PlaystyleRadarPanel({ players, filters }: { players: ComparedPlayer[]; filters: CompareFilters }) {
-  const population = useQuery(playerStatsMetricsQueryOptions(compareMetricsParams(filters)));
+  const population = useQuery({
+    ...playerStatsMetricsQueryOptions(compareMetricsParams(filters)),
+    placeholderData: keepPreviousData,
+  });
   const own = useQueries({
-    queries: players.map((player) => playerStatsMetricsQueryOptions(compareMetricsParams(filters, player.accountId))),
+    queries: players.map((player) => ({
+      ...playerStatsMetricsQueryOptions(compareMetricsParams(filters, player.accountId)),
+      placeholderData: keepPreviousData,
+    })),
   });
   const { highlighted, toggleProps } = useSeriesHighlight();
 

@@ -54,9 +54,15 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
   });
 
   // The same requests as the curves below, so they share the cache: healing and heal prevented come from here.
-  const population = useQuery(playerStatsMetricsQueryOptions(compareMetricsParams(filters)));
+  const population = useQuery({
+    ...playerStatsMetricsQueryOptions(compareMetricsParams(filters)),
+    placeholderData: keepPreviousData,
+  });
   const metrics = useQueries({
-    queries: accountIds.map((accountId) => playerStatsMetricsQueryOptions(compareMetricsParams(filters, accountId))),
+    queries: accountIds.map((accountId) => ({
+      ...playerStatsMetricsQueryOptions(compareMetricsParams(filters, accountId)),
+      placeholderData: keepPreviousData,
+    })),
   });
   /** A player's average of one metric: undefined while it loads, null when it failed or has no value. */
   const metricAverage = (index: number, key: string) => {
@@ -90,6 +96,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
       profileLoading: (profileQueries[index]?.isPending ?? true) && !profile,
       color: SERIES_COLORS[colorIndexes[index] % SERIES_COLORS.length],
       playstyle: playstyleLabel(playstylePercentiles(population.data, metrics[index]?.data))?.label,
+      rankBadge: badge === undefined ? undefined : badge || null,
       aggregate: aggregate && {
         ...aggregate,
         // Unranked (badge 0) has no rank to compare.

@@ -80,6 +80,8 @@ export function PlayerCards({
   });
   const { scored, tally, leaders, settled } = scoreComparison(players.map((player) => player.aggregate));
   const hasSlot = players.length < MAX_COMPARE_PLAYERS;
+  // Two players with matches make a contest; until then a card shows its matches instead of stats won.
+  const contest = players.filter((player) => player.aggregate !== null).length >= 2;
   const listRef = useRef<HTMLUListElement>(null);
   /** Removes a player and hands focus to the next card's remove button (the previous one's at the end), which is
    * there before and after the change, so focus never falls back to the page. */
@@ -138,13 +140,13 @@ export function PlayerCards({
                           {/* The rank (with its move on these dates), then the playstyle. */}
                           <Stack gap={0} className="min-w-0">
                             <Text variant="caption" tone="muted">
-                              {aggregate?.rankBadge ? (
+                              {player.rankBadge ? (
                                 // One line: the rank's name gives way (truncates) before the move is cut off.
                                 <Inline gap={1} wrap="nowrap" asChild>
                                   <span>
-                                    <BadgeImage badge={aggregate.rankBadge} ranks={ranks} size="inline" alt="" />
+                                    <BadgeImage badge={player.rankBadge} ranks={ranks} size="inline" alt="" />
                                     <span className="sr-only @stat-trio:not-sr-only @stat-trio:truncate">
-                                      {badgeLabel(ranks, aggregate.rankBadge)}
+                                      {badgeLabel(ranks, player.rankBadge)}
                                     </span>
                                     {/* Who is climbing: the rank's move over the page's dates, in divisions. */}
                                     {climb != null && (
@@ -160,7 +162,7 @@ export function PlayerCards({
                                     )}
                                   </span>
                                 </Inline>
-                              ) : aggregate?.rankBadge === undefined ? (
+                              ) : player.rankBadge === undefined ? (
                                 <Skeleton className="h-4 w-20" />
                               ) : (
                                 "Unranked"
@@ -201,7 +203,7 @@ export function PlayerCards({
                         <Text tone="muted">No matches on these filters</Text>
                       ) : (
                         <StatGroup variant="plain" size="sm" className="grid-cols-2 gap-2 @stat-trio:grid-cols-3">
-                          {players.length < 2 ? (
+                          {!contest ? (
                             // Nothing to win alone: the sample size instead.
                             <Stat
                               label="Matches"
@@ -264,61 +266,64 @@ export function PlayerCards({
                         </Text>
                       )}
 
-                      <Inline gap={3} justify="between" align="end">
-                        {/* On one hero's filter every player's most played is that hero. */}
-                        {filters.heroId == null && (
-                          <Stack gap={1}>
-                            <Text variant="caption" tone="muted">
-                              Most played
-                            </Text>
-                            <Inline gap={1} wrap="nowrap">
-                              {aggregate === undefined ? (
-                                <Skeleton className="h-7 w-24" />
-                              ) : aggregate === null ? (
-                                <NoValue />
-                              ) : (
-                                topHeroes(rows, player.accountId).map((row) => (
-                                  <Tooltip
-                                    key={row.hero_id}
-                                    content={
-                                      <TooltipStats variant="plain">
-                                        <TooltipStat label="Matches" value={row.matches_played} />
-                                        <TooltipStat
-                                          label="Win rate"
-                                          value={formatPercent(row.wins / row.matches_played, 0)}
+                      {/* Without matches on the filters there are no heroes or results to show. */}
+                      {aggregate !== null && (
+                        <Inline gap={3} justify="between" align="end">
+                          {/* On one hero's filter every player's most played is that hero. */}
+                          {filters.heroId == null && (
+                            <Stack gap={1}>
+                              <Text variant="caption" tone="muted">
+                                Most played
+                              </Text>
+                              <Inline gap={1} wrap="nowrap">
+                                {aggregate === undefined ? (
+                                  <Skeleton className="h-7 w-24" />
+                                ) : aggregate === null ? (
+                                  <NoValue />
+                                ) : (
+                                  topHeroes(rows, player.accountId).map((row) => (
+                                    <Tooltip
+                                      key={row.hero_id}
+                                      content={
+                                        <TooltipStats variant="plain">
+                                          <TooltipStat label="Matches" value={row.matches_played} />
+                                          <TooltipStat
+                                            label="Win rate"
+                                            value={formatPercent(row.wins / row.matches_played, 0)}
+                                          />
+                                        </TooltipStats>
+                                      }
+                                    >
+                                      <TooltipTarget>
+                                        <HeroImage
+                                          heroId={row.hero_id}
+                                          shape="rounded"
+                                          ring="border"
+                                          className="size-7"
                                         />
-                                      </TooltipStats>
-                                    }
-                                  >
-                                    <TooltipTarget>
-                                      <HeroImage
-                                        heroId={row.hero_id}
-                                        shape="rounded"
-                                        ring="border"
-                                        className="size-7"
-                                      />
-                                    </TooltipTarget>
-                                  </Tooltip>
-                                ))
-                              )}
-                            </Inline>
-                          </Stack>
-                        )}
-                        <Stack gap={1} align="end">
-                          <Text variant="caption" tone="muted">
-                            Last {FORM_LENGTH}
-                          </Text>
-                          {history?.isError ? (
-                            <NoValue label="Match history unavailable" />
-                          ) : form === undefined ? (
-                            <Skeleton className="h-3 w-24" />
-                          ) : form.length === 0 ? (
-                            <NoValue label="No matches" />
-                          ) : (
-                            <FormDots form={form} />
+                                      </TooltipTarget>
+                                    </Tooltip>
+                                  ))
+                                )}
+                              </Inline>
+                            </Stack>
                           )}
-                        </Stack>
-                      </Inline>
+                          <Stack gap={1} align="end">
+                            <Text variant="caption" tone="muted">
+                              Last {FORM_LENGTH}
+                            </Text>
+                            {history?.isError ? (
+                              <NoValue label="Match history unavailable" />
+                            ) : form === undefined ? (
+                              <Skeleton className="h-3 w-24" />
+                            ) : form.length === 0 ? (
+                              <NoValue label="No matches" />
+                            ) : (
+                              <FormDots form={form} />
+                            )}
+                          </Stack>
+                        </Inline>
+                      )}
                     </Stack>
                   </CardContent>
                 </li>

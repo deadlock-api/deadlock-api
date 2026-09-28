@@ -50,7 +50,9 @@ export function HeadToHeadTable({
     (stat) => stat.key !== "heroesPlayed" || aggregates.some((aggregate) => aggregate?.heroesPlayed !== 1),
   );
   const winnersOf = (stat: CompareStat) => compareStatWinners(aggregates, stat);
-  const scoring = settled && players.length >= 2;
+  // Two players with matches make a contest; a player without any is shown but not scored.
+  const contest = aggregates.filter((aggregate) => aggregate !== null).length >= 2;
+  const scoring = settled && contest;
 
   return (
     <Panel {...props}>
@@ -144,7 +146,7 @@ export function HeadToHeadTable({
           );
         })}
         {/* The result of the table: how many of the scored rows each player won. */}
-        {players.length >= 2 && (
+        {contest && (
           <TableFooter tone="highlight">
             <TableRow>
               <TableCell data-pinned>Stats won</TableCell>

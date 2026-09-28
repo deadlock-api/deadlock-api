@@ -11,6 +11,8 @@ export interface ComparedPlayer {
   color: string;
   /** What the player's percentiles say they are good at: "Farmer", "Support"; undefined until known. */
   playstyle?: string;
+  /** The current rank, whatever the filters: undefined while it loads, null when unranked or unknown. */
+  rankBadge?: number | null;
   /** Stats on the filters: null without matches, undefined while they load. */
   aggregate: PlayerAggregate | null | undefined;
 }

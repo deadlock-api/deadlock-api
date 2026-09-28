@@ -63,6 +63,14 @@ export function PerformanceTrendPanel({
   histories: readonly CompareMatchHistory[];
 }) {
   const [metric, setMetric] = useState<TrendMetric>("winRate");
+  // Hidden once loaded when no player has a week with enough matches to plot.
+  const settled = !histories.some((history) => history.isPending);
+  const allFailed = histories.length > 0 && histories.every((history) => history.isError);
+  const plottable = mergeWeeklyTrend(
+    histories.map((history) => ({ key: String(history.accountId), weeks: weeklyTotals(history.matches ?? []) })),
+    "winRate",
+  );
+  if (settled && !allFailed && plottable.length === 0) return null;
 
   return (
     <Panel>

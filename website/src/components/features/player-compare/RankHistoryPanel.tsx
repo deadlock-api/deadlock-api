@@ -59,20 +59,21 @@ export function RankHistoryPanel({
   const { data: ranks } = useQuery(ranksQueryOptions);
   const showsRank = mode === "normal_all" || mode === "normal_ranked";
 
+  // Hidden without ranks to draw: a mode that moves no rank, or nobody ranked on these dates.
+  const allFailed = histories.length > 0 && histories.every((history) => history.isError);
+  const settled = !histories.some((history) => history.isPending);
+  const anyRanked = histories.some((history) =>
+    (history.matches ?? []).some((match) => (match.ranked_display_badge ?? 0) > 0),
+  );
+  if (!showsRank || (settled && !allFailed && !anyRanked)) return null;
+
   return (
     <Panel>
       <PanelHeader size="sm" title="Rank over time" icon={Medal} />
       <PanelBody size="sm">
         {/* The legend under the plot, as on the weekly trend beside it, so the pair lines up. */}
         <Stack gap={2}>
-          {!showsRank ? (
-            <EmptyState
-              variant="plain"
-              icon={Medal}
-              title="No ranks in this mode"
-              description={`${mode === "street_brawl" ? "Street Brawl" : "Unranked"} matches do not move a player's rank. Switch the mode to Ranked or All to see how the ranks moved.`}
-            />
-          ) : histories.length > 0 && histories.every((history) => history.isError) ? (
+          {histories.length > 0 && histories.every((history) => history.isError) ? (
             <ChartError
               label={LABEL}
               onRetry={() => {
@@ -89,7 +90,7 @@ export function RankHistoryPanel({
               daysByPlayer={histories.map((history) => dailyRanks(history.matches ?? []))}
             />
           )}
-          {showsRank && (
+          {
             <ChartLegend label="Players">
               {players.map((player) => (
                 <ChartLegendItem key={player.accountId} color={player.color} shape="line" title={player.name}>
@@ -97,7 +98,7 @@ export function RankHistoryPanel({
                 </ChartLegendItem>
               ))}
             </ChartLegend>
-          )}
+          }
         </Stack>
       </PanelBody>
     </Panel>
@@ -125,14 +126,7 @@ function RankHistoryChart({
       : null;
 
   if (!extent) {
-    return (
-      <EmptyState
-        variant="plain"
-        icon={Medal}
-        title="No ranked matches in this range"
-        description="None of these players has a ranked match on these dates. Try a wider date range."
-      />
-    );
+    return <EmptyState variant="plain" icon={Medal} title="No ranked matches in this range" />;
   }
 
   const rows = mergeRankSeries(series);

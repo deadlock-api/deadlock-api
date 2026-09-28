@@ -47,10 +47,12 @@ function splitSuggestions(mates: Companion[], enemies: Companion[]): { mates: Co
 }
 
 function useQuickAddSuggestions(accountIds: readonly number[], filters: CompareFilters) {
-  const first = accountIds[0];
+  // Whose teammates to suggest: the lowest account id rather than the first column, so reordering the players never
+  // swaps the suggestions.
+  const first = accountIds.length > 0 ? Math.min(...accountIds) : undefined;
   const enabled = first !== undefined;
   const params = compareCompanionParams(first ?? 0, filters);
-  // Another first player (a reorder, a removal) keeps the old suggestions up until the new ones arrive, so the slot
+  // Another player to suggest for (an add or a removal) keeps the old suggestions up until the new ones arrive, so the slot
   // does not collapse to a skeleton and back.
   const mateQuery = useQuery({ ...trackerMateStatsQueryOptions(params), enabled, placeholderData: keepPreviousData });
   const enemyQuery = useQuery({ ...trackerEnemyStatsQueryOptions(params), enabled, placeholderData: keepPreviousData });
@@ -144,7 +146,7 @@ function SuggestionGroup({
 }
 
 /**
- * One-click additions for the comparison: the players the first compared player queues with and meets most, on the
+ * One-click additions for the comparison: the players one compared player (the lowest account id) queues with and meets most, on the
  * page's filters. An optional helper: it shows a thin skeleton while it loads and nothing at all when there is
  * nobody to suggest or the request fails.
  */

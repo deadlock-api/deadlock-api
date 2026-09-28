@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 import { ZoomIn } from "lucide-react";
 import { useState } from "react";
 
@@ -23,9 +23,15 @@ import type { ComparedPlayer } from "./types";
 export function PercentileComparison({ players, filters }: { players: ComparedPlayer[]; filters: CompareFilters }) {
   const [zoom, setZoom] = useState(true);
   const [expanded, setExpanded] = useState(false);
-  const population = useQuery(playerStatsMetricsQueryOptions(compareMetricsParams(filters)));
+  const population = useQuery({
+    ...playerStatsMetricsQueryOptions(compareMetricsParams(filters)),
+    placeholderData: keepPreviousData,
+  });
   const own = useQueries({
-    queries: players.map((player) => playerStatsMetricsQueryOptions(compareMetricsParams(filters, player.accountId))),
+    queries: players.map((player) => ({
+      ...playerStatsMetricsQueryOptions(compareMetricsParams(filters, player.accountId)),
+      placeholderData: keepPreviousData,
+    })),
   });
   const failed = population.isError || own.some((query) => query.isError && !query.data);
   // The curves draw once the field and one player are in; a player still loading just has no marker yet, so adding

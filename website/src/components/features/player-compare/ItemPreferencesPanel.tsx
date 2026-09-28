@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
@@ -38,7 +38,10 @@ type Column =
 export function ItemPreferencesPanel({ players, filters }: { players: ComparedPlayer[]; filters: CompareFilters }) {
   const itemsQuery = useQuery(itemUpgradesQueryOptions);
   const statsQueries = useQueries({
-    queries: players.map((player) => itemStatsQueryOptions(compareItemStatsParams(player.accountId, filters))),
+    queries: players.map((player) => ({
+      ...itemStatsQueryOptions(compareItemStatsParams(player.accountId, filters)),
+      placeholderData: keepPreviousData,
+    })),
   });
   const itemsById = new Map((itemsQuery.data ?? []).map((item) => [item.id, item]));
 

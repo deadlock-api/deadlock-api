@@ -4,7 +4,6 @@ import { useState } from "react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { Panel, PanelHeader, PanelShowMore } from "~/components/patterns/panel/Panel";
-import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { NoValue } from "~/components/ui/no-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
@@ -35,18 +34,19 @@ export function SharedHeroesTable({
   const accountIds = players.map((player) => player.accountId);
   const heroes = sharedHeroes(rows, accountIds);
   const shown = expanded ? heroes : heroes.slice(0, COLLAPSED_ROWS);
+  const pending = loading || (heroes.length === 0 && players.some((player) => player.aggregate === undefined));
+  // Nothing in common: no panel.
+  if (!pending && heroes.length === 0) return null;
 
   return (
     <Panel>
       <PanelHeader size="sm" title="Shared heroes" />
       {/* A player just added has no rows yet: the old answer's "nothing in common" is not a verdict. */}
-      {loading || (heroes.length === 0 && players.some((player) => player.aggregate === undefined)) ? (
+      {pending ? (
         <Stack gap={2} className="p-2">
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-8 w-full" />
         </Stack>
-      ) : heroes.length === 0 ? (
-        <EmptyState variant="plain" title="No hero in common on these filters." />
       ) : (
         <>
           <Table density="dense" className="tabular-nums">
