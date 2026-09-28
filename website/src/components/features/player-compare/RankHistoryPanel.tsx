@@ -4,7 +4,7 @@ import { Medal } from "lucide-react";
 import { useState } from "react";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
-import { RANK_BADGE_AXIS_WIDTH, RankBadgeTick } from "~/components/domain/rank/RankBadgeTick";
+import { RANK_BADGE_NAME_AXIS_WIDTH, RankBadgeTick } from "~/components/domain/rank/RankBadgeTick";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
@@ -187,13 +187,13 @@ function RankHistoryChart({
           />
           <YAxis
             {...CHART_Y_AXIS}
-            width={RANK_BADGE_AXIS_WIDTH}
+            width={RANK_BADGE_NAME_AXIS_WIDTH}
             type="number"
             domain={axis.domain}
             ticks={axis.ticks}
             interval={0}
             allowDecimals={false}
-            tick={<RankBadgeTick ranks={ranks} />}
+            tick={<RankBadgeTick ranks={ranks} display="badge-name" />}
           />
           <Tooltip
             cursor={CHART_CURSOR_LINE}
@@ -298,13 +298,13 @@ function RankByMatchChart({
           />
           <YAxis
             {...CHART_Y_AXIS}
-            width={RANK_BADGE_AXIS_WIDTH}
+            width={RANK_BADGE_NAME_AXIS_WIDTH}
             type="number"
             domain={axis.domain}
             ticks={axis.ticks}
             interval={0}
             allowDecimals={false}
-            tick={<RankBadgeTick ranks={ranks} />}
+            tick={<RankBadgeTick ranks={ranks} display="badge-name" />}
           />
           <Tooltip
             cursor={CHART_CURSOR_LINE}

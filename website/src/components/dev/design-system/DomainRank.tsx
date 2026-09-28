@@ -2,7 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from "recharts";
 
 import { Specimen } from "~/components/dev/design-system/Specimen";
-import { RANK_BADGE_AXIS_WIDTH, RankBadgeTick } from "~/components/domain/rank/RankBadgeTick";
+import {
+  RANK_BADGE_AXIS_WIDTH,
+  RANK_BADGE_NAME_AXIS_WIDTH,
+  RankBadgeTick,
+} from "~/components/domain/rank/RankBadgeTick";
 import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/RankTierIcons";
 import { RankTierTick } from "~/components/domain/rank/RankTierTick";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
@@ -91,7 +95,7 @@ export function DomainRank() {
       <Specimen
         name="RankBadgeTick"
         source="domain/rank/RankBadgeTick"
-        note="The y-axis tick of a chart plotted on linearised badges (badgeToLinear): the subtier's badge, named in its title, or its short number while the ranks load. Give the YAxis width={RANK_BADGE_AXIS_WIDTH} and ticks at tier starts (rankAxis in ~/lib/compare-rank-history)."
+        note="The y-axis tick of a chart plotted on linearised badges (badgeToLinear): the subtier's badge, named in its title, or its short number while the ranks load. Give the YAxis width={RANK_BADGE_AXIS_WIDTH} and ticks at tier starts (rankAxis in ~/lib/compare-rank-history). display=badge-name writes the rank's name beside the badge (width={RANK_BADGE_NAME_AXIS_WIDTH})."
         className="grid gap-3 lg:grid-cols-2"
       >
         <ChartSurface label="Two players' ranks over twelve days, RankBadgeTick on the y axis" size="md">
@@ -100,11 +104,11 @@ export function DomainRank() {
             <XAxis {...CHART_X_AXIS} dataKey="day" type="number" domain={[1, 12]} />
             <YAxis
               {...CHART_Y_AXIS}
-              width={RANK_BADGE_AXIS_WIDTH}
+              width={RANK_BADGE_NAME_AXIS_WIDTH}
               domain={[30, 44]}
               ticks={RANK_TICKS}
               interval={0}
-              tick={<RankBadgeTick ranks={ranks} />}
+              tick={<RankBadgeTick ranks={ranks} display="badge-name" />}
             />
             <Line
               dataKey="a"
