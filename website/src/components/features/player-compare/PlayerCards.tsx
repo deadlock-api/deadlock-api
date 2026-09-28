@@ -15,7 +15,7 @@ import { Delta } from "~/components/ui/delta";
 import { Grid } from "~/components/ui/grid";
 import { useReorder } from "~/components/ui/hooks/use-reorder";
 import { NoValue } from "~/components/ui/no-value";
-import { ReorderHandle } from "~/components/ui/reorder-handle";
+import { ReorderHandle, ReorderItem } from "~/components/ui/reorder-handle";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
@@ -123,220 +123,227 @@ export function PlayerCards({
                 )
               : undefined;
             return (
-              <Card key={player.accountId} asChild size="sm" accent={player.color} className="@container min-w-0">
-                <li>
-                  <CardContent>
-                    <Stack gap={2}>
-                      <Inline gap={2} wrap="nowrap" align="start">
-                        {/* Smaller in a narrow card, so the name keeps its room. */}
-                        <SteamAvatar
-                          src={player.avatar}
-                          loading={player.profileLoading}
-                          size="lg"
-                          shape="rounded"
-                          className="size-8 @stat-trio:size-12"
-                        />
-                        <Stack gap={0.5} className="min-w-0 flex-1">
-                          {player.profileLoading ? (
-                            <Skeleton className="h-5 w-28" />
-                          ) : (
-                            <Text variant="label" className="line-clamp-2 wrap-break-word" title={player.name}>
-                              <PlayerLink accountId={player.accountId} className="whitespace-normal">
-                                {player.name}
-                              </PlayerLink>
-                            </Text>
-                          )}
-                          {/* The rank (with its move on these dates), then the playstyle. */}
-                          <Stack gap={0} className="min-w-0">
-                            <Text variant="caption" tone="muted">
-                              {player.rankBadge ? (
-                                // One line: the rank's name gives way (truncates) before the move is cut off.
-                                <Inline gap={1} wrap="nowrap" asChild>
-                                  <span>
-                                    <BadgeImage badge={player.rankBadge} ranks={ranks} size="inline" alt="" />
-                                    <span className="sr-only @stat-trio:not-sr-only @stat-trio:truncate">
-                                      {badgeLabel(ranks, player.rankBadge)}
-                                    </span>
-                                    {/* Who is climbing: the rank's move over the page's dates, in divisions. */}
-                                    {climb != null && (
-                                      <Delta
-                                        className="shrink-0"
-                                        value={climb}
-                                        format="number"
-                                        digits={0}
-                                        sign="arrow"
-                                        unit=""
-                                        title={`${climb > 0 ? "+" : ""}${climb} divisions on these dates`}
-                                      />
-                                    )}
-                                  </span>
-                                </Inline>
-                              ) : player.rankBadge === undefined ? (
-                                <Skeleton className="h-4 w-20" />
-                              ) : (
-                                "Unranked"
-                              )}
-                            </Text>
-                            {player.playstyle && (
-                              <Text variant="caption" tone="default" wrap="truncate">
-                                {player.playstyle}
+              // The card is what moves: dragging its handle carries the whole card, and the others make room.
+              <ReorderItem key={player.accountId} asChild {...reorder.boxProps(index)}>
+                <Card asChild size="sm" accent={player.color} className="@container min-w-0">
+                  <li>
+                    <CardContent>
+                      <Stack gap={2}>
+                        <Inline gap={2} wrap="nowrap" align="start">
+                          {/* Smaller in a narrow card, so the name keeps its room. */}
+                          <SteamAvatar
+                            src={player.avatar}
+                            loading={player.profileLoading}
+                            size="lg"
+                            shape="rounded"
+                            className="size-8 @stat-trio:size-12"
+                          />
+                          <Stack gap={0.5} className="min-w-0 flex-1">
+                            {player.profileLoading ? (
+                              <Skeleton className="h-5 w-28" />
+                            ) : (
+                              <Text variant="label" className="line-clamp-2 wrap-break-word" title={player.name}>
+                                <PlayerLink accountId={player.accountId} className="whitespace-normal">
+                                  {player.name}
+                                </PlayerLink>
                               </Text>
                             )}
-                          </Stack>
-                        </Stack>
-                        <Inline gap={0.5} wrap="nowrap">
-                          {players.length >= 2 && (
-                            <ReorderHandle
-                              aria-label={`Move ${player.name}`}
-                              title="Drag, or press the arrow keys, to move"
-                              {...reorder.itemProps(index)}
-                            >
-                              <span className="sr-only">{player.name}</span>
-                            </ReorderHandle>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            aria-label={`Remove ${player.name}`}
-                            title={`Remove ${player.name}`}
-                            data-remove-player={player.accountId}
-                            onClick={() => removeAt(index)}
-                          >
-                            <XIcon aria-hidden="true" />
-                          </Button>
-                        </Inline>
-                      </Inline>
-
-                      {/* The verdict first: stats won out of the stats scored, and who leads; then the record. */}
-                      {aggregate === null ? (
-                        <Text tone="muted">No matches on these filters</Text>
-                      ) : (
-                        <StatGroup variant="plain" size="sm" className="grid-cols-2 gap-2 @stat-trio:grid-cols-3">
-                          {!contest ? (
-                            // Nothing to win alone: the sample size instead.
-                            <Stat
-                              label="Matches"
-                              value={
-                                aggregate ? (
-                                  formatPlayerMetricValue(aggregate.matches, "integer")
-                                ) : (
-                                  <Skeleton className="h-6 w-10" />
-                                )
-                              }
-                            />
-                          ) : (
-                            <Stat
-                              label="Stats won"
-                              value={
-                                !settled || aggregate === undefined ? (
-                                  <Skeleton className="h-6 w-10" />
-                                ) : players.length < 2 ? (
-                                  <NoValue label="Add an opponent to score" />
-                                ) : (
+                            {/* The rank (with its move on these dates), then the playstyle. */}
+                            <Stack gap={0} className="min-w-0">
+                              <Text variant="caption" tone="muted">
+                                {player.rankBadge ? (
+                                  // One line: the rank's name gives way (truncates) before the move is cut off.
                                   <Inline gap={1} wrap="nowrap" asChild>
                                     <span>
-                                      {leads && <CrownIcon aria-hidden="true" className="size-4" />}
-                                      {tally[index]}
-                                      <span className="text-muted-foreground">/{scored.length}</span>
-                                      {leads && (
-                                        <span className="sr-only">, {leaders.length > 1 ? "tied lead" : "leads"}</span>
+                                      <BadgeImage badge={player.rankBadge} ranks={ranks} size="inline" alt="" />
+                                      <span className="sr-only @stat-trio:not-sr-only @stat-trio:truncate">
+                                        {badgeLabel(ranks, player.rankBadge)}
+                                      </span>
+                                      {/* Who is climbing: the rank's move over the page's dates, in divisions. */}
+                                      {climb != null && (
+                                        <Delta
+                                          className="shrink-0"
+                                          value={climb}
+                                          format="number"
+                                          digits={0}
+                                          sign="arrow"
+                                          unit=""
+                                          title={`${climb > 0 ? "+" : ""}${climb} divisions on these dates`}
+                                        />
                                       )}
                                     </span>
                                   </Inline>
+                                ) : player.rankBadge === undefined ? (
+                                  <Skeleton className="h-4 w-20" />
+                                ) : (
+                                  "Unranked"
+                                )}
+                              </Text>
+                              {player.playstyle && (
+                                <Text variant="caption" tone="default" wrap="truncate">
+                                  {player.playstyle}
+                                </Text>
+                              )}
+                            </Stack>
+                          </Stack>
+                          <Inline gap={0.5} wrap="nowrap">
+                            {players.length >= 2 && (
+                              <ReorderHandle
+                                aria-label={`Move ${player.name}`}
+                                title="Drag, or press the arrow keys, to move"
+                                {...reorder.itemProps(index)}
+                              >
+                                <span className="sr-only">{player.name}</span>
+                              </ReorderHandle>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              aria-label={`Remove ${player.name}`}
+                              title={`Remove ${player.name}`}
+                              data-remove-player={player.accountId}
+                              onClick={() => removeAt(index)}
+                            >
+                              <XIcon aria-hidden="true" />
+                            </Button>
+                          </Inline>
+                        </Inline>
+
+                        {/* The verdict first: stats won out of the stats scored, and who leads; then the record. */}
+                        {aggregate === null ? (
+                          <Text tone="muted">No matches on these filters</Text>
+                        ) : (
+                          <StatGroup variant="plain" size="sm" className="grid-cols-2 gap-2 @stat-trio:grid-cols-3">
+                            {!contest ? (
+                              // Nothing to win alone: the sample size instead.
+                              <Stat
+                                label="Matches"
+                                value={
+                                  aggregate ? (
+                                    formatPlayerMetricValue(aggregate.matches, "integer")
+                                  ) : (
+                                    <Skeleton className="h-6 w-10" />
+                                  )
+                                }
+                              />
+                            ) : (
+                              <Stat
+                                label="Stats won"
+                                value={
+                                  !settled || aggregate === undefined ? (
+                                    <Skeleton className="h-6 w-10" />
+                                  ) : players.length < 2 ? (
+                                    <NoValue label="Add an opponent to score" />
+                                  ) : (
+                                    <Inline gap={1} wrap="nowrap" asChild>
+                                      <span>
+                                        {leads && <CrownIcon aria-hidden="true" className="size-4" />}
+                                        {tally[index]}
+                                        <span className="text-muted-foreground">/{scored.length}</span>
+                                        {leads && (
+                                          <span className="sr-only">
+                                            , {leaders.length > 1 ? "tied lead" : "leads"}
+                                          </span>
+                                        )}
+                                      </span>
+                                    </Inline>
+                                  )
+                                }
+                              />
+                            )}
+                            <Stat
+                              label="Win rate"
+                              value={
+                                aggregate ? formatPercent(aggregate.winRate, 1) : <Skeleton className="h-6 w-14" />
+                              }
+                            />
+                            {/* A narrow card leaves the KDA to the table below. */}
+                            <Stat
+                              className="hidden @stat-trio:flex"
+                              label="KDA"
+                              value={
+                                aggregate ? (
+                                  formatPlayerMetricValue(aggregate.kda, "decimal2")
+                                ) : (
+                                  <Skeleton className="h-6 w-12" />
                                 )
                               }
                             />
-                          )}
-                          <Stat
-                            label="Win rate"
-                            value={aggregate ? formatPercent(aggregate.winRate, 1) : <Skeleton className="h-6 w-14" />}
-                          />
-                          {/* A narrow card leaves the KDA to the table below. */}
-                          <Stat
-                            className="hidden @stat-trio:flex"
-                            label="KDA"
-                            value={
-                              aggregate ? (
-                                formatPlayerMetricValue(aggregate.kda, "decimal2")
-                              ) : (
-                                <Skeleton className="h-6 w-12" />
-                              )
-                            }
-                          />
-                        </StatGroup>
-                      )}
-                      {aggregate && (
-                        <Text variant="caption" tone="muted" numeric="tabular" wrap="truncate">
-                          {formatPlayerMetricValue(aggregate.matches, "integer")} matches ·{" "}
-                          {[aggregate.kills, aggregate.deaths, aggregate.assists]
-                            .map((value) => formatPlayerMetricValue(value, "decimal1"))
-                            .join(" / ")}{" "}
-                          K/D/A
-                        </Text>
-                      )}
+                          </StatGroup>
+                        )}
+                        {aggregate && (
+                          <Text variant="caption" tone="muted" numeric="tabular" wrap="truncate">
+                            {formatPlayerMetricValue(aggregate.matches, "integer")} matches ·{" "}
+                            {[aggregate.kills, aggregate.deaths, aggregate.assists]
+                              .map((value) => formatPlayerMetricValue(value, "decimal1"))
+                              .join(" / ")}{" "}
+                            K/D/A
+                          </Text>
+                        )}
 
-                      {/* Without matches on the filters there are no heroes or results to show. */}
-                      {aggregate !== null && (
-                        <Inline gap={3} justify="between" align="end">
-                          {/* On one hero's filter every player's most played is that hero. */}
-                          {filters.heroId == null && (
-                            <Stack gap={1}>
-                              <Text variant="caption" tone="muted">
-                                Most played
-                              </Text>
-                              <Inline gap={1} wrap="nowrap">
-                                {aggregate === undefined ? (
-                                  <Skeleton className="h-7 w-24" />
-                                ) : aggregate === null ? (
-                                  <NoValue />
-                                ) : (
-                                  topHeroes(rows, player.accountId).map((row) => (
-                                    <Tooltip
-                                      key={row.hero_id}
-                                      content={
-                                        <TooltipStats variant="plain">
-                                          <TooltipStat label="Matches" value={row.matches_played} />
-                                          <TooltipStat
-                                            label="Win rate"
-                                            value={formatPercent(row.wins / row.matches_played, 0)}
+                        {/* Without matches on the filters there are no heroes or results to show. */}
+                        {aggregate !== null && (
+                          <Inline gap={3} justify="between" align="end">
+                            {/* On one hero's filter every player's most played is that hero. */}
+                            {filters.heroId == null && (
+                              <Stack gap={1}>
+                                <Text variant="caption" tone="muted">
+                                  Most played
+                                </Text>
+                                <Inline gap={1} wrap="nowrap">
+                                  {aggregate === undefined ? (
+                                    <Skeleton className="h-7 w-24" />
+                                  ) : aggregate === null ? (
+                                    <NoValue />
+                                  ) : (
+                                    topHeroes(rows, player.accountId).map((row) => (
+                                      <Tooltip
+                                        key={row.hero_id}
+                                        content={
+                                          <TooltipStats variant="plain">
+                                            <TooltipStat label="Matches" value={row.matches_played} />
+                                            <TooltipStat
+                                              label="Win rate"
+                                              value={formatPercent(row.wins / row.matches_played, 0)}
+                                            />
+                                          </TooltipStats>
+                                        }
+                                      >
+                                        <TooltipTarget>
+                                          <HeroImage
+                                            heroId={row.hero_id}
+                                            shape="rounded"
+                                            ring="border"
+                                            className="size-7"
                                           />
-                                        </TooltipStats>
-                                      }
-                                    >
-                                      <TooltipTarget>
-                                        <HeroImage
-                                          heroId={row.hero_id}
-                                          shape="rounded"
-                                          ring="border"
-                                          className="size-7"
-                                        />
-                                      </TooltipTarget>
-                                    </Tooltip>
-                                  ))
-                                )}
-                              </Inline>
-                            </Stack>
-                          )}
-                          <Stack gap={1} align="end">
-                            <Text variant="caption" tone="muted">
-                              Last {FORM_LENGTH}
-                            </Text>
-                            {history?.isError ? (
-                              <NoValue label="Match history unavailable" />
-                            ) : form === undefined ? (
-                              <Skeleton className="h-3 w-24" />
-                            ) : form.length === 0 ? (
-                              <NoValue label="No matches" />
-                            ) : (
-                              <FormDots form={form} />
+                                        </TooltipTarget>
+                                      </Tooltip>
+                                    ))
+                                  )}
+                                </Inline>
+                              </Stack>
                             )}
-                          </Stack>
-                        </Inline>
-                      )}
-                    </Stack>
-                  </CardContent>
-                </li>
-              </Card>
+                            <Stack gap={1} align="end">
+                              <Text variant="caption" tone="muted">
+                                Last {FORM_LENGTH}
+                              </Text>
+                              {history?.isError ? (
+                                <NoValue label="Match history unavailable" />
+                              ) : form === undefined ? (
+                                <Skeleton className="h-3 w-24" />
+                              ) : form.length === 0 ? (
+                                <NoValue label="No matches" />
+                              ) : (
+                                <FormDots form={form} />
+                              )}
+                            </Stack>
+                          </Inline>
+                        )}
+                      </Stack>
+                    </CardContent>
+                  </li>
+                </Card>
+              </ReorderItem>
             );
           })}
           {hasSlot && (

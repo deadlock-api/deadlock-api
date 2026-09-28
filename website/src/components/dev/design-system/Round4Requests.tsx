@@ -3,9 +3,10 @@ import { useState } from "react";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { Button } from "~/components/ui/button";
+import { Card, CardContent } from "~/components/ui/card";
 import { moveItem, useReorder } from "~/components/ui/hooks/use-reorder";
 import { Input } from "~/components/ui/input";
-import { ReorderHandle } from "~/components/ui/reorder-handle";
+import { ReorderHandle, ReorderItem } from "~/components/ui/reorder-handle";
 import { SelectionBox } from "~/components/ui/selection-box";
 import { SharePreview } from "~/components/ui/share-preview";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -49,6 +50,31 @@ function ReorderDemo() {
       <span className="sr-only" aria-live="polite">
         {reorder.announcement}
       </span>
+    </div>
+  );
+}
+
+/** Cards that reorder as boxes: `boxProps` on each ReorderItem previews the drop while dragging. */
+function ReorderBoxDemo() {
+  const [names, setNames] = useState(["Infernus", "Haze", "Seven", "Paradox"]);
+  const reorder = useReorder({
+    count: names.length,
+    itemLabel: (index) => names[index],
+    onMove: (from, to) => setNames((current) => moveItem(current, from, to)),
+  });
+  return (
+    <div className="grid grid-cols-2 gap-3 @md:grid-cols-4">
+      {names.map((name, index) => (
+        <ReorderItem key={name} asChild {...reorder.boxProps(index)}>
+          <Card size="sm">
+            <CardContent>
+              <ReorderHandle aria-label={`Move ${name}`} {...reorder.itemProps(index)}>
+                <span>{name}</span>
+              </ReorderHandle>
+            </CardContent>
+          </Card>
+        </ReorderItem>
+      ))}
     </div>
   );
 }
@@ -199,10 +225,13 @@ export function Round4Requests() {
       <Specimen
         name="ReorderHandle"
         source="ui/reorder-handle + ui/hooks/use-reorder"
-        note="The part of an item you grab to move it. useReorder (count, onMove(from, to), axis, itemLabel) gives each handle its props: drag it by mouse, touch or pen over another item and release to move it there, or focus it and press the arrow keys to move it one place. The dragged item dims, the drop target rings in primary, and itemProps' announcement goes in a polite live region. Try it."
+        note="The part of an item you grab to move it. useReorder (count, onMove(from, to), axis, itemLabel) gives each handle its props: drag it by mouse, touch or pen over another item and release to move it there, or focus it and press the arrow keys to move it one place. Handles alone: the dragged one dims and the drop target rings in primary. With boxProps on a ReorderItem around each item, the dragged box lifts and follows the pointer and the others slide to where they would land. The announcement goes in a polite live region. Try it."
       >
         <Variants label="Drag a name, or focus one and press ← →">
           <ReorderDemo />
+        </Variants>
+        <Variants label="ReorderItem boxes: the dragged card follows the pointer, the others make room">
+          <ReorderBoxDemo />
         </Variants>
       </Specimen>
 

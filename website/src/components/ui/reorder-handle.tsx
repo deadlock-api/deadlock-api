@@ -1,4 +1,5 @@
 import { GripVerticalIcon } from "lucide-react";
+import { Slot } from "radix-ui";
 import { useId } from "react";
 
 import { FOCUS_RING } from "~/components/ui/recipes";
@@ -42,5 +43,30 @@ export function ReorderHandle({
         Drag, or press the arrow keys, to move.
       </span>
     </>
+  );
+}
+
+/**
+ * The box of a reorderable item, the thing that moves: spread `useReorder().boxProps(index)` on it (or wrap the item
+ * with `asChild`). While its handle is dragged it lifts above the others and follows the pointer; the other boxes
+ * slide to the places they would take, so the drop is previewed before it happens.
+ */
+export function ReorderItem({
+  asChild = false,
+  className,
+  ...props
+}: React.ComponentProps<"div"> & { asChild?: boolean }) {
+  const Comp = asChild ? Slot.Root : "div";
+  return (
+    <Comp
+      data-slot="reorder-item"
+      className={cn(
+        "relative data-reordering:transition-transform data-reordering:duration-normal data-reordering:ease-standard",
+        "data-dragging:z-20 data-dragging:shadow-lg data-dragging:ring-2 data-dragging:ring-primary/40 data-dragging:transition-none",
+        "data-settling:transition-none",
+        className,
+      )}
+      {...props}
+    />
   );
 }

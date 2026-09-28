@@ -65,6 +65,7 @@ export const NAV: readonly NavChapter[] = [
           "Input spinners",
           "SharePreview",
           "ReorderHandle",
+          "ReorderItem",
           "Input",
           "SearchInput",
           "Textarea",
