@@ -275,6 +275,8 @@
   --container-slot-pair: 6rem;
   /* The width at which a player card fits three headline stats in a row rather than two. */
   --container-stat-trio: 14rem;
+  /* The width at which a list row (an item's icon and name) fits most names on one line; narrower, they take two. */
+  --container-name-line: 12rem;
   /* Above Tailwind's @7xl (80rem), for a page wide enough for three dashboard columns (a 1920 or 2560 screen). */
   --container-8xl: 96rem;
   --container-9xl: 120rem;

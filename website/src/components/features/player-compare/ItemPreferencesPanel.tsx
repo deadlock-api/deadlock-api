@@ -211,7 +211,7 @@ function ItemRow({
             <Stack gap={0} className="flex-1">
               {/* Two lines before an ellipsis: a narrow column still names the item. In a column narrow enough to wrap,
                   every name holds two lines, so the rows line up across the players' columns. */}
-              <Text wrap="clamp-2" className="min-h-two-lines @3xs:min-h-0">
+              <Text wrap="clamp-2" className="min-h-two-lines @name-line:line-clamp-1 @name-line:min-h-0">
                 {name}
               </Text>
               <Text variant="caption" tone="muted" numeric="tabular" wrap="truncate">

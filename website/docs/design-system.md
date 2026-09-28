@@ -116,7 +116,7 @@ Container sizes: Tailwind's `@3xs` and up, plus `@5xs` (3.75rem) and `@4xs` (5re
 dense board, such as the swap hint in a draft slot that drops its arrow and then its number as the slot narrows, and
 `@slot-pair` (6rem), the width at which a lane card fits its two draft slots side by side rather than stacked, and
 `@stat-trio` (14rem), the width at which a player card fits three headline stats in a row rather than two.
-`@8xl` (96rem) and `@9xl` (120rem) extend the scale past `@7xl` for pages wide enough for three dashboard columns.
+`@name-line` (12rem), the width at which a list row fits most names on one line. `@8xl` (96rem) and `@9xl` (120rem) extend the scale past `@7xl` for pages wide enough for three dashboard columns.
 
 Radius: controls `rounded-md`, nested blocks `rounded-lg`, cards and panels `rounded-xl`, pills `rounded-full`.
 Spacing between page blocks comes from `PageShell`, never from margins on the blocks.
