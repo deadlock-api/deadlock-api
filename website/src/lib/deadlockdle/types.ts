@@ -15,4 +15,11 @@ export interface StreakState {
   gamesWon: number;
 }
 
-export type GameMode = "guess-hero" | "guess-item" | "guess-sound" | "guess-ability" | "item-stats" | "trivia";
+export type GameMode =
+  | "guess-hero"
+  | "guess-item"
+  | "guess-sound"
+  | "guess-ability"
+  | "item-stats"
+  | "trivia"
+  | "higher-lower";

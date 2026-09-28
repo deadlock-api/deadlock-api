@@ -94,6 +94,7 @@ import { Route as GamesDeadlockdleGuessAbilityRouteImport } from './routes/games
 import { Route as GamesDeadlockdleGuessHeroRouteImport } from './routes/games_.deadlockdle/guess-hero'
 import { Route as GamesDeadlockdleGuessItemRouteImport } from './routes/games_.deadlockdle/guess-item'
 import { Route as GamesDeadlockdleGuessSoundRouteImport } from './routes/games_.deadlockdle/guess-sound'
+import { Route as GamesDeadlockdleHigherLowerRouteImport } from './routes/games_.deadlockdle/higher-lower'
 import { Route as GamesDeadlockdleItemStatsRouteImport } from './routes/games_.deadlockdle/item-stats'
 import { Route as GamesDeadlockdleTriviaRouteImport } from './routes/games_.deadlockdle/trivia'
 import { Route as GamesFlashcardsIndexRouteImport } from './routes/games_.flashcards/index'
@@ -541,6 +542,12 @@ const GamesDeadlockdleGuessSoundRoute =
     path: '/guess-sound',
     getParentRoute: () => GamesDeadlockdleRoute,
   } as any)
+const GamesDeadlockdleHigherLowerRoute =
+  GamesDeadlockdleHigherLowerRouteImport.update({
+    id: '/higher-lower',
+    path: '/higher-lower',
+    getParentRoute: () => GamesDeadlockdleRoute,
+  } as any)
 const GamesDeadlockdleItemStatsRoute =
   GamesDeadlockdleItemStatsRouteImport.update({
     id: '/item-stats',
@@ -677,6 +684,7 @@ export interface FileRoutesByFullPath {
   '/games/deadlockdle/guess-hero': typeof GamesDeadlockdleGuessHeroRoute
   '/games/deadlockdle/guess-item': typeof GamesDeadlockdleGuessItemRoute
   '/games/deadlockdle/guess-sound': typeof GamesDeadlockdleGuessSoundRoute
+  '/games/deadlockdle/higher-lower': typeof GamesDeadlockdleHigherLowerRoute
   '/games/deadlockdle/item-stats': typeof GamesDeadlockdleItemStatsRoute
   '/games/deadlockdle/trivia': typeof GamesDeadlockdleTriviaRoute
   '/games/flashcards/heroes': typeof GamesFlashcardsHeroesRoute
@@ -764,6 +772,7 @@ export interface FileRoutesByTo {
   '/games/deadlockdle/guess-hero': typeof GamesDeadlockdleGuessHeroRoute
   '/games/deadlockdle/guess-item': typeof GamesDeadlockdleGuessItemRoute
   '/games/deadlockdle/guess-sound': typeof GamesDeadlockdleGuessSoundRoute
+  '/games/deadlockdle/higher-lower': typeof GamesDeadlockdleHigherLowerRoute
   '/games/deadlockdle/item-stats': typeof GamesDeadlockdleItemStatsRoute
   '/games/deadlockdle/trivia': typeof GamesDeadlockdleTriviaRoute
   '/games/flashcards/heroes': typeof GamesFlashcardsHeroesRoute
@@ -862,6 +871,7 @@ export interface FileRoutesById {
   '/games_/deadlockdle/guess-hero': typeof GamesDeadlockdleGuessHeroRoute
   '/games_/deadlockdle/guess-item': typeof GamesDeadlockdleGuessItemRoute
   '/games_/deadlockdle/guess-sound': typeof GamesDeadlockdleGuessSoundRoute
+  '/games_/deadlockdle/higher-lower': typeof GamesDeadlockdleHigherLowerRoute
   '/games_/deadlockdle/item-stats': typeof GamesDeadlockdleItemStatsRoute
   '/games_/deadlockdle/trivia': typeof GamesDeadlockdleTriviaRoute
   '/games_/flashcards/heroes': typeof GamesFlashcardsHeroesRoute
@@ -961,6 +971,7 @@ export interface FileRouteTypes {
     | '/games/deadlockdle/guess-hero'
     | '/games/deadlockdle/guess-item'
     | '/games/deadlockdle/guess-sound'
+    | '/games/deadlockdle/higher-lower'
     | '/games/deadlockdle/item-stats'
     | '/games/deadlockdle/trivia'
     | '/games/flashcards/heroes'
@@ -1048,6 +1059,7 @@ export interface FileRouteTypes {
     | '/games/deadlockdle/guess-hero'
     | '/games/deadlockdle/guess-item'
     | '/games/deadlockdle/guess-sound'
+    | '/games/deadlockdle/higher-lower'
     | '/games/deadlockdle/item-stats'
     | '/games/deadlockdle/trivia'
     | '/games/flashcards/heroes'
@@ -1145,6 +1157,7 @@ export interface FileRouteTypes {
     | '/games_/deadlockdle/guess-hero'
     | '/games_/deadlockdle/guess-item'
     | '/games_/deadlockdle/guess-sound'
+    | '/games_/deadlockdle/higher-lower'
     | '/games_/deadlockdle/item-stats'
     | '/games_/deadlockdle/trivia'
     | '/games_/flashcards/heroes'
@@ -1807,6 +1820,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GamesDeadlockdleGuessSoundRouteImport
       parentRoute: typeof GamesDeadlockdleRoute
     }
+    '/games_/deadlockdle/higher-lower': {
+      id: '/games_/deadlockdle/higher-lower'
+      path: '/higher-lower'
+      fullPath: '/games/deadlockdle/higher-lower'
+      preLoaderRoute: typeof GamesDeadlockdleHigherLowerRouteImport
+      parentRoute: typeof GamesDeadlockdleRoute
+    }
     '/games_/deadlockdle/item-stats': {
       id: '/games_/deadlockdle/item-stats'
       path: '/item-stats'
@@ -2038,6 +2058,7 @@ interface GamesDeadlockdleRouteChildren {
   GamesDeadlockdleGuessHeroRoute: typeof GamesDeadlockdleGuessHeroRoute
   GamesDeadlockdleGuessItemRoute: typeof GamesDeadlockdleGuessItemRoute
   GamesDeadlockdleGuessSoundRoute: typeof GamesDeadlockdleGuessSoundRoute
+  GamesDeadlockdleHigherLowerRoute: typeof GamesDeadlockdleHigherLowerRoute
   GamesDeadlockdleItemStatsRoute: typeof GamesDeadlockdleItemStatsRoute
   GamesDeadlockdleTriviaRoute: typeof GamesDeadlockdleTriviaRoute
   GamesDeadlockdleIndexRoute: typeof GamesDeadlockdleIndexRoute
@@ -2048,6 +2069,7 @@ const GamesDeadlockdleRouteChildren: GamesDeadlockdleRouteChildren = {
   GamesDeadlockdleGuessHeroRoute: GamesDeadlockdleGuessHeroRoute,
   GamesDeadlockdleGuessItemRoute: GamesDeadlockdleGuessItemRoute,
   GamesDeadlockdleGuessSoundRoute: GamesDeadlockdleGuessSoundRoute,
+  GamesDeadlockdleHigherLowerRoute: GamesDeadlockdleHigherLowerRoute,
   GamesDeadlockdleItemStatsRoute: GamesDeadlockdleItemStatsRoute,
   GamesDeadlockdleTriviaRoute: GamesDeadlockdleTriviaRoute,
   GamesDeadlockdleIndexRoute: GamesDeadlockdleIndexRoute,

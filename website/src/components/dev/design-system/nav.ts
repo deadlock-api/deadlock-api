@@ -299,6 +299,8 @@ export const NAV: readonly NavChapter[] = [
         title: "Mini-games",
         items: [
           "AnswerOption",
+          "Versus",
+          "VersusChoice",
           "GamePage",
           "GameTile",
           "GameTile and GamePage heading level",

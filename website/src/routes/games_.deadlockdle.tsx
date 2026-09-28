@@ -38,7 +38,8 @@ function DeadlockdleLayout() {
         </ClientOnly>
       )}
 
-      <div className="theme-terminal fixed inset-e-3 top-3 z-50 md:inset-e-4 md:top-4">
+      {/* A custom cursor means nothing on a touch screen, where the toggle only covered the breadcrumb at 320px. */}
+      <div className="theme-terminal fixed inset-e-3 top-3 z-50 md:inset-e-4 md:top-4 pointer-coarse:hidden">
         <Button
           variant="outline"
           size="icon"

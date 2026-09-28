@@ -10,6 +10,8 @@ const answerOptionVariants = cva(
   [
     FOCUS_RING_BORDER,
     "cursor-target flex items-center border font-mono transition-colors duration-fast disabled:cursor-default aria-disabled:cursor-default",
+    // Icons in the label keep their size when a long label wraps.
+    "[&_svg]:shrink-0",
   ],
   {
     variants: {
@@ -25,6 +27,19 @@ const answerOptionVariants = cva(
         row: "w-full justify-between gap-3 px-4 py-3 text-start text-sm font-medium",
         /** One of a few short choices sharing a line. */
         tile: "flex-1 justify-center px-2 py-2.5 text-center text-xs font-semibold",
+        /** One of two or three big choices sharing a line, the main action of a round, with a result mark. */
+        /**
+         * Inside a `Versus` board narrower than 28rem (Higher / Lower in a side's `VersusActions`) it tightens its gaps,
+         * padding and type, and drops the keycap (the key still works), so both fit a side down to a 320px screen.
+         * Outside a board the container query never matches.
+         */
+        choice:
+          "min-h-11 min-w-0 flex-1 justify-center gap-2 px-3 py-3 text-center text-sm font-semibold text-balance @max-md/versus:gap-1 @max-md/versus:px-1.5 @max-md/versus:text-xs",
+        /**
+         * A whole card is the answer (a contender of `VersusChoice`): the children lay themselves out in a column, the
+         * keycap and the result mark sit in the top corners over the padding, so neither moves the content.
+         */
+        card: "relative min-h-11 w-full min-w-0 flex-col items-center justify-start gap-3 px-2 py-3 text-center",
       },
       /** The category an answer belongs to, for a quiz whose choices are item categories. */
       tone: {
@@ -61,7 +76,8 @@ interface AnswerOptionProps
 }
 
 /**
- * One answer of a quiz, in every game. The result is carried by a mark as well as by color.
+ * One answer of a quiz, in every game. The result is carried by a mark as well as by color. `row` and `choice` keep the
+ * mark's slot in every state, empty until the reveal, so revealing an answer never changes its width, height or wrap.
  *
  * While an answer is revealed the options take `aria-disabled` rather than `disabled`: they stay focusable, so focus
  * stays on the answer just picked instead of falling to <body>, and a click or Enter on them does nothing.
@@ -92,18 +108,45 @@ export function AnswerOption({
       onClick={locked ? undefined : onClick}
       {...props}
     >
-      {shortcut ? (
-        <span className="flex min-w-0 items-center gap-3">
-          <Kbd aria-hidden="true" className="hidden pointer-fine:inline-flex">
-            {shortcut}
-          </Kbd>
+      {variant === "card" ? (
+        <>
+          {shortcut && (
+            <Kbd aria-hidden="true" className="absolute inset-s-2 top-2 hidden pointer-fine:inline-flex">
+              {shortcut}
+            </Kbd>
+          )}
           {children}
-        </span>
+          <ResultMark state={state ?? "idle"} className="absolute inset-e-2 top-2" />
+        </>
       ) : (
-        children
+        <>
+          {shortcut ? (
+            <span className="flex min-w-0 items-center gap-3 @max-md/versus:gap-1">
+              <Kbd
+                aria-hidden="true"
+                className={cn(
+                  "hidden pointer-fine:inline-flex",
+                  variant === "choice" && "pointer-fine:@max-md/versus:hidden",
+                )}
+              >
+                {shortcut}
+              </Kbd>
+              {children}
+            </span>
+          ) : (
+            children
+          )}
+          {variant !== "tile" && <ResultMark state={state ?? "idle"} />}
+        </>
       )}
-      {variant === "row" && state === "correct" && <Check aria-label="Correct" className="size-4 shrink-0" />}
-      {variant === "row" && state === "wrong" && <X aria-label="Wrong" className="size-4 shrink-0" />}
     </motion.button>
   );
+}
+
+/** The result mark, or an empty slot of the same size before the reveal. */
+function ResultMark({ state, className }: { state: AnswerOptionState; className?: string }) {
+  const mark = cn("size-4 shrink-0", className);
+  if (state === "correct") return <Check data-slot="answer-option-mark" aria-label="Correct" className={mark} />;
+  if (state === "wrong") return <X data-slot="answer-option-mark" aria-label="Wrong" className={mark} />;
+  return <span data-slot="answer-option-mark" aria-hidden="true" className={mark} />;
 }

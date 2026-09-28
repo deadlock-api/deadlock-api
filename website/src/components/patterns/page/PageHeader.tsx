@@ -61,7 +61,15 @@ export function PageHeader({
     >
       <div className={cn("flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2", centered && "justify-center")}>
         {media}
-        <div className={cn("flex min-w-0 flex-1 flex-col gap-1", centered && "items-center")}>
+        {/* Beside actions and no media, the title keeps at least 16rem, so on a narrow page the actions wrap below it
+            instead of squeezing it into a column of single words. */}
+        <div
+          className={cn(
+            "flex min-w-0 flex-col gap-1",
+            actions && !media ? "grow basis-3xs" : "flex-1",
+            centered && "items-center",
+          )}
+        >
           {figure && (
             <p data-slot="page-header-figure" className="text-7xl font-bold tracking-tight text-primary tabular-nums">
               {figure}

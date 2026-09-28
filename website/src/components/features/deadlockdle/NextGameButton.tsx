@@ -15,6 +15,7 @@ const GAMES: { mode: GameMode; title: string; path: string }[] = [
   { mode: "guess-ability", title: "Guess the Ability", path: "/games/deadlockdle/guess-ability" },
   { mode: "item-stats", title: "Item Stats Quiz", path: "/games/deadlockdle/item-stats" },
   { mode: "trivia", title: "Deadlock Trivia", path: "/games/deadlockdle/trivia" },
+  { mode: "higher-lower", title: "Higher or Lower", path: "/games/deadlockdle/higher-lower" },
 ];
 
 export function NextGameButton({ currentMode, date = getTodayDate() }: { currentMode: GameMode; date?: string }) {

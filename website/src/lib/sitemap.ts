@@ -38,6 +38,7 @@ const STATIC_ENTRIES: SitemapEntry[] = [
   { path: "/games/deadlockdle/guess-ability", changefreq: "weekly", priority: 0.6 },
   { path: "/games/deadlockdle/item-stats", changefreq: "weekly", priority: 0.6 },
   { path: "/games/deadlockdle/trivia", changefreq: "weekly", priority: 0.6 },
+  { path: "/games/deadlockdle/higher-lower", changefreq: "weekly", priority: 0.6 },
   { path: "/games/flashcards", changefreq: "weekly", priority: 0.6 },
   { path: "/games/flashcards/heroes", changefreq: "weekly", priority: 0.6 },
   { path: "/games/flashcards/items", changefreq: "weekly", priority: 0.6 },
