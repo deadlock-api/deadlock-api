@@ -20,6 +20,7 @@ import { steamProfileQueryOptions, trackerHeroStatsQueryOptions } from "~/querie
 import { AddPlayerControls } from "./AddPlayerControls";
 import { HeadToHeadTable } from "./HeadToHeadTable";
 import { PercentileComparison } from "./PercentileComparison";
+import { PerformanceTrendPanel } from "./PerformanceTrendPanel";
 import { PlayerCards } from "./PlayerCards";
 import { PlaystyleRadarPanel } from "./PlaystyleRadarPanel";
 import { RankHistoryPanel } from "./RankHistoryPanel";
@@ -148,10 +149,12 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             </div>
           </div>
           {/* Wide: the climb and the heroes in common side by side, so the page stays short. */}
-          <div className={cn("grid items-start gap-4", showSharedHeroes && "@4xl:grid-cols-2")}>
+          {/* Over time, side by side: the climb and the form. */}
+          <div className="grid items-start gap-4 @4xl:grid-cols-2">
             <RankHistoryPanel players={players} filters={filters} histories={histories} />
-            {showSharedHeroes && <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />}
+            <PerformanceTrendPanel players={players} histories={histories} />
           </div>
+          {showSharedHeroes && <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />}
           <PercentileComparison players={players} filters={filters} />
         </>
       )}
