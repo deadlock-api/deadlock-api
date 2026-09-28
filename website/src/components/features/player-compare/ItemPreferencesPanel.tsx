@@ -1,8 +1,9 @@
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ItemStats } from "deadlock_api_client";
+import { useState } from "react";
 
 import { ItemImage } from "~/components/domain/assets/ItemImage";
-import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
+import { Panel, PanelBody, PanelHeader, PanelShowMore } from "~/components/patterns/panel/Panel";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Grid } from "~/components/ui/grid";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -37,6 +38,7 @@ type Column =
 
 /** Each player's most bought items of tier 2 and up on the page's filters, with how often and how well. */
 export function ItemPreferencesPanel({ players, filters }: { players: ComparedPlayer[]; filters: CompareFilters }) {
+  const [expanded, setExpanded] = useState(false);
   const itemsQuery = useQuery(itemUpgradesQueryOptions);
   const client = useQueryClient();
   const statsQueries = useQueries({
@@ -59,22 +61,31 @@ export function ItemPreferencesPanel({ players, filters }: { players: ComparedPl
     }
     if (player.aggregate === null) return { state: "ready", items: [] };
     if (!query?.data || !itemsQuery.data || player.aggregate === undefined) return { state: "loading" };
-    return { state: "ready", items: favoriteItems(query.data, itemsQuery.data, player.aggregate.matches) };
+    // Every item that qualifies; the panel shows the first few until "Show all".
+    return { state: "ready", items: favoriteItems(query.data, itemsQuery.data, player.aggregate.matches, Infinity) };
   });
 
   if (columns.every((column) => column.state === "ready" && column.items.length === 0)) return null;
 
   const count = Math.min(Math.max(players.length, 2), 5) as keyof typeof COLUMNS;
+  const longest = Math.max(0, ...columns.map((column) => (column.state === "ready" ? column.items.length : 0)));
   return (
     <Panel>
       <PanelHeader size="sm" title="Favorite items" />
       <PanelBody size="sm">
         <Grid columns={COLUMNS[count]} gap={4}>
           {players.map((player, index) => (
-            <PlayerItems key={player.accountId} player={player} column={columns[index]} itemsById={itemsById} />
+            <PlayerItems
+              key={player.accountId}
+              player={player}
+              column={columns[index]}
+              itemsById={itemsById}
+              expanded={expanded}
+            />
           ))}
         </Grid>
       </PanelBody>
+      {longest > FAVORITE_ITEM_COUNT && <PanelShowMore open={expanded} onOpenChange={setExpanded} total={longest} />}
     </Panel>
   );
 }
@@ -83,10 +94,13 @@ function PlayerItems({
   player,
   column,
   itemsById,
+  expanded,
 }: {
   player: ComparedPlayer;
   column: Column;
   itemsById: ReadonlyMap<number, SlimUpgrade>;
+  /** Every item, rather than the first few. */
+  expanded: boolean;
 }) {
   return (
     <Stack gap={1.5}>
@@ -107,13 +121,13 @@ function PlayerItems({
           <ul aria-label={`${possessive(player.name)} favorite items`}>
             {column.state === "loading"
               ? Array.from({ length: FAVORITE_ITEM_COUNT }, (_, index) => <ItemRowSkeleton key={index} />)
-              : column.items.map((entry, index) => (
+              : (expanded ? column.items : column.items.slice(0, FAVORITE_ITEM_COUNT)).map((entry, index) => (
                   <ItemRow
                     key={entry.itemId}
                     entry={entry}
                     item={itemsById.get(entry.itemId)}
                     // A narrow panel (a phone, the columns stacked) keeps each player's top five.
-                    className={index >= NARROW_ITEM_COUNT ? "hidden @md:list-item" : undefined}
+                    className={!expanded && index >= NARROW_ITEM_COUNT ? "hidden @md:list-item" : undefined}
                   />
                 ))}
           </ul>
