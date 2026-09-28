@@ -4,6 +4,7 @@ import { GitCompareArrows } from "lucide-react";
 import { SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
+import { Box } from "~/components/ui/box";
 import { Grid } from "~/components/ui/grid";
 import { Stack } from "~/components/ui/stack";
 import { aggregateHeroStats } from "~/lib/player-compare";
@@ -143,12 +144,14 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
           >
             <HeadToHeadTable players={players} />
             {/* Its own width decides: stacked under a wide table, the side panels pair up rather than stretch. */}
+            {/* Paired, the radar spans both rows beside the share card and the records; stacked, the records come
+                last, since they only appear once loaded and with shared matches, and so move nothing below them. */}
             <Grid columns={{ base: 1, xl: 2 }} gap={4} className="items-start">
-              <Stack gap={4}>
-                <ShareComparison filters={filters} />
-                {accountIds.length >= 2 && <TogetherAgainstPanel players={players} histories={histories} />}
-              </Stack>
-              <PlaystyleRadarPanel players={players} filters={filters} />
+              <ShareComparison filters={filters} />
+              <Box className="@4xl:row-span-2">
+                <PlaystyleRadarPanel players={players} filters={filters} />
+              </Box>
+              {accountIds.length >= 2 && <TogetherAgainstPanel players={players} histories={histories} />}
             </Grid>
           </Grid>
           {/* Over time, side by side: the climb and the form. */}
