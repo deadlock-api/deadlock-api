@@ -131,21 +131,30 @@ function RecordValue({
   if (heroId != null) {
     return (
       <Inline gap={1.5} wrap="nowrap" justify="end" title={detail}>
-        {/* At the cell's start, the value at its end: icons and numbers each line up down the column. */}
-        <HeroImage heroId={heroId} shape="circle" className="me-auto size-5" />
-        <RowValue won={won}>{children}</RowValue>
+        {/* The hero right before a value of fixed width: heroes and numbers each line up down the column. */}
+        <HeroImage heroId={heroId} shape="circle" className="size-5 shrink-0" />
+        <RowValue won={won} width="fixed">
+          {children}
+        </RowValue>
         {detail && <span className="sr-only">{detail}</span>}
       </Inline>
     );
   }
-  if (!match) return <RowValue won={won}>{children}</RowValue>;
+  if (!match)
+    return (
+      <RowValue won={won} width="fixed">
+        {children}
+      </RowValue>
+    );
   const date = day.unix(match.startTime).utc().format("MMM D, YYYY");
   return (
     <Inline gap={1.5} wrap="nowrap" justify="end" title={date}>
       {/* The image's alt and title name the hero. */}
       {/* A narrow table keeps the numbers and gives the hero's room to the other players' columns. */}
-      <HeroImage heroId={match.heroId} shape="circle" className="me-auto hidden size-5 @xl/table:block" />
-      <RowValue won={won}>{children}</RowValue>
+      <HeroImage heroId={match.heroId} shape="circle" className="hidden size-5 shrink-0 @xl/table:block" />
+      <RowValue won={won} width="fixed">
+        {children}
+      </RowValue>
       <span className="sr-only">on {date}</span>
     </Inline>
   );

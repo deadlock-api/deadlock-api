@@ -5,6 +5,7 @@ import { Inline } from "~/components/ui/stack";
 import { StatusDot } from "~/components/ui/status-dot";
 import { TableHead } from "~/components/ui/table";
 import { Text } from "~/components/ui/text";
+import { cn } from "~/lib/utils";
 
 import type { ComparedPlayer } from "./types";
 
@@ -32,10 +33,22 @@ export function PlayerColumnHead({ player }: { player: ComparedPlayer }) {
  * the crowns sit in one column beside them. A phone-narrow table keeps the bold ink and drops the slot, so more players
  * fit.
  */
-export function RowValue({ won, children }: { won: boolean; children: React.ReactNode }) {
+export function RowValue({
+  won,
+  width = "auto",
+  children,
+}: {
+  won: boolean;
+  /** `fixed`: the value in a box of one width, so something before it (a hero) lines up down the column too. */
+  width?: "auto" | "fixed";
+  children: React.ReactNode;
+}) {
   return (
     <Inline gap={1} wrap="nowrap" justify="end">
-      <Text tone={won ? "default" : "muted"} className={won ? "font-semibold" : undefined}>
+      <Text
+        tone={won ? "default" : "muted"}
+        className={cn(won && "font-semibold", width === "fixed" && "w-16 shrink-0 text-end whitespace-nowrap")}
+      >
         {children}
       </Text>
       {won ? (
