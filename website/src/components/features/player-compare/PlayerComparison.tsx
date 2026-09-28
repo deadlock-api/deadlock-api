@@ -183,24 +183,27 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             <ActivityPanel players={players} histories={histories} by="weekday" />
           </Grid>
           {/* Heroes, items and together & against. Up to three players: heroes beside items, together & against under
-              both, and very wide all three in a row. Four or five players: the heroes table needs the full width for
-              its columns, items and together & against pair up under it. On one hero's filter there are no shared
-              heroes: items beside together & against. */}
-          <Grid gap={4} className={threeUp ? "@xl:grid-cols-2 @8xl:grid-cols-3" : "@xl:grid-cols-2"}>
-            {showSharedHeroes && (
-              <SharedHeroesTable
-                players={players}
-                rows={rows}
-                loading={heroStats.isPending}
-                className={players.length >= 4 ? "@xl:col-span-2" : undefined}
-              />
-            )}
+              both, and very wide all three in a row. Four or five players: each takes the full width, which their
+              columns need. On one hero's filter there are no shared heroes: items beside together & against. */}
+          <Grid
+            gap={4}
+            className={
+              players.length >= 4 ? undefined : threeUp ? "@xl:grid-cols-2 @8xl:grid-cols-3" : "@xl:grid-cols-2"
+            }
+          >
+            {showSharedHeroes && <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />}
             <ItemPreferencesPanel players={players} filters={filters} />
             {accountIds.length >= 2 && (
               <TogetherAgainstPanel
                 players={players}
                 histories={histories}
-                className={threeUp ? "@xl:col-span-2 @8xl:col-span-1" : showSharedHeroes ? "@xl:col-span-2" : undefined}
+                className={
+                  threeUp
+                    ? "@xl:col-span-2 @8xl:col-span-1"
+                    : players.length < 4 && (nobodyMet || showSharedHeroes)
+                      ? "@xl:col-span-2"
+                      : undefined
+                }
               />
             )}
           </Grid>
