@@ -130,6 +130,8 @@ export interface SharedMatchEntry extends PairMatchEntry {
   player_kills: number;
   player_deaths: number;
   player_assists: number;
+  net_worth: number;
+  match_duration_s: number;
 }
 
 export interface SharedMatchHistory {
@@ -144,6 +146,8 @@ export interface SharedMatchPlayer {
   kills: number;
   deaths: number;
   assists: number;
+  /** Souls at the end of the match. */
+  netWorth: number;
 }
 
 export interface SharedMatchTeam {
@@ -156,6 +160,8 @@ export interface SharedMatchTeam {
 export interface SharedMatch {
   matchId: number;
   startTime: number;
+  /** How long the match ran, in seconds. */
+  durationS: number;
   /** One team when the players were all teammates, two when some faced each other; the first player's team first. */
   teams: SharedMatchTeam[];
 }
@@ -190,10 +196,11 @@ export function recentSharedMatches(histories: readonly SharedMatchHistory[], li
         kills: entry.player_kills,
         deaths: entry.player_deaths,
         assists: entry.player_assists,
+        netWorth: entry.net_worth,
       });
     }
     const { entry } = players[0];
-    return { matchId: entry.match_id, startTime: entry.start_time, teams };
+    return { matchId: entry.match_id, startTime: entry.start_time, durationS: entry.match_duration_s, teams };
   });
 }
 

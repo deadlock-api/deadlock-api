@@ -29,6 +29,18 @@ import { toneOf } from "~/lib/tone";
 import type { ComparedPlayer } from "./types";
 import type { CompareMatchHistory } from "./useCompareMatchHistories";
 
+/** The optional columns of the pairs table. */
+interface PairColumns {
+  synergy: boolean;
+  duo: boolean;
+  against: boolean;
+}
+
+/** Souls as a match line reads them: "32.4k". */
+function compactSouls(value: number): string {
+  return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : formatStatValue(value, "integer");
+}
+
 /** The duo heroes column: only where the table is wide enough to spare it. */
 const DUO_COLUMN = "hidden text-end @2xl/table:table-cell";
 
@@ -70,6 +82,7 @@ function PairRow({
   a,
   b,
   duos,
+  columns,
   lastMetLabel,
 }: {
   pair: PlayerPair;
@@ -77,6 +90,8 @@ function PairRow({
   b: ComparedPlayer;
   /** The pair's most played hero pairings as teammates. */
   duos: readonly DuoHeroes[];
+  /** Which of the optional columns the table shows: those with something to say for some pair. */
+  columns: PairColumns;
   lastMetLabel: (unix: number) => string;
 }) {
   const { together, against } = pair;
@@ -112,61 +127,69 @@ function PairRow({
           <NoValue label="Never on the same team" />
         )}
       </TableCell>
-      <TableCell className="text-end">
-        {/* Win rate together minus the average of each one's win rate apart, in points. */}
-        {synergy == null ? (
-          <NoValue label="Too few matches together" />
-        ) : (
-          <>
-            {/* Delta draws nothing for a change that rounds to zero; an even duo still reads as one. */}
-            {Math.round(synergy * 100) === 0 ? (
-              <Text tone="muted">±0 pts</Text>
-            ) : (
-              <Delta value={synergy} digits={0} unit=" pts" />
-            )}
-            <span className="sr-only"> win rate together compared with apart</span>
-          </>
-        )}
-      </TableCell>
-      <TableCell className={DUO_COLUMN}>
-        {duos.length === 0 ? (
-          <NoValue label="No hero pairing played three times" />
-        ) : (
-          <Stack gap={0.5} align="end">
-            {duos.map((duo) => (
-              <Inline key={`${duo.aHero}-${duo.bHero}`} gap={1} wrap="nowrap" justify="end">
-                <HeroImage heroId={duo.aHero} shape="circle" className="size-5" />
-                <HeroImage heroId={duo.bHero} shape="circle" className="size-5" />
-                <Text variant="caption" tone="muted" numeric="tabular" className="whitespace-nowrap">
-                  {plural(duo.matches, "match")} ·{" "}
-                  <Text tone={toneOf(duo.wins / duo.matches, 0.5)}>{formatPercent(duo.wins / duo.matches, 0)} WR</Text>
+      {columns.synergy && (
+        <TableCell className="text-end">
+          {/* Win rate together minus the average of each one's win rate apart, in points. */}
+          {synergy == null ? (
+            <NoValue label="Too few matches together" />
+          ) : (
+            <>
+              {/* Delta draws nothing for a change that rounds to zero; an even duo still reads as one. */}
+              {Math.round(synergy * 100) === 0 ? (
+                <Text tone="muted">±0 pts</Text>
+              ) : (
+                <Delta value={synergy} digits={0} unit=" pts" />
+              )}
+              <span className="sr-only"> win rate together compared with apart</span>
+            </>
+          )}
+        </TableCell>
+      )}
+      {columns.duo && (
+        <TableCell className={DUO_COLUMN}>
+          {duos.length === 0 ? (
+            <NoValue label="No hero pairing played three times" />
+          ) : (
+            <Stack gap={0.5} align="end">
+              {duos.map((duo) => (
+                <Inline key={`${duo.aHero}-${duo.bHero}`} gap={1} wrap="nowrap" justify="end">
+                  <HeroImage heroId={duo.aHero} shape="circle" className="size-5" />
+                  <HeroImage heroId={duo.bHero} shape="circle" className="size-5" />
+                  <Text variant="caption" tone="muted" numeric="tabular" className="whitespace-nowrap">
+                    {plural(duo.matches, "match")} ·{" "}
+                    <Text tone={toneOf(duo.wins / duo.matches, 0.5)}>
+                      {formatPercent(duo.wins / duo.matches, 0)} WR
+                    </Text>
+                  </Text>
+                </Inline>
+              ))}
+            </Stack>
+          )}
+        </TableCell>
+      )}
+      {columns.against && (
+        <TableCell className="text-end">
+          {against.matches > 0 ? (
+            <Stack gap={0} align="end">
+              <Text>{plural(against.matches, "match")}</Text>
+              <Inline gap={1} wrap="nowrap" justify="end">
+                <StatusDot color={a.color} />
+                <Text variant="caption" tone="muted" className="whitespace-nowrap">
+                  <span aria-hidden="true">
+                    {against.aWins} – {against.bWins}
+                  </span>
+                  <span className="sr-only">
+                    {a.name} won {against.aWins}, {b.name} won {against.bWins}
+                  </span>
                 </Text>
+                <StatusDot color={b.color} />
               </Inline>
-            ))}
-          </Stack>
-        )}
-      </TableCell>
-      <TableCell className="text-end">
-        {against.matches > 0 ? (
-          <Stack gap={0} align="end">
-            <Text>{plural(against.matches, "match")}</Text>
-            <Inline gap={1} wrap="nowrap" justify="end">
-              <StatusDot color={a.color} />
-              <Text variant="caption" tone="muted" className="whitespace-nowrap">
-                <span aria-hidden="true">
-                  {against.aWins} – {against.bWins}
-                </span>
-                <span className="sr-only">
-                  {a.name} won {against.aWins}, {b.name} won {against.bWins}
-                </span>
-              </Text>
-              <StatusDot color={b.color} />
-            </Inline>
-          </Stack>
-        ) : (
-          <NoValue label="Never on opposite teams" />
-        )}
-      </TableCell>
+            </Stack>
+          ) : (
+            <NoValue label="Never on opposite teams" />
+          )}
+        </TableCell>
+      )}
       <TableCell className="hidden text-end whitespace-nowrap @md/table:table-cell">
         {pair.lastMet != null ? <Text tone="muted">{lastMetLabel(pair.lastMet)}</Text> : <NoValue />}
       </TableCell>
@@ -189,7 +212,11 @@ function SharedTeam({ team, byId }: { team: SharedMatchTeam; byId: ReadonlyMap<n
             <span className="sr-only">{player?.name ?? `Player ${entry.accountId}`} as</span>
             <HeroImage heroId={entry.heroId} shape="circle" title="" className="size-5" />
             <Text variant="caption" numeric="tabular" className="whitespace-nowrap">
-              {entry.kills}/{entry.deaths}/{entry.assists}
+              {entry.kills}/{entry.deaths}/{entry.assists}{" "}
+              <Text variant="caption" tone="muted">
+                {compactSouls(entry.netWorth)}
+                <span className="sr-only"> souls</span>
+              </Text>
             </Text>
           </Inline>
         );
@@ -212,8 +239,8 @@ function SharedMatchRow({
     // Not a link: the site has no public match page (the tracker's scoreboard is for signed-in patrons).
     <Inline gap={3} asChild className="gap-y-1 px-3 py-1.5">
       <li>
-        <Text variant="caption" tone="muted" className="w-24 shrink-0 whitespace-nowrap">
-          {lastMetLabel(match.startTime)}
+        <Text variant="caption" tone="muted" className="w-32 shrink-0 whitespace-nowrap">
+          {lastMetLabel(match.startTime)} · {Math.round(match.durationS / 60)}m<span className="sr-only"> long</span>
         </Text>
         <Inline gap={3} className="gap-y-1">
           <SharedTeam team={first} byId={byId} />
@@ -283,7 +310,22 @@ export function TogetherAgainstPanel({
   const loading = histories.some((history) => history.isPending && !history.isError);
   const { met, neverMet } = splitPairs(playerPairs(histories));
   const pairs = [...met, ...neverMet];
-  const recent = recentSharedMatches(histories);
+  const duosOf = (pair: PlayerPair) => {
+    const aMatches = histories.find((history) => history.accountId === pair.a)?.matches;
+    const bMatches = histories.find((history) => history.accountId === pair.b)?.matches;
+    return pair.together.matches >= MIN_DUO_HEROES_MATCHES && aMatches && bMatches
+      ? duoHeroPairs(aMatches, bMatches)
+      : [];
+  };
+  // A column shows when some pair has something in it; while loading, every column holds its place.
+  const columns: PairColumns = loading
+    ? { synergy: true, duo: true, against: true }
+    : {
+        synergy: met.some((pair) => pairSynergy(pair) != null),
+        duo: met.some((pair) => duosOf(pair).length > 0),
+        against: met.some((pair) => pair.against.matches > 0),
+      };
+  const recent = recentSharedMatches(histories, 8);
   const loadingPairs = players.flatMap((a, i) => players.slice(i + 1).map((b) => [a, b] as const));
 
   return (
@@ -306,9 +348,9 @@ export function TogetherAgainstPanel({
             <TableRow>
               <TableHead data-pinned>Players</TableHead>
               <TableHead className="text-end">Together</TableHead>
-              <TableHead className="text-end">Synergy</TableHead>
-              <TableHead className={DUO_COLUMN}>Duo heroes</TableHead>
-              <TableHead className="text-end">Against</TableHead>
+              {columns.synergy && <TableHead className="text-end">Synergy</TableHead>}
+              {columns.duo && <TableHead className={DUO_COLUMN}>Duo heroes</TableHead>}
+              {columns.against && <TableHead className="text-end">Against</TableHead>}
               <TableHead className="hidden text-end @md/table:table-cell">Last met</TableHead>
             </TableRow>
           </TableHeader>
@@ -319,19 +361,14 @@ export function TogetherAgainstPanel({
                   const a = byId.get(pair.a);
                   const b = byId.get(pair.b);
                   if (!a || !b) return null;
-                  const aHistory = histories.find((history) => history.accountId === pair.a);
-                  const bHistory = histories.find((history) => history.accountId === pair.b);
-                  const duos =
-                    pair.together.matches >= MIN_DUO_HEROES_MATCHES && aHistory?.matches && bHistory?.matches
-                      ? duoHeroPairs(aHistory.matches, bHistory.matches)
-                      : [];
                   return (
                     <PairRow
                       key={`${pair.a}-${pair.b}`}
                       pair={pair}
                       a={a}
                       b={b}
-                      duos={duos}
+                      duos={duosOf(pair)}
+                      columns={columns}
                       lastMetLabel={lastMetLabel}
                     />
                   );

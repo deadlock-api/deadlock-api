@@ -110,6 +110,8 @@ function played(matchId: number, team: number, winner: number, startTime = match
     player_kills: matchId,
     player_deaths: 2,
     player_assists: 3,
+    net_worth: 30_000,
+    match_duration_s: 1_800,
   };
 }
 
@@ -147,7 +149,15 @@ test("recentSharedMatches groups the players by team, the first player's team fi
       { team: 0, won: true, players: [2] },
     ],
   );
-  assert.deepEqual(match.teams[0].players[1], { accountId: 3, heroId: 13, kills: 7, deaths: 2, assists: 3 });
+  assert.deepEqual(match.teams[0].players[1], {
+    accountId: 3,
+    heroId: 13,
+    kills: 7,
+    deaths: 2,
+    assists: 3,
+    netWorth: 30_000,
+  });
+  assert.equal(match.durationS, 1_800);
 });
 
 test("recentSharedMatches skips loading histories and counts a duplicated entry once", () => {
@@ -201,6 +211,8 @@ test("duoHeroPairs counts same-team hero pairings, most played first", () => {
     player_kills: 0,
     player_deaths: 0,
     player_assists: 0,
+    net_worth: 0,
+    match_duration_s: 0,
   });
   const a = [1, 2, 3, 4, 5, 6].map((id) => shared(id, 0, id <= 2 ? 0 : 1, id <= 4 ? 7 : 8));
   const b = [
