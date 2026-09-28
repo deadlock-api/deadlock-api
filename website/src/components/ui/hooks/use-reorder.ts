@@ -160,7 +160,12 @@ export function useReorder({
       "data-dragging": drag?.from === index || undefined,
       "data-reordering": drag != null || undefined,
       "data-settling": settling || undefined,
-      style: transform ? { transform } : undefined,
+      // The dragged box tracks the pointer 1:1 and the drop lands in place: neither may ease. Inline, so no class
+      // order can let the other boxes' slide transition catch them.
+      style:
+        transform || settling
+          ? { transform, transition: drag?.from === index || settling ? "none" : undefined }
+          : undefined,
     };
   };
 
