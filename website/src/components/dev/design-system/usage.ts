@@ -2,7 +2,7 @@
  * How often the design system is used, counted from the source itself. Vite hands this dev-only module the text of
  * every source file; nothing here is written by hand, so the numbers move with the code.
  */
-const SOURCES = import.meta.glob<string>(
+const GLOBBED = import.meta.glob<string>(
   [
     "/src/**/*.{ts,tsx}",
     "!/src/components/dev/**",
@@ -12,6 +12,13 @@ const SOURCES = import.meta.glob<string>(
     "!/src/routeTree.gen.ts",
   ],
   { query: "?raw", import: "default", eager: true },
+);
+/**
+ * The sources as text. The browser-only modules stubbed out of the server build (`plugins/client-only-modules.mjs`)
+ * come back without their text there, so they drop out rather than fail the page's server render.
+ */
+const SOURCES = Object.fromEntries(
+  Object.entries(GLOBBED).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
 );
 
 export interface UsageFile {
