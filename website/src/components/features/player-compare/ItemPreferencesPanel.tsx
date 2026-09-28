@@ -77,7 +77,8 @@ export function ItemPreferencesPanel({ players, filters }: { players: ComparedPl
   const count = Math.min(Math.max(players.length, 2), 5) as keyof typeof COLUMNS;
   const longest = Math.max(0, ...columns.map((column) => (column.state === "ready" ? column.items.length : 0)));
   return (
-    <Panel>
+    // The panel's own width decides how many items a collapsed list shows, not each player's column.
+    <Panel className="@container/items">
       <PanelHeader size="sm" title="Favorite items" />
       <PanelBody size="sm">
         <Grid columns={players.length === 1 ? 1 : COLUMNS[count]} gap={4}>
@@ -100,7 +101,7 @@ export function ItemPreferencesPanel({ players, filters }: { players: ComparedPl
           open={expanded}
           onOpenChange={setExpanded}
           total={longest}
-          className={longest <= FAVORITE_ITEM_COUNT ? "@md:hidden" : undefined}
+          className={longest <= FAVORITE_ITEM_COUNT ? "@md/items:hidden" : undefined}
         />
       )}
     </Panel>
@@ -147,7 +148,7 @@ function PlayerItems({
                     entry={entry}
                     item={itemsById.get(entry.itemId)}
                     // A narrow panel (a phone, the columns stacked) keeps each player's top five.
-                    className={!expanded && index >= NARROW_ITEM_COUNT ? "hidden @md:list-item" : undefined}
+                    className={!expanded && index >= NARROW_ITEM_COUNT ? "hidden @md/items:list-item" : undefined}
                   />
                 ))}
           </ul>
