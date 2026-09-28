@@ -66,8 +66,10 @@ export function PerformanceTrendPanel({
   // Hidden once loaded when no player has a week with enough matches to plot.
   const settled = !histories.some((history) => history.isPending);
   const allFailed = histories.length > 0 && histories.every((history) => history.isError);
+  // Summed once per render and shared with the chart: up to five histories of thousands of matches.
+  const weeksByPlayer = histories.map((history) => weeklyTotals(history.matches ?? []));
   const plottable = mergeWeeklyTrend(
-    histories.map((history) => ({ key: String(history.accountId), weeks: weeklyTotals(history.matches ?? []) })),
+    histories.map((history, index) => ({ key: String(history.accountId), weeks: weeksByPlayer[index] })),
     "winRate",
   );
   if (settled && !allFailed && plottable.length === 0) return null;
@@ -102,11 +104,7 @@ export function PerformanceTrendPanel({
           ) : histories.some((history) => history.isPending) ? (
             <ChartLoading label={LABEL} size="md" />
           ) : (
-            <PerformanceTrendChart
-              players={players}
-              metric={metric}
-              weeksByPlayer={histories.map((history) => weeklyTotals(history.matches ?? []))}
-            />
+            <PerformanceTrendChart players={players} metric={metric} weeksByPlayer={weeksByPlayer} />
           )}
           <ChartLegend label="Players">
             {players.map((player) => (
