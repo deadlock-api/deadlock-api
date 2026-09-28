@@ -209,26 +209,40 @@ export function PlayerCards({
                         <Text tone="muted">No matches on these filters</Text>
                       ) : (
                         <StatGroup variant="plain" size="sm" className="grid-cols-2 gap-2 @stat-trio:grid-cols-3">
-                          <Stat
-                            label={settled && players.length >= 2 ? `Won of ${scored.length}` : "Stats won"}
-                            value={
-                              !settled || aggregate === undefined ? (
-                                <Skeleton className="h-6 w-10" />
-                              ) : players.length < 2 ? (
-                                <NoValue label="Add an opponent to score" />
-                              ) : (
-                                <Inline gap={1} wrap="nowrap" asChild>
-                                  <span>
-                                    {leads && <CrownIcon aria-hidden="true" className="size-4" />}
-                                    {tally[index]}
-                                    {leads && (
-                                      <span className="sr-only">, {leaders.length > 1 ? "tied lead" : "leads"}</span>
-                                    )}
-                                  </span>
-                                </Inline>
-                              )
-                            }
-                          />
+                          {players.length < 2 ? (
+                            // Nothing to win alone: the sample size instead.
+                            <Stat
+                              label="Matches"
+                              value={
+                                aggregate ? (
+                                  formatPlayerMetricValue(aggregate.matches, "integer")
+                                ) : (
+                                  <Skeleton className="h-6 w-10" />
+                                )
+                              }
+                            />
+                          ) : (
+                            <Stat
+                              label={settled && players.length >= 2 ? `Won of ${scored.length}` : "Stats won"}
+                              value={
+                                !settled || aggregate === undefined ? (
+                                  <Skeleton className="h-6 w-10" />
+                                ) : players.length < 2 ? (
+                                  <NoValue label="Add an opponent to score" />
+                                ) : (
+                                  <Inline gap={1} wrap="nowrap" asChild>
+                                    <span>
+                                      {leads && <CrownIcon aria-hidden="true" className="size-4" />}
+                                      {tally[index]}
+                                      {leads && (
+                                        <span className="sr-only">, {leaders.length > 1 ? "tied lead" : "leads"}</span>
+                                      )}
+                                    </span>
+                                  </Inline>
+                                )
+                              }
+                            />
+                          )}
                           <Stat
                             label="Win rate"
                             value={aggregate ? formatPercent(aggregate.winRate, 1) : <Skeleton className="h-6 w-14" />}

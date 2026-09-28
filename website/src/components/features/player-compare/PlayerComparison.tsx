@@ -5,7 +5,7 @@ import { SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Stack } from "~/components/ui/stack";
-import { aggregateHeroStats, MAX_COMPARE_PLAYERS, SCORED_STAT_COUNT } from "~/lib/player-compare";
+import { aggregateHeroStats } from "~/lib/player-compare";
 import { playstyleLabel, playstylePercentiles } from "~/lib/playstyle";
 import { cn } from "~/lib/utils";
 import {
@@ -113,7 +113,6 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
         <EmptyState
           icon={GitCompareArrows}
           title="Who's the better player?"
-          description={`Add yourself and a friend, or measure up against a top player. Up to ${MAX_COMPARE_PLAYERS} players, head to head on ${SCORED_STAT_COUNT} stats, with your record together and against each other, rank over time, playstyles and a card to share in Discord.`}
           action={<AddPlayerControls filters={filters} accountIds={accountIds} onAdd={add} />}
           className="py-12"
         />

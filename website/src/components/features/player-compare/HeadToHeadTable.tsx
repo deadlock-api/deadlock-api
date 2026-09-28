@@ -144,31 +144,33 @@ export function HeadToHeadTable({
           );
         })}
         {/* The result of the table: how many of the scored rows each player won. */}
-        <TableFooter tone="highlight">
-          <TableRow>
-            <TableCell data-pinned>Stats won</TableCell>
-            {players.map((player, index) => {
-              const leads = settled && leaders.includes(index);
-              return (
-                <TableCell key={player.accountId} className="text-end">
-                  {!settled ? (
-                    <Skeleton className="ms-auto h-4 w-12" />
-                  ) : players.length < 2 ? (
-                    <NoValue label="Add an opponent to score" />
-                  ) : (
-                    <Inline gap={1} wrap="nowrap" justify="end">
-                      {leads && <CrownIcon aria-hidden="true" className="size-3.5 shrink-0" />}
-                      <Text className={leads ? "font-bold" : undefined}>
-                        {tally[index]} of {scored.length}
-                      </Text>
-                      {leads && <span className="sr-only">, the most</span>}
-                    </Inline>
-                  )}
-                </TableCell>
-              );
-            })}
-          </TableRow>
-        </TableFooter>
+        {players.length >= 2 && (
+          <TableFooter tone="highlight">
+            <TableRow>
+              <TableCell data-pinned>Stats won</TableCell>
+              {players.map((player, index) => {
+                const leads = settled && leaders.includes(index);
+                return (
+                  <TableCell key={player.accountId} className="text-end">
+                    {!settled ? (
+                      <Skeleton className="ms-auto h-4 w-12" />
+                    ) : players.length < 2 ? (
+                      <NoValue label="Add an opponent to score" />
+                    ) : (
+                      <Inline gap={1} wrap="nowrap" justify="end">
+                        {leads && <CrownIcon aria-hidden="true" className="size-3.5 shrink-0" />}
+                        <Text className={leads ? "font-bold" : undefined}>
+                          {tally[index]} of {scored.length}
+                        </Text>
+                        {leads && <span className="sr-only">, the most</span>}
+                      </Inline>
+                    )}
+                  </TableCell>
+                );
+              })}
+            </TableRow>
+          </TableFooter>
+        )}
       </Table>
     </Panel>
   );

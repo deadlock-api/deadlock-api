@@ -40,6 +40,8 @@ export function ShareComparison({
           aria-label="Copy the link to this comparison"
           state={copied ? "confirmed" : "idle"}
           onClick={copyLink}
+          // The header's button is the keyboard's way to copy; the card is a second, pointer-sized target for it.
+          tabIndex={-1}
         />
       </PanelBody>
     </Panel>
