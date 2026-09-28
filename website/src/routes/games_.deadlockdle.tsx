@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { ClientOnly, createFileRoute, Outlet } from "@tanstack/react-router";
 import { AnimatePresence, motion, MotionConfig } from "framer-motion";
 import { Crosshair } from "lucide-react";
 import { useCallback } from "react";
@@ -31,7 +31,12 @@ function DeadlockdleLayout() {
 
   return (
     <MotionConfig reducedMotion="user">
-      {cursorEnabled && <TargetCursor />}
+      {/* Browser only: the server build stubs it (plugins/client-only-modules.mjs). */}
+      {cursorEnabled && (
+        <ClientOnly>
+          <TargetCursor />
+        </ClientOnly>
+      )}
 
       <div className="theme-terminal fixed inset-e-3 top-3 z-50 md:inset-e-4 md:top-4">
         <Button

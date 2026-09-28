@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { ClientOnly, createFileRoute } from "@tanstack/react-router";
 import { Terminal } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { lazy, Suspense, useCallback, useMemo, useRef, useState } from "react";
@@ -127,17 +127,20 @@ function DataDumps() {
         <UsageInstructions />
       </Stack>
 
+      {/* Browser only: the server build stubs it (plugins/client-only-modules.mjs). */}
       {playgroundOpen && (
-        <Suspense fallback={null}>
-          <SqlPlayground
-            open={playgroundOpen}
-            onOpenChange={setPlaygroundOpen}
-            tables={playgroundTables}
-            schemaByTable={schemaByTable}
-            query={sqlQuery}
-            onQueryChange={onSqlQueryChange}
-          />
-        </Suspense>
+        <ClientOnly>
+          <Suspense fallback={null}>
+            <SqlPlayground
+              open={playgroundOpen}
+              onOpenChange={setPlaygroundOpen}
+              tables={playgroundTables}
+              schemaByTable={schemaByTable}
+              query={sqlQuery}
+              onQueryChange={onSqlQueryChange}
+            />
+          </Suspense>
+        </ClientOnly>
       )}
 
       <Stack gap={3}>

@@ -4,6 +4,7 @@ import viteReact from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 
 import { annotateSource } from "./plugins/annotate-source.mjs";
+import { clientOnlyModules } from "./plugins/client-only-modules.mjs";
 
 const annotation = annotateSource();
 
@@ -68,6 +69,7 @@ export default defineConfig({
   },
   plugins: [
     esToolkitCompatEsm(),
+    clientOnlyModules(),
     tanstackStart({
       router: {
         // Data loaders bring catalog/API clients with them. Load those only

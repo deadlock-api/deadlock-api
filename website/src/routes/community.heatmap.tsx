@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { ClientOnly, createFileRoute } from "@tanstack/react-router";
 import type { AnalyticsApiKillDeathStatsRequest } from "deadlock_api_client";
 import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense } from "react";
@@ -182,16 +182,19 @@ function HeatmapPage() {
           <StaleOverlay active={killDeathQuery.isPlaceholderData} label="heatmap" className="size-full">
             {is3D ? (
               <ChunkErrorBoundary>
-                <Suspense fallback={<LoadingState label="3D heatmap" />}>
-                  <Heatmap3D
-                    data={killDeathQuery.data}
-                    mapData={mapQuery.data}
-                    viewMode={viewMode}
-                    sensitivity={sensitivity / 10000}
-                    onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
-                    scope={scope}
-                  />
-                </Suspense>
+                {/* Browser only: the server build stubs it (plugins/client-only-modules.mjs). */}
+                <ClientOnly fallback={<LoadingState label="3D heatmap" />}>
+                  <Suspense fallback={<LoadingState label="3D heatmap" />}>
+                    <Heatmap3D
+                      data={killDeathQuery.data}
+                      mapData={mapQuery.data}
+                      viewMode={viewMode}
+                      sensitivity={sensitivity / 10000}
+                      onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
+                      scope={scope}
+                    />
+                  </Suspense>
+                </ClientOnly>
               </ChunkErrorBoundary>
             ) : (
               <HeatmapCanvas
