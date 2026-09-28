@@ -166,9 +166,6 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
               <PlaystyleRadarPanel players={players} filters={filters} />
             </Grid>
           </Grid>
-          {/* Across the page under the pair: the records and the shared matches read best wide, and the side column
-              stays as short as the table. */}
-          {accountIds.length >= 2 && <TogetherAgainstPanel players={players} histories={histories} />}
           {/* Over time, side by side: the climb and the form. */}
           <Grid columns={{ base: 1, xl: 2 }} gap={4} className="items-start">
             <RankHistoryPanel players={players} filters={filters} histories={histories} />
@@ -181,11 +178,14 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             <MatchLengthPanel players={players} histories={histories} />
           </Grid>
           <PercentileComparison players={players} filters={filters} />
-          {/* Heroes and items side by side; items last, since the panel hides itself when nobody has any. */}
+          {/* Heroes and items side by side. */}
           <Grid columns={{ base: 1, xl: showSharedHeroes ? 2 : 1 }} gap={4} className="items-start">
             {showSharedHeroes && <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />}
             <ItemPreferencesPanel players={players} filters={filters} />
           </Grid>
+          {/* Across the page, last: the records and the shared matches read best wide, and the panel only appears once
+              the match histories are in (and only when two players met), so appearing late moves nothing. */}
+          {accountIds.length >= 2 && <TogetherAgainstPanel players={players} histories={histories} />}
         </>
       )}
     </Stack>

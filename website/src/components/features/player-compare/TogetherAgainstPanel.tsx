@@ -205,7 +205,7 @@ export function TogetherAgainstPanel({
   const recent = recentSharedMatches(histories);
   const nameOf = (accountId: number) => byId.get(accountId)?.name ?? `Player ${accountId}`;
   const neverMetLine = `Never met: ${neverMet.map((pair) => `${nameOf(pair.a)} & ${nameOf(pair.b)}`).join(", ")}`;
-  // Only there when it has something to show: it sits last in its column, so appearing once loaded moves nothing.
+  // Only there when it has something to show: it sits last on the page, so appearing once loaded moves nothing.
   // A failed history still shows, with its retry.
   if (loading || (met.length === 0 && failed.length === 0)) return null;
 
