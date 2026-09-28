@@ -237,12 +237,11 @@ function SharedMatchesTable({
         {matches.map((match) => (
           <TableRow key={match.matchId}>
             <TableCell data-pinned>
-              {/* One line in a wide table; a narrow one puts the length under the day, for the players' columns. */}
               <Text tone="muted" className="whitespace-nowrap">
                 {lastMetLabel(match.startTime)}
-                <span className="hidden @md/table:inline"> · {Math.round(match.durationS / 60)}m</span>
               </Text>
-              <Text as="div" variant="caption" tone="muted" className="@md/table:hidden">
+              {/* The length under the day: the players' columns get the width. */}
+              <Text as="div" variant="caption" tone="muted">
                 {Math.round(match.durationS / 60)}m
               </Text>
             </TableCell>
@@ -255,15 +254,19 @@ function SharedMatchesTable({
                 <TableCell key={player.accountId} className="text-end">
                   {team && entry ? (
                     <Inline gap={1.5} wrap="nowrap" justify="end">
-                      <Text tone={team.won ? "positive" : "negative"} className="font-semibold">
+                      {/* Fixed widths, none shrinking: the letters, heroes and numbers line up down the column. */}
+                      <Text
+                        tone={team.won ? "positive" : "negative"}
+                        className="w-4 shrink-0 text-center font-semibold"
+                      >
                         <span aria-hidden="true">{team.won ? "W" : "L"}</span>
                         <span className="sr-only">{team.won ? "Won" : "Lost"} as</span>
                       </Text>
-                      <HeroImage heroId={entry.heroId} shape="circle" className="size-5" />
-                      <Text className="w-20 text-end whitespace-nowrap">
+                      <HeroImage heroId={entry.heroId} shape="circle" className="size-5 shrink-0" />
+                      <Text className="w-16 shrink-0 text-end whitespace-nowrap">
                         {entry.kills}/{entry.deaths}/{entry.assists}
                       </Text>
-                      <Text tone="muted" className="w-12 text-end whitespace-nowrap">
+                      <Text tone="muted" className="w-12 shrink-0 text-end whitespace-nowrap">
                         {compactSouls(entry.netWorth)}
                         <span className="sr-only"> souls</span>
                       </Text>
