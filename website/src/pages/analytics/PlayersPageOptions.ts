@@ -108,8 +108,12 @@ export const comparePageOptions = {
       import("~/queries/player-scoreboard-query"),
       import("~/queries/player-stats-metrics-query"),
     ]);
+    // Loaded even when the URL names its dates: the seasons register the exact patch boundaries, without which a pinned
+    // season start (a patch instant) rounds down to midnight, and the server would ask for other data (another query
+    // key) than the page, which then renders its skeletons over the server's numbers.
+    const seasons = await loadSeasons(queryClient);
     const { filters } = await compareQueries.resolveCompareFilters(deps.filters, async () =>
-      defaultUnixRange(await loadSeasons(queryClient), preferences.dateFilter),
+      defaultUnixRange(seasons, preferences.dateFilter),
     );
     const accountIds = parseCompareIds(deps.accountIds);
     if (accountIds.length === 0) {
