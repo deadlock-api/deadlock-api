@@ -334,27 +334,7 @@ export function PlayerCards({
                                       <NoValue />
                                     ) : (
                                       topHeroes(rows, player.accountId).map((row) => (
-                                        <Tooltip
-                                          key={row.hero_id}
-                                          content={
-                                            <TooltipStats variant="plain">
-                                              <TooltipStat label="Matches" value={row.matches_played} />
-                                              <TooltipStat
-                                                label="Win rate"
-                                                value={formatPercent(row.wins / row.matches_played, 0)}
-                                              />
-                                            </TooltipStats>
-                                          }
-                                        >
-                                          <TooltipTarget>
-                                            <HeroImage
-                                              heroId={row.hero_id}
-                                              shape="rounded"
-                                              ring="border"
-                                              className="size-7"
-                                            />
-                                          </TooltipTarget>
-                                        </Tooltip>
+                                        <MostPlayedHero key={row.hero_id} row={row} />
                                       ))
                                     )}
                                   </Inline>
@@ -416,5 +396,28 @@ export function PlayerCards({
         {reorder.announcement}
       </span>
     </>
+  );
+}
+
+/** One of a card's most played heroes: its icon, a tab stop read as the hero and its record, the numbers on hover. */
+function MostPlayedHero({ row }: { row: HeroStats }) {
+  const winRate = formatPercent(row.wins / row.matches_played, 0);
+  return (
+    <Tooltip
+      content={
+        <TooltipStats variant="plain">
+          <TooltipStat label="Matches" value={row.matches_played} />
+          <TooltipStat label="Win rate" value={winRate} />
+        </TooltipStats>
+      }
+    >
+      <TooltipTarget>
+        {/* The image's alt names the hero; the record follows for a screen reader. */}
+        <HeroImage heroId={row.hero_id} shape="rounded" ring="border" className="size-7" />
+        <span className="sr-only">
+          {row.matches_played} matches, {winRate} win rate
+        </span>
+      </TooltipTarget>
+    </Tooltip>
   );
 }
