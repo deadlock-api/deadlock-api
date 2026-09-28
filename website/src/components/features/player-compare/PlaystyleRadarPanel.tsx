@@ -126,7 +126,7 @@ export function PlaystyleRadarPanel({ players, filters }: { players: ComparedPla
     <Panel>
       <PanelHeader size="sm" title="Playstyle" description="Percentile among all players">
         <ChartLegend label="Reference">
-          <ChartLegendItem color="var(--chart-axis)" shape="line">
+          <ChartLegendItem color="var(--chart-axis)" shape="dashed">
             Median player
           </ChartLegendItem>
         </ChartLegend>

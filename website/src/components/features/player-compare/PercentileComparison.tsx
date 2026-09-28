@@ -51,7 +51,7 @@ export function PercentileComparison({ players, filters }: { players: ComparedPl
                 </span>
               </ChartLegendItem>
             ))}
-            <ChartLegendItem color="var(--chart-axis)" shape="line">
+            <ChartLegendItem color="var(--chart-axis)" shape="dashed">
               Median player
             </ChartLegendItem>
           </ChartLegend>

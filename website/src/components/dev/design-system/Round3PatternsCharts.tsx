@@ -97,6 +97,9 @@ export function Round3PatternsCharts() {
             <ChartLegendItem color={SERIES_COLORS[2]} shape="ring">
               Projected
             </ChartLegendItem>
+            <ChartLegendItem color="var(--chart-axis)" shape="dashed">
+              Median
+            </ChartLegendItem>
           </ChartLegend>
           <ChartLegend size="sm">
             <ChartLegendItem color={SERIES_COLORS[0]} shape="line">

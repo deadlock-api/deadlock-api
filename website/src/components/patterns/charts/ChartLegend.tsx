@@ -3,16 +3,18 @@ import { createContext, useContext } from "react";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
-type SwatchShape = "line" | "square" | "dot" | "ring";
+type SwatchShape = "line" | "dashed" | "square" | "dot" | "ring";
 
 const shapeClass: Record<SwatchShape, string> = {
   line: "h-0.5 w-4 rounded-full",
+  dashed: "h-0 w-4 border-t-2 border-dashed bg-transparent",
   square: "size-2.5 rounded-xs",
   dot: "size-2 rounded-full",
   ring: "size-2.5 rounded-full border-2 bg-transparent",
 };
 const smallShapeClass: Record<SwatchShape, string> = {
   line: "h-0.5 w-3 rounded-full",
+  dashed: "h-0 w-3 border-t-2 border-dashed bg-transparent",
   square: "size-2 rounded-xs",
   dot: "size-1.5 rounded-full",
   ring: "size-2 rounded-full border-2 bg-transparent",
@@ -20,7 +22,7 @@ const smallShapeClass: Record<SwatchShape, string> = {
 
 /**
  * The mark of one series, wherever it is named: a legend, a tooltip row, a table cell. Match the shape to the mark:
- * `line` for lines and areas, `square` for bars and stacks, `dot` for points, `ring` for hollow points.
+ * `line` for lines and areas, `dashed` for a dashed reference line (a median, an average), `square` for bars and stacks, `dot` for points, `ring` for hollow points.
  */
 export function ChartSwatch({
   color,
@@ -40,7 +42,9 @@ export function ChartSwatch({
       data-slot="chart-swatch"
       aria-hidden="true"
       className={cn("inline-block shrink-0", (size === "sm" ? smallShapeClass : shapeClass)[shape], className)}
-      style={shape === "ring" ? { borderColor: color, ...style } : { backgroundColor: color, ...style }}
+      style={
+        shape === "ring" || shape === "dashed" ? { borderColor: color, ...style } : { backgroundColor: color, ...style }
+      }
       {...props}
     />
   );
