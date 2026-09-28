@@ -1108,6 +1108,23 @@ async fn run_query(
     ch_client.query(query_str).fetch_all().await
 }
 
+/// Separate cache for the pre-aggregated rollup queries (`item_stats_agg`, cohort and
+/// enemy rollups): the long tail of per-account base-table queries would otherwise
+/// evict these few, heavily repeated entries from the shared cache long before
+/// their TTL.
+#[cached(
+    max_size = 5_000,
+    ttl_secs = 21600,
+    convert = "{ query_str.to_string() }",
+    key = "String"
+)]
+async fn run_rollup_query(
+    ch_client: &clickhouse::Client,
+    query_str: &str,
+) -> clickhouse::error::Result<Vec<ItemStats>> {
+    ch_client.query(query_str).fetch_all().await
+}
+
 async fn get_item_stats(
     ch_client: &clickhouse::Client,
     mut query: ItemStatsQuery,
@@ -1118,14 +1135,14 @@ async fn get_item_stats(
     // error so a missing or rebuilding view never breaks the endpoint.
     if let Some(mv_query) = build_mv_query(&query) {
         debug!(?mv_query);
-        match run_query(ch_client, &mv_query).await {
+        match run_rollup_query(ch_client, &mv_query).await {
             Ok(rows) => return Ok(rows),
             Err(e) => warn!("item_stats MV query failed, falling back to base table: {e}"),
         }
     }
     if let Some(cohort_mv_query) = build_cohort_mv_query(&query) {
         debug!(?cohort_mv_query);
-        match run_query(ch_client, &cohort_mv_query).await {
+        match run_rollup_query(ch_client, &cohort_mv_query).await {
             Ok(rows) => return Ok(rows),
             Err(e) => warn!("item_stats cohort MV query failed, falling back to base table: {e}"),
         }
@@ -1140,7 +1157,7 @@ async fn get_item_stats(
     }
     if let Some(enemy_mv_query) = build_enemy_mv_query(&query) {
         debug!(?enemy_mv_query);
-        match run_query(ch_client, &enemy_mv_query).await {
+        match run_rollup_query(ch_client, &enemy_mv_query).await {
             Ok(rows) => return Ok(rows),
             Err(e) => warn!("item_stats enemy MV query failed, falling back to base table: {e}"),
         }
