@@ -461,9 +461,9 @@ function Score({
             : "none",
         }}
       >
-        {player.hasMatches ? String(player.statsWon) : <span style={{ fontWeight: 500, color: OG.muted }}>–</span>}
+        {player.scored ? String(player.statsWon) : <span style={{ fontWeight: 500, color: OG.muted }}>–</span>}
       </span>
-      {!player.hasMatches ? null : won ? (
+      {!player.scored ? null : won ? (
         <div style={{ display: "flex", flexDirection: "column", lineHeight: 1 }}>
           <span style={{ fontSize: Math.round(fontSize * 0.34), fontWeight: 800, color: OG.muted }}>
             {`/${scoredCount}`}

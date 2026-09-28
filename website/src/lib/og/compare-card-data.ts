@@ -45,6 +45,8 @@ export interface CompareCardPlayer {
   rankName: string | undefined;
   rankImage: string | undefined;
   hasMatches: boolean;
+  /** Has a stats-won count: matches of their own and at least one opponent with matches to be scored against. */
+  scored: boolean;
   statsWon: number;
   leader: boolean;
   highlights: { label: string; value: string; best: boolean }[];
@@ -134,6 +136,7 @@ export async function loadCompareCardData(search: URLSearchParams): Promise<Comp
         ? (ranks?.find((entry) => entry.tier === Math.floor(aggregate.rankBadge! / 10))?.images.large ?? undefined)
         : undefined,
       hasMatches: aggregate != null,
+      scored: aggregate != null && aggregates.filter((entry) => entry !== null).length >= 2,
       statsWon: tally[index],
       leader: leaders.includes(index),
       highlights: HIGHLIGHTS.map(({ key, short }) => {
