@@ -6,13 +6,28 @@ import type { PlayerMetricFormat } from "~/lib/player-metrics";
 export const MAX_COMPARE_PLAYERS = 5;
 
 /**
- * Each player's series color index: their place among the players sorted by account id. A player keeps their color
- * when the columns are reordered (the order is the reader's, the color is the player's), and the colors in use are
- * always the first ones of the palette, in its validated order.
+ * The palette entries a comparison draws its players in: red, green, yellow, blue and violet. Orange (the fifth) sits
+ * out, since beside red it would be the one pair of players hard to tell apart.
+ */
+const COMPARE_PALETTE = [0, 1, 2, 3, 5] as const;
+
+/**
+ * Each player's series color index, one of `COMPARE_PALETTE`. A player's color comes
+ * from their account id, so it follows the player: moving the columns, adding a player or removing another keeps it.
+ * Two players whose ids want the same color are settled in the URL's order (a newly added player comes last), so the
+ * players already on screen keep theirs and the newcomer takes the next free one.
  */
 export function compareColorIndexes(accountIds: readonly number[]): number[] {
-  const sorted = [...accountIds].sort((a, b) => a - b);
-  return accountIds.map((accountId) => sorted.indexOf(accountId));
+  const slots = COMPARE_PALETTE.length;
+  const taken = new Set<number>();
+  return accountIds.map((accountId) => {
+    // Knuth's multiplicative hash spreads neighbouring ids (alt accounts made together) over the slots.
+    let slot = Math.imul(accountId, 2_654_435_761) >>> 0;
+    slot %= slots;
+    while (taken.has(slot) && taken.size < slots) slot = (slot + 1) % slots;
+    taken.add(slot);
+    return COMPARE_PALETTE[slot];
+  });
 }
 
 /** Account ids are SteamID3 numbers, unsigned 32-bit; the API rejects a whole request carrying a larger one. */

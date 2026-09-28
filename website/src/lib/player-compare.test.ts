@@ -221,9 +221,29 @@ test("compareStatWinners: values printed alike share the win", () => {
   );
 });
 
-test("compareColorIndexes: a player keeps their color when the columns move", () => {
-  assert.deepEqual(compareColorIndexes([30, 10, 20]), [2, 0, 1]);
-  assert.deepEqual(compareColorIndexes([10, 30, 20]), [0, 2, 1]);
+test("compareColorIndexes: a player keeps their color when players are added, removed or moved", () => {
+  const ids = [1_045_169_707, 957_234_943, 187_434_761, 185_598_645, 706_587_707];
+  const colorOf = (players: number[]) => new Map(players.map((id, index) => [id, compareColorIndexes(players)[index]]));
+  const five = colorOf(ids);
+  // Five players take five different colors.
+  assert.equal(new Set(five.values()).size, 5);
+  for (let count = 1; count <= ids.length; count++) {
+    const some = colorOf(ids.slice(0, count));
+    for (const [id, color] of some) assert.equal(five.get(id), color, `player ${id} with ${count} players`);
+  }
+  // Moving a column keeps every color (these ids want different ones).
+  const three = ids.slice(0, 3);
+  const moved = colorOf([three[2], three[0], three[1]]);
+  for (const id of three) assert.equal(moved.get(id), five.get(id));
+});
+
+test("compareColorIndexes: players wanting the same color get different ones, the first come keeps it", () => {
+  // Both ids want the first color.
+  const [first, second] = [957_234_943, 185_598_645];
+  assert.equal(compareColorIndexes([first])[0], compareColorIndexes([second])[0]);
+  const both = compareColorIndexes([first, second]);
+  assert.equal(both[0], compareColorIndexes([first])[0]);
+  assert.notEqual(both[1], both[0]);
 });
 
 test("canonicalCardParams: one spelling per card, whatever else the URL carries", async () => {

@@ -31,4 +31,6 @@ export const OG_SERIES = [
   "#3987e5",
   // ds-allow color-literal: --chart-5 (series-orange)
   "#d95926",
+  // ds-allow color-literal: --chart-6 (series-violet)
+  "#9085e9",
 ] as const;
