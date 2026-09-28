@@ -15,6 +15,7 @@ import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from
 import { formatPercent, formatRelativeTime } from "~/lib/format";
 import { sharedHeroes } from "~/lib/player-compare";
 import { formatStatValue } from "~/lib/stat-format";
+import { toneOf } from "~/lib/tone";
 
 import type { ComparedPlayer } from "./types";
 
@@ -121,7 +122,11 @@ export function SharedHeroesTable({
                                   {stats.matches === 1 ? "match" : "matches"}
                                 </Text>
                                 <Text variant="caption" tone="muted">
-                                  {formatPercent(stats.winRate, 0)} WR · {formatStatValue(stats.kda, "decimal2")} KDA
+                                  {/* The win rate in the good / bad tone, judged as printed, like the other panels. */}
+                                  <Text variant="caption" tone={toneOf(Math.round(stats.winRate * 100), 50)}>
+                                    {formatPercent(stats.winRate, 0)} WR
+                                  </Text>{" "}
+                                  · {formatStatValue(stats.kda, "decimal2")} KDA
                                 </Text>
                               </span>
                             </Stack>
