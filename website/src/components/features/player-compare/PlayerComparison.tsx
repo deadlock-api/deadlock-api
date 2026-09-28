@@ -7,6 +7,7 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Stack } from "~/components/ui/stack";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { aggregateHeroStats, MAX_COMPARE_PLAYERS, SCORED_STAT_COUNT } from "~/lib/player-compare";
+import { playstyleLabel, playstylePercentiles } from "~/lib/playstyle";
 import {
   type CompareFilters,
   compareHeroStatsParams,
@@ -19,14 +20,19 @@ import { trackerHeroStatsQueryOptions } from "~/queries/tracker-queries";
 import { AddPlayerControls } from "./AddPlayerControls";
 import { HeadToHeadTable } from "./HeadToHeadTable";
 import { PercentileComparison } from "./PercentileComparison";
+import { PlayerCards } from "./PlayerCards";
+import { PlaystyleRadarPanel } from "./PlaystyleRadarPanel";
+import { RankHistoryPanel } from "./RankHistoryPanel";
 import { ShareComparison } from "./ShareComparison";
 import { SharedHeroesTable } from "./SharedHeroesTable";
+import { TogetherAgainstPanel } from "./TogetherAgainstPanel";
 import type { ComparedPlayer } from "./types";
+import { useCompareMatchHistories } from "./useCompareMatchHistories";
 import { usePlayerCompareState } from "./usePlayerCompareState";
 
 /** The compare tab: pick up to five players, then see who wins which stat on the page's filters. */
 export function PlayerComparison({ filters }: { filters: CompareFilters }) {
-  const { accountIds, isFull, add, remove, move } = usePlayerCompareState();
+  const { accountIds, add, remove, move } = usePlayerCompareState();
   const { profiles, isLoading: profilesLoading } = useSteamProfiles(accountIds);
   const hasPlayers = accountIds.length > 0;
 
@@ -43,6 +49,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
   });
 
   // The same requests as the curves below, so they share the cache: healing and heal prevented come from here.
+  const population = useQuery(playerStatsMetricsQueryOptions(compareMetricsParams(filters)));
   const metrics = useQueries({
     queries: accountIds.map((accountId) => playerStatsMetricsQueryOptions(compareMetricsParams(filters, accountId))),
   });
@@ -52,6 +59,8 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
     if (!query || query.isPending) return undefined;
     return query.data?.[key]?.avg ?? null;
   };
+
+  const histories = useCompareMatchHistories(accountIds, filters);
 
   const rows = heroStats.data ?? [];
   const ranksSettled = ranks.isSuccess && !ranks.isPlaceholderData;
@@ -71,8 +80,10 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
     return {
       accountId,
       name: profile?.personaname ?? `Player ${accountId}`,
+      avatar: profile?.avatarfull || profile?.avatar,
       profileLoading: profilesLoading && !profile,
       color: SERIES_COLORS[index % SERIES_COLORS.length],
+      playstyle: playstyleLabel(playstylePercentiles(population.data, metrics[index]?.data))?.label,
       aggregate: aggregate && {
         ...aggregate,
         // Unranked (badge 0) has no rank to compare.
@@ -97,33 +108,38 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
         <EmptyState
           icon={GitCompareArrows}
           title="Who's the better player?"
-          description={`Add yourself and a friend, or measure up against a top player. Up to ${MAX_COMPARE_PLAYERS} players, head to head on ${SCORED_STAT_COUNT} stats, ranked against everyone on these filters, with the heroes you share.`}
+          description={`Add yourself and a friend, or measure up against a top player. Up to ${MAX_COMPARE_PLAYERS} players, head to head on ${SCORED_STAT_COUNT} stats, with your record together and against each other, rank over time, playstyles and a card to share in Discord.`}
           action={<AddPlayerControls filters={filters} accountIds={accountIds} onAdd={add} />}
           className="py-12"
         />
       ) : (
-        // Wide: the head-to-head table keeps the width of its values on the left, the rest fills the right. Narrow:
-        // stacked, and the head-to-head panel still hugs its table instead of spreading two columns over the page.
-        <div className="grid items-start gap-4 @6xl:grid-cols-[max-content_minmax(0,1fr)]">
-          <Stack gap={4}>
-            {/* Takes the width the table sets and adds none of its own: the preview must not widen the column. */}
-            <ShareComparison filters={filters} className="w-0 min-w-full" />
-            <HeadToHeadTable
-              players={players}
-              isFull={isFull}
-              onAdd={add}
-              onRemove={remove}
-              onMove={move}
-              className="w-fit max-w-full @6xl:w-auto"
-            />
-          </Stack>
-          <Stack gap={4}>
-            <PercentileComparison players={players} filters={filters} />
-            {filters.heroId == null && accountIds.length >= 2 && (
-              <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />
-            )}
-          </Stack>
-        </div>
+        <>
+          <PlayerCards
+            players={players}
+            rows={rows}
+            histories={histories}
+            filters={filters}
+            onAdd={add}
+            onRemove={remove}
+            onMove={move}
+          />
+          {/* Wide: the stat table on the left, the share card and the profile charts beside it. Narrow: stacked. */}
+          <div className="grid items-start gap-4 @4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+            <Stack gap={4}>
+              <HeadToHeadTable players={players} />
+              {accountIds.length >= 2 && <TogetherAgainstPanel players={players} filters={filters} />}
+            </Stack>
+            <Stack gap={4}>
+              <ShareComparison filters={filters} names={players.map((player) => player.name)} />
+              <PlaystyleRadarPanel players={players} filters={filters} />
+            </Stack>
+          </div>
+          <RankHistoryPanel players={players} filters={filters} />
+          <PercentileComparison players={players} filters={filters} />
+          {filters.heroId == null && accountIds.length >= 2 && (
+            <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />
+          )}
+        </>
       )}
     </Stack>
   );

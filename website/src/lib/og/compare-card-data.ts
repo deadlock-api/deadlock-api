@@ -7,11 +7,11 @@ import { extractBadgeMap } from "~/lib/leaderboard";
 import {
   aggregateHeroStats,
   COMPARE_STATS,
+  compareStatWinners,
   type CompareStatKey,
   type PlayerAggregate,
   parseCompareIds,
   scoreComparison,
-  statWinners,
 } from "~/lib/player-compare";
 import { formatPlayerMetricValue } from "~/lib/player-metrics";
 import { defaultUnixRange } from "~/lib/seasons";
@@ -60,8 +60,11 @@ export interface CompareCardData {
 
 /** The page's filters (the current season for dates), and the dates as the card names them. */
 async function resolveFilters(search: URLSearchParams, client: QueryClient) {
+  // Loaded even when the URL names its dates: the seasons register the exact patch boundaries, without which a
+  // pinned season start (a patch instant) rounds down to midnight and the card counts matches the page does not.
+  const seasons = await loadSeasons(client);
   const { filters, mode, range } = await resolveCompareFilters(compareFilterSearch(search), async () =>
-    defaultUnixRange(await loadSeasons(client), "season"),
+    defaultUnixRange(seasons, "season"),
   );
   // An open end is the day the card is drawn, written as that day.
   const dateLabel = range
@@ -136,10 +139,7 @@ export async function loadCompareCardData(search: URLSearchParams): Promise<Comp
         return {
           label: short,
           value: value == null || stat.format === "rank" ? "–" : formatPlayerMetricValue(value, stat.format),
-          best: statWinners(
-            aggregates.map((entry) => entry?.[key]),
-            stat.polarity,
-          ).includes(index),
+          best: compareStatWinners(aggregates, stat).includes(index),
         };
       }),
     };

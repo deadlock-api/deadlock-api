@@ -46,7 +46,7 @@ export function SharedHeroesTable({
         <EmptyState variant="plain" title="No hero in common on these filters." />
       ) : (
         <>
-          <Table density="dense" width="hug" className="tabular-nums">
+          <Table density="dense" className="tabular-nums">
             <TableHeader tone="muted">
               <TableRow>
                 <TableHead data-pinned>Hero</TableHead>
@@ -106,13 +106,16 @@ export function SharedHeroesTable({
                                   {formatStatValue(stats.matches, "integer")}{" "}
                                   {stats.matches === 1 ? "match" : "matches"}
                                 </Text>
-                                <Text variant="meta" tone="muted">
+                                <Text variant="caption" tone="muted">
                                   {formatPercent(stats.winRate, 0)} WR · {formatStatValue(stats.kda, "decimal2")} KDA
                                 </Text>
                               </span>
                             </Stack>
                           </TooltipTarget>
                         </Tooltip>
+                      ) : players[index].aggregate === undefined ? (
+                        // A player just added: the rows on screen are the previous request's, not a verdict.
+                        <Skeleton className="ms-auto h-8 w-20" />
                       ) : (
                         <NoValue label="Not played" />
                       )}

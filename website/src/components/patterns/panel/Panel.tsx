@@ -65,7 +65,7 @@ export function PanelHeader({
         <span className="truncate">{title}</span>
       </h3>
       {description && (
-        <Text data-slot="panel-header-description" variant="meta" tone="muted" numeric="tabular">
+        <Text data-slot="panel-header-description" variant="caption" tone="muted" numeric="tabular">
           {description}
         </Text>
       )}

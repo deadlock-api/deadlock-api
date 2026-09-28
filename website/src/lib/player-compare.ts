@@ -105,37 +105,67 @@ export type StatPolarity = "higher" | "lower" | "none";
 
 export type CompareStatKey = keyof PlayerAggregate;
 
+/** The sections of the head-to-head table, in order. */
+export const COMPARE_STAT_GROUPS = ["Overview", "Combat", "Economy", "Objectives & support"] as const;
+export type CompareStatGroup = (typeof COMPARE_STAT_GROUPS)[number];
+
 export interface CompareStat {
   key: CompareStatKey;
   label: string;
   /** `rank` is a badge, drawn as the rank's name. */
   format: PlayerMetricFormat | "rank";
   polarity: StatPolarity;
+  group: CompareStatGroup;
 }
 
+/** Every stat of a comparison, in table order: grouped, and within a group the ones people quote first. */
 export const COMPARE_STATS: readonly CompareStat[] = [
-  { key: "matches", label: "Matches", format: "integer", polarity: "none" },
-  { key: "heroesPlayed", label: "Heroes played", format: "integer", polarity: "none" },
-  { key: "avgMatchSeconds", label: "Average match", format: "duration", polarity: "none" },
-  { key: "rankBadge", label: "Current rank", format: "rank", polarity: "higher" },
-  { key: "winRate", label: "Win rate", format: "percent", polarity: "higher" },
-  { key: "kda", label: "KDA", format: "decimal2", polarity: "higher" },
-  { key: "kills", label: "Kills / match", format: "decimal1", polarity: "higher" },
-  { key: "deaths", label: "Deaths / match", format: "decimal1", polarity: "lower" },
-  { key: "assists", label: "Assists / match", format: "decimal1", polarity: "higher" },
-  { key: "netWorthPerMin", label: "Souls / min", format: "integer", polarity: "higher" },
-  { key: "damagePerMin", label: "Hero damage / min", format: "integer", polarity: "higher" },
-  { key: "damagePerSoul", label: "Damage per soul", format: "decimal2", polarity: "higher" },
-  { key: "objDamagePerMin", label: "Obj. damage / min", format: "integer", polarity: "higher" },
-  { key: "damageMitigatedPerMin", label: "Mitigated / min", format: "integer", polarity: "higher" },
-  { key: "healingPerMin", label: "Healing / min", format: "integer", polarity: "higher" },
-  { key: "healPreventedPerMatch", label: "Heal prevented", format: "integer", polarity: "higher" },
-  { key: "lastHitsPerMin", label: "Last hits / min", format: "decimal1", polarity: "higher" },
-  { key: "deniesPerMatch", label: "Denies / match", format: "decimal1", polarity: "higher" },
-  { key: "accuracy", label: "Accuracy", format: "percent", polarity: "higher" },
-  { key: "critShotRate", label: "Headshot rate", format: "percent", polarity: "higher" },
-  { key: "mvpRate", label: "MVP rate", format: "percent", polarity: "higher" },
-  { key: "top3Rate", label: "Top 3 rate", format: "percent", polarity: "higher" },
+  { key: "matches", label: "Matches", format: "integer", polarity: "none", group: "Overview" },
+  { key: "heroesPlayed", label: "Heroes played", format: "integer", polarity: "none", group: "Overview" },
+  { key: "avgMatchSeconds", label: "Average match", format: "duration", polarity: "none", group: "Overview" },
+  { key: "rankBadge", label: "Current rank", format: "rank", polarity: "higher", group: "Overview" },
+  { key: "winRate", label: "Win rate", format: "percent", polarity: "higher", group: "Overview" },
+  { key: "mvpRate", label: "MVP rate", format: "percent", polarity: "higher", group: "Overview" },
+  { key: "top3Rate", label: "Top 3 rate", format: "percent", polarity: "higher", group: "Overview" },
+  { key: "kda", label: "KDA", format: "decimal2", polarity: "higher", group: "Combat" },
+  { key: "kills", label: "Kills / match", format: "decimal1", polarity: "higher", group: "Combat" },
+  { key: "deaths", label: "Deaths / match", format: "decimal1", polarity: "lower", group: "Combat" },
+  { key: "assists", label: "Assists / match", format: "decimal1", polarity: "higher", group: "Combat" },
+  { key: "damagePerMin", label: "Hero damage / min", format: "integer", polarity: "higher", group: "Combat" },
+  { key: "accuracy", label: "Accuracy", format: "percent", polarity: "higher", group: "Combat" },
+  { key: "critShotRate", label: "Headshot rate", format: "percent", polarity: "higher", group: "Combat" },
+  { key: "netWorthPerMin", label: "Souls / min", format: "integer", polarity: "higher", group: "Economy" },
+  { key: "damagePerSoul", label: "Damage per soul", format: "decimal2", polarity: "higher", group: "Economy" },
+  { key: "lastHitsPerMin", label: "Last hits / min", format: "decimal1", polarity: "higher", group: "Economy" },
+  { key: "deniesPerMatch", label: "Denies / match", format: "decimal1", polarity: "higher", group: "Economy" },
+  {
+    key: "objDamagePerMin",
+    label: "Obj. damage / min",
+    format: "integer",
+    polarity: "higher",
+    group: "Objectives & support",
+  },
+  {
+    key: "damageMitigatedPerMin",
+    label: "Mitigated / min",
+    format: "integer",
+    polarity: "higher",
+    group: "Objectives & support",
+  },
+  {
+    key: "healingPerMin",
+    label: "Healing / min",
+    format: "integer",
+    polarity: "higher",
+    group: "Objectives & support",
+  },
+  {
+    key: "healPreventedPerMatch",
+    label: "Heal prevented",
+    format: "integer",
+    polarity: "higher",
+    group: "Objectives & support",
+  },
 ];
 
 /** The stats a comparison can be won on; a row drops out when no player has it, so copy says "up to". */
@@ -158,14 +188,39 @@ export function statWinners(values: readonly (number | null | undefined)[], pola
   return present.filter((entry) => entry.value === best).map((entry) => entry.index);
 }
 
+/** Decimals a stat is shown with; ranks and durations are whole numbers. */
+const SHOWN_DECIMALS: Record<CompareStat["format"], number> = {
+  integer: 0,
+  duration: 0,
+  rank: 0,
+  percent: 3,
+  decimal1: 1,
+  decimal2: 2,
+};
+
+/**
+ * The winners of one stat, judged on the values as the table prints them: two players both shown with a 4.25 KDA
+ * share the win rather than one of them winning on the third decimal.
+ */
+export function compareStatWinners(
+  aggregates: readonly (PlayerAggregate | null | undefined)[],
+  stat: Pick<CompareStat, "key" | "format" | "polarity">,
+): number[] {
+  const factor = 10 ** SHOWN_DECIMALS[stat.format];
+  return statWinners(
+    aggregates.map((aggregate) => {
+      const value = aggregate?.[stat.key];
+      return value == null ? value : Math.round(value * factor) / factor;
+    }),
+    stat.polarity,
+  );
+}
+
 /** How many stats each player wins, in the players' order. */
 export function statTally(aggregates: readonly (PlayerAggregate | null)[], stats = COMPARE_STATS): number[] {
   const tally = aggregates.map(() => 0);
   for (const stat of stats) {
-    for (const index of statWinners(
-      aggregates.map((aggregate) => aggregate?.[stat.key]),
-      stat.polarity,
-    )) {
+    for (const index of compareStatWinners(aggregates, stat)) {
       tally[index] += 1;
     }
   }

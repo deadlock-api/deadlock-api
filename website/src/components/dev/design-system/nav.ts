@@ -218,6 +218,7 @@ export const NAV: readonly NavChapter[] = [
           "ChartCard",
           "ChartLegend",
           "ChartLegend items",
+          "ChartLegendToggle",
           "ChartReadings",
           "ChartReveal",
           "ChartReadings rows",
@@ -230,7 +231,7 @@ export const NAV: readonly NavChapter[] = [
       { title: "Controls and layout", items: ["MetricSelect", "Trend fields", "ChartSidebarLayout"] },
       {
         title: "Ready-made charts",
-        items: ["WinRateBarChart", "StatTrendChart", "WeeklyTrendChart", "StatTrendChart states"],
+        items: ["WinRateBarChart", "RadarChart", "StatTrendChart", "WeeklyTrendChart", "StatTrendChart states"],
       },
     ],
   },
@@ -257,7 +258,7 @@ export const NAV: readonly NavChapter[] = [
           "RankedEntityGrid",
         ],
       },
-      { title: "Rank", items: ["RankTierIcons", "RankTierTick"] },
+      { title: "Rank", items: ["RankTierIcons", "RankTierTick", "RankBadgeTick"] },
       {
         title: "Selectors",
         items: [

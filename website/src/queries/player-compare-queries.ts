@@ -3,6 +3,7 @@ import type {
   AnalyticsApiPlayerScoreboardRequest,
   AnalyticsApiPlayerStatsMetricsRequest,
   PlayerHeroStatsGameModeEnum,
+  PlayersApiEnemyStatsRequest,
   PlayersApiPlayerHeroStatsRequest,
 } from "deadlock_api_client";
 
@@ -117,6 +118,24 @@ export function compareSuggestionsParams(filters: CompareFilters): AnalyticsApiP
     maxUnixTimestamp: filters.maxUnixTimestamp,
     start: 0,
     limit: SUGGESTION_LIMIT,
+  };
+}
+
+/** A companion shared this few matches with the player is noise; the floor also keeps the response small. */
+const COMPANION_MIN_MATCHES = 5;
+
+/**
+ * The players one player met most on the comparison's filters, as teammates (`trackerMateStatsQueryOptions`) or
+ * opponents (`trackerEnemyStatsQueryOptions`); both take the same request. The roster has no hero or match mode
+ * filter, so only the game mode and the dates apply.
+ */
+export function compareCompanionParams(accountId: number, filters: CompareFilters): PlayersApiEnemyStatsRequest {
+  return {
+    accountId,
+    gameMode: filters.gameMode,
+    minUnixTimestamp: filters.minUnixTimestamp ?? 0,
+    maxUnixTimestamp: filters.maxUnixTimestamp,
+    minMatchesPlayed: COMPANION_MIN_MATCHES,
   };
 }
 

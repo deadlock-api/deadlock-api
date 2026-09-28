@@ -5,7 +5,7 @@ import { ChartReading, ChartReadingList } from "~/components/patterns/charts/Cha
 import { ChartReveal, ChartRevealBack, ChartRevealFront } from "~/components/patterns/charts/ChartReveal";
 import { ChartEmpty, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { chartSizeVariants, ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_COLOR, CHART_TICK_SM, CHART_X_AXIS_SM } from "~/components/patterns/charts/theme";
+import { CHART_COLOR, CHART_TICK, CHART_X_AXIS } from "~/components/patterns/charts/theme";
 import { PanelBody } from "~/components/patterns/panel/Panel";
 import { Grid } from "~/components/ui/grid";
 import { Stack } from "~/components/ui/stack";
@@ -26,11 +26,15 @@ const LEAD_KEYS = [
   "player_damage_per_min",
   "accuracy",
   "last_hits",
+  "crit_shot_rate",
+  "boss_damage_per_min",
 ];
 const METRICS = [
   ...LEAD_KEYS.flatMap((key) => PLAYER_METRICS.filter((metric) => metric.key === key)),
   ...PLAYER_METRICS.filter((metric) => !LEAD_KEYS.includes(metric.key)),
 ];
+
+export const METRIC_COUNT = METRICS.length;
 
 /** One stat's chart, on its own so a tile only redraws when its own values change. */
 function MetricTile({
@@ -77,6 +81,7 @@ export function DistributionMarkers({
   averages,
   loading,
   zoom = true,
+  limit,
 }: {
   players: ComparedPlayer[];
   population: Record<string, HashMapValue> | undefined;
@@ -85,11 +90,13 @@ export function DistributionMarkers({
   loading: boolean;
   /** On: each curve spans the players, with a margin. Off: the whole field, from its lowest to its highest. */
   zoom?: boolean;
+  /** Shows only the first stats, the ones a player is most often measured by. */
+  limit?: number;
 }) {
   return (
     <PanelBody size="sm">
       <Grid columns={{ base: 1, sm: 2, md: 3, lg: 4, xl: 5 }} gap={3}>
-        {METRICS.map((metric) => (
+        {METRICS.slice(0, limit).map((metric) => (
           <MetricTile
             key={metric.key}
             metric={metric}
@@ -163,9 +170,9 @@ function MetricCurve({
   // A player past the known ends of the curve is drawn on the edge rather than off the plot.
   const clamp = (x: number) => Math.min(to, Math.max(from, x));
   const share = (avg: number) => rankShareLabel(approxPercentile(values, avg), lowerIsBetter);
-  // Three ticks, always: both ends of the zoom and its middle, each named by where it ranks.
+  // Two ticks, always: both ends of the zoom, each named by where it ranks; a middle one left no room for legible text.
   const edge = (x: number) => ({ x, label: rankShareLabel(approxPercentile(values, x), lowerIsBetter) });
-  const landmarks = from === to ? [edge(from)] : [edge(from), edge((from + to) / 2), edge(to)];
+  const landmarks = from === to ? [edge(from)] : [edge(from), edge(to)];
   const tickLabel = new Map(landmarks.map((landmark) => [landmark.x, landmark.label]));
   const summary =
     `${label}: median of all players ${fmt(values.percentile50)}. ` +
@@ -183,10 +190,10 @@ function MetricCurve({
               allowDataOverflow
               ticks={landmarks.map((landmark) => landmark.x)}
               interval={0}
-              {...CHART_X_AXIS_SM}
+              {...CHART_X_AXIS}
               // The outer labels align inward, so a label on the plot's edge is not cut in half. A custom tick draws no
               // text the axis can measure, so the axis takes a fixed height.
-              height={24}
+              height={28}
               // A short mark on the axis at each labelled point.
               tickLine={{ stroke: "var(--chart-axis)" }}
               tickSize={4}
@@ -204,9 +211,9 @@ function MetricCurve({
                 <text
                   x={x}
                   y={y}
-                  dy={12}
+                  dy={14}
                   textAnchor={index === 0 ? "start" : index === landmarks.length - 1 ? "end" : "middle"}
-                  style={CHART_TICK_SM}
+                  style={CHART_TICK}
                 >
                   {tickLabel.get(payload.value) ?? ""}
                 </text>
@@ -231,7 +238,7 @@ function MetricCurve({
         </ChartSurface>
       </ChartRevealFront>
       <ChartRevealBack>
-        <ChartReadingList size="sm" extra>
+        <ChartReadingList extra>
           {marks.map(({ player, avg }) => (
             <ChartReading key={player.accountId} label={player.name} color={player.color} extra={fmt(avg)}>
               {share(avg)}

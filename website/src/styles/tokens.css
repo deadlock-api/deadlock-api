@@ -32,7 +32,8 @@
   --series-forest: #008300;
   --series-magenta: #d55181;
 
-  /* Dense data type sizes, below Tailwind's text-xs (12px). In rem, so they follow the reader's font size. */
+  /* Dense data type sizes, from Tailwind's text-xs (12px) down. In rem, so they follow the reader's font size. */
+  --type-xs: 0.75rem;
   --type-2xs: 0.6875rem;
   --type-3xs: 0.625rem;
   --type-4xs: 0.5625rem;
@@ -101,8 +102,8 @@
   --chart-grid: var(--ink-700);
   --chart-axis: var(--ink-400);
   /* Tick and axis label size; `-sm` for plots under 100px tall. Auto-sized axes grow with it. */
-  --chart-tick: var(--type-2xs);
-  --chart-tick-sm: var(--type-4xs);
+  --chart-tick: var(--type-xs);
+  --chart-tick-sm: var(--type-2xs);
 
   /* Game identity: item categories, as colored in the game client */
   --item-weapon: rgb(229 138 0);

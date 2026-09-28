@@ -17,6 +17,8 @@ export const chartSizeVariants = cva("", {
       default: "h-70 @xl:h-80",
       lg: "h-90 @xl:h-105",
       xl: "h-105 @xl:h-140",
+      /** As tall as it is wide, up to the height of `lg`: round plots such as a radar. */
+      square: "aspect-square max-h-105 w-full",
       /** The parent sets the height. */
       fill: "h-full",
     },

@@ -133,9 +133,9 @@ test("statTally counts the stats each player wins", () => {
     statTally(
       [base, better, null],
       [
-        { key: "winRate", label: "", format: "percent", polarity: "higher" },
-        { key: "deaths", label: "", format: "decimal1", polarity: "lower" },
-        { key: "matches", label: "", format: "integer", polarity: "none" },
+        { key: "winRate", label: "", format: "percent", polarity: "higher", group: "Overview" },
+        { key: "deaths", label: "", format: "decimal1", polarity: "lower", group: "Overview" },
+        { key: "matches", label: "", format: "integer", polarity: "none", group: "Overview" },
       ],
     ),
     [0, 2, 0],

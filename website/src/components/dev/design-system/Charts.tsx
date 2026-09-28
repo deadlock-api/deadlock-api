@@ -13,6 +13,7 @@ import {
 } from "recharts";
 
 import { ChartsMore } from "~/components/dev/design-system/ChartsMore";
+import { ChartsRadar } from "~/components/dev/design-system/ChartsRadar";
 import { Round3PatternsCharts } from "~/components/dev/design-system/Round3PatternsCharts";
 import { Chapter, Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
@@ -284,6 +285,7 @@ export function Charts() {
 
       <ChartsMore />
       <Round3PatternsCharts />
+      <ChartsRadar />
     </Chapter>
   );
 }

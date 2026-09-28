@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { Bar, BarChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from "recharts";
 
 import { Specimen } from "~/components/dev/design-system/Specimen";
+import { RANK_BADGE_AXIS_WIDTH, RankBadgeTick } from "~/components/domain/rank/RankBadgeTick";
 import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/RankTierIcons";
 import { RankTierTick } from "~/components/domain/rank/RankTierTick";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
@@ -12,6 +13,7 @@ import {
   CHART_MARGIN,
   CHART_X_AXIS,
   CHART_Y_AXIS,
+  SERIES_COLORS,
 } from "~/components/patterns/charts/theme";
 import { percentTicks, winRateDomain } from "~/lib/chart-axis";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -34,6 +36,13 @@ const TIER_SPANS: React.ComponentProps<typeof RankTierIcons>["tiers"] = TIERS.ma
 }));
 const WIN_RATE_BY_TIER = TIERS.map((tier) => ({ tier, winRate: 0.468 + tier * 0.006 + (tier % 3) * 0.003 }));
 const WIN_RATE_AXIS = winRateDomain([0.5, ...WIN_RATE_BY_TIER.map((entry) => entry.winRate)]);
+/** Two players' linearised ranks (`badgeToLinear`) over twelve days; null is a day off the line. */
+const RANK_LINES = [31, 32, 32, 33, 35, 34, 36, 37, 37, 38, 39, 40].map((a, i) => ({
+  day: i + 1,
+  a,
+  b: i < 3 || i > 8 ? 42 - Math.floor(i / 4) : null,
+}));
+const RANK_TICKS = [31, 37, 43];
 const percent = (v: number) => `${Math.round(v * 100)}%`;
 
 export function DomainRank() {
@@ -76,6 +85,66 @@ export function DomainRank() {
             <Bar dataKey="players" radius={2} isAnimationActive={false} />
             <RankTierIcons tiers={TIER_SPANS} ranks={rankByTier} />
           </BarChart>
+        </ChartSurface>
+      </Specimen>
+
+      <Specimen
+        name="RankBadgeTick"
+        source="domain/rank/RankBadgeTick"
+        note="The y-axis tick of a chart plotted on linearised badges (badgeToLinear): the subtier's badge, named in its title, or its short number while the ranks load. Give the YAxis width={RANK_BADGE_AXIS_WIDTH} and ticks at tier starts (rankAxis in ~/lib/compare-rank-history)."
+        className="grid gap-3 lg:grid-cols-2"
+      >
+        <ChartSurface label="Two players' ranks over twelve days, RankBadgeTick on the y axis" size="md">
+          <LineChart data={RANK_LINES} margin={CHART_MARGIN}>
+            <CartesianGrid {...CHART_GRID} />
+            <XAxis {...CHART_X_AXIS} dataKey="day" type="number" domain={[1, 12]} />
+            <YAxis
+              {...CHART_Y_AXIS}
+              width={RANK_BADGE_AXIS_WIDTH}
+              domain={[30, 44]}
+              ticks={RANK_TICKS}
+              interval={0}
+              tick={<RankBadgeTick ranks={ranks} />}
+            />
+            <Line
+              dataKey="a"
+              type="stepAfter"
+              stroke={SERIES_COLORS[0]}
+              strokeWidth={2}
+              dot={false}
+              isAnimationActive={false}
+            />
+            <Line
+              dataKey="b"
+              type="stepAfter"
+              stroke={SERIES_COLORS[1]}
+              strokeWidth={2}
+              dot={false}
+              isAnimationActive={false}
+            />
+          </LineChart>
+        </ChartSurface>
+        <ChartSurface label="Ranks inside one tier while the ranks load, RankBadgeTick as short numbers" size="md">
+          <LineChart data={RANK_LINES.slice(0, 4)} margin={CHART_MARGIN}>
+            <CartesianGrid {...CHART_GRID} />
+            <XAxis {...CHART_X_AXIS} dataKey="day" type="number" domain={[1, 4]} />
+            <YAxis
+              {...CHART_Y_AXIS}
+              width={RANK_BADGE_AXIS_WIDTH}
+              domain={[30, 34]}
+              ticks={[30, 31, 32, 33, 34]}
+              interval={0}
+              tick={<RankBadgeTick ranks={undefined} />}
+            />
+            <Line
+              dataKey="a"
+              type="stepAfter"
+              stroke={SERIES_COLORS[0]}
+              strokeWidth={2}
+              dot={false}
+              isAnimationActive={false}
+            />
+          </LineChart>
         </ChartSurface>
       </Specimen>
 

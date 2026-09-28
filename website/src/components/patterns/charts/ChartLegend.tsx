@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
 
+import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
 type SwatchShape = "line" | "square" | "dot" | "ring";
@@ -67,25 +68,104 @@ export function ChartLegendItem({ color, shape, icon, className, children, ...pr
   );
 }
 
+interface ChartLegendToggleProps extends Omit<React.ComponentProps<"button">, "color" | "type"> {
+  /** A CSS color: a token such as `var(--chart-2)`, or a player's or hero's series color. */
+  color: string;
+  shape?: SwatchShape;
+  /** The series is singled out and stays so until pressed again. */
+  pressed?: boolean;
+  onPressedChange?: (pressed: boolean) => void;
+  /** Hover or focus enters (true) or leaves (false) the item: a passing highlight of its series. */
+  onHighlight?: (highlighted: boolean) => void;
+}
+
+/**
+ * A series of a `ChartLegend` the reader can single out: hovering or focusing it highlights the series in the plot,
+ * pressing it keeps the highlight (a toggle button, `aria-pressed`), which is how touch and keyboard pin one.
+ * Drive it with `useSeriesHighlight`. Children are its label.
+ */
+export function ChartLegendToggle({
+  color,
+  shape,
+  pressed = false,
+  onPressedChange,
+  onHighlight,
+  onClick,
+  onPointerEnter,
+  onPointerLeave,
+  onFocus,
+  onBlur,
+  className,
+  children,
+  ...props
+}: ChartLegendToggleProps) {
+  const size = useContext(LegendSizeContext);
+  return (
+    <li data-slot="chart-legend-item" className="flex min-w-0">
+      <Button
+        type="button"
+        variant="toggle"
+        size="xs"
+        data-slot="chart-legend-toggle"
+        aria-pressed={pressed}
+        // A legend row, not a pill: it keeps the legend's type and wraps or truncates a long label.
+        className={cn(
+          "h-auto min-h-6 min-w-0 shrink justify-start gap-1.5 text-start font-normal whitespace-normal",
+          className,
+        )}
+        onClick={(event) => {
+          onClick?.(event);
+          if (!event.defaultPrevented) onPressedChange?.(!pressed);
+        }}
+        onPointerEnter={(event) => {
+          onPointerEnter?.(event);
+          onHighlight?.(true);
+        }}
+        onPointerLeave={(event) => {
+          onPointerLeave?.(event);
+          onHighlight?.(false);
+        }}
+        onFocus={(event) => {
+          onFocus?.(event);
+          onHighlight?.(true);
+        }}
+        onBlur={(event) => {
+          onBlur?.(event);
+          onHighlight?.(false);
+        }}
+        {...props}
+      >
+        <ChartSwatch color={color} shape={shape} size={size} />
+        {children}
+      </Button>
+    </li>
+  );
+}
+
 /** The key to a chart's series. Text stays in ink; only the swatch carries the series color. */
 export function ChartLegend({
   label = "Legend",
   size = "default",
+  orientation = "horizontal",
   className,
   children,
   ...props
 }: React.ComponentProps<"ul"> & {
   label?: string;
   size?: "sm" | "default";
+  /** `vertical`: one series a row, full width, for a key beside the plot; long labels truncate instead of wrapping. */
+  orientation?: "horizontal" | "vertical";
 }) {
   return (
     <LegendSizeContext.Provider value={size}>
       <ul
         data-slot="chart-legend"
         data-size={size}
+        data-orientation={orientation}
         aria-label={label}
         className={cn(
-          "flex flex-wrap items-center text-muted-foreground",
+          "flex text-muted-foreground",
+          orientation === "vertical" ? "flex-col items-stretch" : "flex-wrap items-center",
           size === "sm" ? "gap-x-3 gap-y-0.5 text-2xs" : "gap-x-4 gap-y-1 px-1 text-xs",
           className,
         )}

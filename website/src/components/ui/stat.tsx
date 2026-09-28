@@ -81,7 +81,7 @@ function Stat({ label, value, sub, tone, align = "start", className, ...props }:
       )}
       {...props}
     >
-      <dt className="max-w-full truncate eyebrow">{label}</dt>
+      <dt className="max-w-full truncate type-caption font-medium text-muted-foreground">{label}</dt>
       <dd
         className={cn(
           "max-w-full min-w-0 truncate",

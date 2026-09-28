@@ -125,7 +125,7 @@ export const comparePageOptions = {
           staleTime: "static",
         }),
       );
-      return { names: [] };
+      return { names: [], range: undefined };
     }
     const [profileBatches] = await Promise.all([
       warmProfiles(accountIds),
@@ -142,18 +142,26 @@ export const comparePageOptions = {
       { personaname: string }
     >;
     // For the page head: a shared link previews as "A vs B", not as the generic tab.
-    return { names: accountIds.map((id) => profiles[id]?.personaname ?? `Player ${id}`) };
+    return {
+      names: accountIds.map((id) => profiles[id]?.personaname ?? `Player ${id}`),
+      // The dates the page shows, so the preview card counts the same matches when the URL names none (the page
+      // falls back to the reader's date preference, the card on its own would fall back to the season).
+      range: { minUnixTimestamp: filters.minUnixTimestamp, maxUnixTimestamp: filters.maxUnixTimestamp },
+    };
   },
   head: ({
     match,
     loaderData,
   }: {
     match: { pathname: string; search: Record<string, unknown> };
-    loaderData?: { names: string[] };
+    loaderData?: {
+      names: string[];
+      range: { minUnixTimestamp?: number; maxUnixTimestamp?: number } | undefined;
+    };
   }) => {
     const view = analyticsView("players", match.pathname);
     const names = loaderData?.names ?? [];
-    const params = compareShareParams(match.search);
+    const params = compareShareParams(match.search, loaderData?.range);
     const path = match.pathname.replace(/\/$/, "");
     return seo({
       title: names.length > 0 ? pageTitle(`${names.join(" vs ")}: Deadlock Player Comparison`) : pageTitle(view.title),
