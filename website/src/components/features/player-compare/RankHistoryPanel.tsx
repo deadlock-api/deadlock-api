@@ -46,11 +46,14 @@ export function RankHistoryPanel({
   players,
   filters,
   histories,
+  className,
 }: {
   players: ComparedPlayer[];
   filters: CompareFilters;
   /** The players' match histories on the filters, in the players' order (`useCompareMatchHistories`). */
   histories: readonly CompareMatchHistory[];
+  /** Layout from the parent (grid placement). */
+  className?: string;
 }) {
   const mode = modeFromParams(
     filters.gameMode === "street_brawl" ? "street_brawl" : "normal",
@@ -69,7 +72,7 @@ export function RankHistoryPanel({
   const daysByPlayer = histories.map((history) => dailyRanks(history.matches ?? []));
 
   return (
-    <Panel>
+    <Panel className={className}>
       {/* As tall as the weekly trend's header beside it (which holds a select), so the two plots start level. */}
       <PanelHeader size="sm" title="Rank over time" icon={Medal} className="min-h-11" />
       <PanelBody size="sm">

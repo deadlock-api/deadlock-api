@@ -80,7 +80,16 @@ function AxisReadings({ entry, players }: { entry?: AxisRow; players: RadarPlaye
  * How each player plays, as percentiles among all players on the same filters: one axis per side of the game, 50 the
  * median, higher always better. Each player gets a playstyle label from their strongest axes.
  */
-export function PlaystyleRadarPanel({ players, metrics }: { players: ComparedPlayer[]; metrics: CompareMetrics }) {
+export function PlaystyleRadarPanel({
+  players,
+  metrics,
+  className,
+}: {
+  players: ComparedPlayer[];
+  metrics: CompareMetrics;
+  /** Layout from the parent (grid placement). */
+  className?: string;
+}) {
   const { highlighted, toggleProps } = useSeriesHighlight();
 
   // A player whose numbers failed (a private account) drops out of the chart; the others still draw.
@@ -116,7 +125,7 @@ export function PlaystyleRadarPanel({ players, metrics }: { players: ComparedPla
       .join(". ");
 
   return (
-    <Panel>
+    <Panel className={className}>
       <PanelHeader size="sm" title="Playstyle">
         <ChartLegend label="Reference">
           <ChartLegendItem color="var(--chart-axis)" shape="dashed">

@@ -8,7 +8,6 @@ import { Grid } from "~/components/ui/grid";
 import { Stack } from "~/components/ui/stack";
 import { aggregateHeroStats, compareColorIndexes } from "~/lib/player-compare";
 import { playstyleLabel, playstylePercentiles } from "~/lib/playstyle";
-import { cn } from "~/lib/utils";
 import { type CompareFilters, compareHeroStatsParams, playerRanksQueryOptions } from "~/queries/player-compare-queries";
 import { steamProfileQueryOptions, trackerHeroStatsQueryOptions } from "~/queries/tracker-queries";
 
@@ -29,6 +28,20 @@ import type { ComparedPlayer } from "./types";
 import { useCompareMatchHistories } from "./useCompareMatchHistories";
 import { useCompareMetrics } from "./useCompareMetrics";
 import { usePlayerCompareState } from "./usePlayerCompareState";
+
+/** The top grid's classes for up to three players: two columns from @4xl, three from @8xl. */
+const LAYOUT = {
+  grid: "@4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @8xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)]",
+  table: "order-1 @4xl:row-span-2 @8xl:order-none @8xl:row-span-1",
+  stack: "contents @8xl:flex",
+};
+
+/** Four or five players: the table spans the width until @7xl, then two columns, three from @9xl. */
+const WIDE_LAYOUT = {
+  grid: "@4xl:grid-cols-2 @7xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @9xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)]",
+  table: "order-1 @4xl:col-span-2 @7xl:col-span-1 @7xl:row-span-2 @9xl:order-none @9xl:row-span-1",
+  stack: "contents @9xl:flex",
+};
 
 /** The compare tab: pick up to five players, then see who wins which stat on the page's filters. */
 export function PlayerComparison({ filters }: { filters: CompareFilters }) {
@@ -93,6 +106,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
     };
   });
 
+  const layout = players.length >= 4 ? WIDE_LAYOUT : LAYOUT;
   // On one hero's filter every shared hero is that hero.
   const showSharedHeroes = filters.heroId == null && accountIds.length >= 2;
 
@@ -124,39 +138,27 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             onRemove={remove}
             onMove={move}
           />
-          {/* Wide: the stat table on the left, the share card and the profile charts beside it. Four or five columns
-              of values need the whole width until the page is very wide. Narrow: stacked. */}
-          <Grid
-            gap={4}
-            className={cn(
-              "items-start",
-              players.length >= 4
-                ? "@7xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
-                : "@4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]",
-            )}
-          >
-            <HeadToHeadTable players={players} />
-            {/* Its own width decides: stacked under a wide table, the side panels pair up rather than stretch. */}
-            {/* Under a wide table (four or five players) the share card and the radar pair up side by side. */}
-            <Grid columns={{ base: 1, xl: 2 }} gap={4} className="items-start">
-              <ShareComparison filters={filters} />
-              <PlaystyleRadarPanel players={players} metrics={metrics} />
-            </Grid>
-          </Grid>
-          {/* Over time, side by side: the climb and the form. */}
-          <Grid columns={{ base: 1, xl: 2 }} gap={4} className="items-start">
-            <RankHistoryPanel players={players} filters={filters} histories={histories} />
-            <PerformanceTrendPanel players={players} histories={histories} />
-          </Grid>
-          {/* Bests and streaks beside how each player fares as matches run long; four or five columns of records
-              need the whole width until the page is very wide, like the head-to-head. */}
-          <Grid gap={4} className={cn("items-start", players.length >= 4 ? "@7xl:grid-cols-2" : "@4xl:grid-cols-2")}>
-            <RecordsPanel players={players} histories={histories} />
-            <MatchLengthPanel players={players} histories={histories} />
+          {/* One grid, so every edge lines up. Narrow: one column. Wide: the stat table spans two rows beside the
+              share card and the playstyle, then records beside match length, then rank beside the weekly trend.
+              Very wide: three columns, the table beside two stacks of three that end level with it. Four or five
+              columns of values need more width for each step. The stacks dissolve into the grid (`contents`) below
+              three columns, and `order` keeps the reading order in every layout. */}
+          <Grid gap={4} className={layout.grid}>
+            <HeadToHeadTable players={players} className={layout.table} />
+            <Stack gap={4} className={layout.stack}>
+              <ShareComparison filters={filters} className="order-2" />
+              <PlaystyleRadarPanel players={players} metrics={metrics} className="order-3" />
+              <PerformanceTrendPanel players={players} histories={histories} className="order-7 flex-1" />
+            </Stack>
+            <Stack gap={4} className={layout.stack}>
+              <RecordsPanel players={players} histories={histories} className="order-4" />
+              <MatchLengthPanel players={players} histories={histories} className="order-5" />
+              <RankHistoryPanel players={players} filters={filters} histories={histories} className="order-6 flex-1" />
+            </Stack>
           </Grid>
           <PercentileComparison players={players} metrics={metrics} />
           {/* Heroes and items side by side. */}
-          <Grid columns={{ base: 1, xl: showSharedHeroes ? 2 : 1 }} gap={4} className="items-start">
+          <Grid columns={{ base: 1, xl: showSharedHeroes ? 2 : 1 }} gap={4}>
             {showSharedHeroes && <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />}
             <ItemPreferencesPanel players={players} filters={filters} />
           </Grid>

@@ -57,10 +57,13 @@ const METRICS: Record<TrendMetric, { short: string; label: string; format: (valu
 export function PerformanceTrendPanel({
   players,
   histories,
+  className,
 }: {
   players: ComparedPlayer[];
   /** The players' match histories on the filters, in the players' order (`useCompareMatchHistories`). */
   histories: readonly CompareMatchHistory[];
+  /** Layout from the parent (grid placement). */
+  className?: string;
 }) {
   const [metric, setMetric] = useState<TrendMetric>("winRate");
   // Hidden once loaded when no player has a week with enough matches to plot.
@@ -75,7 +78,7 @@ export function PerformanceTrendPanel({
   if (settled && !allFailed && plottable.length === 0) return null;
 
   return (
-    <Panel>
+    <Panel className={className}>
       <PanelHeader size="sm" title="Weekly trend" icon={ChartNoAxesCombined}>
         {/* One line, like the rank chart's header beside it, so the two plots start level. */}
         <MetricSelect
