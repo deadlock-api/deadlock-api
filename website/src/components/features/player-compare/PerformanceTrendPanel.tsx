@@ -29,6 +29,7 @@ import {
   type TrendMetric,
   type TrendRow,
   weeklyTotals,
+  trendBucketWeeks,
   weekTicks,
 } from "~/lib/compare-trends";
 import { formatPercent } from "~/lib/format";
@@ -70,17 +71,22 @@ export function PerformanceTrendPanel({
   // Hidden once loaded when no player has a week with enough matches to plot.
   const settled = !histories.some((history) => history.isPending);
   const allFailed = histories.length > 0 && histories.every((history) => history.isError);
+  // A long range sums blocks of weeks, so the lines stay readable (about 26 points at most).
+  const starts = histories.flatMap((history) => (history.matches ?? []).map((match) => match.start_time));
+  const bucket = starts.length > 0 ? trendBucketWeeks(Math.min(...starts), Math.max(...starts)) : 1;
   // Summed once per render and shared with the chart: up to five histories of thousands of matches.
-  const weeksByPlayer = histories.map((history) => weeklyTotals(history.matches ?? []));
+  const weeksByPlayer = histories.map((history) => weeklyTotals(history.matches ?? [], bucket));
   const plottable = mergeWeeklyTrend(
     histories.map((history, index) => ({ key: String(history.accountId), weeks: weeksByPlayer[index] })),
     "winRate",
+    MIN_WEEK_MATCHES,
+    bucket,
   );
   if (settled && !allFailed && plottable.length === 0) return null;
 
   return (
     <Panel className={className}>
-      <PanelHeader size="sm" title="Weekly trend" icon={ChartNoAxesCombined}>
+      <PanelHeader size="sm" title={bucket === 1 ? "Weekly trend" : `${bucket}-week trend`} icon={ChartNoAxesCombined}>
         {/* One line, like the rank chart's header beside it, so the two plots start level. */}
         <MetricSelect
           value={metric}
@@ -109,7 +115,7 @@ export function PerformanceTrendPanel({
           ) : histories.some((history) => history.isPending) ? (
             <ChartLoading label={LABEL} size="grow" />
           ) : (
-            <PerformanceTrendChart players={players} metric={metric} weeksByPlayer={weeksByPlayer} />
+            <PerformanceTrendChart players={players} metric={metric} weeksByPlayer={weeksByPlayer} bucket={bucket} />
           )}
           <ChartLegend label="Players">
             {players.map((player) => (
@@ -128,17 +134,23 @@ function PerformanceTrendChart({
   players,
   metric,
   weeksByPlayer,
+  bucket,
 }: {
   players: ComparedPlayer[];
   metric: TrendMetric;
   weeksByPlayer: ReturnType<typeof weeklyTotals>[];
+  /** Weeks summed into each point. */
+  bucket: number;
 }) {
   const selected = METRICS[metric];
   const keys = players.map((player) => String(player.accountId));
   const rows = mergeWeeklyTrend(
     keys.map((key, index) => ({ key, weeks: weeksByPlayer[index] ?? [] })),
     metric,
+    MIN_WEEK_MATCHES,
+    bucket,
   );
+  const period = bucket === 1 ? "week" : `${bucket} weeks`;
   const first = rows[0];
   const last = rows.at(-1);
 
@@ -159,10 +171,10 @@ function PerformanceTrendChart({
     const key = keys[index];
     const row = rows.findLast((candidate) => candidate.value[key] != null);
     return row
-      ? `${player.name} ${selected.format(row.value[key] ?? 0)} in the week of ${longDate(row.week)}`
+      ? `${player.name} ${selected.format(row.value[key] ?? 0)} in the ${period} from ${longDate(row.week)}`
       : `${player.name} no week with ${MIN_WEEK_MATCHES} or more matches`;
   });
-  const summary = `${selected.label} by UTC week, from the week of ${longDate(first.week)} to the week of ${longDate(last.week)}, weeks with ${MIN_WEEK_MATCHES} or more matches. Latest: ${latest.join("; ")}.`;
+  const summary = `${selected.label} by ${period} (UTC), from ${longDate(first.week)} to ${longDate(last.week)}, periods with ${MIN_WEEK_MATCHES} or more matches. Latest: ${latest.join("; ")}.`;
 
   return (
     <ChartSurface label={summary} announce="label" size="grow" variant="flush">
@@ -195,7 +207,11 @@ function PerformanceTrendChart({
             if (!active || !row) return null;
             return (
               <ChartReadings
-                title={`Week of ${longDate(row.week)} (UTC)`}
+                title={
+                  bucket === 1
+                    ? `Week of ${longDate(row.week)} (UTC)`
+                    : `${shortDate(row.week)} – ${longDate(row.week + bucket * 7 * 86_400 - 86_400)} (UTC)`
+                }
                 valueLabel={selected.short}
                 extraLabel="Matches"
                 label={`${selected.label} in this week`}

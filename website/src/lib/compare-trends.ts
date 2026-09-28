@@ -13,9 +13,13 @@ export const MIN_WEEK_MATCHES = 5;
 export const TREND_METRICS = ["winRate", "kda", "kills", "deaths", "soulsPerMin", "lastHitsPerMin"] as const;
 export type TrendMetric = (typeof TREND_METRICS)[number];
 
-/** Start of the UTC week (Monday 00:00 UTC) a moment falls in, in unix seconds. UTC, so server and browser agree. */
-export function utcWeek(unix: number): number {
-  return Math.floor((unix - MONDAY_OFFSET) / WEEK) * WEEK + MONDAY_OFFSET;
+/**
+ * Start of the UTC week (Monday 00:00 UTC) a moment falls in, in unix seconds; with `weeks`, of the block of that many
+ * weeks (counted from the epoch's first Monday). UTC, so server and browser agree.
+ */
+export function utcWeek(unix: number, weeks = 1): number {
+  const span = weeks * WEEK;
+  return Math.floor((unix - MONDAY_OFFSET) / span) * span + MONDAY_OFFSET;
 }
 
 /** One player's matches in one UTC week, summed. */
@@ -33,10 +37,10 @@ export interface WeekTotals {
 }
 
 /** A match history (any order) summed per UTC week, oldest first. Weeks without matches are left out. */
-export function weeklyTotals(entries: readonly PlayerMatchHistoryEntry[]): WeekTotals[] {
+export function weeklyTotals(entries: readonly PlayerMatchHistoryEntry[], weeks = 1): WeekTotals[] {
   const byWeek = new Map<number, WeekTotals>();
   for (const entry of entries) {
-    const week = utcWeek(entry.start_time);
+    const week = utcWeek(entry.start_time, weeks);
     let totals = byWeek.get(week);
     if (!totals) {
       totals = { week, matches: 0, wins: 0, kills: 0, deaths: 0, assists: 0, netWorth: 0, lastHits: 0, seconds: 0 };
@@ -100,6 +104,7 @@ export function mergeWeeklyTrend(
   series: readonly TrendSeriesInput[],
   metric: TrendMetric,
   minMatches = MIN_WEEK_MATCHES,
+  weeks = 1,
 ): TrendRow[] {
   const valued = series.map(({ key, weeks }) => {
     const byWeek = new Map<number, { value: number | null; matches: number }>();
@@ -123,7 +128,7 @@ export function mergeWeeklyTrend(
   if (first > last) return [];
 
   const rows: TrendRow[] = [];
-  for (let week = first; week <= last; week += WEEK) {
+  for (let week = first; week <= last; week += weeks * WEEK) {
     const row: TrendRow = { week, value: {}, matches: {}, lone: {} };
     for (const { key, byWeek } of valued) {
       const cell = byWeek.get(week);
@@ -148,4 +153,16 @@ export function weekTicks(start: number, end: number, count = 5): number[] {
   const ticks: number[] = [];
   for (let t = start; t <= end; t += step) ticks.push(t);
   return ticks;
+}
+
+/** At most this many points on the trend: a longer range sums weeks into blocks. */
+const MAX_TREND_POINTS = 26;
+
+/**
+ * How many weeks one point of the trend sums, for match histories spanning `first` to `last` (unix seconds): 1 up to
+ * half a year, then 2, 4 or 8, so a long range stays readable.
+ */
+export function trendBucketWeeks(first: number, last: number): number {
+  const span = Math.max(0, last - first) / WEEK;
+  return [1, 2, 4, 8].find((weeks) => span / weeks <= MAX_TREND_POINTS) ?? 8;
 }

@@ -126,3 +126,21 @@ test("weekTicks steps in whole weeks", () => {
     [0, 1, 2].map((i) => MONDAY + i * WEEK),
   );
 });
+
+test("trendBucketWeeks keeps a long range to about 26 points", async () => {
+  const { trendBucketWeeks } = await import("./compare-trends");
+  assert.equal(trendBucketWeeks(MONDAY, MONDAY + 10 * WEEK), 1);
+  assert.equal(trendBucketWeeks(MONDAY, MONDAY + 40 * WEEK), 2);
+  assert.equal(trendBucketWeeks(MONDAY, MONDAY + 70 * WEEK), 4);
+  assert.equal(trendBucketWeeks(MONDAY, MONDAY + 500 * WEEK), 8);
+});
+
+test("weeklyTotals sums blocks of weeks", () => {
+  const weeks = weeklyTotals([match(MONDAY + 10), match(MONDAY + WEEK + 10), match(MONDAY + 2 * WEEK + 10)], 2);
+  assert.equal(
+    weeks.reduce((sum, week) => sum + week.matches, 0),
+    3,
+  );
+  assert.ok(weeks.length <= 2);
+  assert.equal(new Date(weeks[0].week * 1000).getUTCDay(), 1);
+});
