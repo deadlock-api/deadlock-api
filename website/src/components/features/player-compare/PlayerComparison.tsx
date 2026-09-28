@@ -24,6 +24,7 @@ import { RankHistoryPanel } from "./RankHistoryPanel";
 import { RecordsPanel } from "./RecordsPanel";
 import { ShareComparison } from "./ShareComparison";
 import { SharedHeroesTable } from "./SharedHeroesTable";
+import { TimelinePanel } from "./TimelinePanel";
 import { TogetherAgainstPanel } from "./TogetherAgainstPanel";
 import type { ComparedPlayer } from "./types";
 import { useCompareMatchHistories } from "./useCompareMatchHistories";
@@ -167,8 +168,9 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             <PerformanceTrendPanel players={players} histories={histories} className={layout.trend} />
           </Grid>
           <PercentileComparison players={players} metrics={metrics} />
-          {/* When they play: the hours beside the weekdays, each its own panel at one height. */}
-          <Grid gap={4} className="@4xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          {/* How a match goes for each, then when they play: the timeline, the hours and the weekdays at one height. */}
+          <Grid gap={4} className="@4xl:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1fr)]">
+            <TimelinePanel players={players} filters={filters} />
             <ActivityPanel players={players} histories={histories} by="hour" />
             <ActivityPanel players={players} histories={histories} by="weekday" />
           </Grid>

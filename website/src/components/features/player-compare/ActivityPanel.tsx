@@ -106,8 +106,8 @@ export function ActivityPanel({
   return (
     <Panel className={className}>
       <PanelHeader size="sm" title={title} icon={by === "hour" ? Clock : CalendarDays} />
-      <PanelBody size="sm">
-        <Stack gap={2}>
+      <PanelBody size="sm" className="flex flex-1 flex-col">
+        <Stack gap={2} className="flex-1">
           {allFailed ? (
             <ChartError
               label={title}
@@ -116,7 +116,7 @@ export function ActivityPanel({
               }}
             />
           ) : pending ? (
-            <ChartLoading label={title} size="md" />
+            <ChartLoading label={title} size="grow" />
           ) : (
             <ShareChart
               players={players}
@@ -176,7 +176,7 @@ function ShareChart({
   const domain: [number, number] = [0, top];
   const yTicks = [0, top / 2, top];
   return (
-    <ChartSurface label={summary} announce="label" size="md" variant="flush">
+    <ChartSurface label={summary} announce="label" size="grow" variant="flush">
       <LineChart data={points} margin={CHART_MARGIN} accessibilityLayer={false}>
         <CartesianGrid {...CHART_GRID} />
         <XAxis {...CHART_X_AXIS} dataKey="label" ticks={ticks} interval="preserveStartEnd" minTickGap={16} />
