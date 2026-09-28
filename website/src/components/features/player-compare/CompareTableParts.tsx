@@ -21,18 +21,11 @@ export function PlayerColumnHead({
   return (
     <TableHead className="text-end">
       <Inline gap={1} wrap="nowrap" justify="end">
+        <StatusDot color={player.color} />
         {player.profileLoading ? (
           <Skeleton className="h-4 w-20" />
         ) : (
-          // A long name wraps onto a second line (inside a word only when it must) rather than being cut, within a
-          // width that leaves the other players' columns room; only a name longer than two lines is cut.
-          <span
-            className="line-clamp-2 max-w-20 text-end break-words whitespace-normal @md/table:max-w-32 @2xl/table:max-w-none"
-            title={player.name}
-          >
-            {/* The dot in the text's flow, so it sits right before the first word however the name wraps. */}
-            <StatusDot color={player.color} className="align-middle" />
-            {"\u00a0"}
+          <span className="max-w-14 truncate @md/table:max-w-24 @2xl/table:max-w-none" title={player.name}>
             {player.name}
           </span>
         )}
