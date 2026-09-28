@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import type { HeroStats } from "deadlock_api_client";
 import { useState } from "react";
 
@@ -10,6 +11,7 @@ import { Inline, Stack } from "~/components/ui/stack";
 import { StatusDot } from "~/components/ui/status-dot";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Text } from "~/components/ui/text";
+import { TextLink } from "~/components/ui/text-link";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import { formatPercent, formatRelativeTime } from "~/lib/format";
 import { sharedHeroes } from "~/lib/player-compare";
@@ -67,7 +69,15 @@ export function SharedHeroesTable({
               {shown.map((hero) => (
                 <TableRow key={hero.heroId}>
                   <TableCell data-pinned>
-                    <HeroCell heroId={hero.heroId} size="sm" linkToDetail className="max-w-40" />
+                    {/* Drills in: the whole comparison on this hero. */}
+                    <TextLink asChild tone="inherit">
+                      <Link
+                        to="/analytics/players/compare"
+                        search={(prev: Record<string, unknown>) => ({ ...prev, hero: hero.heroId })}
+                      >
+                        <HeroCell heroId={hero.heroId} size="sm" className="max-w-40" />
+                      </Link>
+                    </TextLink>
                   </TableCell>
                   {hero.stats.map((stats, index) => (
                     <TableCell key={accountIds[index]} className="text-end">
