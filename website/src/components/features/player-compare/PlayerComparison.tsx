@@ -23,11 +23,13 @@ import { steamProfileQueryOptions, trackerHeroStatsQueryOptions } from "~/querie
 import { AddPlayerControls } from "./AddPlayerControls";
 import { HeadToHeadTable } from "./HeadToHeadTable";
 import { ItemPreferencesPanel } from "./ItemPreferencesPanel";
+import { MatchLengthPanel } from "./MatchLengthPanel";
 import { PercentileComparison } from "./PercentileComparison";
 import { PerformanceTrendPanel } from "./PerformanceTrendPanel";
 import { PlayerCards } from "./PlayerCards";
 import { PlaystyleRadarPanel } from "./PlaystyleRadarPanel";
 import { RankHistoryPanel } from "./RankHistoryPanel";
+import { RecordsPanel } from "./RecordsPanel";
 import { ShareComparison } from "./ShareComparison";
 import { SharedHeroesTable } from "./SharedHeroesTable";
 import { TogetherAgainstPanel } from "./TogetherAgainstPanel";
@@ -171,6 +173,11 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
           <Grid columns={{ base: 1, xl: 2 }} gap={4} className="items-start">
             <RankHistoryPanel players={players} filters={filters} histories={histories} />
             <PerformanceTrendPanel players={players} histories={histories} />
+          </Grid>
+          {/* Bests and streaks beside how each player fares as matches run long. */}
+          <Grid columns={{ base: 1, xl: 2 }} gap={4} className="items-start">
+            <RecordsPanel players={players} histories={histories} />
+            <MatchLengthPanel players={players} histories={histories} />
           </Grid>
           <PercentileComparison players={players} filters={filters} />
           {/* Heroes and items side by side; items last, since the panel hides itself when nobody has any. */}
