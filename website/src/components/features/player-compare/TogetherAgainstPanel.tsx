@@ -237,8 +237,13 @@ function SharedMatchesTable({
         {matches.map((match) => (
           <TableRow key={match.matchId}>
             <TableCell data-pinned>
+              {/* One line in a wide table; a narrow one puts the length under the day, for the players' columns. */}
               <Text tone="muted" className="whitespace-nowrap">
-                {lastMetLabel(match.startTime)} · {Math.round(match.durationS / 60)}m
+                {lastMetLabel(match.startTime)}
+                <span className="hidden @md/table:inline"> · {Math.round(match.durationS / 60)}m</span>
+              </Text>
+              <Text as="div" variant="caption" tone="muted" className="@md/table:hidden">
+                {Math.round(match.durationS / 60)}m
               </Text>
             </TableCell>
             {columns.map((player) => {
