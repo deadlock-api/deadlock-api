@@ -93,9 +93,11 @@ function PairRow({
     return (
       <TableRow>
         {names}
-        <TableCell colSpan={4}>
+        <TableCell colSpan={3}>
           <Text tone="muted">Never met</Text>
         </TableCell>
+        {/* The last-met column, which a narrow table hides: the row spans what the header spans. */}
+        <TableCell className="hidden @md/table:table-cell" />
       </TableRow>
     );
   }
@@ -272,7 +274,8 @@ export function TogetherAgainstPanel({
         return player ? <HistoryError key={history.accountId} player={player} history={history} /> : null;
       })}
       {/* Nobody met: one line instead of a table of empty rows. */}
-      {!loading && pairs.length > 0 && met.length === 0 && (
+      {/* Only a verdict when every history is in: a failed one leaves its pairs unknown, not unmet. */}
+      {!loading && failed.length === 0 && pairs.length > 0 && met.length === 0 && (
         <PanelBody size="sm">
           <Text tone="muted">{pairs.length === 1 ? "Never met" : "No two of them have met"} on these dates</Text>
         </PanelBody>
