@@ -66,6 +66,7 @@ export function RankHistoryPanel({
     (history.matches ?? []).some((match) => (match.ranked_display_badge ?? 0) > 0),
   );
   if (!showsRank || (settled && !allFailed && !anyRanked)) return null;
+  const daysByPlayer = histories.map((history) => dailyRanks(history.matches ?? []));
 
   return (
     <Panel>
@@ -84,22 +85,23 @@ export function RankHistoryPanel({
           ) : histories.some((history) => history.isPending) ? (
             <ChartLoading label={LABEL} size="md" />
           ) : (
-            <RankHistoryChart
-              players={players}
-              ranks={ranks}
-              filters={filters}
-              daysByPlayer={histories.map((history) => dailyRanks(history.matches ?? []))}
-            />
+            <RankHistoryChart players={players} ranks={ranks} filters={filters} daysByPlayer={daysByPlayer} />
           )}
-          {
-            <ChartLegend label="Players">
-              {players.map((player) => (
+          <ChartLegend label="Players">
+            {players.map((player, index) => {
+              // Who is missing from the chart, in the legend rather than a line under the plot, so this panel stays
+              // as tall as the weekly trend beside it.
+              const unranked = settled && !histories[index]?.isError && !daysByPlayer[index]?.length;
+              return (
                 <ChartLegendItem key={player.accountId} color={player.color} shape="line" title={player.name}>
-                  <span className="max-w-full truncate">{player.name}</span>
+                  <span className="max-w-full truncate">
+                    {player.name}
+                    {unranked && " · unranked"}
+                  </span>
                 </ChartLegendItem>
-              ))}
-            </ChartLegend>
-          }
+              );
+            })}
+          </ChartLegend>
         </Stack>
       </PanelBody>
     </Panel>
@@ -218,8 +220,6 @@ function RankHistoryChart({
           })}
         </LineChart>
       </ChartSurface>
-      {/* Who is missing from the chart, rather than a line that is not there. */}
-      {unrankedNote && <p className="text-xs text-muted-foreground">{unrankedNote}</p>}
     </Stack>
   );
 }
