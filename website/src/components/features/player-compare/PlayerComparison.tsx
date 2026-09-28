@@ -29,19 +29,34 @@ import { useCompareMatchHistories } from "./useCompareMatchHistories";
 import { useCompareMetrics } from "./useCompareMetrics";
 import { usePlayerCompareState } from "./usePlayerCompareState";
 
-/** The top grid's classes for up to three players: two columns from @4xl, three from @8xl. */
+/**
+ * The top grid's classes for up to three players. Narrow: one column. From @4xl two columns: the stat table spans two
+ * rows beside the share card and the playstyle, then records beside match length, rank beside the weekly trend. From
+ * @8xl a 3x3 grid: the table spans all three rows on the left, and each row pairs share / records, playstyle / match
+ * length, trend / rank, so every row's two panels share a height. `order` sets the reading order in each layout.
+ */
 const LAYOUT = {
   // The share card keeps its own height beside the table; the playstyle under it takes the rest.
   grid: "@4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @4xl:grid-rows-[auto_1fr] @8xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)] @8xl:grid-rows-none",
-  table: "order-1 @4xl:row-span-2 @8xl:order-none @8xl:row-span-1",
-  stack: "contents @8xl:flex",
+  table: "order-1 @4xl:row-span-2 @8xl:row-span-3",
+  share: "order-2",
+  radar: "order-3 @8xl:order-4",
+  records: "order-4 @8xl:order-3",
+  length: "order-5",
+  rank: "order-6 @8xl:order-7",
+  trend: "order-7 @8xl:order-6",
 };
 
-/** Four or five players: the table spans the width until @7xl, then two columns, three from @9xl. */
+/** Four or five players: the table spans the width until @7xl, then two columns, the 3x3 grid from @9xl. */
 const WIDE_LAYOUT = {
   grid: "@4xl:grid-cols-2 @7xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @7xl:grid-rows-[auto_1fr] @9xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)] @9xl:grid-rows-none",
-  table: "order-1 @4xl:col-span-2 @7xl:col-span-1 @7xl:row-span-2 @9xl:order-none @9xl:row-span-1",
-  stack: "contents @9xl:flex",
+  table: "order-1 @4xl:col-span-2 @7xl:col-span-1 @7xl:row-span-2 @9xl:row-span-3",
+  share: "order-2",
+  radar: "order-3 @9xl:order-4",
+  records: "order-4 @9xl:order-3",
+  length: "order-5",
+  rank: "order-6 @9xl:order-7",
+  trend: "order-7 @9xl:order-6",
 };
 
 /** The compare tab: pick up to five players, then see who wins which stat on the page's filters. */
@@ -139,23 +154,15 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             onRemove={remove}
             onMove={move}
           />
-          {/* One grid, so every edge lines up. Narrow: one column. Wide: the stat table spans two rows beside the
-              share card and the playstyle, then records beside match length, then rank beside the weekly trend.
-              Very wide: three columns, the table beside two stacks of three that end level with it. Four or five
-              columns of values need more width for each step. The stacks dissolve into the grid (`contents`) below
-              three columns, and `order` keeps the reading order in every layout. */}
+          {/* One grid, so every edge lines up; see LAYOUT for the arrangement at each width. */}
           <Grid gap={4} className={layout.grid}>
             <HeadToHeadTable players={players} className={layout.table} />
-            <Stack gap={4} className={layout.stack}>
-              <ShareComparison filters={filters} className="order-2" />
-              <PlaystyleRadarPanel players={players} metrics={metrics} className="order-3" />
-              <PerformanceTrendPanel players={players} histories={histories} className="order-7 flex-1" />
-            </Stack>
-            <Stack gap={4} className={layout.stack}>
-              <RecordsPanel players={players} histories={histories} className="order-4" />
-              <MatchLengthPanel players={players} histories={histories} className="order-5" />
-              <RankHistoryPanel players={players} filters={filters} histories={histories} className="order-6 flex-1" />
-            </Stack>
+            <ShareComparison filters={filters} className={layout.share} />
+            <PlaystyleRadarPanel players={players} metrics={metrics} className={layout.radar} />
+            <RecordsPanel players={players} histories={histories} className={layout.records} />
+            <MatchLengthPanel players={players} histories={histories} className={layout.length} />
+            <RankHistoryPanel players={players} filters={filters} histories={histories} className={layout.rank} />
+            <PerformanceTrendPanel players={players} histories={histories} className={layout.trend} />
           </Grid>
           <PercentileComparison players={players} metrics={metrics} />
           {/* Heroes and items side by side. */}
