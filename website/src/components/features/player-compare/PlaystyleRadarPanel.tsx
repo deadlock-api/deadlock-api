@@ -196,7 +196,7 @@ export function PlaystyleRadarPanel({ players, filters }: { players: ComparedPla
                       <Text variant="label" tone="default" wrap="truncate" title={entry.player.name}>
                         {entry.player.name}
                       </Text>
-                      <Text variant="caption" tone="muted" wrap="truncate">
+                      <Text variant="caption" tone="muted" className="line-clamp-2">
                         {playstyleLine(entry) ?? "Not enough data for a playstyle"}
                       </Text>
                     </Stack>

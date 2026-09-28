@@ -139,15 +139,39 @@ export function PlayerCards({
                             className="size-8 @stat-trio:size-12"
                           />
                           <Stack gap={0.5} className="min-w-0 flex-1">
-                            {player.profileLoading ? (
-                              <Skeleton className="h-5 w-28" />
-                            ) : (
-                              <Text variant="label" className="line-clamp-2 wrap-break-word" title={player.name}>
-                                <PlayerLink accountId={player.accountId} className="whitespace-normal">
-                                  {player.name}
-                                </PlayerLink>
-                              </Text>
-                            )}
+                            {/* The controls share the name's line only, so the rank and playstyle below get the width. */}
+                            <Inline gap={1} wrap="nowrap" align="start" justify="between">
+                              {player.profileLoading ? (
+                                <Skeleton className="h-5 w-28" />
+                              ) : (
+                                <Text variant="label" className="line-clamp-2 wrap-break-word" title={player.name}>
+                                  <PlayerLink accountId={player.accountId} className="whitespace-normal">
+                                    {player.name}
+                                  </PlayerLink>
+                                </Text>
+                              )}
+                              <Inline gap={0.5} wrap="nowrap" className="shrink-0">
+                                {players.length >= 2 && (
+                                  <ReorderHandle
+                                    aria-label={`Move ${player.name}`}
+                                    title="Drag, or press the arrow keys, to move"
+                                    {...reorder.itemProps(index)}
+                                  >
+                                    <span className="sr-only">{player.name}</span>
+                                  </ReorderHandle>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  aria-label={`Remove ${player.name}`}
+                                  title={`Remove ${player.name}`}
+                                  data-remove-player={player.accountId}
+                                  onClick={() => removeAt(index)}
+                                >
+                                  <XIcon aria-hidden="true" />
+                                </Button>
+                              </Inline>
+                            </Inline>
                             {/* The rank (with its move on these dates), then the playstyle. */}
                             <Stack gap={0} className="min-w-0">
                               <Text variant="caption" tone="muted">
@@ -186,34 +210,18 @@ export function PlayerCards({
                               )}
                             </Stack>
                           </Stack>
-                          <Inline gap={0.5} wrap="nowrap">
-                            {players.length >= 2 && (
-                              <ReorderHandle
-                                aria-label={`Move ${player.name}`}
-                                title="Drag, or press the arrow keys, to move"
-                                {...reorder.itemProps(index)}
-                              >
-                                <span className="sr-only">{player.name}</span>
-                              </ReorderHandle>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon-xs"
-                              aria-label={`Remove ${player.name}`}
-                              title={`Remove ${player.name}`}
-                              data-remove-player={player.accountId}
-                              onClick={() => removeAt(index)}
-                            >
-                              <XIcon aria-hidden="true" />
-                            </Button>
-                          </Inline>
                         </Inline>
 
                         {/* The verdict first: stats won out of the stats scored, and who leads; then the record. */}
                         {aggregate === null ? (
                           <Text tone="muted">No matches on these filters</Text>
                         ) : (
-                          <StatGroup variant="plain" size="sm" className="grid-cols-2 gap-2 @stat-trio:grid-cols-3">
+                          <StatGroup
+                            variant="plain"
+                            size="sm"
+                            // Each stat as wide as its value, spread across the card: a crowned "12/19" keeps its "/19".
+                            className="grid-cols-2 justify-between gap-2 @stat-trio:grid-cols-[repeat(3,auto)]"
+                          >
                             {!contest ? (
                               // Nothing to win alone: the sample size instead.
                               <Stat
@@ -237,7 +245,7 @@ export function PlayerCards({
                                   ) : (
                                     <Inline gap={1} wrap="nowrap" asChild>
                                       <span>
-                                        {leads && <CrownIcon aria-hidden="true" className="size-4" />}
+                                        {leads && <CrownIcon aria-hidden="true" className="size-4 shrink-0" />}
                                         {tally[index]}
                                         <span className="text-muted-foreground">/{scored.length}</span>
                                         {leads && (
@@ -273,7 +281,8 @@ export function PlayerCards({
                         )}
                         {aggregate && (
                           <Text variant="caption" tone="muted" numeric="tabular" wrap="truncate">
-                            {formatPlayerMetricValue(aggregate.matches, "integer")} matches ·{" "}
+                            {/* Alone, the matches are a stat of their own above. */}
+                            {contest && `${formatPlayerMetricValue(aggregate.matches, "integer")} matches · `}
                             {[aggregate.kills, aggregate.deaths, aggregate.assists]
                               .map((value) => formatPlayerMetricValue(value, "decimal1"))
                               .join(" / ")}{" "}
