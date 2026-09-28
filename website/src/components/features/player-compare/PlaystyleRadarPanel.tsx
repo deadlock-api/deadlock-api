@@ -7,7 +7,6 @@ import { RadarChart, RadarSeries } from "~/components/patterns/charts/RadarChart
 import { useSeriesHighlight } from "~/components/patterns/charts/useSeriesHighlight";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
-import { Grid } from "~/components/ui/grid";
 import { NoValue } from "~/components/ui/no-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Stack } from "~/components/ui/stack";
@@ -25,7 +24,9 @@ import {
 import type { ComparedPlayer } from "./types";
 import type { CompareMetrics } from "./useCompareMetrics";
 
-const CHART_SIZE = "md";
+/** The radar beside its legend (under it when narrow), filling the panel's height. */
+const PLOT_AND_LEGEND =
+  "grid min-h-0 flex-1 grid-cols-1 items-center gap-3 @sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]";
 
 interface RadarPlayer {
   player: ComparedPlayer;
@@ -134,7 +135,8 @@ export function PlaystyleRadarPanel({
           </ChartLegendItem>
         </ChartLegend>
       </PanelHeader>
-      <PanelBody size="sm">
+      {/* The plot takes the height its row gives the panel (beside records), from a readable minimum. */}
+      <PanelBody size="sm" className="@container flex flex-1 flex-col">
         {failed ? (
           <ErrorState
             variant="inline"
@@ -144,8 +146,8 @@ export function PlaystyleRadarPanel({
           />
         ) : loading ? (
           // The loaded panel's shape: the plot and a legend line a player, so nothing grows when the numbers land.
-          <Grid columns={{ base: 1, sm: 2 }} gap={3} className="items-center">
-            <ChartLoading label="Playstyle percentiles" size={CHART_SIZE} />
+          <div className={PLOT_AND_LEGEND}>
+            <ChartLoading label="Playstyle percentiles" size="fill" className="min-h-55" />
             <ChartLegend label="Players" orientation="vertical">
               {players.map((player) => (
                 <ChartLegendItem key={player.accountId} color={player.color} shape="line">
@@ -160,11 +162,11 @@ export function PlaystyleRadarPanel({
                 </ChartLegendItem>
               ))}
             </ChartLegend>
-          </Grid>
+          </div>
         ) : ranked.length === 0 ? (
           <ChartEmpty label="playstyle data" />
         ) : (
-          <Stack gap={3}>
+          <Stack gap={3} className="flex-1">
             {failedPlayers.length > 0 && (
               <ErrorState
                 variant="inline"
@@ -173,11 +175,12 @@ export function PlaystyleRadarPanel({
                 retrying={metrics.retrying}
               />
             )}
-            <Grid columns={{ base: 1, sm: 2 }} gap={3} className="items-center">
+            <div className={PLOT_AND_LEGEND}>
               <RadarChart
                 label={summary}
                 announce="label"
-                size={CHART_SIZE}
+                size="fill"
+                className="min-h-55"
                 variant="bare"
                 data={rows}
                 axisKey="axis"
@@ -209,7 +212,7 @@ export function PlaystyleRadarPanel({
                   </ChartLegendToggle>
                 ))}
               </ChartLegend>
-            </Grid>
+            </div>
           </Stack>
         )}
       </PanelBody>
