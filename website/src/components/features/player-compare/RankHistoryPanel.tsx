@@ -159,7 +159,9 @@ function RankHistoryChart({
   }
 
   const rows = mergeRankSeries(series);
-  const start = Math.min(extent[0], filters.minUnixTimestamp ? utcDay(filters.minUnixTimestamp) : extent[0]);
+  // From the first ranked day, not the filter's start: a long range with ranks only in its last weeks would leave most of
+  // the plot empty. The end runs to the filter's end, where the last rank still holds.
+  const start = extent[0];
   const end = Math.max(extent[1], filters.maxUnixTimestamp ? utcDay(filters.maxUnixTimestamp) : extent[1]);
   const axis = rankAxis(series.flatMap((s) => s.days.map((d) => d.linear)));
   const rankName = (badge: number) => badgeLabel(ranks, badge);
