@@ -5,7 +5,6 @@ import { useState } from "react";
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { Panel, PanelHeader, PanelShowMore } from "~/components/patterns/panel/Panel";
 import { NoValue } from "~/components/ui/no-value";
-import { ProgressBar } from "~/components/ui/progress-bar";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
 import { StatusDot } from "~/components/ui/status-dot";
@@ -54,7 +53,7 @@ export function SharedHeroesTable({
         </Stack>
       ) : (
         <>
-          <Table density="dense" height="fill" className="tabular-nums">
+          <Table density="dense" className="tabular-nums">
             <TableHeader tone="muted">
               <TableRow>
                 <TableHead data-pinned>Hero</TableHead>
@@ -71,105 +70,95 @@ export function SharedHeroesTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {shown.map((hero) => {
-                // Who plays it most gets the full bar; the others read as a share of that.
-                const mostMatches = Math.max(...hero.stats.map((stats) => stats?.matches ?? 0));
-                return (
-                  <TableRow key={hero.heroId}>
-                    <TableCell data-pinned>
-                      {/* Drills in: the whole comparison on this hero. */}
-                      <TextLink asChild tone="inherit">
-                        <Link
-                          to="/analytics/players/compare"
-                          search={(prev: Record<string, unknown>) => ({ ...prev, hero: hero.heroId })}
+              {shown.map((hero) => (
+                <TableRow key={hero.heroId}>
+                  <TableCell data-pinned>
+                    {/* Drills in: the whole comparison on this hero. */}
+                    <TextLink asChild tone="inherit">
+                      <Link
+                        to="/analytics/players/compare"
+                        search={(prev: Record<string, unknown>) => ({ ...prev, hero: hero.heroId })}
+                      >
+                        <HeroCell heroId={hero.heroId} size="sm" className="max-w-36" />
+                      </Link>
+                    </TextLink>
+                  </TableCell>
+                  {hero.stats.map((stats, index) => (
+                    <TableCell key={accountIds[index]} className="text-end">
+                      {stats ? (
+                        <Tooltip
+                          content={
+                            <>
+                              <TooltipHeader title={players[index].name} subtitle={`${stats.matches} matches`} />
+                              <TooltipStats>
+                                <TooltipStat label="Record" value={`${stats.wins}W ${stats.matches - stats.wins}L`} />
+                                <TooltipStat
+                                  label="K / D / A"
+                                  value={[stats.kills, stats.deaths, stats.assists]
+                                    .map((v) => formatStatValue(v, "decimal1"))
+                                    .join(" / ")}
+                                />
+                                <TooltipStat
+                                  label="Souls / min"
+                                  value={formatStatValue(stats.netWorthPerMin, "integer")}
+                                />
+                                <TooltipStat
+                                  label="Damage / min"
+                                  value={formatStatValue(stats.damagePerMin, "integer")}
+                                />
+                                <TooltipStat
+                                  label="Last played"
+                                  value={formatRelativeTime(new Date(stats.lastPlayed * 1000).toISOString())}
+                                />
+                              </TooltipStats>
+                            </>
+                          }
                         >
-                          <HeroCell heroId={hero.heroId} size="sm" className="max-w-36" />
-                        </Link>
-                      </TextLink>
+                          <TooltipTarget>
+                            <Stack gap={0} align="end" asChild>
+                              <span>
+                                {/* A narrow table keeps the count and drops the word, so every player's column fits. */}
+                                <Text>
+                                  {formatStatValue(stats.matches, "integer")}
+                                  <span className="sr-only @xl/table:not-sr-only">
+                                    {" "}
+                                    {stats.matches === 1 ? "match" : "matches"}
+                                  </span>
+                                </Text>
+                                {/* The win rate in the good / bad tone, judged as printed, like the other panels; fixed widths,
+                                    so the win rates and the KDAs each line up down the column. */}
+                                <Inline gap={1} wrap="nowrap" justify="end" asChild>
+                                  <span>
+                                    <Text
+                                      variant="caption"
+                                      tone={toneOf(Math.round(stats.winRate * 100), 50)}
+                                      className="whitespace-nowrap @xl/table:w-16 @xl/table:shrink-0 @xl/table:text-end"
+                                    >
+                                      {formatPercent(stats.winRate, 0)} WR
+                                    </Text>
+                                    <Text
+                                      variant="caption"
+                                      tone="muted"
+                                      className="hidden whitespace-nowrap @xl/table:inline @xl/table:w-18 @xl/table:shrink-0 @xl/table:text-end"
+                                    >
+                                      {formatStatValue(stats.kda, "decimal2")} KDA
+                                    </Text>
+                                  </span>
+                                </Inline>
+                              </span>
+                            </Stack>
+                          </TooltipTarget>
+                        </Tooltip>
+                      ) : players[index].aggregate === undefined ? (
+                        // A player just added: the rows on screen are the previous request's, not a verdict.
+                        <Skeleton className="ms-auto h-4 w-24" />
+                      ) : (
+                        <NoValue label="Not played" />
+                      )}
                     </TableCell>
-                    {hero.stats.map((stats, index) => (
-                      <TableCell key={accountIds[index]} className="text-end">
-                        {stats ? (
-                          <Tooltip
-                            content={
-                              <>
-                                <TooltipHeader title={players[index].name} subtitle={`${stats.matches} matches`} />
-                                <TooltipStats>
-                                  <TooltipStat label="Record" value={`${stats.wins}W ${stats.matches - stats.wins}L`} />
-                                  <TooltipStat
-                                    label="K / D / A"
-                                    value={[stats.kills, stats.deaths, stats.assists]
-                                      .map((v) => formatStatValue(v, "decimal1"))
-                                      .join(" / ")}
-                                  />
-                                  <TooltipStat
-                                    label="Souls / min"
-                                    value={formatStatValue(stats.netWorthPerMin, "integer")}
-                                  />
-                                  <TooltipStat
-                                    label="Damage / min"
-                                    value={formatStatValue(stats.damagePerMin, "integer")}
-                                  />
-                                  <TooltipStat
-                                    label="Last played"
-                                    value={formatRelativeTime(new Date(stats.lastPlayed * 1000).toISOString())}
-                                  />
-                                </TooltipStats>
-                              </>
-                            }
-                          >
-                            <TooltipTarget display="block">
-                              <Stack gap={1} asChild>
-                                <span>
-                                  {/* One line: the match count, the win rate in the good / bad tone (judged as printed, like the
-                                      other panels) and the KDA, at fixed widths so each lines up down the column. A narrow
-                                      table drops the KDA, so every player's column fits. */}
-                                  <Inline gap={1} wrap="nowrap" justify="end" asChild>
-                                    <span>
-                                      <Text
-                                        variant="caption"
-                                        className="whitespace-nowrap @xl/table:w-8 @xl/table:shrink-0 @xl/table:text-end"
-                                      >
-                                        {formatStatValue(stats.matches, "integer")}
-                                        <span className="sr-only"> {stats.matches === 1 ? "match" : "matches"}</span>
-                                      </Text>
-                                      <Text
-                                        variant="caption"
-                                        tone={toneOf(Math.round(stats.winRate * 100), 50)}
-                                        className="whitespace-nowrap @xl/table:w-15 @xl/table:shrink-0 @xl/table:text-end"
-                                      >
-                                        {formatPercent(stats.winRate, 0)} WR
-                                      </Text>
-                                      <Text
-                                        variant="caption"
-                                        tone="muted"
-                                        className="hidden whitespace-nowrap @xl/table:inline @xl/table:w-16 @xl/table:shrink-0 @xl/table:text-end"
-                                      >
-                                        {formatStatValue(stats.kda, "decimal2")} KDA
-                                      </Text>
-                                    </span>
-                                  </Inline>
-                                  <ProgressBar
-                                    variant="thin"
-                                    value={stats.matches}
-                                    max={mostMatches}
-                                    color={players[index].color}
-                                  />
-                                </span>
-                              </Stack>
-                            </TooltipTarget>
-                          </Tooltip>
-                        ) : players[index].aggregate === undefined ? (
-                          // A player just added: the rows on screen are the previous request's, not a verdict.
-                          <Skeleton className="ms-auto h-8 w-24" />
-                        ) : (
-                          <NoValue label="Not played" />
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                );
-              })}
+                  ))}
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
           {heroes.length > COLLAPSED_ROWS && (
