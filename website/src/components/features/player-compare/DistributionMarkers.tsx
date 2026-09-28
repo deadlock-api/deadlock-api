@@ -65,6 +65,8 @@ const METRICS = [
 ].map((metric) => ({ ...metric, label: COMPARE_LABELS[metric.key] ?? metric.label }));
 
 export const METRIC_COUNT = METRICS.length;
+/** How many stats a collapsed panel shows when it is one column wide. */
+const NARROW_METRICS = 6;
 
 /** One stat's chart, on its own so a tile only redraws when its own values change. */
 function MetricTile({
@@ -74,6 +76,7 @@ function MetricTile({
   averages,
   loading,
   zoom,
+  className,
 }: {
   metric: (typeof METRICS)[number];
   values: HashMapValue | undefined;
@@ -81,6 +84,8 @@ function MetricTile({
   averages: (Record<string, HashMapValue> | undefined)[];
   loading: boolean;
   zoom: boolean;
+  /** Layout from the parent. */
+  className?: string;
 }) {
   const fmt = (value: number) => formatPlayerMetricValue(value, metric.format);
   const marks = players.flatMap((player, index) => {
@@ -88,7 +93,7 @@ function MetricTile({
     return avg == null || !Number.isFinite(avg) ? [] : [{ player, avg }];
   });
   return (
-    <Stack gap={1}>
+    <Stack gap={1} className={className}>
       <Text variant="label">{metric.label}</Text>
       {loading ? (
         <ChartLoading label={`${metric.label} distribution`} size="sm" />
@@ -126,9 +131,11 @@ export function DistributionMarkers({
   return (
     <PanelBody size="sm">
       <Grid columns={{ base: 1, sm: 2, md: 3, lg: 4, xl: 5 }} gap={3}>
-        {METRICS.slice(0, limit).map((metric) => (
+        {METRICS.slice(0, limit).map((metric, index) => (
           <MetricTile
             key={metric.key}
+            // Collapsed on a phone (one column), the first six; "Show all" opens the rest.
+            className={limit !== undefined && index >= NARROW_METRICS ? "hidden @sm/percentiles:flex" : undefined}
             metric={metric}
             values={population?.[metric.key]}
             players={players}

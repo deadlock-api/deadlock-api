@@ -27,7 +27,8 @@ export function PercentileComparison({ players, metrics }: { players: ComparedPl
   const loading = metrics.populationPending || metrics.pending.every(Boolean);
 
   return (
-    <Panel>
+    // Named, so a tile knows the panel's width (a phone shows fewer before "Show all").
+    <Panel className="@container/percentiles">
       <PanelHeader size="sm" title="Against everyone">
         {/* The legend, then the zoom toggle on the far right. */}
         <Inline gap={3} wrap="nowrap">
