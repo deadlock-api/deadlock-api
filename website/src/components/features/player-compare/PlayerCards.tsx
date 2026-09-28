@@ -128,13 +128,22 @@ export function PlayerCards({
                   <CardContent>
                     <Stack gap={2}>
                       <Inline gap={2} wrap="nowrap" align="start">
-                        <SteamAvatar src={player.avatar} loading={player.profileLoading} size="lg" shape="rounded" />
+                        {/* Smaller in a narrow card, so the name keeps its room. */}
+                        <SteamAvatar
+                          src={player.avatar}
+                          loading={player.profileLoading}
+                          size="lg"
+                          shape="rounded"
+                          className="size-8 @stat-trio:size-12"
+                        />
                         <Stack gap={0.5} className="min-w-0 flex-1">
                           {player.profileLoading ? (
                             <Skeleton className="h-5 w-28" />
                           ) : (
-                            <Text variant="label" className="truncate" title={player.name}>
-                              <PlayerLink accountId={player.accountId}>{player.name}</PlayerLink>
+                            <Text variant="label" className="line-clamp-2 wrap-break-word" title={player.name}>
+                              <PlayerLink accountId={player.accountId} className="whitespace-normal">
+                                {player.name}
+                              </PlayerLink>
                             </Text>
                           )}
                           {/* The rank (with its move on these dates), then the playstyle. */}
