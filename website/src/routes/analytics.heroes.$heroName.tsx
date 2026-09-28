@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, type NotFoundRouteProps, createFileRoute, notFound, redirect } from "@tanstack/react-router";
+import { Link, type NotFoundRouteProps, createFileRoute, notFound, redirect, useRouter } from "@tanstack/react-router";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { ListOrdered, type LucideIcon, Map, ShoppingBag, Trophy, Users } from "lucide-react";
 import { lazy, Suspense, useMemo } from "react";
@@ -28,17 +28,12 @@ import { getPickrateMultiplier } from "~/lib/constants";
 import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { formatPercent } from "~/lib/format";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
+import { fetchHeroMatchups, type HeroMatchupsRequest } from "~/lib/hero-matchup-fns";
 import { findHeroBySlug, heroSlug } from "~/lib/hero-slug";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
 import { rankRangeLabel } from "~/lib/rank-utils";
-import {
-  defaultDateRange,
-  defaultPeriodLabel,
-  defaultPrevDateRange,
-  defaultUnixRange,
-  type SeasonInfo,
-} from "~/lib/seasons";
+import { defaultPeriodLabel, defaultPrevUnixRange, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { pageTitle, seo, SITE_URL } from "~/lib/seo";
 import { closestNameBySlug, slugify } from "~/lib/slug";
 import {
@@ -123,6 +118,24 @@ function currentBanParams(seasons: readonly SeasonInfo[], preference: DateFilter
   };
 }
 
+function matchupsRequest(
+  heroId: number,
+  seasons: readonly SeasonInfo[],
+  preference: DateFilterPreference = "season",
+): HeroMatchupsRequest {
+  const prev = defaultPrevUnixRange(seasons, preference);
+  return {
+    heroId,
+    minAverageBadge: DEFAULT_MIN_RANK,
+    maxAverageBadge: DEFAULT_MAX_RANK,
+    ...defaultUnixRange(seasons, preference),
+    prevMinUnixTimestamp: prev.minUnixTimestamp,
+    prevMaxUnixTimestamp: prev.maxUnixTimestamp,
+    gameMode: GAME_MODE,
+    matchMode: DEFAULT_MATCH_MODE,
+  };
+}
+
 function summarizeHeroStats(rows: readonly AnalyticsHeroStats[] | undefined, heroId: number) {
   if (!rows || rows.length === 0) return null;
   const row = rows.find((r) => r.hero_id === heroId);
@@ -167,7 +180,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       }
       throw notFound({ data: { suggestion: closestNameBySlug(playable, params.heroName)?.name } });
     }
-    const [stats, ranks] = await Promise.all([
+    const [stats, ranks, , , , matchups] = await Promise.all([
       prefetchSafe(
         queryClient.query({
           ...heroStatsQueryOptions(currentStatsParams(seasons, preferences.dateFilter)),
@@ -188,6 +201,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
         }),
       ),
       prefetchSafe(queryClient.query({ ...itemUpgradesQueryOptions, staleTime: "static" })),
+      prefetchSafe(fetchHeroMatchups({ data: matchupsRequest(hero.id, seasons, preferences.dateFilter) })),
     ]);
     const cardImage = hero.images.hero_card_critical_webp ?? hero.images.icon_hero_card_webp ?? null;
     const summary = summarizeHeroStats(stats, hero.id);
@@ -197,6 +211,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       slug: params.heroName,
       cardImage,
       breadcrumb: hero.name,
+      matchups,
       rankRange: rankRangeLabel(ranks, DEFAULT_MIN_RANK, DEFAULT_MAX_RANK),
       summary: summary && {
         winRate: summary.winRate,
@@ -263,11 +278,11 @@ function HeroLinkCard({
 
 function HeroDetailPage() {
   const { preferences } = Route.useRouteContext();
-  const { heroId, heroName, rankRange } = Route.useLoaderData();
+  const { heroId, heroName, rankRange, matchups } = Route.useLoaderData();
+  const router = useRouter();
+  const retryMatchups = () => void router.invalidate();
   const { seasons } = useSeasons();
   const period = defaultPeriodLabel(seasons, preferences.dateFilter);
-  const [defaultStart, defaultEnd] = defaultDateRange(seasons, preferences.dateFilter);
-  const [prevStart, prevEnd] = defaultPrevDateRange(seasons, preferences.dateFilter);
   const statsQuery = useQuery(heroStatsQueryOptions(currentStatsParams(seasons, preferences.dateFilter)));
   const banQuery = useQuery(heroBanStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter)));
 
@@ -392,48 +407,15 @@ function HeroDetailPage() {
         title={`${heroName} Matchups & Synergies`}
         description={`Which heroes ${heroName} counters, which heroes counter ${heroName}, and the best teammates to pair with, in ${rankRange} matches.`}
       >
-        <HeroMatchupSummary
-          heroId={heroId}
-          heroName={heroName}
-          minRankId={DEFAULT_MIN_RANK}
-          maxRankId={DEFAULT_MAX_RANK}
-          minDate={defaultStart}
-          maxDate={defaultEnd}
-          gameMode={GAME_MODE}
-          matchMode={DEFAULT_MATCH_MODE}
-        />
+        <HeroMatchupSummary heroName={heroName} matchups={matchups} onRetry={retryMatchups} />
         <div className="grid items-start gap-4 lg:grid-cols-2">
           <Panel>
             <PanelHeader title={`${heroName} with Teammates`} description="Win rate change, best first" />
-            <HeroMatchupDetailsStatsTable
-              heroId={heroId}
-              stat={0}
-              minRankId={DEFAULT_MIN_RANK}
-              maxRankId={DEFAULT_MAX_RANK}
-              minDate={defaultStart}
-              maxDate={defaultEnd}
-              prevMinDate={prevStart}
-              prevMaxDate={prevEnd}
-              gameMode={GAME_MODE}
-              matchMode={DEFAULT_MATCH_MODE}
-              linkHeroes
-            />
+            <HeroMatchupDetailsStatsTable stat={0} matchups={matchups} onRetry={retryMatchups} linkHeroes />
           </Panel>
           <Panel>
             <PanelHeader title={`${heroName} against Enemies`} description="Win rate change, best first" />
-            <HeroMatchupDetailsStatsTable
-              heroId={heroId}
-              stat={1}
-              minRankId={DEFAULT_MIN_RANK}
-              maxRankId={DEFAULT_MAX_RANK}
-              minDate={defaultStart}
-              maxDate={defaultEnd}
-              prevMinDate={prevStart}
-              prevMaxDate={prevEnd}
-              gameMode={GAME_MODE}
-              matchMode={DEFAULT_MATCH_MODE}
-              linkHeroes
-            />
+            <HeroMatchupDetailsStatsTable stat={1} matchups={matchups} onRetry={retryMatchups} linkHeroes />
           </Panel>
         </div>
       </Section>

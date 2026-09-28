@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { redirectLegacyPage } from "~/lib/site-route-migration";
+import { redirectLegacyHeroId, redirectLegacyPage } from "~/lib/site-route-migration";
 
 export const Route = createFileRoute("/heroes")({
-  beforeLoad: redirectLegacyPage,
+  beforeLoad: async (options) => {
+    await redirectLegacyHeroId(options);
+    redirectLegacyPage(options);
+  },
 });

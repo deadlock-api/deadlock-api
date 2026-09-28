@@ -1,18 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { useMemo, useState } from "react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
-import { HeroImage } from "~/components/domain/assets/HeroImage";
-import { HeroName } from "~/components/domain/assets/HeroName";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { PanelShowMore } from "~/components/patterns/panel/Panel";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
-import { LoadingState } from "~/components/patterns/states/LoadingState";
-import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
-import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -21,28 +15,14 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { formatSignedPercent } from "~/lib/format";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
-import { matchupWinRateChange } from "~/lib/matchup-stats";
+import { heroMatchups, type HeroMatchups } from "~/lib/matchup-stats";
 import { queryKeys } from "~/queries/query-keys";
+
+export type { MatchupRow } from "~/lib/matchup-stats";
 
 export enum HeroMatchupDetailsStatsTableStat {
   SYNERGY = 0,
   COUNTER = 1,
-}
-
-export interface MatchupRow {
-  heroId: number;
-  matches: number;
-  wins: number;
-  relWinrate: number;
-  prevRelWinrate: number | undefined;
-}
-
-function buildHeroStatsMap(data: AnalyticsHeroStats[] | undefined): Record<number, AnalyticsHeroStats> {
-  const map: Record<number, AnalyticsHeroStats> = {};
-  for (const hero of data || []) {
-    map[hero.hero_id] = hero;
-  }
-  return map;
 }
 
 export interface HeroMatchupParams {
@@ -214,88 +194,25 @@ export function useHeroMatchupRows({
     enabled: hasPreviousInterval,
   });
 
-  const isLoading = useMemo(
-    () => isLoadingSynergy || isLoadingCounter || isLoadingHero,
-    [isLoadingSynergy, isLoadingCounter, isLoadingHero],
+  const isLoading = isLoadingSynergy || isLoadingCounter || isLoadingHero;
+
+  const { synergyRows, counterRows } = useMemo(
+    () =>
+      heroMatchups(
+        heroId,
+        { heroStats: heroData ?? [], synergies: synergyData ?? [], counters: counterData ?? [] },
+        hasPreviousInterval
+          ? { heroStats: prevHeroData ?? [], synergies: prevSynergyData ?? [], counters: prevCounterData ?? [] }
+          : undefined,
+      ),
+    [heroId, heroData, synergyData, counterData, hasPreviousInterval, prevHeroData, prevSynergyData, prevCounterData],
   );
-
-  const heroStatsMap = useMemo(() => buildHeroStatsMap(heroData), [heroData]);
-  const prevHeroStatsMap = useMemo(() => buildHeroStatsMap(prevHeroData), [prevHeroData]);
-
-  const prevSynergyRelWinrateMap = useMemo(() => {
-    const map: Record<number, Record<number, number>> = {};
-    for (const synergy of (hasPreviousInterval ? prevSynergyData : undefined) || []) {
-      const relWinrate = matchupWinRateChange(synergy.wins, synergy.matches_played, [
-        prevHeroStatsMap[synergy.hero_id1],
-        prevHeroStatsMap[synergy.hero_id2],
-      ]);
-      if (relWinrate === undefined) continue;
-      if (!map[synergy.hero_id1]) map[synergy.hero_id1] = {};
-      if (!map[synergy.hero_id2]) map[synergy.hero_id2] = {};
-      map[synergy.hero_id1][synergy.hero_id2] = relWinrate;
-      map[synergy.hero_id2][synergy.hero_id1] = relWinrate;
-    }
-    return map;
-  }, [prevSynergyData, prevHeroStatsMap, hasPreviousInterval]);
-
-  const prevCounterRelWinrateMap = useMemo(() => {
-    const map: Record<number, Record<number, number>> = {};
-    for (const counter of (hasPreviousInterval ? prevCounterData : undefined) || []) {
-      const relWinrate = matchupWinRateChange(counter.wins, counter.matches_played, [
-        prevHeroStatsMap[counter.hero_id],
-      ]);
-      if (relWinrate === undefined) continue;
-      if (!map[counter.hero_id]) map[counter.hero_id] = {};
-      map[counter.hero_id][counter.enemy_hero_id] = relWinrate;
-    }
-    return map;
-  }, [prevCounterData, prevHeroStatsMap, hasPreviousInterval]);
-
-  const synergyRows = useMemo(() => {
-    const rows: MatchupRow[] = [];
-    for (const synergy of synergyData || []) {
-      if (synergy.hero_id1 !== heroId && synergy.hero_id2 !== heroId) continue;
-      const otherHeroId = synergy.hero_id1 === heroId ? synergy.hero_id2 : synergy.hero_id1;
-      const relWinrate = matchupWinRateChange(synergy.wins, synergy.matches_played, [
-        heroStatsMap[heroId],
-        heroStatsMap[otherHeroId],
-      ]);
-      if (relWinrate === undefined) continue;
-      rows.push({
-        heroId: otherHeroId,
-        matches: synergy.matches_played,
-        wins: synergy.wins,
-        relWinrate,
-        prevRelWinrate: prevSynergyRelWinrateMap[heroId]?.[otherHeroId],
-      });
-    }
-    rows.sort((a, b) => b.relWinrate - a.relWinrate);
-    return rows;
-  }, [heroId, synergyData, heroStatsMap, prevSynergyRelWinrateMap]);
-
-  const counterRows = useMemo(() => {
-    const rows: MatchupRow[] = [];
-    for (const counter of counterData || []) {
-      if (counter.hero_id !== heroId) continue;
-      const relWinrate = matchupWinRateChange(counter.wins, counter.matches_played, [heroStatsMap[heroId]]);
-      if (relWinrate === undefined) continue;
-      rows.push({
-        heroId: counter.enemy_hero_id,
-        matches: counter.matches_played,
-        wins: counter.wins,
-        relWinrate,
-        prevRelWinrate: prevCounterRelWinrateMap[heroId]?.[counter.enemy_hero_id],
-      });
-    }
-    rows.sort((a, b) => b.relWinrate - a.relWinrate);
-    return rows;
-  }, [heroId, counterData, heroStatsMap, prevCounterRelWinrateMap]);
 
   return {
     synergyRows,
     counterRows,
     isLoading,
-    heroStats: heroStatsMap[heroId],
+    heroStats: heroData?.find((hero) => hero.hero_id === heroId),
     isError: isHeroError || isSynergyError || isCounterError,
     retry: () => Promise.all([refetchHero(), refetchSynergy(), refetchCounter()]),
   };
@@ -307,31 +224,26 @@ const COLLAPSED_ROWS = 10;
 /** The rows of one side of the matchups, the last rows of a `Panel`: the first ten, then a "Show all" row. */
 export function HeroMatchupDetailsStatsTable({
   stat,
-  onHeroSelected,
+  matchups,
+  onRetry,
   linkHeroes,
-  ...params
-}: HeroMatchupParams & {
+}: {
   stat: HeroMatchupDetailsStatsTableStat;
-  onHeroSelected?: (heroId: number) => void;
+  /** Undefined when the matchups failed to load. */
+  matchups: HeroMatchups | undefined;
+  onRetry?: () => void;
   linkHeroes?: boolean;
 }) {
-  const { synergyRows, counterRows, isLoading, isError, retry } = useHeroMatchupRows(params);
   const isSynergy = stat === HeroMatchupDetailsStatsTableStat.SYNERGY;
-  const rows = isSynergy ? synergyRows : counterRows;
+  const rows = (isSynergy ? matchups?.synergyRows : matchups?.counterRows) ?? [];
   const relWinrates = rows.map((row) => row.relWinrate);
   const minRelWinrate = rows.length ? Math.min(...relWinrates) : 0;
   const maxRelWinrate = rows.length ? Math.max(...relWinrates) : 0;
   const [expanded, setExpanded] = useState(false);
   const visibleRows = expanded ? rows : rows.slice(0, COLLAPSED_ROWS);
 
-  if (isLoading) {
-    return <LoadingState label="hero matchups" align="center" className="py-8" />;
-  }
-
-  if (isError && rows.length === 0) {
-    return (
-      <ErrorState variant="inline" title="Hero matchups did not load" onRetry={() => void retry()} className="p-4" />
-    );
+  if (!matchups) {
+    return <ErrorState variant="inline" title="Hero matchups did not load" onRetry={onRetry} className="p-4" />;
   }
 
   return (
@@ -349,31 +261,10 @@ export function HeroMatchupDetailsStatsTable({
             <TableEmptyRow colSpan={3}>No matchups with enough matches for these filters</TableEmptyRow>
           )}
           {visibleRows.map((row, index) => (
-            <TableRow
-              key={row.heroId}
-              data-interactive={onHeroSelected ? true : undefined}
-              onClick={() => onHeroSelected?.(row.heroId)}
-            >
+            <TableRow key={row.heroId}>
               <TableCell>{index + 1}</TableCell>
               <TableCell data-pinned>
-                {onHeroSelected ? (
-                  <Inline wrap="nowrap">
-                    <HeroImage heroId={row.heroId} />
-                    <Button
-                      variant="link"
-                      size="inline"
-                      className="font-normal text-foreground"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onHeroSelected(row.heroId);
-                      }}
-                    >
-                      <HeroName heroId={row.heroId} />
-                    </Button>
-                  </Inline>
-                ) : (
-                  <HeroCell heroId={row.heroId} linkToDetail={linkHeroes} />
-                )}
+                <HeroCell heroId={row.heroId} linkToDetail={linkHeroes} />
               </TableCell>
               <TableCell>
                 <Tooltip

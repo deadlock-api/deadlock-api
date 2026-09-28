@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { matchupWinRateChange } from "./matchup-stats";
+import { heroMatchups, matchupWinRateChange } from "./matchup-stats";
 
 test("ally impact uses both heroes' baselines and is symmetric", () => {
   const heroes = [
@@ -35,4 +35,50 @@ test("missing baselines and invalid samples never produce misleading or non-fini
   ]) {
     assert.equal(matchupWinRateChange(wins, matches, [{ wins: 5, matches: 10 }]), undefined);
   }
+});
+
+test("a hero's matchups take either synergy side, skip other heroes' rows and sort best first", () => {
+  const current = {
+    heroStats: [
+      { hero_id: 1, wins: 50, matches: 100 },
+      { hero_id: 2, wins: 50, matches: 100 },
+      { hero_id: 3, wins: 50, matches: 100 },
+    ],
+    synergies: [
+      { hero_id1: 1, hero_id2: 2, wins: 40, matches_played: 100 },
+      { hero_id1: 3, hero_id2: 1, wins: 60, matches_played: 100 },
+      { hero_id1: 2, hero_id2: 3, wins: 90, matches_played: 100 },
+    ],
+    counters: [
+      { hero_id: 1, enemy_hero_id: 2, wins: 70, matches_played: 100 },
+      { hero_id: 1, enemy_hero_id: 3, wins: 30, matches_played: 100 },
+      { hero_id: 2, enemy_hero_id: 1, wins: 30, matches_played: 100 },
+    ],
+  };
+  const { synergyRows, counterRows } = heroMatchups(1, current);
+  assert.deepEqual(
+    synergyRows.map((row) => row.heroId),
+    [3, 2],
+  );
+  assert.deepEqual(
+    counterRows.map((row) => [row.heroId, Math.round(row.relWinrate * 100)]),
+    [
+      [2, 20],
+      [3, -20],
+    ],
+  );
+  assert.equal(synergyRows[0].prevRelWinrate, undefined);
+});
+
+test("the previous period only annotates pairings it also saw", () => {
+  const period = (wins: number) => ({
+    heroStats: [
+      { hero_id: 1, wins: 50, matches: 100 },
+      { hero_id: 2, wins: 50, matches: 100 },
+    ],
+    synergies: [],
+    counters: [{ hero_id: 1, enemy_hero_id: 2, wins, matches_played: 100 }],
+  });
+  assert.ok(Math.abs(heroMatchups(1, period(60), period(40)).counterRows[0].prevRelWinrate! + 0.1) < 1e-10);
+  assert.equal(heroMatchups(1, period(60), { ...period(40), counters: [] }).counterRows[0].prevRelWinrate, undefined);
 });

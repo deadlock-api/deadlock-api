@@ -7,6 +7,7 @@ import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultPeriodLabel, defaultPrevUnixRange, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { pageTitle, seo } from "~/lib/seo";
+import { redirectLegacyHeroId } from "~/lib/site-route-migration";
 import type { SlimHero } from "~/queries/asset-queries";
 import type { RouterContext } from "~/router";
 
@@ -42,7 +43,10 @@ function findWinRateLeader(
 }
 
 export const heroesPageOptions = {
-  beforeLoad: redirectAnalyticsTab,
+  beforeLoad: async (options: { location: { href: string }; context: RouterContext }) => {
+    await redirectLegacyHeroId(options);
+    redirectAnalyticsTab(options);
+  },
   component: lazyRouteComponent(() => import("./HeroesPage"), "HeroesPage"),
   loader: async ({ context: { queryClient, preferences } }: { context: RouterContext }) => {
     // Shared route options are not automatically split by the router plugin.

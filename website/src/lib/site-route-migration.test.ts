@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { canonicalAnalyticsHref } from "./analytics-tabs";
-import { LEGACY_PAGE_PATHS, migrateLegacyHref } from "./site-route-migration";
+import { LEGACY_PAGE_PATHS, legacyHeroIdHref, migrateLegacyHref } from "./site-route-migration";
 
 test("legacy category pages redirect with filters and fragments intact", () => {
   for (const [legacy, destination] of Object.entries(LEGACY_PAGE_PATHS)) {
@@ -77,4 +77,28 @@ test("explicit view paths win over old tab parameters without changing detail pa
   assert.equal(canonicalAnalyticsHref("/analytics/heroes?tab=unknown&date_range=_"), "/analytics/heroes?date_range=_");
   assert.equal(canonicalAnalyticsHref("/analytics/heroes/by-duration?hero_stat=winrate"), null);
   assert.equal(canonicalAnalyticsHref("/analytics/heroes/dynamo?tab=abilities"), null);
+});
+
+test("hero views with a heroId go to that hero's page, including links already moved to /analytics", () => {
+  const heroes = [
+    { id: 15, name: "Bebop" },
+    { id: 2, name: "Lady Geist" },
+  ];
+  assert.equal(legacyHeroIdHref("/heroes?heroId=15&tab=stats-over-time", heroes), "/analytics/heroes/bebop");
+  assert.equal(legacyHeroIdHref("/heroes/?heroId=2", heroes), "/analytics/heroes/lady-geist");
+  assert.equal(legacyHeroIdHref("/analytics/heroes/over-time?heroId=15", heroes), "/analytics/heroes/bebop");
+  assert.equal(legacyHeroIdHref("/analytics/heroes?heroId=15&min_rank=61", heroes), "/analytics/heroes/bebop");
+});
+
+test("heroId links without a known hero, or off the hero views, stay where they are", () => {
+  const heroes = [{ id: 15, name: "Bebop" }];
+  for (const href of [
+    "/heroes?heroId=999",
+    "/heroes?heroId=abc",
+    "/heroes?tab=stats-over-time",
+    "/analytics/heroes/bebop?heroId=15",
+    "/analytics/items?heroId=15",
+  ]) {
+    assert.equal(legacyHeroIdHref(href, heroes), null);
+  }
 });
