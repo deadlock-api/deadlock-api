@@ -112,7 +112,8 @@ function PairRow({
     </TableCell>
   );
   return (
-    <TableRow>
+    // Top-aligned: the first lines of the two-line cells (names, together, against) sit on one line.
+    <TableRow className="[&>td]:align-top">
       {names}
       <TableCell className="text-end">
         {together.matches > 0 ? (
@@ -136,7 +137,9 @@ function PairRow({
             <>
               {/* Delta draws nothing for a change that rounds to zero; an even duo still reads as one. */}
               {Math.round(synergy * 100) === 0 ? (
-                <Text tone="muted">±0 pts</Text>
+                <Text variant="caption" tone="muted">
+                  ±0 pts
+                </Text>
               ) : (
                 <Delta value={synergy} digits={0} unit=" pts" />
               )}
