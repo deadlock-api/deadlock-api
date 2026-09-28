@@ -1,4 +1,5 @@
-import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { HashMapValue } from "deadlock_api_client";
 import { GitCompareArrows } from "lucide-react";
 
 import { SERIES_COLORS } from "~/components/patterns/charts/theme";
@@ -13,6 +14,7 @@ import {
   type CompareFilters,
   compareHeroStatsParams,
   compareMetricsParams,
+  lastAnswerForAccount,
   playerRanksQueryOptions,
 } from "~/queries/player-compare-queries";
 import { playerStatsMetricsQueryOptions } from "~/queries/player-stats-metrics-query";
@@ -38,6 +40,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
   const { accountIds, add, remove, move } = usePlayerCompareState();
   // One query a player, shared with the tracker: adding or reordering players never refetches (and blanks) the names
   // already on screen.
+  const client = useQueryClient();
   const profileQueries = useQueries({ queries: accountIds.map((accountId) => steamProfileQueryOptions(accountId)) });
   const hasPlayers = accountIds.length > 0;
 
@@ -61,7 +64,11 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
   const metrics = useQueries({
     queries: accountIds.map((accountId) => ({
       ...playerStatsMetricsQueryOptions(compareMetricsParams(filters, accountId)),
-      placeholderData: keepPreviousData,
+      placeholderData: lastAnswerForAccount<Record<string, HashMapValue>>(
+        client,
+        "api-player-stats-metrics",
+        accountId,
+      ),
     })),
   });
   /** A player's average of one metric: undefined while it loads, null when it failed or has no value. */

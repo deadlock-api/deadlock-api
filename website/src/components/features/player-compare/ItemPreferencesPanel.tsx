@@ -1,4 +1,5 @@
-import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ItemStats } from "deadlock_api_client";
 
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
@@ -15,7 +16,7 @@ import { formatStatValue } from "~/lib/stat-format";
 import { toneOf } from "~/lib/tone";
 import { type SlimUpgrade, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
-import { type CompareFilters, compareItemStatsParams } from "~/queries/player-compare-queries";
+import { type CompareFilters, compareItemStatsParams, lastAnswerForAccount } from "~/queries/player-compare-queries";
 
 import type { ComparedPlayer } from "./types";
 
@@ -37,10 +38,11 @@ type Column =
 /** Each player's most bought items of tier 2 and up on the page's filters, with how often and how well. */
 export function ItemPreferencesPanel({ players, filters }: { players: ComparedPlayer[]; filters: CompareFilters }) {
   const itemsQuery = useQuery(itemUpgradesQueryOptions);
+  const client = useQueryClient();
   const statsQueries = useQueries({
     queries: players.map((player) => ({
       ...itemStatsQueryOptions(compareItemStatsParams(player.accountId, filters)),
-      placeholderData: keepPreviousData,
+      placeholderData: lastAnswerForAccount<ItemStats[]>(client, "api-item-stats", player.accountId),
     })),
   });
   const itemsById = new Map((itemsQuery.data ?? []).map((item) => [item.id, item]));

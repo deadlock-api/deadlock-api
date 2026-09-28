@@ -1,4 +1,4 @@
-import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { HashMapValue } from "deadlock_api_client";
 
 import { ChartLegend, ChartLegendItem, ChartLegendToggle } from "~/components/patterns/charts/ChartLegend";
@@ -21,7 +21,7 @@ import {
   type PlaystylePercentiles,
   playstylePercentiles,
 } from "~/lib/playstyle";
-import { type CompareFilters, compareMetricsParams } from "~/queries/player-compare-queries";
+import { type CompareFilters, compareMetricsParams, lastAnswerForAccount } from "~/queries/player-compare-queries";
 import { playerStatsMetricsQueryOptions } from "~/queries/player-stats-metrics-query";
 
 import type { ComparedPlayer } from "./types";
@@ -87,10 +87,15 @@ export function PlaystyleRadarPanel({ players, filters }: { players: ComparedPla
     ...playerStatsMetricsQueryOptions(compareMetricsParams(filters)),
     placeholderData: keepPreviousData,
   });
+  const client = useQueryClient();
   const own = useQueries({
     queries: players.map((player) => ({
       ...playerStatsMetricsQueryOptions(compareMetricsParams(filters, player.accountId)),
-      placeholderData: keepPreviousData,
+      placeholderData: lastAnswerForAccount<Record<string, HashMapValue>>(
+        client,
+        "api-player-stats-metrics",
+        player.accountId,
+      ),
     })),
   });
   const { highlighted, toggleProps } = useSeriesHighlight();

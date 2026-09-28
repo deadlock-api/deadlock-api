@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import type {
   AnalyticsApiItemStatsRequest,
   AnalyticsApiPlayerScoreboardRequest,
@@ -168,5 +168,24 @@ export function compareItemStatsParams(accountId: number, filters: CompareFilter
     maxUnixTimestamp: filters.maxUnixTimestamp,
     // The API keeps items bought in 20+ matches by default; the panel draws its own, lower line.
     minMatches: FAVORITE_MIN_MATCHES,
+  };
+}
+
+/**
+ * A placeholder for one player's query in a `useQueries` list: the newest answer cached for the same account under
+ * `prefix`, on any filters. `keepPreviousData` does not carry across when every key of the list changes at once (a
+ * filter change), so this keeps the old numbers on screen until the new ones arrive instead of blanking the panels.
+ */
+export function lastAnswerForAccount<T>(client: QueryClient, prefix: string, accountId: number): () => T | undefined {
+  return () => {
+    let newest: { at: number; data: T } | undefined;
+    for (const query of client.getQueryCache().findAll({ queryKey: [prefix] })) {
+      const params = query.queryKey[1] as { accountId?: number; accountIds?: number[] } | undefined;
+      const owner = params?.accountId ?? (params?.accountIds?.length === 1 ? params.accountIds[0] : undefined);
+      const data = query.state.data as T | undefined;
+      if (owner !== accountId || data === undefined) continue;
+      if (!newest || query.state.dataUpdatedAt > newest.at) newest = { at: query.state.dataUpdatedAt, data };
+    }
+    return newest?.data;
   };
 }
