@@ -54,7 +54,6 @@ export function HeadToHeadTable({
   const winnersOf = (stat: CompareStat) => compareStatWinners(aggregates, stat);
   // Two players with matches make a contest; a player without any is shown but not scored.
   const contest = aggregates.filter((aggregate) => aggregate !== null).length >= 2;
-  const scoring = settled && contest;
 
   return (
     <Panel {...props}>
@@ -68,37 +67,12 @@ export function HeadToHeadTable({
             ))}
           </TableRow>
         </TableHeader>
-        {/* A body per group, so each group's `rowgroup` header names only its own rows. */}
+        {/* The stats in their groups' order (overview, combat, economy, objectives), without heading rows. */}
         {COMPARE_STAT_GROUPS.map((group) => {
           const groupStats = shown.filter((stat) => stat.group === group);
           if (groupStats.length === 0) return null;
-          // Each player's wins in this group, so a reader sees where a lead comes from.
-          const groupTally = players.map(
-            (_, index) => groupStats.filter((stat) => winnersOf(stat).includes(index)).length,
-          );
-          const groupScored = groupStats.some((stat) => stat.polarity !== "none");
           return (
             <TableBody key={group}>
-              <TableRow tone="section">
-                <TableHead scope="rowgroup" data-pinned>
-                  <Text variant="label" as="div" className="max-w-24 whitespace-normal @md/table:max-w-none">
-                    {group}
-                  </Text>
-                </TableHead>
-                {players.map((player, index) => (
-                  <TableCell key={player.accountId} className="text-end">
-                    {scoring && groupScored && groupTally[index] > 0 && (
-                      // Ends where the values below end, before their crown's slot.
-                      <Inline gap={1} wrap="nowrap" justify="end">
-                        <Text variant="caption" tone="muted">
-                          {groupTally[index]} won
-                        </Text>
-                        <span aria-hidden="true" className="hidden size-3.5 shrink-0 @xl/table:block" />
-                      </Inline>
-                    )}
-                  </TableCell>
-                ))}
-              </TableRow>
               {groupStats.map((stat) => {
                 const values = aggregates.map((aggregate) => aggregate?.[stat.key]);
                 const winners = winnersOf(stat);
