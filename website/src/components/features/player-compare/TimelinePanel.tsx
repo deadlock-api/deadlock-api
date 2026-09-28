@@ -28,6 +28,11 @@ import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance
 import type { ComparedPlayer } from "./types";
 
 const LABEL = "match timeline";
+/**
+ * The timeline ends here: past it only a player's few longest matches are left, so the averages swing (the deaths of
+ * three long games can average below the whole field's).
+ */
+const LAST_MINUTE = 45;
 const METRICS = {
   souls: { label: "Souls", key: "net_worth_avg", digits: 0 },
   kills: { label: "Kills", key: "kills_avg", digits: 1 },
@@ -107,7 +112,9 @@ export function TimelinePanel({
   const selected = METRICS[metric];
   const keys = players.map((player) => String(player.accountId));
   const times = new Set<number>();
-  for (const query of own) for (const point of query.data ?? []) times.add(point.game_time);
+  for (const query of own) {
+    for (const point of query.data ?? []) if (point.game_time <= LAST_MINUTE * 60) times.add(point.game_time);
+  }
   const valueAt = (points: PlayerPerformanceCurvePoint[] | undefined, time: number) => {
     const point = points?.find((entry) => entry.game_time === time);
     return point ? point[selected.key] : null;
