@@ -19,7 +19,6 @@ const BATCH_SIZE: usize = 100;
 const CLAIM_TTL_SECS: u64 = 15 * 60;
 const POOL_LIMIT: usize = 200_000;
 const MIN_MATCH_ID: u64 = 31_247_321;
-const CURSOR_KEY: &str = "matches_to_fetch:cursor";
 const CLAIM_PREFIX: &str = "matches_to_fetch:claimed:";
 
 fn worklist(ids: Vec<u64>) -> impl IntoResponse {
@@ -43,13 +42,17 @@ async fn prioritized_account_ids(pg_client: &Pool<Postgres>) -> Result<Arc<Vec<u
     ))
 }
 
+/// Pending matches in fetch order: prioritized accounts' matches, then ranked, unranked,
+/// street brawl and everything else; ranked games with higher-badge players (from
+/// `player_card`) first, then the newest. Holds every pending prioritized match plus the
+/// newest others, up to `POOL_LIMIT`.
 #[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 async fn pending_pool(
     ch_client: &clickhouse::Client,
     prioritized: &[u32],
 ) -> clickhouse::error::Result<Arc<Vec<u64>>> {
-    let exclude = if prioritized.is_empty() {
-        String::new()
+    let prio = if prioritized.is_empty() {
+        "SELECT toUInt64(0) AS match_id WHERE 0".to_owned()
     } else {
         let ids = prioritized
             .iter()
@@ -57,14 +60,35 @@ async fn pending_pool(
             .collect::<Vec<_>>()
             .join(",");
         format!(
-            "AND match_id NOT IN (SELECT match_id FROM player_match_history \
-             WHERE account_id IN ({ids}) AND match_id >= {MIN_MATCH_ID}) "
+            "SELECT match_id FROM player_match_history \
+             WHERE account_id IN ({ids}) AND match_id >= {MIN_MATCH_ID}"
         )
     };
+    // Matches missing from `player_match_by_match` get the defaults 'Invalid' and badge 0.
     let query = format!(
-        "SELECT match_id FROM pending_matches FINAL \
-         WHERE state = 'pending' AND match_id >= {MIN_MATCH_ID} {exclude}\
-         ORDER BY match_id DESC LIMIT {POOL_LIMIT} \
+        "WITH prio AS ({prio}),
+         pool AS (
+             SELECT match_id, match_id IN prio AS is_prio FROM pending_matches FINAL
+             WHERE state = 'pending' AND match_id >= {MIN_MATCH_ID}
+             ORDER BY is_prio DESC, match_id DESC LIMIT {POOL_LIMIT}
+         ),
+         players AS (
+             SELECT match_id, account_id, match_mode, game_mode FROM player_match_by_match
+             WHERE match_id IN (SELECT match_id FROM pool)
+         ),
+         badges AS (
+             SELECT account_id, argMax(ranked_badge_level, created_at) AS badge
+             FROM player_card GROUP BY account_id
+         )
+         SELECT match_id
+         FROM pool LEFT JOIN players USING match_id LEFT JOIN badges USING account_id
+         GROUP BY match_id, is_prio
+         ORDER BY if(is_prio, 0, multiIf(any(match_mode) = 'Ranked', 1,
+                                         any(game_mode) = 'StreetBrawl', 3,
+                                         any(match_mode) = 'Unranked', 2,
+                                         4)),
+                  avgIf(badge, badge > 0 AND match_mode = 'Ranked') DESC,
+                  match_id DESC
          SETTINGS log_comment = 'matches_to_fetch_pool'"
     );
     let ids: Vec<u64> = ch_client.query(&query).fetch_all().await?;
@@ -122,24 +146,16 @@ pub(super) async fn matches_to_fetch(
         return Ok(worklist(Vec::new()));
     }
 
+    // Walk the pool in priority order, skipping matches another worker has claimed.
     let mut conn = state.redis_client.clone();
-    let cursor: u64 = redis::cmd("INCR")
-        .arg(CURSOR_KEY)
-        .query_async(&mut conn)
-        .await
-        .unwrap_or(0);
-    let start = usize::try_from(cursor.wrapping_mul(BATCH_SIZE as u64) % n as u64).unwrap_or(0);
-
     let mut claimed: Vec<u64> = Vec::with_capacity(BATCH_SIZE);
     let mut scanned = 0usize;
     while claimed.len() < BATCH_SIZE && scanned < n {
         let chunk = (BATCH_SIZE - claimed.len()).min(n - scanned);
-        let ids: Vec<u64> = (0..chunk)
-            .map(|k| pool[(start + scanned + k) % n])
-            .collect();
+        let ids = &pool[scanned..scanned + chunk];
 
         let mut pipe = redis::pipe();
-        for id in &ids {
+        for id in ids {
             pipe.cmd("SET")
                 .arg(format!("{CLAIM_PREFIX}{id}"))
                 .arg(1u8)
