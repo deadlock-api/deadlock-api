@@ -11,7 +11,7 @@ import { type CompareFilters, compareCompanionParams } from "~/queries/player-co
 import { trackerEnemyStatsQueryOptions, trackerMateStatsQueryOptions } from "~/queries/tracker-queries";
 
 /** How many suggestions the card shows in all, and how many each group keeps when both have enough. */
-const SUGGESTION_TOTAL = 4;
+const SUGGESTION_TOTAL = 3;
 const SUGGESTION_PER_GROUP = 2;
 
 interface Companion {

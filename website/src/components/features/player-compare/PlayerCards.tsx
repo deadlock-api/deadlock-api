@@ -127,8 +127,10 @@ export function PlayerCards({
               <ReorderItem key={player.accountId} asChild {...reorder.boxProps(index)}>
                 <Card asChild size="sm" accent={player.color} className="@container min-w-0">
                   <li>
-                    <CardContent>
-                      <Stack gap={2}>
+                    {/* The numbers sit at the bottom: a name on two lines never pushes one card's stats below the
+                        others' in the row. */}
+                    <CardContent className="flex-1">
+                      <Stack gap={2} justify="between" className="h-full">
                         <Inline gap={2} wrap="nowrap" align="start">
                           {/* Smaller in a narrow card, so the name keeps its room. */}
                           <SteamAvatar
@@ -212,142 +214,144 @@ export function PlayerCards({
                           </Stack>
                         </Inline>
 
-                        {/* The verdict first: stats won out of the stats scored, and who leads; then the record. */}
-                        {aggregate === null ? (
-                          <Text tone="muted">No matches on these filters</Text>
-                        ) : (
-                          <StatGroup
-                            variant="plain"
-                            size="sm"
-                            // Each stat as wide as its value, spread across the card: a crowned "12/19" keeps its "/19".
-                            className="grid-cols-2 justify-between gap-2 @stat-trio:grid-cols-[repeat(3,auto)]"
-                          >
-                            {!contest ? (
-                              // Nothing to win alone: the sample size instead.
+                        <Stack gap={2}>
+                          {/* The verdict first: stats won out of the stats scored, and who leads; then the record. */}
+                          {aggregate === null ? (
+                            <Text tone="muted">No matches on these filters</Text>
+                          ) : (
+                            <StatGroup
+                              variant="plain"
+                              size="sm"
+                              // Each stat as wide as its value, spread across the card: a crowned "12/19" keeps its "/19".
+                              className="grid-cols-2 justify-between gap-2 @stat-trio:grid-cols-[repeat(3,auto)]"
+                            >
+                              {!contest ? (
+                                // Nothing to win alone: the sample size instead.
+                                <Stat
+                                  label="Matches"
+                                  value={
+                                    aggregate ? (
+                                      formatPlayerMetricValue(aggregate.matches, "integer")
+                                    ) : (
+                                      <Skeleton className="h-6 w-10" />
+                                    )
+                                  }
+                                />
+                              ) : (
+                                <Stat
+                                  label="Stats won"
+                                  value={
+                                    !settled || aggregate === undefined ? (
+                                      <Skeleton className="h-6 w-10" />
+                                    ) : players.length < 2 ? (
+                                      <NoValue label="Add an opponent to score" />
+                                    ) : (
+                                      <Inline gap={1} wrap="nowrap" asChild>
+                                        <span>
+                                          {leads && <CrownIcon aria-hidden="true" className="size-4 shrink-0" />}
+                                          {tally[index]}
+                                          <span className="text-muted-foreground">/{scored.length}</span>
+                                          {leads && (
+                                            <span className="sr-only">
+                                              , {leaders.length > 1 ? "tied lead" : "leads"}
+                                            </span>
+                                          )}
+                                        </span>
+                                      </Inline>
+                                    )
+                                  }
+                                />
+                              )}
                               <Stat
-                                label="Matches"
+                                label="Win rate"
+                                value={
+                                  aggregate ? formatPercent(aggregate.winRate, 1) : <Skeleton className="h-6 w-14" />
+                                }
+                              />
+                              {/* A narrow card leaves the KDA to the table below. */}
+                              <Stat
+                                className="hidden @stat-trio:flex"
+                                label="KDA"
                                 value={
                                   aggregate ? (
-                                    formatPlayerMetricValue(aggregate.matches, "integer")
+                                    formatPlayerMetricValue(aggregate.kda, "decimal2")
                                   ) : (
-                                    <Skeleton className="h-6 w-10" />
+                                    <Skeleton className="h-6 w-12" />
                                   )
                                 }
                               />
-                            ) : (
-                              <Stat
-                                label="Stats won"
-                                value={
-                                  !settled || aggregate === undefined ? (
-                                    <Skeleton className="h-6 w-10" />
-                                  ) : players.length < 2 ? (
-                                    <NoValue label="Add an opponent to score" />
-                                  ) : (
-                                    <Inline gap={1} wrap="nowrap" asChild>
-                                      <span>
-                                        {leads && <CrownIcon aria-hidden="true" className="size-4 shrink-0" />}
-                                        {tally[index]}
-                                        <span className="text-muted-foreground">/{scored.length}</span>
-                                        {leads && (
-                                          <span className="sr-only">
-                                            , {leaders.length > 1 ? "tied lead" : "leads"}
-                                          </span>
-                                        )}
-                                      </span>
-                                    </Inline>
-                                  )
-                                }
-                              />
-                            )}
-                            <Stat
-                              label="Win rate"
-                              value={
-                                aggregate ? formatPercent(aggregate.winRate, 1) : <Skeleton className="h-6 w-14" />
-                              }
-                            />
-                            {/* A narrow card leaves the KDA to the table below. */}
-                            <Stat
-                              className="hidden @stat-trio:flex"
-                              label="KDA"
-                              value={
-                                aggregate ? (
-                                  formatPlayerMetricValue(aggregate.kda, "decimal2")
-                                ) : (
-                                  <Skeleton className="h-6 w-12" />
-                                )
-                              }
-                            />
-                          </StatGroup>
-                        )}
-                        {aggregate && (
-                          <Text variant="caption" tone="muted" numeric="tabular" wrap="truncate">
-                            {/* Alone, the matches are a stat of their own above. */}
-                            {contest && `${formatPlayerMetricValue(aggregate.matches, "integer")} matches · `}
-                            {[aggregate.kills, aggregate.deaths, aggregate.assists]
-                              .map((value) => formatPlayerMetricValue(value, "decimal1"))
-                              .join(" / ")}{" "}
-                            K/D/A
-                          </Text>
-                        )}
+                            </StatGroup>
+                          )}
+                          {aggregate && (
+                            <Text variant="caption" tone="muted" numeric="tabular" wrap="truncate">
+                              {/* Alone, the matches are a stat of their own above. */}
+                              {contest && `${formatPlayerMetricValue(aggregate.matches, "integer")} matches · `}
+                              {[aggregate.kills, aggregate.deaths, aggregate.assists]
+                                .map((value) => formatPlayerMetricValue(value, "decimal1"))
+                                .join(" / ")}{" "}
+                              K/D/A
+                            </Text>
+                          )}
 
-                        {/* Without matches on the filters there are no heroes or results to show. */}
-                        {aggregate !== null && (
-                          <Inline gap={3} justify="between" align="end">
-                            {/* On one hero's filter every player's most played is that hero. */}
-                            {filters.heroId == null && (
-                              <Stack gap={1}>
-                                <Text variant="caption" tone="muted">
-                                  Most played
-                                </Text>
-                                <Inline gap={1} wrap="nowrap">
-                                  {aggregate === undefined ? (
-                                    <Skeleton className="h-7 w-24" />
-                                  ) : aggregate === null ? (
-                                    <NoValue />
-                                  ) : (
-                                    topHeroes(rows, player.accountId).map((row) => (
-                                      <Tooltip
-                                        key={row.hero_id}
-                                        content={
-                                          <TooltipStats variant="plain">
-                                            <TooltipStat label="Matches" value={row.matches_played} />
-                                            <TooltipStat
-                                              label="Win rate"
-                                              value={formatPercent(row.wins / row.matches_played, 0)}
+                          {/* Without matches on the filters there are no heroes or results to show. */}
+                          {aggregate !== null && (
+                            <Inline gap={3} justify="between" align="end">
+                              {/* On one hero's filter every player's most played is that hero. */}
+                              {filters.heroId == null && (
+                                <Stack gap={1}>
+                                  <Text variant="caption" tone="muted">
+                                    Most played
+                                  </Text>
+                                  <Inline gap={1} wrap="nowrap">
+                                    {aggregate === undefined ? (
+                                      <Skeleton className="h-7 w-24" />
+                                    ) : aggregate === null ? (
+                                      <NoValue />
+                                    ) : (
+                                      topHeroes(rows, player.accountId).map((row) => (
+                                        <Tooltip
+                                          key={row.hero_id}
+                                          content={
+                                            <TooltipStats variant="plain">
+                                              <TooltipStat label="Matches" value={row.matches_played} />
+                                              <TooltipStat
+                                                label="Win rate"
+                                                value={formatPercent(row.wins / row.matches_played, 0)}
+                                              />
+                                            </TooltipStats>
+                                          }
+                                        >
+                                          <TooltipTarget>
+                                            <HeroImage
+                                              heroId={row.hero_id}
+                                              shape="rounded"
+                                              ring="border"
+                                              className="size-7"
                                             />
-                                          </TooltipStats>
-                                        }
-                                      >
-                                        <TooltipTarget>
-                                          <HeroImage
-                                            heroId={row.hero_id}
-                                            shape="rounded"
-                                            ring="border"
-                                            className="size-7"
-                                          />
-                                        </TooltipTarget>
-                                      </Tooltip>
-                                    ))
-                                  )}
-                                </Inline>
-                              </Stack>
-                            )}
-                            <Stack gap={1} align="end">
-                              <Text variant="caption" tone="muted">
-                                Last {FORM_LENGTH}
-                              </Text>
-                              {history?.isError ? (
-                                <NoValue label="Match history unavailable" />
-                              ) : form === undefined ? (
-                                <Skeleton className="h-3 w-24" />
-                              ) : form.length === 0 ? (
-                                <NoValue label="No matches" />
-                              ) : (
-                                <FormDots form={form} />
+                                          </TooltipTarget>
+                                        </Tooltip>
+                                      ))
+                                    )}
+                                  </Inline>
+                                </Stack>
                               )}
-                            </Stack>
-                          </Inline>
-                        )}
+                              <Stack gap={1} align="end">
+                                <Text variant="caption" tone="muted">
+                                  Last {FORM_LENGTH}
+                                </Text>
+                                {history?.isError ? (
+                                  <NoValue label="Match history unavailable" />
+                                ) : form === undefined ? (
+                                  <Skeleton className="h-3 w-24" />
+                                ) : form.length === 0 ? (
+                                  <NoValue label="No matches" />
+                                ) : (
+                                  <FormDots form={form} />
+                                )}
+                              </Stack>
+                            </Inline>
+                          )}
+                        </Stack>
                       </Stack>
                     </CardContent>
                   </li>
