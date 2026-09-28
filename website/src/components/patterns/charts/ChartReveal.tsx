@@ -41,14 +41,17 @@ export function ChartRevealFront({ className, ...props }: React.ComponentProps<"
   );
 }
 
-/** The readings, faded and slid in over the plot while the tile is hovered or focused. */
+/**
+ * The readings, faded and slid in over the plot while the tile is hovered or focused. The front alone sizes the tile
+ * (the back is size-contained), so a long list never makes a row of tiles taller; keep it short enough to fit.
+ */
 export function ChartRevealBack({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="chart-reveal-back"
       aria-hidden="true"
       className={cn(
-        "pointer-events-none min-w-0 translate-y-1 overflow-hidden opacity-0 transition-[opacity,translate] duration-normal ease-standard group-hover/reveal:translate-y-0 group-hover/reveal:opacity-100 group-focus-visible/reveal:translate-y-0 group-focus-visible/reveal:opacity-100",
+        "pointer-events-none min-w-0 translate-y-1 overflow-hidden opacity-0 transition-[opacity,translate] duration-normal ease-standard contain-size group-hover/reveal:translate-y-0 group-hover/reveal:opacity-100 group-focus-visible/reveal:translate-y-0 group-focus-visible/reveal:opacity-100",
         className,
       )}
       {...props}

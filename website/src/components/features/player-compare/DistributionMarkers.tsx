@@ -231,15 +231,19 @@ function MetricCurve({
         </ChartSurface>
       </ChartRevealFront>
       <ChartRevealBack>
-        <ChartReadingList extra>
+        {/* The readings stay inside the plot's box: four or more players close up the rows, and five leave the median
+            to its dashed line on the plot. */}
+        <ChartReadingList extra className={marks.length >= 4 ? "gap-0" : undefined}>
           {marks.map(({ player, avg }) => (
             <ChartReading key={player.accountId} label={player.name} color={player.color} extra={fmt(avg)}>
               {share(avg)}
             </ChartReading>
           ))}
-          <ChartReading label="Median player" color="var(--chart-axis)" extra={fmt(values.percentile50)}>
-            Median
-          </ChartReading>
+          {marks.length < 5 && (
+            <ChartReading label="Median player" color="var(--chart-axis)" extra={fmt(values.percentile50)}>
+              Median
+            </ChartReading>
+          )}
         </ChartReadingList>
       </ChartRevealBack>
     </ChartReveal>
