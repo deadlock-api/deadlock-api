@@ -25,9 +25,9 @@ const NARROW_ITEM_COUNT = 5;
 
 const COLUMNS = {
   2: { base: 1, sm: 2 },
-  3: { base: 1, lg: 3 },
-  4: { base: 1, sm: 2, xl: 4 },
-  5: { base: 1, sm: 2, lg: 3, xl: 5 },
+  3: { base: 1, sm: 3 },
+  4: { base: 1, sm: 2, lg: 4 },
+  5: { base: 1, sm: 3, xl: 5 },
 } as const;
 
 type Column =
@@ -166,7 +166,9 @@ function ItemRow({
             <Stack gap={0} className="flex-1">
               <Text wrap="truncate">{name}</Text>
               <Text variant="caption" tone="muted" numeric="tabular" wrap="truncate">
-                {formatShare(entry.share)} bought ·{" "}
+                {/* Short, so the win rate survives a narrow column; the tooltip spells it out. */}
+                {formatShare(entry.share)}
+                <span className="sr-only"> bought</span> ·{" "}
                 <Text variant="caption" tone={tone === "muted" ? "muted" : tone}>
                   {formatPercent(entry.winRate, 0)} WR
                 </Text>

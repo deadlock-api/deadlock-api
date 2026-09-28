@@ -173,10 +173,12 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             <RankHistoryPanel players={players} filters={filters} histories={histories} />
             <PerformanceTrendPanel players={players} histories={histories} />
           </Grid>
-          {showSharedHeroes && <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />}
           <PercentileComparison players={players} filters={filters} />
-          {/* Last on the page: it hides itself when nobody has items, and nothing below it moves. */}
-          <ItemPreferencesPanel players={players} filters={filters} />
+          {/* Heroes and items side by side; items last, since the panel hides itself when nobody has any. */}
+          <Grid columns={{ base: 1, xl: showSharedHeroes ? 2 : 1 }} gap={4} className="items-start">
+            {showSharedHeroes && <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />}
+            <ItemPreferencesPanel players={players} filters={filters} />
+          </Grid>
         </>
       )}
     </Stack>
