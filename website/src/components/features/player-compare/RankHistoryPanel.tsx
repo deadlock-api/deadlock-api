@@ -90,13 +90,7 @@ export function RankHistoryPanel({
       {/* As tall as the weekly trend's header beside it (which holds a select), so the two plots start level. */}
       <PanelHeader size="sm" title="Rank over time" icon={Medal} className="min-h-11">
         {/* By date: when each climbed. By matches: how many ranked matches each climb took. */}
-        <Segmented
-          size="sm"
-          width="hug"
-          aria-label="Rank over"
-          value={axisBy}
-          onValueChange={(next) => setAxisBy(next as "date" | "matches")}
-        >
+        <Segmented size="sm" width="hug" aria-label="Rank over" value={axisBy} onValueChange={setAxisBy}>
           <SegmentedItem value="date">Date</SegmentedItem>
           <SegmentedItem value="matches">Matches</SegmentedItem>
         </Segmented>

@@ -262,12 +262,18 @@ function yAxis(
 ): { domain: [number, number]; ticks: number[]; format: (value: number) => string } {
   if (metric === "winRate") {
     const domain = winRateDomain([...values, 0.5]);
-    return { domain, ticks: percentTicks(domain), format: (value) => formatPercent(value, 0) };
+    // At most four labels: the plot grows from a short minimum, where five would crowd.
+    const ticks = percentTicks(domain);
+    return {
+      domain,
+      ticks: ticks.length > 4 ? ticks.filter((_, index) => index % 2 === 0) : ticks,
+      format: (value) => formatPercent(value, 0),
+    };
   }
   const lo = Math.min(...values);
   const hi = Math.max(...values);
   // One value (a single week, or equal weeks) still gets a span to sit in.
-  const ticks = niceTicks(lo, hi > lo ? hi : lo + Math.max(1, Math.abs(lo) * 0.1));
+  const ticks = niceTicks(lo, hi > lo ? hi : lo + Math.max(1, Math.abs(lo) * 0.1), 3);
   const step = ticks.length > 1 ? ticks[1] - ticks[0] : 1;
   return {
     domain: [ticks[0], ticks.at(-1) ?? ticks[0]],
