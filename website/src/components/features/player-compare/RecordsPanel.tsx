@@ -131,7 +131,8 @@ function RecordValue({
   if (heroId != null) {
     return (
       <Inline gap={1.5} wrap="nowrap" justify="end" title={detail}>
-        <HeroImage heroId={heroId} shape="circle" className="size-5" />
+        {/* At the cell's start, the value at its end: icons and numbers each line up down the column. */}
+        <HeroImage heroId={heroId} shape="circle" className="me-auto size-5" />
         <RowValue won={won}>{children}</RowValue>
         {detail && <span className="sr-only">{detail}</span>}
       </Inline>
@@ -143,7 +144,7 @@ function RecordValue({
     <Inline gap={1.5} wrap="nowrap" justify="end" title={date}>
       {/* The image's alt and title name the hero. */}
       {/* A narrow table keeps the numbers and gives the hero's room to the other players' columns. */}
-      <HeroImage heroId={match.heroId} shape="circle" className="hidden size-5 @xl/table:block" />
+      <HeroImage heroId={match.heroId} shape="circle" className="me-auto hidden size-5 @xl/table:block" />
       <RowValue won={won}>{children}</RowValue>
       <span className="sr-only">on {date}</span>
     </Inline>
