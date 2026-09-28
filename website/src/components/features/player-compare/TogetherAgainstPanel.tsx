@@ -155,11 +155,17 @@ function PairRow({
                 <Inline key={`${duo.aHero}-${duo.bHero}`} gap={1} wrap="nowrap" justify="end">
                   <HeroImage heroId={duo.aHero} shape="circle" className="size-5" />
                   <HeroImage heroId={duo.bHero} shape="circle" className="size-5" />
-                  <Text variant="caption" tone="muted" numeric="tabular" className="whitespace-nowrap">
-                    {plural(duo.matches, "match")} ·{" "}
-                    <Text tone={toneOf(duo.wins / duo.matches, 0.5)}>
-                      {formatPercent(duo.wins / duo.matches, 0)} WR
-                    </Text>
+                  {/* Fixed widths, so the heroes and the numbers line up down the column. */}
+                  <Text variant="caption" tone="muted" numeric="tabular" className="w-18 text-end whitespace-nowrap">
+                    {plural(duo.matches, "match")}
+                  </Text>
+                  <Text
+                    variant="caption"
+                    tone={toneOf(duo.wins / duo.matches, 0.5)}
+                    numeric="tabular"
+                    className="w-14 text-end whitespace-nowrap"
+                  >
+                    {formatPercent(duo.wins / duo.matches, 0)} WR
                   </Text>
                 </Inline>
               ))}
