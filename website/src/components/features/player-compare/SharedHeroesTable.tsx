@@ -54,7 +54,7 @@ export function SharedHeroesTable({
         </Stack>
       ) : (
         <>
-          <Table density="compact" height="fill" className="tabular-nums">
+          <Table density="dense" height="fill" className="tabular-nums">
             <TableHeader tone="muted">
               <TableRow>
                 <TableHead data-pinned>Hero</TableHead>
@@ -83,7 +83,7 @@ export function SharedHeroesTable({
                           to="/analytics/players/compare"
                           search={(prev: Record<string, unknown>) => ({ ...prev, hero: hero.heroId })}
                         >
-                          <HeroCell heroId={hero.heroId} className="max-w-36" />
+                          <HeroCell heroId={hero.heroId} size="sm" className="max-w-36" />
                         </Link>
                       </TextLink>
                     </TableCell>
@@ -121,29 +121,29 @@ export function SharedHeroesTable({
                             <TooltipTarget display="block">
                               <Stack gap={1} asChild>
                                 <span>
-                                  {/* A narrow table keeps the count and drops the word, so every player's column fits. */}
-                                  <Text className="text-end">
-                                    {formatStatValue(stats.matches, "integer")}
-                                    <span className="sr-only @xl/table:not-sr-only">
-                                      {" "}
-                                      {stats.matches === 1 ? "match" : "matches"}
-                                    </span>
-                                  </Text>
-                                  {/* The win rate in the good / bad tone, judged as printed, like the other panels; fixed widths,
-                                    so the win rates and the KDAs each line up down the column. */}
+                                  {/* One line: the match count, the win rate in the good / bad tone (judged as printed, like the
+                                      other panels) and the KDA, at fixed widths so each lines up down the column. A narrow
+                                      table drops the KDA, so every player's column fits. */}
                                   <Inline gap={1} wrap="nowrap" justify="end" asChild>
                                     <span>
                                       <Text
                                         variant="caption"
+                                        className="whitespace-nowrap @xl/table:w-8 @xl/table:shrink-0 @xl/table:text-end"
+                                      >
+                                        {formatStatValue(stats.matches, "integer")}
+                                        <span className="sr-only"> {stats.matches === 1 ? "match" : "matches"}</span>
+                                      </Text>
+                                      <Text
+                                        variant="caption"
                                         tone={toneOf(Math.round(stats.winRate * 100), 50)}
-                                        className="whitespace-nowrap @xl/table:w-16 @xl/table:shrink-0 @xl/table:text-end"
+                                        className="whitespace-nowrap @xl/table:w-15 @xl/table:shrink-0 @xl/table:text-end"
                                       >
                                         {formatPercent(stats.winRate, 0)} WR
                                       </Text>
                                       <Text
                                         variant="caption"
                                         tone="muted"
-                                        className="hidden whitespace-nowrap @xl/table:inline @xl/table:w-18 @xl/table:shrink-0 @xl/table:text-end"
+                                        className="hidden whitespace-nowrap @xl/table:inline @xl/table:w-16 @xl/table:shrink-0 @xl/table:text-end"
                                       >
                                         {formatStatValue(stats.kda, "decimal2")} KDA
                                       </Text>
@@ -161,7 +161,7 @@ export function SharedHeroesTable({
                           </Tooltip>
                         ) : players[index].aggregate === undefined ? (
                           // A player just added: the rows on screen are the previous request's, not a verdict.
-                          <Skeleton className="ms-auto h-12 w-24" />
+                          <Skeleton className="ms-auto h-8 w-24" />
                         ) : (
                           <NoValue label="Not played" />
                         )}
