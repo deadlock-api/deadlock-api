@@ -93,3 +93,76 @@ export function splitPairs(pairs: readonly PlayerPair[]): { met: PlayerPair[]; n
   const neverMet = pairs.filter((pair) => pairMatchCount(pair) === 0);
   return { met, neverMet };
 }
+
+/** The fields of a match history entry a shared match line reads. */
+export interface SharedMatchEntry extends PairMatchEntry {
+  hero_id: number;
+  player_kills: number;
+  player_deaths: number;
+  player_assists: number;
+}
+
+export interface SharedMatchHistory {
+  accountId: number;
+  /** Undefined while the history loads or after it failed: the player is left out until it arrives. */
+  matches: readonly SharedMatchEntry[] | undefined;
+}
+
+export interface SharedMatchPlayer {
+  accountId: number;
+  heroId: number;
+  kills: number;
+  deaths: number;
+  assists: number;
+}
+
+export interface SharedMatchTeam {
+  team: number;
+  won: boolean;
+  /** The compared players on this team, in comparison order. */
+  players: SharedMatchPlayer[];
+}
+
+export interface SharedMatch {
+  matchId: number;
+  startTime: number;
+  /** One team when the players were all teammates, two when some faced each other; the first player's team first. */
+  teams: SharedMatchTeam[];
+}
+
+/** The newest matches (at most `limit`) in which two or more of the players played, together or against. */
+export function recentSharedMatches(histories: readonly SharedMatchHistory[], limit = 6): SharedMatch[] {
+  const byMatch = new Map<number, { entry: SharedMatchEntry; accountId: number }[]>();
+  for (const history of histories) {
+    if (!history.matches) continue;
+    for (const entry of history.matches) {
+      const players = byMatch.get(entry.match_id);
+      if (!players) byMatch.set(entry.match_id, [{ entry, accountId: history.accountId }]);
+      // A duplicated entry counts its player once.
+      else if (!players.some((player) => player.accountId === history.accountId)) {
+        players.push({ entry, accountId: history.accountId });
+      }
+    }
+  }
+  const shared = [...byMatch.values()].filter((players) => players.length >= 2);
+  shared.sort((x, y) => y[0].entry.start_time - x[0].entry.start_time || y[0].entry.match_id - x[0].entry.match_id);
+  return shared.slice(0, limit).map((players) => {
+    const teams: SharedMatchTeam[] = [];
+    for (const { entry, accountId } of players) {
+      let team = teams.find((candidate) => candidate.team === entry.player_team);
+      if (!team) {
+        team = { team: entry.player_team, won: entry.match_result === entry.player_team, players: [] };
+        teams.push(team);
+      }
+      team.players.push({
+        accountId,
+        heroId: entry.hero_id,
+        kills: entry.player_kills,
+        deaths: entry.player_deaths,
+        assists: entry.player_assists,
+      });
+    }
+    const { entry } = players[0];
+    return { matchId: entry.match_id, startTime: entry.start_time, teams };
+  });
+}

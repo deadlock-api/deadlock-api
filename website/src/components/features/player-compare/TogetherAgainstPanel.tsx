@@ -1,3 +1,4 @@
+import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { Panel, PanelFooter, PanelHeader } from "~/components/patterns/panel/Panel";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { NoValue } from "~/components/ui/no-value";
@@ -8,7 +9,14 @@ import { Text } from "~/components/ui/text";
 import { day } from "~/dayjs";
 import { useHydrated } from "~/hooks/useHydrated";
 import { formatPercent } from "~/lib/format";
-import { type PlayerPair, playerPairs, splitPairs } from "~/lib/player-compare-pairs";
+import {
+  type PlayerPair,
+  playerPairs,
+  recentSharedMatches,
+  type SharedMatch,
+  type SharedMatchTeam,
+  splitPairs,
+} from "~/lib/player-compare-pairs";
 import { formatStatValue } from "~/lib/stat-format";
 import { toneOf } from "~/lib/tone";
 
@@ -116,9 +124,67 @@ function PairRow({
   );
 }
 
+function SharedTeam({ team, byId }: { team: SharedMatchTeam; byId: ReadonlyMap<number, ComparedPlayer> }) {
+  return (
+    <Inline gap={2} className="gap-y-1">
+      <Text variant="caption" tone={team.won ? "positive" : "negative"} className="font-semibold">
+        <span aria-hidden="true">{team.won ? "W" : "L"}</span>
+        <span className="sr-only">{team.won ? "Won:" : "Lost:"}</span>
+      </Text>
+      {team.players.map((entry) => {
+        const player = byId.get(entry.accountId);
+        return (
+          <Inline key={entry.accountId} gap={1} wrap="nowrap" title={player?.name}>
+            {player && <StatusDot color={player.color} />}
+            <span className="sr-only">{player?.name ?? `Player ${entry.accountId}`} as</span>
+            <HeroImage heroId={entry.heroId} shape="circle" title="" className="size-5" />
+            <Text variant="caption" numeric="tabular" className="whitespace-nowrap">
+              {entry.kills}/{entry.deaths}/{entry.assists}
+            </Text>
+          </Inline>
+        );
+      })}
+    </Inline>
+  );
+}
+
+function SharedMatchRow({
+  match,
+  byId,
+  lastMetLabel,
+}: {
+  match: SharedMatch;
+  byId: ReadonlyMap<number, ComparedPlayer>;
+  lastMetLabel: (unix: number) => string;
+}) {
+  const [first, second] = match.teams;
+  return (
+    // Not a link: the site has no public match page (the tracker's scoreboard is for signed-in patrons).
+    <Inline gap={3} asChild className="gap-y-1 px-3 py-1.5">
+      <li>
+        <Text variant="caption" tone="muted" className="w-24 shrink-0 whitespace-nowrap">
+          {lastMetLabel(match.startTime)}
+        </Text>
+        <Inline gap={3} className="gap-y-1">
+          <SharedTeam team={first} byId={byId} />
+          {second && (
+            <>
+              <Text variant="caption" tone="muted">
+                vs
+              </Text>
+              <SharedTeam team={second} byId={byId} />
+            </>
+          )}
+        </Inline>
+      </li>
+    </Inline>
+  );
+}
+
 /**
  * Every pair of compared players: the matches they played on the same team with that team's record, the matches
- * they played against each other with the head-to-head, and when they last met. Pairs that never met share one line.
+ * they played against each other with the head-to-head, and when they last met; then the newest matches two or more of
+ * them shared, newest first. Pairs that never met share one line.
  */
 export function TogetherAgainstPanel({
   players,
@@ -136,6 +202,7 @@ export function TogetherAgainstPanel({
   const failed = histories.filter((history) => history.isError);
   const loading = histories.some((history) => history.isPending && !history.isError);
   const { met, neverMet } = splitPairs(playerPairs(histories));
+  const recent = recentSharedMatches(histories);
   const nameOf = (accountId: number) => byId.get(accountId)?.name ?? `Player ${accountId}`;
   const neverMetLine = `Never met: ${neverMet.map((pair) => `${nameOf(pair.a)} & ${nameOf(pair.b)}`).join(", ")}`;
   // Only there when it has something to show: it sits last in its column, so appearing once loaded moves nothing.
@@ -168,6 +235,18 @@ export function TogetherAgainstPanel({
             })}
           </TableBody>
         </Table>
+      )}
+      {recent.length > 0 && (
+        <>
+          <PanelHeader size="sm" title="Recent shared matches" />
+          <Stack gap={0} asChild>
+            <ul aria-label="Recent shared matches">
+              {recent.map((match) => (
+                <SharedMatchRow key={match.matchId} match={match} byId={byId} lastMetLabel={lastMetLabel} />
+              ))}
+            </ul>
+          </Stack>
+        </>
       )}
       {neverMet.length > 0 && (
         // Two lines at most: with five players the list runs long; the full list is in the title.
