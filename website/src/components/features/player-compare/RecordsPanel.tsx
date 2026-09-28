@@ -5,7 +5,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
-import { type PlayerRecords, playerRecords, type RecordMatch } from "~/lib/compare-records";
+import { BEST_HERO_MIN_MATCHES, type PlayerRecords, playerRecords, type RecordMatch } from "~/lib/compare-records";
 import { statWinners } from "~/lib/player-compare";
 import { formatStatValue } from "~/lib/stat-format";
 
@@ -28,9 +28,22 @@ interface RecordRow {
   format: (value: number, records: PlayerRecords) => string;
   /** The match that set the record, shown as its hero and date. */
   match?: (records: PlayerRecords) => RecordMatch | null;
+  /** The hero the row is about, shown beside the value at any width. */
+  hero?: (records: PlayerRecords) => number | null;
+  /** What the value stands on ("in 24 matches"), on hover and for a screen reader. */
+  detail?: (records: PlayerRecords) => string;
 }
 
 const ROWS: RecordRow[] = [
+  {
+    key: "bestHero",
+    label: `Best hero (${BEST_HERO_MIN_MATCHES}+)`,
+    // Judged in the shown whole percent.
+    value: (records) => (records.bestHero ? Math.round(records.bestHero.winRate * 100) : null),
+    format: (value) => `${value}%`,
+    hero: (records) => records.bestHero?.heroId ?? null,
+    detail: (records) => (records.bestHero ? `in ${records.bestHero.matches} matches` : ""),
+  },
   {
     key: "mostKills",
     label: "Most kills",
@@ -101,7 +114,29 @@ const ROWS: RecordRow[] = [
 ];
 
 /** The hero a record was set on, beside the value; the match's UTC day shows on hover and to screen readers. */
-function RecordValue({ match, won, children }: { match?: RecordMatch | null; won: boolean; children: string }) {
+function RecordValue({
+  match,
+  heroId,
+  detail,
+  won,
+  children,
+}: {
+  match?: RecordMatch | null;
+  /** A hero the value is about (not one match's): its icon at any width, without a date. */
+  heroId?: number | null;
+  detail?: string;
+  won: boolean;
+  children: string;
+}) {
+  if (heroId != null) {
+    return (
+      <Inline gap={1.5} wrap="nowrap" justify="end" title={detail}>
+        <HeroImage heroId={heroId} shape="circle" className="size-5" />
+        <RowValue won={won}>{children}</RowValue>
+        {detail && <span className="sr-only">{detail}</span>}
+      </Inline>
+    );
+  }
   if (!match) return <RowValue won={won}>{children}</RowValue>;
   const date = day.unix(match.startTime).utc().format("MMM D, YYYY");
   return (
@@ -171,7 +206,12 @@ export function RecordsPanel({
                       ) : !record || value == null ? (
                         <NoValue />
                       ) : (
-                        <RecordValue match={row.match?.(record)} won={winners.includes(index)}>
+                        <RecordValue
+                          match={row.match?.(record)}
+                          heroId={row.hero?.(record)}
+                          detail={row.detail?.(record)}
+                          won={winners.includes(index)}
+                        >
                           {row.format(value, record)}
                         </RecordValue>
                       )}

@@ -117,3 +117,15 @@ test("matchesByWeekday starts the week on Monday, UTC by default", () => {
   assert.equal(days[0].matches, 1);
   assert.equal(days[3].matches, 1);
 });
+
+test("playerRecords' best hero needs enough matches and prefers the bigger sample on a tie", () => {
+  const win = { match_result: 0, player_team: 0 };
+  const loss = { match_result: 1, player_team: 0 };
+  const games = (heroId: number, wins: number, losses: number) => [
+    ...Array.from({ length: wins }, (_, i) => match(i, { ...win, hero_id: heroId })),
+    ...Array.from({ length: losses }, (_, i) => match(i, { ...loss, hero_id: heroId })),
+  ];
+  const records = playerRecords([...games(1, 9, 1), ...games(2, 18, 2), ...games(3, 5, 0)]);
+  assert.deepEqual(records.bestHero, { heroId: 2, winRate: 0.9, matches: 20 });
+  assert.equal(playerRecords(games(4, 3, 0)).bestHero, null);
+});

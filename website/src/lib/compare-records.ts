@@ -22,12 +22,17 @@ export interface PlayerRecords {
   bestKda: RecordMatch | null;
   /** Matches without a death. */
   deathless: number;
+  /** The hero with the best win rate over at least `BEST_HERO_MIN_MATCHES` matches; more matches break a tie. */
+  bestHero: { heroId: number; winRate: number; matches: number } | null;
   longestWinStreak: number;
   /** Positive = an ongoing win streak, negative = an ongoing loss streak, 0 without matches. */
   currentStreak: number;
   /** Distinct UTC days with at least one match. */
   activeDays: number;
 }
+
+/** Fewer matches on a hero than this and its win rate is luck, not a best hero. */
+export const BEST_HERO_MIN_MATCHES = 10;
 
 /** Matches shorter than this are left out of the per-minute record: an early abandon inflates it. */
 export const RECORD_MIN_DURATION_S = 15 * 60;
@@ -54,9 +59,22 @@ export function playerRecords(entries: readonly PlayerMatchHistoryEntry[]): Play
   const streaks = computeStreaks(entries as PlayerMatchHistoryEntry[]);
   const days = new Set<number>();
   let deathless = 0;
+  const byHero = new Map<number, { matches: number; wins: number }>();
   for (const entry of entries) {
     days.add(Math.floor(entry.start_time / 86_400));
     if (entry.player_deaths === 0) deathless++;
+    const hero = byHero.get(entry.hero_id) ?? { matches: 0, wins: 0 };
+    hero.matches++;
+    if (isWin(entry)) hero.wins++;
+    byHero.set(entry.hero_id, hero);
+  }
+  let bestHero: PlayerRecords["bestHero"] = null;
+  for (const [heroId, { matches, wins }] of byHero) {
+    if (matches < BEST_HERO_MIN_MATCHES) continue;
+    const winRate = wins / matches;
+    if (!bestHero || winRate > bestHero.winRate || (winRate === bestHero.winRate && matches > bestHero.matches)) {
+      bestHero = { heroId, winRate, matches };
+    }
   }
   return {
     matches: entries.length,
@@ -67,6 +85,7 @@ export function playerRecords(entries: readonly PlayerMatchHistoryEntry[]): Play
     mostLastHits: best(entries, (entry) => entry.last_hits),
     bestKda: best(entries, (entry) => (entry.player_kills + entry.player_assists) / Math.max(1, entry.player_deaths)),
     deathless,
+    bestHero,
     longestWinStreak: streaks.longestWin,
     currentStreak: streaks.current,
     activeDays: days.size,
