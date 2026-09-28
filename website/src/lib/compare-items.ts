@@ -29,7 +29,7 @@ export interface FavoriteItem {
   avgSellTimeS: number | null;
 }
 
-export const FAVORITE_ITEM_COUNT = 8;
+export const FAVORITE_ITEM_COUNT = 6;
 /** Tier 1 items are bought early by nearly everyone and sold later; they would fill every list with the same eight. */
 export const FAVORITE_MIN_TIER = 2;
 /** An item bought once or twice is not a favorite. */

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { favoriteItems, type ItemMeta, type PlayerItemStatRow } from "./compare-items";
+import { FAVORITE_ITEM_COUNT, favoriteItems, type ItemMeta, type PlayerItemStatRow } from "./compare-items";
 
 function row(item_id: number, matches: number, wins = Math.round(matches / 2), sell = 0): PlayerItemStatRow {
   return { item_id, matches, wins, avg_buy_time_s: 600, avg_sell_time_s: sell };
@@ -41,7 +41,7 @@ test("favoriteItems computes share and win rate, capping the share at one", () =
 test("favoriteItems keeps the limit and returns nothing without matches", () => {
   const items = Array.from({ length: 12 }, (_, index) => item(index + 1));
   const rows = items.map((entry) => row(entry.id, 10 + entry.id));
-  assert.equal(favoriteItems(rows, items, 100).length, 8);
+  assert.equal(favoriteItems(rows, items, 100).length, FAVORITE_ITEM_COUNT);
   assert.equal(favoriteItems(rows, items, 100, 3).length, 3);
   assert.deepEqual(favoriteItems(rows, items, 0), []);
 });
