@@ -28,15 +28,21 @@ export function PlayerColumnHead({ player }: { player: ComparedPlayer }) {
 
 /**
  * One value in a compare table: the best of its row gets a crown and full ink, the rest are muted. No hue: every hue is
- * also some player's color. A phone-narrow table keeps the bold ink and drops the crown, so more players fit.
+ * also some player's color. Every value keeps a crown's slot after it, filled or not, so the values end on one edge and
+ * the crowns sit in one column beside them. A phone-narrow table keeps the bold ink and drops the slot, so more players
+ * fit.
  */
 export function RowValue({ won, children }: { won: boolean; children: React.ReactNode }) {
   return (
     <Inline gap={1} wrap="nowrap" justify="end">
-      {won && <CrownIcon aria-hidden="true" className="hidden size-3.5 shrink-0 @md/table:block" />}
       <Text tone={won ? "default" : "muted"} className={won ? "font-semibold" : undefined}>
         {children}
       </Text>
+      {won ? (
+        <CrownIcon aria-hidden="true" className="hidden size-3.5 shrink-0 @md/table:block" />
+      ) : (
+        <span aria-hidden="true" className="hidden size-3.5 shrink-0 @md/table:block" />
+      )}
       {won && <span className="sr-only">, best</span>}
     </Inline>
   );
