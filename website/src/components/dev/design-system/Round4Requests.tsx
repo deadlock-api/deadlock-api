@@ -123,7 +123,7 @@ export function Round4Requests() {
       <Specimen
         name="Table width"
         source="ui/table"
-        note={`\`width="fill"\` (default) spreads the columns over the container. \`width="hug"\` sizes them to their content, so a table of two or three columns keeps its values next to their labels in a wide panel; it still scrolls sideways when the container is narrower.`}
+        note={`\`width="fill"\` (default) spreads the columns over the container. \`width="hug"\` sizes them to their content, so a table of two or three columns keeps its values next to their labels in a wide panel; it still scrolls sideways when the container is narrower. \`height="fill"\` grows a table to a stretched panel (a flex column), its rows sharing the extra height, so a panel beside taller ones ends level without empty space under the table.`}
       >
         <Variants label='width="fill"' className="items-stretch">
           <Table density="dense">
@@ -150,6 +150,21 @@ export function Round4Requests() {
               <HeroRows />
             </TableBody>
           </Table>
+        </Variants>
+        <Variants label='height="fill" in a taller panel' className="items-stretch">
+          <Card size="flush" className="h-64">
+            <Table density="dense" height="fill">
+              <TableHeader tone="muted">
+                <TableRow>
+                  <TableHead>Hero</TableHead>
+                  <TableHead className="text-end">Matches</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <HeroRows />
+              </TableBody>
+            </Table>
+          </Card>
         </Variants>
       </Specimen>
 
@@ -218,6 +233,11 @@ export function Round4Requests() {
                 setTimeout(() => setPreviewCopied(false), 2000);
               }}
             />
+          </div>
+        </Variants>
+        <Variants label='fit="contain" in a wide, short size container' className="items-stretch">
+          <div className="@container-size flex h-32 w-96 max-w-full items-center justify-center">
+            <SharePreview src="/og/v2/default.png" width={1200} height={630} aria-label="Copy the link" fit="contain" />
           </div>
         </Variants>
       </Specimen>

@@ -18,9 +18,16 @@ export function SharePreview({
   alt = "",
   state = "idle",
   confirmation = "Link copied",
+  fit = "width",
   className,
+  style,
   ...props
 }: Omit<React.ComponentProps<"button">, "children"> & {
+  /**
+   * `width` fills the parent's width at the image's aspect ratio. `contain` scales it to fit both the width and the
+   * height of the nearest size container (`@container-size`), so it fills a box of any shape without cropping.
+   */
+  fit?: "width" | "contain";
   src: string;
   /** The image's pixel size, which holds its space while it loads. */
   width: number;
@@ -50,8 +57,11 @@ export function SharePreview({
         FOCUS_RING,
         "relative block w-full cursor-pointer overflow-hidden rounded-lg border transition-[scale,box-shadow,border-color] duration-fast ease-standard hover:border-primary/60 active:scale-98",
         confirmed && "border-primary ring-2 ring-primary",
+        fit === "contain" && "max-h-full",
         className,
       )}
+      // The aspect ratio decides which side runs out first: as wide as the box, or as wide as its height allows.
+      style={fit === "contain" ? { width: `min(100cqw, 100cqh * ${width / height})`, ...style } : style}
       {...props}
     >
       <img

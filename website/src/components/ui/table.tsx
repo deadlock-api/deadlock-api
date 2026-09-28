@@ -28,8 +28,14 @@ function Table({
   className,
   density = "default",
   width = "fill",
+  height = "auto",
   ...props
-}: React.ComponentProps<"table"> & { density?: TableDensity; width?: "fill" | "hug" }) {
+}: React.ComponentProps<"table"> & {
+  density?: TableDensity;
+  width?: "fill" | "hug";
+  /** `fill` grows the table to the height of a flex-column parent (a stretched panel), its rows sharing the extra. */
+  height?: "auto" | "fill";
+}) {
   return (
     <TableDensityContext value={density}>
       <div
@@ -40,6 +46,7 @@ function Table({
           SCROLLBAR_THIN,
           "relative w-full scroll-fade-x overflow-x-auto",
           width === "fill" && "has-data-pinned:@container/table",
+          height === "fill" && "flex-1",
         )}
       >
         <table
@@ -49,6 +56,7 @@ function Table({
           className={cn(
             "group/table caption-bottom",
             width === "fill" ? "w-full" : "w-max",
+            height === "fill" && "h-full",
             density === "dense" ? "text-xs" : "text-sm",
             className,
           )}
