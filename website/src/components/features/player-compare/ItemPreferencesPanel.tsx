@@ -80,7 +80,7 @@ export function ItemPreferencesPanel({ players, filters }: { players: ComparedPl
     <Panel>
       <PanelHeader size="sm" title="Favorite items" />
       <PanelBody size="sm">
-        <Grid columns={COLUMNS[count]} gap={4}>
+        <Grid columns={players.length === 1 ? 1 : COLUMNS[count]} gap={4}>
           {players.map((player, index) => (
             <PlayerItems
               key={player.accountId}
@@ -88,6 +88,7 @@ export function ItemPreferencesPanel({ players, filters }: { players: ComparedPl
               column={columns[index]}
               itemsById={itemsById}
               expanded={expanded}
+              alone={players.length === 1}
             />
           ))}
         </Grid>
@@ -111,12 +112,15 @@ function PlayerItems({
   column,
   itemsById,
   expanded,
+  alone,
 }: {
   player: ComparedPlayer;
   column: Column;
   itemsById: ReadonlyMap<number, SlimUpgrade>;
   /** Every item, rather than the first few. */
   expanded: boolean;
+  /** The only player: the list flows over the panel's width in columns rather than down one of them. */
+  alone: boolean;
 }) {
   return (
     <Stack gap={1.5}>
@@ -133,7 +137,7 @@ function PlayerItems({
           No items on these filters
         </Text>
       ) : (
-        <Stack gap={1} asChild>
+        <Grid columns={alone ? { base: 1, sm: 2, lg: 4 } : 1} gap={1} asChild>
           <ul aria-label={`${possessive(player.name)} favorite items`}>
             {column.state === "loading"
               ? Array.from({ length: FAVORITE_ITEM_COUNT }, (_, index) => <ItemRowSkeleton key={index} />)
@@ -147,7 +151,7 @@ function PlayerItems({
                   />
                 ))}
           </ul>
-        </Stack>
+        </Grid>
       )}
     </Stack>
   );
