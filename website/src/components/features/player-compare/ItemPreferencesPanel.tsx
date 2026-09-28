@@ -21,8 +21,12 @@ import { type CompareFilters, compareItemStatsParams, lastAnswerForAccount } fro
 
 import type { ComparedPlayer } from "./types";
 
-/** Columns by the panel's width: one per player once each has room for an item name. */
+/** A narrow panel (a phone, the columns stacked) shows each player's top five until expanded. */
 const NARROW_ITEM_COUNT = 5;
+/** Expanded, each player's top items up to this many: past it the list is a long tail of one-off buys. */
+const EXPANDED_ITEM_COUNT = 16;
+
+/** Columns by the panel's width: one per player once each has room for an item name. */
 
 const COLUMNS = {
   2: { base: 1, sm: 2 },
@@ -61,8 +65,11 @@ export function ItemPreferencesPanel({ players, filters }: { players: ComparedPl
     }
     if (player.aggregate === null) return { state: "ready", items: [] };
     if (!query?.data || !itemsQuery.data || player.aggregate === undefined) return { state: "loading" };
-    // Every item that qualifies; the panel shows the first few until "Show all".
-    return { state: "ready", items: favoriteItems(query.data, itemsQuery.data, player.aggregate.matches, Infinity) };
+    // The items the expanded panel can show; collapsed, it shows the first few.
+    return {
+      state: "ready",
+      items: favoriteItems(query.data, itemsQuery.data, player.aggregate.matches, EXPANDED_ITEM_COUNT),
+    };
   });
 
   if (columns.every((column) => column.state === "ready" && column.items.length === 0)) return null;
@@ -85,7 +92,16 @@ export function ItemPreferencesPanel({ players, filters }: { players: ComparedPl
           ))}
         </Grid>
       </PanelBody>
-      {longest > FAVORITE_ITEM_COUNT && <PanelShowMore open={expanded} onOpenChange={setExpanded} total={longest} />}
+      {/* Wide, the collapsed panel shows eight a player; narrow, five, so six to eight items only need the control on a
+          narrow panel. */}
+      {longest > NARROW_ITEM_COUNT && (
+        <PanelShowMore
+          open={expanded}
+          onOpenChange={setExpanded}
+          total={longest}
+          className={longest <= FAVORITE_ITEM_COUNT ? "@md:hidden" : undefined}
+        />
+      )}
     </Panel>
   );
 }
