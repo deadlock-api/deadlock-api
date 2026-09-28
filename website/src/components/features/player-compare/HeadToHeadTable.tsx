@@ -129,7 +129,10 @@ export function HeadToHeadTable({
                             <Inline gap={1} wrap="nowrap" justify="end">
                               {/* The best value: a crown and full ink, the rest muted. No hue: every hue is also some
                                   player's color. */}
-                              {won && <CrownIcon aria-hidden="true" className="size-3.5 shrink-0" />}
+                              {/* A phone-narrow table keeps the bold ink and drops the crown, so more players fit. */}
+                              {won && (
+                                <CrownIcon aria-hidden="true" className="hidden size-3.5 shrink-0 @md/table:block" />
+                              )}
                               <Text tone={won ? "default" : "muted"} className={won ? "font-semibold" : undefined}>
                                 <StatValue stat={stat} value={value} ranks={ranks} />
                               </Text>
