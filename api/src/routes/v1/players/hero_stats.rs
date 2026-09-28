@@ -191,9 +191,8 @@ fn build_query(query: &HeroStatsQuery) -> String {
                max_neutral_damage, max_shots_hit, max_shots_missed,
                max_hero_bullets_hit, max_hero_bullets_hit_crit,
                duration_s, start_time, average_badge, mvp_rank
-        FROM player_match_stats
+        FROM player_match_stats FINAL
         WHERE {mp_where}
-        LIMIT 1 BY match_id, account_id
     )
     SELECT
         account_id,
