@@ -223,7 +223,7 @@ export function PlayerCards({
                               variant="plain"
                               size="sm"
                               // Each stat as wide as its value, spread across the card: a crowned "12/19" keeps its "/19".
-                              className="grid-cols-2 justify-between gap-2 @stat-trio:grid-cols-[repeat(3,auto)]"
+                              className="grid-cols-2 justify-between gap-2 @stat-trio:grid-cols-[repeat(3,auto)] @md:grid-cols-[repeat(5,auto)]"
                             >
                               {!contest ? (
                                 // Nothing to win alone: the sample size instead.
@@ -277,6 +277,31 @@ export function PlayerCards({
                                     formatPlayerMetricValue(aggregate.kda, "decimal2")
                                   ) : (
                                     <Skeleton className="h-6 w-12" />
+                                  )
+                                }
+                              />
+                              {/* A wide card (a big screen) has room for the farm and the MVPs too. */}
+                              <Stat
+                                className="hidden @md:flex"
+                                label="Souls/min"
+                                value={
+                                  aggregate ? (
+                                    formatPlayerMetricValue(aggregate.netWorthPerMin, "integer")
+                                  ) : (
+                                    <Skeleton className="h-6 w-12" />
+                                  )
+                                }
+                              />
+                              <Stat
+                                className="hidden @md:flex"
+                                label="MVP rate"
+                                value={
+                                  aggregate === undefined ? (
+                                    <Skeleton className="h-6 w-12" />
+                                  ) : aggregate.mvpRate == null ? (
+                                    <NoValue />
+                                  ) : (
+                                    formatPercent(aggregate.mvpRate, 1)
                                   )
                                 }
                               />
