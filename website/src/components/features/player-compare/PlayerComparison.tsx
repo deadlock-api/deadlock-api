@@ -7,6 +7,7 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Grid } from "~/components/ui/grid";
 import { Stack } from "~/components/ui/stack";
 import { aggregateHeroStats, compareColorIndexes } from "~/lib/player-compare";
+import { playerPairs, splitPairs } from "~/lib/player-compare-pairs";
 import { playstyleLabel, playstylePercentiles } from "~/lib/playstyle";
 import { type CompareFilters, compareHeroStatsParams, playerRanksQueryOptions } from "~/queries/player-compare-queries";
 import { steamProfileQueryOptions, trackerHeroStatsQueryOptions } from "~/queries/tracker-queries";
@@ -129,6 +130,12 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
   const layout = players.length >= 4 ? WIDE_LAYOUT : LAYOUT;
   // On one hero's filter every shared hero is that hero.
   const showSharedHeroes = filters.heroId == null && accountIds.length >= 2;
+  // Once the histories are in and no two players met, together & against is one line: it goes under heroes and items
+  // across the page rather than taking a tall, empty third column beside them.
+  const nobodyMet =
+    histories.every((history) => !history.isPending && !history.isError) &&
+    splitPairs(playerPairs(histories)).met.length === 0;
+  const threeUp = showSharedHeroes && players.length < 4 && !nobodyMet;
 
   return (
     <Stack gap={4} className="@container">
@@ -179,10 +186,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
               both, and very wide all three in a row. Four or five players: the heroes table needs the full width for
               its columns, items and together & against pair up under it. On one hero's filter there are no shared
               heroes: items beside together & against. */}
-          <Grid
-            gap={4}
-            className={showSharedHeroes && players.length < 4 ? "@xl:grid-cols-2 @8xl:grid-cols-3" : "@xl:grid-cols-2"}
-          >
+          <Grid gap={4} className={threeUp ? "@xl:grid-cols-2 @8xl:grid-cols-3" : "@xl:grid-cols-2"}>
             {showSharedHeroes && (
               <SharedHeroesTable
                 players={players}
@@ -196,7 +200,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
               <TogetherAgainstPanel
                 players={players}
                 histories={histories}
-                className={showSharedHeroes && players.length < 4 ? "@xl:col-span-2 @8xl:col-span-1" : undefined}
+                className={threeUp ? "@xl:col-span-2 @8xl:col-span-1" : showSharedHeroes ? "@xl:col-span-2" : undefined}
               />
             )}
           </Grid>
