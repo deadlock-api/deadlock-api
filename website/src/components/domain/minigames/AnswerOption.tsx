@@ -28,13 +28,12 @@ const answerOptionVariants = cva(
         /** One of a few short choices sharing a line. */
         tile: "flex-1 justify-center px-2 py-2.5 text-center text-xs font-semibold",
         /** One of two or three big choices sharing a line, the main action of a round, with a result mark. */
+        choice: "min-h-11 min-w-0 flex-1 justify-center gap-2 px-3 py-3 text-center text-sm font-semibold text-balance",
         /**
-         * Inside a `Versus` board narrower than 28rem (Higher / Lower in a side's `VersusActions`) it tightens its gaps,
-         * padding and type, and drops the keycap (the key still works), so both fit a side down to a 320px screen.
-         * Outside a board the container query never matches.
+         * A 44px square holding only an icon (Higher / Lower around a `VersusValue` in `VersusActions`). It needs an
+         * `aria-label`, draws no keycap, and after the reveal the icon gives way to the result mark.
          */
-        choice:
-          "min-h-11 min-w-0 flex-1 justify-center gap-2 px-3 py-3 text-center text-sm font-semibold text-balance @max-md/versus:gap-1 @max-md/versus:px-1.5 @max-md/versus:text-xs",
+        icon: "size-11 shrink-0 justify-center [&_svg]:size-5",
         /**
          * A whole card is the answer (a contender of `VersusChoice`): the children lay themselves out in a column, the
          * keycap and the result mark sit in the top corners over the padding, so neither moves the content.
@@ -64,8 +63,10 @@ export function revealedState(correct: boolean, picked: boolean): AnswerOptionSt
   return picked ? "wrong" : "dimmed";
 }
 
-interface AnswerOptionProps
-  extends Omit<HTMLMotionProps<"button">, "children">, VariantProps<typeof answerOptionVariants> {
+type AnswerOptionVariant = NonNullable<VariantProps<typeof answerOptionVariants>["variant"]>;
+
+interface AnswerOptionBaseProps
+  extends Omit<HTMLMotionProps<"button">, "children">, Omit<VariantProps<typeof answerOptionVariants>, "variant"> {
   children: React.ReactNode;
   /**
    * The key that picks this answer, e.g. "1": drawn as a keycap in front of the text on devices with a fine pointer
@@ -74,6 +75,10 @@ interface AnswerOptionProps
    */
   shortcut?: string;
 }
+
+/** An icon-only answer has no text to be named by, so it takes its name from `aria-label`. */
+type AnswerOptionProps = AnswerOptionBaseProps &
+  ({ variant?: Exclude<AnswerOptionVariant, "icon"> } | { variant: "icon"; "aria-label": string });
 
 /**
  * One answer of a quiz, in every game. The result is carried by a mark as well as by color. `row` and `choice` keep the
@@ -108,7 +113,13 @@ export function AnswerOption({
       onClick={locked ? undefined : onClick}
       {...props}
     >
-      {variant === "card" ? (
+      {variant === "icon" ? (
+        state === "correct" || state === "wrong" ? (
+          <ResultMark state={state} />
+        ) : (
+          children
+        )
+      ) : variant === "card" ? (
         <>
           {shortcut && (
             <Kbd aria-hidden="true" className="absolute inset-s-2 top-2 hidden pointer-fine:inline-flex">
@@ -121,14 +132,8 @@ export function AnswerOption({
       ) : (
         <>
           {shortcut ? (
-            <span className="flex min-w-0 items-center gap-3 @max-md/versus:gap-1">
-              <Kbd
-                aria-hidden="true"
-                className={cn(
-                  "hidden pointer-fine:inline-flex",
-                  variant === "choice" && "pointer-fine:@max-md/versus:hidden",
-                )}
-              >
+            <span className="flex min-w-0 items-center gap-3">
+              <Kbd aria-hidden="true" className="hidden pointer-fine:inline-flex">
                 {shortcut}
               </Kbd>
               {children}
