@@ -33,8 +33,8 @@ function topCompanions(
 }
 
 /**
- * Up to four suggestions split between teammates and opponents: two each, and a group with fewer leaves its room to
- * the other. A player who was both is offered once, as a teammate.
+ * Up to three suggestions split between teammates and opponents: two teammates and one opponent when both have
+ * enough, and a group with fewer leaves its room to the other. A player who was both is offered once, as a teammate.
  */
 function splitSuggestions(mates: Companion[], enemies: Companion[]): { mates: Companion[]; enemies: Companion[] } {
   const mateIds = new Set(mates.map((mate) => mate.accountId));
@@ -86,69 +86,51 @@ function useQuickAddSuggestions(accountIds: readonly number[], filters: CompareF
   };
 }
 
-function SuggestionGroup({
-  label,
+/** One suggestion: the player, and how often they met the compared player, together or against. */
+function SuggestionRow({
+  companion: { accountId, matches },
   relation,
-  companions,
   profiles,
   profilesLoading,
   onAdd,
 }: {
-  label: string;
-  /** How the count reads to a screen reader: "together" or "against". */
-  relation: string;
-  companions: Companion[];
+  companion: Companion;
+  relation: "together" | "against";
   profiles: ReturnType<typeof useSteamProfiles>["profiles"];
   profilesLoading: boolean;
   onAdd: (accountId: number) => void;
 }) {
-  const labelId = useId();
-  if (companions.length === 0) return null;
+  const profile = profiles[accountId];
+  const name = profile?.personaname ?? `Player ${accountId}`;
   return (
-    <Stack gap={0.5}>
-      <Text id={labelId} variant="caption" tone="muted">
-        {label}
-      </Text>
-      <Stack gap={0.5} asChild>
-        <ul aria-labelledby={labelId}>
-          {companions.map(({ accountId, matches }) => {
-            const profile = profiles[accountId];
-            const name = profile?.personaname ?? `Player ${accountId}`;
-            const games = `${matches} ${matches === 1 ? "game" : "games"}`;
-            return (
-              <li key={accountId}>
-                <Button
-                  variant="ghost"
-                  size="sm-tight"
-                  className="w-full justify-start"
-                  aria-label={`Add ${name}, ${games} ${relation}`}
-                  onClick={() => onAdd(accountId)}
-                >
-                  <PlayerCell
-                    size="sm"
-                    accountId={accountId}
-                    name={profile?.personaname}
-                    avatar={profile?.avatar}
-                    loading={profilesLoading && !profile}
-                    className="flex-1"
-                  />
-                  <Text variant="caption" tone="muted" numeric="tabular" className="shrink-0">
-                    {games}
-                  </Text>
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
-      </Stack>
-    </Stack>
+    <li>
+      <Button
+        variant="ghost"
+        size="sm-tight"
+        className="w-full justify-start"
+        aria-label={`Add ${name}, ${matches} ${matches === 1 ? "game" : "games"} ${relation}`}
+        onClick={() => onAdd(accountId)}
+      >
+        <PlayerCell
+          size="sm"
+          accountId={accountId}
+          name={profile?.personaname}
+          avatar={profile?.avatar}
+          loading={profilesLoading && !profile}
+          className="flex-1"
+        />
+        <Text variant="caption" tone="muted" numeric="tabular" className="shrink-0">
+          {matches} {relation}
+        </Text>
+      </Button>
+    </li>
   );
 }
 
 /**
- * One-click additions for the comparison: the players one compared player (the lowest account id) queues with and meets most, on the
- * page's filters. An optional helper: it shows a thin skeleton while it loads and nothing at all when there is
- * nobody to suggest or the request fails.
+ * One-click additions for the comparison: the players one compared player (the lowest account id) queues with and
+ * meets most, on the page's filters, in one list of up to three. While it loads, a skeleton of the same three rows
+ * holds its place; it shows nothing when there is nobody to suggest or the request fails.
  */
 export function QuickAddSuggestions({
   accountIds,
@@ -159,30 +141,40 @@ export function QuickAddSuggestions({
   filters: CompareFilters;
   onAdd: (accountId: number) => void;
 }) {
+  const labelId = useId();
   const { enabled, isPending, mates, enemies, profiles, profilesLoading } = useQuickAddSuggestions(accountIds, filters);
 
   if (!enabled) return null;
-  if (isPending) return <Skeleton className="h-4 w-32" />;
-  if (mates.length === 0 && enemies.length === 0) return null;
+  if (!isPending && mates.length === 0 && enemies.length === 0) return null;
 
   return (
-    <Stack gap={2} className="w-full">
-      <SuggestionGroup
-        label="Frequent teammates"
-        relation="together"
-        companions={mates}
-        profiles={profiles}
-        profilesLoading={profilesLoading}
-        onAdd={onAdd}
-      />
-      <SuggestionGroup
-        label="Frequent opponents"
-        relation="against"
-        companions={enemies}
-        profiles={profiles}
-        profilesLoading={profilesLoading}
-        onAdd={onAdd}
-      />
+    <Stack gap={0.5} className="w-full">
+      <Text id={labelId} variant="caption" tone="muted">
+        Suggested players
+      </Text>
+      <Stack gap={0.5} asChild>
+        <ul aria-labelledby={labelId} aria-busy={isPending || undefined}>
+          {isPending
+            ? Array.from({ length: SUGGESTION_TOTAL }, (_, index) => (
+                <li key={index} aria-hidden="true">
+                  <Skeleton className="h-8 w-full" />
+                </li>
+              ))
+            : [
+                ...mates.map((companion) => ({ companion, relation: "together" as const })),
+                ...enemies.map((companion) => ({ companion, relation: "against" as const })),
+              ].map(({ companion, relation }) => (
+                <SuggestionRow
+                  key={companion.accountId}
+                  companion={companion}
+                  relation={relation}
+                  profiles={profiles}
+                  profilesLoading={profilesLoading}
+                  onAdd={onAdd}
+                />
+              ))}
+        </ul>
+      </Stack>
     </Stack>
   );
 }
