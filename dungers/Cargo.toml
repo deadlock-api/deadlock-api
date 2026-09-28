@@ -1,0 +1,30 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/*",
+]
+
+[workspace.package]
+edition = "2024"
+
+[workspace.dependencies]
+dungers_bitbuf = { path = "crates/dungers_bitbuf" }
+dungers_charsor = { path = "crates/dungers_charsor" }
+dungers_varint = { path = "crates/dungers_varint" }
+thiserror = "2.0.12"
+bytemuck = "1.23.1"
+
+[package]
+name = "dungers"
+version = "0.0.0"
+edition.workspace = true
+
+[dependencies]
+dungers_bitbuf = { workspace = true, optional = true }
+dungers_charsor = { workspace = true, optional = true }
+dungers_varint = { workspace = true, optional = true }
+
+[features]
+bitbuf = ["dep:dungers_bitbuf"]
+charsor = ["dep:dungers_charsor"]
+varint = ["dep:dungers_varint", "dungers_bitbuf?/varint"]

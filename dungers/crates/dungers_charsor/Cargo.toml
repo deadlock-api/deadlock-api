@@ -1,0 +1,5 @@
+[package]
+name = "dungers_charsor"
+version = "0.0.0"
+edition.workspace = true
+
