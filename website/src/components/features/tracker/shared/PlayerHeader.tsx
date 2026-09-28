@@ -1,15 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, GitCompareArrows } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
 import { SteamAvatar } from "~/components/domain/player/SteamAvatar";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { Button } from "~/components/ui/button";
 import { InlineStat } from "~/components/ui/inline-stat";
 import { TextLink } from "~/components/ui/text-link";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { formatPlaytime, peakRank, summarize } from "~/lib/tracker/compute";
+import { isDemoAccount } from "~/lib/tracker/demo";
 import { steamProfileQueryOptions, trackerRankQueryOptions } from "~/queries/tracker-queries";
 
 import { RefreshControl } from "./RefreshControl";
@@ -85,6 +88,14 @@ export function PlayerHeader({
                   {summary?.lastPlayedUnix != null && <span> · last played {fromNow(summary.lastPlayedUnix)}</span>}
                 </span>
                 <RefreshControl accountId={accountId} />
+                {!isDemoAccount(accountId) && (
+                  <Button variant="ghost" size="xs" asChild>
+                    <Link to="/analytics/players/compare" search={{ players: accountId }}>
+                      <GitCompareArrows aria-hidden="true" />
+                      Compare
+                    </Link>
+                  </Button>
+                )}
               </span>
             }
           />

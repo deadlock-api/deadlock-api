@@ -17,6 +17,8 @@ export const LEGACY_PAGE_PATHS = {
   "/heatmap": "/community/heatmap",
   "/deadlockdle": "/games/deadlockdle",
   "/flashcards": "/games/flashcards",
+  // A short link to share a comparison: `/compare?players=1,2`.
+  "/compare": "/analytics/players/compare",
 } as const;
 
 /** Keep shared links intact, including their filters, selected matches, archive dates and fragment. */

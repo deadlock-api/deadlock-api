@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PlayerEntry } from "deadlock_api_client";
 import Fuse from "fuse.js";
+import { CheckIcon, PlusIcon } from "lucide-react";
 import { useDeferredValue, useMemo } from "react";
 
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
@@ -8,8 +9,8 @@ import { PlayerCell } from "~/components/domain/player/PlayerCell";
 import { PaginationControls, PaginationStatus } from "~/components/patterns/data-table/PaginationControls";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
+import { Button } from "~/components/ui/button";
 import { SearchInput } from "~/components/ui/search-input";
-import { ariaSort, SortButton } from "~/components/ui/sort-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { usePaginationQueryState } from "~/hooks/usePaginationQueryState";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
@@ -17,8 +18,35 @@ import { extractBadgeMap } from "~/lib/leaderboard";
 import { parseSteamIdInput } from "~/lib/steam";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
-import { formatStatValue } from "./sort-options";
-import { SortBySelector } from "./SortBySelector";
+import { formatStatValue, sortByLabel } from "./sort-options";
+
+/** A row's add-to-comparison toggle: a plus to add, a check once added. */
+function PickToggle({
+  name,
+  picked,
+  full,
+  onClick,
+}: {
+  name: string;
+  picked: boolean;
+  /** No room for another pick; an added player can still be removed. */
+  full: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      variant="toggle"
+      size="icon-sm"
+      aria-pressed={picked}
+      aria-label={picked ? `Remove ${name} from the comparison` : `Add ${name} to the comparison`}
+      title={picked ? "Remove from comparison" : "Add to comparison"}
+      disabled={!picked && full}
+      onClick={onClick}
+    >
+      {picked ? <CheckIcon aria-hidden="true" /> : <PlusIcon aria-hidden="true" />}
+    </Button>
+  );
+}
 
 export type ScoreboardSort = { sortBy: string; sortDirection: "desc" | "asc" };
 
@@ -28,6 +56,16 @@ interface ScoreboardTableProps extends React.ComponentProps<"div"> {
   sortDirection: "desc" | "asc";
   /** The header always sets column and direction together, so one callback carries both. */
   onSortChange?: (sort: ScoreboardSort) => void;
+  /**
+   * The players picked on the board (for a comparison): with it, each row ends in a toggle that adds or removes its
+   * player, and `onValueChange` receives the new picks. Without it, rows have no toggle.
+   */
+  selectedAccountIds?: readonly number[];
+  onValueChange?: (accountIds: number[]) => void;
+  /** How many players can be picked; the other toggles disable once it's reached. */
+  maxSelected?: number;
+  /** The pick column's header, e.g. the action that uses the picks; "Compare" when left out. */
+  pickHeader?: React.ReactNode;
 }
 
 export function ScoreboardTable({
@@ -35,10 +73,19 @@ export function ScoreboardTable({
   sortBy,
   sortDirection,
   onSortChange,
+  selectedAccountIds,
+  onValueChange,
+  maxSelected = Number.POSITIVE_INFINITY,
+  pickHeader = "Compare",
   className,
   ...props
 }: ScoreboardTableProps) {
   const sort = (next: ScoreboardSort) => onSortChange?.(next);
+  const selectable = selectedAccountIds !== undefined;
+  const togglePick = (accountId: number) => {
+    const picked = selectedAccountIds ?? [];
+    onValueChange?.(picked.includes(accountId) ? picked.filter((id) => id !== accountId) : [...picked, accountId]);
+  };
   const flip = (): "desc" | "asc" => (sortDirection === "desc" ? "asc" : "desc");
   const {
     searchQuery,
@@ -175,24 +222,16 @@ export function ScoreboardTable({
                 }
               />
             )}
-            <TableHead className="text-end" aria-sort={ariaSort(true, sortDirection)}>
-              <div className="flex items-center justify-end gap-1">
-                <SortBySelector
-                  value={sortBy}
-                  defaultValue="kills"
-                  // The name column gives way first; below this the picker shrank to an unreadable "S…", and from
-                  // `sm` up there is room for "Avg Player Damage".
-                  className="min-w-24 sm:min-w-44"
-                  onValueChange={(next) => sort({ sortBy: next, sortDirection })}
-                />
-                <SortButton
-                  active
-                  sortDir={sortDirection}
-                  onClick={() => sort({ sortBy, sortDirection: flip() })}
-                  aria-label="Toggle sort direction"
-                />
-              </div>
-            </TableHead>
+            {/* The stat is picked in the scoreboard's toolbar; its column header flips the direction. */}
+            <SortableHeader
+              label={sortByLabel(sortBy)}
+              sortKey={sortBy}
+              activeSortKey={sortBy}
+              sortDir={sortDirection}
+              align="end"
+              onSortChange={() => sort({ sortBy, sortDirection: flip() })}
+            />
+            {selectable && <TableHead className="w-28 text-center">{pickHeader}</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -220,11 +259,23 @@ export function ScoreboardTable({
                   </TableCell>
                 )}
                 <TableCell className="text-end">{renderValue(entry.value)}</TableCell>
+                {selectable && (
+                  <TableCell className="text-center">
+                    {accountId != null && (
+                      <PickToggle
+                        name={profile?.personaname ?? `player ${accountId}`}
+                        picked={selectedAccountIds.includes(accountId)}
+                        full={selectedAccountIds.length >= maxSelected}
+                        onClick={() => togglePick(accountId)}
+                      />
+                    )}
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}
           {paginatedEntries.length === 0 && (
-            <TableEmptyRow colSpan={sortBy === "matches" ? 3 : 4}>
+            <TableEmptyRow colSpan={(sortBy === "matches" ? 3 : 4) + (selectable ? 1 : 0)}>
               {/* The search only sees the players on this board, so "no results" is about the board, not the player. */}
               {deferredSearchQuery
                 ? `No match in the top ${entries.length.toLocaleString("en-US")} players for this sort.`

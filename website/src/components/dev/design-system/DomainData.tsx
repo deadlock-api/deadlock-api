@@ -45,6 +45,7 @@ export function DomainData() {
 
   const [sortBy, setSortBy] = useState("kills");
   const [sortDirection, setSortDirection] = useState<"desc" | "asc">("desc");
+  const [pickedPlayers, setPickedPlayers] = useState<number[]>([]);
   const scoreboardQuery = useQuery(
     playerScoreboardQueryOptions({
       sortBy: sortBy as PlayerScoreboardSortByEnum,
@@ -72,12 +73,16 @@ export function DomainData() {
       <Specimen
         name="ScoreboardTable"
         source="domain/player-scoreboard/ScoreboardTable"
-        note="A player leaderboard for one stat: search, pagination, Steam names, and the stat picked in the header through SortBySelector. Sorting is the server's, so the parent refetches on onSortChange. Search, page and page size live in the URL (q, page, per_page). Live data: the top 8 since the previous patch."
+        note="A player leaderboard for one stat: search, pagination and Steam names. The parent picks the stat (SortBySelector in its toolbar); the stat's column header flips the direction. Sorting is the server's, so the parent refetches on onSortChange. Search, page and page size live in the URL (q, page, per_page). With selectedAccountIds each row ends in a + toggle that adds its player to a pick (onValueChange gets the new list), up to maxSelected; here three. pickHeader fills that column's header, usually the action that uses the picks. Live data: the top 8 since the previous patch."
       >
         <QueryRenderer query={scoreboardQuery}>
           {(entries) => (
             <ScoreboardTable
               entries={entries}
+              selectedAccountIds={pickedPlayers}
+              onValueChange={setPickedPlayers}
+              maxSelected={3}
+              pickHeader={`${pickedPlayers.length} of 3`}
               sortBy={sortBy}
               sortDirection={sortDirection}
               onSortChange={(next) => {

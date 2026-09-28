@@ -6,7 +6,7 @@ import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 
 const TYPE_STEPS = ["label", "body", "caption", "meta", "eyebrow"] as const;
-const TONES = ["default", "muted", "positive", "negative", "warning", "destructive"] as const;
+const TONES = ["default", "muted", "primary", "positive", "negative", "warning", "destructive"] as const;
 
 function Tile({ children }: { children: React.ReactNode }) {
   return (

@@ -5,9 +5,10 @@ import { useMemo } from "react";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
+import { buildDistributionCurve } from "~/lib/distribution-percentile";
 import { formatPlayerMetricValue, type PlayerMetricDefinition } from "~/lib/player-metrics";
 
-import { buildDistributionCurve, DistributionChart } from "./distribution-chart";
+import { DistributionChart } from "./distribution-chart";
 
 export function PlayerMetricDistributionCard({
   def,

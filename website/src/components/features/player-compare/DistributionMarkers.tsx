@@ -1,0 +1,247 @@
+import type { HashMapValue } from "deadlock_api_client";
+import { Area, AreaChart, ReferenceLine, XAxis, YAxis } from "recharts";
+
+import { ChartReading, ChartReadingList } from "~/components/patterns/charts/ChartReadings";
+import { ChartReveal, ChartRevealBack, ChartRevealFront } from "~/components/patterns/charts/ChartReveal";
+import { ChartEmpty, ChartLoading } from "~/components/patterns/charts/ChartStates";
+import { chartSizeVariants, ChartSurface } from "~/components/patterns/charts/ChartSurface";
+import { CHART_COLOR, CHART_TICK_SM, CHART_X_AXIS_SM } from "~/components/patterns/charts/theme";
+import { PanelBody } from "~/components/patterns/panel/Panel";
+import { Grid } from "~/components/ui/grid";
+import { Stack } from "~/components/ui/stack";
+import { Text } from "~/components/ui/text";
+import { approxPercentile, buildDistributionCurve } from "~/lib/distribution-percentile";
+import { LOWER_IS_BETTER_METRICS, rankShareLabel } from "~/lib/player-compare";
+import { formatPlayerMetricValue, PLAYER_METRICS } from "~/lib/player-metrics";
+
+import type { ComparedPlayer } from "./types";
+
+/** Every stat the API reports: the ones a player is most often measured by first, then the rest in category order. */
+const LEAD_KEYS = [
+  "kda",
+  "kills",
+  "deaths",
+  "assists",
+  "net_worth_per_min",
+  "player_damage_per_min",
+  "accuracy",
+  "last_hits",
+];
+const METRICS = [
+  ...LEAD_KEYS.flatMap((key) => PLAYER_METRICS.filter((metric) => metric.key === key)),
+  ...PLAYER_METRICS.filter((metric) => !LEAD_KEYS.includes(metric.key)),
+];
+
+/** One stat's chart, on its own so a tile only redraws when its own values change. */
+function MetricTile({
+  metric,
+  values,
+  players,
+  averages,
+  loading,
+  zoom,
+}: {
+  metric: (typeof METRICS)[number];
+  values: HashMapValue | undefined;
+  players: ComparedPlayer[];
+  averages: (Record<string, HashMapValue> | undefined)[];
+  loading: boolean;
+  zoom: boolean;
+}) {
+  const fmt = (value: number) => formatPlayerMetricValue(value, metric.format);
+  const marks = players.flatMap((player, index) => {
+    const avg = averages[index]?.[metric.key]?.avg;
+    return avg == null || !Number.isFinite(avg) ? [] : [{ player, avg }];
+  });
+  return (
+    <Stack gap={1}>
+      <Text variant="label">{metric.label}</Text>
+      {loading ? (
+        <ChartLoading label={`${metric.label} distribution`} size="sm" />
+      ) : !values ? (
+        <ChartEmpty label={`${metric.label} data`} className={chartSizeVariants({ size: "sm" })} />
+      ) : (
+        <MetricCurve zoom={zoom} metricKey={metric.key} label={metric.label} values={values} marks={marks} fmt={fmt} />
+      )}
+    </Stack>
+  );
+}
+
+/**
+ * Small multiples of the population's distribution for every stat, each player's average a line on it in the
+ * player's color. Hovering or focusing a chart turns it into a table of every player's value and share.
+ */
+export function DistributionMarkers({
+  players,
+  population,
+  averages,
+  loading,
+  zoom = true,
+}: {
+  players: ComparedPlayer[];
+  population: Record<string, HashMapValue> | undefined;
+  /** Each player's own metrics, in the players' order. */
+  averages: (Record<string, HashMapValue> | undefined)[];
+  loading: boolean;
+  /** On: each curve spans the players, with a margin. Off: the whole field, from its lowest to its highest. */
+  zoom?: boolean;
+}) {
+  return (
+    <PanelBody size="sm">
+      <Grid columns={{ base: 1, sm: 2, md: 3, lg: 4, xl: 5 }} gap={3}>
+        {METRICS.map((metric) => (
+          <MetricTile
+            key={metric.key}
+            metric={metric}
+            values={population?.[metric.key]}
+            players={players}
+            averages={averages}
+            loading={loading}
+            zoom={zoom}
+          />
+        ))}
+      </Grid>
+    </PanelBody>
+  );
+}
+
+/**
+ * The x range the players occupy, with a margin: at least a quarter of the middle half of the field on each side,
+ * so a close race still shows the curve around it. Kept within the known range of the curve.
+ */
+function zoomDomain(avgs: number[], values: HashMapValue, min: number, max: number): [number, number] {
+  if (avgs.length === 0) return [min, max];
+  const lo = Math.min(...avgs);
+  const hi = Math.max(...avgs);
+  const iqr = values.percentile75 - values.percentile25;
+  const pad = Math.max((hi - lo) * 0.35, iqr * 0.25, (max - min) * 0.05);
+  return [Math.max(min, lo - pad), Math.min(max, hi + pad)];
+}
+
+function MetricCurve({
+  zoom,
+  metricKey,
+  label,
+  values,
+  marks,
+  fmt,
+}: {
+  zoom: boolean;
+  metricKey: string;
+  label: string;
+  values: HashMapValue;
+  marks: { player: ComparedPlayer; avg: number }[];
+  fmt: (value: number) => string;
+}) {
+  const lowerIsBetter = LOWER_IS_BETTER_METRICS.has(metricKey);
+  const curve = buildDistributionCurve(values);
+  const min = curve[0]?.x ?? 0;
+  const max = curve[curve.length - 1]?.x ?? 1;
+  const [from, to] = zoom
+    ? zoomDomain(
+        marks.map((mark) => mark.avg),
+        values,
+        min,
+        max,
+      )
+    : [min, max];
+  // The height of the part in view, so a zoomed-in slope is not drawn flat under the peak outside it.
+  const visibleMax = Math.max(
+    ...curve
+      .filter((point, index) => {
+        const next = curve[index + 1];
+        const prev = curve[index - 1];
+        return (
+          (point.x >= from && point.x <= to) ||
+          (next && next.x > from && point.x < from) ||
+          (prev && prev.x < to && point.x > to)
+        );
+      })
+      .map((point) => point.y),
+    0,
+  );
+  // A player past the known ends of the curve is drawn on the edge rather than off the plot.
+  const clamp = (x: number) => Math.min(to, Math.max(from, x));
+  const share = (avg: number) => rankShareLabel(approxPercentile(values, avg), lowerIsBetter);
+  // Three ticks, always: both ends of the zoom and its middle, each named by where it ranks.
+  const edge = (x: number) => ({ x, label: rankShareLabel(approxPercentile(values, x), lowerIsBetter) });
+  const landmarks = from === to ? [edge(from)] : [edge(from), edge((from + to) / 2), edge(to)];
+  const tickLabel = new Map(landmarks.map((landmark) => [landmark.x, landmark.label]));
+  const summary =
+    `${label}: median of all players ${fmt(values.percentile50)}. ` +
+    marks.map(({ player, avg }) => `${player.name} ${fmt(avg)}, ${share(avg)} of players`).join("; ");
+
+  return (
+    <ChartReveal aria-label={`${label}: where each player ranks`}>
+      <ChartRevealFront>
+        <ChartSurface label={summary} announce="label" size="sm" variant="bare">
+          <AreaChart data={curve} margin={{ top: 4, right: 12, bottom: 0, left: 12 }} accessibilityLayer={false}>
+            <XAxis
+              type="number"
+              dataKey="x"
+              domain={[from, to]}
+              allowDataOverflow
+              ticks={landmarks.map((landmark) => landmark.x)}
+              interval={0}
+              {...CHART_X_AXIS_SM}
+              // The outer labels align inward, so a label on the plot's edge is not cut in half. A custom tick draws no
+              // text the axis can measure, so the axis takes a fixed height.
+              height={24}
+              // A short mark on the axis at each labelled point.
+              tickLine={{ stroke: "var(--chart-axis)" }}
+              tickSize={4}
+              tick={({
+                x,
+                y,
+                payload,
+                index,
+              }: {
+                x: number | string;
+                y: number | string;
+                payload: { value: number };
+                index: number;
+              }) => (
+                <text
+                  x={x}
+                  y={y}
+                  dy={12}
+                  textAnchor={index === 0 ? "start" : index === landmarks.length - 1 ? "end" : "middle"}
+                  style={CHART_TICK_SM}
+                >
+                  {tickLabel.get(payload.value) ?? ""}
+                </text>
+              )}
+              axisLine={{ stroke: "var(--chart-grid)" }}
+            />
+            <YAxis type="number" domain={[0, visibleMax * 1.1 || "dataMax"]} allowDataOverflow hide />
+            <Area
+              type="monotone"
+              dataKey="y"
+              stroke={CHART_COLOR.neutral}
+              strokeWidth={1}
+              fill={CHART_COLOR.neutral}
+              fillOpacity={0.15}
+              isAnimationActive={false}
+            />
+            <ReferenceLine x={values.percentile50} stroke="var(--chart-axis)" strokeDasharray="2 2" strokeWidth={1} />
+            {marks.map(({ player, avg }) => (
+              <ReferenceLine key={player.accountId} x={clamp(avg)} stroke={player.color} strokeWidth={2} />
+            ))}
+          </AreaChart>
+        </ChartSurface>
+      </ChartRevealFront>
+      <ChartRevealBack>
+        <ChartReadingList size="sm" extra>
+          {marks.map(({ player, avg }) => (
+            <ChartReading key={player.accountId} label={player.name} color={player.color} extra={fmt(avg)}>
+              {share(avg)}
+            </ChartReading>
+          ))}
+          <ChartReading label="Median player" color="var(--chart-axis)" extra={fmt(values.percentile50)}>
+            Median
+          </ChartReading>
+        </ChartReadingList>
+      </ChartRevealBack>
+    </ChartReveal>
+  );
+}

@@ -17,7 +17,8 @@ import { Round3PatternsCharts } from "~/components/dev/design-system/Round3Patte
 import { Chapter, Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
-import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
+import { ChartReading, ChartReadingList, ChartReadings } from "~/components/patterns/charts/ChartReadings";
+import { ChartReveal, ChartRevealBack, ChartRevealFront } from "~/components/patterns/charts/ChartReveal";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
@@ -212,13 +213,66 @@ export function Charts() {
       <Specimen
         name="ChartReadings"
         source="patterns/charts/ChartReadings"
-        note="The tooltip body of every chart: a title and aligned label/value rows, scrollable when there are many."
+        note="The tooltip body of every chart: a title and aligned label/value rows, scrollable when there are many. size sm is the tight card for small multiples, where a tooltip must not cover the neighbouring plots; there the title can be left out when the plot is titled."
       >
-        <ChartReadings title="Week of 2026-09-07">
-          <ChartReading label="Win rate">52.4%</ChartReading>
-          <ChartReading label="Pick rate">8.1%</ChartReading>
-          <ChartReading label="Matches">84,120</ChartReading>
-        </ChartReadings>
+        <Variants label="size: default, sm" className="items-start">
+          <ChartReadings title="Week of 2026-09-07">
+            <ChartReading label="Win rate">52.4%</ChartReading>
+            <ChartReading label="Pick rate">8.1%</ChartReading>
+            <ChartReading label="Matches">84,120</ChartReading>
+          </ChartReadings>
+          <ChartReadings size="sm">
+            <ChartReading label="Bananas Only" color="var(--chart-1)">
+              3.29 · P78
+            </ChartReading>
+            <ChartReading label="Clankers" color="var(--chart-2)">
+              2.52 · P61
+            </ChartReading>
+          </ChartReadings>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="ChartReveal"
+        source="patterns/charts/ChartReveal"
+        note="A small multiple that turns into its numbers: hover or focus the tile and the plot (ChartRevealFront) cross-fades into its readings (ChartRevealBack, usually a ChartReadingList size sm) in the same box, so no tooltip lies over the neighbouring plots. One tab stop; the back is hidden from assistive technology, so the front's ChartSurface summary must carry the numbers."
+      >
+        <Variants label="Hover or focus the tile" className="items-start">
+          <ChartReveal aria-label="Infernus win rate, weekly readings" className="w-64">
+            <ChartRevealFront>
+              <ChartSurface
+                label="Infernus win rate over ten weeks, between 47% and 53%"
+                announce="label"
+                size="sm"
+                variant="bare"
+              >
+                <AreaChart data={WEEKS} margin={CHART_MARGIN} accessibilityLayer={false}>
+                  <XAxis dataKey="label" {...CHART_X_AXIS} />
+                  <Area
+                    dataKey="Infernus"
+                    stroke={SERIES_COLORS[0]}
+                    fill={SERIES_COLORS[0]}
+                    fillOpacity={0.15}
+                    isAnimationActive={false}
+                  />
+                </AreaChart>
+              </ChartSurface>
+            </ChartRevealFront>
+            <ChartRevealBack>
+              <ChartReadingList size="sm" extra>
+                <ChartReading label="Latest week" color={SERIES_COLORS[0]} extra="W10">
+                  51.2%
+                </ChartReading>
+                <ChartReading label="Best week" color={SERIES_COLORS[0]} extra="W4">
+                  53.0%
+                </ChartReading>
+                <ChartReading label="Worst week" color={SERIES_COLORS[0]} extra="W8">
+                  47.1%
+                </ChartReading>
+              </ChartReadingList>
+            </ChartRevealBack>
+          </ChartReveal>
+        </Variants>
       </Specimen>
 
       <Specimen name="Chart states" source="patterns/charts/ChartStates">

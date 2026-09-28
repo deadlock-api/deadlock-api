@@ -1,4 +1,6 @@
-export type PlayerMetricFormat = "integer" | "decimal1" | "decimal2" | "percent";
+import { formatStatValue, type StatFormat } from "~/lib/stat-format";
+
+export type PlayerMetricFormat = StatFormat;
 
 export type PlayerMetricCategory = "Combat" | "Farming" | "Economy" | "Damage" | "Healing";
 
@@ -43,16 +45,7 @@ export const PLAYER_METRICS: PlayerMetricDefinition[] = [
   { key: "heal_prevented", label: "Heal Prevented", format: "integer", category: "Healing" },
 ];
 
+/** A player metric in its format; the same formats, and output, as every other stat on the site. */
 export function formatPlayerMetricValue(value: number | undefined | null, format: PlayerMetricFormat): string {
-  if (value == null || Number.isNaN(value)) return "-";
-  switch (format) {
-    case "integer":
-      return Math.round(value).toLocaleString("en-US");
-    case "decimal1":
-      return value.toFixed(1);
-    case "decimal2":
-      return value.toFixed(2);
-    case "percent":
-      return `${(value * 100).toFixed(1)}%`;
-  }
+  return formatStatValue(value, format);
 }

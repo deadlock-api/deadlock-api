@@ -3,6 +3,7 @@ import {
   BarChart3,
   Code,
   Database,
+  GitCompareArrows,
   HardDrive,
   Heart,
   ListOrdered,
@@ -13,7 +14,6 @@ import {
   Swords,
   Trophy,
   Tv,
-  Users,
   UsersRound,
 } from "lucide-react";
 
@@ -158,10 +158,10 @@ const analyticsLinks = [
     icon: Trophy,
   },
   {
-    title: "Player Analytics",
-    description: "Compare player performance across matches and view stat distributions.",
-    href: "/analytics/players",
-    icon: Users,
+    title: "Compare Players",
+    description: "Put yourself next to a friend or a top player and see who wins which stat.",
+    href: "/analytics/players/compare",
+    icon: GitCompareArrows,
   },
   {
     title: "Rank Distribution",

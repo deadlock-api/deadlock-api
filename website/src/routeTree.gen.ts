@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AbilitiesRouteImport } from './routes/abilities'
 import { Route as BadgeDistributionRouteImport } from './routes/badge-distribution'
+import { Route as CompareRouteImport } from './routes/compare'
 import { Route as DataDumpsRouteImport } from './routes/data-dumps'
 import { Route as DataPrivacyRouteImport } from './routes/data-privacy'
 import { Route as DeadlockdleRouteImport } from './routes/deadlockdle'
@@ -61,6 +62,7 @@ import { Route as HeroesIndexRouteImport } from './routes/heroes.index'
 import { Route as HeroesHeroNameRouteImport } from './routes/heroes.$heroName'
 import { Route as ItemsIndexRouteImport } from './routes/items.index'
 import { Route as ItemsItemNameRouteImport } from './routes/items.$itemName'
+import { Route as OgCompareDotpngRouteImport } from './routes/og.compare[.]png'
 import { Route as PlayersAccountIdRouteImport } from './routes/players_.$accountId'
 import { Route as StreamkitIndexRouteImport } from './routes/streamkit/index'
 import { Route as TrackerDemoRouteImport } from './routes/tracker_.demo'
@@ -84,6 +86,7 @@ import { Route as AnalyticsItemsBuildFlowRouteImport } from './routes/analytics.
 import { Route as AnalyticsItemsCombosRouteImport } from './routes/analytics.items.combos'
 import { Route as AnalyticsItemsItemPurchaseAnalysisRouteImport } from './routes/analytics.items.item-purchase-analysis'
 import { Route as AnalyticsPlayersIndexRouteImport } from './routes/analytics.players.index'
+import { Route as AnalyticsPlayersCompareRouteImport } from './routes/analytics.players.compare'
 import { Route as AnalyticsPlayersStatsMetricsRouteImport } from './routes/analytics.players.stats-metrics'
 import { Route as AuthPatreonCallbackRouteImport } from './routes/auth/patreon/callback'
 import { Route as GamesDeadlockdleIndexRouteImport } from './routes/games_.deadlockdle/index'
@@ -115,6 +118,11 @@ const AbilitiesRoute = AbilitiesRouteImport.update({
 const BadgeDistributionRoute = BadgeDistributionRouteImport.update({
   id: '/badge-distribution',
   path: '/badge-distribution',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareRoute = CompareRouteImport.update({
+  id: '/compare',
+  path: '/compare',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DataDumpsRoute = DataDumpsRouteImport.update({
@@ -363,6 +371,11 @@ const ItemsItemNameRoute = ItemsItemNameRouteImport.update({
   path: '/$itemName',
   getParentRoute: () => ItemsRoute,
 } as any)
+const OgCompareDotpngRoute = OgCompareDotpngRouteImport.update({
+  id: '/og/compare.png',
+  path: '/og/compare.png',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PlayersAccountIdRoute = PlayersAccountIdRouteImport.update({
   id: '/players_/$accountId',
   path: '/players/$accountId',
@@ -483,6 +496,11 @@ const AnalyticsPlayersIndexRoute = AnalyticsPlayersIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AnalyticsPlayersRoute,
 } as any)
+const AnalyticsPlayersCompareRoute = AnalyticsPlayersCompareRouteImport.update({
+  id: '/compare',
+  path: '/compare',
+  getParentRoute: () => AnalyticsPlayersRoute,
+} as any)
 const AnalyticsPlayersStatsMetricsRoute =
   AnalyticsPlayersStatsMetricsRouteImport.update({
     id: '/stats-metrics',
@@ -582,6 +600,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/abilities': typeof AbilitiesRoute
   '/badge-distribution': typeof BadgeDistributionRoute
+  '/compare': typeof CompareRoute
   '/data-dumps': typeof DataDumpsRoute
   '/data-privacy': typeof DataPrivacyRoute
   '/deadlockdle': typeof DeadlockdleRouteWithChildren
@@ -624,6 +643,7 @@ export interface FileRoutesByFullPath {
   '/games/flashcards': typeof GamesFlashcardsRouteWithChildren
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
+  '/og/compare.png': typeof OgCompareDotpngRoute
   '/players/$accountId': typeof PlayersAccountIdRoute
   '/tracker/demo': typeof TrackerDemoRoute
   '/analytics/': typeof AnalyticsIndexRoute
@@ -650,6 +670,7 @@ export interface FileRoutesByFullPath {
   '/analytics/items/build-flow': typeof AnalyticsItemsBuildFlowRoute
   '/analytics/items/combos': typeof AnalyticsItemsCombosRoute
   '/analytics/items/item-purchase-analysis': typeof AnalyticsItemsItemPurchaseAnalysisRoute
+  '/analytics/players/compare': typeof AnalyticsPlayersCompareRoute
   '/analytics/players/stats-metrics': typeof AnalyticsPlayersStatsMetricsRoute
   '/auth/patreon/callback': typeof AuthPatreonCallbackRoute
   '/games/deadlockdle/guess-ability': typeof GamesDeadlockdleGuessAbilityRoute
@@ -676,6 +697,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/abilities': typeof AbilitiesRoute
   '/badge-distribution': typeof BadgeDistributionRoute
+  '/compare': typeof CompareRoute
   '/data-dumps': typeof DataDumpsRoute
   '/data-privacy': typeof DataPrivacyRoute
   '/deadlockstats-privacy': typeof DeadlockstatsPrivacyRoute
@@ -708,6 +730,7 @@ export interface FileRoutesByTo {
   '/flashcards/items': typeof FlashcardsItemsRoute
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
+  '/og/compare.png': typeof OgCompareDotpngRoute
   '/players/$accountId': typeof PlayersAccountIdRoute
   '/tracker/demo': typeof TrackerDemoRoute
   '/analytics': typeof AnalyticsIndexRoute
@@ -734,6 +757,7 @@ export interface FileRoutesByTo {
   '/analytics/items/build-flow': typeof AnalyticsItemsBuildFlowRoute
   '/analytics/items/combos': typeof AnalyticsItemsCombosRoute
   '/analytics/items/item-purchase-analysis': typeof AnalyticsItemsItemPurchaseAnalysisRoute
+  '/analytics/players/compare': typeof AnalyticsPlayersCompareRoute
   '/analytics/players/stats-metrics': typeof AnalyticsPlayersStatsMetricsRoute
   '/auth/patreon/callback': typeof AuthPatreonCallbackRoute
   '/games/deadlockdle/guess-ability': typeof GamesDeadlockdleGuessAbilityRoute
@@ -761,6 +785,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/abilities': typeof AbilitiesRoute
   '/badge-distribution': typeof BadgeDistributionRoute
+  '/compare': typeof CompareRoute
   '/data-dumps': typeof DataDumpsRoute
   '/data-privacy': typeof DataPrivacyRoute
   '/deadlockdle': typeof DeadlockdleRouteWithChildren
@@ -803,6 +828,7 @@ export interface FileRoutesById {
   '/games_/flashcards': typeof GamesFlashcardsRouteWithChildren
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
+  '/og/compare.png': typeof OgCompareDotpngRoute
   '/players_/$accountId': typeof PlayersAccountIdRoute
   '/tracker_/demo': typeof TrackerDemoRoute
   '/analytics/': typeof AnalyticsIndexRoute
@@ -829,6 +855,7 @@ export interface FileRoutesById {
   '/analytics/items/build-flow': typeof AnalyticsItemsBuildFlowRoute
   '/analytics/items/combos': typeof AnalyticsItemsCombosRoute
   '/analytics/items/item-purchase-analysis': typeof AnalyticsItemsItemPurchaseAnalysisRoute
+  '/analytics/players/compare': typeof AnalyticsPlayersCompareRoute
   '/analytics/players/stats-metrics': typeof AnalyticsPlayersStatsMetricsRoute
   '/auth/patreon/callback': typeof AuthPatreonCallbackRoute
   '/games_/deadlockdle/guess-ability': typeof GamesDeadlockdleGuessAbilityRoute
@@ -857,6 +884,7 @@ export interface FileRouteTypes {
     | '/'
     | '/abilities'
     | '/badge-distribution'
+    | '/compare'
     | '/data-dumps'
     | '/data-privacy'
     | '/deadlockdle'
@@ -899,6 +927,7 @@ export interface FileRouteTypes {
     | '/games/flashcards'
     | '/heroes/$heroName'
     | '/items/$itemName'
+    | '/og/compare.png'
     | '/players/$accountId'
     | '/tracker/demo'
     | '/analytics/'
@@ -925,6 +954,7 @@ export interface FileRouteTypes {
     | '/analytics/items/build-flow'
     | '/analytics/items/combos'
     | '/analytics/items/item-purchase-analysis'
+    | '/analytics/players/compare'
     | '/analytics/players/stats-metrics'
     | '/auth/patreon/callback'
     | '/games/deadlockdle/guess-ability'
@@ -951,6 +981,7 @@ export interface FileRouteTypes {
     | '/'
     | '/abilities'
     | '/badge-distribution'
+    | '/compare'
     | '/data-dumps'
     | '/data-privacy'
     | '/deadlockstats-privacy'
@@ -983,6 +1014,7 @@ export interface FileRouteTypes {
     | '/flashcards/items'
     | '/heroes/$heroName'
     | '/items/$itemName'
+    | '/og/compare.png'
     | '/players/$accountId'
     | '/tracker/demo'
     | '/analytics'
@@ -1009,6 +1041,7 @@ export interface FileRouteTypes {
     | '/analytics/items/build-flow'
     | '/analytics/items/combos'
     | '/analytics/items/item-purchase-analysis'
+    | '/analytics/players/compare'
     | '/analytics/players/stats-metrics'
     | '/auth/patreon/callback'
     | '/games/deadlockdle/guess-ability'
@@ -1035,6 +1068,7 @@ export interface FileRouteTypes {
     | '/'
     | '/abilities'
     | '/badge-distribution'
+    | '/compare'
     | '/data-dumps'
     | '/data-privacy'
     | '/deadlockdle'
@@ -1077,6 +1111,7 @@ export interface FileRouteTypes {
     | '/games_/flashcards'
     | '/heroes/$heroName'
     | '/items/$itemName'
+    | '/og/compare.png'
     | '/players_/$accountId'
     | '/tracker_/demo'
     | '/analytics/'
@@ -1103,6 +1138,7 @@ export interface FileRouteTypes {
     | '/analytics/items/build-flow'
     | '/analytics/items/combos'
     | '/analytics/items/item-purchase-analysis'
+    | '/analytics/players/compare'
     | '/analytics/players/stats-metrics'
     | '/auth/patreon/callback'
     | '/games_/deadlockdle/guess-ability'
@@ -1130,6 +1166,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AbilitiesRoute: typeof AbilitiesRoute
   BadgeDistributionRoute: typeof BadgeDistributionRoute
+  CompareRoute: typeof CompareRoute
   DataDumpsRoute: typeof DataDumpsRoute
   DataPrivacyRoute: typeof DataPrivacyRoute
   DeadlockdleRoute: typeof DeadlockdleRouteWithChildren
@@ -1160,6 +1197,7 @@ export interface RootRouteChildren {
   DevDesignSystemRoute: typeof DevDesignSystemRoute
   GamesDeadlockdleRoute: typeof GamesDeadlockdleRouteWithChildren
   GamesFlashcardsRoute: typeof GamesFlashcardsRouteWithChildren
+  OgCompareDotpngRoute: typeof OgCompareDotpngRoute
   PlayersAccountIdRoute: typeof PlayersAccountIdRoute
   TrackerDemoRoute: typeof TrackerDemoRoute
   AnalyticsIndexRoute: typeof AnalyticsIndexRoute
@@ -1193,6 +1231,13 @@ declare module '@tanstack/react-router' {
       path: '/badge-distribution'
       fullPath: '/badge-distribution'
       preLoaderRoute: typeof BadgeDistributionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare': {
+      id: '/compare'
+      path: '/compare'
+      fullPath: '/compare'
+      preLoaderRoute: typeof CompareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/data-dumps': {
@@ -1538,6 +1583,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ItemsItemNameRouteImport
       parentRoute: typeof ItemsRoute
     }
+    '/og/compare.png': {
+      id: '/og/compare.png'
+      path: '/og/compare.png'
+      fullPath: '/og/compare.png'
+      preLoaderRoute: typeof OgCompareDotpngRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/players_/$accountId': {
       id: '/players_/$accountId'
       path: '/players/$accountId'
@@ -1697,6 +1749,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/analytics/players/'
       preLoaderRoute: typeof AnalyticsPlayersIndexRouteImport
+      parentRoute: typeof AnalyticsPlayersRoute
+    }
+    '/analytics/players/compare': {
+      id: '/analytics/players/compare'
+      path: '/compare'
+      fullPath: '/analytics/players/compare'
+      preLoaderRoute: typeof AnalyticsPlayersCompareRouteImport
       parentRoute: typeof AnalyticsPlayersRoute
     }
     '/analytics/players/stats-metrics': {
@@ -1960,11 +2019,13 @@ const AnalyticsItemsRouteWithChildren = AnalyticsItemsRoute._addFileChildren(
 )
 
 interface AnalyticsPlayersRouteChildren {
+  AnalyticsPlayersCompareRoute: typeof AnalyticsPlayersCompareRoute
   AnalyticsPlayersStatsMetricsRoute: typeof AnalyticsPlayersStatsMetricsRoute
   AnalyticsPlayersIndexRoute: typeof AnalyticsPlayersIndexRoute
 }
 
 const AnalyticsPlayersRouteChildren: AnalyticsPlayersRouteChildren = {
+  AnalyticsPlayersCompareRoute: AnalyticsPlayersCompareRoute,
   AnalyticsPlayersStatsMetricsRoute: AnalyticsPlayersStatsMetricsRoute,
   AnalyticsPlayersIndexRoute: AnalyticsPlayersIndexRoute,
 }
@@ -2019,6 +2080,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AbilitiesRoute: AbilitiesRoute,
   BadgeDistributionRoute: BadgeDistributionRoute,
+  CompareRoute: CompareRoute,
   DataDumpsRoute: DataDumpsRoute,
   DataPrivacyRoute: DataPrivacyRoute,
   DeadlockdleRoute: DeadlockdleRouteWithChildren,
@@ -2049,6 +2111,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevDesignSystemRoute: DevDesignSystemRoute,
   GamesDeadlockdleRoute: GamesDeadlockdleRouteWithChildren,
   GamesFlashcardsRoute: GamesFlashcardsRouteWithChildren,
+  OgCompareDotpngRoute: OgCompareDotpngRoute,
   PlayersAccountIdRoute: PlayersAccountIdRoute,
   TrackerDemoRoute: TrackerDemoRoute,
   AnalyticsIndexRoute: AnalyticsIndexRoute,

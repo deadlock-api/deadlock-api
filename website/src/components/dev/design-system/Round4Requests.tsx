@@ -1,10 +1,14 @@
 import { MessageSquare } from "lucide-react";
+import { useState } from "react";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { Button } from "~/components/ui/button";
+import { moveItem, useReorder } from "~/components/ui/hooks/use-reorder";
 import { Input } from "~/components/ui/input";
+import { ReorderHandle } from "~/components/ui/reorder-handle";
 import { SelectionBox } from "~/components/ui/selection-box";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { SharePreview } from "~/components/ui/share-preview";
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 
 const TEXT_SIZES = ["xs", "sm", "default", "lg"] as const;
 const ICON_SIZES = ["icon-xs", "icon-sm", "icon", "icon-lg"] as const;
@@ -27,8 +31,31 @@ function HeroRows() {
   ));
 }
 
+/** A row of names that reorder by drag or arrow keys, for the ReorderHandle specimen. */
+function ReorderDemo() {
+  const [names, setNames] = useState(["Infernus", "Haze", "Seven", "Paradox"]);
+  const reorder = useReorder({
+    count: names.length,
+    itemLabel: (index) => names[index],
+    onMove: (from, to) => setNames((current) => moveItem(current, from, to)),
+  });
+  return (
+    <div className="flex flex-wrap gap-3">
+      {names.map((name, index) => (
+        <ReorderHandle key={name} aria-label={`Move ${name}`} {...reorder.itemProps(index)}>
+          <span>{name}</span>
+        </ReorderHandle>
+      ))}
+      <span className="sr-only" aria-live="polite">
+        {reorder.announcement}
+      </span>
+    </div>
+  );
+}
+
 /** Round 4: the props the feature migration asked for. */
 export function Round4Requests() {
+  const [previewCopied, setPreviewCopied] = useState(false);
   return (
     <>
       <Specimen
@@ -64,6 +91,118 @@ export function Round4Requests() {
               </TableBody>
             </Table>
           </div>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="Table width"
+        source="ui/table"
+        note={`\`width="fill"\` (default) spreads the columns over the container. \`width="hug"\` sizes them to their content, so a table of two or three columns keeps its values next to their labels in a wide panel; it still scrolls sideways when the container is narrower.`}
+      >
+        <Variants label='width="fill"' className="items-stretch">
+          <Table density="dense">
+            <TableHeader tone="muted">
+              <TableRow>
+                <TableHead>Hero</TableHead>
+                <TableHead className="text-end">Matches</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <HeroRows />
+            </TableBody>
+          </Table>
+        </Variants>
+        <Variants label='width="hug"' className="items-stretch">
+          <Table density="dense" width="hug">
+            <TableHeader tone="muted">
+              <TableRow>
+                <TableHead>Hero</TableHead>
+                <TableHead className="text-end">Matches</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <HeroRows />
+            </TableBody>
+          </Table>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="TableFooter"
+        source="ui/table"
+        note="The result rows under the body: a total, a tally. Ruled off from the body, no stripe, no hover fill. tone highlight makes it the table's result: a brand rule and tint, the pinned cell included."
+      >
+        <Variants label='tone="default", tone="highlight"' className="items-start">
+          <Table density="dense" width="hug">
+            <TableHeader tone="muted">
+              <TableRow>
+                <TableHead>Hero</TableHead>
+                <TableHead className="text-end">Matches</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <HeroRows />
+            </TableBody>
+            <TableFooter>
+              <TableRow>
+                <TableCell>Total</TableCell>
+                <TableCell className="text-end tabular-nums">
+                  {ROWS.reduce((sum, row) => sum + row.matches, 0).toLocaleString("en-US")}
+                </TableCell>
+              </TableRow>
+            </TableFooter>
+          </Table>
+          <Table density="dense" width="hug">
+            <TableHeader tone="muted">
+              <TableRow>
+                <TableHead data-pinned>Hero</TableHead>
+                <TableHead className="text-end">Matches</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <HeroRows />
+            </TableBody>
+            <TableFooter tone="highlight">
+              <TableRow>
+                <TableCell data-pinned>Total</TableCell>
+                <TableCell className="text-end tabular-nums">
+                  {ROWS.reduce((sum, row) => sum + row.matches, 0).toLocaleString("en-US")}
+                </TableCell>
+              </TableRow>
+            </TableFooter>
+          </Table>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="SharePreview"
+        source="ui/share-preview"
+        note="A share image that is its own copy button: full width at its aspect ratio, it presses in on click, and while state is confirmed it rings in the brand color with the confirmation over it. The parent copies and owns the state, so a separate button can confirm through the same image. A skeleton holds the space until the image has loaded, and again when src changes. Click it."
+      >
+        <Variants label='state="idle", then "confirmed" for two seconds' className="items-stretch">
+          <div className="w-96 max-w-full">
+            <SharePreview
+              src="/og/v2/default.png"
+              width={1200}
+              height={630}
+              aria-label="Copy the link"
+              state={previewCopied ? "confirmed" : "idle"}
+              onClick={() => {
+                setPreviewCopied(true);
+                setTimeout(() => setPreviewCopied(false), 2000);
+              }}
+            />
+          </div>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="ReorderHandle"
+        source="ui/reorder-handle + ui/hooks/use-reorder"
+        note="The part of an item you grab to move it. useReorder (count, onMove(from, to), axis, itemLabel) gives each handle its props: drag it by mouse, touch or pen over another item and release to move it there, or focus it and press the arrow keys to move it one place. The dragged item dims, the drop target rings in primary, and itemProps' announcement goes in a polite live region. Try it."
+      >
+        <Variants label="Drag a name, or focus one and press ← →">
+          <ReorderDemo />
         </Variants>
       </Specimen>
 

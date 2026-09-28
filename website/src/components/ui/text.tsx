@@ -15,6 +15,7 @@ const textVariants = cva("min-w-0", {
     tone: {
       default: "text-foreground",
       muted: "text-muted-foreground",
+      primary: "text-primary",
       positive: "text-positive",
       negative: "text-negative",
       warning: "text-warning",

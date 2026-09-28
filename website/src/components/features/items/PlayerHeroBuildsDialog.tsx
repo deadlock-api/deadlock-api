@@ -1,20 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import type { MatchesApiBulkMetadataRequest, Rank, SteamProfile } from "deadlock_api_client";
+import type { MatchesApiBulkMetadataRequest, Rank } from "deadlock_api_client";
 import { useMemo, useState } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import MatchHistoryCard from "~/components/domain/match/MatchHistoryCard";
+import { PlayerSearch } from "~/components/domain/player/PlayerSearch";
 import { SeasonPatchDatePicker } from "~/components/domain/selectors/SeasonPatchDatePicker";
 import { AverageBuildCard } from "~/components/features/items/AverageBuildCard";
-import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
-import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
-import { OptionRow } from "~/components/ui/option-row";
-import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
-import { SearchInput } from "~/components/ui/search-input";
 import { Inline, Stack } from "~/components/ui/stack";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { day, type Dayjs } from "~/dayjs";
@@ -28,7 +23,6 @@ import {
   buildUpgradeChainLookup,
   getHeroAbilityMetadata,
 } from "~/lib/build-transform";
-import { useDebouncedState } from "~/lib/utils";
 import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
 
@@ -163,7 +157,10 @@ export function PlayerHeroBuildsDialog({
         {/* Outside the title, which names the dialog: controls inside it were read out as part of its name. */}
         <Inline gap={2}>
           <PlayerSearch
-            onSelect={(profile) => setOverridePlayer({ accountId: profile.account_id, name: profile.personaname })}
+            label="Search another player…"
+            size="xs"
+            className="font-normal"
+            onValueChange={(player) => setOverridePlayer({ accountId: player.accountId, name: player.name })}
           />
           <SeasonPatchDatePicker
             value={dateRange}
@@ -188,79 +185,5 @@ export function PlayerHeroBuildsDialog({
         </Stack>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function PlayerSearch({ onSelect }: { onSelect: (profile: SteamProfile) => void }) {
-  const [open, setOpen] = useState(false);
-  const [query, debouncedQuery, setQuery] = useDebouncedState("", 300);
-  const trimmed = debouncedQuery.trim();
-
-  const { data: results, isFetching } = useQuery({
-    queryKey: queryKeys.steam.search(trimmed),
-    queryFn: async () => {
-      const response = await api.steam_api.steamSearch({ searchQuery: trimmed, limit: 10 });
-      return response.data;
-    },
-    enabled: open && trimmed.length >= 2,
-    staleTime: CACHE_DURATIONS.FIVE_MINUTES,
-  });
-
-  return (
-    <Popover
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (!next) setQuery("");
-      }}
-    >
-      <PopoverTrigger asChild>
-        <Button variant="subtle" size="xs" className="font-normal">
-          <span className="icon-[mdi--magnify] size-3.5" />
-          Search another player…
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="flex w-72 flex-col gap-2 p-2">
-        <SearchInput
-          aria-label="Search by Steam name"
-          value={query}
-          onValueChange={setQuery}
-          placeholder="Search by Steam name…"
-          size="sm"
-        />
-        <div className="max-h-64 overflow-y-auto">
-          {trimmed.length < 2 ? (
-            <EmptyState variant="inline" title="Type at least 2 characters to search." className="py-2 text-xs" />
-          ) : isFetching ? (
-            <LoadingState size="sm" text="Loading players…" label="players" className="py-2 text-xs" />
-          ) : !results || results.length === 0 ? (
-            <EmptyState variant="inline" title="No players found." className="py-2 text-xs" />
-          ) : (
-            <ul className="flex flex-col">
-              {results.map((profile) => (
-                <li key={profile.account_id}>
-                  <OptionRow
-                    selected={false}
-                    onClick={() => {
-                      onSelect(profile);
-                      setOpen(false);
-                      setQuery("");
-                    }}
-                    leading={
-                      <Avatar size="sm">
-                        <AvatarImage src={profile.avatarmedium} alt={profile.personaname} />
-                        <AvatarFallback>{profile.personaname.slice(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                    }
-                  >
-                    {profile.personaname}
-                  </OptionRow>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
   );
 }

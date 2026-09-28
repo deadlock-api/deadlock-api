@@ -88,6 +88,7 @@ export const queryKeys = {
   players: {
     matchHistory: (accountId: number) => ["api-player-match-history", accountId] as const,
     rank: (accountId: number) => ["api-player-rank", accountId] as const,
+    rankBatch: (accountIds: number[]) => ["api-player-rank-batch", accountIds] as const,
     heroStats: (params: PlayersApiPlayerHeroStatsRequest) => ["api-player-hero-stats", params] as const,
     mateStats: (params: PlayersApiMateStatsRequest) => ["api-player-mate-stats", params] as const,
     enemyStats: (params: PlayersApiEnemyStatsRequest) => ["api-player-enemy-stats", params] as const,

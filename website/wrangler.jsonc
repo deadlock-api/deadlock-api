@@ -19,7 +19,7 @@
       "/team-builder", "/team-builder/*", "/leaderboard", "/leaderboard/*",
       "/badge-distribution", "/badge-distribution/*", "/heatmap", "/heatmap/*",
       "/deadlockdle", "/deadlockdle/*", "/flashcards", "/flashcards/*",
-      "/data-dumps", "/streamkit"
+      "/data-dumps", "/streamkit", "/compare", "/og/compare.png"
     ]
   },
   "routes": [

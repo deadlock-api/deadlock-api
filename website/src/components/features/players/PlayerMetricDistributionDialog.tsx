@@ -7,9 +7,10 @@ import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { InlineStat } from "~/components/ui/inline-stat";
 import { Inline } from "~/components/ui/stack";
+import { buildDistributionCurve } from "~/lib/distribution-percentile";
 import { formatPlayerMetricValue, type PlayerMetricDefinition } from "~/lib/player-metrics";
 
-import { buildDistributionCurve, DistributionChart } from "./distribution-chart";
+import { DistributionChart } from "./distribution-chart";
 
 export function PlayerMetricDistributionDialog({
   metric,

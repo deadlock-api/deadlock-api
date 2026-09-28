@@ -8,6 +8,8 @@ import { TooltipCard } from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
 
 const ExtraColumnContext = createContext(false);
+/** The card's size, so a `sm` card's rows drop their padding too. */
+const ReadingsSizeContext = createContext<"sm" | "default">("default");
 
 /** One series of a `ChartReadings`; children are its value. */
 export function ChartReading({
@@ -33,7 +35,8 @@ export function ChartReading({
       data-slot="chart-reading"
       data-highlighted={highlighted || undefined}
       className={cn(
-        "flex items-center justify-between gap-3 rounded-sm px-1 py-0.5",
+        "flex items-center justify-between gap-3 rounded-sm px-1",
+        useContext(ReadingsSizeContext) === "sm" ? "py-0" : "py-0.5",
         highlighted && "bg-accent",
         className,
       )}
@@ -54,7 +57,8 @@ export function ChartReading({
 }
 
 interface ChartReadingsProps extends Omit<React.ComponentProps<typeof TooltipCard>, "title"> {
-  title: ReactNode;
+  /** What the readings are of: the bucket under the cursor. Leave it out only where the plot's own title says it. */
+  title?: ReactNode;
   /** A count on the leading edge of the column headings: "12 heroes". */
   summary?: ReactNode;
   /** The heading of the value column. */
@@ -64,8 +68,11 @@ interface ChartReadingsProps extends Omit<React.ComponentProps<typeof TooltipCar
   scrollHint?: string;
   /** Names the scrollable list of readings: what they are and which bucket they belong to. */
   label?: string;
-  /** `lg` is a fixed, wider card for readings with a swatch and two value columns. */
-  size?: "default" | "lg";
+  /**
+   * `lg` is a fixed, wider card for readings with a swatch and two value columns. `sm` is a tight card in the small
+   * type step, for small multiples, where a tooltip must not cover the plots around its own.
+   */
+  size?: "sm" | "default" | "lg";
 }
 
 /**
@@ -89,12 +96,16 @@ export function ChartReadings({
   return (
     <TooltipCard
       data-slot="chart-readings"
-      className={cn("gap-1.5 p-2.5", size === "lg" ? "w-64 max-w-full" : "max-w-72", className)}
+      className={cn(
+        size === "sm" ? "gap-1 px-2 py-1.5" : "gap-1.5 p-2.5",
+        size === "lg" ? "w-64 max-w-full" : size === "sm" ? "max-w-56" : "max-w-72",
+        className,
+      )}
       onMouseMove={(event) => event.stopPropagation()}
       onPointerMove={(event) => event.stopPropagation()}
       {...props}
     >
-      <p className="text-xs font-semibold">{title}</p>
+      {title != null && <p className={cn("font-semibold", size === "sm" ? "text-2xs" : "text-xs")}>{title}</p>}
       {(summary || valueLabel || hasExtraColumn) && (
         <div className="flex justify-between gap-3 text-xs text-muted-foreground">
           <span>{summary}</span>
@@ -113,12 +124,35 @@ export function ChartReadings({
         )}
       >
         {children && (
-          <ExtraColumnContext.Provider value={hasExtraColumn}>
-            <ul className="flex flex-col gap-1 text-xs">{children}</ul>
-          </ExtraColumnContext.Provider>
+          <ChartReadingList size={size === "sm" ? "sm" : "default"} extra={hasExtraColumn}>
+            {children}
+          </ChartReadingList>
         )}
       </section>
       {count > 7 && <p className="text-xs text-muted-foreground">{scrollHint}</p>}
     </TooltipCard>
+  );
+}
+
+/**
+ * `ChartReading` rows without the card: for readings shown in place of a plot (the back of a `ChartReveal`) rather
+ * than floating over it. `extra` turns on the quieter second value column.
+ */
+export function ChartReadingList({
+  size = "default",
+  extra = false,
+  className,
+  ...props
+}: React.ComponentProps<"ul"> & { size?: "sm" | "default"; extra?: boolean }) {
+  return (
+    <ExtraColumnContext.Provider value={extra}>
+      <ReadingsSizeContext.Provider value={size}>
+        <ul
+          data-slot="chart-reading-list"
+          className={cn("flex flex-col", size === "sm" ? "gap-0 text-2xs" : "gap-1 text-xs", className)}
+          {...props}
+        />
+      </ReadingsSizeContext.Provider>
+    </ExtraColumnContext.Provider>
   );
 }

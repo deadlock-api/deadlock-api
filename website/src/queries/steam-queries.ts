@@ -9,6 +9,8 @@ import { queryKeys } from "./query-keys";
 export interface SteamProfile {
   personaname: string;
   avatar: string;
+  /** 184px, for large portraits such as the share card; `avatar` is 32px. */
+  avatarfull?: string;
   profileurl: string;
 }
 
@@ -32,11 +34,24 @@ export function steamProfilesQueryOptions(batch: number[]) {
         map[profile.account_id] = {
           personaname: profile.personaname,
           avatar: profile.avatar,
+          avatarfull: profile.avatarfull,
           profileurl: profile.profileurl,
         };
       }
       return map;
     },
     staleTime: CACHE_DURATIONS.ONE_DAY,
+  });
+}
+
+/** Steam profiles whose name (or account id) matches `query`. */
+export function steamSearchQueryOptions(query: string) {
+  return queryOptions({
+    queryKey: queryKeys.steam.search(query),
+    queryFn: async () => {
+      const response = await api.steam_api.steamSearch({ searchQuery: query, limit: 10 });
+      return response.data;
+    },
+    staleTime: CACHE_DURATIONS.FIVE_MINUTES,
   });
 }

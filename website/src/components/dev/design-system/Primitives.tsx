@@ -1,5 +1,17 @@
 import { Link } from "@tanstack/react-router";
-import { BarChart3, ChevronDown, Download, Info, LayoutGrid, List, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import {
+  BarChart3,
+  ChevronDown,
+  Download,
+  Info,
+  LayoutGrid,
+  List,
+  Plus,
+  RefreshCw,
+  Trash2,
+  X,
+  ZoomIn,
+} from "lucide-react";
 import { useState } from "react";
 
 import { HeadingSpecimen, PrimitivesMore } from "~/components/dev/design-system/PrimitivesMore";
@@ -70,6 +82,7 @@ const BUTTON_VARIANTS = [
   "destructive-soft",
   "positive-soft",
   "negative-soft",
+  "toggle",
 ] as const;
 const BUTTON_SIZES = ["xs", "sm", "default", "lg"] as const;
 const ICON_SIZES = ["icon-xs", "icon-sm", "icon", "icon-lg"] as const;
@@ -147,6 +160,12 @@ export function Primitives() {
           </Button>
           <Button variant="negative-soft" size="xs" aria-pressed>
             Excluded
+          </Button>
+          <Button variant="toggle" size="icon-sm" aria-pressed={false} aria-label="Zoom in, off">
+            <ZoomIn />
+          </Button>
+          <Button variant="toggle" size="icon-sm" aria-pressed aria-label="Zoom in, on">
+            <ZoomIn />
           </Button>
           <Button asChild variant="soft">
             <Link to="/">Link as button</Link>

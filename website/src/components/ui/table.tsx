@@ -19,22 +19,39 @@ const CELL_DENSITY: Record<TableDensity, string> = { default: "p-2", compact: "p
  * A table wider than its container scrolls sideways inside it, and the edge with more columns past it fades out
  * (`scroll-fade-x`; with a pinned column only the end edge). A table with a pinned column is also the `table`
  * container, so its pinned cell can give up width in a narrow one (`@md/table:min-w-40`, `hidden @md/table:block`).
+ *
+ * `width`: `fill` (default) spreads the columns over the container; `hug` sizes them to their content, for a table
+ * of a few columns whose values would otherwise sit far from their labels. A hugging table is never the `table`
+ * container, since a size container has no width of its own to hug with.
  */
 function Table({
   className,
   density = "default",
+  width = "fill",
   ...props
-}: React.ComponentProps<"table"> & { density?: TableDensity }) {
+}: React.ComponentProps<"table"> & { density?: TableDensity; width?: "fill" | "hug" }) {
   return (
     <TableDensityContext value={density}>
       <div
         data-slot="table-container"
-        className={cn(SCROLLBAR_THIN, "relative w-full scroll-fade-x overflow-x-auto has-data-pinned:@container/table")}
+        // A size container has no width of its own, so a hugging table cannot be one: its pinned column stays sticky
+        // but the `@md/table:` variants do not apply.
+        className={cn(
+          SCROLLBAR_THIN,
+          "relative w-full scroll-fade-x overflow-x-auto",
+          width === "fill" && "has-data-pinned:@container/table",
+        )}
       >
         <table
           data-slot="table"
           data-density={density}
-          className={cn("group/table w-full caption-bottom", density === "dense" ? "text-xs" : "text-sm", className)}
+          data-width={width}
+          className={cn(
+            "group/table caption-bottom",
+            width === "fill" ? "w-full" : "w-max",
+            density === "dense" ? "text-xs" : "text-sm",
+            className,
+          )}
           {...props}
         />
       </div>
@@ -103,13 +120,40 @@ function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
   );
 }
 
+const FOOTER_TONE = {
+  default: "border-t font-medium [&_tr]:bg-transparent",
+  /** The result the table leads to (a tally, a winner): ruled off in the brand color and tinted, pinned cell too. */
+  highlight: "border-t-2 border-primary font-semibold [&_td]:bg-table-total [&_td[data-pinned]]:bg-table-total",
+} as const;
+
+/**
+ * The result rows under the body: totals, a tally. Ruled off from the body and set heavier; its rows carry no stripe
+ * and never answer to the pointer. `tone="highlight"` makes it the table's result.
+ */
+function TableFooter({
+  tone = "default",
+  className,
+  ...props
+}: React.ComponentProps<"tfoot"> & { tone?: keyof typeof FOOTER_TONE }) {
+  return (
+    <tfoot
+      data-slot="table-footer"
+      data-tone={tone}
+      className={cn("[&_tr]:border-0 [&_tr:hover]:bg-transparent", FOOTER_TONE[tone], className)}
+      {...props}
+    />
+  );
+}
+
 function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   return (
     <tr
       data-slot="table-row"
       className={cn(
         // `data-plain` drops the rule and the hover fill; `data-static` drops the hover fill and keeps the rule.
-        "border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-interactive:cursor-pointer data-plain:border-0 data-plain:hover:bg-transparent data-static:hover:bg-transparent data-[state=current]:bg-accent data-[state=current]:font-medium data-[state=selected]:bg-muted",
+        // Even rows carry a faint translucent stripe, the same on a card or on glass; hover and the states come later
+        // in the cascade and paint over it. A pinned cell draws the opaque twin of it (`table-stripe`).
+        "border-b transition-colors even:bg-subtle hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-interactive:cursor-pointer data-plain:border-0 data-plain:hover:bg-transparent data-static:hover:bg-transparent data-[state=current]:bg-accent data-[state=current]:font-medium data-[state=selected]:bg-muted",
         className,
       )}
       {...props}
@@ -138,7 +182,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "align-middle whitespace-nowrap data-pinned:sticky data-pinned:inset-s-0 data-pinned:z-10 data-pinned:bg-card [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-0.5",
+        "align-middle whitespace-nowrap data-pinned:sticky data-pinned:inset-s-0 data-pinned:z-10 data-pinned:bg-card [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-0.5 [tr:nth-child(even)>&]:data-pinned:bg-table-stripe",
         CELL_DENSITY[density],
         className,
       )}
@@ -153,4 +197,4 @@ function TableCaption({ className, ...props }: React.ComponentProps<"caption">) 
   );
 }
 
-export { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, TableCaption };
+export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption };

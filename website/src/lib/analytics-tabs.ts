@@ -20,7 +20,7 @@ export const ANALYTICS_TABS = {
     "item-combos": "combos",
   },
   games: { overview: "", "over-time": "over-time", "by-rank": "by-rank", economy: "economy" },
-  players: { scoreboard: "", "stats-metrics": "stats-metrics" },
+  players: { scoreboard: "", "stats-metrics": "stats-metrics", compare: "compare" },
 } as const;
 
 export type AnalyticsSection = keyof typeof ANALYTICS_TABS;
@@ -210,6 +210,13 @@ export const ANALYTICS_VIEWS: { [S in AnalyticsSection]: Record<AnalyticsTab<S>,
       heading: "Deadlock Player Stat Distributions",
       summary: "Where a stat line sits among all players.",
       description: "Percentile distributions of Deadlock player stats: see where your kills, souls and damage rank.",
+    },
+    compare: {
+      title: "Compare Deadlock Players Head to Head",
+      heading: "Compare Deadlock Players",
+      summary: "Up to five players side by side: who wins which stat.",
+      description:
+        "Compare up to five Deadlock players head to head: win rate, KDA, souls and damage, by hero, mode and patch.",
     },
   },
 };

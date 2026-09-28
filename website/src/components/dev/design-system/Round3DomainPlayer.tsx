@@ -3,6 +3,7 @@ import { FormDots } from "~/components/domain/match/FormDots";
 import { KdaLine } from "~/components/domain/match/KdaLine";
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
 import { PlayerLink } from "~/components/domain/player/PlayerLink";
+import { PlayerSearch } from "~/components/domain/player/PlayerSearch";
 import { SteamAvatar } from "~/components/domain/player/SteamAvatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 
@@ -67,6 +68,18 @@ export function Round3DomainPlayer() {
           <PlayerLink accountId={ACCOUNT_ID} className="max-w-32">
             A very long persona name that does not fit
           </PlayerLink>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="PlayerSearch"
+        source="domain/player/PlayerSearch"
+        note="A button that opens a Steam player search: type a name (2+ characters), or paste a SteamID64, account id, [U:1:…] or profile link, which is offered first. Arrow keys move from the field through the results, Enter picks the first pickable one, Escape closes and returns focus. onValueChange receives { accountId, name, avatar }; disabledAccountIds lists players already chosen, shown as Added. The search itself is usePlayerSearch, for another presentation."
+      >
+        <Variants label="Default (subtle, sm), outline trigger with a label, with disabled accounts">
+          <PlayerSearch />
+          <PlayerSearch variant="outline" label="Add a player" />
+          <PlayerSearch label="Search another player…" size="xs" disabledAccountIds={[ACCOUNT_ID]} />
         </Variants>
       </Specimen>
 

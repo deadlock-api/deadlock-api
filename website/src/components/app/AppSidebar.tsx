@@ -18,7 +18,8 @@ function isActive(pathname: string, to: string) {
   if (to === "/") return pathname === "/";
   // Tracker profiles belong to the tracker hub's navigation entry.
   if (/^\/tracker\/players\/\d+/.test(pathname)) return to === "/tracker";
-  return pathname.startsWith(to);
+  // The entry's own page or one beneath it: `/analytics/players` is not active on a `/analytics/playersX`.
+  return pathname === to || pathname.startsWith(`${to}/`);
 }
 
 function NavItem({ link }: { link: NavLink }) {

@@ -15,6 +15,11 @@ interface SeoOptions {
   title: string;
   description: string;
   path: string;
+  /**
+   * The og:url, when the page shows more than its canonical `path` does (a filled comparison): link previews and
+   * re-scrapes then keep what was shared, while search engines still index the one canonical page.
+   */
+  shareUrl?: string;
   ogImage?: string;
   /**
    * `card` is a 1200x630 share image (the /og/ set). `thumbnail` is game art of another size, such as a hero card:
@@ -59,6 +64,7 @@ export function seo({
   title,
   description,
   path,
+  shareUrl,
   ogImage,
   ogImageKind = "card",
   ogType,
@@ -74,7 +80,7 @@ export function seo({
     { name: "description", content: description },
     { property: "og:title", content: title },
     { property: "og:description", content: description },
-    { property: "og:url", content: url },
+    { property: "og:url", content: shareUrl ?? url },
     { property: "og:type", content: ogType ?? "website" },
     { property: "og:image", content: image },
     ...(ogImageKind === "card"

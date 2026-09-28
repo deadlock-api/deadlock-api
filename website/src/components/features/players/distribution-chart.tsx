@@ -4,31 +4,7 @@ import { Area, AreaChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts"
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_COLOR, CHART_CURSOR_LINE, CHART_X_AXIS_SM } from "~/components/patterns/charts/theme";
-import { approxPercentile, formatPercentile, percentilePoints } from "~/lib/distribution-percentile";
-
-export interface CurvePoint {
-  x: number;
-  y: number;
-}
-
-/**
- * Approximates a KDE-style density curve from percentile summary stats (no raw samples
- * are available). Each bin between adjacent percentiles gets a density = probability
- * mass / bin width, plotted at the bin midpoint; Recharts' monotone curve smooths
- * between those points into a continuous silhouette.
- */
-export function buildDistributionCurve(values: HashMapValue): CurvePoint[] {
-  const points = percentilePoints(values);
-  const curve: CurvePoint[] = [{ x: Math.min(0, values.percentile1), y: 0 }];
-  for (let i = 0; i < points.length - 1; i++) {
-    const width = points[i + 1].v - points[i].v;
-    if (width <= 0) continue;
-    const share = (points[i + 1].p - points[i].p) / 100;
-    curve.push({ x: (points[i].v + points[i + 1].v) / 2, y: share / width });
-  }
-  curve.push({ x: Math.max(values.percentile99, values.avg) * 1.05 || 1, y: 0 });
-  return curve;
-}
+import { approxPercentile, type CurvePoint, formatPercentile } from "~/lib/distribution-percentile";
 
 function DistributionTooltip({
   payload,

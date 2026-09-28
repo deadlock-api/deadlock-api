@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { Coins, Flame, HeartPulse, type LucideIcon, Swords, Wheat } from "lucide-react";
+import { ChartArea, Coins, Flame, HeartPulse, Swords, type LucideIcon, Wheat } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { Disclosure } from "~/components/patterns/content/Disclosure";
+import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Text } from "~/components/ui/text";
@@ -91,17 +92,19 @@ export function PlayerStatsDistributionCharts({
 
   return (
     <div className="flex flex-col gap-6">
-      <ChartLegend className="justify-center">
-        <ChartLegendItem color={CHART_COLOR.primary} shape="square">
-          Approximate distribution shape
-        </ChartLegendItem>
-        <ChartLegendItem color={CHART_COLOR.primary} shape="line">
-          Average
-        </ChartLegendItem>
-        <ChartLegendItem color={CHART_COLOR.neutral} shape="line">
-          P25 / Median / P75
-        </ChartLegendItem>
-      </ChartLegend>
+      <FilterBar variant="toolbar" title="Stat distributions" icon={ChartArea} aria-label="Stat distribution legend">
+        <ChartLegend>
+          <ChartLegendItem color={CHART_COLOR.primary} shape="square">
+            Approximate distribution shape
+          </ChartLegendItem>
+          <ChartLegendItem color={CHART_COLOR.primary} shape="line">
+            Average
+          </ChartLegendItem>
+          <ChartLegendItem color={CHART_COLOR.neutral} shape="line">
+            P25 / Median / P75
+          </ChartLegendItem>
+        </ChartLegend>
+      </FilterBar>
 
       <div className="flex flex-col gap-3">
         {groupedMetrics.map(({ category, metrics }) => {

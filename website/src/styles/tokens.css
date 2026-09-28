@@ -6,6 +6,8 @@
   --ink-950: #010409;
   --ink-900: #0d1117;
   --ink-850: #151b23;
+  /* The card under the 2% white of --subtle, opaque: a table's even-row stripe on its pinned cells. */
+  --ink-880: #12161c;
   --ink-800: #1c2128;
   --ink-700: #21262d;
   --ink-400: #8b949e;
@@ -14,6 +16,8 @@
 
   --red-500: #fa4454;
   --red-400: #f85149;
+  /* The brand red at 10% over the card, opaque, so a pinned cell can carry it over scrolling rows. */
+  --red-950: #25161d;
   --teal-500: #0ea5a0;
   --amber-400: #fbbf24;
   --amber-500: #f59e0b;
@@ -51,6 +55,9 @@
   --muted-foreground: var(--ink-400);
   --accent: var(--ink-800);
   --accent-foreground: var(--ink-100);
+  /* Tables: the even-row stripe and the result row, both opaque for the pinned column. */
+  --table-stripe: var(--ink-880);
+  --table-total: var(--red-950);
 
   /* Translucent layers for panels that sit on imagery or on another surface */
   --hairline: rgb(255 255 255 / 0.06);
@@ -169,6 +176,8 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-hairline: var(--hairline);
+  --color-table-stripe: var(--table-stripe);
+  --color-table-total: var(--table-total);
   --color-subtle: var(--subtle);
   --color-subtle-hover: var(--subtle-hover);
   --color-subtle-active: var(--subtle-active);

@@ -1,11 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PlayerScoreboardSortByEnum } from "deadlock_api_client";
+import { Trophy } from "lucide-react";
 import { parseAsInteger, parseAsStringLiteral, throttle, useQueryState } from "nuqs";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 
 import { Filter } from "~/components/domain/filters";
 import { ScoreboardTable } from "~/components/domain/player-scoreboard/ScoreboardTable";
 import { ALL_SORT_BY_VALUES } from "~/components/domain/player-scoreboard/sort-options";
+import { SortBySelector } from "~/components/domain/player-scoreboard/SortBySelector";
+import { ScoreboardCompareButton } from "~/components/features/player-compare/ScoreboardCompareButton";
+import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigation/ResponsiveTabsList";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
@@ -21,12 +25,19 @@ import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
+import { MAX_COMPARE_PLAYERS } from "~/lib/player-compare";
 import { playerScoreboardQueryOptions } from "~/queries/player-scoreboard-query";
 
 import { DEFAULT_MIN_MATCHES, MAX_ENTRIES } from "./PlayersPageOptions";
 
 /** A filter or sort change and the page reset land in one throttled URL update, so one history entry. */
 const together = { limitUrlUpdates: throttle(50) };
+
+const PlayerComparison = lazy(() =>
+  import("~/components/features/player-compare/PlayerComparison").then((m) => ({
+    default: m.PlayerComparison,
+  })),
+);
 
 const PlayerStatsDistributionCharts = lazy(() =>
   import("~/components/features/players/PlayerStatsDistributionCharts").then((m) => ({
@@ -36,6 +47,8 @@ const PlayerStatsDistributionCharts = lazy(() =>
 
 export function PlayersPage() {
   const [tab, setTab] = useAnalyticsTab("players");
+  // Players picked on the scoreboard for a comparison; they stay picked across sorts and pages.
+  const [picked, setPicked] = useState<number[]>([]);
   const [sortBy, setSortBy] = useQueryState(
     "sort_by",
     parseAsStringLiteral(ALL_SORT_BY_VALUES as [string, ...string[]]).withDefault("kills"),
@@ -57,8 +70,8 @@ export function PlayersPage() {
 
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
 
-  const scoreboardQuery = useQuery(
-    playerScoreboardQueryOptions({
+  const scoreboardQuery = useQuery({
+    ...playerScoreboardQueryOptions({
       sortBy: sortBy as PlayerScoreboardSortByEnum,
       sortDirection: sortDirection,
       gameMode,
@@ -72,7 +85,9 @@ export function PlayersPage() {
       start: 0,
       limit: MAX_ENTRIES,
     }),
-  );
+    // Only the scoreboard tab draws these 1000 rows.
+    enabled: tab === "scoreboard",
+  });
 
   return (
     <PageShell>
@@ -85,6 +100,8 @@ export function PlayersPage() {
 
       <Filter.Root>
         <Filter.ModeWithRank
+          // A comparison is of the players' own matches, whatever lobby they were in: no rank filter there.
+          hideRankRange={tab === "compare"}
           value={{ mode, rank: [minRankId, maxRankId] }}
           onValueChange={(next) => {
             if (next.mode !== mode) setMode(next.mode);
@@ -132,10 +149,22 @@ export function PlayersPage() {
         >
           <ResponsiveTab value="scoreboard">Scoreboard</ResponsiveTab>
           <ResponsiveTab value="stats-metrics">Stats Metrics</ResponsiveTab>
+          <ResponsiveTab value="compare">Compare</ResponsiveTab>
         </ResponsiveTabsList>
 
         <TabsContent value="scoreboard">
           <Section titleDisplay="hidden" title="Player Scoreboard">
+            <FilterBar variant="toolbar" title="Player scoreboard" icon={Trophy} aria-label="Scoreboard controls">
+              <SortBySelector
+                size="sm"
+                value={sortBy}
+                defaultValue="kills"
+                onValueChange={(next) => {
+                  void setSortBy(next, together);
+                  firstPage();
+                }}
+              />
+            </FilterBar>
             <QueryRenderer
               query={scoreboardQuery}
               loadingFallback={<LoadingState label="player scoreboard" align="center" />}
@@ -151,6 +180,10 @@ export function PlayersPage() {
               {(data) => (
                 <ScoreboardTable
                   entries={data}
+                  selectedAccountIds={picked}
+                  onValueChange={setPicked}
+                  maxSelected={MAX_COMPARE_PLAYERS}
+                  pickHeader={<ScoreboardCompareButton accountIds={picked} />}
                   sortBy={sortBy}
                   sortDirection={sortDirection}
                   onSortChange={(next) => {
@@ -176,6 +209,24 @@ export function PlayersPage() {
                   maxRankId={effectiveMaxRankId}
                   minDate={startDate}
                   maxDate={endDate}
+                />
+              </Suspense>
+            </ChunkErrorBoundary>
+          </Section>
+        </TabsContent>
+
+        <TabsContent value="compare">
+          <Section titleDisplay="hidden" title="Compare Players">
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingState />}>
+                <PlayerComparison
+                  filters={{
+                    gameMode,
+                    matchMode,
+                    heroId,
+                    minUnixTimestamp: minUnixTimestamp ?? 0,
+                    maxUnixTimestamp,
+                  }}
                 />
               </Suspense>
             </ChunkErrorBoundary>

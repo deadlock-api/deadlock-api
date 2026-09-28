@@ -21,7 +21,7 @@ import { chromium } from "@playwright/test";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_DIR = join(ROOT, "public", "og", "v2");
 const BLOG_DIR = join(ROOT, "content", "blog");
-const HEROES_URL = "https://assets.deadlock-api.com/v2/heroes?only_active=true";
+const HEROES_URL = "https://api.deadlock-api.com/v1/assets/heroes?only_active=true";
 const HEROES_PER_CARD = 7;
 
 const PAGE_CARDS = [

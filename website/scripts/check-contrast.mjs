@@ -169,6 +169,14 @@ for (const [token, fill] of [
   ["info", "info/10 over card"],
   ["info", "info/20 over card"],
   ["foreground", "steam-bg"],
+  ["foreground", "table-stripe"],
+  ["muted-foreground", "table-stripe"],
+  ["primary", "table-stripe"],
+  ["positive", "table-stripe"],
+  ["negative", "table-stripe"],
+  ["foreground", "table-total"],
+  ["muted-foreground", "table-total"],
+  ["primary", "table-total"],
 ]) {
   variant(token, fill);
 }

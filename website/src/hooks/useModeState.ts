@@ -1,12 +1,6 @@
 import { type Options, throttle, useQueryStates } from "nuqs";
 
-import { type MatchMode, type Mode, MODE_CONFIG, parseAsGameMode, parseAsMatchMode } from "~/lib/game-mode";
-
-const NORMAL_MODE_BY_MATCH_MODE: Record<MatchMode, Mode> = {
-  "ranked,unranked": "normal_all",
-  ranked: "normal_ranked",
-  unranked: "normal_unranked",
-};
+import { type Mode, MODE_CONFIG, modeFromParams, parseAsGameMode, parseAsMatchMode } from "~/lib/game-mode";
 
 /**
  * Backs the single Mode filter with the long-standing `game_mode` / `match_mode` search params, so
@@ -19,7 +13,7 @@ export function useModeState() {
     match_mode: parseAsMatchMode,
   });
 
-  const mode: Mode = gameModeParam === "street_brawl" ? "street_brawl" : NORMAL_MODE_BY_MATCH_MODE[matchModeParam];
+  const mode: Mode = modeFromParams(gameModeParam, matchModeParam);
 
   const setMode = (next: Mode, options?: Options) => {
     // One choice updates both parameters together, without the app's per-key debounce splitting browser history.

@@ -16,11 +16,31 @@ test("date URL values reject invalid Dayjs objects rather than propagating Inval
 
 test("date ranges preserve all-time and one-sided filters", () => {
   assert.deepEqual(parseAsDayjsRange.parse("_"), [undefined, undefined]);
-  for (const value of ["2024-12-01T00:00:00.000Z_", "_2024-12-01T23:59:59.999Z"]) {
+  // Whole UTC days are written back as bare dates.
+  for (const [value, written] of [
+    ["2024-12-01T00:00:00.000Z_", "2024-12-01_"],
+    ["_2024-12-01T23:59:59.999Z", "_2024-12-01"],
+  ]) {
     const parsed = parseAsDayjsRange.parse(value);
     assert.ok(parsed);
-    assert.equal(parseAsDayjsRange.serialize(parsed), value);
+    assert.equal(parseAsDayjsRange.serialize(parsed), written);
   }
+});
+
+test("date ranges accept bare dates as whole UTC days, and keep them short", () => {
+  const parsed = parseAsDayjsRange.parse("2026-07-30_2026-09-28");
+  assert.ok(parsed);
+  assert.equal(parsed[0]?.toISOString(), "2026-07-30T00:00:00.000Z");
+  assert.equal(parsed[1]?.toISOString(), "2026-09-28T23:59:59.999Z");
+  assert.equal(parseAsDayjsRange.serialize(parsed), "2026-07-30_2026-09-28");
+  // One day, start to end.
+  assert.ok(parseAsDayjsRange.parse("2026-09-28_2026-09-28"));
+  // A bare date that is no calendar day.
+  assert.equal(parseAsDayjsRange.parse("2026-02-30_"), null);
+  // A start between day boundaries keeps its exact instant.
+  const patch = parseAsDayjsRange.parse("2026-09-11T19:00:00.000Z_2026-09-28");
+  assert.ok(patch);
+  assert.equal(parseAsDayjsRange.serialize(patch), "2026-09-11T19:00:00.000Z_2026-09-28");
 });
 
 test("date ranges reject malformed bounds and reversed time ranges", () => {
@@ -41,7 +61,8 @@ test("valid ranges retain exact boundaries and compare instants across offsets",
   const range = "2024-12-01T14:15:16.000Z_2024-12-01T23:59:59.999Z";
   const parsed = parseAsDayjsRange.parse(range);
   assert.ok(parsed);
-  assert.equal(parseAsDayjsRange.serialize(parsed), range);
+  // The start between day boundaries stays exact; the end, a whole UTC day, is written short.
+  assert.equal(parseAsDayjsRange.serialize(parsed), "2024-12-01T14:15:16.000Z_2024-12-01");
   const sameInstant = parseAsDayjsRange.parse("2026-09-11T19:00:00+02:00_2026-09-11T17:00:00Z");
   assert.ok(sameInstant);
   assert.equal(sameInstant[0]?.valueOf(), sameInstant[1]?.valueOf());

@@ -47,6 +47,17 @@ export type Mode = keyof typeof MODE_CONFIG;
 
 export const DEFAULT_MODE: Mode = "normal_all";
 
+const NORMAL_MODE_BY_MATCH_MODE: Record<MatchMode, Mode> = {
+  "ranked,unranked": "normal_all",
+  ranked: "normal_ranked",
+  unranked: "normal_unranked",
+};
+
+/** The one Mode the long-standing `game_mode` / `match_mode` search params stand for. */
+export function modeFromParams(gameMode: GameMode, matchMode: MatchMode): Mode {
+  return gameMode === "street_brawl" ? "street_brawl" : NORMAL_MODE_BY_MATCH_MODE[matchMode];
+}
+
 export function getEffectiveRankRange(
   mode: Mode,
   minRankId: number | null | undefined,
