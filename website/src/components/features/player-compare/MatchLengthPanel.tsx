@@ -81,8 +81,9 @@ export function MatchLengthPanel({
   return (
     <Panel className={className}>
       <PanelHeader size="sm" title="Win rate by match length" icon={Timer} />
-      <PanelBody size="sm">
-        <Stack gap={2}>
+      {/* The plot takes whatever height its grid row gives the panel, from a compact minimum. */}
+      <PanelBody size="sm" className="flex flex-1 flex-col">
+        <Stack gap={2} className="flex-1">
           {allFailed ? (
             <ChartError
               label={LABEL}
@@ -91,9 +92,9 @@ export function MatchLengthPanel({
               }}
             />
           ) : pending ? (
-            <ChartLoading label={LABEL} size="md" />
+            <ChartLoading label={LABEL} size="fill" className="min-h-40 flex-1" />
           ) : (
-            <ChartSurface label={summary} announce="label" size="md" variant="flush">
+            <ChartSurface label={summary} announce="label" size="fill" variant="flush" className="min-h-40 flex-1">
               <BarChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false} barGap={2}>
                 <CartesianGrid {...CHART_GRID} />
                 <XAxis {...CHART_X_AXIS} dataKey="label" />

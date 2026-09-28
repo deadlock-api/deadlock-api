@@ -95,8 +95,9 @@ export function PerformanceTrendPanel({
           ))}
         </MetricSelect>
       </PanelHeader>
-      <PanelBody size="sm">
-        <Stack gap={2}>
+      {/* The plot takes whatever height its grid row gives the panel, from a compact minimum. */}
+      <PanelBody size="sm" className="flex flex-1 flex-col">
+        <Stack gap={2} className="flex-1">
           {histories.length > 0 && histories.every((history) => history.isError) ? (
             <ChartError
               label={LABEL}
@@ -105,7 +106,7 @@ export function PerformanceTrendPanel({
               }}
             />
           ) : histories.some((history) => history.isPending) ? (
-            <ChartLoading label={LABEL} size="md" />
+            <ChartLoading label={LABEL} size="fill" className="min-h-40 flex-1" />
           ) : (
             <PerformanceTrendChart players={players} metric={metric} weeksByPlayer={weeksByPlayer} />
           )}
@@ -146,7 +147,7 @@ function PerformanceTrendChart({
         variant="plain"
         icon={ChartNoAxesCombined}
         title={`No week with ${MIN_WEEK_MATCHES} or more matches`}
-        className="h-55"
+        className="min-h-40 flex-1"
       />
     );
   }
@@ -163,7 +164,7 @@ function PerformanceTrendChart({
   const summary = `${selected.label} by UTC week, from the week of ${longDate(first.week)} to the week of ${longDate(last.week)}, weeks with ${MIN_WEEK_MATCHES} or more matches. Latest: ${latest.join("; ")}.`;
 
   return (
-    <ChartSurface label={summary} announce="label" size="md" variant="flush">
+    <ChartSurface label={summary} announce="label" size="fill" variant="flush" className="min-h-40 flex-1">
       <LineChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false}>
         <CartesianGrid {...CHART_GRID} />
         <XAxis

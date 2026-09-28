@@ -75,9 +75,10 @@ export function RankHistoryPanel({
     <Panel className={className}>
       {/* As tall as the weekly trend's header beside it (which holds a select), so the two plots start level. */}
       <PanelHeader size="sm" title="Rank over time" icon={Medal} className="min-h-11" />
-      <PanelBody size="sm">
+      {/* The plot takes whatever height its grid row gives the panel, from a compact minimum. */}
+      <PanelBody size="sm" className="flex flex-1 flex-col">
         {/* The legend under the plot, as on the weekly trend beside it, so the pair lines up. */}
-        <Stack gap={2}>
+        <Stack gap={2} className="flex-1">
           {histories.length > 0 && histories.every((history) => history.isError) ? (
             <ChartError
               label={LABEL}
@@ -86,7 +87,7 @@ export function RankHistoryPanel({
               }}
             />
           ) : histories.some((history) => history.isPending) ? (
-            <ChartLoading label={LABEL} size="md" />
+            <ChartLoading label={LABEL} size="fill" className="min-h-40 flex-1" />
           ) : (
             <RankHistoryChart players={players} ranks={ranks} filters={filters} daysByPlayer={daysByPlayer} />
           )}
@@ -147,8 +148,8 @@ function RankHistoryChart({
   const summary = `Rank over time from ${longDate(start)} to ${longDate(end)}, UTC. Latest ranks: ${latest.join("; ")}.${unrankedNote ? ` ${unrankedNote}` : ""}`;
 
   return (
-    <Stack gap={2}>
-      <ChartSurface label={summary} announce="label" size="md" variant="flush">
+    <Stack gap={2} className="flex-1">
+      <ChartSurface label={summary} announce="label" size="fill" variant="flush" className="min-h-40 flex-1">
         <LineChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false}>
           <CartesianGrid {...CHART_GRID} />
           <XAxis
