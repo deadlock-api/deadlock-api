@@ -7,12 +7,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { day } from "~/dayjs";
 import { type PlayerRecords, playerRecords, type RecordMatch } from "~/lib/compare-records";
 import { statWinners } from "~/lib/player-compare";
+import { formatStatValue } from "~/lib/stat-format";
 
 import { PlayerColumnHead, RowValue } from "./CompareTableParts";
 import type { ComparedPlayer } from "./types";
 import type { CompareMatchHistory } from "./useCompareMatchHistories";
 
-const integer = (value: number) => Math.round(value).toLocaleString("en-US");
+const integer = (value: number) => formatStatValue(value, "integer");
 
 function formatStreak(streak: number): string {
   if (streak === 0) return "–";

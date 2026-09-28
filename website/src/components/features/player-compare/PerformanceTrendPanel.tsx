@@ -32,6 +32,7 @@ import {
   weekTicks,
 } from "~/lib/compare-trends";
 import { formatPercent } from "~/lib/format";
+import { formatStatValue } from "~/lib/stat-format";
 
 import type { ComparedPlayer } from "./types";
 import type { CompareMatchHistory } from "./useCompareMatchHistories";
@@ -48,7 +49,7 @@ const METRICS: Record<TrendMetric, { short: string; label: string; format: (valu
   soulsPerMin: {
     short: "Souls/min",
     label: "Souls per minute",
-    format: (value) => Math.round(value).toLocaleString("en-US"),
+    format: (value) => formatStatValue(value, "integer"),
   },
   lastHitsPerMin: { short: "Last hits/min", label: "Last hits per minute", format: (value) => value.toFixed(1) },
 };
@@ -106,7 +107,7 @@ export function PerformanceTrendPanel({
               }}
             />
           ) : histories.some((history) => history.isPending) ? (
-            <ChartLoading label={LABEL} size="fill" className="min-h-32 flex-1" />
+            <ChartLoading label={LABEL} size="grow" />
           ) : (
             <PerformanceTrendChart players={players} metric={metric} weeksByPlayer={weeksByPlayer} />
           )}
@@ -164,7 +165,7 @@ function PerformanceTrendChart({
   const summary = `${selected.label} by UTC week, from the week of ${longDate(first.week)} to the week of ${longDate(last.week)}, weeks with ${MIN_WEEK_MATCHES} or more matches. Latest: ${latest.join("; ")}.`;
 
   return (
-    <ChartSurface label={summary} announce="label" size="fill" variant="flush" className="min-h-32 flex-1">
+    <ChartSurface label={summary} announce="label" size="grow" variant="flush">
       <LineChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false}>
         <CartesianGrid {...CHART_GRID} />
         <XAxis
