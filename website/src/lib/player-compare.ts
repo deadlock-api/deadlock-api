@@ -54,6 +54,8 @@ export interface PlayerAggregate {
   damageMitigatedPerMin: number;
   heroesPlayed: number;
   avgMatchSeconds: number;
+  /** Seconds played on the filters. */
+  timePlayed: number;
   /**
    * From outside the hero stats: the per-player metrics (healing, heal prevented) and the current rank. Undefined
    * while they load, null when there is none (an unranked player is null, not badge 0).
@@ -104,6 +106,7 @@ export function aggregateHeroStats(rows: readonly HeroStats[], accountId: number
     damageMitigatedPerMin: perTime((row) => row.damage_mitigated_per_min),
     heroesPlayed: own.length,
     avgMatchSeconds: time / matches,
+    timePlayed: time,
     healingPerMin: undefined,
     healPreventedPerMatch: undefined,
     rankBadge: undefined,
@@ -132,6 +135,7 @@ export interface CompareStat {
 export const COMPARE_STATS: readonly CompareStat[] = [
   { key: "matches", label: "Matches", format: "integer", polarity: "none", group: "Overview" },
   { key: "heroesPlayed", label: "Heroes played", format: "integer", polarity: "none", group: "Overview" },
+  { key: "timePlayed", label: "Time played", format: "hours", polarity: "none", group: "Overview" },
   { key: "avgMatchSeconds", label: "Average match", format: "duration", polarity: "none", group: "Overview" },
   { key: "rankBadge", label: "Current rank", format: "rank", polarity: "higher", group: "Overview" },
   { key: "winRate", label: "Win rate", format: "percent", polarity: "higher", group: "Overview" },

@@ -1,6 +1,7 @@
-export type StatFormat = "integer" | "duration" | "percent" | "decimal1" | "decimal2";
+/** `duration` is seconds as m:ss (a match); `hours` is seconds as hours played. */
+export type StatFormat = "integer" | "duration" | "hours" | "percent" | "decimal1" | "decimal2";
 
-const BASE_DECIMALS: Record<Exclude<StatFormat, "duration">, number> = {
+const BASE_DECIMALS: Record<Exclude<StatFormat, "duration" | "hours">, number> = {
   integer: 0,
   percent: 1,
   decimal1: 1,
@@ -18,7 +19,7 @@ export function valueSpan(data: { value: number | null }[]): number {
  * intervals across it, so the estimated step decides the precision.
  */
 export function formatAxisTick(value: number, format: StatFormat, span: number): string {
-  if (format === "duration") return formatStatValue(value, format);
+  if (format === "duration" || format === "hours") return formatStatValue(value, format);
   const scale = format === "percent" ? 100 : 1;
   const step = (span * scale) / 4;
   const decimals = Math.min(4, Math.max(BASE_DECIMALS[format], step > 0 ? Math.ceil(-Math.log10(step)) : 0));
@@ -36,6 +37,11 @@ export function formatStatValue(value: number | undefined | null, format: StatFo
       const minutes = Math.floor(whole / 60);
       const seconds = whole % 60;
       return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+    }
+    case "hours": {
+      // Tenths under ten hours, whole hours above: "4.5 h", "132 h".
+      const hours = value / 3600;
+      return hours < 10 ? `${hours.toFixed(1)} h` : `${Math.round(hours).toLocaleString("en-US")} h`;
     }
     case "percent":
       return `${(value * 100).toFixed(1)}%`;
