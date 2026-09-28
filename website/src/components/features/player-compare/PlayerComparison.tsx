@@ -31,14 +31,15 @@ import { usePlayerCompareState } from "./usePlayerCompareState";
 
 /** The top grid's classes for up to three players: two columns from @4xl, three from @8xl. */
 const LAYOUT = {
-  grid: "@4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @8xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)]",
+  // The share card keeps its own height beside the table; the playstyle under it takes the rest.
+  grid: "@4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @4xl:grid-rows-[auto_1fr] @8xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)] @8xl:grid-rows-none",
   table: "order-1 @4xl:row-span-2 @8xl:order-none @8xl:row-span-1",
   stack: "contents @8xl:flex",
 };
 
 /** Four or five players: the table spans the width until @7xl, then two columns, three from @9xl. */
 const WIDE_LAYOUT = {
-  grid: "@4xl:grid-cols-2 @7xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @9xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)]",
+  grid: "@4xl:grid-cols-2 @7xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @7xl:grid-rows-[auto_1fr] @9xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)] @9xl:grid-rows-none",
   table: "order-1 @4xl:col-span-2 @7xl:col-span-1 @7xl:row-span-2 @9xl:order-none @9xl:row-span-1",
   stack: "contents @9xl:flex",
 };
