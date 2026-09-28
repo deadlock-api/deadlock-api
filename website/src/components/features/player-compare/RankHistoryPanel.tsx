@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Rank } from "deadlock_api_client";
 import { Medal } from "lucide-react";
+import { useState } from "react";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
 import { RANK_BADGE_AXIS_WIDTH, RankBadgeTick } from "~/components/domain/rank/RankBadgeTick";
@@ -18,19 +19,25 @@ import {
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { NoValue } from "~/components/ui/no-value";
+import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Stack } from "~/components/ui/stack";
 import { day } from "~/dayjs";
+import { niceTicks } from "~/lib/chart-axis";
 import {
   dailyRanks,
   dayTicks,
   mergeRankSeries,
   rankAxis,
+  type RankByMatchRow,
+  rankByMatchNumber,
   rankDayExtent,
   type RankRow,
   utcDay,
 } from "~/lib/compare-rank-history";
 import { type MatchMode, modeFromParams } from "~/lib/game-mode";
 import { badgeLabel } from "~/lib/rank-utils";
+import { formatStatValue } from "~/lib/stat-format";
+import { rankHistoryPoints } from "~/lib/tracker/compute";
 import type { CompareFilters } from "~/queries/player-compare-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -41,7 +48,10 @@ const LABEL = "rank over time";
 const shortDate = (unix: number) => day.unix(unix).utc().format("MMM D");
 const longDate = (unix: number) => day.unix(unix).utc().format("MMM D, YYYY");
 
-/** Every compared player's rank across the page's dates, one step line each, one point per day. */
+/**
+ * Every compared player's rank across the page's dates, one step line each: by date (one point per day), or by ranked
+ * match number, so two climbs compare by the matches they took.
+ */
 export function RankHistoryPanel({
   players,
   filters,
@@ -60,6 +70,7 @@ export function RankHistoryPanel({
     filters.matchMode as MatchMode,
   );
   const { data: ranks } = useQuery(ranksQueryOptions);
+  const [axisBy, setAxisBy] = useState<"date" | "matches">("date");
   const showsRank = mode === "normal_all" || mode === "normal_ranked";
 
   // Hidden without ranks to draw: a mode that moves no rank, or nobody ranked on these dates.
@@ -70,11 +81,26 @@ export function RankHistoryPanel({
   );
   if (!showsRank || (settled && !allFailed && !anyRanked)) return null;
   const daysByPlayer = histories.map((history) => dailyRanks(history.matches ?? []));
+  // Oldest first, the rank after each ranked match: for the by-matches axis.
+  const pointsByPlayer =
+    axisBy === "matches" ? histories.map((history) => rankHistoryPoints(history.matches ?? [])) : [];
 
   return (
     <Panel className={className}>
       {/* As tall as the weekly trend's header beside it (which holds a select), so the two plots start level. */}
-      <PanelHeader size="sm" title="Rank over time" icon={Medal} className="min-h-11" />
+      <PanelHeader size="sm" title="Rank over time" icon={Medal} className="min-h-11">
+        {/* By date: when each climbed. By matches: how many ranked matches each climb took. */}
+        <Segmented
+          size="sm"
+          width="hug"
+          aria-label="Rank over"
+          value={axisBy}
+          onValueChange={(next) => setAxisBy(next as "date" | "matches")}
+        >
+          <SegmentedItem value="date">Date</SegmentedItem>
+          <SegmentedItem value="matches">Matches</SegmentedItem>
+        </Segmented>
+      </PanelHeader>
       {/* The plot takes whatever height its grid row gives the panel, from a compact minimum. */}
       <PanelBody size="sm" className="flex flex-1 flex-col">
         {/* The legend under the plot, as on the weekly trend beside it, so the pair lines up. */}
@@ -88,8 +114,10 @@ export function RankHistoryPanel({
             />
           ) : histories.some((history) => history.isPending) ? (
             <ChartLoading label={LABEL} size="grow" />
-          ) : (
+          ) : axisBy === "date" ? (
             <RankHistoryChart players={players} ranks={ranks} filters={filters} daysByPlayer={daysByPlayer} />
+          ) : (
+            <RankByMatchChart players={players} ranks={ranks} pointsByPlayer={pointsByPlayer} />
           )}
           <ChartLegend label="Players">
             {players.map((player, index) => {
@@ -219,6 +247,107 @@ function RankHistoryChart({
                     <g key={index} />
                   )
                 }
+              />
+            );
+          })}
+        </LineChart>
+      </ChartSurface>
+    </Stack>
+  );
+}
+
+function RankByMatchChart({
+  players,
+  ranks,
+  pointsByPlayer,
+}: {
+  players: ComparedPlayer[];
+  ranks: readonly Rank[] | undefined;
+  pointsByPlayer: ReturnType<typeof rankHistoryPoints>[];
+}) {
+  const series = players.map((player, index) => ({
+    key: String(player.accountId),
+    points: pointsByPlayer[index] ?? [],
+  }));
+  const rows = rankByMatchNumber(series);
+  const last = rows.at(-1);
+  if (!last) return <EmptyState variant="plain" icon={Medal} title="No ranked matches in this range" />;
+  const axis = rankAxis(series.flatMap((s) => s.points.map((point) => point.linear)));
+  const rankName = (badge: number) => badgeLabel(ranks, badge);
+  const ranked = players.filter((_, index) => (pointsByPlayer[index]?.length ?? 0) > 0);
+  const summary = `Rank by ranked match on these dates. ${ranked
+    .map((player) => {
+      const points = pointsByPlayer[players.indexOf(player)] ?? [];
+      const first = points[0];
+      const end = points.at(-1);
+      return first && end
+        ? `${player.name}: ${rankName(first.badge)} to ${rankName(end.badge)} in ${points.length} ranked matches`
+        : player.name;
+    })
+    .join("; ")}.`;
+
+  return (
+    <Stack gap={2} className="flex-1">
+      <ChartSurface label={summary} announce="label" size="grow" variant="flush">
+        <LineChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false}>
+          <CartesianGrid {...CHART_GRID} />
+          <XAxis
+            {...CHART_X_AXIS}
+            dataKey="match"
+            type="number"
+            domain={[1, last.match]}
+            ticks={niceTicks(1, last.match).filter((tick) => tick >= 1 && tick <= last.match)}
+            tickFormatter={(match: number) => formatStatValue(match, "integer")}
+            minTickGap={24}
+          />
+          <YAxis
+            {...CHART_Y_AXIS}
+            width={RANK_BADGE_AXIS_WIDTH}
+            type="number"
+            domain={axis.domain}
+            ticks={axis.ticks}
+            interval={0}
+            allowDecimals={false}
+            tick={<RankBadgeTick ranks={ranks} />}
+          />
+          <Tooltip
+            cursor={CHART_CURSOR_LINE}
+            isAnimationActive={false}
+            wrapperStyle={{ pointerEvents: "auto" }}
+            content={({ active, payload }) => {
+              const row = payload?.[0]?.payload as RankByMatchRow | undefined;
+              if (!active || !row) return null;
+              return (
+                <ChartReadings
+                  title={`After ranked match ${formatStatValue(row.match, "integer")}`}
+                  valueLabel="Rank"
+                  label="Ranks after this many ranked matches"
+                >
+                  {ranked.map((player) => {
+                    const badge = row.badge[String(player.accountId)];
+                    return (
+                      <ChartReading key={player.accountId} label={player.name} color={player.color}>
+                        {badge == null ? <NoValue /> : rankName(badge)}
+                      </ChartReading>
+                    );
+                  })}
+                </ChartReadings>
+              );
+            }}
+          />
+          {players.map((player) => {
+            const key = String(player.accountId);
+            return (
+              <Line
+                key={key}
+                name={player.name}
+                dataKey={(row: RankByMatchRow) => row.linear[key]}
+                type="stepAfter"
+                stroke={player.color}
+                strokeWidth={2}
+                dot={false}
+                isAnimationActive={false}
+                activeDot={{ r: 4, stroke: "var(--card)", strokeWidth: 2 }}
               />
             );
           })}

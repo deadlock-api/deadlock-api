@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
-import { dailyRanks, dayTicks, mergeRankSeries, rankAxis, utcDay } from "./compare-rank-history";
+import { dailyRanks, dayTicks, mergeRankSeries, rankAxis, rankByMatchNumber, utcDay } from "./compare-rank-history";
 
 const DAY = 86_400;
 const D0 = 1_700_006_400; // a UTC midnight
@@ -101,4 +101,31 @@ test("rankAxis ticks tier starts, or subtiers inside one tier", () => {
 test("dayTicks spreads UTC days over the range", () => {
   assert.deepEqual(dayTicks(D0 + 5, D0 + 8 * DAY + 5, 5), [D0, D0 + 2 * DAY, D0 + 4 * DAY, D0 + 6 * DAY, D0 + 8 * DAY]);
   assert.deepEqual(dayTicks(D0, D0 + 100), [D0]);
+});
+
+test("rankByMatchNumber lines series up by match number and ends each where it ends", () => {
+  const point = (linear: number) => ({ badge: linear, linear });
+  const rows = rankByMatchNumber([
+    { key: "a", points: [point(1), point(2), point(3)] },
+    { key: "b", points: [point(5)] },
+  ]);
+  assert.deepEqual(
+    rows.map((row) => row.match),
+    [1, 2, 3],
+  );
+  assert.equal(rows[0].linear.b, 5);
+  assert.equal(rows[1].linear.b, null);
+  assert.equal(rows[2].linear.a, 3);
+});
+
+test("rankByMatchNumber samples long histories, keeping every series' last match", () => {
+  const long = Array.from({ length: 1000 }, (_, index) => ({ badge: index, linear: index }));
+  const rows = rankByMatchNumber([
+    { key: "a", points: long },
+    { key: "b", points: long.slice(0, 457) },
+  ]);
+  assert.ok(rows.length <= 302);
+  assert.ok(rows.some((row) => row.match === 1000));
+  assert.ok(rows.some((row) => row.match === 457));
+  assert.deepEqual(rankByMatchNumber([]), []);
 });

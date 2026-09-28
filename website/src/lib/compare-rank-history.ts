@@ -126,3 +126,42 @@ export function dayTicks(start: number, end: number, count = 5): number[] {
   for (let t = first; t <= last; t += step) ticks.push(t);
   return ticks;
 }
+
+/** One player's ranked matches in order, oldest first: the rank after each. */
+export interface RankByMatchInput {
+  key: string;
+  points: readonly { badge: number; linear: number }[];
+}
+
+export interface RankByMatchRow {
+  /** The ranked match number, from 1: the player's first ranked match on the page's dates is 1. */
+  match: number;
+  /** Each series' rank after this match: null past its last ranked match. */
+  linear: Record<string, number | null>;
+  badge: Record<string, number | null>;
+}
+
+/**
+ * The players' ranks lined up by ranked match number rather than date, so a climb reads as matches it took: at most
+ * about `maxRows` rows (every n-th match), and each series' last match always has its own row so its line ends where
+ * it does.
+ */
+export function rankByMatchNumber(series: readonly RankByMatchInput[], maxRows = 300): RankByMatchRow[] {
+  const longest = Math.max(0, ...series.map((s) => s.points.length));
+  if (longest === 0) return [];
+  const step = Math.max(1, Math.ceil(longest / maxRows));
+  const numbers = new Set<number>();
+  for (let match = 1; match <= longest; match += step) numbers.add(match);
+  for (const { points } of series) if (points.length > 0) numbers.add(points.length);
+  return [...numbers]
+    .sort((a, b) => a - b)
+    .map((match) => {
+      const row: RankByMatchRow = { match, linear: {}, badge: {} };
+      for (const { key, points } of series) {
+        const point = points[match - 1];
+        row.linear[key] = point?.linear ?? null;
+        row.badge[key] = point?.badge ?? null;
+      }
+      return row;
+    });
+}
