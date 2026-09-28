@@ -110,7 +110,7 @@ Positive is teal, not green, so the positive/negative pair survives red-green co
 order is validated for colorblind separation between neighbours; do not reorder it or insert hues.
 
 Type scale: Tailwind's, plus `text-2xs` (11px), `text-3xs` (10px), `text-4xs` (9px) for dense data. The `eyebrow`
-utility is the small uppercase label above a value. Numbers that line up use `tabular-nums`.
+utility is the small uppercase label above a value. Numbers that line up use `tabular-nums`. `min-h-two-lines` makes a `Text wrap="clamp-2"` hold two lines from the start, so rows side by side line up.
 
 Container sizes: Tailwind's `@3xs` and up, plus `@5xs` (3.75rem) and `@4xs` (5rem) for the parts of one slot in a
 dense board, such as the swap hint in a draft slot that drops its arrow and then its number as the slot narrows, and

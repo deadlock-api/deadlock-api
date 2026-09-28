@@ -43,6 +43,12 @@
   color: var(--muted-foreground);
 }
 
+/* Text that may wrap to two lines (`Text wrap="clamp-2"`) holding both from the start, so rows side by side line up
+   whether their text wraps or not. */
+@utility min-h-two-lines {
+  min-height: 2lh;
+}
+
 /* The mini-games' terminal sub-theme: every radius inside the scope collapses to square corners
    (rounded-full stays round). Portalled content (dialogs, popovers) needs the class on its own root. */
 .theme-terminal {
