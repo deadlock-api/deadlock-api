@@ -6,8 +6,8 @@ import { CartesianGrid, Line, LineChart, ReferenceLine, Tooltip, XAxis, YAxis } 
 
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
-import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
-import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
+import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
+import { ChartSurface, chartSizeVariants } from "~/components/patterns/charts/ChartSurface";
 import {
   CHART_CURSOR_LINE,
   CHART_GRID,
@@ -98,16 +98,13 @@ export function TimelinePanel({
     })),
   });
   // Everyone's curve, the zero line every lead is measured from. A timeout is not retried: the averages stand in.
-  const field = useQuery({
-    ...playerPerformanceCurveQueryOptions(curveParams(filters)),
-    placeholderData: keepPreviousData,
-    retry: false,
-  });
+  // No placeholder: a lead measured against the previous filters' field would be a wrong number.
+  const field = useQuery({ ...playerPerformanceCurveQueryOptions(curveParams(filters)), retry: false });
   const pending = own.some((query) => query.isPending);
   const failed = own.length > 0 && own.every((query) => query.isError && !query.data);
   // Leads need the field, which is slow to compute cold and can time out on a long date range: until it is in (or when
   // it fails) the players' own averages are drawn instead.
-  const relative = field.data !== undefined;
+  const relative = field.data !== undefined && !own.some((query) => query.isPlaceholderData);
 
   const selected = METRICS[metric];
   const keys = players.map((player) => String(player.accountId));
@@ -171,6 +168,8 @@ export function TimelinePanel({
             />
           ) : pending ? (
             <ChartLoading label={LABEL} size="md" />
+          ) : rows.length === 0 ? (
+            <ChartEmpty label={LABEL} className={chartSizeVariants({ size: "md" })} />
           ) : (
             <ChartSurface label={summary} announce="label" size="md" variant="flush">
               <LineChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false}>
