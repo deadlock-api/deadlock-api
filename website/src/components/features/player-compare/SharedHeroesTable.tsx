@@ -18,7 +18,7 @@ import { formatStatValue } from "~/lib/stat-format";
 
 import type { ComparedPlayer } from "./types";
 
-const COLLAPSED_ROWS = 8;
+const COLLAPSED_ROWS = 6;
 
 /** The heroes at least two of the players have played, with each one's matches, win rate and KDA on them. */
 export function SharedHeroesTable({
