@@ -16,7 +16,7 @@ import {
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { NoValue } from "~/components/ui/no-value";
 import { Stack } from "~/components/ui/stack";
-import { percentTicks, winRateDomain } from "~/lib/chart-axis";
+import { percentTicks } from "~/lib/chart-axis";
 import { type BracketResult, DURATION_BRACKETS, MIN_BRACKET_MATCHES, winRateByDuration } from "~/lib/compare-records";
 import { formatPercent } from "~/lib/format";
 
@@ -58,7 +58,9 @@ export function MatchLengthPanel({
   // Hidden once loaded when no player has a bracket with enough matches.
   if (!pending && !allFailed && values.length === 0) return null;
 
-  const domain = winRateDomain([...values, 0.5]);
+  // Symmetric around 50%, so a bar's length reads as its distance from an even record either way.
+  const reach = Math.max(0.1, Math.ceil(Math.max(0, ...values.map((value) => Math.abs(value - 0.5))) * 10) / 10);
+  const domain: [number, number] = [Math.max(0, 0.5 - reach), Math.min(1, 0.5 + reach)];
   const summary = `Win rate by match length, brackets with ${MIN_BRACKET_MATCHES} or more matches. ${players
     .map(
       (player, index) =>
@@ -136,9 +138,13 @@ export function MatchLengthPanel({
                     <Bar
                       key={key}
                       name={player.name}
-                      dataKey={(row: Row) => row.results[key]?.winRate ?? null}
+                      // A range from 50% to the win rate: up for a winning record, down for a losing one.
+                      dataKey={(row: Row) => {
+                        const winRate = row.results[key]?.winRate;
+                        return winRate == null ? null : [0.5, winRate];
+                      }}
                       fill={player.color}
-                      radius={[2, 2, 0, 0]}
+                      radius={2}
                       maxBarSize={20}
                       isAnimationActive={false}
                     />
