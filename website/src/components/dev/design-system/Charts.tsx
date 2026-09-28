@@ -139,7 +139,7 @@ export function Charts() {
       <Specimen
         name="ChartSurface"
         source="patterns/charts/ChartSurface"
-        note="size: xs, sm, md, default, lg, xl (the main plot of a page), fill. variant: card, flush, bare. The loading skeleton takes the same size. announce: plot (the label names it) or label (the label summarises a small plot, which is hidden from screen readers; the bare one here)."
+        note="size: xs, sm, md, default, lg, xl (the main plot of a page), fill (the parent sets the height), grow (grows in a stretched panel from a compact minimum; its loading skeleton too). variant: card, flush, bare. The loading skeleton takes the same size. announce: plot (the label names it) or label (the label summarises a small plot, which is hidden from screen readers; the bare one here)."
       >
         <Variants className="grid items-start md:grid-cols-2">
           <ChartSurface label="Win rate by rank" size="md">
@@ -189,6 +189,22 @@ export function Charts() {
               </AreaChart>
             </ChartSurface>
             <ChartLoading label="trend" size="sm" />
+          </div>
+          {/* A panel stretched to a taller neighbour: the grow plot takes the height, the legend stays under it. */}
+          <div className="flex h-56 flex-col gap-2">
+            <ChartSurface label="Weekly matches, grown to its panel" size="grow" variant="flush">
+              <BarChart data={BY_RANK} margin={CHART_MARGIN}>
+                <XAxis
+                  dataKey="rank"
+                  {...CHART_X_AXIS}
+                  interval={0}
+                  tickFormatter={(rank: string) => rank.slice(0, 3)}
+                />
+                <YAxis domain={[0.44, 0.56]} tickFormatter={percent} {...CHART_Y_AXIS} />
+                <Bar dataKey="winRate" radius={4} isAnimationActive={false} />
+              </BarChart>
+            </ChartSurface>
+            <ChartLoading label="grown plot" size="grow" />
           </div>
         </Variants>
       </Specimen>

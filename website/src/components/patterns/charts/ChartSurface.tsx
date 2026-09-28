@@ -21,6 +21,11 @@ export const chartSizeVariants = cva("", {
       square: "aspect-square max-h-105 w-full",
       /** The parent sets the height. */
       fill: "h-full",
+      /**
+       * Grows in a flex column (a panel stretched by its grid row) from a compact minimum: the plot takes the height
+       * its row gives the panel.
+       */
+      grow: "h-full",
     },
   },
   defaultVariants: { size: "default" },
@@ -65,6 +70,13 @@ interface ChartSurfaceProps
   children: ComponentProps<typeof ResponsiveContainer>["children"];
 }
 
+/** The classes a `fill` or `grow` plot's outer element takes; the other sizes set the height on the plot itself. */
+export function chartFrameHeight(size: ChartSize | null | undefined): string | undefined {
+  if (size === "fill") return "h-full";
+  if (size === "grow") return "min-h-32 flex-1";
+  return undefined;
+}
+
 /** The frame every Recharts plot sits in: a labelled figure of a named height with a responsive container. */
 export function ChartSurface({
   label,
@@ -80,7 +92,7 @@ export function ChartSurface({
     <figure
       data-slot="chart-surface"
       aria-label={announce === "plot" ? label : undefined}
-      className={cn(chartSurfaceVariants({ variant }), size === "fill" && "h-full", className)}
+      className={cn(chartSurfaceVariants({ variant }), chartFrameHeight(size), className)}
       {...props}
     >
       {/* A caption names the figure and is read in browse mode too, where an aria-label on it may be skipped. */}
@@ -95,7 +107,7 @@ export function ChartSurface({
         aria-hidden={announce === "label" || undefined}
         className={cn(
           "min-w-0",
-          size === "fill" ? "min-h-0" : chartSizeVariants({ size }),
+          size === "fill" || size === "grow" ? "min-h-0" : chartSizeVariants({ size }),
           variant !== "bare" && "p-2",
         )}
       >

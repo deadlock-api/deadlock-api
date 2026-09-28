@@ -87,7 +87,7 @@ export function RankHistoryPanel({
               }}
             />
           ) : histories.some((history) => history.isPending) ? (
-            <ChartLoading label={LABEL} size="fill" className="min-h-32 flex-1" />
+            <ChartLoading label={LABEL} size="grow" />
           ) : (
             <RankHistoryChart players={players} ranks={ranks} filters={filters} daysByPlayer={daysByPlayer} />
           )}
@@ -149,7 +149,7 @@ function RankHistoryChart({
 
   return (
     <Stack gap={2} className="flex-1">
-      <ChartSurface label={summary} announce="label" size="fill" variant="flush" className="min-h-32 flex-1">
+      <ChartSurface label={summary} announce="label" size="grow" variant="flush">
         <LineChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false}>
           <CartesianGrid {...CHART_GRID} />
           <XAxis

@@ -1,4 +1,4 @@
-import { type ChartSize, chartSizeVariants } from "~/components/patterns/charts/ChartSurface";
+import { chartFrameHeight, type ChartSize, chartSizeVariants } from "~/components/patterns/charts/ChartSurface";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -19,7 +19,7 @@ interface ChartLoadingProps extends ChartStateProps {
 
 export function ChartLoading({ label, size = "default", className, ...props }: ChartLoadingProps) {
   return (
-    <div data-slot="chart-loading" className={cn(stateRoot, size === "fill" && "h-full", className)} {...props}>
+    <div data-slot="chart-loading" className={cn(stateRoot, chartFrameHeight(size), className)} {...props}>
       <LoadingState variant="skeleton" label={label} className={chartSizeVariants({ size })} />
     </div>
   );

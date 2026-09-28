@@ -92,9 +92,9 @@ export function MatchLengthPanel({
               }}
             />
           ) : pending ? (
-            <ChartLoading label={LABEL} size="fill" className="min-h-32 flex-1" />
+            <ChartLoading label={LABEL} size="grow" />
           ) : (
-            <ChartSurface label={summary} announce="label" size="fill" variant="flush" className="min-h-32 flex-1">
+            <ChartSurface label={summary} announce="label" size="grow" variant="flush">
               <BarChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false} barGap={2}>
                 <CartesianGrid {...CHART_GRID} />
                 <XAxis {...CHART_X_AXIS} dataKey="label" />
