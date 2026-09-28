@@ -48,15 +48,23 @@ export function RowValue({
   children,
 }: {
   won: boolean;
-  /** `fixed`: the value in a box of one width, so something before it (a hero) lines up down the column too. */
-  width?: "auto" | "fixed";
+  /**
+   * `fixed`: the value in a box of one width from a 36rem table (`fixed-wide`: from 42rem, for four or five players), so
+   * something before it (a hero) lines up down the column too.
+   */
+  width?: "auto" | "fixed" | "fixed-wide";
   children: React.ReactNode;
 }) {
   return (
     <Inline gap={1} wrap="nowrap" justify="end">
       <Text
         tone={won ? "default" : "muted"}
-        className={cn(won && "font-semibold", width === "fixed" && "w-16 shrink-0 text-end whitespace-nowrap")}
+        className={cn(
+          won && "font-semibold",
+          width !== "auto" && "shrink-0 text-end whitespace-nowrap",
+          width === "fixed" && "@xl/table:w-16",
+          width === "fixed-wide" && "@2xl/table:w-16",
+        )}
       >
         {children}
       </Text>

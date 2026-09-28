@@ -118,9 +118,12 @@ function RecordValue({
   match,
   heroId,
   detail,
+  crowded = false,
   won,
   children,
 }: {
+  /** Four or five players: the heroes and fixed widths need a wider table before they show. */
+  crowded?: boolean;
   match?: RecordMatch | null;
   /** A hero the value is about (not one match's): its icon at any width, without a date. */
   heroId?: number | null;
@@ -132,8 +135,12 @@ function RecordValue({
     return (
       <Inline gap={1.5} wrap="nowrap" justify="end" title={detail}>
         {/* The hero right before a value of fixed width: heroes and numbers each line up down the column. */}
-        <HeroImage heroId={heroId} shape="circle" className="size-5 shrink-0" />
-        <RowValue won={won} width="fixed">
+        <HeroImage
+          heroId={heroId}
+          shape="circle"
+          className={crowded ? "hidden size-5 shrink-0 @2xl/table:block" : "hidden size-5 shrink-0 @xl/table:block"}
+        />
+        <RowValue won={won} width={crowded ? "fixed-wide" : "fixed"}>
           {children}
         </RowValue>
         {detail && <span className="sr-only">{detail}</span>}
@@ -142,7 +149,7 @@ function RecordValue({
   }
   if (!match)
     return (
-      <RowValue won={won} width="fixed">
+      <RowValue won={won} width={crowded ? "fixed-wide" : "fixed"}>
         {children}
       </RowValue>
     );
@@ -151,8 +158,12 @@ function RecordValue({
     <Inline gap={1.5} wrap="nowrap" justify="end" title={date}>
       {/* The image's alt and title name the hero. */}
       {/* A narrow table keeps the numbers and gives the hero's room to the other players' columns. */}
-      <HeroImage heroId={match.heroId} shape="circle" className="hidden size-5 shrink-0 @xl/table:block" />
-      <RowValue won={won} width="fixed">
+      <HeroImage
+        heroId={match.heroId}
+        shape="circle"
+        className={crowded ? "hidden size-5 shrink-0 @2xl/table:block" : "hidden size-5 shrink-0 @xl/table:block"}
+      />
+      <RowValue won={won} width={crowded ? "fixed-wide" : "fixed"}>
         {children}
       </RowValue>
       <span className="sr-only">on {date}</span>
@@ -223,6 +234,7 @@ export function RecordsPanel({
                           match={row.match?.(record)}
                           heroId={row.hero?.(record)}
                           detail={row.detail?.(record)}
+                          crowded={players.length >= 4}
                           won={winners.includes(index)}
                         >
                           {row.format(value, record)}
