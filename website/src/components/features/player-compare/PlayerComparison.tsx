@@ -35,31 +35,32 @@ import { usePlayerCompareState } from "./usePlayerCompareState";
  * The top grid's classes for up to three players. Narrow: one column. From @4xl two columns: the stat table spans three
  * rows beside the share card, the playstyle and match length; then records beside the weekly trend, and rank over time
  * across both. From @8xl a 3x3 grid: the table spans all three rows on the left, and each row pairs share / records,
- * playstyle / match length, trend / rank at one height. `order` sets the reading order in each layout.
+ * playstyle / match length, trend / rank at one height. The source follows the 3x3 grid's reading order; `order`
+ * rearranges the narrower layouts.
  */
 const LAYOUT = {
   // The playstyle keeps its own height beside the table; the share card and match length above and below it share the
   // rest, the card and the plot scaling to it.
   grid: "@4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @4xl:grid-rows-[1fr_auto_1fr] @8xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)] @8xl:grid-rows-none",
-  table: "order-1 @4xl:row-span-3",
-  share: "order-2",
-  radar: "order-3 @8xl:order-4",
-  length: "order-4 @8xl:order-5",
-  records: "order-5 @8xl:order-3",
-  trend: "order-6",
-  rank: "order-7 @4xl:col-span-2 @8xl:col-span-1",
+  table: "order-1 @4xl:row-span-3 @8xl:order-none",
+  share: "order-2 @8xl:order-none",
+  records: "order-5 @8xl:order-none",
+  radar: "order-3 @8xl:order-none",
+  length: "order-4 @8xl:order-none",
+  trend: "order-6 @8xl:order-none",
+  rank: "order-7 @4xl:col-span-2 @8xl:order-none @8xl:col-span-1",
 };
 
 /** Four or five players: the table spans the width until @7xl, then two columns, the 3x3 grid from @9xl. */
 const WIDE_LAYOUT = {
   grid: "@4xl:grid-cols-2 @7xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @7xl:grid-rows-[1fr_auto_1fr] @9xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)] @9xl:grid-rows-none",
-  table: "order-1 @4xl:col-span-2 @7xl:col-span-1 @7xl:row-span-3",
-  share: "order-2",
-  radar: "order-3 @9xl:order-4",
-  length: "order-4 @9xl:order-5",
-  records: "order-5 @9xl:order-3",
-  trend: "order-6",
-  rank: "order-7 @7xl:col-span-2 @9xl:col-span-1",
+  table: "order-1 @4xl:col-span-2 @7xl:col-span-1 @7xl:row-span-3 @9xl:order-none",
+  share: "order-2 @9xl:order-none",
+  records: "order-5 @9xl:order-none",
+  radar: "order-3 @9xl:order-none",
+  length: "order-4 @9xl:order-none",
+  trend: "order-6 @9xl:order-none",
+  rank: "order-7 @7xl:col-span-2 @9xl:order-none @9xl:col-span-1",
 };
 
 /** The compare tab: pick up to five players, then see who wins which stat on the page's filters. */
@@ -161,11 +162,11 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
           <Grid gap={4} className={layout.grid}>
             <HeadToHeadTable players={players} className={layout.table} />
             <ShareComparison filters={filters} className={layout.share} />
-            <PlaystyleRadarPanel players={players} metrics={metrics} className={layout.radar} />
             <RecordsPanel players={players} histories={histories} className={layout.records} />
+            <PlaystyleRadarPanel players={players} metrics={metrics} className={layout.radar} />
             <MatchLengthPanel players={players} histories={histories} className={layout.length} />
-            <RankHistoryPanel players={players} filters={filters} histories={histories} className={layout.rank} />
             <PerformanceTrendPanel players={players} histories={histories} className={layout.trend} />
+            <RankHistoryPanel players={players} filters={filters} histories={histories} className={layout.rank} />
           </Grid>
           <PercentileComparison players={players} metrics={metrics} />
           {/* How a match goes for each, then when they play: the timeline, the hours and the weekdays at one height. */}
