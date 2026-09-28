@@ -73,7 +73,7 @@ function PairRow({
   return (
     <TableRow>
       <TableCell data-pinned>
-        <Stack gap={0.5} className="max-w-40">
+        <Stack gap={0.5} className="max-w-40 @md/table:max-w-none">
           <PlayerName player={a} />
           <PlayerName player={b} />
           {pair.lastMet != null && (
