@@ -94,7 +94,7 @@ export function RankHistoryPanel({
             <ChartLegend label="Players">
               {players.map((player) => (
                 <ChartLegendItem key={player.accountId} color={player.color} shape="line" title={player.name}>
-                  <span className="max-w-32 truncate">{player.name}</span>
+                  <span className="max-w-full truncate">{player.name}</span>
                 </ChartLegendItem>
               ))}
             </ChartLegend>

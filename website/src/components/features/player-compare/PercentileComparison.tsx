@@ -58,7 +58,7 @@ export function PercentileComparison({ players, filters }: { players: ComparedPl
           <ChartLegend label="Players">
             {players.map((player) => (
               <ChartLegendItem key={player.accountId} color={player.color} shape="line" title={player.name}>
-                <span className="max-w-32 truncate" title={player.name}>
+                <span className="max-w-full truncate" title={player.name}>
                   {player.name}
                 </span>
               </ChartLegendItem>

@@ -57,7 +57,7 @@ export function SharedHeroesTable({
                   <TableHead key={player.accountId} className="text-end">
                     <Inline gap={1.5} wrap="nowrap" justify="end">
                       <StatusDot color={player.color} />
-                      <span className="max-w-32 truncate" title={player.name}>
+                      <span className="max-w-32 truncate @3xl/table:max-w-none" title={player.name}>
                         {player.name}
                       </span>
                     </Inline>

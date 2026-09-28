@@ -68,7 +68,7 @@ export function HeadToHeadTable({
                   {player.profileLoading ? (
                     <Skeleton className="h-4 w-20" />
                   ) : (
-                    <span className="max-w-14 truncate @md/table:max-w-32" title={player.name}>
+                    <span className="max-w-14 truncate @md/table:max-w-32 @3xl/table:max-w-none" title={player.name}>
                       {player.name}
                     </span>
                   )}
