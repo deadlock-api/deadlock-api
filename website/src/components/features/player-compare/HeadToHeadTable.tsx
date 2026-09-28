@@ -88,9 +88,13 @@ export function HeadToHeadTable({
                 {players.map((player, index) => (
                   <TableCell key={player.accountId} className="text-end">
                     {scoring && groupScored && groupTally[index] > 0 && (
-                      <Text variant="caption" tone="muted">
-                        {groupTally[index]} won
-                      </Text>
+                      // Ends where the values below end, before their crown's slot.
+                      <Inline gap={1} wrap="nowrap" justify="end">
+                        <Text variant="caption" tone="muted">
+                          {groupTally[index]} won
+                        </Text>
+                        <span aria-hidden="true" className="hidden size-3.5 shrink-0 @md/table:block" />
+                      </Inline>
                     )}
                   </TableCell>
                 ))}
@@ -154,11 +158,16 @@ export function HeadToHeadTable({
                     ) : players.length < 2 ? (
                       <NoValue label="Add an opponent to score" />
                     ) : (
+                      // The crown after the count, in the slot the values above keep for theirs.
                       <Inline gap={1} wrap="nowrap" justify="end">
-                        {leads && <CrownIcon aria-hidden="true" className="size-3.5 shrink-0" />}
                         <Text className={leads ? "font-bold" : undefined}>
                           {tally[index]} of {scored.length}
                         </Text>
+                        {leads ? (
+                          <CrownIcon aria-hidden="true" className="size-3.5 shrink-0" />
+                        ) : (
+                          <span aria-hidden="true" className="size-3.5 shrink-0" />
+                        )}
                         {leads && <span className="sr-only">, the most</span>}
                       </Inline>
                     )}

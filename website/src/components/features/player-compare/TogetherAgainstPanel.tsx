@@ -232,7 +232,7 @@ function SharedMatchesTable({
         <TableRow>
           <TableHead data-pinned>Match</TableHead>
           {columns.map((player) => (
-            <PlayerColumnHead key={player.accountId} player={player} />
+            <PlayerColumnHead key={player.accountId} player={player} crownSlot={false} />
           ))}
         </TableRow>
       </TableHeader>

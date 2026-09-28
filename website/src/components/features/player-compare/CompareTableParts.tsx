@@ -10,7 +10,14 @@ import { cn } from "~/lib/utils";
 import type { ComparedPlayer } from "./types";
 
 /** A player's column head in a compare table: their color and name, truncated only in a narrow table. */
-export function PlayerColumnHead({ player }: { player: ComparedPlayer }) {
+export function PlayerColumnHead({
+  player,
+  crownSlot = true,
+}: {
+  player: ComparedPlayer;
+  /** The column's values are `RowValue`s, which keep a crown's slot after them: the name keeps one too. */
+  crownSlot?: boolean;
+}) {
   return (
     <TableHead className="text-end">
       <Inline gap={1} wrap="nowrap" justify="end">
@@ -22,6 +29,8 @@ export function PlayerColumnHead({ player }: { player: ComparedPlayer }) {
             {player.name}
           </span>
         )}
+        {/* The crown's slot every value keeps (RowValue), so the name ends where the values do. */}
+        {crownSlot && <span aria-hidden="true" className="hidden size-3.5 shrink-0 @md/table:block" />}
       </Inline>
     </TableHead>
   );
