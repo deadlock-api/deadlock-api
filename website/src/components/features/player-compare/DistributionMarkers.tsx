@@ -218,6 +218,8 @@ function MetricCurve({
               dataKey="x"
               domain={[from, to]}
               allowDataOverflow
+              // Better is always to the right: a stat where less is better (deaths) runs from high to low.
+              reversed={lowerIsBetter}
               ticks={landmarks.map((landmark) => landmark.x)}
               interval={0}
               // The outer labels align inward, so a label on the plot's edge is not cut in half.
@@ -237,7 +239,14 @@ function MetricCurve({
                   x={x}
                   y={y}
                   dy={CHART_CUSTOM_TICK_DY}
-                  textAnchor={index === 0 ? "start" : index === landmarks.length - 1 ? "end" : "middle"}
+                  // The label at the plot's left edge starts there, the one at its right edge ends there.
+                  textAnchor={
+                    index === (lowerIsBetter ? landmarks.length - 1 : 0)
+                      ? "start"
+                      : index === (lowerIsBetter ? 0 : landmarks.length - 1)
+                        ? "end"
+                        : "middle"
+                  }
                   style={CHART_TICK}
                 >
                   {tickLabel.get(payload.value) ?? ""}
