@@ -351,7 +351,7 @@ export function TogetherAgainstPanel({
         duo: met.some((pair) => duosOf(pair).length > 0),
         against: met.some((pair) => pair.against.matches > 0),
       };
-  const recent = recentSharedMatches(histories, 8);
+  const recent = recentSharedMatches(histories);
   const loadingPairs = players.flatMap((a, i) => players.slice(i + 1).map((b) => [a, b] as const));
 
   return (
