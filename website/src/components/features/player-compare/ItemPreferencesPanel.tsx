@@ -15,6 +15,7 @@ import { FAVORITE_ITEM_COUNT, type FavoriteItem, favoriteItems } from "~/lib/com
 import { formatPercent, formatShare, possessive } from "~/lib/format";
 import { formatStatValue } from "~/lib/stat-format";
 import { toneOf } from "~/lib/tone";
+import { cn } from "~/lib/utils";
 import { type SlimUpgrade, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { type CompareFilters, compareItemStatsParams, lastAnswerForAccount } from "~/queries/player-compare-queries";
@@ -41,7 +42,16 @@ type Column =
   | { state: "ready"; items: FavoriteItem[] };
 
 /** Each player's most bought items of tier 2 and up on the page's filters, with how often and how well. */
-export function ItemPreferencesPanel({ players, filters }: { players: ComparedPlayer[]; filters: CompareFilters }) {
+export function ItemPreferencesPanel({
+  players,
+  filters,
+  className,
+}: {
+  players: ComparedPlayer[];
+  filters: CompareFilters;
+  /** Layout from the parent (grid placement). */
+  className?: string;
+}) {
   const [expanded, setExpanded] = useState(false);
   const itemsQuery = useQuery(itemUpgradesQueryOptions);
   const client = useQueryClient();
@@ -78,7 +88,7 @@ export function ItemPreferencesPanel({ players, filters }: { players: ComparedPl
   const longest = Math.max(0, ...columns.map((column) => (column.state === "ready" ? column.items.length : 0)));
   return (
     // The panel's own width decides how many items a collapsed list shows, not each player's column.
-    <Panel className="@container/items">
+    <Panel className={cn("@container/items", className)}>
       <PanelHeader size="sm" title="Favorite items" />
       <PanelBody size="sm">
         <Grid columns={players.length === 1 ? 1 : COLUMNS[count]} gap={4}>

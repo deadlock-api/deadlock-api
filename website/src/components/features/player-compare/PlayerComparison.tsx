@@ -192,7 +192,16 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             }
           >
             {showSharedHeroes && <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />}
-            <ItemPreferencesPanel players={players} filters={filters} />
+            <ItemPreferencesPanel
+              players={players}
+              filters={filters}
+              // Nothing beside it (one player, or one hero's filter where nobody met): the full width, not half.
+              className={
+                players.length < 4 && !showSharedHeroes && (accountIds.length < 2 || nobodyMet)
+                  ? "@xl:col-span-2"
+                  : undefined
+              }
+            />
             {accountIds.length >= 2 && (
               <TogetherAgainstPanel
                 players={players}
