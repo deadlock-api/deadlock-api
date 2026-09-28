@@ -333,8 +333,13 @@ export function PlayerCards({
                                     ) : aggregate === null ? (
                                       <NoValue />
                                     ) : (
-                                      topHeroes(rows, player.accountId).map((row) => (
-                                        <MostPlayedHero key={row.hero_id} row={row} />
+                                      topHeroes(rows, player.accountId).map((row, heroIndex) => (
+                                        <MostPlayedHero
+                                          key={row.hero_id}
+                                          row={row}
+                                          // A narrow card keeps two, so the recent form fits beside them.
+                                          className={heroIndex >= 2 ? "hidden @stat-trio:inline-block" : undefined}
+                                        />
                                       ))
                                     )}
                                   </Inline>
@@ -400,7 +405,7 @@ export function PlayerCards({
 }
 
 /** One of a card's most played heroes: its icon, a tab stop read as the hero and its record, the numbers on hover. */
-function MostPlayedHero({ row }: { row: HeroStats }) {
+function MostPlayedHero({ row, className }: { row: HeroStats; className?: string }) {
   const winRate = formatPercent(row.wins / row.matches_played, 0);
   return (
     <Tooltip
@@ -411,7 +416,7 @@ function MostPlayedHero({ row }: { row: HeroStats }) {
         </TooltipStats>
       }
     >
-      <TooltipTarget>
+      <TooltipTarget className={className}>
         {/* The image's alt names the hero; the record follows for a screen reader. */}
         <HeroImage heroId={row.hero_id} shape="rounded" ring="border" className="size-7" />
         <span className="sr-only">
