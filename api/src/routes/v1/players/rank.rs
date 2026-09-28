@@ -1,7 +1,8 @@
 use axum::Json;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::http::{StatusCode, header};
 use axum::response::IntoResponse;
+use axum_extra::extract::Query;
 use cached::macros::cached;
 use clickhouse::Row;
 use itertools::Itertools;
