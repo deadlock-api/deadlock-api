@@ -125,7 +125,7 @@ export function RecordsPanel({
   return (
     <Panel className={className}>
       <PanelHeader size="sm" title="Records" />
-      <Table density="dense" className="tabular-nums">
+      <Table density="dense" height="fill" className="tabular-nums">
         <TableHeader tone="muted">
           <TableRow>
             <TableHead data-pinned>Record</TableHead>

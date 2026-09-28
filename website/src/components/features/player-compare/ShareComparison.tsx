@@ -30,7 +30,8 @@ export function ShareComparison({
           {copied ? "Link copied" : failed ? "Copy failed" : "Copy link"}
         </Button>
       </PanelHeader>
-      <PanelBody size="sm">
+      {/* The card as large as the panel allows, in both directions: the panel's height comes from its grid row. */}
+      <PanelBody size="sm" className="@container-size flex min-h-40 flex-1 items-center justify-center">
         <SharePreview
           // Relative, so the preview comes from the site the reader is on.
           src={compareCardUrl(params, "")}
@@ -42,8 +43,7 @@ export function ShareComparison({
           onClick={copyLink}
           // The header's button is the keyboard's way to copy; the card is a second, pointer-sized target for it.
           tabIndex={-1}
-          // Wide columns do not blow the card up past the size it is read at.
-          className="mx-auto max-w-md"
+          fit="contain"
         />
       </PanelBody>
     </Panel>

@@ -37,8 +37,9 @@ import { usePlayerCompareState } from "./usePlayerCompareState";
  * playstyle / match length, trend / rank at one height. `order` sets the reading order in each layout.
  */
 const LAYOUT = {
-  // The share card and match length keep their own heights beside the table; the playstyle between them takes the rest.
-  grid: "@4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @4xl:grid-rows-[auto_1fr_auto] @8xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)] @8xl:grid-rows-none",
+  // The playstyle keeps its own height beside the table; the share card and match length above and below it share the
+  // rest, the card and the plot scaling to it.
+  grid: "@4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @4xl:grid-rows-[1fr_auto_1fr] @8xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)] @8xl:grid-rows-none",
   table: "order-1 @4xl:row-span-3",
   share: "order-2",
   radar: "order-3 @8xl:order-4",
@@ -50,7 +51,7 @@ const LAYOUT = {
 
 /** Four or five players: the table spans the width until @7xl, then two columns, the 3x3 grid from @9xl. */
 const WIDE_LAYOUT = {
-  grid: "@4xl:grid-cols-2 @7xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @7xl:grid-rows-[auto_1fr_auto] @9xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)] @9xl:grid-rows-none",
+  grid: "@4xl:grid-cols-2 @7xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @7xl:grid-rows-[1fr_auto_1fr] @9xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)] @9xl:grid-rows-none",
   table: "order-1 @4xl:col-span-2 @7xl:col-span-1 @7xl:row-span-3",
   share: "order-2",
   radar: "order-3 @9xl:order-4",

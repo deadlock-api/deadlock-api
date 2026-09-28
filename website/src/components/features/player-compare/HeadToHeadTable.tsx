@@ -57,7 +57,7 @@ export function HeadToHeadTable({
   return (
     <Panel {...props}>
       <PanelHeader size="sm" title="Head to head" />
-      <Table density="dense" className="tabular-nums">
+      <Table density="dense" height="fill" className="tabular-nums">
         <TableHeader tone="muted">
           <TableRow>
             <TableHead data-pinned>Stat</TableHead>

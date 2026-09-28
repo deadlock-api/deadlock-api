@@ -106,7 +106,7 @@ export function PerformanceTrendPanel({
               }}
             />
           ) : histories.some((history) => history.isPending) ? (
-            <ChartLoading label={LABEL} size="fill" className="min-h-40 flex-1" />
+            <ChartLoading label={LABEL} size="fill" className="min-h-32 flex-1" />
           ) : (
             <PerformanceTrendChart players={players} metric={metric} weeksByPlayer={weeksByPlayer} />
           )}
@@ -147,7 +147,7 @@ function PerformanceTrendChart({
         variant="plain"
         icon={ChartNoAxesCombined}
         title={`No week with ${MIN_WEEK_MATCHES} or more matches`}
-        className="min-h-40 flex-1"
+        className="min-h-32 flex-1"
       />
     );
   }
@@ -164,7 +164,7 @@ function PerformanceTrendChart({
   const summary = `${selected.label} by UTC week, from the week of ${longDate(first.week)} to the week of ${longDate(last.week)}, weeks with ${MIN_WEEK_MATCHES} or more matches. Latest: ${latest.join("; ")}.`;
 
   return (
-    <ChartSurface label={summary} announce="label" size="fill" variant="flush" className="min-h-40 flex-1">
+    <ChartSurface label={summary} announce="label" size="fill" variant="flush" className="min-h-32 flex-1">
       <LineChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false}>
         <CartesianGrid {...CHART_GRID} />
         <XAxis
