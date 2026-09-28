@@ -157,11 +157,14 @@ function RecordValue({
 export function RecordsPanel({
   players,
   histories,
+  heroFiltered = false,
   className,
 }: {
   players: ComparedPlayer[];
   /** The players' match histories on the filters, in the players' order (`useCompareMatchHistories`). */
   histories: readonly CompareMatchHistory[];
+  /** The page is on one hero: a best hero would only name that hero. */
+  heroFiltered?: boolean;
   /** Layout from the parent (grid placement). */
   className?: string;
 }) {
@@ -185,7 +188,7 @@ export function RecordsPanel({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {ROWS.map((row) => {
+          {ROWS.filter((row) => !heroFiltered || row.key !== "bestHero").map((row) => {
             const values = records.map((record) => (record ? row.value(record) : null));
             const winners = statWinners(values, "higher");
             return (

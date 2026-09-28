@@ -169,7 +169,12 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
           <Grid gap={4} className={layout.grid}>
             <HeadToHeadTable players={players} className={layout.table} />
             <ShareComparison filters={filters} className={layout.share} />
-            <RecordsPanel players={players} histories={histories} className={layout.records} />
+            <RecordsPanel
+              players={players}
+              histories={histories}
+              heroFiltered={filters.heroId != null}
+              className={layout.records}
+            />
             <PlaystyleRadarPanel players={players} metrics={metrics} className={layout.radar} />
             <MatchLengthPanel players={players} histories={histories} className={layout.length} />
             <PerformanceTrendPanel players={players} histories={histories} className={layout.trend} />
@@ -177,7 +182,10 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
           </Grid>
           <PercentileComparison players={players} metrics={metrics} />
           {/* How a match goes for each, then when they play: the timeline, the hours and the weekdays at one height. */}
-          <Grid gap={4} className="@4xl:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1fr)]">
+          <Grid
+            gap={4}
+            className="@4xl:grid-cols-[minmax(0,3fr)_minmax(0,3fr)_minmax(0,2fr)] @8xl:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1fr)]"
+          >
             <TimelinePanel players={players} filters={filters} />
             <ActivityPanel players={players} histories={histories} by="hour" />
             <ActivityPanel players={players} histories={histories} by="weekday" />
