@@ -1,0 +1,58 @@
+message CMsgMatchMetaDataContentsPatched {
+  message Players {
+    optional uint32 account_id = 1;
+    optional uint32 player_slot = 2;
+    repeated .CMsgMatchMetaDataContents.Deaths death_details = 3;
+    repeated .CMsgMatchMetaDataContents.Items items = 4;
+    repeated .CMsgMatchMetaDataContents.PlayerStats stats = 5;
+    optional .ECitadelLobbyTeam team = 6 [default = k_ECitadelLobbyTeam_Team0];
+    optional uint32 kills = 8;
+    optional uint32 deaths = 9;
+    optional uint32 assists = 10;
+    optional uint32 net_worth = 11;
+    optional uint32 hero_id = 12;
+    optional uint32 last_hits = 13;
+    optional uint32 denies = 14;
+    optional uint32 ability_points = 15;
+    optional uint32 party = 16;
+    optional uint32 assigned_lane = 17;
+    optional uint32 level = 18;
+    repeated .CMsgMatchMetaDataContents.Ping pings = 19;
+    repeated .CMsgMatchMetaDataContents.AbilityStat ability_stats = 20;
+    repeated float stats_type_stat = 21 [packed = true];
+    repeated .CMsgMatchMetaDataContents.BookReward book_rewards = 22;
+    optional uint32 abandon_match_time_s = 23;
+    optional bool rewards_eligible = 26;
+  }
+
+  message MatchInfo {
+    optional uint32 duration_s = 1;
+    optional .CMsgMatchMetaDataContents.EMatchOutcome match_outcome = 2 [default = k_eOutcome_TeamWin];
+    optional .ECitadelLobbyTeam winning_team = 3 [default = k_ECitadelLobbyTeam_Team0];
+    repeated .CMsgMatchMetaDataContentsPatched.Players players = 4;
+    optional uint32 start_time = 5;
+    optional uint64 match_id = 6;
+    optional uint32 legacy_objectives_mask = 8;
+    optional .ECitadelGameMode game_mode = 9 [default = k_ECitadelGameMode_Invalid];
+    optional .ECitadelMatchMode match_mode = 10 [default = k_ECitadelMatchMode_Invalid];
+    repeated .CMsgMatchMetaDataContents.Objective objectives = 11;
+    optional .CMsgMatchPlayerPathsData match_paths = 12;
+    optional .CMsgMatchPlayerDamageMatrix damage_matrix = 13;
+    repeated .CMsgMatchMetaDataContents.Pause match_pauses = 14;
+    repeated .CMsgMatchMetaDataContents.CustomUserStatInfo custom_user_stats = 15;
+    repeated .CMsgMatchMetaDataContents.WatchedDeathReplay watched_death_replays = 16;
+    optional uint64 objectives_mask_team0 = 17;
+    optional uint64 objectives_mask_team1 = 18;
+    repeated .CMsgMatchMetaDataContents.MidBoss mid_boss = 19;
+    optional bool is_high_skill_range_parties = 20;
+    optional bool low_pri_pool = 21;
+    optional bool new_player_pool = 22;
+    optional uint32 average_badge_team0 = 23;
+    optional uint32 average_badge_team1 = 24;
+    optional uint32 game_mode_version = 25;
+    optional bool rewards_eligible = 26;
+    optional bool not_scored = 27;
+  }
+
+  optional .CMsgMatchMetaDataContentsPatched.MatchInfo match_info = 2;
+}
