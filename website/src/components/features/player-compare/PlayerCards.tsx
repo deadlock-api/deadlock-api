@@ -193,7 +193,7 @@ export function PlayerCards({
                                           format="number"
                                           digits={0}
                                           sign="arrow"
-                                          unit=""
+                                          unit=" div"
                                           title={`${climb > 0 ? "+" : ""}${climb} divisions on these dates`}
                                         />
                                       )}
