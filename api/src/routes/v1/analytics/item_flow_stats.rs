@@ -375,7 +375,7 @@ fn build_totals_query(parts: &QueryParts) -> String {
         {reached_select}
     FROM match_player
     WHERE {match_filters} {base_player_filters}
-    SETTINGS log_comment = 'item_flow_stats_totals', apply_patch_parts = 0
+    SETTINGS log_comment = 'item_flow_stats_totals', apply_patch_parts = 0, optimize_use_projections = 0
     "
     )
 }
@@ -488,7 +488,7 @@ fn build_nodes_query(query: &ItemFlowStatsQuery) -> String {
     GROUP BY column, item_id
     HAVING matches >= {min_matches}
     ORDER BY column ASC, matches DESC
-    SETTINGS log_comment = 'item_flow_stats_nodes', apply_patch_parts = 0
+    SETTINGS log_comment = 'item_flow_stats_nodes', apply_patch_parts = 0, optimize_use_projections = 0
     "
     )
 }
@@ -526,7 +526,7 @@ fn build_edges_query(query: &ItemFlowStatsQuery) -> String {
     GROUP BY from_column, from_item_id, to_item_id
     HAVING matches >= {min_matches}
     ORDER BY matches DESC
-    SETTINGS log_comment = 'item_flow_stats_edges', apply_patch_parts = 0
+    SETTINGS log_comment = 'item_flow_stats_edges', apply_patch_parts = 0, optimize_use_projections = 0
     "
     )
 }
