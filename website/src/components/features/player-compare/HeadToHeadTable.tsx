@@ -7,7 +7,6 @@ import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { NoValue } from "~/components/ui/no-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline } from "~/components/ui/stack";
-import { StatusDot } from "~/components/ui/status-dot";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Text } from "~/components/ui/text";
 import { COMPARE_STAT_GROUPS, type CompareStat, compareStatWinners, scoreComparison } from "~/lib/player-compare";
@@ -15,6 +14,7 @@ import { formatPlayerMetricValue } from "~/lib/player-metrics";
 import { badgeLabel } from "~/lib/rank-utils";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
+import { PlayerColumnHead, RowValue } from "./CompareTableParts";
 import type { ComparedPlayer } from "./types";
 
 /** One value as the table shows it: a number in its format, or a rank as its badge and name. */
@@ -62,18 +62,7 @@ export function HeadToHeadTable({
           <TableRow>
             <TableHead data-pinned>Stat</TableHead>
             {players.map((player) => (
-              <TableHead key={player.accountId} className="text-end">
-                <Inline gap={1} wrap="nowrap" justify="end">
-                  <StatusDot color={player.color} />
-                  {player.profileLoading ? (
-                    <Skeleton className="h-4 w-20" />
-                  ) : (
-                    <span className="max-w-14 truncate @md/table:max-w-32 @xl/table:max-w-none" title={player.name}>
-                      {player.name}
-                    </span>
-                  )}
-                </Inline>
-              </TableHead>
+              <PlayerColumnHead key={player.accountId} player={player} />
             ))}
           </TableRow>
         </TableHeader>
@@ -126,18 +115,9 @@ export function HeadToHeadTable({
                           ) : value === undefined ? (
                             <Skeleton className="ms-auto h-4 w-12" />
                           ) : (
-                            <Inline gap={1} wrap="nowrap" justify="end">
-                              {/* The best value: a crown and full ink, the rest muted. No hue: every hue is also some
-                                  player's color. */}
-                              {/* A phone-narrow table keeps the bold ink and drops the crown, so more players fit. */}
-                              {won && (
-                                <CrownIcon aria-hidden="true" className="hidden size-3.5 shrink-0 @md/table:block" />
-                              )}
-                              <Text tone={won ? "default" : "muted"} className={won ? "font-semibold" : undefined}>
-                                <StatValue stat={stat} value={value} ranks={ranks} />
-                              </Text>
-                              {won && <span className="sr-only">, best</span>}
-                            </Inline>
+                            <RowValue won={won}>
+                              <StatValue stat={stat} value={value} ranks={ranks} />
+                            </RowValue>
                           )}
                         </TableCell>
                       );
