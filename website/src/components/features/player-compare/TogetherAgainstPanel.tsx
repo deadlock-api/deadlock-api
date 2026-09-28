@@ -1,5 +1,5 @@
 import { HeroImage } from "~/components/domain/assets/HeroImage";
-import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
+import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Delta } from "~/components/ui/delta";
 import { NoValue } from "~/components/ui/no-value";
@@ -271,7 +271,13 @@ export function TogetherAgainstPanel({
         const player = byId.get(history.accountId);
         return player ? <HistoryError key={history.accountId} player={player} history={history} /> : null;
       })}
-      {(loading || pairs.length > 0) && (
+      {/* Nobody met: one line instead of a table of empty rows. */}
+      {!loading && pairs.length > 0 && met.length === 0 && (
+        <PanelBody size="sm">
+          <Text tone="muted">{pairs.length === 1 ? "Never met" : "No two of them have met"} on these dates</Text>
+        </PanelBody>
+      )}
+      {(loading || met.length > 0) && (
         <Table density="dense" className="tabular-nums" aria-busy={loading || undefined}>
           <TableHeader tone="muted">
             <TableRow>
