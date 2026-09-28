@@ -1,4 +1,5 @@
 import type { PlayerAggregate } from "~/lib/player-compare";
+import type { Color } from "~/types/general";
 
 /** One column of a comparison. */
 export interface ComparedPlayer {
@@ -8,7 +9,7 @@ export interface ComparedPlayer {
   avatar?: string;
   profileLoading: boolean;
   /** The player's series color, the same in every section. */
-  color: string;
+  color: Color;
   /** What the player's percentiles say they are good at: "Farmer", "Support"; undefined until known. */
   playstyle?: string;
   /** The current rank, whatever the filters: undefined while it loads, null when unranked or unknown. */
