@@ -92,7 +92,8 @@ function RecordValue({ match, won, children }: { match?: RecordMatch | null; won
   return (
     <Inline gap={1.5} wrap="nowrap" justify="end" title={date}>
       {/* The image's alt and title name the hero. */}
-      <HeroImage heroId={match.heroId} shape="circle" className="size-5" />
+      {/* A narrow table keeps the numbers and gives the hero's room to the other players' columns. */}
+      <HeroImage heroId={match.heroId} shape="circle" className="hidden size-5 @xl/table:block" />
       <RowValue won={won}>{children}</RowValue>
       <span className="sr-only">on {date}</span>
     </Inline>

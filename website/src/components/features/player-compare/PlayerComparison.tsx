@@ -174,8 +174,9 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             <RankHistoryPanel players={players} filters={filters} histories={histories} />
             <PerformanceTrendPanel players={players} histories={histories} />
           </Grid>
-          {/* Bests and streaks beside how each player fares as matches run long. */}
-          <Grid columns={{ base: 1, xl: 2 }} gap={4} className="items-start">
+          {/* Bests and streaks beside how each player fares as matches run long; four or five columns of records
+              need the whole width until the page is very wide, like the head-to-head. */}
+          <Grid gap={4} className={cn("items-start", players.length >= 4 ? "@7xl:grid-cols-2" : "@4xl:grid-cols-2")}>
             <RecordsPanel players={players} histories={histories} />
             <MatchLengthPanel players={players} histories={histories} />
           </Grid>
