@@ -166,15 +166,31 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             <PerformanceTrendPanel players={players} histories={histories} className={layout.trend} />
           </Grid>
           <PercentileComparison players={players} metrics={metrics} />
-          <ActivityPanel players={players} histories={histories} />
-          {/* Heroes and items side by side. */}
-          <Grid columns={{ base: 1, xl: showSharedHeroes ? 2 : 1 }} gap={4}>
+          {/* When they play: the hours beside the weekdays, each its own panel at one height. */}
+          <Grid gap={4} className="@4xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            <ActivityPanel players={players} histories={histories} by="hour" />
+            <ActivityPanel players={players} histories={histories} by="weekday" />
+          </Grid>
+          {/* Heroes and items side by side; very wide, together & against joins them as a third column (the row takes
+              as many equal columns as it has panels, since together & against only shows when two players met). */}
+          <Grid
+            gap={4}
+            className={
+              showSharedHeroes
+                ? "@xl:grid-cols-2 @8xl:auto-cols-fr @8xl:grid-flow-col @8xl:grid-cols-none"
+                : "@8xl:auto-cols-fr @8xl:grid-flow-col"
+            }
+          >
             {showSharedHeroes && <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />}
             <ItemPreferencesPanel players={players} filters={filters} />
+            {accountIds.length >= 2 && (
+              <TogetherAgainstPanel
+                players={players}
+                histories={histories}
+                className={showSharedHeroes ? "@xl:col-span-2 @8xl:col-span-1" : undefined}
+              />
+            )}
           </Grid>
-          {/* Across the page, last: the records and the shared matches read best wide, and the panel only appears once
-              the match histories are in (and only when two players met), so appearing late moves nothing. */}
-          {accountIds.length >= 2 && <TogetherAgainstPanel players={players} histories={histories} />}
         </>
       )}
     </Stack>

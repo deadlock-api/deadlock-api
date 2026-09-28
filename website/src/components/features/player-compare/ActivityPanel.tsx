@@ -1,4 +1,4 @@
-import { CalendarClock } from "lucide-react";
+import { CalendarDays, Clock } from "lucide-react";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
@@ -13,7 +13,6 @@ import {
   CHART_Y_AXIS,
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
-import { Grid } from "~/components/ui/grid";
 import { NoValue } from "~/components/ui/no-value";
 import { Stack } from "~/components/ui/stack";
 import { day } from "~/dayjs";
@@ -24,7 +23,6 @@ import { formatPercent } from "~/lib/format";
 import type { ComparedPlayer } from "./types";
 import type { CompareMatchHistory } from "./useCompareMatchHistories";
 
-const LABEL = "when they play";
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const HOUR_TICKS = [0, 3, 6, 9, 12, 15, 18, 21];
 
@@ -41,17 +39,20 @@ interface Point {
 const hourLabel = (hour: number) => `${String(hour).padStart(2, "0")}:00`;
 
 /**
- * When each compared player plays: the share of their matches by hour of day and by weekday, on the viewer's own
+ * When each compared player plays: the share of their matches by hour of day or by weekday, on the viewer's own
  * clock. Drawn only once hydrated, since the server renders in UTC and does not know the viewer's time zone.
  */
 export function ActivityPanel({
   players,
   histories,
+  by = "hour",
   className,
 }: {
   players: ComparedPlayer[];
   /** The players' match histories on the filters, in the players' order (`useCompareMatchHistories`). */
   histories: readonly CompareMatchHistory[];
+  /** What the plot runs over: the 24 hours of a day, or the 7 days of a week. */
+  by?: "hour" | "weekday";
   /** Layout from the parent (grid placement). */
   className?: string;
 }) {
@@ -72,62 +73,58 @@ export function ActivityPanel({
     matches: Object.fromEntries(keys.map((key, index) => [key, counts[index].matches])),
     wins: Object.fromEntries(keys.map((key, index) => [key, counts[index].wins])),
   });
-  // Local hours and weekdays: only read once hydrated, below.
-  const byHour = pending
+  // Local hours or weekdays: only read once hydrated.
+  const points = pending
     ? []
-    : histories.map((history) => matchesByHour(history.matches ?? [], (unix) => day.unix(unix).hour()));
-  const byWeekday = pending
-    ? []
-    : histories.map((history) => matchesByWeekday(history.matches ?? [], (unix) => (day.unix(unix).day() + 6) % 7));
-  const hours = pending
-    ? []
-    : Array.from({ length: 24 }, (_, hour) =>
-        point(
-          hourLabel(hour),
-          `${hourLabel(hour)} – ${hourLabel((hour + 1) % 24)}`,
-          byHour.map((buckets) => buckets[hour]),
-        ),
-      );
-  const weekdays = pending
-    ? []
-    : WEEKDAYS.map((label, weekday) =>
-        point(
-          label,
-          label,
-          byWeekday.map((buckets) => buckets[weekday]),
-        ),
-      );
+    : by === "hour"
+      ? (() => {
+          const byHour = histories.map((history) =>
+            matchesByHour(history.matches ?? [], (unix) => day.unix(unix).hour()),
+          );
+          return Array.from({ length: 24 }, (_, hour) =>
+            point(
+              hourLabel(hour),
+              `${hourLabel(hour)} – ${hourLabel((hour + 1) % 24)}`,
+              byHour.map((buckets) => buckets[hour]),
+            ),
+          );
+        })()
+      : (() => {
+          const byWeekday = histories.map((history) =>
+            matchesByWeekday(history.matches ?? [], (unix) => (day.unix(unix).day() + 6) % 7),
+          );
+          return WEEKDAYS.map((label, weekday) =>
+            point(
+              label,
+              label,
+              byWeekday.map((buckets) => buckets[weekday]),
+            ),
+          );
+        })();
+  const title = by === "hour" ? "Time of day" : "Day of week";
 
   return (
     <Panel className={className}>
-      <PanelHeader size="sm" title="When they play" icon={CalendarClock} />
+      <PanelHeader size="sm" title={title} icon={by === "hour" ? Clock : CalendarDays} />
       <PanelBody size="sm">
         <Stack gap={2}>
           {allFailed ? (
             <ChartError
-              label={LABEL}
+              label={title}
               onRetry={() => {
                 for (const history of histories) if (history.isError) history.refetch();
               }}
             />
           ) : pending ? (
-            <ChartLoading label={LABEL} size="md" />
+            <ChartLoading label={title} size="md" />
           ) : (
-            <Grid gap={4} className="@2xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-              <ShareChart
-                players={players}
-                keys={keys}
-                points={hours}
-                ticks={HOUR_TICKS.map(hourLabel)}
-                summary={`Share of each player's matches by the hour they started, local time. ${summarize(players, keys, hours)}`}
-              />
-              <ShareChart
-                players={players}
-                keys={keys}
-                points={weekdays}
-                summary={`Share of each player's matches by weekday, local time. ${summarize(players, keys, weekdays)}`}
-              />
-            </Grid>
+            <ShareChart
+              players={players}
+              keys={keys}
+              points={points}
+              ticks={by === "hour" ? HOUR_TICKS.map(hourLabel) : undefined}
+              summary={`Share of each player's matches by ${by === "hour" ? "the hour they started" : "weekday"}, local time. ${summarize(players, keys, points)}`}
+            />
           )}
           <ChartLegend label="Players">
             {players.map((player) => (
