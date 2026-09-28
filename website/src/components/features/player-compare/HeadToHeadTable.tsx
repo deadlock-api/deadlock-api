@@ -45,9 +45,11 @@ export function HeadToHeadTable({
   const { data: ranks = [] } = useQuery(ranksQueryOptions);
   const aggregates = players.map((player) => player.aggregate);
   const { stats, scored, tally, leaders, settled } = scoreComparison(aggregates);
-  // "Heroes played: 1" for everyone (one hero's filter) says nothing.
+  // "Heroes played: 1" for everyone with matches (one hero's filter) says nothing; kept while anyone loads.
   const shown = stats.filter(
-    (stat) => stat.key !== "heroesPlayed" || aggregates.some((aggregate) => aggregate?.heroesPlayed !== 1),
+    (stat) =>
+      stat.key !== "heroesPlayed" ||
+      aggregates.some((aggregate) => aggregate === undefined || (aggregate !== null && aggregate.heroesPlayed !== 1)),
   );
   const winnersOf = (stat: CompareStat) => compareStatWinners(aggregates, stat);
   // Two players with matches make a contest; a player without any is shown but not scored.
@@ -111,7 +113,17 @@ export function HeadToHeadTable({
                       return (
                         <TableCell key={player.accountId} className="text-end">
                           {player.aggregate === null ? (
-                            <Text tone="muted">No matches</Text>
+                            // Said once, in the matches row; the other rows of that column are empty, but for the
+                            // rank, which is the player's whatever the filters.
+                            stat.key === "rankBadge" && player.rankBadge ? (
+                              <Text tone="muted">
+                                <StatValue stat={stat} value={player.rankBadge} ranks={ranks} />
+                              </Text>
+                            ) : stat.key === "matches" ? (
+                              <Text tone="muted">No matches</Text>
+                            ) : (
+                              <NoValue label="No matches" />
+                            )
                           ) : value === undefined ? (
                             <Skeleton className="ms-auto h-4 w-12" />
                           ) : (
