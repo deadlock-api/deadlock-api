@@ -15,9 +15,15 @@ export interface PatchInfo {
 
 export const PATCHES: readonly PatchInfo[] = [
   {
+    id: "2026-09-29",
+    name: "City Never Sleeps (2026-09-29)",
+    startDate: day.utc("2026-09-29T20:25:11Z").local(),
+  },
+  {
     id: "2026-09-16",
     name: "Minor Update (2026-09-16)",
     startDate: day.utc("2026-09-16T22:41:46Z").local(),
+    endDate: day.utc("2026-09-29T20:25:11Z").local(),
   },
   {
     id: "2026-07-30",
