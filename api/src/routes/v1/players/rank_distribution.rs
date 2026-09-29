@@ -102,7 +102,7 @@ fn build_query(query: &RankDistributionQuery) -> String {
     SELECT
         badge,
         intDiv(badge, 10) AS rank,
-        badge % 10 AS subrank,
+        toUInt32(badge % 10) AS subrank,
         count() AS players
     FROM (
         SELECT {badge} AS badge
