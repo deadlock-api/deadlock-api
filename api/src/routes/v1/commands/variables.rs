@@ -948,7 +948,7 @@ impl Variable {
         let (leaderboard, steam_name) = join(
             async {
                 let raw_leaderboard =
-                    fetch_leaderboard_raw(&state.steam_client, region, hero_id).await?;
+                    fetch_leaderboard_raw(&state.steam_client, region, hero_id, None).await?;
                 let proto_leaderboard: SteamProxyResponse<CMsgClientToGcGetLeaderboardResponse> =
                     raw_leaderboard.try_into()?;
                 let leaderboard: APIResult<Leaderboard> = proto_leaderboard.msg.try_into();

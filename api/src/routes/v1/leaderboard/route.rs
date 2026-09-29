@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use base64::Engine;
@@ -48,20 +48,29 @@ pub(super) struct LeaderboardHeroQuery {
     hero_id: u32,
 }
 
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub(super) struct LeaderboardIdQuery {
+    /// Leaderboard to fetch, e.g. a ranked season's `leaderboard_id` from
+    /// <https://api.deadlock-api.com/v1/assets/ranked-seasons>. Defaults to the current one.
+    leaderboard_id: Option<u32>,
+}
+
 #[cached(
     ttl_secs = 600,
-    convert = "{ (region, hero_id) }",
-    key = "(LeaderboardRegion, Option<u32>)"
+    convert = "{ (region, hero_id, leaderboard_id) }",
+    key = "(LeaderboardRegion, Option<u32>, Option<u32>)"
 )]
 pub(crate) async fn fetch_leaderboard_raw(
     steam_client: &SteamClient,
     region: LeaderboardRegion,
     hero_id: Option<u32>,
+    leaderboard_id: Option<u32>,
 ) -> Result<SteamProxyRawResponse, SteamProxyError> {
     let msg = CMsgClientToGcGetLeaderboard {
         leaderboard_region: Some(region as i32),
         hero_id,
-        leaderboard_id: None,
+        leaderboard_id,
     };
     steam_client
         .call_steam_proxy_raw(SteamProxyQuery {
@@ -216,7 +225,7 @@ async fn insert_hero_leaderboard_to_ch(
 #[utoipa::path(
     get,
     path = "/{region}/raw",
-    params(LeaderboardQuery),
+    params(LeaderboardQuery, LeaderboardIdQuery),
     responses(
         (status = OK, body = [u8]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
@@ -249,14 +258,19 @@ Valve updates the leaderboard once per hour.
 pub(super) async fn leaderboard_raw(
     State(state): State<AppState>,
     Path(LeaderboardQuery { region }): Path<LeaderboardQuery>,
+    Query(LeaderboardIdQuery { leaderboard_id }): Query<LeaderboardIdQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let steam_response =
-        tryhard::retry_fn(|| fetch_leaderboard_raw(&state.steam_client, region, None))
-            .retries(3)
-            .fixed_backoff(Duration::from_millis(10))
-            .await?;
+    let steam_response = tryhard::retry_fn(|| {
+        fetch_leaderboard_raw(&state.steam_client, region, None, leaderboard_id)
+    })
+    .retries(3)
+    .fixed_backoff(Duration::from_millis(10))
+    .await?;
     let decoded = BASE64_STANDARD.decode(&steam_response.data)?;
-    if let Ok(proto) = CMsgClientToGcGetLeaderboardResponse::decode(decoded.as_slice()) {
+    // Snapshots track the current leaderboard only; other leaderboards would mix seasons.
+    if leaderboard_id.is_none()
+        && let Ok(proto) = CMsgClientToGcGetLeaderboardResponse::decode(decoded.as_slice())
+    {
         let ch_client = state.ch_client.clone();
         tokio::spawn(async move {
             insert_leaderboard_to_ch(&ch_client, region, &proto.entries).await;
@@ -268,7 +282,7 @@ pub(super) async fn leaderboard_raw(
 #[utoipa::path(
     get,
     path = "/{region}/{hero_id}/raw",
-    params(LeaderboardHeroQuery),
+    params(LeaderboardHeroQuery, LeaderboardIdQuery),
     responses(
         (status = OK, body = [u8]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
@@ -301,6 +315,7 @@ Valve updates the leaderboard once per hour.
 pub(super) async fn leaderboard_hero_raw(
     State(state): State<AppState>,
     Path(LeaderboardHeroQuery { region, hero_id }): Path<LeaderboardHeroQuery>,
+    Query(LeaderboardIdQuery { leaderboard_id }): Query<LeaderboardIdQuery>,
 ) -> APIResult<impl IntoResponse> {
     if !state.assets_client.validate_hero_id(hero_id).await {
         return Err(APIError::status_msg(
@@ -308,13 +323,17 @@ pub(super) async fn leaderboard_hero_raw(
             format!("Invalid hero_id: {hero_id}"),
         ));
     }
-    let steam_response =
-        tryhard::retry_fn(|| fetch_leaderboard_raw(&state.steam_client, region, Some(hero_id)))
-            .retries(3)
-            .fixed_backoff(Duration::from_millis(10))
-            .await?;
+    let steam_response = tryhard::retry_fn(|| {
+        fetch_leaderboard_raw(&state.steam_client, region, Some(hero_id), leaderboard_id)
+    })
+    .retries(3)
+    .fixed_backoff(Duration::from_millis(10))
+    .await?;
     let decoded = BASE64_STANDARD.decode(&steam_response.data)?;
-    if let Ok(proto) = CMsgClientToGcGetLeaderboardResponse::decode(decoded.as_slice()) {
+    // Snapshots track the current leaderboard only; other leaderboards would mix seasons.
+    if leaderboard_id.is_none()
+        && let Ok(proto) = CMsgClientToGcGetLeaderboardResponse::decode(decoded.as_slice())
+    {
         let ch_client = state.ch_client.clone();
         tokio::spawn(async move {
             insert_hero_leaderboard_to_ch(&ch_client, region, hero_id, &proto.entries).await;
@@ -326,7 +345,7 @@ pub(super) async fn leaderboard_hero_raw(
 #[utoipa::path(
     get,
     path = "/{region}",
-    params(LeaderboardQuery),
+    params(LeaderboardQuery, LeaderboardIdQuery),
     responses(
         (status = OK, body = Leaderboard),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
@@ -352,18 +371,22 @@ Valve updates the leaderboard once per hour.
 pub(super) async fn leaderboard(
     State(state): State<AppState>,
     Path(LeaderboardQuery { region }): Path<LeaderboardQuery>,
+    Query(LeaderboardIdQuery { leaderboard_id }): Query<LeaderboardIdQuery>,
 ) -> APIResult<impl IntoResponse> {
     let (raw_leaderboard, steam_names) = join!(
-        fetch_leaderboard_raw(&state.steam_client, region, None),
+        fetch_leaderboard_raw(&state.steam_client, region, None, leaderboard_id),
         fetch_all_steam_names(&state.ch_client_ro),
     );
     let proto_leaderboard: SteamProxyResponse<CMsgClientToGcGetLeaderboardResponse> =
         raw_leaderboard?.try_into()?;
-    let ch_client = state.ch_client.clone();
-    let entries = proto_leaderboard.msg.entries.clone();
-    tokio::spawn(async move {
-        insert_leaderboard_to_ch(&ch_client, region, &entries).await;
-    });
+    // Snapshots track the current leaderboard only; other leaderboards would mix seasons.
+    if leaderboard_id.is_none() {
+        let ch_client = state.ch_client.clone();
+        let entries = proto_leaderboard.msg.entries.clone();
+        tokio::spawn(async move {
+            insert_leaderboard_to_ch(&ch_client, region, &entries).await;
+        });
+    }
     let mut leaderboard: APIResult<Leaderboard> = proto_leaderboard.msg.try_into();
     match steam_names {
         Ok(steam_names) => {
@@ -386,7 +409,7 @@ pub(super) async fn leaderboard(
 #[utoipa::path(
     get,
     path = "/{region}/{hero_id}",
-    params(LeaderboardHeroQuery),
+    params(LeaderboardHeroQuery, LeaderboardIdQuery),
     responses(
         (status = OK, body = Leaderboard),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
@@ -412,6 +435,7 @@ Valve updates the leaderboard once per hour.
 pub(super) async fn leaderboard_hero(
     State(state): State<AppState>,
     Path(LeaderboardHeroQuery { region, hero_id }): Path<LeaderboardHeroQuery>,
+    Query(LeaderboardIdQuery { leaderboard_id }): Query<LeaderboardIdQuery>,
 ) -> APIResult<impl IntoResponse> {
     if !state.assets_client.validate_hero_id(hero_id).await {
         return Err(APIError::status_msg(
@@ -420,16 +444,19 @@ pub(super) async fn leaderboard_hero(
         ));
     }
     let (raw_leaderboard, steam_names) = join!(
-        fetch_leaderboard_raw(&state.steam_client, region, hero_id.into()),
+        fetch_leaderboard_raw(&state.steam_client, region, hero_id.into(), leaderboard_id),
         fetch_all_steam_names(&state.ch_client_ro),
     );
     let proto_leaderboard: SteamProxyResponse<CMsgClientToGcGetLeaderboardResponse> =
         raw_leaderboard?.try_into()?;
-    let ch_client = state.ch_client.clone();
-    let entries = proto_leaderboard.msg.entries.clone();
-    tokio::spawn(async move {
-        insert_hero_leaderboard_to_ch(&ch_client, region, hero_id, &entries).await;
-    });
+    // Snapshots track the current leaderboard only; other leaderboards would mix seasons.
+    if leaderboard_id.is_none() {
+        let ch_client = state.ch_client.clone();
+        let entries = proto_leaderboard.msg.entries.clone();
+        tokio::spawn(async move {
+            insert_hero_leaderboard_to_ch(&ch_client, region, hero_id, &entries).await;
+        });
+    }
     let mut leaderboard: APIResult<Leaderboard> = proto_leaderboard.msg.try_into();
     match steam_names {
         Ok(steam_names) => {
