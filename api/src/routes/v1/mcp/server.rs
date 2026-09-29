@@ -240,6 +240,7 @@ impl McpServer {
                     "name": h.name,
                     "className": h.class_name,
                     "playerSelectable": h.player_selectable,
+                    "developmentState": h.development_state,
                     "disabled": h.disabled,
                 })
             })

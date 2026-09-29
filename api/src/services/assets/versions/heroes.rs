@@ -204,8 +204,12 @@ pub(crate) struct DraftBucketing {
 struct RawHero {
     #[serde(rename = "m_HeroID")]
     id: u32,
+    /// Removed in build 6711 in favour of `m_eHeroDevelopmentState`.
     #[serde(rename = "m_bPlayerSelectable", default)]
-    player_selectable: bool,
+    player_selectable: Option<bool>,
+    /// Added in build 6711 (`EHeroDevState_*`); absent on dev/disabled heroes.
+    #[serde(rename = "m_eHeroDevelopmentState", default)]
+    development_state: Option<String>,
     #[serde(rename = "m_bDisabled", default)]
     disabled: bool,
     #[serde(rename = "m_bInDevelopment", default)]
@@ -311,10 +315,17 @@ pub(crate) struct Hero {
     #[schema(value_type = Option<StdMap<String, f64>>)]
     #[graphql(skip)]
     pub item_draft_weights: Option<IndexMap<String, f64>>,
+    /// Read from `m_bPlayerSelectable` on older builds; since build 6711 it is
+    /// derived as `development_state == release`.
     pub player_selectable: bool,
+    /// Hero development state (`m_eHeroDevelopmentState`, build 6711+). `null`
+    /// on older builds and on heroes that don't declare one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub development_state: Option<HeroDevelopmentState>,
     pub disabled: bool,
     pub in_development: bool,
     pub needs_testing: bool,
+    /// `m_bAssignedPlayersOnly` was removed in build 6711; always `false` since.
     pub assigned_players_only: bool,
     /// Always emitted (empty if the hero declares no `m_vecHeroTags`).
     pub tags: Vec<String>,
@@ -324,6 +335,8 @@ pub(crate) struct Hero {
     pub hideout_rich_presence: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hero_type: Option<HeroType>,
+    /// Read from `m_bPrereleaseOnly` on older builds; since build 6711 it is
+    /// derived as `development_state == pre_release`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prerelease_only: Option<bool>,
     pub limited_testing: bool,
@@ -354,7 +367,9 @@ pub(crate) struct Hero {
     #[schema(value_type = StdMap<String, ScalingStat>)]
     #[graphql(skip)]
     pub scaling_stats: IndexMap<String, ScalingStat>,
-    #[schema(value_type = StdMap<ItemSlotType, Vec<PurchaseBonus>>)]
+    /// Deprecated: `m_mapPurchaseBonuses` was removed in build 6711, so this is
+    /// always empty for newer builds.
+    #[schema(value_type = StdMap<ItemSlotType, Vec<PurchaseBonus>>, deprecated)]
     #[graphql(skip)]
     pub purchase_bonuses: IndexMap<ItemSlotType, Vec<PurchaseBonus>>,
     #[schema(value_type = StdMap<String, f64>)]
@@ -392,6 +407,7 @@ impl Hero {
     async fn scaling_stats(&self) -> Json<IndexMap<String, ScalingStat>> {
         Json(self.scaling_stats.clone())
     }
+    #[graphql(deprecation = "Removed from the game in build 6711; always empty for newer builds.")]
     async fn purchase_bonuses(&self) -> Json<IndexMap<ItemSlotType, Vec<PurchaseBonus>>> {
         Json(self.purchase_bonuses.clone())
     }
@@ -604,6 +620,18 @@ pub(crate) enum HeroType {
     Mystic,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq, ToSchema, EnumString, Enum)]
+#[serde(rename_all = "snake_case")]
+#[strum(ascii_case_insensitive)]
+pub(crate) enum HeroDevelopmentState {
+    #[strum(serialize = "EHeroDevState_Release")]
+    Release,
+    #[strum(serialize = "EHeroDevState_PreRelease")]
+    PreRelease,
+    #[strum(serialize = "EHeroDevState_DebugOnly")]
+    DebugOnly,
+}
+
 #[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq, Hash, ToSchema, EnumString)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum ItemSlotType {
@@ -662,7 +690,7 @@ fn transform_root(
                 continue;
             }
         };
-        if only_active && (!raw.player_selectable || raw.disabled || raw.in_development) {
+        if only_active && (!is_player_selectable(&raw) || raw.disabled || raw.in_development) {
             continue;
         }
         out.push(transform(
@@ -674,6 +702,17 @@ fn transform_root(
         ));
     }
     out
+}
+
+fn parse_development_state(r: &RawHero) -> Option<HeroDevelopmentState> {
+    r.development_state.as_deref().and_then(|s| s.parse().ok())
+}
+
+/// Builds before 6711 carry `m_bPlayerSelectable`; newer ones only expose
+/// `m_eHeroDevelopmentState`, where only released heroes are selectable.
+fn is_player_selectable(r: &RawHero) -> bool {
+    r.player_selectable
+        .unwrap_or_else(|| parse_development_state(r) == Some(HeroDevelopmentState::Release))
 }
 
 #[expect(clippy::too_many_lines)]
@@ -722,6 +761,9 @@ fn transform(
             .cloned()
             .unwrap_or_else(|| h.clone())
     });
+
+    let development_state = parse_development_state(&r);
+    let player_selectable = is_player_selectable(&r);
 
     let bg_raw = backgrounds.get(class_name).cloned();
     let images = build_images(&r, bg_raw.as_deref());
@@ -800,7 +842,8 @@ fn transform(
         name,
         description,
         item_draft_weights: r.item_draft_weights,
-        player_selectable: r.player_selectable,
+        player_selectable,
+        development_state,
         disabled: r.disabled,
         in_development: r.in_development,
         needs_testing: r.needs_testing,
@@ -809,7 +852,9 @@ fn transform(
         gun_tag,
         hideout_rich_presence,
         hero_type: r.hero_type.as_deref().and_then(|s| s.parse().ok()),
-        prerelease_only: r.prerelease_only,
+        prerelease_only: r
+            .prerelease_only
+            .or_else(|| development_state.map(|s| s == HeroDevelopmentState::PreRelease)),
         limited_testing: r.limited_testing,
         complexity: r.complexity,
         skin: r.skin,

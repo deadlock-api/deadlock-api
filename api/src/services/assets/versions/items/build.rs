@@ -105,6 +105,15 @@ fn parse_heroes_lite(root: &IndexMap<String, Value>) -> Vec<RawHeroLite> {
             Some(o) => o.clone(),
             None => continue,
         };
+        // Pre-release vote stubs (build 6711+) bind placeholder abilities
+        // shared with released heroes; don't link them to those items.
+        if obj
+            .get("m_eHeroDevelopmentState")
+            .and_then(Value::as_str)
+            .is_some_and(|s| s.eq_ignore_ascii_case("EHeroDevState_PreRelease"))
+        {
+            continue;
+        }
         // Inject class_name so the struct deserializer picks it up.
         obj.insert("class_name".to_owned(), Value::String(k.clone()));
         match serde_json::from_value::<RawHeroLite>(Value::Object(obj)) {
