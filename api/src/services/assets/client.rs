@@ -147,12 +147,9 @@ fn matches_hero_name(hero: &Hero, needle: &str) -> bool {
 fn images_to_map(images: &RankImages) -> APIResult<HashMap<String, String>> {
     let value = serde_json::to_value(images)
         .map_err(|e| APIError::internal(format!("serializing rank images: {e}")))?;
-    Ok(value
-        .as_object()
-        .map(|obj| {
-            obj.iter()
-                .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_owned())))
-                .collect()
-        })
-        .unwrap_or_default())
+    Ok(value.as_object().map_or_default(|obj| {
+        obj.iter()
+            .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_owned())))
+            .collect()
+    }))
 }

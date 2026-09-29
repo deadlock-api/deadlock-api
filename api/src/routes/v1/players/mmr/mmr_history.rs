@@ -49,9 +49,7 @@ fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
 }
 
 fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String {
-    let hero_filter = hero_id
-        .map(|id| format!("AND hero_id = {id}"))
-        .unwrap_or_default();
+    let hero_filter = hero_id.map_or_default(|id| format!("AND hero_id = {id}"));
     let log_comment = if hero_id.is_some() {
         "mmr_history_hero"
     } else {

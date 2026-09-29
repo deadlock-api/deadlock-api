@@ -29,22 +29,19 @@ pub(crate) async fn track_requests(
     let method = req.method().clone();
     let uri = req.uri().clone();
     let uri_string = uri.to_string();
-    let query_params: HashMap<String, String> = uri
-        .query()
-        .map(|q| {
-            q.split('&')
-                .filter_map(|pair| {
-                    let mut parts = pair.splitn(2, '=');
-                    let key = parts.next()?;
-                    let value = parts.next().unwrap_or("");
-                    Some((
-                        urlencoding::decode(key).unwrap_or_default().into_owned(),
-                        urlencoding::decode(value).unwrap_or_default().into_owned(),
-                    ))
-                })
-                .collect()
-        })
-        .unwrap_or_default();
+    let query_params: HashMap<String, String> = uri.query().map_or_default(|q| {
+        q.split('&')
+            .filter_map(|pair| {
+                let mut parts = pair.splitn(2, '=');
+                let key = parts.next()?;
+                let value = parts.next().unwrap_or("");
+                Some((
+                    urlencoding::decode(key).unwrap_or_default().into_owned(),
+                    urlencoding::decode(value).unwrap_or_default().into_owned(),
+                ))
+            })
+            .collect()
+    });
     let user_agent = get_header(&req, "user-agent");
     let api_key = extract_api_key(&req).and_then(|s| s.to_str().ok().map(ToOwned::to_owned));
     let referer = get_header(&req, "referer");

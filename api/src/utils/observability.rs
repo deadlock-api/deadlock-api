@@ -68,8 +68,7 @@ pub(crate) fn make_request_span<B>(request: &Request<B>) -> Span {
     let client_ip = header_str(headers, "cf-connecting-ip")
         .or_else(|| header_str(headers, "x-forwarded-for").and_then(|s| s.split(',').next()))
         .or_else(|| header_str(headers, "x-real-ip"))
-        .map(str::trim)
-        .unwrap_or_default();
+        .map_or_default(str::trim);
 
     let api_key = header_str(headers, "x-api-key")
         .and_then(|s| Uuid::parse_str(s.strip_prefix("HEXE-").unwrap_or(s)).ok());

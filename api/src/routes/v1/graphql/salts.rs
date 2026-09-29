@@ -127,7 +127,7 @@ pub(super) async fn load_match_salts_page(
     limit: u32,
     offset: u32,
 ) -> GqlResult<Vec<MatchSalts>> {
-    let filters = where_.map(|w| w.to_sql_filters()).unwrap_or_default();
+    let filters = where_.map_or_default(|w| w.to_sql_filters());
     let sql = build_match_salts_query(&filters, order_dir, limit, offset)
         .map_err(|e| async_graphql::Error::new(format!("SQL build error: {e}")))?;
     debug!(?sql, "graphql.match_salts built sql");

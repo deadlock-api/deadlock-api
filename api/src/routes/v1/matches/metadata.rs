@@ -431,8 +431,7 @@ pub(super) async fn metadata(
 
     let banned_hero_ids = demo_rows
         .first()
-        .map(|r| r.banned_hero_ids.clone())
-        .unwrap_or_default();
+        .map_or_default(|r| r.banned_hero_ids.clone());
     let pregame_hero_ids = demo_rows
         .iter()
         .filter_map(|r| r.pregame_hero_id.map(|h| (r.account_id, h)))

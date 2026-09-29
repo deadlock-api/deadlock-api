@@ -471,26 +471,18 @@ impl From<(&MatchInfo, bool, Players)> for ClickhouseMatchPlayer {
                 .iter()
                 .map(|x| (x.tracked_stat_id(), x.tracked_stat_value()))
                 .collect(),
-            team0_tracked_stats: match_info
-                .teams
-                .first()
-                .map(|t| {
-                    t.team_tracked_stats
-                        .iter()
-                        .map(|x| (x.tracked_stat_id(), x.tracked_stat_value()))
-                        .collect()
-                })
-                .unwrap_or_default(),
-            team1_tracked_stats: match_info
-                .teams
-                .get(1)
-                .map(|t| {
-                    t.team_tracked_stats
-                        .iter()
-                        .map(|x| (x.tracked_stat_id(), x.tracked_stat_value()))
-                        .collect()
-                })
-                .unwrap_or_default(),
+            team0_tracked_stats: match_info.teams.first().map_or_default(|t| {
+                t.team_tracked_stats
+                    .iter()
+                    .map(|x| (x.tracked_stat_id(), x.tracked_stat_value()))
+                    .collect()
+            }),
+            team1_tracked_stats: match_info.teams.get(1).map_or_default(|t| {
+                t.team_tracked_stats
+                    .iter()
+                    .map(|x| (x.tracked_stat_id(), x.tracked_stat_value()))
+                    .collect()
+            }),
             account_id: value.account_id(),
             won,
             player_slot: value.player_slot(),

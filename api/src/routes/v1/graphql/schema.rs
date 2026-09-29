@@ -172,7 +172,7 @@ pub(super) async fn load_matches(
     let state = app_state(ctx)?;
     let projection = project_matches(&ctx.look_ahead());
     let via_player_match_stats = via_player_match_stats(state, where_.as_ref()).await?;
-    let mut filters = where_.map(|w| w.to_sql_filters()).unwrap_or_default();
+    let mut filters = where_.map_or_default(|w| w.to_sql_filters());
     filters.extend(scope);
     let sql = build_matches_query(&BuildArgs {
         projection: &projection,
@@ -204,7 +204,7 @@ pub(super) async fn load_match_players(
     let state = app_state(ctx)?;
     let projection = project_match_players(&ctx.look_ahead());
     let via_player_match_stats = via_player_match_stats(state, where_.as_ref()).await?;
-    let mut filters = where_.map(|w| w.to_sql_filters()).unwrap_or_default();
+    let mut filters = where_.map_or_default(|w| w.to_sql_filters());
     filters.extend(scope);
     let sql = build_match_players_query(&BuildArgs {
         projection: &projection,
@@ -235,7 +235,7 @@ pub(super) async fn load_match_history(
 ) -> GqlResult<Vec<MatchHistoryEntry>> {
     let state = app_state(ctx)?;
     let columns = project_match_history(&ctx.look_ahead());
-    let mut filters = where_.map(|w| w.to_sql_filters()).unwrap_or_default();
+    let mut filters = where_.map_or_default(|w| w.to_sql_filters());
     filters.where_.extend(scope);
     let sql = build_match_history_query(&MatchHistoryBuildArgs {
         columns: &columns,

@@ -315,7 +315,7 @@ impl FieldDecode for StringDecoder {
         br: &mut BitReader,
     ) -> Result<FieldValue, DecoderError> {
         // NOTE: string_buf must be cleared after use.
-        assert!(ctx.string_buf.is_empty());
+        assert_eq!(ctx.string_buf, [] as [u8; 0]);
         let n = br.read_string_to_end(&mut ctx.string_buf, false)?;
         let ret = FieldValue::String(Box::from(&ctx.string_buf[..n]));
         ctx.string_buf.clear();

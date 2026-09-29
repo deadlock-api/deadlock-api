@@ -94,7 +94,7 @@ pub(super) struct LaneStats {
 
 impl LaneStats {
     pub(super) fn new(requested: Option<&[LaneStat]>) -> APIResult<Self> {
-        let requested = requested.map(<[LaneStat]>::to_vec).unwrap_or_default();
+        let requested = requested.map_or_default(<[LaneStat]>::to_vec);
         if requested.len() > MAX_STATS {
             return Err(APIError::StatusMsg {
                 status: StatusCode::BAD_REQUEST,

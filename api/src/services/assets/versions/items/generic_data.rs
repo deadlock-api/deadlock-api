@@ -29,12 +29,9 @@ pub(super) fn extract_item_price_per_tier(root: &Value) -> Vec<u32> {
         }
     }
 
-    walk(root)
-        .and_then(Value::as_array)
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| v.as_u64().map(|n| n as u32))
-                .collect()
-        })
-        .unwrap_or_default()
+    walk(root).and_then(Value::as_array).map_or_default(|arr| {
+        arr.iter()
+            .filter_map(|v| v.as_u64().map(|n| n as u32))
+            .collect()
+    })
 }

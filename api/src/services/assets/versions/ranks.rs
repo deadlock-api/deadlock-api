@@ -268,8 +268,7 @@ fn rank_name(
     loc.get(&new_key)
         .or_else(|| english.get(&new_key))
         .or_else(|| loc.get(&format!("Citadel_ranks_rank{tier}")))
-        .map(|s| s.trim().to_owned())
-        .unwrap_or_default()
+        .map_or_default(|s| s.trim().to_owned())
 }
 
 pub(crate) fn build_ranks(

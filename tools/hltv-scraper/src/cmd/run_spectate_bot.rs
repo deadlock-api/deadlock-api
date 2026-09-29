@@ -422,8 +422,7 @@ impl SpectatorBot {
             let local_failed_spectates: std::collections::HashSet<u64> = self
                 .failed_spectates
                 .lock()
-                .map(|guard| guard.iter().map(|(k, _)| *k).collect())
-                .unwrap_or_default();
+                .map_or_default(|guard| guard.iter().map(|(k, _)| *k).collect());
 
             let live_matches = crate::active_matches::fetch_active_matches_cached().await?;
             let next_match = live_matches

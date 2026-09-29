@@ -1287,14 +1287,12 @@ async fn parsed_version_sources(r2: &AmazonS3, version: u32) -> Result<ParsedSou
         style_colors: Arc::new(
             style_css
                 .as_deref()
-                .map(css::parse_hero_style_colors)
-                .unwrap_or_default(),
+                .map_or_default(css::parse_hero_style_colors),
         ),
         backgrounds: Arc::new(
             bg_css
                 .as_deref()
-                .map(css::parse_hero_backgrounds)
-                .unwrap_or_default(),
+                .map_or_default(css::parse_hero_backgrounds),
         ),
     })
 }

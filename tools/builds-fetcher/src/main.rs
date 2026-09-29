@@ -269,24 +269,14 @@ async fn insert_builds(
          ignores, reports, rollup_category, language, updated_at, published_at, data)",
     );
     query.push_values(rows, |mut b, (build, hero_build, data)| {
-        b.push_bind(hero_build.hero_id.map(|x| x as i32).unwrap_or_default())
-            .push_bind(
-                hero_build
-                    .hero_build_id
-                    .map(|x| x as i32)
-                    .unwrap_or_default(),
-            )
-            .push_bind(hero_build.version.map(|x| x as i32).unwrap_or_default())
+        b.push_bind(hero_build.hero_id.map_or_default(|x| x as i32))
+            .push_bind(hero_build.hero_build_id.map_or_default(|x| x as i32))
+            .push_bind(hero_build.version.map_or_default(|x| x as i32))
             .push_bind(hero_build.author_account_id.map(|x| x as i32))
-            .push_bind(
-                build
-                    .num_weekly_favorites
-                    .map(|x| x as i32)
-                    .unwrap_or_default(),
-            )
-            .push_bind(build.num_favorites.map(|x| x as i32).unwrap_or_default())
-            .push_bind(build.num_ignores.map(|x| x as i32).unwrap_or_default())
-            .push_bind(build.num_reports.map(|x| x as i32).unwrap_or_default())
+            .push_bind(build.num_weekly_favorites.map_or_default(|x| x as i32))
+            .push_bind(build.num_favorites.map_or_default(|x| x as i32))
+            .push_bind(build.num_ignores.map_or_default(|x| x as i32))
+            .push_bind(build.num_reports.map_or_default(|x| x as i32))
             .push_bind(build.rollup_category.map(|x| x as i32))
             .push_bind(hero_build.language.map(|x| x as i32))
             .push_bind(hero_build.last_updated_timestamp.and_then(ts_to_pg))

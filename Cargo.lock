@@ -6089,24 +6089,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "prost-wkt-types"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c46d9cbfee659aaabc63e8ab7d88e4814c2ad6eacdc09b404244ce3c7fbcdfc"
-dependencies = [
- "chrono",
- "prost",
- "prost-build",
- "prost-types",
- "prost-wkt",
- "prost-wkt-build",
- "regex",
- "serde",
- "serde_derive",
- "serde_json",
-]
-
-[[package]]
 name = "psm"
 version = "0.1.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8695,7 +8677,6 @@ dependencies = [
  "prost-types",
  "prost-wkt",
  "prost-wkt-build",
- "prost-wkt-types",
  "serde",
  "ureq",
 ]

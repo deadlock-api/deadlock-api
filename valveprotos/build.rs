@@ -106,10 +106,7 @@ fn load_common_protos() -> io::Result<Option<FileDescriptorSet>> {
     {
         config
             .compile_well_known_types()
-            .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
-            .extern_path(".google.protobuf.Any", "::prost_wkt_types::Any")
-            .extern_path(".google.protobuf.Timestamp", "::prost_wkt_types::Timestamp")
-            .extern_path(".google.protobuf.Value", "::prost_wkt_types::Value");
+            .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]");
     }
 
     let protos = collect_protos("protos/common")?;
@@ -128,10 +125,7 @@ fn load_gcsdk_protos() -> io::Result<Option<FileDescriptorSet>> {
     {
         config
             .compile_well_known_types()
-            .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
-            .extern_path(".google.protobuf.Any", "::prost_wkt_types::Any")
-            .extern_path(".google.protobuf.Timestamp", "::prost_wkt_types::Timestamp")
-            .extern_path(".google.protobuf.Value", "::prost_wkt_types::Value");
+            .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]");
     }
 
     let protos = collect_protos("protos/gcsdk")?;
@@ -156,10 +150,7 @@ fn compile_deadlock_protos(externs: &[ExternDefs]) -> io::Result<()> {
     {
         config
             .compile_well_known_types()
-            .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
-            .extern_path(".google.protobuf.Any", "::prost_wkt_types::Any")
-            .extern_path(".google.protobuf.Timestamp", "::prost_wkt_types::Timestamp")
-            .extern_path(".google.protobuf.Value", "::prost_wkt_types::Value");
+            .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]");
     }
 
     // both serde (prost-wkt) and reflect (prost-reflect) need the descriptor set on disk.

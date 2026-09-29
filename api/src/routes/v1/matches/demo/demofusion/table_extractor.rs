@@ -102,8 +102,7 @@ fn extract_from_table_factor(factor: &TableFactor, tables: &mut Vec<String>) {
                 .0
                 .last()
                 .and_then(|part| part.as_ident())
-                .map(|ident| ident.value.clone())
-                .unwrap_or_default();
+                .map_or_default(|ident| ident.value.clone());
             if !table_name.is_empty() {
                 tables.push(table_name);
             }

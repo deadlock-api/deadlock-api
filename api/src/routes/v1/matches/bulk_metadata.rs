@@ -791,15 +791,12 @@ fn build_query(
         // index (measured -15% wall, -59% read_rows). The history subquery in info_filters
         // stays so the match set is unchanged. Item filters and pool flags need columns only
         // match_player has.
-        let join_clause = player_filter_subquery
-            .as_ref()
-            .map(|sub| {
-                format!(
-                    " INNER JOIN (SELECT DISTINCT match_id AS _pf_match_id FROM ({sub})) pf \
+        let join_clause = player_filter_subquery.as_ref().map_or_default(|sub| {
+            format!(
+                " INNER JOIN (SELECT DISTINCT match_id AS _pf_match_id FROM ({sub})) pf \
                      ON match_id = pf._pf_match_id"
-                )
-            })
-            .unwrap_or_default();
+            )
+        });
         let t_matches_source = match &account_filter {
             Some(account_filter) if !advanced_player_filters && !wide_only_filter => {
                 let mut conds = vec![account_filter.clone()];

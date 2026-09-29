@@ -51,12 +51,8 @@ fn build_mmr_query_inner(
         .map(ToString::to_string)
         .collect::<Vec<_>>()
         .join(",");
-    let match_id_filter = max_match_id
-        .map(|m| format!("AND match_id <= {m}"))
-        .unwrap_or_default();
-    let hero_filter = hero_id
-        .map(|id| format!("AND hero_id = {id}"))
-        .unwrap_or_default();
+    let match_id_filter = max_match_id.map_or_default(|m| format!("AND match_id <= {m}"));
+    let hero_filter = hero_id.map_or_default(|id| format!("AND hero_id = {id}"));
     let badge = badge_from_flat_progress_sql(
         "assumeNotNull(argMax(player_rank_final_flat_progress, match_id))",
         "assumeNotNull(argMax(player_rank_initial_display_rank, match_id))",

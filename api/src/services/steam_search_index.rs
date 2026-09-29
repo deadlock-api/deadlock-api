@@ -601,8 +601,7 @@ fn profile_from_doc(doc: &TantivyDocument, f: SearchFields, matches_played: u64)
     let friends = doc
         .get_first(f.friends_blob)
         .and_then(|v| v.as_bytes())
-        .map(decode_friends)
-        .unwrap_or_default();
+        .map_or_default(decode_friends);
     IndexedProfile {
         account_id,
         personaname: read_str(doc, f.personaname),
@@ -762,8 +761,7 @@ fn jaro(s1: &str, s2: &str) -> f64 {
 fn read_str(doc: &TantivyDocument, field: Field) -> String {
     doc.get_first(field)
         .and_then(|v| v.as_str())
-        .map(str::to_owned)
-        .unwrap_or_default()
+        .map_or_default(str::to_owned)
 }
 
 fn read_opt_str(doc: &TantivyDocument, field: Field) -> Option<String> {
@@ -867,8 +865,7 @@ fn write_rows(
 fn unix_now() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or_default()
+        .map_or_default(|d| d.as_secs())
 }
 
 /// Stable-per-replica identifier for namespacing the on-disk index. In Docker

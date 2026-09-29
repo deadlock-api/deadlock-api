@@ -342,8 +342,7 @@ impl Database {
             let lake_dir = self
                 .lake_path
                 .parent()
-                .map(|p| format!("{}/", p.to_string_lossy()))
-                .unwrap_or_default();
+                .map_or_default(|p| format!("{}/", p.to_string_lossy()));
             conn.execute_batch(&format!(
                 "SET allowed_directories = [{}, {}, {}, {}];
                  SET enable_external_access = false;

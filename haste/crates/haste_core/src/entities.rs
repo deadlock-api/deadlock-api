@@ -257,7 +257,7 @@ impl Entity {
                 .ok_or(EntityParseError::FieldNotFound)?;
             // NOTE: field_key construction logic needs to match what `fkey_from_path` does.
             let mut field_key = field.key;
-            for i in 1..=fp.last {
+            for &idx in &fp.data[1..=fp.last] {
                 if field.is_dynamic_array() {
                     field = field.get_child(0).ok_or(EntityParseError::FieldNotFound)?;
                     // NOTE: it's sort of weird to hash index, yup. but it simplifies things
@@ -266,7 +266,7 @@ impl Entity {
                     // hash all parts.
                     field_key = fxhash::add_u64_to_hash(
                         field_key,
-                        fxhash::add_u64_to_hash(0, u64::from(fp.data[i])),
+                        fxhash::add_u64_to_hash(0, u64::from(idx)),
                     );
                 } else {
                     // Fixed-size array children are identical clones that all share the array's
@@ -275,12 +275,12 @@ impl Entity {
                     // navigation into the indexed clone is unchanged.
                     let fixed_array = field.is_fixed_array();
                     field = field
-                        .get_child(fp.data[i] as usize)
+                        .get_child(idx as usize)
                         .ok_or(EntityParseError::FieldNotFound)?;
                     field_key = if fixed_array {
                         fxhash::add_u64_to_hash(
                             field_key,
-                            fxhash::add_u64_to_hash(0, u64::from(fp.data[i])),
+                            fxhash::add_u64_to_hash(0, u64::from(idx)),
                         )
                     } else {
                         fxhash::add_u64_to_hash(field_key, field.var_name.hash)
@@ -395,12 +395,12 @@ fn skip_entity_fields(
             .get_child(fp.data[0] as usize)
             .ok_or(EntityParseError::FieldNotFound)?;
 
-        for i in 1..=fp.last {
+        for &idx in &fp.data[1..=fp.last] {
             if field.is_dynamic_array() {
                 field = field.get_child(0).ok_or(EntityParseError::FieldNotFound)?;
             } else {
                 field = field
-                    .get_child(fp.data[i] as usize)
+                    .get_child(idx as usize)
                     .ok_or(EntityParseError::FieldNotFound)?;
             }
         }

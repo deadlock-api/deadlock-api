@@ -980,7 +980,7 @@ async fn transform_upgrade(
     let shopable = raw.disabled != Some(true) && shop_image.is_some();
     let cost = item_price_per_tier.get(usize::from(raw.item_tier)).copied();
     let corrupted_info = raw.corrupted_info.map(|c| CorruptedItemInfo {
-        property_upgrades: c.upgrade.map(|u| u.property_upgrades).unwrap_or_default(),
+        property_upgrades: c.upgrade.map_or_default(|u| u.property_upgrades),
         excluded_penalties: c.excluded_penalties.unwrap_or_default(),
     });
 
