@@ -109,6 +109,20 @@ export function regionForLanguage(lang: string): LeaderboardRegionEnum {
   return LeaderboardRegionEnum.Europe;
 }
 
+/**
+ * The region a request defaults to: Cloudflare's `cf-ipcountry` first ("XX" and "T1" mean unknown / Tor), then the
+ * first `accept-language` tag.
+ */
+export function regionForRequest(
+  country: string | undefined,
+  acceptLanguage: string | undefined,
+): LeaderboardRegionEnum {
+  if (country && country !== "XX" && country !== "T1") {
+    return regionForCountry(country) ?? LeaderboardRegionEnum.Europe;
+  }
+  return regionForLanguage(acceptLanguage?.split(",")[0]?.trim() ?? "");
+}
+
 export function getDefaultRegion(): LeaderboardRegionEnum {
   if (typeof navigator === "undefined") return LeaderboardRegionEnum.Europe;
   return regionForLanguage(navigator.language ?? "");

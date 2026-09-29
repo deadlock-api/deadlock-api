@@ -2,6 +2,7 @@ import type { Register } from "@tanstack/react-router";
 import { createStartHandler, defaultStreamHandler, type RequestHandler } from "@tanstack/react-start/server";
 
 import headersFile from "../public/_headers?raw";
+import { isCacheableRequest, serveCachedHtml } from "./lib/html-cache";
 import { headersFor, parseHeadersFile } from "./lib/static-headers";
 
 const handler = createStartHandler(defaultStreamHandler);
@@ -12,9 +13,28 @@ function isHtmlResponse(res: Response): boolean {
   return !!ct && ct.toLowerCase().includes("text/html");
 }
 
+/** The part of the Workers `ExecutionContext` this entry uses; absent in the Vite dev server. */
+interface WorkerContext {
+  waitUntil(promise: Promise<unknown>): void;
+}
+
+/** Adds what every Worker-rendered page carries: the `_headers` security headers and, for HTML, a Cache-Control. */
+function finalize(url: URL, res: Response): Response {
+  // Worker responses skip `_headers` (it only covers static assets), so the security headers are added here.
+  const missing = [...headersFor(HEADER_RULES, url.pathname)].filter(([name]) => !res.headers.has(name));
+  const uncached = isHtmlResponse(res) && !res.headers.has("cache-control");
+  if (missing.length === 0 && !uncached) return res;
+  const headers = new Headers(res.headers);
+  for (const [name, value] of missing) headers.set(name, value);
+  if (uncached) {
+    headers.set("Cache-Control", "private, max-age=0, must-revalidate");
+    headers.append("Vary", "Cookie");
+  }
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+}
+
 export default {
-  async fetch(...args) {
-    const request = args[0];
+  async fetch(request: Request, env: Parameters<RequestHandler<Register>>[1], ctx?: WorkerContext) {
     const url = new URL(request.url);
     let changed = false;
     if (url.hostname === "www.deadlock-api.com") {
@@ -27,25 +47,26 @@ export default {
     }
     if (changed) return Response.redirect(url.toString(), 301);
 
-    const res = await handler(args[0], {
-      ...args[1],
-      // Cloudflare creates 103 responses from Link headers. Keep hints limited
-      // to public CSS/fonts; never replay route data or private resources.
-      responseLinkHeader: {
-        filter: ({ hint }) =>
-          hint.rel === "preload" && (hint.as === "style" || hint.as === "font") && hint.href.startsWith("/assets/"),
-      },
-    });
-    // Worker responses skip `_headers` (it only covers static assets), so the security headers are added here.
-    const missing = [...headersFor(HEADER_RULES, url.pathname)].filter(([name]) => !res.headers.has(name));
-    const uncached = isHtmlResponse(res) && !res.headers.has("cache-control");
-    if (missing.length === 0 && !uncached) return res;
-    const headers = new Headers(res.headers);
-    for (const [name, value] of missing) headers.set(name, value);
-    if (uncached) {
-      headers.set("Cache-Control", "private, max-age=0, must-revalidate");
-      headers.append("Vary", "Cookie");
+    const render = (req: Request) =>
+      handler(req, {
+        ...env,
+        // Cloudflare creates 103 responses from Link headers. Keep hints limited
+        // to public CSS/fonts; never replay route data or private resources.
+        responseLinkHeader: {
+          filter: ({ hint }) =>
+            hint.rel === "preload" && (hint.as === "style" || hint.as === "font") && hint.href.startsWith("/assets/"),
+        },
+      });
+
+    if (ctx && typeof caches !== "undefined" && isCacheableRequest(request)) {
+      return serveCachedHtml(request, {
+        cache: await caches.open("ssr-html"),
+        render,
+        finalize: (res) => finalize(url, res),
+        waitUntil: (promise) => ctx.waitUntil(promise),
+        buildId: import.meta.env.VITE_BUILD_ID,
+      });
     }
-    return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+    return finalize(url, await render(request));
   },
-} satisfies { fetch: RequestHandler<Register> };
+};

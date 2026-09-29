@@ -45,6 +45,11 @@ function esToolkitCompatEsm(): Plugin {
 }
 
 export default defineConfig({
+  define: {
+    // Keys the Worker's HTML cache (src/lib/html-cache.ts): a page rendered by one build links that build's hashed
+    // assets, which the next deploy removes.
+    "import.meta.env.VITE_BUILD_ID": JSON.stringify(Date.now().toString(36)),
+  },
   server: {
     port: 3000,
   },
