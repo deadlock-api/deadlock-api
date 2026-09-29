@@ -178,7 +178,13 @@ SELECT
     `hero_xp_rewards.xp_grant`,
     `hero_xp_rewards.reason`,
     `average_badge`,
-    `stats.custom_user_stats`
+    `stats.custom_user_stats`,
+    `corrupted_penalty_seed`,
+    `power_up_buffs.pickup_times_s`,
+    `power_up_buffs.pickup_stat_values`,
+    `hero_release_votes.category`,
+    `hero_release_votes.hero_id`,
+    `hero_release_votes.vote_count`
 FROM default.match_player;
 
 CREATE OR REPLACE VIEW dump.match_salts SQL SECURITY INVOKER AS
