@@ -747,7 +747,7 @@ export function HeroStatsTable({
           {showMatchCounts && (
             // In a narrow table the sample size stays, shortened ("19K"): without it a phone lost how much a win
             // rate rests on.
-            <p className="text-2xs text-muted-foreground tabular-nums @md/table:text-xs">
+            <p className="text-xs text-muted-foreground tabular-nums">
               <span className="@md/table:hidden">
                 {COMPACT_MATCHES.format(row.matches)}
                 <span className="sr-only"> matches</span>
