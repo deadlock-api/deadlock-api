@@ -23,6 +23,7 @@ import { SearchInput } from "~/components/ui/search-input";
 import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
+import { useHydrated } from "~/hooks/useHydrated";
 import { formatPercent } from "~/lib/format";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { cn } from "~/lib/utils";
@@ -42,6 +43,9 @@ interface SortState {
 }
 
 const DEFAULT_SORT_STATE: SortState = { field: "winRate", direction: "desc" };
+
+/** Rows in the server-rendered HTML; a tall screen shows about 15. */
+const SERVER_ROWS = 30;
 
 function toggled(set: Set<number>, id: number) {
   const next = new Set(set);
@@ -533,6 +537,11 @@ export function ItemStatsTable({
       (!nameTerm || (row.item?.name ?? "").toLowerCase().includes(nameTerm)),
   );
 
+  // The server sends the first rows only: all ~150 made the page's HTML over 2 MB, past what Googlebot reads. The rest,
+  // far below the fold, render right after hydration.
+  const hydrated = useHydrated();
+  const renderedData = hydrated ? visibleData : visibleData.slice(0, SERVER_ROWS);
+
   useEffect(() => {
     const id = lastToggled.current;
     if (id === null || visibleData.some((row) => row.item_id === id)) return;
@@ -655,7 +664,7 @@ export function ItemStatsTable({
                 </TableHeader>
               )}
               <TableBody aria-busy={rowsCatchingUp || undefined}>
-                {visibleData.map((row, index) => (
+                {renderedData.map((row, index) => (
                   <ItemStatsTableRow
                     key={row.item_id}
                     row={row}
