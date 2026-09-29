@@ -204,7 +204,7 @@ pub(super) struct PlayerPawnEvent {
 }
 
 impl EntityUpdateEvent for PlayerPawnEvent {
-    fn from_entity_update(_ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
+    fn from_entity_update(ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
         Self {
             controller: entity.get_value(&CONTROLLER_HASH).map(ehandle_to_index),
             team: entity.get_value(&TEAM_HASH),
@@ -214,7 +214,7 @@ impl EntityUpdateEvent for PlayerPawnEvent {
             level: entity.get_value(&LEVEL_HASH),
             max_health: entity.get_value(&MAX_HEALTH_HASH),
             health: entity.get_value(&HEALTH_HASH),
-            position: utils::get_entity_position(entity),
+            position: utils::get_entity_position(ctx, entity),
             quickbuy_auto_purchase: entity.get_value(&QUICKBUY_AUTO_PURCHASE_HASH),
             quickbuy_auto_queue_build: entity.get_value(&QUICKBUY_AUTO_QUUE_BUILD_HASH),
             quickbuy_queue: (0..entity.get_value(&QUICKBUY_HASH).unwrap_or_default())
@@ -258,7 +258,7 @@ pub(super) struct NPCEvent {
 }
 
 impl EntityUpdateEvent for NPCEvent {
-    fn from_entity_update(_ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
+    fn from_entity_update(ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
         Self {
             health: entity.get_value(&HEALTH_HASH),
             max_health: entity.get_value(&MAX_HEALTH_HASH),
@@ -266,7 +266,7 @@ impl EntityUpdateEvent for NPCEvent {
             lane: entity.get_value(&LANE_HASH),
             shield_active: entity.get_value(&SHIELD_ACTIVE_HASH),
             team: entity.get_value(&TEAM_HASH),
-            position: utils::get_entity_position(entity),
+            position: utils::get_entity_position(ctx, entity),
         }
         .into()
     }
@@ -281,12 +281,12 @@ pub(super) struct DestroyableBuilding {
 }
 
 impl EntityUpdateEvent for DestroyableBuilding {
-    fn from_entity_update(_ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
+    fn from_entity_update(ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
         Self {
             health: entity.get_value(&HEALTH_HASH),
             max_health: entity.get_value(&MAX_HEALTH_HASH),
             team: entity.get_value(&TEAM_HASH),
-            position: utils::get_entity_position(entity),
+            position: utils::get_entity_position(ctx, entity),
         }
         .into()
     }
@@ -300,11 +300,11 @@ pub(super) struct SinnersSacrifice {
 }
 
 impl EntityUpdateEvent for SinnersSacrifice {
-    fn from_entity_update(_ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
+    fn from_entity_update(ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
         Self {
             health: entity.get_value(&HEALTH_HASH),
             max_health: entity.get_value(&MAX_HEALTH_HASH),
-            position: utils::get_entity_position(entity),
+            position: utils::get_entity_position(ctx, entity),
         }
         .into()
     }
@@ -337,10 +337,10 @@ pub(super) struct PositionActiveEntity {
 }
 
 impl EntityUpdateEvent for PositionActiveEntity {
-    fn from_entity_update(_ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
+    fn from_entity_update(ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
         Self {
             active: entity.get_value(&ACTIVE_HASH).unwrap_or_default(),
-            position: utils::get_entity_position(entity),
+            position: utils::get_entity_position(ctx, entity),
         }
         .into()
     }
@@ -352,9 +352,9 @@ pub(super) struct PositionEntity {
 }
 
 impl EntityUpdateEvent for PositionEntity {
-    fn from_entity_update(_ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
+    fn from_entity_update(ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
         Self {
-            position: utils::get_entity_position(entity),
+            position: utils::get_entity_position(ctx, entity),
         }
         .into()
     }

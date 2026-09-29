@@ -2,15 +2,17 @@ use dungers::bitbuf;
 use dungers::bitbuf::BitError;
 
 // public/coordsize.h
-const COORD_INTEGER_BITS: usize = 14;
-const COORD_FRACTIONAL_BITS: usize = 5;
-const COORD_DENOMINATOR: f32 = (1 << COORD_FRACTIONAL_BITS) as f32;
-const COORD_RESOLUTION: f32 = 1.0 / COORD_DENOMINATOR;
-
-// public/coordsize.h
-const NORMAL_FRACTIONAL_BITS: usize = 11;
-const NORMAL_DENOMINATOR: f32 = ((1 << (NORMAL_FRACTIONAL_BITS)) - 1) as f32;
-const NORMAL_RESOLUTION: f32 = 1.0 / (NORMAL_DENOMINATOR);
+//
+// NOTE: since deadlock build 6712 servers send these values in
+// `CSVCMsg_FlattenedSerializer.coord_size_params` (see
+// [`crate::flattenedserializers::CoordSizeParams`]); the constants below are the engine defaults
+// (and what older replays use).
+pub(crate) const COORD_INTEGER_BITS: usize = 14;
+pub(crate) const COORD_FRACTIONAL_BITS: usize = 5;
+pub(crate) const COORD_INTEGER_BITS_MP: usize = 11;
+pub(crate) const COORD_FRACTIONAL_BITS_MP: usize = 3;
+pub(crate) const NORMAL_FRACTIONAL_BITS: usize = 11;
+pub(crate) const ANGLE_BITS: usize = 20;
 
 // BitRead is a port of valve's CBitRead(or/and old_bf_read) from valve's tier1 lib.
 pub struct BitReader<'a> {
@@ -139,6 +141,16 @@ impl<'a> BitReader<'a> {
     }
 
     pub fn read_bitcoord(&mut self) -> Result<f32, BitError> {
+        self.read_bitcoord_with(COORD_INTEGER_BITS, COORD_FRACTIONAL_BITS)
+    }
+
+    /// same as [`Self::read_bitcoord`], but with custom integer / fractional bit counts (see
+    /// `ProtoCoordSizeParams_t`).
+    pub fn read_bitcoord_with(
+        &mut self,
+        integer_bits: usize,
+        fractional_bits: usize,
+    ) -> Result<f32, BitError> {
         let mut value: f32 = 0.0;
 
         // Read the required integer and fraction flags
@@ -154,17 +166,18 @@ impl<'a> BitReader<'a> {
             let mut intval = 0;
             if has_intval {
                 // Adjust the integers from [0..MAX_COORD_VALUE-1] to [1..MAX_COORD_VALUE]
-                intval = self.read_ubit64(COORD_INTEGER_BITS)? + 1;
+                intval = self.read_ubit64(integer_bits)? + 1;
             }
 
             // If there's a fraction, read it in
             let mut fractval = 0;
             if has_fractval {
-                fractval = self.read_ubit64(COORD_FRACTIONAL_BITS)?;
+                fractval = self.read_ubit64(fractional_bits)?;
             }
 
             // Calculate the correct floating point value
-            value = intval as f32 + (fractval as f32 * COORD_RESOLUTION);
+            let resolution = 1.0 / (1u64 << fractional_bits) as f32;
+            value = intval as f32 + (fractval as f32 * resolution);
 
             // Fixup the sign if negative.
             if signbit {
@@ -176,14 +189,21 @@ impl<'a> BitReader<'a> {
     }
 
     pub fn read_bitnormal(&mut self) -> Result<f32, BitError> {
+        self.read_bitnormal_with(NORMAL_FRACTIONAL_BITS)
+    }
+
+    /// same as [`Self::read_bitnormal`], but with a custom fractional bit count (see
+    /// `ProtoCoordSizeParams_t`).
+    pub fn read_bitnormal_with(&mut self, fractional_bits: usize) -> Result<f32, BitError> {
         // read the sign bit
         let signbit = self.read_bool()?;
 
         // read the fractional part
-        let fractval = self.read_ubit64(NORMAL_FRACTIONAL_BITS)?;
+        let fractval = self.read_ubit64(fractional_bits)?;
 
         // calculate the correct floating point value
-        let mut value = fractval as f32 * NORMAL_RESOLUTION;
+        let resolution = 1.0 / ((1u64 << fractional_bits) - 1) as f32;
+        let mut value = fractval as f32 * resolution;
 
         // fixup the sign if negative.
         if signbit {
@@ -194,6 +214,14 @@ impl<'a> BitReader<'a> {
     }
 
     pub fn read_bitvec3coord(&mut self) -> Result<[f32; 3], BitError> {
+        self.read_bitvec3coord_with(COORD_INTEGER_BITS, COORD_FRACTIONAL_BITS)
+    }
+
+    pub fn read_bitvec3coord_with(
+        &mut self,
+        integer_bits: usize,
+        fractional_bits: usize,
+    ) -> Result<[f32; 3], BitError> {
         let mut fa = [0f32; 3];
 
         let xflag = self.read_bool()?;
@@ -201,29 +229,36 @@ impl<'a> BitReader<'a> {
         let zflag = self.read_bool()?;
 
         if xflag {
-            fa[0] = self.read_bitcoord()?;
+            fa[0] = self.read_bitcoord_with(integer_bits, fractional_bits)?;
         }
         if yflag {
-            fa[1] = self.read_bitcoord()?;
+            fa[1] = self.read_bitcoord_with(integer_bits, fractional_bits)?;
         }
         if zflag {
-            fa[2] = self.read_bitcoord()?;
+            fa[2] = self.read_bitcoord_with(integer_bits, fractional_bits)?;
         }
 
         Ok(fa)
     }
 
     pub fn read_bitvec3normal(&mut self) -> Result<[f32; 3], BitError> {
+        self.read_bitvec3normal_with(NORMAL_FRACTIONAL_BITS)
+    }
+
+    pub fn read_bitvec3normal_with(
+        &mut self,
+        fractional_bits: usize,
+    ) -> Result<[f32; 3], BitError> {
         let mut fa = [0f32; 3];
 
         let xflag = self.read_bool()?;
         let yflag = self.read_bool()?;
 
         if xflag {
-            fa[0] = self.read_bitnormal()?;
+            fa[0] = self.read_bitnormal_with(fractional_bits)?;
         }
         if yflag {
-            fa[1] = self.read_bitnormal()?;
+            fa[1] = self.read_bitnormal_with(fractional_bits)?;
         }
 
         // the first two imply the third (but not its sign)
@@ -324,6 +359,8 @@ impl<'a> BitReader<'a> {
 }
 
 #[cfg(test)]
+// NOTE: the values compared below are exactly representable.
+#[allow(clippy::float_cmp)]
 mod test {
     use super::*;
 
@@ -336,5 +373,64 @@ mod test {
         let num_chars = br.read_string(&mut out, false).unwrap();
         assert_eq!(&out, &buf);
         assert_eq!(num_chars, buf.len() - 1);
+    }
+
+    fn write_bitcoord(
+        bw: &mut bitbuf::BitWriter,
+        value: f32,
+        integer_bits: usize,
+        fractional_bits: usize,
+    ) {
+        let abs = value.abs();
+        let intval = abs.trunc() as u64;
+        let fractval = ((abs - abs.trunc()) * (1u64 << fractional_bits) as f32) as u64;
+        bw.write_ubit64(u64::from(intval != 0), 1).unwrap();
+        bw.write_ubit64(u64::from(fractval != 0), 1).unwrap();
+        if intval != 0 || fractval != 0 {
+            bw.write_ubit64(u64::from(value < 0.0), 1).unwrap();
+            if intval != 0 {
+                bw.write_ubit64(intval - 1, integer_bits).unwrap();
+            }
+            if fractval != 0 {
+                bw.write_ubit64(fractval, fractional_bits).unwrap();
+            }
+        }
+    }
+
+    #[test]
+    fn test_read_bitcoord_default_params() {
+        let mut buf = [0u8; 16];
+        let mut bw = bitbuf::BitWriter::new(&mut buf);
+        write_bitcoord(&mut bw, -1234.5, COORD_INTEGER_BITS, COORD_FRACTIONAL_BITS);
+        write_bitcoord(&mut bw, 0.0, COORD_INTEGER_BITS, COORD_FRACTIONAL_BITS);
+
+        let mut br = BitReader::new(&buf);
+        assert_eq!(br.read_bitcoord().unwrap(), -1234.5);
+        assert_eq!(br.read_bitcoord().unwrap(), 0.0);
+    }
+
+    #[test]
+    fn test_read_bitcoord_custom_params() {
+        let mut buf = [0u8; 16];
+        let mut bw = bitbuf::BitWriter::new(&mut buf);
+        write_bitcoord(&mut bw, 20000.125, 15, 3);
+
+        let mut br = BitReader::new(&buf);
+        assert_eq!(br.read_bitcoord_with(15, 3).unwrap(), 20000.125);
+        // 3 flag bits + 15 integer bits + 3 fractional bits
+        assert_eq!(br.num_bits_read(), 21);
+    }
+
+    #[test]
+    fn test_read_bitnormal_custom_params() {
+        let mut buf = [0u8; 8];
+        let mut bw = bitbuf::BitWriter::new(&mut buf);
+        // sign + 7 fractional bits; 127 / 127 == 1.0
+        bw.write_ubit64(1, 1).unwrap();
+        bw.write_ubit64(127, 7).unwrap();
+
+        let mut br = BitReader::new(&buf);
+        assert_eq!(br.read_bitnormal_with(7).unwrap(), -1.0);
+        assert_eq!(br.num_bits_read(), 8);
     }
 }

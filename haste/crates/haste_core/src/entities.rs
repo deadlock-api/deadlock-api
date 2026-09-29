@@ -114,22 +114,40 @@ mod deadlock {
     // also CELL_COUNT can be computed as MAX_COORD_INTEGER * 2 / CELL_WIDTH.
     //
     // public/worldsize.h
-    const MAX_COORD_INTEGER: u32 = 16384;
+    //
+    // NOTE: since build 6712 the server announces max coord in
+    // `CSVCMsg_GameSessionConfiguration.max_coord` and it is 32768 (the world origin moved from
+    // cell 32 to cell 64). this constant remains the fallback for replays that predate it.
+    pub const DEFAULT_MAX_COORD: u32 = 16384;
 
     // CCitadelGameRulesProxy entity contains:
     // m_pGameRules.m_vMinimapMins:Vector = [-8960.0, -8960.005, 0.0]
     // m_pGameRules.m_vMinimapMaxs:Vector = [8960.0, 8960.0, 0.0]
 
     /// given a cell and an offset in that cell, reconstruct the world coord.
+    ///
+    /// NOTE: this assumes the pre-6712 max coord of [`DEFAULT_MAX_COORD`]; for replays of build
+    /// 6712 and newer use [`coord_from_cell_with_max_coord`] (or
+    /// [`crate::parser::Context::deadlock_coord_from_cell`]).
     #[must_use]
     pub fn coord_from_cell(cell: u16, vec: f32) -> f32 {
-        super::coord_from_cell(CELL_WIDTH, MAX_COORD_INTEGER, cell, vec)
+        super::coord_from_cell(CELL_WIDTH, DEFAULT_MAX_COORD, cell, vec)
+    }
+
+    /// given a cell and an offset in that cell, reconstruct the world coord using `max_coord`
+    /// from `CSVCMsg_GameSessionConfiguration` (falls back to [`DEFAULT_MAX_COORD`] when `None`).
+    #[must_use]
+    pub fn coord_from_cell_with_max_coord(cell: u16, vec: f32, max_coord: Option<f32>) -> f32 {
+        let max_coord = max_coord.map_or(DEFAULT_MAX_COORD, |max_coord| max_coord as u32);
+        super::coord_from_cell(CELL_WIDTH, max_coord, cell, vec)
     }
 
     // TODO(blukai): impl compact / low precision (u8) variant of coord_from_cell
 }
 
+pub use deadlock::DEFAULT_MAX_COORD as DEADLOCK_DEFAULT_MAX_COORD;
 pub use deadlock::coord_from_cell as deadlock_coord_from_cell;
+pub use deadlock::coord_from_cell_with_max_coord as deadlock_coord_from_cell_with_max_coord;
 
 /// generates field key from given path. can and recommended to be called from a const context.
 /// when called from a const context, the function is interpreted by the compiler at compile time
@@ -622,5 +640,28 @@ impl EntityContainer {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.entities.is_empty()
+    }
+}
+
+#[cfg(test)]
+// NOTE: the values compared below are exactly representable.
+#[allow(clippy::float_cmp)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_deadlock_coord_from_cell() {
+        // pre-6712: world origin is at cell 32.
+        assert_eq!(deadlock_coord_from_cell(32, 0.0), 0.0);
+        assert_eq!(deadlock_coord_from_cell_with_max_coord(32, 0.0, None), 0.0);
+        // 6712+: max_coord is 32768 which puts world origin at cell 64 (see CWorld).
+        assert_eq!(
+            deadlock_coord_from_cell_with_max_coord(64, 0.0, Some(32768.0)),
+            0.0
+        );
+        assert_eq!(
+            deadlock_coord_from_cell_with_max_coord(66, 320.0, Some(32768.0)),
+            1344.0
+        );
     }
 }

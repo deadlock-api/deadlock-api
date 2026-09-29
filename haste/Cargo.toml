@@ -11,3 +11,7 @@ async = ["haste_core/async"]
 [dependencies]
 haste_broadcast.workspace = true
 haste_core.workspace = true
+
+[dev-dependencies]
+anyhow.workspace = true
+prost.workspace = true

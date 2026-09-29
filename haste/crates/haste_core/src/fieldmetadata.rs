@@ -1,6 +1,7 @@
 use crate::fielddecoder::{
-    BoolDecoder, DecoderError, F32Decoder, FieldDecode, I64Decoder, InvalidDecoder, QAngleDecoder,
-    StringDecoder, U64Decoder, Vector2Decoder, Vector3Decoder, Vector4Decoder,
+    BinaryBlockDecoder, BoolDecoder, DecoderError, F32Decoder, FieldDecode, InvalidDecoder,
+    QAngleDecoder, StringDecoder, U64Decoder, Vector2Decoder, Vector3Decoder, Vector4Decoder,
+    new_i64_decoder,
 };
 use crate::flattenedserializers::FlattenedSerializerField;
 use crate::vartype::{self, Expr, Lit};
@@ -131,10 +132,10 @@ fn visit_ident(
     #[allow(clippy::match_same_arms)]
     match ident {
         // primitives
-        "int8" => non_special!(I64Decoder),
-        "int16" => non_special!(I64Decoder),
-        "int32" => non_special!(I64Decoder),
-        "int64" => non_special!(I64Decoder),
+        "int8" | "int16" | "int32" | "int64" => Ok(FieldMetadata {
+            special_descriptor: None,
+            decoder: new_i64_decoder(field),
+        }),
         "bool" => non_special!(BoolDecoder),
         "float32" => non_special!(F32Decoder::new(field)?),
 
@@ -157,8 +158,9 @@ fn visit_ident(
         // other custom types
         "CUtlSymbolLarge" => non_special!(StringDecoder),
         "CUtlString" => non_special!(StringDecoder),
+        "CUtlBinaryBlock" => non_special!(BinaryBlockDecoder),
         // public/mathlib/vector.h
-        "QAngle" => non_special!(QAngleDecoder::new(field)),
+        "QAngle" => non_special!(QAngleDecoder::new(field)?),
         // NOTE: not all quantized floats are actually quantized (if bit_count is 0 or 32 it's
         // not!) F32Decoder will determine which kind of f32 decoder to use.
         "CNetworkedQuantizedFloat" => non_special!(F32Decoder::new(field)?),
@@ -181,6 +183,12 @@ fn visit_ident(
         "m_SpeechBubbles" | "DOTA_CombatLogQueryProgress" => Ok(FieldMetadata {
             special_descriptor: Some(FieldSpecialDescriptor::DynamicSerializerArray),
             decoder: Box::<U64Decoder>::default(),
+        }),
+
+        // enums that are flagged as signed (see `proto_enum_info_t`).
+        _ if field.is_signed_enum => Ok(FieldMetadata {
+            special_descriptor: None,
+            decoder: new_i64_decoder(field),
         }),
 
         // default

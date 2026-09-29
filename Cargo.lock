@@ -3924,8 +3924,10 @@ dependencies = [
 name = "haste"
 version = "0.0.0"
 dependencies = [
+ "anyhow",
  "haste_broadcast",
  "haste_core",
+ "prost",
 ]
 
 [[package]]

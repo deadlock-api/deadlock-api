@@ -24,6 +24,10 @@ bevy game engine).
 
 notable examples to check out for detailed usage:
 
+- [deadlock-demo-check](examples/deadlock-demo-check.rs) parses a deadlock replay end
+  to end and prints sanity checks (server-announced encoding params, player positions /
+  health / hero ids / net worth, packet message histogram); useful after game updates.
+
 - [deadlock-position](examples/deadlock-position.rs) demonstrates how to work with
   entities and how to get player (or any other entity, if desired) positions in
   deadlock (the game);

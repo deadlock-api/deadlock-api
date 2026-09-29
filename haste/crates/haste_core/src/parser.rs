@@ -6,14 +6,17 @@ use std::io;
 use std::io::SeekFrom;
 use valveprotos::common::{
     CDemoFullPacket, CDemoPacket, CDemoStringTables, CsvcMsgCreateStringTable,
-    CsvcMsgPacketEntities, CsvcMsgServerInfo, CsvcMsgUpdateStringTable, EDemoCommands, SvcMessages,
+    CsvcMsgPacketEntities, CsvcMsgServerInfo, CsvcMsgUpdateStringTable, EDemoCommands,
+    QuantizedFloatEncoderAliasT, SvcMessages,
 };
 
 use crate::bitreader::BitReader;
 use crate::demofile::{DEMO_RECORD_BUFFER_SIZE, DemoHeaderError};
 use crate::demostream::CmdHeader;
 use crate::demostream::{DemoStream, SeekableDemoStream};
-use crate::entities::{DeltaHeader, Entity, EntityContainer};
+use crate::entities::{
+    DeltaHeader, Entity, EntityContainer, deadlock_coord_from_cell_with_max_coord,
+};
 use crate::entityclasses::EntityClasses;
 use crate::fielddecoder::FieldDecodeContext;
 use crate::flattenedserializers::FlattenedSerializerContainer;
@@ -49,6 +52,10 @@ pub struct Context {
     full_packet_interval: i32,
     tick: i32,
     prev_tick: i32,
+    /// `CSVCMsg_GameSessionConfiguration.max_coord` (deadlock build 6712+).
+    max_coord: Option<f32>,
+    /// `CSVCMsg_GameSessionConfiguration.quantized_float_encoder_aliases` (deadlock build 6712+).
+    quantized_float_encoder_aliases: Vec<QuantizedFloatEncoderAliasT>,
 }
 
 impl Context {
@@ -63,7 +70,44 @@ impl Context {
             full_packet_interval: 0,
             tick: -1,
             prev_tick: -1,
+            max_coord: None,
+            quantized_float_encoder_aliases: Vec::new(),
         }
+    }
+
+    /// picks up the bits of `CSVCMsg_ServerInfo` that the parser cares about.
+    fn handle_server_info(
+        &mut self,
+        msg: &CsvcMsgServerInfo,
+        field_decode_ctx: &mut FieldDecodeContext,
+    ) {
+        if let Some(tick_interval) = msg.tick_interval {
+            self.tick_interval = tick_interval;
+
+            let ratio = DEFAULT_TICK_INTERVAL / tick_interval;
+            self.full_packet_interval = DEFAULT_FULL_PACKET_INTERVAL * ratio as i32;
+
+            // NOTE(blukai): field decoder context needs tick interval to be able to
+            // decode simulation time floats.
+            field_decode_ctx.tick_interval = tick_interval;
+        }
+
+        if let Some(game_session_config) = msg.game_session_config.as_ref() {
+            self.max_coord = game_session_config.max_coord;
+            self.quantized_float_encoder_aliases
+                .clone_from(&game_session_config.quantized_float_encoder_aliases);
+        }
+    }
+
+    fn parse_serializers(
+        &self,
+        cmd: valveprotos::common::CDemoSendTables,
+    ) -> Result<FlattenedSerializerContainer, crate::flattenedserializers::FlattenedSerializersError>
+    {
+        FlattenedSerializerContainer::parse_with_quantized_float_encoder_aliases(
+            cmd,
+            &self.quantized_float_encoder_aliases,
+        )
     }
 
     // NOTE: following methods are public-facing api; do not use them internally
@@ -104,6 +148,29 @@ impl Context {
     #[must_use]
     pub fn tick(&self) -> i32 {
         self.tick
+    }
+
+    /// world coordinate bound announced by the server (`CSVCMsg_GameSessionConfiguration.max_coord`).
+    ///
+    /// deadlock doubled it from 16384 to 32768 in build 6712 (this moved the world origin cell
+    /// from 32 to 64). `None` for replays that predate it.
+    #[must_use]
+    pub fn max_coord(&self) -> Option<f32> {
+        self.max_coord
+    }
+
+    /// quantized float encoder aliases announced by the server
+    /// (`CSVCMsg_GameSessionConfiguration.quantized_float_encoder_aliases`).
+    #[must_use]
+    pub fn quantized_float_encoder_aliases(&self) -> &[QuantizedFloatEncoderAliasT] {
+        &self.quantized_float_encoder_aliases
+    }
+
+    /// given a deadlock cell and an offset in that cell, reconstruct the world coord, honoring
+    /// [`Self::max_coord`] (see [`deadlock_coord_from_cell_with_max_coord`]).
+    #[must_use]
+    pub fn deadlock_coord_from_cell(&self, cell: u16, vec: f32) -> f32 {
+        deadlock_coord_from_cell_with_max_coord(cell, vec, self.max_coord)
     }
 }
 
@@ -344,7 +411,7 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
                 }
 
                 let cmd = D::decode_cmd_send_tables(cmd_body)?;
-                self.ctx.serializers = Some(FlattenedSerializerContainer::parse(cmd)?);
+                self.ctx.serializers = Some(self.ctx.parse_serializers(cmd)?);
             }
 
             EDemoCommands::DemClassInfo => {
@@ -422,16 +489,8 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
 
                 c if c == SvcMessages::SvcServerInfo as u32 => {
                     let msg = CsvcMsgServerInfo::decode(buf)?;
-                    if let Some(tick_interval) = msg.tick_interval {
-                        self.ctx.tick_interval = tick_interval;
-
-                        let ratio = DEFAULT_TICK_INTERVAL / tick_interval;
-                        self.ctx.full_packet_interval = DEFAULT_FULL_PACKET_INTERVAL * ratio as i32;
-
-                        // NOTE(blukai): field decoder context needs tick interval to be able to
-                        // decode simulation time floats.
-                        self.field_decode_ctx.tick_interval = tick_interval;
-                    }
+                    self.ctx
+                        .handle_server_info(&msg, &mut self.field_decode_ctx);
                 }
 
                 _ => {
@@ -924,7 +983,7 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
                 }
 
                 let cmd = D::decode_cmd_send_tables(cmd_body)?;
-                self.ctx.serializers = Some(FlattenedSerializerContainer::parse(cmd)?);
+                self.ctx.serializers = Some(self.ctx.parse_serializers(cmd)?);
             }
 
             EDemoCommands::DemClassInfo => {
@@ -992,14 +1051,8 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
 
                 c if c == SvcMessages::SvcServerInfo as u32 => {
                     let msg = CsvcMsgServerInfo::decode(buf)?;
-                    if let Some(tick_interval) = msg.tick_interval {
-                        self.ctx.tick_interval = tick_interval;
-
-                        let ratio = DEFAULT_TICK_INTERVAL / tick_interval;
-                        self.ctx.full_packet_interval = DEFAULT_FULL_PACKET_INTERVAL * ratio as i32;
-
-                        self.field_decode_ctx.tick_interval = tick_interval;
-                    }
+                    self.ctx
+                        .handle_server_info(&msg, &mut self.field_decode_ctx);
                 }
 
                 _ => {}
