@@ -67,6 +67,10 @@ Provide either `match_id` (the server spectates the lobby to obtain the broadcas
 Projection/filter queries emit rows continuously as they are decoded. A whole-match aggregation
 (`GROUP BY` / `ORDER BY`) can only produce its final rows once the broadcast ends.
 
+**Joining controllers and pawns:** while a hero is dead, `CCitadelPlayerController.m_hPawn` points
+at a `CCitadelObserverPawn`, not the hero's `CCitadelPlayerPawn`. Join controllers to hero pawns by
+hero id or pawn entity index rather than through `m_hPawn`.
+
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |

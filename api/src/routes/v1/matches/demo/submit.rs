@@ -57,6 +57,10 @@ artifact (Parquet or NDJSON).
 
 Identical `(match_id, query, format)` submissions are deduplicated and reuse a cached result.
 
+**Joining controllers and pawns:** while a hero is dead, `CCitadelPlayerController.m_hPawn` points
+at a `CCitadelObserverPawn`, not the hero's `CCitadelPlayerPawn`. Join controllers to hero pawns by
+hero id or pawn entity index rather than through `m_hPawn`.
+
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |

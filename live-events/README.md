@@ -161,6 +161,10 @@ Additional event names:
 | `sinners_sacrifice` | Sinners sacrifice objective | `health`, `max_health`, `position` |
 | `ability_melee_parry` | Melee parry event | `owner_entity`, `attack_parried`, `start_time`, `success_time` |
 
+> **Joining `player_controller` and `player_pawn`:** while a hero is dead, the controller's `pawn`
+> points at a `CCitadelObserverPawn`, which is not part of the `player_pawn` stream. Join controllers
+> to pawns by hero id or pawn entity index instead of the controller's `pawn` handle.
+
 #### Example Event Payloads
 
 **Player Controller Update:**
