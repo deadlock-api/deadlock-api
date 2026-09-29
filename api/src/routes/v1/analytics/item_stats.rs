@@ -14,7 +14,8 @@ use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    MatchInfoFilters, PlayerFilters, account_match_prefilter, default_min_matches_u32,
+    CORRUPTED_ITEMS_MIN_MATCH_ID, CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP, MatchInfoFilters,
+    PlayerFilters, account_match_prefilter, corrupted_sql, default_min_matches_u32,
     filter_protected_accounts, join_filters, not_corrupted_sql, round_timestamps,
 };
 use crate::context::AppState;
@@ -154,6 +155,22 @@ impl BucketQuery {
             | Self::NetWorthBy10000 => None,
         }
     }
+}
+
+/// How corrupted purchases are counted. Build 6712+: the Broker swaps a T3/T4 upgrade for a
+/// corrupted version that keeps the normal item's id.
+#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum CorruptedItemsFilter {
+    /// Only normal purchases. Corrupted purchases are left out.
+    #[default]
+    Exclude,
+    /// Count corrupted purchases as purchases of the normal item.
+    Include,
+    /// Only corrupted purchases: stats for the corrupted variant of each item.
+    Only,
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
@@ -301,15 +318,44 @@ pub(crate) struct ItemStatsQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_chains()")
     )]
     item_order: Option<Vec<Vec<u32>>>,
-    /// Count corrupted items (build 6712+: a T3/T4 upgrade the Broker swapped for a corrupted version with the same item id) as purchases of the normal item. **Default:** `false`, corrupted purchases are excluded from the stats. Setting it to `true` bypasses the pre-aggregated rollups, so requests are slower.
+    /// How to count corrupted items (build 6712+: a T3/T4 upgrade that the Broker swapped for a corrupted version with the same item id). `exclude`: only normal purchases. `include`: corrupted purchases count as the normal item. `only`: only corrupted purchases, so each row describes the corrupted variant of `item_id`. Compare it with the same request using `exclude`. Corrupted items only exist in matches from 2026-09-29 on, so `only` ignores earlier time and match-id bounds. `include` and `only` skip the pre-aggregated rollups, so those requests are slower. **Default:** `exclude`, or `include` if the deprecated `include_corrupted_items=true` is set.
+    #[serde(default)]
+    #[param(inline)]
+    corrupted_items: Option<CorruptedItemsFilter>,
+    /// Deprecated alias of `corrupted_items=include`. `corrupted_items` takes precedence when both are set.
     #[serde(default)]
     #[param(default = false)]
+    #[deprecated(note = "Use corrupted_items=include instead")]
     include_corrupted_items: Option<bool>,
 }
 
 impl ItemStatsQuery {
-    fn include_corrupted(&self) -> bool {
-        self.include_corrupted_items == Some(true)
+    #[expect(deprecated)]
+    fn corrupted_items(&self) -> CorruptedItemsFilter {
+        self.corrupted_items
+            .unwrap_or(if self.include_corrupted_items == Some(true) {
+                CorruptedItemsFilter::Include
+            } else {
+                CorruptedItemsFilter::Exclude
+            })
+    }
+
+    /// Whether corrupted purchases are counted at all. The rollups are built from
+    /// `upgrades.*`, which has none, so such requests always go to the base table.
+    fn reads_corrupted(&self) -> bool {
+        self.corrupted_items() != CorruptedItemsFilter::Exclude
+    }
+
+    /// `corrupted_items=only` with a time or match-id upper bound before the first match that
+    /// can contain a corrupted item: the result is empty, so no query needs to run.
+    fn corrupted_only_range_is_empty(&self) -> bool {
+        self.corrupted_items() == CorruptedItemsFilter::Only
+            && (self
+                .max_unix_timestamp
+                .is_some_and(|v| v < CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP)
+                || self
+                    .max_match_id
+                    .is_some_and(|v| v < CORRUPTED_ITEMS_MIN_MATCH_ID))
     }
 
     fn has_ability_order_filter(&self) -> bool {
@@ -344,8 +390,8 @@ pub struct ItemStats {
 
 // All rollups below (`item_stats_agg`, `item_cohort_stats_*_agg_v2`, `item_enemy_stats_agg`)
 // are built from the `upgrades.*` arrays, which exclude corrupted purchases (migration 42),
-// and keep no per-purchase corruption dimension: `include_corrupted_items` requests always
-// go to the base table.
+// and keep no per-purchase corruption dimension: `corrupted_items` `include`/`only` requests
+// always go to the base table.
 
 /// Horizon of the `item_stats_agg` materialized view, in days. Keep in sync with
 /// the `INTERVAL ... DAY` in `clickhouse/item_stats_agg.sql`.
@@ -404,7 +450,7 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
         || query.has_ability_order_filter()
         || query.min_match_id.is_some()
         || query.max_match_id.is_some()
-        || query.include_corrupted()
+        || query.reads_corrupted()
         || !MatchMode::is_agg_servable(query.match_mode.as_deref());
     if personalized || unsupported_filter {
         return None;
@@ -574,7 +620,7 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
         || query.max_match_id.is_some()
         || query.min_average_badge.is_some_and(|v| v > 11)
         || query.max_average_badge.is_some_and(|v| v < 116)
-        || query.include_corrupted()
+        || query.reads_corrupted()
         || !MatchMode::is_agg_servable(query.match_mode.as_deref());
     if unsupported {
         return None;
@@ -687,7 +733,7 @@ fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
         || query.has_ability_order_filter()
         || query.min_match_id.is_some()
         || query.max_match_id.is_some()
-        || query.include_corrupted()
+        || query.reads_corrupted()
         || !MatchMode::is_agg_servable(query.match_mode.as_deref());
     if unsupported {
         return None;
@@ -821,7 +867,14 @@ fn cohort_mv_skip_reason(query: &ItemStatsQuery) -> &'static str {
         ),
         (query.min_average_badge.is_some_and(|v| v > 11), "badge"),
         (query.max_average_badge.is_some_and(|v| v < 116), "badge"),
-        (query.include_corrupted(), "include_corrupted"),
+        (
+            query.corrupted_items() == CorruptedItemsFilter::Include,
+            "include_corrupted",
+        ),
+        (
+            query.corrupted_items() == CorruptedItemsFilter::Only,
+            "only_corrupted",
+        ),
         (query.min_unix_timestamp.is_none(), "no_min_timestamp"),
         (
             query
@@ -899,11 +952,40 @@ fn validate_item_order(chains: Option<&[Vec<u32>]>) -> APIResult<()> {
 
 #[expect(clippy::too_many_lines)]
 fn build_query(query: &ItemStatsQuery) -> String {
-    /* ---------- match_info filters ---------- */
+    let corrupted_items = query.corrupted_items();
+    let only_corrupted = corrupted_items == CorruptedItemsFilter::Only;
+    /* ---------- match_info filters ----------
+     *
+     * `corrupted_items=only`: no match before build 6712 can match, so raise the lower bounds
+     * to the first possible match. The `match_id` bound prunes whole partitions, for the base
+     * table and for the hero-led projection alike. The projection has no `start_time` index,
+     * so without that bound it would read every hero row of the table. All windows that
+     * start before the patch also produce the same SQL, so they share one cache entry.
+     */
+    let (min_unix_timestamp, min_match_id) = if only_corrupted {
+        (
+            Some(
+                query
+                    .min_unix_timestamp
+                    .map_or(CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP, |v| {
+                        v.max(CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP)
+                    }),
+            ),
+            Some(
+                query
+                    .min_match_id
+                    .map_or(CORRUPTED_ITEMS_MIN_MATCH_ID, |v| {
+                        v.max(CORRUPTED_ITEMS_MIN_MATCH_ID)
+                    }),
+            ),
+        )
+    } else {
+        (query.min_unix_timestamp, query.min_match_id)
+    };
     let info_filters = MatchInfoFilters {
-        min_unix_timestamp: query.min_unix_timestamp,
+        min_unix_timestamp,
         max_unix_timestamp: query.max_unix_timestamp,
-        min_match_id: query.min_match_id,
+        min_match_id,
         max_match_id: query.max_match_id,
         min_average_badge: query.min_average_badge,
         max_average_badge: query.max_average_badge,
@@ -1039,18 +1121,20 @@ fn build_query(query: &ItemStatsQuery) -> String {
      */
     let mut settings = vec!["log_comment = 'item_stats'", "apply_patch_parts = 0"];
     /*
-     * The `item_stats_by_hero_mode_badge` projection is sorted hero_id-first, so any
-     * query WITHOUT a buyer hero filter cannot prune it and full-scans the entire
-     * projection (~228M rows / ~31 GiB for a 30-day window). The base table serves the
-     * same no-hero shapes far more cheaply via its skip indexes (idx_start_time minmax
+     * The hero-led `item_stats_by_hero_mode_badge_v2` projection is sorted hero_id-first
+     * and has no `start_time` index, so a query WITHOUT a buyer hero filter cannot prune
+     * it. It reads the whole projection of every partition that survives partition pruning,
+     * whatever the time window. Measured: 42.4M rows for a 1-day window while v2 covered
+     * partitions 95..108, and ~350M once it covers the table. The base table serves the same
+     * no-hero shapes far more cheaply through its skip indexes (idx_start_time minmax
      * for the time window, account_id bloom for account filters): benchmarked at ~5-8x
      * less I/O and wall time for item-, badge-, and account-filtered no-hero queries.
      *
      * Hero-filtered queries keep the projection: hero_id is its most selective prefix
-     * (~2.3% per hero) and, combined with start_time, prunes to ~0.15% of the table, so
-     * we disable projections only when there is no buyer hero filter. The single
-     * near-neutral case is an all-time query (no start_time bound), where the base table
-     * cannot prune by time — but it still reads less I/O, and such queries are rare.
+     * (~2.3% per hero), so we disable projections only when there is no buyer hero
+     * filter. The single near-neutral case is an all-time query (no start_time bound),
+     * where the base table cannot prune by time. It still reads less I/O there, and such
+     * queries are rare.
      *
      * (Originally this carve-out covered only account-only shapes; it was generalized to
      * all no-hero shapes after benchmarking the projection vs base-table access paths.)
@@ -1059,16 +1143,30 @@ fn build_query(query: &ItemStatsQuery) -> String {
      * predicate: the enemy-team CTE selects on `hero_id`, which is exactly the
      * projection's leading key, so it prunes to ~1.1k marks instead of ~38k. The
      * main ARRAY JOIN scan reads `upgrades.*`, which the projection does not
-     * store, so it falls back to the base table on its own. With
-     * `include_corrupted_items` the main scan reads `items.*` instead, which the
-     * projection does store, so it could pick the hero-led projection without a hero
-     * predicate (a full projection scan); projections stay off for that opt-in case.
+     * store, so it falls back to the base table on its own. With `corrupted_items`
+     * `include`/`only`, the main scan reads `items.*` instead. The projection does store
+     * those arrays, so ClickHouse could pick it without a hero predicate (a full projection
+     * scan). Projections therefore stay off for those opt-in cases.
      */
-    if !has_buyer_hero_filter && (enemy_hero_ids.is_none() || query.include_corrupted()) {
+    if !has_buyer_hero_filter && (enemy_hero_ids.is_none() || query.reads_corrupted()) {
         settings.push("optimize_use_projections = 0");
     }
     let settings_clause = settings.join(", ");
-    let match_filters = format!("{match_mode_filter} AND {game_mode_filter} {info_filters}");
+    // `corrupted_items=only`: skip players without any corrupted purchase before the item
+    // arrays are read. The predicate only needs `items.upgrade_info`, a small, low-entropy
+    // column, and ClickHouse moves it to PREWHERE on its own. In the enemy case, which has
+    // its own PREWHERE, it goes there explicitly. Measured on partition 108: 153 MiB read
+    // instead of 545 MiB.
+    let has_corrupted_filter = if only_corrupted {
+        format!(
+            " AND arrayExists(u -> {}, items.upgrade_info)",
+            corrupted_sql("u")
+        )
+    } else {
+        String::new()
+    };
+    let match_filters =
+        format!("{match_mode_filter} AND {game_mode_filter} {info_filters}{has_corrupted_filter}");
     // With an enemy filter the match filters move to PREWHERE alongside the semi-join, so
     // the array-joined `WHERE` only keeps the predicates that need the joined aliases.
     let (prewhere_clause, where_match_filters) = if enemy_prewhere.is_empty() {
@@ -1084,23 +1182,26 @@ fn build_query(query: &ItemStatsQuery) -> String {
      * and 42): upgrade-only elements with buy_time > 0 that are not corrupted, baked
      * in at insert time, so the `item_id IN t_upgrades AND buy_time > 0` filter and
      * ~47% of the array bytes disappear. The hero-filtered path must keep `items.*`
-     * + the query-time filter: it is served by the item_stats_by_hero_mode_badge(_v2)
+     * + the query-time filter: it is served by the item_stats_by_hero_mode_badge_v2
      * projection, which does not contain the upgrades.* columns, so referencing them
      * would silently disable the projection. Its corrupted-item filter reads
-     * `items.upgrade_info`, which only the _v2 projection (migration 42) carries.
+     * `items.upgrade_info`, which the _v2 projection (migration 42) carries.
      *
-     * `include_corrupted_items` also needs `items.*`, since `upgrades.*` has no
-     * corrupted purchases to include.
+     * `corrupted_items` `include`/`only` also need `items.*`, because `upgrades.*` has no
+     * corrupted purchases.
      */
-    let use_items_arrays = has_buyer_hero_filter || query.include_corrupted();
+    let use_items_arrays = has_buyer_hero_filter || query.reads_corrupted();
     let (items_array_join, upgrade_filter, nw_col) = if use_items_arrays {
-        let (upgrade_info_join, corrupted_filter) = if query.include_corrupted() {
-            (String::new(), String::new())
-        } else {
-            (
+        let (upgrade_info_join, corrupted_filter) = match corrupted_items {
+            CorruptedItemsFilter::Include => (String::new(), String::new()),
+            CorruptedItemsFilter::Exclude => (
                 ",\n    items.upgrade_info AS upgrade_info".to_owned(),
                 format!(" AND {}", not_corrupted_sql("upgrade_info")),
-            )
+            ),
+            CorruptedItemsFilter::Only => (
+                ",\n    items.upgrade_info AS upgrade_info".to_owned(),
+                format!(" AND {}", corrupted_sql("upgrade_info")),
+            ),
         };
         (
             format!(
@@ -1135,6 +1236,9 @@ fn build_query(query: &ItemStatsQuery) -> String {
     } else {
         format!("WITH {}", ctes.join(",\n    "))
     };
+    // `avgIf` over zero rows is NaN, not NULL, so `coalesce` did not catch it. Groups with no
+    // sale (common for `corrupted_items=only`) then came out as JSON `null`. `ifNotFinite`
+    // returns 0 like the rollup queries do (`if(sum(n_sold) = 0, 0, ...)`).
     format!(
         "
 {with_clause}
@@ -1146,9 +1250,9 @@ SELECT
     wins + losses    AS matches,
     uniq(account_id) AS players,
     avg(buy_time) AS avg_buy_time_s,
-    coalesce(avgIf(sold_time, sold_time > 0), 0) AS avg_sell_time_s,
+    ifNotFinite(avgIf(sold_time, sold_time > 0), 0) AS avg_sell_time_s,
     avg((buy_time / duration_s) * 100) AS avg_buy_time_relative,
-    coalesce(avgIf((sold_time / duration_s) * 100, sold_time > 0), 0) AS avg_sell_time_relative
+    ifNotFinite(avgIf((sold_time / duration_s) * 100, sold_time > 0), 0) AS avg_sell_time_relative
 FROM match_player
 ARRAY JOIN
     {items_array_join}{nw_array_join}
@@ -1197,6 +1301,9 @@ async fn get_item_stats(
     mut query: ItemStatsQuery,
 ) -> APIResult<Vec<ItemStats>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
+    if query.corrupted_only_range_is_empty() {
+        return Ok(vec![]);
+    }
     // Prefer the pre-aggregated item_stats_agg view for the global-meta subset of
     // parameters; fall back to the base table for everything else, and on any MV
     // error so a missing or rebuilding view never breaks the endpoint.
@@ -1467,6 +1574,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(deprecated)]
     fn include_corrupted_items_reads_raw_items_without_the_bit_filter() {
         for hero_ids in [None, Some(vec![7])] {
             let has_hero = hero_ids.is_some();
@@ -1512,6 +1620,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(deprecated)]
     fn include_corrupted_items_declines_every_rollup() {
         let recent = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -1546,6 +1655,199 @@ mod tests {
             cohort_mv_skip_reason(&with_corrupted(&cohort)),
             "include_corrupted"
         );
+    }
+
+    #[test]
+    #[expect(deprecated)]
+    fn corrupted_items_param_aliases_the_legacy_flag() {
+        let with = |corrupted_items, include_corrupted_items| {
+            build_query(&ItemStatsQuery {
+                corrupted_items,
+                include_corrupted_items,
+                ..Default::default()
+            })
+        };
+        let default = build_query(&ItemStatsQuery::default());
+        assert_eq!(with(Some(CorruptedItemsFilter::Exclude), None), default);
+        assert_eq!(with(None, Some(false)), default);
+        assert_eq!(
+            with(Some(CorruptedItemsFilter::Include), None),
+            with(None, Some(true))
+        );
+        // The explicit param wins over the deprecated flag.
+        assert_eq!(
+            with(Some(CorruptedItemsFilter::Exclude), Some(true)),
+            default
+        );
+        assert_eq!(
+            with(Some(CorruptedItemsFilter::Only), Some(true)),
+            with(Some(CorruptedItemsFilter::Only), None)
+        );
+    }
+
+    #[test]
+    fn only_corrupted_items_filters_on_the_corruption_bit() {
+        for hero_ids in [None, Some(vec![7])] {
+            let has_hero = hero_ids.is_some();
+            let sql = build_query(&ItemStatsQuery {
+                hero_ids,
+                corrupted_items: Some(CorruptedItemsFilter::Only),
+                bucket: BucketQuery::NetWorthBy1000,
+                ..Default::default()
+            });
+            assert_valid_sql(&sql);
+            assert!(sql.contains("items.item_id      AS item_id"));
+            assert!(sql.contains(",\n    items.upgrade_info AS upgrade_info"));
+            assert!(sql.contains("`items.net_worth_at_buy` AS net_worth_at_buy"));
+            assert!(sql.contains(
+                "AND item_id IN t_upgrades AND buy_time > 0 AND bitAnd(upgrade_info, 8388608) != 0\n"
+            ));
+            assert!(
+                sql.contains(" AND arrayExists(u -> bitAnd(u, 8388608) != 0, items.upgrade_info)")
+            );
+            assert!(!sql.contains("upgrades.item_id"));
+            assert!(
+                !sql.contains("8388608) = 0"),
+                "no not-corrupted filter: {sql}"
+            );
+            // Hero-filtered: the v2 projection (partition-pruned by the match_id floor).
+            assert_eq!(sql.contains("optimize_use_projections = 0"), !has_hero);
+        }
+        // Enemy shape: the row prefilter goes into the explicit PREWHERE.
+        let enemy = build_query(&ItemStatsQuery {
+            enemy_hero_ids: Some(vec![6]),
+            corrupted_items: Some(CorruptedItemsFilter::Only),
+            ..Default::default()
+        });
+        assert_valid_sql(&enemy);
+        let prewhere = enemy.split("PREWHERE").nth(1).unwrap();
+        let prewhere = prewhere.split("\nWHERE").next().unwrap();
+        assert!(prewhere.contains("arrayExists(u -> bitAnd(u, 8388608) != 0, items.upgrade_info)"));
+        assert!(enemy.contains("optimize_use_projections = 0"));
+    }
+
+    #[test]
+    fn only_corrupted_items_clamps_the_window_to_the_patch() {
+        let floor = format!(
+            "start_time >= {CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP} AND match_id >= {CORRUPTED_ITEMS_MIN_MATCH_ID}"
+        );
+        let only = |min_unix_timestamp, min_match_id| {
+            build_query(&ItemStatsQuery {
+                corrupted_items: Some(CorruptedItemsFilter::Only),
+                min_unix_timestamp,
+                min_match_id,
+                ..Default::default()
+            })
+        };
+        // Old or missing lower bounds are raised to the patch, so they share one SQL string
+        // (and one cache entry).
+        let unbounded = only(None, None);
+        assert!(unbounded.contains(&floor), "{unbounded}");
+        assert_eq!(only(Some(1_700_000_000), Some(1)), unbounded);
+        // Tighter bounds are kept.
+        let later = only(Some(1_790_800_000), Some(108_600_000));
+        assert!(later.contains("start_time >= 1790800000 AND match_id >= 108600000"));
+        // The enemy CTE is bounded too.
+        let enemy = build_query(&ItemStatsQuery {
+            corrupted_items: Some(CorruptedItemsFilter::Only),
+            enemy_hero_ids: Some(vec![6]),
+            min_unix_timestamp: Some(1_700_000_000),
+            ..Default::default()
+        });
+        assert_eq!(enemy.matches(&floor).count(), 2, "{enemy}");
+        // Other modes keep the requested window.
+        let exclude = build_query(&ItemStatsQuery {
+            min_unix_timestamp: Some(1_700_000_000),
+            ..Default::default()
+        });
+        assert!(exclude.contains("start_time >= 1700000000"));
+        assert!(!exclude.contains("match_id >="));
+    }
+
+    #[test]
+    fn only_corrupted_items_before_the_patch_is_empty() {
+        let only = |max_unix_timestamp, max_match_id| ItemStatsQuery {
+            corrupted_items: Some(CorruptedItemsFilter::Only),
+            max_unix_timestamp,
+            max_match_id,
+            ..Default::default()
+        };
+        assert!(
+            only(Some(CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP - 1), None)
+                .corrupted_only_range_is_empty()
+        );
+        assert!(only(None, Some(CORRUPTED_ITEMS_MIN_MATCH_ID - 1)).corrupted_only_range_is_empty());
+        assert!(!only(None, None).corrupted_only_range_is_empty());
+        assert!(
+            !only(Some(CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP), None).corrupted_only_range_is_empty()
+        );
+        // Only `only` short-circuits.
+        assert!(
+            !ItemStatsQuery {
+                corrupted_items: Some(CorruptedItemsFilter::Include),
+                ..only(Some(1), None)
+            }
+            .corrupted_only_range_is_empty()
+        );
+    }
+
+    #[test]
+    fn only_corrupted_items_declines_every_rollup() {
+        let recent = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .cast_signed()
+            - 86_400;
+        let only = ItemStatsQuery {
+            min_unix_timestamp: Some(recent),
+            corrupted_items: Some(CorruptedItemsFilter::Only),
+            ..Default::default()
+        };
+        assert!(build_mv_query(&only).is_none());
+        assert!(
+            build_enemy_mv_query(&ItemStatsQuery {
+                enemy_hero_ids: Some(vec![6]),
+                ..only.clone()
+            })
+            .is_none()
+        );
+        let cohort = ItemStatsQuery {
+            include_item_ids: Some(vec![1]),
+            ..only
+        };
+        assert!(build_cohort_mv_query(&cohort).is_none());
+        assert_eq!(cohort_mv_skip_reason(&cohort), "only_corrupted");
+    }
+
+    #[test]
+    fn corrupted_items_param_deserializes() {
+        let try_parse = |qs: &str| {
+            let uri: axum::http::Uri = format!("/item-stats?{qs}").parse().unwrap();
+            Query::<ItemStatsQuery>::try_from_uri(&uri).map(|Query(q)| q)
+        };
+        let parse = |qs: &str| try_parse(qs).unwrap();
+        for (qs, expected) in [
+            ("", CorruptedItemsFilter::Exclude),
+            ("corrupted_items=exclude", CorruptedItemsFilter::Exclude),
+            ("corrupted_items=include", CorruptedItemsFilter::Include),
+            ("corrupted_items=only", CorruptedItemsFilter::Only),
+            (
+                "include_corrupted_items=true",
+                CorruptedItemsFilter::Include,
+            ),
+            (
+                "include_corrupted_items=false",
+                CorruptedItemsFilter::Exclude,
+            ),
+            (
+                "include_corrupted_items=true&corrupted_items=only",
+                CorruptedItemsFilter::Only,
+            ),
+        ] {
+            assert_eq!(parse(qs).corrupted_items(), expected, "{qs}");
+        }
+        assert!(try_parse("corrupted_items=maybe").is_err());
     }
 
     #[test]

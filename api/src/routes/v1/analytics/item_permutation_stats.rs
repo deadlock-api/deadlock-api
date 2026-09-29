@@ -191,6 +191,19 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
     // apart. The swapped-out normal purchase stays in `items`, so a player who had an item
     // corrupted still counts as owning the normal item.
     let include_corrupted = query.include_corrupted_items == Some(true);
+    // Both shapes read `items.*` (and `items.upgrade_info`), which the hero-led
+    // `item_stats_by_hero_mode_badge_v2` projection stores, so ClickHouse also picks it
+    // without a hero filter. The projection has no `start_time` index, so it then reads the
+    // whole projection of every surviving partition, whatever the window. Measured on a 1-day
+    // window, default filters: combinations read 42.4M rows vs 0.31M on the base table.
+    // Intersect read 42.4M rows / 7.72 GiB / 47 s CPU vs 0.31M rows / 62 MiB / 2.6 s CPU.
+    // This grows to ~350M rows once v2 covers every partition (migration 43). Same rule as
+    // item_stats: only hero-filtered queries may use the projection.
+    let projection_setting = if hero_ids.is_empty() {
+        ", optimize_use_projections = 0"
+    } else {
+        ""
+    };
     if let Some(item_ids) = &query.item_ids {
         if item_ids.len() < 2 {
             return String::new();
@@ -222,7 +235,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         GROUP BY item_ids
         {having_clause}
         ORDER BY matches DESC
-        SETTINGS log_comment = 'item_permutation_stats_intersect', apply_patch_parts = 0
+        SETTINGS log_comment = 'item_permutation_stats_intersect', apply_patch_parts = 0{projection_setting}
         "
         )
     } else {
@@ -262,7 +275,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         GROUP BY {intersect_array}
         {having_clause}
         ORDER BY matches DESC
-        SETTINGS log_comment = 'item_permutation_stats_combinations', apply_patch_parts = 0
+        SETTINGS log_comment = 'item_permutation_stats_combinations', apply_patch_parts = 0{projection_setting}
         "
         )
     }
@@ -409,6 +422,40 @@ mod tests {
         });
         assert!(intersect.contains("arrayIntersect(items.item_id, [1, 2]) AS item_ids"));
         assert!(!intersect.contains("upgrade_info"));
+    }
+
+    #[test]
+    fn projections_are_disabled_without_a_hero_filter() {
+        for item_ids in [None, Some(vec![1, 2])] {
+            for include_corrupted_items in [None, Some(true)] {
+                let no_hero = build_query(&ItemPermutationStatsQuery {
+                    item_ids: item_ids.clone(),
+                    include_corrupted_items,
+                    account_ids: Some(vec![5]),
+                    ..Default::default()
+                });
+                assert!(
+                    no_hero.contains("apply_patch_parts = 0, optimize_use_projections = 0\n"),
+                    "{no_hero}"
+                );
+                let hero = build_query(&ItemPermutationStatsQuery {
+                    item_ids: item_ids.clone(),
+                    include_corrupted_items,
+                    hero_ids: Some(vec![7]),
+                    ..Default::default()
+                });
+                assert!(hero.contains("hero_id IN (7)"));
+                assert!(!hero.contains("optimize_use_projections"), "{hero}");
+                #[expect(deprecated)]
+                let legacy_hero = build_query(&ItemPermutationStatsQuery {
+                    item_ids: item_ids.clone(),
+                    include_corrupted_items,
+                    hero_id: Some(7),
+                    ..Default::default()
+                });
+                assert!(!legacy_hero.contains("optimize_use_projections"));
+            }
+        }
     }
 
     #[test]

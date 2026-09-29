@@ -11,6 +11,22 @@ pub(super) fn not_corrupted_sql(upgrade_info_expr: &str) -> String {
     format!("bitAnd({upgrade_info_expr}, {CORRUPTED_ITEM_BIT}) = 0")
 }
 
+/// SQL predicate that is true for corrupted purchases, given an expression for the
+/// purchase's `upgrade_info` value.
+pub(super) fn corrupted_sql(upgrade_info_expr: &str) -> String {
+    format!("bitAnd({upgrade_info_expr}, {CORRUPTED_ITEM_BIT}) != 0")
+}
+
+/// No match starting before this can contain a corrupted item: build 6712 went live on
+/// 2026-09-29 and the first corrupted purchase on record is in a match that started at
+/// 20:35:08 UTC. This is 2026-09-29 20:00:00 UTC, a safety margin before that.
+pub(super) const CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP: i64 = 1_790_712_000;
+/// Lower bound on the match id of any match that can contain a corrupted item (the first one on
+/// record is `108_540_105`). `match_player` is partitioned by `intDiv(match_id, 1e6)`, so this
+/// is the first id of partition 108. A `match_id >=` bound prunes whole partitions, which
+/// also works for the hero-led projection; that projection cannot prune by `start_time`.
+pub(super) const CORRUPTED_ITEMS_MIN_MATCH_ID: u64 = 108_000_000;
+
 #[cfg_attr(test, derive(Debug, proptest_derive::Arbitrary))]
 pub(super) struct MatchInfoFilters {
     pub min_unix_timestamp: Option<i64>,
