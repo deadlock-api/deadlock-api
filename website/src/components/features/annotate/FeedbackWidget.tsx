@@ -80,7 +80,7 @@ function TargetList({
                 <span className="truncate">{target.source?.component ?? "Selected element"}</span>
               </div>
               <div
-                className="truncate font-mono text-2xs text-muted-foreground"
+                className="truncate font-mono text-xs text-muted-foreground"
                 title={target.source ? formatSource(target.source) : target.selector}
               >
                 {target.source ? formatSource(target.source) : target.selector}

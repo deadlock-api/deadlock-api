@@ -55,7 +55,7 @@ function SwapHint({ heroId, gain, side, onApply }: { heroId: number; gain: numbe
       onClick={onApply}
       aria-label={label}
       title={label}
-      className="px-1 text-3xs font-semibold"
+      className="px-1 text-xs font-semibold"
     >
       {/* The pill fits its slot: a narrow slot (a phone, or both sides side by side) drops the arrow, then the
           number, which the label and title still carry. Wider pills collided with the neighbouring slot's. */}
@@ -137,7 +137,7 @@ export function DraftSlot({
         >
           <PlusIcon className="size-4" />
         </DraftSlotTarget>
-        <div aria-hidden="true" className="invisible text-2xs leading-tight">
+        <div aria-hidden="true" className="invisible text-xs leading-tight">
           &nbsp;
         </div>
         <div className="h-6" />
@@ -184,11 +184,11 @@ export function DraftSlot({
       </div>
 
       <div>
-        <div className="truncate text-2xs leading-tight text-foreground" title={hero?.name}>
+        <div className="truncate text-xs leading-tight text-foreground" title={hero?.name}>
           {hero?.name ?? "…"}
         </div>
         {player && (
-          <div className="truncate text-3xs text-muted-foreground" title={player}>
+          <div className="truncate text-xs text-muted-foreground" title={player}>
             {player}
           </div>
         )}

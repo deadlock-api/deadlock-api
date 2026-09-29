@@ -74,14 +74,14 @@ function LaneSampleLabel({ row }: { row: LaneRow }) {
   const count = formatCount(row.matches);
   return row.source === "duo" ? (
     <span
-      className="text-3xs text-muted-foreground tabular-nums"
+      className="text-xs text-muted-foreground tabular-nums"
       title={`${count} games with these two duos laning against each other`}
     >
       {count} lane games
     </span>
   ) : (
     <span
-      className="truncate text-3xs text-muted-foreground tabular-nums"
+      className="truncate text-xs text-muted-foreground tabular-nums"
       title={`Too few games of these two duos against each other, so this is the average of the four 1v1 lane matchups. The thinnest of them has ${count} games.`}
     >
       Estimate from 1v1s (min {count})
@@ -121,7 +121,7 @@ export function LaneCards({
               {/* Named in text, not only by the coloured top border, which is not an identity cue a
                   reader who does not separate these hues can use. */}
               <Inline align="baseline" justify="between" wrap="nowrap">
-                <span className={cn("text-2xs font-semibold", row.lane.textClass)}>{row.lane.name} lane</span>
+                <span className={cn("text-xs font-semibold", row.lane.textClass)}>{row.lane.name} lane</span>
                 {!loading && row.matches > 0 && <LaneSampleLabel row={row} />}
               </Inline>
 
@@ -169,13 +169,13 @@ export function LaneCards({
                 <Separator />
                 <div className="flex items-stretch gap-3">
                   <Stack gap={1} className="w-40 shrink-0">
-                    <div className="text-2xs font-semibold">Matchups</div>
+                    <div className="text-xs font-semibold">Matchups</div>
                     <LaneMatchupMatrix row={row} index={index} />
                   </Stack>
                   {/* Always laid out, even with nothing to draw yet: the curve resolves after the rest
                     of the card, and leaving the column out until then shifted the matrix sideways. */}
                   <Stack gap={1} className="flex-1">
-                    <div className="text-2xs font-semibold">Soul lead</div>
+                    <div className="text-xs font-semibold">Soul lead</div>
                     <div className="min-h-0 flex-1">
                       {curve && curve.length > 1 ? (
                         <LaneSoulCurve points={curve} />
@@ -186,7 +186,7 @@ export function LaneCards({
                           tone="outline"
                           size="xs"
                           radius="md"
-                          className="h-full min-h-16 items-center justify-center px-2 text-center text-3xs text-muted-foreground"
+                          className="h-full min-h-16 items-center justify-center px-2 text-center text-xs text-muted-foreground"
                         >
                           No souls recorded for this pairing
                         </Card>

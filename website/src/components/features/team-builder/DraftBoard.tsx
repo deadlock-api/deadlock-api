@@ -61,7 +61,7 @@ function IntervalBar({ predicted, margin }: { predicted: number; margin: number 
         interval={[predicted - margin - even, predicted + margin - even]}
         className="h-2"
       />
-      <div className="flex justify-between text-3xs text-muted-foreground">
+      <div className="flex justify-between text-xs text-muted-foreground">
         <span>{BAR_LO}%</span>
         <span>even</span>
         <span>{BAR_HI}%</span>
@@ -158,7 +158,7 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
           <div className="grid grid-cols-3 gap-2">
             {lanes.map((lane, laneIndex) => (
               <Card key={lane.id} tone="glass" size="xs" accent={lane.color} className="@container gap-1 p-1.5">
-                <div className={cn("text-center text-3xs font-semibold", lane.textClass)}>{lane.name}</div>
+                <div className={cn("text-center text-xs font-semibold", lane.textClass)}>{lane.name}</div>
                 {/* A phone leaves a lane card too narrow for two full-size slots side by side, so they stack. */}
                 <div className="flex flex-col justify-center gap-1.5 @slot-pair:flex-row @slot-pair:items-start">
                   {slotsOfLane(laneIndex).map((slot) => renderSlot(side, slot, lane))}
@@ -258,7 +258,7 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
                       { label: "Confidence", value: `${filledPips} of ${MAX_CONFIDENCE_PIPS}` },
                     ]}
                   >
-                    <TooltipTarget className="flex w-full items-center gap-2 text-2xs">
+                    <TooltipTarget className="flex w-full items-center gap-2 text-xs">
                       <span className="flex-1 text-start text-muted-foreground">{contribution.label}</span>
                       <Pips
                         value={filledPips}
@@ -269,7 +269,7 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
                       />
                       {/* Fixed tracks: a wider number would push the pips left and leave the four
                           rows' meters out of line with each other. */}
-                      <span className="flex shrink-0 items-center gap-2 text-2xs font-semibold">
+                      <span className="flex shrink-0 items-center gap-2 text-xs font-semibold">
                         {(["ally", "enemy"] as const).map((side) => (
                           <span key={side} className="flex w-12 items-center gap-1">
                             <TeamEmblem side={side} className="size-3 shrink-0 text-muted-foreground" />

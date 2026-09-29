@@ -99,7 +99,7 @@ function GridCell({
   // Text stays neutral: the fill already carries sign and magnitude, and matching its hue put the
   // strongest cells around 3.3:1.
   const className = cn(
-    "flex flex-col items-center justify-center gap-0.5 text-2xs font-semibold tabular-nums",
+    "flex flex-col items-center justify-center gap-0.5 text-xs font-semibold tabular-nums",
     cell.edge === undefined ? "text-muted-foreground" : "text-foreground",
     cellClass,
   );
@@ -123,8 +123,11 @@ function GridCell({
     >
       <HeatCell color={heatFill(cell.edge, scale)} label={label} title="" className={className}>
         <span>{gridPoints(cell.edge)}</span>
+        {/* A phone-width matrix has no room for a readable count under the edge; the tooltip and label keep it. */}
         {showCounts && (
-          <span className="text-4xs leading-none font-normal text-muted-foreground">{compactCount(cell.matches)}</span>
+          <span className="hidden text-xs leading-none font-normal text-muted-foreground @sm:block">
+            {compactCount(cell.matches)}
+          </span>
         )}
       </HeatCell>
     </StatTooltip>
@@ -169,7 +172,7 @@ export function MatchupGrid({ cells, index, scale, columnMargins, variant }: Mat
         </div>
       ))}
       {margins && (
-        <div className="flex items-center justify-center self-stretch pb-1.5 text-2xs text-muted-foreground">Avg</div>
+        <div className="flex items-center justify-center self-stretch pb-1.5 text-xs text-muted-foreground">Avg</div>
       )}
 
       {cells.map((row, rowIndex) => (
@@ -213,7 +216,7 @@ export function MatchupGrid({ cells, index, scale, columnMargins, variant }: Mat
 
       {margins && (
         <>
-          <div className="flex items-center justify-center self-stretch pt-1.5 text-2xs text-muted-foreground">Avg</div>
+          <div className="flex items-center justify-center self-stretch pt-1.5 text-xs text-muted-foreground">Avg</div>
           {margins.columns.map((value, columnIndex) => (
             <StatTooltip
               key={columns[columnIndex]}

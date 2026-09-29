@@ -26,7 +26,7 @@ const COLLAPSED_ROWS = 8;
  * name column carries a floor so it cannot be the one that collapses, and the trailing count track
  * fits four digits so a sample count can never lose a digit off the panel edge.
  */
-const COLUMNS = "grid grid-cols-[3.5rem_minmax(5rem,1fr)_3rem_3.5rem_3rem] items-center gap-x-2 px-3";
+const COLUMNS = "grid grid-cols-[3.5rem_minmax(4rem,1fr)_2.75rem_3.25rem_3.5rem] items-center gap-x-1.5 px-3";
 
 interface PairsPanelProps {
   allyPairs: PairRow[];
@@ -92,7 +92,7 @@ export function PairsPanel({ allyPairs, enemyPairs, index, loading, onOpen }: Pa
                     </span>
                     <Points value={pair.delta} align="end" className="text-sm font-bold" />
                     <span className="text-end text-xs tabular-nums">{formatRate(pair.winRate)}</span>
-                    <span className="text-end text-2xs text-muted-foreground tabular-nums">
+                    <span className="text-end text-xs text-muted-foreground tabular-nums">
                       {formatCount(pair.matches)}
                     </span>
                   </Button>

@@ -195,8 +195,8 @@ export function PickExplorer({ recommendations, onPick }: PickExplorerProps) {
             {yTicks.map((tick) => (
               <span
                 key={`yl${tick.value}`}
-                className="pointer-events-none absolute inset-s-1 text-3xs text-muted-foreground tabular-nums"
-                style={{ top: tick.at - 6 }}
+                className="pointer-events-none absolute inset-s-1 text-xs text-muted-foreground tabular-nums"
+                style={{ top: tick.at - 8 }}
               >
                 {formatPoints(tick.value)}
               </span>
@@ -240,14 +240,14 @@ export function PickExplorer({ recommendations, onPick }: PickExplorerProps) {
           {xTicks.map((tick) => (
             <span
               key={tick.value}
-              className="absolute -translate-x-1/2 text-3xs text-muted-foreground tabular-nums"
+              className="absolute -translate-x-1/2 text-xs text-muted-foreground tabular-nums"
               style={{ left: tick.at }}
             >
               {formatPoints(tick.value)}
             </span>
           ))}
         </div>
-        <div className="flex justify-between text-2xs text-muted-foreground">
+        <div className="flex justify-between text-xs text-muted-foreground">
           <span>← weaker synergy</span>
           <span>stronger synergy →</span>
         </div>

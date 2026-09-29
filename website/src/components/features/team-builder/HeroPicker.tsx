@@ -206,8 +206,6 @@ function PickerBody({
           })}
         </HeroGrid>
       </div>
-      <Separator />
-      <p className="px-3 py-2 text-2xs text-muted-foreground">Numbers are against the heroes already drafted.</p>
     </>
   );
 }

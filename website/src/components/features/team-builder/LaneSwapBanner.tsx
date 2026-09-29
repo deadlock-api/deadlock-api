@@ -52,14 +52,14 @@ export function LaneSwapBanner({ suggestion, side, onApply }: LaneSwapBannerProp
       title={label}
       className="group h-auto w-full flex-wrap justify-start gap-x-2 gap-y-1 px-2 py-1 text-start font-normal whitespace-normal text-foreground"
     >
-      <span className={cn("flex shrink-0 items-center gap-1 text-2xs font-semibold", TONE_TEXT[tone])}>
+      <span className={cn("flex shrink-0 items-center gap-1 text-xs font-semibold", TONE_TEXT[tone])}>
         <ArrowLeftRightIcon className="size-3" />
         {formatPoints(suggestion.gain)}
       </span>
       {suggestion.moves.map((move) => (
         <Move key={move.heroId} {...move} />
       ))}
-      <span className={cn("ms-auto shrink-0 text-3xs text-muted-foreground", "group-hover:text-positive")}>Apply</span>
+      <span className={cn("ms-auto shrink-0 text-xs text-muted-foreground", "group-hover:text-positive")}>Apply</span>
     </Button>
   );
 }

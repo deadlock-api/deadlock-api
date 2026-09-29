@@ -303,7 +303,7 @@ export default function Heatmap3D({
 
       <ChartOverlay position="bottom-start" narrow="outside">
         <ChartOverlayItem>
-          <Field orientation="horizontal" label={<span className="text-3xs">Opacity</span>}>
+          <Field orientation="horizontal" label={<span className="text-xs">Opacity</span>}>
             <Slider
               aria-label="Opacity"
               min={10}
@@ -313,7 +313,7 @@ export default function Heatmap3D({
               getValueText={(next) => `${next}%`}
               className="w-20"
             />
-            <span className="w-7 text-3xs text-muted-foreground tabular-nums">{Math.round(opacity * 100)}%</span>
+            <span className="w-9 text-xs text-muted-foreground tabular-nums">{Math.round(opacity * 100)}%</span>
           </Field>
         </ChartOverlayItem>
         <SensitivitySlider value={sensitivity} onChange={onSensitivityChange} />

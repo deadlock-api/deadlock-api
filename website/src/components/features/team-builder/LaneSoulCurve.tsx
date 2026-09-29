@@ -136,7 +136,7 @@ export function LaneSoulCurve({ points }: { points: LaneSoulPoint[] }) {
                   <TooltipStat label="95% confidence" value={`${signedSouls(point.lo)} … ${signedSouls(point.hi)}`} />
                 </TooltipStats>
                 {point.lo < 0 && point.hi > 0 && (
-                  <div className="text-3xs text-muted-foreground">Too close to call at this sample size</div>
+                  <div className="text-xs text-muted-foreground">Too close to call at this sample size</div>
                 )}
               </TooltipCard>
             );

@@ -56,7 +56,7 @@ export function PairsChart({
           <PairBar key={`${pair.a}-${pair.b}`} pair={pair} index={index} scale={scale} onOpen={onOpen} />
         ))}
       </Stack>
-      <div className="flex justify-between text-2xs text-muted-foreground">
+      <div className="flex justify-between text-xs text-muted-foreground">
         <span>−{scale} pts</span>
         <span>even</span>
         <span>+{scale} pts</span>

@@ -8,7 +8,6 @@ import { Disclosure } from "~/components/patterns/content/Disclosure";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
-import { Text } from "~/components/ui/text";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
@@ -116,14 +115,7 @@ export function PlayerStatsDistributionCharts({
               variant="bordered"
               size="lg"
               icon={<Icon aria-hidden="true" className="text-muted-foreground" />}
-              title={
-                <>
-                  {category}{" "}
-                  <Text variant="meta" tone="muted" numeric="tabular">
-                    {metrics.length} stats
-                  </Text>
-                </>
-              }
+              title={category}
               open={open}
               onOpenChange={(next) => setCategoryOpen(category, next)}
             >
