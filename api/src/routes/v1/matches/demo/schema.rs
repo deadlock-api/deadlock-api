@@ -97,6 +97,7 @@ pub(super) struct SchemaQuery {
         (status = OK, body = DemoSchemaResponse),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = NOT_FOUND, description = "No demo / salts available for the match"),
+        (status = BAD_GATEWAY, description = "Valve's replay server failed to serve the demo"),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Reading the demo schema failed")
     ),
@@ -120,11 +121,13 @@ pub(super) async fn schema(
         let salts = fetch_match_salts(&state, &rate_limit_key, match_id, false, false).await?;
         (match_id, salts.replay_group_id, salts.replay_salt)
     } else {
+        // Only verified salts: `POST /v1/matches/salts` accepts unverified submissions, and
+        // bogus ones (e.g. match_id 99999999999) would otherwise always sort first.
         let row = state
             .ch_client_ro
             .query(
                 "SELECT ?fields FROM match_salts \
-                 WHERE replay_salt IS NOT NULL \
+                 WHERE replay_salt IS NOT NULL AND verified_at IS NOT NULL AND failed_at IS NULL \
                  ORDER BY match_id DESC LIMIT 1 \
                  SETTINGS log_comment = 'demo_schema_last_match'",
             )
@@ -164,10 +167,13 @@ async fn fetch_demo_schema(url: &str) -> Result<Vec<TableSchema>, APIError> {
         .await?
         .error_for_status()
         .map_err(|e| {
-            APIError::status_msg(
-                StatusCode::NOT_FOUND,
-                format!("Failed to download demo: {e}"),
-            )
+            // A 5xx is Valve's replay server failing, not a missing demo.
+            let status = if e.status().is_some_and(|s| s.is_server_error()) {
+                StatusCode::BAD_GATEWAY
+            } else {
+                StatusCode::NOT_FOUND
+            };
+            APIError::status_msg(status, format!("Failed to download demo: {e}"))
         })?;
 
     let mut reader = StreamReader::new(response.bytes_stream().map_err(std::io::Error::other));
