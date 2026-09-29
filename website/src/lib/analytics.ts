@@ -22,6 +22,10 @@ export function getAnalytics(): Promise<PostHog | null> {
         css_selector_ignorelist: [".ph-no-deadclick", ".ph-no-capture", '[role="tab"]'],
       },
     });
+    // How the Worker answered this page load (src/lib/html-cache.ts), so web vitals can be split by cache status.
+    const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    const htmlCache = navigation?.serverTiming.find((entry) => entry.name === "html-cache")?.description;
+    if (htmlCache) posthog.register({ html_cache: htmlCache });
     return posthog;
   })();
   return client;
