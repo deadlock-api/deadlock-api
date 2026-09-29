@@ -326,7 +326,9 @@ async fn fetch_builds(
         None,
         None,
         Duration::from_mins(20),
-        None,
+        // No soft cooldown: the crawler never borrows a cooling-down bot, leaving that
+        // headroom to the API's on-demand build lookups.
+        Some(Duration::ZERO),
         Duration::from_secs(5),
         None,
     )

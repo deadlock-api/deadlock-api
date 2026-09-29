@@ -118,7 +118,10 @@ async fn fetch_and_store_builds(
                 in_all_groups: None,
                 in_any_groups: None,
                 cooldown_time: Duration::from_secs(5),
-                soft_cooldown_millis: None,
+                // The builds-fetcher crawls with a 20 minute job cooldown and no soft cooldown,
+                // keeping every bot cooling down. On-demand lookups borrow a bot for that whole
+                // window, otherwise they never find a free bot and 503.
+                soft_cooldown_millis: Some(Duration::from_mins(20)),
                 request_timeout: Duration::from_secs(5),
                 username: None,
             })
