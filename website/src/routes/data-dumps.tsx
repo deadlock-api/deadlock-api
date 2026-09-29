@@ -14,7 +14,7 @@ import {
   lakeTables,
 } from "~/components/features/data-dumps/types";
 import { UsageInstructions } from "~/components/features/data-dumps/UsageInstructions";
-import { MANIFEST_URL, formatBytes, formatTimestamp } from "~/components/features/data-dumps/utils";
+import { CATALOG_URL, MANIFEST_URL, formatBytes, formatTimestamp } from "~/components/features/data-dumps/utils";
 import { CopyableUrl } from "~/components/patterns/code/CopyableCode";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
@@ -29,7 +29,7 @@ import { Inline, Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Text } from "~/components/ui/text";
 import { prewarmDuckDb } from "~/lib/duckdb-client";
-import { pageTitle, seo } from "~/lib/seo";
+import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 
 const SqlPlayground = lazy(() =>
   import("~/components/features/data-dumps/SqlPlayground").then((m) => ({ default: m.SqlPlayground })),
@@ -43,6 +43,18 @@ export const Route = createFileRoute("/data-dumps")({
       description:
         "Query the hourly-updated public data lake through a read-only MCP server, DuckDB, or download the Parquet files for offline analysis and research.",
       path: "/data-dumps",
+      jsonLd: datasetJsonLd({
+        name: "Deadlock Match Data Lake",
+        description:
+          "Hourly-updated public Parquet tables of Deadlock matches, match players, leaderboards and Steam profiles, queryable with DuckDB or a read-only MCP server.",
+        path: "/data-dumps",
+        keywords: ["Deadlock", "match data", "Parquet", "DuckDB", "data lake", "leaderboard"],
+        variableMeasured: ["match player stats", "leaderboard rank", "hero leaderboard rank", "Steam profile"],
+        downloads: [
+          { contentUrl: MANIFEST_URL, encodingFormat: "application/json" },
+          { contentUrl: CATALOG_URL, encodingFormat: "application/octet-stream" },
+        ],
+      }),
     }),
 });
 

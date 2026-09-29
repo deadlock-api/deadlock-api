@@ -1,5 +1,17 @@
 const SITE_URL = "https://deadlock-api.com";
 
+/**
+ * The site's publisher, as every JSON-LD block names it. The `@id` ties them all to the one Organization node the
+ * homepage describes in full, so search engines read one entity instead of a new one per page.
+ */
+const ORGANIZATION = {
+  "@type": "Organization",
+  "@id": `${SITE_URL}/#organization`,
+  name: "Deadlock API",
+  url: SITE_URL,
+  logo: { "@type": "ImageObject", url: `${SITE_URL}/favicon.png` },
+};
+
 const TITLE_SUFFIX = " | Deadlock API";
 /** Search results cut titles at about 60 characters; past that the suffix would only push the page's name out. */
 const TITLE_MAX_LENGTH = 60;
@@ -126,9 +138,18 @@ interface DatasetOptions {
   keywords: string[];
   /** What the numbers are, such as "win rate" or "pick rate". */
   variableMeasured: string[];
-  /** The public API endpoint that serves the same data, such as `/v1/analytics/hero-stats`. */
-  apiPath: string;
 }
+
+interface DataDownload {
+  contentUrl: string;
+  encodingFormat: string;
+}
+
+type DatasetSource =
+  /** The public API endpoint that serves the same data, such as `/v1/analytics/hero-stats`. */
+  | { apiPath: string; downloads?: never }
+  /** Files to download when the data is not an API endpoint, such as the data lake. */
+  | { apiPath?: never; downloads: DataDownload[] };
 
 /** Dataset JSON-LD for a stats page: the fields Google's Dataset docs ask for, with the API as its download. */
 export function datasetJsonLd({
@@ -138,7 +159,8 @@ export function datasetJsonLd({
   keywords,
   variableMeasured,
   apiPath,
-}: DatasetOptions): Record<string, unknown> {
+  downloads,
+}: DatasetOptions & DatasetSource): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
     "@type": "Dataset",
@@ -149,16 +171,12 @@ export function datasetJsonLd({
     variableMeasured,
     // The stats are recomputed from new matches all the time, so the day the page is served is the day of its data.
     dateModified: new Date().toISOString().slice(0, 10),
-    creator: { "@type": "Organization", name: "Deadlock API", url: SITE_URL },
+    creator: ORGANIZATION,
     isAccessibleForFree: true,
     license: "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE",
-    distribution: [
-      {
-        "@type": "DataDownload",
-        encodingFormat: "application/json",
-        contentUrl: `https://api.deadlock-api.com${apiPath}`,
-      },
-    ],
+    distribution: (
+      downloads ?? [{ contentUrl: `https://api.deadlock-api.com${apiPath}`, encodingFormat: "application/json" }]
+    ).map(({ contentUrl, encodingFormat }) => ({ "@type": "DataDownload", contentUrl, encodingFormat })),
   };
 }
 
@@ -167,4 +185,4 @@ export function getBlogOGImage(slug: string): string {
   return `/og/v2/blog-${slug}.png`;
 }
 
-export { SITE_URL };
+export { ORGANIZATION, SITE_URL };

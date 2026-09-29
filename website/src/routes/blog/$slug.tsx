@@ -13,7 +13,7 @@ import { Inline, Stack } from "~/components/ui/stack";
 import { TextLink } from "~/components/ui/text-link";
 import { formatBlogDate } from "~/lib/blog-date";
 import { fetchBlogPost } from "~/lib/blog-fns";
-import { getBlogOGImage, pageTitle, seo, SITE_URL } from "~/lib/seo";
+import { getBlogOGImage, ORGANIZATION, pageTitle, seo, SITE_URL } from "~/lib/seo";
 
 import { TagBadge } from "./-tag-badge";
 
@@ -46,15 +46,7 @@ export const Route = createFileRoute("/blog/$slug")({
             "@type": "Person",
             name: loaderData.author,
           },
-          publisher: {
-            "@type": "Organization",
-            name: "Deadlock API",
-            url: SITE_URL,
-            logo: {
-              "@type": "ImageObject",
-              url: `${SITE_URL}/favicon.png`,
-            },
-          },
+          publisher: ORGANIZATION,
           mainEntityOfPage: {
             "@type": "WebPage",
             "@id": `${SITE_URL}/blog/${loaderData.slug}`,

@@ -34,7 +34,7 @@ import {
 } from "~/lib/deadlockdle/seed";
 import { readCurrentStreak } from "~/lib/deadlockdle/storage";
 import type { GameMode } from "~/lib/deadlockdle/types";
-import { pageTitle, seo } from "~/lib/seo";
+import { ORGANIZATION, pageTitle, seo } from "~/lib/seo";
 
 export const Route = createFileRoute("/games_/deadlockdle/")({
   component: DeadlockdleHub,
@@ -55,7 +55,7 @@ export const Route = createFileRoute("/games_/deadlockdle/")({
         operatingSystem: "Any",
         isAccessibleForFree: true,
         offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-        creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
+        creator: ORGANIZATION,
       },
     });
     return s;

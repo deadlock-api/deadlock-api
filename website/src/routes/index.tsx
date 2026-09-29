@@ -35,7 +35,7 @@ import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
 import { API_ORIGIN } from "~/lib/constants";
-import { pageTitle, seo } from "~/lib/seo";
+import { ORGANIZATION, pageTitle, seo, SITE_URL } from "~/lib/seo";
 
 export const Route = createFileRoute("/")({
   head: () =>
@@ -44,27 +44,39 @@ export const Route = createFileRoute("/")({
       description:
         "Deadlock stats tracker with hero win rates, pick rates, item analytics, rank distribution, and leaderboards. Free community tool with live data from Valve's servers.",
       path: "/",
-      jsonLd: [
-        {
-          "@context": "https://schema.org",
-          "@type": "WebSite",
-          name: "Deadlock API",
-          alternateName: "deadlock-api.com",
-          url: "https://deadlock-api.com",
-        },
-        {
-          "@context": "https://schema.org",
-          "@type": "Organization",
-          name: "Deadlock API",
-          url: "https://deadlock-api.com",
-          logo: "https://deadlock-api.com/favicon.png",
-          sameAs: [
-            "https://github.com/deadlock-api",
-            "https://discord.gg/pqWQfTPQJu",
-            "https://www.patreon.com/c/manuelhexe",
-          ],
-        },
-      ],
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": `${SITE_URL}/#website`,
+            name: "Deadlock API",
+            alternateName: "deadlock-api.com",
+            url: SITE_URL,
+            inLanguage: "en",
+            publisher: { "@id": ORGANIZATION["@id"] },
+          },
+          {
+            ...ORGANIZATION,
+            description: "Free, open-source game statistics, analytics and REST API for Valve's Deadlock.",
+            sameAs: [
+              "https://github.com/deadlock-api",
+              "https://discord.gg/pqWQfTPQJu",
+              "https://www.patreon.com/c/manuelhexe",
+            ],
+          },
+          {
+            "@type": "WebAPI",
+            "@id": "https://api.deadlock-api.com/#api",
+            name: "Deadlock API",
+            description: "Public REST API for Deadlock matches, players, heroes, items and leaderboards.",
+            url: "https://api.deadlock-api.com/",
+            documentation: "https://api.deadlock-api.com/docs",
+            provider: { "@id": ORGANIZATION["@id"] },
+            isAccessibleForFree: true,
+          },
+        ],
+      },
     }),
   component: IndexRoute,
 });
