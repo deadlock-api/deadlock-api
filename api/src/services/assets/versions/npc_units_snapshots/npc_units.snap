@@ -15,6 +15,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -38,10 +39,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 0.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": 10,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 1.5,
       "horizontal_recoil": {
         "range": [
@@ -49,6 +53,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 3.3333333333333335,
       "shots_per_second_with_reload": 2.1052631578947367,
@@ -69,6 +82,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -92,10 +106,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 2.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 1.8,
       "horizontal_recoil": {
         "range": [
@@ -103,6 +120,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 0.970873786407767,
       "shots_per_second_with_reload": -0.9803921568627451,
@@ -165,6 +191,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -188,10 +215,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 2.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 1.8,
       "horizontal_recoil": {
         "range": [
@@ -199,6 +229,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 0.970873786407767,
       "shots_per_second_with_reload": -0.9803921568627451,
@@ -265,6 +304,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -288,10 +328,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 2.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 1.8,
       "horizontal_recoil": {
         "range": [
@@ -299,6 +342,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 0.970873786407767,
       "shots_per_second_with_reload": -0.9803921568627451,
@@ -364,6 +416,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -387,10 +440,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 2.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 1.8,
       "horizontal_recoil": {
         "range": [
@@ -398,6 +454,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 0.970873786407767,
       "shots_per_second_with_reload": -0.9803921568627451,
@@ -466,6 +531,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -489,10 +555,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 2.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 1.8,
       "horizontal_recoil": {
         "range": [
@@ -500,6 +569,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 0.970873786407767,
       "shots_per_second_with_reload": -0.9803921568627451,
@@ -566,6 +644,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -589,10 +668,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 0.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 1.0,
       "horizontal_recoil": {
         "range": [
@@ -600,6 +682,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 5.0,
       "shots_per_second_with_reload": -0.9523809523809523,
@@ -650,6 +741,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -673,10 +765,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 0.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 1.0,
       "horizontal_recoil": {
         "range": [
@@ -684,6 +779,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 5.0,
       "shots_per_second_with_reload": -0.9523809523809523,
@@ -742,6 +846,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -765,10 +870,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 0.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 1.0,
       "horizontal_recoil": {
         "range": [
@@ -776,6 +884,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 5.0,
       "shots_per_second_with_reload": -0.9523809523809523,
@@ -834,6 +951,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -857,10 +975,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 0.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 1.0,
       "horizontal_recoil": {
         "range": [
@@ -868,6 +989,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 5.0,
       "shots_per_second_with_reload": -0.9523809523809523,
@@ -962,6 +1092,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -985,10 +1116,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 0.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 1.0,
       "horizontal_recoil": {
         "range": [
@@ -996,6 +1130,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 5.0,
       "shots_per_second_with_reload": -0.9523809523809523,
@@ -1055,6 +1198,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -1078,10 +1222,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 1.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 0.0,
       "horizontal_recoil": {
         "range": [
@@ -1089,6 +1236,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 5.0,
       "shots_per_second_with_reload": -20.000000000000004,
@@ -1141,6 +1297,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -1164,10 +1321,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 0.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": 10,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 1.5,
       "horizontal_recoil": {
         "range": [
@@ -1175,6 +1335,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 3.3333333333333335,
       "shots_per_second_with_reload": 2.1052631578947367,
@@ -1198,6 +1367,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -1221,10 +1391,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 5.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 0.25,
       "horizontal_recoil": {
         "range": [
@@ -1232,6 +1405,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 2.0,
       "shots_per_second_with_reload": 0.0,
@@ -1273,6 +1455,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -1296,10 +1479,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 5.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 0.25,
       "horizontal_recoil": {
         "range": [
@@ -1307,6 +1493,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 2.0,
       "shots_per_second_with_reload": 0.0,
@@ -1348,6 +1543,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -1371,10 +1567,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 5.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 0.25,
       "horizontal_recoil": {
         "range": [
@@ -1382,6 +1581,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 2.0,
       "shots_per_second_with_reload": 0.0,
@@ -1458,6 +1666,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -1481,10 +1690,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 0.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": 10,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 1.5,
       "horizontal_recoil": {
         "range": [
@@ -1492,6 +1704,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 3.3333333333333335,
       "shots_per_second_with_reload": 2.1052631578947367,
@@ -1521,6 +1742,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -1544,10 +1766,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 0.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": 10,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 1.5,
       "horizontal_recoil": {
         "range": [
@@ -1555,6 +1780,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 3.3333333333333335,
       "shots_per_second_with_reload": 2.1052631578947367,
@@ -2234,6 +2468,7 @@ expression: units
       "bullet_reflect_amount": 1.0,
       "bullet_reflect_scale": 0.0,
       "burst_shot_cooldown": 0.0,
+      "crit_bonus_against_npcs": 0.25,
       "crit_bonus_end": 1.35,
       "crit_bonus_end_range": 1500.0,
       "crit_bonus_start": 1.15,
@@ -2257,10 +2492,13 @@ expression: units
       "shoot_spread_penalty_per_shot": 0.0,
       "shooting_up_spread_penalty": 2.0,
       "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
       "zoom_move_speed_percent": 0.75,
       "bullets": 1,
       "burst_shot_count": 1,
       "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
       "reload_duration": 1.8,
       "horizontal_recoil": {
         "range": [
@@ -2268,6 +2506,15 @@ expression: units
           0.1
         ],
         "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
       },
       "shots_per_second": 0.970873786407767,
       "shots_per_second_with_reload": -0.9803921568627451,

@@ -511,7 +511,8 @@ pub(crate) struct RawWeaponInfoVerticalRecoil {
     pub(crate) burst_slope: Option<f64>,
 }
 
-/// `m_WeaponInfo` for weapon-typed items.
+/// Weapon info for weapon-typed items (`m_WeaponInfo` before build 6711,
+/// `m_mapWeaponInfos.primary` from 6711 on).
 #[derive(Debug, Deserialize, Clone, Default)]
 pub(crate) struct RawWeaponInfo {
     #[serde(default, rename = "m_bCanZoom")]
@@ -534,9 +535,14 @@ pub(crate) struct RawWeaponInfo {
     pub(crate) bullet_reflect_scale: Option<f64>,
     #[serde(default, rename = "m_flBulletWhizDistance")]
     pub(crate) bullet_whiz_distance: Option<f64>,
+    /// Removed in build 6711; kept for older builds.
     #[serde(default, rename = "m_flBurstShotCooldown")]
     pub(crate) burst_shot_cooldown: Option<f64>,
-    #[serde(default, rename = "m_flCritBonusAgainstNpcs")]
+    #[serde(
+        default,
+        rename = "m_flCritBonusAgainstNPCs",
+        alias = "m_flCritBonusAgainstNpcs"
+    )]
     pub(crate) crit_bonus_against_npcs: Option<f64>,
     #[serde(default, rename = "m_flCritBonusEnd")]
     pub(crate) crit_bonus_end: Option<f64>,
@@ -616,7 +622,7 @@ pub(crate) struct RawWeaponInfo {
     pub(crate) shooting_up_spread_penalty: Option<f64>,
     #[serde(default, rename = "m_flVerticalPunch")]
     pub(crate) vertical_punch: Option<f64>,
-    #[serde(default, rename = "m_flZoomFov")]
+    #[serde(default, rename = "m_flZoomFOV", alias = "m_flZoomFov")]
     pub(crate) zoom_fov: Option<f64>,
     #[serde(default, rename = "m_flZoomMoveSpeedPercent")]
     pub(crate) zoom_move_speed_percent: Option<f64>,
@@ -632,13 +638,17 @@ pub(crate) struct RawWeaponInfo {
     pub(crate) burst_shot_count: Option<u32>,
     #[serde(default, rename = "m_iClipSize")]
     pub(crate) clip_size: Option<u32>,
-    #[serde(default, rename = "m_flSpread")]
+    #[serde(default, rename = "m_Spread", alias = "m_flSpread")]
     pub(crate) spread: Option<f64>,
-    #[serde(default, rename = "m_flStandingSpread")]
+    #[serde(default, rename = "m_StandingSpread", alias = "m_flStandingSpread")]
     pub(crate) standing_spread: Option<f64>,
-    #[serde(default, rename = "m_flLowAmmoIndicatorThreshold")]
+    #[serde(
+        default,
+        rename = "m_nLowAmmoIndicatorThreshold",
+        alias = "m_flLowAmmoIndicatorThreshold"
+    )]
     pub(crate) low_ammo_indicator_threshold: Option<f64>,
-    #[serde(default, rename = "m_flRecoilSeed")]
+    #[serde(default, rename = "m_nRecoilSeed", alias = "m_flRecoilSeed")]
     pub(crate) recoil_seed: Option<f64>,
     #[serde(default, rename = "m_flReloadDuration", alias = "m_reloadDuration")]
     pub(crate) reload_duration: Option<f64>,
@@ -646,8 +656,13 @@ pub(crate) struct RawWeaponInfo {
     pub(crate) bullet_speed_curve: Option<RawItemWeaponInfoBulletSpeedCurve>,
     #[serde(default, rename = "m_HorizontalRecoil")]
     pub(crate) horizontal_recoil: Option<RawWeaponInfoHorizontalRecoil>,
-    #[serde(default, rename = "m_VerticalRecoil")]
+    /// Valve ships this key with a double `l` (`m_VerticallRecoil`).
+    #[serde(default, rename = "m_VerticallRecoil", alias = "m_VerticalRecoil")]
     pub(crate) vertical_recoil: Option<RawWeaponInfoVerticalRecoil>,
+    #[serde(default, rename = "m_flRecycleTime")]
+    pub(crate) recycle_time: Option<f64>,
+    #[serde(default, rename = "m_eBulletHandlerType")]
+    pub(crate) bullet_handler_type: Option<String>,
 }
 
 // ============================== item variants ==============================
@@ -667,9 +682,33 @@ pub(crate) struct RawItemBaseFields {
     #[serde(default, rename = "m_mapAbilityProperties")]
     pub(crate) properties: Option<IndexMap<String, RawItemProperty>>,
     #[serde(default, rename = "m_WeaponInfo")]
-    pub(crate) weapon_info_inner: Option<RawItemWeaponInfoInner>,
+    weapon_info_inner: Option<RawItemWeaponInfoInner>,
+    #[serde(default, rename = "m_mapWeaponInfos")]
+    weapon_infos_inner: Option<IndexMap<String, RawItemWeaponInfoInner>>,
     #[serde(default, rename = "m_strCSSClass")]
     pub(crate) css_class: Option<String>,
+}
+
+impl RawItemBaseFields {
+    pub(crate) fn weapon_info_inner(&self) -> Option<&RawItemWeaponInfoInner> {
+        primary_weapon_info(
+            self.weapon_info_inner.as_ref(),
+            self.weapon_infos_inner.as_ref(),
+        )
+    }
+}
+
+/// Builds up to 6701 ship a single `m_WeaponInfo`; from 6711 on it moved to
+/// `m_mapWeaponInfos` keyed by weapon name (`primary`, NPC `boss`, ...).
+/// Prefers the legacy key, then `primary`, then the first map entry.
+pub(crate) fn primary_weapon_info<'a, T>(
+    legacy: Option<&'a T>,
+    map: Option<&'a IndexMap<String, T>>,
+) -> Option<&'a T> {
+    legacy.or_else(|| {
+        let map = map?;
+        map.get("primary").or_else(|| map.values().next())
+    })
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -735,13 +774,21 @@ pub(crate) struct RawWeapon {
     #[serde(flatten)]
     pub(crate) base: RawItemBaseFields,
     #[serde(default, rename = "m_WeaponInfo")]
-    pub(crate) weapon_info: Option<RawWeaponInfo>,
+    weapon_info: Option<RawWeaponInfo>,
+    #[serde(default, rename = "m_mapWeaponInfos")]
+    weapon_infos: Option<IndexMap<String, RawWeaponInfo>>,
     #[serde(default, rename = "m_strCrosshairCSSClass")]
     pub(crate) crosshair_css_class: Option<String>,
     #[serde(default, rename = "m_bUseCustomCrosshairSettings")]
     pub(crate) use_custom_crosshair_settings: Option<bool>,
     #[serde(default, rename = "m_CustomCrosshairSettings")]
     pub(crate) custom_crosshair_settings: Option<RawCustomCrosshairSettings>,
+}
+
+impl RawWeapon {
+    pub(crate) fn weapon_info(&self) -> Option<&RawWeaponInfo> {
+        primary_weapon_info(self.weapon_info.as_ref(), self.weapon_infos.as_ref())
+    }
 }
 
 // ============================== minimal hero linkage ==============================

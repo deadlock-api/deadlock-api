@@ -123,6 +123,9 @@ pub(super) fn is_item_candidate(class_name: &str, value: &Value) -> bool {
     if class_name.starts_with("trooper_")
         || class_name.starts_with("super_neutral_")
         || class_name.starts_with("cosmetic_item_")
+        // Renamed to `cosmetic_ability_*` (snowball, voting poster, emote)
+        // in build 6711.
+        || class_name.starts_with("cosmetic_ability_")
         || class_name.starts_with("fathom_")
         || class_name == "citadel_hold_melee"
     {

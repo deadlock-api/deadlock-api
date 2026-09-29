@@ -32,6 +32,8 @@ pub(crate) enum AbilityType {
     Melee,
     #[strum(serialize = "EAbilityType_Cosmetic")]
     Cosmetic,
+    #[strum(serialize = "EAbilityType_Held")]
+    Held,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, EnumString, ToSchema, PartialEq, Eq, Enum)]
@@ -407,6 +409,10 @@ pub(crate) struct WeaponInfo {
     pub(crate) horizontal_recoil: Option<RawWeaponInfoHorizontalRecoil>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) vertical_recoil: Option<RawWeaponInfoVerticalRecoil>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) recycle_time: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) bullet_handler_type: Option<String>,
     // Computed fields, declared last to match the original serialization order.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) shots_per_second: Option<f64>,

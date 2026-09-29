@@ -3,12 +3,14 @@
 m_sModifer = "m_sModifer"
 m_strVAlue = "m_strVAlue"
 m_StrPropertyNAme = "m_StrPropertyNAme"
+m_VerticallRecoil = "m_VerticallRecoil"
 
 [default.extend-words]
 # Upstream source field names (sic).
 Modifer = "Modifer"
 VAlue = "VAlue"
 NAme = "NAme"
+Verticall = "Verticall"
 
 [files]
 extend-exclude = [

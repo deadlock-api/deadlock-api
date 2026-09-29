@@ -75,9 +75,14 @@ struct RawWeaponInfo {
     bullet_reflect_scale: Option<f64>,
     #[serde(default, rename = "m_flBulletWhizDistance")]
     bullet_whiz_distance: Option<f64>,
+    /// Removed in build 6711; kept for older builds.
     #[serde(default, rename = "m_flBurstShotCooldown")]
     burst_shot_cooldown: Option<f64>,
-    #[serde(default, rename = "m_flCritBonusAgainstNpcs")]
+    #[serde(
+        default,
+        rename = "m_flCritBonusAgainstNPCs",
+        alias = "m_flCritBonusAgainstNpcs"
+    )]
     crit_bonus_against_npcs: Option<f64>,
     #[serde(default, rename = "m_flCritBonusEnd")]
     crit_bonus_end: Option<f64>,
@@ -149,7 +154,7 @@ struct RawWeaponInfo {
     shooting_up_spread_penalty: Option<f64>,
     #[serde(default, rename = "m_flVerticalPunch")]
     vertical_punch: Option<f64>,
-    #[serde(default, rename = "m_flZoomFov")]
+    #[serde(default, rename = "m_flZoomFOV", alias = "m_flZoomFov")]
     zoom_fov: Option<f64>,
     #[serde(default, rename = "m_flZoomMoveSpeedPercent")]
     zoom_move_speed_percent: Option<f64>,
@@ -165,13 +170,17 @@ struct RawWeaponInfo {
     burst_shot_count: Option<i64>,
     #[serde(default, rename = "m_iClipSize")]
     clip_size: Option<i64>,
-    #[serde(default, rename = "m_flSpread")]
+    #[serde(default, rename = "m_Spread", alias = "m_flSpread")]
     spread: Option<f64>,
-    #[serde(default, rename = "m_flStandingSpread")]
+    #[serde(default, rename = "m_StandingSpread", alias = "m_flStandingSpread")]
     standing_spread: Option<f64>,
-    #[serde(default, rename = "m_flLowAmmoIndicatorThreshold")]
+    #[serde(
+        default,
+        rename = "m_nLowAmmoIndicatorThreshold",
+        alias = "m_flLowAmmoIndicatorThreshold"
+    )]
     low_ammo_indicator_threshold: Option<f64>,
-    #[serde(default, rename = "m_flRecoilSeed")]
+    #[serde(default, rename = "m_nRecoilSeed", alias = "m_flRecoilSeed")]
     recoil_seed: Option<f64>,
     // Source data uses either spelling.
     #[serde(default, rename = "m_flReloadDuration")]
@@ -182,8 +191,13 @@ struct RawWeaponInfo {
     bullet_speed_curve: Option<serde_json::Value>,
     #[serde(default, rename = "m_HorizontalRecoil")]
     horizontal_recoil: Option<RawHorizontalRecoil>,
-    #[serde(default, rename = "m_VerticalRecoil")]
+    /// Valve ships this key with a double `l` (`m_VerticallRecoil`).
+    #[serde(default, rename = "m_VerticallRecoil", alias = "m_VerticalRecoil")]
     vertical_recoil: Option<RawVerticalRecoil>,
+    #[serde(default, rename = "m_flRecycleTime")]
+    recycle_time: Option<f64>,
+    #[serde(default, rename = "m_eBulletHandlerType")]
+    bullet_handler_type: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone, Copy)]
@@ -254,8 +268,15 @@ struct RawObjectiveHealthGrowthPhase {
 
 #[derive(Debug, Deserialize)]
 struct RawNpcUnit {
+    /// Builds up to 6701.
     #[serde(default, rename = "m_WeaponInfo")]
     weapon_info: Option<RawWeaponInfo>,
+    /// Builds 6711+: weapon infos keyed by name (`primary`, `boss`).
+    #[serde(default, rename = "m_mapWeaponInfos")]
+    weapon_infos: Option<IndexMap<String, RawWeaponInfo>>,
+    /// Key into `m_mapWeaponInfos` for the weapon used against bosses.
+    #[serde(default, rename = "m_BossWeaponName")]
+    boss_weapon_name: Option<String>,
     #[serde(default, rename = "m_nMaxHealth")]
     max_health: Option<i64>,
     #[serde(default, rename = "m_nPhase2Health")]
@@ -534,6 +555,10 @@ pub(crate) struct WeaponInfo {
     pub horizontal_recoil: Option<HorizontalRecoil>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vertical_recoil: Option<VerticalRecoil>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recycle_time: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bullet_handler_type: Option<String>,
     // ---- computed ----
     #[serde(skip_serializing_if = "Option::is_none")]
     pub shots_per_second: Option<f64>,
@@ -625,6 +650,9 @@ pub(crate) struct NpcUnit {
     pub id: u32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub weapon_info: Option<WeaponInfo>,
+    /// Secondary weapon the unit uses against bosses (builds 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub boss_weapon_info: Option<WeaponInfo>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_health: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -762,8 +790,19 @@ pub(crate) fn build_npc_units(vdata: &str) -> Result<Vec<NpcUnit>, AssetsError> 
 }
 
 #[expect(clippy::too_many_lines)]
-fn transform(class_name: String, r: RawNpcUnit) -> NpcUnit {
+fn transform(class_name: String, mut r: RawNpcUnit) -> NpcUnit {
     let id = entity_id(&class_name);
+
+    let mut weapon_infos = r.weapon_infos.take().unwrap_or_default();
+    let boss_weapon_info = weapon_infos
+        .shift_remove(r.boss_weapon_name.as_deref().unwrap_or("boss"))
+        .map(weapon_info_out);
+    let weapon_info = r
+        .weapon_info
+        .take()
+        .or_else(|| weapon_infos.shift_remove("primary"))
+        .or_else(|| weapon_infos.shift_remove_index(0).map(|(_, w)| w))
+        .map(weapon_info_out);
 
     let bound_abilities = r.bound_abilities.map(|m| {
         m.into_iter()
@@ -772,7 +811,8 @@ fn transform(class_name: String, r: RawNpcUnit) -> NpcUnit {
     });
 
     NpcUnit {
-        weapon_info: r.weapon_info.map(weapon_info_out),
+        weapon_info,
+        boss_weapon_info,
         max_health: r.max_health,
         phase2_health: r.phase2_health,
         bound_abilities,
@@ -1058,6 +1098,8 @@ fn weapon_info_out(r: RawWeaponInfo) -> WeaponInfo {
             burst_constant: h.burst_constant,
             burst_slope: h.burst_slope,
         }),
+        recycle_time: r.recycle_time,
+        bullet_handler_type: r.bullet_handler_type,
         shots_per_second,
         shots_per_second_with_reload,
         bullets_per_second: bps,

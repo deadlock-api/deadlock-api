@@ -115,10 +115,11 @@ impl CssIndex {
         None
     }
 
-    /// Property-icon lookup. An empty-string class is NOT short-circuited; it
-    /// matches the first rule (typically `condition_silence.vsvg`).
+    /// Property-icon lookup. An empty class resolves to `None`: it would
+    /// otherwise match the `""` artifact of every leading-dot selector and
+    /// return whatever rule happens to be first in the file.
     pub(super) fn find_ability_properties_icon(&self, css_class: Option<&str>) -> Option<String> {
-        let needle = css_class?;
+        let needle = css_class.map(str::trim).filter(|c| !c.is_empty())?;
         let prefixed = format!("prop_{needle}");
         for rule in &self.rules {
             let classes = Self::selector_classes(&rule.selector);

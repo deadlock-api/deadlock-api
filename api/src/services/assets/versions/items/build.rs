@@ -412,7 +412,7 @@ async fn transform_ability(
         heroes: Some(heroes),
         update_time: raw.base.update_time,
         properties,
-        weapon_info: raw.base.weapon_info_inner.clone(),
+        weapon_info: raw.base.weapon_info_inner().cloned(),
         r#type: ItemType::Ability,
         grant_ammo_on_cast: raw.grant_ammo_on_cast,
         behaviours,
@@ -615,18 +615,7 @@ fn transform_weapon(
     let image = parse_img_path(image_raw.as_deref());
     let image_webp = webp_of(image.as_deref());
 
-    // Fall through several variants of the class name to find a localized name.
-    let cn = &class_name;
-    let candidates = [
-        cn.clone(),
-        cn.replace("citadel_weapon", "citadel_weapon_hero"),
-        cn.replace("citadel_weapon", "citadel_weapon_hero")
-            .replace("_alt", "_set"),
-        cn.replace("citadel_weapon", "citadel_weapon_hero")
-            .replace("_alt", "_set")
-            .replace("set2", "set"),
-    ];
-    let name = candidates
+    let name = weapon_loc_candidates(&class_name, ctx.heroes)
         .iter()
         .find_map(|k| ctx.localization.get(k))
         .cloned()
@@ -634,7 +623,7 @@ fn transform_weapon(
         .trim()
         .to_owned();
 
-    let weapon_info = raw.weapon_info.as_ref().map(build_weapon_info);
+    let weapon_info = raw.weapon_info().map(build_weapon_info);
 
     let properties = raw.base.properties.clone().map(|m| {
         m.into_iter()
@@ -665,6 +654,41 @@ fn transform_weapon(
         use_custom_crosshair_settings: raw.use_custom_crosshair_settings,
         custom_crosshair_settings: raw.custom_crosshair_settings,
     }
+}
+
+/// Localization keys to try, in order, for a weapon's display name.
+///
+/// Weapon loc keys don't follow the class name consistently: builds up to
+/// 6701 use `citadel_weapon_hero_<x>_set`, 6711+ dropped the `_hero` infix,
+/// secondary/alt variants (`_alt`, `_set2`, `_set_2`) share the primary's
+/// name, and some weapons are keyed by their hero's name instead of the
+/// weapon's (`citadel_weapon_bull_set` -> `citadel_weapon_atlas_set`).
+fn weapon_loc_candidates(class_name: &str, heroes: &[RawHeroLite]) -> Vec<String> {
+    let mut bases = vec![class_name.to_owned()];
+    for (from, to) in [("_alt", "_set"), ("_set_2", "_set"), ("_set2", "_set")] {
+        if let Some(stem) = class_name.strip_suffix(from) {
+            bases.push(format!("{stem}{to}"));
+        }
+    }
+    let hero_names = heroes
+        .iter()
+        .filter(|h| h.items.values().any(|n| bases.contains(n)))
+        .filter_map(|h| h.class_name.strip_prefix("hero_"))
+        .map(|h| format!("citadel_weapon_{h}_set"));
+    let named = bases.clone().into_iter().chain(hero_names);
+
+    let mut out: Vec<String> = Vec::new();
+    for key in named {
+        let hero_infixed = key
+            .strip_prefix("citadel_weapon_")
+            .map(|rest| format!("citadel_weapon_hero_{rest}"));
+        for k in core::iter::once(key).chain(hero_infixed) {
+            if !out.contains(&k) {
+                out.push(k);
+            }
+        }
+    }
+    out
 }
 
 fn build_weapon_info(w: &RawWeaponInfo) -> WeaponInfo {
@@ -811,6 +835,8 @@ fn build_weapon_info(w: &RawWeaponInfo) -> WeaponInfo {
             r.range = r.range.map(coerce_recoil_range);
             r
         }),
+        recycle_time: w.recycle_time,
+        bullet_handler_type: w.bullet_handler_type.clone(),
         shots_per_second,
         shots_per_second_with_reload,
         bullets_per_second,
@@ -925,7 +951,7 @@ async fn transform_upgrade(
         hero,
         heroes: Some(heroes),
         update_time: raw.base.update_time,
-        weapon_info: raw.base.weapon_info_inner.clone(),
+        weapon_info: raw.base.weapon_info_inner().cloned(),
         r#type: ItemType::Upgrade,
         shop_image,
         shop_image_webp,
