@@ -1,4 +1,4 @@
-use haste::entities::{Entity, ehandle_to_index};
+use haste::entities::Entity;
 use haste::fxhash;
 use haste::fxhash::add_u64_to_hash;
 use haste::parser::Context;
@@ -152,7 +152,7 @@ impl AbilityUpgrade {
 impl EntityUpdateEvent for PlayerControllerEvent {
     fn from_entity_update(_ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
         Self {
-            pawn: entity.get_value(&PAWN_HASH).map(ehandle_to_index),
+            pawn: utils::get_entity_handle_index(entity, PAWN_HASH),
             steam_id: entity
                 .get_value(&STEAM_ID_HASH)
                 .and_then(|s| steamid64_to_steamid3(s).ok()),
@@ -206,9 +206,9 @@ pub(super) struct PlayerPawnEvent {
 impl EntityUpdateEvent for PlayerPawnEvent {
     fn from_entity_update(ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
         Self {
-            controller: entity.get_value(&CONTROLLER_HASH).map(ehandle_to_index),
+            controller: utils::get_entity_handle_index(entity, CONTROLLER_HASH),
             team: entity.get_value(&TEAM_HASH),
-            hero_id: entity.get_value(&HERO_ID_HASH),
+            hero_id: entity.get_value(&PAWN_HERO_ID_HASH),
             hero_build_id: entity.get_value(&HERO_BUILD_ID_HASH),
             hero_build_serialized: entity.get_value(&HERO_BUILD_SERIALIZED_HASH),
             level: entity.get_value(&LEVEL_HASH),
@@ -321,7 +321,7 @@ pub(super) struct AbilityMeleeParry {
 impl EntityUpdateEvent for AbilityMeleeParry {
     fn from_entity_update(_ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
         Self {
-            owner_entity: entity.get_value(&OWNER_ENTITY_HASH).map(ehandle_to_index),
+            owner_entity: utils::get_entity_handle_index(entity, OWNER_ENTITY_HASH),
             attack_parried: entity.get_value(&ATTACK_PARRIED_HASH),
             start_time: entity.get_value(&PARRY_START_TIME_HASH),
             success_time: entity.get_value(&PARRY_SUCCESS_TIME_HASH),

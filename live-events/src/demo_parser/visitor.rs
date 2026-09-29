@@ -3,7 +3,7 @@ use std::collections::HashSet;
 
 use axum::response::sse::Event;
 use haste::demostream::CmdHeader;
-use haste::entities::{DeltaHeader, Entity, ehandle_to_index, is_ehandle_valid};
+use haste::entities::{DeltaHeader, Entity};
 use haste::parser::{AsyncVisitor, Context};
 use haste::stringtables::StringTableItem;
 use prost::Message;
@@ -22,6 +22,7 @@ use crate::demo_parser::entity_events::{
 };
 use crate::demo_parser::error::DemoParseError;
 use crate::demo_parser::types::{DemoEvent, DemoEventPayload};
+use crate::demo_parser::utils::handle_to_entity_index;
 use crate::utils::steamid64_to_steamid3;
 
 pub(crate) struct SendingVisitor {
@@ -267,6 +268,13 @@ impl SendingVisitor {
     }
 
     fn handle_tick_end(&mut self, ctx: &Context) -> Result<(), DemoParseError> {
+        // The tick rate comes from `CSVCMsg_ServerInfo` (1/64 in build 6712 replays, not the
+        // 1/60 default). Don't rely on seeing a `DemSyncTick` to pick it up: broadcast streams
+        // joined mid-match may not carry one.
+        if ctx.tick_interval() > 0.0 {
+            self.tick_interval = ctx.tick_interval();
+        }
+
         #[expect(clippy::cast_precision_loss)]
         {
             let ticks = ctx.tick() - self.rules.total_paused_ticks.unwrap_or_default();
@@ -282,13 +290,6 @@ impl SendingVisitor {
         self.sender.send(demo_event.try_into()?)?;
         Ok(())
     }
-}
-
-/// Converts a networked entity handle (as used by the newer user messages) to an entity index.
-fn handle_to_entity_index(handle: Option<u32>) -> Option<i32> {
-    handle
-        .filter(|h| is_ehandle_valid(*h))
-        .map(ehandle_to_index)
 }
 
 fn music_queue_name(queue: CitadelMusicMsgType) -> &'static str {

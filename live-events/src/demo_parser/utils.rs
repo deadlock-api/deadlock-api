@@ -1,4 +1,4 @@
-use haste::entities::Entity;
+use haste::entities::{Entity, ehandle_to_index, is_ehandle_valid};
 use haste::parser::Context;
 
 #[allow(
@@ -21,4 +21,30 @@ pub(super) fn get_entity_position(ctx: &Context, entity: &Entity) -> Option<[f32
         get_entity_coord(ctx, entity, CZ, VZ)?,
     ]
     .into()
+}
+
+/// Converts a networked entity handle to an entity index, mapping the invalid handle (e.g. a
+/// dead hero's pawn has no controller, the demo recorder's controller has no pawn) to `None`.
+pub(super) fn handle_to_entity_index(handle: Option<u32>) -> Option<i32> {
+    handle
+        .filter(|h| is_ehandle_valid(*h))
+        .map(ehandle_to_index)
+}
+
+/// Reads an entity handle field and converts it with [`handle_to_entity_index`].
+pub(super) fn get_entity_handle_index(entity: &Entity, key: u64) -> Option<i32> {
+    handle_to_entity_index(entity.get_value(&key))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_handle_to_entity_index() {
+        // real handles from a build 6712 replay: controller -> pawn 94, and the invalid handle
+        assert_eq!(handle_to_entity_index(Some(11_419_742)), Some(94));
+        assert_eq!(handle_to_entity_index(Some(16_777_215)), None);
+        assert_eq!(handle_to_entity_index(None), None);
+    }
 }

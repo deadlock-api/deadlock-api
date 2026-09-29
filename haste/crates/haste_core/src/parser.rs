@@ -27,12 +27,25 @@ use crate::stringtables::StringTableContainer;
 // (src/main/java/skadistats/clarity/model/engine/AbstractDotaEngineType.java)
 // and documented in manta (string_table.go).
 //
-// NOTE: full packet interval is 1800 only if tick interval is 1 / 30 - this is true for dota2, but
-// deaclock's tick interval is x 2.
+// NOTE: full packet interval is 1800 only if tick interval is 1 / 30 - this is true for dota2. full
+// packets are written once per minute, so the interval scales with the tick rate (see
+// `full_packet_interval`).
 const DEFAULT_FULL_PACKET_INTERVAL: i32 = 1800;
 // NOTE: tick interval is needed to be able to correctly decide simulation time values.
-// dota2's tick interval is 1 / 30; deadlock's 1 / 60 - they are constant.
+// dota2's tick interval is 1 / 30; deadlock's was 1 / 60, build 6712 replays use 1 / 64.
 const DEFAULT_TICK_INTERVAL: f32 = 1.0 / 30.0;
+
+/// number of ticks between two full packets for the given tick interval (one minute of ticks).
+///
+/// the ratio must not be truncated: deadlock's 1 / 64 tick interval (build 6712 replays) gives a
+/// ratio of 2.133, and truncating it to 2 yields 3600 instead of the actual 3840, which makes
+/// `Parser::run_to_tick` skip the last full packet before some targets and end up with no
+/// entities.
+#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+fn full_packet_interval(tick_interval: f32) -> i32 {
+    let ratio = DEFAULT_TICK_INTERVAL / tick_interval;
+    (DEFAULT_FULL_PACKET_INTERVAL as f32 * ratio).round() as i32
+}
 
 // NOTE: primary purpose of Context is to to be able to expose state to the
 // public; attempts to put parser into arguments of Visitor's method did not
@@ -84,8 +97,7 @@ impl Context {
         if let Some(tick_interval) = msg.tick_interval {
             self.tick_interval = tick_interval;
 
-            let ratio = DEFAULT_TICK_INTERVAL / tick_interval;
-            self.full_packet_interval = DEFAULT_FULL_PACKET_INTERVAL * ratio as i32;
+            self.full_packet_interval = full_packet_interval(tick_interval);
 
             // NOTE(blukai): field decoder context needs tick interval to be able to
             // decode simulation time floats.
@@ -1253,5 +1265,20 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
 
     pub fn context(&self) -> &Context {
         &self.ctx
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_full_packet_interval() {
+        // dota2
+        assert_eq!(full_packet_interval(1.0 / 30.0), 1800);
+        // deadlock before build 6712
+        assert_eq!(full_packet_interval(1.0 / 60.0), 3600);
+        // deadlock build 6712 replays: full packets at ticks 1, 3841, 7681, ...
+        assert_eq!(full_packet_interval(1.0 / 64.0), 3840);
     }
 }

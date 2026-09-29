@@ -31,8 +31,8 @@ const HERO_ID: u64 = fkey_from_path(&["m_CCitadelHeroComponent", "m_spawnedHero"
 const PLAYER_NAME: u64 = fkey_from_path(&["m_iszPlayerName"]);
 const NET_WORTH: u64 = fkey_from_path(&["m_PlayerDataGlobal", "m_iGoldNetWorth"]);
 
-/// 5 minutes at deadlock's 60 ticks per second.
-const REPORT_INTERVAL_TICKS: i32 = 60 * 60 * 5;
+/// report player state every 5 minutes.
+const REPORT_INTERVAL_SECS: f32 = 5.0 * 60.0;
 
 #[derive(Default)]
 struct MyVisitor {
@@ -112,9 +112,12 @@ impl Visitor for MyVisitor {
     }
 
     fn on_tick_end(&mut self, ctx: &Context) -> Result<(), Self::Error> {
-        if ctx.tick() > 0 && ctx.tick() % REPORT_INTERVAL_TICKS == 0 {
+        // NOTE: the tick rate is announced by the server (1 / 64 in build 6712 replays).
+        #[expect(clippy::cast_possible_truncation)]
+        let report_interval_ticks = (REPORT_INTERVAL_SECS / ctx.tick_interval()).round() as i32;
+        if ctx.tick() > 0 && report_interval_ticks > 0 && ctx.tick() % report_interval_ticks == 0 {
             if let Some(serializers) = ctx.serializers()
-                && ctx.tick() == REPORT_INTERVAL_TICKS
+                && ctx.tick() == report_interval_ticks
             {
                 println!("coord size params: {:?}", serializers.coord_size_params());
             }
