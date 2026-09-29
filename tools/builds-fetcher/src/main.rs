@@ -111,7 +111,7 @@ async fn fetch_missing_builds(
 ) {
     let seen: Vec<(u32, u32)> = match ch_client
         .query(
-            "SELECT DISTINCT hero_id, toUInt32(assumeNotNull(hero_build_id)) \
+            "SELECT DISTINCT toUInt32(hero_id), toUInt32(assumeNotNull(hero_build_id)) \
              FROM match_player \
              WHERE start_time > now() - INTERVAL 7 DAY \
                AND demo_processed = 1 \
