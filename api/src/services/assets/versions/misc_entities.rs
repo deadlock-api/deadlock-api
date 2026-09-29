@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use cached::macros::cached;
+use indexmap::IndexMap;
 use object_store::aws::AmazonS3;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
@@ -144,8 +145,15 @@ struct RawMiscEntity {
     damaged_by_melee: Option<bool>,
     #[serde(default, rename = "m_bDamagedByBullets")]
     damaged_by_bullets: Option<bool>,
+    #[serde(default, rename = "m_bDamagedBySlide")]
+    damaged_by_slide: Option<bool>,
+    #[serde(default, rename = "m_bHeavyMeleeOnly")]
+    heavy_melee_only: Option<bool>,
+    #[serde(default, rename = "m_nHeavyMeleeHitCount")]
+    heavy_melee_hit_count: Option<i64>,
     #[serde(default, rename = "m_bIsMantleable")]
     is_mantleable: Option<bool>,
+    // Removed in build 6711 (replaced by `m_flPowerupDropChance`).
     #[serde(default, rename = "m_flPrimaryDropChance")]
     primary_drop_chance: Option<f64>,
     #[serde(default, rename = "m_vecPrimaryPickups")]
@@ -154,6 +162,11 @@ struct RawMiscEntity {
     pickups_lv2: Option<Vec<RawPickup>>,
     #[serde(default, rename = "m_vecPickups_lv3")]
     pickups_lv3: Option<Vec<RawPickup>>,
+    #[serde(default, rename = "m_flPowerupDropChance")]
+    powerup_drop_chance: Option<f64>,
+    /// Build 6711+: `{pickup_name: weight}`, replacing the `m_vecPickups*` lists.
+    #[serde(default, rename = "m_mapPickupChances")]
+    pickup_chances: Option<IndexMap<String, f64>>,
     #[serde(default, rename = "m_eRollType")]
     roll_type: Option<RollType>,
     #[serde(default, rename = "m_flGoldAmount")]
@@ -177,6 +190,12 @@ struct RawMiscEntity {
     lifetime: Option<f64>,
     #[serde(default, rename = "m_flCollisionRadius")]
     collision_radius: Option<f64>,
+    #[serde(default, rename = "m_sBuffTypeLocString")]
+    buff_type_loc_string: Option<String>,
+    #[serde(default, rename = "m_BuffTypeGraphColor")]
+    buff_type_graph_color: Option<Color>,
+    #[serde(default, rename = "m_eBuffTypeValueUnit")]
+    buff_type_value_unit: Option<String>,
 }
 
 // ----- Public shape -----
@@ -276,7 +295,14 @@ pub(crate) struct MiscEntity {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub damaged_by_bullets: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub damaged_by_slide: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub heavy_melee_only: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub heavy_melee_hit_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub is_mantleable: Option<bool>,
+    /// Pre-6711 builds only; see `powerup_drop_chance`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub primary_drop_chance: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -285,6 +311,14 @@ pub(crate) struct MiscEntity {
     pub pickups_lv2: Option<Vec<Pickup>>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "m_vecPickups_lv3")]
     pub pickups_lv3: Option<Vec<Pickup>>,
+    /// Drop chance (percent) for build 6711+; replaces `primary_drop_chance`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub powerup_drop_chance: Option<f64>,
+    /// Pickup name to relative weight (build 6711+); replaces the
+    /// `primary_pickups` / `m_vecPickups_lv*` lists.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(value_type = Option<std::collections::HashMap<String, f64>>)]
+    pub pickup_chances: Option<IndexMap<String, f64>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub roll_type: Option<RollType>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -307,6 +341,15 @@ pub(crate) struct MiscEntity {
     pub lifetime: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub collision_radius: Option<f64>,
+    /// Permanent pickups: localization token of the stat the buff raises.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub buff_type_loc_string: Option<String>,
+    /// Permanent pickups: color used for the buff in the stat graph.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub buff_type_graph_color: Option<Color>,
+    /// Permanent pickups: unit of the buff value (e.g. `Percent`, `Meters`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub buff_type_value_unit: Option<String>,
 }
 
 // ----- Build -----
@@ -342,11 +385,16 @@ fn transform(class_name: String, r: RawMiscEntity) -> MiscEntity {
         damaged_by_abilities: r.damaged_by_abilities,
         damaged_by_melee: r.damaged_by_melee,
         damaged_by_bullets: r.damaged_by_bullets,
+        damaged_by_slide: r.damaged_by_slide,
+        heavy_melee_only: r.heavy_melee_only,
+        heavy_melee_hit_count: r.heavy_melee_hit_count,
         is_mantleable: r.is_mantleable,
         primary_drop_chance: r.primary_drop_chance,
         primary_pickups: r.primary_pickups.map(pickups_out),
         pickups_lv2: r.pickups_lv2.map(pickups_out),
         pickups_lv3: r.pickups_lv3.map(pickups_out),
+        powerup_drop_chance: r.powerup_drop_chance,
+        pickup_chances: r.pickup_chances,
         roll_type: r.roll_type,
         gold_amount: r.gold_amount,
         gold_per_minute_amount: r.gold_per_minute_amount,
@@ -360,6 +408,9 @@ fn transform(class_name: String, r: RawMiscEntity) -> MiscEntity {
         orb_spawn_delay_max: r.orb_spawn_delay_max,
         lifetime: r.lifetime,
         collision_radius: r.collision_radius,
+        buff_type_loc_string: r.buff_type_loc_string,
+        buff_type_graph_color: r.buff_type_graph_color,
+        buff_type_value_unit: r.buff_type_value_unit,
         class_name,
         id,
     }
@@ -446,6 +497,51 @@ mod tests {
             assert!(!e.class_name.contains("base"), "leaked: {}", e.class_name);
             assert!(!e.class_name.contains("dummy"), "leaked: {}", e.class_name);
         }
+    }
+
+    #[test]
+    fn parses_build_6711_pickup_fields() {
+        let vdata = r##"<!-- kv3 encoding:text:version{e21c7f3c-8a33-41c5-9977-a76d3a32aa0d} format:generic:version{7412167c-06e9-4698-aff2-e63eb59037e7} -->
+{
+	citadel_breakable_prop_tough_crate =
+	{
+		m_flPowerupDropChance = 100.000000
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_bHeavyMeleeOnly = true
+		m_nHeavyMeleeHitCount = 1
+		m_mapPickupChances =
+		{
+			big_gold_pickup = 1.000000
+		}
+	}
+	firerate_permanent_pickup =
+	{
+		m_sBuffTypeLocString = "#Citadel_Graph_PermanentBuff_FireRate"
+		m_BuffTypeGraphColor = [ 255, 60, 60 ]
+		m_eBuffTypeValueUnit = "Percent"
+	}
+}"##;
+        let entities = build_misc_entities(vdata).expect("builds");
+        let crate_ = &entities[0];
+        assert_eq!(crate_.powerup_drop_chance, Some(100.0));
+        assert_eq!(crate_.roll_type, Some(RollType::BreakableGoldPickup));
+        assert_eq!(crate_.heavy_melee_only, Some(true));
+        assert_eq!(crate_.heavy_melee_hit_count, Some(1));
+        assert_eq!(
+            crate_
+                .pickup_chances
+                .as_ref()
+                .and_then(|m| m.get("big_gold_pickup")),
+            Some(&1.0)
+        );
+        assert!(crate_.primary_pickups.is_none());
+        let pickup = &entities[1];
+        assert_eq!(
+            pickup.buff_type_loc_string.as_deref(),
+            Some("#Citadel_Graph_PermanentBuff_FireRate")
+        );
+        assert_eq!(pickup.buff_type_graph_color.map(|c| c.red), Some(255));
+        assert_eq!(pickup.buff_type_value_unit.as_deref(), Some("Percent"));
     }
 
     #[test]

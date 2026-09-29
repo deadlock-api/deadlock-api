@@ -1,6 +1,7 @@
 //! SVG fetcher backed by the public assets bucket. Inlined keybind / inline-
 //! attribute icons are pulled from
-//! `https://assets-bucket.deadlock-api.com/assets-api-res/icons/<name>` and
+//! `https://assets-bucket.deadlock-api.com/assets-api-res/icons/<path>` (the
+//! nested path under `panorama/images/`, e.g. `glyphs/mouse1.svg`) and
 //! cached in-process. Negative responses are cached too so we don't refetch.
 
 use std::sync::{Arc, OnceLock};

@@ -35,11 +35,11 @@ pub(super) struct TemplateCtx<'a> {
 
 fn keybind_svg_name(key: &str) -> Option<&'static str> {
     Some(match key {
-        "Attack" => "mouse1.svg",
-        "ADS" => "mouse2.svg",
-        "AltCast" => "mouse3.svg",
-        "SpectateFlyUp" => "mouse4.svg",
-        "SpectateFlyDown" => "mouse5.svg",
+        "Attack" => "glyphs/mouse1.svg",
+        "ADS" => "glyphs/mouse2.svg",
+        "AltCast" => "glyphs/mouse3.svg",
+        "SpectateFlyUp" => "glyphs/mouse4.svg",
+        "SpectateFlyDown" => "glyphs/mouse5.svg",
         _ => return None,
     })
 }
@@ -277,8 +277,12 @@ async fn resolve_inline_attribute(ctx: &TemplateCtx<'_>, css_class: &str) -> Str
 
     let img_tag = match bg.as_deref() {
         Some(bg_url) if bg_url.ends_with(".svg") => {
-            let svg_name =
-                svg_name_override.unwrap_or_else(|| bg_url.rsplit('/').next().unwrap_or(bg_url));
+            // `fetch_svg` takes the path relative to the icons root.
+            let svg_name = svg_name_override.unwrap_or_else(|| {
+                bg_url
+                    .strip_prefix(SVGS_BASE_URL)
+                    .map_or(bg_url, |p| p.trim_start_matches('/'))
+            });
             if let Some(svg) = fetch_svg(svg_name).await.as_ref().clone() {
                 add_fill_to_svg(&svg, wash.as_deref())
             } else if wash.is_some() {

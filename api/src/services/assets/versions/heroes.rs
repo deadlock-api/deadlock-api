@@ -18,7 +18,6 @@ use crate::services::assets::versions::store;
 use crate::utils::kv3;
 
 const IMAGE_BASE_URL: &str = "https://assets-bucket.deadlock-api.com/assets-api-res/images";
-const SVGS_BASE_URL: &str = "https://assets-bucket.deadlock-api.com/assets-api-res/icons";
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -1085,6 +1084,17 @@ fn parse_img_path(v: &str) -> Option<String> {
         return None;
     }
 
+    // Svg icons are uploaded nested by their full path under
+    // `panorama/images/`, so they must not be cut at an anchor below.
+    let is_svg = |s: &str| {
+        std::path::Path::new(s.trim_end_matches('"'))
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("svg") || ext.eq_ignore_ascii_case("vsvg"))
+    };
+    if is_svg(v) {
+        return Some(super::common::svg_icon_url(v));
+    }
+
     // Prefer the longest meaningful tail: an `abilities/`, `upgrades/`, or
     // `hud/` prefix anywhere in the path; failing that, the segment after the
     // *last* `{images}/` placeholder.
@@ -1095,29 +1105,13 @@ fn parse_img_path(v: &str) -> Option<String> {
         &v[i..]
     } else if let Some((_, t)) = v.rsplit_once("{images}/") {
         t
-    } else if !std::path::Path::new(v)
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("svg"))
-    {
-        // Plain relative path — no markers, not an svg.
-        let cleaned = normalize_image_suffix(v)
-            .replace(".vsvg", ".svg")
-            .replace("images/images", "images");
-        return Some(format!("{IMAGE_BASE_URL}/{cleaned}"));
     } else {
-        v
+        // Plain relative path — no markers, not an svg.
+        let cleaned = normalize_image_suffix(v).replace("images/images", "images");
+        return Some(format!("{IMAGE_BASE_URL}/{cleaned}"));
     };
 
-    let s = normalize_image_suffix(tail).replace(".vsvg", ".svg");
-    if std::path::Path::new(&s)
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("svg"))
-    {
-        let leaf = s.rsplit('/').next().unwrap_or(&s);
-        Some(format!("{SVGS_BASE_URL}/{leaf}"))
-    } else {
-        Some(format!("{IMAGE_BASE_URL}/{s}"))
-    }
+    Some(format!("{IMAGE_BASE_URL}/{}", normalize_image_suffix(tail)))
 }
 
 #[derive(Clone)]

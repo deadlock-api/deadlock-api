@@ -1,5 +1,7 @@
 //! URL and string helpers for the item transform pipeline.
 
+use crate::services::assets::versions::common::svg_icon_url;
+
 pub(super) const IMAGE_BASE_URL: &str =
     "https://assets-bucket.deadlock-api.com/assets-api-res/images";
 pub(super) const SVGS_BASE_URL: &str =
@@ -7,11 +9,18 @@ pub(super) const SVGS_BASE_URL: &str =
 pub(super) const VIDEO_BASE_URL: &str =
     "https://assets-bucket.deadlock-api.com/assets-api-res/videos";
 
-/// Quirk: when there's no `abilities/`/`upgrades/`/`hud/` anchor AND no
-/// `{images}/` prefix AND the input doesn't end in `.svg`, the suffix
-/// replacements are intentionally skipped.
+/// Quirk: when a non-svg input has no `abilities/`/`upgrades/`/`hud/` anchor
+/// AND no `{images}/` prefix, the suffix replacements are intentionally
+/// skipped.
+///
+/// Svg icons resolve to their nested bucket path (see
+/// [`svg_icon_url`](crate::services::assets::versions::common::svg_icon_url)).
 pub(super) fn parse_img_path(v: Option<&str>) -> Option<String> {
     let v = v?;
+    let trimmed = v.trim_end_matches('"');
+    if trimmed.ends_with(".svg") || trimmed.ends_with(".vsvg") {
+        return Some(svg_icon_url(v));
+    }
     let split_index = v
         .find("abilities/")
         .or_else(|| v.find("upgrades/"))
@@ -21,7 +30,7 @@ pub(super) fn parse_img_path(v: Option<&str>) -> Option<String> {
         v[idx..].to_owned()
     } else {
         let parts: Vec<&str> = v.split("{images}/").collect();
-        if parts.len() != 2 && !v.ends_with(".svg") {
+        if parts.len() != 2 {
             return Some(format!("{IMAGE_BASE_URL}/{v}").replace("images/images", "images"));
         }
         parts.last().copied().unwrap_or(v).to_owned()
@@ -31,15 +40,9 @@ pub(super) fn parse_img_path(v: Option<&str>) -> Option<String> {
         .replace('"', "")
         .replace("_psd.", ".")
         .replace("_png.", ".")
-        .replace(".psd", ".png")
-        .replace(".vsvg", ".svg");
+        .replace(".psd", ".png");
 
-    if cleaned.ends_with(".svg") {
-        let name = cleaned.rsplit('/').next().unwrap_or(&cleaned);
-        Some(format!("{SVGS_BASE_URL}/{name}"))
-    } else {
-        Some(format!("{IMAGE_BASE_URL}/{cleaned}"))
-    }
+    Some(format!("{IMAGE_BASE_URL}/{cleaned}"))
 }
 
 pub(super) fn extract_video_url(v: Option<&str>) -> Option<String> {
@@ -89,7 +92,29 @@ mod tests {
     fn img_path_with_svg() {
         assert_eq!(
             parse_img_path(Some("file://{images}/icons/mouse1.vsvg")),
-            Some(format!("{SVGS_BASE_URL}/mouse1.svg"))
+            Some(format!("{SVGS_BASE_URL}/icons/mouse1.svg"))
+        );
+    }
+
+    #[test]
+    fn img_path_svg_keeps_nested_source_path() {
+        // Svgs are uploaded nested by their path under `panorama/images/`, so
+        // an anchor like `hud/` or `abilities/` must not truncate them.
+        assert_eq!(
+            parse_img_path(Some("panorama:\"file://{images}/hud/abilities/foo.vsvg\"")),
+            Some(format!("{SVGS_BASE_URL}/hud/abilities/foo.svg"))
+        );
+        assert_eq!(
+            parse_img_path(Some("s2r://panorama/images/icons/properties/spirit.vsvg")),
+            Some(format!("{SVGS_BASE_URL}/icons/properties/spirit.svg"))
+        );
+        assert_eq!(
+            parse_img_path(Some("images/upgrades/mods_weapon/x.svg")),
+            Some(format!("{SVGS_BASE_URL}/upgrades/mods_weapon/x.svg"))
+        );
+        assert_eq!(
+            parse_img_path(Some("bare.svg")),
+            Some(format!("{SVGS_BASE_URL}/bare.svg"))
         );
     }
 

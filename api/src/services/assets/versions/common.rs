@@ -15,6 +15,28 @@ pub(crate) const IMAGE_BASE_URL: &str =
 pub(crate) const SVGS_BASE_URL: &str =
     "https://assets-bucket.deadlock-api.com/assets-api-res/icons";
 
+/// Path of an svg icon relative to `icons/` in the assets bucket, derived from
+/// its game source path (`file://{images}/...`, `s2r://panorama/images/...`,
+/// `images/...`, optionally quoted / `.vsvg`). Icons are uploaded nested by
+/// their path under `panorama/images/` (see `copy_icon` in
+/// `scripts/build_version_and_upload.sh`); sources outside it sit at the top
+/// level under their file name.
+pub(crate) fn svg_icon_path(source: &str) -> String {
+    let s = source.replace('"', "").replace(".vsvg", ".svg");
+    let rel = s
+        .rsplit_once("{images}/")
+        .or_else(|| s.rsplit_once("panorama/images/"))
+        .map(|(_, t)| t)
+        .or_else(|| s.strip_prefix("images/"))
+        .unwrap_or_else(|| s.rsplit('/').next().unwrap_or(&s));
+    rel.to_owned()
+}
+
+/// Public URL of an svg icon given its game source path (see [`svg_icon_path`]).
+pub(crate) fn svg_icon_url(source: &str) -> String {
+    format!("{SVGS_BASE_URL}/{}", svg_icon_path(source))
+}
+
 /// Parse a KV3 source file, then iterate its top-level entries: each entry
 /// that passes `keep` is deserialized into `Raw` and passed to `transform`.
 /// Entries that fail to deserialize are skipped with a `warn!` carrying

@@ -33,7 +33,7 @@ pub(crate) fn build_build_tags(loc: &HashMap<String, String>) -> Vec<BuildTag> {
             class_name: k.clone(),
             label: v.clone(),
             id: entity_id(k),
-            icon: format!("{SVGS_BASE_URL}/{k}.svg"),
+            icon: format!("{SVGS_BASE_URL}/builds/{k}.svg"),
         })
         .collect();
     out.sort_by(|a, b| a.class_name.cmp(&b.class_name));
@@ -93,7 +93,7 @@ mod tests {
         assert_eq!(weapon.label, "Weapon");
         assert_eq!(
             weapon.icon,
-            "https://assets-bucket.deadlock-api.com/assets-api-res/icons/citadel_build_tag_weapon.svg"
+            "https://assets-bucket.deadlock-api.com/assets-api-res/icons/builds/citadel_build_tag_weapon.svg"
         );
     }
 

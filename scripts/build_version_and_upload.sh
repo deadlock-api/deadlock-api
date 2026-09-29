@@ -8,7 +8,7 @@ set -euo pipefail
 #   3. Extract the required VPK contents.
 #   4. Build the versions/<build>/ folder (vdata/css/steam.inf/localization,
 #      zstd-compressed) from the extracted files.
-#   5. Extract + process the media assets (images/icons/fonts/sounds/videos).
+#   5. Extract + process the media assets (images/icons/fonts/sounds).
 #   6. Upload the media assets to R2.
 #   7. Upload the versions/<build>/ folder to R2.
 #   8. Rebuild the R2 indexes (per-folder index.json.zst + steam-info/all.json.zst)
@@ -16,7 +16,7 @@ set -euo pipefail
 #      asset update — the index must never drift from what's in the bucket.
 #
 # Requires: wget/curl, unzip, zstd, uv, rclone, convert (ImageMagick),
-#           ffmpeg, python3, and Steam credentials in the environment.
+#           python3, and Steam credentials in the environment.
 #
 # Environment:
 #   STEAM_USERNAME / STEAM_PASSWORD  Steam login for the depot download.
@@ -87,14 +87,12 @@ check_cmd() {
     fi
 }
 
-for cmd in unzip zstd uv rclone convert ffmpeg python3 rsync; do
+for cmd in unzip zstd uv rclone convert python3 rsync; do
     check_cmd "$cmd"
 done
 
-# Parallelism + portable hashing helpers (used by media processing).
+# Parallelism helper (used by media processing).
 if command -v nproc >/dev/null 2>&1; then JOBS=$(nproc); else JOBS=$(sysctl -n hw.ncpu 2>/dev/null || echo 4); fi
-if command -v sha256sum >/dev/null 2>&1; then HASH_CMD="sha256sum"; else HASH_CMD="shasum -a 256"; fi
-export HASH_CMD
 
 # Copy that warns instead of aborting when a source path is missing.
 safe_cp() {
@@ -313,14 +311,11 @@ mkdir -p images/hud/core
 safe_cp -r "$citadel_folder"/panorama/images/heroes images/
 safe_cp -r "$citadel_folder"/panorama/images/hud/*.png images/hud/
 safe_cp -r "$citadel_folder"/panorama/images/hud/*/*.png images/hud/core/
-safe_cp "$citadel_folder"/panorama/images/hud/hero_portraits/* images/heroes/
 safe_cp "$citadel_folder"/panorama/images/*.* images/
-safe_cp -r "$citadel_folder"/panorama/images/hud/hero_portraits images/hud/
 safe_cp -r "$citadel_folder"/panorama/images/items/ images/
 safe_cp -r "$citadel_folder"/panorama/images/shop/ images/
 safe_cp -r "$citadel_folder"/panorama/images/main_menu/ images/
-mkdir -p images/materials
-safe_cp "$citadel_folder"/materials/citadel_loading*.png images/materials/
+safe_cp -r "$citadel_folder"/panorama/images/npcs images/
 
 mkdir -p images/abilities
 safe_cp -r "$citadel_folder"/panorama/images/hud/abilities images/
@@ -347,27 +342,6 @@ find images -type f -name "*.png" -print0 | xargs -0 -P 24 -I {} sh -c '
 find images -type f -name "*_psd.*" -exec bash -c 'mv "$1" "${1/_psd./.}"' _ {} \;
 find images -type f -name "*_psd_128.*" -exec bash -c 'mv "$1" "${1/_psd_128./.}"' _ {} \;
 find images -type f -name "*_png.*" -exec bash -c 'mv "$1" "${1/_png./.}"' _ {} \;
-
-# Videos: transcode webm -> h264 mp4, skipping when the source sha256 is unchanged.
-mkdir -p videos
-safe_cp -r "$citadel_folder"/panorama/videos/hero_abilities videos/
-HASH_DIR="$WORK_DIR/.video-hashes"
-mkdir -p "$HASH_DIR"
-export HASH_DIR
-find videos -type f -name "*.webm" -print0 | \
-    xargs -P 2 -0 -I {} sh -c '
-        video_file="$1"
-        mp4_file="${video_file%.webm}_h264.mp4"
-        hash_file="$HASH_DIR/$(echo "$video_file" | tr "/" "_").sha256"
-        cur=$($HASH_CMD "$video_file" | cut -d" " -f1)
-        if [ -f "$mp4_file" ] && [ "$(cat "$hash_file" 2>/dev/null)" = "$cur" ]; then
-            echo "Skipping unchanged video: $video_file"
-        else
-            echo "Converting $video_file -> $mp4_file"
-            timeout 300 ffmpeg -nostdin -loglevel error -i "$video_file" -c:v libx264 -crf 23 -y "$mp4_file" \
-                && printf "%s\n" "$cur" > "$hash_file"
-        fi
-    ' _ {}
 
 # 5b. Validate the build before uploading ANYTHING to R2. A partial or broken
 # build (e.g. missing localization, empty media) must never reach the bucket and
@@ -420,7 +394,6 @@ echo "Uploading media assets to R2..."
 rclone copy -P -c --transfers 8 --checkers 8 images/ "$REMOTE/images/"
 rclone copy -P -c --transfers 8 --checkers 8 icons/ "$REMOTE/icons/"
 rclone copy -P -c --transfers 8 --checkers 8 sounds/ "$REMOTE/sounds/"
-rclone copy -P -c --transfers 8 --checkers 8 videos/ "$REMOTE/videos/"
 rclone copy -P -c --transfers 8 --checkers 8 fonts/ "$REMOTE/fonts/"
 
 # 7. Upload the versioned source files (vdata/css/steam.inf/localization) to R2
