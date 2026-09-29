@@ -2,9 +2,12 @@
 //!
 //! The objective marker positions come from the per-version
 //! `styles/objectives_map.css`; the radius, image URLs (which switch to the
-//! layered midtown minimap from build 6711 on), and zip-line lane splines
-//! ([`geometry`]) are fixed constants.
+//! layered midtown minimap from build 6711 on), zip-line lane splines and (6711+)
+//! neutral camps are fixed constants extracted from the map entity lump: the
+//! pre-6711 map in [`geometry`], the "City Never Sleeps" map (6711+) in
+//! [`city_never_sleeps`].
 
+mod city_never_sleeps;
 mod geometry;
 
 use std::collections::HashMap;
@@ -17,10 +20,11 @@ use serde::Serialize;
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 use utoipa::ToSchema;
 
-use crate::services::assets::versions::common::{Color, IMAGE_BASE_URL};
+use crate::services::assets::versions::common::{Color, IMAGE_BASE_URL, SVGS_BASE_URL};
 use crate::services::assets::versions::css;
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::store;
+use geometry::NeutralCampKind;
 
 const MAP_RADIUS: u32 = 10752;
 const CSS_PATH: &str = "styles/objectives_map.css";
@@ -127,6 +131,21 @@ pub(crate) struct ZiplanePath {
     color_parsed: Color,
 }
 
+/// A neutral camp ("Haunt") marker (build 6711+).
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub(crate) struct NeutralCamp {
+    /// Camp entity name from the map (e.g. `theater_lobby_camp`).
+    name: String,
+    kind: NeutralCampKind,
+    /// World position `[x, y, z]`, same space as the zip-line splines.
+    position: [f64; 3],
+    /// Position on the minimap, as fractions of its width/height.
+    left_relative: f64,
+    top_relative: f64,
+    /// Minimap icon URL.
+    icon: String,
+}
+
 /// The `/v1/assets/map` response.
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub(crate) struct MapData {
@@ -135,6 +154,9 @@ pub(crate) struct MapData {
     #[schema(value_type = HashMap<String, ObjectivePosition>)]
     objective_positions: IndexMap<String, ObjectivePosition>,
     zipline_paths: Vec<ZiplanePath>,
+    /// Neutral camps (build 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    neutral_camps: Option<Vec<NeutralCamp>>,
 }
 
 /// Image layers for `version`. Images aren't versioned in the bucket and
@@ -164,11 +186,16 @@ fn images(version: u32) -> MapImages {
     }
 }
 
-fn zipline_paths() -> Vec<ZiplanePath> {
-    geometry::LANES
+fn zipline_paths(version: u32) -> Vec<ZiplanePath> {
+    let (lanes, origins) = if version >= CITY_NEVER_SLEEPS_BUILD {
+        (&city_never_sleeps::LANES, &city_never_sleeps::LANE_ORIGINS)
+    } else {
+        (&geometry::LANES, &geometry::LANE_ORIGINS)
+    };
+    lanes
         .iter()
         .zip(geometry::LANE_COLORS)
-        .zip(geometry::LANE_ORIGINS)
+        .zip(origins.iter().copied())
         .map(|((lane, color), origin)| {
             let pick = |a: usize, b: usize, c: usize| -> Vec<[f64; 3]> {
                 lane.iter().map(|n| [n[a], n[b], n[c]]).collect()
@@ -188,6 +215,44 @@ fn zipline_paths() -> Vec<ZiplanePath> {
             }
         })
         .collect()
+}
+
+/// Minimap icon (under `icons/minimap/`) for a camp kind, as `hud_minimap.css`
+/// maps `.map_button.neutral_{weak,medium,large,vault}`.
+const fn neutral_camp_icon(kind: NeutralCampKind) -> &'static str {
+    match kind {
+        NeutralCampKind::Weak => "neutral_small_psd",
+        NeutralCampKind::Medium => "neutral_medium_psd",
+        NeutralCampKind::Strong => "neutral_large_psd",
+        NeutralCampKind::Vault => "neutral_vault_psd",
+    }
+}
+
+/// Neutral camps for `version`; `None` before 6711 (not extracted for the old map).
+fn neutral_camps(version: u32) -> Option<Vec<NeutralCamp>> {
+    if version < CITY_NEVER_SLEEPS_BUILD {
+        return None;
+    }
+    let radius = f64::from(MAP_RADIUS);
+    Some(
+        city_never_sleeps::NEUTRAL_CAMPS
+            .iter()
+            .map(|camp| {
+                let [x, y, _] = camp.position;
+                NeutralCamp {
+                    name: camp.name.to_owned(),
+                    kind: camp.kind,
+                    position: camp.position,
+                    left_relative: (x + radius) / (2.0 * radius),
+                    top_relative: (radius - y) / (2.0 * radius),
+                    icon: format!(
+                        "{SVGS_BASE_URL}/minimap/{}.png",
+                        neutral_camp_icon(camp.kind)
+                    ),
+                }
+            })
+            .collect(),
+    )
 }
 
 /// Parse the objective marker positions from `objectives_map.css`, keyed by
@@ -227,7 +292,8 @@ pub(crate) fn build_map(css: &str, version: u32) -> Result<MapData, AssetsError>
         radius: MAP_RADIUS,
         images: images(version),
         objective_positions: build_objective_positions(css)?,
-        zipline_paths: zipline_paths(),
+        zipline_paths: zipline_paths(version),
+        neutral_camps: neutral_camps(version),
     })
 }
 
@@ -255,6 +321,45 @@ mod tests {
             { snapshot_path => "map_snapshots", prepend_module_to_snapshot => false },
             { insta::assert_json_snapshot!("map", map); }
         );
+    }
+
+    /// `objectives_map.css` is byte-identical in 6711, so the same fixture is used.
+    #[test]
+    fn snapshot_map_city_never_sleeps() {
+        let map = build_map(FIXTURE, CITY_NEVER_SLEEPS_BUILD).expect("builds");
+        insta::with_settings!(
+            { snapshot_path => "map_snapshots", prepend_module_to_snapshot => false },
+            { insta::assert_json_snapshot!("map_city_never_sleeps", map); }
+        );
+    }
+
+    #[test]
+    fn city_never_sleeps_geometry() {
+        let old = build_map(FIXTURE, CITY_NEVER_SLEEPS_BUILD - 1).expect("builds");
+        assert!(old.neutral_camps.is_none());
+        let bits = |v: [f64; 3]| v.map(f64::to_bits);
+        assert_eq!(
+            bits(old.zipline_paths[0].origin),
+            bits(geometry::LANE_ORIGINS[0])
+        );
+
+        let new = build_map(FIXTURE, CITY_NEVER_SLEEPS_BUILD).expect("builds");
+        assert_eq!(new.zipline_paths.len(), 3);
+        assert_eq!(
+            bits(new.zipline_paths[0].origin),
+            bits(city_never_sleeps::LANE_ORIGINS[0])
+        );
+        let camps = new.neutral_camps.expect("camps for 6711+");
+        assert!(!camps.is_empty());
+        for camp in &camps {
+            assert!((0.0..=1.0).contains(&camp.left_relative), "{}", camp.name);
+            assert!((0.0..=1.0).contains(&camp.top_relative), "{}", camp.name);
+            assert!(
+                camp.icon.contains("/icons/minimap/neutral_"),
+                "{}",
+                camp.icon
+            );
+        }
     }
 
     #[test]
