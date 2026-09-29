@@ -954,9 +954,14 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
                     }
                 }
                 Err(err) => {
+                    // NOTE: the async demo file reads the cmd header's leading varint byte by
+                    // byte, so a clean end of file surfaces as a varint io error.
                     if matches!(
                         err,
                         crate::demostream::ReadCmdHeaderError::IoError(ref e)
+                            | crate::demostream::ReadCmdHeaderError::ReadVarintError(
+                                dungers::varint::VarintError::IoError(ref e)
+                            )
                             if e.kind() == io::ErrorKind::UnexpectedEof
                     ) {
                         return Ok(());

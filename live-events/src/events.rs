@@ -44,9 +44,22 @@ fn all_sse_events() -> Vec<String> {
             ]
         })
         .chain(
-            ["tick_end", "hero_killed", "end", "error"]
-                .into_iter()
-                .map(ToString::to_string),
+            [
+                "tick_end",
+                "hero_killed",
+                "chat_message",
+                "banned_heroes",
+                "soul_bag_pickup",
+                "hero_release_vote",
+                "combat_log_entry",
+                "combat_log_bulk_data",
+                "player_typing",
+                "music_queue",
+                "end",
+                "error",
+            ]
+            .into_iter()
+            .map(ToString::to_string),
         )
         .collect()
 }

@@ -124,6 +124,13 @@ Each entity type produces three event names:
 Additional event names:
 
 - `chat_message` — in-game chat (requires `subscribed_chat_messages=true`)
+- `player_typing` — a player started/stopped typing (requires `subscribed_chat_messages=true`)
+- `hero_killed` — hero kill (includes `killfeed_gold` and `killer_ability_id`)
+- `banned_heroes` — heroes banned in the draft
+- `soul_bag_pickup` — soul bag picked up (`pickup_player` / `victim_player` are entity indices, `killfeed_gold`)
+- `hero_release_vote` — a player voted for a hero release (`player_slot`, `voted_hero_id`)
+- `combat_log_entry` / `combat_log_bulk_data` — combat log entries (`CMsgCitadelCombatLogEntry`)
+- `music_queue` — music cue (`queue`, `queue_name`; `corrupted_item_shop_announce` is the Broker's arrival)
 - `tick_end` — marks the end of a game tick
 - `end` — the demo stream has ended
 

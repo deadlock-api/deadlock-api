@@ -3,7 +3,7 @@ use std::collections::HashSet;
 
 use axum::response::sse::Event;
 use haste::demostream::CmdHeader;
-use haste::entities::{DeltaHeader, Entity};
+use haste::entities::{DeltaHeader, Entity, ehandle_to_index, is_ehandle_valid};
 use haste::parser::{AsyncVisitor, Context};
 use haste::stringtables::StringTableItem;
 use prost::Message;
@@ -11,8 +11,10 @@ use tokio::sync::mpsc::UnboundedSender;
 use tracing::debug;
 use valveprotos::common::{CMsgPlayerInfo, EDemoCommands};
 use valveprotos::deadlock::{
-    CCitadelUserMsgBannedHeroes, CCitadelUserMsgChatMsg, CCitadelUserMsgHeroKilled,
-    CitadelUserMessageIds,
+    CCitadelUserMsgBannedHeroes, CCitadelUserMsgChatMsg, CCitadelUserMsgCombatLogBulkData,
+    CCitadelUserMsgHeroKilled, CCitadelUserMsgHeroReleaseVote, CCitadelUserMsgMusicQueue,
+    CCitadelUserMsgPlayerTyping, CCitadelUserMsgSoulBagPickup, CMsgCitadelCombatLogEntry,
+    CitadelMusicMsgType, CitadelUserMessageIds,
 };
 
 use crate::demo_parser::entity_events::{
@@ -201,7 +203,67 @@ impl SendingVisitor {
             self.sender.send(sse_event)?;
         }
 
+        if let Some(event) = self.decode_user_message(packet_type, data) {
+            let demo_event = DemoEvent {
+                tick: ctx.tick(),
+                game_time: self.game_time,
+                event,
+            };
+            self.sender.send(demo_event.try_into()?)?;
+        }
+
         Ok(())
+    }
+
+    /// Decodes the user messages that map one to one onto a [`DemoEventPayload`].
+    fn decode_user_message(&self, packet_type: u32, data: &[u8]) -> Option<DemoEventPayload> {
+        let msg_id = CitadelUserMessageIds::try_from(i32::try_from(packet_type).ok()?).ok()?;
+        match msg_id {
+            CitadelUserMessageIds::KEUserMsgSoulBagPickup => {
+                let msg = CCitadelUserMsgSoulBagPickup::decode(data).ok()?;
+                Some(DemoEventPayload::SoulBagPickup {
+                    pickup_player: handle_to_entity_index(msg.pickup_player),
+                    victim_player: handle_to_entity_index(msg.victim_player),
+                    killfeed_gold: msg.killfeed_gold,
+                })
+            }
+            CitadelUserMessageIds::KEUserMsgHeroReleaseVote => {
+                CCitadelUserMsgHeroReleaseVote::decode(data)
+                    .ok()
+                    .map(DemoEventPayload::HeroReleaseVote)
+            }
+            CitadelUserMessageIds::KEUserMsgCombatLogEntry => {
+                CMsgCitadelCombatLogEntry::decode(data)
+                    .ok()
+                    .map(|msg| DemoEventPayload::CombatLogEntry(Box::new(msg)))
+            }
+            CitadelUserMessageIds::KEUserMsgCombatLogBulkData => {
+                CCitadelUserMsgCombatLogBulkData::decode(data)
+                    .ok()
+                    .map(DemoEventPayload::CombatLogBulkData)
+            }
+            // Typing indicators belong to the chat, so they share its subscription.
+            CitadelUserMessageIds::KEUserMsgPlayerTyping if self.subscribed_chat_messages => {
+                let msg = CCitadelUserMsgPlayerTyping::decode(data).ok()?;
+                Some(DemoEventPayload::PlayerTyping {
+                    player_slot: msg.player_slot,
+                    server_game_time: msg.game_time,
+                    all_chat: msg.all_chat,
+                    typing: msg.typing,
+                })
+            }
+            CitadelUserMessageIds::KEUserMsgMusicQueue => {
+                let msg = CCitadelUserMsgMusicQueue::decode(data).ok()?;
+                Some(DemoEventPayload::MusicQueue {
+                    queue: msg.queue,
+                    queue_name: msg
+                        .queue
+                        .and_then(|q| CitadelMusicMsgType::try_from(q).ok())
+                        .map(music_queue_name),
+                })
+            }
+            _ => None,
+        }
     }
 
     fn handle_tick_end(&mut self, ctx: &Context) -> Result<(), DemoParseError> {
@@ -219,5 +281,78 @@ impl SendingVisitor {
         };
         self.sender.send(demo_event.try_into()?)?;
         Ok(())
+    }
+}
+
+/// Converts a networked entity handle (as used by the newer user messages) to an entity index.
+fn handle_to_entity_index(handle: Option<u32>) -> Option<i32> {
+    handle
+        .filter(|h| is_ehandle_valid(*h))
+        .map(ehandle_to_index)
+}
+
+fn music_queue_name(queue: CitadelMusicMsgType) -> &'static str {
+    match queue {
+        CitadelMusicMsgType::KEMusicQueueInvalid => "invalid",
+        CitadelMusicMsgType::KEMusicQueueIdolAnnounce => "idol_announce",
+        CitadelMusicMsgType::KEMusicQueueKothAnnounce => "koth_announce",
+        CitadelMusicMsgType::KEMusicQueueRejuvDrop => "rejuv_drop",
+        CitadelMusicMsgType::KEMusicQueueCorruptedItemShopAnnounce => {
+            "corrupted_item_shop_announce"
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use haste::async_demofile::AsyncDemoFile;
+    use haste::parser::AsyncStreamingParser;
+
+    use super::*;
+
+    /// Runs the visitor over a local replay and prints how often each SSE event fired, plus a
+    /// sample payload of the non-entity events.
+    ///
+    /// `LIVE_EVENTS_TEST_DEMO=/path/to/match.dem cargo test -p deadlock-live-events -- --ignored`
+    #[tokio::test]
+    #[ignore = "needs a replay file in LIVE_EVENTS_TEST_DEMO"]
+    async fn test_demo_events() {
+        let path = std::env::var("LIVE_EVENTS_TEST_DEMO").expect("LIVE_EVENTS_TEST_DEMO not set");
+        let data = std::fs::read(path).expect("failed to read replay");
+
+        let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel();
+        let visitor = SendingVisitor::new(sender, true, None::<Vec<EntityType>>);
+        let demo_file = AsyncDemoFile::start_reading(data.as_slice()).await.unwrap();
+        let mut parser =
+            AsyncStreamingParser::from_stream_with_visitor(demo_file, visitor).unwrap();
+        parser.run_to_end().await.unwrap();
+        drop(parser);
+
+        let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+        let mut samples: BTreeMap<String, String> = BTreeMap::new();
+        while let Some(event) = receiver.recv().await {
+            // NOTE: axum's Event has no accessors; its debug output contains the raw
+            // `event: <name>\ndata: <json>` buffer.
+            let debug = format!("{event:?}");
+            let name = debug
+                .split("event: ")
+                .nth(1)
+                .and_then(|rest| rest.split("\\n").next())
+                .unwrap_or("?")
+                .to_owned();
+            if !name.contains("_entity_") && name != "tick_end" {
+                samples.entry(name.clone()).or_insert(debug);
+            }
+            *counts.entry(name).or_default() += 1;
+        }
+        for (name, count) in &counts {
+            println!("{name}: {count}");
+        }
+        for sample in samples.values() {
+            println!("{sample}");
+        }
+        assert!(counts.contains_key("player_pawn_entity_update"));
     }
 }

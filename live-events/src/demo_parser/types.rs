@@ -4,7 +4,10 @@ use axum::response::sse::Event;
 use haste::entities::DeltaHeader;
 use serde::Serialize;
 use strum::{Display, FromRepr};
-use valveprotos::deadlock::CCitadelUserMsgHeroKilled;
+use valveprotos::deadlock::{
+    CCitadelUserMsgCombatLogBulkData, CCitadelUserMsgHeroKilled, CCitadelUserMsgHeroReleaseVote,
+    CMsgCitadelCombatLogEntry,
+};
 
 use crate::demo_parser::entity_events::{EntityType, EntityUpdateEvents};
 
@@ -48,6 +51,30 @@ pub(super) enum DemoEventPayload {
     BannedHeroes {
         banned_hero_ids: Vec<u32>,
     },
+    SoulBagPickup {
+        /// Entity index of the player that picked up the soul bag.
+        pickup_player: Option<i32>,
+        /// Entity index of the player that dropped the soul bag.
+        victim_player: Option<i32>,
+        killfeed_gold: Option<i32>,
+    },
+    HeroReleaseVote(CCitadelUserMsgHeroReleaseVote),
+    CombatLogEntry(Box<CMsgCitadelCombatLogEntry>),
+    CombatLogBulkData(CCitadelUserMsgCombatLogBulkData),
+    PlayerTyping {
+        player_slot: Option<i32>,
+        /// Server game time sent with the message (the envelope's `game_time` is the match
+        /// clock).
+        server_game_time: Option<f32>,
+        all_chat: Option<bool>,
+        typing: Option<bool>,
+    },
+    MusicQueue {
+        queue: Option<i32>,
+        /// Snake-case name of `queue` (e.g. `corrupted_item_shop_announce` for the Broker's
+        /// arrival), if it is known.
+        queue_name: Option<&'static str>,
+    },
     TickEnd,
 }
 
@@ -60,6 +87,12 @@ impl Display for DemoEventPayload {
             Self::ChatMessage { .. } => write!(f, "chat_message"),
             Self::HeroKilled { .. } => write!(f, "hero_killed"),
             Self::BannedHeroes { .. } => write!(f, "banned_heroes"),
+            Self::SoulBagPickup { .. } => write!(f, "soul_bag_pickup"),
+            Self::HeroReleaseVote(..) => write!(f, "hero_release_vote"),
+            Self::CombatLogEntry(..) => write!(f, "combat_log_entry"),
+            Self::CombatLogBulkData(..) => write!(f, "combat_log_bulk_data"),
+            Self::PlayerTyping { .. } => write!(f, "player_typing"),
+            Self::MusicQueue { .. } => write!(f, "music_queue"),
             Self::TickEnd => write!(f, "tick_end"),
         }
     }
