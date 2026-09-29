@@ -9,7 +9,10 @@
 - [Stream Toolkit](https://deadlock-api.com/streamkit): Chatbot command builder and OBS overlay widget generator for streamers
 
 ## APIs
-- [Game Data API](https://api.deadlock-api.com): Real-time and historical match data, hero and item analytics, leaderboard endpoints, game assets (OpenAPI spec: https://api.deadlock-api.com/openapi.json)
+- [Game Data API](https://api.deadlock-api.com): Real-time and historical match data, hero and item analytics, leaderboard endpoints, game assets
+- [API documentation](https://api.deadlock-api.com/docs): Interactive reference for every endpoint
+- [OpenAPI spec](https://api.deadlock-api.com/openapi.json): Machine-readable description of the Game Data API
+- [Data dumps](https://deadlock-api.com/data-dumps): Downloadable database snapshots and an in-browser SQL playground
 
 ## Data
 - Match data tracked in real time for millions of players; updated continuously
@@ -19,12 +22,15 @@
 - Fully open source: https://github.com/deadlock-api/
 
 ## Blog
-- [Community Ingest](https://deadlock-api.com/blog/community-ingest): How community-contributed match salts grew monthly ingestion from 105k to 1.4 million matches
 - [Blog](https://deadlock-api.com/blog): Engineering posts, data analyses, and project updates
+- [Solo vs duo queue win rates in ranked](https://deadlock-api.com/blog/solo-vs-duo-queue-ranked): Duo players win 50.9% of ranked games, solo players 50.0%, with data through 6 September 2026
+- [Valve rebuilt Deadlock's Urn three times in six weeks](https://deadlock-api.com/blog/urn-rework-2026): How the Urn reworks changed who collects its souls and what losing it costs
+- [Four months of Valve balancing Deadlock](https://deadlock-api.com/blog/2026-patches-meta-shift): Five patches from January to April 2026, told in 2.9 million matches
+- [How Deadlock API started](https://deadlock-api.com/blog/how-deadlock-api-started): From one developer's side project to 20 million daily requests
 
 ## Contact
 - GitHub: https://github.com/deadlock-api/
-- Discord: https://discord.gg/deadlock-api
+- Discord: https://discord.gg/pqWQfTPQJu
 - Email: info@deadlock-api.com
 
 ## Licensing & AI Usage
