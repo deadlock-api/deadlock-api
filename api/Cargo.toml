@@ -105,6 +105,6 @@ heck = "0.5"
 clickhouse-sql-parser = { git = "https://github.com/raimannma/clickhouse-antlr4", version = "0.1.0" }
 proptest = "1"
 proptest-derive = "0.8"
-rstest = "0.26.1"
+rstest = "0.27.0"
 insta = { version = "1", features = ["json"] }
 
