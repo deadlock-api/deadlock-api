@@ -488,7 +488,8 @@ expression: entities
     },
     "show_on_minimap": false,
     "is_permanent_pickup": true,
-    "name_loc_string": "#small_gold_pickup_label:f"
+    "name_loc_string": "#small_gold_pickup_label:f",
+    "name": "#small_gold_pickup_label:f"
   },
   {
     "class_name": "big_gold_pickup",
@@ -511,7 +512,8 @@ expression: entities
     },
     "show_on_minimap": false,
     "is_permanent_pickup": true,
-    "name_loc_string": "#big_gold_pickup_label:f"
+    "name_loc_string": "#big_gold_pickup_label:f",
+    "name": "{amount, plural, one{Soul} other{Souls}}"
   },
   {
     "class_name": "floating_apple_pickup",
@@ -579,6 +581,7 @@ expression: entities
     "show_on_minimap": true,
     "collision_radius": 40.0,
     "name_loc_string": "gun_powerup_pickup",
+    "name": "gun_powerup_pickup",
     "collection_method": "Punch",
     "hits_required": 1,
     "minimap_class": "powerup_gun"
@@ -628,6 +631,7 @@ expression: entities
     "show_on_minimap": true,
     "collision_radius": 40.0,
     "name_loc_string": "survival_powerup_pickup",
+    "name": "survival_powerup_pickup",
     "collection_method": "Punch",
     "hits_required": 1,
     "minimap_class": "powerup_survival"
@@ -677,6 +681,7 @@ expression: entities
     "show_on_minimap": true,
     "collision_radius": 40.0,
     "name_loc_string": "casting_powerup_pickup",
+    "name": "casting_powerup_pickup",
     "collection_method": "Punch",
     "hits_required": 1,
     "minimap_class": "powerup_casting"
@@ -737,6 +742,7 @@ expression: entities
     "show_on_minimap": true,
     "collision_radius": 40.0,
     "name_loc_string": "movement_powerup_pickup",
+    "name": "movement_powerup_pickup",
     "collection_method": "Punch",
     "hits_required": 1,
     "minimap_class": "powerup_movement"
@@ -767,6 +773,7 @@ expression: entities
     "show_on_minimap": true,
     "collision_radius": 40.0,
     "name_loc_string": "refresh_powerup_pickup",
+    "name": "refresh_powerup_pickup",
     "collection_method": "Punch",
     "hits_required": 1,
     "minimap_class": "powerup_refresh"
@@ -797,6 +804,7 @@ expression: entities
     "show_on_minimap": true,
     "collision_radius": 40.0,
     "name_loc_string": "change_team_powerup_pickup",
+    "name": "change_team_powerup_pickup",
     "collection_method": "Punch",
     "hits_required": 1
   },
@@ -826,6 +834,7 @@ expression: entities
     "show_on_minimap": true,
     "collision_radius": 40.0,
     "name_loc_string": "souls_powerup_pickup",
+    "name": "Souls",
     "collection_method": "Punch",
     "hits_required": 1,
     "minimap_class": "powerup_souls"
@@ -861,6 +870,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_SpiritPower",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_SpiritPower",
     "buff_type_graph_color": {
       "red": 170,
       "green": 70,
@@ -868,7 +878,8 @@ expression: entities
       "alpha": 255
     },
     "is_permanent_pickup": true,
-    "name_loc_string": "spirit_permanent_pickup_label"
+    "name_loc_string": "spirit_permanent_pickup_label",
+    "name": "spirit_permanent_pickup_label"
   },
   {
     "class_name": "spirit_permanent_pickup_lv2",
@@ -901,6 +912,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_SpiritPower",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_SpiritPower",
     "buff_type_graph_color": {
       "red": 170,
       "green": 70,
@@ -908,7 +920,8 @@ expression: entities
       "alpha": 255
     },
     "is_permanent_pickup": true,
-    "name_loc_string": "spirit_permanent_pickup_label_lv2"
+    "name_loc_string": "spirit_permanent_pickup_label_lv2",
+    "name": "spirit_permanent_pickup_label_lv2"
   },
   {
     "class_name": "spirit_permanent_pickup_lv3",
@@ -941,6 +954,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_SpiritPower",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_SpiritPower",
     "buff_type_graph_color": {
       "red": 170,
       "green": 70,
@@ -948,7 +962,8 @@ expression: entities
       "alpha": 255
     },
     "is_permanent_pickup": true,
-    "name_loc_string": "spirit_permanent_pickup_label_lv3"
+    "name_loc_string": "spirit_permanent_pickup_label_lv3",
+    "name": "spirit_permanent_pickup_label_lv3"
   },
   {
     "class_name": "firerate_permanent_pickup",
@@ -981,6 +996,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_FireRate",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_FireRate",
     "buff_type_graph_color": {
       "red": 255,
       "green": 60,
@@ -989,7 +1005,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "firerate_permanent_pickup_label"
+    "name_loc_string": "firerate_permanent_pickup_label",
+    "name": "firerate_permanent_pickup_label"
   },
   {
     "class_name": "firerate_permanent_pickup_lv2",
@@ -1022,6 +1039,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_FireRate",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_FireRate",
     "buff_type_graph_color": {
       "red": 255,
       "green": 60,
@@ -1030,7 +1048,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "firerate_permanent_pickup_label_lv2"
+    "name_loc_string": "firerate_permanent_pickup_label_lv2",
+    "name": "firerate_permanent_pickup_label_lv2"
   },
   {
     "class_name": "firerate_permanent_pickup_lv3",
@@ -1063,6 +1082,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_FireRate",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_FireRate",
     "buff_type_graph_color": {
       "red": 255,
       "green": 60,
@@ -1071,7 +1091,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "firerate_permanent_pickup_label_lv3"
+    "name_loc_string": "firerate_permanent_pickup_label_lv3",
+    "name": "firerate_permanent_pickup_label_lv3"
   },
   {
     "class_name": "ammo_permanent_pickup",
@@ -1104,6 +1125,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_MaxAmmo",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_MaxAmmo",
     "buff_type_graph_color": {
       "red": 255,
       "green": 220,
@@ -1112,7 +1134,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "ammo_permanent_pickup_label"
+    "name_loc_string": "ammo_permanent_pickup_label",
+    "name": "ammo_permanent_pickup_label"
   },
   {
     "class_name": "ammo_permanent_pickup_lv2",
@@ -1145,6 +1168,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_MaxAmmo",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_MaxAmmo",
     "buff_type_graph_color": {
       "red": 255,
       "green": 220,
@@ -1153,7 +1177,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "ammo_permanent_pickup_label_lv2"
+    "name_loc_string": "ammo_permanent_pickup_label_lv2",
+    "name": "ammo_permanent_pickup_label_lv2"
   },
   {
     "class_name": "ammo_permanent_pickup_lv3",
@@ -1186,6 +1211,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_MaxAmmo",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_MaxAmmo",
     "buff_type_graph_color": {
       "red": 255,
       "green": 220,
@@ -1194,7 +1220,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "ammo_permanent_pickup_label_lv3"
+    "name_loc_string": "ammo_permanent_pickup_label_lv3",
+    "name": "ammo_permanent_pickup_label_lv3"
   },
   {
     "class_name": "hp_permanent_pickup",
@@ -1227,6 +1254,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_BonusHealth",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_BonusHealth",
     "buff_type_graph_color": {
       "red": 150,
       "green": 240,
@@ -1234,7 +1262,8 @@ expression: entities
       "alpha": 255
     },
     "is_permanent_pickup": true,
-    "name_loc_string": "hp_permanent_pickup_label"
+    "name_loc_string": "hp_permanent_pickup_label",
+    "name": "hp_permanent_pickup_label"
   },
   {
     "class_name": "hp_permanent_pickup_lv2",
@@ -1267,6 +1296,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_BonusHealth",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_BonusHealth",
     "buff_type_graph_color": {
       "red": 150,
       "green": 240,
@@ -1274,7 +1304,8 @@ expression: entities
       "alpha": 255
     },
     "is_permanent_pickup": true,
-    "name_loc_string": "hp_permanent_pickup_label_lv2"
+    "name_loc_string": "hp_permanent_pickup_label_lv2",
+    "name": "hp_permanent_pickup_label_lv2"
   },
   {
     "class_name": "hp_permanent_pickup_lv3",
@@ -1307,6 +1338,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_BonusHealth",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_BonusHealth",
     "buff_type_graph_color": {
       "red": 150,
       "green": 240,
@@ -1314,7 +1346,8 @@ expression: entities
       "alpha": 255
     },
     "is_permanent_pickup": true,
-    "name_loc_string": "hp_permanent_pickup_label_lv3"
+    "name_loc_string": "hp_permanent_pickup_label_lv3",
+    "name": "hp_permanent_pickup_label_lv3"
   },
   {
     "class_name": "cd_permanent_pickup",
@@ -1347,6 +1380,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_CooldownReduction",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_CooldownReduction",
     "buff_type_graph_color": {
       "red": 70,
       "green": 110,
@@ -1355,7 +1389,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "cd_permanent_pickup_label"
+    "name_loc_string": "cd_permanent_pickup_label",
+    "name": "cd_permanent_pickup_label"
   },
   {
     "class_name": "cd_permanent_pickup_lv2",
@@ -1388,6 +1423,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_CooldownReduction",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_CooldownReduction",
     "buff_type_graph_color": {
       "red": 70,
       "green": 110,
@@ -1396,7 +1432,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "cd_permanent_pickup_label_lv2"
+    "name_loc_string": "cd_permanent_pickup_label_lv2",
+    "name": "cd_permanent_pickup_label_lv2"
   },
   {
     "class_name": "cd_permanent_pickup_lv3",
@@ -1429,6 +1466,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_CooldownReduction",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_CooldownReduction",
     "buff_type_graph_color": {
       "red": 70,
       "green": 110,
@@ -1437,7 +1475,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "cd_permanent_pickup_label_lv3"
+    "name_loc_string": "cd_permanent_pickup_label_lv3",
+    "name": "cd_permanent_pickup_label_lv3"
   },
   {
     "class_name": "wp_permanent_pickup",
@@ -1470,6 +1509,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_WeaponDamage",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_WeaponDamage",
     "buff_type_graph_color": {
       "red": 255,
       "green": 140,
@@ -1478,7 +1518,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "wp_permanent_pickup_label"
+    "name_loc_string": "wp_permanent_pickup_label",
+    "name": "wp_permanent_pickup_label"
   },
   {
     "class_name": "wp_permanent_pickup_lv2",
@@ -1511,6 +1552,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_WeaponDamage",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_WeaponDamage",
     "buff_type_graph_color": {
       "red": 255,
       "green": 140,
@@ -1519,7 +1561,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "wp_permanent_pickup_label_lv2"
+    "name_loc_string": "wp_permanent_pickup_label_lv2",
+    "name": "wp_permanent_pickup_label_lv2"
   },
   {
     "class_name": "wp_permanent_pickup_lv3",
@@ -1552,6 +1595,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_WeaponDamage",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_WeaponDamage",
     "buff_type_graph_color": {
       "red": 255,
       "green": 140,
@@ -1560,7 +1604,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "wp_permanent_pickup_label_lv3"
+    "name_loc_string": "wp_permanent_pickup_label_lv3",
+    "name": "wp_permanent_pickup_label_lv3"
   },
   {
     "class_name": "bulletresist_permanent_pickup",
@@ -1593,6 +1638,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_BulletResist",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_BulletResist",
     "buff_type_graph_color": {
       "red": 60,
       "green": 200,
@@ -1601,7 +1647,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "bulletresist_permanent_pickup_label"
+    "name_loc_string": "bulletresist_permanent_pickup_label",
+    "name": "bulletresist_permanent_pickup_label"
   },
   {
     "class_name": "bulletresist_permanent_pickup_lv2",
@@ -1634,6 +1681,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_BulletResist",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_BulletResist",
     "buff_type_graph_color": {
       "red": 60,
       "green": 200,
@@ -1642,7 +1690,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "bulletresist_permanent_pickup_label_lv2"
+    "name_loc_string": "bulletresist_permanent_pickup_label_lv2",
+    "name": "bulletresist_permanent_pickup_label_lv2"
   },
   {
     "class_name": "bulletresist_permanent_pickup_lv3",
@@ -1675,6 +1724,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_BulletResist",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_BulletResist",
     "buff_type_graph_color": {
       "red": 60,
       "green": 200,
@@ -1683,7 +1733,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "bulletresist_permanent_pickup_label_lv3"
+    "name_loc_string": "bulletresist_permanent_pickup_label_lv3",
+    "name": "bulletresist_permanent_pickup_label_lv3"
   },
   {
     "class_name": "spiritresist_permanent_pickup",
@@ -1716,6 +1767,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_SpiritResist",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_SpiritResist",
     "buff_type_graph_color": {
       "red": 60,
       "green": 170,
@@ -1724,7 +1776,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "spiritresist_permanent_pickup_label"
+    "name_loc_string": "spiritresist_permanent_pickup_label",
+    "name": "spiritresist_permanent_pickup_label"
   },
   {
     "class_name": "spiritresist_permanent_pickup_lv2",
@@ -1757,6 +1810,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_SpiritResist",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_SpiritResist",
     "buff_type_graph_color": {
       "red": 60,
       "green": 170,
@@ -1765,7 +1819,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "spiritresist_permanent_pickup_label_lv2"
+    "name_loc_string": "spiritresist_permanent_pickup_label_lv2",
+    "name": "spiritresist_permanent_pickup_label_lv2"
   },
   {
     "class_name": "spiritresist_permanent_pickup_lv3",
@@ -1798,6 +1853,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_SpiritResist",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_SpiritResist",
     "buff_type_graph_color": {
       "red": 60,
       "green": 170,
@@ -1806,7 +1862,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "spiritresist_permanent_pickup_label_lv3"
+    "name_loc_string": "spiritresist_permanent_pickup_label_lv3",
+    "name": "spiritresist_permanent_pickup_label_lv3"
   },
   {
     "class_name": "range_permanent_pickup",
@@ -1843,6 +1900,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_AbilityRange",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_AbilityRange",
     "buff_type_graph_color": {
       "red": 230,
       "green": 90,
@@ -1851,7 +1909,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "range_permanent_pickup_label"
+    "name_loc_string": "range_permanent_pickup_label",
+    "name": "range_permanent_pickup_label"
   },
   {
     "class_name": "range_permanent_pickup_lv2",
@@ -1884,6 +1943,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_AbilityRange",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_AbilityRange",
     "buff_type_graph_color": {
       "red": 230,
       "green": 90,
@@ -1892,7 +1952,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "range_permanent_pickup_label_lv2"
+    "name_loc_string": "range_permanent_pickup_label_lv2",
+    "name": "range_permanent_pickup_label_lv2"
   },
   {
     "class_name": "range_permanent_pickup_lv3",
@@ -1925,6 +1986,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_AbilityRange",
+    "buff_type_name": "#Citadel_Graph_PermanentBuff_AbilityRange",
     "buff_type_graph_color": {
       "red": 230,
       "green": 90,
@@ -1933,7 +1995,8 @@ expression: entities
     },
     "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
-    "name_loc_string": "range_permanent_pickup_label_lv3"
+    "name_loc_string": "range_permanent_pickup_label_lv3",
+    "name": "range_permanent_pickup_label_lv3"
   },
   {
     "class_name": "movespeed_permanent_pickup",
@@ -1966,6 +2029,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_MoveSpeed",
+    "buff_type_name": "Move Speed",
     "buff_type_graph_color": {
       "red": 40,
       "green": 230,
@@ -1974,7 +2038,8 @@ expression: entities
     },
     "buff_type_value_unit": "Meters",
     "is_permanent_pickup": true,
-    "name_loc_string": "movespeed_permanent_pickup_label"
+    "name_loc_string": "movespeed_permanent_pickup_label",
+    "name": "movespeed_permanent_pickup_label"
   },
   {
     "class_name": "movespeed_permanent_pickup_lv2",
@@ -2007,6 +2072,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_MoveSpeed",
+    "buff_type_name": "Move Speed",
     "buff_type_graph_color": {
       "red": 40,
       "green": 230,
@@ -2015,7 +2081,8 @@ expression: entities
     },
     "buff_type_value_unit": "Meters",
     "is_permanent_pickup": true,
-    "name_loc_string": "movespeed_permanent_pickup_label_lv2"
+    "name_loc_string": "movespeed_permanent_pickup_label_lv2",
+    "name": "movespeed_permanent_pickup_label_lv2"
   },
   {
     "class_name": "movespeed_permanent_pickup_lv3",
@@ -2048,6 +2115,7 @@ expression: entities
     },
     "show_on_minimap": false,
     "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_MoveSpeed",
+    "buff_type_name": "Move Speed",
     "buff_type_graph_color": {
       "red": 40,
       "green": 230,
@@ -2056,7 +2124,8 @@ expression: entities
     },
     "buff_type_value_unit": "Meters",
     "is_permanent_pickup": true,
-    "name_loc_string": "movespeed_permanent_pickup_label_lv3"
+    "name_loc_string": "movespeed_permanent_pickup_label_lv3",
+    "name": "+0.3m Move Speed"
   },
   {
     "class_name": "dropped_soul_orb",

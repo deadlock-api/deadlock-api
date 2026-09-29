@@ -25,6 +25,7 @@ use crate::services::assets::versions::items::types::{
     UpgradeTooltipImportantPropertyWithIcon, UpgradeTooltipSection, UpgradeTooltipSectionAttribute,
     Weapon, WeaponInfo,
 };
+use crate::services::assets::versions::localization;
 
 pub(super) struct BuildInputs<'a> {
     pub abilities_vdata: &'a str,
@@ -542,12 +543,7 @@ async fn build_ability_tooltip_details(
             }
             let loc_string = match section_loc {
                 Some(ls) => {
-                    let trimmed = ls.trim_start_matches('#');
-                    let src = ctx
-                        .localization
-                        .get(trimmed)
-                        .cloned()
-                        .unwrap_or_else(|| ls.to_owned());
+                    let src = localization::localize(ctx.localization, ls);
                     replace_templates(ctx, item, Some(&src), None).await
                 }
                 None => None,
@@ -566,12 +562,7 @@ async fn build_ability_tooltip_details(
                             let block_loc = b.loc_string.as_deref().filter(|ls| !ls.is_empty());
                             let loc_string = match block_loc {
                                 Some(ls) => {
-                                    let trimmed = ls.trim_start_matches('#');
-                                    let src = ctx
-                                        .localization
-                                        .get(trimmed)
-                                        .cloned()
-                                        .unwrap_or_else(|| ls.to_owned());
+                                    let src = localization::localize(ctx.localization, ls);
                                     replace_templates(ctx, item, Some(&src), None).await
                                 }
                                 None => None,
@@ -1118,8 +1109,7 @@ async fn build_section_attrs(
     for sa in &s.section_attributes {
         let loc_string = match &sa.loc_string {
             Some(ls) => {
-                let trimmed = ls.trim_start_matches('#');
-                let src = ctx.localization.get(trimmed).cloned();
+                let src = localization::lookup(ctx.localization, ls).cloned();
                 replace_templates(ctx, item, src.as_deref(), None).await
             }
             None => None,

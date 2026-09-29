@@ -4,13 +4,13 @@ use axum::response::IntoResponse;
 
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::assets::common::{VersionQuery, find_by_id_or_classname, load_versioned};
+use crate::routes::v1::assets::common::{AssetsQuery, find_by_id_or_classname, load_localized};
 use crate::services::assets::versions::misc_entities::{MiscEntity, fetch_misc_entities};
 
 #[utoipa::path(
     get,
     path = "/",
-    params(VersionQuery),
+    params(AssetsQuery),
     responses(
         (status = OK, body = [MiscEntity]),
         (status = NOT_FOUND, description = "Requested client_version is not available"),
@@ -18,14 +18,14 @@ use crate::services::assets::versions::misc_entities::{MiscEntity, fetch_misc_en
     ),
     tags = ["Misc Entities"],
     summary = "List Misc Entities",
-    description = "Returns the per-misc-entity metadata used by the game client, parsed from the patch's KV3 source files."
+    description = "Returns the per-misc-entity metadata used by the game client, parsed from the patch's KV3 source files. Pickup labels (`name`) and permanent buff stat names (`buff_type_name`) are localized into the requested `language`; the raw tokens stay in `name_loc_string` / `buff_type_loc_string`."
 )]
 pub(super) async fn list_misc_entities(
     State(state): State<AppState>,
-    Query(q): Query<VersionQuery>,
+    Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
     Ok(
-        Json(load_versioned(&state, &q, "misc entities", fetch_misc_entities).await?)
+        Json(load_localized(&state, &q, "misc entities", fetch_misc_entities).await?)
             .into_response(),
     )
 }
@@ -35,7 +35,7 @@ pub(super) async fn list_misc_entities(
     path = "/{id_or_classname}",
     params(
         ("id_or_classname" = String, Path, description = "Misc entity id (`murmurhash2(class_name)`) or `class_name`"),
-        VersionQuery,
+        AssetsQuery,
     ),
     responses(
         (status = OK, body = MiscEntity),
@@ -49,9 +49,9 @@ pub(super) async fn list_misc_entities(
 pub(super) async fn get_misc_entity(
     State(state): State<AppState>,
     Path(id_or_classname): Path<String>,
-    Query(q): Query<VersionQuery>,
+    Query(q): Query<AssetsQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let entities = load_versioned(&state, &q, "misc entities", fetch_misc_entities).await?;
+    let entities = load_localized(&state, &q, "misc entities", fetch_misc_entities).await?;
     find_by_id_or_classname(
         &entities,
         &id_or_classname,

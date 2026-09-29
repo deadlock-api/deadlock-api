@@ -1,5 +1,6 @@
 //! `/v1/assets/misc-entities` data layer — fetch + parse + transform.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use cached::macros::cached;
@@ -13,7 +14,7 @@ use crate::services::assets::versions::common::{
     Color, Subclass, WrapSubclass, build_from_kv3, entity_id, enum_str_serde,
 };
 use crate::services::assets::versions::error::AssetsError;
-use crate::services::assets::versions::store;
+use crate::services::assets::versions::{localization, store};
 
 // ----- Raw KV3 shape -----
 
@@ -378,6 +379,10 @@ pub(crate) struct MiscEntity {
     /// Permanent pickups: localization token of the stat the buff raises.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub buff_type_loc_string: Option<String>,
+    /// Permanent pickups: `buff_type_loc_string` localized into the requested
+    /// language (e.g. `Fire Rate`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub buff_type_name: Option<String>,
     /// Permanent pickups: color used for the buff in the stat graph.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub buff_type_graph_color: Option<Color>,
@@ -391,6 +396,11 @@ pub(crate) struct MiscEntity {
     /// Localization token of the pickup's world label.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name_loc_string: Option<String>,
+    /// `name_loc_string` localized into the requested language (e.g.
+    /// `+1.5% Fire Rate`). Gold pickups use an ICU plural pattern
+    /// (`{amount, plural, one{Soul} other{Souls}}`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
     /// How the pickup is collected, e.g. `Punch` or `VacuumTrigger`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub collection_method: Option<String>,
@@ -431,19 +441,31 @@ pub(crate) struct MiscEntity {
 
 // ----- Build -----
 
-pub(crate) fn build_misc_entities(vdata: &str) -> Result<Vec<MiscEntity>, AssetsError> {
+pub(crate) fn build_misc_entities(
+    vdata: &str,
+    loc: &HashMap<String, String>,
+) -> Result<Vec<MiscEntity>, AssetsError> {
     build_from_kv3(
         vdata,
         "misc entity",
         |class_name, value| {
             value.is_object() && !class_name.contains("base") && !class_name.contains("dummy")
         },
-        transform,
+        |class_name, raw| transform(class_name, raw, loc),
     )
 }
 
-fn transform(class_name: String, r: RawMiscEntity) -> MiscEntity {
+fn transform(class_name: String, r: RawMiscEntity, loc: &HashMap<String, String>) -> MiscEntity {
     let id = entity_id(&class_name);
+    let name_loc_string = r.name_loc_string.filter(|s| !s.is_empty());
+    let name = name_loc_string
+        .as_deref()
+        .map(|t| localization::localize(loc, t));
+    let buff_type_name = r
+        .buff_type_loc_string
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .map(|t| localization::localize(loc, t));
     MiscEntity {
         color: r.color,
         initial_spawn_time: r.initial_spawn_time,
@@ -486,10 +508,12 @@ fn transform(class_name: String, r: RawMiscEntity) -> MiscEntity {
         lifetime: r.lifetime,
         collision_radius: r.collision_radius,
         buff_type_loc_string: r.buff_type_loc_string,
+        buff_type_name,
         buff_type_graph_color: r.buff_type_graph_color,
         buff_type_value_unit: r.buff_type_value_unit,
         is_permanent_pickup: r.is_permanent_pickup,
-        name_loc_string: r.name_loc_string.filter(|s| !s.is_empty()),
+        name_loc_string,
+        name,
         collection_method: r.collection_method,
         hits_required: r.hits_required,
         minimap_class: r.minimap_class.filter(|s| !s.is_empty()),
@@ -555,13 +579,26 @@ fn curve_or_float_out(r: RawCurveOrFloat) -> CurveOrFloat {
 
 // ----- Cached fetch -----
 
-#[cached(max_size = 64, ttl_secs = 86400, convert = "{ version }", key = "u32")]
+#[cached(
+    max_size = 64,
+    ttl_secs = 86400,
+    convert = r#"{ (version, language.to_owned()) }"#,
+    key = "(u32, String)"
+)]
 pub(crate) async fn fetch_misc_entities(
     r2: &AmazonS3,
     version: u32,
+    language: &str,
 ) -> Result<Arc<Vec<MiscEntity>>, AssetsError> {
-    let vdata = store::fetch_text(r2, version, "scripts/misc.vdata").await?;
-    let entities = build_misc_entities(&vdata)?;
+    let (vdata, loc) = tokio::try_join!(
+        async {
+            store::fetch_text(r2, version, "scripts/misc.vdata")
+                .await
+                .map_err(AssetsError::from)
+        },
+        localization::fetch_localization(r2, version, language),
+    )?;
+    let entities = build_misc_entities(&vdata, &loc)?;
     Ok(Arc::new(entities))
 }
 
@@ -577,10 +614,53 @@ mod tests {
 
     #[test]
     fn snapshot_misc_entities() {
-        let entities = build_misc_entities(&fixture()).expect("builds");
+        let entities = build_misc_entities(&fixture(), &HashMap::new()).expect("builds");
         insta::with_settings!(
             { snapshot_path => "misc_entities_snapshots", prepend_module_to_snapshot => false },
             { insta::assert_json_snapshot!("misc_entities", entities); }
+        );
+    }
+
+    fn build_6712() -> Vec<MiscEntity> {
+        let manifest = env!("CARGO_MANIFEST_DIR");
+        let vdata =
+            std::fs::read_to_string(format!("{manifest}/src/utils/kv3_fixtures/misc_6712.vdata"))
+                .expect("vdata fixture");
+        let loc: HashMap<String, String> = [
+            ("Citadel_Graph_PermanentBuff_MoveSpeed", "Move Speed"),
+            ("movespeed_permanent_pickup_label_lv3", "+0.3m Move Speed"),
+            ("souls_powerup_pickup", "Souls"),
+            (
+                "big_gold_pickup_label:f",
+                "{amount, plural, one{Soul} other{Souls}}",
+            ),
+        ]
+        .into_iter()
+        .map(|(k, v)| (k.to_owned(), v.to_owned()))
+        .collect();
+        build_misc_entities(&vdata, &loc).expect("builds")
+    }
+
+    #[test]
+    fn localizes_names_6712() {
+        let entities = build_6712();
+        let get = |name: &str| {
+            entities
+                .iter()
+                .find(|e| e.class_name == name)
+                .unwrap_or_else(|| panic!("missing {name}"))
+        };
+        let movespeed = get("movespeed_permanent_pickup_lv3");
+        assert_eq!(movespeed.buff_type_name.as_deref(), Some("Move Speed"));
+        assert_eq!(movespeed.name.as_deref(), Some("+0.3m Move Speed"));
+        assert_eq!(
+            get("big_gold_pickup").name.as_deref(),
+            Some("{amount, plural, one{Soul} other{Souls}}")
+        );
+        // No translation: the token passes through.
+        assert_eq!(
+            get("firerate_permanent_pickup").buff_type_name.as_deref(),
+            Some("#Citadel_Graph_PermanentBuff_FireRate")
         );
     }
 
@@ -588,11 +668,7 @@ mod tests {
     /// soul pickups, the Broker trigger and the Chinatown bell.
     #[test]
     fn snapshot_misc_entities_6712() {
-        let manifest = env!("CARGO_MANIFEST_DIR");
-        let vdata =
-            std::fs::read_to_string(format!("{manifest}/src/utils/kv3_fixtures/misc_6712.vdata"))
-                .expect("vdata fixture");
-        let entities = build_misc_entities(&vdata).expect("builds");
+        let entities = build_6712();
         let get = |name: &str| {
             entities
                 .iter()
@@ -688,7 +764,7 @@ mod tests {
 
     #[test]
     fn skips_base_and_dummy_classes() {
-        let entities = build_misc_entities(&fixture()).expect("builds");
+        let entities = build_misc_entities(&fixture(), &HashMap::new()).expect("builds");
         for e in &entities {
             assert!(!e.class_name.contains("base"), "leaked: {}", e.class_name);
             assert!(!e.class_name.contains("dummy"), "leaked: {}", e.class_name);
@@ -717,7 +793,12 @@ mod tests {
 		m_eBuffTypeValueUnit = "Percent"
 	}
 }"##;
-        let entities = build_misc_entities(vdata).expect("builds");
+        let loc: HashMap<String, String> = [(
+            "Citadel_Graph_PermanentBuff_FireRate".to_owned(),
+            "Fire Rate".to_owned(),
+        )]
+        .into();
+        let entities = build_misc_entities(vdata, &loc).expect("builds");
         let crate_ = &entities[0];
         assert_eq!(crate_.powerup_drop_chance, Some(100.0));
         assert_eq!(crate_.roll_type, Some(RollType::BreakableGoldPickup));
@@ -736,6 +817,7 @@ mod tests {
             pickup.buff_type_loc_string.as_deref(),
             Some("#Citadel_Graph_PermanentBuff_FireRate")
         );
+        assert_eq!(pickup.buff_type_name.as_deref(), Some("Fire Rate"));
         assert_eq!(pickup.buff_type_graph_color.map(|c| c.red), Some(255));
         assert_eq!(pickup.buff_type_value_unit.as_deref(), Some("Percent"));
     }
