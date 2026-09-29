@@ -1,6 +1,6 @@
 ---
 title: Valve rebuilt Deadlock's Urn three times in six weeks
-description: The Urn became a King of the Hill point, then split into a solo courier job and the Unstable Rift. The souls it pays out barely moved. Who collects them, and what losing it costs, changed completely.
+description: Deadlock's Urn became a King of the Hill point, then a courier job and the Unstable Rift. Its souls barely moved; who collects them changed completely.
 date: 2026-07-23
 author: Manuel - Deadlock API Team
 tags:

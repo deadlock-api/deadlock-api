@@ -1,6 +1,6 @@
 ---
-title: Solo vs duo queue win rates in ranked
-description: Duo players win 50.9% of ranked games, solo players 50.0%. Pairs with no game together before ranked win 54%, pairs with 500+ shared games win 49%. Data through 6 September 2026.
+title: Solo vs duo queue win rates in Deadlock ranked
+description: Deadlock duos win 50.9% of ranked games, solos 50.0%. New duo pairs win 54%, pairs with 500+ games together 49%. 641k ranked matches through 6 Sep 2026.
 date: 2026-09-07
 author: Manuel - Deadlock API Team
 tags:
