@@ -1,4 +1,5 @@
 import { Skeleton } from "~/components/ui/skeleton";
+import { cdnImageUrl } from "~/lib/image-cdn";
 import { cn } from "~/lib/utils";
 
 interface AssetImageData {
@@ -27,12 +28,6 @@ const ASSET_ORIGIN = "https://assets-bucket.deadlock-api.com/";
 /** Candidate widths: the art is drawn at 16 to 80px, and the originals are 200px or more, lossless. */
 const WIDTHS = [48, 96, 160] as const;
 
-function transformed(url: string, width: number) {
-  // Cloudflare resizes and re-encodes (AVIF or WebP by Accept) at the edge and caches the result; on any failure it
-  // redirects to the original.
-  return `https://deadlock-api.com/cdn-cgi/image/fit=scale-down,width=${width},quality=85,format=auto,onerror=redirect/${url}`;
-}
-
 export function AssetImage({
   asset,
   loading = false,
@@ -59,8 +54,8 @@ export function AssetImage({
     return (
       <img
         loading="lazy"
-        src={transformed(original, 96)}
-        srcSet={WIDTHS.map((width) => `${transformed(original, width)} ${width}w`).join(", ")}
+        src={cdnImageUrl(original, 96)}
+        srcSet={WIDTHS.map((width) => `${cdnImageUrl(original, width)} ${width}w`).join(", ")}
         // `auto` (lazy images, Chromium) takes the rendered size; elsewhere the largest use, 80px, keeps it sharp.
         sizes="auto, 80px"
         alt={asset.alt}
