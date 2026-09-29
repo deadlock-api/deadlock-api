@@ -1,0 +1,187 @@
+---
+source: src/services/assets/versions/modifiers.rs
+expression: modifiers
+---
+[
+  {
+    "class_name": "modifier_obscured_by_steam",
+    "id": 3139486147,
+    "class": "modifier_obscured",
+    "properties": {
+      "MODIFIER_VALUE_GRAVITY_SCALE": 1.15,
+      "MODIFIER_VALUE_STAMINA_REGEN_PER_SECOND_ADDITIVE": -0.05,
+      "m_flHideDuration": 1.0,
+      "m_flRevealDuration": 1.0
+    }
+  },
+  {
+    "class_name": "modifier_corrupted_penalty",
+    "id": 1372983179,
+    "class": "modifier_corrupted_penalty",
+    "properties": {}
+  },
+  {
+    "class_name": "citadel_neutral_attack_bullet_to_pointmodifier",
+    "id": 2996713698,
+    "class": "citadel_neutral_attack_bullet_to_pointmodifier",
+    "folder": "Neutral Ability Base",
+    "properties": {
+      "m_WeaponInfo.m_flAutoReplenishClip": 4.0,
+      "m_WeaponInfo.m_flBulletGravityScale": 0.0,
+      "m_WeaponInfo.m_flBulletLifetime": 4.0,
+      "m_WeaponInfo.m_flBulletSpeed": 600.0,
+      "m_WeaponInfo.m_flCycleTime": 0.5,
+      "m_WeaponInfo.m_flDamageFalloffEndRange": 2000.0,
+      "m_WeaponInfo.m_flDamageFalloffStartRange": 2000.0,
+      "m_WeaponInfo.m_flRange": 2000.0,
+      "m_WeaponInfo.m_flVerticalPunch": 0.0,
+      "m_WeaponInfo.m_iClipSize": -1.0,
+      "m_WeaponInfo.m_reloadDuration": 0.25
+    }
+  },
+  {
+    "class_name": "citadel_neutral_light_melee_weak",
+    "id": 1140521566,
+    "class": "citadel_neutral_light_melee",
+    "base": "citadel_neutral_light_melee_base",
+    "folder": "Neutral Ability Melee",
+    "properties": {
+      "m_flCastDelayTime": 0.17,
+      "m_flChannelTime": 0.63,
+      "m_flCooldownTime": 1.0,
+      "m_flDamage": 12.0,
+      "m_flForwardOffset": 50.0,
+      "m_flMeleeRadius": 100.0,
+      "m_flPostCastTime": 0.0
+    }
+  },
+  {
+    "class_name": "citadel_neutral_laser_beam_underhand_strong",
+    "id": 1148391434,
+    "class": "citadel_neutral_laser_beam",
+    "base": "citadel_neutral_laser_beam_underhand",
+    "folder": "Neutral Ability",
+    "properties": {
+      "m_GroundAuraModifier.m_flAuraRadius": 70.0,
+      "m_GroundAuraModifier.m_flDPS": 100.0,
+      "m_GroundAuraModifier.m_flModifierProvidedByAuraDuration": 1.0,
+      "m_GroundAuraModifier.m_modifierProvidedByAura.m_flDPS": 100.0,
+      "m_GroundAuraModifier.m_modifierProvidedByAura.m_flTickRate": 0.5,
+      "m_flAuraDropTickRate": 0.1,
+      "m_flAuraDuration": 10.0,
+      "m_flBeamDPS": 50.0,
+      "m_flBeamLength": 2000.0,
+      "m_flBeamMoveSpeedm": 8.0,
+      "m_flBeamWidth": 15.0,
+      "m_flCastDelayTime": 1.0,
+      "m_flChannelTime": 2.0,
+      "m_flCooldownTime": 20.0,
+      "m_flMaxTurnRate": 1.0,
+      "m_flPostCastTime": 0.0,
+      "m_flStartDistancem": 5.0
+    }
+  },
+  {
+    "class_name": "citadel_neutral_attack_lobfire",
+    "id": 1076027224,
+    "class": "citadel_neutral_attack_lobfire",
+    "base": "citadel_neutral_attack_bullet_to_pointmodifier",
+    "folder": "Neutral Ability",
+    "properties": {
+      "m_GroundPointModifier.m_flAuraRadius": 60.0,
+      "m_GroundPointModifier.m_flModifierProvidedByAuraDuration": 1.0,
+      "m_GroundPointModifier.m_modifierProvidedByAura.m_flDPS": 100.0,
+      "m_GroundPointModifier.m_modifierProvidedByAura.m_flTickRate": 0.5,
+      "m_WeaponInfo.m_flAutoReplenishClip": 4.0,
+      "m_WeaponInfo.m_flBulletGravityScale": 0.0,
+      "m_WeaponInfo.m_flBulletLifetime": 4.0,
+      "m_WeaponInfo.m_flBulletSpeed": 600.0,
+      "m_WeaponInfo.m_flCycleTime": 0.5,
+      "m_WeaponInfo.m_flDamageFalloffEndRange": 2000.0,
+      "m_WeaponInfo.m_flDamageFalloffStartRange": 2000.0,
+      "m_WeaponInfo.m_flRange": 2000.0,
+      "m_WeaponInfo.m_flVerticalPunch": 0.0,
+      "m_WeaponInfo.m_iClipSize": -1.0,
+      "m_WeaponInfo.m_reloadDuration": 0.25,
+      "m_flBulletSpeed": 1000.0,
+      "m_flCastDelayTime": 1.0,
+      "m_flChannelTime": 2.0,
+      "m_flCooldownTime": 20.0,
+      "m_flDamage": 100.0,
+      "m_flFireRate": 0.2,
+      "m_flImpactEffectRadius": 60.0,
+      "m_flModifierDuration": 6.0,
+      "m_flPostCastTime": 0.0,
+      "m_flTargetPosRNG": 100.0,
+      "m_nBulletCount": 3.0
+    }
+  },
+  {
+    "class_name": "citadel_neutral_self_bomb",
+    "id": 1010805994,
+    "class": "citadel_neutral_self_cast_bomb",
+    "folder": "Neutral Ability",
+    "properties": {
+      "m_SelfCastModifier.m_flDamage": 200.0,
+      "m_flCastDelayTime": 0.0,
+      "m_flChannelTime": 0.5,
+      "m_flCooldownTime": 15.0,
+      "m_flModifierDuration": 3.5,
+      "m_flPostCastTime": 4.5
+    }
+  },
+  {
+    "class_name": "citadel_neutral_attack_sludge_strong",
+    "id": 1890067048,
+    "class": "citadel_neutral_attack_sludge",
+    "base": "citadel_neutral_attack_sludge",
+    "folder": "Neutral Ability",
+    "properties": {
+      "m_GroundPointModifier.m_flAuraRadius": 200.0,
+      "m_GroundPointModifier.m_flModifierProvidedByAuraDuration": 3.0,
+      "m_GroundPointModifier.m_modifierProvidedByAura.MODIFIER_VALUE_MOVEMENT_GROUND_DASH_REDUCTION_PERCENT": -36.0,
+      "m_GroundPointModifier.m_modifierProvidedByAura.MODIFIER_VALUE_MOVEMENT_SPEED_SLOW_PERCENT": 40.0,
+      "m_GroundPointModifier.m_modifierProvidedByAura.m_flDPS": 30.0,
+      "m_GroundPointModifier.m_modifierProvidedByAura.m_flDuration": 3.0,
+      "m_GroundPointModifier.m_modifierProvidedByAura.m_flTickRate": 0.5,
+      "m_WeaponInfo.m_flAutoReplenishClip": 4.0,
+      "m_WeaponInfo.m_flBulletGravityScale": 0.0,
+      "m_WeaponInfo.m_flBulletLifetime": 4.0,
+      "m_WeaponInfo.m_flBulletSpeed": 600.0,
+      "m_WeaponInfo.m_flCycleTime": 0.5,
+      "m_WeaponInfo.m_flDamageFalloffEndRange": 2000.0,
+      "m_WeaponInfo.m_flDamageFalloffStartRange": 2000.0,
+      "m_WeaponInfo.m_flRange": 2000.0,
+      "m_WeaponInfo.m_flVerticalPunch": 0.0,
+      "m_WeaponInfo.m_iClipSize": -1.0,
+      "m_WeaponInfo.m_reloadDuration": 0.25,
+      "m_flBulletSpeed": 600.0,
+      "m_flCastDelayTime": 1.15,
+      "m_flChannelTime": 2.1,
+      "m_flCooldownTime": 20.0,
+      "m_flDamage": 10.0,
+      "m_flFireRate": 0.2,
+      "m_flHangTime": 1.15,
+      "m_flImpactEffectRadius": 60.0,
+      "m_flLobGravityScale": 1.0,
+      "m_flModifierDuration": 4.1,
+      "m_flNoTargetDistance": 400.0,
+      "m_flPostCastTime": 1.0,
+      "m_flTargetOffsetPerShot": 0.0,
+      "m_flTargetPosRNG": 80.0,
+      "m_nBulletCount": 15.0
+    }
+  },
+  {
+    "class_name": "modifier_neutral_attack_explode_on_death",
+    "id": 684491567,
+    "class": "modifier_neutral_attack_explode_on_death",
+    "properties": {
+      "m_ExplodeDebuffModifier.MODIFIER_VALUE_MOVEMENT_GROUND_DASH_REDUCTION_PERCENT": -26.0,
+      "m_ExplodeDebuffModifier.MODIFIER_VALUE_MOVEMENT_SPEED_SLOW_PERCENT": 30.0,
+      "m_ExplodeDebuffModifier.m_flDuration": 3.0,
+      "m_flExplodeDamage": 75.0,
+      "m_flExplodeRadius": 120.0
+    }
+  }
+]

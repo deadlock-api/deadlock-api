@@ -1,0 +1,612 @@
+---
+source: src/services/assets/versions/npc_units.rs
+expression: units
+---
+[
+  {
+    "class_name": "neutral_trooper_weak",
+    "id": 1250952856,
+    "name": "Gutter Ghoul I",
+    "neutral_type": "NEUTRAL_NPC_WEAK",
+    "neutral_melee": "citadel_neutral_light_melee_weak",
+    "viewer_souls_class": {
+      "0": "weak_to_viewer"
+    },
+    "neutral_damage_growth": {
+      "subclass": {
+        "damage_growth_pct_per_min": 0.5
+      }
+    },
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 2.415,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 1.0,
+      "bullet_radius": 3.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "crit_bonus_against_npcs": 0.25,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 0.5,
+      "intra_burst_cycle_time": 0.0,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 1500.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 1500.0,
+      "horizontal_punch": 0.0,
+      "range": 1500.0,
+      "bullet_speed": 6000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 0.0,
+      "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
+      "reload_duration": 0.25,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
+      },
+      "shots_per_second": 2.0,
+      "shots_per_second_with_reload": 0.0,
+      "bullets_per_second": 2.0,
+      "damage_per_second": 4.83,
+      "damage_per_shot": 2.415
+    },
+    "max_health": 129,
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_DAMAGE_REDUCTION_PERCENT",
+              "value": 50.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 45.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 1500.0,
+    "sight_range_npcs": 1500.0,
+    "gold_reward": 41.0,
+    "gold_reward_bonus_percent_per_minute": 1.08,
+    "walk_speed": 150.0,
+    "run_speed": 150.0,
+    "melee_attempt_range": 150.0
+  },
+  {
+    "class_name": "neutral_drain_creature_strong",
+    "id": 1599666197,
+    "name": "Gutter Ghoul III",
+    "neutral_type": "NEUTRAL_NPC_STRONG",
+    "neutral_abilities": [
+      "citadel_neutral_attack_sludge_strong"
+    ],
+    "neutral_melee": "citadel_neutral_light_melee_strong",
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/npcs/neutrals/neutral_drain_creature_strong.png",
+    "image_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/npcs/neutrals/neutral_drain_creature_strong.webp",
+    "viewer_souls_class": {
+      "0": "strong_to_viewer",
+      "10000": "normal_to_viewer",
+      "15000": "weak_to_viewer"
+    },
+    "neutral_damage_growth": {
+      "subclass": {
+        "damage_growth_pct_per_min": 0.5
+      }
+    },
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 9.1,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 1.0,
+      "bullet_radius": 3.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "crit_bonus_against_npcs": 0.25,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 0.5,
+      "intra_burst_cycle_time": 0.0,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 1500.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 1500.0,
+      "horizontal_punch": 0.0,
+      "range": 1500.0,
+      "bullet_speed": 6000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 0.0,
+      "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
+      "reload_duration": 0.25,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
+      },
+      "shots_per_second": 2.0,
+      "shots_per_second_with_reload": 0.0,
+      "bullets_per_second": 2.0,
+      "damage_per_second": 18.2,
+      "damage_per_shot": 9.1
+    },
+    "max_health": 1133,
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_DAMAGE_REDUCTION_PERCENT",
+              "value": 60.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 55.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 1500.0,
+    "sight_range_npcs": 1500.0,
+    "gold_reward": 181.0,
+    "gold_reward_bonus_percent_per_minute": 1.08,
+    "walk_speed": 135.0,
+    "run_speed": 135.0,
+    "acceleration": 400.0,
+    "spawn_breakables_on_death": true,
+    "melee_attempt_range": 150.0
+  },
+  {
+    "class_name": "neutral_sinners_sacrifice",
+    "id": 855199377,
+    "name": "Sinner's Sacrifice",
+    "neutral_type": "NEUTRAL_SINNERS_SACRIFICE",
+    "neutral_damage_growth": {
+      "subclass": {
+        "damage_growth_pct_per_min": 0.5
+      }
+    },
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 1.0,
+      "bullet_radius": 3.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "crit_bonus_against_npcs": 0.25,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 0.5,
+      "intra_burst_cycle_time": 0.0,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 1500.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 1500.0,
+      "horizontal_punch": 0.0,
+      "range": 0.0,
+      "bullet_speed": 6000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 0.0,
+      "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
+      "reload_duration": 0.25,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
+      },
+      "shots_per_second": 2.0,
+      "shots_per_second_with_reload": 0.0,
+      "bullets_per_second": 2.0
+    },
+    "max_health": 500,
+    "intrinsic_modifiers": [
+      {
+        "subclass": {}
+      },
+      {
+        "subclass": {}
+      }
+    ],
+    "sight_range_players": 200.0,
+    "sight_range_npcs": 0.0,
+    "gold_reward": 155.0,
+    "gold_reward_bonus_percent_per_minute": 1.08,
+    "spawn_breakables_on_death": true,
+    "melee_attempt_range": 150.0
+  },
+  {
+    "class_name": "npc_boss_tier2",
+    "id": 3493103073,
+    "name": "Walker",
+    "max_health": 6000,
+    "bound_abilities": {
+      "signature1": "citadel_ability_tier2boss_rocket_barrage",
+      "signature2": "citadel_ability_tier2boss_laser_beam",
+      "signature3": "citadel_ability_tier2boss_stomp",
+      "signature4": "citadel_ability_tier2boss_aoe_wave"
+    },
+    "empowered_modifier_level1": {
+      "subclass": {
+        "max_health": 9000,
+        "transition_duration": 1.0,
+        "model_scale": 1.0
+      }
+    },
+    "empowered_modifier_level2": {
+      "subclass": {
+        "max_health": 12000,
+        "transition_duration": 1.0,
+        "model_scale": 1.15
+      }
+    },
+    "ranged_armor_modifier": {
+      "subclass": {
+        "range_min": 1200.0,
+        "range_max": 2000.0
+      }
+    },
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 0.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST",
+              "value": 35.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 944.0,
+    "sight_range_npcs": 1417.32,
+    "stomp_damage": 350.0,
+    "stomp_damage_max_health_percent": 15.0,
+    "stun_duration": 2.0,
+    "stomp_impact_radius": 570.8661,
+    "melee_damage": 300.0,
+    "melee_attempt_range": 600.0,
+    "melee_duration": 0.9,
+    "health_bar_color_friend": {
+      "red": 255,
+      "green": 239,
+      "blue": 215,
+      "alpha": 255
+    },
+    "health_bar_color_enemy": {
+      "red": 230,
+      "green": 25,
+      "blue": 25,
+      "alpha": 255
+    },
+    "health_bar_color_team1": {
+      "red": 231,
+      "green": 182,
+      "blue": 89,
+      "alpha": 255
+    },
+    "health_bar_color_team2": {
+      "red": 91,
+      "green": 121,
+      "blue": 230,
+      "alpha": 255
+    },
+    "health_bar_color_team_neutral": {
+      "red": 0,
+      "green": 125,
+      "blue": 125,
+      "alpha": 255
+    }
+  },
+  {
+    "class_name": "neutral_underground_strong",
+    "id": 970727396,
+    "name": "Underhand III",
+    "neutral_type": "NEUTRAL_NPC_STRONG",
+    "neutral_abilities": [
+      "citadel_neutral_laser_beam_underhand_strong"
+    ],
+    "neutral_melee": "citadel_neutral_light_melee_strong",
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/npcs/neutrals/neutral_underground_heavy.png",
+    "image_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/npcs/neutrals/neutral_underground_heavy.webp",
+    "viewer_souls_class": {
+      "0": "strong_to_viewer",
+      "10000": "normal_to_viewer",
+      "15000": "weak_to_viewer"
+    },
+    "neutral_damage_growth": {
+      "subclass": {
+        "damage_growth_pct_per_min": 0.5
+      }
+    },
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 9.1,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 1.0,
+      "bullet_radius": 20.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "crit_bonus_against_npcs": 0.25,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 0.5,
+      "intra_burst_cycle_time": 0.0,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 1500.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 1500.0,
+      "horizontal_punch": 0.0,
+      "range": 1500.0,
+      "bullet_speed": 1200.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 0.0,
+      "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
+      "reload_duration": 0.25,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
+      },
+      "shots_per_second": 2.0,
+      "shots_per_second_with_reload": 0.0,
+      "bullets_per_second": 2.0,
+      "damage_per_second": 18.2,
+      "damage_per_shot": 9.1
+    },
+    "max_health": 1133,
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_DAMAGE_REDUCTION_PERCENT",
+              "value": 60.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 55.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 1500.0,
+    "sight_range_npcs": 1500.0,
+    "gold_reward": 181.0,
+    "gold_reward_bonus_percent_per_minute": 1.08,
+    "walk_speed": 80.0,
+    "run_speed": 80.0,
+    "spawn_breakables_on_death": true,
+    "melee_attempt_range": 150.0
+  },
+  {
+    "class_name": "neutral_barrel_01_weak",
+    "id": 3694004026,
+    "name": "Barrel Mimic I",
+    "neutral_type": "NEUTRAL_NPC_WEAK",
+    "neutral_melee": "citadel_neutral_light_melee_weak",
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/npcs/neutrals/neutral_barrel_heavy.png",
+    "image_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/npcs/neutrals/neutral_barrel_heavy.webp",
+    "viewer_souls_class": {
+      "0": "weak_to_viewer"
+    },
+    "neutral_damage_growth": {
+      "subclass": {
+        "damage_growth_pct_per_min": 0.5
+      }
+    },
+    "weapon_info": {
+      "can_zoom": true,
+      "bullet_damage": 2.415,
+      "bullet_gravity_scale": 0.0,
+      "bullet_inherit_shooter_velocity_scale": 0.0,
+      "bullet_lifetime": 1.0,
+      "bullet_radius": 3.0,
+      "bullet_reflect_amount": 1.0,
+      "bullet_reflect_scale": 0.0,
+      "crit_bonus_against_npcs": 0.25,
+      "crit_bonus_end": 1.35,
+      "crit_bonus_end_range": 1500.0,
+      "crit_bonus_start": 1.15,
+      "crit_bonus_start_range": 500.0,
+      "cycle_time": 0.5,
+      "intra_burst_cycle_time": 0.0,
+      "damage_falloff_bias": 0.5,
+      "damage_falloff_end_range": 1500.0,
+      "damage_falloff_end_scale": 0.3,
+      "damage_falloff_start_range": 1500.0,
+      "horizontal_punch": 0.0,
+      "range": 1500.0,
+      "bullet_speed": 6000.0,
+      "recoil_recovery_speed": 10.0,
+      "recoil_shot_index_recovery_time_factor": 0.25,
+      "recoil_speed": 1.0,
+      "reload_move_speed": 236.22,
+      "scatter_yaw_scale": 1.0,
+      "shoot_move_speed_percent": 0.75,
+      "shoot_spread_penalty_decay": 2.0,
+      "shoot_spread_penalty_decay_delay": 0.0,
+      "shoot_spread_penalty_per_shot": 0.0,
+      "shooting_up_spread_penalty": 0.0,
+      "vertical_punch": 0.0,
+      "zoom_fov": 40.0,
+      "zoom_move_speed_percent": 0.75,
+      "bullets": 1,
+      "burst_shot_count": 1,
+      "clip_size": -1,
+      "spread": 0.5,
+      "standing_spread": 1.5,
+      "reload_duration": 0.25,
+      "horizontal_recoil": {
+        "range": [
+          -0.1,
+          0.1
+        ],
+        "burst_exponent": 0.0
+      },
+      "vertical_recoil": {
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "burst_exponent": 0.0,
+        "burst_constant": 0.0,
+        "burst_slope": 0.0
+      },
+      "shots_per_second": 2.0,
+      "shots_per_second_with_reload": 0.0,
+      "bullets_per_second": 2.0,
+      "damage_per_second": 4.83,
+      "damage_per_shot": 2.415
+    },
+    "max_health": 129,
+    "intrinsic_modifiers": [
+      {
+        "subclass": {
+          "script_values": [
+            {
+              "modifier_value": "MODIFIER_VALUE_BULLET_DAMAGE_REDUCTION_PERCENT",
+              "value": 50.0
+            },
+            {
+              "modifier_value": "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT",
+              "value": 45.0
+            }
+          ]
+        }
+      }
+    ],
+    "sight_range_players": 1500.0,
+    "sight_range_npcs": 1500.0,
+    "gold_reward": 41.0,
+    "gold_reward_bonus_percent_per_minute": 1.08,
+    "walk_speed": 150.0,
+    "run_speed": 150.0,
+    "spawn_breakables_on_death": true,
+    "melee_attempt_range": 150.0
+  }
+]

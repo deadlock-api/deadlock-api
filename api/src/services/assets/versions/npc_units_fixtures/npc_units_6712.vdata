@@ -1,0 +1,1225 @@
+<!-- kv3 encoding:text:version{e21c7f3c-8a33-41c5-9977-a76d3a32aa0d} format:generic:version{7412167c-06e9-4698-aff2-e63eb59037e7} -->
+{
+	generic_data_type = "CAI_CitadelNPCVData"
+	neutral_trooper_weak = 
+	{
+		m_bTrackOutOfCombatStatus = false
+		m_NpcOutOfCombatModifier = subclass:
+		{
+			_my_subclass_name = "modifier_npc_ooc"
+			_class = "modifier_npc_ooc"
+		}
+		m_NpcInCombatModifier = subclass:
+		{
+			_my_subclass_name = "modifier_npc_in_combat"
+			_class = "modifier_npc_in_combat"
+			m_nEnabledStateMask = "MODIFIER_STATE_IN_COMBAT"
+		}
+		m_mapWeaponInfos = 
+		{
+			primary = 
+			{
+				m_Spread = 0.5
+				m_StandingSpread = 1.5
+				m_flScatterYawScale = 1
+				m_flShootingUpSpreadPenalty = 0
+				m_flZoomMoveSpeedPercent = 0.75
+				m_flShootMoveSpeedPercent = 0.75
+				m_flHorizontalPunch = 0
+				m_flVerticalPunch = 0
+				m_flRecoilRecoverySpeed = 10.0
+				m_VerticallRecoil = 
+				{
+					m_Range = [ -0.2, 0.2 ]
+					m_flBurstSlope = 0.0
+					m_flBurstExponent = 0.0
+					m_flBurstConstant = 0.0
+				}
+				m_HorizontalRecoil = 
+				{
+					m_Range = [ -0.1, 0.1 ]
+					m_flBurstExponent = 0.0
+				}
+				m_flRecoilSpeed = 1
+				m_flZoomFOV = 40.0
+				m_flZoomFOV_Relative = -35.0
+				m_flDamageFalloffStartRange = 1500
+				m_flDamageFalloffEndRange = 1500
+				m_flRange = 1500.0
+				m_flBulletLifetime = 1.0
+				m_flDamageFalloffEndScale = 0.3
+				m_flDamageFalloffBias = 0.5
+				m_iBullets = 1
+				m_flCycleTime = 0.5
+				m_reloadDuration = 0.25
+				m_iClipSize = -1
+				m_iBurstShotCount = 1
+				m_flIntraBurstCycleTime = 0
+				m_flBulletGravityScale = 0.0
+				m_flBulletRadius = 3
+				m_flBulletDrag = 1
+				m_flBulletDragBias = 0.5
+				m_flBulletReflectScale = 0
+				m_flBulletReflectAmount = 1
+				m_flBulletInheritShooterVelocityScale = 0
+				m_szBulletTravelTracerParticle = resource_name:"particles/npc/neutrals/generic_neutral/neutral_small_projectile.vpcf"
+				m_szMuzzleFlashEffectName = resource_name:"particles/npc/neutrals/generic_neutral/neutral_muzzle_flash_small.vpcf"
+				m_strBulletWhizSound = soundevent:"Neutral.Camp.Bullet.Whizby"
+				m_flBulletSpeed = 6000.0
+				m_mapImpactEffects = 
+				{
+					default = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+					flesh = 
+					{
+						m_strDecal = ""
+						m_strParticle = resource_name:"particles/blood_impact/blood_impact_red_01.vpcf"
+					}
+					concrete = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+					solidmetal = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+					portals = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+				}
+				m_flCritBonusStart = 1.15
+				m_flCritBonusEnd = 1.35
+				m_flCritBonusStartRange = 500.0
+				m_flCritBonusEndRange = 1500.0
+				m_flCritBonusAgainstNPCs = 0.25
+				m_flShootSpreadPenaltyPerShot = 0.0
+				m_flShootSpreadPenaltyDecayDelay = 0.0
+				m_flShootSpreadPenaltyDecay = 2.0
+				m_flRecoilShotIndexRecoveryTimeFactor = 0.25
+				m_bCanZoom = true
+				m_strWeaponImpactEffect = resource_name:"particles/npc/neutrals/generic_neutral/neutral_small_tracer_impact.vpcf"
+				m_flReloadMoveSpeed = 236.22
+				m_strLocalPlayerBulletImpactSound = soundevent:"Player.Bullet.Impact.Default"
+				m_flAutoReplenishClip = 4
+				m_strShootSound = soundevent:"Neutral.Camp.Bullet.Fire"
+				m_flBulletDamage = 2.415
+			}
+		}
+		_base = "neutral_base"
+		_class = "npc_trooper_neutral"
+		m_bSpawnOnGround = true
+		m_ShieldParticle = resource_name:""
+		m_flSightRangePlayers = 1500.0
+		m_flSightRangeNPCs = 1500.0
+		m_flMaxHealthBarDrawDistance = 800
+		m_flShieldReactivateDelay = 2.0
+		m_flGoldReward = 41
+		m_flGoldRewardBonusPercentPerMinute = 1.08
+		m_strLastHitSound = soundevent:"LastHit.Default"
+		m_flSquadDistance = 100.0
+		m_flSpawnTetherRadius = 300.0
+		m_flMeleeAttemptRange = 150.0
+		m_NeutralDamageGrowth = subclass:
+		{
+			_my_subclass_name = "modifier_neutral_damage_growth"
+			_class = "modifier_neutral_damage_growth"
+			m_flDamageGrowthPctPerMin = 0.5
+			m_nEnabledStateMask = "MODIFIER_STATE_LOCK_ENTITY_FACING"
+		}
+		m_SleepModifier = subclass:
+		{
+			_my_subclass_name = "modifier_sleep"
+			_class = "modifier_base"
+			m_nEnabledStateMask = "MODIFIER_STATE_IGNORED_BY_NPC_TARGETING"
+		}
+		m_DeathParticle = resource_name:"particles/npc/neutral_trooper_death.vpcf"
+		m_DeathSound = soundevent:"Damage.Receive.Lethal.NPC"
+		m_bSuppressOtherOutlinesWhenVisible = true
+		m_bOutlineThroughWalls = true
+		m_flOutlineRange = 800.0
+		m_bNoMelee = false
+		m_bOnlyMelee = false
+		m_mapViewerSoulsClass = 
+		{
+			"0" = "weak_to_viewer"
+		}
+		m_sModelName = resource_name:"models/npc/neutral_drain_creature/neutral_drain_creature.vmdl"
+		m_SpawnSound = soundevent:"Neutral.Camp.Spawn_Small"
+		m_flModelScale = 0.28
+		m_nMaxHealth = 129
+		m_sDefaultMaterialGroupName = "Neutral_Weak"
+		m_eNeutralType = "NEUTRAL_NPC_WEAK"
+		m_nSquadPriority = 1
+		m_iMaxSquadAttackers = 3
+		m_flWalkSpeed = 150
+		m_flRunSpeed = 150
+		m_flStrafeAngleAmount = 15.0
+		m_flStrafeSpeed = 60
+		m_flStrafeSideDuration = 3.0
+		m_flNonMoveAttackDuration = 1.0
+		m_flAttackRangeTarget = 100.0
+		m_sNeutralMelee = "citadel_neutral_light_melee_weak"
+		m_vecIntrinsicModifiers = 
+		[
+			subclass:
+			{
+				_my_subclass_name = "weak_neutral_bullet_armor"
+				_class = "modifier_intrinsic_base"
+				m_vecScriptValues = 
+				[
+					{
+						m_eModifierValue = "MODIFIER_VALUE_BULLET_DAMAGE_REDUCTION_PERCENT"
+						m_value = 50.0
+					},
+					{
+						m_eModifierValue = "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT"
+						m_value = 45.0
+					},
+				]
+			},
+		]
+		m_sLocUnitName = "#neutral_trash_1"
+	}
+	neutral_drain_creature_strong = 
+	{
+		m_bTrackOutOfCombatStatus = false
+		m_NpcOutOfCombatModifier = subclass:
+		{
+			_my_subclass_name = "modifier_npc_ooc"
+			_class = "modifier_npc_ooc"
+		}
+		m_NpcInCombatModifier = subclass:
+		{
+			_my_subclass_name = "modifier_npc_in_combat"
+			_class = "modifier_npc_in_combat"
+			m_nEnabledStateMask = "MODIFIER_STATE_IN_COMBAT"
+		}
+		m_mapWeaponInfos = 
+		{
+			primary = 
+			{
+				m_Spread = 0.5
+				m_StandingSpread = 1.5
+				m_flScatterYawScale = 1
+				m_flShootingUpSpreadPenalty = 0
+				m_flZoomMoveSpeedPercent = 0.75
+				m_flShootMoveSpeedPercent = 0.75
+				m_flHorizontalPunch = 0
+				m_flVerticalPunch = 0
+				m_flRecoilRecoverySpeed = 10.0
+				m_VerticallRecoil = 
+				{
+					m_Range = [ -0.2, 0.2 ]
+					m_flBurstSlope = 0.0
+					m_flBurstExponent = 0.0
+					m_flBurstConstant = 0.0
+				}
+				m_HorizontalRecoil = 
+				{
+					m_Range = [ -0.1, 0.1 ]
+					m_flBurstExponent = 0.0
+				}
+				m_flRecoilSpeed = 1
+				m_flZoomFOV = 40.0
+				m_flZoomFOV_Relative = -35.0
+				m_flDamageFalloffStartRange = 1500
+				m_flDamageFalloffEndRange = 1500
+				m_flRange = 1500.0
+				m_flBulletLifetime = 1.0
+				m_flDamageFalloffEndScale = 0.3
+				m_flDamageFalloffBias = 0.5
+				m_iBullets = 1
+				m_flCycleTime = 0.5
+				m_reloadDuration = 0.25
+				m_iClipSize = -1
+				m_iBurstShotCount = 1
+				m_flIntraBurstCycleTime = 0
+				m_flBulletGravityScale = 0.0
+				m_flBulletRadius = 3
+				m_flBulletDrag = 1
+				m_flBulletDragBias = 0.5
+				m_flBulletReflectScale = 0
+				m_flBulletReflectAmount = 1
+				m_flBulletInheritShooterVelocityScale = 0
+				m_szBulletTravelTracerParticle = resource_name:"particles/npc/neutrals/generic_neutral/neutral_small_projectile.vpcf"
+				m_szMuzzleFlashEffectName = resource_name:"particles/npc/neutrals/generic_neutral/neutral_muzzle_flash_small.vpcf"
+				m_strBulletWhizSound = soundevent:"Neutral.Camp.Bullet.Whizby"
+				m_flBulletSpeed = 6000.0
+				m_mapImpactEffects = 
+				{
+					default = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+					flesh = 
+					{
+						m_strDecal = ""
+						m_strParticle = resource_name:"particles/blood_impact/blood_impact_red_01.vpcf"
+					}
+					concrete = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+					solidmetal = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+					portals = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+				}
+				m_flCritBonusStart = 1.15
+				m_flCritBonusEnd = 1.35
+				m_flCritBonusStartRange = 500.0
+				m_flCritBonusEndRange = 1500.0
+				m_flCritBonusAgainstNPCs = 0.25
+				m_flShootSpreadPenaltyPerShot = 0.0
+				m_flShootSpreadPenaltyDecayDelay = 0.0
+				m_flShootSpreadPenaltyDecay = 2.0
+				m_flRecoilShotIndexRecoveryTimeFactor = 0.25
+				m_bCanZoom = true
+				m_strWeaponImpactEffect = resource_name:"particles/npc/neutrals/generic_neutral/neutral_small_tracer_impact.vpcf"
+				m_flReloadMoveSpeed = 236.22
+				m_strLocalPlayerBulletImpactSound = soundevent:"Player.Bullet.Impact.Default"
+				m_flAutoReplenishClip = 6
+				m_strShootSound = soundevent:"Neutral.Camp.Bullet.Fire"
+				m_flBulletDamage = 9.1
+			}
+		}
+		_base = "neutral_trooper_strong"
+		_class = "npc_trooper_neutral"
+		m_bSpawnOnGround = true
+		m_ShieldParticle = resource_name:""
+		m_flSightRangePlayers = 1500.0
+		m_flSightRangeNPCs = 1500.0
+		m_flMaxHealthBarDrawDistance = 800
+		m_flShieldReactivateDelay = 2.0
+		m_flGoldReward = 181
+		m_flGoldRewardBonusPercentPerMinute = 1.08
+		m_strLastHitSound = soundevent:"LastHit.Default"
+		m_flSquadDistance = 200.0
+		m_flSpawnTetherRadius = 300.0
+		m_flMeleeAttemptRange = 150.0
+		m_NeutralDamageGrowth = subclass:
+		{
+			_my_subclass_name = "modifier_neutral_damage_growth"
+			_class = "modifier_neutral_damage_growth"
+			m_flDamageGrowthPctPerMin = 0.5
+			m_nEnabledStateMask = "MODIFIER_STATE_LOCK_ENTITY_FACING"
+		}
+		m_SleepModifier = subclass:
+		{
+			_my_subclass_name = "modifier_sleep"
+			_class = "modifier_base"
+			m_nEnabledStateMask = "MODIFIER_STATE_IGNORED_BY_NPC_TARGETING"
+		}
+		m_DeathParticle = resource_name:"particles/npc/neutral_trooper_death.vpcf"
+		m_DeathSound = soundevent:"Damage.Receive.Lethal.NPC"
+		m_bSuppressOtherOutlinesWhenVisible = true
+		m_bOutlineThroughWalls = true
+		m_flOutlineRange = 800.0
+		m_bNoMelee = false
+		m_bOnlyMelee = false
+		m_mapViewerSoulsClass = 
+		{
+			"0" = "strong_to_viewer"
+			"10000" = "normal_to_viewer"
+			"15000" = "weak_to_viewer"
+		}
+		m_sModelName = resource_name:"models/npc/neutral_drain_creature/neutral_drain_creature_large.vmdl"
+		m_SpawnSound = soundevent:"Neutral.Camp.Spawn_Large"
+		m_flModelScale = 0.6
+		m_nMaxHealth = 1133
+		m_eNeutralType = "NEUTRAL_NPC_STRONG"
+		m_sDefaultMaterialGroupName = "Neutral_Strong"
+		m_flWalkSpeed = 135.0
+		m_flRunSpeed = 135.0
+		m_flStrafeAngleAmount = 15.0
+		m_flStrafeSpeed = 135.0
+		m_flStrafeSideDuration = 3.0
+		m_flNonMoveAttackDuration = 3.5
+		m_nSquadPriority = 3
+		m_flAttackRangeTarget = 600.0
+		m_flAbilityChance01 = 0.05
+		m_flAbilityChance02 = 0.05
+		m_flAbilityChance03 = 0.1
+		m_vNeutralAbilities = 
+		[
+			"citadel_neutral_attack_sludge_strong",
+		]
+		m_sNeutralMelee = "citadel_neutral_light_melee_strong"
+		m_vecIntrinsicModifiers = 
+		[
+			subclass:
+			{
+				_my_subclass_name = "strong_neutral_bullet_armor"
+				_class = "modifier_intrinsic_base"
+				m_vecScriptValues = 
+				[
+					{
+						m_eModifierValue = "MODIFIER_VALUE_BULLET_DAMAGE_REDUCTION_PERCENT"
+						m_value = 60.0
+					},
+					{
+						m_eModifierValue = "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT"
+						m_value = 55.0
+					},
+				]
+			},
+		]
+		m_sLocUnitName = "#neutral_trash_3"
+		m_bUseSleepPoseWhenNoTarget = true
+		m_flReturnToSpawnSpeed = 200.0
+		m_flAcceleration = 400.0
+		m_flTurnRate = 120.0
+		m_bSpawnBreakablesOnDeath = true
+		m_strCustomUnitIcon = panorama:"file://{images}/npcs/neutrals/neutral_drain_creature_strong.psd"
+	}
+	neutral_sinners_sacrifice = 
+	{
+		m_bTrackOutOfCombatStatus = false
+		m_NpcOutOfCombatModifier = subclass:
+		{
+			_my_subclass_name = "modifier_npc_ooc"
+			_class = "modifier_npc_ooc"
+		}
+		m_NpcInCombatModifier = subclass:
+		{
+			_my_subclass_name = "modifier_npc_in_combat"
+			_class = "modifier_npc_in_combat"
+			m_nEnabledStateMask = "MODIFIER_STATE_IN_COMBAT"
+		}
+		m_mapWeaponInfos = 
+		{
+			primary = 
+			{
+				m_Spread = 0.5
+				m_StandingSpread = 1.5
+				m_flScatterYawScale = 1
+				m_flShootingUpSpreadPenalty = 0
+				m_flZoomMoveSpeedPercent = 0.75
+				m_flShootMoveSpeedPercent = 0.75
+				m_flHorizontalPunch = 0
+				m_flVerticalPunch = 0
+				m_flRecoilRecoverySpeed = 10.0
+				m_VerticallRecoil = 
+				{
+					m_Range = [ -0.2, 0.2 ]
+					m_flBurstSlope = 0.0
+					m_flBurstExponent = 0.0
+					m_flBurstConstant = 0.0
+				}
+				m_HorizontalRecoil = 
+				{
+					m_Range = [ -0.1, 0.1 ]
+					m_flBurstExponent = 0.0
+				}
+				m_flRecoilSpeed = 1
+				m_flZoomFOV = 40.0
+				m_flZoomFOV_Relative = -35.0
+				m_flDamageFalloffStartRange = 1500
+				m_flDamageFalloffEndRange = 1500
+				m_flRange = 0
+				m_flBulletLifetime = 1.0
+				m_flDamageFalloffEndScale = 0.3
+				m_flDamageFalloffBias = 0.5
+				m_iBullets = 1
+				m_flCycleTime = 0.5
+				m_reloadDuration = 0.25
+				m_iClipSize = -1
+				m_iBurstShotCount = 1
+				m_flIntraBurstCycleTime = 0
+				m_flBulletGravityScale = 0.0
+				m_flBulletRadius = 3
+				m_flBulletDrag = 1
+				m_flBulletDragBias = 0.5
+				m_flBulletReflectScale = 0
+				m_flBulletReflectAmount = 1
+				m_flBulletInheritShooterVelocityScale = 0
+				m_szBulletTravelTracerParticle = resource_name:"particles/npc/neutrals/generic_neutral/neutral_small_projectile.vpcf"
+				m_szMuzzleFlashEffectName = resource_name:"particles/npc/neutrals/generic_neutral/neutral_muzzle_flash_small.vpcf"
+				m_strBulletWhizSound = soundevent:"Neutral.Camp.Bullet.Whizby"
+				m_flBulletSpeed = 6000.0
+				m_mapImpactEffects = 
+				{
+					default = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+					flesh = 
+					{
+						m_strDecal = ""
+						m_strParticle = resource_name:"particles/blood_impact/blood_impact_red_01.vpcf"
+					}
+					concrete = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+					solidmetal = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+					portals = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+				}
+				m_flCritBonusStart = 1.15
+				m_flCritBonusEnd = 1.35
+				m_flCritBonusStartRange = 500.0
+				m_flCritBonusEndRange = 1500.0
+				m_flCritBonusAgainstNPCs = 0.25
+				m_flShootSpreadPenaltyPerShot = 0.0
+				m_flShootSpreadPenaltyDecayDelay = 0.0
+				m_flShootSpreadPenaltyDecay = 2.0
+				m_flRecoilShotIndexRecoveryTimeFactor = 0.25
+				m_bCanZoom = true
+				m_strWeaponImpactEffect = resource_name:"particles/npc/neutrals/generic_neutral/neutral_small_tracer_impact.vpcf"
+				m_flReloadMoveSpeed = 236.22
+				m_strLocalPlayerBulletImpactSound = soundevent:"Player.Bullet.Impact.Default"
+				m_flAutoReplenishClip = 4
+				m_strShootSound = soundevent:"Neutral.Camp.Bullet.Fire"
+			}
+		}
+		_base = "neutral_base"
+		_class = "npc_neutral_sinners_sacrifice"
+		m_bSpawnOnGround = true
+		m_ShieldParticle = resource_name:""
+		m_flSightRangePlayers = 200.0
+		m_flSightRangeNPCs = 0.0
+		m_flMaxHealthBarDrawDistance = 800
+		m_flShieldReactivateDelay = 2.0
+		m_flGoldReward = 155
+		m_flGoldRewardBonusPercentPerMinute = 1.08
+		m_strLastHitSound = soundevent:"LastHit.Default"
+		m_flSquadDistance = 100.0
+		m_flSpawnTetherRadius = 300.0
+		m_flMeleeAttemptRange = 150.0
+		m_NeutralDamageGrowth = subclass:
+		{
+			_my_subclass_name = "modifier_neutral_damage_growth"
+			_class = "modifier_neutral_damage_growth"
+			m_flDamageGrowthPctPerMin = 0.5
+			m_nEnabledStateMask = "MODIFIER_STATE_LOCK_ENTITY_FACING"
+		}
+		m_SleepModifier = subclass:
+		{
+			_my_subclass_name = "modifier_sleep"
+			_class = "modifier_base"
+			m_nEnabledStateMask = "MODIFIER_STATE_IGNORED_BY_NPC_TARGETING"
+		}
+		m_DeathParticle = resource_name:"particles/generic/null.vpcf"
+		m_DeathSound = soundevent:"Vault.Destroyed"
+		m_bSuppressOtherOutlinesWhenVisible = true
+		m_bOutlineThroughWalls = true
+		m_flOutlineRange = 800.0
+		m_bNoMelee = false
+		m_bOnlyMelee = false
+		m_mapViewerSoulsClass = 
+		{
+		}
+		m_sModelName = resource_name:"models/props_gameplay/sinners_sacrifice_vault/sinners_sacrifice.vmdl"
+		m_nMaxHealth = 500
+		m_bDamagedByBullets = false
+		m_bDamagedByAbilities = false
+		m_bFixedMeleeDamage = true
+		m_retaliateParticle = resource_name:"particles/environment/spirit_orb_vault_hit.vpcf"
+		m_flRetaliateDamage = 80.0
+		m_flPhysicsImpulseMultiplier = 0
+		m_flDyingDuration = 0.0
+		m_vecIntrinsicModifiers = 
+		[
+			subclass:
+			{
+				_my_subclass_name = "neutral_vault_tech_immune"
+				_class = "modifier_intrinsic_base"
+				m_nEnabledStateMask = "MODIFIER_STATE_TECH_UNTARGETABLE | MODIFIER_STATE_TECH_INVULNERABLE | MODIFIER_STATE_HEALING_DISABLED"
+			},
+			subclass:
+			{
+				_class = "modifier_check_nearby_player_parry"
+				_my_subclass_name = "modifier_check_nearby_player_parry"
+				m_flParryCheckRadius = 60.0
+			},
+		]
+		m_eNeutralType = "NEUTRAL_SINNERS_SACRIFICE"
+		m_bSpawnBreakablesOnDeath = true
+		m_flBreakableForceScale = 3.0
+		m_flVaultMiniGameTime = 3.0
+		m_flVaultMiniGameHitWindow = 0.5
+		m_flVaultSuccessLightsScroll = 3.0
+		m_flVaultSuccessDestroyTime = 1.3
+		m_flMiniGameFastSpeed = 1.65
+		m_flMiniGameFastChance = 0.4
+		m_strFastMaterialGroup = "fast"
+		m_VaultSuccessParticle = resource_name:"particles/environment/sinners_sacrifice_bonus_round_success.vpcf"
+		m_VaultIdleLoopSound = soundevent:"Vault.Idle_Lp"
+		m_VaultStartActiveSound = soundevent:"Vault.Start_Active"
+		m_VaultActiveLoopSound = soundevent:"Vault.Active_Lp"
+		m_VaultStartCriticalSound = soundevent:"Vault.Impact.Stinger_04"
+		m_VaultStartFastCriticalSound = soundevent:"Vault.Impact.Stinger_04b"
+		m_VaultCriticalLoopSound = soundevent:"Vault.Critical_Lp"
+		m_VaultHitSuccessSoundLight = soundevent:"Vault.HitSuccess.Light"
+		m_VaultHitSuccessSoundHeavy = soundevent:"Vault.HitSuccess.Heavy"
+		m_VaultHitFailSound = soundevent:"Vault.HitFail"
+		m_VaultHit01 = soundevent:"Vault.Impact.Stinger_01"
+		m_VaultHit02 = soundevent:"Vault.Impact.Stinger_01"
+		m_VaultHit03 = soundevent:"Vault.Impact.Stinger_01b"
+		m_VaultHit04 = soundevent:"Vault.Impact.Stinger_02"
+		m_VaultHit05 = soundevent:"Vault.Impact.Stinger_02b"
+		m_VaultHit06 = soundevent:"Vault.Impact.Stinger_03"
+		m_VaultHit07 = soundevent:"Vault.Impact.Stinger_03b"
+		m_VaultLightHitWindow = soundevent:"Vault.LightHitWindow"
+		m_VaultWheelSuccessDing = soundevent:"Vault.WheelSuccessDing"
+		m_VaultLight = soundevent:"Vault.Light"
+		m_VaultFastLightFlash = soundevent:"Vault.Fast.Light.Flash"
+		m_VaultLightPowerupGainedSound = soundevent:"Vault.Powerup.Gained.Light"
+		m_VaultHeavyPowerupGainedSound = soundevent:"Vault.Powerup.Gained.Heavy"
+		m_sLocUnitName = "#neutral_sinners"
+	}
+	npc_boss_tier2 = 
+	{
+		_class = "npc_boss_tier2"
+		m_sModelName = resource_name:"models/npc/boss_tier_02_sun_walker_v2/boss_tier_02_sun_walker.vmdl"
+		m_strWIPModelName = resource_name:"models/npc/t2_bull/t2_bull.vmdl"
+		m_flSightRangePlayers = 944
+		m_flSightRangeNPCs = 1417.32
+		m_flPlayerInitialSightRange = 1200.0
+		m_flMeleeAttemptRange = 600.0
+		m_flMeleeTargetRadius = 200.0
+		m_strLastHitSound = soundevent:""
+		m_navHull = 2
+		m_flHullCapsuleRadius = 64.0
+		m_flHullCapsuleHeight = 210.0
+		m_mapBoundAbilities = 
+		{
+			ESlot_Signature_1 = "citadel_ability_tier2boss_rocket_barrage"
+			ESlot_Signature_2 = "citadel_ability_tier2boss_laser_beam"
+			ESlot_Signature_3 = "citadel_ability_tier2boss_stomp"
+			ESlot_Signature_4 = "citadel_ability_tier2boss_aoe_wave"
+		}
+		m_sDefaultMaterialGroupName = ""
+		m_sEnemyMaterialGroupName = ""
+		m_StompImpactEffect = resource_name:"particles/npc/tier2boss/tier2boss_stomp.vpcf"
+		m_StompWarningEffect = resource_name:"particles/npc/tier2boss/tier2boss_stomp_precast.vpcf"
+		m_flStompDamage = 350.0
+		m_flStompDamageMaxHealthPercent = 15.0
+		m_flStompDamageTrooperRate = 0.3
+		m_flStunDuration = 2.0
+		m_flStompAttemptRadius = 495
+		m_flStompImpactRadius = 570.8661
+		m_flStompImpactHeight = 354.331
+		m_flStompTossUpMagnitude = 1.25
+		m_flTossSpeed = 350.0
+		m_flBurstDuration = 1.0
+		m_flBurstCooldown = 0.2
+		m_flPhysicsImpulseMultiplier = 0.0
+		m_bBeamTurnToFire = true
+		m_flMeleeDuration = 0.9
+		m_flMeleeHitTime = 0.6
+		m_flMeleeAttackRadius = 200.0
+		m_flMeleeDamage = 300
+		m_flMeleeDamageHealthPct = 10.0
+		m_MeleeActivateParticle = resource_name:"particles/npc/npc_melee_activate.vpcf"
+		m_MeleeSwingParticle = resource_name:"particles/npc/npc_melee_swing.vpcf"
+		m_MeleeHitSound = soundevent:"Guardian.Tier1.Melee.Hit"
+		m_flAoeWaveHealthThreshold = 0.25
+		m_sTeam1MaterialGroupName = "Amber"
+		m_sTeam2MaterialGroupName = "Sapphire"
+		m_flBackDoorProtectionRange = 2165.35
+		m_BackdoorProtectionModifier = subclass:
+		{
+			_class = "modifier_citadel_backdoor_protection"
+			_my_subclass_name = "tier2_backdoor_protection"
+			m_flHealthPerSecondRegen = 65.0
+			m_flBackdoorProtectionDamageMitigationFromPlayers = 65.0
+			m_flBackdoorProtectionDamageMitigationFromPlayers_Streetbrawl = 85.0
+			m_strParticleEffect = resource_name:""
+			m_ShieldImpactParticle = resource_name:"particles/generic/backdoor_protection_impact.vpcf"
+			flShieldImpactDirectionOffset = 50.0
+			m_strParticleEffectConfig = ""
+			m_ShieldActiveParticle = resource_name:"particles/generic/backdoor_protection_aura.vpcf"
+			m_strActiveEffectConfigName = "tier2"
+		}
+		m_nMaxHealth = 6000
+		m_flModelScale = 0.85
+		m_EmpoweredModifierLevel1 = subclass:
+		{
+			_class = "modifier_tier2_empowered"
+			_my_subclass_name = "tier2_empowered_level1"
+			m_nMaxHealth = 9000
+			m_flTransitionDuration = 1.0
+			m_flModelScale = 1.0
+			m_nEnabledStateMask = "MODIFIER_STATE_DO_NOT_ADJUST_HEALTH_ON_MAXHEALTH_CHANGE"
+		}
+		m_EmpoweredModifierLevel2 = subclass:
+		{
+			_class = "modifier_tier2_empowered"
+			_my_subclass_name = "tier2_empowered_level2"
+			m_nMaxHealth = 12000
+			m_flTransitionDuration = 1.0
+			m_flModelScale = 1.15
+			m_nEnabledStateMask = "MODIFIER_STATE_DO_NOT_ADJUST_HEALTH_ON_MAXHEALTH_CHANGE"
+		}
+		m_flInvulModifierRange = 866.142
+		m_InvulModifier = subclass:
+		{
+			_my_subclass_name = "modifier_boss_invuln"
+			_class = "modifier_boss_invuln"
+			m_flShieldRadius = 300
+			m_ShieldParticle = resource_name:"particles/trooper/tier2_boss_invulerability_shield.vpcf"
+		}
+		m_RangedArmorModifier = subclass:
+		{
+			_class = "modifier_citadel_ranged_armor_bonus"
+			_my_subclass_name = "modifier_citadel_ranged_armor_bonus"
+			m_flBulletResistancePctMax = 100.0
+			m_flTechResistancePctMax = 0
+			m_flRangeMin = 1200
+			m_flRangeMax = 2000
+		}
+		m_NearbyEnemyResist = subclass:
+		{
+			_my_subclass_name = "modifier_nearby_enemy_resist"
+			_class = "modifier_nearby_enemy_resist"
+			m_flNearbyEnemyResistRange = 2000.0
+			m_flResistValues = 
+			[
+				0, 0, 0, 20,
+				30, 40, 50,
+			]
+		}
+		m_FriendlyAuraModifier = subclass:
+		{
+			_class = "modifier_base_aura"
+			_my_subclass_name = "friendly_aura"
+			m_bIsHidden = true
+			m_flAuraRadius = 1102.36
+			m_eHudDisplayLocation = "DISPLAY_HUD_NONE"
+			m_eLOSCheck = "Bounds"
+			m_modifierProvidedByAura = subclass:
+			{
+				_class = "modifier_base"
+				_my_subclass_name = "target_near_walker"
+				m_sLocalizationName = "modifier_walker_resist_aura"
+				m_eHudDisplayLocation = "DISPLAY_HUD_NONE"
+				m_vecScriptValues = 
+				[
+					{
+						m_eModifierValue = "MODIFIER_VALUE_TECH_RESIST"
+						m_value = 15
+					},
+					{
+						m_eModifierValue = "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST"
+						m_value = 15
+					},
+				]
+			}
+			m_iAuraSearchType = "CITADEL_UNIT_TARGET_HERO_FRIENDLY"
+		}
+		m_StatTrackerAuraModifier = subclass:
+		{
+			_class = "modifier_base_aura"
+			_my_subclass_name = "stat_tracker_aura"
+			m_bIsHidden = true
+			m_flAuraRadius = 1259.84
+			m_eHudDisplayLocation = "DISPLAY_HUD_NONE"
+			m_modifierProvidedByAura = subclass:
+			{
+				_class = "modifier_tier2_stat_tracker"
+				_my_subclass_name = "modifier_tier2_stat_tracker"
+				m_bIsHidden = true
+				m_eHudDisplayLocation = "DISPLAY_HUD_NONE"
+				m_eDebuffType = "MODIFIER_DEBUFF_NO"
+			}
+			m_iAuraSearchType = "CITADEL_UNIT_TARGET_HERO"
+		}
+		m_StaggerWatcherModifier = subclass:
+		{
+			_class = "modifier_t2boss_stagger_watcher"
+			_my_subclass_name = "modifier_t2boss_stagger_watcher"
+			m_bIsHidden = true
+			m_flBuildUpMax = 5.0
+			m_flAdditionlPlayerMinContribution = 0.2
+			m_StaggeredModifier = subclass:
+			{
+				_class = "modifier_t2boss_staggered"
+				_my_subclass_name = "modifier_t2boss_staggered"
+				m_strSmallIconCssClass = "t2boss_stagger"
+				m_sAmbientLoopingSound = soundevent:"Inferno.Afterburn.Modifier.Lp"
+				m_strParticleStatusEffect = resource_name:"particles/status_fx/status_fx_afterburn.vpcf"
+				m_sAfterburnParticle = resource_name:"particles/abilities/inferno/inferno_afterburn_debuff.vpcf"
+				m_eDrawOverheadStatus = "OVERHEAD_DRAW_FOR_EVERYONE"
+				m_sStartSound = soundevent:"Inferno.Afterburn.Modifier.Start"
+				m_eModifierDisplayLocaiton = "MODIFIER_DISPLAY_HEALTHBAR"
+				m_bIsHidden = true
+				m_eHudDisplayLocation = "DISPLAY_HUD_NONE"
+				m_strParticleEffect = resource_name:"particles/npc/tier2boss/tier2_boss_stagger.vpcf"
+			}
+			m_BuildUpModifier = subclass:
+			{
+				_class = "modifier_citadel_base_buildup"
+				_my_subclass_name = "modifier_citadel_base_buildup"
+				m_sLocalizationName = "modifier_citadel_afterburn_buildup"
+				m_strSmallIconCssClass = "t2boss_stagger"
+				m_bUseBaseWeaponCycleTimeForDelay = false
+				m_flBuildUpDecayDelay = 2.0
+				m_eBuildupMode = "BUILDUP_MODE_ONE_AND_DONE"
+				m_bBuildupAffectedByEffectiveness = true
+				m_eDrawOverheadStatus = "OVERHEAD_DRAW_FOR_EVERYONE"
+				m_eModifierDisplayLocaiton = "MODIFIER_DISPLAY_HEALTHBAR"
+				m_eHudDisplayLocation = "DISPLAY_HUD_NONE"
+				m_bIsHidden = true
+			}
+			m_vecProcDamageTypes = 
+			[
+				"CITADEL_DAMAGETYPE_BULLET",
+			]
+		}
+		m_HealthBarColorFriend = [ 255, 239, 215 ]
+		m_HealthBarColorEnemy = [ 230, 25, 25 ]
+		m_HealthBarColorTeam1 = [ 231, 182, 89 ]
+		m_HealthBarColorTeam2 = [ 91, 121, 230 ]
+		m_HealthBarColorTeamNeutral = [ 0, 125, 125 ]
+		m_vecIntrinsicModifiers = 
+		[
+			subclass:
+			{
+				_my_subclass_name = "npc_boss_intrinsic"
+				_class = "modifier_intrinsic_base"
+				m_mapAutoRegisterModifierValueFromAbilityPropertyName = 
+				{
+				}
+				m_vecScriptValues = 
+				[
+					{
+						m_eModifierValue = "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT"
+						m_value = 0.0
+					},
+					{
+						m_eModifierValue = "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST"
+						m_value = 35
+					},
+				]
+			},
+		]
+		m_StompImpactSound = soundevent:"Guardian.T2.Stomp.Impact"
+		m_BeamHitSound = soundevent:"Guardian.T2.Beam.Hit"
+		m_BeamAnnounceSound = soundevent:"Guardian.T2.Beam.Announce"
+		m_StompAnnounceSound = soundevent:"Guardian.T2.Stomp.Announce"
+		m_BarrageAnnounceSound = soundevent:"Guardian.T2.RocketBarrage.Announce"
+		m_MeleeAnnounceSound = soundevent:"Guardian.T2.Stomp.Announce"
+		m_DeathSound = soundevent:"Guardian.T2.Death"
+		m_flOutlineRange = 2200.0
+		m_RangeRingParticle = resource_name:"particles/npc/tier2boss/tier2boss_range_ring.vpcf"
+		m_flRangeRingShowDistance = 275.59
+		m_flRangeRingFadeDistance = 196.85
+		m_flRangeRingAlpha = 0.8
+		m_bOutlineThroughWalls = true
+		m_bOutlineWhenVisible = true
+		m_bUseTeamRelativeMaterialGroups = false
+		m_bSpawnOnGround = false
+		m_sLocUnitName = "walker_unit"
+	}
+	neutral_underground_strong = 
+	{
+		m_bTrackOutOfCombatStatus = false
+		m_NpcOutOfCombatModifier = subclass:
+		{
+			_my_subclass_name = "modifier_npc_ooc"
+			_class = "modifier_npc_ooc"
+		}
+		m_NpcInCombatModifier = subclass:
+		{
+			_my_subclass_name = "modifier_npc_in_combat"
+			_class = "modifier_npc_in_combat"
+			m_nEnabledStateMask = "MODIFIER_STATE_IN_COMBAT"
+		}
+		m_mapWeaponInfos = 
+		{
+			primary = 
+			{
+				m_Spread = 0.5
+				m_StandingSpread = 1.5
+				m_flScatterYawScale = 1
+				m_flShootingUpSpreadPenalty = 0
+				m_flZoomMoveSpeedPercent = 0.75
+				m_flShootMoveSpeedPercent = 0.75
+				m_flHorizontalPunch = 0
+				m_flVerticalPunch = 0
+				m_flRecoilRecoverySpeed = 10.0
+				m_VerticallRecoil = 
+				{
+					m_Range = [ -0.2, 0.2 ]
+					m_flBurstSlope = 0.0
+					m_flBurstExponent = 0.0
+					m_flBurstConstant = 0.0
+				}
+				m_HorizontalRecoil = 
+				{
+					m_Range = [ -0.1, 0.1 ]
+					m_flBurstExponent = 0.0
+				}
+				m_flRecoilSpeed = 1
+				m_flZoomFOV = 40.0
+				m_flZoomFOV_Relative = -35.0
+				m_flDamageFalloffStartRange = 1500
+				m_flDamageFalloffEndRange = 1500
+				m_flRange = 1500.0
+				m_flBulletLifetime = 1.0
+				m_flDamageFalloffEndScale = 0.3
+				m_flDamageFalloffBias = 0.5
+				m_iBullets = 1
+				m_flCycleTime = 0.5
+				m_reloadDuration = 0.25
+				m_iClipSize = -1
+				m_iBurstShotCount = 1
+				m_flIntraBurstCycleTime = 0
+				m_flBulletGravityScale = 0.0
+				m_flBulletRadius = 20
+				m_flBulletDrag = 1
+				m_flBulletDragBias = 0.5
+				m_flBulletReflectScale = 0
+				m_flBulletReflectAmount = 1
+				m_flBulletInheritShooterVelocityScale = 0
+				m_szBulletTravelTracerParticle = resource_name:"particles/npc/neutrals/generic_neutral/neutral_small_projectile.vpcf"
+				m_szMuzzleFlashEffectName = resource_name:"particles/npc/neutrals/generic_neutral/neutral_muzzle_flash_small.vpcf"
+				m_strBulletWhizSound = soundevent:"Neutral.Camp.Bullet.Whizby"
+				m_flBulletSpeed = 1200.0
+				m_mapImpactEffects = 
+				{
+					default = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+					flesh = 
+					{
+						m_strDecal = ""
+						m_strParticle = resource_name:"particles/blood_impact/blood_impact_red_01.vpcf"
+					}
+					concrete = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+					solidmetal = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+					portals = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+				}
+				m_flCritBonusStart = 1.15
+				m_flCritBonusEnd = 1.35
+				m_flCritBonusStartRange = 500.0
+				m_flCritBonusEndRange = 1500.0
+				m_flCritBonusAgainstNPCs = 0.25
+				m_flShootSpreadPenaltyPerShot = 0.0
+				m_flShootSpreadPenaltyDecayDelay = 0.0
+				m_flShootSpreadPenaltyDecay = 2.0
+				m_flRecoilShotIndexRecoveryTimeFactor = 0.25
+				m_bCanZoom = true
+				m_strWeaponImpactEffect = resource_name:"particles/npc/neutrals/generic_neutral/neutral_small_tracer_impact.vpcf"
+				m_flReloadMoveSpeed = 236.22
+				m_strLocalPlayerBulletImpactSound = soundevent:"Player.Bullet.Impact.Default"
+				m_flAutoReplenishClip = 6
+				m_strShootSound = soundevent:"Neutral.Camp.Bullet.Fire"
+				m_flBulletDamage = 9.1
+			}
+		}
+		_base = "neutral_trooper_strong"
+		_class = "npc_trooper_neutral"
+		m_bSpawnOnGround = true
+		m_ShieldParticle = resource_name:""
+		m_flSightRangePlayers = 1500.0
+		m_flSightRangeNPCs = 1500.0
+		m_flMaxHealthBarDrawDistance = 800
+		m_flShieldReactivateDelay = 2.0
+		m_flGoldReward = 181
+		m_flGoldRewardBonusPercentPerMinute = 1.08
+		m_strLastHitSound = soundevent:"LastHit.Default"
+		m_flSquadDistance = 200.0
+		m_flSpawnTetherRadius = 300.0
+		m_flMeleeAttemptRange = 150.0
+		m_NeutralDamageGrowth = subclass:
+		{
+			_my_subclass_name = "modifier_neutral_damage_growth"
+			_class = "modifier_neutral_damage_growth"
+			m_flDamageGrowthPctPerMin = 0.5
+			m_nEnabledStateMask = "MODIFIER_STATE_LOCK_ENTITY_FACING"
+		}
+		m_SleepModifier = subclass:
+		{
+			_my_subclass_name = "modifier_sleep"
+			_class = "modifier_base"
+			m_nEnabledStateMask = "MODIFIER_STATE_IGNORED_BY_NPC_TARGETING"
+		}
+		m_DeathParticle = resource_name:"particles/npc/neutral_trooper_death.vpcf"
+		m_DeathSound = soundevent:"Damage.Receive.Lethal.NPC"
+		m_bSuppressOtherOutlinesWhenVisible = true
+		m_bOutlineThroughWalls = true
+		m_flOutlineRange = 800.0
+		m_bNoMelee = true
+		m_bOnlyMelee = false
+		m_mapViewerSoulsClass = 
+		{
+			"0" = "strong_to_viewer"
+			"10000" = "normal_to_viewer"
+			"15000" = "weak_to_viewer"
+		}
+		m_sModelName = resource_name:"models/npc_units/neutral_underhand_01/neutral_underhand_01.vmdl"
+		m_SpawnSound = soundevent:"Neutral.Camp.Spawn_Large"
+		m_flModelScale = 2.1
+		m_nMaxHealth = 1133
+		m_eNeutralType = "NEUTRAL_NPC_STRONG"
+		m_sDefaultMaterialGroupName = "Neutral_Strong"
+		m_flWalkSpeed = 80
+		m_flRunSpeed = 80
+		m_flStrafeAngleAmount = 15.0
+		m_flStrafeSpeed = 80
+		m_flStrafeSideDuration = 3.0
+		m_flNonMoveAttackDuration = 3.5
+		m_nSquadPriority = 3
+		m_flAttackRangeTarget = 600.0
+		m_flAbilityChance01 = 0.3
+		m_flAbilityChance02 = 0.2
+		m_flAbilityChance03 = 0.1
+		m_vNeutralAbilities = 
+		[
+			"citadel_neutral_laser_beam_underhand_strong",
+		]
+		m_sNeutralMelee = "citadel_neutral_light_melee_strong"
+		m_vecIntrinsicModifiers = 
+		[
+			subclass:
+			{
+				_my_subclass_name = "strong_neutral_bullet_armor"
+				_class = "modifier_intrinsic_base"
+				m_vecScriptValues = 
+				[
+					{
+						m_eModifierValue = "MODIFIER_VALUE_BULLET_DAMAGE_REDUCTION_PERCENT"
+						m_value = 60.0
+					},
+					{
+						m_eModifierValue = "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT"
+						m_value = 55.0
+					},
+				]
+			},
+		]
+		m_sLocUnitName = "#neutral_underhand_3"
+		m_bSpawnBreakablesOnDeath = true
+		m_strCustomUnitIcon = panorama:"file://{images}/npcs/neutrals/neutral_underground_heavy.psd"
+	}
+	neutral_barrel_01_weak = 
+	{
+		m_bTrackOutOfCombatStatus = false
+		m_NpcOutOfCombatModifier = subclass:
+		{
+			_my_subclass_name = "modifier_npc_ooc"
+			_class = "modifier_npc_ooc"
+		}
+		m_NpcInCombatModifier = subclass:
+		{
+			_my_subclass_name = "modifier_npc_in_combat"
+			_class = "modifier_npc_in_combat"
+			m_nEnabledStateMask = "MODIFIER_STATE_IN_COMBAT"
+		}
+		m_mapWeaponInfos = 
+		{
+			primary = 
+			{
+				m_Spread = 0.5
+				m_StandingSpread = 1.5
+				m_flScatterYawScale = 1
+				m_flShootingUpSpreadPenalty = 0
+				m_flZoomMoveSpeedPercent = 0.75
+				m_flShootMoveSpeedPercent = 0.75
+				m_flHorizontalPunch = 0
+				m_flVerticalPunch = 0
+				m_flRecoilRecoverySpeed = 10.0
+				m_VerticallRecoil = 
+				{
+					m_Range = [ -0.2, 0.2 ]
+					m_flBurstSlope = 0.0
+					m_flBurstExponent = 0.0
+					m_flBurstConstant = 0.0
+				}
+				m_HorizontalRecoil = 
+				{
+					m_Range = [ -0.1, 0.1 ]
+					m_flBurstExponent = 0.0
+				}
+				m_flRecoilSpeed = 1
+				m_flZoomFOV = 40.0
+				m_flZoomFOV_Relative = -35.0
+				m_flDamageFalloffStartRange = 1500
+				m_flDamageFalloffEndRange = 1500
+				m_flRange = 1500.0
+				m_flBulletLifetime = 1.0
+				m_flDamageFalloffEndScale = 0.3
+				m_flDamageFalloffBias = 0.5
+				m_iBullets = 1
+				m_flCycleTime = 0.5
+				m_reloadDuration = 0.25
+				m_iClipSize = -1
+				m_iBurstShotCount = 1
+				m_flIntraBurstCycleTime = 0
+				m_flBulletGravityScale = 0.0
+				m_flBulletRadius = 3
+				m_flBulletDrag = 1
+				m_flBulletDragBias = 0.5
+				m_flBulletReflectScale = 0
+				m_flBulletReflectAmount = 1
+				m_flBulletInheritShooterVelocityScale = 0
+				m_szBulletTravelTracerParticle = resource_name:"particles/npc/neutrals/generic_neutral/neutral_small_projectile.vpcf"
+				m_szMuzzleFlashEffectName = resource_name:"particles/npc/neutrals/generic_neutral/neutral_muzzle_flash_small.vpcf"
+				m_strBulletWhizSound = soundevent:"Neutral.Camp.Bullet.Whizby"
+				m_flBulletSpeed = 6000.0
+				m_mapImpactEffects = 
+				{
+					default = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+					flesh = 
+					{
+						m_strDecal = ""
+						m_strParticle = resource_name:"particles/blood_impact/blood_impact_red_01.vpcf"
+					}
+					concrete = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+					solidmetal = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+					portals = 
+					{
+						m_strDecal = "Impact.Concrete"
+						m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+					}
+				}
+				m_flCritBonusStart = 1.15
+				m_flCritBonusEnd = 1.35
+				m_flCritBonusStartRange = 500.0
+				m_flCritBonusEndRange = 1500.0
+				m_flCritBonusAgainstNPCs = 0.25
+				m_flShootSpreadPenaltyPerShot = 0.0
+				m_flShootSpreadPenaltyDecayDelay = 0.0
+				m_flShootSpreadPenaltyDecay = 2.0
+				m_flRecoilShotIndexRecoveryTimeFactor = 0.25
+				m_bCanZoom = true
+				m_strWeaponImpactEffect = resource_name:"particles/npc/neutrals/generic_neutral/neutral_small_tracer_impact.vpcf"
+				m_flReloadMoveSpeed = 236.22
+				m_strLocalPlayerBulletImpactSound = soundevent:"Player.Bullet.Impact.Default"
+				m_flAutoReplenishClip = 4
+				m_strShootSound = soundevent:"Neutral.Camp.Bullet.Fire"
+				m_flBulletDamage = 2.415
+			}
+		}
+		_base = "neutral_trooper_weak"
+		_class = "npc_trooper_neutral"
+		m_bSpawnOnGround = true
+		m_ShieldParticle = resource_name:""
+		m_flSightRangePlayers = 1500.0
+		m_flSightRangeNPCs = 1500.0
+		m_flMaxHealthBarDrawDistance = 800
+		m_flShieldReactivateDelay = 2.0
+		m_flGoldReward = 41
+		m_flGoldRewardBonusPercentPerMinute = 1.08
+		m_strLastHitSound = soundevent:"LastHit.Default"
+		m_flSquadDistance = 100.0
+		m_flSpawnTetherRadius = 300.0
+		m_flMeleeAttemptRange = 150.0
+		m_NeutralDamageGrowth = subclass:
+		{
+			_my_subclass_name = "modifier_neutral_damage_growth"
+			_class = "modifier_neutral_damage_growth"
+			m_flDamageGrowthPctPerMin = 0.5
+			m_nEnabledStateMask = "MODIFIER_STATE_LOCK_ENTITY_FACING"
+		}
+		m_SleepModifier = subclass:
+		{
+			_my_subclass_name = "modifier_sleep"
+			_class = "modifier_base"
+			m_nEnabledStateMask = "MODIFIER_STATE_IGNORED_BY_NPC_TARGETING"
+		}
+		m_DeathParticle = resource_name:"particles/npc/neutral_trooper_death.vpcf"
+		m_DeathSound = soundevent:"Damage.Receive.Lethal.NPC"
+		m_bSuppressOtherOutlinesWhenVisible = true
+		m_bOutlineThroughWalls = true
+		m_flOutlineRange = 800.0
+		m_bNoMelee = false
+		m_bOnlyMelee = false
+		m_mapViewerSoulsClass = 
+		{
+			"0" = "weak_to_viewer"
+		}
+		m_sModelName = resource_name:"models/npc_units/neutral_barrel_mimic_01/neutral_barrel_mimic_01.vmdl"
+		m_SpawnSound = soundevent:"Neutral.Camp.Spawn_Small"
+		m_flModelScale = 0.8
+		m_nMaxHealth = 129
+		m_sDefaultMaterialGroupName = "Neutral_Weak"
+		m_eNeutralType = "NEUTRAL_NPC_WEAK"
+		m_nSquadPriority = 1
+		m_iMaxSquadAttackers = 3
+		m_flWalkSpeed = 150
+		m_flRunSpeed = 150
+		m_flStrafeAngleAmount = 15.0
+		m_flStrafeSpeed = 150.0
+		m_flStrafeSideDuration = 3.0
+		m_flNonMoveAttackDuration = 1.0
+		m_flAttackRangeTarget = 100.0
+		m_sNeutralMelee = "citadel_neutral_light_melee_weak"
+		m_vecIntrinsicModifiers = 
+		[
+			subclass:
+			{
+				_my_subclass_name = "weak_neutral_bullet_armor"
+				_class = "modifier_intrinsic_base"
+				m_vecScriptValues = 
+				[
+					{
+						m_eModifierValue = "MODIFIER_VALUE_BULLET_DAMAGE_REDUCTION_PERCENT"
+						m_value = 50.0
+					},
+					{
+						m_eModifierValue = "MODIFIER_VALUE_ABILITY_DAMAGE_REDUCTION_PERCENT"
+						m_value = 45.0
+					},
+				]
+			},
+		]
+		m_sLocUnitName = "#neutral_barrel_1"
+		m_bUseSleepPoseWhenNoTarget = true
+		m_bSpawnBreakablesOnDeath = true
+		m_strCustomUnitIcon = panorama:"file://{images}/npcs/neutrals/neutral_barrel_heavy.psd"
+	}
+}

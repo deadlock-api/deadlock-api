@@ -122,6 +122,7 @@ const TAG_GROUPS: &[(&str, &[&str])] = &[
             "Heroes",
             "Ranks",
             "NPC Units",
+            "Modifiers",
             "Build Tags",
             "Client Versions",
             "Map",

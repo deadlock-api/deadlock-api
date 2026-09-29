@@ -61,10 +61,14 @@ KEEP_VDATA=(
     ranked_seasons.vdata
 )
 
-# Loaded by the API for older builds only; Valve dropped loot_tables.vdata in
-# build 6711, so copy it when present but never require it.
+# Copied when present but never required:
+#   loot_tables.vdata -- loaded by the API for older builds only; Valve dropped
+#                        it in build 6711.
+#   modifiers.vdata   -- neutral ("Haunt") ability stats for /v1/assets/modifiers;
+#                        only published from build 6712 on, so older builds 404.
 OPTIONAL_VDATA=(
     loot_tables.vdata
+    modifiers.vdata
 )
 
 # Localization categories to pull into the versions folder.
@@ -130,6 +134,9 @@ fi
 # The zip ships Source2Viewer-CLI alongside libSkiaSharp.so (and friends); a
 # partial cache restore that brings back only the managed binary leaves the
 # natives absent, and the CLI then aborts with "Unable to load libSkiaSharp".
+# Pinned to 19.1: 20.0 (latest) only adds VCS shader version 71, so it still logs
+# "Only VCS file versions 59 through 71 are supported ... 72" for
+# materials/minimap/*.vmat_c (non-fatal; the same 42 files are extracted).
 if [ ! -f Source2Viewer-CLI ] || [ ! -f libSkiaSharp.so ]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
         curl -L -o Decompiler.zip "https://github.com/ValveResourceFormat/ValveResourceFormat/releases/download/19.1/cli-macos-arm64.zip"
@@ -316,6 +323,12 @@ safe_cp -r "$citadel_folder"/panorama/images/items/ images/
 safe_cp -r "$citadel_folder"/panorama/images/shop/ images/
 safe_cp -r "$citadel_folder"/panorama/images/main_menu/ images/
 safe_cp -r "$citadel_folder"/panorama/images/npcs images/
+safe_cp -r "$citadel_folder"/panorama/images/hero_badges images/
+safe_cp -r "$citadel_folder"/panorama/images/overviews images/
+mkdir -p images/events images/seasonal/2026 images/tooltips/items
+safe_cp -r "$citadel_folder"/panorama/images/events/voting_sept2026 images/events/
+safe_cp "$citadel_folder"/panorama/images/seasonal/2026/vote_* images/seasonal/2026/
+safe_cp "$citadel_folder"/panorama/images/tooltips/items/*_corrupted* images/tooltips/items/
 
 mkdir -p images/abilities
 safe_cp -r "$citadel_folder"/panorama/images/hud/abilities images/

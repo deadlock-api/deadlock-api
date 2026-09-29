@@ -1,0 +1,388 @@
+<!-- kv3 encoding:text:version{e21c7f3c-8a33-41c5-9977-a76d3a32aa0d} format:generic:version{7412167c-06e9-4698-aff2-e63eb59037e7} -->
+{
+	generic_data_type = "CModifierVData"
+	_include = 
+	[
+		resource_name:"scripts/modifiers_neutrals.vdata_inc",
+	]
+	modifier_obscured_by_steam = 
+	{
+		_class = "modifier_obscured"
+		m_strScreenParticleEffect = resource_name:""
+		m_nEnabledStateMask = "MODIFIER_STATE_STAMINA_REGEN_PAUSED"
+		m_strParticleEffect = resource_name:""
+		m_strParticleStatusEffect = resource_name:"particles/status_fx/status_fx_obscured_by_steam.vpcf"
+		m_vecScriptValues = 
+		[
+			{
+				m_eModifierValue = "MODIFIER_VALUE_STAMINA_REGEN_PER_SECOND_ADDITIVE"
+				m_value = -0.05
+			},
+			{
+				m_eModifierValue = "MODIFIER_VALUE_GRAVITY_SCALE"
+				m_value = 1.15
+			},
+		]
+		m_vecScriptEventHandlers = [  ]
+		m_eDebuffType = "MODIFIER_DEBUFF_ENEMY_TEAM_ONLY"
+		m_flRevealDuration = 1.0
+		m_flHideDuration = 1.0
+		m_bIsHidden = true
+	}
+	modifier_corrupted_penalty = 
+	{
+		_class = "modifier_corrupted_penalty"
+		m_bIsHidden = true
+		m_bNetworkValuesForStatsPreview = true
+	}
+	citadel_neutral_attack_bullet_to_pointmodifier = 
+	{
+		_class = "citadel_neutral_attack_bullet_to_pointmodifier"
+		_not_pickable = 2
+		m_WeaponInfo = 
+		{
+			m_iClipSize = -1
+			m_flCycleTime = 0.5
+			m_flVerticalPunch = 0
+			m_reloadDuration = 0.25
+			m_flBulletGravityScale = 0.0
+			m_flAutoReplenishClip = 4
+			m_flDamageFalloffStartRange = 2000
+			m_flDamageFalloffEndRange = 2000
+			m_flBulletLifetime = 4.0
+			m_flRange = 2000.0
+			m_flBulletSpeed = 600.0
+			m_strShootSound = soundevent:"Neutral.Camp.Bullet.Fire"
+			m_szBulletTravelTracerParticle = resource_name:"particles/npc/neutrals/generic_neutral/neutral_small_projectile.vpcf"
+			m_szMuzzleFlashEffectName = resource_name:"particles/npc/neutrals/generic_neutral/neutral_muzzle_flash_small.vpcf"
+			m_strWeaponImpactEffect = resource_name:"particles/npc/neutrals/generic_neutral/neutral_small_tracer_impact.vpcf"
+			m_strBulletWhizSound = soundevent:"Neutral.Camp.Bullet.Whizby"
+			m_strBulletLoopingSound = soundevent:"Trooper.Weapon.Lob.Proj"
+			m_mapImpactEffects = 
+			{
+				default = 
+				{
+					m_strDecal = "Impact.Concrete"
+					m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+				}
+			}
+		}
+		_editor = 
+		{
+			folder_name = "Neutral Ability Base"
+		}
+	}
+	citadel_neutral_light_melee_weak = 
+	{
+		m_flCastDelayTime = 0.17
+		m_flChannelTime = 0.63
+		m_flPostCastTime = 0.0
+		m_flCooldownTime = 1.0
+		m_flForwardOffset = 50
+		m_flMeleeRadius = 100
+		m_flDamage = 12
+		m_eDamageType = "CITADEL_DAMAGETYPE_MELEE"
+		m_strAttackHitSound = soundevent:"Neutral.Camp.Melee.Hit"
+		m_strAttackMissSound = soundevent:""
+		m_MeleeSwingParticle = resource_name:"particles/npc/neutrals/generic_neutral/neutral_generic_melee_swing_wave.vpcf"
+		m_MeleeImpactParticle = resource_name:"particles/abilities/melee_impact.vpcf"
+		m_AutoCastDelayModifier = subclass:
+		{
+			_class = "modifier_base"
+			_my_subclass_name = "castdelay"
+			m_bIsHidden = true
+			m_strParticleEffect = resource_name:""
+		}
+		_editor = 
+		{
+			folder_name = "Neutral Ability Melee"
+		}
+		_base = "citadel_neutral_light_melee_base"
+		_class = "citadel_neutral_light_melee"
+		m_strCastSound = soundevent:""
+		m_strCastDelaySound = soundevent:"Neutral.Camp.Melee.Swing"
+	}
+	citadel_neutral_laser_beam_underhand_strong = 
+	{
+		_class = "citadel_neutral_laser_beam"
+		m_flCastDelayTime = 1.0
+		m_flChannelTime = 2.0
+		m_flPostCastTime = 0
+		m_flCooldownTime = 20.0
+		m_flStartDistancem = 5
+		m_flBeamMoveSpeedm = 8.0
+		m_flMaxTurnRate = 1.0
+		m_flAuraDuration = 10.0
+		m_flAuraDropTickRate = 0.1
+		m_flBeamDPS = 50
+		m_BeamChargingEffect = resource_name:"particles/npc/neutrals/neutral_laser/neutral_laser_beam_charge.vpcf"
+		m_BeamPreviewEffect = resource_name:"particles/npc/neutrals/neutral_laser/neutral_laser_beam_warning_preview.vpcf"
+		m_BeamParticle = resource_name:"particles/npc/neutrals/neutral_laser/neutral_laser_beam.vpcf"
+		m_BeamStartSound = soundevent:"Neutral.Camp.Beam.Start"
+		m_BeamStopSound = soundevent:"Neutral.Camp.Beam.Stop"
+		m_BeamPointStartLoopSound = soundevent:"Neutral.Camp.Beam.Lp.Point.Start"
+		m_BeamPointClosestLoopSound = soundevent:"Neutral.Camp.Beam.Lp.Point.Closest"
+		m_strCastDelaySound = soundevent:"Neutral.Camp.Beam.Charge"
+		m_GroundAuraModifier = subclass:
+		{
+			_class = "modifier_neutral_ground_effect_aura"
+			_my_subclass_name = "modifier_neutral_ground_effect_aura"
+			m_strParticleEffect = resource_name:"particles/npc/neutrals/neutral_laser/neutral_laser_ground_linger.vpcf"
+			m_flModifierProvidedByAuraDuration = 1.0
+			m_flAuraRadius = 70.0
+			m_iAuraSearchType = "CITADEL_UNIT_TARGET_ALL_ENEMY"
+			m_bRemoveProvidedModifierOnAuraRemoval = false
+			m_modifierProvidedByAura = subclass:
+			{
+				_class = "modifier_neutral_dot_debuff"
+				_my_subclass_name = "modifier_neutral_dot_debuff"
+				m_bIsHidden = true
+				m_strParticleStatusEffect = resource_name:"particles/status_fx/status_fx_neutral_laser_beam_debuff.vpcf"
+				m_strParticleEffect = resource_name:"particles/npc/neutrals/neutral_laser/neutral_laser_beam_debuff_tag_enemy.vpcf"
+				m_flTickRate = 0.5
+				m_flDPS = 100.0
+				m_sAmbientLoopingSound = soundevent:"Neutral.Camp.Beam.Modifier.Lp"
+			}
+			m_flDPS = 100
+		}
+		_editor = 
+		{
+			folder_name = "Neutral Ability"
+		}
+		_base = "citadel_neutral_laser_beam_underhand"
+		m_flBeamWidth = 15.0
+		m_flBeamLength = 2000
+		m_AutoChannelModifier = subclass:
+		{
+			_class = "modifier_base"
+			_my_subclass_name = "autochannel"
+			m_bIsHidden = true
+			m_nEnabledStateMask = "MODIFIER_STATE_LOCKED_AIM_ANGLES"
+		}
+	}
+	citadel_neutral_attack_lobfire = 
+	{
+		_class = "citadel_neutral_attack_lobfire"
+		m_WeaponInfo = 
+		{
+			m_iClipSize = -1
+			m_flCycleTime = 0.5
+			m_flVerticalPunch = 0
+			m_reloadDuration = 0.25
+			m_flBulletGravityScale = 0.0
+			m_flAutoReplenishClip = 4
+			m_flDamageFalloffStartRange = 2000
+			m_flDamageFalloffEndRange = 2000
+			m_flBulletLifetime = 4.0
+			m_flRange = 2000.0
+			m_flBulletSpeed = 600.0
+			m_strShootSound = soundevent:"Neutral.Camp.Bullet.Fire"
+			m_szBulletTravelTracerParticle = resource_name:"particles/npc/neutrals/generic_neutral/neutral_small_projectile.vpcf"
+			m_szMuzzleFlashEffectName = resource_name:"particles/npc/neutrals/generic_neutral/neutral_muzzle_flash_small.vpcf"
+			m_strWeaponImpactEffect = resource_name:"particles/npc/neutrals/generic_neutral/neutral_small_tracer_impact.vpcf"
+			m_strBulletWhizSound = soundevent:"Neutral.Camp.Bullet.Whizby"
+			m_strBulletLoopingSound = soundevent:"Neutral.Camp.LobFire.Projectile.Lp"
+			m_mapImpactEffects = 
+			{
+				default = 
+				{
+					m_strDecal = "Impact.Concrete"
+					m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+				}
+			}
+		}
+		_editor = 
+		{
+			folder_name = "Neutral Ability"
+		}
+		_base = "citadel_neutral_attack_bullet_to_pointmodifier"
+		m_flCastDelayTime = 1.0
+		m_flChannelTime = 2.0
+		m_flPostCastTime = 0
+		m_flCooldownTime = 20.0
+		m_nBulletCount = 3
+		m_flFireRate = 0.2
+		m_flBulletSpeed = 1000.0
+		m_flTargetPosRNG = 100.0
+		m_flImpactEffectRadius = 60
+		m_ImpactParticle = resource_name:"particles/abilities/ghost/ghost_blood_bomb_explode.vpcf"
+		m_TracerParticle = resource_name:"particles/abilities/ghost/ghost_blood_bomb_projectile.vpcf"
+		m_ShootSound = soundevent:"Neutral.Camp.LobFire.Fire"
+		m_HitSound = soundevent:"Neutral.Camp.LobFire.Explode"
+		m_flDamage = 100.0
+		m_flModifierDuration = 6.0
+		m_GroundPointModifier = subclass:
+		{
+			_class = "modifier_neutral_ground_effect_aura"
+			_my_subclass_name = "modifier_neutral_ground_effect_aura"
+			m_strParticleEffect = resource_name:"particles/npc/neutrals/neutral_laser/neutral_laser_ground_linger.vpcf"
+			m_flModifierProvidedByAuraDuration = 1.0
+			m_flAuraRadius = 60.0
+			m_iAuraSearchType = "CITADEL_UNIT_TARGET_ALL_ENEMY"
+			m_bRemoveProvidedModifierOnAuraRemoval = false
+			m_modifierProvidedByAura = subclass:
+			{
+				_class = "modifier_neutral_dot_debuff"
+				_my_subclass_name = "modifier_neutral_dot_debuff"
+				m_bIsHidden = true
+				m_strParticleStatusEffect = resource_name:"particles/status_fx/status_fx_inferno_flame_dash_debuff.vpcf"
+				m_strParticleEffect = resource_name:"particles/abilities/inferno/inferno_flame_dash_tag_enemy.vpcf"
+				m_flTickRate = 0.5
+				m_flDPS = 100
+				m_sAmbientLoopingSound = soundevent:"Neutral.Camp.Beam.Modifier.Lp"
+			}
+		}
+	}
+	citadel_neutral_self_bomb = 
+	{
+		_class = "citadel_neutral_self_cast_bomb"
+		m_flCastDelayTime = 0.0
+		m_flChannelTime = 0.5
+		m_flPostCastTime = 4.5
+		m_flCooldownTime = 15.0
+		m_flModifierDuration = 3.5
+		m_SelfCastModifier = subclass:
+		{
+			_class = "citadel_modifier_neutral_self_bomb"
+			_my_subclass_name = "citadel_modifier_neutral_self_bomb"
+			m_bIsHidden = true
+			m_bDurationReducible = false
+			m_strExplodeSound = soundevent:"Neutral.BarrelBomb.Wood.Explode"
+			m_strTickTockSound = soundevent:"Neutral.BarrelBomb.Wood.Alarm.Loop"
+			m_strTickTockFastSound = soundevent:"Neutral.BarrelBomb.Wood.Alert.Detonate"
+			m_BombAttachedParticle = resource_name:"particles/npc/neutrals/neutral_barrel_creature/neutral_attack_self_explode_attached.vpcf"
+			m_RadiusParticle = resource_name:"particles/npc/neutrals/neutral_barrel_creature/neutral_attack_self_explode_radius_warning_telegraph.vpcf"
+			m_ExplodeParticle = resource_name:"particles/npc/neutrals/neutral_barrel_creature/neutral_attack_self_explode_detonation.vpcf"
+			m_strParticleStatusEffect = resource_name:"particles/npc/neutrals/neutral_barrel_creature/neutral_attack_self_explode_status_effect.vpcf"
+			m_flDamage = 200.0
+		}
+		_editor = 
+		{
+			folder_name = "Neutral Ability"
+		}
+	}
+	citadel_neutral_attack_sludge_strong = 
+	{
+		_class = "citadel_neutral_attack_sludge"
+		m_WeaponInfo = 
+		{
+			m_iClipSize = -1
+			m_flCycleTime = 0.5
+			m_flVerticalPunch = 0
+			m_reloadDuration = 0.25
+			m_flBulletGravityScale = 0.0
+			m_flAutoReplenishClip = 4
+			m_flDamageFalloffStartRange = 2000
+			m_flDamageFalloffEndRange = 2000
+			m_flBulletLifetime = 4.0
+			m_flRange = 2000.0
+			m_flBulletSpeed = 600.0
+			m_strShootSound = soundevent:"Neutral.Camp.Bullet.Fire"
+			m_szBulletTravelTracerParticle = resource_name:"particles/npc/neutrals/generic_neutral/neutral_small_projectile.vpcf"
+			m_szMuzzleFlashEffectName = resource_name:"particles/npc/neutrals/generic_neutral/neutral_muzzle_flash_small.vpcf"
+			m_strWeaponImpactEffect = resource_name:"particles/npc/neutrals/generic_neutral/neutral_small_tracer_impact.vpcf"
+			m_strBulletWhizSound = soundevent:"Neutral.Camp.Bullet.Whizby"
+			m_strBulletLoopingSound = soundevent:"Neutral.Camp.Sludge.Attack.Proj.Lp"
+			m_mapImpactEffects = 
+			{
+				default = 
+				{
+					m_strDecal = "Impact.Concrete"
+					m_strParticle = resource_name:"particles/impact_fx/impact_spark_spray_large.vpcf"
+				}
+			}
+		}
+		_editor = 
+		{
+			folder_name = "Neutral Ability"
+		}
+		_base = "citadel_neutral_attack_sludge"
+		m_flCastDelayTime = 1.15
+		m_flChannelTime = 2.1
+		m_flPostCastTime = 1.0
+		m_flCooldownTime = 20.0
+		m_flFireRate = 0.2
+		m_flBulletSpeed = 600.0
+		m_flTargetPosRNG = 80.0
+		m_flTargetOffsetPerShot = 0
+		m_nBulletCount = 15
+		m_flDamage = 10.0
+		m_flImpactEffectRadius = 60
+		m_ImpactParticle = resource_name:"particles/npc/neutrals/neutral_drain_creature/neutral_attack_sludge_impact.vpcf"
+		m_TracerParticle = resource_name:"particles/npc/neutrals/neutral_drain_creature/neutral_attack_sludge_projectile.vpcf"
+		m_ShootSound = soundevent:"Neutral.Camp.Sludge.Attack.Fire"
+		m_HitSound = soundevent:"Neutral.Camp.Sludge.Attack.Explode"
+		m_flModifierDuration = 4.1
+		m_AutoCastDelayModifier = subclass:
+		{
+			_class = "modifier_base"
+			_my_subclass_name = "castdelay"
+			m_bIsHidden = true
+			m_strParticleEffect = resource_name:"particles/npc/neutrals/neutral_drain_creature/neutral_attack_sludge_warmup.vpcf"
+		}
+		m_GroundPointModifier = subclass:
+		{
+			_class = "modifier_neutral_attack_sludge_aura"
+			_my_subclass_name = "modifier_neutral_attack_sludge_aura"
+			m_flModifierProvidedByAuraDuration = 3.0
+			m_flAuraRadius = 200.0
+			m_iAuraSearchType = "CITADEL_UNIT_TARGET_ALL_ENEMY"
+			m_bRemoveProvidedModifierOnAuraRemoval = false
+			m_strParticleEffect = resource_name:"particles/npc/neutrals/neutral_drain_creature/neutral_attack_sludge_puddle.vpcf"
+			m_modifierProvidedByAura = subclass:
+			{
+				_class = "modifier_neutral_dot_debuff"
+				_my_subclass_name = "modifier_neutral_dot_debuff"
+				m_bIsHidden = true
+				m_flDuration = 3.0
+				m_strParticleStatusEffect = resource_name:"particles/status_fx/status_fx_neutral_attack_sludge_debuff.vpcf"
+				m_strParticleEffect = resource_name:"particles/npc/neutrals/neutral_drain_creature/neutral_attack_sludge_tag_enemy.vpcf"
+				m_vecScriptValues = 
+				[
+					{
+						m_eModifierValue = "MODIFIER_VALUE_MOVEMENT_SPEED_SLOW_PERCENT"
+						m_value = 40.0
+					},
+					{
+						m_eModifierValue = "MODIFIER_VALUE_MOVEMENT_GROUND_DASH_REDUCTION_PERCENT"
+						m_value = -36.0
+					},
+				]
+				m_flTickRate = 0.5
+				m_flDPS = 30
+			}
+		}
+		m_strCastDelaySound = soundevent:"Neutral.Camp.Sludge.Attack.Cast.Delay"
+		m_flHangTime = 1.15
+		m_flLobGravityScale = 1.0
+		m_flNoTargetDistance = 400.0
+	}
+	modifier_neutral_attack_explode_on_death = 
+	{
+		_class = "modifier_neutral_attack_explode_on_death"
+		m_flExplodeDamage = 75.0
+		m_flExplodeRadius = 120.0
+		m_ExplodeParticle = resource_name:"particles/npc/neutrals/neutral_specimen/neutral_attack_specimen_self_explode.vpcf"
+		m_ExplodeSound = soundevent:"Neutral.Camp.Sludge.Attack.Explode"
+		m_ExplodeDebuffModifier = subclass:
+		{
+			_class = "modifier_base"
+			_my_subclass_name = "explode_debuff"
+			m_bIsHidden = true
+			m_flDuration = 3.0
+			m_strParticleStatusEffect = resource_name:"particles/status_fx/status_fx_inferno_flame_dash_debuff.vpcf"
+			m_strParticleEffect = resource_name:"particles/abilities/inferno/inferno_flame_dash_tag_enemy.vpcf"
+			m_vecScriptValues = 
+			[
+				{
+					m_eModifierValue = "MODIFIER_VALUE_MOVEMENT_SPEED_SLOW_PERCENT"
+					m_value = 30.0
+				},
+				{
+					m_eModifierValue = "MODIFIER_VALUE_MOVEMENT_GROUND_DASH_REDUCTION_PERCENT"
+					m_value = -26.0
+				},
+			]
+		}
+	}
+}

@@ -16,6 +16,7 @@ mod items;
 mod loot_tables;
 mod map;
 mod misc_entities;
+mod modifiers;
 mod npc_units;
 mod r2_index;
 mod ranked_seasons;
@@ -34,6 +35,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .nest("/loot-tables", loot_tables::router())
         .nest("/map", map::router())
         .nest("/misc-entities", misc_entities::router())
+        .nest("/modifiers", modifiers::router())
         .nest("/npc-units", npc_units::router())
         .merge(r2_index::router())
         .nest("/ranked-seasons", ranked_seasons::router())

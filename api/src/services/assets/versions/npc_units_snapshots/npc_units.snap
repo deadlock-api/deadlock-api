@@ -1357,6 +1357,11 @@ expression: units
   {
     "class_name": "neutral_trooper_weak",
     "id": 1250952856,
+    "neutral_damage_growth": {
+      "subclass": {
+        "damage_growth_pct_per_min": 0.5
+      }
+    },
     "weapon_info": {
       "can_zoom": true,
       "bullet_damage": 2.415,
@@ -1445,6 +1450,11 @@ expression: units
   {
     "class_name": "neutral_trooper_normal",
     "id": 941701082,
+    "neutral_damage_growth": {
+      "subclass": {
+        "damage_growth_pct_per_min": 0.5
+      }
+    },
     "weapon_info": {
       "can_zoom": true,
       "bullet_damage": 6.125,
@@ -1533,6 +1543,11 @@ expression: units
   {
     "class_name": "neutral_trooper_strong",
     "id": 3392417854,
+    "neutral_damage_growth": {
+      "subclass": {
+        "damage_growth_pct_per_min": 0.5
+      }
+    },
     "weapon_info": {
       "can_zoom": true,
       "bullet_damage": 9.1,

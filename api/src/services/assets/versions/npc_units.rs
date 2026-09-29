@@ -1,5 +1,6 @@
 //! `/v1/assets/npc-units` data layer — fetch + parse + transform.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use cached::macros::cached;
@@ -9,10 +10,10 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::services::assets::versions::common::{
-    Color, HeroItemType, Subclass, WrapSubclass, build_from_kv3, entity_id,
+    Color, HeroItemType, IMAGE_BASE_URL, Subclass, WrapSubclass, build_from_kv3, entity_id,
 };
 use crate::services::assets::versions::error::AssetsError;
-use crate::services::assets::versions::store;
+use crate::services::assets::versions::{localization, store};
 
 // ===================================================== Raw KV3 shape
 
@@ -266,8 +267,33 @@ struct RawObjectiveHealthGrowthPhase {
     growth_start_time_in_minutes: Option<i64>,
 }
 
+#[derive(Debug, Deserialize, Clone, Copy)]
+struct RawNeutralDamageGrowth {
+    #[serde(default, rename = "m_flDamageGrowthPctPerMin")]
+    damage_growth_pct_per_min: Option<f64>,
+}
+
 #[derive(Debug, Deserialize)]
 struct RawNpcUnit {
+    /// Localization token (`#neutral_trash_1`) or bare key (`walker_unit`).
+    #[serde(default, rename = "m_sLocUnitName")]
+    loc_unit_name: Option<String>,
+    /// `NEUTRAL_NPC_WEAK` / `_NORMAL` / `_STRONG`, `NEUTRAL_SINNERS_SACRIFICE` (6711+).
+    #[serde(default, rename = "m_eNeutralType")]
+    neutral_type: Option<String>,
+    /// Ability names defined in `modifiers.vdata` (6711+).
+    #[serde(default, rename = "m_vNeutralAbilities")]
+    neutral_abilities: Option<Vec<String>>,
+    #[serde(default, rename = "m_sNeutralMelee")]
+    neutral_melee: Option<String>,
+    /// `panorama:"file://{images}/npcs/neutrals/<name>.psd"`.
+    #[serde(default, rename = "m_strCustomUnitIcon")]
+    custom_unit_icon: Option<String>,
+    /// Distance threshold → soul orb class shown to the viewer.
+    #[serde(default, rename = "m_mapViewerSoulsClass")]
+    viewer_souls_class: Option<IndexMap<String, String>>,
+    #[serde(default, rename = "m_NeutralDamageGrowth")]
+    neutral_damage_growth: Option<WrapSubclass<RawNeutralDamageGrowth>>,
     /// Builds up to 6701.
     #[serde(default, rename = "m_WeaponInfo")]
     weapon_info: Option<RawWeaponInfo>,
@@ -645,9 +671,39 @@ pub(crate) struct ObjectiveHealthGrowthPhase {
 }
 
 #[derive(Debug, Serialize, Clone, ToSchema)]
+pub(crate) struct NeutralDamageGrowth {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub damage_growth_pct_per_min: Option<f64>,
+}
+
+#[derive(Debug, Serialize, Clone, ToSchema)]
 pub(crate) struct NpcUnit {
     pub class_name: String,
     pub id: u32,
+    /// Localized unit name (`m_sLocUnitName`), e.g. `Gutter Ghoul I`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Neutral tier, e.g. `NEUTRAL_NPC_WEAK` (builds 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub neutral_type: Option<String>,
+    /// Neutral ability class names; see `/v1/assets/modifiers` (builds 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub neutral_abilities: Option<Vec<String>>,
+    /// Neutral melee ability class name; see `/v1/assets/modifiers` (builds 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub neutral_melee: Option<String>,
+    /// Unit icon (`m_strCustomUnitIcon`) as png.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image: Option<String>,
+    /// Unit icon (`m_strCustomUnitIcon`) as webp.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image_webp: Option<String>,
+    /// Distance threshold (as string key) → soul orb class shown to the viewer.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(value_type = Option<std::collections::HashMap<String, String>>)]
+    pub viewer_souls_class: Option<IndexMap<String, String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub neutral_damage_growth: Option<Subclass<NeutralDamageGrowth>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub weapon_info: Option<WeaponInfo>,
     /// Secondary weapon the unit uses against bosses (builds 6711+).
@@ -784,14 +840,48 @@ pub(crate) struct NpcUnit {
 
 // ===================================================== Build
 
-pub(crate) fn build_npc_units(vdata: &str) -> Result<Vec<NpcUnit>, AssetsError> {
+pub(crate) fn build_npc_units(
+    vdata: &str,
+    loc: &HashMap<String, String>,
+) -> Result<Vec<NpcUnit>, AssetsError> {
     // `generic_data_type` and other scalar top-level keys are filtered out.
-    build_from_kv3(vdata, "npc unit", |_, value| value.is_object(), transform)
+    build_from_kv3(
+        vdata,
+        "npc unit",
+        |_, value| value.is_object(),
+        |class_name, raw| transform(class_name, raw, loc),
+    )
+}
+
+/// Resolve `m_strCustomUnitIcon` (`panorama:"file://{images}/npcs/neutrals/x.psd"`)
+/// to its `(png, webp)` bucket URLs. The pipeline copies `panorama/images/npcs`
+/// to `images/npcs` and strips the `_psd` suffix `Source2Viewer` appends.
+fn unit_icon_urls(v: Option<&str>) -> Option<(String, String)> {
+    let v = v?.replace('"', "");
+    let (_, tail) = v.rsplit_once("{images}/")?;
+    let stem = tail
+        .rsplit_once('.')
+        .map_or(tail, |(stem, _)| stem)
+        .trim_end_matches("_psd")
+        .trim_end_matches("_png");
+    if stem.is_empty() {
+        return None;
+    }
+    Some((
+        format!("{IMAGE_BASE_URL}/{stem}.png"),
+        format!("{IMAGE_BASE_URL}/{stem}.webp"),
+    ))
 }
 
 #[expect(clippy::too_many_lines)]
-fn transform(class_name: String, mut r: RawNpcUnit) -> NpcUnit {
+fn transform(class_name: String, mut r: RawNpcUnit, loc: &HashMap<String, String>) -> NpcUnit {
     let id = entity_id(&class_name);
+    let name = r
+        .loc_unit_name
+        .take()
+        .filter(|t| !t.is_empty())
+        .map(|t| localization::localize(loc, &t));
+    let (image, image_webp) = unit_icon_urls(r.custom_unit_icon.as_deref()).unzip();
 
     let mut weapon_infos = r.weapon_infos.take().unwrap_or_default();
     let boss_weapon_info = weapon_infos
@@ -811,6 +901,18 @@ fn transform(class_name: String, mut r: RawNpcUnit) -> NpcUnit {
     });
 
     NpcUnit {
+        name,
+        neutral_type: r.neutral_type,
+        neutral_abilities: r.neutral_abilities,
+        neutral_melee: r.neutral_melee.filter(|s| !s.is_empty()),
+        image,
+        image_webp,
+        viewer_souls_class: r.viewer_souls_class.filter(|m| !m.is_empty()),
+        neutral_damage_growth: r.neutral_damage_growth.map(|s| Subclass {
+            subclass: NeutralDamageGrowth {
+                damage_growth_pct_per_min: s.subclass.damage_growth_pct_per_min,
+            },
+        }),
         weapon_info,
         boss_weapon_info,
         max_health: r.max_health,
@@ -1126,13 +1228,26 @@ fn normalize_spread_penalty(p: SpreadPenalty) -> Option<SpreadPenalty> {
 
 // ===================================================== Cached fetch
 
-#[cached(max_size = 64, ttl_secs = 86400, convert = "{ version }", key = "u32")]
+#[cached(
+    max_size = 64,
+    ttl_secs = 86400,
+    convert = r#"{ (version, language.to_owned()) }"#,
+    key = "(u32, String)"
+)]
 pub(crate) async fn fetch_npc_units(
     r2: &AmazonS3,
     version: u32,
+    language: &str,
 ) -> Result<Arc<Vec<NpcUnit>>, AssetsError> {
-    let vdata = store::fetch_text(r2, version, "scripts/npc_units.vdata").await?;
-    let units = build_npc_units(&vdata)?;
+    let (vdata, loc) = tokio::try_join!(
+        async {
+            store::fetch_text(r2, version, "scripts/npc_units.vdata")
+                .await
+                .map_err(AssetsError::from)
+        },
+        localization::fetch_localization(r2, version, language),
+    )?;
+    let units = build_npc_units(&vdata, &loc)?;
     Ok(Arc::new(units))
 }
 
@@ -1148,10 +1263,76 @@ mod tests {
 
     #[test]
     fn snapshot_npc_units() {
-        let units = build_npc_units(&fixture()).expect("builds");
+        let units = build_npc_units(&fixture(), &HashMap::new()).expect("builds");
         insta::with_settings!(
             { snapshot_path => "npc_units_snapshots", prepend_module_to_snapshot => false, sort_maps => true },
             { insta::assert_json_snapshot!("npc_units", units); }
         );
+    }
+
+    fn loc_6712() -> HashMap<String, String> {
+        [
+            ("neutral_trash_1", "Gutter Ghoul I"),
+            ("neutral_trash_3", "Gutter Ghoul III"),
+            ("neutral_underhand_3", "Underhand III"),
+            ("neutral_barrel_1", "Barrel Mimic I"),
+            ("neutral_sinners", "Sinner's Sacrifice"),
+            ("walker_unit", "Walker"),
+        ]
+        .into_iter()
+        .map(|(k, v)| (k.to_owned(), v.to_owned()))
+        .collect()
+    }
+
+    /// Trimmed build 6712 ("City Never Sleeps") fixture with Haunt neutrals.
+    #[test]
+    fn snapshot_npc_units_6712() {
+        let manifest = env!("CARGO_MANIFEST_DIR");
+        let vdata = std::fs::read_to_string(format!(
+            "{manifest}/src/services/assets/versions/npc_units_fixtures/npc_units_6712.vdata"
+        ))
+        .expect("vdata fixture");
+        let units = build_npc_units(&vdata, &loc_6712()).expect("builds");
+        let underhand = units
+            .iter()
+            .find(|u| u.class_name == "neutral_underground_strong")
+            .expect("underhand");
+        assert_eq!(underhand.name.as_deref(), Some("Underhand III"));
+        assert_eq!(
+            underhand.neutral_type.as_deref(),
+            Some("NEUTRAL_NPC_STRONG")
+        );
+        assert_eq!(
+            underhand.image_webp.as_deref(),
+            Some(
+                "https://assets-bucket.deadlock-api.com/assets-api-res/images/npcs/neutrals/neutral_underground_heavy.webp"
+            )
+        );
+        insta::with_settings!(
+            { snapshot_path => "npc_units_snapshots", prepend_module_to_snapshot => false, sort_maps => true },
+            { insta::assert_json_snapshot!("npc_units_6712", units); }
+        );
+    }
+
+    #[test]
+    fn unit_icon_urls_strip_suffixes() {
+        assert_eq!(
+            unit_icon_urls(Some(
+                r#"panorama:"file://{images}/npcs/neutrals/neutral_plant_weak.psd""#
+            )),
+            Some((
+                format!("{IMAGE_BASE_URL}/npcs/neutrals/neutral_plant_weak.png"),
+                format!("{IMAGE_BASE_URL}/npcs/neutrals/neutral_plant_weak.webp"),
+            ))
+        );
+        assert_eq!(
+            unit_icon_urls(Some("file://{images}/npcs/core_psd.vtex")),
+            Some((
+                format!("{IMAGE_BASE_URL}/npcs/core.png"),
+                format!("{IMAGE_BASE_URL}/npcs/core.webp"),
+            ))
+        );
+        assert_eq!(unit_icon_urls(Some("")), None);
+        assert_eq!(unit_icon_urls(None), None);
     }
 }
