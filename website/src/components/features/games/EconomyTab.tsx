@@ -24,12 +24,7 @@ function Section({ icon, title, children }: { icon: LucideIcon; title: string; c
 
 export default function EconomyTab({ params, isStreetBrawl = false }: EconomyTabProps) {
   if (isStreetBrawl) {
-    return (
-      <EmptyState
-        title="Soul economy isn't tracked in Street Brawl."
-        description="Pick a standard game mode to explore economy stats."
-      />
-    );
+    return <EmptyState title="Soul economy isn't tracked in Street Brawl." />;
   }
 
   const perfParams: AnalyticsApiPlayerPerformanceCurveRequest = {
