@@ -8,16 +8,31 @@ import { PageShell } from "~/components/patterns/page/PageShell";
 import { Stack } from "~/components/ui/stack";
 import { formatBlogDate } from "~/lib/blog-date";
 import { fetchBlogPosts } from "~/lib/blog-fns";
-import { pageTitle, seo } from "~/lib/seo";
+import { ORGANIZATION, pageTitle, seo, SITE_URL } from "~/lib/seo";
 
 import { TagBadge } from "./-tag-badge";
 
 export const Route = createFileRoute("/blog/")({
-  head: () =>
+  head: ({ loaderData }) =>
     seo({
       title: pageTitle("Blog"),
       description: "Updates, patch analyses, meta insights, and development news from the Deadlock API team.",
       path: "/blog",
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "Blog",
+        "@id": `${SITE_URL}/blog#blog`,
+        name: "Deadlock API Blog",
+        url: `${SITE_URL}/blog`,
+        publisher: ORGANIZATION,
+        blogPost: (loaderData ?? []).map((post) => ({
+          "@type": "BlogPosting",
+          headline: post.title,
+          url: `${SITE_URL}/blog/${post.slug}`,
+          datePublished: post.date,
+          author: { "@type": "Person", name: post.author },
+        })),
+      },
     }),
   loader: () => fetchBlogPosts(),
   component: BlogIndex,
