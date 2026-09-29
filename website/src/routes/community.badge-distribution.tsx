@@ -69,8 +69,8 @@ export const Route = createFileRoute("/community/badge-distribution")({
     const year = new Date().getFullYear();
     const median = loaderData?.medianRank ? ` Half of all players sit at ${loaderData.medianRank} or below.` : "";
     return seo({
-      title: pageTitle(`Deadlock Rank Distribution ${year} & Percentiles`),
-      description: `See the Deadlock rank distribution across all badges and subtiers.${median} Find out what percentage of players are at each rank on the competitive ladder.`,
+      title: pageTitle(`Deadlock Rank Distribution ${year}: % of Players per Rank`),
+      description: `What percent of Deadlock players sit at each rank and subtier, from Obscurus to Eternus.${median}`,
       path: "/community/badge-distribution",
       jsonLd: {
         "@context": "https://schema.org",
