@@ -53,13 +53,18 @@ KEEP_CSS=(
 # The API only loads these vdata files.
 KEEP_VDATA=(
     generic_data.vdata
-    loot_tables.vdata
     heroes.vdata
     abilities.vdata
     accolades.vdata
     npc_units.vdata
     misc.vdata
     ranked_seasons.vdata
+)
+
+# Loaded by the API for older builds only; Valve dropped loot_tables.vdata in
+# build 6711, so copy it when present but never require it.
+OPTIONAL_VDATA=(
+    loot_tables.vdata
 )
 
 # Localization categories to pull into the versions folder.
@@ -220,7 +225,7 @@ mkdir -p "$VERSION_DIR/scripts" "$VERSION_DIR/styles" "$VERSION_DIR/localization
 cp "$citadel_folder/steam.inf" "$VERSION_DIR/"
 
 # vData files
-for f in "${KEEP_VDATA[@]}"; do
+for f in "${KEEP_VDATA[@]}" "${OPTIONAL_VDATA[@]}"; do
     if [ -f "$citadel_folder/scripts/$f" ]; then
         cp "$citadel_folder/scripts/$f" "$VERSION_DIR/scripts/"
     else
