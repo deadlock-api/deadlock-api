@@ -530,6 +530,11 @@ impl<'a> Parser<'a> {
         Err(self.err(format!("invalid number: {text}")))
     }
 
+    /// Bare keywords (`true`, `null`, enum names) and typed literals such as
+    /// `resource_name:"x"`, `soundevent:"x"` or `panorama:"x"`, which are kept
+    /// verbatim (prefix and quotes included). Unquoted whitespace or `,` ends
+    /// the token, so array elements (`[ resource_name:"a", resource_name:"b" ]`) don't
+    /// swallow their separator.
     fn parse_keyword_or_resource(&mut self) -> Kv3Value<'a> {
         let bytes = self.bytes();
         let start = self.idx;
@@ -538,15 +543,15 @@ impl<'a> Parser<'a> {
             let b = bytes[self.idx];
             if b == b'"' {
                 in_quotes = !in_quotes;
-            } else if b.is_ascii_whitespace()
-                || (!in_quotes && matches!(b, b'{' | b'}' | b'[' | b']'))
+            } else if !in_quotes
+                && (b.is_ascii_whitespace() || matches!(b, b'{' | b'}' | b'[' | b']' | b','))
             {
                 break;
             }
             self.idx += 1;
         }
-        // Loop breaks on whitespace before advancing, so the slice never has
-        // leading/trailing whitespace — no trim needed.
+        // Loop breaks on unquoted whitespace before advancing, so the slice
+        // never has leading/trailing whitespace — no trim needed.
         let kw = &self.src[start..self.idx];
         match kw {
             "true" => Kv3Value::Bool(true),
@@ -644,6 +649,40 @@ mod tests {
         assert_eq!(v["icon"]["flag"], "panorama");
         assert_eq!(v["icon"]["value"], "file://x");
         assert_eq!(v["sub"]["subclass"]["_name"], "foo");
+    }
+
+    #[test]
+    fn parses_typed_literals_in_arrays_like_object_values() {
+        let v: Value = from_str(
+            "{\n\
+             \t_include =\n\
+             \t[\n\
+             \t\tresource_name:\"scripts/misc_base.vdata\",\n\
+             \t\tresource_name:\"scripts/a, b.vdata\",\n\
+             \t]\n\
+             \tinline = [soundevent:\"A.B\",panorama:\"file://{images}/x.png\"]\n\
+             \tflags = [true, false, null, EFoo,EBar]\n\
+             \tsnd = soundevent:\"A.B\",\n\
+             }",
+        )
+        .expect("ok");
+        assert_eq!(
+            v["_include"],
+            serde_json::json!([
+                "resource_name:\"scripts/misc_base.vdata\"",
+                "resource_name:\"scripts/a, b.vdata\"",
+            ])
+        );
+        assert_eq!(
+            v["inline"],
+            serde_json::json!(["soundevent:\"A.B\"", "panorama:\"file://{images}/x.png\""])
+        );
+        assert_eq!(
+            v["flags"],
+            serde_json::json!([true, false, null, "EFoo", "EBar"])
+        );
+        // Same representation as the equivalent object value.
+        assert_eq!(v["snd"], v["inline"][0]);
     }
 
     #[test]
