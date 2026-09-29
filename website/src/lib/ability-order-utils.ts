@@ -150,3 +150,54 @@ export function getPickRate(node: AbilityTrieNode, parentMatches: number): numbe
 export function getSortedChildren(node: AbilityTrieNode): AbilityTrieNode[] {
   return Array.from(node.children.values()).sort((a, b) => b.matches - a.matches);
 }
+
+/** Ability order rows packed by column: each order is a string of base-36 indexes into `ids`. A hero's orders use
+ * four ability ids 15 times over, so this is about a seventh of the row JSON, and it is what the server dehydrates
+ * into the page (1.5k rows on /analytics/abilities). */
+export interface PackedAbilityOrders {
+  ids: number[];
+  orders: string[];
+  wins: number[];
+  losses: number[];
+  matches: number[];
+  players: number[];
+  kills: number[];
+  deaths: number[];
+  assists: number[];
+}
+
+export function packAbilityOrders(
+  rows: AnalyticsAbilityOrderStats[],
+): PackedAbilityOrders | AnalyticsAbilityOrderStats[] {
+  const ids = [...new Set(rows.flatMap((row) => row.abilities))];
+  // One base-36 digit per ability; a set this large is not a hero's kit, so leave it as it is.
+  if (ids.length > 36) return rows;
+  const index = new Map(ids.map((id, i) => [id, i.toString(36)]));
+  return {
+    ids,
+    orders: rows.map((row) => row.abilities.map((id) => index.get(id)).join("")),
+    wins: rows.map((row) => row.wins),
+    losses: rows.map((row) => row.losses),
+    matches: rows.map((row) => row.matches),
+    players: rows.map((row) => row.players),
+    kills: rows.map((row) => row.total_kills),
+    deaths: rows.map((row) => row.total_deaths),
+    assists: rows.map((row) => row.total_assists),
+  };
+}
+
+export function unpackAbilityOrders(
+  packed: PackedAbilityOrders | AnalyticsAbilityOrderStats[],
+): AnalyticsAbilityOrderStats[] {
+  if (Array.isArray(packed)) return packed;
+  return packed.orders.map((order, i) => ({
+    abilities: Array.from(order, (digit) => packed.ids[Number.parseInt(digit, 36)]),
+    wins: packed.wins[i],
+    losses: packed.losses[i],
+    matches: packed.matches[i],
+    players: packed.players[i],
+    total_kills: packed.kills[i],
+    total_deaths: packed.deaths[i],
+    total_assists: packed.assists[i],
+  }));
+}
