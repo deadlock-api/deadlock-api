@@ -119,6 +119,20 @@ pub(super) struct ItemFlowStatsQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     exclude_item_ids: Option<Vec<u32>>,
+    /// Comma separated list of ability ids: only players whose ability upgrade order starts with exactly this sequence (one entry per ability point spent, unlocks included; see `ability_unlock_order_prefix` to match only the unlock order). See more: <https://api.deadlock-api.com/v1/analytics/ability-order-stats>
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
+    ability_order_prefix: Option<Vec<u32>>,
+    /// Comma separated list of ability ids: only players who unlocked (put their first point into) their abilities in exactly this order, e.g. `a,b` for players who unlocked `a` first and `b` second. See more: <https://api.deadlock-api.com/v1/assets/heroes>
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
+    ability_unlock_order_prefix: Option<Vec<u32>>,
     /// Comma separated list of item ids forming a "locked" build path. Pairs positionally with
     /// `locked_columns`: the i-th item must have been bought in the i-th `locked_columns` stage.
     /// See more: <https://api.deadlock-api.com/v1/assets/items>
@@ -252,6 +266,8 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
         max_networth: query.max_networth,
         include_item_ids: query.include_item_ids.as_deref(),
         exclude_item_ids: query.exclude_item_ids.as_deref(),
+        ability_order_prefix: query.ability_order_prefix.as_deref(),
+        ability_unlock_order_prefix: query.ability_unlock_order_prefix.as_deref(),
         ..Default::default()
     }
     .build();

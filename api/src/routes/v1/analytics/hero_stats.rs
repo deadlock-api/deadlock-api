@@ -141,6 +141,20 @@ pub(crate) struct HeroStatsQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     exclude_item_ids: Option<Vec<u32>>,
+    /// Comma separated list of ability ids: only players whose ability upgrade order starts with exactly this sequence (one entry per ability point spent, unlocks included; see `ability_unlock_order_prefix` to match only the unlock order). See more: <https://api.deadlock-api.com/v1/analytics/ability-order-stats>
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
+    ability_order_prefix: Option<Vec<u32>>,
+    /// Comma separated list of ability ids: only players who unlocked (put their first point into) their abilities in exactly this order, e.g. `a,b` for players who unlocked `a` first and `b` second. See more: <https://api.deadlock-api.com/v1/assets/heroes>
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
+    ability_unlock_order_prefix: Option<Vec<u32>>,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     #[deprecated]
@@ -153,6 +167,18 @@ pub(crate) struct HeroStatsQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     account_ids: Option<Vec<u32>>,
+}
+
+impl HeroStatsQuery {
+    fn has_ability_order_filter(&self) -> bool {
+        self.ability_order_prefix
+            .as_ref()
+            .is_some_and(|v| !v.is_empty())
+            || self
+                .ability_unlock_order_prefix
+                .as_ref()
+                .is_some_and(|v| !v.is_empty())
+    }
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -225,7 +251,8 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
         || query.min_hero_matches.is_some()
         || query.max_hero_matches.is_some()
         || query.min_hero_matches_total.is_some()
-        || query.max_hero_matches_total.is_some();
+        || query.max_hero_matches_total.is_some()
+        || query.has_ability_order_filter();
     // The rollups only ingest Ranked/Unranked, so any other mode would read zero rows.
     let unsupported_match_mode = !MatchMode::is_agg_servable(query.match_mode.as_deref());
     if personalized || unsupported_filter || unsupported_match_mode {
@@ -332,6 +359,8 @@ fn build_query(query: &HeroStatsQuery) -> String {
         max_networth: query.max_networth,
         include_item_ids: query.include_item_ids.as_deref(),
         exclude_item_ids: query.exclude_item_ids.as_deref(),
+        ability_order_prefix: query.ability_order_prefix.as_deref(),
+        ability_unlock_order_prefix: query.ability_unlock_order_prefix.as_deref(),
         ..Default::default()
     }
     .build();
@@ -385,10 +414,11 @@ fn build_query(query: &HeroStatsQuery) -> String {
         || query
             .exclude_item_ids
             .as_ref()
-            .is_some_and(|ids| !ids.is_empty());
+            .is_some_and(|ids| !ids.is_empty())
+        || query.has_ability_order_filter();
     // An account-scoped read is a primary-key range on player_match_stats but opens every part
-    // of match_player; only the item arrays, which player_match_stats does not carry, force the
-    // wide table.
+    // of match_player; only the item and ability arrays, which player_match_stats does not
+    // carry, force the wide table.
     let source_table = if has_account_filter && !has_item_filter {
         "player_match_stats"
     } else {
@@ -587,6 +617,31 @@ mod tests {
         assert!(!sql.contains("FINAL"));
         assert!(sql.contains("LIMIT 1 BY match_id, account_id"));
     }
+
+    #[test]
+    fn ability_order_filter_reads_match_player_not_rollups() {
+        let query = HeroStatsQuery {
+            account_ids: Some(vec![1]),
+            ability_order_prefix: Some(vec![1_999_680_326, 1_842_576_017]),
+            ..Default::default()
+        };
+        assert!(build_mv_query(&query).is_none());
+        let sql = build_query(&query);
+        assert_valid_sql(&sql);
+        assert!(sql.contains("FROM match_player\n"));
+        assert!(sql.contains("arraySlice(abilities, 1, 2) = [1999680326, 1842576017]"));
+
+        let unlock = HeroStatsQuery {
+            ability_unlock_order_prefix: Some(vec![1_999_680_326, 1_842_576_017]),
+            ..Default::default()
+        };
+        assert!(build_mv_query(&unlock).is_none());
+        let sql = build_query(&unlock);
+        assert_valid_sql(&sql);
+        assert!(
+            sql.contains("arraySlice(arrayDistinct(abilities), 1, 2) = [1999680326, 1842576017]")
+        );
+    }
 }
 
 #[cfg(test)]
@@ -625,6 +680,8 @@ mod proptests {
             query.max_hero_matches = None;
             query.min_hero_matches_total = None;
             query.max_hero_matches_total = None;
+            query.ability_order_prefix = None;
+            query.ability_unlock_order_prefix = None;
             query.min_unix_timestamp = Some(i64::MAX / 2);
             if let Some(mv) = build_mv_query(&query) {
                 assert_valid_sql(&mv);

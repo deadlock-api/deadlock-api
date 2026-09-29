@@ -247,6 +247,20 @@ pub(crate) struct ItemStatsQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     exclude_item_ids: Option<Vec<u32>>,
+    /// Comma separated list of ability ids: only players whose ability upgrade order starts with exactly this sequence (one entry per ability point spent, unlocks included; see `ability_unlock_order_prefix` to match only the unlock order). See more: <https://api.deadlock-api.com/v1/analytics/ability-order-stats>
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
+    ability_order_prefix: Option<Vec<u32>>,
+    /// Comma separated list of ability ids: only players who unlocked (put their first point into) their abilities in exactly this order, e.g. `a,b` for players who unlocked `a` first and `b` second. See more: <https://api.deadlock-api.com/v1/assets/heroes>
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
+    ability_unlock_order_prefix: Option<Vec<u32>>,
     /// The minimum number of matches played for an item to be included in the response.
     #[serde(default = "default_min_matches")]
     #[param(minimum = 1, default = 20)]
@@ -287,6 +301,18 @@ pub(crate) struct ItemStatsQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_chains()")
     )]
     item_order: Option<Vec<Vec<u32>>>,
+}
+
+impl ItemStatsQuery {
+    fn has_ability_order_filter(&self) -> bool {
+        self.ability_order_prefix
+            .as_ref()
+            .is_some_and(|v| !v.is_empty())
+            || self
+                .ability_unlock_order_prefix
+                .as_ref()
+                .is_some_and(|v| !v.is_empty())
+    }
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -362,6 +388,7 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
         || query.min_bought_at_s.is_some()
         || query.max_bought_at_s.is_some()
         || query.item_order.as_ref().is_some_and(|v| !v.is_empty())
+        || query.has_ability_order_filter()
         || query.min_match_id.is_some()
         || query.max_match_id.is_some()
         || !MatchMode::is_agg_servable(query.match_mode.as_deref());
@@ -528,6 +555,7 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
         || query.min_bought_at_s.is_some()
         || query.max_bought_at_s.is_some()
         || query.item_order.as_ref().is_some_and(|v| !v.is_empty())
+        || query.has_ability_order_filter()
         || query.min_match_id.is_some()
         || query.max_match_id.is_some()
         || query.min_average_badge.is_some_and(|v| v > 11)
@@ -641,6 +669,7 @@ fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
         || query.min_bought_at_s.is_some()
         || query.max_bought_at_s.is_some()
         || query.item_order.as_ref().is_some_and(|v| !v.is_empty())
+        || query.has_ability_order_filter()
         || query.min_match_id.is_some()
         || query.max_match_id.is_some()
         || !MatchMode::is_agg_servable(query.match_mode.as_deref());
@@ -765,6 +794,7 @@ fn cohort_mv_skip_reason(query: &ItemStatsQuery) -> &'static str {
             "bought_at",
         ),
         (nonempty(query.item_order.as_deref()), "item_order"),
+        (query.has_ability_order_filter(), "ability_order"),
         (
             query.min_match_id.is_some() || query.max_match_id.is_some(),
             "match_id",
@@ -886,6 +916,8 @@ fn build_query(query: &ItemStatsQuery) -> String {
         max_networth: query.max_networth,
         include_item_ids: query.include_item_ids.as_deref(),
         exclude_item_ids: query.exclude_item_ids.as_deref(),
+        ability_order_prefix: query.ability_order_prefix.as_deref(),
+        ability_unlock_order_prefix: query.ability_unlock_order_prefix.as_deref(),
         ..Default::default()
     };
     let mut player_filters = player_filter_inputs.build();
@@ -1270,6 +1302,54 @@ mod tests {
         let plain = build_query(&ItemStatsQuery::default());
         assert!(!plain.contains("PREWHERE"));
         assert!(plain.contains("\nWHERE match_mode IN ('Ranked', 'Unranked') AND 1=1 "));
+    }
+
+    #[test]
+    fn ability_order_filter_declines_every_rollup() {
+        let recent = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .cast_signed()
+            - 86_400;
+        let query = ItemStatsQuery {
+            min_unix_timestamp: Some(recent),
+            ability_order_prefix: Some(vec![1_999_680_326]),
+            ..Default::default()
+        };
+        assert!(build_mv_query(&query).is_none());
+        assert!(
+            build_enemy_mv_query(&ItemStatsQuery {
+                enemy_hero_ids: Some(vec![66]),
+                ..query.clone()
+            })
+            .is_none()
+        );
+        let cohort = ItemStatsQuery {
+            include_item_ids: Some(vec![1]),
+            ..query.clone()
+        };
+        assert!(build_cohort_mv_query(&cohort).is_none());
+        assert_eq!(cohort_mv_skip_reason(&cohort), "ability_order");
+        assert!(build_query(&query).contains("arraySlice(abilities, 1, 1) = [1999680326]"));
+
+        let unlock = ItemStatsQuery {
+            ability_order_prefix: None,
+            ability_unlock_order_prefix: Some(vec![1_999_680_326]),
+            ..query
+        };
+        assert!(build_mv_query(&unlock).is_none());
+        assert!(
+            build_cohort_mv_query(&ItemStatsQuery {
+                include_item_ids: Some(vec![1]),
+                ..unlock.clone()
+            })
+            .is_none()
+        );
+        assert!(
+            build_query(&unlock)
+                .contains("arraySlice(arrayDistinct(abilities), 1, 1) = [1999680326]")
+        );
     }
     use crate::utils::proptest_utils::assert_valid_sql;
 

@@ -73,6 +73,8 @@ pub(super) struct PlayerFilters<'a> {
     pub max_networth: Option<u64>,
     pub include_item_ids: Option<&'a [u32]>,
     pub exclude_item_ids: Option<&'a [u32]>,
+    pub ability_order_prefix: Option<&'a [u32]>,
+    pub ability_unlock_order_prefix: Option<&'a [u32]>,
 }
 
 impl PlayerFilters<'_> {
@@ -116,6 +118,16 @@ impl PlayerFilters<'_> {
                 ids.iter().map(ToString::to_string).join(", ")
             ));
         }
+        if let Some(ids) = self.ability_order_prefix
+            && !ids.is_empty()
+        {
+            filters.push(ability_order_prefix_filter(ids));
+        }
+        if let Some(ids) = self.ability_unlock_order_prefix
+            && !ids.is_empty()
+        {
+            filters.push(ability_unlock_order_prefix_filter(ids));
+        }
         filters
     }
 }
@@ -145,6 +157,8 @@ pub(super) fn account_match_prefilter(
     let stats_filters = PlayerFilters {
         include_item_ids: None,
         exclude_item_ids: None,
+        ability_order_prefix: None,
+        ability_unlock_order_prefix: None,
         ..player_filters
     }
     .build();
@@ -153,6 +167,27 @@ pub(super) fn account_match_prefilter(
         info_filters.build(),
         join_filters(&stats_filters)
     ))
+}
+
+/// Players whose ability point spends (`match_player.abilities`, in spend order) start with
+/// exactly `ids`.
+pub(super) fn ability_order_prefix_filter(ids: &[u32]) -> String {
+    format!(
+        "arraySlice(abilities, 1, {}) = [{}]",
+        ids.len(),
+        id_list(ids)
+    )
+}
+
+/// Players whose abilities were first put a point into (unlocked) in exactly the order `ids`,
+/// i.e. a prefix match on the first occurrence of each ability. `arrayDistinct` keeps
+/// first-occurrence order.
+pub(super) fn ability_unlock_order_prefix_filter(ids: &[u32]) -> String {
+    format!(
+        "arraySlice(arrayDistinct(abilities), 1, {}) = [{}]",
+        ids.len(),
+        id_list(ids)
+    )
 }
 
 pub(super) fn id_list(ids: &[u32]) -> String {
@@ -392,13 +427,16 @@ mod proptests {
             max_networth in any::<Option<u64>>(),
             include_item_ids in prop::option::of(prop::collection::vec(any::<u32>(), 0..16)),
             exclude_item_ids in prop::option::of(prop::collection::vec(any::<u32>(), 0..16)),
+            ability_order_prefix in prop::option::of(prop::collection::vec(any::<u32>(), 0..16)),
+            ability_unlock_order_prefix in prop::option::of(prop::collection::vec(any::<u32>(), 0..16)),
         ) -> (
             Option<u32>, Option<Vec<u32>>,
             Option<u32>, Option<Vec<u32>>,
             Option<u64>, Option<u64>,
             Option<Vec<u32>>, Option<Vec<u32>>,
+            Option<Vec<u32>>, Option<Vec<u32>>,
         ) {
-            (account_id, account_ids, hero_id, hero_ids, min_networth, max_networth, include_item_ids, exclude_item_ids)
+            (account_id, account_ids, hero_id, hero_ids, min_networth, max_networth, include_item_ids, exclude_item_ids, ability_order_prefix, ability_unlock_order_prefix)
         }
     }
 
@@ -412,7 +450,7 @@ mod proptests {
 
         #[test]
         fn player_filters_emit_valid_sql(params in arb_player_filter_inputs()) {
-            let (account_id, account_ids, hero_id, hero_ids, min_networth, max_networth, include_item_ids, exclude_item_ids) = params;
+            let (account_id, account_ids, hero_id, hero_ids, min_networth, max_networth, include_item_ids, exclude_item_ids, ability_order_prefix, ability_unlock_order_prefix) = params;
             let filters = PlayerFilters {
                 account_id,
                 account_ids: account_ids.as_deref(),
@@ -422,6 +460,8 @@ mod proptests {
                 max_networth,
                 include_item_ids: include_item_ids.as_deref(),
                 exclude_item_ids: exclude_item_ids.as_deref(),
+                ability_order_prefix: ability_order_prefix.as_deref(),
+                ability_unlock_order_prefix: ability_unlock_order_prefix.as_deref(),
             };
             assert_valid_predicate_vec(&filters.build());
         }
