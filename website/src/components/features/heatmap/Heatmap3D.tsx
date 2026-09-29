@@ -1,6 +1,6 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
-import type { KillDeathStats, MapData } from "deadlock_api_client";
+import type { KillDeathStats, MapData, MapImages } from "deadlock_api_client";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
@@ -20,6 +20,8 @@ import {
   summarizeHeatmap,
 } from "./heatmap-grid";
 import { HeatmapLegend } from "./HeatmapLegend";
+import { composeMap } from "./map-composite";
+import type { MapArt } from "./map-era";
 import { SensitivitySlider } from "./SensitivitySlider";
 
 type ViewMode = "kills" | "deaths" | "kd";
@@ -27,6 +29,8 @@ type ViewMode = "kills" | "deaths" | "kd";
 interface Heatmap3DProps {
   data: KillDeathStats[];
   mapData: MapData;
+  /** How the map's art is drawn: `painted` before the City Never Sleeps rework, `silhouette` from it on. */
+  art?: MapArt;
   viewMode: ViewMode;
   sensitivity: number;
   onSensitivityChange: (value: number) => void;
@@ -148,9 +152,11 @@ function HeatBars({ grid, opacity }: { grid: Float32Array; opacity: number }) {
 
 function MapPlane({
   mapImages,
+  art,
   onStatusChange,
 }: {
-  mapImages: { background: string; frame: string; mid: string };
+  mapImages: MapImages;
+  art: MapArt;
   onStatusChange: (status: "loading" | "ready" | "error") => void;
 }) {
   const [texture, setTexture] = useState<THREE.Texture | null>(null);
@@ -158,41 +164,23 @@ function MapPlane({
   useEffect(() => {
     let cancelled = false;
     onStatusChange("loading");
-    const loader = new THREE.ImageLoader();
-    const load = (url: string) => loader.loadAsync(url);
-
-    const loadAll = async () => {
-      const [bgImg, frameImg, midImg] = await Promise.all([
-        load(mapImages.background),
-        load(mapImages.frame),
-        load(mapImages.mid),
-      ]);
+    // A failed image used to leave bars floating over a bare disc; the 2D view's error and retry now apply here too.
+    const load = async () => {
+      const canvas = await composeMap(mapImages, art);
       if (cancelled) return;
-      const size = bgImg.width;
-      const canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      ctx.drawImage(bgImg, 0, 0, size, size);
-      ctx.drawImage(midImg, 0, 0, size, size);
-      ctx.globalCompositeOperation = "multiply";
-      ctx.drawImage(frameImg, 0, 0, size, size);
-
       const tex = new THREE.CanvasTexture(canvas);
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.needsUpdate = true;
       setTexture(tex);
       onStatusChange("ready");
     };
-    // A failed image used to leave bars floating over a bare disc; the 2D view's error and retry now apply here too.
-    void loadAll().catch(() => {
+    load().catch(() => {
       if (!cancelled) onStatusChange("error");
     });
     return () => {
       cancelled = true;
     };
-  }, [mapImages.background, mapImages.frame, mapImages.mid, onStatusChange]);
+  }, [mapImages, art, onStatusChange]);
 
   // Disposed once it is replaced or the plane unmounts, not when new images start loading: the old texture is still
   // on screen until then, and three.js would silently re-upload a disposed one.
@@ -221,6 +209,7 @@ function BasePlane() {
 export default function Heatmap3D({
   data,
   mapData,
+  art = "painted",
   viewMode,
   sensitivity,
   onSensitivityChange,
@@ -268,7 +257,7 @@ export default function Heatmap3D({
 
           <BasePlane />
           {/* A retry remounts the plane, which loads the images again. */}
-          <MapPlane key={mapAttempt} mapImages={mapData.images} onStatusChange={setMapStatus} />
+          <MapPlane key={mapAttempt} mapImages={mapData.images} art={art} onStatusChange={setMapStatus} />
           <HeatBars grid={grid} opacity={opacity} />
 
           <OrbitControls

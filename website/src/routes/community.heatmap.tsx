@@ -1,12 +1,20 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ClientOnly, createFileRoute } from "@tanstack/react-router";
 import type { AnalyticsApiKillDeathStatsRequest } from "deadlock_api_client";
+import { MapIcon } from "lucide-react";
 import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useMemo } from "react";
 
 import { Filter } from "~/components/domain/filters";
 import type { ModeWithRank } from "~/components/domain/filters/ModeWithRankFilter";
 import HeatmapCanvas from "~/components/features/heatmap/HeatmapCanvas";
+import {
+  MAP_ART,
+  MAP_CLIENT_VERSION,
+  MAP_REWORK_START,
+  mapEraOf,
+  trimToCurrentLayout,
+} from "~/components/features/heatmap/map-era";
 import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
 import { StringOption, StringSelector } from "~/components/patterns/filter-bar/StringSelector";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
@@ -17,16 +25,25 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { combineQueryStates } from "~/components/patterns/states/QueryRenderer";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Button } from "~/components/ui/button";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { useHeroById } from "~/hooks/useAssetById";
+import { useDateFilterPreference } from "~/hooks/useDateFilterPreference";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import { useSeasons } from "~/hooks/useSeasons";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
+import { defaultDateRange } from "~/lib/seasons";
 import { pageTitle, seo } from "~/lib/seo";
+import { registerExactBoundaries } from "~/lib/time-normalize";
 import { loadSeasons } from "~/queries/asset-queries";
 import { killDeathStatsQueryOptions, mapQueryOptions } from "~/queries/heatmap-queries";
+
+// A range starting at the map rework keeps its exact second, instead of midnight with the day's old-layout matches.
+registerExactBoundaries([MAP_REWORK_START.unix()]);
 
 const Heatmap3D = lazy(() => import("~/components/features/heatmap/Heatmap3D"));
 
@@ -45,7 +62,8 @@ export const Route = createFileRoute("/community/heatmap")({
   // fetched after hydration instead of being dehydrated into the HTML.
   loader: async ({ context: { queryClient } }) => {
     await Promise.all([
-      prefetchSafe(queryClient.query({ ...mapQueryOptions, staleTime: "static" })),
+      // The default range is on the current layout, whose map is the latest build's.
+      prefetchSafe(queryClient.query({ ...mapQueryOptions(), staleTime: "static" })),
       loadSeasons(queryClient),
     ]);
   },
@@ -71,10 +89,19 @@ function HeatmapPage() {
   const [outlier, setOutlierSensitivity] = useQueryState("outlier", parseAsInteger.withDefault(9900));
   // The slider's range (80-100%): an edited `?outlier=5000` saturated half the map with the thumb stuck at its minimum.
   const sensitivity = Math.min(10000, Math.max(8000, outlier));
-  const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
+  // Positions from two map layouts do not add up, so the default season or patch starts no earlier than the current one.
+  const { seasons } = useSeasons();
+  const { preference } = useDateFilterPreference();
+  const layoutDefaultRange = useMemo(
+    () => trimToCurrentLayout(defaultDateRange(seasons, preference)),
+    [seasons, preference],
+  );
+  const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState(layoutDefaultRange);
 
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
+  // The map images have to be the layout the positions were recorded on.
+  const { era, spansRework } = mapEraOf(minUnixTimestamp, maxUnixTimestamp);
 
   const requestParams: AnalyticsApiKillDeathStatsRequest = {
     team: team,
@@ -95,7 +122,7 @@ function HeatmapPage() {
     ", ",
   );
 
-  const mapQuery = useQuery(mapQueryOptions);
+  const mapQuery = useQuery(mapQueryOptions(MAP_CLIENT_VERSION[era]));
   // A filter change keeps the old map, dimmed, until the new positions arrive, instead of blanking the page.
   // `useQuery`, not `useQueries`: the latter starts a new observer for the new key, which has no previous data.
   const killDeathQuery = useQuery({ ...killDeathStatsQueryOptions(requestParams), placeholderData: keepPreviousData });
@@ -160,6 +187,23 @@ function HeatmapPage() {
         />
       </Filter.Root>
 
+      {spansRework && (
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Alert contains block content; a filter hint is announced politely, not as an alert.
+        <Alert variant="info" role="status">
+          <MapIcon aria-hidden="true" />
+          <AlertTitle>This range covers two map layouts</AlertTitle>
+          <AlertDescription>
+            <p>
+              The City Never Sleeps update rebuilt the map on September 29, 2026. Kills and deaths from before it were
+              on the old streets, so they land in the wrong places on the new map drawn here.
+            </p>
+            <Button size="sm" variant="outline" onClick={() => handleDateChange(MAP_REWORK_START, endDate, "custom")}>
+              Only show matches since the update
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex min-h-72 flex-1 items-center justify-center">
         {isPending ? (
           <LoadingState label="heatmap" />
@@ -188,6 +232,7 @@ function HeatmapPage() {
                     <Heatmap3D
                       data={killDeathQuery.data}
                       mapData={mapQuery.data}
+                      art={MAP_ART[era]}
                       viewMode={viewMode}
                       sensitivity={sensitivity / 10000}
                       onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
@@ -200,6 +245,7 @@ function HeatmapPage() {
               <HeatmapCanvas
                 data={killDeathQuery.data}
                 mapData={mapQuery.data}
+                art={MAP_ART[era]}
                 viewMode={viewMode}
                 sensitivity={sensitivity / 10000}
                 onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}

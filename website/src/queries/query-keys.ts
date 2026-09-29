@@ -84,7 +84,7 @@ export const queryKeys = {
     matchHistory: (accountId: string) => ["streamkit-match-history", accountId] as const,
     version: (widgetType: string | undefined) => ["streamkit-version", widgetType] as const,
   },
-  map: () => ["assets-map"] as const,
+  map: (clientVersion?: number) => ["assets-map", clientVersion ?? "latest"] as const,
   players: {
     matchHistory: (accountId: number) => ["api-player-match-history", accountId] as const,
     rank: (accountId: number) => ["api-player-rank", accountId] as const,

@@ -17,6 +17,8 @@ import {
   summarizeHeatmap,
 } from "./heatmap-grid";
 import { HeatmapLegend } from "./HeatmapLegend";
+import { composeMap } from "./map-composite";
+import type { MapArt } from "./map-era";
 import { SensitivitySlider } from "./SensitivitySlider";
 
 const UNSIZED = { width: 0, height: 0 };
@@ -33,6 +35,8 @@ interface TooltipState {
 interface HeatmapCanvasProps {
   data: KillDeathStats[];
   mapData: MapData;
+  /** How the map's art is drawn: `painted` before the City Never Sleeps rework, `silhouette` from it on. */
+  art?: MapArt;
   viewMode: ViewMode;
   sensitivity: number;
   onSensitivityChange: (value: number) => void;
@@ -43,6 +47,7 @@ interface HeatmapCanvasProps {
 export default function HeatmapCanvas({
   data,
   mapData,
+  art = "painted",
   viewMode,
   sensitivity,
   onSensitivityChange,
@@ -73,43 +78,20 @@ export default function HeatmapCanvas({
 
   useEffect(() => {
     let cancelled = false;
-    const loadImage = (src: string): Promise<HTMLImageElement> =>
-      new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error(`Failed to load ${src}`));
-        img.src = src;
-      });
-
-    const loadAll = async () => {
-      const [bg, mid, frame] = await Promise.all([
-        loadImage(mapData.images.background),
-        loadImage(mapData.images.mid),
-        loadImage(mapData.images.frame),
-      ]);
+    // Without the rejection an unreachable image would leave "Loading map…" up forever.
+    const load = async () => {
+      const canvas = await composeMap(mapData.images, art);
       if (cancelled) return;
-      const size = Math.max(bg.naturalWidth, mid.naturalWidth, frame.naturalWidth);
-      const canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      ctx.drawImage(bg, 0, 0, size, size);
-      ctx.drawImage(mid, 0, 0, size, size);
-      ctx.globalCompositeOperation = "multiply";
-      ctx.drawImage(frame, 0, 0, size, size);
       compositeRef.current = canvas;
       setMapImages("ready");
     };
-    // Without the rejection an unreachable image would leave "Loading map…" up forever.
-    loadAll().catch(() => {
+    load().catch(() => {
       if (!cancelled) setMapImages("error");
     });
     return () => {
       cancelled = true;
     };
-  }, [mapData.images.background, mapData.images.mid, mapData.images.frame, mapAttempt]);
+  }, [mapData.images, art, mapAttempt]);
 
   const renderHeatmap = useCallback(() => {
     const mapCanvas = mapCanvasRef.current;

@@ -6,14 +6,17 @@ import { api } from "~/lib/api";
 
 import { queryKeys } from "./query-keys";
 
-export const mapQueryOptions = queryOptions({
-  queryKey: queryKeys.map(),
-  queryFn: async () => {
-    const response = await api.map_api.getMap();
-    return response.data;
-  },
-  staleTime: CACHE_DURATIONS.FOREVER,
-});
+/** The map for one game build (`clientVersion`), or the latest one: its images change with the map's layout. */
+export function mapQueryOptions(clientVersion?: number) {
+  return queryOptions({
+    queryKey: queryKeys.map(clientVersion),
+    queryFn: async () => {
+      const response = await api.map_api.getMap({ clientVersion });
+      return response.data;
+    },
+    staleTime: CACHE_DURATIONS.FOREVER,
+  });
+}
 
 export function killDeathStatsQueryOptions(params: AnalyticsApiKillDeathStatsRequest) {
   return queryOptions({
