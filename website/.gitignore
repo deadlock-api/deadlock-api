@@ -21,3 +21,9 @@ playwright-report/
 
 # `pnpm check:startup` writes its CPU profile here
 worker-startup.cpuprofile
+
+# Google service account for Search Console (path set in .env as GOOGLE_APPLICATION_CREDENTIALS)
+google-service-account.json
+
+# local SEO audit reports and drift baselines
+seo-reports/
