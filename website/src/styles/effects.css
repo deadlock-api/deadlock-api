@@ -65,11 +65,18 @@ body[data-feedback-spotlight] [data-slot="dialog-overlay"] {
   mask-image: radial-gradient(circle 320px at calc(100% - 80px) calc(100% - 38px), transparent 35%, black 90%);
 }
 
-/* The brand mark behind the page: tilted into the corner and faded out towards the content. */
+/* The brand mark behind the page: its shape (--page-backdrop-image, set by PageBackdrop) intersected with a gradient
+   that fades it out towards the content, tilted into the corner. */
 .page-backdrop {
   transform: perspective(900px) rotateX(12deg) rotateY(-8deg) rotateZ(-14deg);
-  -webkit-mask-image: linear-gradient(to top left, black 10%, rgb(0 0 0 / 0.15) 80%);
-  mask-image: linear-gradient(to top left, black 10%, rgb(0 0 0 / 0.15) 80%);
+  -webkit-mask-image: var(--page-backdrop-image), linear-gradient(to top left, black 10%, rgb(0 0 0 / 0.15) 80%);
+  mask-image: var(--page-backdrop-image), linear-gradient(to top left, black 10%, rgb(0 0 0 / 0.15) 80%);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
 }
 
 /* Native dialogs make the page inert, but scroll locking is separate. */

@@ -212,7 +212,7 @@ function RootComponent() {
                 <MobileMenuButton />
                 {/* Low priority: a 10% opacity decoration, it was preloaded ahead of the CSS and the font and became every page's
                     largest contentful paint. */}
-                <PageBackdrop src="/logo/hexe.svg" fetchPriority="low" />
+                <PageBackdrop src="/logo/hexe.svg" />
                 <AppFrame>
                   <Stack gap={4} className="flex-1">
                     <Breadcrumbs />

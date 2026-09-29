@@ -54,17 +54,19 @@ export function AppBody({
 /**
  * The decorative brand mark behind the page, tilted into the bottom corner and faded out by a mask. It is fixed to
  * the viewport by nature, like a dialog overlay; render it before the `AppFrame` so the frame blurs it.
+ *
+ * `src` is a single-colour SVG used as a mask and filled with the primary colour. As an `<img>` it was the largest
+ * image on every page, so the browser measured Largest Contentful Paint on a decoration; a mask never counts.
  */
-export function PageBackdrop({ src, className, ...props }: Omit<React.ComponentProps<"img">, "alt"> & { src: string }) {
+export function PageBackdrop({ src, className, style, ...props }: React.ComponentProps<"div"> & { src: string }) {
   return (
-    <img
+    <div
       data-slot="page-backdrop"
-      src={src}
-      alt=""
       aria-hidden="true"
-      // `page-backdrop` (effects.css) carries the tilt and the fade-out mask.
+      // `page-backdrop` (effects.css) carries the tilt and layers this mark under the fade-out gradient.
+      style={{ "--page-backdrop-image": `url("${src}")`, ...style } as React.CSSProperties}
       className={cn(
-        "page-backdrop pointer-events-none fixed inset-e-0 bottom-0 size-144 opacity-10 select-none",
+        "page-backdrop pointer-events-none fixed inset-e-0 bottom-0 size-144 bg-primary opacity-10 select-none",
         className,
       )}
       {...props}
