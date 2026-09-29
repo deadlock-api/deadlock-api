@@ -115,6 +115,15 @@ pub(crate) struct PlayerStatsMetricsQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     account_ids: Option<Vec<u32>>,
+    /// Also return the permanent buff (power-up) pickup metrics `permanent_buffs`,
+    /// `permanent_buffs_per_min` and `first_permanent_buff_time_s`. Off by default because
+    /// the buff columns are not in the per-hero projection, which roughly doubles the cost of
+    /// hero-filtered requests.
+    /// `first_permanent_buff_time_s` only covers matches since build 6712 (2026-09-29), which
+    /// record pickup times; its values are `null` when the filter matches none of them.
+    #[serde(default)]
+    #[param(default = false)]
+    include_buff_metrics: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -185,6 +194,12 @@ pub(super) enum Metric {
     TeammateHealing,
     TeammateBarriering,
     HealPrevented,
+    // The buff metrics below are only computed with `include_buff_metrics=true`
+    // (see `Metric::is_buff`).
+    PermanentBuffs,
+    PermanentBuffsPerMin,
+    // Only rows with pickup timings (matches since build 6712) contribute.
+    FirstPermanentBuffTimeS,
 }
 
 impl Metric {
@@ -221,7 +236,19 @@ impl Metric {
             Self::TeammateHealing => "max_teammate_healing",
             Self::TeammateBarriering => "max_teammate_barriering",
             Self::HealPrevented => "max_heal_prevented",
+            Self::PermanentBuffs => "permanent_buffs",
+            Self::PermanentBuffsPerMin => "permanent_buffs / duration_m",
+            Self::FirstPermanentBuffTimeS => "first_permanent_buff_time_s",
         }
+    }
+
+    /// Buff metrics read the buff pickup columns, which no `match_player` projection carries,
+    /// so they are only computed on request (`include_buff_metrics`).
+    pub(super) fn is_buff(self) -> bool {
+        matches!(
+            self,
+            Self::PermanentBuffs | Self::PermanentBuffsPerMin | Self::FirstPermanentBuffTimeS
+        )
     }
 
     #[expect(clippy::too_many_lines)]
@@ -354,6 +381,21 @@ impl Metric {
                 row.std_heal_prevented,
                 &row.quantiles_heal_prevented,
             ),
+            Self::PermanentBuffs => MetricValues::from_stats(
+                row.avg_permanent_buffs,
+                row.std_permanent_buffs,
+                &row.quantiles_permanent_buffs,
+            ),
+            Self::PermanentBuffsPerMin => MetricValues::from_stats(
+                row.avg_permanent_buffs_per_min,
+                row.std_permanent_buffs_per_min,
+                &row.quantiles_permanent_buffs_per_min,
+            ),
+            Self::FirstPermanentBuffTimeS => MetricValues::from_stats(
+                row.avg_first_permanent_buff_time_s,
+                row.std_first_permanent_buff_time_s,
+                &row.quantiles_first_permanent_buff_time_s,
+            ),
         }
     }
 }
@@ -449,6 +491,40 @@ pub(super) struct AnalyticsPlayerStatsMetricsRow {
     avg_heal_prevented: f64,
     std_heal_prevented: f64,
     quantiles_heal_prevented: Vec<f64>,
+    avg_permanent_buffs: f64,
+    std_permanent_buffs: f64,
+    quantiles_permanent_buffs: Vec<f64>,
+    avg_permanent_buffs_per_min: f64,
+    std_permanent_buffs_per_min: f64,
+    quantiles_permanent_buffs_per_min: Vec<f64>,
+    avg_first_permanent_buff_time_s: f64,
+    std_first_permanent_buff_time_s: f64,
+    quantiles_first_permanent_buff_time_s: Vec<f64>,
+}
+
+/// SELECT list entry for one metric. Buff metrics that were not requested get typed
+/// placeholders (their columns must still exist for the row struct) and are dropped from the
+/// response. `avg`/`std` of the nullable first-pickup time are `NULL` when no row has
+/// timings, so they fall back to `nan` (serialized as `null`).
+fn metric_select(metric: Metric, include_buff_metrics: bool) -> String {
+    const QUANTILES: &str = "quantilesDD(0.01, 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99)";
+    if metric.is_buff() && !include_buff_metrics {
+        return format!(
+            "toFloat64(0) AS avg_{metric}, toFloat64(0) AS std_{metric}, \
+             emptyArrayFloat64() AS quantiles_{metric}"
+        );
+    }
+    let expr = metric.get_select_clause();
+    if metric == Metric::FirstPermanentBuffTimeS {
+        return format!(
+            "ifNull(avg({expr}), nan) AS avg_{metric}, ifNull(std({expr}), nan) AS std_{metric}, \
+             {QUANTILES}({expr}) AS quantiles_{metric}"
+        );
+    }
+    format!(
+        "avg({expr}) AS avg_{metric}, std({expr}) AS std_{metric}, {QUANTILES}({expr}) AS \
+         quantiles_{metric}"
+    )
 }
 
 fn build_query(query: &PlayerStatsMetricsQuery) -> String {
@@ -477,14 +553,10 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
         }
         .build(),
     );
-    let quantiles = "quantilesDD(0.01, 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99)";
-    let selects = Metric::VARIANTS.iter()
-        .map(|metric| (metric, metric.get_select_clause()))
-        .map(|(name, expr)| {
-        format!(
-            "avg({expr}) AS avg_{name}, std({expr}) AS std_{name}, {quantiles}({expr}) AS quantiles_{name}"
-        )
-    }).join(",\n");
+    let selects = Metric::VARIANTS
+        .iter()
+        .map(|metric| metric_select(*metric, query.include_buff_metrics))
+        .join(",\n");
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     // `duration_s` is denormalized onto every player row and is constant within
@@ -492,7 +564,14 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
     // This avoids the previous self-aggregation + JOIN, which forced a full,
     // unfilterable scan of every player row in the window just to attach the
     // match duration.
-    let data_columns = "
+    let buff_columns = if query.include_buff_metrics {
+        ",
+                permanent_buffs, first_permanent_buff_time_s"
+    } else {
+        ""
+    };
+    let data_columns = format!(
+        "
                 kills, deaths, assists, net_worth, denies, last_hits,
                 max_hero_bullets_hit_crit, max_hero_bullets_hit,
                 max_shots_hit, max_shots_missed,
@@ -501,7 +580,17 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
                 max_self_healing, max_player_healing,
                 max_teammate_healing, max_teammate_barriering,
                 max_heal_prevented,
-                greatest(1, duration_s) / 60 AS duration_m";
+                greatest(1, duration_s) / 60 AS duration_m{buff_columns}"
+    );
+    // Without a hero filter the planner may still pick a hero-led projection, which cannot
+    // prune by start_time and reads the table's full history (measured on a 7-day window:
+    // 346M rows / 2.24 GiB / 369 ms with it, 3.4M rows / 288 MiB / 182 ms without).
+    let has_hero_filter = query.hero_ids.as_ref().is_some_and(|ids| !ids.is_empty());
+    let projection_setting = if has_hero_filter {
+        ""
+    } else {
+        ", optimize_use_projections = 0"
+    };
     // When `max_matches` is set we must restrict to the most recent N matches
     // first. That selection is hero-agnostic (it mirrors the old `t_matches`
     // CTE), and is cheap because `ORDER BY match_id DESC LIMIT n` rides the
@@ -541,7 +630,7 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
         "
     SELECT {selects}
     FROM {t_data}
-    SETTINGS log_comment = 'player_stats_metrics', apply_patch_parts = 0, max_threads = 32
+    SETTINGS log_comment = 'player_stats_metrics', apply_patch_parts = 0, max_threads = 32{projection_setting}
     "
     )
 }
@@ -610,15 +699,59 @@ pub(crate) async fn player_stats_metrics(
         });
     }
     filter_protected_accounts(&state, &mut query.account_ids, None).await?;
+    let include_buff_metrics = query.include_buff_metrics;
     get_player_stats_metrics(&state.ch_client_ro, query)
         .await
         .map(|rows| {
             Metric::VARIANTS
                 .iter()
+                .filter(|m| include_buff_metrics || !m.is_buff())
                 .map(|m| (*m, m.extract_values(&rows)))
                 .collect::<AnalyticsPlayerStatsMetrics>()
         })
         .map(Json)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
+
+    #[test]
+    fn buff_metrics_are_opt_in() {
+        let sql = build_query(&PlayerStatsMetricsQuery {
+            hero_ids: Some(vec![15]),
+            ..Default::default()
+        });
+        assert_valid_sql(&sql);
+        // Without the buff metrics the hero-filtered read can stay on the per-hero projection.
+        assert!(!sql.contains("permanent_buffs, first_permanent_buff_time_s"));
+        assert!(!sql.contains("avg(permanent_buffs"));
+        assert!(!sql.contains("(first_permanent_buff_time_s)"));
+        assert!(sql.contains("emptyArrayFloat64() AS quantiles_permanent_buffs"));
+
+        let sql = build_query(&PlayerStatsMetricsQuery {
+            hero_ids: Some(vec![15]),
+            include_buff_metrics: true,
+            ..Default::default()
+        });
+        assert_valid_sql(&sql);
+        assert!(sql.contains("permanent_buffs, first_permanent_buff_time_s"));
+        assert!(sql.contains("avg(permanent_buffs / duration_m) AS avg_permanent_buffs_per_min"));
+        assert!(sql.contains("ifNull(avg(first_permanent_buff_time_s), nan)"));
+        assert!(sql.contains("AS quantiles_permanent_buffs_per_min"));
+    }
+
+    #[test]
+    fn projections_are_disabled_only_without_a_hero_filter() {
+        let unscoped = build_query(&PlayerStatsMetricsQuery::default());
+        assert!(unscoped.contains("optimize_use_projections = 0"));
+        let hero_scoped = build_query(&PlayerStatsMetricsQuery {
+            hero_ids: Some(vec![15]),
+            ..Default::default()
+        });
+        assert!(!hero_scoped.contains("optimize_use_projections"));
+    }
 }
 
 #[cfg(test)]

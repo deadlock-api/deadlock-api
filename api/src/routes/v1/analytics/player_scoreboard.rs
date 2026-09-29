@@ -171,7 +171,12 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
         .account_ids
         .as_ref()
         .is_some_and(|ids| !ids.is_empty());
-    let table = if has_account_filter || (!needs_match_info_filter && query.hero_id.is_none()) {
+    // Buff sorts read match_player.permanent_buffs: player_match_stats only has it for rows
+    // ingested since it was added. The handler requires a time or match-id lower bound for
+    // them so this never scans the full history.
+    let table = if query.sort_by.is_buff_sort() {
+        "match_player"
+    } else if has_account_filter || (!needs_match_info_filter && query.hero_id.is_none()) {
         "player_match_stats"
     } else {
         "match_player"
@@ -314,6 +319,15 @@ pub(crate) async fn player_scoreboard(
             message: "Cannot filter by average badge for street brawl game mode".to_string(),
         });
     }
+    if query.sort_by.is_buff_sort()
+        && query.min_unix_timestamp.is_none()
+        && query.min_match_id.is_none()
+    {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "Buff sorts require min_unix_timestamp or min_match_id",
+        ));
+    }
     filter_protected_accounts(&state, &mut query.account_ids, None).await?;
     get_player_scoreboard(&state.ch_client_ro, query)
         .await
@@ -324,6 +338,30 @@ pub(crate) async fn player_scoreboard(
 mod tests {
     use super::*;
     use crate::utils::proptest_utils::assert_valid_sql;
+
+    #[test]
+    fn buff_sorts_read_match_player_and_carry_the_buff_column_through_the_dedup() {
+        let sql = build_query(&PlayerScoreboardQuery {
+            sort_by: ScoreboardQuerySortBy::AvgPermanentBuffsPerMatch,
+            hero_id: Some(15),
+            account_ids: Some(vec![1, 2]),
+            min_unix_timestamp: Some(1_790_121_600),
+            ..Default::default()
+        });
+        assert_valid_sql(&sql);
+        assert!(sql.contains("FROM match_player"));
+        assert!(!sql.contains("player_match_stats"));
+        assert!(sql.contains(", any(permanent_buffs) as permanent_buffs"));
+        assert!(sql.contains("toFloat64(avg(permanent_buffs)) as value"));
+
+        let unscoped = build_query(&PlayerScoreboardQuery {
+            sort_by: ScoreboardQuerySortBy::PermanentBuffs,
+            min_match_id: Some(108_000_000),
+            ..Default::default()
+        });
+        assert_valid_sql(&unscoped);
+        assert!(unscoped.contains("FROM match_player FINAL"));
+    }
 
     #[test]
     fn rank_sort_carries_both_rank_columns_through_the_dedup_subquery() {

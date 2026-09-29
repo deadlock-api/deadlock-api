@@ -1,5 +1,6 @@
 pub mod ability_order_stats;
 pub mod badge_distribution;
+mod buff_stats;
 pub mod build_item_stats;
 mod common_filters;
 pub mod game_stats;
@@ -20,6 +21,7 @@ pub mod lane_soul_curve;
 pub mod player_performance_curve;
 pub mod player_scoreboard;
 mod player_stats_metrics;
+mod power_up_buffs;
 pub mod scoreboard_types;
 
 use core::time::Duration;
@@ -72,6 +74,7 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
             .routes(routes!(build_item_stats::build_item_stats))
             .routes(routes!(badge_distribution::badge_distribution))
             .routes(routes!(game_stats::game_stats))
+            .routes(routes!(buff_stats::buff_stats))
             .routes(routes!(player_performance_curve::player_performance_curve))
             .nest(
                 "/scoreboards",

@@ -14,6 +14,7 @@ use utoipa::{IntoParams, ToSchema};
 use super::common_filters::{
     MatchInfoFilters, PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
 };
+use super::power_up_buffs::PERMANENT_BUFF_TIMES;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
@@ -181,6 +182,10 @@ pub struct PlayerPerformanceCurvePoint {
     pub gold_denied_avg: f64,
     /// Average souls lost on death at this time point
     pub gold_death_loss_avg: f64,
+    /// Average permanent buff (power-up) pickups collected up to this time point. Only
+    /// matches since build 6712 (2026-09-29) record pickup times, so only players with at
+    /// least one timed permanent pickup count; `null` when there are none.
+    pub permanent_buffs_avg: Option<f64>,
 }
 
 fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
@@ -238,10 +243,18 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
 
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
+    // Cumulative permanent buff pickups at each stats tick, counted before the ARRAY JOIN so
+    // only one UInt32 per tick is replicated (not the pickup-time array). Rows without pickup
+    // timings (pre-6712 matches) are left out of the average via `has_buff_timings`.
+    let players_buffs = format!(
+        ", {PERMANENT_BUFF_TIMES} AS buff_times, \
+         arrayMap(ts -> toUInt32(arrayCount(t -> t <= ts, buff_times)), stats.time_stamp_s) AS \
+         permanent_buffs_arr, notEmpty(buff_times) AS has_buff_timings"
+    );
     format!(
         "
     WITH t_players AS (
-            SELECT stats.time_stamp_s as timestamp_s, stats.net_worth as net_worths, stats.kills as kills_arr, stats.deaths as deaths_arr, stats.assists as assists_arr{players_gold}, duration_s
+            SELECT stats.time_stamp_s as timestamp_s, stats.net_worth as net_worths, stats.kills as kills_arr, stats.deaths as deaths_arr, stats.assists as assists_arr{players_gold}{players_buffs}, duration_s
             FROM match_player
             WHERE {match_mode_filter}
                 AND {game_mode_filter}
@@ -249,9 +262,9 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
                 {player_filters}
         ),
         t_data AS (
-            SELECT timestamp_s, net_worths as net_worth, kills_arr as kills, deaths_arr as deaths, assists_arr as assists{data_gold}, duration_s
+            SELECT timestamp_s, net_worths as net_worth, kills_arr as kills, deaths_arr as deaths, assists_arr as assists{data_gold}, permanent_buffs_arr as permanent_buffs, has_buff_timings, duration_s
             FROM t_players
-            ARRAY JOIN timestamp_s, net_worths, kills_arr, deaths_arr, assists_arr{array_join_gold}
+            ARRAY JOIN timestamp_s, net_worths, kills_arr, deaths_arr, assists_arr{array_join_gold}, permanent_buffs_arr
         )
     SELECT
         {game_time_selection} AS game_time,
@@ -262,7 +275,8 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
         avg(deaths) AS deaths_avg,
         std(deaths) AS deaths_std,
         avg(assists) AS assists_avg,
-        std(assists) AS assists_std{select_gold}
+        std(assists) AS assists_std{select_gold},
+        avgOrNullIf(permanent_buffs, has_buff_timings) AS permanent_buffs_avg
     FROM t_data
     {additional_filter}
     GROUP BY game_time

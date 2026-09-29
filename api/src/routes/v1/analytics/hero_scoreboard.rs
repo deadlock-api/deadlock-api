@@ -233,6 +233,24 @@ pub(super) async fn hero_scoreboard(
 }
 
 #[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
+
+    #[test]
+    fn buff_sort_aggregates_permanent_pickups() {
+        let sql = build_query(&HeroScoreboardQuery {
+            sort_by: ScoreboardQuerySortBy::AvgPermanentBuffsPerMatch,
+            min_unix_timestamp: Some(1_790_121_600),
+            ..Default::default()
+        });
+        assert_valid_sql(&sql);
+        assert!(sql.contains("toFloat64(avg(permanent_buffs)) as value"));
+        assert!(sql.contains("optimize_use_projections = 0"));
+    }
+}
+
+#[cfg(test)]
 mod proptests {
     use proptest::prelude::*;
 

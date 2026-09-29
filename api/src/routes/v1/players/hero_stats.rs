@@ -116,6 +116,18 @@ pub struct HeroStats {
     /// further back.
     mvp_rated_matches: u64,
     matches: Vec<u64>,
+    /// Permanent buff (power-up) pickups over the `permanent_buff_matches` matches. Buff
+    /// types: <https://api.deadlock-api.com/v1/assets/misc-entities>
+    permanent_buffs: u64,
+    /// Matches that carry buff pickup counts. Only matches ingested since build 6712 (late
+    /// September 2026) have them here, so divide by this rather than `matches_played`.
+    permanent_buff_matches: u64,
+    /// Permanent buff pickups per minute over the `permanent_buff_matches` matches, `null`
+    /// without any.
+    permanent_buffs_per_min: Option<f64>,
+    /// Average game time (seconds) of the first permanent buff pickup, over matches with
+    /// pickup timings (build 6712+, at least one permanent pickup), `null` without any.
+    avg_first_permanent_buff_time_s: Option<f64>,
 }
 
 /// First match with MVP ranks. Every match from this id on carries them.
@@ -190,7 +202,8 @@ fn build_query(query: &HeroStatsQuery) -> String {
                max_damage_mitigated, max_creep_kills, max_boss_damage, max_creep_damage,
                max_neutral_damage, max_shots_hit, max_shots_missed,
                max_hero_bullets_hit, max_hero_bullets_hit_crit,
-               duration_s, start_time, average_badge, mvp_rank
+               duration_s, start_time, average_badge, mvp_rank,
+               permanent_buffs AS pb, first_permanent_buff_time_s AS first_pb_time_s
         FROM player_match_stats FINAL
         WHERE {mp_where}
     )
@@ -234,7 +247,12 @@ fn build_query(query: &HeroStatsQuery) -> String {
          crit_shot_rate,
         [countIf(mvp_rank = 1), countIf(mvp_rank = 2), countIf(mvp_rank = 3)] AS mvp_rank_counts,
         countIf(match_id >= {MVP_RANK_SINCE_MATCH_ID}) AS mvp_rated_matches,
-        groupUniqArray(match_id) as matches
+        groupUniqArray(match_id) as matches,
+        toUInt64(sum(ifNull(pb, 0))) AS permanent_buffs,
+        count(pb) AS permanent_buff_matches,
+        if(permanent_buff_matches = 0, NULL,
+           60 * sum(ifNull(pb, 0)) / greatest(1, sumIf(duration_s, pb IS NOT NULL))) AS permanent_buffs_per_min,
+        avg(first_pb_time_s) AS avg_first_permanent_buff_time_s
     FROM mp
     {outer_where}
     GROUP BY account_id, hero_id

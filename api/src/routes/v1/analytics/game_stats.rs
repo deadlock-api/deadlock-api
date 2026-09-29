@@ -200,6 +200,14 @@ pub struct AnalyticsGameStats {
     pub abandon_rate: f64,
     pub team0_wins: u64,
     pub team1_wins: u64,
+    /// Average permanent buff (power-up) pickups per player per match. Buff types:
+    /// <https://api.deadlock-api.com/v1/assets/misc-entities>
+    pub avg_permanent_buffs: f64,
+    /// Average permanent buff pickups per player per minute of match time.
+    pub avg_permanent_buffs_per_min: f64,
+    /// Average game time (seconds) of a player's first permanent buff pickup. Only matches
+    /// since build 6712 (2026-09-29) record pickup times; `null` when the bucket has none.
+    pub avg_first_permanent_buff_time_s: Option<f64>,
 }
 
 fn build_query(query: &GameStatsQuery) -> String {
@@ -280,7 +288,10 @@ fn build_query(query: &GameStatsQuery) -> String {
         uniqIf(match_id, length(`mid_boss.destroyed_time_s`) > 0) / greatest(1, uniq(match_id)) AS mid_boss_kill_rate,
         avg(abandon_match_time_s > 0) AS abandon_rate,
         uniqIf(match_id, winning_team = 'Team0') AS team0_wins,
-        uniqIf(match_id, winning_team = 'Team1') AS team1_wins
+        uniqIf(match_id, winning_team = 'Team1') AS team1_wins,
+        avg(permanent_buffs) AS avg_permanent_buffs,
+        avg(permanent_buffs * 60 / greatest(1, duration_s)) AS avg_permanent_buffs_per_min,
+        avg(first_permanent_buff_time_s) AS avg_first_permanent_buff_time_s
     FROM match_player
     WHERE {match_mode_filter}
         AND {game_mode_filter}
@@ -355,6 +366,24 @@ pub(crate) async fn game_stats(
     filter_protected_accounts(&state, &mut query.account_ids, None).await?;
 
     get_game_stats(&state.ch_client_ro, query).await.map(Json)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn buff_averages_read_the_scalar_columns() {
+        let sql = build_query(&GameStatsQuery {
+            min_unix_timestamp: Some(1_790_121_600),
+            ..Default::default()
+        });
+        assert!(sql.contains("avg(permanent_buffs) AS avg_permanent_buffs"));
+        assert!(
+            sql.contains("avg(first_permanent_buff_time_s) AS avg_first_permanent_buff_time_s")
+        );
+        assert!(!sql.contains("power_up_buffs"));
+    }
 }
 
 #[cfg(test)]

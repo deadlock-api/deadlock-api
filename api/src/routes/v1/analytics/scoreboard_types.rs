@@ -134,6 +134,12 @@ pub enum ScoreboardQuerySortBy {
     AvgHeroBulletsHitCritPerMatch,
     /// Sort by the max total `hero_bullets_hit_crit`
     HeroBulletsHitCrit,
+    /// Sort by the max permanent buff (power-up) pickups per match. On the player scoreboard it requires `min_unix_timestamp` or `min_match_id`.
+    MaxPermanentBuffsPerMatch,
+    /// Sort by the avg permanent buff (power-up) pickups per match. On the player scoreboard it requires `min_unix_timestamp` or `min_match_id`.
+    AvgPermanentBuffsPerMatch,
+    /// Sort by the total permanent buff (power-up) pickups. On the player scoreboard it requires `min_unix_timestamp` or `min_match_id`.
+    PermanentBuffs,
 }
 
 /// Badge the player ended their latest ranked match on, `0` when no grouped row carries a rank.
@@ -154,6 +160,9 @@ impl ScoreboardQuerySortBy {
     pub(super) fn get_select_clause(self) -> String {
         let clause = match self {
             Self::Rank => return latest_badge_clause(),
+            Self::MaxPermanentBuffsPerMatch => "max(permanent_buffs)",
+            Self::AvgPermanentBuffsPerMatch => "avg(permanent_buffs)",
+            Self::PermanentBuffs => "sum(permanent_buffs)",
             Self::Matches => "uniq(match_id)",
             Self::Wins => "countIf(won)",
             Self::Losses => "countIf(not won)",
@@ -230,6 +239,18 @@ impl ScoreboardQuerySortBy {
         matches!(self, Self::Matches)
     }
 
+    /// Whether the sort reads `match_player.permanent_buffs`. The scoreboards' account-scoped
+    /// path (`player_match_stats`) has the column too, but only for recent rows, and none of
+    /// `match_player`'s projections carries it.
+    pub(super) fn is_buff_sort(self) -> bool {
+        matches!(
+            self,
+            Self::MaxPermanentBuffsPerMatch
+                | Self::AvgPermanentBuffsPerMatch
+                | Self::PermanentBuffs
+        )
+    }
+
     /// Columns from `match_player` that must be carried through the per-(`account_id`,
     /// `match_id`) dedup subquery. Empty means the sort only needs `match_id`, which is always
     /// projected. Used by `player_scoreboard` to deduplicate `ReplacingMergeTree` rows without
@@ -291,6 +312,9 @@ impl ScoreboardQuerySortBy {
             Self::MaxHeroBulletsHitCritPerMatch
             | Self::AvgHeroBulletsHitCritPerMatch
             | Self::HeroBulletsHitCrit => &["max_hero_bullets_hit_crit"],
+            Self::MaxPermanentBuffsPerMatch
+            | Self::AvgPermanentBuffsPerMatch
+            | Self::PermanentBuffs => &["permanent_buffs"],
         }
     }
 }

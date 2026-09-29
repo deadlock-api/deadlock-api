@@ -204,9 +204,24 @@ pub struct AnalyticsHeroStats {
     total_max_health: u64,
     total_shots_hit: u64,
     total_shots_missed: u64,
+    /// Sum of permanent buff (power-up) pickups over the `permanent_buff_matches` matches.
+    /// Average per match: `total_permanent_buffs / permanent_buff_matches`. Buff types:
+    /// <https://api.deadlock-api.com/v1/assets/misc-entities>
+    total_permanent_buffs: u64,
+    /// Matches that carry buff pickup counts. Equals `matches`, except on account-scoped
+    /// queries (`account_ids` without item or ability filters): those read a per-account table
+    /// that only has buff counts for matches ingested since build 6712 (late September 2026).
+    permanent_buff_matches: u64,
+    /// Sum of the game time (seconds) of each player's first permanent buff pickup, over the
+    /// `permanent_buff_timing_matches` matches.
+    /// Average: `total_first_permanent_buff_time_s / permanent_buff_timing_matches`.
+    total_first_permanent_buff_time_s: u64,
+    /// Matches with pickup timings. Only matches since build 6712 (2026-09-29) record pickup
+    /// times, and only players with at least one permanent pickup count here.
+    permanent_buff_timing_matches: u64,
 }
 
-/// Horizon of the `hero_stats_agg` materialized view, in days. Keep in sync with
+/// Horizon of the `hero_stats_agg_v2` materialized view, in days. Keep in sync with
 /// the `INTERVAL ... DAY` in the view's refresh `SELECT`.
 const MV_HORIZON_DAYS: i64 = 65;
 /// Safety margin below the horizon: only route windows whose start sits
@@ -222,12 +237,13 @@ const MV_ROUTING_MARGIN_DAYS: i64 = 5;
 /// anything per-player or per-row (account, item set, net worth, duration, match id,
 /// hero match counts) or needing sub-day resolution must use the base table.
 ///
-/// Two rollups back this: the hourly-refreshed last-65-days `hero_stats_agg` and the
-/// 6-hourly full-history `hero_stats_agg_all`. Recent windows use the hot one (freshest
+/// Two rollups back this: the hourly-refreshed last-65-days `hero_stats_agg_v2` and the
+/// 6-hourly full-history `hero_stats_agg_all_v2`. Recent windows use the hot one (freshest
 /// data); older / all-time windows — notably the date-picker-reset
 /// `min_unix_timestamp=0` state, which used to full-scan `match_player` and time out —
 /// use the full-history one. A request reads exactly one table, so totals never
-/// double-count.
+/// double-count. The `_v2` views (migration 50) add the permanent buff pickup sums; every
+/// rolled-up row has buff counts, so `permanent_buff_matches` is `n_matches`.
 fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
     let bucket_expr = query.bucket.mv_bucket_expr()?;
     // Per-player / per-row filters the grain cannot express → base table.
@@ -272,9 +288,9 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
         .min_unix_timestamp
         .is_some_and(|min_ts| min_ts >= oldest_servable)
     {
-        ("hero_stats_agg", "hero_stats_mv")
+        ("hero_stats_agg_v2", "hero_stats_mv")
     } else {
-        ("hero_stats_agg_all", "hero_stats_mv_all")
+        ("hero_stats_agg_all_v2", "hero_stats_mv_all")
     };
 
     let mut filters = vec![GameMode::sql_filter(query.game_mode)];
@@ -328,7 +344,11 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
         sum(sum_neutral_damage) AS total_neutral_damage,
         sum(sum_max_health) AS total_max_health,
         sum(sum_shots_hit) AS total_shots_hit,
-        sum(sum_shots_missed) AS total_shots_missed
+        sum(sum_shots_missed) AS total_shots_missed,
+        sum(sum_permanent_buffs) AS total_permanent_buffs,
+        sum(n_matches) AS permanent_buff_matches,
+        sum(sum_first_permanent_buff_time_s) AS total_first_permanent_buff_time_s,
+        sum(n_permanent_buff_timing_matches) AS permanent_buff_timing_matches
     FROM {mv_table}
     WHERE {where_clause}
     GROUP BY hero_id, bucket
@@ -470,13 +490,16 @@ fn build_query(query: &HeroStatsQuery) -> String {
     } else {
         ""
     };
+    // Both tables carry the per-row buff scalars (see `power_up_buffs`); on player_match_stats
+    // they are NULL for rows ingested before the columns existed, hence the `count(...)`
+    // denominators below.
     ctes.push(format!(
         "mp AS (
         SELECT
             hero_id, account_id, match_id, won, kills, deaths, assists, net_worth, last_hits, denies,
             max_player_damage, max_player_damage_taken, max_boss_damage, max_creep_damage,
             max_neutral_damage, max_max_health, max_shots_hit, max_shots_missed,
-            start_time, average_badge
+            start_time, average_badge, permanent_buffs, first_permanent_buff_time_s
         FROM {source_table}{final_clause}
         WHERE TRUE
             {player_filters}
@@ -516,7 +539,11 @@ fn build_query(query: &HeroStatsQuery) -> String {
         sum(max_neutral_damage) AS total_neutral_damage,
         sum(max_max_health) AS total_max_health,
         sum(max_shots_hit) AS total_shots_hit,
-        sum(max_shots_missed) AS total_shots_missed
+        sum(max_shots_missed) AS total_shots_missed,
+        toUInt64(sum(ifNull(permanent_buffs, 0))) AS total_permanent_buffs,
+        count(permanent_buffs) AS permanent_buff_matches,
+        toUInt64(sum(ifNull(first_permanent_buff_time_s, 0))) AS total_first_permanent_buff_time_s,
+        count(first_permanent_buff_time_s) AS permanent_buff_timing_matches
     FROM mp
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
@@ -604,6 +631,35 @@ mod tests {
         assert!(sql.contains("FROM match_player FINAL"));
         assert!(!sql.contains("LIMIT 1 BY"));
         assert!(!sql.contains("optimize_use_projections"));
+    }
+
+    #[test]
+    fn buff_sums_come_from_the_scalar_columns_on_every_path() {
+        for query in [
+            HeroStatsQuery {
+                min_unix_timestamp: Some(1_786_147_200),
+                min_networth: Some(1),
+                ..Default::default()
+            },
+            HeroStatsQuery {
+                account_ids: Some(vec![1, 2]),
+                ..Default::default()
+            },
+        ] {
+            let sql = build_query(&query);
+            assert_valid_sql(&sql);
+            assert!(sql.contains("average_badge, permanent_buffs, first_permanent_buff_time_s"));
+            assert!(sql.contains("count(permanent_buffs) AS permanent_buff_matches"));
+            assert!(!sql.contains("power_up_buffs"));
+        }
+        let mv = build_mv_query(&HeroStatsQuery {
+            min_unix_timestamp: Some(0),
+            ..Default::default()
+        })
+        .expect("routes to a rollup");
+        assert_valid_sql(&mv);
+        assert!(mv.contains("FROM hero_stats_agg_all_v2"));
+        assert!(mv.contains("sum(n_matches) AS permanent_buff_matches"));
     }
 
     #[test]
