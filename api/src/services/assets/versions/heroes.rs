@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use std::collections::HashMap as StdMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use async_graphql::{ComplexObject, Enum, Json, SimpleObject};
@@ -10,7 +10,8 @@ use serde::{Deserialize, Serialize};
 use strum::EnumString;
 use utoipa::ToSchema;
 
-use crate::services::assets::versions::common::HeroItemType;
+use crate::services::assets::index::{IndexFolder, fetch_index};
+use crate::services::assets::versions::common::{HeroItemType, entity_id};
 use crate::services::assets::versions::css;
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::localization;
@@ -73,6 +74,27 @@ struct RawStartingStats {
     e_air_dash_distance_in_meters: Option<f64>,
     #[serde(default, rename = "EAirDashDuration")]
     e_air_dash_duration: Option<f64>,
+    /// Added in build 6711.
+    #[serde(default, rename = "EOOCHealthRegen")]
+    e_ooc_health_regen: Option<f64>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawItemPopularity {
+    #[serde(rename = "m_flPickPct")]
+    pick_pct: f64,
+    #[serde(rename = "m_flWinratePct")]
+    winrate_pct: f64,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawPopularItems {
+    #[serde(default, rename = "m_unTimestamp")]
+    timestamp: Option<i64>,
+    /// `ECitadelItemGamePhase_*` → item class name → stats; `null` on heroes
+    /// without generated data.
+    #[serde(default, rename = "m_mapGeneratedItemPopularity")]
+    item_popularity: Option<IndexMap<String, IndexMap<String, RawItemPopularity>>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -253,6 +275,18 @@ struct RawHero {
     hideout_rich_presence: Option<String>,
     #[serde(default, rename = "m_eHeroType")]
     hero_type: Option<String>,
+    /// Added in build 6711.
+    #[serde(default, rename = "m_strHeroGender")]
+    gender: Option<String>,
+    /// Added in build 6711 (loc token, e.g. `#hero_inferno_search`).
+    #[serde(default, rename = "m_strHeroSearchName")]
+    search_name: Option<String>,
+    /// Added in build 6711, only on the hero release vote candidates.
+    #[serde(default, rename = "m_strVoteSticker")]
+    vote_sticker: Option<String>,
+    /// Added in build 6711: Valve's generated item pick/win rates per game phase.
+    #[serde(default, rename = "m_PopularItems")]
+    popular_items: Option<RawPopularItems>,
 
     #[serde(rename = "m_ShopStatDisplay")]
     shop_stat_display: RawShopStatDisplay,
@@ -334,6 +368,16 @@ pub(crate) struct Hero {
     pub hideout_rich_presence: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hero_type: Option<HeroType>,
+    /// Hero gender (`m_strHeroGender`, build 6711+), e.g. `male` / `female`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gender: Option<String>,
+    /// Localized search name (`m_strHeroSearchName`, build 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub search_name: Option<String>,
+    /// Valve's generated item pick / win rates per game phase
+    /// (`m_PopularItems`, build 6711+). `null` when the hero has no data.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub popular_items: Option<HeroPopularItems>,
     /// Read from `m_bPrereleaseOnly` on older builds; since build 6711 it is
     /// derived as `development_state == pre_release`.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -466,6 +510,34 @@ pub(crate) struct HeroImages {
     pub background_image_webp: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name_image: Option<String>,
+    /// Hero release vote sticker (`m_strVoteSticker`, build 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vote_sticker: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vote_sticker_webp: Option<String>,
+}
+
+#[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
+#[graphql(rename_fields = "snake_case")]
+pub(crate) struct HeroPopularItems {
+    /// Unix timestamp (seconds) at which Valve generated the data.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timestamp: Option<i64>,
+    pub early_game: Vec<HeroPopularItem>,
+    pub mid_game: Vec<HeroPopularItem>,
+    pub late_game: Vec<HeroPopularItem>,
+}
+
+#[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
+#[graphql(rename_fields = "snake_case")]
+pub(crate) struct HeroPopularItem {
+    /// Item id, derived from `class_name` like `/v2/items` ids.
+    pub item_id: u32,
+    pub class_name: String,
+    /// Pick rate in percent (0-100).
+    pub pick_pct: f64,
+    /// Win rate in percent (0-100).
+    pub winrate_pct: f64,
 }
 
 #[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
@@ -587,6 +659,9 @@ pub(crate) struct StartingStats {
     pub air_dash_distance_in_meters: Option<StartingStat>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub air_dash_duration: Option<StartingStat>,
+    /// Out-of-combat health regen (build 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ooc_health_regen: Option<StartingStat>,
 }
 
 #[derive(Debug, Serialize, Clone, ToSchema)]
@@ -662,15 +737,21 @@ pub(crate) fn build_heroes(
         localization,
         &style_colors,
         &backgrounds,
+        None,
         only_active,
     ))
 }
 
+/// `known_assets`, when present, is the set of image / icon URLs published in
+/// the bucket indexes; image fields pointing anywhere else are dropped so we
+/// don't hand out 404 URLs (e.g. `*_card.psd` referenced by vote stub heroes
+/// that doesn't exist in the game files).
 fn transform_root(
     root: &IndexMap<String, serde_json::Value>,
     localization: &HashMap<String, String>,
     style_colors: &HashMap<String, String>,
     backgrounds: &HashMap<String, String>,
+    known_assets: Option<&HashSet<String>>,
     only_active: bool,
 ) -> Vec<Hero> {
     let mut out = Vec::with_capacity(root.len());
@@ -698,6 +779,7 @@ fn transform_root(
             localization,
             style_colors,
             backgrounds,
+            known_assets,
         ));
     }
     out
@@ -721,16 +803,24 @@ fn transform(
     loc: &HashMap<String, String>,
     style_colors: &HashMap<String, String>,
     backgrounds: &HashMap<String, String>,
+    known_assets: Option<&HashSet<String>>,
 ) -> Hero {
-    let name = loc
-        .get(&format!("{class_name}:n"))
-        .or_else(|| loc.get(class_name))
-        .or_else(|| loc.get(&format!("Steam_RP_{class_name}")))
-        .cloned()
-        .unwrap_or_else(|| class_name.to_owned())
-        .trim()
-        .replace("#|f|#", "")
-        .replace("#|m|#", "");
+    let name = strip_gender_markers(
+        loc.get(&format!("{class_name}:n"))
+            .or_else(|| loc.get(class_name))
+            .or_else(|| loc.get(&format!("Steam_RP_{class_name}")))
+            .map_or(class_name, String::as_str),
+    );
+
+    // `#hero_inferno_search` is stored as `hero_inferno_search:n`.
+    let search_name = r.search_name.as_deref().and_then(|token| {
+        let key = token.trim_start_matches('#');
+        loc.get(key)
+            .or_else(|| loc.get(&format!("{key}:n")))
+            .map(|s| strip_gender_markers(s))
+    });
+    let gender = r.gender.clone().filter(|g| !g.is_empty());
+    let popular_items = r.popular_items.as_ref().and_then(build_popular_items);
 
     let description = HeroDescription {
         lore: loc.get(&format!("{class_name}_lore")).cloned(),
@@ -765,7 +855,7 @@ fn transform(
     let player_selectable = is_player_selectable(&r);
 
     let bg_raw = backgrounds.get(class_name).cloned();
-    let images = build_images(&r, bg_raw.as_deref());
+    let images = build_images(&r, bg_raw.as_deref(), known_assets);
 
     let physics = HeroPhysics {
         stealth_speed_meters_per_second: r.stealth_speed_meters_per_second,
@@ -789,6 +879,9 @@ fn transform(
         .items
         .into_iter()
         .filter_map(|(k, v)| k.parse().ok().map(|k| (k, v)))
+        // Build 6711 binds `cosmetic_ability_voting_poster` to every hero;
+        // cosmetics aren't part of the hero's kit.
+        .filter(|(k, _)| *k != HeroItemType::EslotCosmetic1)
         .collect();
 
     let item_slot_info: IndexMap<ItemSlotType, ItemSlotInfo> = r
@@ -851,6 +944,9 @@ fn transform(
         gun_tag,
         hideout_rich_presence,
         hero_type: r.hero_type.as_deref().and_then(|s| s.parse().ok()),
+        gender,
+        search_name,
+        popular_items,
         prerelease_only: r
             .prerelease_only
             .or_else(|| development_state.map(|s| s == HeroDevelopmentState::PreRelease)),
@@ -863,7 +959,7 @@ fn transform(
         item_slot_info,
         physics,
         colors,
-        shop_stat_display: build_shop_stat_display(r.shop_stat_display),
+        shop_stat_display: build_shop_stat_display(r.shop_stat_display, known_assets),
         cost_bonuses: if cost_bonuses.is_empty() {
             None
         } else {
@@ -889,9 +985,45 @@ fn transform(
     }
 }
 
-fn build_shop_stat_display(r: RawShopStatDisplay) -> ShopStatDisplay {
+fn strip_gender_markers(s: &str) -> String {
+    s.trim().replace("#|f|#", "").replace("#|m|#", "")
+}
+
+fn build_popular_items(r: &RawPopularItems) -> Option<HeroPopularItems> {
+    let phases = r.item_popularity.as_ref()?;
+    let phase = |key: &str| -> Vec<HeroPopularItem> {
+        phases
+            .get(key)
+            .into_iter()
+            .flatten()
+            .map(|(class_name, p)| HeroPopularItem {
+                item_id: entity_id(class_name),
+                class_name: class_name.clone(),
+                pick_pct: p.pick_pct,
+                winrate_pct: p.winrate_pct,
+            })
+            .collect()
+    };
+    Some(HeroPopularItems {
+        timestamp: r.timestamp,
+        early_game: phase("ECitadelItemGamePhase_EarlyGame"),
+        mid_game: phase("ECitadelItemGamePhase_MidGame"),
+        late_game: phase("ECitadelItemGamePhase_LateGame"),
+    })
+}
+
+/// Drops `url` when a published-asset index is available and doesn't list it.
+fn known_url(url: Option<String>, known_assets: Option<&HashSet<String>>) -> Option<String> {
+    url.filter(|u| known_assets.is_none_or(|k| k.contains(u)))
+}
+
+fn build_shop_stat_display(
+    r: RawShopStatDisplay,
+    known_assets: Option<&HashSet<String>>,
+) -> ShopStatDisplay {
     let weapon_image = extract_image_url(r.e_weapon_stats_display.weapon_image.as_deref());
-    let weapon_image_webp = weapon_image.as_deref().map(png_to_webp);
+    let weapon_image_webp = known_url(weapon_image.as_deref().map(png_to_webp), known_assets);
+    let weapon_image = known_url(weapon_image, known_assets);
     ShopStatDisplay {
         spirit_stats_display: ShopSpiritStatsDisplay {
             display_stats: r.e_spirit_stats_display.display_stats,
@@ -991,10 +1123,17 @@ fn build_starting_stats(s: &RawStartingStats) -> StartingStats {
         air_dash_duration: s
             .e_air_dash_duration
             .map(|v| mk!(v, "EAirDashDuration", float)),
+        ooc_health_regen: s
+            .e_ooc_health_regen
+            .map(|v| mk!(v, "EOOCHealthRegen", float)),
     }
 }
 
-fn build_images(r: &RawHero, background_raw: Option<&str>) -> HeroImages {
+fn build_images(
+    r: &RawHero,
+    background_raw: Option<&str>,
+    known_assets: Option<&HashSet<String>>,
+) -> HeroImages {
     let icon_hero_card = extract_image_url(r.icon_hero_card.as_deref());
     let icon_image_small = extract_image_url(r.icon_image_small.as_deref());
     let minimap_image = extract_image_url(r.minimap_image.as_deref());
@@ -1014,24 +1153,32 @@ fn build_images(r: &RawHero, background_raw: Option<&str>) -> HeroImages {
         parse_img_path(&wrapped)
     });
 
+    // Vote stickers live under `events/`, uploaded like the other image
+    // folders by their path below `panorama/images/`.
+    let vote_sticker = r.vote_sticker.as_deref().and_then(parse_img_path);
+
+    let known = |url: Option<String>| known_url(url, known_assets);
+    let webp = |url: &Option<String>| known(url.as_deref().map(png_to_webp));
     HeroImages {
-        icon_hero_card_webp: icon_hero_card.as_deref().map(png_to_webp),
-        icon_hero_card,
-        icon_image_small_webp: icon_image_small.as_deref().map(png_to_webp),
-        icon_image_small,
-        minimap_image_webp: minimap_image.as_deref().map(png_to_webp),
-        minimap_image,
-        hero_card_critical_webp: hero_card_critical.as_deref().map(png_to_webp),
-        hero_card_critical,
-        hero_card_gloat_webp: hero_card_gloat.as_deref().map(png_to_webp),
-        hero_card_gloat,
-        top_bar_vertical_image_webp: top_bar_vertical_image.as_deref().map(png_to_webp),
-        top_bar_vertical_image,
+        icon_hero_card_webp: webp(&icon_hero_card),
+        icon_hero_card: known(icon_hero_card),
+        icon_image_small_webp: webp(&icon_image_small),
+        icon_image_small: known(icon_image_small),
+        minimap_image_webp: webp(&minimap_image),
+        minimap_image: known(minimap_image),
+        hero_card_critical_webp: webp(&hero_card_critical),
+        hero_card_critical: known(hero_card_critical),
+        hero_card_gloat_webp: webp(&hero_card_gloat),
+        hero_card_gloat: known(hero_card_gloat),
+        top_bar_vertical_image_webp: webp(&top_bar_vertical_image),
+        top_bar_vertical_image: known(top_bar_vertical_image),
         weapon_image: None,
         weapon_image_webp: None,
-        background_image_webp: background_image.as_deref().map(png_to_webp),
-        background_image,
-        name_image: parse_img_path(r.name_image.as_deref().unwrap_or("")),
+        background_image_webp: webp(&background_image),
+        background_image: known(background_image),
+        name_image: known(parse_img_path(r.name_image.as_deref().unwrap_or(""))),
+        vote_sticker_webp: webp(&vote_sticker),
+        vote_sticker: known(vote_sticker),
     }
 }
 
@@ -1119,19 +1266,23 @@ struct ParsedSources {
     raw_root: Arc<IndexMap<String, serde_json::Value>>,
     style_colors: Arc<HashMap<String, String>>,
     backgrounds: Arc<HashMap<String, String>>,
+    known_assets: Option<Arc<HashSet<String>>>,
 }
 
 #[cached(max_size = 8, ttl_secs = 86400, convert = "{ version }", key = "u32")]
 async fn parsed_version_sources(r2: &AmazonS3, version: u32) -> Result<ParsedSources, AssetsError> {
     // CSS files are optional: a NotFound leaves the lookup empty so the
     // per-hero `background_image*` / `colors.style*` fields serialize as null.
-    let (vdata, style_css, bg_css) = tokio::try_join!(
+    let (vdata, style_css, bg_css, known_assets) = tokio::join!(
         store::fetch_text(r2, version, "scripts/heroes.vdata"),
         fetch_optional_text(r2, version, "styles/citadel_base_styles.css"),
         fetch_optional_text(r2, version, "styles/hero_background_default.css"),
-    )?;
+        fetch_known_assets(r2),
+    );
+    let (vdata, style_css, bg_css) = (vdata?, style_css?, bg_css?);
     let raw_root: IndexMap<String, serde_json::Value> = kv3::from_str(&vdata)?;
     Ok(ParsedSources {
+        known_assets: known_assets.map(Arc::new),
         raw_root: Arc::new(raw_root),
         style_colors: Arc::new(
             style_css
@@ -1146,6 +1297,38 @@ async fn parsed_version_sources(r2: &AmazonS3, version: u32) -> Result<ParsedSou
                 .unwrap_or_default(),
         ),
     })
+}
+
+/// All image + icon URLs listed in the bucket indexes. Best effort: `None` (no
+/// URL filtering) if either index can't be loaded or parsed.
+async fn fetch_known_assets(r2: &AmazonS3) -> Option<HashSet<String>> {
+    fn collect(v: serde_json::Value, out: &mut HashSet<String>) {
+        match v {
+            serde_json::Value::String(s) => {
+                out.insert(s);
+            }
+            serde_json::Value::Object(m) => m.into_iter().for_each(|(_, v)| collect(v, out)),
+            _ => {}
+        }
+    }
+    let (images, icons) = tokio::join!(
+        fetch_index(r2, IndexFolder::Images),
+        fetch_index(r2, IndexFolder::Icons),
+    );
+    let mut out = HashSet::new();
+    for index in [images, icons] {
+        let parsed = index
+            .map_err(|e| e.to_string())
+            .and_then(|b| serde_json::from_slice(&b).map_err(|e| e.to_string()));
+        match parsed {
+            Ok(v) => collect(v, &mut out),
+            Err(e) => {
+                tracing::warn!("Hero image URLs not validated, failed to load asset index: {e}");
+                return None;
+            }
+        }
+    }
+    Some(out)
 }
 
 async fn fetch_optional_text(
@@ -1188,6 +1371,7 @@ fn build_from_sources(s: &ParsedSources, localization: &HashMap<String, String>)
         localization,
         &s.style_colors,
         &s.backgrounds,
+        s.known_assets.as_deref(),
         false,
     )
 }
