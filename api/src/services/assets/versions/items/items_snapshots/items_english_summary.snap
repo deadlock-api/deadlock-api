@@ -1,12 +1,631 @@
 ---
-source: src/services/assets/versions/items/build.rs
-assertion_line: 1150
+source: api/src/services/assets/versions/items/build.rs
+assertion_line: 1326
 expression: summary
 ---
 [
   {
-    "class_name": "ability_melee_butcher",
+    "class_name": "citadel_weapon_bosstier2_set",
     "kind": "weapon",
+    "id": 2976789773,
+    "name": "citadel_weapon_bosstier2_set",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_bosstier3_set",
+    "kind": "weapon",
+    "id": 3317486525,
+    "name": "citadel_weapon_bosstier3_set",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_rutger_set",
+    "kind": "weapon",
+    "id": 2470199706,
+    "name": "citadel_weapon_rutger_set",
+    "hero": 49,
+    "heroes": [
+      49
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_kali_set",
+    "kind": "weapon",
+    "id": 1115497205,
+    "name": "citadel_weapon_kali_set",
+    "hero": 21,
+    "heroes": [
+      21
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_gunslinger_set",
+    "kind": "weapon",
+    "id": 2790538565,
+    "name": "citadel_weapon_gunslinger_set",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_yakuza_set",
+    "kind": "weapon",
+    "id": 2772141905,
+    "name": "citadel_weapon_yakuza_set",
+    "hero": 39,
+    "heroes": [
+      39
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_architect_set",
+    "kind": "weapon",
+    "id": 3033433915,
+    "name": "citadel_weapon_architect_set",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_thumper_set",
+    "kind": "weapon",
+    "id": 2914777625,
+    "name": "citadel_weapon_thumper_set",
+    "hero": 51,
+    "heroes": [
+      51
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_medic_trooper_heal",
+    "kind": "ability",
+    "id": 1889173382,
+    "name": "ability_medic_trooper_heal",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "ability_golden_idol",
+    "kind": "ability",
+    "id": 2521299219,
+    "name": "ability_golden_idol",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/wraith_lift.png"
+  },
+  {
+    "class_name": "ability_item_pickup_effects",
+    "kind": "ability",
+    "id": 2641680935,
+    "name": "ability_item_pickup_effects",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "citadel_ability_zip_line",
+    "kind": "ability",
+    "id": 2573821048,
+    "name": "Hyperline",
+    "hero": 1,
+    "heroes": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      25,
+      27,
+      31,
+      35,
+      38,
+      39,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75
+    ],
+    "image": null
+  },
+  {
+    "class_name": "citadel_ability_zipline_boost",
+    "kind": "ability",
+    "id": 875395762,
+    "name": "citadel_ability_zipline_boost",
+    "hero": 1,
+    "heroes": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      25,
+      27,
+      31,
+      35,
+      38,
+      39,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/zipline_mastery.png"
+  },
+  {
+    "class_name": "citadel_ability_trooper_zip_line",
+    "kind": "ability",
+    "id": 1751980904,
+    "name": "citadel_ability_trooper_zip_line",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "citadel_ability_mantle",
+    "kind": "ability",
+    "id": 4109126631,
+    "name": "citadel_ability_mantle",
+    "hero": 1,
+    "heroes": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      25,
+      27,
+      31,
+      35,
+      38,
+      39,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75
+    ],
+    "image": null
+  },
+  {
+    "class_name": "citadel_ability_climb_rope",
+    "kind": "ability",
+    "id": 4261702459,
+    "name": "citadel_ability_climb_rope",
+    "hero": 1,
+    "heroes": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      25,
+      27,
+      31,
+      35,
+      38,
+      39,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75
+    ],
+    "image": null
+  },
+  {
+    "class_name": "citadel_ability_jump",
+    "kind": "ability",
+    "id": 1466127517,
+    "name": "Jump",
+    "hero": 1,
+    "heroes": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      25,
+      27,
+      31,
+      35,
+      38,
+      39,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75
+    ],
+    "image": null
+  },
+  {
+    "class_name": "citadel_ability_sprint",
+    "kind": "ability",
+    "id": 1443159618,
+    "name": "",
+    "hero": 1,
+    "heroes": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      25,
+      27,
+      31,
+      35,
+      38,
+      39,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/icons/hud/icons/icon_speed.svg"
+  },
+  {
+    "class_name": "citadel_ability_dash",
+    "kind": "ability",
+    "id": 2207638101,
+    "name": "Dash",
+    "hero": 1,
+    "heroes": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      25,
+      27,
+      31,
+      35,
+      38,
+      39,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75
+    ],
+    "image": null
+  },
+  {
+    "class_name": "citadel_ability_slide",
+    "kind": "ability",
+    "id": 2335418656,
+    "name": "citadel_ability_slide",
+    "hero": 1,
+    "heroes": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      25,
+      27,
+      31,
+      35,
+      38,
+      39,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      73,
+      74,
+      75
+    ],
+    "image": null
+  },
+  {
+    "class_name": "ability_melee_butcher",
+    "kind": "ability",
     "id": 677666973,
     "name": "ability_melee_butcher",
     "hero": null,
@@ -15,16 +634,18 @@ expression: summary
   },
   {
     "class_name": "citadel_ability_melee_kali",
-    "kind": "weapon",
+    "kind": "ability",
     "id": 2950623773,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 21,
+    "heroes": [
+      21
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
     "class_name": "citadel_ability_melee_butcher",
-    "kind": "weapon",
+    "kind": "ability",
     "id": 755819616,
     "name": "citadel_ability_melee_butcher",
     "hero": null,
@@ -33,34 +654,40 @@ expression: summary
   },
   {
     "class_name": "citadel_ability_melee_gunslinger",
-    "kind": "weapon",
+    "kind": "ability",
     "id": 3299584775,
     "name": "citadel_ability_melee_gunslinger",
-    "hero": null,
-    "heroes": [],
+    "hero": 38,
+    "heroes": [
+      38
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
     "class_name": "citadel_ability_melee_yakuza",
-    "kind": "weapon",
+    "kind": "ability",
     "id": 3571834135,
     "name": "citadel_ability_melee_yakuza",
-    "hero": null,
-    "heroes": [],
+    "hero": 39,
+    "heroes": [
+      39
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
     "class_name": "citadel_ability_melee_thumper",
-    "kind": "weapon",
+    "kind": "ability",
     "id": 1208692244,
     "name": "citadel_ability_melee_thumper",
-    "hero": null,
-    "heroes": [],
+    "hero": 51,
+    "heroes": [
+      51
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
     "class_name": "citadel_ability_melee_architect",
-    "kind": "weapon",
+    "kind": "ability",
     "id": 3123925900,
     "name": "citadel_ability_melee_architect",
     "hero": null,
@@ -68,12 +695,122 @@ expression: summary
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
+    "class_name": "citadel_ability_melee_parry",
+    "kind": "ability",
+    "id": 664285540,
+    "name": "Parry",
+    "hero": 1,
+    "heroes": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      25,
+      27,
+      31,
+      35,
+      38,
+      39,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75
+    ],
+    "image": null
+  },
+  {
+    "class_name": "citadel_ability_tier2boss_rocket_barrage",
+    "kind": "ability",
+    "id": 1792983333,
+    "name": "Rocket Barrage",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/engineer_rockets.png"
+  },
+  {
+    "class_name": "citadel_ability_tier2boss_laser_beam",
+    "kind": "ability",
+    "id": 4101890370,
+    "name": "Laser",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/engineer_rockets.png"
+  },
+  {
+    "class_name": "citadel_ability_tier2boss_stomp",
+    "kind": "ability",
+    "id": 1233550373,
+    "name": "Stomp",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/sumo/sumo_stomp.png"
+  },
+  {
+    "class_name": "citadel_ability_tier3boss_laser_beam",
+    "kind": "ability",
+    "id": 337723920,
+    "name": "Patron Laser",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/engineer_rockets.png"
+  },
+  {
+    "class_name": "citadel_ability_tier3boss_damage_pulse",
+    "kind": "ability",
+    "id": 346024533,
+    "name": "citadel_ability_tier3boss_damage_pulse",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
     "class_name": "rutger_rocket",
     "kind": "ability",
     "id": 4182904284,
     "name": "rutger_rocket",
-    "hero": null,
-    "heroes": [],
+    "hero": 49,
+    "heroes": [
+      49
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/rutger/rutger_rocket_launcher.png"
   },
   {
@@ -81,8 +818,10 @@ expression: summary
     "kind": "ability",
     "id": 639385332,
     "name": "rutger_force_field",
-    "hero": null,
-    "heroes": [],
+    "hero": 49,
+    "heroes": [
+      49
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/rutger/rutger_force_field.png"
   },
   {
@@ -90,8 +829,10 @@ expression: summary
     "kind": "ability",
     "id": 1613872264,
     "name": "rutger_cheat_death",
-    "hero": null,
-    "heroes": [],
+    "hero": 49,
+    "heroes": [
+      49
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/rutger/rutger_cheat_death.png"
   },
   {
@@ -99,8 +840,10 @@ expression: summary
     "kind": "ability",
     "id": 363299194,
     "name": "rutger_pulse",
-    "hero": null,
-    "heroes": [],
+    "hero": 49,
+    "heroes": [
+      49
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/rutger/rutger_pulse.png"
   },
   {
@@ -108,8 +851,10 @@ expression: summary
     "kind": "ability",
     "id": 4260284622,
     "name": "citadel_ability_kali_spinning_blade",
-    "hero": null,
-    "heroes": [],
+    "hero": 21,
+    "heroes": [
+      21
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/kali/kali_oscilloblade.png"
   },
   {
@@ -117,8 +862,10 @@ expression: summary
     "kind": "ability",
     "id": 21628267,
     "name": "ability_kali_dust_storm",
-    "hero": null,
-    "heroes": [],
+    "hero": 21,
+    "heroes": [
+      21
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/kali/kali_whirling_blade.png"
   },
   {
@@ -126,8 +873,10 @@ expression: summary
     "kind": "ability",
     "id": 3219375905,
     "name": "citadel_ability_kali_disruptive_charge",
-    "hero": null,
-    "heroes": [],
+    "hero": 21,
+    "heroes": [
+      21
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/kali/kali_speed_burst.png"
   },
   {
@@ -135,8 +884,10 @@ expression: summary
     "kind": "ability",
     "id": 488392205,
     "name": "ability_kali_trappers_bolo",
-    "hero": null,
-    "heroes": [],
+    "hero": 21,
+    "heroes": [
+      21
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/bebop/bebop_sticky_bomb.png"
   },
   {
@@ -180,8 +931,10 @@ expression: summary
     "kind": "ability",
     "id": 2984400727,
     "name": "yakuza_kobun",
-    "hero": null,
-    "heroes": [],
+    "hero": 39,
+    "heroes": [
+      39
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/theboss/the_boss_hired_muscle.png"
   },
   {
@@ -189,26 +942,86 @@ expression: summary
     "kind": "ability",
     "id": 3577477084,
     "name": "yakuza_shakedown_target",
+    "hero": 39,
+    "heroes": [
+      39
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/theboss/the_boss_shakedown.png"
+  },
+  {
+    "class_name": "yakuza_shakedown",
+    "kind": "ability",
+    "id": 3108273022,
+    "name": "yakuza_shakedown",
     "hero": null,
     "heroes": [],
-    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/theboss/the_boss_shakedown.png"
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/engineer_rockets.png"
   },
   {
     "class_name": "yakuza_setting_sun",
     "kind": "ability",
     "id": 3908497730,
     "name": "yakuza_setting_sun",
+    "hero": 39,
+    "heroes": [
+      39
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/theboss/the_boss_setting_sun.png"
+  },
+  {
+    "class_name": "yakuza_gang_activity",
+    "kind": "ability",
+    "id": 2250508707,
+    "name": "yakuza_gang_activity",
     "hero": null,
     "heroes": [],
-    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/theboss/the_boss_setting_sun.png"
+    "image": null
+  },
+  {
+    "class_name": "yakuza_gang_activity_cancel",
+    "kind": "ability",
+    "id": 1685078091,
+    "name": "yakuza_gang_activity_cancel",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/duo/duo_cancel.png"
+  },
+  {
+    "class_name": "yakuza_summon_gangster",
+    "kind": "ability",
+    "id": 523691429,
+    "name": "yakuza_summon_gangster",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "yakuza_teleport_to_gangster",
+    "kind": "ability",
+    "id": 2340315673,
+    "name": "yakuza_teleport_to_gangster",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "yakuza_fealty",
+    "kind": "ability",
+    "id": 3176860010,
+    "name": "yakuza_fealty",
+    "hero": null,
+    "heroes": [],
+    "image": null
   },
   {
     "class_name": "yakuza_protection_racket",
     "kind": "ability",
     "id": 1584495732,
     "name": "yakuza_protection_racket",
-    "hero": null,
-    "heroes": [],
+    "hero": 39,
+    "heroes": [
+      39
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/theboss/the_boss_protection_racket.png"
   },
   {
@@ -216,8 +1029,10 @@ expression: summary
     "kind": "ability",
     "id": 348689004,
     "name": "thumper_ability_1",
-    "hero": null,
-    "heroes": [],
+    "hero": 51,
+    "heroes": [
+      51
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/thumper/thumper_ability_1.png"
   },
   {
@@ -225,8 +1040,10 @@ expression: summary
     "kind": "ability",
     "id": 2086284285,
     "name": "thumper_ability_2",
-    "hero": null,
-    "heroes": [],
+    "hero": 51,
+    "heroes": [
+      51
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/thumper/thumper_ability_2.png"
   },
   {
@@ -234,8 +1051,10 @@ expression: summary
     "kind": "ability",
     "id": 2489807574,
     "name": "thumper_ability_3",
-    "hero": null,
-    "heroes": [],
+    "hero": 51,
+    "heroes": [
+      51
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/thumper/thumper_ability_3.png"
   },
   {
@@ -243,35 +1062,109 @@ expression: summary
     "kind": "ability",
     "id": 2563620507,
     "name": "thumper_ability_4",
-    "hero": null,
-    "heroes": [],
+    "hero": 51,
+    "heroes": [
+      51
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/thumper/thumper_ability_4.png"
   },
   {
-    "class_name": "citadel_hold_melee",
-    "kind": "weapon",
-    "id": 3152711215,
-    "name": "citadel_hold_melee",
+    "class_name": "ability_npc_health_nova",
+    "kind": "ability",
+    "id": 169007758,
+    "name": "ability_npc_health_nova",
     "hero": null,
     "heroes": [],
-    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/health_nova.png"
+  },
+  {
+    "class_name": "ability_npc_shield",
+    "kind": "ability",
+    "id": 2073346996,
+    "name": "ability_npc_shield",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "ability_npc_tier2_beam",
+    "kind": "ability",
+    "id": 3517113584,
+    "name": "ability_npc_tier2_beam",
+    "hero": null,
+    "heroes": [],
+    "image": null
   },
   {
     "class_name": "citadel_ability_melee_genericperson",
-    "kind": "weapon",
+    "kind": "ability",
     "id": 384715776,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 49,
+    "heroes": [
+      49,
+      50,
+      52,
+      53
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
-    "class_name": "ability_melee_astro",
+    "class_name": "weapon_alternative_rmb_activate",
     "kind": "weapon",
-    "id": 519260576,
-    "name": "Melee",
+    "id": 2826225210,
+    "name": "weapon_alternative_rmb_activate",
     "hero": null,
     "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "weapon_alternative_rmb+lmb_activate",
+    "kind": "weapon",
+    "id": 1983361803,
+    "name": "weapon_alternative_rmb+lmb_activate",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_astro_set",
+    "kind": "weapon",
+    "id": 2082220949,
+    "name": "Doc's Orders",
+    "hero": 14,
+    "heroes": [
+      14
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_astro_set_shotgun",
+    "kind": "weapon",
+    "id": 1398703271,
+    "name": "citadel_weapon_astro_set_shotgun",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_astro_set_shotgun_backwards",
+    "kind": "weapon",
+    "id": 4161463520,
+    "name": "citadel_weapon_astro_set_shotgun_backwards",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_astro",
+    "kind": "ability",
+    "id": 519260576,
+    "name": "Melee",
+    "hero": 14,
+    "heroes": [
+      14
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -279,8 +1172,10 @@ expression: summary
     "kind": "ability",
     "id": 1235098866,
     "name": "Powder Keg",
-    "hero": null,
-    "heroes": [],
+    "hero": 14,
+    "heroes": [
+      14
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/astro/holliday_powder_keg.png"
   },
   {
@@ -288,8 +1183,10 @@ expression: summary
     "kind": "ability",
     "id": 2240607294,
     "name": "Bounce Pad",
-    "hero": null,
-    "heroes": [],
+    "hero": 14,
+    "heroes": [
+      14
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/astro/holliday_bounce_pad.png"
   },
   {
@@ -315,8 +1212,10 @@ expression: summary
     "kind": "ability",
     "id": 3190606822,
     "name": "Spirit Lasso",
-    "hero": null,
-    "heroes": [],
+    "hero": 14,
+    "heroes": [
+      14
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/astro/holliday_spirit_lasso.png"
   },
   {
@@ -347,21 +1246,45 @@ expression: summary
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/archer/archer_guided_arrow.png"
   },
   {
+    "class_name": "citadel_weapon_astro_hand_cannon",
+    "kind": "weapon",
+    "id": 669936916,
+    "name": "citadel_weapon_astro_hand_cannon",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
     "class_name": "ability_crackshot",
     "kind": "ability",
     "id": 4179229681,
     "name": "Crackshot",
-    "hero": null,
-    "heroes": [],
+    "hero": 14,
+    "heroes": [
+      14
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/astro/holliday_crackshot.png"
   },
   {
-    "class_name": "citadel_ability_melee_bull",
+    "class_name": "citadel_weapon_bull_set",
     "kind": "weapon",
+    "id": 3609948706,
+    "name": "Case Closed",
+    "hero": 6,
+    "heroes": [
+      6
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_ability_melee_bull",
+    "kind": "ability",
     "id": 3415298717,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 6,
+    "heroes": [
+      6
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -369,8 +1292,10 @@ expression: summary
     "kind": "ability",
     "id": 2824119765,
     "name": "Shoulder Charge",
-    "hero": null,
-    "heroes": [],
+    "hero": 6,
+    "heroes": [
+      6
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/bull_charge.png"
   },
   {
@@ -378,8 +1303,10 @@ expression: summary
     "kind": "ability",
     "id": 715762406,
     "name": "Infernal Resilience",
-    "hero": null,
-    "heroes": [],
+    "hero": 6,
+    "heroes": [
+      6
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/bull_beef.png"
   },
   {
@@ -387,8 +1314,10 @@ expression: summary
     "kind": "ability",
     "id": 509856396,
     "name": "Seismic Impact",
-    "hero": null,
-    "heroes": [],
+    "hero": 6,
+    "heroes": [
+      6
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/bull_jump.png"
   },
   {
@@ -396,17 +1325,32 @@ expression: summary
     "kind": "ability",
     "id": 4072270083,
     "name": "Siphon Life",
-    "hero": null,
-    "heroes": [],
+    "hero": 6,
+    "heroes": [
+      6
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/bull_drain.png"
   },
   {
-    "class_name": "citadel_ability_melee_bebop",
+    "class_name": "citadel_weapon_bebop_set",
     "kind": "weapon",
+    "id": 3764085067,
+    "name": "Humble Pie",
+    "hero": 15,
+    "heroes": [
+      15
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_ability_melee_bebop",
+    "kind": "ability",
     "id": 2373292985,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 15,
+    "heroes": [
+      15
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -414,8 +1358,10 @@ expression: summary
     "kind": "ability",
     "id": 3089858203,
     "name": "Exploding Uppercut",
-    "hero": null,
-    "heroes": [],
+    "hero": 15,
+    "heroes": [
+      15
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/bebop/bebop_uppercut.png"
   },
   {
@@ -423,8 +1369,10 @@ expression: summary
     "kind": "ability",
     "id": 2521902222,
     "name": "Sticky Bomb",
-    "hero": null,
-    "heroes": [],
+    "hero": 15,
+    "heroes": [
+      15
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/bebop/bebop_sticky_bomb.png"
   },
   {
@@ -432,8 +1380,10 @@ expression: summary
     "kind": "ability",
     "id": 3832675871,
     "name": "Hyper Beam",
-    "hero": null,
-    "heroes": [],
+    "hero": 15,
+    "heroes": [
+      15
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/bebop/bebop_hyper_beam.png"
   },
   {
@@ -441,8 +1391,10 @@ expression: summary
     "kind": "ability",
     "id": 1928108461,
     "name": "Grapple Arm",
-    "hero": null,
-    "heroes": [],
+    "hero": 15,
+    "heroes": [
+      15
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/bebop/bebop_hook.png"
   },
   {
@@ -455,12 +1407,25 @@ expression: summary
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/bebop/bebop_sticky_bomb.png"
   },
   {
-    "class_name": "ability_melee_bomber",
+    "class_name": "citadel_weapon_bomber_set",
     "kind": "weapon",
+    "id": 2605652378,
+    "name": "citadel_weapon_bomber_set",
+    "hero": 56,
+    "heroes": [
+      56
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_bomber",
+    "kind": "ability",
     "id": 1759542823,
     "name": "ability_melee_bomber",
-    "hero": null,
-    "heroes": [],
+    "hero": 56,
+    "heroes": [
+      56
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -468,17 +1433,30 @@ expression: summary
     "kind": "ability",
     "id": 3338528319,
     "name": "ability_charged_bomb",
+    "hero": 56,
+    "heroes": [
+      56
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/bebop/bebop_sticky_bomb.png"
+  },
+  {
+    "class_name": "ability_charged_bomb_throw",
+    "kind": "ability",
+    "id": 511336372,
+    "name": "ability_charged_bomb_throw",
     "hero": null,
     "heroes": [],
-    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/bebop/bebop_sticky_bomb.png"
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/engineer_fissure_2_activate.png"
   },
   {
     "class_name": "ability_bomber_ability02",
     "kind": "ability",
     "id": 3875361929,
     "name": "ability_bomber_ability02",
-    "hero": null,
-    "heroes": [],
+    "hero": 56,
+    "heroes": [
+      56
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_roller_bomb.png"
   },
   {
@@ -486,8 +1464,10 @@ expression: summary
     "kind": "ability",
     "id": 4081662205,
     "name": "ability_bomber_ability03",
-    "hero": null,
-    "heroes": [],
+    "hero": 56,
+    "heroes": [
+      56
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_roller_bomb.png"
   },
   {
@@ -495,17 +1475,32 @@ expression: summary
     "kind": "ability",
     "id": 3232290270,
     "name": "ability_bomber_ult",
-    "hero": null,
-    "heroes": [],
+    "hero": 56,
+    "heroes": [
+      56
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_tunnel_vision.png"
   },
   {
-    "class_name": "citadel_ability_melee_cadence",
+    "class_name": "citadel_weapon_cadence_set",
     "kind": "weapon",
+    "id": 3155417712,
+    "name": "citadel_weapon_cadence_set",
+    "hero": 54,
+    "heroes": [
+      54
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_ability_melee_cadence",
+    "kind": "ability",
     "id": 852374872,
     "name": "citadel_ability_melee_cadence",
-    "hero": null,
-    "heroes": [],
+    "hero": 54,
+    "heroes": [
+      54
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -513,8 +1508,10 @@ expression: summary
     "kind": "ability",
     "id": 1157620447,
     "name": "cadence_ability_anthem",
-    "hero": null,
-    "heroes": [],
+    "hero": 54,
+    "heroes": [
+      54
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/cadence/cadence_ability_1.png"
   },
   {
@@ -522,8 +1519,10 @@ expression: summary
     "kind": "ability",
     "id": 957095276,
     "name": "cadence_ability_lullaby",
-    "hero": null,
-    "heroes": [],
+    "hero": 54,
+    "heroes": [
+      54
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/cadence/cadence_ability_3.png"
   },
   {
@@ -531,8 +1530,10 @@ expression: summary
     "kind": "ability",
     "id": 421275722,
     "name": "cadence_ability_silencecontraptions",
-    "hero": null,
-    "heroes": [],
+    "hero": 54,
+    "heroes": [
+      54
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/cadence/cadence_ability_2.png"
   },
   {
@@ -549,17 +1550,32 @@ expression: summary
     "kind": "ability",
     "id": 599532073,
     "name": "cadence_ability_crescendo",
-    "hero": null,
-    "heroes": [],
+    "hero": 54,
+    "heroes": [
+      54
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/cadence/cadence_ability_4.png"
   },
   {
-    "class_name": "citadel_ability_melee_chrono",
+    "class_name": "citadel_weapon_chrono_set",
     "kind": "weapon",
+    "id": 2390964381,
+    "name": "Trade Secret",
+    "hero": 10,
+    "heroes": [
+      10
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_ability_melee_chrono",
+    "kind": "ability",
     "id": 3672737523,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 10,
+    "heroes": [
+      10
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -567,8 +1583,11 @@ expression: summary
     "kind": "ability",
     "id": 58655583,
     "name": "Pulse Grenade",
-    "hero": null,
-    "heroes": [],
+    "hero": 10,
+    "heroes": [
+      10,
+      38
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/chrono/chrono_time_bomb.png"
   },
   {
@@ -576,8 +1595,10 @@ expression: summary
     "kind": "ability",
     "id": 1366719170,
     "name": "Time Wall",
-    "hero": null,
-    "heroes": [],
+    "hero": 10,
+    "heroes": [
+      10
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/chrono/chrono_time_wall.png"
   },
   {
@@ -585,8 +1606,10 @@ expression: summary
     "kind": "ability",
     "id": 1128670012,
     "name": "Kinetic Carbine",
-    "hero": null,
-    "heroes": [],
+    "hero": 10,
+    "heroes": [
+      10
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/duo/duo_attack.png"
   },
   {
@@ -594,17 +1617,32 @@ expression: summary
     "kind": "ability",
     "id": 2917891787,
     "name": "Paradoxical Swap",
-    "hero": null,
-    "heroes": [],
+    "hero": 10,
+    "heroes": [
+      10
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/chrono/chrono_swap.png"
   },
   {
-    "class_name": "citadel_ability_melee_sumo",
+    "class_name": "citadel_weapon_sumo_set",
     "kind": "weapon",
+    "id": 602440127,
+    "name": "The Vonnegun",
+    "hero": 11,
+    "heroes": [
+      11
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_ability_melee_sumo",
+    "kind": "ability",
     "id": 855695370,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 11,
+    "heroes": [
+      11
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -612,8 +1650,10 @@ expression: summary
     "kind": "ability",
     "id": 3760705623,
     "name": "Kinetic Pulse",
-    "hero": null,
-    "heroes": [],
+    "hero": 11,
+    "heroes": [
+      11
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/sumo/sumo_stomp.png"
   },
   {
@@ -621,8 +1661,10 @@ expression: summary
     "kind": "ability",
     "id": 2031714424,
     "name": "Quantum Entanglement",
-    "hero": null,
-    "heroes": [],
+    "hero": 11,
+    "heroes": [
+      11
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/sumo/sumo_quantum.png"
   },
   {
@@ -639,8 +1681,10 @@ expression: summary
     "kind": "ability",
     "id": 492030745,
     "name": "Rejuvenating Aurora",
-    "hero": null,
-    "heroes": [],
+    "hero": 11,
+    "heroes": [
+      11
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/sumo/sumo_pork_bun.png"
   },
   {
@@ -648,17 +1692,32 @@ expression: summary
     "kind": "ability",
     "id": 249410288,
     "name": "Singularity",
-    "hero": null,
-    "heroes": [],
+    "hero": 11,
+    "heroes": [
+      11
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/sumo/sumo_vacuum.png"
   },
   {
-    "class_name": "citadel_ability_melee_engineer",
+    "class_name": "citadel_weapon_engineer_set",
     "kind": "weapon",
+    "id": 1975078202,
+    "name": "Services Rendered",
+    "hero": 8,
+    "heroes": [
+      8
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_ability_melee_engineer",
+    "kind": "ability",
     "id": 2660222379,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 8,
+    "heroes": [
+      8
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -666,8 +1725,10 @@ expression: summary
     "kind": "ability",
     "id": 2142734020,
     "name": "Medicinal Specter",
-    "hero": null,
-    "heroes": [],
+    "hero": 8,
+    "heroes": [
+      8
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/engineer_resupply.png"
   },
   {
@@ -675,8 +1736,10 @@ expression: summary
     "kind": "ability",
     "id": 3133377790,
     "name": "Mini Turret",
-    "hero": null,
-    "heroes": [],
+    "hero": 8,
+    "heroes": [
+      8
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/engineer_turret.png"
   },
   {
@@ -684,26 +1747,70 @@ expression: summary
     "kind": "ability",
     "id": 1725685134,
     "name": "Spectral Wall",
+    "hero": 8,
+    "heroes": [
+      8
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/engineer_fissure_2.png"
+  },
+  {
+    "class_name": "citadel_ability_fissure_wall_trigger",
+    "kind": "ability",
+    "id": 318567870,
+    "name": "citadel_ability_fissure_wall_trigger",
     "hero": null,
     "heroes": [],
-    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/engineer_fissure_2.png"
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/engineer_fissure_2_activate.png"
+  },
+  {
+    "class_name": "citadel_ability_fissure_wall_cancel",
+    "kind": "ability",
+    "id": 1690335039,
+    "name": "citadel_ability_fissure_wall_cancel",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/ability_activate.png"
   },
   {
     "class_name": "citadel_ability_rocket_barrage",
     "kind": "ability",
     "id": 3503044146,
     "name": "Heavy Barrage",
-    "hero": null,
-    "heroes": [],
+    "hero": 8,
+    "heroes": [
+      8
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/engineer_rockets.png"
   },
   {
-    "class_name": "ability_melee_ghost",
+    "class_name": "citadel_weapon_genericperson_set",
     "kind": "weapon",
-    "id": 2500675101,
-    "name": "Melee",
+    "id": 1150061901,
+    "name": "citadel_weapon_genericperson_set",
     "hero": null,
     "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_ghost_set",
+    "kind": "weapon",
+    "id": 1558668879,
+    "name": "Johann's Gift",
+    "hero": 4,
+    "heroes": [
+      4
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_ghost",
+    "kind": "ability",
+    "id": 2500675101,
+    "name": "Melee",
+    "hero": 4,
+    "heroes": [
+      4
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -711,8 +1818,10 @@ expression: summary
     "kind": "ability",
     "id": 715325746,
     "name": "Essence Bomb",
-    "hero": null,
-    "heroes": [],
+    "hero": 4,
+    "heroes": [
+      4
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/spectre/blood_bomb.png"
   },
   {
@@ -720,8 +1829,10 @@ expression: summary
     "kind": "ability",
     "id": 3230530872,
     "name": "Malice",
-    "hero": null,
-    "heroes": [],
+    "hero": 4,
+    "heroes": [
+      4
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/spectre/geist_dagger.png"
   },
   {
@@ -729,8 +1840,10 @@ expression: summary
     "kind": "ability",
     "id": 218284420,
     "name": "Life Drain",
-    "hero": null,
-    "heroes": [],
+    "hero": 4,
+    "heroes": [
+      4
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/spectre/life_drain.png"
   },
   {
@@ -747,17 +1860,32 @@ expression: summary
     "kind": "ability",
     "id": 1307289689,
     "name": "Soul Exchange",
-    "hero": null,
-    "heroes": [],
+    "hero": 4,
+    "heroes": [
+      4
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/spectre/blood_exchange.png"
   },
   {
-    "class_name": "citadel_ability_melee_gigawatt",
+    "class_name": "citadel_weapon_gigawatt_set",
     "kind": "weapon",
+    "id": 2695625322,
+    "name": "Cold Calculus",
+    "hero": 2,
+    "heroes": [
+      2
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_ability_melee_gigawatt",
+    "kind": "ability",
     "id": 2372182196,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 2,
+    "heroes": [
+      2
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -765,8 +1893,10 @@ expression: summary
     "kind": "ability",
     "id": 1065103387,
     "name": "Lightning Ball",
-    "hero": null,
-    "heroes": [],
+    "hero": 2,
+    "heroes": [
+      2
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/giga_ball.png"
   },
   {
@@ -774,8 +1904,10 @@ expression: summary
     "kind": "ability",
     "id": 1074714947,
     "name": "Static Charge",
-    "hero": null,
-    "heroes": [],
+    "hero": 2,
+    "heroes": [
+      2
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/giga_static.png"
   },
   {
@@ -801,8 +1933,10 @@ expression: summary
     "kind": "ability",
     "id": 539192269,
     "name": "Power Surge",
-    "hero": null,
-    "heroes": [],
+    "hero": 2,
+    "heroes": [
+      2
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/giga_chain.png"
   },
   {
@@ -810,17 +1944,32 @@ expression: summary
     "kind": "ability",
     "id": 2061574352,
     "name": "Storm Cloud",
-    "hero": null,
-    "heroes": [],
+    "hero": 2,
+    "heroes": [
+      2
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/giga_storm.png"
   },
   {
-    "class_name": "ability_melee_haze",
+    "class_name": "citadel_weapon_haze_set",
     "kind": "weapon",
+    "id": 2679155647,
+    "name": "Censure & Penance",
+    "hero": 13,
+    "heroes": [
+      13
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_haze",
+    "kind": "ability",
     "id": 3104292528,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 13,
+    "heroes": [
+      13
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -828,8 +1977,10 @@ expression: summary
     "kind": "ability",
     "id": 2948410412,
     "name": "Sleep Dagger",
-    "hero": null,
-    "heroes": [],
+    "hero": 13,
+    "heroes": [
+      13
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/haze/haze_sleep_dagger.png"
   },
   {
@@ -837,8 +1988,10 @@ expression: summary
     "kind": "ability",
     "id": 2414191464,
     "name": "Smoke Bomb",
-    "hero": null,
-    "heroes": [],
+    "hero": 13,
+    "heroes": [
+      13
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/haze/haze_smoke_bomb.png"
   },
   {
@@ -846,8 +1999,10 @@ expression: summary
     "kind": "ability",
     "id": 1080948381,
     "name": "Fixation",
-    "hero": null,
-    "heroes": [],
+    "hero": 13,
+    "heroes": [
+      13
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/haze/haze_fixation.png"
   },
   {
@@ -855,17 +2010,32 @@ expression: summary
     "kind": "ability",
     "id": 731943444,
     "name": "Bullet Dance",
-    "hero": null,
-    "heroes": [],
+    "hero": 13,
+    "heroes": [
+      13
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/haze/haze_bullet_flurry.png"
   },
   {
-    "class_name": "citadel_ability_melee_hornet",
+    "class_name": "citadel_weapon_hornet_set",
     "kind": "weapon",
+    "id": 3510968490,
+    "name": "Wallflower's Revenge",
+    "hero": 3,
+    "heroes": [
+      3
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_ability_melee_hornet",
+    "kind": "ability",
     "id": 1619999260,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 3,
+    "heroes": [
+      3
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -882,8 +2052,10 @@ expression: summary
     "kind": "ability",
     "id": 537527508,
     "name": "Stake",
-    "hero": null,
-    "heroes": [],
+    "hero": 3,
+    "heroes": [
+      3
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/hornet/vindicta_stake.png"
   },
   {
@@ -891,8 +2063,10 @@ expression: summary
     "kind": "ability",
     "id": 1796564033,
     "name": "Flight",
-    "hero": null,
-    "heroes": [],
+    "hero": 3,
+    "heroes": [
+      3
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/hornet/vindicta_flight.png"
   },
   {
@@ -900,8 +2074,10 @@ expression: summary
     "kind": "ability",
     "id": 2048438176,
     "name": "Crow Familiar",
-    "hero": null,
-    "heroes": [],
+    "hero": 3,
+    "heroes": [
+      3
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/hornet/hornet_crow.png"
   },
   {
@@ -909,8 +2085,10 @@ expression: summary
     "kind": "ability",
     "id": 775377419,
     "name": "Assassinate",
-    "hero": null,
-    "heroes": [],
+    "hero": 3,
+    "heroes": [
+      3
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/hornet/hornet_assassinate.png"
   },
   {
@@ -923,12 +2101,26 @@ expression: summary
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/wasp_mark.png"
   },
   {
-    "class_name": "ability_melee_inferno",
+    "class_name": "citadel_weapon_inferno_set",
     "kind": "weapon",
+    "id": 556186193,
+    "name": "Incendiary Remarks",
+    "hero": 1,
+    "heroes": [
+      1
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_inferno",
+    "kind": "ability",
     "id": 750371308,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 1,
+    "heroes": [
+      1,
+      62
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -936,8 +2128,10 @@ expression: summary
     "kind": "ability",
     "id": 1142270357,
     "name": "Concussive Combustion",
-    "hero": null,
-    "heroes": [],
+    "hero": 1,
+    "heroes": [
+      1
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/inferno_bomb.png"
   },
   {
@@ -945,8 +2139,10 @@ expression: summary
     "kind": "ability",
     "id": 3516947824,
     "name": "Flame Dash",
-    "hero": null,
-    "heroes": [],
+    "hero": 1,
+    "heroes": [
+      1
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/inferno_dash.png"
   },
   {
@@ -954,8 +2150,10 @@ expression: summary
     "kind": "ability",
     "id": 491391007,
     "name": "Napalm",
-    "hero": null,
-    "heroes": [],
+    "hero": 1,
+    "heroes": [
+      1
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/inferno_molotov.png"
   },
   {
@@ -963,17 +2161,32 @@ expression: summary
     "kind": "ability",
     "id": 1593133799,
     "name": "Afterburn",
-    "hero": null,
-    "heroes": [],
+    "hero": 1,
+    "heroes": [
+      1
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/inferno_deflect.png"
   },
   {
-    "class_name": "ability_melee_kelvin",
+    "class_name": "citadel_weapon_kelvin_set",
     "kind": "weapon",
+    "id": 3576988085,
+    "name": "Expedition's End",
+    "hero": 12,
+    "heroes": [
+      12
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_kelvin",
+    "kind": "ability",
     "id": 3403409980,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 12,
+    "heroes": [
+      12
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -981,8 +2194,10 @@ expression: summary
     "kind": "ability",
     "id": 2351041382,
     "name": "Arctic Beam",
-    "hero": null,
-    "heroes": [],
+    "hero": 12,
+    "heroes": [
+      12
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/kelvin/ice_beam.png"
   },
   {
@@ -990,8 +2205,10 @@ expression: summary
     "kind": "ability",
     "id": 1963397252,
     "name": "Ice Path",
-    "hero": null,
-    "heroes": [],
+    "hero": 12,
+    "heroes": [
+      12
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/kelvin/ice_path.png"
   },
   {
@@ -999,8 +2216,10 @@ expression: summary
     "kind": "ability",
     "id": 18921423,
     "name": "Frost Grenade",
-    "hero": null,
-    "heroes": [],
+    "hero": 12,
+    "heroes": [
+      12
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/kelvin/freezing_grenade.png"
   },
   {
@@ -1008,17 +2227,32 @@ expression: summary
     "kind": "ability",
     "id": 3826390464,
     "name": "Frozen Shelter",
-    "hero": null,
-    "heroes": [],
+    "hero": 12,
+    "heroes": [
+      12
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/kelvin/frozen_shelter.png"
   },
   {
-    "class_name": "ability_melee_lash",
+    "class_name": "citadel_weapon_lash_set",
     "kind": "weapon",
+    "id": 2896288811,
+    "name": "Tale of The Tape",
+    "hero": 31,
+    "heroes": [
+      31
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_lash",
+    "kind": "ability",
     "id": 3283820257,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 31,
+    "heroes": [
+      31
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -1026,8 +2260,10 @@ expression: summary
     "kind": "ability",
     "id": 2670099061,
     "name": "Grapple",
-    "hero": null,
-    "heroes": [],
+    "hero": 31,
+    "heroes": [
+      31
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/lash/lash_lash.png"
   },
   {
@@ -1035,8 +2271,10 @@ expression: summary
     "kind": "ability",
     "id": 3561817145,
     "name": "Ground Strike",
-    "hero": null,
-    "heroes": [],
+    "hero": 31,
+    "heroes": [
+      31
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/lash/lash_death_slam.png"
   },
   {
@@ -1044,8 +2282,10 @@ expression: summary
     "kind": "ability",
     "id": 397010810,
     "name": "Death Slam",
-    "hero": null,
-    "heroes": [],
+    "hero": 31,
+    "heroes": [
+      31
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/lash/lash_counter_lash.png"
   },
   {
@@ -1053,17 +2293,32 @@ expression: summary
     "kind": "ability",
     "id": 519124136,
     "name": "Flog",
-    "hero": null,
-    "heroes": [],
+    "hero": 31,
+    "heroes": [
+      31
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/lash/lash_flog.png"
+  },
+  {
+    "class_name": "citadel_weapon_mirage_set",
+    "kind": "weapon",
+    "id": 2942562744,
+    "name": "Promises Kept",
+    "hero": 52,
+    "heroes": [
+      52
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
   },
   {
     "class_name": "mirage_tornado",
     "kind": "ability",
     "id": 1336069669,
     "name": "Tornado",
-    "hero": null,
-    "heroes": [],
+    "hero": 52,
+    "heroes": [
+      52
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/mirage/mirage_tornado.png"
   },
   {
@@ -1071,8 +2326,10 @@ expression: summary
     "kind": "ability",
     "id": 2221949202,
     "name": "Djinn's Mark",
-    "hero": null,
-    "heroes": [],
+    "hero": 52,
+    "heroes": [
+      52
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/mirage/mirage_sand_phantom.png"
   },
   {
@@ -1080,8 +2337,10 @@ expression: summary
     "kind": "ability",
     "id": 3733594387,
     "name": "Fire Scarabs",
-    "hero": null,
-    "heroes": [],
+    "hero": 52,
+    "heroes": [
+      52
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/mirage/mirage_fire_beetles.png"
   },
   {
@@ -1089,17 +2348,32 @@ expression: summary
     "kind": "ability",
     "id": 2604653402,
     "name": "Traveler",
-    "hero": null,
-    "heroes": [],
+    "hero": 52,
+    "heroes": [
+      52
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/mirage/mirage_teleport.png"
   },
   {
-    "class_name": "ability_melee_digger",
+    "class_name": "citadel_weapon_digger_set",
     "kind": "weapon",
+    "id": 1895060499,
+    "name": "Yellow Canary",
+    "hero": 18,
+    "heroes": [
+      18
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_digger",
+    "kind": "ability",
     "id": 1400683724,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 18,
+    "heroes": [
+      18
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -1107,8 +2381,10 @@ expression: summary
     "kind": "ability",
     "id": 1454278799,
     "name": "Scorn",
-    "hero": null,
-    "heroes": [],
+    "hero": 18,
+    "heroes": [
+      18
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/grappler/grappler_regen.png"
   },
   {
@@ -1116,8 +2392,10 @@ expression: summary
     "kind": "ability",
     "id": 2406758797,
     "name": "Burrow",
-    "hero": null,
-    "heroes": [],
+    "hero": 18,
+    "heroes": [
+      18
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/grappler/grappler_spin.png"
   },
   {
@@ -1125,8 +2403,10 @@ expression: summary
     "kind": "ability",
     "id": 1914797280,
     "name": "Sand Blast",
-    "hero": null,
-    "heroes": [],
+    "hero": 18,
+    "heroes": [
+      18
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/grappler/grappler_throw_sand.png"
   },
   {
@@ -1134,9 +2414,20 @@ expression: summary
     "kind": "ability",
     "id": 1917840730,
     "name": "Combo",
+    "hero": 18,
+    "heroes": [
+      18
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/grappler/grappler_combo.png"
+  },
+  {
+    "class_name": "citadel_weapon_digger_set2",
+    "kind": "weapon",
+    "id": 1273162367,
+    "name": "Yellow Canary",
     "hero": null,
     "heroes": [],
-    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/grappler/grappler_combo.png"
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
   },
   {
     "class_name": "ability_digger_mudshield",
@@ -1157,12 +2448,34 @@ expression: summary
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/ability_activate.png"
   },
   {
-    "class_name": "ability_melee_nano",
+    "class_name": "citadel_weapon_nano_set",
     "kind": "weapon",
-    "id": 3861289372,
-    "name": "Melee",
+    "id": 3108987282,
+    "name": "Sweetest Lie",
+    "hero": 16,
+    "heroes": [
+      16
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_nano_alt",
+    "kind": "weapon",
+    "id": 3386449071,
+    "name": "Sweetest Lie",
     "hero": null,
     "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_nano",
+    "kind": "ability",
+    "id": 3861289372,
+    "name": "Melee",
+    "hero": 16,
+    "heroes": [
+      16
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -1173,6 +2486,15 @@ expression: summary
     "hero": null,
     "heroes": [],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/high_velocity_mag.png"
+  },
+  {
+    "class_name": "ability_perched_predator_trigger",
+    "kind": "ability",
+    "id": 3380228790,
+    "name": "ability_perched_predator_trigger",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/engineer_fissure_2_activate.png"
   },
   {
     "class_name": "ability_rolling_fireball",
@@ -1224,17 +2546,39 @@ expression: summary
     "kind": "ability",
     "id": 1009029159,
     "name": "Ava",
+    "hero": 16,
+    "heroes": [
+      16
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_catform.png"
+  },
+  {
+    "class_name": "ability_nano_catform_trigger",
+    "kind": "ability",
+    "id": 847436099,
+    "name": "ability_nano_catform_trigger",
     "hero": null,
     "heroes": [],
-    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_catform.png"
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/ability_cancel.png"
+  },
+  {
+    "class_name": "ability_nano_catform_pounce",
+    "kind": "ability",
+    "id": 3975527743,
+    "name": "ability_nano_catform_pounce",
+    "hero": null,
+    "heroes": [],
+    "image": null
   },
   {
     "class_name": "ability_nano_clustergrenade",
     "kind": "ability",
     "id": 4131517918,
     "name": "Gloom Bombs",
-    "hero": null,
-    "heroes": [],
+    "hero": 16,
+    "heroes": [
+      16
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_clustergrenade.png"
   },
   {
@@ -1242,8 +2586,10 @@ expression: summary
     "kind": "ability",
     "id": 2054144742,
     "name": "Return to Shadows",
-    "hero": null,
-    "heroes": [],
+    "hero": 16,
+    "heroes": [
+      16
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_shadow_pulse.png"
   },
   {
@@ -1251,17 +2597,32 @@ expression: summary
     "kind": "ability",
     "id": 1426567660,
     "name": "Leaping Slash",
-    "hero": null,
-    "heroes": [],
+    "hero": 16,
+    "heroes": [
+      16
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_dash.png"
   },
   {
-    "class_name": "ability_melee_archer",
+    "class_name": "citadel_weapon_archer_set",
     "kind": "weapon",
+    "id": 2402901451,
+    "name": "The Mourning Comes",
+    "hero": 17,
+    "heroes": [
+      17
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_archer",
+    "kind": "ability",
     "id": 4220996204,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 17,
+    "heroes": [
+      17
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -1269,8 +2630,10 @@ expression: summary
     "kind": "ability",
     "id": 548943648,
     "name": "Charged Shot",
-    "hero": null,
-    "heroes": [],
+    "hero": 17,
+    "heroes": [
+      17
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/archer/archer_charged_shot.png"
   },
   {
@@ -1278,8 +2641,10 @@ expression: summary
     "kind": "ability",
     "id": 3452399392,
     "name": "Rain of Arrows",
-    "hero": null,
-    "heroes": [],
+    "hero": 17,
+    "heroes": [
+      17
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/archer/archer_power_jump.png"
   },
   {
@@ -1287,8 +2652,10 @@ expression: summary
     "kind": "ability",
     "id": 512733154,
     "name": "Spirit Snare",
-    "hero": null,
-    "heroes": [],
+    "hero": 17,
+    "heroes": [
+      17
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/archer/imobolize_trap.png"
   },
   {
@@ -1296,17 +2663,43 @@ expression: summary
     "kind": "ability",
     "id": 3242902780,
     "name": "Guided Owl",
-    "hero": null,
-    "heroes": [],
+    "hero": 17,
+    "heroes": [
+      17
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/archer/archer_guided_arrow.png"
   },
   {
-    "class_name": "citadel_ability_melee_shiv",
+    "class_name": "citadel_weapon_shiv_set",
     "kind": "weapon",
+    "id": 3121968594,
+    "name": "Busted Flush",
+    "hero": 19,
+    "heroes": [
+      19
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_shiv_alt",
+    "kind": "weapon",
+    "id": 225271804,
+    "name": "Busted Flush",
+    "hero": 19,
+    "heroes": [
+      19
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_ability_melee_shiv",
+    "kind": "ability",
     "id": 11664367,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 19,
+    "heroes": [
+      19
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -1314,8 +2707,10 @@ expression: summary
     "kind": "ability",
     "id": 2460791803,
     "name": "Serrated Knives",
-    "hero": null,
-    "heroes": [],
+    "hero": 19,
+    "heroes": [
+      19
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/shiv/shiv_toss.png"
   },
   {
@@ -1323,8 +2718,10 @@ expression: summary
     "kind": "ability",
     "id": 1458044103,
     "name": "Slice and Dice",
-    "hero": null,
-    "heroes": [],
+    "hero": 19,
+    "heroes": [
+      19
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/shiv/shiv_flash.png"
   },
   {
@@ -1332,8 +2729,10 @@ expression: summary
     "kind": "ability",
     "id": 1537272748,
     "name": "Bloodletting",
-    "hero": null,
-    "heroes": [],
+    "hero": 19,
+    "heroes": [
+      19
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/shiv/shiv_bloodletting.png"
   },
   {
@@ -1341,17 +2740,32 @@ expression: summary
     "kind": "ability",
     "id": 1835738020,
     "name": "Killing Blow",
-    "hero": null,
-    "heroes": [],
+    "hero": 19,
+    "heroes": [
+      19
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/shiv/shiv_killing_blow.png"
   },
   {
-    "class_name": "ability_melee_shieldguy",
+    "class_name": "citadel_weapon_shieldguy_set",
     "kind": "weapon",
+    "id": 215719738,
+    "name": "citadel_weapon_shieldguy_set",
+    "hero": 57,
+    "heroes": [
+      57
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_shieldguy",
+    "kind": "ability",
     "id": 17949280,
     "name": "ability_melee_shieldguy",
-    "hero": null,
-    "heroes": [],
+    "hero": 57,
+    "heroes": [
+      57
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -1359,8 +2773,10 @@ expression: summary
     "kind": "ability",
     "id": 2935955509,
     "name": "ability_shieldguy_ability01",
-    "hero": null,
-    "heroes": [],
+    "hero": 57,
+    "heroes": [
+      57
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_roller_bomb.png"
   },
   {
@@ -1368,8 +2784,10 @@ expression: summary
     "kind": "ability",
     "id": 2322200384,
     "name": "ability_shieldguy_ability02",
-    "hero": null,
-    "heroes": [],
+    "hero": 57,
+    "heroes": [
+      57
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_roller_bomb.png"
   },
   {
@@ -1377,8 +2795,10 @@ expression: summary
     "kind": "ability",
     "id": 1105433407,
     "name": "ability_shieldguy_ability03",
-    "hero": null,
-    "heroes": [],
+    "hero": 57,
+    "heroes": [
+      57
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_roller_bomb.png"
   },
   {
@@ -1386,71 +2806,63 @@ expression: summary
     "kind": "ability",
     "id": 2824729668,
     "name": "ability_shieldguy_ult",
-    "hero": null,
-    "heroes": [],
+    "hero": 57,
+    "heroes": [
+      57
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_tunnel_vision.png"
   },
   {
-    "class_name": "fathom_scalding_spray",
-    "kind": "ability",
-    "id": 347080770,
-    "name": "Scalding Spray",
-    "hero": null,
-    "heroes": [],
-    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/slork/slork_scald.png"
+    "class_name": "citadel_weapon_slork_set",
+    "kind": "weapon",
+    "id": 2080724972,
+    "name": "Riptide",
+    "hero": 53,
+    "heroes": [
+      53
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
   },
   {
-    "class_name": "fathom_breach",
-    "kind": "ability",
-    "id": 2732213553,
-    "name": "Breach",
-    "hero": null,
-    "heroes": [],
-    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/tokamak/tokamak_dying_star.png"
-  },
-  {
-    "class_name": "fathom_defer_damage",
-    "kind": "ability",
-    "id": 2611201292,
-    "name": "fathom_defer_damage",
-    "hero": null,
-    "heroes": [],
-    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/rutger/rutger_cheat_death.png"
-  },
-  {
-    "class_name": "fathom_reefdweller_harpoon",
-    "kind": "ability",
-    "id": 1898352041,
-    "name": "Reefdweller Harpoon",
-    "hero": null,
-    "heroes": [],
-    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/haze/haze_sleep_dagger.png"
-  },
-  {
-    "class_name": "fathom_lurkers_ambush",
-    "kind": "ability",
-    "id": 1851171544,
-    "name": "Lurker's Ambush",
-    "hero": null,
-    "heroes": [],
-    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/slork/slork_invis.png"
+    "class_name": "citadel_weapon_synth_set",
+    "kind": "weapon",
+    "id": 3383556212,
+    "name": "The Black Sheep",
+    "hero": 50,
+    "heroes": [
+      50
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
   },
   {
     "class_name": "synth_plasma_flux",
     "kind": "ability",
     "id": 1976701714,
     "name": "Flying Cloak",
+    "hero": 50,
+    "heroes": [
+      50
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/synth/synth_plasma_flux.png"
+  },
+  {
+    "class_name": "synth_plasma_flux_trigger",
+    "kind": "ability",
+    "id": 15584241,
+    "name": "synth_plasma_flux_trigger",
     "hero": null,
     "heroes": [],
-    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/synth/synth_plasma_flux.png"
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/ability_activate.png"
   },
   {
     "class_name": "synth_pulse",
     "kind": "ability",
     "id": 3747867012,
     "name": "Enchanter's Satchel",
-    "hero": null,
-    "heroes": [],
+    "hero": 50,
+    "heroes": [
+      50
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/synth/synth_pulse.png"
   },
   {
@@ -1463,12 +2875,23 @@ expression: summary
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/synth/synth_grasp.png"
   },
   {
+    "class_name": "synth_grasp_cancel",
+    "kind": "ability",
+    "id": 3168595809,
+    "name": "synth_grasp_cancel",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/ability_activate.png"
+  },
+  {
     "class_name": "synth_barrage",
     "kind": "ability",
     "id": 938149308,
     "name": "Barrage",
-    "hero": null,
-    "heroes": [],
+    "hero": 50,
+    "heroes": [
+      50
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/synth/synth_barrage.png"
   },
   {
@@ -1485,17 +2908,32 @@ expression: summary
     "kind": "ability",
     "id": 2954330093,
     "name": "Affliction",
-    "hero": null,
-    "heroes": [],
+    "hero": 50,
+    "heroes": [
+      50
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/synth/synth_affliction.png"
   },
   {
-    "class_name": "citadel_ability_melee_tengu",
+    "class_name": "citadel_weapon_tengu_set",
     "kind": "weapon",
+    "id": 1961353863,
+    "name": "Protector's Hand",
+    "hero": 20,
+    "heroes": [
+      20
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_ability_melee_tengu",
+    "kind": "ability",
     "id": 2840115251,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 20,
+    "heroes": [
+      20
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -1503,17 +2941,30 @@ expression: summary
     "kind": "ability",
     "id": 1531378655,
     "name": "Watcher's Covenant",
+    "hero": 20,
+    "heroes": [
+      20
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/tengu/tengu_tether.png"
+  },
+  {
+    "class_name": "citadel_ability_tangotether_trigger",
+    "kind": "ability",
+    "id": 3491113888,
+    "name": "citadel_ability_tangotether_trigger",
     "hero": null,
     "heroes": [],
-    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/tengu/tengu_tether.png"
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/astro/gravity_lasso.png"
   },
   {
     "class_name": "citadel_ability_tengu_urn",
     "kind": "ability",
     "id": 4111222521,
     "name": "Kudzu Bomb",
-    "hero": null,
-    "heroes": [],
+    "hero": 20,
+    "heroes": [
+      20
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/tengu/tengu_storm_flask.png"
   },
   {
@@ -1521,8 +2972,10 @@ expression: summary
     "kind": "ability",
     "id": 3642273386,
     "name": "Stone Form",
-    "hero": null,
-    "heroes": [],
+    "hero": 20,
+    "heroes": [
+      20
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/tengu/tengu_stone_form.png"
   },
   {
@@ -1530,17 +2983,32 @@ expression: summary
     "kind": "ability",
     "id": 1247583368,
     "name": "Air Drop",
-    "hero": null,
-    "heroes": [],
+    "hero": 20,
+    "heroes": [
+      20
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/tengu/tengu_lightning_crash.png"
   },
   {
-    "class_name": "citadel_ability_melee_tokamak",
+    "class_name": "citadel_weapon_tokamak_set",
     "kind": "weapon",
+    "id": 2053287272,
+    "name": "citadel_weapon_tokamak_set",
+    "hero": 47,
+    "heroes": [
+      47
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_ability_melee_tokamak",
+    "kind": "ability",
     "id": 3208168586,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 47,
+    "heroes": [
+      47
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -1548,8 +3016,10 @@ expression: summary
     "kind": "ability",
     "id": 1564303265,
     "name": "tokamak_hot_shot",
-    "hero": null,
-    "heroes": [],
+    "hero": 47,
+    "heroes": [
+      47
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/tokamak/tokamak_hot_shot.png"
   },
   {
@@ -1566,8 +3036,10 @@ expression: summary
     "kind": "ability",
     "id": 1498385915,
     "name": "tokamak_radiance",
-    "hero": null,
-    "heroes": [],
+    "hero": 47,
+    "heroes": [
+      47
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/tokamak/tokamak_blinding_radiance.png"
   },
   {
@@ -1580,12 +3052,23 @@ expression: summary
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/tokamak/tokamak_heat_sinks.png"
   },
   {
+    "class_name": "tokamak_heat_sinks_inherent",
+    "kind": "ability",
+    "id": 26435936,
+    "name": "tokamak_heat_sinks_inherent",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/ability_activate.png"
+  },
+  {
     "class_name": "tokamak_dying_star",
     "kind": "ability",
     "id": 4042747505,
     "name": "tokamak_dying_star",
-    "hero": null,
-    "heroes": [],
+    "hero": 47,
+    "heroes": [
+      47
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/tokamak/tokamak_dying_star.png"
   },
   {
@@ -1593,17 +3076,43 @@ expression: summary
     "kind": "ability",
     "id": 4264339460,
     "name": "tokamak_crimson_cannon",
-    "hero": null,
-    "heroes": [],
+    "hero": 47,
+    "heroes": [
+      47
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/tokamak/tokamak_crimson_cannon.png"
   },
   {
-    "class_name": "ability_melee_viscous",
+    "class_name": "citadel_weapon_viscous_set",
     "kind": "weapon",
+    "id": 3413773852,
+    "name": "Deep Sea Interpreter",
+    "hero": 35,
+    "heroes": [
+      35
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_viscous_set_2",
+    "kind": "weapon",
+    "id": 3819944797,
+    "name": "Deep Sea Interpreter",
+    "hero": 35,
+    "heroes": [
+      35
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_viscous",
+    "kind": "ability",
     "id": 3914911135,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 35,
+    "heroes": [
+      35
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -1611,8 +3120,10 @@ expression: summary
     "kind": "ability",
     "id": 3247040238,
     "name": "Splatter",
-    "hero": null,
-    "heroes": [],
+    "hero": 35,
+    "heroes": [
+      35
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/viscous/viscous_goo_ball.png"
   },
   {
@@ -1620,8 +3131,10 @@ expression: summary
     "kind": "ability",
     "id": 3788152387,
     "name": "The Cube",
-    "hero": null,
-    "heroes": [],
+    "hero": 35,
+    "heroes": [
+      35
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/viscous/viscous_restorative_goo.png"
   },
   {
@@ -1638,8 +3151,10 @@ expression: summary
     "kind": "ability",
     "id": 4206531918,
     "name": "Goo Ball",
-    "hero": null,
-    "heroes": [],
+    "hero": 35,
+    "heroes": [
+      35
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/viscous/viscous_goo_sphere.png"
   },
   {
@@ -1647,17 +3162,32 @@ expression: summary
     "kind": "ability",
     "id": 1020817390,
     "name": "Puddle Punch",
-    "hero": null,
-    "heroes": [],
+    "hero": 35,
+    "heroes": [
+      35
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/viscous/viscous_goo_punch.png"
   },
   {
-    "class_name": "citadel_ability_melee_warden",
+    "class_name": "citadel_weapon_warden_set",
     "kind": "weapon",
+    "id": 816395058,
+    "name": "Freedom's Cost",
+    "hero": 25,
+    "heroes": [
+      25
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_ability_melee_warden",
+    "kind": "ability",
     "id": 3433765565,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 25,
+    "heroes": [
+      25
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -1665,8 +3195,10 @@ expression: summary
     "kind": "ability",
     "id": 1656913918,
     "name": "Binding Word",
-    "hero": null,
-    "heroes": [],
+    "hero": 25,
+    "heroes": [
+      25
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/warden/warden_lock_down.png"
   },
   {
@@ -1674,8 +3206,10 @@ expression: summary
     "kind": "ability",
     "id": 2751689917,
     "name": "Willpower",
-    "hero": null,
-    "heroes": [],
+    "hero": 25,
+    "heroes": [
+      25
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/warden/warden_high_alert.png"
   },
   {
@@ -1683,8 +3217,10 @@ expression: summary
     "kind": "ability",
     "id": 2656490109,
     "name": "Alchemical Flask",
-    "hero": null,
-    "heroes": [],
+    "hero": 25,
+    "heroes": [
+      25
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/warden/warden_crowd_control.png"
   },
   {
@@ -1692,17 +3228,32 @@ expression: summary
     "kind": "ability",
     "id": 2702908623,
     "name": "Last Stand",
-    "hero": null,
-    "heroes": [],
+    "hero": 25,
+    "heroes": [
+      25
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/warden/warden_riot_protocol.png"
   },
   {
-    "class_name": "citadel_ability_melee_wraith",
+    "class_name": "citadel_weapon_wraith_set",
     "kind": "weapon",
+    "id": 1427059555,
+    "name": "The Rake",
+    "hero": 7,
+    "heroes": [
+      7
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_ability_melee_wraith",
+    "kind": "ability",
     "id": 1192327851,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 7,
+    "heroes": [
+      7
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -1710,8 +3261,10 @@ expression: summary
     "kind": "ability",
     "id": 2981692841,
     "name": "Telekinesis",
-    "hero": null,
-    "heroes": [],
+    "hero": 7,
+    "heroes": [
+      7
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/wraith_lift.png"
   },
   {
@@ -1719,8 +3272,10 @@ expression: summary
     "kind": "ability",
     "id": 4147641675,
     "name": "Project Mind",
-    "hero": null,
-    "heroes": [],
+    "hero": 7,
+    "heroes": [
+      7
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/wraith_teleport.png"
   },
   {
@@ -1737,8 +3292,11 @@ expression: summary
     "kind": "ability",
     "id": 1842576017,
     "name": "Full Auto",
-    "hero": null,
-    "heroes": [],
+    "hero": 7,
+    "heroes": [
+      7,
+      62
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/wraith_aura.png"
   },
   {
@@ -1746,8 +3304,10 @@ expression: summary
     "kind": "ability",
     "id": 1999680326,
     "name": "Card Trick",
-    "hero": null,
-    "heroes": [],
+    "hero": 7,
+    "heroes": [
+      7
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/wraith_card_trick.png"
   },
   {
@@ -1760,12 +3320,25 @@ expression: summary
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/tokamak/tokamak_blinding_radiance.png"
   },
   {
-    "class_name": "ability_melee_wrecker",
+    "class_name": "citadel_weapon_wrecker_set",
     "kind": "weapon",
+    "id": 495487721,
+    "name": "The Butcher's Hand",
+    "hero": 48,
+    "heroes": [
+      48
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_wrecker",
+    "kind": "ability",
     "id": 2697859853,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 48,
+    "heroes": [
+      48
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -1778,12 +3351,23 @@ expression: summary
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/wrecker/wrecking_ball.png"
   },
   {
+    "class_name": "ability_wrecking_ball_throw",
+    "kind": "ability",
+    "id": 4016285240,
+    "name": "ability_wrecking_ball_throw",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/ability_activate.png"
+  },
+  {
     "class_name": "ability_wrecker_salvage",
     "kind": "ability",
     "id": 208809857,
     "name": "Consume",
-    "hero": null,
-    "heroes": [],
+    "hero": 48,
+    "heroes": [
+      48
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/wrecker/salvage.png"
   },
   {
@@ -1791,8 +3375,10 @@ expression: summary
     "kind": "ability",
     "id": 3422822440,
     "name": "Bio Blast",
-    "hero": null,
-    "heroes": [],
+    "hero": 48,
+    "heroes": [
+      48
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/wrecker/scrap_blast.png"
   },
   {
@@ -1818,8 +3404,10 @@ expression: summary
     "kind": "ability",
     "id": 3426178920,
     "name": "Overload",
-    "hero": null,
-    "heroes": [],
+    "hero": 48,
+    "heroes": [
+      48
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/mirage/mirage_sunfire_cataclysm.png"
   },
   {
@@ -1827,17 +3415,43 @@ expression: summary
     "kind": "ability",
     "id": 2153275594,
     "name": "Wrecking Ball",
-    "hero": null,
-    "heroes": [],
+    "hero": 48,
+    "heroes": [
+      48
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/wrecker/wrecking_ball.png"
   },
   {
-    "class_name": "ability_melee_yamato",
+    "class_name": "citadel_weapon_yamato_set",
     "kind": "weapon",
+    "id": 440716503,
+    "name": "Sister's Lament",
+    "hero": 27,
+    "heroes": [
+      27
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_yamato_alt",
+    "kind": "weapon",
+    "id": 2725537392,
+    "name": "Sister's Lament",
+    "hero": 27,
+    "heroes": [
+      27
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_yamato",
+    "kind": "ability",
     "id": 3334760137,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 27,
+    "heroes": [
+      27
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -1845,8 +3459,10 @@ expression: summary
     "kind": "ability",
     "id": 3255651252,
     "name": "Power Slash",
-    "hero": null,
-    "heroes": [],
+    "hero": 27,
+    "heroes": [
+      27
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/yamato/yamato_power_slash.png"
   },
   {
@@ -1854,8 +3470,10 @@ expression: summary
     "kind": "ability",
     "id": 2566573207,
     "name": "Flying Strike",
-    "hero": null,
-    "heroes": [],
+    "hero": 27,
+    "heroes": [
+      27
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/yamato/yamato_flying_strike.png"
   },
   {
@@ -1863,8 +3481,10 @@ expression: summary
     "kind": "ability",
     "id": 2366960452,
     "name": "Crimson Slash",
-    "hero": null,
-    "heroes": [],
+    "hero": 27,
+    "heroes": [
+      27
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/yamato/yamato_crimson_slash.png"
   },
   {
@@ -1872,17 +3492,32 @@ expression: summary
     "kind": "ability",
     "id": 3319782965,
     "name": "Shadow Transformation",
-    "hero": null,
-    "heroes": [],
+    "hero": 27,
+    "heroes": [
+      27
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/yamato/yamato_blinding_steel.png"
   },
   {
-    "class_name": "ability_melee_viper",
+    "class_name": "citadel_weapon_viper_set",
     "kind": "weapon",
+    "id": 988091080,
+    "name": "The Rattler",
+    "hero": 58,
+    "heroes": [
+      58
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_viper",
+    "kind": "ability",
     "id": 1015591692,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 58,
+    "heroes": [
+      58
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -1899,8 +3534,10 @@ expression: summary
     "kind": "ability",
     "id": 1469918191,
     "name": "Slither",
-    "hero": null,
-    "heroes": [],
+    "hero": 58,
+    "heroes": [
+      58
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/viper/viper_snakedash.png"
   },
   {
@@ -1908,8 +3545,10 @@ expression: summary
     "kind": "ability",
     "id": 3428732129,
     "name": "Lethal Venom",
-    "hero": null,
-    "heroes": [],
+    "hero": 58,
+    "heroes": [
+      58
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/viper/viper_venom.png"
   },
   {
@@ -1922,12 +3561,23 @@ expression: summary
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/tokamak/tokamak_blinding_radiance.png"
   },
   {
+    "class_name": "ability_viper_slide",
+    "kind": "ability",
+    "id": 726306979,
+    "name": "ability_viper_slide",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
     "class_name": "ability_viper_debuffdagger",
     "kind": "ability",
     "id": 645773760,
     "name": "Screwjab Dagger",
-    "hero": null,
-    "heroes": [],
+    "hero": 58,
+    "heroes": [
+      58
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/viper/viper_debuffdagger.png"
   },
   {
@@ -1935,17 +3585,32 @@ expression: summary
     "kind": "ability",
     "id": 1594727071,
     "name": "Petrifying Bola",
-    "hero": null,
-    "heroes": [],
+    "hero": 58,
+    "heroes": [
+      58
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/viper/viper_petrifybola.png"
   },
   {
-    "class_name": "ability_melee_vandal",
+    "class_name": "citadel_weapon_vandal_set",
     "kind": "weapon",
+    "id": 2207852489,
+    "name": "citadel_weapon_vandal_set",
+    "hero": 59,
+    "heroes": [
+      59
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_vandal",
+    "kind": "ability",
     "id": 2067539397,
     "name": "ability_melee_vandal",
-    "hero": null,
-    "heroes": [],
+    "hero": 59,
+    "heroes": [
+      59
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -1953,8 +3618,10 @@ expression: summary
     "kind": "ability",
     "id": 1288133032,
     "name": "citadel_ability_vandal_surge",
-    "hero": null,
-    "heroes": [],
+    "hero": 59,
+    "heroes": [
+      59
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/wraith_lift.png"
   },
   {
@@ -1962,8 +3629,10 @@ expression: summary
     "kind": "ability",
     "id": 2833514487,
     "name": "ability_vandal_pillar",
-    "hero": null,
-    "heroes": [],
+    "hero": 59,
+    "heroes": [
+      59
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/tokamak/tokamak_blinding_radiance.png"
   },
   {
@@ -1971,8 +3640,10 @@ expression: summary
     "kind": "ability",
     "id": 371372145,
     "name": "ability_haunt",
-    "hero": null,
-    "heroes": [],
+    "hero": 59,
+    "heroes": [
+      59
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/inferno_deflect.png"
   },
   {
@@ -1980,17 +3651,32 @@ expression: summary
     "kind": "ability",
     "id": 916959628,
     "name": "citadel_ability_vandal_overflow",
-    "hero": null,
-    "heroes": [],
+    "hero": 59,
+    "heroes": [
+      59
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/wraith_lift.png"
   },
   {
-    "class_name": "ability_melee_magician",
+    "class_name": "citadel_weapon_magician_set",
     "kind": "weapon",
+    "id": 2014234803,
+    "name": "The Prestige",
+    "hero": 60,
+    "heroes": [
+      60
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_magician",
+    "kind": "ability",
     "id": 3610020756,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 60,
+    "heroes": [
+      60
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -1998,8 +3684,10 @@ expression: summary
     "kind": "ability",
     "id": 3156905386,
     "name": "Vexing Bolt",
-    "hero": null,
-    "heroes": [],
+    "hero": 60,
+    "heroes": [
+      60
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/magician/magician_magicbolt.png"
   },
   {
@@ -2030,13 +3718,33 @@ expression: summary
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/rutger/rutger_cheat_death.png"
   },
   {
+    "class_name": "ability_magician_magicbolt_trigger",
+    "kind": "ability",
+    "id": 28521455,
+    "name": "ability_magician_magicbolt_trigger",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/ricochet.png"
+  },
+  {
     "class_name": "ability_magician_cloneturret",
     "kind": "ability",
     "id": 12456023,
     "name": "Spectral Assistant",
+    "hero": 60,
+    "heroes": [
+      60
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/magician/magician_cloneturret.png"
+  },
+  {
+    "class_name": "ability_magician_cloneturret_trigger",
+    "kind": "ability",
+    "id": 653642027,
+    "name": "Spectral Assistant",
     "hero": null,
     "heroes": [],
-    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/magician/magician_cloneturret.png"
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/ability_activate.png"
   },
   {
     "class_name": "ability_magician_stage",
@@ -2070,8 +3778,10 @@ expression: summary
     "kind": "ability",
     "id": 191022746,
     "name": "Audience Participation",
-    "hero": null,
-    "heroes": [],
+    "hero": 60,
+    "heroes": [
+      60
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/magician/magician_copyult.png"
   },
   {
@@ -2079,17 +3789,32 @@ expression: summary
     "kind": "ability",
     "id": 2142213586,
     "name": "Rabbit Hex",
-    "hero": null,
-    "heroes": [],
+    "hero": 60,
+    "heroes": [
+      60
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/magician/magician_animalcurse.png"
   },
   {
-    "class_name": "ability_melee_trapper",
+    "class_name": "citadel_weapon_trapper_set",
     "kind": "weapon",
+    "id": 2390247986,
+    "name": "Civil Servant",
+    "hero": 61,
+    "heroes": [
+      61
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_trapper",
+    "kind": "ability",
     "id": 4050229048,
     "name": "ability_melee_trapper",
-    "hero": null,
-    "heroes": [],
+    "hero": 61,
+    "heroes": [
+      61
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -2097,8 +3822,10 @@ expression: summary
     "kind": "ability",
     "id": 2675680636,
     "name": "Bottled Phantasmicide",
-    "hero": null,
-    "heroes": [],
+    "hero": 61,
+    "heroes": [
+      61
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/trapper/trapper_poison_jar.png"
   },
   {
@@ -2106,8 +3833,10 @@ expression: summary
     "kind": "ability",
     "id": 2876116869,
     "name": "Crawling Plague",
-    "hero": null,
-    "heroes": [],
+    "hero": 61,
+    "heroes": [
+      61
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/trapper/trapper_spider_wave.png"
   },
   {
@@ -2115,8 +3844,10 @@ expression: summary
     "kind": "ability",
     "id": 3322902852,
     "name": "Pest Barrier",
-    "hero": null,
-    "heroes": [],
+    "hero": 61,
+    "heroes": [
+      61
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/trapper/trapper_spider_shield.png"
   },
   {
@@ -2133,8 +3864,10 @@ expression: summary
     "kind": "ability",
     "id": 3360792911,
     "name": "Silktrap",
-    "hero": null,
-    "heroes": [],
+    "hero": 61,
+    "heroes": [
+      61
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/trapper/trapper_web_wall.png"
   },
   {
@@ -2147,12 +3880,25 @@ expression: summary
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/healbane.png"
   },
   {
+    "class_name": "citadel_weapon_operative_set",
+    "kind": "weapon",
+    "id": 3294175151,
+    "name": "Umbrella Gun",
+    "hero": 62,
+    "heroes": [
+      62
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
     "class_name": "operative_umbrella_maneuver",
     "kind": "ability",
     "id": 4210991587,
     "name": "Umbrella Maneuver",
-    "hero": null,
-    "heroes": [],
+    "hero": 62,
+    "heroes": [
+      62
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/springy_boots.png"
   },
   {
@@ -2160,8 +3906,10 @@ expression: summary
     "kind": "ability",
     "id": 1773588524,
     "name": "Blindside",
-    "hero": null,
-    "heroes": [],
+    "hero": 62,
+    "heroes": [
+      62
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/operative/operative_blindside.png"
   },
   {
@@ -2169,9 +3917,22 @@ expression: summary
     "kind": "ability",
     "id": 1101238302,
     "name": "Revelation",
-    "hero": null,
-    "heroes": [],
+    "hero": 62,
+    "heroes": [
+      62
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/sumo/sumo_pork_bun.png"
+  },
+  {
+    "class_name": "citadel_weapon_gunslinger2_set",
+    "kind": "weapon",
+    "id": 3318975115,
+    "name": "citadel_weapon_gunslinger2_set",
+    "hero": 38,
+    "heroes": [
+      38
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
   },
   {
     "class_name": "ability_gunslinger_spreadingfire",
@@ -2205,8 +3966,11 @@ expression: summary
     "kind": "ability",
     "id": 3248109871,
     "name": "Demontrigger Blitz",
-    "hero": null,
-    "heroes": [],
+    "hero": 38,
+    "heroes": [
+      38,
+      70
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/tokamak/tokamak_hot_shot.png"
   },
   {
@@ -2214,8 +3978,10 @@ expression: summary
     "kind": "ability",
     "id": 2839987102,
     "name": "Infernal Brand",
-    "hero": null,
-    "heroes": [],
+    "hero": 38,
+    "heroes": [
+      38
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/hornet/hornet_assassinate.png"
   },
   {
@@ -2223,17 +3989,32 @@ expression: summary
     "kind": "ability",
     "id": 289749826,
     "name": "gunslinger_knockbackblast",
-    "hero": null,
-    "heroes": [],
+    "hero": 38,
+    "heroes": [
+      38
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/tokamak/tokamak_hot_shot.png"
   },
   {
-    "class_name": "ability_melee_vampirebat",
+    "class_name": "citadel_weapon_vampirebat_set",
     "kind": "weapon",
+    "id": 2502155040,
+    "name": "New Money",
+    "hero": 63,
+    "heroes": [
+      63
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_vampirebat",
+    "kind": "ability",
     "id": 1372322902,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 63,
+    "heroes": [
+      63
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -2250,8 +4031,10 @@ expression: summary
     "kind": "ability",
     "id": 2398133749,
     "name": "Sanguine Retreat",
-    "hero": null,
-    "heroes": [],
+    "hero": 63,
+    "heroes": [
+      63
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/vampirebat/vampirebat_sanguine_retreat.png"
   },
   {
@@ -2259,8 +4042,10 @@ expression: summary
     "kind": "ability",
     "id": 1233782561,
     "name": "Love Bites",
-    "hero": null,
-    "heroes": [],
+    "hero": 63,
+    "heroes": [
+      63
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/vampirebat/vampirebat_love_bites.png"
   },
   {
@@ -2268,8 +4053,10 @@ expression: summary
     "kind": "ability",
     "id": 3379486147,
     "name": "Nox Nostra",
-    "hero": null,
-    "heroes": [],
+    "hero": 63,
+    "heroes": [
+      63
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/vampirebat/vampirebat_nox_nostra.png"
   },
   {
@@ -2295,17 +4082,41 @@ expression: summary
     "kind": "ability",
     "id": 193508101,
     "name": "Rake",
-    "hero": null,
-    "heroes": [],
+    "hero": 63,
+    "heroes": [
+      63
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/vampirebat/vampirebat_rake.png"
   },
   {
-    "class_name": "ability_melee_priest",
+    "class_name": "citadel_weapon_vampirebat_set2",
     "kind": "weapon",
-    "id": 2559648467,
-    "name": "ability_melee_priest",
+    "id": 57866690,
+    "name": "New Money",
     "hero": null,
     "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_priest_set",
+    "kind": "weapon",
+    "id": 2029849853,
+    "name": "51:20",
+    "hero": 65,
+    "heroes": [
+      65
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_priest",
+    "kind": "ability",
+    "id": 2559648467,
+    "name": "ability_melee_priest",
+    "hero": 65,
+    "heroes": [
+      65
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -2313,8 +4124,10 @@ expression: summary
     "kind": "ability",
     "id": 1764146857,
     "name": "ability_priest_knockback",
-    "hero": null,
-    "heroes": [],
+    "hero": 65,
+    "heroes": [
+      65
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/sumo/sumo_stomp.png"
   },
   {
@@ -2331,8 +4144,10 @@ expression: summary
     "kind": "ability",
     "id": 2260066289,
     "name": "ability_priest_stackingdefense",
-    "hero": null,
-    "heroes": [],
+    "hero": 65,
+    "heroes": [
+      65
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/advanced_armor.png"
   },
   {
@@ -2345,12 +4160,23 @@ expression: summary
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/hornet/hornet_assassinate.png"
   },
   {
+    "class_name": "citadel_weapon_priest_crossbow",
+    "kind": "weapon",
+    "id": 519002049,
+    "name": "citadel_weapon_priest_crossbow",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
     "class_name": "ability_priest_weaponswap",
     "kind": "ability",
     "id": 2918874166,
     "name": "ability_priest_weaponswap",
-    "hero": null,
-    "heroes": [],
+    "hero": 65,
+    "heroes": [
+      65
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/hornet/hornet_assassinate.png"
   },
   {
@@ -2385,17 +4211,32 @@ expression: summary
     "kind": "ability",
     "id": 911307831,
     "name": "ability_priest_flashbang",
-    "hero": null,
-    "heroes": [],
+    "hero": 65,
+    "heroes": [
+      65
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/rupture.png"
   },
   {
-    "class_name": "ability_melee_boho",
+    "class_name": "citadel_weapon_boho_set",
     "kind": "weapon",
+    "id": 1590129566,
+    "name": "citadel_weapon_boho_set",
+    "hero": 68,
+    "heroes": [
+      68
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_boho",
+    "kind": "ability",
     "id": 1318429798,
     "name": "ability_melee_boho",
-    "hero": null,
-    "heroes": [],
+    "hero": 68,
+    "heroes": [
+      68
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -2421,8 +4262,10 @@ expression: summary
     "kind": "ability",
     "id": 370209602,
     "name": "Intertwine",
-    "hero": null,
-    "heroes": [],
+    "hero": 68,
+    "heroes": [
+      68
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/synth/synth_grasp.png"
   },
   {
@@ -2430,8 +4273,10 @@ expression: summary
     "kind": "ability",
     "id": 2000761890,
     "name": "Skipshot",
-    "hero": null,
-    "heroes": [],
+    "hero": 68,
+    "heroes": [
+      68
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/magician/magician_magicbolt.png"
   },
   {
@@ -2439,8 +4284,10 @@ expression: summary
     "kind": "ability",
     "id": 3962304265,
     "name": "Swish",
-    "hero": null,
-    "heroes": [],
+    "hero": 68,
+    "heroes": [
+      68
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/shiv/shiv_prison_dance.png"
   },
   {
@@ -2448,17 +4295,32 @@ expression: summary
     "kind": "ability",
     "id": 759370291,
     "name": "ability_boho_channeltether",
-    "hero": null,
-    "heroes": [],
+    "hero": 68,
+    "heroes": [
+      68
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/mirage/mirage_djinns_reach.png"
   },
   {
-    "class_name": "ability_melee_swan",
+    "class_name": "citadel_weapon_swan_set",
     "kind": "weapon",
+    "id": 1761919638,
+    "name": "citadel_weapon_swan_set",
+    "hero": 71,
+    "heroes": [
+      71
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_swan",
+    "kind": "ability",
     "id": 2605250528,
     "name": "ability_melee_swan",
-    "hero": null,
-    "heroes": [],
+    "hero": 71,
+    "heroes": [
+      71
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -2466,8 +4328,10 @@ expression: summary
     "kind": "ability",
     "id": 2619369142,
     "name": "ability_swan_featherboomerang",
-    "hero": null,
-    "heroes": [],
+    "hero": 71,
+    "heroes": [
+      71
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/mirage/mirage_fire_beetles.png"
   },
   {
@@ -2475,8 +4339,10 @@ expression: summary
     "kind": "ability",
     "id": 682591488,
     "name": "Jeté",
-    "hero": null,
-    "heroes": [],
+    "hero": 71,
+    "heroes": [
+      71
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/bull_jump.png"
   },
   {
@@ -2484,8 +4350,10 @@ expression: summary
     "kind": "ability",
     "id": 1418303954,
     "name": "Acrobat",
-    "hero": null,
-    "heroes": [],
+    "hero": 71,
+    "heroes": [
+      71
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/kelvin/ice_path.png"
   },
   {
@@ -2493,17 +4361,32 @@ expression: summary
     "kind": "ability",
     "id": 1048488396,
     "name": "ability_swan_ult",
-    "hero": null,
-    "heroes": [],
+    "hero": 71,
+    "heroes": [
+      71
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_tunnel_vision.png"
   },
   {
-    "class_name": "ability_melee_skyrunner",
+    "class_name": "citadel_weapon_skyrunner_set",
     "kind": "weapon",
+    "id": 3977811669,
+    "name": "citadel_weapon_skyrunner_set",
+    "hero": 70,
+    "heroes": [
+      70
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_skyrunner",
+    "kind": "ability",
     "id": 1274698030,
     "name": "ability_melee_skyrunner",
-    "hero": null,
-    "heroes": [],
+    "hero": 70,
+    "heroes": [
+      70
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -2511,8 +4394,10 @@ expression: summary
     "kind": "ability",
     "id": 228680142,
     "name": "Flakshot",
-    "hero": null,
-    "heroes": [],
+    "hero": 70,
+    "heroes": [
+      70
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/ricochet.png"
   },
   {
@@ -2520,8 +4405,10 @@ expression: summary
     "kind": "ability",
     "id": 3449758496,
     "name": "ability_skyrunner_magic_beam",
-    "hero": null,
-    "heroes": [],
+    "hero": 70,
+    "heroes": [
+      70
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/kelvin/freezing_grenade.png"
   },
   {
@@ -2529,8 +4416,10 @@ expression: summary
     "kind": "ability",
     "id": 201562678,
     "name": "Lifethread",
-    "hero": null,
-    "heroes": [],
+    "hero": 70,
+    "heroes": [
+      70
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/lash/lash_flog.png"
   },
   {
@@ -2543,12 +4432,36 @@ expression: summary
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_tunnel_vision.png"
   },
   {
-    "class_name": "ability_melee_druid",
+    "class_name": "citadel_weapon_skyrunner_alt",
     "kind": "weapon",
+    "id": 2330506722,
+    "name": "citadel_weapon_skyrunner_alt",
+    "hero": 70,
+    "heroes": [
+      70
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_druid_set",
+    "kind": "weapon",
+    "id": 122168569,
+    "name": "citadel_weapon_druid_set",
+    "hero": 73,
+    "heroes": [
+      73
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_druid",
+    "kind": "ability",
     "id": 3204148430,
     "name": "ability_melee_druid",
-    "hero": null,
-    "heroes": [],
+    "hero": 73,
+    "heroes": [
+      73
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -2556,8 +4469,10 @@ expression: summary
     "kind": "ability",
     "id": 3603780999,
     "name": "ability_druid_ability01",
-    "hero": null,
-    "heroes": [],
+    "hero": 73,
+    "heroes": [
+      73
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_roller_bomb.png"
   },
   {
@@ -2565,8 +4480,10 @@ expression: summary
     "kind": "ability",
     "id": 1077190862,
     "name": "ability_druid_ability02",
-    "hero": null,
-    "heroes": [],
+    "hero": 73,
+    "heroes": [
+      73
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_roller_bomb.png"
   },
   {
@@ -2574,8 +4491,10 @@ expression: summary
     "kind": "ability",
     "id": 2800600819,
     "name": "ability_druid_sprout",
-    "hero": null,
-    "heroes": [],
+    "hero": 73,
+    "heroes": [
+      73
+    ],
     "image": null
   },
   {
@@ -2583,17 +4502,50 @@ expression: summary
     "kind": "ability",
     "id": 2510227556,
     "name": "ability_druid_ult",
-    "hero": null,
-    "heroes": [],
+    "hero": 73,
+    "heroes": [
+      73
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_tunnel_vision.png"
   },
   {
-    "class_name": "ability_melee_graf",
-    "kind": "weapon",
-    "id": 2614530871,
-    "name": "ability_melee_graf",
+    "class_name": "ability_druid_plant_obscure_bush",
+    "kind": "ability",
+    "id": 796063676,
+    "name": "ability_druid_plant_obscure_bush",
     "hero": null,
     "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "ability_druid_plant_branch_wall",
+    "kind": "ability",
+    "id": 609857027,
+    "name": "ability_druid_plant_branch_wall",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "citadel_weapon_graf_set",
+    "kind": "weapon",
+    "id": 581038282,
+    "name": "citadel_weapon_graf_set",
+    "hero": 74,
+    "heroes": [
+      74
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_graf",
+    "kind": "ability",
+    "id": 2614530871,
+    "name": "ability_melee_graf",
+    "hero": 74,
+    "heroes": [
+      74
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -2601,8 +4553,10 @@ expression: summary
     "kind": "ability",
     "id": 2627122290,
     "name": "ability_graf_ability01",
-    "hero": null,
-    "heroes": [],
+    "hero": 74,
+    "heroes": [
+      74
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_roller_bomb.png"
   },
   {
@@ -2610,8 +4564,10 @@ expression: summary
     "kind": "ability",
     "id": 4197612718,
     "name": "ability_graf_ability02",
-    "hero": null,
-    "heroes": [],
+    "hero": 74,
+    "heroes": [
+      74
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_roller_bomb.png"
   },
   {
@@ -2619,8 +4575,10 @@ expression: summary
     "kind": "ability",
     "id": 2949458312,
     "name": "ability_graf_ability03",
-    "hero": null,
-    "heroes": [],
+    "hero": 74,
+    "heroes": [
+      74
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_roller_bomb.png"
   },
   {
@@ -2628,17 +4586,32 @@ expression: summary
     "kind": "ability",
     "id": 2561043068,
     "name": "ability_graf_ult",
-    "hero": null,
-    "heroes": [],
+    "hero": 74,
+    "heroes": [
+      74
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_tunnel_vision.png"
   },
   {
-    "class_name": "ability_melee_fortuna",
+    "class_name": "citadel_weapon_fortuna_set",
     "kind": "weapon",
+    "id": 3877402249,
+    "name": "citadel_weapon_fortuna_set",
+    "hero": 75,
+    "heroes": [
+      75
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_fortuna",
+    "kind": "ability",
     "id": 1388731643,
     "name": "ability_melee_fortuna",
-    "hero": null,
-    "heroes": [],
+    "hero": 75,
+    "heroes": [
+      75
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -2646,8 +4619,10 @@ expression: summary
     "kind": "ability",
     "id": 309803113,
     "name": "ability_fortuna_ability01",
-    "hero": null,
-    "heroes": [],
+    "hero": 75,
+    "heroes": [
+      75
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_roller_bomb.png"
   },
   {
@@ -2655,8 +4630,10 @@ expression: summary
     "kind": "ability",
     "id": 3803152704,
     "name": "ability_fortuna_ability02",
-    "hero": null,
-    "heroes": [],
+    "hero": 75,
+    "heroes": [
+      75
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_roller_bomb.png"
   },
   {
@@ -2664,8 +4641,10 @@ expression: summary
     "kind": "ability",
     "id": 620778714,
     "name": "ability_fortuna_ability03",
-    "hero": null,
-    "heroes": [],
+    "hero": 75,
+    "heroes": [
+      75
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_roller_bomb.png"
   },
   {
@@ -2673,17 +4652,43 @@ expression: summary
     "kind": "ability",
     "id": 3632058121,
     "name": "ability_fortuna_ult",
-    "hero": null,
-    "heroes": [],
+    "hero": 75,
+    "heroes": [
+      75
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/nano/nano_tunnel_vision.png"
   },
   {
-    "class_name": "ability_melee_punkgoat",
+    "class_name": "citadel_weapon_punkgoat_set",
     "kind": "weapon",
+    "id": 3395613043,
+    "name": "Biquette",
+    "hero": 72,
+    "heroes": [
+      72
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_punkgoat_slide",
+    "kind": "ability",
+    "id": 3152475531,
+    "name": "ability_punkgoat_slide",
+    "hero": 72,
+    "heroes": [
+      72
+    ],
+    "image": null
+  },
+  {
+    "class_name": "ability_melee_punkgoat",
+    "kind": "ability",
     "id": 3023323617,
     "name": "Melee",
-    "hero": null,
-    "heroes": [],
+    "hero": 72,
+    "heroes": [
+      72
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -2691,8 +4696,10 @@ expression: summary
     "kind": "ability",
     "id": 3296031213,
     "name": "Blasted",
-    "hero": null,
-    "heroes": [],
+    "hero": 72,
+    "heroes": [
+      72
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/punkgoat/goat_blasted.png"
   },
   {
@@ -2700,8 +4707,10 @@ expression: summary
     "kind": "ability",
     "id": 3762861984,
     "name": "Chain Gang",
-    "hero": null,
-    "heroes": [],
+    "hero": 72,
+    "heroes": [
+      72
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/punkgoat/goat_chaingang.png"
   },
   {
@@ -2709,8 +4718,10 @@ expression: summary
     "kind": "ability",
     "id": 1792773251,
     "name": "Rising Ram",
-    "hero": null,
-    "heroes": [],
+    "hero": 72,
+    "heroes": [
+      72
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/punkgoat/goat_risingram.png"
   },
   {
@@ -2718,17 +4729,41 @@ expression: summary
     "kind": "ability",
     "id": 1841661392,
     "name": "Bashdown",
-    "hero": null,
-    "heroes": [],
+    "hero": 72,
+    "heroes": [
+      72
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/punkgoat/goat_sigilslam.png"
   },
   {
-    "class_name": "ability_melee_doorman",
+    "class_name": "citadel_weapon_doorman_set",
     "kind": "weapon",
-    "id": 2903891855,
-    "name": "Melee",
+    "id": 3409956698,
+    "name": "Service With A Smile",
+    "hero": 69,
+    "heroes": [
+      69
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_doorman_alt",
+    "kind": "weapon",
+    "id": 4144812912,
+    "name": "Service With A Smile",
     "hero": null,
     "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_doorman",
+    "kind": "ability",
+    "id": 2903891855,
+    "name": "Melee",
+    "hero": 69,
+    "heroes": [
+      69
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -2736,17 +4771,30 @@ expression: summary
     "kind": "ability",
     "id": 109766091,
     "name": "Doorway",
+    "hero": 69,
+    "heroes": [
+      69
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/doorman/doorman_doorway.png"
+  },
+  {
+    "class_name": "ability_doorman_doorway_close",
+    "kind": "ability",
+    "id": 3720109443,
+    "name": "Close Doors",
     "hero": null,
     "heroes": [],
-    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/doorman/doorman_doorway.png"
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/doorman/doorman_doorwayclose.png"
   },
   {
     "class_name": "ability_doorman_luggage_cart",
     "kind": "ability",
     "id": 1719512318,
     "name": "Luggage Cart",
-    "hero": null,
-    "heroes": [],
+    "hero": 69,
+    "heroes": [
+      69
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/doorman/doorman_luggagetrolley.png"
   },
   {
@@ -2754,8 +4802,10 @@ expression: summary
     "kind": "ability",
     "id": 103496908,
     "name": "Call Bell",
-    "hero": null,
-    "heroes": [],
+    "hero": 69,
+    "heroes": [
+      69
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/doorman/doorman_bell.png"
   },
   {
@@ -2763,17 +4813,30 @@ expression: summary
     "kind": "ability",
     "id": 1703045691,
     "name": "Hotel Guest",
-    "hero": null,
-    "heroes": [],
+    "hero": 69,
+    "heroes": [
+      69
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/doorman/doorman_elevator.png"
   },
   {
-    "class_name": "ability_melee_bookworm",
+    "class_name": "citadel_weapon_bookworm_set",
     "kind": "weapon",
-    "id": 3850113264,
-    "name": "Melee",
+    "id": 353851685,
+    "name": "Chapter's End",
     "hero": null,
     "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_bookworm",
+    "kind": "ability",
+    "id": 3850113264,
+    "name": "Melee",
+    "hero": 67,
+    "heroes": [
+      67
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -2781,8 +4844,10 @@ expression: summary
     "kind": "ability",
     "id": 604448162,
     "name": "Conjure Dragon",
-    "hero": null,
-    "heroes": [],
+    "hero": 67,
+    "heroes": [
+      67
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/bookworm/bookworm_dragon.png"
   },
   {
@@ -2790,8 +4855,10 @@ expression: summary
     "kind": "ability",
     "id": 3054993162,
     "name": "Captivating Read",
-    "hero": null,
-    "heroes": [],
+    "hero": 67,
+    "heroes": [
+      67
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/bookworm/bookworm_blindinglight.png"
   },
   {
@@ -2799,8 +4866,10 @@ expression: summary
     "kind": "ability",
     "id": 3553292912,
     "name": "Defend and Fight!",
-    "hero": null,
-    "heroes": [],
+    "hero": 67,
+    "heroes": [
+      67
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/bookworm/bookworm_defendandfight.png"
   },
   {
@@ -2808,17 +4877,52 @@ expression: summary
     "kind": "ability",
     "id": 1841901343,
     "name": "Rallying Charge",
-    "hero": null,
-    "heroes": [],
+    "hero": 67,
+    "heroes": [
+      67
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/bookworm/bookworm_charge.png"
   },
   {
-    "class_name": "ability_melee_drifter",
+    "class_name": "citadel_weapon_bookworm_set2",
     "kind": "weapon",
-    "id": 1184405291,
-    "name": "Melee",
+    "id": 4260448939,
+    "name": "Chapter's End",
+    "hero": 67,
+    "heroes": [
+      67
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_drifter_set",
+    "kind": "weapon",
+    "id": 160782216,
+    "name": "Crimson Grasp",
+    "hero": 64,
+    "heroes": [
+      64
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "citadel_weapon_drifter_alt",
+    "kind": "weapon",
+    "id": 2201766712,
+    "name": "Drifter Alt Weapon",
     "hero": null,
     "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_drifter",
+    "kind": "ability",
+    "id": 1184405291,
+    "name": "Melee",
+    "hero": 64,
+    "heroes": [
+      64
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -2826,8 +4930,10 @@ expression: summary
     "kind": "ability",
     "id": 3120550633,
     "name": "Rend",
-    "hero": null,
-    "heroes": [],
+    "hero": 64,
+    "heroes": [
+      64
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/drifter/drifter_claw.png"
   },
   {
@@ -2835,17 +4941,30 @@ expression: summary
     "kind": "ability",
     "id": 1264175662,
     "name": "Stalker's Mark",
+    "hero": 64,
+    "heroes": [
+      64
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/drifter/drifter_stalkersmark.png"
+  },
+  {
+    "class_name": "drifter_shadow_mark_teleport",
+    "kind": "ability",
+    "id": 3534684567,
+    "name": "Ambush",
     "hero": null,
     "heroes": [],
-    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/drifter/drifter_stalkersmark.png"
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/drifter/stalkers_mark_teleport.png"
   },
   {
     "class_name": "ability_drifter_hunger",
     "kind": "ability",
     "id": 1033019133,
     "name": "Bloodscent",
-    "hero": null,
-    "heroes": [],
+    "hero": 64,
+    "heroes": [
+      64
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/drifter/drifter_thehunger.png"
   },
   {
@@ -2853,17 +4972,30 @@ expression: summary
     "kind": "ability",
     "id": 1168182161,
     "name": "Eternal Night",
-    "hero": null,
-    "heroes": [],
+    "hero": 64,
+    "heroes": [
+      64
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/drifter/darkness.png"
   },
   {
-    "class_name": "ability_melee_frank",
+    "class_name": "citadel_weapon_frank_set",
     "kind": "weapon",
-    "id": 3745177128,
-    "name": "Melee",
+    "id": 4048744580,
+    "name": "Memento Mori",
     "hero": null,
     "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "ability_melee_frank",
+    "kind": "ability",
+    "id": 3745177128,
+    "name": "Melee",
+    "hero": 66,
+    "heroes": [
+      66
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/melee_damage.png"
   },
   {
@@ -2880,8 +5012,10 @@ expression: summary
     "kind": "ability",
     "id": 3727084744,
     "name": "Jumpstart",
-    "hero": null,
-    "heroes": [],
+    "hero": 66,
+    "heroes": [
+      66
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/frank/frank_jump_start.png"
   },
   {
@@ -2889,8 +5023,10 @@ expression: summary
     "kind": "ability",
     "id": 1472593493,
     "name": "Aura of Suffering",
-    "hero": null,
-    "heroes": [],
+    "hero": 66,
+    "heroes": [
+      66
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/frank/frank_aura_of_suffering.png"
   },
   {
@@ -2898,8 +5034,10 @@ expression: summary
     "kind": "ability",
     "id": 3493884851,
     "name": "Shocking Reanimation",
-    "hero": null,
-    "heroes": [],
+    "hero": 66,
+    "heroes": [
+      66
+    ],
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/frank/frank_shocking_reanimation.png"
   },
   {
@@ -2907,8 +5045,2127 @@ expression: summary
     "kind": "ability",
     "id": 2043074967,
     "name": "Pain Battery",
+    "hero": 66,
+    "heroes": [
+      66
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/frank/frank_pain_battery.png"
+  },
+  {
+    "class_name": "citadel_weapon_frank_set2",
+    "kind": "weapon",
+    "id": 2079380905,
+    "name": "Memento Mori",
+    "hero": 66,
+    "heroes": [
+      66
+    ],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/weapon_damage.png"
+  },
+  {
+    "class_name": "weapon_upgrade_t1",
+    "kind": "weapon",
+    "id": 10546756,
+    "name": "weapon_upgrade_t1",
     "hero": null,
     "heroes": [],
-    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/frank/frank_pain_battery.png"
+    "image": null
+  },
+  {
+    "class_name": "weapon_upgrade_t2",
+    "kind": "weapon",
+    "id": 1620942471,
+    "name": "weapon_upgrade_t2",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "weapon_upgrade_t3",
+    "kind": "weapon",
+    "id": 506109244,
+    "name": "weapon_upgrade_t3",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "weapon_upgrade_t4",
+    "kind": "weapon",
+    "id": 361904051,
+    "name": "weapon_upgrade_t4",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "weapon_upgrade_t5",
+    "kind": "weapon",
+    "id": 349524508,
+    "name": "weapon_upgrade_t5",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "upgrade_clip_size",
+    "kind": "upgrade",
+    "id": 1548066885,
+    "name": "Extended Magazine",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/clip_size.png"
+  },
+  {
+    "class_name": "upgrade_non_player_bonus",
+    "kind": "upgrade",
+    "id": 1009965641,
+    "name": "Monster Rounds",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/reaper_rounds.png"
+  },
+  {
+    "class_name": "upgrade_non_player_bonus_sacrifice",
+    "kind": "upgrade",
+    "id": 709540378,
+    "name": "Cultist Sacrifice",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "upgrade_ammo_scavenger",
+    "kind": "upgrade",
+    "id": 1248737459,
+    "name": "Ammo Scavenger",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/ammo_scavenger.png"
+  },
+  {
+    "class_name": "upgrade_clip_size_fixed",
+    "kind": "upgrade",
+    "id": 3535785353,
+    "name": "upgrade_clip_size_fixed",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/clip_size.png"
+  },
+  {
+    "class_name": "upgrade_clip_size_fixed_t3",
+    "kind": "upgrade",
+    "id": 2861048274,
+    "name": "upgrade_clip_size_fixed_t3",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "upgrade_chain_lightning",
+    "kind": "upgrade",
+    "id": 811521119,
+    "name": "Tesla Bullets",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/electrified_bullets.png"
+  },
+  {
+    "class_name": "upgrade_capacitor",
+    "kind": "upgrade",
+    "id": 710436191,
+    "name": "Capacitor",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/electrified_bullets.png"
+  },
+  {
+    "class_name": "upgrade_galvanic_storm",
+    "kind": "upgrade",
+    "id": 3316018900,
+    "name": "upgrade_galvanic_storm",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/electrified_bullets.png"
+  },
+  {
+    "class_name": "upgrade_hollow_point_rounds",
+    "kind": "upgrade",
+    "id": 2678489038,
+    "name": "Hollow Point",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/hollow_point.png"
+  },
+  {
+    "class_name": "upgrade_pristine_emblem",
+    "kind": "upgrade",
+    "id": 2064029594,
+    "name": "Opening Rounds",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/pristine_emblem.png"
+  },
+  {
+    "class_name": "upgrade_stabilizer",
+    "kind": "upgrade",
+    "id": 1544322593,
+    "name": "upgrade_stabilizer",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/stabilizer.png"
+  },
+  {
+    "class_name": "upgrade_high_velocity_mag",
+    "kind": "upgrade",
+    "id": 3077079169,
+    "name": "High-Velocity Rounds",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/high_velocity_mag.png"
+  },
+  {
+    "class_name": "upgrade_lifestrike_gauntlets",
+    "kind": "upgrade",
+    "id": 1437614329,
+    "name": "Melee Lifesteal",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/lifestrike_gauntlets.png"
+  },
+  {
+    "class_name": "upgrade_melee_rebuttal",
+    "kind": "upgrade",
+    "id": 4204808176,
+    "name": "Rebuttal",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/icons/hud/modifiers/icon_parry.svg"
+  },
+  {
+    "class_name": "upgrade_counterspell",
+    "kind": "upgrade",
+    "id": 1414025773,
+    "name": "Counterspell",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/icons/hud/modifiers/icon_parry.svg"
+  },
+  {
+    "class_name": "upgrade_weighted_shots",
+    "kind": "upgrade",
+    "id": 3791587546,
+    "name": "Weighted Shots",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/close_range.png"
+  },
+  {
+    "class_name": "upgrade_close_range",
+    "kind": "upgrade",
+    "id": 1342610602,
+    "name": "Close Quarters",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/close_range.png"
+  },
+  {
+    "class_name": "upgrade_long_range",
+    "kind": "upgrade",
+    "id": 3331811235,
+    "name": "Long Range",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/long_range.png"
+  },
+  {
+    "class_name": "upgrade_slowing_bullets",
+    "kind": "upgrade",
+    "id": 393974127,
+    "name": "Slowing Bullets",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/slowing_bullets.png"
+  },
+  {
+    "class_name": "upgrade_inhibitor",
+    "kind": "upgrade",
+    "id": 2037039379,
+    "name": "Inhibitor",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/inhibitor.png"
+  },
+  {
+    "class_name": "upgrade_small_attack_speed",
+    "kind": "upgrade",
+    "id": 1889400890,
+    "name": "upgrade_small_attack_speed",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/fire_rate_plus.png"
+  },
+  {
+    "class_name": "upgrade_tech_defense_shredders",
+    "kind": "upgrade",
+    "id": 1144549437,
+    "name": "Spirit Shredder Bullets",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/tech_resist_shredder.png"
+  },
+  {
+    "class_name": "upgrade_attack_speed_1",
+    "kind": "upgrade",
+    "id": 1109351073,
+    "name": "upgrade_attack_speed_1",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/fire_rate_plus.png"
+  },
+  {
+    "class_name": "upgrade_nearby_enemy_boost",
+    "kind": "upgrade",
+    "id": 1100809516,
+    "name": "upgrade_nearby_enemy_boost",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/adrenaline_rush.png"
+  },
+  {
+    "class_name": "upgrade_dps_aura",
+    "kind": "upgrade",
+    "id": 2108215830,
+    "name": "Heroic Aura",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/bullet_damage_aura.png"
+  },
+  {
+    "class_name": "upgrade_armor_reduction_debuff",
+    "kind": "upgrade",
+    "id": 1031828968,
+    "name": "upgrade_armor_reduction_debuff",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/armor_breaking_bullets.png"
+  },
+  {
+    "class_name": "upgrade_weapon_detention_ammo",
+    "kind": "upgrade",
+    "id": 775925321,
+    "name": "upgrade_weapon_detention_ammo",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/detention_rounds.png"
+  },
+  {
+    "class_name": "upgrade_height_advantage",
+    "kind": "upgrade",
+    "id": 2854211216,
+    "name": "upgrade_height_advantage",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/height_advantage.png"
+  },
+  {
+    "class_name": "upgrade_targeted_silence",
+    "kind": "upgrade",
+    "id": 619484391,
+    "name": "Silence Wave",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/targeted_silence.png"
+  },
+  {
+    "class_name": "upgrade_proc_silence",
+    "kind": "upgrade",
+    "id": 1113837674,
+    "name": "Silencer",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/emp_bullets.png"
+  },
+  {
+    "class_name": "upgrade_silencer",
+    "kind": "upgrade",
+    "id": 3133167885,
+    "name": "Silencer",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/emp_bullets.png"
+  },
+  {
+    "class_name": "upgrade_proc_disarm",
+    "kind": "upgrade",
+    "id": 1503218332,
+    "name": "upgrade_proc_disarm",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/disarm.png"
+  },
+  {
+    "class_name": "upgrade_berserker",
+    "kind": "upgrade",
+    "id": 1414319208,
+    "name": "Berserker",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/berserker.png"
+  },
+  {
+    "class_name": "upgrade_fervor",
+    "kind": "upgrade",
+    "id": 339443430,
+    "name": "Frenzy",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/fervor.png"
+  },
+  {
+    "class_name": "upgrade_siphon_bullets",
+    "kind": "upgrade",
+    "id": 1282141666,
+    "name": "Siphon Bullets",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/siphon_bullets.png"
+  },
+  {
+    "class_name": "upgrade_headshot_booster",
+    "kind": "upgrade",
+    "id": 2010028405,
+    "name": "Headshot Booster",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/headshot_booster.png"
+  },
+  {
+    "class_name": "upgrade_headshot_booster2",
+    "kind": "upgrade",
+    "id": 1770441818,
+    "name": "Weakening Headshot",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/headshot_booster.png"
+  },
+  {
+    "class_name": "upgrade_sharpshooter",
+    "kind": "upgrade",
+    "id": 2152872419,
+    "name": "Sharpshooter",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/longshot.png"
+  },
+  {
+    "class_name": "upgrade_headhunter",
+    "kind": "upgrade",
+    "id": 4053935515,
+    "name": "Headhunter",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/headhunter.png"
+  },
+  {
+    "class_name": "upgrade_spellslinger_headshots",
+    "kind": "upgrade",
+    "id": 4075861416,
+    "name": "Spirit Rend",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/spellslinger_headshots.png"
+  },
+  {
+    "class_name": "upgrade_banshee_slugs",
+    "kind": "upgrade",
+    "id": 3884003354,
+    "name": "Crippling Headshot",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/banshee_slugs.png"
+  },
+  {
+    "class_name": "upgrade_proc_tech_damage",
+    "kind": "upgrade",
+    "id": 184951197,
+    "name": "upgrade_proc_tech_damage",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/tech_imbued_bullets.png"
+  },
+  {
+    "class_name": "upgrade_crackshot",
+    "kind": "upgrade",
+    "id": 395867183,
+    "name": "Mystic Shot",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/explosive_bullets.png"
+  },
+  {
+    "class_name": "upgrade_critshot",
+    "kind": "upgrade",
+    "id": 1396247347,
+    "name": "Lucky Shot",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/crit_damage.png"
+  },
+  {
+    "class_name": "upgrade_close_quarter_combat",
+    "kind": "upgrade",
+    "id": 2095565695,
+    "name": "Point Blank",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/point_blank.png"
+  },
+  {
+    "class_name": "upgrade_clip_size_2",
+    "kind": "upgrade",
+    "id": 4284855775,
+    "name": "upgrade_clip_size_2",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "upgrade_clip_size_3",
+    "kind": "upgrade",
+    "id": 3449296332,
+    "name": "upgrade_clip_size_3",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "upgrade_toxic_bullets",
+    "kind": "upgrade",
+    "id": 3696726732,
+    "name": "Toxic Bullets",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/toxic_bullets.png"
+  },
+  {
+    "class_name": "upgrade_attack_speed_2",
+    "kind": "upgrade",
+    "id": 3791295884,
+    "name": "upgrade_attack_speed_2",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/fire_rate_plus_plus.png"
+  },
+  {
+    "class_name": "upgrade_drum_magazine",
+    "kind": "upgrade",
+    "id": 4190165534,
+    "name": "upgrade_drum_magazine",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/auto_reloader.png"
+  },
+  {
+    "class_name": "upgrade_ricochet",
+    "kind": "upgrade",
+    "id": 2480592370,
+    "name": "Ricochet",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/ricochet.png"
+  },
+  {
+    "class_name": "upgrade_health",
+    "kind": "upgrade",
+    "id": 3633614685,
+    "name": "Extra Health",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/health.png"
+  },
+  {
+    "class_name": "upgrade_health_2",
+    "kind": "upgrade",
+    "id": 2858617477,
+    "name": "Toughness",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/health.png"
+  },
+  {
+    "class_name": "upgrade_toughness_3",
+    "kind": "upgrade",
+    "id": 1448361452,
+    "name": "upgrade_toughness_3",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/health.png"
+  },
+  {
+    "class_name": "upgrade_bullet_armor",
+    "kind": "upgrade",
+    "id": 3713423303,
+    "name": "Bullet Armor",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/bullet_armor.png"
+  },
+  {
+    "class_name": "upgrade_tech_armor",
+    "kind": "upgrade",
+    "id": 223594321,
+    "name": "Spirit Armor",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/tech_armor.png"
+  },
+  {
+    "class_name": "upgrade_health_regen_1",
+    "kind": "upgrade",
+    "id": 1575167590,
+    "name": "upgrade_health_regen_1",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/health_regen.png"
+  },
+  {
+    "class_name": "upgrade_vampire",
+    "kind": "upgrade",
+    "id": 499683006,
+    "name": "Bullet Lifesteal",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/health_stealing_bullets.png"
+  },
+  {
+    "class_name": "upgrade_double_jump",
+    "kind": "upgrade",
+    "id": 790496977,
+    "name": "upgrade_double_jump",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/double_jump.png"
+  },
+  {
+    "class_name": "upgrade_health_regen_aura",
+    "kind": "upgrade",
+    "id": 3321728133,
+    "name": "upgrade_health_regen_aura",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/health_regen_aura.png"
+  },
+  {
+    "class_name": "upgrade_combo_breaker",
+    "kind": "upgrade",
+    "id": 4066757307,
+    "name": "upgrade_combo_breaker",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/tech_purge.png"
+  },
+  {
+    "class_name": "upgrade_debuff_reducer",
+    "kind": "upgrade",
+    "id": 1047818222,
+    "name": "Debuff Reducer",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/debuff_reducer.png"
+  },
+  {
+    "class_name": "upgrade_reduce_debuff_duration",
+    "kind": "upgrade",
+    "id": 3731635960,
+    "name": "Debuff Remover",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/debuff_remover.png"
+  },
+  {
+    "class_name": "upgrade_high_impact_armor",
+    "kind": "upgrade",
+    "id": 1825391146,
+    "name": "upgrade_high_impact_armor",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/bullet_armor.png"
+  },
+  {
+    "class_name": "upgrade_slow_immunity",
+    "kind": "upgrade",
+    "id": 1711193274,
+    "name": "upgrade_slow_immunity",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/sprint_booster.png"
+  },
+  {
+    "class_name": "upgrade_bullet_armor_2",
+    "kind": "upgrade",
+    "id": 2887128033,
+    "name": "upgrade_bullet_armor_2",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/bullet_armor_plus.png"
+  },
+  {
+    "class_name": "upgrade_weapon_power_and_health_drain",
+    "kind": "upgrade",
+    "id": 471704443,
+    "name": "upgrade_weapon_power_and_health_drain",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/overdrive.png"
+  },
+  {
+    "class_name": "upgrade_active_bullet_shield",
+    "kind": "upgrade",
+    "id": 1319649491,
+    "name": "upgrade_active_bullet_shield",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/bullet_shield.png"
+  },
+  {
+    "class_name": "upgrade_ablative_coat",
+    "kind": "upgrade",
+    "id": 4168302000,
+    "name": "upgrade_ablative_coat",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/bullet_shield.png"
+  },
+  {
+    "class_name": "upgrade_tech_purge",
+    "kind": "upgrade",
+    "id": 2163598980,
+    "name": "Spirit Resilience",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/tech_purge.png"
+  },
+  {
+    "class_name": "upgrade_improved_bullet_armor",
+    "kind": "upgrade",
+    "id": 3140772621,
+    "name": "Bullet Resilience",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/improved_bullet_armor.png"
+  },
+  {
+    "class_name": "upgrade_metal_skin",
+    "kind": "upgrade",
+    "id": 1378931225,
+    "name": "Metal Skin",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/metal_skin.png"
+  },
+  {
+    "class_name": "upgrade_healing_booster",
+    "kind": "upgrade",
+    "id": 2566692615,
+    "name": "Healing Booster",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/healing_booster.png"
+  },
+  {
+    "class_name": "upgrade_chonky",
+    "kind": "upgrade",
+    "id": 3585132399,
+    "name": "Fortitude",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/revitalizer.png"
+  },
+  {
+    "class_name": "upgrade_damage_recycler",
+    "kind": "upgrade",
+    "id": 865846625,
+    "name": "Leech",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/leech.png"
+  },
+  {
+    "class_name": "upgrade_bullet_damage_reduction_aura",
+    "kind": "upgrade",
+    "id": 1298427343,
+    "name": "upgrade_bullet_damage_reduction_aura",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/weapon_jammer.png"
+  },
+  {
+    "class_name": "upgrade_sprint_booster",
+    "kind": "upgrade",
+    "id": 3399065363,
+    "name": "Sprint Boots",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/sprint_booster.png"
+  },
+  {
+    "class_name": "upgrade_trophy_collector",
+    "kind": "upgrade",
+    "id": 3074274290,
+    "name": "Trophy Collector",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/sprint_booster.png"
+  },
+  {
+    "class_name": "upgrade_cardio_calibrator",
+    "kind": "upgrade",
+    "id": 2447176615,
+    "name": "Enduring Speed",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/cardio_calibrator.png"
+  },
+  {
+    "class_name": "upgrade_superior_stamina",
+    "kind": "upgrade",
+    "id": 334300056,
+    "name": "Stamina Mastery",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/superior_stamina.png"
+  },
+  {
+    "class_name": "upgrade_rapid_rounds",
+    "kind": "upgrade",
+    "id": 668299740,
+    "name": "Rapid Rounds",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/rapid_rounds.png"
+  },
+  {
+    "class_name": "upgrade_improved_stamina",
+    "kind": "upgrade",
+    "id": 4139877411,
+    "name": "Extra Stamina",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/improved_stamina.png"
+  },
+  {
+    "class_name": "upgrade_bullet_armor_reduction_aura",
+    "kind": "upgrade",
+    "id": 2481177645,
+    "name": "Hunter's Aura",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/bullet_armor_reduction_aura.png"
+  },
+  {
+    "class_name": "upgrade_camouflage",
+    "kind": "upgrade",
+    "id": 1962740586,
+    "name": "upgrade_camouflage",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/camouflage_suit.png"
+  },
+  {
+    "class_name": "upgrade_regenerative_armor",
+    "kind": "upgrade",
+    "id": 3038950099,
+    "name": "upgrade_regenerative_armor",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/last_stand.png"
+  },
+  {
+    "class_name": "upgrade_weapon_shielding",
+    "kind": "upgrade",
+    "id": 805079544,
+    "name": "Weapon Shielding",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/bullet_shield.png"
+  },
+  {
+    "class_name": "upgrade_spirit_bubble",
+    "kind": "upgrade",
+    "id": 112198670,
+    "name": "Spirit Shielding",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/bullet_shield.png"
+  },
+  {
+    "class_name": "upgrade_regenerating_bullet_shield",
+    "kind": "upgrade",
+    "id": 1235347618,
+    "name": "Battle Vest",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/bullet_shield.png"
+  },
+  {
+    "class_name": "upgrade_magic_shield",
+    "kind": "upgrade",
+    "id": 3970837787,
+    "name": "Enchanter's Emblem",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/tech_shield_pulse.png"
+  },
+  {
+    "class_name": "upgrade_improved_spirit",
+    "kind": "upgrade",
+    "id": 968099481,
+    "name": "Extra Spirit",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/tech_damage.png"
+  },
+  {
+    "class_name": "upgrade_mystic_regeneration",
+    "kind": "upgrade",
+    "id": 1439347412,
+    "name": "Mystic Regeneration",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/endurance.png"
+  },
+  {
+    "class_name": "upgrade_soaring_spirit",
+    "kind": "upgrade",
+    "id": 7409189,
+    "name": "Improved Spirit",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/soaring_spirit.png"
+  },
+  {
+    "class_name": "upgrade_tech_overflow",
+    "kind": "upgrade",
+    "id": 2226497419,
+    "name": "Spiritual Overflow",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/magic_overflow.png"
+  },
+  {
+    "class_name": "upgrade_return_fire",
+    "kind": "upgrade",
+    "id": 3361075077,
+    "name": "Return Fire",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/return_fire.png"
+  },
+  {
+    "class_name": "upgrade_tech_range",
+    "kind": "upgrade",
+    "id": 1193964439,
+    "name": "Greater Expansion",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/spiritual_dominion.png"
+  },
+  {
+    "class_name": "upgrade_magic_reach",
+    "kind": "upgrade",
+    "id": 754480263,
+    "name": "Mystic Expansion",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/tech_range.png"
+  },
+  {
+    "class_name": "upgrade_extra_charge",
+    "kind": "upgrade",
+    "id": 3776945997,
+    "name": "Extra Charge",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/extra_charge.png"
+  },
+  {
+    "class_name": "upgrade_health_stealing_magic",
+    "kind": "upgrade",
+    "id": 876563814,
+    "name": "Spirit Lifesteal",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/health_stealing_tech.png"
+  },
+  {
+    "class_name": "upgrade_disarm",
+    "kind": "upgrade",
+    "id": 2645639421,
+    "name": "upgrade_disarm",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/disarm.png"
+  },
+  {
+    "class_name": "upgrade_bullet_resist_shredder",
+    "kind": "upgrade",
+    "id": 2971868509,
+    "name": "Bullet Resist Shredder",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/bullet_resist_shredder.png"
+  },
+  {
+    "class_name": "upgrade_tech_bleed",
+    "kind": "upgrade",
+    "id": 869090587,
+    "name": "Mystic Reverb",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/magic_reverb.png"
+  },
+  {
+    "class_name": "upgrade_magic_burst",
+    "kind": "upgrade",
+    "id": 1998374645,
+    "name": "Mystic Burst",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/magic_burst.png"
+  },
+  {
+    "class_name": "upgrade_magic_shock",
+    "kind": "upgrade",
+    "id": 2121044373,
+    "name": "Tankbuster",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/magic_shock.png"
+  },
+  {
+    "class_name": "upgrade_arcane_medallion",
+    "kind": "upgrade",
+    "id": 1052584266,
+    "name": "upgrade_arcane_medallion",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/arcane_medallion.png"
+  },
+  {
+    "class_name": "upgrade_magic_vulnerability",
+    "kind": "upgrade",
+    "id": 2081037738,
+    "name": "Mystic Vulnerability",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/tech_vulnerability.png"
+  },
+  {
+    "class_name": "upgrade_healbane",
+    "kind": "upgrade",
+    "id": 2603935618,
+    "name": "Healbane",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/healbane.png"
+  },
+  {
+    "class_name": "upgrade_magic_slow",
+    "kind": "upgrade",
+    "id": 1102081447,
+    "name": "Mystic Slow",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/slowing_tech.png"
+  },
+  {
+    "class_name": "upgrade_escalating_exposure",
+    "kind": "upgrade",
+    "id": 3005970438,
+    "name": "Escalating Exposure",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/escalating_exposure.png"
+  },
+  {
+    "class_name": "upgrade_rapid_recharge",
+    "kind": "upgrade",
+    "id": 787198704,
+    "name": "Rapid Recharge",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/rapid_recharge.png"
+  },
+  {
+    "class_name": "upgrade_magic_tempo",
+    "kind": "upgrade",
+    "id": 380806748,
+    "name": "Compress Cooldown",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/advanced_recharge.png"
+  },
+  {
+    "class_name": "upgrade_cooldown_reduction",
+    "kind": "upgrade",
+    "id": 3261353684,
+    "name": "Superior Cooldown",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/spiritual_flow.png"
+  },
+  {
+    "class_name": "upgrade_transcendent_cooldown",
+    "kind": "upgrade",
+    "id": 915014646,
+    "name": "Transcendent Cooldown",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "upgrade_duration_extender",
+    "kind": "upgrade",
+    "id": 3789823638,
+    "name": "upgrade_duration_extender",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/tech_duration_extender.png"
+  },
+  {
+    "class_name": "upgrade_slowing_tech",
+    "kind": "upgrade",
+    "id": 3013879715,
+    "name": "upgrade_slowing_tech",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/slowing_tech.png"
+  },
+  {
+    "class_name": "upgrade_containment",
+    "kind": "upgrade",
+    "id": 1813726886,
+    "name": "Slowing Hex",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/immobilize.png"
+  },
+  {
+    "class_name": "upgrade_spirit_sap",
+    "kind": "upgrade",
+    "id": 1219329868,
+    "name": "Spirit Sap",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/focused_silence.png"
+  },
+  {
+    "class_name": "upgrade_focus_lens",
+    "kind": "upgrade",
+    "id": 2142980412,
+    "name": "Focus Lens",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/focused_silence.png"
+  },
+  {
+    "class_name": "upgrade_withering_whip",
+    "kind": "upgrade",
+    "id": 2922054143,
+    "name": "Rusted Barrel",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/slowing_tech.png"
+  },
+  {
+    "class_name": "upgrade_greater_withering_whip",
+    "kind": "upgrade",
+    "id": 2061878743,
+    "name": "Disarming Hex",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/disarm.png"
+  },
+  {
+    "class_name": "upgrade_rescue_beam",
+    "kind": "upgrade",
+    "id": 1804594021,
+    "name": "Rescue Beam",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/medic_beam.png"
+  },
+  {
+    "class_name": "upgrade_personal_rejuvenator",
+    "kind": "upgrade",
+    "id": 2329546537,
+    "name": "Rebirth",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/rebirth.png"
+  },
+  {
+    "class_name": "upgrade_rebirth",
+    "kind": "upgrade",
+    "id": 4003032160,
+    "name": "Soul Rebirth",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/rebirth.png"
+  },
+  {
+    "class_name": "upgrade_long_range_slowing_tech",
+    "kind": "upgrade",
+    "id": 1993213427,
+    "name": "upgrade_long_range_slowing_tech",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/tech_range.png"
+  },
+  {
+    "class_name": "upgrade_full_spectrum",
+    "kind": "upgrade",
+    "id": 3064545951,
+    "name": "upgrade_full_spectrum",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/tech_range.png"
+  },
+  {
+    "class_name": "upgrade_tech_cleave",
+    "kind": "upgrade",
+    "id": 4249800570,
+    "name": "upgrade_tech_cleave",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/quantum_chimaera.png"
+  },
+  {
+    "class_name": "upgrade_bonus_ability_charge_3",
+    "kind": "upgrade",
+    "id": 1288322878,
+    "name": "upgrade_bonus_ability_charge_3",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/extra_charge.png"
+  },
+  {
+    "class_name": "upgrade_charge_mastery",
+    "kind": "upgrade",
+    "id": 4245766497,
+    "name": "upgrade_charge_mastery",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/extra_charge.png"
+  },
+  {
+    "class_name": "upgrade_rupture",
+    "kind": "upgrade",
+    "id": 3144988365,
+    "name": "Decay",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/rupture.png"
+  },
+  {
+    "class_name": "upgrade_discord",
+    "kind": "upgrade",
+    "id": 2417568017,
+    "name": "Scourge",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/rupture.png"
+  },
+  {
+    "class_name": "upgrade_aoe_tech_shield",
+    "kind": "upgrade",
+    "id": 776145721,
+    "name": "upgrade_aoe_tech_shield",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/tech_shield_pulse.png"
+  },
+  {
+    "class_name": "upgrade_target_stun",
+    "kind": "upgrade",
+    "id": 1254091416,
+    "name": "Knockdown",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/knockdown.png"
+  },
+  {
+    "class_name": "upgrade_phantom_strike",
+    "kind": "upgrade",
+    "id": 1371725689,
+    "name": "Phantom Strike",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/phantom_strike.png"
+  },
+  {
+    "class_name": "upgrade_warp_stone",
+    "kind": "upgrade",
+    "id": 3270001687,
+    "name": "Warp Stone",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/warp_stone.png"
+  },
+  {
+    "class_name": "upgrade_aoe_root",
+    "kind": "upgrade",
+    "id": 1152158042,
+    "name": "Vortex Web",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/area_immobilize.png"
+  },
+  {
+    "class_name": "upgrade_ability_refresher",
+    "kind": "upgrade",
+    "id": 677738769,
+    "name": "Refresher",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/refresher_module.png"
+  },
+  {
+    "class_name": "upgrade_ability_power_shard",
+    "kind": "upgrade",
+    "id": 630839635,
+    "name": "Echo Shard",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/echo_shard.png"
+  },
+  {
+    "class_name": "upgrade_tech_damage_pulse",
+    "kind": "upgrade",
+    "id": 395944548,
+    "name": "Torment Pulse",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/torment_aura.png"
+  },
+  {
+    "class_name": "upgrade_cheat_death",
+    "kind": "upgrade",
+    "id": 3361811174,
+    "name": "Cheat Death",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/torment_aura.png"
+  },
+  {
+    "class_name": "upgrade_reload_speed",
+    "kind": "upgrade",
+    "id": 3276909180,
+    "name": "upgrade_reload_speed",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/fast_reload.png"
+  },
+  {
+    "class_name": "upgrade_cloaking_device",
+    "kind": "upgrade",
+    "id": 2560018361,
+    "name": "upgrade_cloaking_device",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/cloaking_device.png"
+  },
+  {
+    "class_name": "upgrade_cloaking_device_active",
+    "kind": "upgrade",
+    "id": 1798666702,
+    "name": "Shadow Weave",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/cloaking_device.png"
+  },
+  {
+    "class_name": "upgrade_fire_rate_aura",
+    "kind": "upgrade",
+    "id": 3662153307,
+    "name": "upgrade_fire_rate_aura",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/fire_rate_aura.png"
+  },
+  {
+    "class_name": "upgrade_weapon_overdrive_clip",
+    "kind": "upgrade",
+    "id": 607292868,
+    "name": "upgrade_weapon_overdrive_clip",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/overdrive.png"
+  },
+  {
+    "class_name": "upgrade_rocket_boots",
+    "kind": "upgrade",
+    "id": 3830846077,
+    "name": "Majestic Leap - Disabled",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/springy_boots.png"
+  },
+  {
+    "class_name": "upgrade_rocket_booster",
+    "kind": "upgrade",
+    "id": 600033864,
+    "name": "Majestic Leap",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/lash/lash_death_slam.png"
+  },
+  {
+    "class_name": "upgrade_aerial_assault",
+    "kind": "upgrade",
+    "id": 271801138,
+    "name": "upgrade_aerial_assault",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/springy_boots.png"
+  },
+  {
+    "class_name": "upgrade_health_nova",
+    "kind": "upgrade",
+    "id": 2956256701,
+    "name": "Healing Nova",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/health_nova.png"
+  },
+  {
+    "class_name": "upgrade_restorative_locket",
+    "kind": "upgrade",
+    "id": 2059712766,
+    "name": "Restorative Locket",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/restorative_locket.png"
+  },
+  {
+    "class_name": "upgrade_health_stimpak",
+    "kind": "upgrade",
+    "id": 1710079648,
+    "name": "Healing Rite",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/stimpak.png"
+  },
+  {
+    "class_name": "upgrade_infuser",
+    "kind": "upgrade",
+    "id": 1797283378,
+    "name": "Infuser",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/infuser.png"
+  },
+  {
+    "class_name": "upgrade_guardian_ward",
+    "kind": "upgrade",
+    "id": 857669956,
+    "name": "Guardian Ward",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/savior.png"
+  },
+  {
+    "class_name": "upgrade_divine_barrier",
+    "kind": "upgrade",
+    "id": 1662311306,
+    "name": "Divine Barrier",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/savior.png"
+  },
+  {
+    "class_name": "upgrade_aoe_smoke_bomb",
+    "kind": "upgrade",
+    "id": 937242723,
+    "name": "upgrade_aoe_smoke_bomb",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/smoke.png"
+  },
+  {
+    "class_name": "upgrade_thermal_detonator",
+    "kind": "upgrade",
+    "id": 1932939246,
+    "name": "Alchemical Fire",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/thermal_detonator.png"
+  },
+  {
+    "class_name": "upgrade_blood_tribute",
+    "kind": "upgrade",
+    "id": 989206714,
+    "name": "Blood Tribute",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "upgrade_fleetfoot_boots",
+    "kind": "upgrade",
+    "id": 3403085434,
+    "name": "Fleetfoot",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/fleetfoot_boots.png"
+  },
+  {
+    "class_name": "upgrade_kinetic_sash",
+    "kind": "upgrade",
+    "id": 3977876567,
+    "name": "Kinetic Dash",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/kinetic_sash.png"
+  },
+  {
+    "class_name": "upgrade_arcane_surge",
+    "kind": "upgrade",
+    "id": 1150006784,
+    "name": "Arcane Surge",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/arcane_surge.png"
+  },
+  {
+    "class_name": "upgrade_weapon_eater",
+    "kind": "upgrade",
+    "id": 389243496,
+    "name": "upgrade_weapon_eater",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/advanced_weaponry.png"
+  },
+  {
+    "class_name": "upgrade_weapon_instant_reload",
+    "kind": "upgrade",
+    "id": 315518818,
+    "name": "upgrade_weapon_instant_reload",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/fast_reload.png"
+  },
+  {
+    "class_name": "upgrade_tech_defender",
+    "kind": "upgrade",
+    "id": 1947620709,
+    "name": "upgrade_tech_defender",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/tech_defender.png"
+  },
+  {
+    "class_name": "upgrade_unstoppable",
+    "kind": "upgrade",
+    "id": 3357231760,
+    "name": "Unstoppable",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/unstoppable.png"
+  },
+  {
+    "class_name": "upgrade_colossus",
+    "kind": "upgrade",
+    "id": 2407781327,
+    "name": "Colossus",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/colossus.png"
+  },
+  {
+    "class_name": "upgrade_cold_front",
+    "kind": "upgrade",
+    "id": 1976391348,
+    "name": "Cold Front",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/ice_blast.png"
+  },
+  {
+    "class_name": "upgrade_arctic_blast",
+    "kind": "upgrade",
+    "id": 3812615317,
+    "name": "Arctic Blast",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/ice_blast.png"
+  },
+  {
+    "class_name": "upgrade_aoe_silence",
+    "kind": "upgrade",
+    "id": 486220748,
+    "name": "upgrade_aoe_silence",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/emp_wave.png"
+  },
+  {
+    "class_name": "upgrade_self_bubble",
+    "kind": "upgrade",
+    "id": 2533252781,
+    "name": "Ethereal Shift",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/shifting_shroud.png"
+  },
+  {
+    "class_name": "upgrade_stasis_bomb",
+    "kind": "upgrade",
+    "id": 385745034,
+    "name": "upgrade_stasis_bomb",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/stasis.png"
+  },
+  {
+    "class_name": "upgrade_quarantine",
+    "kind": "upgrade",
+    "id": 1641353616,
+    "name": "upgrade_quarantine",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/stasis.png"
+  },
+  {
+    "class_name": "upgrade_glitch",
+    "kind": "upgrade",
+    "id": 2617435668,
+    "name": "Curse",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/glitch.png"
+  },
+  {
+    "class_name": "upgrade_imbued_ability",
+    "kind": "upgrade",
+    "id": 1959600032,
+    "name": "upgrade_imbued_ability",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/tech_damage.png"
+  },
+  {
+    "class_name": "upgrade_arcane_extension",
+    "kind": "upgrade",
+    "id": 2951612397,
+    "name": "Duration Extender",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/duration_extender.png"
+  },
+  {
+    "class_name": "upgrade_imbued_duration_extender",
+    "kind": "upgrade",
+    "id": 2717651715,
+    "name": "Superior Duration",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/arcane_persistance.png"
+  },
+  {
+    "class_name": "upgrade_glass_cannon",
+    "kind": "upgrade",
+    "id": 365620721,
+    "name": "Glass Cannon",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/glass_cannon.png"
+  },
+  {
+    "class_name": "upgrade_fury_trance",
+    "kind": "upgrade",
+    "id": 1409190604,
+    "name": "Fury Trance",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/vampiric_burst.png"
+  },
+  {
+    "class_name": "upgrade_surging_power",
+    "kind": "upgrade",
+    "id": 1055679805,
+    "name": "Vampiric Burst",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/vampiric_burst.png"
+  },
+  {
+    "class_name": "upgrade_mod_disruptor",
+    "kind": "upgrade",
+    "id": 481022061,
+    "name": "upgrade_mod_disruptor",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/thermal_detonator.png"
+  },
+  {
+    "class_name": "upgrade_frenzy",
+    "kind": "upgrade",
+    "id": 2039312305,
+    "name": "upgrade_frenzy",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/health_stealing_bullets.png"
+  },
+  {
+    "class_name": "upgrade_burst_fire_actuator",
+    "kind": "upgrade",
+    "id": 253917113,
+    "name": "upgrade_burst_fire_actuator",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/fast_reload.png"
+  },
+  {
+    "class_name": "upgrade_boxing_glove",
+    "kind": "upgrade",
+    "id": 1252627263,
+    "name": "Lifestrike",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/boxing_glove.png"
+  },
+  {
+    "class_name": "upgrade_acolytes_glove",
+    "kind": "upgrade",
+    "id": 465043967,
+    "name": "Spirit Strike",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/acolytes_glove.png"
+  },
+  {
+    "class_name": "upgrade_spirit_snatch",
+    "kind": "upgrade",
+    "id": 3190916303,
+    "name": "Spirit Snatch",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/spirit_snatch.png"
+  },
+  {
+    "class_name": "upgrade_melee_charge",
+    "kind": "upgrade",
+    "id": 26002154,
+    "name": "Melee Charge",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/melee_charge.png"
+  },
+  {
+    "class_name": "upgrade_crushing_fists",
+    "kind": "upgrade",
+    "id": 800008313,
+    "name": "Crushing Fists",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/melee_charge.png"
+  },
+  {
+    "class_name": "upgrade_charmed_wraps",
+    "kind": "upgrade",
+    "id": 3572021243,
+    "name": "upgrade_charmed_wraps",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/charmed_wraps.png"
+  },
+  {
+    "class_name": "upgrade_belt_fed_magazine",
+    "kind": "upgrade",
+    "id": 1326137213,
+    "name": "upgrade_belt_fed_magazine",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/auto_reloader.png"
+  },
+  {
+    "class_name": "upgrade_diviners_kevlar",
+    "kind": "upgrade",
+    "id": 2820116164,
+    "name": "Diviner's Kevlar",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/bullet_shield.png"
+  },
+  {
+    "class_name": "upgrade_stabilizing_tripod",
+    "kind": "upgrade",
+    "id": 2672389724,
+    "name": "upgrade_stabilizing_tripod",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/base_utility.png"
+  },
+  {
+    "class_name": "upgrade_resonant_healing",
+    "kind": "upgrade",
+    "id": 2947183272,
+    "name": "Radiant Regeneration",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/boundless_spirit.png"
+  },
+  {
+    "class_name": "upgrade_boundless_spirit",
+    "kind": "upgrade",
+    "id": 2519598785,
+    "name": "Boundless Spirit",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/boundless_spirit.png"
+  },
+  {
+    "class_name": "upgrade_burst_fire",
+    "kind": "upgrade",
+    "id": 2739107182,
+    "name": "Burst Fire",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/fire_rate_plus_plus.png"
+  },
+  {
+    "class_name": "upgrade_resilience",
+    "kind": "upgrade",
+    "id": 558396679,
+    "name": "Enduring Spirit",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/resilience.png"
+  },
+  {
+    "class_name": "upgrade_endurance",
+    "kind": "upgrade",
+    "id": 2829638276,
+    "name": "Extra Regen",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/endurance.png"
+  },
+  {
+    "class_name": "upgrade_magic_clarity",
+    "kind": "upgrade",
+    "id": 2985482185,
+    "name": "upgrade_magic_clarity",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/clarity.png"
+  },
+  {
+    "class_name": "upgrade_magic_storm",
+    "kind": "upgrade",
+    "id": 1292979587,
+    "name": "Surge of Power",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/magic_storm.png"
+  },
+  {
+    "class_name": "upgrade_suppressor",
+    "kind": "upgrade",
+    "id": 1925087134,
+    "name": "Suppressor",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/weapon_jammer.png"
+  },
+  {
+    "class_name": "upgrade_quick_silver",
+    "kind": "upgrade",
+    "id": 84321454,
+    "name": "Quicksilver Reload",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/fire_rate_plus.png"
+  },
+  {
+    "class_name": "upgrade_ethereal_bullets",
+    "kind": "upgrade",
+    "id": 3919289022,
+    "name": "Mercurial Magnum",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/fire_rate_plus.png"
+  },
+  {
+    "class_name": "upgrade_arcane_eater",
+    "kind": "upgrade",
+    "id": 2717142638,
+    "name": "upgrade_arcane_eater",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/arcane_eater.png"
+  },
+  {
+    "class_name": "upgrade_predator_precision",
+    "kind": "upgrade",
+    "id": 2574520834,
+    "name": "upgrade_predator_precision",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/close_range.png"
+  },
+  {
+    "class_name": "upgrade_intensifying_clip",
+    "kind": "upgrade",
+    "id": 2407033488,
+    "name": "Intensifying Magazine",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/auto_reloader.png"
+  },
+  {
+    "class_name": "upgrade_reinforcing_casings",
+    "kind": "upgrade",
+    "id": 2463960640,
+    "name": "Escalating Resilience",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/bullet_armor_plus.png"
+  },
+  {
+    "class_name": "upgrade_blitz_bullets",
+    "kind": "upgrade",
+    "id": 4104549924,
+    "name": "Swift Striker",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/fire_rate_plus.png"
+  },
+  {
+    "class_name": "upgrade_veil_walker",
+    "kind": "upgrade",
+    "id": 865958998,
+    "name": "Veil Walker",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/veil_walker.png"
+  },
+  {
+    "class_name": "upgrade_vex_barrier",
+    "kind": "upgrade",
+    "id": 1644605047,
+    "name": "Reactive Barrier",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/last_stand.png"
+  },
+  {
+    "class_name": "upgrade_medic_bullets",
+    "kind": "upgrade",
+    "id": 3862866912,
+    "name": "Restorative Shot",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/medic_bullets.png"
+  },
+  {
+    "class_name": "upgrade_titan_round",
+    "kind": "upgrade",
+    "id": 2356412290,
+    "name": "Titanic Magazine",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/titanic_magazine.png"
+  },
+  {
+    "class_name": "upgrade_split_shot",
+    "kind": "upgrade",
+    "id": 3647584222,
+    "name": "Split Shot",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/titanic_magazine.png"
+  },
+  {
+    "class_name": "upgrade_active_reload",
+    "kind": "upgrade",
+    "id": 381961617,
+    "name": "Active Reload",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/deployable_bullet_shield.png"
+  },
+  {
+    "class_name": "upgrade_magic_carpet",
+    "kind": "upgrade",
+    "id": 2800629741,
+    "name": "Magic Carpet",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/kelvin/ice_path.png"
+  },
+  {
+    "class_name": "upgrade_spellshield",
+    "kind": "upgrade",
+    "id": 1200177229,
+    "name": "Hexafoil Ward",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/debuff_remover.png"
+  },
+  {
+    "class_name": "upgrade_superacolytes_glove",
+    "kind": "upgrade",
+    "id": 2331566268,
+    "name": "Hex-Sealed Knuckles",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/acolytes_glove.png"
+  },
+  {
+    "class_name": "upgrade_magic_missile",
+    "kind": "upgrade",
+    "id": 194116661,
+    "name": "Conjure Missiles",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/glass_cannon.png"
+  },
+  {
+    "class_name": "upgrade_heal_on_level",
+    "kind": "upgrade",
+    "id": 138320648,
+    "name": "Patron's Healing",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_armor/last_stand.png"
+  },
+  {
+    "class_name": "upgrade_spirit_burn",
+    "kind": "upgrade",
+    "id": 343572757,
+    "name": "Spirit Burn",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/escalating_exposure.png"
+  },
+  {
+    "class_name": "upgrade_ultimate_burst",
+    "kind": "upgrade",
+    "id": 493591231,
+    "name": "Lightning Scroll",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/adrenaline_rush.png"
+  },
+  {
+    "class_name": "upgrade_corpse_explosion",
+    "kind": "upgrade",
+    "id": 3913864662,
+    "name": "Soul Explosion",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_utility/smoke.png"
+  },
+  {
+    "class_name": "upgrade_absorbing_armor",
+    "kind": "upgrade",
+    "id": 3028234315,
+    "name": "Witchmail",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/arcane_medallion.png"
+  },
+  {
+    "class_name": "upgrade_healbuff",
+    "kind": "upgrade",
+    "id": 1427630806,
+    "name": "Healing Tempo",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/aura_icon.png"
+  },
+  {
+    "class_name": "upgrade_infinitemagazine",
+    "kind": "upgrade",
+    "id": 3346798998,
+    "name": "Endless Magazine",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/abilities/wraith_daggers.png"
+  },
+  {
+    "class_name": "upgrade_glass_cannon2",
+    "kind": "upgrade",
+    "id": 1497973293,
+    "name": "Glass Cannon v2",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/glass_cannon.png"
+  },
+  {
+    "class_name": "upgrade_aprounds",
+    "kind": "upgrade",
+    "id": 673001892,
+    "name": "Armor Piercing Rounds",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_weapon/armor_breaking_bullets.png"
+  },
+  {
+    "class_name": "upgrade_deflecting_armor",
+    "kind": "upgrade",
+    "id": 3491236900,
+    "name": "Plated Armor",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/upgrades/mods_tech/arcane_medallion.png"
+  },
+  {
+    "class_name": "upgrade_spellbreaker",
+    "kind": "upgrade",
+    "id": 1955841979,
+    "name": "Spellbreaker",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "upgrade_juggernaut",
+    "kind": "upgrade",
+    "id": 1250307611,
+    "name": "Juggernaut",
+    "hero": null,
+    "heroes": [],
+    "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/items/vitality/juggernaut.png"
+  },
+  {
+    "class_name": "upgrade_enchanted_holsters",
+    "kind": "upgrade",
+    "id": 2221211450,
+    "name": "Spellslinger",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "upgrade_weapon_backstabber",
+    "kind": "upgrade",
+    "id": 98582110,
+    "name": "Backstabber",
+    "hero": null,
+    "heroes": [],
+    "image": null
+  },
+  {
+    "class_name": "upgrade_express_shot",
+    "kind": "upgrade",
+    "id": 690458959,
+    "name": "Express Shot",
+    "hero": null,
+    "heroes": [],
+    "image": null
   }
 ]
