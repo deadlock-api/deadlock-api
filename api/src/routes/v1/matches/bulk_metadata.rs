@@ -323,6 +323,8 @@ fn player_columns(query: &BulkMatchMetadataQuery) -> Vec<(String, String)> {
             "player_tracked_stats",
             "accolades",
             "hero_xp_rewards",
+            "power_up_buffs",
+            "hero_release_votes",
             "player_match_outcome",
             "player_rank_initial_display_rank",
             "player_rank_initial_flat_progress",
@@ -541,6 +543,7 @@ fn build_query(
             "any(team1_tracked_stats) as team1_tracked_stats".to_owned(),
             "any(ranked_type) as ranked_type".to_owned(),
             "any(rank_interval) as rank_interval".to_owned(),
+            "any(corrupted_penalty_seed) as corrupted_penalty_seed".to_owned(),
         ]);
     }
     if query.include_mid_boss {

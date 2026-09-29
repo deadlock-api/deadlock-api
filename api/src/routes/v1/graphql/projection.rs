@@ -41,6 +41,7 @@ pub(super) const MATCH_COLUMNS: &[Column] = &[
     mp("not_scored", "not_scored"),
     mp("ranked_type", "ranked_type"),
     mp("rank_interval", "rank_interval"),
+    mp("corrupted_penalty_seed", "corrupted_penalty_seed"),
     mp("rewards_eligible", "rewards_eligible"),
     mp("earned_holiday_award_2025", "earned_holiday_award_2025"),
     mp("objectives_mask_team_0", "objectives_mask_team0"),
@@ -140,6 +141,7 @@ pub(super) const PLAYER_COLUMNS: &[Column] = &[
     mp("hero_build_id", "hero_build_id"),
     mp("pregame_hero_id", "pregame_hero_id"),
     mp("hero_xp_rewards", "hero_xp_rewards"),
+    mp("hero_release_votes", "hero_release_votes"),
     mp("player_match_outcome", "player_match_outcome"),
     mp(
         "player_rank_initial_display_rank",

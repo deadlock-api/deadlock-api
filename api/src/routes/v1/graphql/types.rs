@@ -50,6 +50,8 @@ pub(super) struct Match {
     pub(super) not_scored: Option<bool>,
     pub(super) ranked_type: Option<String>,
     pub(super) rank_interval: Option<u32>,
+    /// Seed the Broker's random corrupted-item penalties were rolled from.
+    pub(super) corrupted_penalty_seed: Option<u32>,
 
     // Misc match flags / stats
     pub(super) rewards_eligible: Option<bool>,
@@ -206,6 +208,8 @@ pub(super) struct MatchPlayer {
     pub(super) stats_type_stat: Option<JsonScalar>,
     #[graphql(complexity = 50)]
     pub(super) hero_xp_rewards: Option<JsonScalar>,
+    #[graphql(complexity = 50)]
+    pub(super) hero_release_votes: Option<JsonScalar>,
 }
 
 /// One `player_match_history` row per (`account_id`, `match_id`) — the same
