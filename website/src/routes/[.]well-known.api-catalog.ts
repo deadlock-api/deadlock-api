@@ -8,6 +8,10 @@ const API_CATALOG = {
       "service-desc": [{ href: "https://api.deadlock-api.com/openapi.json", type: "application/json" }],
       "service-doc": [{ href: "https://api.deadlock-api.com/docs", type: "text/html" }],
     },
+    {
+      anchor: "https://api.deadlock-api.com/v1/mcp",
+      "service-doc": [{ href: "https://deadlock-api.com/data-dumps", type: "text/html" }],
+    },
   ],
 };
 
