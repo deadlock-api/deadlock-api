@@ -29,7 +29,7 @@ import { rankOf } from "~/lib/rank-of";
 import { rankRangeLabel } from "~/lib/rank-utils";
 import { defaultPeriodLabel, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
-import { closestNameBySlug, slugify } from "~/lib/slug";
+import { closestNameBySlug, findByIdSegment, slugify } from "~/lib/slug";
 import { filterShopableItems, itemQueryOptions, itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
@@ -125,8 +125,9 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
     const shopable = filterShopableItems(items);
     const item = findItemBySlug(shopable, params.itemName);
     if (!item) {
-      // "Extra_Health" names an item exactly once normalized: send it to its canonical address.
-      const canonical = findItemBySlug(shopable, slugify(params.itemName));
+      // "Extra_Health" or an item id names an item: send it to its canonical address.
+      const canonical =
+        findItemBySlug(shopable, slugify(params.itemName)) ?? findByIdSegment(shopable, params.itemName);
       if (canonical) {
         throw redirect({
           to: "/analytics/items/$itemName",

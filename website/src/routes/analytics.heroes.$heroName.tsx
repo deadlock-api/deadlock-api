@@ -35,7 +35,7 @@ import { rankOf } from "~/lib/rank-of";
 import { rankRangeLabel } from "~/lib/rank-utils";
 import { defaultPeriodLabel, defaultPrevUnixRange, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
-import { closestNameBySlug, slugify } from "~/lib/slug";
+import { closestNameBySlug, findByIdSegment, slugify } from "~/lib/slug";
 import {
   filterPlayableHeroes,
   heroesQueryOptions,
@@ -169,8 +169,9 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
     const playable = filterPlayableHeroes(heroes);
     const hero = findHeroBySlug(playable, params.heroName);
     if (!hero) {
-      // "Haze" or "grey_talon" name a hero exactly once normalized: send them to its canonical address.
-      const canonical = findHeroBySlug(playable, slugify(params.heroName));
+      // "Haze", "grey_talon" or its id "15" name a hero: send them to its canonical address.
+      const canonical =
+        findHeroBySlug(playable, slugify(params.heroName)) ?? findByIdSegment(playable, params.heroName);
       if (canonical) {
         throw redirect({
           to: "/analytics/heroes/$heroName",

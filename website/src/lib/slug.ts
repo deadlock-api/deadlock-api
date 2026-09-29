@@ -6,6 +6,12 @@ export function slugify(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/** The candidate a numeric URL segment names by id ("15" for the hero with id 15): links built from API ids. */
+export function findByIdSegment<T extends { id: number }>(candidates: readonly T[], segment: string): T | undefined {
+  if (!/^\d+$/.test(segment)) return undefined;
+  return candidates.find((candidate) => candidate.id === Number(segment));
+}
+
 function editDistance(a: string, b: string): number {
   let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
   for (let i = 1; i <= a.length; i += 1) {
