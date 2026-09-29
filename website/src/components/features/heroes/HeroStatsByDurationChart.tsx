@@ -169,16 +169,7 @@ export function HeroStatsByDurationChart({
             />
           }
         >
-          <ChartCard
-            aria-label="Duration chart"
-            title={`${HERO_TREND_LABELS[heroStat]} by match duration`}
-            footer={
-              <>
-                Gaps indicate missing data.
-                {requiresSampleFloor && ` Buckets below ${MIN_MATCHES_PER_BUCKET} matches are omitted.`}
-              </>
-            }
-          >
+          <ChartCard aria-label="Duration chart" title={`${HERO_TREND_LABELS[heroStat]} by match duration`}>
             {selectedIds.length > 0 && (
               <ChartLegend label="Selected heroes" className="px-3 pt-2 select-none">
                 {selectedIds.map((heroId) => (

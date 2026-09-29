@@ -46,7 +46,7 @@ function ChosenItems({ label, items }: { label: string; items: readonly SlimUpgr
   if (items.length === 0) return null;
   return (
     <div className="flex min-w-0 items-center gap-1.5">
-      <span className="text-2xs text-muted-foreground">{label}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
       <ul aria-label={`${label} items`} className="flex min-w-0 flex-wrap gap-0.5">
         {items.map((item) => (
           <li key={item.id}>
@@ -176,11 +176,6 @@ export function ItemSelector(props: ItemSelectorProps) {
                 Clear
               </Button>
             </div>
-          )}
-          {selection === "tri-state" && (
-            <p className="text-2xs text-muted-foreground">
-              Press an item once to include it, again to exclude it, a third time to clear it.
-            </p>
           )}
         </div>
       )}

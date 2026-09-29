@@ -66,11 +66,11 @@ export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matc
               </Inline>
               <Card tone="inset" size="flush" radius="lg" className="max-h-72 overflow-auto">
                 {table.files.length === 0 ? (
-                  <Text as="div" className="px-3 py-2 text-2xs" tone="muted">
+                  <Text as="div" className="px-3 py-2 text-xs" tone="muted">
                     No files published yet.
                   </Text>
                 ) : (
-                  <Table density="dense" className="text-2xs">
+                  <Table density="dense" className="text-xs">
                     <TableBody>
                       {table.files.map((f) => (
                         <TableRow key={f.key}>
@@ -85,7 +85,7 @@ export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matc
                             >
                               {f.key.split("/").slice(-2).join("/")}
                             </TextLink>
-                            <div className="text-3xs text-muted-foreground">
+                            <div className="text-xs text-muted-foreground">
                               {KIND_LABEL[f.kind]}
                               {f.partition !== undefined && ` · partition ${f.partition}`}
                               {f.lo !== undefined &&

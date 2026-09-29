@@ -383,11 +383,7 @@ export function HeroStatsByRankChart({
             />
           }
         >
-          <ChartCard
-            aria-label="Rank comparison chart"
-            title="Hero performance by rank"
-            footer="Each badge shows a rank tier. Lines connect ranks for the same hero."
-          >
+          <ChartCard aria-label="Rank comparison chart" title="Hero performance by rank">
             {selectedIds.length > 0 && (
               <ChartLegend label="Selected heroes" className="px-3 pt-2 select-none">
                 {selectedIds.map((heroId) => (

@@ -119,11 +119,9 @@ const PER_COLUMN_OPTIONS = [4, 6, 8, 12].map((n) => ({ value: String(n), label: 
 // Must match TIME_PHASE_BOUNDARIES on the API (0-9m, 9-20m, 20-30m, 30m+).
 const TIME_PHASE_LABELS = ["0–9m", "9–20m", "20–30m", "30m+"] as const;
 
-function phaseLabel(column: number, isStreetBrawl: boolean): { title: string; sub: string } {
-  if (isStreetBrawl) {
-    return { title: `Round ${column + 1}`, sub: "round" };
-  }
-  return { title: TIME_PHASE_LABELS[column] ?? `phase ${column + 1}`, sub: "purchase time" };
+function phaseLabel(column: number, isStreetBrawl: boolean): string {
+  if (isStreetBrawl) return `Round ${column + 1}`;
+  return TIME_PHASE_LABELS[column] ?? `phase ${column + 1}`;
 }
 
 interface ItemFlowGraphProps {
@@ -389,10 +387,6 @@ const ItemFlowCard = memo(function ItemFlowCard({
               value={`${node.avgKills.toFixed(1)} / ${node.avgDeaths.toFixed(1)} / ${node.avgAssists.toFixed(1)}`}
             />
           </TooltipStats>
-          <Separator />
-          <div className="text-3xs text-muted-foreground">
-            {node.locked ? "Click to remove from build path" : "Click to lock into build path"}
-          </div>
         </>
       }
     >
@@ -810,11 +804,6 @@ export function ItemFlowGraph({
                 </li>
               ))}
             </ul>
-            <p className="text-2xs text-muted-foreground">
-              {isStreetBrawl
-                ? "Win rate reflects players who bought the item, not its causal effect."
-                : "Win rates are adjusted for net worth at purchase (so they're not just “rich players win”), but remain observational, not a controlled causal estimate."}
-            </p>
           </PopoverContent>
         </Popover>
         <Field label="Min confidence" orientation="horizontal">
@@ -885,7 +874,7 @@ export function ItemFlowGraph({
                   <div className="relative" style={{ width: layout.width, height: layout.height }}>
                     {/* Column headers: phase + reached% + lock picker */}
                     {layout.columnMeta.map((meta) => {
-                      const { title, sub } = phaseLabel(meta.column, isStreetBrawl);
+                      const title = phaseLabel(meta.column, isStreetBrawl);
                       const reached = data
                         ? (data.reached_per_column[meta.column] ?? 0) / (data.baseline.matches || 1)
                         : 1;
@@ -900,10 +889,9 @@ export function ItemFlowGraph({
                             <Heading as="h3" size="sm" className="text-center">
                               {title}
                             </Heading>
-                            <div className="text-center text-3xs text-muted-foreground">{sub}</div>
                             <div
                               className={cn(
-                                "text-center text-3xs",
+                                "text-center text-xs",
                                 reached < 0.8 ? "text-warning" : "text-muted-foreground",
                               )}
                               title="Share of games that reached this stage (lower = more survivorship-selected, e.g. long games only)"
@@ -1025,12 +1013,12 @@ export function ItemFlowGraph({
                         >
                           {(pathStats.winRate * 100).toFixed(1)}%
                         </span>
-                        <div className="text-3xs text-muted-foreground tabular-nums">
+                        <div className="text-xs text-muted-foreground tabular-nums">
                           95% CI {(pathStats.wrLow * 100).toFixed(1)}–{(pathStats.wrHigh * 100).toFixed(1)}%
                         </div>
                         {locked.length > 0 && (
                           <div
-                            className="text-3xs text-muted-foreground"
+                            className="text-xs text-muted-foreground"
                             title="Difference vs the unlocked population. Not a controlled comparison: players who commit to a build may differ in skill/lead."
                           >
                             {Math.round((pathStats.winRate - pathStats.baseWinRate) * 1000) === 0 ? (
@@ -1092,15 +1080,6 @@ export function ItemFlowGraph({
                         />
                       )}
                     </KeyValueList>
-
-                    {locked.length === 0 && (
-                      <Stack gap={2}>
-                        <Separator />
-                        <p className="text-2xs text-muted-foreground">
-                          Click items in the graph to lock a build path and see its combined stats.
-                        </p>
-                      </Stack>
-                    )}
                   </Stack>
                 )}
               </PanelBody>

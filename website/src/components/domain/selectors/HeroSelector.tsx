@@ -121,11 +121,6 @@ export function HeroSelector(props: HeroSelectorProps) {
           ))}
         </HeroGrid>
       </div>
-      {selection === "tri-state" && (
-        <p className="border-t px-3 py-2 text-2xs text-muted-foreground">
-          Press a hero once to include it, again to exclude it, a third time to clear it.
-        </p>
-      )}
     </FilterCell>
   );
 }

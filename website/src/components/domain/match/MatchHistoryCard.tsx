@@ -73,7 +73,7 @@ function FullBuildPhase({ label, items }: { label: string; items: FullBuildItem[
             </div>
           ))
         ) : (
-          <span className="text-3xs text-muted-foreground italic">—</span>
+          <span className="text-xs text-muted-foreground italic">—</span>
         )}
       </div>
     </div>
@@ -92,7 +92,7 @@ function AbilityBuildTooltip({ abilityUpgradeSequence }: { abilityUpgradeSequenc
     <>
       {ABILITY_SLOTS.map((abilityNumber) => (
         <div key={abilityNumber} className="flex items-center gap-2">
-          <span className="w-2 text-3xs font-semibold text-muted-foreground">{abilityNumber}</span>
+          <span className="w-2 text-xs font-semibold text-muted-foreground">{abilityNumber}</span>
           <div className="flex gap-1">
             {sequenceColumns.map(({ slot, key }) => (
               <span
@@ -190,7 +190,7 @@ export default function MatchHistoryCard({
             <HeroImage heroId={heroId} shape="rounded" ring="border" className="size-8 shrink-0" />
             <div className="flex flex-col gap-1">
               <KdaLine kills={kills} deaths={deaths} assists={assists} />
-              <div className="text-2xs text-muted-foreground">{computeKDA(kills, deaths, assists)} KDA</div>
+              <div className="text-xs text-muted-foreground">{computeKDA(kills, deaths, assists)} KDA</div>
             </div>
           </div>
         </div>

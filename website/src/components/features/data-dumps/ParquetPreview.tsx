@@ -60,7 +60,7 @@ export function ParquetPreview({ urls }: { urls: string | string[] }) {
         </Text>
         <Inline wrap="nowrap">
           <Text variant="meta" tone="muted">
-            {data.columns.length} columns · scroll →
+            {data.columns.length} columns
           </Text>
           <Button
             type="button"

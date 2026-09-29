@@ -78,12 +78,12 @@ function FlexSlot({ entry }: { entry: Extract<TimelineEntry, { kind: "flex" }> }
       <div className="flex items-center gap-1">
         {entry.candidates.map((candidate, i) => (
           <div key={candidate.itemId} className="flex items-center gap-1">
-            {i > 0 && <span className="text-3xs text-warning">/</span>}
+            {i > 0 && <span className="text-xs text-warning">/</span>}
             <ItemIcon item={candidate} dim={i > 0} />
           </div>
         ))}
       </div>
-      <Text variant="eyebrow" tone="warning" className="text-4xs">
+      <Text variant="eyebrow" tone="warning">
         1 of · {pct(entry.slotFrequency)}
       </Text>
     </Card>
@@ -110,7 +110,7 @@ function PhaseRow({ label, entries }: { label: string; entries: TimelineEntry[] 
             />
           ))
         ) : (
-          <span className="text-3xs text-muted-foreground italic">—</span>
+          <span className="text-xs text-muted-foreground italic">—</span>
         )}
       </div>
     </div>
@@ -178,9 +178,9 @@ export function AverageBuildCard({ build, heroId }: { build: AverageBuild; heroI
           <HeroImage heroId={heroId} shape="rounded" ring="border" className="size-8 shrink-0" />
           <div className="flex flex-col">
             <span className="font-bold text-foreground">Average Build</span>
-            <span className="text-2xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               from {build.nBuilds} recent game{build.nBuilds === 1 ? "" : "s"} ·{" "}
-              <WinRate wins={build.wins} games={build.nBuilds} className="text-2xs" />
+              <WinRate wins={build.wins} games={build.nBuilds} className="text-xs" />
               {multi ? ` · ${build.variants.length} variants` : ""}
             </span>
           </div>
@@ -193,10 +193,10 @@ export function AverageBuildCard({ build, heroId }: { build: AverageBuild; heroI
           {build.variants.map((variant) => (
             <SegmentedItem key={variant.id} value={variant.id}>
               <span className="font-semibold">Build {variant.id}</span>
-              <span className="text-3xs text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {variant.nGames}g · {Math.round(variant.frequency * 100)}%
               </span>
-              <WinRate wins={variant.wins} games={variant.nGames} className="text-3xs" />
+              <WinRate wins={variant.wins} games={variant.nGames} className="text-xs" />
             </SegmentedItem>
           ))}
         </Segmented>

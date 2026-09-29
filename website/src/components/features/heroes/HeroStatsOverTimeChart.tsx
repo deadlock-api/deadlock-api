@@ -497,19 +497,6 @@ export function HeroStatsOverTimeChart({
                   {visibleHeroIds.length} {visibleHeroIds.length === 1 ? "hero" : "heroes"} selected
                 </Badge>
               }
-              footer={
-                <>
-                  Gaps indicate missing or insufficient data.{" "}
-                  {heroStat === "winrate" &&
-                    yTicks[0] <= 50 &&
-                    yTicks[yTicks.length - 1] >= 50 &&
-                    "Dashed line: 50% win rate. "}
-                  {isBanRate && "Ban rates are unaffected by player match-count filters. "}
-                  {requiresSampleFloor &&
-                    `Buckets below ${minMatchesPerBucket.toLocaleString("en-US")} matches are omitted. `}
-                  The ongoing interval is omitted when at least two completed intervals are available.
-                </>
-              }
             >
               {selectedHeroes.length > 0 && (
                 <ChartLegend label="Selected heroes" className="px-3 pt-2 select-none">

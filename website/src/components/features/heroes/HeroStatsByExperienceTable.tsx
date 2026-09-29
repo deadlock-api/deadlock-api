@@ -310,18 +310,18 @@ export function HeroStatsByExperienceTable({
                   >
                     {bucket.label}
                   </SortButton>
-                  <span className="text-3xs font-normal text-muted-foreground">{bucket.sublabel}</span>
+                  <span className="text-xs font-normal text-muted-foreground">{bucket.sublabel}</span>
                   {i !== BASELINE_BUCKET ? (
                     <SortButton
                       active={sortKey === `delta-${i}`}
                       sortDir={sortDir}
                       onClick={() => handleSort(`delta-${i}`)}
-                      className="text-3xs font-normal text-muted-foreground"
+                      className="text-xs font-normal text-muted-foreground"
                     >
                       {"Δ"} vs Beginner
                     </SortButton>
                   ) : (
-                    <span className="text-3xs font-normal text-muted-foreground">baseline</span>
+                    <span className="text-xs font-normal text-muted-foreground">baseline</span>
                   )}
                 </div>
               </TableHead>

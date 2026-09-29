@@ -130,7 +130,7 @@ export function HeroSkillOrder({
           return (
             <li key={step.level} title={`${step.level}. ${slot ? `Ability ${slot}` : "Ability"}`}>
               <Card size="xs" className="w-16 items-center gap-1">
-                <span className="text-3xs font-medium text-muted-foreground tabular-nums">{step.level}</span>
+                <span className="text-xs font-medium text-muted-foreground tabular-nums">{step.level}</span>
                 <AbilityImage abilityId={step.abilityId} className="size-8" />
                 <Badge
                   variant={(slot && SLOT_VARIANTS[slot]) || "muted"}
@@ -140,7 +140,7 @@ export function HeroSkillOrder({
                 >
                   {slot ?? "?"}
                 </Badge>
-                <span className="text-3xs text-muted-foreground tabular-nums">{formatPercent(step.pickRate, 0)}</span>
+                <span className="text-xs text-muted-foreground tabular-nums">{formatPercent(step.pickRate, 0)}</span>
                 <AbilityName abilityId={step.abilityId} className="sr-only" />
               </Card>
             </li>

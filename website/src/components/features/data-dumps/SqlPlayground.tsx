@@ -227,7 +227,7 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
           <Stack gap={2} className="min-h-0">
             {tables.length > 0 && (
               <Stack gap={1}>
-                <Text variant="eyebrow">Tables ({tables.length}) · click to insert</Text>
+                <Text variant="eyebrow">Tables ({tables.length})</Text>
                 <Inline gap={1} className="max-h-24 overflow-y-auto">
                   {tables.map((t) => (
                     <Button
@@ -235,7 +235,7 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
                       variant="subtle"
                       size="xs"
                       onClick={() => insertAtCursor(t.name)}
-                      className="font-mono text-2xs"
+                      className="font-mono"
                       title={`${t.urls.length} parquet file${t.urls.length === 1 ? "" : "s"}`}
                     >
                       {t.name}

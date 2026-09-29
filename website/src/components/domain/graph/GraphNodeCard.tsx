@@ -63,7 +63,7 @@ function RateRow({
   className: string;
 }) {
   return (
-    <div className="flex items-center gap-1.5 text-3xs">
+    <div className="flex items-center gap-1.5 text-xs">
       <span className="w-4 shrink-0 font-medium text-muted-foreground">{label}</span>
       <ProgressBar variant="thin" value={fill} color={color} className={cn("flex-1", fade)} />
       <span className={cn("w-9 shrink-0 text-end font-semibold tabular-nums", className)}>
@@ -157,7 +157,7 @@ export function GraphNodeCard({
         <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs leading-tight font-semibold">
           {name}
           {meta && (
-            <span className="inline-flex items-center gap-1 text-3xs font-normal text-muted-foreground">{meta}</span>
+            <span className="inline-flex items-center gap-1 text-xs font-normal text-muted-foreground">{meta}</span>
           )}
         </div>
       </div>
