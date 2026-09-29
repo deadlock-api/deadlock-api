@@ -16,7 +16,7 @@ import { SegmentedItem } from "~/components/ui/segmented";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { getDefaultRegion, REGION_LABELS } from "~/lib/region";
 import { fetchDefaultRegion } from "~/lib/region-fns";
-import { pageTitle, seo } from "~/lib/seo";
+import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { leaderboardQueryOptions } from "~/queries/leaderboard-queries";
 
 export const Route = createFileRoute("/community/leaderboard")({
@@ -40,18 +40,15 @@ export const Route = createFileRoute("/community/leaderboard")({
       description:
         "Browse the Deadlock ranked leaderboard across all regions. Filter by hero, search for any player and jump to any rank.",
       path: "/community/leaderboard",
-      jsonLd: {
-        "@context": "https://schema.org",
-        "@type": "Dataset",
+      jsonLd: datasetJsonLd({
         name: "Deadlock Leaderboard: Top Ranked Players by Region",
         description:
           "Ranked player standings for Deadlock across all regions, sortable by matchmaking rating and filterable by hero.",
-        url: "https://deadlock-api.com/community/leaderboard",
+        path: "/community/leaderboard",
         keywords: ["Deadlock", "leaderboard", "leaderboards", "top players", "ranked ladder"],
-        creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
-        isAccessibleForFree: true,
-        license: "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE",
-      },
+        variableMeasured: ["leaderboard rank", "rank badge", "most played heroes"],
+        apiPath: "/v1/leaderboard/Europe",
+      }),
     }),
 });
 

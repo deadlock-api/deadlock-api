@@ -119,6 +119,49 @@ export function serializeJsonLd(data: unknown): string {
   return JSON.stringify(data).replace(/</g, "\\u003c");
 }
 
+interface DatasetOptions {
+  name: string;
+  description: string;
+  path: string;
+  keywords: string[];
+  /** What the numbers are, such as "win rate" or "pick rate". */
+  variableMeasured: string[];
+  /** The public API endpoint that serves the same data, such as `/v1/analytics/hero-stats`. */
+  apiPath: string;
+}
+
+/** Dataset JSON-LD for a stats page: the fields Google's Dataset docs ask for, with the API as its download. */
+export function datasetJsonLd({
+  name,
+  description,
+  path,
+  keywords,
+  variableMeasured,
+  apiPath,
+}: DatasetOptions): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Dataset",
+    name,
+    description,
+    url: `${SITE_URL}${path}`,
+    keywords,
+    variableMeasured,
+    // The stats are recomputed from new matches all the time, so the day the page is served is the day of its data.
+    dateModified: new Date().toISOString().slice(0, 10),
+    creator: { "@type": "Organization", name: "Deadlock API", url: SITE_URL },
+    isAccessibleForFree: true,
+    license: "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE",
+    distribution: [
+      {
+        "@type": "DataDownload",
+        encodingFormat: "application/json",
+        contentUrl: `https://api.deadlock-api.com${apiPath}`,
+      },
+    ],
+  };
+}
+
 /** OG image for a blog post by slug */
 export function getBlogOGImage(slug: string): string {
   return `/og/v2/blog-${slug}.png`;

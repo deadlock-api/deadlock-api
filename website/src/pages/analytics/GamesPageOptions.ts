@@ -5,7 +5,7 @@ import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/l
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultPrevUnixRange, defaultUnixRange } from "~/lib/seasons";
-import { pageTitle, seo } from "~/lib/seo";
+import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import type { RouterContext } from "~/router";
 
 const MATCH_LENGTH_ANSWER = "A typical Deadlock match lasts around 30-40 minutes, varying by game mode and skill.";
@@ -47,17 +47,14 @@ export const gamesPageOptions = {
   head: ({ match }: { match: { pathname: string } }) => {
     const tab = analyticsTabFromPath("games", match.pathname);
     const view = ANALYTICS_VIEWS.games[tab];
-    const dataset = {
-      "@context": "https://schema.org",
-      "@type": "Dataset",
+    const dataset = datasetJsonLd({
       name: view.title,
       description: view.description,
-      url: `https://deadlock-api.com${match.pathname.replace(/\/$/, "")}`,
+      path: match.pathname.replace(/\/$/, ""),
       keywords: ["Deadlock", "match stats", "average kills", "souls", "game length"],
-      creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
-      isAccessibleForFree: true,
-      license: "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE",
-    };
+      variableMeasured: ["match length", "kills", "deaths", "souls", "net worth"],
+      apiPath: "/v1/analytics/game-stats",
+    });
     // The match-length question belongs to the overview; repeating it on every view makes them duplicates.
     const faq = {
       "@context": "https://schema.org",

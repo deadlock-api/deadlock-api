@@ -34,7 +34,7 @@ import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
 import { rankRangeLabel } from "~/lib/rank-utils";
 import { defaultPeriodLabel, defaultPrevUnixRange, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
-import { pageTitle, seo, SITE_URL } from "~/lib/seo";
+import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { closestNameBySlug, slugify } from "~/lib/slug";
 import {
   filterPlayableHeroes,
@@ -226,7 +226,6 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
     // The not-found page sets its own title and noindex; a second title and a canonical to the section came first.
     if (!loaderData) return {};
     const { heroName, slug, cardImage, rankRange, summary } = loaderData;
-    const url = `${SITE_URL}/analytics/heroes/${slug}`;
     const description = summary
       ? `${heroName} holds a ${formatPercent(summary.winRate)} win rate (#${summary.rank} of ${summary.heroCount} heroes) and a ${formatPercent(summary.pickRate)} pick rate in ${rankRange} Deadlock matches. Live matchups, synergies, and counters, updated daily.`
       : `${heroName} win rate, pick rate, best items, and matchups in Deadlock. Live stats from tracked matches, updated daily.`;
@@ -236,17 +235,14 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       path: `/analytics/heroes/${slug}`,
       ogImage: cardImage ?? undefined,
       ogImageKind: cardImage ? "thumbnail" : "card",
-      jsonLd: {
-        "@context": "https://schema.org",
-        "@type": "Dataset",
+      jsonLd: datasetJsonLd({
         name: `Deadlock ${heroName} Win Rate & Pick Rate`,
         description: `Win rate, pick rate, ban rate, and matchup statistics for ${heroName} in Deadlock, calculated from tracked ${rankRange} matches and updated daily.`,
-        url,
+        path: `/analytics/heroes/${slug}`,
         keywords: ["Deadlock", heroName, "win rate", "pick rate", "matchups"],
-        creator: { "@type": "Organization", name: "Deadlock API", url: SITE_URL },
-        isAccessibleForFree: true,
-        license: "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE",
-      },
+        variableMeasured: ["win rate", "pick rate", "ban rate", "matchup win rate"],
+        apiPath: "/v1/analytics/hero-stats",
+      }),
     });
   },
 });

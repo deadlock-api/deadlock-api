@@ -4,7 +4,7 @@ import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/l
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultPrevUnixRange, defaultUnixRange } from "~/lib/seasons";
-import { pageTitle, seo } from "~/lib/seo";
+import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import type { RouterContext } from "~/router";
 
@@ -96,17 +96,14 @@ export const itemsPageOptions = {
       title: pageTitle(view.title),
       description: view.description + lead,
       path: match.pathname.replace(/\/$/, ""),
-      jsonLd: {
-        "@context": "https://schema.org",
-        "@type": "Dataset",
+      jsonLd: datasetJsonLd({
         name: view.title,
         description: view.description,
-        url: `https://deadlock-api.com${match.pathname.replace(/\/$/, "")}`,
+        path: match.pathname.replace(/\/$/, ""),
         keywords: ["Deadlock", "item win rates", "build stats", "item combos"],
-        creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
-        isAccessibleForFree: true,
-        license: "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE",
-      },
+        variableMeasured: ["win rate", "pick rate", "matches played"],
+        apiPath: "/v1/analytics/item-stats",
+      }),
     });
   },
 };

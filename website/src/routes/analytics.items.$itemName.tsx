@@ -28,7 +28,7 @@ import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
 import { rankRangeLabel } from "~/lib/rank-utils";
 import { defaultPeriodLabel, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
-import { pageTitle, seo, SITE_URL } from "~/lib/seo";
+import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { closestNameBySlug, slugify } from "~/lib/slug";
 import { filterShopableItems, itemQueryOptions, itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
@@ -176,7 +176,6 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
     // The not-found page sets its own title and noindex; a second title and a canonical to the section came first.
     if (!loaderData) return {};
     const { itemName, slug, image, tier, slot, rankRange, summary } = loaderData;
-    const url = `${SITE_URL}/analytics/items/${slug}`;
     const usage = summary?.usage !== undefined ? ` and shows up in ${formatPercent(summary.usage)} of builds` : "";
     const description = summary
       ? `${itemName} wins ${formatPercent(summary.winRate)} of ${rankRange} Deadlock matches (#${summary.rank} of ${summary.itemCount} items)${usage}. Best heroes, common pairings, and buy timing, updated daily.`
@@ -187,17 +186,14 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       path: `/analytics/items/${slug}`,
       ogImage: image ?? undefined,
       ogImageKind: image ? "thumbnail" : "card",
-      jsonLd: {
-        "@context": "https://schema.org",
-        "@type": "Dataset",
+      jsonLd: datasetJsonLd({
         name: `Deadlock ${itemName} Win Rate & Best Heroes`,
         description: `Win rate, purchase rate, buy timing, best heroes, and common pairings for the tier ${tier} ${slot} item ${itemName} in Deadlock, calculated from tracked ${rankRange} matches and updated daily.`,
-        url,
+        path: `/analytics/items/${slug}`,
         keywords: ["Deadlock", itemName, "item", "win rate", "build"],
-        creator: { "@type": "Organization", name: "Deadlock API", url: SITE_URL },
-        isAccessibleForFree: true,
-        license: "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE",
-      },
+        variableMeasured: ["win rate", "purchase rate", "buy time"],
+        apiPath: "/v1/analytics/item-stats",
+      }),
     });
   },
 });

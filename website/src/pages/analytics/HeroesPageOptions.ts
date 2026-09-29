@@ -6,7 +6,7 @@ import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultPeriodLabel, defaultPrevUnixRange, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
-import { pageTitle, seo } from "~/lib/seo";
+import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { redirectLegacyHeroId } from "~/lib/site-route-migration";
 import type { SlimHero } from "~/queries/asset-queries";
 import type { RouterContext } from "~/router";
@@ -133,17 +133,14 @@ export const heroesPageOptions = {
       title: pageTitle(view.title),
       description: view.description + lead,
       path: match.pathname.replace(/\/$/, ""),
-      jsonLd: {
-        "@context": "https://schema.org",
-        "@type": "Dataset",
+      jsonLd: datasetJsonLd({
         name: view.title,
         description: view.description,
-        url: `https://deadlock-api.com${match.pathname.replace(/\/$/, "")}`,
+        path: match.pathname.replace(/\/$/, ""),
         keywords: ["Deadlock", "hero win rates", "pick rates", "ban rates", "matchups", "hero meta"],
-        creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
-        isAccessibleForFree: true,
-        license: "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE",
-      },
+        variableMeasured: ["win rate", "pick rate", "ban rate", "matches played"],
+        apiPath: "/v1/analytics/hero-stats",
+      }),
     });
   },
 };

@@ -23,7 +23,7 @@ import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { defaultUnixRange } from "~/lib/seasons";
-import { pageTitle, seo } from "~/lib/seo";
+import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { loadSeasons } from "~/queries/asset-queries";
 import { badgeDistributionQueryOptions } from "~/queries/badge-distribution-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -72,18 +72,15 @@ export const Route = createFileRoute("/community/badge-distribution")({
       title: pageTitle(`Deadlock Rank Distribution ${year}: % of Players per Rank`),
       description: `What percent of Deadlock players sit at each rank and subtier, from Obscurus to Eternus.${median}`,
       path: "/community/badge-distribution",
-      jsonLd: {
-        "@context": "https://schema.org",
-        "@type": "Dataset",
+      jsonLd: datasetJsonLd({
         name: `Deadlock Rank Distribution ${year}`,
         description:
           "Distribution of Deadlock players across every rank badge and subtier, showing the share of players at each tier of the competitive ladder along with rank percentiles.",
-        url: "https://deadlock-api.com/community/badge-distribution",
+        path: "/community/badge-distribution",
         keywords: ["Deadlock", "rank distribution", "badge distribution", "rank percentiles", "MMR"],
-        creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
-        isAccessibleForFree: true,
-        license: "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE",
-      },
+        variableMeasured: ["share of players per rank", "rank percentile"],
+        apiPath: "/v1/analytics/badge-distribution",
+      }),
     });
   },
 });
