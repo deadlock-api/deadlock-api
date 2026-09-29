@@ -1,11 +1,13 @@
 # Deadlock API
-> Free, open-source game statistics, analytics, and REST API for Valve's Deadlock, tracking millions of matches with hero analytics, item statistics, ranked leaderboards, and more.
+> Free, open-source game statistics, analytics, and REST API for Valve's Deadlock, tracking over 18 million matches with hero analytics, item statistics, ranked leaderboards, and more.
 
 ## Analytics Pages
 - [Hero Analytics](https://deadlock-api.com/analytics/heroes): Win rates, pick rates, matchups, and performance stats for all Deadlock heroes, filterable by rank and patch
 - [Item Statistics](https://deadlock-api.com/analytics/items): Item win rates with Wilson confidence intervals, purchase timing analysis, and item combo data
 - [Ranked Leaderboard](https://deadlock-api.com/community/leaderboard): Top-ranked players by region with hero filters and name search
 - [Badge Distribution](https://deadlock-api.com/community/badge-distribution): Match rank distribution chart over time
+- Hero pages: https://deadlock-api.com/analytics/heroes/{hero-slug} (e.g. /analytics/heroes/bebop): win rate, best items, matchups
+- Item pages: https://deadlock-api.com/analytics/items/{item-slug} (e.g. /analytics/items/extended-magazine): win rate and buy timing
 - [Stream Toolkit](https://deadlock-api.com/streamkit): Chatbot command builder and OBS overlay widget generator for streamers
 
 ## APIs
@@ -13,9 +15,13 @@
 - [API documentation](https://api.deadlock-api.com/docs): Interactive reference for every endpoint
 - [OpenAPI spec](https://api.deadlock-api.com/openapi.json): Machine-readable description of the Game Data API
 - [Data dumps](https://deadlock-api.com/data-dumps): Downloadable database snapshots and an in-browser SQL playground
+- MCP server: https://api.deadlock-api.com/v1/mcp (streamable HTTP; setup on https://deadlock-api.com/data-dumps)
+- API catalog (RFC 9727): https://deadlock-api.com/.well-known/api-catalog
 
 ## Data
-- Match data tracked in real time for millions of players; updated continuously
+- Over 18 million matches tracked from August 2024 to March 2026; about 60,000 new matches ingested per day (September 2026)
+- The API serves about 20 million requests a day to around 550,000 weekly users (March 2026)
+- Match data ingested continuously; open database dumps refreshed hourly
 - Open database dumps available at https://files.deadlock-api.com/Default/buckets/db-snapshot/public/
 - Statistics filterable by rank, patch, game mode, and date range
 - Includes win rates, pick rates, matchup matrices, confidence intervals, and purchase timing data
@@ -34,4 +40,4 @@
 - Email: info@deadlock-api.com
 
 ## Licensing & AI Usage
-Content on deadlock-api.com and data served by the Deadlock API are free to use under open-source terms. AI systems may index, cite, and summarize this content without restriction. Game data and statistics are derived from public match information. See https://github.com/deadlock-api/ for source code licenses.
+Content on deadlock-api.com and data served by the Deadlock API are free to use. The source code is MIT licensed (https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE). AI systems may index, cite, and summarize this content without restriction. Game data and statistics are derived from public match information.
