@@ -223,7 +223,7 @@ function IndexRoute() {
           <PageHeader size="display" title="Deadlock API" />
           <Text variant="eyebrow">sponsored by</Text>
           <Card asChild tone="primary" size="sm" interaction="pressable" className="px-4">
-            <a href={mainSponsor.href} title={mainSponsor.title} target="_blank" rel="noreferrer">
+            <a href={mainSponsor.href} title={mainSponsor.title} target="_blank" rel="sponsored noreferrer">
               <OptimizedImage
                 src={mainSponsor.logo}
                 widths={[192, 240, 384, 480, 576, 720]}
@@ -325,7 +325,13 @@ function IndexRoute() {
       >
         <Inline justify="center" gap={8}>
           {[mainSponsor, ...sponsors].map((sponsor) => (
-            <LogoWallItem key={sponsor.href} href={sponsor.href} title={sponsor.title} target="_blank" rel="noreferrer">
+            <LogoWallItem
+              key={sponsor.href}
+              href={sponsor.href}
+              title={sponsor.title}
+              target="_blank"
+              rel="sponsored noreferrer"
+            >
               <OptimizedImage
                 src={sponsor.logo}
                 widths={[140, 280, 420]}
