@@ -262,7 +262,7 @@ function ItemStatsQuiz() {
                         })}
                       </div>
                       {result && !result.active && (
-                        <p className="text-3xs text-negative">Correct: {item.is_active_item ? "Active" : "Passive"}</p>
+                        <p className="text-xs text-negative">Correct: {item.is_active_item ? "Active" : "Passive"}</p>
                       )}
                     </Field>
 
@@ -284,7 +284,7 @@ function ItemStatsQuiz() {
                           );
                         })}
                       </div>
-                      {result && !result.tier && <p className="text-3xs text-negative">Correct: T{item.item_tier}</p>}
+                      {result && !result.tier && <p className="text-xs text-negative">Correct: T{item.item_tier}</p>}
                     </Field>
 
                     <Field label="Slot" className="font-mono">
@@ -307,7 +307,7 @@ function ItemStatsQuiz() {
                         })}
                       </div>
                       {result && !result.slot && (
-                        <p className="text-3xs text-negative">Correct: {formatSlotLabel(item.item_slot_type)}</p>
+                        <p className="text-xs text-negative">Correct: {formatSlotLabel(item.item_slot_type)}</p>
                       )}
                     </Field>
                   </div>

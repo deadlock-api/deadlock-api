@@ -109,7 +109,6 @@ export default function GamesOverTimeChart({
           <ChartCard
             title={`${statDef?.label ?? stat} over time`}
             description={`${day.utc(chartData[0].date).format("MMM D, YYYY")} – ${day.utc(chartData.at(-1)!.date).format("MMM D, YYYY")} · UTC`}
-            footer={`${chartData.length.toLocaleString("en-US")} buckets · The ongoing interval is omitted when at least two completed intervals are available.`}
           >
             <ChartSurface label={`${statDef?.label ?? stat} over time chart`} variant="flush">
               <LineChart data={chartData} margin={{ top: 16, right: 12, bottom: 8, left: 0 }}>

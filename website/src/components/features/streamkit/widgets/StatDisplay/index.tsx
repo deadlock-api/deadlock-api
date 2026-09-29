@@ -19,7 +19,7 @@ export const StatDisplay: FC<StatDisplayProps> = ({ stat, theme = "dark", classN
       {subtext && (
         <span
           className={cn(
-            "mt-0.5 text-center text-[11px] font-medium tracking-wide text-nowrap",
+            "mt-0.5 text-center text-xs font-medium tracking-wide text-nowrap",
             theme === "light" ? "text-gray-500" : "text-white/60",
           )}
         >

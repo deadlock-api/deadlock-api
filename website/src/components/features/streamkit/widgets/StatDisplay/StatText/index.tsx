@@ -7,7 +7,7 @@ export const StatText = ({ label, value, prefix, suffix, theme }: StatTextProps)
     <>
       <span
         className={cn(
-          "text-center text-[11px] font-medium tracking-wide text-nowrap uppercase",
+          "text-center text-xs font-medium tracking-wide text-nowrap uppercase",
           theme === "light" ? "text-gray-800" : "text-white/60",
         )}
       >

@@ -84,8 +84,8 @@ export const useWidgetTheme = (theme: Theme, opacity = 100, showOutline = true) 
       statClasses: THEME_STYLES[theme].stat,
       brandingLinkClasses: getBrandingLinkClasses(),
       brandingTextClasses: {
-        primary: cn("text-2xs font-medium transition-all", theme === "light" ? "text-gray-500" : "text-white/50"),
-        secondary: cn("text-2xs font-semibold transition-all", theme === "light" ? "text-black/80" : "text-white/80"),
+        primary: cn("text-xs font-medium transition-all", theme === "light" ? "text-gray-500" : "text-white/50"),
+        secondary: cn("text-xs font-semibold transition-all", theme === "light" ? "text-black/80" : "text-white/80"),
       },
       userNameClasses: getUserNameClasses(),
     };

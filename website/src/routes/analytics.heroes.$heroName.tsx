@@ -410,11 +410,11 @@ function HeroDetailPage() {
         <HeroMatchupSummary heroName={heroName} matchups={matchups} onRetry={retryMatchups} />
         <div className="grid items-start gap-4 lg:grid-cols-2">
           <Panel>
-            <PanelHeader title={`${heroName} with Teammates`} description="Win rate change, best first" />
+            <PanelHeader title={`${heroName} with Teammates`} />
             <HeroMatchupDetailsStatsTable stat={0} matchups={matchups} onRetry={retryMatchups} linkHeroes />
           </Panel>
           <Panel>
-            <PanelHeader title={`${heroName} against Enemies`} description="Win rate change, best first" />
+            <PanelHeader title={`${heroName} against Enemies`} />
             <HeroMatchupDetailsStatsTable stat={1} matchups={matchups} onRetry={retryMatchups} linkHeroes />
           </Panel>
         </div>

@@ -554,12 +554,8 @@ function GuessSound() {
 
         <Stack gap={1.5} className="w-full max-w-xs">
           <ProgressBar value={progress} />
-          <div className="flex items-center justify-between font-mono text-3xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Volume2 className="size-3" />
-              SOUND
-            </span>
-            <span>{formattedDuration}</span>
+          <div className="flex justify-end font-mono text-xs text-muted-foreground tabular-nums">
+            {formattedDuration}
           </div>
         </Stack>
 
@@ -583,7 +579,7 @@ function GuessSound() {
             onValueChange={([next]) => changeVolume(next / 100)}
             className="cursor-target flex-1"
           />
-          <span className="w-7 text-end font-mono text-3xs text-muted-foreground tabular-nums">
+          <span className="w-7 text-end font-mono text-xs text-muted-foreground tabular-nums">
             {Math.round(volume * 100)}
           </span>
         </Field>
