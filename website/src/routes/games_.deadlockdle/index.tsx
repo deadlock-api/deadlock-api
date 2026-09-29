@@ -41,9 +41,22 @@ export const Route = createFileRoute("/games_/deadlockdle/")({
   validateSearch: validatePuzzleDateSearch,
   head: () => {
     const s = seo({
-      title: pageTitle("Deadlockdle - Daily Deadlock Minigames"),
-      description: "Test your Deadlock knowledge with daily puzzles. Guess heroes, items, sounds, abilities, and more.",
+      title: pageTitle("Deadlockdle (Deadlockle): Daily Deadlock Guessing Game"),
+      description:
+        "Deadlockdle, the daily Deadlock guessing game: guess the hero, item, ability and sound, then play trivia and Higher or Lower. New puzzles every day.",
       path: "/games/deadlockdle",
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        name: "Deadlockdle",
+        alternateName: ["Deadlockle", "Deadlock Wordle"],
+        url: "https://deadlock-api.com/games/deadlockdle",
+        applicationCategory: "GameApplication",
+        operatingSystem: "Any",
+        isAccessibleForFree: true,
+        offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+        creator: { "@type": "Organization", name: "Deadlock API", url: "https://deadlock-api.com" },
+      },
     });
     return s;
   },
