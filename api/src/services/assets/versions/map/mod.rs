@@ -1,7 +1,8 @@
 //! `/v1/assets/map` data layer.
 //!
 //! The objective marker positions come from the per-version
-//! `styles/objectives_map.css`; the radius, image URLs (which switch to the
+//! `styles/objectives_map.css` (pre-6711) or, from 6711 on, from the world
+//! positions in the map entity lump; the radius, image URLs (which switch to the
 //! layered midtown minimap from build 6711 on), zip-line lane splines and (6711+)
 //! neutral camps are fixed constants extracted from the map entity lump: the
 //! pre-6711 map in [`geometry`], the "City Never Sleeps" map (6711+) in
@@ -80,7 +81,19 @@ enum ObjectiveMarker {
     Team1Tier14,
 }
 
+/// Marker footprint in `objectives_map.css`, as fractions of the minimap:
+/// `.Core` is 30% x 8%, every other marker (`.Icon`) 10% x 10%.
+const CORE_SIZE: (f64, f64) = (0.30, 0.08);
+const ICON_SIZE: (f64, f64) = (0.10, 0.10);
+
 impl ObjectiveMarker {
+    const fn size(self) -> (f64, f64) {
+        match self {
+            Self::Team0Core | Self::Team1Core => CORE_SIZE,
+            _ => ICON_SIZE,
+        }
+    }
+
     const fn is_required(self) -> bool {
         !matches!(
             self,
@@ -290,12 +303,58 @@ pub(crate) fn build_objective_positions(
         .collect()
 }
 
-/// Build the full map response from the version's `objectives_map.css`.
+/// Round to 4 decimals (about 2 px on a 20k-wide minimap), like the CSS's 2.
+fn round4(v: f64) -> f64 {
+    (v * 1e4).round() / 1e4
+}
+
+/// Objective positions for 6711+, from the entity lump's world positions.
+///
+/// `objectives_map.css` still describes the old layout after the "City Never
+/// Sleeps" rework, so it is not used. The CSS `margin-left`/`margin-top` place
+/// the marker's top-left corner, so the marker centre is
+/// `margin + size / 2`; the centre of a `Core` (30% x 8%) / `Icon` (10% x 10%)
+/// coincides with the structure's minimap position on the cores and titans of
+/// the old layout (`0.5` horizontally). Here the margin is therefore
+/// `(x + R) / 2R - w / 2` and `(R - y) / 2R - h / 2`, the same anchor.
+fn city_never_sleeps_objective_positions()
+-> Result<IndexMap<String, ObjectivePosition>, AssetsError> {
+    let radius = f64::from(MAP_RADIUS);
+    ObjectiveMarker::iter()
+        .filter_map(|marker| {
+            let key = marker.to_string();
+            let Some(src) = city_never_sleeps::OBJECTIVES.iter().find(|o| o.key == key) else {
+                return marker.is_required().then(|| {
+                    Err(AssetsError::Map(format!(
+                        "missing objective position for `{marker}`"
+                    )))
+                });
+            };
+            let [x, y] = src.position;
+            let (w, h) = marker.size();
+            Some(Ok((
+                key,
+                ObjectivePosition {
+                    left_relative: round4((x + radius) / (2.0 * radius) - w / 2.0),
+                    top_relative: round4((radius - y) / (2.0 * radius) - h / 2.0),
+                },
+            )))
+        })
+        .collect()
+}
+
+/// Build the full map response. Pre-6711 the objective positions come from
+/// `css` (the version's `objectives_map.css`); from 6711 on `css` is unused.
 pub(crate) fn build_map(css: &str, version: u32) -> Result<MapData, AssetsError> {
+    let objective_positions = if version >= CITY_NEVER_SLEEPS_BUILD {
+        city_never_sleeps_objective_positions()?
+    } else {
+        build_objective_positions(css)?
+    };
     Ok(MapData {
         radius: MAP_RADIUS,
         images: images(version),
-        objective_positions: build_objective_positions(css)?,
+        objective_positions,
         zipline_paths: zipline_paths(version),
         neutral_camps: neutral_camps(version),
     })
@@ -327,7 +386,8 @@ mod tests {
         );
     }
 
-    /// `objectives_map.css` is byte-identical in 6711, so the same fixture is used.
+    /// `objectives_map.css` is byte-identical in 6711 (and no longer describes the
+    /// bases), so the fixture is only passed through; positions come from the lump.
     #[test]
     fn snapshot_map_city_never_sleeps() {
         let map = build_map(FIXTURE, CITY_NEVER_SLEEPS_BUILD).expect("builds");
@@ -402,5 +462,21 @@ mod tests {
         assert!(!positions.contains_key("team0_tier2_2"));
         assert!(!positions.contains_key("team1_tier1_2"));
         assert!(positions.contains_key("team0_tier2_1"));
+    }
+
+    #[test]
+    fn city_never_sleeps_objectives_follow_the_lump() {
+        let old = build_map(FIXTURE, CITY_NEVER_SLEEPS_BUILD - 1).expect("builds");
+        let new = build_map(FIXTURE, CITY_NEVER_SLEEPS_BUILD).expect("builds");
+        assert!(
+            old.objective_positions
+                .keys()
+                .eq(new.objective_positions.keys())
+        );
+        // Bases moved off the map's centre line.
+        assert!(new.objective_positions["team0_titan"].left_relative < 0.45);
+        assert!(new.objective_positions["team1_titan"].left_relative > 0.45);
+        // Legacy path is untouched: it still reads the CSS.
+        assert!((old.objective_positions["team0_titan"].left_relative - 0.45).abs() < 1e-9);
     }
 }

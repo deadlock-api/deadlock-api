@@ -14,68 +14,68 @@ expression: map
   },
   "objective_positions": {
     "team0_core": {
-      "left_relative": 0.35,
-      "top_relative": 0.93
+      "left_relative": 0.2905,
+      "top_relative": 0.9258
     },
     "team1_core": {
-      "left_relative": 0.35,
-      "top_relative": 0.0
+      "left_relative": 0.4095,
+      "top_relative": -0.0147
     },
     "team0_titan": {
-      "left_relative": 0.45,
-      "top_relative": 0.79
+      "left_relative": 0.3905,
+      "top_relative": 0.8236
     },
     "team1_titan": {
-      "left_relative": 0.45,
-      "top_relative": 0.11
+      "left_relative": 0.5095,
+      "top_relative": 0.0757
     },
     "team0_tier2_1": {
-      "left_relative": 0.25,
-      "top_relative": 0.67
+      "left_relative": 0.1583,
+      "top_relative": 0.6702
     },
     "team0_tier2_3": {
-      "left_relative": 0.45,
-      "top_relative": 0.67
+      "left_relative": 0.3901,
+      "top_relative": 0.6115
     },
     "team0_tier2_4": {
-      "left_relative": 0.65,
-      "top_relative": 0.67
+      "left_relative": 0.7117,
+      "top_relative": 0.6853
     },
     "team1_tier2_1": {
-      "left_relative": 0.25,
-      "top_relative": 0.25
+      "left_relative": 0.1981,
+      "top_relative": 0.2164
     },
     "team1_tier2_3": {
-      "left_relative": 0.45,
-      "top_relative": 0.25
+      "left_relative": 0.5099,
+      "top_relative": 0.2885
     },
     "team1_tier2_4": {
-      "left_relative": 0.65,
-      "top_relative": 0.25
+      "left_relative": 0.7497,
+      "top_relative": 0.2279
     },
     "team0_tier1_1": {
-      "left_relative": 0.21,
-      "top_relative": 0.53
+      "left_relative": 0.069,
+      "top_relative": 0.5363
     },
     "team0_tier1_3": {
       "left_relative": 0.45,
-      "top_relative": 0.53
+      "top_relative": 0.5333
     },
     "team0_tier1_4": {
-      "left_relative": 0.69,
-      "top_relative": 0.53
+      "left_relative": 0.7774,
+      "top_relative": 0.5423
     },
     "team1_tier1_1": {
-      "left_relative": 0.21,
-      "top_relative": 0.39
+      "left_relative": 0.1226,
+      "top_relative": 0.3577
     },
     "team1_tier1_3": {
       "left_relative": 0.45,
-      "top_relative": 0.39
+      "top_relative": 0.3667
     },
     "team1_tier1_4": {
-      "left_relative": 0.69,
-      "top_relative": 0.39
+      "left_relative": 0.828,
+      "top_relative": 0.3637
     }
   },
   "zipline_paths": [

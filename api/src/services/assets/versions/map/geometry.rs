@@ -26,6 +26,20 @@ pub(super) struct NeutralCampSource {
     pub(super) position: [f64; 3],
 }
 
+/// A base objective's world position as extracted from the map entity lump.
+/// `source` and `name` record where the position came from and are not read.
+#[expect(dead_code)]
+pub(super) struct ObjectiveSource {
+    /// `objective_positions` key, e.g. `team0_tier1_3`.
+    pub(super) key: &'static str,
+    /// Entity classname the position came from.
+    pub(super) source: &'static str,
+    /// Entity `targetname` (may be empty).
+    pub(super) name: &'static str,
+    /// World position `[x, y]`.
+    pub(super) position: [f64; 2],
+}
+
 /// Lane spline origins, one `[x, y, z]` per lane.
 pub(super) static LANE_ORIGINS: [[f64; 3]; 3] = [
     [0.0, -11520.0, 1504.0],
