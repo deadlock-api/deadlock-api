@@ -1,14 +1,21 @@
 use clickhouse::Row;
 use serde::Serialize;
-use valveprotos::deadlock::CMsgHeroXpGrant;
+use std::io::Read;
+
+use prost::Message;
+use tracing::warn;
+use valveprotos::deadlock::c_msg_match_hero_release_votes::HeroVote;
 use valveprotos::deadlock::c_msg_match_meta_data_contents::{
     BookReward, Deaths, Items, MatchInfo, MidBoss, Objective as ProtoObjective, PlayerAccolade,
     PlayerStats, Players, PowerUpBuff, StreetBrawlRound,
 };
+use valveprotos::deadlock::{
+    CMsgHeroXpGrant, CMsgMatchHeroReleaseVotes, EMatchMetadataExtraMessage,
+};
 
 use crate::models::enums::{
-    BotDifficulty, GameMode, HeroXpGrantReason, MatchMode, MatchOutcome, Objective,
-    PlayerMatchOutcome, RankedType, Team,
+    BotDifficulty, GameMode, HeroReleaseVoteCategory, HeroXpGrantReason, MatchMode, MatchOutcome,
+    Objective, PlayerMatchOutcome, RankedType, Team,
 };
 
 #[derive(Row, Debug, Clone, Serialize)]
@@ -33,6 +40,7 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub game_mode_version: Option<u32>,
     pub ranked_type: RankedType,
     pub rank_interval: Option<u32>,
+    pub corrupted_penalty_seed: Option<u32>,
     #[serde(rename = "objectives.destroyed_time_s")]
     pub objectives_destroyed_time_s: Vec<u32>,
     #[serde(rename = "objectives.creep_damage")]
@@ -220,6 +228,16 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub power_up_buffs_value: Vec<u32>,
     #[serde(rename = "power_up_buffs.is_permanent")]
     pub power_up_buffs_is_permanent: Vec<bool>,
+    #[serde(rename = "power_up_buffs.pickup_times_s")]
+    pub power_up_buffs_pickup_times_s: Vec<Vec<u32>>,
+    #[serde(rename = "power_up_buffs.pickup_stat_values")]
+    pub power_up_buffs_pickup_stat_values: Vec<Vec<f32>>,
+    #[serde(rename = "hero_release_votes.category")]
+    pub hero_release_votes_category: Vec<HeroReleaseVoteCategory>,
+    #[serde(rename = "hero_release_votes.hero_id")]
+    pub hero_release_votes_hero_id: Vec<u32>,
+    #[serde(rename = "hero_release_votes.vote_count")]
+    pub hero_release_votes_vote_count: Vec<u32>,
     pub rewards_eligible: bool,
     pub earned_holiday_award_2025: bool,
     pub hero_xp: u32,
@@ -300,9 +318,56 @@ fn mean_badge(badges: &[u32]) -> Option<u32> {
     Some(dense_mean + 4 * ((dense_mean - 1) / 6))
 }
 
+/// Decode the hero release votes carried in the match's `extra_messages` blocks.
+fn hero_release_votes(match_info: &MatchInfo) -> Vec<CMsgMatchHeroReleaseVotes> {
+    match_info
+        .extra_messages
+        .iter()
+        .filter(|b| {
+            b.msg_type()
+                == EMatchMetadataExtraMessage::KEMatchMetadataExtraMessageHeroReleaseVotes as u32
+        })
+        .filter_map(|b| {
+            let contents = b.contents();
+            let decoded = if b.is_compressed() {
+                let mut buf = Vec::new();
+                zstd::stream::read::Decoder::new(contents)
+                    .and_then(|mut d| d.read_to_end(&mut buf))
+                    .map(|_| buf)
+                    .inspect_err(|e| {
+                        warn!(
+                            match_id = match_info.match_id(),
+                            "Failed to decompress hero release votes: {e}"
+                        );
+                    })
+                    .ok()?
+            } else {
+                contents.to_vec()
+            };
+            CMsgMatchHeroReleaseVotes::decode(decoded.as_slice())
+                .inspect_err(|e| {
+                    warn!(
+                        match_id = match_info.match_id(),
+                        "Failed to decode hero release votes: {e}"
+                    );
+                })
+                .ok()
+        })
+        .collect()
+}
+
 #[expect(clippy::too_many_lines)]
 impl From<(&MatchInfo, bool, Players)> for ClickhouseMatchPlayer {
     fn from((match_info, won, value): (&MatchInfo, bool, Players)) -> Self {
+        let player_votes: Vec<(HeroReleaseVoteCategory, HeroVote)> = hero_release_votes(match_info)
+            .into_iter()
+            .flat_map(|votes| votes.categories)
+            .flat_map(|c| {
+                let category = HeroReleaseVoteCategory::from(c.vote_category());
+                c.hero_votes.into_iter().map(move |v| (category.clone(), v))
+            })
+            .filter(|(_, v)| v.vote_player_slot() == value.player_slot())
+            .collect();
         Self {
             match_id: match_info.match_id(),
             start_time: match_info.start_time(),
@@ -324,6 +389,7 @@ impl From<(&MatchInfo, bool, Players)> for ClickhouseMatchPlayer {
             game_mode_version: match_info.game_mode_version,
             ranked_type: RankedType::from(match_info.ranked_type()),
             rank_interval: match_info.rank_interval,
+            corrupted_penalty_seed: match_info.corrupted_penalty_seed,
             objectives_destroyed_time_s: match_info
                 .objectives
                 .iter()
@@ -636,6 +702,25 @@ impl From<(&MatchInfo, bool, Players)> for ClickhouseMatchPlayer {
                 .power_up_buffs
                 .iter()
                 .map(PowerUpBuff::is_permanent)
+                .collect(),
+            power_up_buffs_pickup_times_s: value
+                .power_up_buffs
+                .iter()
+                .map(|b| b.pickup_times_s.clone())
+                .collect(),
+            power_up_buffs_pickup_stat_values: value
+                .power_up_buffs
+                .iter()
+                .map(|b| b.pickup_stat_values.clone())
+                .collect(),
+            hero_release_votes_category: player_votes.iter().map(|(c, _)| c.clone()).collect(),
+            hero_release_votes_hero_id: player_votes
+                .iter()
+                .map(|(_, v)| v.vote_hero_id())
+                .collect(),
+            hero_release_votes_vote_count: player_votes
+                .iter()
+                .map(|(_, v)| v.vote_count())
                 .collect(),
             team: Team::from(value.team()),
             kills: value.kills(),

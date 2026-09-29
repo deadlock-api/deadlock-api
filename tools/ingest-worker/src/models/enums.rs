@@ -1,4 +1,5 @@
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use valveprotos::deadlock::c_msg_match_hero_release_votes::EHeroReleaseVoteCategory;
 use valveprotos::deadlock::c_msg_match_meta_data_contents::EMatchOutcome;
 use valveprotos::deadlock::{
     ECitadelBotDifficulty, ECitadelGameMode, ECitadelLobbyTeam, ECitadelMatchMode,
@@ -181,6 +182,24 @@ impl From<EHeroXpGrantReason> for HeroXpGrantReason {
             EHeroXpGrantReason::KEGrantWin => Self::Win,
             EHeroXpGrantReason::KEGrantLoss => Self::Loss,
             EHeroXpGrantReason::KEGrantAward => Self::Award,
+        }
+    }
+}
+
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
+#[repr(i8)]
+pub(crate) enum HeroReleaseVoteCategory {
+    MatchCompleted = 0,
+    MatchWon = 1,
+    DailyBonus = 2,
+}
+
+impl From<EHeroReleaseVoteCategory> for HeroReleaseVoteCategory {
+    fn from(value: EHeroReleaseVoteCategory) -> Self {
+        match value {
+            EHeroReleaseVoteCategory::KEMatchCompleted => Self::MatchCompleted,
+            EHeroReleaseVoteCategory::KEMatchWon => Self::MatchWon,
+            EHeroReleaseVoteCategory::KEDailyBonus => Self::DailyBonus,
         }
     }
 }
