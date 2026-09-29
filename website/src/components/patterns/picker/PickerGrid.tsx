@@ -198,7 +198,7 @@ const mediaVariants = cva("flex shrink-0 items-center justify-center transition-
   defaultVariants: { size: "default", state: "none" },
 });
 
-const nameVariants = cva("w-full text-center text-3xs leading-tight text-muted-foreground", {
+const nameVariants = cva("w-full text-center text-xs leading-tight text-muted-foreground", {
   variants: { size: { default: "truncate", sm: "truncate", lg: "line-clamp-2 break-words hyphens-auto" } },
   defaultVariants: { size: "default" },
 });
@@ -288,7 +288,7 @@ export function PickerGridTile({
           <span
             id={metaId}
             data-slot="picker-grid-tile-meta"
-            className="flex w-full justify-center truncate text-3xs leading-tight font-medium tabular-nums"
+            className="flex w-full justify-center truncate text-xs leading-tight font-medium tabular-nums"
           >
             {children}
           </span>

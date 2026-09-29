@@ -122,8 +122,8 @@
   font-weight: 400;
 }
 @utility type-meta {
-  font-size: var(--text-3xs);
-  line-height: var(--text-3xs--line-height);
+  font-size: var(--text-xs);
+  line-height: 1rem;
   font-weight: 400;
 }
 @utility type-value-lg {

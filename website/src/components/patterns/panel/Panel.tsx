@@ -157,13 +157,13 @@ export function PanelSection({
       data-slot="panel-section"
       data-tone={tone}
       className={cn(
-        "flex min-w-0 items-center justify-between gap-2 border-b px-4 py-1.5 text-2xs text-muted-foreground",
+        "flex min-w-0 items-center justify-between gap-2 border-b px-4 py-1.5 text-xs text-muted-foreground",
         tone === "opaque" ? "bg-card" : "bg-subtle",
         className,
       )}
       {...props}
     >
-      <div className="truncate eyebrow text-2xs">{title}</div>
+      <div className="truncate eyebrow">{title}</div>
       {children}
     </div>
   );

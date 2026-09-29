@@ -53,7 +53,7 @@ export function OptionRow({
         </span>
       </span>
       <span className="flex shrink-0 items-center gap-2">
-        {hint && <span className="font-mono text-2xs font-normal text-muted-foreground">{hint}</span>}
+        {hint && <span className="font-mono text-xs font-normal text-muted-foreground">{hint}</span>}
         {trailing}
         {selected && <CheckIcon className="size-3.5 text-primary" />}
       </span>

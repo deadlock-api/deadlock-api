@@ -57,11 +57,7 @@ export function ResultGrid({
       className={cn("max-w-full", className)}
       {...props}
     >
-      <Table
-        density={density}
-        aria-label={label}
-        className={cn("w-auto min-w-full", density === "dense" && "text-2xs")}
-      >
+      <Table density={density} aria-label={label} className={cn("w-auto min-w-full", density === "dense" && "text-xs")}>
         <TableHeader>
           <TableRow>
             {columns.map((column, j) => (

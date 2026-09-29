@@ -69,7 +69,7 @@ export function ChartOverlay({
     <div
       data-slot="chart-overlay"
       data-narrow={narrow}
-      className={cn(chartOverlayVariants({ position, narrow }), "text-3xs text-muted-foreground", className)}
+      className={cn(chartOverlayVariants({ position, narrow }), "text-xs text-muted-foreground", className)}
       {...props}
     />
   );
@@ -114,7 +114,7 @@ export function ChartRegion({
       data-tone={tone}
       aria-hidden="true"
       className={cn(
-        "pointer-events-none absolute flex items-start p-1.5 text-3xs text-muted-foreground",
+        "pointer-events-none absolute flex items-start p-1.5 text-xs text-muted-foreground",
         REGION_TONE[tone],
         className,
       )}

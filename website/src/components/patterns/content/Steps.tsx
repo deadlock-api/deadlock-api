@@ -8,7 +8,7 @@ const markerVariants = cva("tabular-nums", {
     variant: {
       /** A numbered chip: the steps are the content of the block. */
       badge:
-        "inline-flex size-5 items-center justify-center rounded-full border border-primary/30 bg-primary/15 text-2xs font-semibold text-primary before:content-[counter(step)]",
+        "inline-flex size-5 items-center justify-center rounded-full border border-primary/30 bg-primary/15 text-xs font-semibold text-primary before:content-[counter(step)]",
       /** A plain numeral, for a short list inside an Alert or a Card that already has a frame. */
       plain: "min-w-4 text-muted-foreground before:content-[counter(step)_'.']",
     },

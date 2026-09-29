@@ -27,7 +27,7 @@ export function HeadingSpecimen() {
       <div className="flex flex-col gap-2">
         {HEADING_SIZES.map((size) => (
           <div key={size} className="flex flex-wrap items-baseline gap-x-3">
-            <code className="w-16 shrink-0 font-mono text-2xs text-muted-foreground">{size}</code>
+            <code className="w-16 shrink-0 font-mono text-xs text-muted-foreground">{size}</code>
             <Heading as="h4" size={size}>
               Win rate by rank
             </Heading>

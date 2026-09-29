@@ -105,7 +105,7 @@ export function ChartReadings({
       onPointerMove={(event) => event.stopPropagation()}
       {...props}
     >
-      {title != null && <p className={cn("font-semibold", size === "sm" ? "text-2xs" : "text-xs")}>{title}</p>}
+      {title != null && <p className="text-xs font-semibold">{title}</p>}
       {(summary || valueLabel || hasExtraColumn) && (
         <div className="flex justify-between gap-3 text-xs text-muted-foreground">
           <span>{summary}</span>
@@ -149,7 +149,7 @@ export function ChartReadingList({
       <ReadingsSizeContext.Provider value={size}>
         <ul
           data-slot="chart-reading-list"
-          className={cn("flex flex-col", size === "sm" ? "gap-0 text-2xs" : "gap-1 text-xs", className)}
+          className={cn("flex flex-col", size === "sm" ? "gap-0 text-xs" : "gap-1 text-xs", className)}
           {...props}
         />
       </ReadingsSizeContext.Provider>

@@ -95,7 +95,7 @@ export function HeatGridColumn({ className, ...props }: React.ComponentProps<typ
     <TableHead
       data-slot="heat-grid-column"
       scope="col"
-      className={cn("h-4 p-0 text-center text-4xs", className)}
+      className={cn("h-4 p-0 text-center text-xs leading-none", className)}
       {...props}
     />
   );
@@ -109,7 +109,7 @@ export function HeatGridRow({
 }: React.ComponentProps<typeof TableRow> & { label: React.ReactNode }) {
   return (
     <TableRow data-slot="heat-grid-row" {...props}>
-      <TableHead scope="row" className="h-4 p-0 text-4xs">
+      <TableHead scope="row" className="h-4 p-0 text-xs leading-none">
         {label}
       </TableHead>
       {children}

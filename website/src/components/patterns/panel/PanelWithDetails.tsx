@@ -66,7 +66,7 @@ export function PanelWithDetails({
         <PanelBody size="sm" className="flex flex-col gap-1">
           {children}
           <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
-            {footer && <div className="min-w-0 flex-1 text-3xs text-muted-foreground">{footer}</div>}
+            {footer && <div className="min-w-0 flex-1 text-xs text-muted-foreground">{footer}</div>}
             <DialogTrigger asChild>
               <Button variant="ghost" size="xs" aria-label={`Show more ${title.toLowerCase()}`}>
                 Show more

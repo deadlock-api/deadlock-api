@@ -56,12 +56,12 @@ function Swatch({ token }: { token: string }) {
   return (
     <div className="flex w-28 flex-col gap-1">
       <div className="h-10 rounded-md border" style={{ backgroundColor: `var(--${token})` }} />
-      <code className="truncate font-mono text-2xs">{token}</code>
+      <code className="truncate font-mono text-xs">{token}</code>
       <Text variant="meta" tone="muted" numeric="tabular">
         {tokenUsage(token).toLocaleString("en-US")} uses
       </Text>
       <code
-        className="truncate font-mono text-3xs text-muted-foreground"
+        className="truncate font-mono text-xs text-muted-foreground"
         ref={(el) => {
           if (el) el.textContent = getComputedStyle(el).getPropertyValue(`--${token}`).trim();
         }}
@@ -71,10 +71,7 @@ function Swatch({ token }: { token: string }) {
 }
 
 const TYPE_SCALE = [
-  ["text-4xs", "9px · chart annotations, corner counters"],
-  ["text-3xs", "10px · eyebrow labels, dense meta"],
-  ["text-2xs", "11px · dense table cells, hints"],
-  ["text-xs", "12px · secondary text, toolbar labels"],
+  ["text-xs", "12px · the floor: secondary text, dense data, labels"],
   ["text-sm", "14px · body of data pages, controls"],
   ["text-base", "16px · prose"],
   ["text-xl", "20px · section titles"],
@@ -125,18 +122,18 @@ export function Foundations() {
           {TYPE_SCALE.map(([cls, use]) => (
             <div key={cls} className="flex flex-wrap items-baseline gap-x-4">
               <span className={cn(cls, "font-medium tabular-nums")}>Win rate 52.4%</span>
-              <code className="font-mono text-2xs text-muted-foreground">
+              <code className="font-mono text-xs text-muted-foreground">
                 {cls} · {use}
               </code>
             </div>
           ))}
           <div className="flex flex-wrap items-baseline gap-x-4">
             <span className="eyebrow">Matches played</span>
-            <code className="font-mono text-2xs text-muted-foreground">eyebrow · the label above a value</code>
+            <code className="font-mono text-xs text-muted-foreground">eyebrow · the label above a value</code>
           </div>
           <div className="flex flex-wrap items-baseline gap-x-4">
             <span className="font-game text-2xl">Deadlockdle</span>
-            <code className="font-mono text-2xs text-muted-foreground">font-game</code>
+            <code className="font-mono text-xs text-muted-foreground">font-game</code>
           </div>
         </div>
       </Specimen>
@@ -149,8 +146,8 @@ export function Foundations() {
           {RADII.map(([cls, use]) => (
             <div key={cls} className="flex flex-col items-center gap-1">
               <div className={cn("size-14 border bg-card", cls)} />
-              <code className="font-mono text-3xs">{cls}</code>
-              <span className="text-3xs text-muted-foreground">{use}</span>
+              <code className="font-mono text-xs">{cls}</code>
+              <span className="text-xs text-muted-foreground">{use}</span>
             </div>
           ))}
         </Variants>
@@ -161,7 +158,7 @@ export function Foundations() {
           {SHADOWS.map((cls) => (
             <div key={cls} className="flex flex-col items-center gap-1">
               <div className={cn("size-14 rounded-lg border bg-card", cls)} />
-              <code className="font-mono text-3xs">{cls}</code>
+              <code className="font-mono text-xs">{cls}</code>
             </div>
           ))}
         </Variants>
@@ -172,8 +169,8 @@ export function Foundations() {
           {HEIGHTS.map(([cls, use]) => (
             <div key={cls} className="flex flex-col items-center gap-1">
               <div className={cn("w-20 rounded-md border bg-card", cls)} />
-              <code className="font-mono text-3xs">{cls}</code>
-              <span className="text-3xs text-muted-foreground">{use}</span>
+              <code className="font-mono text-xs">{cls}</code>
+              <span className="text-xs text-muted-foreground">{use}</span>
             </div>
           ))}
         </Variants>

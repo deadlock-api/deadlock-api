@@ -170,8 +170,14 @@ const RULES = [
   },
   {
     id: "arbitrary-text-size",
-    message: "arbitrary font size; use text-4xs (9px), text-3xs (10px), text-2xs (11px), text-xs...",
+    message: "arbitrary font size; use the type scale: text-xs (12px) and up",
     pattern: /(?<![\w-])text-\[\d+(?:\.\d+)?(?:px|rem)\]/g,
+  },
+  // 12px is the floor. Text too small to read is either not worth showing (drop it) or worth 12px.
+  {
+    id: "tiny-text",
+    message: "text under 12px; use text-xs (12px) or drop the text if it is a hint",
+    pattern: /(?<![\w-])(?:text|type)-[2-9]xs\b/g,
   },
   {
     id: "raw-button",

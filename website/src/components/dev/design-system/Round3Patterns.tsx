@@ -361,7 +361,7 @@ function ContentSpecimens() {
             cta="Play"
             footer={<Badge variant="positive">Won</Badge>}
           >
-            <span className="text-2xs text-muted-foreground">Children land under the description.</span>
+            <span className="text-xs text-muted-foreground">Children land under the description.</span>
           </LinkCard>
         </Variants>
       </Specimen>

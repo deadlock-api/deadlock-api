@@ -113,7 +113,7 @@ export function Specimen({
     >
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <Heading>{name}</Heading>
-        {source && <code className="font-mono text-2xs text-muted-foreground">{source}</code>}
+        {source && <code className="font-mono text-xs text-muted-foreground">{source}</code>}
         {source && <UsageBadge source={source} />}
         {note && <p className="basis-full text-xs text-muted-foreground">{note}</p>}
       </header>

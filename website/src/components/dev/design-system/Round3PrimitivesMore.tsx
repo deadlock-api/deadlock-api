@@ -385,7 +385,7 @@ export function Round3PrimitivesMore() {
         <div className="flex flex-col gap-2">
           {(["sans", "mono"] as const).map((font) => (
             <div key={font} className="flex flex-wrap items-baseline gap-x-3">
-              <code className="w-16 shrink-0 font-mono text-2xs text-muted-foreground">{font}</code>
+              <code className="w-16 shrink-0 font-mono text-xs text-muted-foreground">{font}</code>
               <Heading as="h4" size="xl" font={font}>
                 Deadlockdle
               </Heading>

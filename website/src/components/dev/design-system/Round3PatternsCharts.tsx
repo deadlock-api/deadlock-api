@@ -176,7 +176,7 @@ export function Round3PatternsCharts() {
           </ChartOverlay>
           <ChartOverlay position="bottom-start">
             <ChartOverlayItem>
-              <Field orientation="horizontal" label={<span className="text-3xs">Opacity</span>}>
+              <Field orientation="horizontal" label={<span className="text-xs">Opacity</span>}>
                 <Slider
                   aria-label="Opacity"
                   min={10}

@@ -6,7 +6,7 @@ const codeVariants = cva("rounded-sm bg-muted px-1.5 py-0.5 font-mono break-word
   variants: {
     /** One step below the text around it: `default` inside body text, `sm` inside captions, `lg` inside prose. */
     size: {
-      sm: "text-2xs",
+      sm: "text-xs",
       default: "text-xs",
       lg: "text-sm",
     },

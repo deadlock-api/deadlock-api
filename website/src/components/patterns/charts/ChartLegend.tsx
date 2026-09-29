@@ -170,7 +170,7 @@ export function ChartLegend({
         className={cn(
           "flex text-muted-foreground",
           orientation === "vertical" ? "flex-col items-stretch" : "flex-wrap items-center",
-          size === "sm" ? "gap-x-3 gap-y-0.5 text-2xs" : "gap-x-4 gap-y-1 px-1 text-xs",
+          size === "sm" ? "gap-x-3 gap-y-0.5 text-xs" : "gap-x-4 gap-y-1 px-1 text-xs",
           className,
         )}
         {...props}
@@ -199,7 +199,7 @@ export function ChartGradientLegend({
   return (
     <div
       data-slot="chart-gradient-legend"
-      className={cn("flex items-center gap-1.5 text-3xs text-muted-foreground tabular-nums", className)}
+      className={cn("flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums", className)}
       {...props}
     >
       <span className="sr-only">{label}, from</span>

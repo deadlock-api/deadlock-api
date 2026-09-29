@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "~/lib/utils";
 
 const cornerBadgeVariants = cva(
-  "pointer-events-none absolute rounded-sm px-0.5 text-4xs leading-tight font-semibold whitespace-nowrap tabular-nums",
+  "pointer-events-none absolute rounded-sm px-0.5 text-xs leading-none font-semibold whitespace-nowrap tabular-nums",
   {
     variants: {
       corner: {

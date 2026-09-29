@@ -28,7 +28,7 @@ const WIDTHS = [
 
 function Block({ children }: { children?: React.ReactNode }) {
   return (
-    <div className="rounded-md border border-dashed bg-subtle px-2 py-1.5 text-center text-2xs text-muted-foreground">
+    <div className="rounded-md border border-dashed bg-subtle px-2 py-1.5 text-center text-xs text-muted-foreground">
       {children}
     </div>
   );
@@ -121,7 +121,7 @@ export function SideNavSpecimen() {
                   </SideNavItem>
                 </SideNavGroup>
               </SideNav>
-              <SideNavFooter className="flex items-center justify-between gap-2 text-2xs text-muted-foreground">
+              <SideNavFooter className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                 SideNavFooter
                 <Button variant="soft" size="xs">
                   Support us
