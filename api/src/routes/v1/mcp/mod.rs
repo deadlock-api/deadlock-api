@@ -21,6 +21,7 @@ mod server;
 
 pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
     let catalog = Arc::clone(&state.mcp_catalog);
+    let assets = state.assets_client.clone();
     let config = StreamableHttpServerConfig::default()
         .with_legacy_session_mode(false)
         .with_cancellation_token(SHUTDOWN_TOKEN.child_token())
@@ -29,6 +30,7 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
         move || {
             Ok(McpServer {
                 catalog: Arc::clone(&catalog),
+                assets: assets.clone(),
             })
         },
         Arc::new(NeverSessionManager::default()),

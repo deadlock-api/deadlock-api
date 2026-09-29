@@ -7,6 +7,7 @@ use tracing::{debug, warn};
 use crate::error::{APIError, APIResult};
 use crate::services::assets::types::{AssetsHero, AssetsRanks};
 use crate::services::assets::versions::heroes::{Hero, fetch_heroes as build_heroes};
+use crate::services::assets::versions::items::{Item, fetch_items as build_items};
 use crate::services::assets::versions::ranks::{RankImages, fetch_ranks as build_ranks};
 use crate::services::assets::versions::store::VersionStore;
 
@@ -101,11 +102,19 @@ impl AssetsClient {
     }
 
     /// Cached `Arc<Vec<Hero>>` for the latest version (shared underlying allocation).
-    async fn heroes(&self) -> APIResult<Arc<Vec<Hero>>> {
+    pub(crate) async fn heroes(&self) -> APIResult<Arc<Vec<Hero>>> {
         let version = self.latest_version().await?;
         build_heroes(&self.r2_client, version, DEFAULT_LANGUAGE)
             .await
             .map_err(|e| APIError::internal(format!("building heroes: {e}")))
+    }
+
+    /// Cached `Arc<Vec<Item>>` (abilities, weapons and upgrades) for the latest version.
+    pub(crate) async fn items(&self) -> APIResult<Arc<Vec<Item>>> {
+        let version = self.latest_version().await?;
+        build_items(&self.r2_client, version, DEFAULT_LANGUAGE)
+            .await
+            .map_err(|e| APIError::internal(format!("building items: {e}")))
     }
 
     /// Resolve the latest known client version, loading the listing on demand.

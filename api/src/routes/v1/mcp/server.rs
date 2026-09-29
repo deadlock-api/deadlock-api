@@ -14,6 +14,9 @@ use tracing::{Instrument, debug, info_span, warn};
 
 use super::catalog::{DATABASE, QueryError, SCHEMA, SnapshotCatalog};
 use super::format::format_query_output;
+use crate::services::assets::client::AssetsClient;
+use crate::services::assets::versions::items::Item;
+use crate::services::assets::versions::items::types::ItemType;
 
 const INSTRUCTIONS: &str = "\
 Read-only SQL access to hourly parquet snapshots of the Deadlock API database (https://deadlock-api.com).
@@ -26,10 +29,12 @@ Read-only SQL access to hourly parquet snapshots of the Deadlock API database (h
 - `match_player` holds hundreds of gigabytes in parquet files split by `match_id` range. Filters on `match_id` or `start_time` skip whole files and are fast; a filter on `account_id` alone has to scan everything and is slow, so combine it with a `start_time` range. Select only needed columns and use LIMIT.
 - `match_player` is exported incrementally, so up to ~2% of rows can appear twice with different `created_at`. `match_player_latest` keeps only the newest row per (`match_id`, `account_id`); prefer it when counts matter.
 - Schema exploration: `SHOW TABLES`, `DESCRIBE match_player`, `SUMMARIZE match_salts`, `duckdb_columns()`.
-- DuckDB extras: `SELECT * EXCLUDE (col)`, `GROUP BY ALL`, `QUALIFY`, `arg_max(x, y)`, list/struct literals, `strftime`/`date_trunc`.";
+- DuckDB extras: `SELECT * EXCLUDE (col)`, `GROUP BY ALL`, `QUALIFY`, `arg_max(x, y)`, list/struct literals, `strftime`/`date_trunc`.
+- Heroes and items (abilities, weapons, shop upgrades) are stored as numeric ids. `list_heroes` and `list_items` map them to names; pass an `id` to get the full details of one hero or item.";
 
 pub(super) struct McpServer {
     pub(super) catalog: Arc<SnapshotCatalog>,
+    pub(super) assets: AssetsClient,
 }
 
 impl ServerHandler for McpServer {
@@ -70,6 +75,8 @@ impl ServerHandler for McpServer {
                 "list_databases" => list_databases(),
                 "list_tables" => self.list_tables(parse_json_object(args)?),
                 "list_columns" => self.list_columns(parse_json_object(args)?),
+                "list_heroes" => self.list_heroes(parse_json_object(args)?).await,
+                "list_items" => self.list_items(parse_json_object(args)?).await,
                 other => CallToolResult::error(vec![ContentBlock::text(format!(
                     "Unknown tool: '{other}'"
                 ))]),
@@ -97,6 +104,17 @@ struct ListColumnsArgs {
     table: String,
     database: Option<String>,
     schema: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct ListHeroesArgs {
+    id: Option<u32>,
+}
+
+#[derive(Deserialize)]
+struct ListItemsArgs {
+    r#type: Option<ItemType>,
+    id: Option<u32>,
 }
 
 #[derive(Serialize)]
@@ -202,6 +220,97 @@ impl McpServer {
             "columnCount": info.columns.len(),
         }))
     }
+
+    async fn list_heroes(&self, args: ListHeroesArgs) -> CallToolResult {
+        let heroes = match self.assets.heroes().await {
+            Ok(heroes) => heroes,
+            Err(e) => return assets_error("list_heroes", &e),
+        };
+        if let Some(id) = args.id {
+            return match heroes.iter().find(|h| h.id == id) {
+                Some(hero) => success(hero),
+                None => lookup_not_found(format!("Hero not found: {id}")),
+            };
+        }
+        let heroes: Vec<_> = heroes
+            .iter()
+            .map(|h| {
+                json!({
+                    "id": h.id,
+                    "name": h.name,
+                    "className": h.class_name,
+                    "playerSelectable": h.player_selectable,
+                    "disabled": h.disabled,
+                })
+            })
+            .collect();
+        success(&json!({ "success": true, "heroCount": heroes.len(), "heroes": heroes }))
+    }
+
+    async fn list_items(&self, args: ListItemsArgs) -> CallToolResult {
+        let items = match self.assets.items().await {
+            Ok(items) => items,
+            Err(e) => return assets_error("list_items", &e),
+        };
+        if let Some(id) = args.id {
+            return match items.iter().find(|i| i.id() == id) {
+                Some(item) => success(item),
+                None => lookup_not_found(format!("Item not found: {id}")),
+            };
+        }
+        let Some(item_type) = args.r#type else {
+            return lookup_not_found(
+                "Pass `type` (ability, weapon or upgrade) to list items, or `id` for one item"
+                    .to_owned(),
+            );
+        };
+        let items: Vec<_> = items
+            .iter()
+            .filter(|i| i.item_type() == item_type)
+            .map(item_summary)
+            .collect();
+        success(&json!({ "success": true, "itemCount": items.len(), "items": items }))
+    }
+}
+
+fn item_summary(item: &Item) -> Value {
+    let (name, class_name) = match item {
+        Item::Ability(a) => (&a.name, &a.class_name),
+        Item::Weapon(w) => (&w.name, &w.class_name),
+        Item::Upgrade(u) => (&u.name, &u.class_name),
+    };
+    let mut summary = json!({ "id": item.id() });
+    // Internal items have no localized name; it falls back to the class name.
+    if name != class_name {
+        summary["name"] = json!(name);
+    }
+    summary["className"] = json!(class_name);
+    match item {
+        Item::Ability(a) => summary["heroes"] = json!(a.heroes),
+        Item::Weapon(w) => summary["heroes"] = json!(w.heroes),
+        Item::Upgrade(u) => {
+            summary["slot"] = json!(u.item_slot_type);
+            summary["tier"] = json!(u.item_tier);
+            summary["cost"] = json!(u.cost);
+            summary["shopable"] = json!(u.shopable);
+        }
+    }
+    summary
+}
+
+fn assets_error(tool: &str, error: &impl core::fmt::Display) -> CallToolResult {
+    warn!("MCP {tool} failed: {error}");
+    CallToolResult::error(vec![ContentBlock::text(format!(
+        "Error calling tool '{tool}': failed to load game assets: {error}"
+    ))])
+}
+
+fn lookup_not_found(error: String) -> CallToolResult {
+    success(&ToolError {
+        success: false,
+        error,
+        error_type: "NotFoundError".to_owned(),
+    })
 }
 
 fn list_databases() -> CallToolResult {
@@ -222,19 +331,22 @@ fn missing_scope(database: &str, schema: &str, allow_all_schemas: bool) -> Optio
     }
 }
 
-fn pretty(value: &impl Serialize) -> String {
-    serde_json::to_string_pretty(value).unwrap_or_default()
+/// Every tool result is TOON (<https://toonformat.dev>): the same data model as JSON, with
+/// arrays of uniform objects written as one header plus CSV-like rows, which costs clients
+/// far fewer tokens than JSON.
+pub(super) fn toon(value: &impl Serialize) -> String {
+    toon_format::encode_default(value).unwrap_or_default()
 }
 
 fn success(value: &impl Serialize) -> CallToolResult {
-    let text = pretty(value);
+    let text = toon(value);
     let mut result = CallToolResult::success(vec![ContentBlock::text(text.clone())]);
     result.structured_content = Some(json!({ "result": text }));
     result
 }
 
 fn query_error(error: String, error_type: String) -> CallToolResult {
-    let text = pretty(&ToolError {
+    let text = toon(&ToolError {
         success: false,
         error,
         error_type,
@@ -311,6 +423,14 @@ fn optional_string(description: &str) -> Value {
     })
 }
 
+fn optional_integer(description: &str) -> Value {
+    json!({
+        "anyOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }],
+        "default": null,
+        "description": description
+    })
+}
+
 static TOOLS: LazyLock<Vec<Tool>> = LazyLock::new(|| {
     let output_schema: Arc<JsonObject> = Arc::new(object(json!({
         "properties": { "result": { "type": "string" } },
@@ -373,6 +493,35 @@ static TOOLS: LazyLock<Vec<Tool>> = LazyLock::new(|| {
             })),
         )
         .with_title("List Columns"),
+        Tool::new(
+            "list_heroes",
+            "List the heroes of the current game version with their `id` (the hero id in the tables), `name` and `className`. Pass `id` to get the full details of one hero instead: description, stats, abilities, images.",
+            object(json!({
+                "properties": {
+                    "id": optional_integer("Hero id; returns the full details of that hero")
+                },
+                "type": "object",
+                "additionalProperties": false
+            })),
+        )
+        .with_title("List Heroes"),
+        Tool::new(
+            "list_items",
+            "List the items of one type in the current game version with their `id` (the item id in the tables), `name` and `className`; abilities and weapons also list their `heroes`, upgrades their `slot`, `tier`, `cost` and whether they are still `shopable`. Pass `id` to get the full details of one item instead: description, properties, upgrades, images.",
+            object(json!({
+                "properties": {
+                    "type": {
+                        "anyOf": [{ "type": "string", "enum": ["ability", "weapon", "upgrade"] }, { "type": "null" }],
+                        "default": null,
+                        "description": "Item type to list: `upgrade` for shop items, `ability` for hero abilities, `weapon` for hero weapons. Required unless `id` is set."
+                    },
+                    "id": optional_integer("Item id; returns the full details of that item")
+                },
+                "type": "object",
+                "additionalProperties": false
+            })),
+        )
+        .with_title("List Items"),
     ]
     .into_iter()
     .map(|tool| {

@@ -6,9 +6,10 @@ use duckdb::arrow::datatypes::DataType;
 use duckdb::arrow::error::ArrowError;
 use duckdb::arrow::record_batch::RecordBatch;
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 use super::catalog::QueryOutput;
+use super::server::toon;
 
 const MAX_CHARS: usize = 50_000;
 const MAX_ROWS_WARNING: &str = "Results limited to 1,024 rows. Query returned more data.";
@@ -19,7 +20,8 @@ pub(super) struct QueryResult {
     success: bool,
     columns: Vec<String>,
     column_types: Vec<String>,
-    rows: Vec<Vec<Value>>,
+    /// Objects keyed by column, so TOON writes them as a table.
+    rows: Vec<Map<String, Value>>,
     row_count: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
     truncated: Option<bool>,
@@ -40,7 +42,7 @@ pub(super) fn format_query_output(output: &QueryOutput) -> Result<QueryResult, A
         .iter()
         .map(|f| sql_type_name(f.data_type()))
         .collect();
-    let rows = rows_as_arrays(&columns, &output.batches)?;
+    let rows = rows_as_objects(&output.batches)?;
     let mut result = QueryResult {
         success: true,
         columns,
@@ -50,7 +52,7 @@ pub(super) fn format_query_output(output: &QueryOutput) -> Result<QueryResult, A
         truncated: output.truncated.then_some(true),
         warning: output.truncated.then(|| MAX_ROWS_WARNING.to_owned()),
     };
-    let mut chars = compact_len(&result);
+    let mut chars = toon(&result).len();
     while !result.rows.is_empty() && chars > MAX_CHARS {
         let remove = max(1, result.rows.len() / 10);
         result.rows.truncate(result.rows.len() - remove);
@@ -61,20 +63,13 @@ pub(super) fn format_query_output(output: &QueryOutput) -> Result<QueryResult, A
             result.rows.len(),
             MAX_CHARS / 1000
         ));
-        chars = compact_len(&result);
+        chars = toon(&result).len();
     }
     Ok(result)
 }
 
-fn compact_len(result: &QueryResult) -> usize {
-    serde_json::to_vec(result).map_or(0, |v| v.len())
-}
-
-/// Serializes rows as arrays in column order, with JSON values as arrow-json renders them.
-fn rows_as_arrays(
-    columns: &[String],
-    batches: &[RecordBatch],
-) -> Result<Vec<Vec<Value>>, ArrowError> {
+/// Serializes rows as objects in column order, with JSON values as arrow-json renders them.
+fn rows_as_objects(batches: &[RecordBatch]) -> Result<Vec<Map<String, Value>>, ArrowError> {
     let mut writer = WriterBuilder::new()
         .with_explicit_nulls(true)
         .build::<_, JsonArray>(Vec::new());
@@ -82,17 +77,7 @@ fn rows_as_arrays(
         writer.write(batch)?;
     }
     writer.finish()?;
-    let objects: Vec<serde_json::Map<String, Value>> = serde_json::from_slice(&writer.into_inner())
-        .map_err(|e| ArrowError::JsonError(e.to_string()))?;
-    Ok(objects
-        .into_iter()
-        .map(|mut object| {
-            columns
-                .iter()
-                .map(|column| object.remove(column).unwrap_or(Value::Null))
-                .collect()
-        })
-        .collect())
+    serde_json::from_slice(&writer.into_inner()).map_err(|e| ArrowError::JsonError(e.to_string()))
 }
 
 /// SQL-style type names, matching what `list_columns` reports and what `CAST(x AS ...)` accepts.
@@ -164,7 +149,7 @@ mod tests {
     }
 
     #[test]
-    fn formats_rows_as_arrays_in_column_order() {
+    fn formats_rows_as_objects_in_column_order() {
         let result = run(
             "SELECT 1 AS a, 'x' AS b, NULL AS c, 1.5::DOUBLE AS d, [1, 2] AS e, DATE '2026-09-05' AS f",
         );
@@ -181,8 +166,10 @@ mod tests {
         assert_eq!(json["columnTypes"][5], "DATE");
         assert_eq!(
             json["rows"],
-            serde_json::json!([[1, "x", null, 1.5, [1, 2], "2026-09-05"]])
+            serde_json::json!([{ "a": 1, "b": "x", "c": null, "d": 1.5, "e": [1, 2], "f": "2026-09-05" }])
         );
+        let keys: Vec<_> = json["rows"][0].as_object().unwrap().keys().collect();
+        assert_eq!(keys, ["a", "b", "c", "d", "e", "f"]);
         assert_eq!(json["rowCount"], 1);
         assert!(json.get("truncated").is_none());
     }
@@ -201,7 +188,7 @@ mod tests {
             serde_json::to_value(run("SELECT range AS i FROM range(1, 5001) ORDER BY i")).unwrap();
         assert_eq!(json["rowCount"], 1024);
         assert_eq!(json["rows"].as_array().unwrap().len(), 1024);
-        assert_eq!(json["rows"][0], serde_json::json!([1]));
+        assert_eq!(json["rows"][0], serde_json::json!({ "i": 1 }));
         assert_eq!(json["truncated"], true);
         assert_eq!(json["warning"], MAX_ROWS_WARNING);
     }
@@ -228,6 +215,14 @@ mod tests {
             "{}",
             json["warning"]
         );
-        assert!(serde_json::to_string(&json).unwrap().len() <= MAX_CHARS + 200);
+        assert!(toon(&json).len() <= MAX_CHARS + 200);
+    }
+
+    #[test]
+    fn encodes_rows_as_toon_table() {
+        let text = toon(&run(
+            "SELECT 1 AS a, 'x' AS b UNION ALL SELECT 2, 'y' ORDER BY a",
+        ));
+        assert!(text.contains("rows[2]{a,b}:\n  1,x\n  2,y"), "{text}");
     }
 }
