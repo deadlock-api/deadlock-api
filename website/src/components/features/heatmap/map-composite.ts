@@ -29,7 +29,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
  */
 export async function composeMap(images: MapImages, art: MapArt): Promise<HTMLCanvasElement> {
   const [background, mid, frame] = await Promise.all([
-    art === "painted" ? loadImage(images.background) : null,
+    art === "painted" && images.background ? loadImage(images.background) : null,
     loadImage(images.mid),
     loadImage(images.frame),
   ]);

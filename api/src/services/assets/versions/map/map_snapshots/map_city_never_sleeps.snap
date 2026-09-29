@@ -7,7 +7,6 @@ expression: map
   "images": {
     "minimap": "https://assets-bucket.deadlock-api.com/assets-api-res/images/maps/minimap_midtown_mid.png",
     "plain": "https://assets-bucket.deadlock-api.com/assets-api-res/images/maps/minimap_midtown_mid.png",
-    "background": "https://assets-bucket.deadlock-api.com/assets-api-res/images/maps/minimap_bg.png",
     "frame": "https://assets-bucket.deadlock-api.com/assets-api-res/images/maps/minimap_frame.png",
     "mid": "https://assets-bucket.deadlock-api.com/assets-api-res/images/maps/minimap_midtown_mid.png",
     "mid_tunnels": "https://assets-bucket.deadlock-api.com/assets-api-res/images/maps/minimap_midtown_mid_tunnels.png",

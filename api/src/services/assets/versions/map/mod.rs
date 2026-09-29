@@ -99,13 +99,17 @@ pub(crate) struct ObjectivePosition {
 /// CDN URLs for the minimap image layers.
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub(crate) struct MapImages {
-    /// Full minimap. From build 6711 on this is the midtown base layer.
+    /// Full minimap. From build 6711 on the game ships no composed minimap, so this is the
+    /// same image as `mid`: the midtown street layer as a black mask on transparency, meant
+    /// to be drawn over a base colour rather than shown on its own.
     minimap: String,
-    /// Minimap without overlays. From build 6711 on this is the midtown base layer.
+    /// Minimap without overlays. From build 6711 on this is the same street mask as `mid`
+    /// (see `minimap`).
     plain: String,
-    /// Background layer. No longer shipped by the game from build 6711 on; the
-    /// last extracted image is kept in the bucket.
-    background: String,
+    /// Background layer drawn under `mid`. Only for builds before 6711; the game no longer
+    /// ships it, so it is omitted from build 6711 on.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    background: Option<String>,
     frame: String,
     /// Midtown base layer.
     mid: String,
@@ -167,7 +171,7 @@ fn images(version: u32) -> MapImages {
         MapImages {
             minimap: url("minimap_midtown_mid"),
             plain: url("minimap_midtown_mid"),
-            background: url("minimap_bg"),
+            background: None,
             frame: url("minimap_frame"),
             mid: url("minimap_midtown_mid"),
             mid_tunnels: Some(url("minimap_midtown_mid_tunnels")),
@@ -177,7 +181,7 @@ fn images(version: u32) -> MapImages {
         MapImages {
             minimap: url("minimap"),
             plain: url("minimap_plain"),
-            background: url("minimap_bg"),
+            background: Some(url("minimap_bg")),
             frame: url("minimap_frame"),
             mid: url("minimap_midtown_mid_2k"),
             mid_tunnels: None,
