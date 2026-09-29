@@ -8,53 +8,49 @@ import { heroSlug } from "./hero-slug";
 import { itemSlug } from "./item-slug";
 import { SITE_URL } from "./seo";
 
+// Google ignores changefreq and priority, and trusts lastmod only while it is accurate: it is set only where a real
+// date exists (blog front matter), never by hand.
 export interface SitemapEntry {
   path: string;
   lastmod?: string;
-  changefreq?: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
-  priority?: number;
 }
 
 const STATIC_ENTRIES: SitemapEntry[] = [
-  { path: "/", lastmod: "2026-05-06", changefreq: "weekly", priority: 1.0 },
-  { path: "/analytics/heroes", changefreq: "daily", priority: 0.9 },
-  { path: "/analytics/items", changefreq: "daily", priority: 0.9 },
-  { path: "/analytics/abilities", changefreq: "daily", priority: 0.8 },
-  { path: "/community/leaderboard", changefreq: "daily", priority: 0.8 },
-  { path: "/community/badge-distribution", changefreq: "weekly", priority: 0.7 },
-  { path: "/analytics/games", changefreq: "daily", priority: 0.7 },
-  { path: "/community/heatmap", changefreq: "weekly", priority: 0.7 },
-  { path: "/analytics/players", changefreq: "daily", priority: 0.7 },
-  { path: "/tracker", changefreq: "weekly", priority: 0.7 },
-  { path: "/tracker/demo", changefreq: "weekly", priority: 0.7 },
-  { path: "/analytics/team-builder", changefreq: "weekly", priority: 0.7 },
-  { path: "/streamkit", lastmod: "2026-03-12", changefreq: "monthly", priority: 0.6 },
-  { path: "/data-privacy", lastmod: "2026-03-22", changefreq: "monthly", priority: 0.5 },
-  { path: "/ingest-cache", lastmod: "2026-03-10", changefreq: "monthly", priority: 0.6 },
-  { path: "/games/deadlockdle", changefreq: "daily", priority: 0.8 },
-  { path: "/games/deadlockdle/guess-hero", changefreq: "weekly", priority: 0.6 },
-  { path: "/games/deadlockdle/guess-item", changefreq: "weekly", priority: 0.6 },
-  { path: "/games/deadlockdle/guess-sound", changefreq: "weekly", priority: 0.6 },
-  { path: "/games/deadlockdle/guess-ability", changefreq: "weekly", priority: 0.6 },
-  { path: "/games/deadlockdle/item-stats", changefreq: "weekly", priority: 0.6 },
-  { path: "/games/deadlockdle/trivia", changefreq: "weekly", priority: 0.6 },
-  { path: "/games/deadlockdle/higher-lower", changefreq: "weekly", priority: 0.6 },
-  { path: "/games/flashcards", changefreq: "weekly", priority: 0.6 },
-  { path: "/games/flashcards/heroes", changefreq: "weekly", priority: 0.6 },
-  { path: "/games/flashcards/items", changefreq: "weekly", priority: 0.6 },
-  { path: "/games/flashcards/item-effects", changefreq: "weekly", priority: 0.6 },
-  { path: "/games/flashcards/item-upgrades", changefreq: "weekly", priority: 0.6 },
-  { path: "/data-dumps", changefreq: "weekly", priority: 0.6 },
+  { path: "/" },
+  { path: "/analytics/heroes" },
+  { path: "/analytics/items" },
+  { path: "/analytics/abilities" },
+  { path: "/community/leaderboard" },
+  { path: "/community/badge-distribution" },
+  { path: "/analytics/games" },
+  { path: "/community/heatmap" },
+  { path: "/analytics/players" },
+  { path: "/tracker" },
+  { path: "/tracker/demo" },
+  { path: "/analytics/team-builder" },
+  { path: "/streamkit" },
+  { path: "/data-privacy" },
+  { path: "/ingest-cache" },
+  { path: "/games/deadlockdle" },
+  { path: "/games/deadlockdle/guess-hero" },
+  { path: "/games/deadlockdle/guess-item" },
+  { path: "/games/deadlockdle/guess-sound" },
+  { path: "/games/deadlockdle/guess-ability" },
+  { path: "/games/deadlockdle/item-stats" },
+  { path: "/games/deadlockdle/trivia" },
+  { path: "/games/deadlockdle/higher-lower" },
+  { path: "/games/flashcards" },
+  { path: "/games/flashcards/heroes" },
+  { path: "/games/flashcards/items" },
+  { path: "/games/flashcards/item-effects" },
+  { path: "/games/flashcards/item-upgrades" },
+  { path: "/data-dumps" },
 ];
 
 const ANALYTICS_VIEW_ENTRIES: SitemapEntry[] = Object.entries(ANALYTICS_TABS).flatMap(([section, tabs]) =>
   Object.values(tabs)
     .filter(Boolean)
-    .map((view) => ({
-      path: `/analytics/${section}/${view}`,
-      changefreq: "daily" as const,
-      priority: 0.7,
-    })),
+    .map((view) => ({ path: `/analytics/${section}/${view}` })),
 );
 
 // Load blog markdown files from content/blog/ at build time via Vite glob.
@@ -115,8 +111,6 @@ function escapeXml(value: string): string {
 function renderUrl(entry: SitemapEntry): string {
   const parts = [`<loc>${escapeXml(`${SITE_URL}${entry.path}`)}</loc>`];
   if (entry.lastmod) parts.push(`<lastmod>${entry.lastmod}</lastmod>`);
-  if (entry.changefreq) parts.push(`<changefreq>${entry.changefreq}</changefreq>`);
-  if (entry.priority !== undefined) parts.push(`<priority>${entry.priority.toFixed(1)}</priority>`);
   return `  <url>${parts.join("")}</url>`;
 }
 
@@ -139,8 +133,6 @@ async function loadHeroEntries(): Promise<SitemapEntry[]> {
   const response = await withRetries("heroes", () => api.heroes_api.listHeroes({ onlyActive: true }));
   return filterPlayableHeroes(response.data).map((hero) => ({
     path: `/analytics/heroes/${heroSlug(hero.name)}`,
-    changefreq: "daily",
-    priority: 0.6,
   }));
 }
 
@@ -148,8 +140,6 @@ async function loadItemEntries(): Promise<SitemapEntry[]> {
   const response = await withRetries("items", () => api.items_api.getItemsByType({ type: "upgrade" }));
   return filterShopableItems(response.data as Upgrade[]).map((item) => ({
     path: `/analytics/items/${itemSlug(item.name)}`,
-    changefreq: "daily",
-    priority: 0.6,
   }));
 }
 
@@ -157,8 +147,6 @@ export async function buildSitemapXml(): Promise<string> {
   const blogEntries: SitemapEntry[] = loadBlogEntries().map((post) => ({
     path: `/blog/${post.slug}`,
     lastmod: post.date,
-    changefreq: "monthly",
-    priority: 0.7,
   }));
   const blogIndex: SitemapEntry = {
     path: "/blog",
@@ -166,8 +154,6 @@ export async function buildSitemapXml(): Promise<string> {
       .flatMap((post) => post.lastmod ?? [])
       .sort()
       .at(-1),
-    changefreq: "weekly",
-    priority: 0.7,
   };
   const [heroEntries, itemEntries] = await Promise.all([loadHeroEntries(), loadItemEntries()]);
   const all = [...STATIC_ENTRIES, ...ANALYTICS_VIEW_ENTRIES, blogIndex, ...blogEntries, ...heroEntries, ...itemEntries];
