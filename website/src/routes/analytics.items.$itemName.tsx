@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, type NotFoundRouteProps, createFileRoute, notFound, redirect } from "@tanstack/react-router";
+import { Link, type NotFoundRouteProps, createFileRoute, notFound, redirect, useRouter } from "@tanstack/react-router";
 import type { AnalyticsHeroStats, ItemStats } from "deadlock_api_client";
 import { lazy, Suspense, useMemo } from "react";
 
@@ -23,6 +23,7 @@ import { useSeasons } from "~/hooks/useSeasons";
 import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { formatPercent } from "~/lib/format";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
+import { fetchItemBestHeroes } from "~/lib/item-hero-fns";
 import { findItemBySlug, itemSlug } from "~/lib/item-slug";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
@@ -137,7 +138,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       }
       throw notFound({ data: { suggestion: closestNameBySlug(shopable, params.itemName)?.name } });
     }
-    const [stats, heroStats, ranks] = await Promise.all([
+    const [stats, heroStats, ranks, , bestHeroes] = await Promise.all([
       prefetchSafe(
         queryClient.query({
           ...itemStatsQueryOptions(currentItemStatsParams(seasons, preferences.dateFilter)),
@@ -152,6 +153,18 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       ),
       prefetchSafe(queryClient.query({ ...ranksQueryOptions, staleTime: "static" })),
       prefetchSafe(queryClient.query({ ...itemQueryOptions(item.id), staleTime: "static" })),
+      prefetchSafe(
+        fetchItemBestHeroes({
+          data: {
+            itemId: item.id,
+            minAverageBadge: DEFAULT_MIN_RANK,
+            maxAverageBadge: DEFAULT_MAX_RANK,
+            gameMode: GAME_MODE,
+            matchMode: DEFAULT_MATCH_MODE,
+            ...defaultUnixRange(seasons, preferences.dateFilter),
+          },
+        }),
+      ),
     ]);
     const summary = summarizeItemStats(stats, heroStats, item.id);
     return {
@@ -163,6 +176,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       slot: SLOT_LABEL[item.item_slot_type],
       cost: item.cost ?? null,
       breadcrumb: item.name,
+      bestHeroes,
       rankRange: rankRangeLabel(ranks, DEFAULT_MIN_RANK, DEFAULT_MAX_RANK),
       summary: summary && {
         winRate: summary.winRate,
@@ -206,7 +220,8 @@ function clock(seconds: number): string {
 
 function ItemDetailPage() {
   const { preferences } = Route.useRouteContext();
-  const { itemId, itemName, tier, slot, cost, rankRange } = Route.useLoaderData();
+  const { itemId, itemName, tier, slot, cost, rankRange, bestHeroes } = Route.useLoaderData();
+  const router = useRouter();
   const { seasons } = useSeasons();
   const period = defaultPeriodLabel(seasons, preferences.dateFilter);
   const itemRequest = currentItemStatsParams(seasons, preferences.dateFilter);
@@ -287,7 +302,13 @@ function ItemDetailPage() {
 
       <ItemUpgradePath itemId={itemId} itemName={itemName} request={itemRequest} rankRange={rankRange} />
 
-      <ItemHeroBreakdown itemId={itemId} itemName={itemName} itemRequest={itemRequest} heroRequest={heroRequest} />
+      <ItemHeroBreakdown
+        itemId={itemId}
+        itemName={itemName}
+        itemRequest={itemRequest}
+        bestHeroes={bestHeroes}
+        onRetry={() => void router.invalidate()}
+      />
 
       <ChunkErrorBoundary>
         <Suspense fallback={<ChartLoading label={`${itemName} win rate over time`} />}>
