@@ -18,7 +18,7 @@ use crate::services::assets::versions::ranked_seasons::{RankedSeason, fetch_rank
     ),
     tags = ["Ranked Seasons"],
     summary = "List Ranked Seasons",
-    description = "Returns the ranked season definitions used by the game client, parsed from the patch's KV3 source files. Each season carries its eligibility requirements and the intervals it runs for, as unix timestamps in seconds."
+    description = "Returns the ranked season definitions used by the game client, parsed from the patch's KV3 source files. Each season carries its eligibility requirements and the intervals it runs for, as unix timestamps in seconds, together with each interval's leaderboard ID."
 )]
 pub(super) async fn list_ranked_seasons(
     State(state): State<AppState>,

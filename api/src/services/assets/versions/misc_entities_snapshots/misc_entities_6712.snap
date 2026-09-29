@@ -8,24 +8,20 @@ expression: entities
     "id": 4172910958,
     "initial_spawn_time": 300.0,
     "spawn_interval": 300.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "gun_powerup_pickup",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "survival_powerup_pickup",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "casting_powerup_pickup",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "movement_powerup_pickup",
-        "pickup_weight": 1.0
-      }
-    ]
+    "pickup_chances": {
+      "gun_powerup_pickup": 1.0,
+      "survival_powerup_pickup": 1.0,
+      "casting_powerup_pickup": 1.0,
+      "movement_powerup_pickup": 1.0
+    }
+  },
+  {
+    "class_name": "citadel_item_powerup_spawner_bounty_runes",
+    "id": 2488686909,
+    "initial_spawn_time": -1.0,
+    "respawn_time": 9999999.0,
+    "pickup_chances": {},
+    "single_pickup_override": "souls_powerup_pickup"
   },
   {
     "class_name": "citadel_refresh_spawner",
@@ -42,13 +38,27 @@ expression: entities
     "single_pickup_override": "change_team_powerup_pickup"
   },
   {
+    "class_name": "citadel_pickup_spawner",
+    "id": 833537427,
+    "spawn_delay": 0.0
+  },
+  {
+    "class_name": "citadel_pickup_floating_apple",
+    "id": 2226700793,
+    "pickup": "floating_apple_pickup"
+  },
+  {
+    "class_name": "citadel_pickup_floating_health",
+    "id": 654100837,
+    "respawn_time": 180.0,
+    "pickup": "citadel_pickup_health_float_in_world",
+    "spawn_delay": 180.0
+  },
+  {
     "class_name": "citadel_breakable_prop_drop_powerups",
     "id": 3457071437,
-    "initial_spawn_time": 120.0,
+    "initial_spawn_time": 180.0,
     "respawn_time": 180.0,
-    "match_time_mins_for_level2_pickups": 10,
-    "match_time_mins_for_level3_pickups": 30,
-    "loot_list_deck_size": 5,
     "health": 1,
     "break_on_dodge_touch": true,
     "solid_after_death": false,
@@ -56,91 +66,14 @@ expression: entities
     "damaged_by_abilities": true,
     "damaged_by_melee": true,
     "damaged_by_bullets": true,
-    "primary_drop_chance": 50.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "spirit_permanent_pickup",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "firerate_permanent_pickup",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "ammo_permanent_pickup",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "hp_permanent_pickup",
-        "pickup_weight": 2.0
-      },
-      {
-        "pickup_name": "cd_permanent_pickup",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "wp_permanent_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
-    "m_vecPickups_lv2": [
-      {
-        "pickup_name": "spirit_permanent_pickup_lv2",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "firerate_permanent_pickup_lv2",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "ammo_permanent_pickup_lv2",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "hp_permanent_pickup_lv2",
-        "pickup_weight": 2.0
-      },
-      {
-        "pickup_name": "cd_permanent_pickup_lv2",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "wp_permanent_pickup_lv2",
-        "pickup_weight": 1.0
-      }
-    ],
-    "m_vecPickups_lv3": [
-      {
-        "pickup_name": "spirit_permanent_pickup_lv3",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "firerate_permanent_pickup_lv3",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "ammo_permanent_pickup_lv3",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "hp_permanent_pickup_lv3",
-        "pickup_weight": 2.0
-      },
-      {
-        "pickup_name": "cd_permanent_pickup_lv3",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "wp_permanent_pickup_lv3",
-        "pickup_weight": 1.0
-      }
-    ],
+    "damaged_by_slide": true,
+    "powerup_drop_chance": 50.0,
     "roll_type": "ECitadelRandomRoll_BreakablePowerupPickup"
   },
   {
     "class_name": "citadel_breakable_prop_drop_gold",
     "id": 3017498471,
-    "initial_spawn_time": 120.0,
+    "initial_spawn_time": 180.0,
     "respawn_time": 180.0,
     "health": 1,
     "break_on_dodge_touch": true,
@@ -149,23 +82,18 @@ expression: entities
     "damaged_by_abilities": true,
     "damaged_by_melee": true,
     "damaged_by_bullets": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
+    "damaged_by_slide": true,
+    "powerup_drop_chance": 60.0,
+    "pickup_chances": {
+      "small_gold_pickup": 1.0
+    },
     "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
   },
   {
     "class_name": "citadel_breakable_item_container",
     "id": 3719077267,
-    "initial_spawn_time": 120.0,
+    "initial_spawn_time": 180.0,
     "respawn_time": 180.0,
-    "match_time_mins_for_level2_pickups": 10,
-    "match_time_mins_for_level3_pickups": 30,
-    "loot_list_deck_size": 5,
     "health": 1,
     "break_on_dodge_touch": true,
     "solid_after_death": false,
@@ -173,91 +101,14 @@ expression: entities
     "damaged_by_abilities": true,
     "damaged_by_melee": true,
     "damaged_by_bullets": true,
-    "primary_drop_chance": 50.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "spirit_permanent_pickup",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "firerate_permanent_pickup",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "ammo_permanent_pickup",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "hp_permanent_pickup",
-        "pickup_weight": 2.0
-      },
-      {
-        "pickup_name": "cd_permanent_pickup",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "wp_permanent_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
-    "m_vecPickups_lv2": [
-      {
-        "pickup_name": "spirit_permanent_pickup_lv2",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "firerate_permanent_pickup_lv2",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "ammo_permanent_pickup_lv2",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "hp_permanent_pickup_lv2",
-        "pickup_weight": 2.0
-      },
-      {
-        "pickup_name": "cd_permanent_pickup_lv2",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "wp_permanent_pickup_lv2",
-        "pickup_weight": 1.0
-      }
-    ],
-    "m_vecPickups_lv3": [
-      {
-        "pickup_name": "spirit_permanent_pickup_lv3",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "firerate_permanent_pickup_lv3",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "ammo_permanent_pickup_lv3",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "hp_permanent_pickup_lv3",
-        "pickup_weight": 2.0
-      },
-      {
-        "pickup_name": "cd_permanent_pickup_lv3",
-        "pickup_weight": 1.0
-      },
-      {
-        "pickup_name": "wp_permanent_pickup_lv3",
-        "pickup_weight": 1.0
-      }
-    ],
+    "damaged_by_slide": true,
+    "powerup_drop_chance": 50.0,
     "roll_type": "ECitadelRandomRoll_BreakablePowerupPickup"
   },
   {
     "class_name": "citadel_breakable_prop_vase",
     "id": 3040869273,
-    "initial_spawn_time": 120.0,
+    "initial_spawn_time": 180.0,
     "respawn_time": 180.0,
     "health": 1,
     "break_on_dodge_touch": true,
@@ -266,19 +117,17 @@ expression: entities
     "damaged_by_abilities": true,
     "damaged_by_melee": true,
     "damaged_by_bullets": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
+    "damaged_by_slide": true,
+    "powerup_drop_chance": 60.0,
+    "pickup_chances": {
+      "small_gold_pickup": 1.0
+    },
     "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
   },
   {
     "class_name": "citadel_breakable_prop_box_multi",
     "id": 2286845008,
-    "initial_spawn_time": 120.0,
+    "initial_spawn_time": 180.0,
     "respawn_time": 180.0,
     "health": 1,
     "break_on_dodge_touch": true,
@@ -287,19 +136,17 @@ expression: entities
     "damaged_by_abilities": true,
     "damaged_by_melee": true,
     "damaged_by_bullets": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
+    "damaged_by_slide": true,
+    "powerup_drop_chance": 60.0,
+    "pickup_chances": {
+      "small_gold_pickup": 1.0
+    },
     "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
   },
   {
     "class_name": "citadel_breakable_prop_wooden_crate",
     "id": 3986897915,
-    "initial_spawn_time": 120.0,
+    "initial_spawn_time": 180.0,
     "respawn_time": 180.0,
     "health": 1,
     "break_on_dodge_touch": true,
@@ -308,20 +155,55 @@ expression: entities
     "damaged_by_abilities": true,
     "damaged_by_melee": true,
     "damaged_by_bullets": true,
+    "damaged_by_slide": true,
     "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
+    "powerup_drop_chance": 60.0,
+    "pickup_chances": {
+      "small_gold_pickup": 1.0
+    },
     "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_breakable_prop_tough_crate",
+    "id": 202631964,
+    "initial_spawn_time": 180.0,
+    "respawn_time": 180.0,
+    "health": 1,
+    "break_on_dodge_touch": false,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": false,
+    "damaged_by_melee": true,
+    "damaged_by_bullets": false,
+    "damaged_by_slide": false,
+    "heavy_melee_only": true,
+    "heavy_melee_hit_count": 1,
+    "is_mantleable": true,
+    "powerup_drop_chance": 100.0,
+    "pickup_chances": {
+      "big_gold_pickup": 1.0
+    },
+    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_breakable_bell_chinatown",
+    "id": 1755924652,
+    "initial_spawn_time": 0.0,
+    "respawn_time": 5.0,
+    "health": 1,
+    "break_on_dodge_touch": false,
+    "solid_after_death": false,
+    "render_after_death": false,
+    "damaged_by_abilities": false,
+    "damaged_by_melee": false,
+    "damaged_by_bullets": false,
+    "damaged_by_slide": false,
+    "powerup_drop_chance": 0.0
   },
   {
     "class_name": "citadel_breakable_lion_statue",
     "id": 2168482585,
-    "initial_spawn_time": 120.0,
+    "initial_spawn_time": 180.0,
     "respawn_time": 180.0,
     "health": 1,
     "break_on_dodge_touch": true,
@@ -330,19 +212,17 @@ expression: entities
     "damaged_by_abilities": true,
     "damaged_by_melee": true,
     "damaged_by_bullets": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
+    "damaged_by_slide": true,
+    "powerup_drop_chance": 60.0,
+    "pickup_chances": {
+      "small_gold_pickup": 1.0
+    },
     "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
   },
   {
     "class_name": "citadel_breakable_sake_barrel",
     "id": 1153939632,
-    "initial_spawn_time": 120.0,
+    "initial_spawn_time": 180.0,
     "respawn_time": 180.0,
     "health": 1,
     "break_on_dodge_touch": true,
@@ -351,20 +231,18 @@ expression: entities
     "damaged_by_abilities": true,
     "damaged_by_melee": true,
     "damaged_by_bullets": true,
+    "damaged_by_slide": true,
     "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
+    "powerup_drop_chance": 60.0,
+    "pickup_chances": {
+      "small_gold_pickup": 1.0
+    },
     "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
   },
   {
     "class_name": "citadel_breakable_wooden_crate_02",
     "id": 1075096886,
-    "initial_spawn_time": 120.0,
+    "initial_spawn_time": 180.0,
     "respawn_time": 180.0,
     "health": 1,
     "break_on_dodge_touch": true,
@@ -373,20 +251,18 @@ expression: entities
     "damaged_by_abilities": true,
     "damaged_by_melee": true,
     "damaged_by_bullets": true,
+    "damaged_by_slide": true,
     "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
+    "powerup_drop_chance": 60.0,
+    "pickup_chances": {
+      "small_gold_pickup": 1.0
+    },
     "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
   },
   {
     "class_name": "citadel_breakable_wooden_crate_03",
     "id": 985941184,
-    "initial_spawn_time": 120.0,
+    "initial_spawn_time": 180.0,
     "respawn_time": 180.0,
     "health": 1,
     "break_on_dodge_touch": true,
@@ -395,20 +271,18 @@ expression: entities
     "damaged_by_abilities": true,
     "damaged_by_melee": true,
     "damaged_by_bullets": true,
+    "damaged_by_slide": true,
     "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
+    "powerup_drop_chance": 60.0,
+    "pickup_chances": {
+      "small_gold_pickup": 1.0
+    },
     "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
   },
   {
     "class_name": "citadel_breakable_jar_01",
     "id": 4027046556,
-    "initial_spawn_time": 120.0,
+    "initial_spawn_time": 180.0,
     "respawn_time": 180.0,
     "health": 1,
     "break_on_dodge_touch": true,
@@ -417,218 +291,18 @@ expression: entities
     "damaged_by_abilities": true,
     "damaged_by_melee": true,
     "damaged_by_bullets": true,
+    "damaged_by_slide": true,
     "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
-    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
-  },
-  {
-    "class_name": "citadel_breakable_prop_car",
-    "id": 1402417399,
-    "initial_spawn_time": 0.0,
-    "respawn_time": 180.0,
-    "health": 100000000,
-    "break_on_dodge_touch": false,
-    "solid_after_death": false,
-    "render_after_death": false,
-    "damaged_by_abilities": true,
-    "damaged_by_melee": true,
-    "damaged_by_bullets": true,
-    "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
-    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
-  },
-  {
-    "class_name": "vehicle_car_01",
-    "id": 844909675,
-    "initial_spawn_time": 0.0,
-    "respawn_time": 180.0,
-    "health": 100000000,
-    "break_on_dodge_touch": false,
-    "solid_after_death": false,
-    "render_after_death": false,
-    "damaged_by_abilities": true,
-    "damaged_by_melee": true,
-    "damaged_by_bullets": true,
-    "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
-    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
-  },
-  {
-    "class_name": "vehicle_car_04",
-    "id": 3283028508,
-    "initial_spawn_time": 0.0,
-    "respawn_time": 180.0,
-    "health": 100000000,
-    "break_on_dodge_touch": false,
-    "solid_after_death": false,
-    "render_after_death": false,
-    "damaged_by_abilities": true,
-    "damaged_by_melee": true,
-    "damaged_by_bullets": true,
-    "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
-    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
-  },
-  {
-    "class_name": "vehicle_car_05",
-    "id": 479455394,
-    "initial_spawn_time": 0.0,
-    "respawn_time": 180.0,
-    "health": 100000000,
-    "break_on_dodge_touch": false,
-    "solid_after_death": false,
-    "render_after_death": false,
-    "damaged_by_abilities": true,
-    "damaged_by_melee": true,
-    "damaged_by_bullets": true,
-    "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
-    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
-  },
-  {
-    "class_name": "vehicle_large_truck_01",
-    "id": 1702726906,
-    "initial_spawn_time": 0.0,
-    "respawn_time": 180.0,
-    "health": 100000000,
-    "break_on_dodge_touch": false,
-    "solid_after_death": false,
-    "render_after_death": false,
-    "damaged_by_abilities": true,
-    "damaged_by_melee": true,
-    "damaged_by_bullets": true,
-    "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
-    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
-  },
-  {
-    "class_name": "vehicle_large_truck_02",
-    "id": 818456624,
-    "initial_spawn_time": 0.0,
-    "respawn_time": 180.0,
-    "health": 100000000,
-    "break_on_dodge_touch": false,
-    "solid_after_death": false,
-    "render_after_death": false,
-    "damaged_by_abilities": true,
-    "damaged_by_melee": true,
-    "damaged_by_bullets": true,
-    "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
-    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
-  },
-  {
-    "class_name": "vehicle_mini_truck_03",
-    "id": 2902681599,
-    "initial_spawn_time": 0.0,
-    "respawn_time": 180.0,
-    "health": 100000000,
-    "break_on_dodge_touch": false,
-    "solid_after_death": false,
-    "render_after_death": false,
-    "damaged_by_abilities": true,
-    "damaged_by_melee": true,
-    "damaged_by_bullets": true,
-    "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
-    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
-  },
-  {
-    "class_name": "vehicle_bike_flying",
-    "id": 2812656400,
-    "initial_spawn_time": 0.0,
-    "respawn_time": 180.0,
-    "health": 100000000,
-    "break_on_dodge_touch": false,
-    "solid_after_death": false,
-    "render_after_death": false,
-    "damaged_by_abilities": true,
-    "damaged_by_melee": true,
-    "damaged_by_bullets": true,
-    "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
-    "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
-  },
-  {
-    "class_name": "vehicle_ground_ship_03",
-    "id": 3087609631,
-    "initial_spawn_time": 0.0,
-    "respawn_time": 180.0,
-    "health": 100000000,
-    "break_on_dodge_touch": false,
-    "solid_after_death": false,
-    "render_after_death": false,
-    "damaged_by_abilities": true,
-    "damaged_by_melee": true,
-    "damaged_by_bullets": true,
-    "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
+    "powerup_drop_chance": 60.0,
+    "pickup_chances": {
+      "small_gold_pickup": 1.0
+    },
     "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
   },
   {
     "class_name": "citadel_breakable_prop_pumpkin01",
     "id": 1070887086,
-    "initial_spawn_time": 120.0,
+    "initial_spawn_time": 180.0,
     "respawn_time": 180.0,
     "health": 1,
     "break_on_dodge_touch": true,
@@ -637,20 +311,18 @@ expression: entities
     "damaged_by_abilities": true,
     "damaged_by_melee": true,
     "damaged_by_bullets": true,
+    "damaged_by_slide": true,
     "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
+    "powerup_drop_chance": 60.0,
+    "pickup_chances": {
+      "small_gold_pickup": 1.0
+    },
     "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
   },
   {
     "class_name": "citadel_breakable_prop_pumpkin02",
     "id": 1413828045,
-    "initial_spawn_time": 120.0,
+    "initial_spawn_time": 180.0,
     "respawn_time": 180.0,
     "health": 1,
     "break_on_dodge_touch": true,
@@ -659,20 +331,18 @@ expression: entities
     "damaged_by_abilities": true,
     "damaged_by_melee": true,
     "damaged_by_bullets": true,
+    "damaged_by_slide": true,
     "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
+    "powerup_drop_chance": 60.0,
+    "pickup_chances": {
+      "small_gold_pickup": 1.0
+    },
     "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
   },
   {
     "class_name": "citadel_breakable_prop_pumpkin03",
     "id": 2572218233,
-    "initial_spawn_time": 120.0,
+    "initial_spawn_time": 180.0,
     "respawn_time": 180.0,
     "health": 1,
     "break_on_dodge_touch": true,
@@ -681,20 +351,18 @@ expression: entities
     "damaged_by_abilities": true,
     "damaged_by_melee": true,
     "damaged_by_bullets": true,
+    "damaged_by_slide": true,
     "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
+    "powerup_drop_chance": 60.0,
+    "pickup_chances": {
+      "small_gold_pickup": 1.0
+    },
     "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
   },
   {
     "class_name": "citadel_breakable_prop_pumpkin04",
     "id": 841549549,
-    "initial_spawn_time": 120.0,
+    "initial_spawn_time": 180.0,
     "respawn_time": 180.0,
     "health": 1,
     "break_on_dodge_touch": true,
@@ -703,20 +371,18 @@ expression: entities
     "damaged_by_abilities": true,
     "damaged_by_melee": true,
     "damaged_by_bullets": true,
+    "damaged_by_slide": true,
     "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
+    "powerup_drop_chance": 60.0,
+    "pickup_chances": {
+      "small_gold_pickup": 1.0
+    },
     "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
   },
   {
     "class_name": "citadel_breakable_prop_xmaspresent01",
     "id": 1467120186,
-    "initial_spawn_time": 120.0,
+    "initial_spawn_time": 180.0,
     "respawn_time": 180.0,
     "health": 1,
     "break_on_dodge_touch": true,
@@ -725,20 +391,18 @@ expression: entities
     "damaged_by_abilities": true,
     "damaged_by_melee": true,
     "damaged_by_bullets": true,
+    "damaged_by_slide": true,
     "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
+    "powerup_drop_chance": 60.0,
+    "pickup_chances": {
+      "small_gold_pickup": 1.0
+    },
     "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
   },
   {
     "class_name": "citadel_breakable_prop_xmaspresent02",
     "id": 1580763103,
-    "initial_spawn_time": 120.0,
+    "initial_spawn_time": 180.0,
     "respawn_time": 180.0,
     "health": 1,
     "break_on_dodge_touch": true,
@@ -747,20 +411,18 @@ expression: entities
     "damaged_by_abilities": true,
     "damaged_by_melee": true,
     "damaged_by_bullets": true,
+    "damaged_by_slide": true,
     "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
+    "powerup_drop_chance": 60.0,
+    "pickup_chances": {
+      "small_gold_pickup": 1.0
+    },
     "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
   },
   {
     "class_name": "citadel_breakable_prop_xmaspresent03",
     "id": 4154240310,
-    "initial_spawn_time": 120.0,
+    "initial_spawn_time": 180.0,
     "respawn_time": 180.0,
     "health": 1,
     "break_on_dodge_touch": true,
@@ -769,15 +431,41 @@ expression: entities
     "damaged_by_abilities": true,
     "damaged_by_melee": true,
     "damaged_by_bullets": true,
+    "damaged_by_slide": true,
     "is_mantleable": true,
-    "primary_drop_chance": 60.0,
-    "primary_pickups": [
-      {
-        "pickup_name": "small_gold_pickup",
-        "pickup_weight": 1.0
-      }
-    ],
+    "powerup_drop_chance": 60.0,
+    "pickup_chances": {
+      "small_gold_pickup": 1.0
+    },
     "roll_type": "ECitadelRandomRoll_BreakableGoldPickup"
+  },
+  {
+    "class_name": "citadel_item_pickup",
+    "id": 341297418
+  },
+  {
+    "class_name": "citadel_item_pickup_idol",
+    "id": 1409114072,
+    "spawn_music_state": "k_EMusicQueue_IdolAnnounce"
+  },
+  {
+    "class_name": "citadel_item_koth_spawner",
+    "id": 320279287,
+    "spawn_music_state": "k_EMusicQueue_KothAnnounce"
+  },
+  {
+    "class_name": "citadel_item_punchable_gold",
+    "id": 3045641808
+  },
+  {
+    "class_name": "citadel_item_pickup_rejuv",
+    "id": 289368075,
+    "spawn_music_state": "k_EMusicQueue_RejuvDrop"
+  },
+  {
+    "class_name": "citadel_item_pickup_rejuv_herotest",
+    "id": 3820209822,
+    "spawn_music_state": "k_EMusicQueue_RejuvDrop"
   },
   {
     "class_name": "small_gold_pickup",
@@ -800,7 +488,51 @@ expression: entities
     },
     "show_on_minimap": false,
     "is_permanent_pickup": true,
-    "name_loc_string": "small_gold_pickup_label:p"
+    "name_loc_string": "#small_gold_pickup_label:f"
+  },
+  {
+    "class_name": "big_gold_pickup",
+    "id": 1284810104,
+    "color": {
+      "red": 0,
+      "green": 255,
+      "blue": 204,
+      "alpha": 255
+    },
+    "gold_amount": 46.0,
+    "gold_per_minute_amount": 4.0,
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 300.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false,
+    "is_permanent_pickup": true,
+    "name_loc_string": "#big_gold_pickup_label:f"
+  },
+  {
+    "class_name": "floating_apple_pickup",
+    "id": 1465128211,
+    "color": {
+      "red": 0,
+      "green": 255,
+      "blue": 204,
+      "alpha": 255
+    },
+    "gold_amount": 1.0,
+    "gold_per_minute_amount": 1.0,
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 300.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false
   },
   {
     "class_name": "gun_powerup_pickup",
@@ -847,7 +579,9 @@ expression: entities
     "show_on_minimap": true,
     "collision_radius": 40.0,
     "name_loc_string": "gun_powerup_pickup",
-    "hits_required": 1
+    "collection_method": "Punch",
+    "hits_required": 1,
+    "minimap_class": "powerup_gun"
   },
   {
     "class_name": "survival_powerup_pickup",
@@ -894,7 +628,9 @@ expression: entities
     "show_on_minimap": true,
     "collision_radius": 40.0,
     "name_loc_string": "survival_powerup_pickup",
-    "hits_required": 1
+    "collection_method": "Punch",
+    "hits_required": 1,
+    "minimap_class": "powerup_survival"
   },
   {
     "class_name": "casting_powerup_pickup",
@@ -941,7 +677,9 @@ expression: entities
     "show_on_minimap": true,
     "collision_radius": 40.0,
     "name_loc_string": "casting_powerup_pickup",
-    "hits_required": 1
+    "collection_method": "Punch",
+    "hits_required": 1,
+    "minimap_class": "powerup_casting"
   },
   {
     "class_name": "movement_powerup_pickup",
@@ -999,7 +737,9 @@ expression: entities
     "show_on_minimap": true,
     "collision_radius": 40.0,
     "name_loc_string": "movement_powerup_pickup",
-    "hits_required": 1
+    "collection_method": "Punch",
+    "hits_required": 1,
+    "minimap_class": "powerup_movement"
   },
   {
     "class_name": "refresh_powerup_pickup",
@@ -1027,7 +767,9 @@ expression: entities
     "show_on_minimap": true,
     "collision_radius": 40.0,
     "name_loc_string": "refresh_powerup_pickup",
-    "hits_required": 1
+    "collection_method": "Punch",
+    "hits_required": 1,
+    "minimap_class": "powerup_refresh"
   },
   {
     "class_name": "change_team_powerup_pickup",
@@ -1055,7 +797,38 @@ expression: entities
     "show_on_minimap": true,
     "collision_radius": 40.0,
     "name_loc_string": "change_team_powerup_pickup",
+    "collection_method": "Punch",
     "hits_required": 1
+  },
+  {
+    "class_name": "souls_powerup_pickup",
+    "id": 3344911888,
+    "color": {
+      "red": 66,
+      "green": 204,
+      "blue": 151,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_citadel_powerup_souls",
+        "subclass_name": "souls_powerup_pickup_modifier"
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 300.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": true,
+    "collision_radius": 40.0,
+    "name_loc_string": "souls_powerup_pickup",
+    "collection_method": "Punch",
+    "hits_required": 1,
+    "minimap_class": "powerup_souls"
   },
   {
     "class_name": "spirit_permanent_pickup",
@@ -1087,6 +860,13 @@ expression: entities
       "per_minute_after_start": 0.0
     },
     "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_SpiritPower",
+    "buff_type_graph_color": {
+      "red": 170,
+      "green": 70,
+      "blue": 255,
+      "alpha": 255
+    },
     "is_permanent_pickup": true,
     "name_loc_string": "spirit_permanent_pickup_label"
   },
@@ -1120,6 +900,13 @@ expression: entities
       "per_minute_after_start": 0.0
     },
     "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_SpiritPower",
+    "buff_type_graph_color": {
+      "red": 170,
+      "green": 70,
+      "blue": 255,
+      "alpha": 255
+    },
     "is_permanent_pickup": true,
     "name_loc_string": "spirit_permanent_pickup_label_lv2"
   },
@@ -1153,6 +940,13 @@ expression: entities
       "per_minute_after_start": 0.0
     },
     "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_SpiritPower",
+    "buff_type_graph_color": {
+      "red": 170,
+      "green": 70,
+      "blue": 255,
+      "alpha": 255
+    },
     "is_permanent_pickup": true,
     "name_loc_string": "spirit_permanent_pickup_label_lv3"
   },
@@ -1186,6 +980,14 @@ expression: entities
       "per_minute_after_start": 0.0
     },
     "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_FireRate",
+    "buff_type_graph_color": {
+      "red": 255,
+      "green": 60,
+      "blue": 60,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
     "name_loc_string": "firerate_permanent_pickup_label"
   },
@@ -1219,6 +1021,14 @@ expression: entities
       "per_minute_after_start": 0.0
     },
     "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_FireRate",
+    "buff_type_graph_color": {
+      "red": 255,
+      "green": 60,
+      "blue": 60,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
     "name_loc_string": "firerate_permanent_pickup_label_lv2"
   },
@@ -1252,6 +1062,14 @@ expression: entities
       "per_minute_after_start": 0.0
     },
     "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_FireRate",
+    "buff_type_graph_color": {
+      "red": 255,
+      "green": 60,
+      "blue": 60,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
     "name_loc_string": "firerate_permanent_pickup_label_lv3"
   },
@@ -1285,6 +1103,14 @@ expression: entities
       "per_minute_after_start": 0.0
     },
     "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_MaxAmmo",
+    "buff_type_graph_color": {
+      "red": 255,
+      "green": 220,
+      "blue": 70,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
     "name_loc_string": "ammo_permanent_pickup_label"
   },
@@ -1318,6 +1144,14 @@ expression: entities
       "per_minute_after_start": 0.0
     },
     "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_MaxAmmo",
+    "buff_type_graph_color": {
+      "red": 255,
+      "green": 220,
+      "blue": 70,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
     "name_loc_string": "ammo_permanent_pickup_label_lv2"
   },
@@ -1351,6 +1185,14 @@ expression: entities
       "per_minute_after_start": 0.0
     },
     "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_MaxAmmo",
+    "buff_type_graph_color": {
+      "red": 255,
+      "green": 220,
+      "blue": 70,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
     "name_loc_string": "ammo_permanent_pickup_label_lv3"
   },
@@ -1384,6 +1226,13 @@ expression: entities
       "per_minute_after_start": 0.0
     },
     "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_BonusHealth",
+    "buff_type_graph_color": {
+      "red": 150,
+      "green": 240,
+      "blue": 60,
+      "alpha": 255
+    },
     "is_permanent_pickup": true,
     "name_loc_string": "hp_permanent_pickup_label"
   },
@@ -1403,7 +1252,7 @@ expression: entities
         "script_values": [
           {
             "value_type": "MODIFIER_VALUE_HEALTH_MAX",
-            "value": 25.0
+            "value": 20.0
           }
         ]
       }
@@ -1417,6 +1266,13 @@ expression: entities
       "per_minute_after_start": 0.0
     },
     "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_BonusHealth",
+    "buff_type_graph_color": {
+      "red": 150,
+      "green": 240,
+      "blue": 60,
+      "alpha": 255
+    },
     "is_permanent_pickup": true,
     "name_loc_string": "hp_permanent_pickup_label_lv2"
   },
@@ -1436,7 +1292,7 @@ expression: entities
         "script_values": [
           {
             "value_type": "MODIFIER_VALUE_HEALTH_MAX",
-            "value": 35.0
+            "value": 30.0
           }
         ]
       }
@@ -1450,6 +1306,13 @@ expression: entities
       "per_minute_after_start": 0.0
     },
     "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_BonusHealth",
+    "buff_type_graph_color": {
+      "red": 150,
+      "green": 240,
+      "blue": 60,
+      "alpha": 255
+    },
     "is_permanent_pickup": true,
     "name_loc_string": "hp_permanent_pickup_label_lv3"
   },
@@ -1483,6 +1346,14 @@ expression: entities
       "per_minute_after_start": 0.0
     },
     "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_CooldownReduction",
+    "buff_type_graph_color": {
+      "red": 70,
+      "green": 110,
+      "blue": 255,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
     "name_loc_string": "cd_permanent_pickup_label"
   },
@@ -1516,6 +1387,14 @@ expression: entities
       "per_minute_after_start": 0.0
     },
     "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_CooldownReduction",
+    "buff_type_graph_color": {
+      "red": 70,
+      "green": 110,
+      "blue": 255,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
     "name_loc_string": "cd_permanent_pickup_label_lv2"
   },
@@ -1549,6 +1428,14 @@ expression: entities
       "per_minute_after_start": 0.0
     },
     "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_CooldownReduction",
+    "buff_type_graph_color": {
+      "red": 70,
+      "green": 110,
+      "blue": 255,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
     "name_loc_string": "cd_permanent_pickup_label_lv3"
   },
@@ -1567,7 +1454,7 @@ expression: entities
         "subclass_name": "modifier_permanent_pickup",
         "script_values": [
           {
-            "value_type": "MODIFIER_VALUE_BASEATTACK_DAMAGE_PERCENT",
+            "value_type": "MODIFIER_VALUE_WEAPON_DAMAGE_INCREASE",
             "value": 3.0
           }
         ]
@@ -1582,6 +1469,14 @@ expression: entities
       "per_minute_after_start": 0.0
     },
     "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_WeaponDamage",
+    "buff_type_graph_color": {
+      "red": 255,
+      "green": 140,
+      "blue": 30,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
     "name_loc_string": "wp_permanent_pickup_label"
   },
@@ -1600,7 +1495,7 @@ expression: entities
         "subclass_name": "modifier_permanent_pickup",
         "script_values": [
           {
-            "value_type": "MODIFIER_VALUE_BASEATTACK_DAMAGE_PERCENT",
+            "value_type": "MODIFIER_VALUE_WEAPON_DAMAGE_INCREASE",
             "value": 4.0
           }
         ]
@@ -1615,6 +1510,14 @@ expression: entities
       "per_minute_after_start": 0.0
     },
     "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_WeaponDamage",
+    "buff_type_graph_color": {
+      "red": 255,
+      "green": 140,
+      "blue": 30,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
     "name_loc_string": "wp_permanent_pickup_label_lv2"
   },
@@ -1633,7 +1536,7 @@ expression: entities
         "subclass_name": "modifier_permanent_pickup",
         "script_values": [
           {
-            "value_type": "MODIFIER_VALUE_BASEATTACK_DAMAGE_PERCENT",
+            "value_type": "MODIFIER_VALUE_WEAPON_DAMAGE_INCREASE",
             "value": 6.0
           }
         ]
@@ -1648,8 +1551,512 @@ expression: entities
       "per_minute_after_start": 0.0
     },
     "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_WeaponDamage",
+    "buff_type_graph_color": {
+      "red": 255,
+      "green": 140,
+      "blue": 30,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
     "is_permanent_pickup": true,
     "name_loc_string": "wp_permanent_pickup_label_lv3"
+  },
+  {
+    "class_name": "bulletresist_permanent_pickup",
+    "id": 2838596945,
+    "color": {
+      "red": 60,
+      "green": 160,
+      "blue": 90,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST",
+            "value": 0.5
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_BulletResist",
+    "buff_type_graph_color": {
+      "red": 60,
+      "green": 200,
+      "blue": 90,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
+    "is_permanent_pickup": true,
+    "name_loc_string": "bulletresist_permanent_pickup_label"
+  },
+  {
+    "class_name": "bulletresist_permanent_pickup_lv2",
+    "id": 974475569,
+    "color": {
+      "red": 60,
+      "green": 160,
+      "blue": 90,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST",
+            "value": 0.75
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_BulletResist",
+    "buff_type_graph_color": {
+      "red": 60,
+      "green": 200,
+      "blue": 90,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
+    "is_permanent_pickup": true,
+    "name_loc_string": "bulletresist_permanent_pickup_label_lv2"
+  },
+  {
+    "class_name": "bulletresist_permanent_pickup_lv3",
+    "id": 3260354483,
+    "color": {
+      "red": 60,
+      "green": 160,
+      "blue": 90,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST",
+            "value": 1.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_BulletResist",
+    "buff_type_graph_color": {
+      "red": 60,
+      "green": 200,
+      "blue": 90,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
+    "is_permanent_pickup": true,
+    "name_loc_string": "bulletresist_permanent_pickup_label_lv3"
+  },
+  {
+    "class_name": "spiritresist_permanent_pickup",
+    "id": 624082451,
+    "color": {
+      "red": 40,
+      "green": 80,
+      "blue": 200,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_TECH_RESIST",
+            "value": 0.5
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_SpiritResist",
+    "buff_type_graph_color": {
+      "red": 60,
+      "green": 170,
+      "blue": 255,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
+    "is_permanent_pickup": true,
+    "name_loc_string": "spiritresist_permanent_pickup_label"
+  },
+  {
+    "class_name": "spiritresist_permanent_pickup_lv2",
+    "id": 804359518,
+    "color": {
+      "red": 40,
+      "green": 80,
+      "blue": 200,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_TECH_RESIST",
+            "value": 0.75
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_SpiritResist",
+    "buff_type_graph_color": {
+      "red": 60,
+      "green": 170,
+      "blue": 255,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
+    "is_permanent_pickup": true,
+    "name_loc_string": "spiritresist_permanent_pickup_label_lv2"
+  },
+  {
+    "class_name": "spiritresist_permanent_pickup_lv3",
+    "id": 2488066442,
+    "color": {
+      "red": 40,
+      "green": 80,
+      "blue": 200,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_TECH_RESIST",
+            "value": 1.0
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_SpiritResist",
+    "buff_type_graph_color": {
+      "red": 60,
+      "green": 170,
+      "blue": 255,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
+    "is_permanent_pickup": true,
+    "name_loc_string": "spiritresist_permanent_pickup_label_lv3"
+  },
+  {
+    "class_name": "range_permanent_pickup",
+    "id": 1687990602,
+    "color": {
+      "red": 140,
+      "green": 60,
+      "blue": 200,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_TECH_RANGE_PERCENT",
+            "value": 0.25
+          },
+          {
+            "value_type": "MODIFIER_VALUE_TECH_RADIUS_PERCENT",
+            "value": 0.25
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_AbilityRange",
+    "buff_type_graph_color": {
+      "red": 230,
+      "green": 90,
+      "blue": 230,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
+    "is_permanent_pickup": true,
+    "name_loc_string": "range_permanent_pickup_label"
+  },
+  {
+    "class_name": "range_permanent_pickup_lv2",
+    "id": 245199735,
+    "color": {
+      "red": 140,
+      "green": 60,
+      "blue": 200,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_TECH_RANGE_PERCENT",
+            "value": 0.5
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_AbilityRange",
+    "buff_type_graph_color": {
+      "red": 230,
+      "green": 90,
+      "blue": 230,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
+    "is_permanent_pickup": true,
+    "name_loc_string": "range_permanent_pickup_label_lv2"
+  },
+  {
+    "class_name": "range_permanent_pickup_lv3",
+    "id": 2571392344,
+    "color": {
+      "red": 140,
+      "green": 60,
+      "blue": 200,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_TECH_RANGE_PERCENT",
+            "value": 0.75
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_AbilityRange",
+    "buff_type_graph_color": {
+      "red": 230,
+      "green": 90,
+      "blue": 230,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Percent",
+    "is_permanent_pickup": true,
+    "name_loc_string": "range_permanent_pickup_label_lv3"
+  },
+  {
+    "class_name": "movespeed_permanent_pickup",
+    "id": 3852431778,
+    "color": {
+      "red": 0,
+      "green": 180,
+      "blue": 200,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_MOVEMENT_SPEED_MAX",
+            "value": 3.937
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_MoveSpeed",
+    "buff_type_graph_color": {
+      "red": 40,
+      "green": 230,
+      "blue": 200,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Meters",
+    "is_permanent_pickup": true,
+    "name_loc_string": "movespeed_permanent_pickup_label"
+  },
+  {
+    "class_name": "movespeed_permanent_pickup_lv2",
+    "id": 2341536156,
+    "color": {
+      "red": 0,
+      "green": 180,
+      "blue": 200,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_MOVEMENT_SPEED_MAX",
+            "value": 7.874
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_MoveSpeed",
+    "buff_type_graph_color": {
+      "red": 40,
+      "green": 230,
+      "blue": 200,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Meters",
+    "is_permanent_pickup": true,
+    "name_loc_string": "movespeed_permanent_pickup_label_lv2"
+  },
+  {
+    "class_name": "movespeed_permanent_pickup_lv3",
+    "id": 4063749492,
+    "color": {
+      "red": 0,
+      "green": 180,
+      "blue": 200,
+      "alpha": 255
+    },
+    "modifier": {
+      "subclass": {
+        "class_name": "modifier_permanent_pickup",
+        "subclass_name": "modifier_permanent_pickup",
+        "script_values": [
+          {
+            "value_type": "MODIFIER_VALUE_MOVEMENT_SPEED_MAX",
+            "value": 11.811
+          }
+        ]
+      }
+    },
+    "pickup_radius": {
+      "base": 85.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 30.0,
+      "per_minute_after_start": 0.0
+    },
+    "show_on_minimap": false,
+    "buff_type_loc_string": "#Citadel_Graph_PermanentBuff_MoveSpeed",
+    "buff_type_graph_color": {
+      "red": 40,
+      "green": 230,
+      "blue": 200,
+      "alpha": 255
+    },
+    "buff_type_value_unit": "Meters",
+    "is_permanent_pickup": true,
+    "name_loc_string": "movespeed_permanent_pickup_label_lv3"
   },
   {
     "class_name": "dropped_soul_orb",
@@ -1667,7 +2074,8 @@ expression: entities
     "expiration_duration": {
       "base": 18.0,
       "per_minute_after_start": 4.0
-    }
+    },
+    "collection_method": "VacuumTrigger"
   },
   {
     "class_name": "medic_trooper_aoe_health_pickup_amber",
@@ -1686,7 +2094,8 @@ expression: entities
       "base": 18.0,
       "per_minute_after_start": 2.0
     },
-    "regen_duration": 2.0,
+    "collection_method": "VacuumTrigger",
+    "regen_duration": 4.0,
     "regen_duration_troopers": 8.0,
     "regen_trooper_multi": 1.3
   },
@@ -1707,7 +2116,33 @@ expression: entities
       "base": 18.0,
       "per_minute_after_start": 2.0
     },
-    "regen_duration": 2.0,
+    "collection_method": "VacuumTrigger",
+    "regen_duration": 4.0,
+    "regen_duration_troopers": 8.0,
+    "regen_trooper_multi": 1.3
+  },
+  {
+    "class_name": "citadel_pickup_health_float_in_world",
+    "id": 1436690691,
+    "color": {
+      "red": 0,
+      "green": 255,
+      "blue": 204,
+      "alpha": 255
+    },
+    "pickup_radius": {
+      "base": 120.0,
+      "per_minute_after_start": 0.0
+    },
+    "expiration_duration": {
+      "base": 0.0,
+      "per_minute_after_start": 0.0
+    },
+    "collection_method": "VacuumTrigger",
+    "regen_max_health_percent": {
+      "base": 10.0
+    },
+    "regen_duration": 4.0,
     "regen_duration_troopers": 8.0,
     "regen_trooper_multi": 1.3
   },
@@ -1727,7 +2162,8 @@ expression: entities
     "expiration_duration": {
       "base": 10.0,
       "per_minute_after_start": 0.0
-    }
+    },
+    "collection_method": "VacuumTrigger"
   },
   {
     "class_name": "xp_orb",
@@ -1752,6 +2188,14 @@ expression: entities
     "orb_spawn_delay_max": 0.3,
     "lifetime": 3.0,
     "collision_radius": 12.0
+  },
+  {
+    "class_name": "xp_orb_koth_giveup",
+    "id": 643818086,
+    "orb_spawn_delay_min": 0.1,
+    "orb_spawn_delay_max": 0.3,
+    "lifetime": 25.0,
+    "collision_radius": 15.0
   },
   {
     "class_name": "xp_orb_player_kill",
@@ -1840,9 +2284,9 @@ expression: entities
   {
     "class_name": "neutral_camp_medium",
     "id": 806615399,
-    "initial_spawn_delay_in_seconds": 360,
+    "initial_spawn_delay_in_seconds": 300,
     "spawn_interval_in_seconds": 290,
-    "initial_spawn_delay_seconds": 360
+    "initial_spawn_delay_seconds": 300
   },
   {
     "class_name": "neutral_camp_medium_herotest",
@@ -1868,9 +2312,9 @@ expression: entities
   {
     "class_name": "neutral_camp_midboss",
     "id": 911084663,
-    "initial_spawn_delay_in_seconds": 600,
+    "initial_spawn_delay_in_seconds": 0,
     "spawn_interval_in_seconds": 420,
-    "initial_spawn_delay_seconds": 600
+    "initial_spawn_delay_seconds": 0
   },
   {
     "class_name": "neutral_camp_bug",
@@ -1889,5 +2333,25 @@ expression: entities
   {
     "class_name": "capture_point_escort",
     "id": 69830815
+  },
+  {
+    "class_name": "citadel_koth_cashin",
+    "id": 947640506
+  },
+  {
+    "class_name": "citadel_trigger_corrupted_item_shop",
+    "id": 2335199448,
+    "in_shop_modifier": {
+      "subclass": {
+        "class_name": "modifier_base",
+        "subclass_name": "modifier_in_corrupted_item_shop",
+        "enabled_state_mask": "MODIFIER_STATE_IN_CORRUPTED_ITEM_SHOP"
+      }
+    },
+    "spawn_music_state": "k_EMusicQueue_CorruptedItemShopAnnounce"
+  },
+  {
+    "class_name": "citadel_trigger_bonk",
+    "id": 1068950377
   }
 ]

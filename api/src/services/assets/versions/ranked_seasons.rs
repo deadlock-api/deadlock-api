@@ -29,6 +29,8 @@ struct RawRankedSeason {
     min_hero_unlocks: u32,
     #[serde(rename = "m_unCalibrationMatches")]
     calibration_matches: u32,
+    #[serde(default, rename = "m_unBaseWinLossPointGrant")]
+    base_win_loss_point_grant: Option<u32>,
     #[serde(default, rename = "m_vecValidPartySizes")]
     valid_party_sizes: Vec<u32>,
     #[serde(default, rename = "m_vecIntervals")]
@@ -43,6 +45,8 @@ struct RawSeasonInterval {
     start_timestamp: i64,
     #[serde(rename = "m_rtIntervalEndTimestamp")]
     end_timestamp: i64,
+    #[serde(default, rename = "m_unLeaderboardID")]
+    leaderboard_id: Option<u32>,
 }
 
 // ----- Public shape -----
@@ -54,6 +58,9 @@ pub(crate) struct SeasonInterval {
     pub start_timestamp: i64,
     /// Unix timestamp (seconds) at which the interval ends.
     pub end_timestamp: i64,
+    /// Leaderboard backing this interval (build 6701+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub leaderboard_id: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Clone, ToSchema)]
@@ -65,6 +72,9 @@ pub(crate) struct RankedSeason {
     pub min_hero_wins: u32,
     pub min_hero_unlocks: u32,
     pub calibration_matches: u32,
+    /// Base rank points granted per win / taken per loss (build 6701+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub base_win_loss_point_grant: Option<u32>,
     pub valid_party_sizes: Vec<u32>,
     pub intervals: Vec<SeasonInterval>,
 }
@@ -96,6 +106,7 @@ fn transform(
         min_hero_wins: r.min_hero_wins,
         min_hero_unlocks: r.min_hero_unlocks,
         calibration_matches: r.calibration_matches,
+        base_win_loss_point_grant: r.base_win_loss_point_grant,
         valid_party_sizes: r.valid_party_sizes,
         intervals: r
             .intervals
@@ -104,6 +115,7 @@ fn transform(
                 interval: i.interval,
                 start_timestamp: i.start_timestamp,
                 end_timestamp: i.end_timestamp,
+                leaderboard_id: i.leaderboard_id,
             })
             .collect(),
     }
@@ -118,11 +130,15 @@ fn map_ranked_type(raw: &str) -> String {
 
 /// The interval running at `now` (unix seconds), as accepted by the
 /// `rank_interval` field of `CMsgClientToGCGetMatchHistory`.
+///
+/// Consecutive intervals share their boundary timestamp (interval 1 ends
+/// exactly when interval 2 starts), so the later-starting one wins there.
 pub(crate) fn interval_at(seasons: &[RankedSeason], now: i64) -> Option<u32> {
     seasons
         .iter()
         .flat_map(|s| &s.intervals)
-        .find(|i| (i.start_timestamp..=i.end_timestamp).contains(&now))
+        .filter(|i| (i.start_timestamp..=i.end_timestamp).contains(&now))
+        .max_by_key(|i| i.start_timestamp)
         .map(|i| i.interval)
 }
 
@@ -181,6 +197,36 @@ mod tests {
         insta::with_settings!(
             { snapshot_path => "ranked_seasons_snapshots", prepend_module_to_snapshot => false },
             { insta::assert_json_snapshot!("ranked_seasons_english", out); }
+        );
+    }
+
+    /// Build 6712 ("City Never Sleeps") added interval 2 and leaderboard IDs.
+    #[test]
+    fn snapshot_6712_second_interval() {
+        let (_, loc) = fixtures();
+        let manifest = env!("CARGO_MANIFEST_DIR");
+        let vdata = std::fs::read_to_string(format!(
+            "{manifest}/src/utils/kv3_fixtures/ranked_seasons_6712.vdata"
+        ))
+        .expect("vdata fixture");
+        let out = build_ranked_seasons(&vdata, &loc).expect("builds");
+        let season = &out[0];
+        assert_eq!(season.base_win_loss_point_grant, Some(300));
+        let ids: Vec<_> = season
+            .intervals
+            .iter()
+            .map(|i| (i.interval, i.leaderboard_id))
+            .collect();
+        assert_eq!(ids, [(1, Some(1001)), (2, Some(1002))]);
+        // 2026-10-08 → 2028-01-01
+        assert_eq!(season.intervals[1].start_timestamp, 1_791_493_200);
+        assert_eq!(season.intervals[1].end_timestamp, 1_830_326_400);
+        assert_eq!(interval_at(&out, 1_791_493_199), Some(1));
+        assert_eq!(interval_at(&out, 1_791_493_200), Some(2));
+        assert_eq!(interval_at(&out, 1_800_000_000), Some(2));
+        insta::with_settings!(
+            { snapshot_path => "ranked_seasons_snapshots", prepend_module_to_snapshot => false },
+            { insta::assert_json_snapshot!("ranked_seasons_6712", out); }
         );
     }
 

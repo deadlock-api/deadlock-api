@@ -468,6 +468,421 @@ expression: data
     6400,
     9999
   ],
+  "item_corruption_price_per_tier": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "corrupted_penalties": [
+    {
+      "name": "TechCooldown",
+      "roll_weight": 1.0,
+      "effects": [
+        {
+          "modifier_value": "MODIFIER_VALUE_COOLDOWN_REDUCTION_PERCENTAGE",
+          "bonus_per_tier": [
+            0.0,
+            0.0,
+            0.0,
+            -13.0,
+            -17.0,
+            0.0
+          ],
+          "display_type": "ETechCooldown",
+          "loc_token_override": "CooldownReduction",
+          "label": "Ability Cooldown Reduction",
+          "postfix": "%",
+          "css_class": "cooldown",
+          "display": true
+        }
+      ]
+    },
+    {
+      "name": "TechRange",
+      "roll_weight": 1.0,
+      "effects": [
+        {
+          "modifier_value": "MODIFIER_VALUE_TECH_RANGE_PERCENT",
+          "bonus_per_tier": [
+            0.0,
+            0.0,
+            0.0,
+            -20.0,
+            -25.0,
+            0.0
+          ],
+          "display_type": "ETechRange",
+          "loc_token_override": "TechRangeMultiplier",
+          "css_class": "distance",
+          "display": true
+        },
+        {
+          "modifier_value": "MODIFIER_VALUE_TECH_RADIUS_PERCENT",
+          "bonus_per_tier": [
+            0.0,
+            0.0,
+            0.0,
+            -20.0,
+            -25.0,
+            0.0
+          ],
+          "display_type": "ETechRadius",
+          "loc_token_override": "TechRadiusMultiplier",
+          "display": false
+        }
+      ]
+    },
+    {
+      "name": "Stamina",
+      "roll_weight": 1.0,
+      "effects": [
+        {
+          "modifier_value": "MODIFIER_VALUE_STAMINA",
+          "bonus_per_tier": [
+            0.0,
+            0.0,
+            0.0,
+            -1.0,
+            -1.0,
+            0.0
+          ],
+          "display_type": "EStamina",
+          "loc_token_override": "Stamina",
+          "display": true
+        },
+        {
+          "modifier_value": "MODIFIER_VALUE_STAMINA_REGEN_PER_SECOND_PERCENTAGE",
+          "bonus_per_tier": [
+            0.0,
+            0.0,
+            0.0,
+            -18.0,
+            -24.0,
+            0.0
+          ],
+          "display_type": "EStaminaRegenPercent",
+          "loc_token_override": "StaminaRegenPercent",
+          "display": true
+        }
+      ]
+    },
+    {
+      "name": "MoveSpeed",
+      "roll_weight": 1.0,
+      "effects": [
+        {
+          "modifier_value": "MODIFIER_VALUE_MOVEMENT_SPEED_MAX",
+          "bonus_per_tier": [
+            0.0,
+            0.0,
+            0.0,
+            -2.0,
+            -2.75,
+            0.0
+          ],
+          "display_type": "EMaxMoveSpeed",
+          "loc_token_override": "BonusMoveSpeed",
+          "css_class": "move_speed",
+          "display": true
+        }
+      ]
+    },
+    {
+      "name": "FireRate",
+      "roll_weight": 1.0,
+      "effects": [
+        {
+          "modifier_value": "MODIFIER_VALUE_FIRE_RATE",
+          "bonus_per_tier": [
+            0.0,
+            0.0,
+            0.0,
+            -20.0,
+            -25.0,
+            0.0
+          ],
+          "display_type": "EFireRate",
+          "loc_token_override": "BonusFireRate",
+          "css_class": "fire_rate",
+          "display": true
+        }
+      ]
+    },
+    {
+      "name": "TechDuration",
+      "roll_weight": 1.0,
+      "effects": [
+        {
+          "modifier_value": "MODIFIER_VALUE_BONUS_ABILITY_DURATION_PERCENTAGE",
+          "bonus_per_tier": [
+            0.0,
+            0.0,
+            0.0,
+            -15.0,
+            -20.0,
+            0.0
+          ],
+          "display_type": "ETechDuration",
+          "loc_token_override": "BonusAbilityDurationPercent",
+          "css_class": "duration",
+          "display": true
+        }
+      ]
+    },
+    {
+      "name": "TechPower",
+      "roll_weight": 1.0,
+      "effects": [
+        {
+          "modifier_value": "MODIFIER_VALUE_TECH_POWER",
+          "bonus_per_tier": [
+            0.0,
+            0.0,
+            0.0,
+            -30.0,
+            -45.0,
+            0.0
+          ],
+          "display_type": "ETechPower",
+          "loc_token_override": "TechPower",
+          "css_class": "tech_damage",
+          "display": true
+        }
+      ]
+    },
+    {
+      "name": "WeaponDamage",
+      "roll_weight": 1.0,
+      "effects": [
+        {
+          "modifier_value": "MODIFIER_VALUE_WEAPON_DAMAGE_INCREASE",
+          "bonus_per_tier": [
+            0.0,
+            0.0,
+            0.0,
+            -40.0,
+            -55.0,
+            0.0
+          ],
+          "display_type": "EBaseWeaponDamageIncrease",
+          "loc_token_override": "WeaponPower",
+          "css_class": "bullet_damage",
+          "display": true
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "roll_weight": 1.0,
+      "effects": [
+        {
+          "modifier_value": "MODIFIER_VALUE_HEALTH_MAX",
+          "bonus_per_tier": [
+            0.0,
+            0.0,
+            0.0,
+            -350.0,
+            -550.0,
+            0.0
+          ],
+          "display_type": "EMaxHealth",
+          "loc_token_override": "BonusMaxHealth",
+          "css_class": "health",
+          "display": true
+        }
+      ]
+    },
+    {
+      "name": "BulletResist",
+      "roll_weight": 1.0,
+      "effects": [
+        {
+          "modifier_value": "MODIFIER_VALUE_BULLET_AND_MELEE_RESIST_REDUCTION",
+          "bonus_per_tier": [
+            0.0,
+            0.0,
+            0.0,
+            -14.0,
+            -18.0,
+            0.0
+          ],
+          "display_type": "EBulletArmorDamageReduction",
+          "loc_token_override": "BulletResist",
+          "css_class": "bullet_armor_up",
+          "display": true
+        }
+      ]
+    },
+    {
+      "name": "TechResist",
+      "roll_weight": 1.0,
+      "effects": [
+        {
+          "modifier_value": "MODIFIER_VALUE_TECH_RESIST_REDUCTION",
+          "bonus_per_tier": [
+            0.0,
+            0.0,
+            0.0,
+            -14.0,
+            -18.0,
+            0.0
+          ],
+          "display_type": "ETechArmorDamageReduction",
+          "loc_token_override": "TechArmorDamageReduction",
+          "label": "Spirit Resist",
+          "css_class": "tech_armor_up",
+          "display": true
+        }
+      ]
+    }
+  ],
+  "neutral_camp_respawn_timer_show_distance": 15.0,
+  "breakable_powerup_loot_params": {
+    "loot_list_deck_size": 3,
+    "pickups_by_match_time_mins": {
+      "0": {
+        "spirit_permanent_pickup": 1.0,
+        "firerate_permanent_pickup": 1.0,
+        "ammo_permanent_pickup": 1.0,
+        "hp_permanent_pickup": 2.0,
+        "cd_permanent_pickup": 1.0,
+        "wp_permanent_pickup": 1.0,
+        "bulletresist_permanent_pickup": 1.0,
+        "spiritresist_permanent_pickup": 1.0,
+        "range_permanent_pickup": 0.5,
+        "movespeed_permanent_pickup": 0.5
+      },
+      "10": {
+        "spirit_permanent_pickup_lv2": 1.0,
+        "firerate_permanent_pickup_lv2": 1.0,
+        "ammo_permanent_pickup_lv2": 1.0,
+        "hp_permanent_pickup_lv2": 2.0,
+        "cd_permanent_pickup_lv2": 1.0,
+        "wp_permanent_pickup_lv2": 1.0,
+        "bulletresist_permanent_pickup_lv2": 1.0,
+        "spiritresist_permanent_pickup_lv2": 1.0,
+        "range_permanent_pickup_lv2": 0.5,
+        "movespeed_permanent_pickup_lv2": 0.5
+      },
+      "30": {
+        "spirit_permanent_pickup_lv3": 1.0,
+        "firerate_permanent_pickup_lv3": 1.0,
+        "ammo_permanent_pickup_lv3": 1.0,
+        "hp_permanent_pickup_lv3": 2.0,
+        "cd_permanent_pickup_lv3": 1.0,
+        "wp_permanent_pickup_lv3": 1.0,
+        "bulletresist_permanent_pickup_lv3": 1.0,
+        "spiritresist_permanent_pickup_lv3": 1.0,
+        "range_permanent_pickup_lv3": 0.5,
+        "movespeed_permanent_pickup_lv3": 0.5
+      }
+    }
+  },
+  "map_districts": [
+    {
+      "district": "map_district_amber",
+      "district_name": "map_district_amber",
+      "building": "map_district_building_base",
+      "building_name": "map_district_building_base"
+    },
+    {
+      "district": "map_district_sapphire",
+      "district_name": "map_district_sapphire",
+      "building": "map_district_building_base",
+      "building_name": "map_district_building_base"
+    },
+    {
+      "district": "map_district_york",
+      "district_name": "York",
+      "building": "map_district_building_docks",
+      "building_name": "Docks"
+    },
+    {
+      "district": "map_district_broadway",
+      "district_name": "map_district_broadway",
+      "building": "map_district_building_times_square",
+      "building_name": "map_district_building_times_square"
+    },
+    {
+      "district": "map_district_park",
+      "district_name": "map_district_park",
+      "building": "map_district_building_central_park",
+      "building_name": "map_district_building_central_park"
+    },
+    {
+      "district": "map_district_haunted_slums",
+      "district_name": "map_district_haunted_slums"
+    },
+    {
+      "district": "map_district_chinatown",
+      "district_name": "map_district_chinatown"
+    },
+    {
+      "district": "map_district_fairfax",
+      "district_name": "map_district_fairfax"
+    },
+    {
+      "district": "map_district_theater",
+      "district_name": "Theater"
+    },
+    {
+      "district": "map_district_mid",
+      "district_name": "map_district_mid",
+      "building": "map_district_building_pit",
+      "building_name": "map_district_building_pit"
+    },
+    {
+      "district": "map_district_canal",
+      "district_name": "map_district_canal",
+      "building": "map_district_building_parkside",
+      "building_name": "map_district_building_parkside"
+    },
+    {
+      "district": "map_district_canal",
+      "district_name": "map_district_canal",
+      "building": "map_district_building_yorkside",
+      "building_name": "map_district_building_yorkside"
+    },
+    {
+      "district": "map_district_york",
+      "district_name": "York",
+      "building": "map_district_building_factory",
+      "building_name": "map_district_building_factory"
+    },
+    {
+      "district": "map_district_york",
+      "district_name": "York",
+      "building": "map_district_building_stock_exchange",
+      "building_name": "map_district_building_stock_exchange"
+    },
+    {
+      "district": "map_district_broadway",
+      "district_name": "map_district_broadway",
+      "building": "map_district_building_uptown",
+      "building_name": "map_district_building_uptown"
+    },
+    {
+      "district": "map_district_broadway",
+      "district_name": "map_district_broadway",
+      "building": "map_district_building_downtown",
+      "building_name": "map_district_building_downtown"
+    },
+    {
+      "district": "map_district_park",
+      "district_name": "map_district_park",
+      "building": "map_district_building_brownstones",
+      "building_name": "map_district_building_brownstones"
+    },
+    {
+      "district": "map_district_park",
+      "district_name": "map_district_park",
+      "building": "map_district_building_campus",
+      "building_name": "map_district_building_campus"
+    }
+  ],
   "trooper_kill_gold_share_frac": [
     1.0,
     0.54,
@@ -1030,6 +1445,7 @@ expression: data
     "tier1_max_resist_time": 2.2,
     "tier2_max_resist_time": 2.2,
     "ultimate_unlock_round": 1,
+    "corrupt_item_round": 5,
     "item_draft_rounds_per_game_round": [
       {
         "chance_rare": {

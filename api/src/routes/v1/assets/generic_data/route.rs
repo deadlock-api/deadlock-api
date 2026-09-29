@@ -19,9 +19,11 @@ use crate::services::assets::versions::generic_data::{GenericData, fetch_generic
     tags = ["Generic Data"],
     summary = "Get Generic Data",
     description = "Returns the game-wide generic configuration (street brawl, lane info, glitch \
-                   settings, damage flash, item draft, etc.) parsed from the patch's \
-                   `generic_data.vdata` KV3 source file. Lane names are localized into \
-                   the requested `language`."
+                   settings, damage flash, item draft, corrupted item penalties, breakable \
+                   loot tables, map districts, etc.) parsed from the patch's \
+                   `generic_data.vdata` KV3 source file. Lane names, corrupted penalty \
+                   labels and map district names are localized into the requested \
+                   `language`."
 )]
 pub(super) async fn get_generic_data(
     State(state): State<AppState>,

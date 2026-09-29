@@ -260,6 +260,67 @@ struct RawDraftBuckets {
     name: Option<String>,
 }
 
+/// KV3 stores the per-tier corrupted penalty values as strings (`"-13"`),
+/// distances with a meter suffix (`"-2.75m"`).
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum RawNumberOrString {
+    Number(f64),
+    String(String),
+}
+
+impl RawNumberOrString {
+    fn to_f64(&self) -> Option<f64> {
+        match self {
+            Self::Number(n) => Some(*n),
+            Self::String(s) => s.trim().trim_end_matches('m').parse().ok(),
+        }
+    }
+}
+
+/// One effect of a corrupted-item penalty (build 6711+).
+#[derive(Debug, Deserialize)]
+struct RawCorruptedPenaltyEffect {
+    #[serde(rename = "m_eModifierValue")]
+    modifier_value: String,
+    #[serde(rename = "m_strBonusPerTier")]
+    bonus_per_tier: Vec<RawNumberOrString>,
+    #[serde(default, rename = "m_eDisplayType")]
+    display_type: Option<String>,
+    #[serde(default, rename = "m_strLocTokenOverride")]
+    loc_token_override: Option<String>,
+    #[serde(default, rename = "m_strCSSClass")]
+    css_class: Option<String>,
+    #[serde(default, rename = "m_bDisplay")]
+    display: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawCorruptedPenaltyDef {
+    #[serde(rename = "m_strName")]
+    name: String,
+    #[serde(default, rename = "m_flRollWeight")]
+    roll_weight: Option<f64>,
+    #[serde(default, rename = "m_vecEffects")]
+    effects: Vec<RawCorruptedPenaltyEffect>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawBreakablePowerupLootParams {
+    #[serde(default, rename = "m_iLootListDeckSize")]
+    loot_list_deck_size: Option<i64>,
+    #[serde(default, rename = "m_mapPickupsByMatchTimeMins")]
+    pickups_by_match_time_mins: IndexMap<String, IndexMap<String, f64>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawMapDistrictLocalization {
+    #[serde(rename = "m_strDistrict")]
+    district: String,
+    #[serde(default, rename = "m_strBuilding")]
+    building: Option<String>,
+}
+
 #[derive(Debug, Deserialize)]
 struct RawStreetBrawl {
     #[serde(rename = "m_vecRespawnTimes")]
@@ -314,6 +375,8 @@ struct RawStreetBrawl {
     tier2_max_resist_time: f64,
     #[serde(rename = "m_iUltimateUnlockRound")]
     ultimate_unlock_round: i64,
+    #[serde(default, rename = "m_iCorruptItemRound")]
+    corrupt_item_round: Option<i64>,
     #[serde(rename = "m_vecItemDraftRoundsPerGameRound")]
     item_draft_rounds_per_game_round: Vec<RawItemDraftRoundPerGameRound>,
     #[serde(rename = "m_mapItemTierToItemDraftBuckets")]
@@ -350,6 +413,18 @@ struct RawGenericData {
     color_team2: Option<Color>,
     #[serde(rename = "m_nItemPricePerTier")]
     item_price_per_tier: Vec<i64>,
+    #[serde(default, rename = "m_nItemCorruptionPricePerTier")]
+    item_corruption_price_per_tier: Option<Vec<i64>>,
+    /// Parsed entry by entry in [`corrupted_penalties_out`] so one malformed
+    /// penalty can't take the whole endpoint down.
+    #[serde(default, rename = "m_vecCorruptedPenaltyDefs")]
+    corrupted_penalty_defs: Option<Vec<serde_json::Value>>,
+    #[serde(default, rename = "m_flNeutralCampRespawnTimerShowDistance")]
+    neutral_camp_respawn_timer_show_distance: Option<f64>,
+    #[serde(default, rename = "m_BreakablePowerupLootParams")]
+    breakable_powerup_loot_params: Option<RawBreakablePowerupLootParams>,
+    #[serde(default, rename = "m_MapDistrictLocalization")]
+    map_district_localization: Option<Vec<RawMapDistrictLocalization>>,
     #[serde(rename = "m_flTrooperKillGoldShareFrac")]
     trooper_kill_gold_share_frac: Vec<f64>,
     #[serde(rename = "m_flHeroKillGoldShareFrac")]
@@ -595,6 +670,66 @@ pub(crate) struct DraftBuckets {
 }
 
 #[derive(Debug, Serialize, Clone, ToSchema)]
+pub(crate) struct CorruptedPenaltyEffect {
+    /// Modifier the penalty applies, e.g. `MODIFIER_VALUE_COOLDOWN_REDUCTION_PERCENTAGE`.
+    pub modifier_value: String,
+    /// Penalty value indexed by item tier (same indexing as
+    /// `item_price_per_tier`; tiers that can't be corrupted are `0`), in
+    /// display units: distances are meters (source suffix `m` stripped),
+    /// matching `postfix`.
+    pub bonus_per_tier: Vec<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub loc_token_override: Option<String>,
+    /// Localized stat label (from `loc_token_override`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    /// Localized unit suffix, e.g. `%` or ` m`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub postfix: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub css_class: Option<String>,
+    /// `false` for effects the game applies but doesn't list in tooltips.
+    pub display: bool,
+}
+
+/// A penalty that can be rolled onto a corrupted item (build 6711+).
+#[derive(Debug, Serialize, Clone, ToSchema)]
+pub(crate) struct CorruptedPenalty {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub roll_weight: Option<f64>,
+    pub effects: Vec<CorruptedPenaltyEffect>,
+}
+
+#[derive(Debug, Serialize, Clone, ToSchema)]
+pub(crate) struct BreakablePowerupLootParams {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub loot_list_deck_size: Option<i64>,
+    /// Match time in minutes (string key) from which a loot table applies,
+    /// mapped to `{pickup_name: relative weight}`.
+    #[schema(value_type = std::collections::HashMap<String, std::collections::HashMap<String, f64>>)]
+    pub pickups_by_match_time_mins: IndexMap<String, IndexMap<String, f64>>,
+}
+
+/// A district / building label pair shown on the map (build 6711+).
+#[derive(Debug, Serialize, Clone, ToSchema)]
+pub(crate) struct MapDistrict {
+    /// Localization token, e.g. `map_district_theater`.
+    pub district: String,
+    /// Localized district name, e.g. `Theater`.
+    pub district_name: String,
+    /// Localization token, e.g. `map_district_building_docks`. Absent for
+    /// districts without buildings.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub building: Option<String>,
+    /// Localized building name, e.g. `Docks`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub building_name: Option<String>,
+}
+
+#[derive(Debug, Serialize, Clone, ToSchema)]
 pub(crate) struct StreetBrawl {
     pub respawn_times: Vec<i64>,
     pub gold_per_round: Vec<i64>,
@@ -622,6 +757,9 @@ pub(crate) struct StreetBrawl {
     pub tier1_max_resist_time: f64,
     pub tier2_max_resist_time: f64,
     pub ultimate_unlock_round: i64,
+    /// Round in which players may corrupt an item (build 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub corrupt_item_round: Option<i64>,
     pub item_draft_rounds_per_game_round: Vec<ItemDraftRoundPerGameRound>,
     #[schema(value_type = std::collections::HashMap<String, DraftBuckets>)]
     pub item_drafts: IndexMap<ItemTier, Option<DraftBuckets>>,
@@ -656,6 +794,21 @@ pub(crate) struct GenericData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color_team2: Option<Color>,
     pub item_price_per_tier: Vec<i64>,
+    /// Extra cost of corrupting an item, by item tier (build 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub item_corruption_price_per_tier: Option<Vec<i64>>,
+    /// Penalties that can be rolled onto corrupted items (build 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub corrupted_penalties: Option<Vec<CorruptedPenalty>>,
+    /// Distance within which a neutral camp's respawn timer is shown (build 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub neutral_camp_respawn_timer_show_distance: Option<f64>,
+    /// Loot tables for breakable powerup props (build 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub breakable_powerup_loot_params: Option<BreakablePowerupLootParams>,
+    /// District / building labels shown on the map (build 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub map_districts: Option<Vec<MapDistrict>>,
     pub trooper_kill_gold_share_frac: Vec<f64>,
     pub hero_kill_gold_share_frac: Vec<f64>,
     pub aim_spring_strength: Vec<f64>,
@@ -722,6 +875,20 @@ fn transform(r: RawGenericData, loc: &HashMap<String, String>) -> GenericData {
         color_team1: r.color_team1,
         color_team2: r.color_team2,
         item_price_per_tier: r.item_price_per_tier,
+        item_corruption_price_per_tier: r.item_corruption_price_per_tier,
+        corrupted_penalties: r
+            .corrupted_penalty_defs
+            .map(|defs| corrupted_penalties_out(defs, loc)),
+        neutral_camp_respawn_timer_show_distance: r.neutral_camp_respawn_timer_show_distance,
+        breakable_powerup_loot_params: r.breakable_powerup_loot_params.map(|p| {
+            BreakablePowerupLootParams {
+                loot_list_deck_size: p.loot_list_deck_size,
+                pickups_by_match_time_mins: p.pickups_by_match_time_mins,
+            }
+        }),
+        map_districts: r
+            .map_district_localization
+            .map(|v| v.into_iter().map(|d| map_district_out(d, loc)).collect()),
         trooper_kill_gold_share_frac: r.trooper_kill_gold_share_frac,
         hero_kill_gold_share_frac: r.hero_kill_gold_share_frac,
         aim_spring_strength: r.aim_spring_strength,
@@ -809,6 +976,91 @@ fn lane_info_out(r: RawLaneInfo, loc: &HashMap<String, String>) -> LaneInfo {
         objective_color: r.objective_color,
         minimap_color: r.minimap_color,
         is_enemy_lane: r.is_enemy_lane,
+    }
+}
+
+fn corrupted_penalties_out(
+    defs: Vec<serde_json::Value>,
+    loc: &HashMap<String, String>,
+) -> Vec<CorruptedPenalty> {
+    defs.into_iter()
+        .filter_map(|v| {
+            let parsed = serde_json::from_value::<RawCorruptedPenaltyDef>(v)
+                .map_err(|e| e.to_string())
+                .and_then(|d| corrupted_penalty_out(d, loc));
+            parsed
+                .inspect_err(|e| tracing::warn!("Skipping corrupted penalty def: {e}"))
+                .ok()
+        })
+        .collect()
+}
+
+fn corrupted_penalty_out(
+    d: RawCorruptedPenaltyDef,
+    loc: &HashMap<String, String>,
+) -> Result<CorruptedPenalty, String> {
+    let effects = d
+        .effects
+        .into_iter()
+        .map(|e| corrupted_penalty_effect_out(e, loc))
+        .collect::<Result<_, _>>()
+        .map_err(|e| format!("{}: {e}", d.name))?;
+    Ok(CorruptedPenalty {
+        name: d.name,
+        roll_weight: d.roll_weight,
+        effects,
+    })
+}
+
+fn corrupted_penalty_effect_out(
+    e: RawCorruptedPenaltyEffect,
+    loc: &HashMap<String, String>,
+) -> Result<CorruptedPenaltyEffect, String> {
+    let bonus_per_tier = e
+        .bonus_per_tier
+        .iter()
+        .map(|b| {
+            b.to_f64()
+                .ok_or_else(|| format!("non-numeric bonus {b:?} for {}", e.modifier_value))
+        })
+        .collect::<Result<_, _>>()?;
+    let token = e.loc_token_override.as_deref().filter(|t| !t.is_empty());
+    let label = token.and_then(|t| {
+        loc.get(&format!("{t}_label"))
+            .or_else(|| loc.get(&format!("{t}_Label")))
+            .or_else(|| loc.get(&format!("StatDesc_{t}")))
+            .cloned()
+    });
+    let postfix = token.and_then(|t| {
+        loc.get(&format!("{t}_postfix"))
+            .or_else(|| loc.get(&format!("StatDesc_{t}_postfix")))
+            .cloned()
+    });
+    Ok(CorruptedPenaltyEffect {
+        modifier_value: e.modifier_value,
+        bonus_per_tier,
+        display_type: e.display_type,
+        loc_token_override: e.loc_token_override,
+        label,
+        postfix,
+        css_class: e.css_class.filter(|c| !c.is_empty()),
+        display: e.display.unwrap_or(true),
+    })
+}
+
+fn map_district_out(r: RawMapDistrictLocalization, loc: &HashMap<String, String>) -> MapDistrict {
+    // District strings are formatted as the prefix of a
+    // `"<district> : <building>"` label (`"York : "`); strip the separator.
+    let district_name = localization::localize(loc, &r.district)
+        .trim_end_matches([' ', ':'])
+        .to_owned();
+    let building = r.building.filter(|b| !b.is_empty());
+    let building_name = building.as_deref().map(|b| localization::localize(loc, b));
+    MapDistrict {
+        district: r.district,
+        district_name,
+        building,
+        building_name,
     }
 }
 
@@ -913,6 +1165,7 @@ fn street_brawl_out(r: RawStreetBrawl) -> StreetBrawl {
         tier1_max_resist_time: r.tier1_max_resist_time,
         tier2_max_resist_time: r.tier2_max_resist_time,
         ultimate_unlock_round: r.ultimate_unlock_round,
+        corrupt_item_round: r.corrupt_item_round,
         item_draft_rounds_per_game_round: r
             .item_draft_rounds_per_game_round
             .into_iter()
@@ -985,16 +1238,32 @@ mod tests {
         );
     }
 
-    /// Build 6711 ("City Never Sleeps") reshaped damage flashes, lane info,
-    /// minimap colors and item draft weights.
-    #[test]
-    fn snapshot_generic_data_6711() {
+    fn data_6711() -> GenericData {
         let loc = HashMap::from([
             ("Citadel_LaneNameYellow".to_owned(), "York".to_owned()),
             ("Citadel_LaneNameBlue".to_owned(), "Broadway".to_owned()),
             ("Citadel_LaneNameGreen".to_owned(), "Greenwich".to_owned()),
+            ("map_district_york".to_owned(), "York : ".to_owned()),
+            ("map_district_theater".to_owned(), "Theater".to_owned()),
+            ("map_district_building_docks".to_owned(), "Docks".to_owned()),
+            (
+                "CooldownReduction_label".to_owned(),
+                "Ability Cooldown Reduction".to_owned(),
+            ),
+            ("CooldownReduction_postfix".to_owned(), "%".to_owned()),
+            (
+                "StatDesc_TechArmorDamageReduction".to_owned(),
+                "Spirit Resist".to_owned(),
+            ),
         ]);
-        let data = build_generic_data(&fixture("generic_data_6711.vdata"), &loc).expect("builds");
+        build_generic_data(&fixture("generic_data_6711.vdata"), &loc).expect("builds")
+    }
+
+    /// Build 6711 ("City Never Sleeps") reshaped damage flashes, lane info,
+    /// minimap colors and item draft weights.
+    #[test]
+    fn snapshot_generic_data_6711() {
+        let data = data_6711();
 
         let names: Vec<&str> = data
             .lane_info
@@ -1032,5 +1301,86 @@ mod tests {
             { snapshot_path => "generic_data_snapshots", prepend_module_to_snapshot => false },
             { insta::assert_json_snapshot!("generic_data_6711", data); }
         );
+    }
+
+    /// Build 6711 added the corrupted item shop (Broker).
+    #[test]
+    fn parses_6711_corrupted_items() {
+        let data = data_6711();
+        let sb = data.street_brawl.as_ref().expect("street brawl");
+        assert_eq!(sb.corrupt_item_round, Some(5));
+        assert_eq!(
+            data.item_corruption_price_per_tier.as_deref(),
+            Some(&[0, 0, 0, 0, 0, 0][..])
+        );
+        let penalties = data.corrupted_penalties.as_ref().expect("penalties");
+        assert_eq!(penalties.len(), 11);
+        let cd = &penalties[0];
+        assert_eq!(cd.name, "TechCooldown");
+        assert_eq!(cd.roll_weight, Some(1.0));
+        let cd_effect = &cd.effects[0];
+        assert_eq!(cd_effect.bonus_per_tier, [0.0, 0.0, 0.0, -13.0, -17.0, 0.0]);
+        assert_eq!(
+            cd_effect.label.as_deref(),
+            Some("Ability Cooldown Reduction")
+        );
+        assert_eq!(cd_effect.postfix.as_deref(), Some("%"));
+        assert_eq!(cd_effect.css_class.as_deref(), Some("cooldown"));
+        assert!(cd_effect.display);
+        let range = penalties
+            .iter()
+            .find(|p| p.name == "TechRange")
+            .expect("range");
+        assert!(!range.effects[1].display);
+        let move_speed = penalties
+            .iter()
+            .find(|p| p.name == "MoveSpeed")
+            .expect("ms");
+        assert_eq!(
+            move_speed.effects[0].bonus_per_tier,
+            [0.0, 0.0, 0.0, -2.0, -2.75, 0.0]
+        );
+        let resist = penalties
+            .iter()
+            .find(|p| p.name == "TechResist")
+            .expect("resist");
+        assert_eq!(resist.effects[0].label.as_deref(), Some("Spirit Resist"));
+    }
+
+    /// Build 6711 moved the breakable loot tables here from misc entities
+    /// and added map district labels.
+    #[test]
+    fn parses_6711_loot_params_and_districts() {
+        let data = data_6711();
+        let loot = data
+            .breakable_powerup_loot_params
+            .as_ref()
+            .expect("loot params");
+        assert_eq!(loot.loot_list_deck_size, Some(3));
+        let mins: Vec<&str> = loot
+            .pickups_by_match_time_mins
+            .keys()
+            .map(String::as_str)
+            .collect();
+        assert_eq!(mins, ["0", "10", "30"]);
+        assert_eq!(
+            loot.pickups_by_match_time_mins["10"].get("range_permanent_pickup_lv2"),
+            Some(&0.5)
+        );
+
+        assert_eq!(data.neutral_camp_respawn_timer_show_distance, Some(15.0));
+        let districts = data.map_districts.as_ref().expect("districts");
+        let docks = districts
+            .iter()
+            .find(|d| d.building.as_deref() == Some("map_district_building_docks"))
+            .expect("docks");
+        assert_eq!(docks.district_name, "York");
+        assert_eq!(docks.building_name.as_deref(), Some("Docks"));
+        let theater = districts
+            .iter()
+            .find(|d| d.district == "map_district_theater")
+            .expect("theater");
+        assert_eq!(theater.district_name, "Theater");
+        assert!(theater.building.is_none());
     }
 }

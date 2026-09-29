@@ -47,6 +47,8 @@ struct RawModifierDefinition {
     modifier_values: Option<Vec<RawModifierValue>>,
     #[serde(default, rename = "m_vecScriptValues")]
     script_values: Option<Vec<RawModifierValue>>,
+    #[serde(default, rename = "m_nEnabledStateMask")]
+    enabled_state_mask: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -196,6 +198,34 @@ struct RawMiscEntity {
     buff_type_graph_color: Option<Color>,
     #[serde(default, rename = "m_eBuffTypeValueUnit")]
     buff_type_value_unit: Option<String>,
+    #[serde(default, rename = "m_bIsPermanentPickup")]
+    is_permanent_pickup: Option<bool>,
+    #[serde(default, rename = "m_sNameLocString")]
+    name_loc_string: Option<String>,
+    #[serde(default, rename = "m_eCollectionMethod")]
+    collection_method: Option<String>,
+    #[serde(default, rename = "m_iHitsRequired")]
+    hits_required: Option<i64>,
+    #[serde(default, rename = "m_strMinimapClass")]
+    minimap_class: Option<String>,
+    #[serde(default, rename = "m_sPickup")]
+    pickup: Option<String>,
+    #[serde(default, rename = "m_flSpawnDelay")]
+    spawn_delay: Option<f64>,
+    #[serde(default, rename = "m_sSinglePickupOverride")]
+    single_pickup_override: Option<String>,
+    #[serde(default, rename = "m_flRegenMaxHealthPercent")]
+    regen_max_health_percent: Option<RawCurveOrFloat>,
+    #[serde(default, rename = "m_flRegenDuration")]
+    regen_duration: Option<f64>,
+    #[serde(default, rename = "m_flRegenDurationTroopers")]
+    regen_duration_troopers: Option<f64>,
+    #[serde(default, rename = "m_flRegenTrooperMulti")]
+    regen_trooper_multi: Option<f64>,
+    #[serde(default, rename = "m_InShopModifier")]
+    in_shop_modifier: Option<WrapSubclass<RawModifierDefinition>>,
+    #[serde(default, rename = "m_nSpawnMusicState")]
+    spawn_music_state: Option<String>,
 }
 
 // ----- Public shape -----
@@ -230,6 +260,10 @@ pub(crate) struct ModifierDefinition {
     pub modifier_values: Option<Vec<ModifierValue>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub script_values: Option<Vec<ModifierValue>>,
+    /// Modifier states the modifier enables, e.g.
+    /// `MODIFIER_STATE_IN_CORRUPTED_ITEM_SHOP`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enabled_state_mask: Option<String>,
 }
 
 #[derive(Debug, Serialize, Clone, ToSchema)]
@@ -348,8 +382,51 @@ pub(crate) struct MiscEntity {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub buff_type_graph_color: Option<Color>,
     /// Permanent pickups: unit of the buff value (e.g. `Percent`, `Meters`).
+    /// The modifier value itself is in game units (`Meters` values are
+    /// inches, 39.37 per meter).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub buff_type_value_unit: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_permanent_pickup: Option<bool>,
+    /// Localization token of the pickup's world label.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name_loc_string: Option<String>,
+    /// How the pickup is collected, e.g. `Punch` or `VacuumTrigger`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub collection_method: Option<String>,
+    /// Punchable pickups: hits needed to collect.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hits_required: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub minimap_class: Option<String>,
+    /// Pickup spawners: class name of the spawned pickup.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pickup: Option<String>,
+    /// Pickup spawners: delay (seconds) before the first spawn.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spawn_delay: Option<f64>,
+    /// Powerup spawners: class name of the only pickup spawned, overriding
+    /// `pickup_chances`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub single_pickup_override: Option<String>,
+    /// Health pickups: healing as percent of max health.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub regen_max_health_percent: Option<CurveOrFloat>,
+    /// Health pickups: seconds over which the healing is applied to heroes.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub regen_duration: Option<f64>,
+    /// Health pickups: seconds over which the healing is applied to troopers.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub regen_duration_troopers: Option<f64>,
+    /// Health pickups: healing multiplier for troopers.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub regen_trooper_multi: Option<f64>,
+    /// Corrupted item shop (Broker) trigger: modifier applied while inside.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub in_shop_modifier: Option<Subclass<ModifierDefinition>>,
+    /// Corrupted item shop (Broker) trigger: music cue played on spawn.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spawn_music_state: Option<String>,
 }
 
 // ----- Build -----
@@ -411,6 +488,22 @@ fn transform(class_name: String, r: RawMiscEntity) -> MiscEntity {
         buff_type_loc_string: r.buff_type_loc_string,
         buff_type_graph_color: r.buff_type_graph_color,
         buff_type_value_unit: r.buff_type_value_unit,
+        is_permanent_pickup: r.is_permanent_pickup,
+        name_loc_string: r.name_loc_string.filter(|s| !s.is_empty()),
+        collection_method: r.collection_method,
+        hits_required: r.hits_required,
+        minimap_class: r.minimap_class.filter(|s| !s.is_empty()),
+        pickup: r.pickup.filter(|s| !s.is_empty()),
+        spawn_delay: r.spawn_delay,
+        single_pickup_override: r.single_pickup_override.filter(|s| !s.is_empty()),
+        regen_max_health_percent: r.regen_max_health_percent.map(curve_or_float_out),
+        regen_duration: r.regen_duration,
+        regen_duration_troopers: r.regen_duration_troopers,
+        regen_trooper_multi: r.regen_trooper_multi,
+        in_shop_modifier: r.in_shop_modifier.map(|w| Subclass {
+            subclass: modifier_out(w.subclass),
+        }),
+        spawn_music_state: r.spawn_music_state,
         class_name,
         id,
     }
@@ -435,6 +528,7 @@ fn modifier_out(r: RawModifierDefinition) -> ModifierDefinition {
         always_show_in_ui: r.always_show_in_ui,
         modifier_values: r.modifier_values.map(modifier_values_out),
         script_values: r.script_values.map(modifier_values_out),
+        enabled_state_mask: r.enabled_state_mask,
     }
 }
 
@@ -487,6 +581,108 @@ mod tests {
         insta::with_settings!(
             { snapshot_path => "misc_entities_snapshots", prepend_module_to_snapshot => false },
             { insta::assert_json_snapshot!("misc_entities", entities); }
+        );
+    }
+
+    /// Build 6712 ("City Never Sleeps"): new permanent buffs, healing snacks,
+    /// soul pickups, the Broker trigger and the Chinatown bell.
+    #[test]
+    fn snapshot_misc_entities_6712() {
+        let manifest = env!("CARGO_MANIFEST_DIR");
+        let vdata =
+            std::fs::read_to_string(format!("{manifest}/src/utils/kv3_fixtures/misc_6712.vdata"))
+                .expect("vdata fixture");
+        let entities = build_misc_entities(&vdata).expect("builds");
+        let get = |name: &str| {
+            entities
+                .iter()
+                .find(|e| e.class_name == name)
+                .unwrap_or_else(|| panic!("missing {name}"))
+        };
+        let script_values = |e: &MiscEntity| -> Vec<(String, f64)> {
+            e.modifier
+                .as_ref()
+                .and_then(|m| m.subclass.script_values.as_ref())
+                .expect("script values")
+                .iter()
+                .map(|v| (v.value_type.clone().unwrap(), v.value.unwrap()))
+                .collect()
+        };
+
+        for (prefix, unit) in [
+            ("bulletresist", "Percent"),
+            ("spiritresist", "Percent"),
+            ("range", "Percent"),
+            ("movespeed", "Meters"),
+        ] {
+            for suffix in ["", "_lv2", "_lv3"] {
+                let e = get(&format!("{prefix}_permanent_pickup{suffix}"));
+                assert_eq!(e.is_permanent_pickup, Some(true));
+                assert_eq!(e.buff_type_value_unit.as_deref(), Some(unit));
+                assert!(e.buff_type_loc_string.is_some());
+                assert!(e.buff_type_graph_color.is_some());
+                assert!(!script_values(e).is_empty());
+            }
+        }
+        assert_eq!(
+            script_values(get("movespeed_permanent_pickup_lv3")),
+            [("MODIFIER_VALUE_MOVEMENT_SPEED_MAX".to_owned(), 11.811)]
+        );
+        assert_eq!(
+            script_values(get("bulletresist_permanent_pickup")),
+            [("MODIFIER_VALUE_BULLET_ARMOR_DAMAGE_RESIST".to_owned(), 0.5)]
+        );
+
+        let snack_spawner = get("citadel_pickup_floating_health");
+        assert_eq!(
+            snack_spawner.pickup.as_deref(),
+            Some("citadel_pickup_health_float_in_world")
+        );
+        assert_eq!(snack_spawner.spawn_delay, Some(180.0));
+        assert_eq!(snack_spawner.respawn_time, Some(180.0));
+        let snack = get("citadel_pickup_health_float_in_world");
+        assert!(matches!(
+            snack.regen_max_health_percent,
+            Some(CurveOrFloat::Curve(Curve {
+                base: Some(10.0),
+                ..
+            }))
+        ));
+        assert_eq!(snack.regen_duration, Some(4.0));
+        assert_eq!(snack.regen_duration_troopers, Some(8.0));
+        assert_eq!(snack.collection_method.as_deref(), Some("VacuumTrigger"));
+
+        let souls = get("souls_powerup_pickup");
+        assert_eq!(souls.collection_method.as_deref(), Some("Punch"));
+        assert_eq!(souls.hits_required, Some(1));
+        assert_eq!(souls.minimap_class.as_deref(), Some("powerup_souls"));
+        assert_eq!(
+            get("citadel_item_powerup_spawner_bounty_runes")
+                .single_pickup_override
+                .as_deref(),
+            Some("souls_powerup_pickup")
+        );
+
+        let broker = get("citadel_trigger_corrupted_item_shop");
+        assert_eq!(
+            broker
+                .in_shop_modifier
+                .as_ref()
+                .and_then(|m| m.subclass.enabled_state_mask.as_deref()),
+            Some("MODIFIER_STATE_IN_CORRUPTED_ITEM_SHOP")
+        );
+        assert_eq!(
+            broker.spawn_music_state.as_deref(),
+            Some("k_EMusicQueue_CorruptedItemShopAnnounce")
+        );
+
+        let bell = get("citadel_breakable_bell_chinatown");
+        assert_eq!(bell.health, Some(1));
+        assert_eq!(bell.respawn_time, Some(5.0));
+
+        insta::with_settings!(
+            { snapshot_path => "misc_entities_snapshots", prepend_module_to_snapshot => false },
+            { insta::assert_json_snapshot!("misc_entities_6712", entities); }
         );
     }
 
