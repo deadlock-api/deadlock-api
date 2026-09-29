@@ -450,7 +450,7 @@ pub(crate) struct ClickhouseSalts {
     pub(crate) metadata_salt: Option<u32>,
     pub(crate) replay_salt: Option<u32>,
     pub(crate) cluster_id: Option<u32>,
-    username: Option<String>,
+    pub(crate) username: Option<String>,
 }
 
 impl From<ClickhouseSalts> for CMsgClientToGcGetMatchMetaDataResponse {

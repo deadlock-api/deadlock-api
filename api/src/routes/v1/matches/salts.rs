@@ -277,7 +277,7 @@ pub(super) async fn fetch_match_salts(
             }),
         })
         .await?;
-    let username = result.username.clone();
+    let username = format!("api-fetch:{}", result.username);
     let salts: SteamProxyResponse<CMsgClientToGcGetMatchMetaDataResponse> = result.try_into()?;
     let salts = salts.msg;
     if salts.result.is_none_or(|r| {
