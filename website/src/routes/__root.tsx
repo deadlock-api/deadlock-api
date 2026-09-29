@@ -118,6 +118,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         { rel: "icon", type: "image/webp", href: "https://deadlock-api.com/favicon.webp" },
         { rel: "icon", type: "image/png", href: "https://deadlock-api.com/favicon.png" },
         { rel: "manifest", href: "/manifest.webmanifest" },
+        { rel: "api-catalog", href: "/.well-known/api-catalog" },
         {
           rel: "preload",
           href: interWoff2,

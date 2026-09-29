@@ -30,6 +30,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as Sitemap_indexDotxmlRouteImport } from './routes/sitemap_index[.]xml'
 import { Route as TeamBuilderRouteImport } from './routes/team-builder'
 import { Route as TrackerRouteImport } from './routes/tracker'
+import { Route as DotwellKnownApiCatalogRouteImport } from './routes/[.]well-known.api-catalog'
 import { Route as AnalyticsIndexRouteImport } from './routes/analytics.index'
 import { Route as AnalyticsAbilitiesRouteImport } from './routes/analytics.abilities'
 import { Route as AnalyticsGamesRouteImport } from './routes/analytics.games'
@@ -209,6 +210,11 @@ const TeamBuilderRoute = TeamBuilderRouteImport.update({
 const TrackerRoute = TrackerRouteImport.update({
   id: '/tracker',
   path: '/tracker',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DotwellKnownApiCatalogRoute = DotwellKnownApiCatalogRouteImport.update({
+  id: '/.well-known/api-catalog',
+  path: '/.well-known/api-catalog',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AnalyticsIndexRoute = AnalyticsIndexRouteImport.update({
@@ -625,6 +631,7 @@ export interface FileRoutesByFullPath {
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
   '/team-builder': typeof TeamBuilderRoute
   '/tracker': typeof TrackerRoute
+  '/.well-known/api-catalog': typeof DotwellKnownApiCatalogRoute
   '/analytics/abilities': typeof AnalyticsAbilitiesRoute
   '/analytics/games': typeof AnalyticsGamesRouteWithChildren
   '/analytics/heroes': typeof AnalyticsHeroesRouteWithChildren
@@ -719,6 +726,7 @@ export interface FileRoutesByTo {
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
   '/team-builder': typeof TeamBuilderRoute
   '/tracker': typeof TrackerRoute
+  '/.well-known/api-catalog': typeof DotwellKnownApiCatalogRoute
   '/analytics/abilities': typeof AnalyticsAbilitiesRoute
   '/analytics/team-builder': typeof AnalyticsTeamBuilderRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -812,6 +820,7 @@ export interface FileRoutesById {
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
   '/team-builder': typeof TeamBuilderRoute
   '/tracker': typeof TrackerRoute
+  '/.well-known/api-catalog': typeof DotwellKnownApiCatalogRoute
   '/analytics/abilities': typeof AnalyticsAbilitiesRoute
   '/analytics/games': typeof AnalyticsGamesRouteWithChildren
   '/analytics/heroes': typeof AnalyticsHeroesRouteWithChildren
@@ -912,6 +921,7 @@ export interface FileRouteTypes {
     | '/sitemap_index.xml'
     | '/team-builder'
     | '/tracker'
+    | '/.well-known/api-catalog'
     | '/analytics/abilities'
     | '/analytics/games'
     | '/analytics/heroes'
@@ -1006,6 +1016,7 @@ export interface FileRouteTypes {
     | '/sitemap_index.xml'
     | '/team-builder'
     | '/tracker'
+    | '/.well-known/api-catalog'
     | '/analytics/abilities'
     | '/analytics/team-builder'
     | '/blog/$slug'
@@ -1098,6 +1109,7 @@ export interface FileRouteTypes {
     | '/sitemap_index.xml'
     | '/team-builder'
     | '/tracker'
+    | '/.well-known/api-catalog'
     | '/analytics/abilities'
     | '/analytics/games'
     | '/analytics/heroes'
@@ -1197,6 +1209,7 @@ export interface RootRouteChildren {
   Sitemap_indexDotxmlRoute: typeof Sitemap_indexDotxmlRoute
   TeamBuilderRoute: typeof TeamBuilderRoute
   TrackerRoute: typeof TrackerRoute
+  DotwellKnownApiCatalogRoute: typeof DotwellKnownApiCatalogRoute
   AnalyticsAbilitiesRoute: typeof AnalyticsAbilitiesRoute
   AnalyticsGamesRoute: typeof AnalyticsGamesRouteWithChildren
   AnalyticsHeroesRoute: typeof AnalyticsHeroesRouteWithChildren
@@ -1370,6 +1383,13 @@ declare module '@tanstack/react-router' {
       path: '/tracker'
       fullPath: '/tracker'
       preLoaderRoute: typeof TrackerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/api-catalog': {
+      id: '/.well-known/api-catalog'
+      path: '/.well-known/api-catalog'
+      fullPath: '/.well-known/api-catalog'
+      preLoaderRoute: typeof DotwellKnownApiCatalogRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/analytics/': {
@@ -2120,6 +2140,7 @@ const rootRouteChildren: RootRouteChildren = {
   Sitemap_indexDotxmlRoute: Sitemap_indexDotxmlRoute,
   TeamBuilderRoute: TeamBuilderRoute,
   TrackerRoute: TrackerRoute,
+  DotwellKnownApiCatalogRoute: DotwellKnownApiCatalogRoute,
   AnalyticsAbilitiesRoute: AnalyticsAbilitiesRoute,
   AnalyticsGamesRoute: AnalyticsGamesRouteWithChildren,
   AnalyticsHeroesRoute: AnalyticsHeroesRouteWithChildren,
