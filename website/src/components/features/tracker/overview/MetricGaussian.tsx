@@ -31,7 +31,7 @@ export function MetricGaussian({
     return (
       <EmptyState
         variant="inline"
-        className="flex h-20 items-center justify-center py-0 text-3xs"
+        className="flex h-20 items-center justify-center py-0 text-xs"
         title="Distribution unavailable"
       />
     );
@@ -82,7 +82,7 @@ export function MetricGaussian({
         </AreaChart>
       </ChartSurface>
       {!curve.hasSpread && (
-        <span className="absolute inset-x-0 top-2 text-center text-4xs text-muted-foreground">
+        <span className="absolute inset-x-0 top-2 text-center text-xs text-muted-foreground">
           No spread recorded · means only
         </span>
       )}

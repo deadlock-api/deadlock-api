@@ -65,7 +65,6 @@ export function HeroStatsTable({
       footer={
         <output>
           {visible.length} of {sorted.length} {sorted.length === 1 ? "hero" : "heroes"}
-          {minimumMatches > 0 ? ` · ${minimumMatches}+ games` : " · selected matches"}
         </output>
       }
       actions={
@@ -107,7 +106,7 @@ export function HeroStatsTable({
             <TableHeader>
               <TableRow>
                 <TableHead className="ps-0">
-                  <span className="text-3xs text-muted-foreground">Hero</span>
+                  <span className="text-xs text-muted-foreground">Hero</span>
                 </TableHead>
                 {columns.map(({ key, label, name, className }) => (
                   <SortableHeader
@@ -118,7 +117,7 @@ export function HeroStatsTable({
                     sortDir={sortDir}
                     align="end"
                     size="sm"
-                    className={cn("text-3xs text-muted-foreground", className)}
+                    className={cn("text-xs text-muted-foreground", className)}
                     sortLabel={`Sort by ${name}, ${sort === key && direction === "descending" ? "ascending" : "descending"}`}
                     onSortChange={(next) => {
                       setDirection(sort === next && direction === "descending" ? "ascending" : "descending");

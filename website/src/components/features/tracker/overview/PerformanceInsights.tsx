@@ -69,7 +69,7 @@ export function PerformanceInsights({
                       </div>
                       <p className="text-xs font-medium">{insight.headline}</p>
                       <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-2xs text-muted-foreground tabular-nums">{insight.detail}</span>
+                        <span className="text-xs text-muted-foreground tabular-nums">{insight.detail}</span>
                         {heroId != null && (
                           <Button variant="ghost" size="xs" onClick={() => onSelectHero(heroId)}>
                             <span className="sr-only">Filter matches to </span>
@@ -86,11 +86,6 @@ export function PerformanceInsights({
                 );
               })}
             </ul>
-            <p className="pt-2 text-3xs leading-relaxed text-muted-foreground">
-              Compared with all selected matches. pp = percentage points. At least {MIN_HERO_MATCHES} hero matches or{" "}
-              {MIN_SPLIT_MATCHES} matches per group; gaps of {MIN_DELTA_POINTS}+ points. Historical patterns, not
-              predictions.
-            </p>
           </>
         )}
       </PanelBody>

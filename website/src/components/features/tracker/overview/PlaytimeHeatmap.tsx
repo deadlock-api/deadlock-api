@@ -76,7 +76,7 @@ export function PlaytimeHeatmap({ habits }: { habits: PlaytimeHabits }) {
           ))}
         </HeatGridBody>
       </HeatGrid>
-      <div className="flex flex-wrap justify-between gap-1 text-3xs text-muted-foreground">
+      <div className="flex flex-wrap justify-between gap-1 text-xs text-muted-foreground">
         <span>
           {inspected ? (
             describeCell(inspected)
@@ -88,7 +88,6 @@ export function PlaytimeHeatmap({ habits }: { habits: PlaytimeHabits }) {
             </>
           )}
         </span>
-        <span>Fainter → fewer games</span>
       </div>
     </div>
   );

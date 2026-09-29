@@ -65,7 +65,7 @@ function Laner({
         <span className={cn("min-w-0 flex-1 truncate", mirrored && "text-end", tracked && "font-semibold")}>
           {name}
         </span>
-        <span className="shrink-0 text-2xs text-muted-foreground tabular-nums">
+        <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
           {stat?.net_worth.toLocaleString("en-US") ?? "—"}
         </span>
       </span>

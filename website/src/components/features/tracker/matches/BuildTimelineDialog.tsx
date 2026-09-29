@@ -44,7 +44,8 @@ function BuildTimeline({ events, playerName }: { events: BuildEvent[]; playerNam
     const grid = gridRef.current;
     if (!grid) return;
     const measure = () => {
-      const columns = Math.max(1, Math.floor((grid.clientWidth + 4) / (window.innerWidth >= 640 ? 48 : 36)));
+      // A column is at least 44px on phones: narrower, a 12px time ("22:05") overflows its tile.
+      const columns = Math.max(1, Math.floor((grid.clientWidth + 4) / (window.innerWidth >= 640 ? 48 : 44)));
       // Reserve room for the compact header, legend and optional page controls.
       const rows = Math.max(1, Math.floor((window.innerHeight - 180) / 48));
       setLayout({ columns, capacity: columns * rows });
@@ -71,8 +72,7 @@ function BuildTimeline({ events, playerName }: { events: BuildEvent[]; playerNam
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-3xs text-muted-foreground">
-        <span>Left to right → then next row</span>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
         <span>+ Buy / unlock</span>
         <span>↑ Upgrade</span>
         <span>↓ Sell</span>
@@ -120,7 +120,7 @@ function BuildTimeline({ events, playerName }: { events: BuildEvent[]; playerNam
                   }
                 }}
               >
-                <span className="text-4xs leading-none tabular-nums">{formatMatchDuration(event.time)}</span>
+                <span className="text-xs leading-none tabular-nums">{formatMatchDuration(event.time)}</span>
                 <span aria-hidden="true" className="relative">
                   <EventImage event={event} />
                   <CornerBadge corner="bottom-end" className="-inset-e-1 -bottom-0.5 p-px">
@@ -137,7 +137,7 @@ function BuildTimeline({ events, playerName }: { events: BuildEvent[]; playerNam
           <Button variant="ghost" size="xs" disabled={page === 0} onClick={() => goTo(start - layout.capacity)}>
             <ChevronLeft data-icon="inline-start" /> Earlier
           </Button>
-          <span className="text-3xs text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {start + 1}–{start + visible.length} of {events.length}
           </span>
           <Button

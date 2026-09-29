@@ -62,8 +62,6 @@ export function CompanionsPanel({
     <PanelWithDetails
       title="Teammates & opponents"
       icon={UsersRound}
-      description="Frequent encounters"
-      footer="Your win rate · 2+ shared games in selected matches"
       open={open}
       onOpenChange={setOpen}
       details={
@@ -177,9 +175,9 @@ function CompanionPreview({
         <Table density="dense" aria-label={`Frequent ${label.toLowerCase()} in selected matches`}>
           <TableHeader>
             <TableRow>
-              <TableHead className="ps-0 text-3xs">Player</TableHead>
-              <TableHead className="text-end text-3xs">Games</TableHead>
-              <TableHead className="pe-0 text-end text-3xs">Win %</TableHead>
+              <TableHead className="ps-0 text-xs">Player</TableHead>
+              <TableHead className="text-end text-xs">Games</TableHead>
+              <TableHead className="pe-0 text-end text-xs">Win %</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -218,7 +216,7 @@ function CompanionPreview({
       )}
       {isError && rows !== undefined && (
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <output className="text-3xs text-muted-foreground">Refresh failed. Showing loaded results.</output>
+          <output className="text-xs text-muted-foreground">Refresh failed. Showing loaded results.</output>
           <Button variant="ghost" size="xs" disabled={isFetching} onClick={onRetry}>
             Retry {label.toLowerCase()}
           </Button>

@@ -65,7 +65,7 @@ export function TrackerFilterBar({
             <SlidersHorizontal data-icon="inline-start" />
             <span className="min-w-0 flex-1 text-start">
               <span className="block text-xs">{dateLabel}</span>
-              <span className="block text-3xs wrap-anywhere text-muted-foreground">{summary}</span>
+              <span className="block text-xs wrap-anywhere text-muted-foreground">{summary}</span>
             </span>
             <ChevronDown data-icon="inline-end" className="group-data-[state=open]:rotate-180" />
           </Button>

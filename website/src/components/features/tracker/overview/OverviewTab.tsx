@@ -150,7 +150,7 @@ export function OverviewTab({
             Player overview
           </Heading>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-3xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span>
             <span className="sr-only">Dates of selected matches: </span>
             {toTime(sorted[sorted.length - 1].start_time).format("MMM D, YYYY")} –{" "}
@@ -226,12 +226,7 @@ export function OverviewTab({
             </KeyValueList>
           </PanelBody>
         </Panel>
-        <RecentFormPanel
-          comparison={recent}
-          resultFiltered={filters.result !== "all"}
-          onWindowChange={setRecentWindow}
-          onOpenMatch={onOpenMatch}
-        />
+        <RecentFormPanel comparison={recent} onWindowChange={setRecentWindow} onOpenMatch={onOpenMatch} />
       </div>
 
       <PerformanceInsights
@@ -293,15 +288,10 @@ export function OverviewTab({
               <SplitRows label="Session momentum" rows={sessions.byPreviousResult} />
               <SplitRows label="Match in session" rows={sessions.byPosition} />
             </div>
-            {(filters.result !== "all" || filters.heroId != null) && (
-              <p className="text-3xs text-muted-foreground">
-                Session context includes all heroes and results in this mode and date range.
-              </p>
-            )}
           </PanelBody>
         </Panel>
         <Panel>
-          <PanelHeader title="Play habits" description="Your local time" icon={Clock3} size="sm" />
+          <PanelHeader title="Play habits" icon={Clock3} size="sm" />
           <PanelBody size="sm">
             <div className="grid grid-cols-3 gap-2 pb-2">
               {[
@@ -311,7 +301,7 @@ export function OverviewTab({
               ].map(({ label, value }) => (
                 <div key={label}>
                   <div className="text-base font-semibold tabular-nums">{value}</div>
-                  <div className="text-3xs text-muted-foreground">{label}</div>
+                  <div className="text-xs text-muted-foreground">{label}</div>
                 </div>
               ))}
             </div>
@@ -319,7 +309,7 @@ export function OverviewTab({
           </PanelBody>
         </Panel>
         <Panel className="@container/records">
-          <PanelHeader title="Personal bests" description="In selected matches" icon={Trophy} size="sm" />
+          <PanelHeader title="Personal bests" icon={Trophy} size="sm" />
           <PanelBody size="sm" className="flex flex-col gap-2">
             <div className="grid grid-cols-2 gap-1.5 @xs/records:grid-cols-3">
               {RECORD_KINDS.map(({ key, label, format }) => {
@@ -332,7 +322,7 @@ export function OverviewTab({
                     onClick={() => record && onOpenMatch(record.entry.match_id)}
                     className="h-auto min-w-0 flex-col items-stretch gap-0.5 px-2 py-1.5 text-start font-normal"
                   >
-                    <span className="flex items-center justify-between gap-1 text-3xs text-muted-foreground">
+                    <span className="flex items-center justify-between gap-1 text-xs text-muted-foreground">
                       {label}
                       {record && <ArrowUpRight aria-hidden="true" className="size-3 shrink-0" />}
                     </span>
@@ -342,19 +332,16 @@ export function OverviewTab({
                         <span aria-hidden="true">
                           <HeroImage heroId={record.entry.hero_id} className="size-4" title="" />
                         </span>
-                        <HeroName heroId={record.entry.hero_id} className="text-3xs text-muted-foreground" />
+                        <HeroName heroId={record.entry.hero_id} className="text-xs text-muted-foreground" />
                       </span>
                     ) : (
-                      <span className="text-3xs text-muted-foreground">Not recorded</span>
+                      <span className="text-xs text-muted-foreground">Not recorded</span>
                     )}
                   </Button>
                 );
               })}
             </div>
-            {filters.result !== "all" && (
-              <p className="text-3xs text-muted-foreground">Streaks include wins and losses.</p>
-            )}
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-2xs text-muted-foreground">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
               <span>
                 Longest win streak <strong className="text-positive tabular-nums">{streaks.longestWin}</strong>
               </span>
@@ -377,7 +364,7 @@ function SplitRows({ label, rows }: { label: string; rows: OutcomeSplit[] }) {
       </Heading>
       <div className="flex flex-col gap-1">
         {rows.map((row) => (
-          <div key={row.label} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 text-2xs">
+          <div key={row.label} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 text-xs">
             <span className="min-w-0">{row.label}</span>
             <span className="min-w-6 text-end text-muted-foreground tabular-nums">{integer(row.matches)}</span>
             <span className="min-w-7 text-end font-medium tabular-nums">

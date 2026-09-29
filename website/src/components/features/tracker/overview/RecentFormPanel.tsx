@@ -206,20 +206,15 @@ function ResultGrid({
 
 export function RecentFormPanel({
   comparison,
-  resultFiltered,
   onWindowChange,
   onOpenMatch,
 }: {
   comparison: RecentMatchComparison;
-  resultFiltered: boolean;
   onWindowChange: (window: RecentMatchWindow) => void;
   onOpenMatch: (matchId: number) => void;
 }) {
   const { recent, previous, streaks, entries, previousEntries, window } = comparison;
   const missing = window + MIN_COMPARISON_MATCHES - entries.length - previousEntries.length;
-  const scope = resultFiltered
-    ? "Includes wins and losses. Hero, mode and date filters apply."
-    : "Uses the selected hero, mode and date range.";
   const meta = `Last ${recent.matches} ${recent.matches === 1 ? "match" : "matches"}`;
   const [open, setOpen] = useState(false);
   const { toTime } = useTrackerTime();
@@ -234,8 +229,7 @@ export function RecentFormPanel({
       onOpenChange={setOpen}
       details={
         <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs text-muted-foreground">{scope}</p>
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Segmented
               size="sm"
               width="hug"
@@ -263,7 +257,7 @@ export function RecentFormPanel({
                   <Heading as="h3" size="xs">
                     Latest {recent.matches} matches
                   </Heading>
-                  <p className="text-3xs text-muted-foreground">{dateRange(entries, toTime)}</p>
+                  <p className="text-xs text-muted-foreground">{dateRange(entries, toTime)}</p>
                   <p className="pt-1 text-xs tabular-nums">
                     {recent.wins} wins / {recent.losses} losses
                   </p>
@@ -272,18 +266,18 @@ export function RecentFormPanel({
                   <Heading as="h3" size="xs">
                     Previous {previous.matches} matches
                   </Heading>
-                  <p className="text-3xs text-muted-foreground">{dateRange(previousEntries, toTime)}</p>
+                  <p className="text-xs text-muted-foreground">{dateRange(previousEntries, toTime)}</p>
                   <p className="pt-1 text-xs tabular-nums">
                     {previous.wins} wins / {previous.losses} losses
                   </p>
                 </Card>
               </div>
               <ComparisonMetrics recent={recent} previous={previous} />
-              <p className="text-xs text-muted-foreground">
-                Separate match windows; no match appears in both. KDA uses total kills and assists divided by total
-                deaths. Per-minute stats use total time played. pp = percentage points.
-                {previous.matches < window && ` The previous window has only ${previous.matches} of ${window} matches.`}
-              </p>
+              {previous.matches < window && (
+                <p className="text-xs text-muted-foreground">
+                  The previous window has only {previous.matches} of {window} matches.
+                </p>
+              )}
             </>
           ) : (
             <EmptyState
@@ -307,15 +301,14 @@ export function RecentFormPanel({
       }
     >
       <div>
-        {resultFiltered && <p className="pb-2 text-3xs text-muted-foreground">{scope}</p>}
         <div className="flex flex-wrap items-baseline justify-between gap-2 pb-2">
           <div className="flex items-baseline gap-2">
             <span className="text-lg font-semibold text-positive tabular-nums">{percent(recent.winrate)}</span>
-            <span className="text-2xs text-muted-foreground tabular-nums">
+            <span className="text-xs text-muted-foreground tabular-nums">
               {recent.wins}W / {recent.losses}L
             </span>
           </div>
-          <span className="text-2xs text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             Current streak{" "}
             <strong className={TONE_TEXT[streaks.current > 0 ? "positive" : "negative"]}>
               {Math.abs(streaks.current)}
@@ -324,10 +317,7 @@ export function RecentFormPanel({
           </span>
         </div>
         <ResultGrid entries={entries.slice(0, 20)} onOpenMatch={onOpenMatch} />
-        <p className="py-1 text-3xs text-muted-foreground">
-          {entries.length > 20 ? "Latest 20 results · " : ""}Newest first
-        </p>
-        <div className="flex flex-wrap justify-between gap-2 py-1 text-2xs text-muted-foreground">
+        <div className="flex flex-wrap justify-between gap-2 py-1 text-xs text-muted-foreground">
           <span>
             KDA <strong className="text-foreground tabular-nums">{ratio(recent.kdaRatio)}</strong>
           </span>
@@ -335,7 +325,7 @@ export function RecentFormPanel({
             Souls / min <strong className="text-foreground tabular-nums">{integer(recent.soulsPerMin)}</strong>
           </span>
         </div>
-        <p className="pt-1 text-3xs text-muted-foreground">
+        <p className="pt-1 text-xs text-muted-foreground">
           {previous ? (
             <>
               <Change value={(recent.winrate - previous.winrate) * 100} precision={1} unit=" pp" /> win rate vs.

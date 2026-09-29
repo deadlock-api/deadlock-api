@@ -24,26 +24,23 @@ import {
   TooltipStats,
 } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
-import { computePerformanceTrend, performanceWindow, type ResultFilter } from "~/lib/tracker/compute";
+import { computePerformanceTrend, performanceWindow } from "~/lib/tracker/compute";
 
 const metrics = {
   winrate: {
     label: "Win rate",
     color: CHART_COLOR.positive,
     format: (value: number) => `${(value * 100).toFixed(1)}%`,
-    description: "Wins / matches. Dashed line: 50% win rate.",
   },
   kdaRatio: {
     label: "KDA",
     color: SERIES_COLORS[3],
     format: (value: number) => value.toFixed(2),
-    description: "Total kills + assists / deaths in each window. With no deaths, shows kills + assists.",
   },
   soulsPerMin: {
     label: "Souls / min",
     color: SERIES_COLORS[2],
     format: (value: number) => Math.round(value).toLocaleString("en-US"),
-    description: "Total souls / total minutes played in each window.",
   },
 };
 type Metric = keyof typeof metrics;
@@ -52,11 +49,9 @@ const windows = ["auto", "5", "10", "20", "50"] as const;
 
 export function PerformanceTrendPanel({
   entries,
-  result,
   className,
 }: {
   entries: PlayerMatchHistoryEntry[];
-  result: ResultFilter;
   className?: string;
 }) {
   const [metric, setMetric] = useQueryState("trend_metric", parseAsStringLiteral(metricKeys).withDefault("winrate"));
@@ -110,7 +105,7 @@ export function PerformanceTrendPanel({
         </div>
         <div className="flex flex-wrap items-baseline gap-2" aria-live="polite" aria-atomic="true">
           <span className="text-lg font-semibold tabular-nums">{latest ? selected.format(latest[metric]) : "—"}</span>
-          <span className="text-3xs text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {selected.label} · latest {window} selected matches
           </span>
         </div>
@@ -155,15 +150,6 @@ export function PerformanceTrendPanel({
               />
             </AreaChart>
           </ChartSurface>
-        )}
-        <p className="text-3xs text-muted-foreground">{selected.description}</p>
-        {result !== "all" && (
-          <p className="text-3xs text-muted-foreground">
-            {result === "win" ? "Wins only" : "Losses only"}.
-            {metric === "winrate"
-              ? ` The ${result === "win" ? "100%" : "0%"} win rate reflects your result filter. Select All results to see your overall trend.`
-              : " Statistics describe only these selected outcomes."}
-          </p>
         )}
       </PanelBody>
     </Panel>

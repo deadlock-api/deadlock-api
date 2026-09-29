@@ -203,7 +203,7 @@ function PlayerStatStrip({
   pregameHeroName?: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 pb-1 text-2xs text-muted-foreground tabular-nums">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 pb-1 text-xs text-muted-foreground tabular-nums">
       {(player.rank_delta || player.demotion_protected || player.rank_badge != null) && (
         // The name row hands the rank down here at phone width, where the name needs the room more.
         <span className="flex items-center gap-1 @sm:hidden">
@@ -377,7 +377,7 @@ export function Scoreboard({
                     >
                       Player
                       {sortKey && (
-                        <span className="text-3xs text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           {sortLabel}
                           {sortDirection === "desc" ? "↓" : "↑"}
                         </span>

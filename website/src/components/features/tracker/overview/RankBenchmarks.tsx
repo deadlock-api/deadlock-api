@@ -189,11 +189,7 @@ export function RankBenchmarks({
     <PanelWithDetails
       title="Rank benchmarks"
       details={renderContent(true)}
-      footer={
-        mode.supportsRank && selection === "auto" && autoRange
-          ? "Your average / lobby average · Auto uses your latest recorded rank"
-          : "Your average / lobby average"
-      }
+      footer="Your average / lobby average"
       icon={ChartNoAxesCombined}
       actions={
         mode.supportsRank ? (
@@ -281,10 +277,10 @@ function BenchmarkMetric({
       >
         {/* The label wraps instead of truncating: two tiles a row leave "Objective dmg / min" no room on a phone. */}
         <div className="flex w-full items-start justify-between gap-2">
-          <span className="min-w-0 text-2xs text-muted-foreground">{labels[def.key] ?? def.label}</span>
+          <span className="min-w-0 text-xs text-muted-foreground">{labels[def.key] ?? def.label}</span>
           {relativePercent != null &&
             (relativePercent === 0 || neutral ? (
-              <span className="text-3xs text-muted-foreground tabular-nums">
+              <span className="text-xs text-muted-foreground tabular-nums">
                 {relativePercent > 0 ? "+" : ""}
                 {relativePercent}%
               </span>
@@ -295,13 +291,13 @@ function BenchmarkMetric({
                 digits={0}
                 unit="%"
                 polarity={def.key === "deaths" ? "lower-is-better" : "higher-is-better"}
-                className="text-3xs"
+                className="text-xs"
               />
             ))}
         </div>
         <div className="flex w-full items-center justify-between gap-2">
           <span className="shrink-0 text-xs font-semibold tabular-nums">{format(player?.avg)}</span>
-          <span className="shrink-0 text-end text-2xs text-muted-foreground tabular-nums">{format(cohort?.avg)}</span>
+          <span className="shrink-0 text-end text-xs text-muted-foreground tabular-nums">{format(cohort?.avg)}</span>
         </div>
       </DetailPopover>
       {showDistribution && (

@@ -61,11 +61,7 @@ export function TrendPanels({
   const [activityOpen, setActivityOpen] = useState(false);
   return (
     <div className="grid gap-2 @xl/overview:grid-cols-2 @3xl/overview:grid-cols-3">
-      <PerformanceTrendPanel
-        entries={entries}
-        result={result}
-        className="@xl/overview:col-span-2 @3xl/overview:col-span-1"
-      />
+      <PerformanceTrendPanel entries={entries} className="@xl/overview:col-span-2 @3xl/overview:col-span-1" />
       <PanelWithDetails
         title="Rank history"
         icon={Medal}
@@ -125,7 +121,7 @@ export function TrendPanels({
             </AreaChart>
           </ChartSurface>
         )}
-        <p className="text-3xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {ranks.length > 0
             ? `Peak: ${rankName(ranks.reduce((best, p) => (p.badge > best ? p.badge : best), 0))}`
             : "No rank badges in selected matches"}
@@ -157,7 +153,7 @@ export function TrendPanels({
           <span className="text-lg font-semibold tabular-nums">
             {activity.buckets.reduce((sum, b) => sum + b.wins + b.losses, 0).toLocaleString("en-US")}
           </span>
-          <span className="text-3xs text-muted-foreground">matches played</span>
+          <span className="text-xs text-muted-foreground">matches played</span>
         </div>
         <ChartSurface label="Wins and losses by activity period" size="sm" variant="bare">
           <BarChart
