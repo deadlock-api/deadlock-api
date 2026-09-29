@@ -356,6 +356,7 @@ async fn fetch_match_history_raw(
             .then_some(ECitadelMatchMode::KECitadelMatchModeRanked as i32),
         ranked_type: None,
         rank_interval,
+        cabal_id: None,
     };
     let response: CMsgClientToGcGetMatchHistoryResponse = steam_client
         .call_steam_proxy(SteamProxyQuery {

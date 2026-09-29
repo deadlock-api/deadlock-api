@@ -65,6 +65,10 @@ pub(super) struct CreateCustomRequest {
     #[serde(default)]
     #[param(default)]
     duplicate_heroes_enabled: Option<bool>,
+    /// Minute of the match at which the Broker's corrupted item shop first spawns.
+    #[serde(default)]
+    #[param(default)]
+    corrupted_item_shop_spawn_minutes: Option<u32>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -127,6 +131,9 @@ async fn create_party(
             cheats_enabled: settings.as_ref().and_then(|m| m.cheats_enabled),
             available_regions: vec![],
             duplicate_heroes_enabled: settings.as_ref().and_then(|m| m.duplicate_heroes_enabled),
+            corrupted_item_shop_spawn_minutes: settings
+                .as_ref()
+                .and_then(|m| m.corrupted_item_shop_spawn_minutes),
         }
         .into(),
         bot_difficulty: (ECitadelBotDifficulty::KECitadelBotDifficultyNone as i32).into(),
