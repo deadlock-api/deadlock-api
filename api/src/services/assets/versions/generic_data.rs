@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString, FromRepr};
 use utoipa::ToSchema;
 
-use crate::services::assets::versions::common::Color;
+use crate::services::assets::versions::common::{Color, IMAGE_BASE_URL};
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::{localization, store};
 use crate::utils::kv3;
@@ -694,6 +694,57 @@ pub(crate) struct CorruptedPenaltyEffect {
     pub display: bool,
 }
 
+/// A png image and its webp variant.
+#[derive(Debug, Serialize, Clone, ToSchema)]
+pub(crate) struct ImagePair {
+    pub png: String,
+    pub webp: String,
+}
+
+impl ImagePair {
+    fn at(path: &str) -> Self {
+        Self {
+            png: format!("{IMAGE_BASE_URL}/{path}.png"),
+            webp: format!("{IMAGE_BASE_URL}/{path}.webp"),
+        }
+    }
+}
+
+/// Corrupted item tooltip backers, one per item slot type.
+#[derive(Debug, Serialize, Clone, ToSchema)]
+pub(crate) struct CorruptedTooltipBackers {
+    pub weapon: ImagePair,
+    pub spirit: ImagePair,
+    pub vitality: ImagePair,
+}
+
+/// Shop art for corrupted items (build 6711+). The game has no per-item corrupted
+/// icon: a corrupted item is its normal image drawn inside `frame`, with the tooltip
+/// backer of its `item_slot_type`.
+#[derive(Debug, Serialize, Clone, ToSchema)]
+pub(crate) struct CorruptedItemImages {
+    pub frame: ImagePair,
+    /// Frame for an active (usable) corrupted item.
+    pub frame_active: ImagePair,
+    pub tooltip_backers: CorruptedTooltipBackers,
+}
+
+impl CorruptedItemImages {
+    fn new() -> Self {
+        let backer =
+            |slot: &str| ImagePair::at(&format!("tooltips/items/tooltip_backer_{slot}_corrupted"));
+        Self {
+            frame: ImagePair::at("shop/corrupted_items/item_frame_corrupted"),
+            frame_active: ImagePair::at("shop/corrupted_items/item_frame_corrupted_active"),
+            tooltip_backers: CorruptedTooltipBackers {
+                weapon: backer("weapon"),
+                spirit: backer("spirit"),
+                vitality: backer("vitality"),
+            },
+        }
+    }
+}
+
 /// A penalty that can be rolled onto a corrupted item (build 6711+).
 #[derive(Debug, Serialize, Clone, ToSchema)]
 pub(crate) struct CorruptedPenalty {
@@ -800,6 +851,9 @@ pub(crate) struct GenericData {
     /// Penalties that can be rolled onto corrupted items (build 6711+).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub corrupted_penalties: Option<Vec<CorruptedPenalty>>,
+    /// Shop art for corrupted items (build 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub corrupted_item_images: Option<CorruptedItemImages>,
     /// Distance within which a neutral camp's respawn timer is shown (build 6711+).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub neutral_camp_respawn_timer_show_distance: Option<f64>,
@@ -876,6 +930,10 @@ fn transform(r: RawGenericData, loc: &HashMap<String, String>) -> GenericData {
         color_team2: r.color_team2,
         item_price_per_tier: r.item_price_per_tier,
         item_corruption_price_per_tier: r.item_corruption_price_per_tier,
+        corrupted_item_images: r
+            .corrupted_penalty_defs
+            .is_some()
+            .then(CorruptedItemImages::new),
         corrupted_penalties: r
             .corrupted_penalty_defs
             .map(|defs| corrupted_penalties_out(defs, loc)),

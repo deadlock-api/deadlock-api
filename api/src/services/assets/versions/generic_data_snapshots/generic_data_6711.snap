@@ -739,6 +739,30 @@ expression: data
       ]
     }
   ],
+  "corrupted_item_images": {
+    "frame": {
+      "png": "https://assets-bucket.deadlock-api.com/assets-api-res/images/shop/corrupted_items/item_frame_corrupted.png",
+      "webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/shop/corrupted_items/item_frame_corrupted.webp"
+    },
+    "frame_active": {
+      "png": "https://assets-bucket.deadlock-api.com/assets-api-res/images/shop/corrupted_items/item_frame_corrupted_active.png",
+      "webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/shop/corrupted_items/item_frame_corrupted_active.webp"
+    },
+    "tooltip_backers": {
+      "weapon": {
+        "png": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_weapon_corrupted.png",
+        "webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_weapon_corrupted.webp"
+      },
+      "spirit": {
+        "png": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_spirit_corrupted.png",
+        "webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_spirit_corrupted.webp"
+      },
+      "vitality": {
+        "png": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_vitality_corrupted.png",
+        "webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_vitality_corrupted.webp"
+      }
+    }
+  },
   "neutral_camp_respawn_timer_show_distance": 15.0,
   "breakable_powerup_loot_params": {
     "loot_list_deck_size": 3,
