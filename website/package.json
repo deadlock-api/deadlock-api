@@ -81,7 +81,7 @@
     "@jridgewell/trace-mapping": "^0.3.31",
     "@playwright/test": "^1.63.0",
     "@types/hast": "^3.0.5",
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/three": "^0.186.0",
@@ -91,11 +91,11 @@
     "oxc-transform-react": "^0.151.0",
     "oxfmt": "^0.70.0",
     "oxlint": "^1.85.0",
-    "oxlint-tsgolint": "^7.0.2002",
+    "oxlint-tsgolint": "^7.0.2003",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vite": "^8.3.0",
-    "wrangler": "^4.136.3"
+    "vite": "^8.3.1",
+    "wrangler": "^4.141.0"
   },
   "engines": {
     "node": ">=26.0.0"
